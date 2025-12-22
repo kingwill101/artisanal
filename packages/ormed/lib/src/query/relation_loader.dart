@@ -75,6 +75,45 @@ class RelationLoader {
       }
       // Sync relations to model cache
       _syncRelationsToModels(parents, load.relation.name);
+
+      // Load nested relations
+      if (load.nested.isNotEmpty) {
+        final targetDefinition = segment.targetDefinition;
+        final children = <QueryRow<OrmEntity>>[];
+
+        for (final parent in parents) {
+          final value = parent.relations[load.relation.name];
+          if (value == null) continue;
+
+          if (value is List) {
+            for (final item in value) {
+              children.add(
+                QueryRow(
+                  model: item as OrmEntity,
+                  row: targetDefinition.toMap(
+                    item,
+                    registry: _codecRegistry,
+                  ),
+                ),
+              );
+            }
+          } else {
+            children.add(
+              QueryRow(
+                model: value as OrmEntity,
+                row: targetDefinition.toMap(
+                  value,
+                  registry: _codecRegistry,
+                ),
+              ),
+            );
+          }
+        }
+
+        if (children.isNotEmpty) {
+          await attach(targetDefinition, children, load.nested);
+        }
+      }
     }
   }
 
