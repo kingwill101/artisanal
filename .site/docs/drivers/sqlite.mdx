@@ -27,8 +27,32 @@ driver:
 
 ## Use in code (DataSource)
 
+The recommended way is to use the generated `createDataSource()` helper, but you can also initialize it manually:
+
+<Tabs groupId="sqlite-usage" defaultValue="config">
+  <TabItem value="config" label="From Config">
+
+```dart
+import 'package:ormed/ormed.dart';
+import 'package:ormed_sqlite/ormed_sqlite.dart';
+
+void main() async {
+  ensureSqliteDriverRegistration();
+  
+  final config = loadOrmConfig();
+  final ds = DataSource.fromConfig(config);
+  await ds.init();
+}
+```
+
+  </TabItem>
+  <TabItem value="manual" label="Manual">
+
 ```dart file=../../examples/lib/drivers/sqlite.dart#sqlite-datasource
 ```
+
+  </TabItem>
+</Tabs>
 
 ## SQLite Migrations Helpers
 

@@ -54,20 +54,26 @@ driver:
 
 ## Use in code (DataSource)
 
-<Tabs groupId="postgres-datasource" defaultValue="url">
-  <TabItem value="url" label="URL">
+```dart
+import 'package:ormed/ormed.dart';
+import 'package:ormed_postgres/ormed_postgres.dart';
 
-```dart file=../../examples/lib/drivers/postgres.dart#postgres-datasource-url
+void main() async {
+  // 1. Register the driver
+  ensurePostgresDriverRegistration();
+
+  // 2. Load configuration (usually from ormed.yaml)
+  final config = loadOrmConfig();
+
+  // 3. Create DataSource
+  final ds = DataSource.fromConfig(config);
+
+  // 4. Initialize (connects to DB)
+  await ds.init();
+
+  // Use the datasource...
+}
 ```
-
-  </TabItem>
-  <TabItem value="fields" label="Fields">
-
-```dart file=../../examples/lib/drivers/postgres.dart#postgres-datasource-fields
-```
-
-  </TabItem>
-</Tabs>
 
 ## Type support
 
