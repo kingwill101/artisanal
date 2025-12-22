@@ -97,6 +97,36 @@ void main() {
     expect(plan.distinctOn, isEmpty);
   });
 
+  test('where() accepts PartialEntity', () async {
+    final authors = await context
+        .query<Author>()
+        .where(const AuthorPartial(name: 'Alice'))
+        .get();
+
+    expect(authors, hasLength(1));
+    expect(authors.first.name, 'Alice');
+  });
+
+  test('where() accepts Symbol', () async {
+    final authors = await context
+        .query<Author>()
+        .where(#name, 'Alice')
+        .get();
+
+    expect(authors, hasLength(1));
+    expect(authors.first.name, 'Alice');
+  });
+
+  test('where() accepts Symbol with operator', () async {
+    final authors = await context
+        .query<Author>()
+        .where(#id, 1, PredicateOperator.greaterThan)
+        .get();
+
+    expect(authors, hasLength(2));
+    expect(authors.map((a) => a.name), containsAll(['Bob', 'Charlie']));
+  });
+
   test('distinct on columns capture normalized selectors', () {
     final plan = context.query<Author>().distinct(['name']).debugPlan();
     expect(plan.distinctOn, hasLength(1));

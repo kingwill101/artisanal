@@ -178,6 +178,20 @@ void runDriverQueryTests() {
       expect(post?.relation<Author>('author')?.name, 'Bob');
     });
 
+    test('eager loads multiple relations using with_', () async {
+      final post = await dataSource.context
+          .query<Post>()
+          .whereEquals('title', 'Intro')
+          .with_(['author', 'tags'])
+          .firstRow();
+
+      expect(post?.relation<Author>('author')?.name, 'Bob');
+      expect(
+        post?.relationList<Tag>('tags').map((t) => t.label),
+        contains('featured'),
+      );
+    });
+
     test('eager loads manyToMany relations', () async {
       final post = await dataSource.context
           .query<Post>()

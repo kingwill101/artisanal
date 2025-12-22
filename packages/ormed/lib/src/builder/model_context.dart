@@ -410,13 +410,19 @@ class ModelContext {
       if (annotation == null) {
         continue;
       }
+
+      final targetType = annotation.peek('target')?.typeValue;
+      final targetModel = targetType != null && targetType is! DynamicType
+          ? nonNullableTypeName(targetType)
+          : _inferTargetModel(field.type);
+
       relations.add(
         RelationDescriptor(
           owner: className,
           name: field.displayName,
           fieldType: field.type,
           kind: _readRelationKind(annotation.peek('kind')?.objectValue),
-          targetModel: typeOrDynamic(annotation.peek('target')?.typeValue),
+          targetModel: targetModel,
           foreignKey: annotation.peek('foreignKey')?.stringValue,
           localKey: annotation.peek('localKey')?.stringValue,
           through: annotation.peek('through')?.stringValue,
@@ -428,6 +434,18 @@ class ModelContext {
       );
     }
     return relations;
+  }
+
+  String _inferTargetModel(DartType type) {
+    if (type is InterfaceType) {
+      // If it's a List<T>, infer T
+      if (type.isDartCoreList && type.typeArguments.isNotEmpty) {
+        return nonNullableTypeName(type.typeArguments.first);
+      }
+      // Otherwise use the type itself
+      return nonNullableTypeName(type);
+    }
+    return 'dynamic';
   }
 
   List<ScopeDescriptor> _collectScopes() {
