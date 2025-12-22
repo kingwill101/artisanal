@@ -13,6 +13,11 @@ export 'src/sqlite_connector.dart';
 export 'src/sqlite_codecs.dart';
 
 final _sqliteDriverRegistration = (() {
+  DriverAdapterRegistry.register('sqlite', (config) {
+    final database = config.option('database') ?? 'database.sqlite';
+    return SqliteDriverAdapter.file(database);
+  });
+
   DriverRegistry.registerDriver('sqlite', ({
     required Directory root,
     required ConnectionManager manager,

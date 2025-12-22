@@ -51,6 +51,15 @@ OrmConnectionHandle registerPostgresOrmConnection({
 }
 
 final _postgresDriverRegistration = (() {
+  DriverAdapterRegistry.register('postgres', (config) {
+    return PostgresDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'postgres',
+        options: Map<String, Object?>.from(config.options),
+      ),
+    );
+  });
+
   DriverRegistry.registerDriver('postgres', ({
     required Directory root,
     required ConnectionManager manager,
