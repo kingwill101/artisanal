@@ -5,6 +5,7 @@
 - **Added**: `ensureSqliteDriverRegistration()` to register the driver with the core ORM.
 - **Added**: Package example demonstrating `DataSource.fromConfig` usage.
 - **Improved**: Aligned with core `0.1.0-dev+4` refactor for driver-agnostic initialization.
+- **Improved**: Better handling of relative database paths in CLI-scaffolded projects.
 
 ## 0.1.0-dev+3
 
