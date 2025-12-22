@@ -23,9 +23,7 @@ Future<HttpServer> runServer({
   final storage = StorageService();
   await storage.init();
 
-  final database = AppDatabase(
-    driver: AppDatabase.sqliteFile(AppPaths.databaseFile),
-  );
+  final database = AppDatabase();
   await database.init();
 
   final templates = TemplateRenderer(

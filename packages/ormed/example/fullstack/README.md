@@ -1,49 +1,48 @@
-A server app built using [Shelf](https://pub.dev/packages/shelf),
-configured to enable running with [Docker](https://www.docker.com/).
+# Ormed Fullstack Example: Movie Catalog
 
-This sample code handles HTTP GET requests to `/` and `/echo/<message>`
+This is a comprehensive example of a full-stack application built with **Ormed**, **Shelf**, and **Liquify**.
 
-# Running the sample
+## Features
 
-## Running with the Dart SDK
+- **Ormed ORM**: Database interactions, migrations, and seeding.
+- **Shelf Web Server**: Routing, middleware, and request handling.
+- **Liquify Templates**: Server-side rendering with Liquid templates.
+- **Structured Logging**: Contextual logging for better observability.
+- **File Storage**: Local file storage for movie posters.
+- **Testing**: Comprehensive test suite including unit, integration, and property-based tests.
 
-You can run the example with the [Dart SDK](https://dart.dev/get-dart)
-like this:
+## Getting Started
 
-```
-$ dart run bin/server.dart
-Server listening on port 8080
-```
+### 1. Install Dependencies
 
-And then from a second terminal:
-```
-$ curl http://0.0.0.0:8080
-Hello, World!
-$ curl http://0.0.0.0:8080/echo/I_love_Dart
-I_love_Dart
+```bash
+dart pub get
 ```
 
-## Running with Docker
+### 2. Run Migrations and Seed Data
 
-If you have [Docker Desktop](https://www.docker.com/get-started) installed, you
-can build and run with the `docker` command:
-
-```
-$ docker build . -t myserver
-$ docker run -it -p 8080:8080 myserver
-Server listening on port 8080
+```bash
+dart run ormed migrate
+dart run ormed seed
 ```
 
-And then from a second terminal:
-```
-$ curl http://0.0.0.0:8080
-Hello, World!
-$ curl http://0.0.0.0:8080/echo/I_love_Dart
-I_love_Dart
+### 3. Run the Server
+
+```bash
+dart run bin/server.dart
 ```
 
-You should see the logging printed in the first terminal:
-```
-2021-05-06T15:47:04.620417  0:00:00.000158 GET     [200] /
-2021-05-06T15:47:08.392928  0:00:00.001216 GET     [200] /echo/I_love_Dart
-```
+The server will be running at `http://localhost:8080`.
+
+## Project Structure
+
+- `bin/`: Server entry point.
+- `lib/src/database/`: Database configuration, migrations, and seeders.
+- `lib/src/models/`: Ormed models.
+- `lib/src/server/`: Shelf application logic and routes.
+- `lib/src/templates/`: Liquid templates.
+- `test/`: Comprehensive test suite.
+
+## Documentation
+
+For a detailed walkthrough of how this application was built, check out the [Fullstack Guide](https://ormed.vercel.app/docs/guides/fullstack/ormed-shelf-tutorial).

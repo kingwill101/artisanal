@@ -1,7 +1,7 @@
 driver:
   type: sqlite
   options:
-    database: database.sqlite
+    database: database/ormed_fullstack_example.sqlite
 migrations:
   directory: lib/src/database/migrations
   registry: lib/src/database/migrations.dart

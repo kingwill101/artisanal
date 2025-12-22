@@ -28,7 +28,7 @@ class Movie extends Model<Movie> {
   final int? genreId;
 
   @OrmField(ignore: true)
-  @OrmRelation.belongsTo(Genre, foreignKey: 'genre_id')
+  @OrmRelation.belongsTo(target: Genre, foreignKey: 'genre_id')
   final Genre? genre = null;
 
   final DateTime? createdAt;

@@ -368,6 +368,46 @@ class MovieInsertDto implements InsertDto<$Movie> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _MovieInsertDtoCopyWithSentinel _copyWithSentinel =
+      _MovieInsertDtoCopyWithSentinel();
+  MovieInsertDto copyWith({
+    Object? title = _copyWithSentinel,
+    Object? releaseYear = _copyWithSentinel,
+    Object? summary = _copyWithSentinel,
+    Object? posterPath = _copyWithSentinel,
+    Object? genreId = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return MovieInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      releaseYear: identical(releaseYear, _copyWithSentinel)
+          ? this.releaseYear
+          : releaseYear as int?,
+      summary: identical(summary, _copyWithSentinel)
+          ? this.summary
+          : summary as String?,
+      posterPath: identical(posterPath, _copyWithSentinel)
+          ? this.posterPath
+          : posterPath as String?,
+      genreId: identical(genreId, _copyWithSentinel)
+          ? this.genreId
+          : genreId as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _MovieInsertDtoCopyWithSentinel {
+  const _MovieInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Movie].
@@ -406,6 +446,48 @@ class MovieUpdateDto implements UpdateDto<$Movie> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _MovieUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _MovieUpdateDtoCopyWithSentinel();
+  MovieUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? releaseYear = _copyWithSentinel,
+    Object? summary = _copyWithSentinel,
+    Object? posterPath = _copyWithSentinel,
+    Object? genreId = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return MovieUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      releaseYear: identical(releaseYear, _copyWithSentinel)
+          ? this.releaseYear
+          : releaseYear as int?,
+      summary: identical(summary, _copyWithSentinel)
+          ? this.summary
+          : summary as String?,
+      posterPath: identical(posterPath, _copyWithSentinel)
+          ? this.posterPath
+          : posterPath as String?,
+      genreId: identical(genreId, _copyWithSentinel)
+          ? this.genreId
+          : genreId as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _MovieUpdateDtoCopyWithSentinel {
+  const _MovieUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Movie].
@@ -489,6 +571,48 @@ class MoviePartial implements PartialEntity<$Movie> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _MoviePartialCopyWithSentinel _copyWithSentinel =
+      _MoviePartialCopyWithSentinel();
+  MoviePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? releaseYear = _copyWithSentinel,
+    Object? summary = _copyWithSentinel,
+    Object? posterPath = _copyWithSentinel,
+    Object? genreId = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return MoviePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      releaseYear: identical(releaseYear, _copyWithSentinel)
+          ? this.releaseYear
+          : releaseYear as int?,
+      summary: identical(summary, _copyWithSentinel)
+          ? this.summary
+          : summary as String?,
+      posterPath: identical(posterPath, _copyWithSentinel)
+          ? this.posterPath
+          : posterPath as String?,
+      genreId: identical(genreId, _copyWithSentinel)
+          ? this.genreId
+          : genreId as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _MoviePartialCopyWithSentinel {
+  const _MoviePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Movie].
@@ -500,6 +624,7 @@ class MoviePartial implements PartialEntity<$Movie> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Movie extends Movie with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Movie].
   $Movie({
     int id = 0,
     required String title,
@@ -567,47 +692,63 @@ class $Movie extends Movie with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [releaseYear].
   @override
   int get releaseYear => getAttribute<int>('release_year') ?? super.releaseYear;
 
+  /// Tracked setter for [releaseYear].
   set releaseYear(int value) => setAttribute('release_year', value);
 
+  /// Tracked getter for [summary].
   @override
   String? get summary => getAttribute<String?>('summary') ?? super.summary;
 
+  /// Tracked setter for [summary].
   set summary(String? value) => setAttribute('summary', value);
 
+  /// Tracked getter for [posterPath].
   @override
   String? get posterPath =>
       getAttribute<String?>('poster_path') ?? super.posterPath;
 
+  /// Tracked setter for [posterPath].
   set posterPath(String? value) => setAttribute('poster_path', value);
 
+  /// Tracked getter for [genreId].
   @override
   int? get genreId => getAttribute<int?>('genre_id') ?? super.genreId;
 
+  /// Tracked setter for [genreId].
   set genreId(int? value) => setAttribute('genre_id', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

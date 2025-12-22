@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:liquify/liquify.dart';
 import 'package:ormed/ormed.dart';
 import 'package:ormed_fullstack_example/orm_registry.g.dart';
+import 'package:ormed_fullstack_example/src/database/datasource.dart';
 import 'package:ormed_fullstack_example/src/database/database.dart';
 import 'package:ormed_fullstack_example/src/database/migrations.dart';
 import 'package:ormed_fullstack_example/src/database/seeders/database_seeder.dart';
@@ -17,13 +18,7 @@ import 'package:test/test.dart';
 
 // #region testing-setup
 OrmedTestConfig createMovieCatalogConfig() {
-  final baseDataSource = DataSource(
-    DataSourceOptions(
-      driver: SqliteDriverAdapter.inMemory(),
-      registry: bootstrapOrm(),
-      name: 'movie_catalog_test',
-    ),
-  );
+  final baseDataSource = createDataSource();
 
   final config = setUpOrmed(
     dataSource: baseDataSource,

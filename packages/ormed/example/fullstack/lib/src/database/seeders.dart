@@ -12,7 +12,7 @@ import 'seeders/movie_seeder.dart';// </ORM-SEED-IMPORTS>
 /// Used by `ormed seed` command and can be imported for programmatic seeding.
 final List<SeederRegistration> seeders = <SeederRegistration>[
 // <ORM-SEED-REGISTRY>
-SeederRegistration(
+  SeederRegistration(
     name: 'AppDatabaseSeeder',
     factory: (connection) => AppDatabaseSeeder(connection),
   ),

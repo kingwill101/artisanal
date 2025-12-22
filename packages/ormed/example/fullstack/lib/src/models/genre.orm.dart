@@ -281,6 +281,32 @@ class GenreInsertDto implements InsertDto<$Genre> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _GenreInsertDtoCopyWithSentinel _copyWithSentinel =
+      _GenreInsertDtoCopyWithSentinel();
+  GenreInsertDto copyWith({
+    Object? name = _copyWithSentinel,
+    Object? description = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return GenreInsertDto(
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      description: identical(description, _copyWithSentinel)
+          ? this.description
+          : description as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _GenreInsertDtoCopyWithSentinel {
+  const _GenreInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Genre].
@@ -310,6 +336,34 @@ class GenreUpdateDto implements UpdateDto<$Genre> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _GenreUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _GenreUpdateDtoCopyWithSentinel();
+  GenreUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? description = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return GenreUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      description: identical(description, _copyWithSentinel)
+          ? this.description
+          : description as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _GenreUpdateDtoCopyWithSentinel {
+  const _GenreUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Genre].
@@ -374,6 +428,34 @@ class GenrePartial implements PartialEntity<$Genre> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _GenrePartialCopyWithSentinel _copyWithSentinel =
+      _GenrePartialCopyWithSentinel();
+  GenrePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? description = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return GenrePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      description: identical(description, _copyWithSentinel)
+          ? this.description
+          : description as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _GenrePartialCopyWithSentinel {
+  const _GenrePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Genre].
@@ -385,6 +467,7 @@ class GenrePartial implements PartialEntity<$Genre> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Genre extends Genre with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Genre].
   $Genre({
     int id = 0,
     required String name,
@@ -434,32 +517,42 @@ class $Genre extends Genre with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [description].
   @override
   String? get description =>
       getAttribute<String?>('description') ?? super.description;
 
+  /// Tracked setter for [description].
   set description(String? value) => setAttribute('description', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
