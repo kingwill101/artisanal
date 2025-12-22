@@ -84,7 +84,13 @@ The `ormed.yaml` file tells the ORM where to find your models and where to gener
 
 ## DataSource helper
 
-To make database access consistent across our app and tests, we wrap the `DataSource` in a helper class. This class handles the connection lifecycle and ORM bootstrapping.
+To make database access consistent across our app and tests, we use a `createDataSource` helper. This helper is automatically generated when you run `ormed init`, and it handles loading the configuration and bootstrapping the ORM.
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/datasource.dart#datasource-helper
+
+```
+
+We then wrap this in an `AppDatabase` class to manage the connection lifecycle within our application.
 
 ```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/database.dart#database-init
 
