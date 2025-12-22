@@ -156,13 +156,15 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      final creatingEvent = ModelCreatingEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        attributes: Map<String, dynamic>.from(entry.inputMap),
-      );
-      _events.emit(creatingEvent);
-      if (creatingEvent.isCancelled) continue;
+      if (!_suppressEvents) {
+        final creatingEvent = ModelCreatingEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          attributes: Map<String, dynamic>.from(entry.inputMap),
+        );
+        _events.emit(creatingEvent);
+        if (creatingEvent.isCancelled) continue;
+      }
       ready.add(entry);
     }
 
@@ -222,13 +224,15 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      final creatingEvent = ModelCreatingEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        attributes: Map<String, dynamic>.from(entry.inputMap),
-      );
-      _events.emit(creatingEvent);
-      if (creatingEvent.isCancelled) continue;
+      if (!_suppressEvents) {
+        final creatingEvent = ModelCreatingEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          attributes: Map<String, dynamic>.from(entry.inputMap),
+        );
+        _events.emit(creatingEvent);
+        if (creatingEvent.isCancelled) continue;
+      }
       ready.add(entry);
     }
 
@@ -733,7 +737,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      if (entry.model != null && entry.originalAttributes != null) {
+      if (!_suppressEvents && entry.model != null && entry.originalAttributes != null) {
         final updatingEvent = ModelUpdatingEvent(
           modelType: definition.modelType,
           tableName: definition.tableName,
@@ -815,7 +819,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      if (entry.model != null && entry.originalAttributes != null) {
+      if (!_suppressEvents && entry.model != null && entry.originalAttributes != null) {
         final updatingEvent = ModelUpdatingEvent(
           modelType: definition.modelType,
           tableName: definition.tableName,
@@ -1019,16 +1023,18 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
         return const [];
       }
 
-      final updatingEvent = ModelUpdatingEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        model: input,
-        originalAttributes: Map<String, dynamic>.from(originalAttributes),
-        dirtyAttributes: Map<String, dynamic>.from(dirtyAttributes),
-      );
-      target._events.emit(updatingEvent);
-      if (updatingEvent.isCancelled) {
-        return const [];
+      if (!_suppressEvents) {
+        final updatingEvent = ModelUpdatingEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          model: input,
+          originalAttributes: Map<String, dynamic>.from(originalAttributes),
+          dirtyAttributes: Map<String, dynamic>.from(dirtyAttributes),
+        );
+        target._events.emit(updatingEvent);
+        if (updatingEvent.isCancelled) {
+          return const [];
+        }
       }
     } else {
       if (!_emitSavingEvent(null, baseValues)) {
@@ -1130,16 +1136,18 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
         return const MutationResult(affectedRows: 0);
       }
 
-      final updatingEvent = ModelUpdatingEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        model: input,
-        originalAttributes: Map<String, dynamic>.from(originalAttributes),
-        dirtyAttributes: Map<String, dynamic>.from(dirtyAttributes),
-      );
-      target._events.emit(updatingEvent);
-      if (updatingEvent.isCancelled) {
-        return const MutationResult(affectedRows: 0);
+      if (!_suppressEvents) {
+        final updatingEvent = ModelUpdatingEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          model: input,
+          originalAttributes: Map<String, dynamic>.from(originalAttributes),
+          dirtyAttributes: Map<String, dynamic>.from(dirtyAttributes),
+        );
+        target._events.emit(updatingEvent);
+        if (updatingEvent.isCancelled) {
+          return const MutationResult(affectedRows: 0);
+        }
       }
     } else {
       if (!_emitSavingEvent(null, baseValues)) {
@@ -1798,13 +1806,15 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
         continue;
       }
 
-      final creatingEvent = ModelCreatingEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        attributes: Map<String, dynamic>.from(inputMap),
-      );
-      _events.emit(creatingEvent);
-      if (creatingEvent.isCancelled) continue;
+      if (!_suppressEvents) {
+        final creatingEvent = ModelCreatingEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          attributes: Map<String, dynamic>.from(inputMap),
+        );
+        _events.emit(creatingEvent);
+        if (creatingEvent.isCancelled) continue;
+      }
       readyRows.add(rows[i]);
       filteredInputMaps.add(inputMap);
       if (input is T) {
@@ -2046,6 +2056,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     List<T> models,
     List<Map<String, Object?>> inputMaps,
   ) {
+    if (_suppressEvents) return;
     for (var i = 0; i < models.length; i++) {
       final model = models[i];
       final attributes = i < inputMaps.length ? inputMaps[i] : const {};
@@ -2061,6 +2072,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
   }
 
   void _emitSavedEvents(List<T> models, List<Map<String, Object?>> inputMaps) {
+    if (_suppressEvents) return;
     for (var i = 0; i < models.length; i++) {
       final model = models[i];
       final attributes = i < inputMaps.length ? inputMaps[i] : const {};
@@ -2076,6 +2088,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
   }
 
   void _emitUpdatedEvents(List<T> models, List<_UpdateEntry<T>> entries) {
+    if (_suppressEvents) return;
     final limit = models.length < entries.length
         ? models.length
         : entries.length;
@@ -2101,6 +2114,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
   }
 
   bool _emitSavingEvent(T? model, Map<String, Object?> attributes) {
+    if (_suppressEvents) return true;
     final savingEvent = ModelSavingEvent(
       modelType: definition.modelType,
       tableName: definition.tableName,
@@ -2134,15 +2148,17 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
 
     for (final where in wheres) {
       if (where is T) {
-        final deleting = ModelDeletingEvent(
-          modelType: definition.modelType,
-          tableName: definition.tableName,
-          model: where,
-          forceDelete: forceDelete,
-        );
-        _events.emit(deleting);
-        if (deleting.isCancelled) {
-          continue;
+        if (!_suppressEvents) {
+          final deleting = ModelDeletingEvent(
+            modelType: definition.modelType,
+            tableName: definition.tableName,
+            model: where,
+            forceDelete: forceDelete,
+          );
+          _events.emit(deleting);
+          if (deleting.isCancelled) {
+            continue;
+          }
         }
         contexts.add(
           _DeleteEventContext<T>(model: where, forceDelete: forceDelete),
@@ -2155,6 +2171,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
   }
 
   void _emitDeletedEvents(List<_DeleteEventContext<T>> contexts) {
+    if (_suppressEvents) return;
     for (final context in contexts) {
       _events.emit(
         ModelDeletedEvent(
@@ -2213,26 +2230,28 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
       final pkValue = queryRow.row[pkField.columnName];
       if (pkValue == null) continue;
 
-      if (restoring) {
-        final restoringEvent = ModelRestoringEvent(
-          modelType: definition.modelType,
-          tableName: definition.tableName,
-          model: model,
-        );
-        _events.emit(restoringEvent);
-        if (restoringEvent.isCancelled) {
-          continue;
-        }
-      } else {
-        final deletingEvent = ModelDeletingEvent(
-          modelType: definition.modelType,
-          tableName: definition.tableName,
-          model: model,
-          forceDelete: softDeleteField == null,
-        );
-        _events.emit(deletingEvent);
-        if (deletingEvent.isCancelled) {
-          continue;
+      if (!_suppressEvents) {
+        if (restoring) {
+          final restoringEvent = ModelRestoringEvent(
+            modelType: definition.modelType,
+            tableName: definition.tableName,
+            model: model,
+          );
+          _events.emit(restoringEvent);
+          if (restoringEvent.isCancelled) {
+            continue;
+          }
+        } else {
+          final deletingEvent = ModelDeletingEvent(
+            modelType: definition.modelType,
+            tableName: definition.tableName,
+            model: model,
+            forceDelete: softDeleteField == null,
+          );
+          _events.emit(deletingEvent);
+          if (deletingEvent.isCancelled) {
+            continue;
+          }
         }
       }
 
@@ -2254,6 +2273,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     List<T> models, {
     required bool forceDelete,
   }) {
+    if (_suppressEvents) return;
     for (final model in models) {
       _events.emit(
         ModelDeletedEvent(

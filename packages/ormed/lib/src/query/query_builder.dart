@@ -131,6 +131,7 @@ class Query<T extends OrmEntity> {
     List<QueryUnion>? unions,
     Duration? cacheTtl,
     bool disableCache = false,
+    bool suppressEvents = false,
   }) : _filters = filters ?? <FilterClause>[],
        _orders = orders ?? <OrderClause>[],
        _relations = relations ?? <RelationLoad>[],
@@ -171,7 +172,8 @@ class Query<T extends OrmEntity> {
        ),
        _unions = unions ?? const <QueryUnion>[],
        _cacheTtl = cacheTtl,
-       _disableCache = disableCache {
+       _disableCache = disableCache,
+       _suppressEvents = suppressEvents {
     OrmConfig.ensureInitialized();
   }
 
@@ -212,6 +214,7 @@ class Query<T extends OrmEntity> {
   final List<QueryUnion> _unions;
   final Duration? _cacheTtl;
   final bool _disableCache;
+  final bool _suppressEvents;
 
   static const String _softDeleteScope =
       ScopeRegistry.softDeleteScopeIdentifier;
@@ -378,6 +381,7 @@ class Query<T extends OrmEntity> {
       (model as ModelAttributes).syncOriginal();
     }
 
+    if (!_suppressEvents) {
     _events.emit(
       ModelRetrievedEvent(
         modelType: definition.modelType,
@@ -385,6 +389,7 @@ class Query<T extends OrmEntity> {
         model: model,
       ),
     );
+    }
 
     return QueryRow<T>(model: model, row: _projectionRow(row, plan));
   }
@@ -830,6 +835,25 @@ class Query<T extends OrmEntity> {
 
   List<String> get adHocScopes => _adHocScopes;
 
+  /// Whether model events are suppressed for this query.
+  bool get suppressEvents => _suppressEvents;
+
+  /// Returns a query that suppresses all model lifecycle events.
+  ///
+  /// Use this for bulk operations where you don't want to trigger
+  /// creating/created, saving/saved, updating/updated, or deleting/deleted
+  /// events.
+  ///
+  /// Example:
+  /// ```dart
+  /// // Insert without triggering events
+  /// await User.query().withoutEvents().insertInput(user);
+  ///
+  /// // Bulk update without events
+  /// await User.query().where('status', 'inactive').withoutEvents().update({'archived': true});
+  /// ```
+  Query<T> withoutEvents() => _copyWith(suppressEvents: true);
+
   Query<T> _copyWith({
     List<FilterClause>? filters,
     List<OrderClause>? orders,
@@ -866,6 +890,7 @@ class Query<T extends OrmEntity> {
     List<QueryUnion>? unions,
     Duration? cacheTtl,
     bool? disableCache,
+    bool? suppressEvents,
   }) => Query(
     definition: definition,
     context: context,
@@ -906,6 +931,7 @@ class Query<T extends OrmEntity> {
     unions: unions ?? _unions,
     cacheTtl: cacheTtl ?? _cacheTtl,
     disableCache: disableCache ?? _disableCache,
+    suppressEvents: suppressEvents ?? _suppressEvents,
   );
 
   Query<T> _join({
