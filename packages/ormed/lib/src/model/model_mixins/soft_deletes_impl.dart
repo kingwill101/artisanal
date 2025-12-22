@@ -26,17 +26,14 @@ mixin SoftDeletesImpl on ModelAttributes, ModelConnection {
   }
 
   set deletedAt(Object? value) {
-    setAttribute(
-      _column,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toDateTime(),
-        DateTime d => d,
-        _ => throw ArgumentError(
-          'deletedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_column, switch (value) {
+      null => null,
+      CarbonInterface c => c.toDateTime(),
+      DateTime d => d,
+      _ => throw ArgumentError(
+        'deletedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Whether the model currently has a deletion timestamp.

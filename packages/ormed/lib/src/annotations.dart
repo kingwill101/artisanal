@@ -293,16 +293,13 @@ class OrmRelation {
   });
 
   /// Creates a `hasOne` relation.
-  const OrmRelation.hasOne({
-    Type? target,
-    String? foreignKey,
-    String? localKey,
-  }) : this(
-         kind: RelationKind.hasOne,
-         target: target,
-         foreignKey: foreignKey,
-         localKey: localKey,
-       );
+  const OrmRelation.hasOne({Type? target, String? foreignKey, String? localKey})
+    : this(
+        kind: RelationKind.hasOne,
+        target: target,
+        foreignKey: foreignKey,
+        localKey: localKey,
+      );
 
   /// Creates a `hasMany` relation.
   const OrmRelation.hasMany({

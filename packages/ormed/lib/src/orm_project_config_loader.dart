@@ -64,7 +64,9 @@ OrmProjectConfig loadOrmConfig([Directory? startDirectory]) {
 /// `ormed init`.
 OrmProjectConfig loadOrmProjectConfig(File file) {
   if (!file.existsSync()) {
-    throw StateError('Missing ormed.yaml at ${file.path}. Run `ormed init` first.');
+    throw StateError(
+      'Missing ormed.yaml at ${file.path}. Run `ormed init` first.',
+    );
   }
   final parsed = loadYaml(file.readAsStringSync());
   final env = _loadEnv(file.parent);

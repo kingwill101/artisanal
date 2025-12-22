@@ -108,10 +108,7 @@ void main() {
   });
 
   test('where() accepts Symbol', () async {
-    final authors = await context
-        .query<Author>()
-        .where(#name, 'Alice')
-        .get();
+    final authors = await context.query<Author>().where(#name, 'Alice').get();
 
     expect(authors, hasLength(1));
     expect(authors.first.name, 'Alice');

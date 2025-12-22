@@ -90,10 +90,7 @@ class RelationLoader {
               children.add(
                 QueryRow(
                   model: item as OrmEntity,
-                  row: targetDefinition.toMap(
-                    item,
-                    registry: _codecRegistry,
-                  ),
+                  row: targetDefinition.toMap(item, registry: _codecRegistry),
                 ),
               );
             }
@@ -101,10 +98,7 @@ class RelationLoader {
             children.add(
               QueryRow(
                 model: value as OrmEntity,
-                row: targetDefinition.toMap(
-                  value,
-                  registry: _codecRegistry,
-                ),
+                row: targetDefinition.toMap(value, registry: _codecRegistry),
               ),
             );
           }

@@ -208,17 +208,19 @@ class DataSource {
     Map<String, ValueCodec<dynamic>> codecs = const {},
   }) {
     final driverConfig = config.driver;
-    return DataSource(DataSourceOptions(
-      driver: DriverAdapterRegistry.create(driverConfig),
-      registry: registry,
-      scopeRegistry: scopeRegistry,
-      name: config.activeConnectionName,
-      codecs: codecs,
-      logging: driverConfig.options['logging'] == true,
-      database: driverConfig.options['database']?.toString(),
-      tablePrefix: driverConfig.options['table_prefix']?.toString() ?? '',
-      defaultSchema: driverConfig.options['default_schema']?.toString(),
-    ));
+    return DataSource(
+      DataSourceOptions(
+        driver: DriverAdapterRegistry.create(driverConfig),
+        registry: registry,
+        scopeRegistry: scopeRegistry,
+        name: config.activeConnectionName,
+        codecs: codecs,
+        logging: driverConfig.options['logging'] == true,
+        database: driverConfig.options['database']?.toString(),
+        tablePrefix: driverConfig.options['table_prefix']?.toString() ?? '',
+        defaultSchema: driverConfig.options['default_schema']?.toString(),
+      ),
+    );
   }
 
   /// The configuration options for this data source.

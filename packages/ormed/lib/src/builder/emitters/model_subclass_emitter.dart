@@ -254,7 +254,9 @@ class ModelSubclassEmitter {
           buffer.writeln('      \'${relation.through}\',');
           buffer.writeln('      \'\$targetTable.\$targetKey\',');
           buffer.writeln('      \'=\',');
-          buffer.writeln('      \'${relation.through}.${relation.pivotRelatedKey}\',');
+          buffer.writeln(
+            '      \'${relation.through}.${relation.pivotRelatedKey}\',',
+          );
           buffer.writeln(
             '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );

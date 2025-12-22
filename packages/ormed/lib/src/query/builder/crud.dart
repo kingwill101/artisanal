@@ -737,7 +737,9 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      if (!_suppressEvents && entry.model != null && entry.originalAttributes != null) {
+      if (!_suppressEvents &&
+          entry.model != null &&
+          entry.originalAttributes != null) {
         final updatingEvent = ModelUpdatingEvent(
           modelType: definition.modelType,
           tableName: definition.tableName,
@@ -819,7 +821,9 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
     for (final entry in entries) {
       if (!_emitSavingEvent(entry.model, entry.inputMap)) continue;
 
-      if (!_suppressEvents && entry.model != null && entry.originalAttributes != null) {
+      if (!_suppressEvents &&
+          entry.model != null &&
+          entry.originalAttributes != null) {
         final updatingEvent = ModelUpdatingEvent(
           modelType: definition.modelType,
           tableName: definition.tableName,
