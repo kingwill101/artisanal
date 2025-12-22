@@ -7,8 +7,10 @@ void main() async {
 
   // 2. Define configuration
   final config = OrmProjectConfig(
+    activeConnectionName: 'default',
     connections: {
       'default': ConnectionDefinition(
+        name: 'default',
         driver: DriverConfig(
           type: 'postgres',
           options: {
@@ -18,6 +20,12 @@ void main() async {
             'username': 'postgres',
             'password': 'password',
           },
+        ),
+        migrations: MigrationSection(
+          directory: 'database/migrations',
+          registry: 'database/migrations.dart',
+          ledgerTable: 'orm_migrations',
+          schemaDump: 'database/schema',
         ),
       ),
     },

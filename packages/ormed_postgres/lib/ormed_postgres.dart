@@ -15,35 +15,6 @@ export 'src/postgres_type_mapper.dart';
 export 'src/postgres_value_types.dart';
 export 'package:postgres/postgres.dart';
 
-final _postgresDriverRegistration = (() {
-  DriverAdapterRegistry.register('postgres', (config) {
-    return PostgresDriverAdapter.custom(config: config);
-  });
-
-  DriverRegistry.registerDriver('postgres', ({
-    required Directory root,
-    required ConnectionManager manager,
-    required ModelRegistry registry,
-    required String connectionName,
-    required ConnectionDefinition definition,
-  }) {
-    return registerPostgresOrmConnection(
-      name: connectionName,
-      database: DatabaseConfig(
-        driver: 'postgres',
-        options: Map<String, Object?>.from(definition.driver.options),
-      ),
-      registry: registry,
-      manager: manager,
-      singleton: true,
-    );
-  });
-  return null;
-})();
-
-/// Ensures PostgreSQL driver registers with [DriverRegistry] and [DriverAdapterRegistry].
-void ensurePostgresDriverRegistration() => _postgresDriverRegistration;
-
 /// Registers a PostgreSQL ORM connection with the [manager].
 OrmConnectionHandle registerPostgresOrmConnection({
   required String name,
