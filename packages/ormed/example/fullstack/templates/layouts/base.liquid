@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+    :root {
+      color-scheme: light;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      --ink: #141212;
+      --muted: #5f5955;
+      --accent: #c2482f;
+      --accent-2: #1f6b6a;
+      --paper: #f7efe3;
+      --paper-deep: #efe4d2;
+      --border: #e2d4c1;
+      --shadow: rgba(19, 12, 10, 0.12);
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top right, #f3e7d5 0%, transparent 55%),
+        radial-gradient(circle at 10% 20%, #f0ded0 0%, transparent 45%),
+        var(--paper);
+      color: var(--ink);
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 28px 40px 18px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+    }
+
+    .wordmark {
+      font-family: "Playfair Display", serif;
+      font-size: 1.8rem;
+      letter-spacing: 0.03em;
+    }
+
+    header a {
+      color: var(--ink);
+      text-decoration: none;
+      margin-right: 16px;
+      font-weight: 600;
+      position: relative;
+    }
+
+    header a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 0;
+      height: 2px;
+      background: var(--accent);
+      transition: width 0.2s ease;
+    }
+
+    header a:hover::after {
+      width: 100%;
+    }
+
+    header a:last-child {
+      margin-right: 0;
+    }
+
+    main {
+      max-width: 1040px;
+      margin: 40px auto 64px;
+      padding: 0 24px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .hero-card {
+      background: linear-gradient(135deg, #fff6e9, #ffffff);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 26px;
+      box-shadow: 0 20px 40px var(--shadow);
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 18px 36px var(--shadow);
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .grid {
+      display: grid;
+      gap: 24px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 10px 24px rgba(194, 72, 47, 0.25);
+    }
+
+    .button.alt {
+      background: var(--accent-2);
+      box-shadow: 0 10px 24px rgba(31, 107, 106, 0.22);
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--paper-deep);
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-size: 1rem;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    form .field {
+      margin-bottom: 18px;
+    }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 18px 40px 36px;
+      color: var(--muted);
+    }
+
+    .poster {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 320px;
+      box-shadow: 0 18px 32px var(--shadow);
+    }
+
+    .error-list {
+      background: #ffe3de;
+      border: 1px solid #f2b3a7;
+      color: #8b1f1f;
+      padding: 14px 18px;
+      border-radius: 14px;
+      margin-bottom: 18px;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  {% comment %}// #region layout-header{% endcomment %}
+  <header>
+    <div>
+      <div class="tag">Curated</div>
+      <div class="wordmark">{{ app_name }}</div>
+      <span class="muted">An artisanal, lived-in film shelf.</span>
+    </div>
+    <nav>
+      <a href="/">Catalog</a>
+      <a href="/genres">Genres</a>
+      <a href="/movies/new">Add Movie</a>
+    </nav>
+  </header>
+  {% comment %}// #endregion layout-header{% endcomment %}
+
+  {% comment %}// #region layout-content{% endcomment %}
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  {% comment %}// #endregion layout-content{% endcomment %}
+
+  <footer>
+    <span>&copy; {{ year }} {{ app_name }}</span>
+  </footer>
+</body>
+</html>

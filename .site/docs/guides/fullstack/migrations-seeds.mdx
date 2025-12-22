@@ -1,0 +1,89 @@
+---
+title: Migrations & Seed Data
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Migrations & Seed Data
+
+Once your models are defined, you need to create the corresponding database tables and optionally populate them with initial data.
+
+## Create migrations
+
+Migrations allow you to evolve your database schema over time. You can generate migration files using the `ormed` CLI.
+
+```bash
+dart run ormed_cli:ormed make --name create_genres --create --table genres
+dart run ormed_cli:ormed make --name create_movies --create --table movies
+```
+
+These commands generate Dart files in `lib/src/database/migrations/`. You can then define your columns using a fluent schema builder.
+
+<Tabs groupId="migrations">
+  <TabItem value="genres" label="Genres migration">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/migrations/m_20251221201155_create_genres.dart#migration-genres
+
+```
+
+  </TabItem>
+  <TabItem value="movies" label="Movies migration">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/migrations/m_20251221201201_create_movies.dart#migration-movies
+
+```
+
+  </TabItem>
+</Tabs>
+
+## Seed with DTOs
+
+Seeding is the process of populating your database with initial data, which is useful for development and testing. In Ormed, we use the generated DTOs to ensure our seed data matches our model definitions.
+
+### Individual Seeders
+We create separate seeders for each model to keep things organized.
+
+<Tabs groupId="seeds">
+  <TabItem value="genres" label="Genre seeder">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/seeders/genre_seeder.dart#seed-genres
+
+```
+
+  </TabItem>
+  <TabItem value="movies" label="Movie seeder">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/seeders/movie_seeder.dart#seed-movies
+
+```
+
+  </TabItem>
+</Tabs>
+
+### The Root Seeder
+The `DatabaseSeeder` is the entry point that coordinates all other seeders.
+
+<Tabs groupId="seeds">
+  <TabItem value="root" label="Database seeder">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/seeders/database_seeder.dart#seed-root
+
+```
+
+  </TabItem>
+</Tabs>
+
+## Run migrations + seeds
+
+Finally, apply the migrations to create the tables and run the seeders to populate them.
+
+```bash
+# Apply all pending migrations
+dart run ormed_cli:ormed migrate
+
+# Run the database seeders
+dart run ormed_cli:ormed seed
+```
+

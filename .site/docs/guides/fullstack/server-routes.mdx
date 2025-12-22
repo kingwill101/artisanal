@@ -1,0 +1,140 @@
+---
+title: Server & Web Routes
+sidebar_position: 4
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Server & Web Routes
+
+The server is where everything comes together. We use **Shelf** to handle HTTP requests and **Shelf Router** to map URLs to specific handler functions.
+
+## Bootstrap the Shelf server
+
+The entry point of our application initializes the database, storage, and template engine before starting the server. We also use `Pipeline` to add middleware, such as `logRequests` and our custom `contextual_shelf` middleware for structured logging.
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/server.dart#server-bootstrap
+
+```
+
+## Router map
+
+We divide our routes into two main sections: **Web** (for HTML pages) and **API** (for JSON data). This keeps the application organized and easy to maintain.
+
+<Tabs groupId="router">
+  <TabItem value="web" label="Web routes">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#router-web
+
+```
+
+  </TabItem>
+  <TabItem value="api" label="API routes">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#router-api
+
+```
+
+  </TabItem>
+</Tabs>
+
+## Movie handlers
+
+Handlers are responsible for processing requests, interacting with the database, and returning a response.
+
+### Listing Movies
+The index handler fetches movies from the database, including their associated genres, and renders them using a template.
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-index
+
+```
+
+### Creating a Movie
+Creating a movie is a multi-step process. We've broken it down to show how each part works:
+
+<Tabs groupId="create-movie">
+  <TabItem value="form" label="1. Form Parsing">
+    We use `shelf_multipart` to handle file uploads (the movie poster) alongside regular form fields.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-create-form
+    ```
+  </TabItem>
+  <TabItem value="validation" label="2. Validation">
+    Before saving, we ensure the data is valid. If not, we re-render the form with error messages.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-create-validation
+    ```
+  </TabItem>
+  <TabItem value="storage" label="3. File Storage">
+    The poster is saved to our storage service.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-create-storage
+    ```
+  </TabItem>
+  <TabItem value="db" label="4. Database Insert">
+    We use the `MovieInsertDto` to safely insert the new movie into the database.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-create-db
+    ```
+  </TabItem>
+  <TabItem value="logging" label="5. Logging">
+    Finally, we log the event with context for better observability.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-create-logging
+    ```
+  </TabItem>
+</Tabs>
+
+### Updating a Movie
+Updating follows a similar pattern, using `MovieUpdateDto` to apply changes.
+
+<Tabs groupId="update-movie">
+  <TabItem value="db" label="Database Update">
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-update-db
+    ```
+  </TabItem>
+  <TabItem value="logging" label="Logging">
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-update-logging
+    ```
+  </TabItem>
+</Tabs>
+
+## Genre handlers
+
+Genres are simpler as they are mostly read-only in this example.
+
+<Tabs groupId="genre-handlers">
+  <TabItem value="index" label="Index">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-genres
+
+```
+
+  </TabItem>
+  <TabItem value="show" label="Show">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#handler-genre-show
+
+```
+
+  </TabItem>
+</Tabs>
+
+
+## Structured logging
+
+Structured logging (via **Contextual**) is essential for debugging and observability. Instead of plain text logs, we emit JSON logs with attached context like request IDs and user information.
+
+<Tabs groupId="logging">
+  <TabItem value="core" label="Logger">
+    We configure a logger that outputs structured JSON.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/logging/logging.dart#logging-core
+    ```
+  </TabItem>
+  <TabItem value="http" label="HTTP middleware">
+    This middleware logs every incoming request and its response time.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/logging/logging.dart#logging-http
+    ```
+  </TabItem>
+  <TabItem value="request" label="Request ID">
+    Every request gets a unique ID, which is attached to all logs for that request.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/logging/logging.dart#logging-request-id
+    ```
+  </TabItem>
+</Tabs>

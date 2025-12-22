@@ -1,0 +1,37 @@
+{% layout "layouts/base.liquid" %}
+
+{% block title %}{{ movie.title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% comment %}// #region movies-show-header{% endcomment %}
+  <h1>{{ movie.title }}</h1>
+  <p class="muted">
+    {{ movie.release_year }}
+    {% if movie.genre %} · <span class="tag">{{ movie.genre.name }}</span>{% endif %}
+  </p>
+  {% comment %}// #endregion movies-show-header{% endcomment %}
+
+  {% comment %}// #region movies-show-poster{% endcomment %}
+  {% if movie.poster_url %}
+    <img class="poster" src="{{ movie.poster_url }}" alt="Poster for {{ movie.title }}" />
+  {% endif %}
+  {% comment %}// #endregion movies-show-poster{% endcomment %}
+
+  {% comment %}// #region movies-show-summary{% endcomment %}
+  {% if movie.summary %}
+    <p>{{ movie.summary }}</p>
+  {% else %}
+    <p class="muted">No summary provided yet.</p>
+  {% endif %}
+  {% comment %}// #endregion movies-show-summary{% endcomment %}
+
+  {% comment %}// #region movies-show-actions{% endcomment %}
+  <p>
+    <a class="button" href="/">Back to catalog</a>
+    <a class="button alt" href="/movies/{{ movie.id }}/edit">Edit</a>
+    <a class="button" href="/movies/{{ movie.id }}/delete">Delete</a>
+  </p>
+  {% comment %}// #endregion movies-show-actions{% endcomment %}
+</div>
+{% endblock %}

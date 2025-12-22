@@ -1,0 +1,92 @@
+---
+title: Setup & Scaffolding
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Setup & Scaffolding
+
+In this section, we'll initialize our project and set up the core dependencies. We're building a "server-side" application, so we'll start with the standard Dart server template.
+
+## Create the project
+
+First, create a new Dart project using the `server-shelf` template. This gives us a basic Shelf server structure to build upon.
+
+```bash
+dart create -t server-shelf packages/ormed/example/fullstack
+```
+
+## Add dependencies
+
+We use a carefully selected set of packages to handle different aspects of our full-stack application. Here's a breakdown of what each package does:
+
+### Core Framework
+- **[shelf](https://pub.dev/packages/shelf)**: The standard web server middleware for Dart. It's lightweight and highly extensible.
+- **[shelf_router](https://pub.dev/packages/shelf_router)**: A powerful router for Shelf that makes defining web and API endpoints easy.
+- **[shelf_multipart](https://pub.dev/packages/shelf_multipart)**: Adds multipart/form-data support to Shelf for handling file uploads.
+- **[shelf_static](https://pub.dev/packages/shelf_static)**: Serves static files (like uploaded images) from the file system.
+
+### Database (Ormed)
+- **[ormed](https://pub.dev/packages/ormed)**: Our main ORM. It provides a type-safe way to interact with the database using Dart models.
+- **[ormed_sqlite](https://pub.dev/packages/ormed_sqlite)**: The SQLite driver for Ormed. We'll use SQLite for its simplicity and zero-config setup.
+
+### UI & Templates
+- **[liquify](https://pub.dev/packages/liquify)**: A flexible template engine (Liquid-compatible) for rendering HTML on the server.
+
+### Storage & Files
+- **[file_cloud](https://pub.dev/packages/file_cloud)**: A cloud-agnostic storage abstraction.
+- **[storage_fs](https://pub.dev/packages/storage_fs)**: A local file system implementation for `file_cloud`, perfect for development.
+
+### Observability
+- **[contextual](https://pub.dev/packages/contextual)**: A structured logging library that allows you to attach context to your logs.
+- **[contextual_shelf](https://pub.dev/packages/contextual_shelf)**: Middleware to automatically inject request context (like Request IDs) into your logs.
+
+### Testing
+- **[server_testing](https://pub.dev/packages/server_testing)**: A library for testing HTTP servers, supporting both in-memory and live server testing.
+- **[server_testing_shelf](https://pub.dev/packages/server_testing_shelf)**: Shelf-specific bindings for `server_testing`.
+- **[property_testing](https://pub.dev/packages/property_testing)**: A property-based testing framework for Dart, used for stress testing and finding edge cases.
+- **[assertable_json](https://pub.dev/packages/assertable_json)**: A fluent API for asserting on JSON structures in tests.
+
+### CLI & Utilities
+- **[artisanal](https://pub.dev/packages/artisanal)**: A toolkit for building Laravel-style CLI commands (Artisan).
+
+<Tabs groupId="deps">
+  <TabItem value="pubspec" label="pubspec.yaml">
+
+```yaml file=../../../../packages/ormed/example/fullstack/pubspec.yaml
+
+```
+
+  </TabItem>
+</Tabs>
+
+## Initialize Ormed
+
+Once the dependencies are added, we need to initialize Ormed. This creates the `ormed.yaml` configuration file and sets up the project for code generation.
+
+```bash
+dart run ormed_cli:ormed init --no-interaction
+```
+
+The `ormed.yaml` file tells the ORM where to find your models and where to generate the registry.
+
+<Tabs groupId="config">
+  <TabItem value="ormed" label="ormed.yaml">
+
+```yaml file=../../../../packages/ormed/example/fullstack/ormed.yaml
+
+```
+
+  </TabItem>
+</Tabs>
+
+## DataSource helper
+
+To make database access consistent across our app and tests, we wrap the `DataSource` in a helper class. This class handles the connection lifecycle and ORM bootstrapping.
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/database/database.dart#database-init
+
+```
+

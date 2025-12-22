@@ -1,0 +1,73 @@
+---
+title: Models & Codegen
+sidebar_position: 2
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Models & Codegen
+
+Models are the heart of your application. In Ormed, models are simple Dart classes annotated with `@OrmModel`.
+
+## Define the models
+
+We'll define two models: `Genre` and `Movie`.
+
+### The Genre Model
+The `Genre` model represents a category of movies. It uses an auto-incrementing integer as its primary key.
+
+<Tabs groupId="models">
+  <TabItem value="genre" label="Genre">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/models/genre.dart#model-genre
+
+```
+
+  </TabItem>
+</Tabs>
+
+### The Movie Model
+The `Movie` model represents a film. It has a relationship with `Genre`.
+
+Key annotations used here:
+- **`@OrmModel(table: 'movies')`**: Maps the class to the `movies` table.
+- **`@OrmField(isPrimaryKey: true, autoIncrement: true)`**: Defines the primary key.
+- **`@OrmRelation.belongsTo`**: Defines a "Many-to-One" relationship. We mark the field with `@OrmField(ignore: true)` because the relationship itself isn't a column; the `genre_id` foreign key is.
+
+<Tabs groupId="models">
+  <TabItem value="movie" label="Movie">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/models/movie.dart#model-movie
+
+```
+
+  </TabItem>
+</Tabs>
+
+## Generate ORM code + DTOs
+
+Ormed uses code generation to provide type-safe queries and Data Transfer Objects (DTOs). Run the following command to generate the necessary code:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### What Gets Generated?
+
+When you run `build_runner`, Ormed generates several artifacts:
+
+1. **Type Aliases (`$Movie`, `$Genre`)**: These are type aliases used with Ormed's query builder. When you call `dataSource.query<$Movie>()`, you're telling Ormed which model you want to query.
+
+2. **Insert DTOs (`MovieInsertDto`)**: Used for creating new records. Only includes fields that should be set during creation.
+
+3. **Update DTOs (`MovieUpdateDto`)**: Used for updating existing records. All fields are optional, so you only update what changes.
+
+4. **ORM Registry**: A central registry that maps all your models to their table definitions.
+
+### Why DTOs?
+The generator creates specialized DTOs like `MovieInsertDto` and `MovieUpdateDto`. We use these for database operations instead of the main model classes. This provides several benefits:
+1. **Clarity**: It's clear which fields are required for an insert vs. an update.
+2. **Safety**: You can't accidentally try to update a primary key or a read-only field.
+3. **Validation**: DTOs can have their own validation logic.
+
