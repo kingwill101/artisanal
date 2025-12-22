@@ -124,8 +124,10 @@ void main(List<String> args) {
       expect(registryText, contains("upPath: 'migrations/"));
     });
 
-    test('defaults to SQL when ormed.yaml sets migrations.format: sql', () async {
-      ormConfig.writeAsStringSync('''
+    test(
+      'defaults to SQL when ormed.yaml sets migrations.format: sql',
+      () async {
+        ormConfig.writeAsStringSync('''
 driver:
   type: sqlite
   options:
@@ -138,15 +140,16 @@ migrations:
   format: sql
 ''');
 
-      await runMake(['--name', 'create_posts_table']);
+        await runMake(['--name', 'create_posts_table']);
 
-      final migrationsDir = Directory(
-        p.join(scratchDir.path, 'lib', 'src', 'database', 'migrations'),
-      );
-      final created = migrationsDir.listSync().whereType<Directory>().any(
-        (d) => p.basename(d.path).endsWith('_create_posts_table'),
-      );
-      expect(created, isTrue);
-    });
+        final migrationsDir = Directory(
+          p.join(scratchDir.path, 'lib', 'src', 'database', 'migrations'),
+        );
+        final created = migrationsDir.listSync().whereType<Directory>().any(
+          (d) => p.basename(d.path).endsWith('_create_posts_table'),
+        );
+        expect(created, isTrue);
+      },
+    );
   });
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Improved**: `ormed init` now scaffolds a `datasource.dart` file that automatically handles driver registration and provides a type-safe `DataSource` instance.
+- **Improved**: `ormed init` now automatically adds the appropriate driver dependency (e.g., `ormed_sqlite`) to `pubspec.yaml` based on the selected driver.
+- **Improved**: Updated configuration loading to use the new core `loadOrmProjectConfig` and `findOrmConfigFile` utilities.
+- **Changed**: Default SQLite database path is now `database/{project_name}.sqlite` for better project organization.
+- **Added**: Package example and improved help text for all commands.
+
 ## 0.1.0-dev+3
 
 - Synchronized release.

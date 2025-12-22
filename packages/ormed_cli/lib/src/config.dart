@@ -12,6 +12,7 @@ export 'package:ormed/ormed.dart'
         DriverConfig,
         MigrationSection,
         SeedSection,
+        DriverAdapterRegistry,
         findOrmConfigFile,
         loadOrmConfig,
         loadOrmProjectConfig;

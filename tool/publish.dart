@@ -46,11 +46,11 @@ Future<void> publishPackage(String pkgPath, bool isDryRun) async {
 
   // 1. Dry run first (always)
   print('Running dry-run check...');
-  final dryRunResult = await Process.run(
-    'dart',
-    ['pub', 'publish', '--dry-run'],
-    workingDirectory: fullPath,
-  );
+  final dryRunResult = await Process.run('dart', [
+    'pub',
+    'publish',
+    '--dry-run',
+  ], workingDirectory: fullPath);
 
   if (dryRunResult.exitCode != 0) {
     print('Dry-run failed for $name:');
@@ -62,7 +62,7 @@ Future<void> publishPackage(String pkgPath, bool isDryRun) async {
 
   if (!isDryRun) {
     print('Publishing $name to pub.dev...');
-    // We use inheritStdio to allow the user to see progress and handle any 
+    // We use inheritStdio to allow the user to see progress and handle any
     // unexpected prompts, though --force should skip them.
     final process = await Process.start(
       'dart',

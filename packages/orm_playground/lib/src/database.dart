@@ -8,10 +8,6 @@ import 'package:orm_playground/orm_registry.g.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
 import 'package:path/path.dart' as p;
 
-// Ensure SQLite driver is registered (referenced to prevent tree-shaking)
-// ignore: unused_element
-final _ensureRegistration = registerSqliteOrmConnection;
-
 /// Helper that manages playground database connections using the DataSource API.
 ///
 /// ## Single-tenant usage:
@@ -37,6 +33,7 @@ final _ensureRegistration = registerSqliteOrmConnection;
 class PlaygroundDatabase {
   /// Creates a helper that manages playground database connections.
   factory PlaygroundDatabase({Directory? workspaceRoot}) {
+    ensureSqliteDriverRegistration();
     final root = workspaceRoot ?? Directory.current;
     var configFile = File(p.join(root.path, 'ormed.yaml'));
     if (!configFile.existsSync()) {

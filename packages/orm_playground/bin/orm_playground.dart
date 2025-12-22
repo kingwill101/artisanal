@@ -111,7 +111,7 @@ Future<void> _animatedSeed(
     'Creating users',
     run: () async {
       if (!hasUsers || seedOverrides.contains('users')) {
-        await playground_seeders.seedPlayground(
+        await playground_seeders.runProjectSeeds(
           ds.connection,
           names: ['users'],
         );
@@ -125,7 +125,10 @@ Future<void> _animatedSeed(
     'Creating tags',
     run: () async {
       if (!hasTags || seedOverrides.contains('tags')) {
-        await playground_seeders.seedPlayground(ds.connection, names: ['tags']);
+        await playground_seeders.runProjectSeeds(
+          ds.connection,
+          names: ['tags'],
+        );
         if (animate) await Future.delayed(Duration(milliseconds: 100));
       }
       return TaskResult.success;
@@ -136,7 +139,7 @@ Future<void> _animatedSeed(
     'Creating posts',
     run: () async {
       if (!hasPosts || seedOverrides.contains('posts')) {
-        await playground_seeders.seedPlayground(
+        await playground_seeders.runProjectSeeds(
           ds.connection,
           names: ['posts'],
         );
@@ -149,7 +152,7 @@ Future<void> _animatedSeed(
   await io.task(
     'Creating comments',
     run: () async {
-      await playground_seeders.seedPlayground(
+      await playground_seeders.runProjectSeeds(
         ds.connection,
         names: ['comments'],
       );

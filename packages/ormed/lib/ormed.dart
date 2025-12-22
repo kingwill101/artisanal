@@ -165,10 +165,10 @@
 /// ```dart
 /// @OrmModel(table: 'posts')
 /// class Post extends Model<Post> {
-///   @OrmRelation.belongsTo(User, foreignKey: 'author_id')
+///   @OrmRelation.belongsTo(target: User, foreignKey: 'author_id')
 ///   User? author;
 ///
-///   @OrmRelation.hasMany(Comment)
+///   @OrmRelation.hasMany(target: Comment)
 ///   List<Comment>? comments;
 /// }
 ///

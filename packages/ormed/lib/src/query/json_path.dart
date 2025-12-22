@@ -2,10 +2,16 @@ final RegExp _jsonSimpleProperty = RegExp(r'^[A-Za-z0-9_]+$');
 
 /// Normalized reference to a JSON selector (column + path).
 class JsonSelector {
+  /// Creates a new [JsonSelector].
   const JsonSelector(this.column, this.path, this.extractsText);
 
+  /// The column name containing the JSON data.
   final String column;
+
+  /// The JSON path within the column.
   final String path;
+
+  /// Whether the value should be extracted as text (e.g. using `->>` operator).
   final bool extractsText;
 }
 

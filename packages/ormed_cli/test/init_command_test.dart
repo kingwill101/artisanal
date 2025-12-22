@@ -117,7 +117,12 @@ environment:
       final seederA = File(p.join(seedersDir.path, 'demo_seeder.dart'))
         ..writeAsStringSync('class DemoSeeder {}');
 
-      await runInit(['init', '--no-interaction', '--populate-existing', '--skip-build']);
+      await runInit([
+        'init',
+        '--no-interaction',
+        '--populate-existing',
+        '--skip-build',
+      ]);
 
       final migrationsReg = File(
         p.join(scratchDir.path, 'lib/src/database/migrations.dart'),

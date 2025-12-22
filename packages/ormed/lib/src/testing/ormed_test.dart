@@ -221,7 +221,9 @@ OrmedTestConfig setUpOrmed({
     // Remove from config stack
     _configStack.remove(config);
     if (_lastRegisteredConfig == config) {
-      _lastRegisteredConfig = _configStack.isNotEmpty ? _configStack.last : null;
+      _lastRegisteredConfig = _configStack.isNotEmpty
+          ? _configStack.last
+          : null;
     }
 
     await manager!.cleanup();
@@ -453,58 +455,55 @@ void ormedGroup(
       );
       context.dataSource = groupDataSource;
 
-      runZoned(
-        () {
-          if (dataSource != null) {
-            setUpAll(() async {
-              await manager.initialize();
-            });
-          }
-
-          // Provision the unique database for the group
+      runZoned(() {
+        if (dataSource != null) {
           setUpAll(() async {
-            await manager.provisionDatabase(groupDataSource);
+            await manager.initialize();
+          });
+        }
+
+        // Provision the unique database for the group
+        setUpAll(() async {
+          await manager.provisionDatabase(groupDataSource);
+        });
+
+        tearDownAll(() async {
+          await manager.dropDatabase(groupDataSource);
+        });
+
+        if (strategy == DatabaseIsolationStrategy.migrateWithTransactions) {
+          setUp(() async {
+            await groupDataSource.beginTransaction();
+            groupDataSource.setAsDefault();
           });
 
-          tearDownAll(() async {
-            await manager.dropDatabase(groupDataSource);
+          tearDown(() async {
+            await groupDataSource.rollback();
           });
+        } else {
+          setUp(() async {
+            final ds = groupDataSource;
+            final schemaManager = manager.getSchemaManager(ds);
 
-          if (strategy == DatabaseIsolationStrategy.migrateWithTransactions) {
-            setUp(() async {
-              await groupDataSource.beginTransaction();
-              groupDataSource.setAsDefault();
-            });
-
-            tearDown(() async {
-              await groupDataSource.rollback();
-            });
-          } else {
-            setUp(() async {
-              final ds = groupDataSource;
-              final schemaManager = manager.getSchemaManager(ds);
-
-              if (schemaManager != null &&
-                  strategy == DatabaseIsolationStrategy.truncate) {
-                // Fast path: truncate tables
-                await schemaManager.truncateAll();
-              } else if (strategy == DatabaseIsolationStrategy.recreate) {
-                // Slow path: full reset
-                if (schemaManager != null) {
-                  await schemaManager.reset();
-                } else {
-                  await manager.migrate(ds);
-                }
+            if (schemaManager != null &&
+                strategy == DatabaseIsolationStrategy.truncate) {
+              // Fast path: truncate tables
+              await schemaManager.truncateAll();
+            } else if (strategy == DatabaseIsolationStrategy.recreate) {
+              // Slow path: full reset
+              if (schemaManager != null) {
+                await schemaManager.reset();
+              } else {
+                await manager.migrate(ds);
               }
-              ds.setAsDefault();
-            });
-          }
+            }
+            ds.setAsDefault();
+          });
+        }
 
-          // Execute body to define tests
-          body(groupDataSource);
-        },
-        zoneValues: {_groupContextKey: context},
-      );
+        // Execute body to define tests
+        body(groupDataSource);
+      }, zoneValues: {_groupContextKey: context});
     },
     testOn: testOn,
     timeout: timeout,

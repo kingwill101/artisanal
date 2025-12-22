@@ -1,3 +1,9 @@
+/// Configuration for the ORM code generator.
+///
+/// This library provides the [ormModelBuilder] which is used by `build_runner`
+/// to generate `.orm.dart` files for classes annotated with `@OrmModel`.
+library;
+
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
 

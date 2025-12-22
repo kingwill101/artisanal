@@ -17,6 +17,7 @@ export 'src/mysql_schema_dialect.dart';
 export 'src/mysql_type_mapper.dart';
 export 'src/mysql_value_types.dart';
 
+/// Registers a MySQL ORM connection with the [manager].
 OrmConnectionHandle registerMySqlOrmConnection({
   required String name,
   required DatabaseConfig database,
@@ -53,6 +54,18 @@ OrmConnectionHandle registerMySqlOrmConnection({
 }
 
 final _mysqlDriverRegistration = (() {
+  DriverAdapter createAdapter(DriverConfig config) {
+    return MySqlDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'mysql',
+        options: Map<String, Object?>.from(config.options),
+      ),
+    );
+  }
+
+  DriverAdapterRegistry.register('mysql', createAdapter);
+  DriverAdapterRegistry.register('mariadb', createAdapter);
+
   FutureOr<OrmConnectionHandle> register({
     required Directory root,
     required ConnectionManager manager,

@@ -11,7 +11,7 @@ class UserWithPosts extends Model<UserWithPosts> {
   @OrmField(isPrimaryKey: true)
   final int id;
 
-  @OrmRelation.hasMany(UserPost, foreignKey: 'author_id')
+  @OrmRelation.hasMany(target: UserPost, foreignKey: 'author_id')
   final List<UserPost>? posts;
 }
 

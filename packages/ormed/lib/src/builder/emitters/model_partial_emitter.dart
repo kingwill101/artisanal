@@ -89,7 +89,8 @@ class ModelPartialEmitter {
     } else {
       buffer.writeln();
       buffer.writeln(
-          '  static const _${className}PartialCopyWithSentinel _copyWithSentinel = _${className}PartialCopyWithSentinel();');
+        '  static const _${className}PartialCopyWithSentinel _copyWithSentinel = _${className}PartialCopyWithSentinel();',
+      );
       buffer.write('  ${className}Partial copyWith({');
       for (final field in visible) {
         buffer.write('Object? ${field.name} = _copyWithSentinel, ');
@@ -98,7 +99,8 @@ class ModelPartialEmitter {
       buffer.writeln('    return ${className}Partial(');
       for (final field in visible) {
         buffer.writeln(
-            '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,');
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+        );
       }
       buffer.writeln('    );');
       buffer.writeln('  }');
@@ -108,7 +110,8 @@ class ModelPartialEmitter {
 
     if (visible.isNotEmpty) {
       buffer.writeln(
-          'class _${className}PartialCopyWithSentinel { const _${className}PartialCopyWithSentinel(); }');
+        'class _${className}PartialCopyWithSentinel { const _${className}PartialCopyWithSentinel(); }',
+      );
     }
   }
 

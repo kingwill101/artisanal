@@ -11,7 +11,7 @@ class UserWithProfile extends Model<UserWithProfile> {
   @OrmField(isPrimaryKey: true)
   final int id;
 
-  @OrmRelation.hasOne(Profile, foreignKey: 'user_id')
+  @OrmRelation.hasOne(target: Profile, foreignKey: 'user_id')
   final Profile? profile;
 }
 

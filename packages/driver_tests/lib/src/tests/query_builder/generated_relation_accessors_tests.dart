@@ -97,8 +97,10 @@ void runGeneratedRelationAccessorsTests() {
 
     group('belongsTo relation', () {
       test('generated accessor returns typed query', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         // The generated extension method: postAuthorQuery()
@@ -126,8 +128,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('lazy loading belongsTo with load()', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         expect(post.relationLoaded('author'), isFalse);
@@ -139,32 +143,39 @@ void runGeneratedRelationAccessorsTests() {
         expect(post.author!.name, equals('Alice'));
       });
 
-      test('belongsTo returns null for nullable relation when no parent', () async {
-        // Create a post with non-existent author
-        await dataSource.repo<Post>().insertMany([
-          Post(
-            id: 99,
-            authorId: 999, // non-existent
-            title: 'Orphan post',
-            publishedAt: DateTime(2024),
-          ),
-        ]);
+      test(
+        'belongsTo returns null for nullable relation when no parent',
+        () async {
+          // Create a post with non-existent author
+          await dataSource.repo<Post>().insertMany([
+            Post(
+              id: 99,
+              authorId: 999, // non-existent
+              title: 'Orphan post',
+              publishedAt: DateTime(2024),
+            ),
+          ]);
 
-        final rows =
-            await dataSource.context.query<Post>().where('id', 99).get();
-        final post = rows.first;
+          final rows = await dataSource.context
+              .query<Post>()
+              .where('id', 99)
+              .get();
+          final post = rows.first;
 
-        await post.load('author');
+          await post.load('author');
 
-        expect(post.relationLoaded('author'), isTrue);
-        expect(post.author, isNull);
-      });
+          expect(post.relationLoaded('author'), isTrue);
+          expect(post.author, isNull);
+        },
+      );
     });
 
     group('hasMany relation', () {
       test('generated accessor returns typed query', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         // The generated extension method: authorPostsQuery()
@@ -187,12 +198,17 @@ void runGeneratedRelationAccessorsTests() {
 
         expect(author.relationLoaded('posts'), isTrue);
         expect(author.posts, hasLength(2));
-        expect(author.posts.map((p) => p.title).toList(), contains('Post 1 by Alice'));
+        expect(
+          author.posts.map((p) => p.title).toList(),
+          contains('Post 1 by Alice'),
+        );
       });
 
       test('lazy loading hasMany with load()', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         expect(author.relationLoaded('posts'), isFalse);
@@ -205,8 +221,10 @@ void runGeneratedRelationAccessorsTests() {
 
       test('hasMany returns empty list when no related records', () async {
         // Author 3 (Charlie) has no posts
-        final rows =
-            await dataSource.context.query<Author>().where('id', 3).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 3)
+            .get();
         final author = rows.first;
 
         await author.load('posts');
@@ -217,8 +235,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('hasMany generated accessor never returns null', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 3).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 3)
+            .get();
         final author = rows.first;
 
         // Before loading, getter should return empty list (not null)
@@ -248,8 +268,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('lazy loading hasOne with load()', () async {
-        final rows =
-            await dataSource.context.query<User>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<User>()
+            .where('id', 1)
+            .get();
         final user = rows.first;
 
         expect(user.relationLoaded('userProfile'), isFalse);
@@ -262,8 +284,10 @@ void runGeneratedRelationAccessorsTests() {
 
       test('hasOne returns null when no related record', () async {
         // User 2 (Bob) has no profile
-        final rows =
-            await dataSource.context.query<User>().where('id', 2).get();
+        final rows = await dataSource.context
+            .query<User>()
+            .where('id', 2)
+            .get();
         final user = rows.first;
 
         await user.load('userProfile');
@@ -275,8 +299,10 @@ void runGeneratedRelationAccessorsTests() {
 
     group('manyToMany relation', () {
       test('generated accessor returns typed query', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         final tagsQuery = post.tagsQuery();
@@ -302,8 +328,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('lazy loading manyToMany with load()', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         expect(post.relationLoaded('tags'), isFalse);
@@ -325,8 +353,10 @@ void runGeneratedRelationAccessorsTests() {
           ),
         ]);
 
-        final rows =
-            await dataSource.context.query<Post>().where('id', 100).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 100)
+            .get();
         final post = rows.first;
 
         await post.load('tags');
@@ -338,60 +368,56 @@ void runGeneratedRelationAccessorsTests() {
     });
 
     group('morphMany relation', () {
-      test(
-        'eager loading morphMany with withRelation',
-        () async {
-          // Seed photos for post 1
-          await dataSource.repo<Photo>().insertMany([
-            const Photo(
-              id: 1,
-              imageableId: 1,
-              imageableType: 'Post',
-              path: 'photo1.jpg',
-            ),
-            const Photo(
-              id: 2,
-              imageableId: 1,
-              imageableType: 'Post',
-              path: 'photo2.jpg',
-            ),
-          ]);
+      test('eager loading morphMany with withRelation', () async {
+        // Seed photos for post 1
+        await dataSource.repo<Photo>().insertMany([
+          const Photo(
+            id: 1,
+            imageableId: 1,
+            imageableType: 'Post',
+            path: 'photo1.jpg',
+          ),
+          const Photo(
+            id: 2,
+            imageableId: 1,
+            imageableType: 'Post',
+            path: 'photo2.jpg',
+          ),
+        ]);
 
-          final rows = await dataSource.context
-              .query<Post>()
-              .withRelation('photos')
-              .where('id', 1)
-              .get();
-          final post = rows.first;
+        final rows = await dataSource.context
+            .query<Post>()
+            .withRelation('photos')
+            .where('id', 1)
+            .get();
+        final post = rows.first;
 
-          expect(post.relationLoaded('photos'), isTrue);
-          expect(post.photos, hasLength(2));
-        },
-      );
+        expect(post.relationLoaded('photos'), isTrue);
+        expect(post.photos, hasLength(2));
+      });
 
-      test(
-        'lazy loading morphMany with load()',
-        () async {
-          // Seed photos for post 2
-          await dataSource.repo<Photo>().insertMany([
-            const Photo(
-              id: 10,
-              imageableId: 2,
-              imageableType: 'Post',
-              path: 'photo10.jpg',
-            ),
-          ]);
+      test('lazy loading morphMany with load()', () async {
+        // Seed photos for post 2
+        await dataSource.repo<Photo>().insertMany([
+          const Photo(
+            id: 10,
+            imageableId: 2,
+            imageableType: 'Post',
+            path: 'photo10.jpg',
+          ),
+        ]);
 
-          final rows =
-              await dataSource.context.query<Post>().where('id', 2).get();
-          final post = rows.first;
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 2)
+            .get();
+        final post = rows.first;
 
-          await post.load('photos');
+        await post.load('photos');
 
-          expect(post.relationLoaded('photos'), isTrue);
-          expect(post.photos, hasLength(1));
-        },
-      );
+        expect(post.relationLoaded('photos'), isTrue);
+        expect(post.photos, hasLength(1));
+      });
     });
 
     group('nullable vs non-nullable list relations', () {
@@ -458,8 +484,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('lazy load nested relations with dot notation', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
         await post.load('author.posts');
         expect(post.relationLoaded('author'), isTrue);
@@ -483,8 +511,10 @@ void runGeneratedRelationAccessorsTests() {
 
     group('multiple relations', () {
       test('load multiple relations with loadMany', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         await post.loadMany({'author': null, 'tags': null});
@@ -531,7 +561,10 @@ void runGeneratedRelationAccessorsTests() {
       test('withRelation with constraint callback', () async {
         final rows = await dataSource.context
             .query<Author>()
-            .withRelation('posts', (q) => q.where('views', 100, PredicateOperator.greaterThan))
+            .withRelation(
+              'posts',
+              (q) => q.where('views', 100, PredicateOperator.greaterThan),
+            )
             .where('id', 1)
             .get();
         final author = rows.first;
@@ -543,8 +576,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('lazy load with constraint', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         await author.load(
@@ -558,10 +593,10 @@ void runGeneratedRelationAccessorsTests() {
 
     group('batch loading relations', () {
       test('Model.loadRelations loads relation on multiple models', () async {
-        final authors = await dataSource.context
-            .query<Author>()
-            .whereIn('id', [1, 2])
-            .get();
+        final authors = await dataSource.context.query<Author>().whereIn('id', [
+          1,
+          2,
+        ]).get();
 
         expect(authors, hasLength(2));
 
@@ -585,8 +620,10 @@ void runGeneratedRelationAccessorsTests() {
           ),
         ]);
 
-        final rows =
-            await dataSource.context.query<Post>().where('id', 50).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 50)
+            .get();
         final post = rows.first;
 
         // Associate with existing author
@@ -601,8 +638,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('dissociate() clears foreign key for belongsTo', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         // First load the relation
@@ -629,8 +668,10 @@ void runGeneratedRelationAccessorsTests() {
           ),
         ]);
 
-        final rows =
-            await dataSource.context.query<Post>().where('id', 51).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 51)
+            .get();
         final post = rows.first;
 
         // Attach tags
@@ -647,8 +688,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('detach() removes pivot records for manyToMany', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         // Post 1 has tags 1 and 2 attached
@@ -679,8 +722,10 @@ void runGeneratedRelationAccessorsTests() {
           const PostTag(postId: 52, tagId: 2),
         ]);
 
-        final rows =
-            await dataSource.context.query<Post>().where('id', 52).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 52)
+            .get();
         final post = rows.first;
 
         // Sync to only tag 3
@@ -695,18 +740,23 @@ void runGeneratedRelationAccessorsTests() {
         expect(pivotRecords.first.tagId, equals(3));
       });
 
-      test('setRelation() caches relation without database operation', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
-        final post = rows.first;
+      test(
+        'setRelation() caches relation without database operation',
+        () async {
+          final rows = await dataSource.context
+              .query<Post>()
+              .where('id', 1)
+              .get();
+          final post = rows.first;
 
-        // Manually set relation
-        final mockAuthor = const Author(id: 99, name: 'Mock Author');
-        post.setRelation('author', mockAuthor);
+          // Manually set relation
+          final mockAuthor = const Author(id: 99, name: 'Mock Author');
+          post.setRelation('author', mockAuthor);
 
-        expect(post.relationLoaded('author'), isTrue);
-        expect(post.author?.name, equals('Mock Author'));
-      });
+          expect(post.relationLoaded('author'), isTrue);
+          expect(post.author?.name, equals('Mock Author'));
+        },
+      );
 
       test('unsetRelation() removes cached relation', () async {
         final rows = await dataSource.context
@@ -745,8 +795,10 @@ void runGeneratedRelationAccessorsTests() {
 
     group('generated relation query for filtering', () {
       test('postsQuery() returns filtered query by foreign key', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         // The generated query should filter by author_id
@@ -759,8 +811,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('tagsQuery() returns filtered query through pivot', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
         final tags = await post.tagsQuery().get();
         expect(tags, hasLength(2));
@@ -771,8 +825,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('authorQuery() returns query for belongsTo parent', () async {
-        final rows =
-            await dataSource.context.query<Post>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Post>()
+            .where('id', 1)
+            .get();
         final post = rows.first;
 
         final author = await post.authorQuery().first();
@@ -783,12 +839,15 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('can chain additional constraints on relation query', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         // Chain where clause to filter posts
-        final highViewPosts = await author.postsQuery()
+        final highViewPosts = await author
+            .postsQuery()
             .where('views', 100, PredicateOperator.greaterThan)
             .get();
 
@@ -797,11 +856,14 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('can order results from relation query', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
-        final posts = await author.postsQuery()
+        final posts = await author
+            .postsQuery()
             .orderBy('views', descending: true)
             .get();
 
@@ -811,8 +873,10 @@ void runGeneratedRelationAccessorsTests() {
       });
 
       test('can count results from relation query', () async {
-        final rows =
-            await dataSource.context.query<Author>().where('id', 1).get();
+        final rows = await dataSource.context
+            .query<Author>()
+            .where('id', 1)
+            .get();
         final author = rows.first;
 
         final count = await author.postsQuery().count();

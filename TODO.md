@@ -26,7 +26,7 @@ Primary keys - By default, Active Record will use an integer column named id as 
 ```
 
 
-##generator bug?
+## generator bug? [DONE]
 
 
 import "package:ormed/ormed.dart";
@@ -79,7 +79,7 @@ positional arguments, or specifying the name for named arguments. • extra_posi
 
 
 
-## generated seeder.dart should auto import the generated registry file
+## generated seeder.dart should auto import the generated registry file [DONE]
 
 
 import 'package:{{package name}}/orm_registry.g.dart';

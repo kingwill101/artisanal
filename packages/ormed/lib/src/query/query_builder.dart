@@ -1562,13 +1562,6 @@ class Query<T extends OrmEntity> {
     return path;
   }
 
-  RelationSegment _buildRelationSegment(
-    ModelDefinition<OrmEntity> parent,
-    RelationDefinition relation,
-  ) {
-    return _resolver.segmentFor(parent, relation);
-  }
-
   QueryPredicate? _buildRelationPredicateConstraint(
     RelationPath path,
     PredicateCallback<OrmEntity>? constraint,

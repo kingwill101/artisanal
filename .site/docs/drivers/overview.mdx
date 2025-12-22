@@ -12,10 +12,26 @@ Drivers are distributed as separate packages (e.g. `ormed_sqlite`). The core `or
 - **PostgreSQL** — full‑featured SQL with rich JSON, window functions, and robust migrations at scale.
 - **MySQL / MariaDB** — common production backend with `ON DUPLICATE KEY UPDATE` support and JSON columns.
 
-You can use a driver in two ways:
+You can use a driver in three ways:
 
 1) **CLI/config driven** via `ormed.yaml` (`driver.type` + `driver.options`)  
-2) **Programmatically** via `DataSourceOptions(driver: ...)`
+2) **Hybrid** via `DataSource.fromConfig(config)` (resolves driver from config automatically)
+3) **Programmatically** via `DataSourceOptions(driver: ...)`
+
+### Driver Registration
+
+To use the config-driven or hybrid approach, you must ensure the driver is registered with the `DriverAdapterRegistry`. This is typically done by calling the registration helper provided by the driver package:
+
+```dart
+import 'package:ormed_sqlite/ormed_sqlite.dart';
+
+void main() {
+  ensureSqliteDriverRegistration();
+  // ...
+}
+```
+
+The `ormed init` command automatically scaffolds this registration in your `lib/src/database/datasource.dart` file.
 
 Pick the driver that matches your runtime environment; you can keep the rest of your Ormed code identical and switch by changing the active connection in `ormed.yaml` or the adapter you pass to `DataSourceOptions`.
 

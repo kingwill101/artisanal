@@ -9,11 +9,8 @@ part 'comment.orm.dart';
 
 @OrmModel(table: 'comments')
 class Comment extends Model<Comment> with ModelFactoryCapable, SoftDeletes {
-  const Comment({
-    required this.id,
-    required this.body,
-    this.postId,
-  }) : post = null;
+  const Comment({required this.id, required this.body, this.postId})
+    : post = null;
 
   @OrmField(isPrimaryKey: true, autoIncrement: true)
   final int id;

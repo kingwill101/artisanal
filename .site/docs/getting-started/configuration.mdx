@@ -155,8 +155,30 @@ dart run ormed migrate:apply --connection production
 
 You can also configure Ormed programmatically. The recommended approach is to use the generated registry.
 
-<Tabs groupId="programmatic-config" defaultValue="generated">
-  <TabItem value="generated" label="Generated (recommended)">
+<Tabs groupId="programmatic-config" defaultValue="config-driven">
+  <TabItem value="config-driven" label="Config-Driven (recommended)">
+
+This approach uses `ormed.yaml` for database settings but allows you to bootstrap the ORM in code.
+
+```dart
+import 'package:ormed/ormed.dart';
+import 'orm_registry.g.dart';
+
+void main() async {
+  final config = loadOrmConfig();
+  final ds = DataSource.fromConfig(
+    config,
+    registry: bootstrapOrm(),
+  );
+  
+  await ds.init();
+}
+```
+
+  </TabItem>
+  <TabItem value="generated" label="Generated Registry">
+
+If you want to provide the driver manually but use the generated model registry:
 
 ```dart file=../../examples/lib/setup.dart#programmatic-config
 ```

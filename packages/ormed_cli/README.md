@@ -44,15 +44,18 @@ For a complete walkthrough of setting up a project with the CLI, see the [Gettin
 ### Project Initialization
 
 ```bash
-# Scaffold ormed.yaml, migration registry, and directories
+# Scaffold ormed.yaml, migration registry, and DataSource entrypoint
 ormed init
 
 # Overwrite existing files
 ormed init --force
-
-# Scan and register existing migrations/seeders
-ormed init --populate-existing
 ```
+
+The `init` command creates:
+- `ormed.yaml`: Project configuration (connections, drivers, paths)
+- `lib/src/database/datasource.dart`: The recommended entrypoint for your application
+- `lib/src/database/migrations.dart`: Migration registry
+- `lib/src/database/seeders.dart`: Seeder registry
 
 ### Migration Management
 

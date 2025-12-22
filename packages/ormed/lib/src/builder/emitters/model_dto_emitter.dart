@@ -72,7 +72,8 @@ class ModelDtoEmitter {
       // Sentinel for distinguishing omitted params vs explicit nulls
       buffer.writeln();
       buffer.writeln(
-          '  static const _${className}InsertDtoCopyWithSentinel _copyWithSentinel = _${className}InsertDtoCopyWithSentinel();');
+        '  static const _${className}InsertDtoCopyWithSentinel _copyWithSentinel = _${className}InsertDtoCopyWithSentinel();',
+      );
       buffer.write('  ${className}InsertDto copyWith({');
       for (final field in insertable) {
         buffer.write('Object? ${field.name} = _copyWithSentinel, ');
@@ -81,7 +82,8 @@ class ModelDtoEmitter {
       buffer.writeln('    return ${className}InsertDto(');
       for (final field in insertable) {
         buffer.writeln(
-            '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,');
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+        );
       }
       buffer.writeln('    );');
       buffer.writeln('  }');
@@ -91,7 +93,8 @@ class ModelDtoEmitter {
 
     if (insertable.isNotEmpty) {
       buffer.writeln(
-          'class _${className}InsertDtoCopyWithSentinel { const _${className}InsertDtoCopyWithSentinel(); }');
+        'class _${className}InsertDtoCopyWithSentinel { const _${className}InsertDtoCopyWithSentinel(); }',
+      );
     }
   }
 
@@ -143,7 +146,8 @@ class ModelDtoEmitter {
     } else {
       buffer.writeln();
       buffer.writeln(
-          '  static const _${className}UpdateDtoCopyWithSentinel _copyWithSentinel = _${className}UpdateDtoCopyWithSentinel();');
+        '  static const _${className}UpdateDtoCopyWithSentinel _copyWithSentinel = _${className}UpdateDtoCopyWithSentinel();',
+      );
       buffer.write('  ${className}UpdateDto copyWith({');
       for (final field in updatable) {
         buffer.write('Object? ${field.name} = _copyWithSentinel, ');
@@ -152,7 +156,8 @@ class ModelDtoEmitter {
       buffer.writeln('    return ${className}UpdateDto(');
       for (final field in updatable) {
         buffer.writeln(
-            '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,');
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+        );
       }
       buffer.writeln('    );');
       buffer.writeln('  }');
@@ -162,7 +167,8 @@ class ModelDtoEmitter {
 
     if (updatable.isNotEmpty) {
       buffer.writeln(
-          'class _${className}UpdateDtoCopyWithSentinel { const _${className}UpdateDtoCopyWithSentinel(); }');
+        'class _${className}UpdateDtoCopyWithSentinel { const _${className}UpdateDtoCopyWithSentinel(); }',
+      );
     }
   }
 }

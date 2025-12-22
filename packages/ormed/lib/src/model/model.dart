@@ -2159,11 +2159,7 @@ abstract class Model<TModel extends Model<TModel>>
     }
 
     // Get existing attached IDs
-    final existingIds = await _getPivotRelatedIds(
-      relationDef,
-      def,
-      resolver,
-    );
+    final existingIds = await _getPivotRelatedIds(relationDef, def, resolver);
 
     // Filter out IDs that already exist
     final newIds = ids.where((id) => !existingIds.contains(id)).toList();
@@ -2241,11 +2237,7 @@ abstract class Model<TModel extends Model<TModel>>
     }
 
     // Get existing attached IDs
-    final existingIds = await _getPivotRelatedIds(
-      relationDef,
-      def,
-      resolver,
-    );
+    final existingIds = await _getPivotRelatedIds(relationDef, def, resolver);
 
     // Separate into IDs to attach and IDs to detach
     final toDetach = ids.where((id) => existingIds.contains(id)).toList();
@@ -2798,7 +2790,9 @@ abstract class Model<TModel extends Model<TModel>>
       context: context,
     );
 
-    final results = await relatedQuery.withoutEvents().insertManyInputs([attributesWithFk]);
+    final results = await relatedQuery.withoutEvents().insertManyInputs([
+      attributesWithFk,
+    ]);
     final created = results.first;
 
     // Update relation cache
@@ -2840,15 +2834,16 @@ abstract class Model<TModel extends Model<TModel>>
   ///   PostInsertDto(title: 'DTO 2', publishedAt: DateTime.now()),
   /// ]);
   /// ```
-  Future<List<TRelated>> createManyQuietlyRelation<TRelated extends Model<TRelated>>(
-    String relationName,
-    List<Object> attributesList,
-  ) async {
+  Future<List<TRelated>> createManyQuietlyRelation<
+    TRelated extends Model<TRelated>
+  >(String relationName, List<Object> attributesList) async {
     if (attributesList.isEmpty) return [];
 
     final results = <TRelated>[];
     for (final attributes in attributesList) {
-      results.add(await createQuietlyRelation<TRelated>(relationName, attributes));
+      results.add(
+        await createQuietlyRelation<TRelated>(relationName, attributes),
+      );
     }
 
     return results;
