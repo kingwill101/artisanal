@@ -8,6 +8,8 @@ import 'model/model.dart';
 import 'query/query.dart';
 import 'repository/repository.dart';
 import 'value_codec.dart';
+import 'orm_project_config.dart';
+import 'driver/driver_adapter_registry.dart';
 
 /// Configuration options for initializing a [DataSource].
 ///
@@ -193,6 +195,30 @@ class DataSource {
         codecs: options.codecs,
       ) {
     // no-op: codecs applied via fork above
+  }
+
+  /// Creates a [DataSource] from an [OrmProjectConfig].
+  ///
+  /// This uses the [DriverAdapterRegistry] to instantiate the driver
+  /// defined in the configuration.
+  factory DataSource.fromConfig(
+    OrmProjectConfig config, {
+    ModelRegistry? registry,
+    ScopeRegistry? scopeRegistry,
+    Map<String, ValueCodec<dynamic>> codecs = const {},
+  }) {
+    final driverConfig = config.driver;
+    return DataSource(DataSourceOptions(
+      driver: DriverAdapterRegistry.create(driverConfig),
+      registry: registry,
+      scopeRegistry: scopeRegistry,
+      name: config.activeConnectionName,
+      codecs: codecs,
+      logging: driverConfig.options['logging'] == true,
+      database: driverConfig.options['database']?.toString(),
+      tablePrefix: driverConfig.options['table_prefix']?.toString() ?? '',
+      defaultSchema: driverConfig.options['default_schema']?.toString(),
+    ));
   }
 
   /// The configuration options for this data source.

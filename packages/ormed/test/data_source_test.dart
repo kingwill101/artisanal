@@ -31,6 +31,41 @@ void main() {
       expect(dataSource.isInitialized, isFalse);
     });
 
+    test('creates from OrmProjectConfig', () {
+      final config = OrmProjectConfig(
+        connections: {
+          'test-conn': ConnectionDefinition(
+            name: 'test-conn',
+            driver: DriverConfig(
+              type: 'mock',
+              options: {
+                'database': 'test-db',
+                'table_prefix': 'pfx_',
+                'logging': true,
+              },
+            ),
+            migrations: MigrationSection(
+              directory: 'migrations',
+              registry: 'registry',
+              ledgerTable: 'ledger',
+              schemaDump: 'dump',
+            ),
+          ),
+        },
+        activeConnectionName: 'test-conn',
+      );
+
+      DriverAdapterRegistry.register('mock', (config) => driver);
+
+      dataSource = DataSource.fromConfig(config, registry: registry);
+
+      expect(dataSource.name, 'test-conn');
+      expect(dataSource.options.database, 'test-db');
+      expect(dataSource.options.tablePrefix, 'pfx_');
+      expect(dataSource.options.logging, isTrue);
+      expect(dataSource.options.driver, driver);
+    });
+
     test('init registers entities and creates connection', () async {
       dataSource = DataSource(
         DataSourceOptions(driver: driver, registry: registry),

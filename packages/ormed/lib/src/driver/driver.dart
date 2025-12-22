@@ -3,6 +3,7 @@ export 'compiler/fallback_plan_compiler.dart';
 export 'compiler/plan_compiler.dart';
 export 'driver.dart';
 export 'driver_adapter.dart';
+export 'driver_adapter_registry.dart';
 export 'driver_capability.dart';
 export 'driver_metadata.dart';
 export 'json_update_clause.dart';
