@@ -15,6 +15,7 @@ export 'src/postgres_type_mapper.dart';
 export 'src/postgres_value_types.dart';
 export 'package:postgres/postgres.dart';
 
+/// Registers a PostgreSQL ORM connection with the [manager].
 OrmConnectionHandle registerPostgresOrmConnection({
   required String name,
   required DatabaseConfig database,
@@ -51,6 +52,15 @@ OrmConnectionHandle registerPostgresOrmConnection({
 }
 
 final _postgresDriverRegistration = (() {
+  DriverAdapterRegistry.register('postgres', (config) {
+    return PostgresDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'postgres',
+        options: Map<String, Object?>.from(config.options),
+      ),
+    );
+  });
+
   DriverRegistry.registerDriver('postgres', ({
     required Directory root,
     required ConnectionManager manager,

@@ -13,7 +13,8 @@ class MakeCommand extends Command<void> {
       ..addOption('name', abbr: 'n', help: 'Slug for the migration/seeder.')
       ..addOption(
         'format',
-        help: 'Migration authoring format (dart|sql). Defaults from ormed.yaml.',
+        help:
+            'Migration authoring format (dart|sql). Defaults from ormed.yaml.',
         allowed: const ['dart', 'sql'],
       )
       ..addOption(
@@ -212,9 +213,10 @@ $down
 ''';
 }
 
-String _seederFileTemplate(String className) =>
+String _seederFileTemplate(String className, String packageName) =>
     '''
 import 'package:ormed/ormed.dart';
+import 'package:$packageName/orm_registry.g.dart';
 
 class $className extends DatabaseSeeder {
   $className(super.connection);
@@ -292,7 +294,8 @@ void _createSeeder({
   if (file.existsSync()) {
     throw UsageException('Seeder file ${file.path} already exists.', usage);
   }
-  file.writeAsStringSync(_seederFileTemplate(className));
+  final packageName = getPackageName(root);
+  file.writeAsStringSync(_seederFileTemplate(className, packageName));
   cliIO.success('Created seeder');
   cliIO.components.horizontalTable({
     'File': p.relative(file.path, from: root.path),
@@ -422,7 +425,9 @@ void _createMigration({
   final registryPath = resolvePath(root, config.migrations.registry);
   final registry = File(registryPath);
   if (!registry.existsSync()) {
-    throw StateError('Registry file $registryPath not found. Run `ormed init`.');
+    throw StateError(
+      'Registry file $registryPath not found. Run `ormed init`.',
+    );
   }
   var content = registry.readAsStringSync();
 

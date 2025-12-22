@@ -247,6 +247,24 @@ class DriverOverrideModelInsertDto implements InsertDto<$DriverOverrideModel> {
       if (payload != null) 'payload': payload,
     };
   }
+
+  static const _DriverOverrideModelInsertDtoCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideModelInsertDtoCopyWithSentinel();
+  DriverOverrideModelInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideModelInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideModelInsertDtoCopyWithSentinel {
+  const _DriverOverrideModelInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [DriverOverrideModel].
@@ -264,6 +282,24 @@ class DriverOverrideModelUpdateDto implements UpdateDto<$DriverOverrideModel> {
       if (payload != null) 'payload': payload,
     };
   }
+
+  static const _DriverOverrideModelUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideModelUpdateDtoCopyWithSentinel();
+  DriverOverrideModelUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideModelUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideModelUpdateDtoCopyWithSentinel {
+  const _DriverOverrideModelUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [DriverOverrideModel].
@@ -305,6 +341,24 @@ class DriverOverrideModelPartial
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (payload != null) 'payload': payload};
   }
+
+  static const _DriverOverrideModelPartialCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideModelPartialCopyWithSentinel();
+  DriverOverrideModelPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideModelPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideModelPartialCopyWithSentinel {
+  const _DriverOverrideModelPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [DriverOverrideModel].

@@ -9,6 +9,7 @@ import 'package:ormed/src/annotations.dart';
 import '../connection/connection.dart';
 import '../contracts.dart';
 import '../driver/driver.dart';
+import '../mutation/mutation_input_helper.dart';
 import '../query/query.dart';
 import '../repository/repository.dart';
 import '../value_codec.dart';
@@ -2112,6 +2113,756 @@ abstract class Model<TModel extends Model<TModel>>
     }
 
     return _self();
+  }
+
+  /// Syncs a manyToMany relationship without detaching existing records.
+  ///
+  /// Unlike [sync], this method only attaches new IDs while keeping existing
+  /// pivot records intact. Useful when you want to add new relations without
+  /// removing existing ones.
+  ///
+  /// Example:
+  /// ```dart
+  /// final post = await Post.query().find(1);
+  /// // Currently has tags: [1, 2]
+  /// await post.syncWithoutDetaching('tags', [2, 3, 4]);
+  /// // Now has tags: [1, 2, 3, 4] (1 kept, 2 kept, 3 and 4 added)
+  /// ```
+  Future<TModel> syncWithoutDetaching(
+    String relationName,
+    List<dynamic> ids, {
+    Map<String, dynamic>? pivotData,
+  }) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.manyToMany) {
+      throw ArgumentError(
+        'syncWithoutDetaching() can only be used with manyToMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    if (ids.isEmpty) {
+      return _self();
+    }
+
+    // Get existing attached IDs
+    final existingIds = await _getPivotRelatedIds(relationDef, def, resolver);
+
+    // Filter out IDs that already exist
+    final newIds = ids.where((id) => !existingIds.contains(id)).toList();
+
+    // Only attach the new ones
+    if (newIds.isNotEmpty) {
+      await attach(relationName, newIds, pivotData: pivotData);
+    } else {
+      // Reload relation to sync cache even if nothing changed
+      await load(relationName);
+    }
+
+    return _self();
+  }
+
+  /// Syncs a manyToMany relationship with the same pivot data for all records.
+  ///
+  /// This is like [sync] but applies the same pivot data to all attached records.
+  ///
+  /// Example:
+  /// ```dart
+  /// final post = await Post.query().find(1);
+  /// await post.syncWithPivotValues('tags', [1, 2, 3], {'active': true});
+  /// // All pivot records now have active=true
+  /// ```
+  Future<TModel> syncWithPivotValues(
+    String relationName,
+    List<dynamic> ids,
+    Map<String, dynamic> pivotData,
+  ) async {
+    return sync(relationName, ids, pivotData: pivotData);
+  }
+
+  /// Toggles the attachment of related models in a manyToMany relationship.
+  ///
+  /// For each ID:
+  /// - If currently attached → detach it
+  /// - If not attached → attach it
+  ///
+  /// Example:
+  /// ```dart
+  /// final post = await Post.query().find(1);
+  /// // Currently has tags: [1, 2]
+  /// await post.toggle('tags', [2, 3]);
+  /// // Now has tags: [1, 3] (2 was detached, 3 was attached)
+  /// ```
+  Future<TModel> toggle(
+    String relationName,
+    List<dynamic> ids, {
+    Map<String, dynamic>? pivotData,
+  }) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.manyToMany) {
+      throw ArgumentError(
+        'toggle() can only be used with manyToMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    if (ids.isEmpty) {
+      return _self();
+    }
+
+    // Get existing attached IDs
+    final existingIds = await _getPivotRelatedIds(relationDef, def, resolver);
+
+    // Separate into IDs to attach and IDs to detach
+    final toDetach = ids.where((id) => existingIds.contains(id)).toList();
+    final toAttach = ids.where((id) => !existingIds.contains(id)).toList();
+
+    // Detach existing ones
+    if (toDetach.isNotEmpty) {
+      await detach(relationName, toDetach);
+    }
+
+    // Attach new ones
+    if (toAttach.isNotEmpty) {
+      await attach(relationName, toAttach, pivotData: pivotData);
+    }
+
+    // If nothing changed, still reload to sync cache
+    if (toDetach.isEmpty && toAttach.isEmpty) {
+      await load(relationName);
+    }
+
+    return _self();
+  }
+
+  /// Updates pivot table attributes for an existing pivot record.
+  ///
+  /// Unlike [attach] with pivotData, this only updates the pivot attributes
+  /// for an already attached related model.
+  ///
+  /// Example:
+  /// ```dart
+  /// final post = await Post.query().find(1);
+  /// // Post has tag 5 attached with order=1
+  /// await post.updateExistingPivot('tags', 5, {'order': 2, 'featured': true});
+  /// // Pivot record updated
+  /// ```
+  Future<TModel> updateExistingPivot(
+    String relationName,
+    dynamic id,
+    Map<String, dynamic> pivotData,
+  ) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.manyToMany) {
+      throw ArgumentError(
+        'updateExistingPivot() can only be used with manyToMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    // Get this model's primary key value
+    final pk = def.primaryKeyField;
+    if (pk == null) {
+      throw StateError('Model ${def.modelName} must have a primary key');
+    }
+
+    final pkValue = _primaryKeyValue(def);
+    if (pkValue == null) {
+      throw StateError('Model ${def.modelName} primary key value is null');
+    }
+
+    final pivotTable = relationDef.through;
+    if (pivotTable == null) {
+      throw StateError(
+        'Relation "$relationName" is missing pivot table name (through)',
+      );
+    }
+
+    final pivotForeignKey = relationDef.pivotForeignKey!;
+    final pivotRelatedKey = relationDef.pivotRelatedKey!;
+
+    // Get the related model definition
+    final relatedModelName = relationDef.targetModel;
+    final relatedDef = resolver.registry.expectByName(relatedModelName);
+    final relatedPk = relatedDef.primaryKeyField;
+    if (relatedPk == null) {
+      throw StateError(
+        'Related model $relatedModelName must have a primary key',
+      );
+    }
+
+    // Build pivot definition with all fields
+    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
+      pivotForeignKey: pk,
+      pivotRelatedKey: relatedPk,
+      ...pivotData.map((key, _) => MapEntry(key, null)),
+    });
+
+    // Update the pivot record
+    final plan = MutationPlan.update(
+      definition: pivotDef,
+      rows: [
+        MutationRow(
+          values: pivotData,
+          keys: {pivotForeignKey: pkValue, pivotRelatedKey: id},
+        ),
+      ],
+    );
+
+    await resolver.runMutation(plan);
+
+    // Reload the relation to sync cache
+    await load(relationName);
+
+    return _self();
+  }
+
+  /// Helper to get currently attached related IDs in a manyToMany relationship.
+  Future<List<dynamic>> _getPivotRelatedIds(
+    RelationDefinition relationDef,
+    ModelDefinition<TModel> def,
+    ConnectionResolver resolver,
+  ) async {
+    final pk = def.primaryKeyField;
+    if (pk == null) {
+      throw StateError('Model ${def.modelName} must have a primary key');
+    }
+
+    final pkValue = _primaryKeyValue(def);
+    if (pkValue == null) {
+      throw StateError('Model ${def.modelName} primary key value is null');
+    }
+
+    final pivotTable = relationDef.through;
+    if (pivotTable == null) {
+      throw StateError(
+        'Relation "${relationDef.name}" is missing pivot table name (through)',
+      );
+    }
+
+    final pivotForeignKey = relationDef.pivotForeignKey!;
+    final pivotRelatedKey = relationDef.pivotRelatedKey!;
+
+    // Get the related model definition
+    final relatedModelName = relationDef.targetModel;
+    final relatedDef = resolver.registry.expectByName(relatedModelName);
+    final relatedPk = relatedDef.primaryKeyField;
+    if (relatedPk == null) {
+      throw StateError(
+        'Related model $relatedModelName must have a primary key',
+      );
+    }
+
+    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
+      pivotForeignKey: pk,
+      pivotRelatedKey: relatedPk,
+    });
+
+    final selectPlan = QueryPlan(
+      definition: pivotDef,
+      filters: [
+        FilterClause(
+          field: pivotForeignKey,
+          operator: FilterOperator.equals,
+          value: pkValue,
+        ),
+      ],
+    );
+
+    final results = await resolver.runSelect(selectPlan);
+    return results.map((row) => row[pivotRelatedKey]).toList();
+  }
+
+  // ==========================================================================
+  // HasOne / HasMany relation mutation methods
+  // ==========================================================================
+
+  /// Saves a related model through a hasOne or hasMany relationship.
+  ///
+  /// This sets the foreign key on the related model to point to this model,
+  /// then persists the related model.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// final post = Post(title: 'New Post', publishedAt: DateTime.now());
+  /// await author.saveRelation('posts', post);
+  /// // post.authorId is now author.id
+  /// ```
+  Future<TRelated> saveRelation<TRelated extends Model<TRelated>>(
+    String relationName,
+    TRelated related,
+  ) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.hasOne &&
+        relationDef.kind != RelationKind.hasMany) {
+      throw ArgumentError(
+        'saveRelation() can only be used with hasOne or hasMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    // Get this model's primary key value (the local key for hasOne/hasMany)
+    // Default to 'id' if localKey is not specified
+    final localKey = relationDef.localKey ?? 'id';
+    final localKeyValue = _getAttributeValue(localKey, def);
+    if (localKeyValue == null) {
+      throw StateError(
+        'Model ${def.modelName} local key "$localKey" value is null',
+      );
+    }
+
+    // Get related model definition
+    final foreignKey = relationDef.foreignKey;
+    final context = _requireQueryContext(resolver);
+    final relatedDef =
+        resolver.registry.expectByName(relationDef.targetModel)
+            as ModelDefinition<TRelated>;
+    final fkField = relatedDef.fields.firstWhere(
+      (f) => f.columnName == foreignKey || f.name == foreignKey,
+    );
+
+    // Convert related model to map and add/override foreign key
+    final relatedMap = relatedDef.toMap(
+      related,
+      registry: context.codecRegistry,
+    );
+    relatedMap[fkField.columnName] = localKeyValue;
+
+    // Use upsert to save (handles both insert and update cases)
+    final repo = context.repository<TRelated>();
+    final saved = await repo.upsert(relatedMap);
+
+    // Update relation cache
+    if (relationDef.kind == RelationKind.hasOne) {
+      _asRelations.setRelation(relationName, saved);
+    } else {
+      // For hasMany, add to the list
+      final existing = _asRelations.getRelation<List<TRelated>>(relationName);
+      if (existing != null) {
+        _asRelations.setRelation(relationName, [...existing, saved]);
+      } else {
+        _asRelations.setRelation(relationName, [saved]);
+      }
+    }
+
+    return saved;
+  }
+
+  /// Saves multiple related models through a hasMany relationship.
+  ///
+  /// This sets the foreign key on each related model to point to this model,
+  /// then persists all related models.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// await author.saveManyRelation('posts', [
+  ///   Post(title: 'Post 1', publishedAt: DateTime.now()),
+  ///   Post(title: 'Post 2', publishedAt: DateTime.now()),
+  /// ]);
+  /// ```
+  Future<List<TRelated>> saveManyRelation<TRelated extends Model<TRelated>>(
+    String relationName,
+    List<TRelated> related,
+  ) async {
+    final def = expectDefinition();
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.hasMany) {
+      throw ArgumentError(
+        'saveManyRelation() can only be used with hasMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    final results = <TRelated>[];
+    for (final model in related) {
+      results.add(await saveRelation<TRelated>(relationName, model));
+    }
+
+    return results;
+  }
+
+  /// Creates a related model through a hasOne or hasMany relationship.
+  ///
+  /// This creates and persists a new related model with the foreign key
+  /// automatically set to point to this model.
+  ///
+  /// The [attributes] parameter accepts:
+  /// - A tracked model instance (`TRelated`).
+  /// - An [InsertDto] or [UpdateDto] instance.
+  /// - A `Map<String, Object?>` containing field/column values.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// final post = await author.createRelation<Post>('posts', {
+  ///   'title': 'New Post',
+  ///   'published_at': DateTime.now(),
+  /// });
+  /// // post.authorId is automatically set to author.id
+  ///
+  /// // Using a DTO:
+  /// final post2 = await author.createRelation<Post>('posts',
+  ///   PostInsertDto(title: 'DTO Post', publishedAt: DateTime.now()),
+  /// );
+  /// ```
+  Future<TRelated> createRelation<TRelated extends Model<TRelated>>(
+    String relationName,
+    Object attributes,
+  ) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.hasOne &&
+        relationDef.kind != RelationKind.hasMany) {
+      throw ArgumentError(
+        'createRelation() can only be used with hasOne or hasMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    // Get this model's local key value
+    // Default to 'id' if localKey is not specified
+    final localKey = relationDef.localKey ?? 'id';
+    final localKeyValue = _getAttributeValue(localKey, def);
+    if (localKeyValue == null) {
+      throw StateError(
+        'Model ${def.modelName} local key "$localKey" value is null',
+      );
+    }
+
+    // Add foreign key to attributes
+    final foreignKey = relationDef.foreignKey;
+    final context = _requireQueryContext(resolver);
+    final relatedDef =
+        resolver.registry.expectByName(relationDef.targetModel)
+            as ModelDefinition<TRelated>;
+    final fkField = relatedDef.fields.firstWhere(
+      (f) => f.columnName == foreignKey || f.name == foreignKey,
+    );
+
+    // Normalize the input to a map using MutationInputHelper
+    final helper = MutationInputHelper<TRelated>(
+      definition: relatedDef,
+      codecs: context.codecRegistry,
+    );
+    final normalizedMap = helper.insertInputToMap(
+      attributes,
+      applySentinelFiltering: attributes is TRelated,
+    );
+    final attributesWithFk = {
+      ...normalizedMap,
+      fkField.columnName: localKeyValue,
+    };
+
+    // Create the related model using repository
+    final repo = context.repository<TRelated>();
+    final created = await repo.insert(attributesWithFk);
+
+    // Update relation cache
+    if (relationDef.kind == RelationKind.hasOne) {
+      _asRelations.setRelation(relationName, created);
+    } else {
+      final existing = _asRelations.getRelation<List<TRelated>>(relationName);
+      if (existing != null) {
+        _asRelations.setRelation(relationName, [...existing, created]);
+      } else {
+        _asRelations.setRelation(relationName, [created]);
+      }
+    }
+
+    return created;
+  }
+
+  /// Creates multiple related models through a hasMany relationship.
+  ///
+  /// Each item in [attributesList] accepts:
+  /// - A tracked model instance (`TRelated`).
+  /// - An [InsertDto] or [UpdateDto] instance.
+  /// - A `Map<String, Object?>` containing field/column values.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// final posts = await author.createManyRelation<Post>('posts', [
+  ///   {'title': 'Post 1', 'published_at': DateTime.now()},
+  ///   {'title': 'Post 2', 'published_at': DateTime.now()},
+  /// ]);
+  ///
+  /// // Using DTOs:
+  /// final posts2 = await author.createManyRelation<Post>('posts', [
+  ///   PostInsertDto(title: 'DTO 1', publishedAt: DateTime.now()),
+  ///   PostInsertDto(title: 'DTO 2', publishedAt: DateTime.now()),
+  /// ]);
+  /// ```
+  Future<List<TRelated>> createManyRelation<TRelated extends Model<TRelated>>(
+    String relationName,
+    List<Object> attributesList,
+  ) async {
+    final def = expectDefinition();
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.hasMany) {
+      throw ArgumentError(
+        'createManyRelation() can only be used with hasMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    final results = <TRelated>[];
+    for (final attributes in attributesList) {
+      results.add(await createRelation<TRelated>(relationName, attributes));
+    }
+
+    return results;
+  }
+
+  /// Creates a related model without firing model events.
+  ///
+  /// Same as [createRelation] but bypasses model event dispatching.
+  /// No creating/created/saving/saved events are fired during insertion.
+  ///
+  /// The [attributes] parameter accepts:
+  /// - A tracked model instance (`TRelated`).
+  /// - An [InsertDto] or [UpdateDto] instance.
+  /// - A `Map<String, Object?>` containing field/column values.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// final post = await author.createQuietlyRelation<Post>('posts', {
+  ///   'title': 'New Post',
+  ///   'published_at': DateTime.now(),
+  /// });
+  ///
+  /// // Using a DTO:
+  /// final post2 = await author.createQuietlyRelation<Post>('posts',
+  ///   PostInsertDto(title: 'DTO Post', publishedAt: DateTime.now()),
+  /// );
+  /// ```
+  Future<TRelated> createQuietlyRelation<TRelated extends Model<TRelated>>(
+    String relationName,
+    Object attributes,
+  ) async {
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+
+    final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+      (r) => r?.name == relationName,
+      orElse: () => null,
+    );
+
+    if (relationDef == null) {
+      throw ArgumentError(
+        'Relation "$relationName" not found on ${def.modelName}',
+      );
+    }
+
+    if (relationDef.kind != RelationKind.hasOne &&
+        relationDef.kind != RelationKind.hasMany) {
+      throw ArgumentError(
+        'createQuietlyRelation() can only be used with hasOne or hasMany relations. '
+        'Relation "$relationName" is ${relationDef.kind}',
+      );
+    }
+
+    // Get this model's local key value
+    final localKey = relationDef.localKey ?? 'id';
+    final localKeyValue = _getAttributeValue(localKey, def);
+    if (localKeyValue == null) {
+      throw StateError(
+        'Model ${def.modelName} local key "$localKey" value is null',
+      );
+    }
+
+    // Add foreign key to attributes
+    final foreignKey = relationDef.foreignKey;
+    final context = _requireQueryContext(resolver);
+    final relatedDef =
+        resolver.registry.expectByName(relationDef.targetModel)
+            as ModelDefinition<TRelated>;
+    final fkField = relatedDef.fields.firstWhere(
+      (f) => f.columnName == foreignKey || f.name == foreignKey,
+    );
+
+    // Normalize the input to a map using MutationInputHelper
+    final helper = MutationInputHelper<TRelated>(
+      definition: relatedDef,
+      codecs: context.codecRegistry,
+    );
+    final normalizedMap = helper.insertInputToMap(
+      attributes,
+      applySentinelFiltering: attributes is TRelated,
+    );
+    final attributesWithFk = {
+      ...normalizedMap,
+      fkField.columnName: localKeyValue,
+    };
+
+    // Create the related model using query with events suppressed
+    final relatedQuery = Query<TRelated>(
+      definition: relatedDef,
+      context: context,
+    );
+
+    final results = await relatedQuery.withoutEvents().insertManyInputs([
+      attributesWithFk,
+    ]);
+    final created = results.first;
+
+    // Update relation cache
+    if (relationDef.kind == RelationKind.hasOne) {
+      _asRelations.setRelation(relationName, created);
+    } else {
+      final existing = _asRelations.getRelation<List<TRelated>>(relationName);
+      if (existing != null) {
+        _asRelations.setRelation(relationName, [...existing, created]);
+      } else {
+        _asRelations.setRelation(relationName, [created]);
+      }
+    }
+
+    return created;
+  }
+
+  /// Creates multiple related models without firing model events.
+  ///
+  /// Same as [createManyRelation] but bypasses model event dispatching.
+  /// No creating/created/saving/saved events are fired during insertion.
+  ///
+  /// Each item in [attributesList] accepts:
+  /// - A tracked model instance (`TRelated`).
+  /// - An [InsertDto] or [UpdateDto] instance.
+  /// - A `Map<String, Object?>` containing field/column values.
+  ///
+  /// Example:
+  /// ```dart
+  /// final author = await Author.query().find(1);
+  /// final posts = await author.createManyQuietlyRelation<Post>('posts', [
+  ///   {'title': 'Post 1', 'published_at': DateTime.now()},
+  ///   {'title': 'Post 2', 'published_at': DateTime.now()},
+  /// ]);
+  ///
+  /// // Using DTOs:
+  /// final posts2 = await author.createManyQuietlyRelation<Post>('posts', [
+  ///   PostInsertDto(title: 'DTO 1', publishedAt: DateTime.now()),
+  ///   PostInsertDto(title: 'DTO 2', publishedAt: DateTime.now()),
+  /// ]);
+  /// ```
+  Future<List<TRelated>> createManyQuietlyRelation<
+    TRelated extends Model<TRelated>
+  >(String relationName, List<Object> attributesList) async {
+    if (attributesList.isEmpty) return [];
+
+    final results = <TRelated>[];
+    for (final attributes in attributesList) {
+      results.add(
+        await createQuietlyRelation<TRelated>(relationName, attributes),
+      );
+    }
+
+    return results;
+  }
+
+  /// Helper to get an attribute value by field name or column name.
+  Object? _getAttributeValue(String key, ModelDefinition<TModel> def) {
+    // Try to find the field
+    final field = def.fields.cast<FieldDefinition?>().firstWhere(
+      (f) => f?.name == key || f?.columnName == key,
+      orElse: () => null,
+    );
+
+    if (field != null) {
+      return _asAttributes.getAttribute(field.columnName);
+    }
+
+    // Fallback to direct attribute access
+    return _asAttributes.getAttribute(key);
   }
 
   /// Creates a minimal ModelDefinition for a pivot table.

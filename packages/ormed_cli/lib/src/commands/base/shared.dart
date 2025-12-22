@@ -269,11 +269,13 @@ void main(List<String> args) {
 }
 ''';
 
-const String defaultOrmYaml = '''
+/// Generate the default ormed.yaml content with the project-specific database path.
+String defaultOrmYaml(String packageName) =>
+    '''
 driver:
   type: sqlite
   options:
-    database: database.sqlite
+    database: database/$packageName.sqlite
 migrations:
   directory: lib/src/database/migrations
   registry: lib/src/database/migrations.dart
@@ -291,8 +293,9 @@ const String seedRegistryMarkerEnd = '// </ORM-SEED-REGISTRY>';
 
 const String initialSeedRegistryTemplate =
     '''
+import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
-import 'package:{{package_name}}/orm_registry.g.dart';
+import 'package:{{package_name}}/orm_registry.g.dart' as g;
 
 import 'seeders/database_seeder.dart';
 $seedImportsMarkerStart
@@ -322,7 +325,7 @@ Future<void> runProjectSeeds(
   List<String>? names,
   bool pretend = false,
 }) async {
-  bootstrapOrm(registry: connection.context.registry);
+  g.bootstrapOrm(registry: connection.context.registry);
   await SeederRunner().run(
     connection: connection,
     seeders: seeders,
@@ -330,6 +333,13 @@ Future<void> runProjectSeeds(
     pretend: pretend,
   );
 }
+
+Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
+      args: args,
+      seeds: seeders,
+      beforeRun: (connection) =>
+          g.bootstrapOrm(registry: connection.context.registry),
+    );
 ''';
 
 class OrmProjectContext {
@@ -376,41 +386,16 @@ OrmProjectContext resolveOrmProject({String? configPath}) {
     return OrmProjectContext(root: root, configFile: file);
   }
 
-  final nearest = _findNearestOrmProjectConfig(Directory.current);
-  if (nearest != null) {
-    final root = findProjectRoot(nearest.parent);
-    return OrmProjectContext(root: root, configFile: nearest);
+  // Use findOrmConfigFile from ormed package to locate config
+  final configFile = findOrmConfigFile();
+  if (configFile != null) {
+    final root = findProjectRoot(configFile.parent);
+    return OrmProjectContext(root: root, configFile: configFile);
   }
 
-  final root = findProjectRoot();
-  final fallback = File(p.join(root.path, 'ormed.yaml'));
-  if (!fallback.existsSync()) {
-    final legacy = File(p.join(root.path, 'ormed.yaml'));
-    if (legacy.existsSync()) return OrmProjectContext(root: root, configFile: legacy);
-    throw StateError(
-      'Missing ormed.yaml. Run `ormed init` or provide --config path.',
-    );
-  }
-  return OrmProjectContext(root: root, configFile: fallback);
-}
-
-File? _findNearestOrmProjectConfig(Directory start) {
-  var dir = start;
-  while (true) {
-    final candidate = File(p.join(dir.path, 'ormed.yaml'));
-    if (candidate.existsSync()) {
-      return candidate;
-    }
-    final legacy = File(p.join(dir.path, 'ormed.yaml'));
-    if (legacy.existsSync()) {
-      return legacy;
-    }
-    final parent = dir.parent;
-    if (parent.path == dir.path) {
-      return null;
-    }
-    dir = parent;
-  }
+  throw StateError(
+    'Missing ormed.yaml. Run `ormed init` or provide --config path.',
+  );
 }
 
 SchemaState? resolveSchemaState(

@@ -268,11 +268,15 @@ class MySqlSchemaDialect extends SchemaDialect {
 
     final defaultValue = override?.defaultValue ?? definition.defaultValue;
     if (defaultValue != null) {
-      buffer.write(' DEFAULT ${_defaultExpression(defaultValue)}');
+      buffer.write(
+        ' DEFAULT ${_defaultExpression(defaultValue, override?.type ?? definition.type)}',
+      );
     }
 
     if (definition.useCurrentOnUpdate) {
-      buffer.write(' ON UPDATE CURRENT_TIMESTAMP');
+      buffer.write(
+        ' ON UPDATE ${_currentTimestampExpression(override?.type ?? definition.type)}',
+      );
     }
 
     final charset = override?.charset ?? definition.charset;
@@ -427,9 +431,9 @@ class MySqlSchemaDialect extends SchemaDialect {
     }
   }
 
-  String _defaultExpression(ColumnDefault defaultValue) {
+  String _defaultExpression(ColumnDefault defaultValue, ColumnType type) {
     if (defaultValue.useCurrentTimestamp) {
-      return 'CURRENT_TIMESTAMP';
+      return _currentTimestampExpression(type);
     }
     if (defaultValue.expression != null) {
       return defaultValue.expression!;
@@ -439,6 +443,19 @@ class MySqlSchemaDialect extends SchemaDialect {
     if (value is num) return value.toString();
     if (value is bool) return value ? '1' : '0';
     return _quoteString(value.toString());
+  }
+
+  String _currentTimestampExpression(ColumnType type) {
+    final precision = _timestampPrecision(type);
+    if (precision != null && precision > 0) {
+      return 'CURRENT_TIMESTAMP($precision)';
+    }
+    return 'CURRENT_TIMESTAMP';
+  }
+
+  int? _timestampPrecision(ColumnType type) {
+    if (type.name != ColumnTypeName.dateTime) return null;
+    return type.precision ?? 3;
   }
 
   String _quote(String identifier) {

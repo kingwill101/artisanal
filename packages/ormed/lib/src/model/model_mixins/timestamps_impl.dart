@@ -27,17 +27,14 @@ mixin TimestampsImpl on ModelAttributes {
   }
 
   set createdAt(Object? value) {
-    setAttribute(
-      _createdAtColumn,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toDateTime(),
-        DateTime d => d,
-        _ => throw ArgumentError(
-          'createdAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_createdAtColumn, switch (value) {
+      null => null,
+      CarbonInterface c => c.toDateTime(),
+      DateTime d => d,
+      _ => throw ArgumentError(
+        'createdAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Timestamp when the model was last updated.
@@ -51,17 +48,14 @@ mixin TimestampsImpl on ModelAttributes {
   }
 
   set updatedAt(Object? value) {
-    setAttribute(
-      _updatedAtColumn,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toDateTime(),
-        DateTime d => d,
-        _ => throw ArgumentError(
-          'updatedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_updatedAtColumn, switch (value) {
+      null => null,
+      CarbonInterface c => c.toDateTime(),
+      DateTime d => d,
+      _ => throw ArgumentError(
+        'updatedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Updates the updatedAt timestamp to the current time.
@@ -107,17 +101,14 @@ mixin TimestampsTZImpl on ModelAttributes {
   }
 
   set createdAt(Object? value) {
-    setAttribute(
-      _createdAtColumn,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toUtc().toDateTime(),
-        DateTime d => d.isUtc ? d : d.toUtc(),
-        _ => throw ArgumentError(
-          'createdAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_createdAtColumn, switch (value) {
+      null => null,
+      CarbonInterface c => c.toUtc().toDateTime(),
+      DateTime d => d.isUtc ? d : d.toUtc(),
+      _ => throw ArgumentError(
+        'createdAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Timestamp when the model was last updated (UTC).
@@ -134,17 +125,14 @@ mixin TimestampsTZImpl on ModelAttributes {
   }
 
   set updatedAt(Object? value) {
-    setAttribute(
-      _updatedAtColumn,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toUtc().toDateTime(),
-        DateTime d => d.isUtc ? d : d.toUtc(),
-        _ => throw ArgumentError(
-          'updatedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_updatedAtColumn, switch (value) {
+      null => null,
+      CarbonInterface c => c.toUtc().toDateTime(),
+      DateTime d => d.isUtc ? d : d.toUtc(),
+      _ => throw ArgumentError(
+        'updatedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Updates the updatedAt timestamp to the current time in UTC.
@@ -186,17 +174,14 @@ mixin SoftDeletesTZImpl on ModelAttributes {
   }
 
   set deletedAt(Object? value) {
-    setAttribute(
-      _column,
-      switch (value) {
-        null => null,
-        CarbonInterface c => c.toUtc().toDateTime(),
-        DateTime d => d.isUtc ? d : d.toUtc(),
-        _ => throw ArgumentError(
-          'deletedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
-        ),
-      },
-    );
+    setAttribute(_column, switch (value) {
+      null => null,
+      CarbonInterface c => c.toUtc().toDateTime(),
+      DateTime d => d.isUtc ? d : d.toUtc(),
+      _ => throw ArgumentError(
+        'deletedAt must be DateTime or CarbonInterface, got ${value.runtimeType}',
+      ),
+    });
   }
 
   /// Whether the model currently has a deletion timestamp.

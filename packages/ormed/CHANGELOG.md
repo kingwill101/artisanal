@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Refactored**: Decoupled database drivers from the core package. Drivers now register themselves via `DriverAdapterRegistry`.
+- **Added**: `DataSource.fromConfig` as the standard, driver-agnostic entry point for ORM initialization.
+- **Added**: `syncWithoutDetaching`, `syncWithPivotValues`, `toggle`, and `updateExistingPivot` methods for `ManyToMany` relationships.
+- **Added**: Support for eager loading nested relations (e.g., `ds.query<User>().with('posts.comments').get()`).
+- **Added**: `copyWith` method generation for DTOs and partial models.
+- **Added**: `suppressEvents` option to `Query` for optimized bulk operations.
+- **Added**: `loadOrmConfig()` and `findOrmConfigFile()` convenience helpers for configuration management.
+- **Fixed**: Eager loading for models with custom primary keys (Issue #12).
+- **Fixed**: Improved relation inference for complex naming conventions and ambiguous foreign keys (Issue #7).
+- **Fixed**: Missing relation accessors in generated models for certain edge cases (Issue #6).
+- **Fixed**: Resolved bugs #4, #11, and #13 related to query builder edge cases.
+- **Improved**: Code generator now emits dartdoc comments for all generated models and members.
+- **Improved**: Reached 160/160 pub score with expanded documentation and examples.
+
 ## 0.1.0-dev+3
 
 - **Fixed**: Timestamp getters (`createdAt`, `updatedAt`, `deletedAt`) now return **immutable** Carbon instances to prevent accidental mutation of model state when chaining date methods like `subDay()`.

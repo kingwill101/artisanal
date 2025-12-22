@@ -2,11 +2,14 @@ part of '../query_builder.dart';
 
 /// Lightweight builder used for nested predicate callbacks.
 class PredicateBuilder<T extends OrmEntity> {
+  /// Creates a new [PredicateBuilder].
   PredicateBuilder(this.definition);
 
+  /// The model definition for the entity being queried.
   final ModelDefinition<T> definition;
   QueryPredicate? _predicate;
 
+  /// Adds a basic `WHERE` clause to the predicate.
   PredicateBuilder<T> where(
     Object fieldOrCallback, [
     Object? value,

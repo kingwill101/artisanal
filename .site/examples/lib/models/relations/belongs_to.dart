@@ -20,7 +20,7 @@ class PostWithAuthor extends Model<PostWithAuthor> {
   final int authorId;
   final String title;
 
-  @OrmRelation.belongsTo(PostAuthor, foreignKey: 'author_id')
+  @OrmRelation.belongsTo(target: PostAuthor, foreignKey: 'author_id')
   final PostAuthor? author;
 }
 // #endregion relation-belongs-to-post

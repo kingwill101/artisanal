@@ -41,7 +41,7 @@ The inverse of hasOne/hasMany: this model owns the foreign key.
   </TabItem>
   <TabItem value="belongs-to-many" label="Belongs To Many">
 
-A many-to-many relationship using a pivot table.
+A many-to-many relationship using a pivot table. Ormed automatically handles the pivot table joins for efficient querying.
 
 ```dart file=../../examples/lib/models/relations/belongs_to_many.dart#relation-belongs-to-many-post
 ```
@@ -109,6 +109,62 @@ Load relations on-demand:
 
 ```dart file=../../examples/lib/relations/loading.dart#relation-associate
 ```
+
+### Creating Related Models
+
+Create new related models through a parent model's hasMany/hasOne relationship:
+
+<Tabs groupId="relation-create" defaultValue="basic">
+  <TabItem value="basic" label="Basic">
+
+```dart file=../../examples/lib/relations/mutations.dart#create-relation-basic
+```
+
+  </TabItem>
+  <TabItem value="dto" label="With DTOs">
+
+Use type-safe DTOs instead of raw maps:
+
+```dart file=../../examples/lib/relations/mutations.dart#create-relation-dto
+```
+
+  </TabItem>
+  <TabItem value="many" label="Create Many">
+
+Create multiple related models at once:
+
+```dart file=../../examples/lib/relations/mutations.dart#create-many-relation
+```
+
+  </TabItem>
+  <TabItem value="mixed" label="Mixed Input Types">
+
+Mix different input types in a single call:
+
+```dart file=../../examples/lib/relations/mutations.dart#create-many-relation-mixed
+```
+
+  </TabItem>
+</Tabs>
+
+### Event-Suppressed Creation
+
+Create related models without triggering lifecycle events:
+
+<Tabs groupId="relation-create-quietly" defaultValue="single">
+  <TabItem value="single" label="Single">
+
+```dart file=../../examples/lib/relations/mutations.dart#create-quietly-relation
+```
+
+  </TabItem>
+  <TabItem value="many" label="Many">
+
+```dart file=../../examples/lib/relations/mutations.dart#create-many-quietly-relation
+```
+
+  </TabItem>
+</Tabs>
 
 ### Many-to-Many Operations
 

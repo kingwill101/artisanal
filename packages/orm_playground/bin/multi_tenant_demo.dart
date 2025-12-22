@@ -89,7 +89,7 @@ Future<void> _prepareTenant(
     await io.task(
       'Seeding "$tenant"',
       run: () async {
-        await playground_seeders.seedPlayground(ds.connection);
+        await playground_seeders.runProjectSeeds(ds.connection);
         if (animate) await Future.delayed(Duration(milliseconds: 200));
         return TaskResult.success;
       },

@@ -385,6 +385,48 @@ class ArticleInsertDto implements InsertDto<$Article> {
       if (categoryId != null) 'category_id': categoryId,
     };
   }
+
+  static const _ArticleInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ArticleInsertDtoCopyWithSentinel();
+  ArticleInsertDto copyWith({
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? rating = _copyWithSentinel,
+    Object? priority = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? reviewedAt = _copyWithSentinel,
+    Object? categoryId = _copyWithSentinel,
+  }) {
+    return ArticleInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as String?,
+      rating: identical(rating, _copyWithSentinel)
+          ? this.rating
+          : rating as double?,
+      priority: identical(priority, _copyWithSentinel)
+          ? this.priority
+          : priority as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      reviewedAt: identical(reviewedAt, _copyWithSentinel)
+          ? this.reviewedAt
+          : reviewedAt as DateTime?,
+      categoryId: identical(categoryId, _copyWithSentinel)
+          ? this.categoryId
+          : categoryId as int?,
+    );
+  }
+}
+
+class _ArticleInsertDtoCopyWithSentinel {
+  const _ArticleInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Article].
@@ -426,6 +468,50 @@ class ArticleUpdateDto implements UpdateDto<$Article> {
       if (categoryId != null) 'category_id': categoryId,
     };
   }
+
+  static const _ArticleUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ArticleUpdateDtoCopyWithSentinel();
+  ArticleUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? rating = _copyWithSentinel,
+    Object? priority = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? reviewedAt = _copyWithSentinel,
+    Object? categoryId = _copyWithSentinel,
+  }) {
+    return ArticleUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as String?,
+      rating: identical(rating, _copyWithSentinel)
+          ? this.rating
+          : rating as double?,
+      priority: identical(priority, _copyWithSentinel)
+          ? this.priority
+          : priority as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      reviewedAt: identical(reviewedAt, _copyWithSentinel)
+          ? this.reviewedAt
+          : reviewedAt as DateTime?,
+      categoryId: identical(categoryId, _copyWithSentinel)
+          ? this.categoryId
+          : categoryId as int?,
+    );
+  }
+}
+
+class _ArticleUpdateDtoCopyWithSentinel {
+  const _ArticleUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Article].
@@ -530,6 +616,50 @@ class ArticlePartial implements PartialEntity<$Article> {
       if (categoryId != null) 'category_id': categoryId,
     };
   }
+
+  static const _ArticlePartialCopyWithSentinel _copyWithSentinel =
+      _ArticlePartialCopyWithSentinel();
+  ArticlePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? rating = _copyWithSentinel,
+    Object? priority = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? reviewedAt = _copyWithSentinel,
+    Object? categoryId = _copyWithSentinel,
+  }) {
+    return ArticlePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as String?,
+      rating: identical(rating, _copyWithSentinel)
+          ? this.rating
+          : rating as double?,
+      priority: identical(priority, _copyWithSentinel)
+          ? this.priority
+          : priority as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      reviewedAt: identical(reviewedAt, _copyWithSentinel)
+          ? this.reviewedAt
+          : reviewedAt as DateTime?,
+      categoryId: identical(categoryId, _copyWithSentinel)
+          ? this.categoryId
+          : categoryId as int?,
+    );
+  }
+}
+
+class _ArticlePartialCopyWithSentinel {
+  const _ArticlePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Article].

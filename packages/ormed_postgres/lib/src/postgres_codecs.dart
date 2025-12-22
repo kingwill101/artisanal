@@ -126,6 +126,13 @@ void registerPostgresCodecs() {
   });
 }
 
+Object? _unwrapTypedValue(Object? value) {
+  if (value is TypedValue) {
+    return value.value;
+  }
+  return value;
+}
+
 final class _PostgresTypedValueCodec<T extends Object> extends ValueCodec<T> {
   const _PostgresTypedValueCodec(this.type);
 
@@ -141,8 +148,9 @@ final class _PostgresTypedValueCodec<T extends Object> extends ValueCodec<T> {
 
   @override
   T? decode(Object? value) {
-    if (value == null) return null;
-    if (value is T) return value;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is T) return unwrapped;
     throw StateError('Unsupported ${type.runtimeType} value "$value".');
   }
 }
@@ -160,10 +168,11 @@ class _PostgresTimestampCodec extends ValueCodec<DateTime> {
 
   @override
   DateTime? decode(Object? value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String && value.isNotEmpty) {
-      return DateTime.parse(value);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is DateTime) return unwrapped;
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      return DateTime.parse(unwrapped);
     }
     throw StateError('Unsupported timestamp value "$value".');
   }
@@ -182,12 +191,13 @@ class _PostgresTimeCodec extends ValueCodec<Time> {
 
   @override
   Time? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Time) return value;
-    if (value is String && value.isNotEmpty) {
-      final parts = value.split(':');
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Time) return unwrapped;
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final parts = unwrapped.split(':');
       if (parts.length < 2) {
-        throw FormatException('Invalid time "$value".');
+        throw FormatException('Invalid time "$unwrapped".');
       }
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
@@ -199,8 +209,8 @@ class _PostgresTimeCodec extends ValueCodec<Time> {
           : 0;
       return Time(hour, minute, second, 0, micros);
     }
-    if (value is UndecodedBytes) {
-      return decode(value.asString);
+    if (unwrapped is UndecodedBytes) {
+      return decode(unwrapped.asString);
     }
     throw StateError('Unsupported time value "$value".');
   }
@@ -219,12 +229,13 @@ class _PostgresIntervalCodec extends ValueCodec<Duration> {
 
   @override
   Duration? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Duration) return value;
-    if (value is Interval) {
-      final fromMonths = Duration(days: value.months * 30);
-      final fromDays = Duration(days: value.days);
-      final fromMicros = Duration(microseconds: value.microseconds);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Duration) return unwrapped;
+    if (unwrapped is Interval) {
+      final fromMonths = Duration(days: unwrapped.months * 30);
+      final fromDays = Duration(days: unwrapped.days);
+      final fromMicros = Duration(microseconds: unwrapped.microseconds);
       return fromMonths + fromDays + fromMicros;
     }
     throw StateError('Unsupported interval value "$value".');
@@ -244,8 +255,9 @@ class _PostgresIntervalValueCodec extends ValueCodec<Interval> {
 
   @override
   Interval? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Interval) return value;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Interval) return unwrapped;
     throw StateError('Unsupported interval value "$value".');
   }
 }
@@ -263,10 +275,13 @@ class _PostgresUuidValueCodec extends ValueCodec<UuidValue> {
 
   @override
   UuidValue? decode(Object? value) {
-    if (value == null) return null;
-    if (value is UuidValue) return value;
-    if (value is String) return UuidValue.fromString(value);
-    if (value is UndecodedBytes) return UuidValue.fromString(value.asString);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is UuidValue) return unwrapped;
+    if (unwrapped is String) return UuidValue.fromString(unwrapped);
+    if (unwrapped is UndecodedBytes) {
+      return UuidValue.fromString(unwrapped.asString);
+    }
     throw StateError('Unsupported UUID value "$value".');
   }
 }
@@ -287,13 +302,16 @@ class _PostgresUuidValueArrayCodec extends ValueCodec<List<UuidValue>> {
 
   @override
   List<UuidValue>? decode(Object? value) {
-    if (value == null) return null;
-    if (value is List<UuidValue>) return List<UuidValue>.from(value);
-    if (value is List<String>) {
-      return value.map(UuidValue.fromString).toList(growable: false);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is List<UuidValue>) {
+      return List<UuidValue>.from(unwrapped);
     }
-    if (value is List) {
-      return value
+    if (unwrapped is List<String>) {
+      return unwrapped.map(UuidValue.fromString).toList(growable: false);
+    }
+    if (unwrapped is List) {
+      return unwrapped
           .map((entry) => UuidValue.fromString(entry.toString()))
           .toList(growable: false);
     }
@@ -314,11 +332,14 @@ class _PostgresNumericDecimalCodec extends ValueCodec<Decimal> {
 
   @override
   Decimal? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Decimal) return value;
-    if (value is String) return Decimal.parse(value);
-    if (value is num) return Decimal.parse(value.toString());
-    if (value is UndecodedBytes) return Decimal.parse(value.asString);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Decimal) return unwrapped;
+    if (unwrapped is String) return Decimal.parse(unwrapped);
+    if (unwrapped is num) return Decimal.parse(unwrapped.toString());
+    if (unwrapped is UndecodedBytes) {
+      return Decimal.parse(unwrapped.asString);
+    }
     throw StateError('Unsupported numeric value "$value".');
   }
 }
@@ -336,10 +357,11 @@ class _PostgresByteaCodec extends ValueCodec<Uint8List> {
 
   @override
   Uint8List? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Uint8List) return value;
-    if (value is List<int>) return Uint8List.fromList(value);
-    if (value is UndecodedBytes) return value.bytes;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Uint8List) return unwrapped;
+    if (unwrapped is List<int>) return Uint8List.fromList(unwrapped);
+    if (unwrapped is UndecodedBytes) return unwrapped.bytes;
     throw StateError('Unsupported bytea value "$value".');
   }
 }
@@ -502,8 +524,9 @@ class _PostgresIntRangeCodec extends ValueCodec<IntRange> {
 
   @override
   IntRange? decode(Object? value) {
-    if (value == null) return null;
-    if (value is IntRange) return value;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is IntRange) return unwrapped;
     throw StateError('Unsupported int range value "$value".');
   }
 }
@@ -521,8 +544,9 @@ class _PostgresDateRangeCodec extends ValueCodec<DateRange> {
 
   @override
   DateRange? decode(Object? value) {
-    if (value == null) return null;
-    if (value is DateRange) return value;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is DateRange) return unwrapped;
     throw StateError('Unsupported date range value "$value".');
   }
 }
@@ -544,8 +568,9 @@ class _PostgresDateTimeRangeCodec extends ValueCodec<DateTimeRange> {
 
   @override
   DateTimeRange? decode(Object? value) {
-    if (value == null) return null;
-    if (value is DateTimeRange) return value;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is DateTimeRange) return unwrapped;
     throw StateError('Unsupported datetime range value "$value".');
   }
 }
@@ -563,15 +588,16 @@ class _PostgresJsonMapCodec extends ValueCodec<Map<String, Object?>> {
 
   @override
   Map<String, Object?>? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Map<String, Object?>) {
-      return Map<String, Object?>.from(value);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Map<String, Object?>) {
+      return Map<String, Object?>.from(unwrapped);
     }
-    if (value is Map) {
-      return value.map((key, dynamic v) => MapEntry(key.toString(), v));
+    if (unwrapped is Map) {
+      return unwrapped.map((key, dynamic v) => MapEntry(key.toString(), v));
     }
-    if (value is String && value.isNotEmpty) {
-      final decoded = jsonDecode(value);
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final decoded = jsonDecode(unwrapped);
       if (decoded is Map) {
         return decoded.map((key, dynamic v) => MapEntry(key.toString(), v));
       }
@@ -593,15 +619,16 @@ class _PostgresJsonDynamicMapCodec extends ValueCodec<Map<String, dynamic>> {
 
   @override
   Map<String, dynamic>? decode(Object? value) {
-    if (value == null) return null;
-    if (value is Map<String, dynamic>) {
-      return Map<String, dynamic>.from(value);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(unwrapped);
     }
-    if (value is Map) {
-      return value.map((key, dynamic v) => MapEntry(key.toString(), v));
+    if (unwrapped is Map) {
+      return unwrapped.map((key, dynamic v) => MapEntry(key.toString(), v));
     }
-    if (value is String && value.isNotEmpty) {
-      final decoded = jsonDecode(value);
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final decoded = jsonDecode(unwrapped);
       if (decoded is Map) {
         return decoded.map((key, dynamic v) => MapEntry(key.toString(), v));
       }
@@ -623,15 +650,16 @@ class _PostgresJsonListCodec extends ValueCodec<List<Object?>> {
 
   @override
   List<Object?>? decode(Object? value) {
-    if (value == null) return null;
-    if (value is List<Object?>) {
-      return List<Object?>.from(value);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is List<Object?>) {
+      return List<Object?>.from(unwrapped);
     }
-    if (value is List) {
-      return value.cast<Object?>();
+    if (unwrapped is List) {
+      return unwrapped.cast<Object?>();
     }
-    if (value is String && value.isNotEmpty) {
-      final decoded = jsonDecode(value);
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final decoded = jsonDecode(unwrapped);
       if (decoded is List) {
         return decoded.cast<Object?>();
       }
@@ -653,12 +681,13 @@ class _PostgresArrayCodec<T> extends ValueCodec<List<T>> {
 
   @override
   List<T>? decode(Object? value) {
-    if (value == null) return null;
-    if (value is List<T>) {
-      return List<T>.from(value);
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
+    if (unwrapped is List<T>) {
+      return List<T>.from(unwrapped);
     }
-    if (value is List) {
-      return value.cast<T>();
+    if (unwrapped is List) {
+      return unwrapped.cast<T>();
     }
     throw StateError('Expected Postgres array but received "$value".');
   }
@@ -681,18 +710,19 @@ class PostgresCarbonCodec extends ValueCodec<Carbon> {
 
   @override
   Carbon? decode(Object? value) {
-    if (value == null) return null;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
 
     // Handle DateTime from postgres package
-    if (value is DateTime) {
-      final utcDateTime = value.isUtc ? value : value.toUtc();
+    if (unwrapped is DateTime) {
+      final utcDateTime = unwrapped.isUtc ? unwrapped : unwrapped.toUtc();
       return Carbon.fromDateTime(utcDateTime).tz(CarbonConfig.defaultTimezone)
           as Carbon;
     }
 
     // Handle string parsing (fallback)
-    if (value is String && value.isNotEmpty) {
-      final utcDateTime = DateTime.parse(value).toUtc();
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final utcDateTime = DateTime.parse(unwrapped).toUtc();
       return Carbon.fromDateTime(utcDateTime).tz(CarbonConfig.defaultTimezone)
           as Carbon;
     }
@@ -718,17 +748,18 @@ class PostgresCarbonInterfaceCodec extends ValueCodec<CarbonInterface> {
 
   @override
   CarbonInterface? decode(Object? value) {
-    if (value == null) return null;
+    final unwrapped = _unwrapTypedValue(value);
+    if (unwrapped == null) return null;
 
     // Handle DateTime from postgres package
-    if (value is DateTime) {
-      final utcDateTime = value.isUtc ? value : value.toUtc();
+    if (unwrapped is DateTime) {
+      final utcDateTime = unwrapped.isUtc ? unwrapped : unwrapped.toUtc();
       return Carbon.fromDateTime(utcDateTime).tz(CarbonConfig.defaultTimezone);
     }
 
     // Handle string parsing (fallback)
-    if (value is String && value.isNotEmpty) {
-      final utcDateTime = DateTime.parse(value).toUtc();
+    if (unwrapped is String && unwrapped.isNotEmpty) {
+      final utcDateTime = DateTime.parse(unwrapped).toUtc();
       return Carbon.fromDateTime(utcDateTime).tz(CarbonConfig.defaultTimezone);
     }
 

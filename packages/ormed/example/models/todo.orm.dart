@@ -219,6 +219,28 @@ class TodoInsertDto implements InsertDto<$Todo> {
       if (completed != null) 'completed': completed,
     };
   }
+
+  static const _TodoInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TodoInsertDtoCopyWithSentinel();
+  TodoInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? completed = _copyWithSentinel,
+  }) {
+    return TodoInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      completed: identical(completed, _copyWithSentinel)
+          ? this.completed
+          : completed as bool?,
+    );
+  }
+}
+
+class _TodoInsertDtoCopyWithSentinel {
+  const _TodoInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Todo].
@@ -238,6 +260,28 @@ class TodoUpdateDto implements UpdateDto<$Todo> {
       if (completed != null) 'completed': completed,
     };
   }
+
+  static const _TodoUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TodoUpdateDtoCopyWithSentinel();
+  TodoUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? completed = _copyWithSentinel,
+  }) {
+    return TodoUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      completed: identical(completed, _copyWithSentinel)
+          ? this.completed
+          : completed as bool?,
+    );
+  }
+}
+
+class _TodoUpdateDtoCopyWithSentinel {
+  const _TodoUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Todo].
@@ -288,6 +332,28 @@ class TodoPartial implements PartialEntity<$Todo> {
       if (completed != null) 'completed': completed,
     };
   }
+
+  static const _TodoPartialCopyWithSentinel _copyWithSentinel =
+      _TodoPartialCopyWithSentinel();
+  TodoPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? completed = _copyWithSentinel,
+  }) {
+    return TodoPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      completed: identical(completed, _copyWithSentinel)
+          ? this.completed
+          : completed as bool?,
+    );
+  }
+}
+
+class _TodoPartialCopyWithSentinel {
+  const _TodoPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Todo].
@@ -299,6 +365,7 @@ class TodoPartial implements PartialEntity<$Todo> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Todo extends Todo with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Todo].
   $Todo({required int id, required String title, required bool completed})
     : super.new(id: id, title: title, completed: completed) {
     _attachOrmRuntimeMetadata({
@@ -321,19 +388,25 @@ class $Todo extends Todo with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [completed].
   @override
   bool get completed => getAttribute<bool>('completed') ?? super.completed;
 
+  /// Tracked setter for [completed].
   set completed(bool value) => setAttribute('completed', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

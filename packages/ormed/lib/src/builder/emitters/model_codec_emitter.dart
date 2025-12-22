@@ -99,43 +99,18 @@ class ModelCodecEmitter {
       return buffer.toString();
     }
 
-    if (constructor.formalParameters.isEmpty) {
-      buffer.writeln('    ');
-    } else if (constructor.formalParameters.every((param) => param.isNamed)) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) {
-          throw InvalidGenerationSourceError(
-            'Constructor parameter $paramName is not backed by a field.',
-            element: constructor,
-          );
-        }
-        buffer.writeln('      $paramName: ${field.localIdentifier},');
-      }
-    } else if (constructor.formalParameters.every(
-      (param) => param.isPositional,
-    )) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) {
-          throw InvalidGenerationSourceError(
-            'Positional parameter $paramName must map to a field.',
-            element: constructor,
-          );
-        }
-        buffer.writeln('      ${field.localIdentifier},');
-      }
-    } else {
-      throw InvalidGenerationSourceError(
-        'Mixed positional/named constructors are not supported yet.',
-        element: constructor,
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      final field = fields.firstWhereOrNull(
+        (f) => !f.isVirtual && f.name == paramName,
       );
+      if (field == null) {
+        throw InvalidGenerationSourceError(
+          'Constructor parameter $paramName is not backed by a field.',
+          element: constructor,
+        );
+      }
+      buffer.writeln('      $paramName: ${field.localIdentifier},');
     }
     buffer.writeln('    )');
     return buffer.toString();

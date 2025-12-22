@@ -123,3 +123,40 @@ Hard deletes emit `deleting` → `deleted` → `forceDeleted`.
 ## Replication
 
 `ModelReplicatingEvent` fires before `Repository.replicate` returns the copy. Cancel it to block replication or attach metadata to the new instance.
+
+## Suppressing Events
+
+Sometimes you need to perform operations without triggering events—for example, during bulk imports, test seeding, or internal system updates.
+
+### Query-Level Suppression
+
+Use `withoutEvents()` to suppress all model events for a query:
+
+<Tabs groupId="event-suppression" defaultValue="query">
+  <TabItem value="query" label="Query">
+
+```dart file=../../examples/lib/relations/mutations.dart#without-events-query
+```
+
+  </TabItem>
+  <TabItem value="use-case" label="Use Cases">
+
+```dart file=../../examples/lib/relations/mutations.dart#without-events-use-case
+```
+
+  </TabItem>
+</Tabs>
+
+### Relation-Level Suppression
+
+Use `createQuietlyRelation` and `createManyQuietlyRelation` to create related models without events:
+
+```dart file=../../examples/lib/relations/mutations.dart#create-quietly-relation
+```
+
+:::tip When to suppress events
+- **Bulk imports**: Skip audit logging for performance
+- **Test seeding**: Avoid triggering side effects in tests  
+- **System migrations**: Update data without user-facing events
+- **Internal sync**: Replicate data without duplicate notifications
+:::

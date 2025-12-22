@@ -66,14 +66,32 @@ driver:
 
 ## Use in code (DataSource)
 
-<Tabs groupId="mysql-datasource" defaultValue="url">
-  <TabItem value="url" label="URL">
+The recommended way is to use the generated `createDataSource()` helper, but you can also initialize it manually:
+
+<Tabs groupId="mysql-usage" defaultValue="config">
+  <TabItem value="config" label="From Config">
+
+```dart
+import 'package:ormed/ormed.dart';
+import 'package:ormed_mysql/ormed_mysql.dart';
+
+void main() async {
+  ensureMySqlDriverRegistration();
+  
+  final config = loadOrmConfig();
+  final ds = DataSource.fromConfig(config);
+  await ds.init();
+}
+```
+
+  </TabItem>
+  <TabItem value="url" label="URL (Manual)">
 
 ```dart file=../../examples/lib/drivers/mysql.dart#mysql-datasource-url
 ```
 
   </TabItem>
-  <TabItem value="fields" label="Fields">
+  <TabItem value="fields" label="Fields (Manual)">
 
 ```dart file=../../examples/lib/drivers/mysql.dart#mysql-datasource-fields
 ```

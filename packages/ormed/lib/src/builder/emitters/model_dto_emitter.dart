@@ -63,7 +63,39 @@ class ModelDtoEmitter {
     }
     buffer.writeln('    };');
     buffer.writeln('  }');
+
+    // copyWith generation
+    if (insertable.isEmpty) {
+      buffer.writeln();
+      buffer.writeln('  ${className}InsertDto copyWith() => this;');
+    } else {
+      // Sentinel for distinguishing omitted params vs explicit nulls
+      buffer.writeln();
+      buffer.writeln(
+        '  static const _${className}InsertDtoCopyWithSentinel _copyWithSentinel = _${className}InsertDtoCopyWithSentinel();',
+      );
+      buffer.write('  ${className}InsertDto copyWith({');
+      for (final field in insertable) {
+        buffer.write('Object? ${field.name} = _copyWithSentinel, ');
+      }
+      buffer.writeln('}) {');
+      buffer.writeln('    return ${className}InsertDto(');
+      for (final field in insertable) {
+        buffer.writeln(
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+        );
+      }
+      buffer.writeln('    );');
+      buffer.writeln('  }');
+    }
+
     buffer.writeln('}');
+
+    if (insertable.isNotEmpty) {
+      buffer.writeln(
+        'class _${className}InsertDtoCopyWithSentinel { const _${className}InsertDtoCopyWithSentinel(); }',
+      );
+    }
   }
 
   void _writeUpdateDto(
@@ -107,6 +139,36 @@ class ModelDtoEmitter {
     }
     buffer.writeln('    };');
     buffer.writeln('  }');
+    // copyWith generation
+    if (updatable.isEmpty) {
+      buffer.writeln();
+      buffer.writeln('  ${className}UpdateDto copyWith() => this;');
+    } else {
+      buffer.writeln();
+      buffer.writeln(
+        '  static const _${className}UpdateDtoCopyWithSentinel _copyWithSentinel = _${className}UpdateDtoCopyWithSentinel();',
+      );
+      buffer.write('  ${className}UpdateDto copyWith({');
+      for (final field in updatable) {
+        buffer.write('Object? ${field.name} = _copyWithSentinel, ');
+      }
+      buffer.writeln('}) {');
+      buffer.writeln('    return ${className}UpdateDto(');
+      for (final field in updatable) {
+        buffer.writeln(
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+        );
+      }
+      buffer.writeln('    );');
+      buffer.writeln('  }');
+    }
+
     buffer.writeln('}');
+
+    if (updatable.isNotEmpty) {
+      buffer.writeln(
+        'class _${className}UpdateDtoCopyWithSentinel { const _${className}UpdateDtoCopyWithSentinel(); }',
+      );
+    }
   }
 }

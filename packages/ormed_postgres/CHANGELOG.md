@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Added**: `ensurePostgresDriverRegistration()` to register the driver with the core ORM.
+- **Added**: Package example demonstrating `DataSource.fromConfig` usage.
+- **Fixed**: Type-safe filter generation for certain PostgreSQL-specific queries (Issue #9).
+- **Fixed**: Updated codec decoding to correctly unwrap `TypedValue` for round-trip compatibility in insert/upsert paths.
+- **Improved**: Aligned with core `0.1.0-dev+4` refactor for driver-agnostic initialization.
+
 ## 0.1.0-dev+3
 
 - Optimized test performance using transactional isolation.

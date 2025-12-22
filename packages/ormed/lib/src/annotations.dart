@@ -267,10 +267,10 @@ class OrmEvent {
 /// ```dart
 /// @OrmModel(table: 'posts')
 /// class Post extends Model<Post> {
-///   @OrmRelation.belongsTo(User, foreignKey: 'author_id')
+///   @OrmRelation.belongsTo(target: User, foreignKey: 'author_id')
 ///   final User? author;
 ///
-///   @OrmRelation.hasMany(Comment, foreignKey: 'post_id')
+///   @OrmRelation.hasMany(target: Comment, foreignKey: 'post_id')
 ///   final List<Comment> comments;
 /// }
 /// ```
@@ -282,7 +282,7 @@ class OrmRelation {
   /// [OrmRelation.belongsTo].
   const OrmRelation({
     required this.kind,
-    required this.target,
+    this.target,
     this.foreignKey,
     this.localKey,
     this.through,
@@ -293,7 +293,7 @@ class OrmRelation {
   });
 
   /// Creates a `hasOne` relation.
-  const OrmRelation.hasOne(Type target, {String? foreignKey, String? localKey})
+  const OrmRelation.hasOne({Type? target, String? foreignKey, String? localKey})
     : this(
         kind: RelationKind.hasOne,
         target: target,
@@ -302,17 +302,20 @@ class OrmRelation {
       );
 
   /// Creates a `hasMany` relation.
-  const OrmRelation.hasMany(Type target, {String? foreignKey, String? localKey})
-    : this(
-        kind: RelationKind.hasMany,
-        target: target,
-        foreignKey: foreignKey,
-        localKey: localKey,
-      );
+  const OrmRelation.hasMany({
+    Type? target,
+    String? foreignKey,
+    String? localKey,
+  }) : this(
+         kind: RelationKind.hasMany,
+         target: target,
+         foreignKey: foreignKey,
+         localKey: localKey,
+       );
 
   /// Creates a `belongsTo` relation.
-  const OrmRelation.belongsTo(
-    Type target, {
+  const OrmRelation.belongsTo({
+    Type? target,
     String? foreignKey,
     String? localKey,
   }) : this(
@@ -326,8 +329,8 @@ class OrmRelation {
   ///
   /// Use [through] for the pivot/join table and provide pivot key overrides as
   /// needed.
-  const OrmRelation.manyToMany(
-    Type target, {
+  const OrmRelation.manyToMany({
+    Type? target,
     String? through,
     String? pivotForeignKey,
     String? pivotRelatedKey,
@@ -344,8 +347,8 @@ class OrmRelation {
        );
 
   /// Creates a `morphOne` relation.
-  const OrmRelation.morphOne(
-    Type target, {
+  const OrmRelation.morphOne({
+    Type? target,
     String? morphType,
     String? morphClass,
     String? foreignKey,
@@ -360,8 +363,8 @@ class OrmRelation {
        );
 
   /// Creates a `morphMany` relation.
-  const OrmRelation.morphMany(
-    Type target, {
+  const OrmRelation.morphMany({
+    Type? target,
     String? morphType,
     String? morphClass,
     String? foreignKey,
@@ -379,7 +382,7 @@ class OrmRelation {
   final RelationKind kind;
 
   /// The related model type (for example, `User`).
-  final Type target;
+  final Type? target;
 
   /// The foreign key column name used by this relation.
   final String? foreignKey;

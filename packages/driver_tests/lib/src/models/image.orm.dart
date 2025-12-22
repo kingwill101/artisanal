@@ -204,6 +204,20 @@ class ImageInsertDto implements InsertDto<$Image> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (label != null) 'label': label};
   }
+
+  static const _ImageInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ImageInsertDtoCopyWithSentinel();
+  ImageInsertDto copyWith({Object? label = _copyWithSentinel}) {
+    return ImageInsertDto(
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _ImageInsertDtoCopyWithSentinel {
+  const _ImageInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Image].
@@ -221,6 +235,24 @@ class ImageUpdateDto implements UpdateDto<$Image> {
       if (label != null) 'label': label,
     };
   }
+
+  static const _ImageUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ImageUpdateDtoCopyWithSentinel();
+  ImageUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return ImageUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _ImageUpdateDtoCopyWithSentinel {
+  const _ImageUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Image].
@@ -258,6 +290,24 @@ class ImagePartial implements PartialEntity<$Image> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (label != null) 'label': label};
   }
+
+  static const _ImagePartialCopyWithSentinel _copyWithSentinel =
+      _ImagePartialCopyWithSentinel();
+  ImagePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return ImagePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _ImagePartialCopyWithSentinel {
+  const _ImagePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Image].

@@ -1,13 +1,18 @@
-import 'package:ormed/ormed.dart' as ormed;
+import 'package:ormed/ormed.dart';
 
-import 'demo_content_seeder.dart';
-
-/// Entrypoint seeder that can fan out to other seed classes.
-class DatabaseSeeder extends ormed.DatabaseSeeder {
-  DatabaseSeeder(super.connection);
+/// Root seeder executed by `orm seed` and `orm migrate --seed`.
+class AppDatabaseSeeder extends DatabaseSeeder {
+  AppDatabaseSeeder(super.connection);
 
   @override
   Future<void> run() async {
-    await call([DemoContentSeeder.new]);
+    // TODO: add seed logic here
+    // Examples:
+    // await seed<User>([
+    //   {'name': 'Admin User', 'email': 'admin@example.com'},
+    // ]);
+    //
+    // Or call other seeders:
+    // await call([UserSeeder.new, PostSeeder.new]);
   }
 }

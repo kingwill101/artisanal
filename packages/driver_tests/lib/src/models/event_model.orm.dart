@@ -251,6 +251,22 @@ class EventModelInsertDto implements InsertDto<$EventModel> {
       if (score != null) 'score': score,
     };
   }
+
+  static const _EventModelInsertDtoCopyWithSentinel _copyWithSentinel =
+      _EventModelInsertDtoCopyWithSentinel();
+  EventModelInsertDto copyWith({
+    Object? name = _copyWithSentinel,
+    Object? score = _copyWithSentinel,
+  }) {
+    return EventModelInsertDto(
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      score: identical(score, _copyWithSentinel) ? this.score : score as int?,
+    );
+  }
+}
+
+class _EventModelInsertDtoCopyWithSentinel {
+  const _EventModelInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [EventModel].
@@ -270,6 +286,24 @@ class EventModelUpdateDto implements UpdateDto<$EventModel> {
       if (score != null) 'score': score,
     };
   }
+
+  static const _EventModelUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _EventModelUpdateDtoCopyWithSentinel();
+  EventModelUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? score = _copyWithSentinel,
+  }) {
+    return EventModelUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      score: identical(score, _copyWithSentinel) ? this.score : score as int?,
+    );
+  }
+}
+
+class _EventModelUpdateDtoCopyWithSentinel {
+  const _EventModelUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [EventModel].
@@ -320,6 +354,24 @@ class EventModelPartial implements PartialEntity<$EventModel> {
       if (score != null) 'score': score,
     };
   }
+
+  static const _EventModelPartialCopyWithSentinel _copyWithSentinel =
+      _EventModelPartialCopyWithSentinel();
+  EventModelPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? score = _copyWithSentinel,
+  }) {
+    return EventModelPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      score: identical(score, _copyWithSentinel) ? this.score : score as int?,
+    );
+  }
+}
+
+class _EventModelPartialCopyWithSentinel {
+  const _EventModelPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [EventModel].

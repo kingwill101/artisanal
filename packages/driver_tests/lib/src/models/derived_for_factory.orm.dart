@@ -304,6 +304,30 @@ class DerivedForFactoryInsertDto implements InsertDto<$DerivedForFactory> {
       if (baseName != null) 'base_name': baseName,
     };
   }
+
+  static const _DerivedForFactoryInsertDtoCopyWithSentinel _copyWithSentinel =
+      _DerivedForFactoryInsertDtoCopyWithSentinel();
+  DerivedForFactoryInsertDto copyWith({
+    Object? layerTwoFlag = _copyWithSentinel,
+    Object? layerOneNotes = _copyWithSentinel,
+    Object? baseName = _copyWithSentinel,
+  }) {
+    return DerivedForFactoryInsertDto(
+      layerTwoFlag: identical(layerTwoFlag, _copyWithSentinel)
+          ? this.layerTwoFlag
+          : layerTwoFlag as bool?,
+      layerOneNotes: identical(layerOneNotes, _copyWithSentinel)
+          ? this.layerOneNotes
+          : layerOneNotes as Map<String, Object?>?,
+      baseName: identical(baseName, _copyWithSentinel)
+          ? this.baseName
+          : baseName as String?,
+    );
+  }
+}
+
+class _DerivedForFactoryInsertDtoCopyWithSentinel {
+  const _DerivedForFactoryInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [DerivedForFactory].
@@ -330,6 +354,32 @@ class DerivedForFactoryUpdateDto implements UpdateDto<$DerivedForFactory> {
       if (baseName != null) 'base_name': baseName,
     };
   }
+
+  static const _DerivedForFactoryUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _DerivedForFactoryUpdateDtoCopyWithSentinel();
+  DerivedForFactoryUpdateDto copyWith({
+    Object? layerTwoFlag = _copyWithSentinel,
+    Object? layerOneNotes = _copyWithSentinel,
+    Object? id = _copyWithSentinel,
+    Object? baseName = _copyWithSentinel,
+  }) {
+    return DerivedForFactoryUpdateDto(
+      layerTwoFlag: identical(layerTwoFlag, _copyWithSentinel)
+          ? this.layerTwoFlag
+          : layerTwoFlag as bool?,
+      layerOneNotes: identical(layerOneNotes, _copyWithSentinel)
+          ? this.layerOneNotes
+          : layerOneNotes as Map<String, Object?>?,
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      baseName: identical(baseName, _copyWithSentinel)
+          ? this.baseName
+          : baseName as String?,
+    );
+  }
+}
+
+class _DerivedForFactoryUpdateDtoCopyWithSentinel {
+  const _DerivedForFactoryUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [DerivedForFactory].
@@ -385,6 +435,32 @@ class DerivedForFactoryPartial implements PartialEntity<$DerivedForFactory> {
       if (baseName != null) 'base_name': baseName,
     };
   }
+
+  static const _DerivedForFactoryPartialCopyWithSentinel _copyWithSentinel =
+      _DerivedForFactoryPartialCopyWithSentinel();
+  DerivedForFactoryPartial copyWith({
+    Object? layerTwoFlag = _copyWithSentinel,
+    Object? layerOneNotes = _copyWithSentinel,
+    Object? id = _copyWithSentinel,
+    Object? baseName = _copyWithSentinel,
+  }) {
+    return DerivedForFactoryPartial(
+      layerTwoFlag: identical(layerTwoFlag, _copyWithSentinel)
+          ? this.layerTwoFlag
+          : layerTwoFlag as bool?,
+      layerOneNotes: identical(layerOneNotes, _copyWithSentinel)
+          ? this.layerOneNotes
+          : layerOneNotes as Map<String, Object?>?,
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      baseName: identical(baseName, _copyWithSentinel)
+          ? this.baseName
+          : baseName as String?,
+    );
+  }
+}
+
+class _DerivedForFactoryPartialCopyWithSentinel {
+  const _DerivedForFactoryPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [DerivedForFactory].

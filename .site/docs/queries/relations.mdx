@@ -27,7 +27,17 @@ Load relations upfront with your query to avoid N+1 problems.
 
 ### Nested Relations
 
+Load multiple levels of relationships using dot notation. Ormed will recursively load each segment of the path.
+
 ```dart file=../../examples/lib/relations/loading.dart#eager-nested
+```
+
+You can also apply constraints to the final segment of a nested path:
+
+```dart
+final posts = await dataSource.query<$Post>()
+  .withRelation('comments.user', (q) => q.where('active', true))
+  .get();
 ```
 
 ## Lazy Loading

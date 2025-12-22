@@ -284,6 +284,28 @@ class ActiveUserInsertDto implements InsertDto<$ActiveUser> {
       if (settings != null) 'settings': settings,
     };
   }
+
+  static const _ActiveUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ActiveUserInsertDtoCopyWithSentinel();
+  ActiveUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? settings = _copyWithSentinel,
+  }) {
+    return ActiveUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      settings: identical(settings, _copyWithSentinel)
+          ? this.settings
+          : settings as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ActiveUserInsertDtoCopyWithSentinel {
+  const _ActiveUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ActiveUser].
@@ -305,6 +327,30 @@ class ActiveUserUpdateDto implements UpdateDto<$ActiveUser> {
       if (settings != null) 'settings': settings,
     };
   }
+
+  static const _ActiveUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ActiveUserUpdateDtoCopyWithSentinel();
+  ActiveUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? settings = _copyWithSentinel,
+  }) {
+    return ActiveUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      settings: identical(settings, _copyWithSentinel)
+          ? this.settings
+          : settings as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ActiveUserUpdateDtoCopyWithSentinel {
+  const _ActiveUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ActiveUser].
@@ -359,6 +405,30 @@ class ActiveUserPartial implements PartialEntity<$ActiveUser> {
       if (settings != null) 'settings': settings,
     };
   }
+
+  static const _ActiveUserPartialCopyWithSentinel _copyWithSentinel =
+      _ActiveUserPartialCopyWithSentinel();
+  ActiveUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? settings = _copyWithSentinel,
+  }) {
+    return ActiveUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      settings: identical(settings, _copyWithSentinel)
+          ? this.settings
+          : settings as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ActiveUserPartialCopyWithSentinel {
+  const _ActiveUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ActiveUser].

@@ -302,6 +302,30 @@ class OrmMigrationRecordInsertDto implements InsertDto<$OrmMigrationRecord> {
       if (batch != null) 'batch': batch,
     };
   }
+
+  static const _OrmMigrationRecordInsertDtoCopyWithSentinel _copyWithSentinel =
+      _OrmMigrationRecordInsertDtoCopyWithSentinel();
+  OrmMigrationRecordInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? checksum = _copyWithSentinel,
+    Object? appliedAt = _copyWithSentinel,
+    Object? batch = _copyWithSentinel,
+  }) {
+    return OrmMigrationRecordInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      checksum: identical(checksum, _copyWithSentinel)
+          ? this.checksum
+          : checksum as String?,
+      appliedAt: identical(appliedAt, _copyWithSentinel)
+          ? this.appliedAt
+          : appliedAt as DateTime?,
+      batch: identical(batch, _copyWithSentinel) ? this.batch : batch as int?,
+    );
+  }
+}
+
+class _OrmMigrationRecordInsertDtoCopyWithSentinel {
+  const _OrmMigrationRecordInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [OrmMigrationRecord].
@@ -328,6 +352,30 @@ class OrmMigrationRecordUpdateDto implements UpdateDto<$OrmMigrationRecord> {
       if (batch != null) 'batch': batch,
     };
   }
+
+  static const _OrmMigrationRecordUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _OrmMigrationRecordUpdateDtoCopyWithSentinel();
+  OrmMigrationRecordUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? checksum = _copyWithSentinel,
+    Object? appliedAt = _copyWithSentinel,
+    Object? batch = _copyWithSentinel,
+  }) {
+    return OrmMigrationRecordUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      checksum: identical(checksum, _copyWithSentinel)
+          ? this.checksum
+          : checksum as String?,
+      appliedAt: identical(appliedAt, _copyWithSentinel)
+          ? this.appliedAt
+          : appliedAt as DateTime?,
+      batch: identical(batch, _copyWithSentinel) ? this.batch : batch as int?,
+    );
+  }
+}
+
+class _OrmMigrationRecordUpdateDtoCopyWithSentinel {
+  const _OrmMigrationRecordUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [OrmMigrationRecord].
@@ -395,6 +443,30 @@ class OrmMigrationRecordPartial implements PartialEntity<$OrmMigrationRecord> {
       if (batch != null) 'batch': batch,
     };
   }
+
+  static const _OrmMigrationRecordPartialCopyWithSentinel _copyWithSentinel =
+      _OrmMigrationRecordPartialCopyWithSentinel();
+  OrmMigrationRecordPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? checksum = _copyWithSentinel,
+    Object? appliedAt = _copyWithSentinel,
+    Object? batch = _copyWithSentinel,
+  }) {
+    return OrmMigrationRecordPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      checksum: identical(checksum, _copyWithSentinel)
+          ? this.checksum
+          : checksum as String?,
+      appliedAt: identical(appliedAt, _copyWithSentinel)
+          ? this.appliedAt
+          : appliedAt as DateTime?,
+      batch: identical(batch, _copyWithSentinel) ? this.batch : batch as int?,
+    );
+  }
+}
+
+class _OrmMigrationRecordPartialCopyWithSentinel {
+  const _OrmMigrationRecordPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [OrmMigrationRecord].
@@ -408,6 +480,7 @@ class OrmMigrationRecordPartial implements PartialEntity<$OrmMigrationRecord> {
 class $OrmMigrationRecord extends OrmMigrationRecord
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$OrmMigrationRecord].
   $OrmMigrationRecord({
     required String id,
     required String checksum,
@@ -451,25 +524,33 @@ class $OrmMigrationRecord extends OrmMigrationRecord
     );
   }
 
+  /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(String value) => setAttribute('id', value);
 
+  /// Tracked getter for [checksum].
   @override
   String get checksum => getAttribute<String>('checksum') ?? super.checksum;
 
+  /// Tracked setter for [checksum].
   set checksum(String value) => setAttribute('checksum', value);
 
+  /// Tracked getter for [appliedAt].
   @override
   DateTime get appliedAt =>
       getAttribute<DateTime>('applied_at') ?? super.appliedAt;
 
+  /// Tracked setter for [appliedAt].
   set appliedAt(DateTime value) => setAttribute('applied_at', value);
 
+  /// Tracked getter for [batch].
   @override
   int get batch => getAttribute<int>('batch') ?? super.batch;
 
+  /// Tracked setter for [batch].
   set batch(int value) => setAttribute('batch', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

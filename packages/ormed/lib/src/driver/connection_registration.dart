@@ -4,8 +4,6 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
-
 import '../connection/connection_handle.dart';
 import '../connection/connection_manager.dart';
 import '../model/model_registry.dart';
@@ -17,28 +15,15 @@ String _connectionNameForDefinition(
   ConnectionDefinition definition,
 ) {
   final driverType = definition.driver.type.toLowerCase();
-  switch (driverType) {
-    case 'sqlite':
-      final database =
-          definition.driver.option('database') ?? 'database.sqlite';
-      final resolved = p.normalize(p.join(root.path, database));
-      return _connectionName(driverType, resolved);
-    case 'mysql':
-    case 'mariadb':
-      final normalized = _normalizeOptions(definition.driver.options);
-      return _connectionName('mysql', _stableFingerprint(normalized));
-    case 'postgres':
-    case 'postgresql':
-      final normalized = _normalizeOptions(definition.driver.options);
-      return _connectionName('postgres', _stableFingerprint(normalized));
-    case 'mongo':
-    case 'mongodb':
-      final normalized = _normalizeOptions(definition.driver.options);
-      return _connectionName(driverType, _stableFingerprint(normalized));
-    default:
-      final normalized = _normalizeOptions(definition.driver.options);
-      return _connectionName(driverType, _stableFingerprint(normalized));
-  }
+  final normalized = _normalizeOptions(definition.driver.options);
+
+  // We include the root path in the fingerprint to ensure that relative paths
+  // (like in SQLite) or identical configs in different projects don't clash
+  // in the global ConnectionManager.
+  return _connectionName(
+    driverType,
+    _stableFingerprint({'root': root.path, 'options': normalized}),
+  );
 }
 
 /// Returns the canonical `ConnectionManager` name for the active [config].

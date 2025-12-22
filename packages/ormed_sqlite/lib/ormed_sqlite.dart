@@ -13,6 +13,11 @@ export 'src/sqlite_connector.dart';
 export 'src/sqlite_codecs.dart';
 
 final _sqliteDriverRegistration = (() {
+  DriverAdapterRegistry.register('sqlite', (config) {
+    final database = config.option('database') ?? 'database.sqlite';
+    return SqliteDriverAdapter.file(database);
+  });
+
   DriverRegistry.registerDriver('sqlite', ({
     required Directory root,
     required ConnectionManager manager,
@@ -38,9 +43,10 @@ final _sqliteDriverRegistration = (() {
   return null;
 })();
 
-/// Ensures sqlite driver registers with [DriverRegistry].
+/// Ensures sqlite driver registers with [DriverRegistry] and [DriverAdapterRegistry].
 void ensureSqliteDriverRegistration() => _sqliteDriverRegistration;
 
+/// Registers a SQLite ORM connection with the [manager].
 OrmConnectionHandle registerSqliteOrmConnection({
   required String name,
   required DatabaseConfig database,

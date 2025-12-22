@@ -88,6 +88,7 @@ class ModelSubclassEmitter {
     buffer.writeln(
       'class $modelSubclassName extends $className$mixinSuffix implements OrmEntity {',
     );
+    buffer.writeln('  /// Internal constructor for [$modelSubclassName].');
     buffer.writeln(
       '  $modelSubclassName${_constructorParameters(context.constructor, context.fields)}',
     );
@@ -134,11 +135,13 @@ class ModelSubclassEmitter {
     }
 
     for (final field in context.fields.where((f) => !f.isVirtual)) {
+      buffer.writeln('  /// Tracked getter for [${field.name}].');
       buffer.writeln('  @override');
       buffer.writeln(
         '  ${field.resolvedType} get ${field.name} => getAttribute<${field.resolvedType}>(\'${field.columnName}\') ?? super.${field.name};',
       );
       buffer.writeln();
+      buffer.writeln('  /// Tracked setter for [${field.name}].');
       buffer.writeln(
         '  set ${field.name}(${field.resolvedType} value) => setAttribute(\'${field.columnName}\', value);',
       );
@@ -162,9 +165,18 @@ class ModelSubclassEmitter {
     // Generate relation getter overrides with loaded checks
     for (final relation in context.relations) {
       final isList = relation.isList;
-      final returnType = isList
-          ? 'List<${relation.targetModel}>'
-          : '${relation.targetModel}?';
+      final isNullable = relation.isNullable;
+
+      // Determine return type based on relation type and field nullability
+      final String returnType;
+      if (isList) {
+        // List relations (hasMany, manyToMany, morphMany) always return non-nullable List
+        // to provide a consistent API - empty list instead of null
+        returnType = 'List<${relation.targetModel}>';
+      } else {
+        // Single relations are always nullable (may not be loaded)
+        returnType = '${relation.targetModel}?';
+      }
 
       buffer.writeln();
       buffer.writeln('  @override');
@@ -182,7 +194,20 @@ class ModelSubclassEmitter {
       }
 
       buffer.writeln('    }');
-      buffer.writeln('    return super.${relation.name};');
+
+      // For list relations, always ensure non-null return (use ?? const [] if super is nullable)
+      // For single relations, return super as-is (nullable)
+      if (isList) {
+        if (isNullable) {
+          // Super field is nullable, need to coalesce to empty list
+          buffer.writeln('    return super.${relation.name} ?? const [];');
+        } else {
+          // Super field is non-nullable, no coalescing needed
+          buffer.writeln('    return super.${relation.name};');
+        }
+      } else {
+        buffer.writeln('    return super.${relation.name};');
+      }
       buffer.writeln('  }');
     }
 
@@ -218,8 +243,25 @@ class ModelSubclassEmitter {
             '    return Model.query<$targetType>().where(\'${relation.foreignKey}\', $localKeyGetter);',
           );
         } else if (relation.kind == RelationKind.manyToMany) {
+          final ownerKeyField = context.fields.firstWhereOrNull(
+            (f) => f.isPrimaryKey,
+          );
+          final ownerKeyGetter = ownerKeyField?.name ?? 'getAttribute("id")';
+
+          buffer.writeln('    final query = Model.query<$targetType>();');
+          buffer.writeln('    final targetTable = query.definition.tableName;');
           buffer.writeln(
-            '    throw UnimplementedError("ManyToMany query generation not yet supported");',
+            '    final targetKey = ${relation.localKey != null ? "'${relation.localKey}'" : "query.definition.primaryKeyField?.columnName ?? 'id'"};',
+          );
+          buffer.writeln('    return query.join(');
+          buffer.writeln('      \'${relation.through}\',');
+          buffer.writeln('      \'\$targetTable.\$targetKey\',');
+          buffer.writeln('      \'=\',');
+          buffer.writeln(
+            '      \'${relation.through}.${relation.pivotRelatedKey}\',',
+          );
+          buffer.writeln(
+            '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );
         } else if (relation.kind == RelationKind.morphOne ||
             relation.kind == RelationKind.morphMany) {
@@ -447,54 +489,26 @@ class ModelSubclassEmitter {
   ) {
     final buffer = StringBuffer();
     buffer.write('({');
-    if (constructor.formalParameters.isEmpty) {
-      // No params
-    } else if (constructor.formalParameters.every((param) => param.isNamed)) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) continue;
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      final field = fields.firstWhereOrNull(
+        (f) => !f.isVirtual && f.name == paramName,
+      );
+      if (field == null) continue;
 
-        // Check if this field has a default value (e.g., auto-increment sentinel)
-        final hasDefaultValue = field.autoIncrement && !field.isNullable;
+      // Check if this field has a default value (e.g., auto-increment sentinel)
+      final hasDefaultValue = field.autoIncrement && !field.isNullable;
 
-        if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
-          buffer.write('required ');
-        }
-        buffer.write('${field.resolvedType} $paramName');
-
-        // Add default value for auto-increment fields
-        if (hasDefaultValue) {
-          buffer.write(' = 0');
-        }
-        buffer.write(', ');
+      if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
+        buffer.write('required ');
       }
-    } else if (constructor.formalParameters.every(
-      (param) => param.isPositional,
-    )) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) continue;
+      buffer.write('${field.resolvedType} $paramName');
 
-        // Check if this field has a default value
-        final hasDefaultValue = field.autoIncrement && !field.isNullable;
-
-        if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
-          buffer.write('required ');
-        }
-        buffer.write('${field.resolvedType} $paramName');
-
-        // Add default value for auto-increment fields
-        if (hasDefaultValue) {
-          buffer.write(' = 0');
-        }
-        buffer.write(', ');
+      // Add default value for auto-increment fields
+      if (hasDefaultValue) {
+        buffer.write(' = 0');
       }
+      buffer.write(', ');
     }
     buffer.write('})');
     return buffer.toString();
@@ -506,18 +520,11 @@ class ModelSubclassEmitter {
       buffer.write('.${constructor.name}');
     }
     buffer.write('(');
-    if (constructor.formalParameters.isEmpty) {
-      // No params
-    } else if (constructor.formalParameters.every((param) => param.isNamed)) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      if (parameter.isNamed) {
         buffer.write('$paramName: $paramName, ');
-      }
-    } else if (constructor.formalParameters.every(
-      (param) => param.isPositional,
-    )) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
+      } else {
         buffer.write('$paramName, ');
       }
     }

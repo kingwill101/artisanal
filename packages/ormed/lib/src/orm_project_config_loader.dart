@@ -9,13 +9,64 @@ import 'package:yaml/yaml.dart';
 
 import 'orm_project_config.dart';
 
+/// Finds the `ormed.yaml` file by searching from [startDirectory] up to the
+/// filesystem root.
+///
+/// Returns `null` if no `ormed.yaml` is found.
+File? findOrmConfigFile([Directory? startDirectory]) {
+  var current = startDirectory ?? Directory.current;
+  while (true) {
+    final candidate = File('${current.path}/ormed.yaml');
+    if (candidate.existsSync()) {
+      return candidate;
+    }
+    final parent = current.parent;
+    if (parent.path == current.path) {
+      // Reached filesystem root
+      return null;
+    }
+    current = parent;
+  }
+}
+
+/// Loads [OrmProjectConfig] by finding `ormed.yaml` in the current directory
+/// or any parent directory.
+///
+/// This is a convenience wrapper around [loadOrmProjectConfig] that
+/// automatically locates the config file.
+///
+/// Throws [StateError] if no `ormed.yaml` is found.
+///
+/// Example:
+/// ```dart
+/// import 'package:ormed/ormed.dart';
+///
+/// void main() async {
+///   final config = loadOrmConfig();
+///   print('Database: ${config.driver.option("database")}');
+///   print('Driver type: ${config.driver.type}');
+/// }
+/// ```
+OrmProjectConfig loadOrmConfig([Directory? startDirectory]) {
+  final file = findOrmConfigFile(startDirectory);
+  if (file == null) {
+    throw StateError(
+      'Could not find ormed.yaml. Run `ormed init` first or ensure you are '
+      'running from within a project directory.',
+    );
+  }
+  return loadOrmProjectConfig(file);
+}
+
 /// Loads [OrmProjectConfig] from [file].
 ///
 /// Throws when the file is missing so callers can instruct users to run
 /// `ormed init`.
 OrmProjectConfig loadOrmProjectConfig(File file) {
   if (!file.existsSync()) {
-    throw StateError('Missing ormed.yaml at ${file.path}. Run `ormed init` first.');
+    throw StateError(
+      'Missing ormed.yaml at ${file.path}. Run `ormed init` first.',
+    );
   }
   final parsed = loadYaml(file.readAsStringSync());
   final env = _loadEnv(file.parent);

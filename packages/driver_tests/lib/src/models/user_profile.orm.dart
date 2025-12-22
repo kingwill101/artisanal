@@ -235,6 +235,24 @@ class UserProfileInsertDto implements InsertDto<$UserProfile> {
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _UserProfileInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserProfileInsertDtoCopyWithSentinel();
+  UserProfileInsertDto copyWith({
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return UserProfileInsertDto(
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _UserProfileInsertDtoCopyWithSentinel {
+  const _UserProfileInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [UserProfile].
@@ -254,6 +272,26 @@ class UserProfileUpdateDto implements UpdateDto<$UserProfile> {
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _UserProfileUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserProfileUpdateDtoCopyWithSentinel();
+  UserProfileUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return UserProfileUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _UserProfileUpdateDtoCopyWithSentinel {
+  const _UserProfileUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [UserProfile].
@@ -304,6 +342,26 @@ class UserProfilePartial implements PartialEntity<$UserProfile> {
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _UserProfilePartialCopyWithSentinel _copyWithSentinel =
+      _UserProfilePartialCopyWithSentinel();
+  UserProfilePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return UserProfilePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _UserProfilePartialCopyWithSentinel {
+  const _UserProfilePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [UserProfile].

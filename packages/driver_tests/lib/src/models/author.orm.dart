@@ -276,6 +276,24 @@ class AuthorInsertDto implements InsertDto<$Author> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _AuthorInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorInsertDtoCopyWithSentinel();
+  AuthorInsertDto copyWith({
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return AuthorInsertDto(
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _AuthorInsertDtoCopyWithSentinel {
+  const _AuthorInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Author].
@@ -295,6 +313,26 @@ class AuthorUpdateDto implements UpdateDto<$Author> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _AuthorUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorUpdateDtoCopyWithSentinel();
+  AuthorUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return AuthorUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _AuthorUpdateDtoCopyWithSentinel {
+  const _AuthorUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Author].
@@ -345,6 +383,26 @@ class AuthorPartial implements PartialEntity<$Author> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _AuthorPartialCopyWithSentinel _copyWithSentinel =
+      _AuthorPartialCopyWithSentinel();
+  AuthorPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return AuthorPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _AuthorPartialCopyWithSentinel {
+  const _AuthorPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Author].

@@ -158,6 +158,11 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   ///   .where('age', 18, PredicateOperator.greaterThan)
   ///   .get();
   ///
+  /// // Using a Partial (Type-safe)
+  /// final users = await context.query<User>()
+  ///   .where(UserPartial(email: 'test@example.com'))
+  ///   .get();
+  ///
   /// // Grouped conditions
   /// final complexUsers = await context.query<User>()
   ///   .where((query) {
@@ -726,6 +731,20 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
         );
       }
       return updated;
+    }
+
+    if (fieldOrCallback is PartialEntity<T>) {
+      final data = fieldOrCallback.toMap();
+      var current = this;
+      for (final entry in data.entries) {
+        current = current.where(entry.key, entry.value);
+      }
+      return current;
+    }
+
+    if (fieldOrCallback is Symbol) {
+      final name = fieldOrCallback.toString().split('"')[1];
+      return where(name, value, operator);
     }
 
     if (fieldOrCallback is PredicateCallback<T>) {
