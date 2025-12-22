@@ -382,13 +382,13 @@ class Query<T extends OrmEntity> {
     }
 
     if (!_suppressEvents) {
-    _events.emit(
-      ModelRetrievedEvent(
-        modelType: definition.modelType,
-        tableName: definition.tableName,
-        model: model,
-      ),
-    );
+      _events.emit(
+        ModelRetrievedEvent(
+          modelType: definition.modelType,
+          tableName: definition.tableName,
+          model: model,
+        ),
+      );
     }
 
     return QueryRow<T>(model: model, row: _projectionRow(row, plan));
@@ -1135,6 +1135,35 @@ class Query<T extends OrmEntity> {
     if (definition is AdHocModelDefinition) {
       return (definition as AdHocModelDefinition).fieldFor(name);
     }
+
+    // Allow qualified names (e.g. "table.column") if we have joins or if it's referring to the current table.
+    // This is common in many-to-many relations and manual joins.
+    if (name.contains('.')) {
+      final parts = name.split('.');
+      if (parts.length == 2) {
+        final tableName = parts[0];
+        final columnName = parts[1];
+
+        // If it's our own table, check if the column exists
+        if (tableName == definition.tableName) {
+          final f = definition.fields.firstWhereOrNull(
+            (f) => f.columnName == columnName || f.name == columnName,
+          );
+          if (f != null) return f;
+        }
+
+        // Otherwise, assume it's a joined table column or a valid qualified name
+        return FieldDefinition(
+          name: name,
+          columnName: name,
+          dartType: 'Object?',
+          resolvedType: 'Object?',
+          isPrimaryKey: false,
+          isNullable: true,
+        );
+      }
+    }
+
     // Allow arbitrary columns for TableQueryDefinition (table() queries)
     if (definition is TableQueryDefinition) {
       return FieldDefinition(
