@@ -9,7 +9,6 @@ import 'query/query.dart';
 import 'repository/repository.dart';
 import 'value_codec.dart';
 import 'orm_project_config.dart';
-import 'driver/driver_adapter_registry.dart';
 
 /// Configuration options for initializing a [DataSource].
 ///
