@@ -1,10 +1,12 @@
 part of '../query_builder.dart';
 
+/// Fluent builder for constructing complex `JOIN` conditions.
 class JoinBuilder {
   JoinBuilder._();
 
   final List<JoinCondition> _conditions = <JoinCondition>[];
 
+  /// Adds a basic `ON` clause to the join.
   JoinBuilder on(String first, [Object? operator, String? second]) {
     final op = _normalizeJoinOperatorToken(operator);
     if (second == null) {

@@ -88,6 +88,7 @@ class ModelSubclassEmitter {
     buffer.writeln(
       'class $modelSubclassName extends $className$mixinSuffix implements OrmEntity {',
     );
+    buffer.writeln('  /// Internal constructor for [$modelSubclassName].');
     buffer.writeln(
       '  $modelSubclassName${_constructorParameters(context.constructor, context.fields)}',
     );
@@ -134,11 +135,13 @@ class ModelSubclassEmitter {
     }
 
     for (final field in context.fields.where((f) => !f.isVirtual)) {
+      buffer.writeln('  /// Tracked getter for [${field.name}].');
       buffer.writeln('  @override');
       buffer.writeln(
         '  ${field.resolvedType} get ${field.name} => getAttribute<${field.resolvedType}>(\'${field.columnName}\') ?? super.${field.name};',
       );
       buffer.writeln();
+      buffer.writeln('  /// Tracked setter for [${field.name}].');
       buffer.writeln(
         '  set ${field.name}(${field.resolvedType} value) => setAttribute(\'${field.columnName}\', value);',
       );
