@@ -74,10 +74,11 @@ class InitCommand extends Command<void> {
       }
     }
 
+    final packageName = getPackageName(root);
     final configFile = File(p.join(root.path, 'ormed.yaml'));
     _writeFile(
       file: configFile,
-      content: defaultOrmYaml,
+      content: defaultOrmYaml(packageName),
       label: 'ormed.yaml',
       force: force,
       tracker: tracker,
@@ -86,7 +87,6 @@ class InitCommand extends Command<void> {
 
     // Load config
     final config = loadOrmProjectConfig(configFile);
-    final packageName = getPackageName(root);
 
     // Directories
     final migrationsDir = Directory(
