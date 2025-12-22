@@ -15,6 +15,7 @@ import 'src/models/image.dart';
 import 'src/models/mutation_target.dart';
 import 'src/models/named_constructor_model.dart';
 import 'src/models/no_factory.dart';
+import 'src/models/nullable_relations_test.dart';
 import 'src/models/photo.dart';
 import 'src/models/post.dart';
 import 'src/models/post_tag.dart';
@@ -41,6 +42,7 @@ final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
   MutationTargetOrmDefinition.definition,
   NamedConstructorModelOrmDefinition.definition,
   NoFactoryOrmDefinition.definition,
+  NullableRelationsTestOrmDefinition.definition,
   PhotoOrmDefinition.definition,
   PostOrmDefinition.definition,
   PostTagOrmDefinition.definition,
@@ -69,16 +71,17 @@ ModelRegistry buildOrmRegistry() => ModelRegistry()
   ..registerTypeAlias<MutationTarget>(_$ormModelDefinitions[11])
   ..registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[12])
   ..registerTypeAlias<NoFactory>(_$ormModelDefinitions[13])
-  ..registerTypeAlias<Photo>(_$ormModelDefinitions[14])
-  ..registerTypeAlias<Post>(_$ormModelDefinitions[15])
-  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[16])
-  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[17])
-  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[18])
-  ..registerTypeAlias<Setting>(_$ormModelDefinitions[19])
-  ..registerTypeAlias<Tag>(_$ormModelDefinitions[20])
-  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[21])
-  ..registerTypeAlias<User>(_$ormModelDefinitions[22])
-  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[23])
+  ..registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[14])
+  ..registerTypeAlias<Photo>(_$ormModelDefinitions[15])
+  ..registerTypeAlias<Post>(_$ormModelDefinitions[16])
+  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[17])
+  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[18])
+  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[19])
+  ..registerTypeAlias<Setting>(_$ormModelDefinitions[20])
+  ..registerTypeAlias<Tag>(_$ormModelDefinitions[21])
+  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[22])
+  ..registerTypeAlias<User>(_$ormModelDefinitions[23])
+  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[24])
   ;
 
 List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
@@ -101,16 +104,17 @@ extension GeneratedOrmModels on ModelRegistry {
     registerTypeAlias<MutationTarget>(_$ormModelDefinitions[11]);
     registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[12]);
     registerTypeAlias<NoFactory>(_$ormModelDefinitions[13]);
-    registerTypeAlias<Photo>(_$ormModelDefinitions[14]);
-    registerTypeAlias<Post>(_$ormModelDefinitions[15]);
-    registerTypeAlias<PostTag>(_$ormModelDefinitions[16]);
-    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[17]);
-    registerTypeAlias<SerialTest>(_$ormModelDefinitions[18]);
-    registerTypeAlias<Setting>(_$ormModelDefinitions[19]);
-    registerTypeAlias<Tag>(_$ormModelDefinitions[20]);
-    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[21]);
-    registerTypeAlias<User>(_$ormModelDefinitions[22]);
-    registerTypeAlias<UserProfile>(_$ormModelDefinitions[23]);
+    registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[14]);
+    registerTypeAlias<Photo>(_$ormModelDefinitions[15]);
+    registerTypeAlias<Post>(_$ormModelDefinitions[16]);
+    registerTypeAlias<PostTag>(_$ormModelDefinitions[17]);
+    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[18]);
+    registerTypeAlias<SerialTest>(_$ormModelDefinitions[19]);
+    registerTypeAlias<Setting>(_$ormModelDefinitions[20]);
+    registerTypeAlias<Tag>(_$ormModelDefinitions[21]);
+    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[22]);
+    registerTypeAlias<User>(_$ormModelDefinitions[23]);
+    registerTypeAlias<UserProfile>(_$ormModelDefinitions[24]);
     return this;
   }
 }
@@ -130,6 +134,7 @@ void registerOrmFactories() {
   ModelFactoryRegistry.registerIfAbsent<Image>(ImageOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<MutationTarget>(MutationTargetOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<NamedConstructorModel>(NamedConstructorModelOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<NullableRelationsTest>(NullableRelationsTestOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Photo>(PhotoOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Post>(PostOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<PostTag>(PostTagOrmDefinition.definition);

@@ -1,7 +1,5 @@
 library;
 
-import 'package:meta/meta.dart';
-
 /// Marker interface for ORM-managed entities and generated tracked models.
 ///
 /// This interface serves as the base type constraint for all ORM operations.
@@ -30,7 +28,10 @@ import 'package:meta/meta.dart';
 /// await repository.insert($UserInsertDto(name: 'Bob', email: 'bob@example.com'));
 /// await context.query<$User>().where('active', true).get();
 /// ```
-@immutable
+///
+/// Note: This class intentionally does **not** have the `@immutable` annotation
+/// to allow models with non-final relation fields (e.g., for lazy loading patterns).
+/// Generated tracked models manage mutable state internally via [Expando].
 abstract class OrmEntity {
   const OrmEntity();
 }

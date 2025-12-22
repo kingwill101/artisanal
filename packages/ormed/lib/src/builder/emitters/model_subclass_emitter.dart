@@ -162,9 +162,18 @@ class ModelSubclassEmitter {
     // Generate relation getter overrides with loaded checks
     for (final relation in context.relations) {
       final isList = relation.isList;
-      final returnType = isList
-          ? 'List<${relation.targetModel}>'
-          : '${relation.targetModel}?';
+      final isNullable = relation.isNullable;
+
+      // Determine return type based on relation type and field nullability
+      final String returnType;
+      if (isList) {
+        // List relations (hasMany, manyToMany, morphMany) always return non-nullable List
+        // to provide a consistent API - empty list instead of null
+        returnType = 'List<${relation.targetModel}>';
+      } else {
+        // Single relations are always nullable (may not be loaded)
+        returnType = '${relation.targetModel}?';
+      }
 
       buffer.writeln();
       buffer.writeln('  @override');
@@ -182,7 +191,20 @@ class ModelSubclassEmitter {
       }
 
       buffer.writeln('    }');
-      buffer.writeln('    return super.${relation.name};');
+
+      // For list relations, always ensure non-null return (use ?? const [] if super is nullable)
+      // For single relations, return super as-is (nullable)
+      if (isList) {
+        if (isNullable) {
+          // Super field is nullable, need to coalesce to empty list
+          buffer.writeln('    return super.${relation.name} ?? const [];');
+        } else {
+          // Super field is non-nullable, no coalescing needed
+          buffer.writeln('    return super.${relation.name};');
+        }
+      } else {
+        buffer.writeln('    return super.${relation.name};');
+      }
       buffer.writeln('  }');
     }
 

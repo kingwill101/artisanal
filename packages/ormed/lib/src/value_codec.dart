@@ -89,6 +89,38 @@ class DateTimeCodec extends ValueCodec<DateTime> {
   }
 }
 
+/// Codec for Carbon/CarbonInterface fields.
+///
+/// Returns **immutable** Carbon instances to prevent accidental mutation
+/// of model state when chaining date methods like `subDay()`.
+///
+/// Example:
+/// ```dart
+/// // Safe - returns a new Carbon instance
+/// final yesterday = model.publishedAt?.subDay();
+///
+/// // Model's publishedAt is unchanged because it's immutable
+/// print(model.publishedAt); // Still the original date
+/// ```
+class CarbonCodec extends ValueCodec<CarbonInterface> {
+  const CarbonCodec();
+
+  @override
+  Object? encode(CarbonInterface? value) {
+    if (value == null) return null;
+    return value.toDateTime();
+  }
+
+  @override
+  CarbonInterface? decode(Object? value) {
+    if (value == null) return null;
+    if (value is CarbonInterface) return value.toImmutable();
+    if (value is DateTime) return Carbon.fromDateTime(value).toImmutable();
+    if (value is String) return Carbon.parse(value).toImmutable();
+    return null;
+  }
+}
+
 /// Registry that resolves codecs per field/type, with driver-specific overlays.
 class ValueCodecRegistry {
   ValueCodecRegistry._(this._codecs, this._driverCodecs, {String? activeDriver})
@@ -270,6 +302,8 @@ Map<String, ValueCodec<dynamic>> get _defaultCodecs => const {
   'bool': IdentityCodec<bool>(),
   'DateTime': DateTimeCodec(),
   'datetime': DateTimeCodec(), // Lowercase alias
+  'Carbon': CarbonCodec(),
+  'CarbonInterface': CarbonCodec(),
   'Map<String, Object?>': IdentityCodec<Map<String, Object?>>(),
   'Map<String, dynamic>': IdentityCodec<Map<String, dynamic>>(),
   'List<Object?>': IdentityCodec<List<Object?>>(),
