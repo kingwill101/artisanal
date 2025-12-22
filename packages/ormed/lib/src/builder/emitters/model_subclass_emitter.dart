@@ -240,8 +240,23 @@ class ModelSubclassEmitter {
             '    return Model.query<$targetType>().where(\'${relation.foreignKey}\', $localKeyGetter);',
           );
         } else if (relation.kind == RelationKind.manyToMany) {
+          final ownerKeyField = context.fields.firstWhereOrNull(
+            (f) => f.isPrimaryKey,
+          );
+          final ownerKeyGetter = ownerKeyField?.name ?? 'getAttribute("id")';
+
+          buffer.writeln('    final query = Model.query<$targetType>();');
+          buffer.writeln('    final targetTable = query.definition.tableName;');
           buffer.writeln(
-            '    throw UnimplementedError("ManyToMany query generation not yet supported");',
+            '    final targetKey = ${relation.localKey != null ? "'${relation.localKey}'" : "query.definition.primaryKeyField?.columnName ?? 'id'"};',
+          );
+          buffer.writeln('    return query.join(');
+          buffer.writeln('      \'${relation.through}\',');
+          buffer.writeln('      \'\$targetTable.\$targetKey\',');
+          buffer.writeln('      \'=\',');
+          buffer.writeln('      \'${relation.through}.${relation.pivotRelatedKey}\',');
+          buffer.writeln(
+            '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );
         } else if (relation.kind == RelationKind.morphOne ||
             relation.kind == RelationKind.morphMany) {
