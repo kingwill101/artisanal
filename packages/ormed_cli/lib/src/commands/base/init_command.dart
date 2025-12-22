@@ -53,8 +53,6 @@ class InitCommand extends Command<void> {
     final root = findProjectRoot();
     final tracker = _ArtifactTracker(root);
 
-    await _ensureDependencies(root, skipBuild: skipBuild);
-
     // If config exists, offer re-initialize
     if (!force) {
       final configFile = File(p.join(root.path, 'ormed.yaml'));
@@ -87,6 +85,8 @@ class InitCommand extends Command<void> {
 
     // Load config
     final config = loadOrmProjectConfig(configFile);
+
+    await _ensureDependencies(root, config: config, skipBuild: skipBuild);
 
     // Directories
     final migrationsDir = Directory(
@@ -127,6 +127,34 @@ class InitCommand extends Command<void> {
       file: defaultSeeder,
       content: _defaultSeederTemplate,
       label: 'database seeder',
+      force: force,
+      tracker: tracker,
+      interactive: true,
+    );
+
+    final datasourceFile =
+        File(p.join(root.path, 'lib', 'src', 'database', 'datasource.dart'));
+
+    final driverTypes =
+        config.connections.values.map((c) => c.driver.type.toLowerCase()).toSet();
+    final driverImports = driverTypes
+        .map((type) => _driverPackageMapping[type])
+        .where((pkg) => pkg != null)
+        .map((pkg) => "import 'package:$pkg/$pkg.dart';")
+        .join('\n');
+    final driverRegistrations = driverTypes
+        .map((type) => _driverRegistrationMapping[type])
+        .where((fn) => fn != null)
+        .map((fn) => "  $fn();")
+        .join('\n');
+
+    _writeFile(
+      file: datasourceFile,
+      content: _datasourceTemplate
+          .replaceAll('{{package_name}}', packageName)
+          .replaceAll('{{driver_imports}}', driverImports)
+          .replaceAll('{{driver_registrations}}', driverRegistrations),
+      label: 'DataSource entrypoint',
       force: force,
       tracker: tracker,
       interactive: true,
@@ -259,7 +287,11 @@ class InitCommand extends Command<void> {
     }
   }
 
-  Future<void> _ensureDependencies(Directory root, {bool skipBuild = false}) async {
+  Future<void> _ensureDependencies(
+    Directory root, {
+    OrmProjectConfig? config,
+    bool skipBuild = false,
+  }) async {
     final pubspecFile = File(p.join(root.path, 'pubspec.yaml'));
     if (!pubspecFile.existsSync()) return;
 
@@ -273,7 +305,22 @@ class InitCommand extends Command<void> {
         (devDeps?.containsKey('ormed_cli') ?? false);
     final hasBuildRunner = devDeps?.containsKey('build_runner') ?? false;
 
-    if (!hasOrmed || !hasOrmedCli || !hasBuildRunner) {
+    final missingDrivers = <String>[];
+    if (config != null) {
+      final driverTypes =
+          config.connections.values.map((c) => c.driver.type).toSet();
+      for (final type in driverTypes) {
+        final pkg = _driverPackageMapping[type.toLowerCase()];
+        if (pkg != null && !(deps?.containsKey(pkg) ?? false)) {
+          missingDrivers.add(pkg);
+        }
+      }
+    }
+
+    if (!hasOrmed ||
+        !hasOrmedCli ||
+        !hasBuildRunner ||
+        missingDrivers.isNotEmpty) {
       cliIO.newLine();
       cliIO.section('Dependencies');
       if (io.confirm(
@@ -287,6 +334,16 @@ class InitCommand extends Command<void> {
             'ormed',
           ], workingDirectory: root.path);
         }
+
+        for (final pkg in missingDrivers) {
+          cliIO.writeln('• Adding $pkg to dependencies...');
+          await Process.run('dart', [
+            'pub',
+            'add',
+            pkg,
+          ], workingDirectory: root.path);
+        }
+
         final devToAdd = <String>[];
         if (!hasOrmedCli) devToAdd.add('ormed_cli');
         if (!hasBuildRunner) devToAdd.add('build_runner');
@@ -307,6 +364,39 @@ class InitCommand extends Command<void> {
     }
   }
 }
+
+const String _datasourceTemplate = r'''
+import 'package:ormed/ormed.dart';
+import 'package:{{package_name}}/orm_registry.g.dart';
+{{driver_imports}}
+
+/// Creates a new DataSource instance using the project configuration.
+DataSource createDataSource() {
+{{driver_registrations}}
+
+  final config = loadOrmConfig();
+  return DataSource.fromConfig(
+    config,
+    registry: bootstrapOrm(),
+  );
+}
+''';
+
+const Map<String, String> _driverPackageMapping = {
+  'sqlite': 'ormed_sqlite',
+  'mysql': 'ormed_mysql',
+  'mariadb': 'ormed_mysql',
+  'postgres': 'ormed_postgres',
+  'postgresql': 'ormed_postgres',
+};
+
+const Map<String, String> _driverRegistrationMapping = {
+  'sqlite': 'ensureSqliteDriverRegistration',
+  'mysql': 'ensureMySqlDriverRegistration',
+  'mariadb': 'ensureMySqlDriverRegistration',
+  'postgres': 'ensurePostgresDriverRegistration',
+  'postgresql': 'ensurePostgresDriverRegistration',
+};
 
 const String _defaultSeederTemplate = '''
 import 'package:ormed/ormed.dart';
