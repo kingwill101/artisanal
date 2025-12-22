@@ -256,7 +256,7 @@ Future<void> verifyFiles() async {
   final files = [
     'lib/src/models/user.orm.dart',
     'lib/orm_registry.g.dart',
-    'database.sqlite',
+    'database/$testDir.sqlite',
   ];
 
   for (final f in files) {
@@ -292,7 +292,7 @@ void main() async {
 
   print('Verifying database content...');
   final ds = DataSource(DataSourceOptions(
-    driver: SqliteDriverAdapter.file('database.sqlite'),
+    driver: SqliteDriverAdapter.file('database/orm_bootstrap_test.sqlite'),
     registry: registry,
   ));
   await ds.init();
