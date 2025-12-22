@@ -8,9 +8,8 @@ import 'package:orm_playground/orm_registry.g.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
 import 'package:path/path.dart' as p;
 
-// Ensure SQLite driver is registered (referenced to prevent tree-shaking)
-// ignore: unused_element
-final _ensureRegistration = registerSqliteOrmConnection;
+// Ensure SQLite driver is registered
+final _ = ensureSqliteDriverRegistration();
 
 /// Helper that manages playground database connections using the DataSource API.
 ///

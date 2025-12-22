@@ -1,33 +1,47 @@
 import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
-import 'package:orm_playground/orm_playground.dart';
+import 'package:orm_playground/orm_registry.g.dart' as g;
 
-import 'seeders/database_seeder.dart' as seeders;
-import 'seeders/demo_content_seeder.dart';
+import 'seeders/database_seeder.dart';
+// <ORM-SEED-IMPORTS>
+// </ORM-SEED-IMPORTS>
 
-final List<SeederRegistration> _seeders = <SeederRegistration>[
+/// Registered seeders for this project.
+/// 
+/// Used by `ormed seed` command and can be imported for programmatic seeding.
+final List<SeederRegistration> seeders = <SeederRegistration>[
+// <ORM-SEED-REGISTRY>
   SeederRegistration(
-    name: 'DatabaseSeeder',
-    factory: seeders.DatabaseSeeder.new,
+    name: 'AppDatabaseSeeder',
+    factory: (connection) => AppDatabaseSeeder(connection),
   ),
-  SeederRegistration(name: 'DemoContentSeeder', factory: DemoContentSeeder.new),
+// </ORM-SEED-REGISTRY>
 ];
 
-Future<void> seedPlayground(
+/// Run project seeders on the given connection.
+/// 
+/// Example:
+/// ```dart
+/// await runProjectSeeds(connection);
+/// await runProjectSeeds(connection, names: ['UserSeeder']);
+/// ```
+Future<void> runProjectSeeds(
   OrmConnection connection, {
   List<String>? names,
   bool pretend = false,
-}) => runSeedRegistryOnConnection(
-  connection,
-  _seeders,
-  names: names,
-  pretend: pretend,
-  beforeRun: (conn) => conn.context.registry.registerGeneratedModels(),
-);
+}) async {
+  g.bootstrapOrm(registry: connection.context.registry);
+  await SeederRunner().run(
+    connection: connection,
+    seeders: seeders,
+    names: names,
+    pretend: pretend,
+  );
+}
 
 Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
-  args: args,
-  seeds: _seeders,
-  beforeRun: (connection) =>
-      connection.context.registry.registerGeneratedModels(),
-);
+      args: args,
+      seeds: seeders,
+      beforeRun: (connection) =>
+          g.bootstrapOrm(registry: connection.context.registry),
+    );

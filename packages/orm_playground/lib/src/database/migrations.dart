@@ -3,34 +3,11 @@ import 'dart:convert';
 import 'package:ormed/migrations.dart';
 
 // <ORM-MIGRATION-IMPORTS>
-import 'migrations/m_20251115014501_create_users_table.dart';
-import 'migrations/m_20251115015021_create_posts_table.dart';
-import 'migrations/m_20251115015036_create_comments_table.dart';
-import 'migrations/m_20251115015055_create_post_tags_table.dart';
-import 'migrations/m_20251115015222_create_tags_table.dart'; // </ORM-MIGRATION-IMPORTS>
+// </ORM-MIGRATION-IMPORTS>
 
 final List<MigrationEntry> _entries = [
   // <ORM-MIGRATION-REGISTRY>
-  MigrationEntry(
-    id: MigrationId.parse('m_20251115014501_create_users_table'),
-    migration: const CreateUsersTable(),
-  ),
-  MigrationEntry(
-    id: MigrationId.parse('m_20251115015021_create_posts_table'),
-    migration: const CreatePostsTable(),
-  ),
-  MigrationEntry(
-    id: MigrationId.parse('m_20251115015036_create_comments_table'),
-    migration: const CreateCommentsTable(),
-  ),
-  MigrationEntry(
-    id: MigrationId.parse('m_20251115015055_create_post_tags_table'),
-    migration: const CreatePostTagsTable(),
-  ),
-  MigrationEntry(
-    id: MigrationId.parse('m_20251115015222_create_tags_table'),
-    migration: const CreateTagsTable(),
-  ), // </ORM-MIGRATION-REGISTRY>
+  // </ORM-MIGRATION-REGISTRY>
 ];
 
 /// Build migration descriptors sorted by timestamp.
@@ -63,11 +40,13 @@ void main(List<String> args) {
     final snapshotIndex = args.indexOf('--schema-snapshot');
     SchemaSnapshot? snapshot;
     if (snapshotIndex != -1) {
-      final decoded = utf8.decode(base64.decode(args[snapshotIndex + 1]));
+      final decoded =
+          utf8.decode(base64.decode(args[snapshotIndex + 1]));
       final payload = jsonDecode(decoded) as Map<String, Object?>;
       snapshot = SchemaSnapshot.fromJson(payload);
     }
     final plan = entry.migration.plan(direction, snapshot: snapshot);
     print(jsonEncode(plan.toJson()));
+    return;
   }
 }
