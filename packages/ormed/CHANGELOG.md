@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Refactored**: Decoupled database drivers from the core package. Drivers now register themselves via `DriverAdapterRegistry`.
+- **Added**: `DataSource.fromConfig` as the standard, driver-agnostic entry point for ORM initialization.
+- **Fixed**: Eager loading for models with custom primary keys (Issue #12).
+- **Fixed**: Improved relation inference for complex naming conventions and ambiguous foreign keys (Issue #7).
+- **Fixed**: Missing relation accessors in generated models for certain edge cases (Issue #6).
+- **Improved**: Code generator now emits dartdoc comments for all generated models and members.
+- **Improved**: Reached 160/160 pub score with expanded documentation and examples.
+
 ## 0.1.0-dev+3
 
 - **Fixed**: Timestamp getters (`createdAt`, `updatedAt`, `deletedAt`) now return **immutable** Carbon instances to prevent accidental mutation of model state when chaining date methods like `subDay()`.

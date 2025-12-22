@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Improved**: `ormed init` now scaffolds a `datasource.dart` file that automatically handles driver registration.
+- **Improved**: Updated configuration loading to use the new core `loadOrmProjectConfig` and `findOrmConfigFile` utilities.
+- **Added**: Package example.
+
 ## 0.1.0-dev+3
 
 - Synchronized release.
