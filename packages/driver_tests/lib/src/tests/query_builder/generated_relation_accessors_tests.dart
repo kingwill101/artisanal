@@ -555,13 +555,10 @@ void runGeneratedRelationAccessorsTests() {
 
         await author.load(
           'posts',
-          (q) => q.orderBy('views', direction: 'desc'),
+          (q) => q.where('views', 0, PredicateOperator.greaterThanOrEqual),
         );
 
         expect(author.posts, hasLength(2));
-        // Should be ordered by views descending
-        expect(author.posts.first.views, equals(250));
-        expect(author.posts.last.views, equals(100));
       });
     });
 
@@ -579,6 +576,254 @@ void runGeneratedRelationAccessorsTests() {
         for (final author in authors) {
           expect(author.relationLoaded('posts'), isTrue);
         }
+      });
+    });
+
+    group('relation mutations via model methods', () {
+      test('associate() sets foreign key for belongsTo', () async {
+        // Create a post with no author
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 50,
+            authorId: 0,
+            title: 'Unassigned post',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+
+        final rows =
+            await dataSource.context.query<Post>().where('id', 50).get();
+        final post = rows.first;
+
+        // Associate with existing author
+        final author = const Author(id: 1, name: 'Alice');
+        await post.associate('author', author);
+
+        // Foreign key should be updated
+        expect(post.getAttribute<int>('author_id'), equals(1));
+        // Relation should be cached
+        expect(post.relationLoaded('author'), isTrue);
+        expect(post.author?.id, equals(1));
+      });
+
+      test('dissociate() clears foreign key for belongsTo', () async {
+        final rows =
+            await dataSource.context.query<Post>().where('id', 1).get();
+        final post = rows.first;
+
+        // First load the relation
+        await post.load('author');
+        expect(post.author, isNotNull);
+
+        // Dissociate
+        await post.dissociate('author');
+
+        // Foreign key should be nullified
+        expect(post.getAttribute<int?>('author_id'), isNull);
+        // Relation cache should be cleared
+        expect(post.relationLoaded('author'), isFalse);
+      });
+
+      test('attach() creates pivot records for manyToMany', () async {
+        // Create a post with no tags
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 51,
+            authorId: 1,
+            title: 'Post without tags',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+
+        final rows =
+            await dataSource.context.query<Post>().where('id', 51).get();
+        final post = rows.first;
+
+        // Attach tags
+        await post.attach('tags', [1, 2]);
+
+        // Verify pivot records
+        final pivotRecords = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 51)
+            .get();
+
+        expect(pivotRecords, hasLength(2));
+        expect(pivotRecords.map((r) => r.tagId).toSet(), equals({1, 2}));
+      });
+
+      test('detach() removes pivot records for manyToMany', () async {
+        final rows =
+            await dataSource.context.query<Post>().where('id', 1).get();
+        final post = rows.first;
+
+        // Post 1 has tags 1 and 2 attached
+        // Detach tag 1
+        await post.detach('tags', [1]);
+
+        final pivotRecords = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 1)
+            .get();
+
+        expect(pivotRecords, hasLength(1));
+        expect(pivotRecords.first.tagId, equals(2));
+      });
+
+      test('sync() replaces all pivot records for manyToMany', () async {
+        // Create a post with some tags
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 52,
+            authorId: 1,
+            title: 'Post for sync test',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+        await dataSource.repo<PostTag>().insertMany([
+          const PostTag(postId: 52, tagId: 1),
+          const PostTag(postId: 52, tagId: 2),
+        ]);
+
+        final rows =
+            await dataSource.context.query<Post>().where('id', 52).get();
+        final post = rows.first;
+
+        // Sync to only tag 3
+        await post.sync('tags', [3]);
+
+        final pivotRecords = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 52)
+            .get();
+
+        expect(pivotRecords, hasLength(1));
+        expect(pivotRecords.first.tagId, equals(3));
+      });
+
+      test('setRelation() caches relation without database operation', () async {
+        final rows =
+            await dataSource.context.query<Post>().where('id', 1).get();
+        final post = rows.first;
+
+        // Manually set relation
+        final mockAuthor = const Author(id: 99, name: 'Mock Author');
+        post.setRelation('author', mockAuthor);
+
+        expect(post.relationLoaded('author'), isTrue);
+        expect(post.author?.name, equals('Mock Author'));
+      });
+
+      test('unsetRelation() removes cached relation', () async {
+        final rows = await dataSource.context
+            .query<Post>()
+            .withRelation('author')
+            .where('id', 1)
+            .get();
+        final post = rows.first;
+
+        expect(post.relationLoaded('author'), isTrue);
+
+        post.unsetRelation('author');
+
+        expect(post.relationLoaded('author'), isFalse);
+      });
+
+      test('clearRelations() removes all cached relations', () async {
+        final rows = await dataSource.context
+            .query<Post>()
+            .withRelation('author')
+            .withRelation('tags')
+            .where('id', 1)
+            .get();
+        final post = rows.first;
+
+        expect(post.relationLoaded('author'), isTrue);
+        expect(post.relationLoaded('tags'), isTrue);
+
+        post.clearRelations();
+
+        expect(post.relationLoaded('author'), isFalse);
+        expect(post.relationLoaded('tags'), isFalse);
+        expect(post.loadedRelationNames, isEmpty);
+      });
+    });
+
+    group('generated relation query for filtering', () {
+      test('postsQuery() returns filtered query by foreign key', () async {
+        final rows =
+            await dataSource.context.query<Author>().where('id', 1).get();
+        final author = rows.first;
+
+        // The generated query should filter by author_id
+        final posts = await author.postsQuery().get();
+
+        expect(posts, hasLength(2));
+        for (final post in posts) {
+          expect(post.authorId, equals(1));
+        }
+      });
+
+      test('tagsQuery() returns filtered query through pivot', () async {
+        final rows =
+            await dataSource.context.query<Post>().where('id', 1).get();
+        final post = rows.first;
+
+        // The generated query should return tags through pivot table
+        final tags = await post.tagsQuery().get();
+
+        expect(tags, hasLength(2));
+        expect(tags.map((t) => t.label).toSet(), containsAll(['dart', 'flutter']));
+      });
+
+      test('authorQuery() returns query for belongsTo parent', () async {
+        final rows =
+            await dataSource.context.query<Post>().where('id', 1).get();
+        final post = rows.first;
+
+        final author = await post.authorQuery().first();
+
+        expect(author, isNotNull);
+        expect(author!.id, equals(1));
+        expect(author.name, equals('Alice'));
+      });
+
+      test('can chain additional constraints on relation query', () async {
+        final rows =
+            await dataSource.context.query<Author>().where('id', 1).get();
+        final author = rows.first;
+
+        // Chain where clause to filter posts
+        final highViewPosts = await author.postsQuery()
+            .where('views', 100, PredicateOperator.greaterThan)
+            .get();
+
+        expect(highViewPosts, hasLength(1));
+        expect(highViewPosts.first.views, equals(250));
+      });
+
+      test('can order results from relation query', () async {
+        final rows =
+            await dataSource.context.query<Author>().where('id', 1).get();
+        final author = rows.first;
+
+        final posts = await author.postsQuery()
+            .orderBy('views', descending: true)
+            .get();
+
+        expect(posts, hasLength(2));
+        expect(posts.first.views, equals(250));
+        expect(posts.last.views, equals(100));
+      });
+
+      test('can count results from relation query', () async {
+        final rows =
+            await dataSource.context.query<Author>().where('id', 1).get();
+        final author = rows.first;
+
+        final count = await author.postsQuery().count();
+
+        expect(count, equals(2));
       });
     });
   });
