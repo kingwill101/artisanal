@@ -9,6 +9,9 @@ class CreateCommentsTable extends Migration {
       table.integer('id').primaryKey().autoIncrement();
       table.string('body');
       table.dateTime('deleted_at').nullable(); // nullable field
+      // Foreign keys for nullable relations test
+      table.integer('parent_id').nullable();
+      table.integer('other_parent_id').nullable();
     });
   }
 

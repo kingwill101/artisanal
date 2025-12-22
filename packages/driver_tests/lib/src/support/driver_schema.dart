@@ -105,6 +105,13 @@ final List<MigrationEntry> driverTestMigrationEntries = [
     ),
     migration: const CreateScopedUsersTable(),
   ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 18),
+      'create_nullable_relations_test_table',
+    ),
+    migration: const CreateNullableRelationsTestTable(),
+  ),
 ];
 
 /// Create a test schema manager for driver tests

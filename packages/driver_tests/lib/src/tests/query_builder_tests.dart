@@ -10,6 +10,7 @@ import 'query_builder/conditional_tests.dart';
 import 'query_builder/convenience_methods_tests.dart';
 import 'query_builder/date_time_tests.dart';
 import 'query_builder/fresh_tests.dart';
+import 'query_builder/generated_relation_accessors_tests.dart';
 import 'query_builder/join_clauses_tests.dart';
 import 'query_builder/json_query_tests.dart';
 import 'query_builder/lazy_loading_tests.dart';
@@ -44,6 +45,7 @@ void runDriverQueryBuilderTests() {
   runQueryRowSyncTests();
   runRelationsAccessorTests();
   runRelationResolverCacheTests();
+  runGeneratedRelationAccessorsTests();
   runCrudOperationsTests();
   runUpsertOperationsTests();
 
