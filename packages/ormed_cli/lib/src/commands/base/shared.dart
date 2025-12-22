@@ -385,41 +385,16 @@ OrmProjectContext resolveOrmProject({String? configPath}) {
     return OrmProjectContext(root: root, configFile: file);
   }
 
-  final nearest = _findNearestOrmProjectConfig(Directory.current);
-  if (nearest != null) {
-    final root = findProjectRoot(nearest.parent);
-    return OrmProjectContext(root: root, configFile: nearest);
+  // Use findOrmConfigFile from ormed package to locate config
+  final configFile = findOrmConfigFile();
+  if (configFile != null) {
+    final root = findProjectRoot(configFile.parent);
+    return OrmProjectContext(root: root, configFile: configFile);
   }
 
-  final root = findProjectRoot();
-  final fallback = File(p.join(root.path, 'ormed.yaml'));
-  if (!fallback.existsSync()) {
-    final legacy = File(p.join(root.path, 'ormed.yaml'));
-    if (legacy.existsSync()) return OrmProjectContext(root: root, configFile: legacy);
-    throw StateError(
-      'Missing ormed.yaml. Run `ormed init` or provide --config path.',
-    );
-  }
-  return OrmProjectContext(root: root, configFile: fallback);
-}
-
-File? _findNearestOrmProjectConfig(Directory start) {
-  var dir = start;
-  while (true) {
-    final candidate = File(p.join(dir.path, 'ormed.yaml'));
-    if (candidate.existsSync()) {
-      return candidate;
-    }
-    final legacy = File(p.join(dir.path, 'ormed.yaml'));
-    if (legacy.existsSync()) {
-      return legacy;
-    }
-    final parent = dir.parent;
-    if (parent.path == dir.path) {
-      return null;
-    }
-    dir = parent;
-  }
+  throw StateError(
+    'Missing ormed.yaml. Run `ormed init` or provide --config path.',
+  );
 }
 
 SchemaState? resolveSchemaState(

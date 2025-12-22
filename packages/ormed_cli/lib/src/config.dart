@@ -12,6 +12,8 @@ export 'package:ormed/ormed.dart'
         DriverConfig,
         MigrationSection,
         SeedSection,
+        findOrmConfigFile,
+        loadOrmConfig,
         loadOrmProjectConfig;
 
 String resolvePath(Directory root, String relativePath) =>
