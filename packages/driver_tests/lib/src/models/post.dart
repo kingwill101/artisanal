@@ -4,6 +4,7 @@ library;
 import 'package:ormed/ormed.dart';
 
 import 'author.dart';
+import 'comment.dart';
 import 'tag.dart';
 import 'photo.dart';
 
@@ -20,7 +21,8 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     this.views,
   }) : author = null,
        tags = const [],
-       photos = const [];
+       photos = const [],
+       comments = const [];
 
   @OrmField(isPrimaryKey: true, autoIncrement: true)
   final int id;
@@ -65,6 +67,15 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     morphClass: 'Post',
   )
   final List<Photo> photos;
+
+  @OrmField(ignore: true)
+  @OrmRelation(
+    kind: RelationKind.hasMany,
+    target: Comment,
+    foreignKey: 'post_id',
+    localKey: 'id',
+  )
+  final List<Comment> comments;
 
   // Demo model-level event handler
   @OrmEvent(ModelCreatedEvent)

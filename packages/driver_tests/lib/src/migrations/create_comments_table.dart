@@ -8,6 +8,7 @@ class CreateCommentsTable extends Migration {
     schema.create('comments', (table) {
       table.integer('id').primaryKey().autoIncrement();
       table.string('body');
+      table.integer('post_id').nullable();
       table.dateTime('deleted_at').nullable(); // nullable field
       // Foreign keys for nullable relations test
       table.integer('parent_id').nullable();

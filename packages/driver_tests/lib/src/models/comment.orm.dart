@@ -31,6 +31,18 @@ const FieldDefinition _$CommentBodyField = FieldDefinition(
   autoIncrement: false,
 );
 
+const FieldDefinition _$CommentPostIdField = FieldDefinition(
+  name: 'postId',
+  columnName: 'post_id',
+  dartType: 'int',
+  resolvedType: 'int?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
 const FieldDefinition _$CommentDeletedAtField = FieldDefinition(
   name: 'deletedAt',
   columnName: 'deleted_at',
@@ -43,6 +55,14 @@ const FieldDefinition _$CommentDeletedAtField = FieldDefinition(
   autoIncrement: false,
 );
 
+const RelationDefinition _$CommentPostRelation = RelationDefinition(
+  name: 'post',
+  kind: RelationKind.belongsTo,
+  targetModel: 'Post',
+  foreignKey: 'post_id',
+  localKey: 'id',
+);
+
 Map<String, Object?> _encodeCommentUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -51,14 +71,20 @@ Map<String, Object?> _encodeCommentUntracked(
   return <String, Object?>{
     'id': registry.encodeField(_$CommentIdField, m.id),
     'body': registry.encodeField(_$CommentBodyField, m.body),
+    'post_id': registry.encodeField(_$CommentPostIdField, m.postId),
   };
 }
 
 final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
   modelName: 'Comment',
   tableName: 'comments',
-  fields: const [_$CommentIdField, _$CommentBodyField, _$CommentDeletedAtField],
-  relations: const [],
+  fields: const [
+    _$CommentIdField,
+    _$CommentBodyField,
+    _$CommentPostIdField,
+    _$CommentDeletedAtField,
+  ],
+  relations: const [_$CommentPostRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
     hidden: const <String>[],
@@ -176,6 +202,7 @@ class _$CommentCodec extends ModelCodec<$Comment> {
     return <String, Object?>{
       'id': registry.encodeField(_$CommentIdField, model.id),
       'body': registry.encodeField(_$CommentBodyField, model.body),
+      'post_id': registry.encodeField(_$CommentPostIdField, model.postId),
       'deleted_at': registry.encodeField(
         _$CommentDeletedAtField,
         model.getAttribute<DateTime?>('deleted_at'),
@@ -190,14 +217,23 @@ class _$CommentCodec extends ModelCodec<$Comment> {
     final String commentBodyValue =
         registry.decodeField<String>(_$CommentBodyField, data['body']) ??
         (throw StateError('Field body on Comment cannot be null.'));
+    final int? commentPostIdValue = registry.decodeField<int?>(
+      _$CommentPostIdField,
+      data['post_id'],
+    );
     final DateTime? commentDeletedAtValue = registry.decodeField<DateTime?>(
       _$CommentDeletedAtField,
       data['deleted_at'],
     );
-    final model = $Comment(id: commentIdValue, body: commentBodyValue);
+    final model = $Comment(
+      id: commentIdValue,
+      body: commentBodyValue,
+      postId: commentPostIdValue,
+    );
     model._attachOrmRuntimeMetadata({
       'id': commentIdValue,
       'body': commentBodyValue,
+      'post_id': commentPostIdValue,
       'deleted_at': commentDeletedAtValue,
     });
     return model;
@@ -208,12 +244,16 @@ class _$CommentCodec extends ModelCodec<$Comment> {
 ///
 /// Auto-increment/DB-generated fields are omitted by default.
 class CommentInsertDto implements InsertDto<$Comment> {
-  const CommentInsertDto({this.body});
+  const CommentInsertDto({this.body, this.postId});
   final String? body;
+  final int? postId;
 
   @override
   Map<String, Object?> toMap() {
-    return <String, Object?>{if (body != null) 'body': body};
+    return <String, Object?>{
+      if (body != null) 'body': body,
+      if (postId != null) 'post_id': postId,
+    };
   }
 }
 
@@ -221,15 +261,17 @@ class CommentInsertDto implements InsertDto<$Comment> {
 ///
 /// All fields are optional; only provided entries are used in SET clauses.
 class CommentUpdateDto implements UpdateDto<$Comment> {
-  const CommentUpdateDto({this.id, this.body});
+  const CommentUpdateDto({this.id, this.body, this.postId});
   final int? id;
   final String? body;
+  final int? postId;
 
   @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
       if (body != null) 'body': body,
+      if (postId != null) 'post_id': postId,
     };
   }
 }
@@ -238,18 +280,23 @@ class CommentUpdateDto implements UpdateDto<$Comment> {
 ///
 /// All fields are nullable; intended for subset SELECTs.
 class CommentPartial implements PartialEntity<$Comment> {
-  const CommentPartial({this.id, this.body});
+  const CommentPartial({this.id, this.body, this.postId});
 
   /// Creates a partial from a database row map.
   ///
   /// The [row] keys should be column names (snake_case).
   /// Missing columns will result in null field values.
   factory CommentPartial.fromRow(Map<String, Object?> row) {
-    return CommentPartial(id: row['id'] as int?, body: row['body'] as String?);
+    return CommentPartial(
+      id: row['id'] as int?,
+      body: row['body'] as String?,
+      postId: row['post_id'] as int?,
+    );
   }
 
   final int? id;
   final String? body;
+  final int? postId;
 
   @override
   $Comment toEntity() {
@@ -262,12 +309,16 @@ class CommentPartial implements PartialEntity<$Comment> {
     if (bodyValue == null) {
       throw StateError('Missing required field: body');
     }
-    return $Comment(id: idValue, body: bodyValue);
+    return $Comment(id: idValue, body: bodyValue, postId: postId);
   }
 
   @override
   Map<String, Object?> toMap() {
-    return {if (id != null) 'id': id, if (body != null) 'body': body};
+    return {
+      if (id != null) 'id': id,
+      if (body != null) 'body': body,
+      if (postId != null) 'post_id': postId,
+    };
   }
 }
 
@@ -282,17 +333,22 @@ class CommentPartial implements PartialEntity<$Comment> {
 class $Comment extends Comment
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
-  $Comment({int id = 0, required String body}) : super.new(id: id, body: body) {
-    _attachOrmRuntimeMetadata({'id': id, 'body': body});
+  $Comment({int id = 0, required String body, int? postId})
+    : super.new(id: id, body: body, postId: postId) {
+    _attachOrmRuntimeMetadata({'id': id, 'body': body, 'post_id': postId});
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
   factory $Comment.fromModel(Comment model) {
-    return $Comment(id: model.id, body: model.body);
+    return $Comment(id: model.id, body: model.body, postId: model.postId);
   }
 
-  $Comment copyWith({int? id, String? body}) {
-    return $Comment(id: id ?? this.id, body: body ?? this.body);
+  $Comment copyWith({int? id, String? body, int? postId}) {
+    return $Comment(
+      id: id ?? this.id,
+      body: body ?? this.body,
+      postId: postId ?? this.postId,
+    );
   }
 
   @override
@@ -305,10 +361,29 @@ class $Comment extends Comment
 
   set body(String value) => setAttribute('body', value);
 
+  @override
+  int? get postId => getAttribute<int?>('post_id') ?? super.postId;
+
+  set postId(int? value) => setAttribute('post_id', value);
+
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);
     attachModelDefinition(_$CommentDefinition);
     attachSoftDeleteColumn('deleted_at');
+  }
+
+  @override
+  Post? get post {
+    if (relationLoaded('post')) {
+      return getRelation<Post>('post');
+    }
+    return super.post;
+  }
+}
+
+extension CommentRelationQueries on Comment {
+  Query<Post> postQuery() {
+    return Model.query<Post>().where('id', postId);
   }
 }
 

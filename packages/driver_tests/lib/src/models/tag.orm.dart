@@ -302,7 +302,12 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
 
 extension TagRelationQueries on Tag {
   Query<Post> postsQuery() {
-    throw UnimplementedError("ManyToMany query generation not yet supported");
+    final query = Model.query<Post>();
+    final targetTable = query.definition.tableName;
+    final targetKey = query.definition.primaryKeyField?.columnName ?? 'id';
+    return query
+        .join('post_tags', '$targetTable.$targetKey', '=', 'post_tags.post_id')
+        .where('post_tags.tag_id', id);
   }
 }
 

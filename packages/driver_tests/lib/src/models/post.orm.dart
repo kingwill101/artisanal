@@ -129,6 +129,14 @@ const RelationDefinition _$PostPhotosRelation = RelationDefinition(
   morphClass: 'Post',
 );
 
+const RelationDefinition _$PostCommentsRelation = RelationDefinition(
+  name: 'comments',
+  kind: RelationKind.hasMany,
+  targetModel: 'Comment',
+  foreignKey: 'post_id',
+  localKey: 'id',
+);
+
 Map<String, Object?> _encodePostUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -161,6 +169,7 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     _$PostAuthorRelation,
     _$PostTagsRelation,
     _$PostPhotosRelation,
+    _$PostCommentsRelation,
   ],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
@@ -615,6 +624,14 @@ class $Post extends Post
     }
     return super.photos;
   }
+
+  @override
+  List<Comment> get comments {
+    if (relationLoaded('comments')) {
+      return getRelationList<Comment>('comments');
+    }
+    return super.comments;
+  }
 }
 
 extension PostRelationQueries on Post {
@@ -623,13 +640,22 @@ extension PostRelationQueries on Post {
   }
 
   Query<Tag> tagsQuery() {
-    throw UnimplementedError("ManyToMany query generation not yet supported");
+    final query = Model.query<Tag>();
+    final targetTable = query.definition.tableName;
+    final targetKey = query.definition.primaryKeyField?.columnName ?? 'id';
+    return query
+        .join('post_tags', '$targetTable.$targetKey', '=', 'post_tags.tag_id')
+        .where('post_tags.post_id', id);
   }
 
   Query<Photo> photosQuery() {
     throw UnimplementedError(
       "Polymorphic relation query generation not yet supported",
     );
+  }
+
+  Query<Comment> commentsQuery() {
+    return Model.query<Comment>().where('post_id', id);
   }
 }
 
