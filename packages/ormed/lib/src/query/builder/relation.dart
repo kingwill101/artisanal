@@ -27,27 +27,89 @@ extension RelationExtension<T extends OrmEntity> on Query<T> {
     String name, [
     PredicateCallback<OrmEntity>? constraint,
   ]) {
-    final relation = definition.relations.firstWhereOrNull(
-      (r) => r.name == name,
-    );
-    if (relation == null) {
-      throw ArgumentError.value(
-        name,
-        'name',
-        'Relation not defined on ${definition.modelName}.',
-      );
-    }
-    final predicate = _buildRelationLoadPredicate(relation, constraint);
-    _relationPaths.putIfAbsent(name, () {
-      final segment = _buildRelationSegment(definition, relation);
-      return RelationPath(segments: [segment]);
-    });
+    final path = _resolveRelationPath(name);
     return _copyWith(
-      relations: [
-        ..._relations,
-        RelationLoad(relation: relation, predicate: predicate),
-      ],
+      relations: _mergeRelationLoad(_relations, path, constraint),
     );
+  }
+
+  /// Requests eager loading for multiple relations.
+  ///
+  /// [names] is a list of relation names to eager load.
+  ///
+  /// Example:
+  /// ```dart
+  /// final users = await context.query<User>()
+  ///   .with_(['posts', 'profile'])
+  ///   .get();
+  /// ```
+  Query<T> with_(List<String> names) {
+    var query = this;
+    for (final name in names) {
+      query = query.withRelation(name);
+    }
+    return query;
+  }
+
+  List<RelationLoad> _mergeRelationLoad(
+    List<RelationLoad> existing,
+    RelationPath path,
+    PredicateCallback<OrmEntity>? constraint,
+  ) {
+    if (path.segments.isEmpty) return existing;
+
+    final segment = path.segments.first;
+    final remainingSegments = path.segments.skip(1).toList();
+
+    final existingIndex = existing.indexWhere(
+      (r) => r.relation.name == segment.name,
+    );
+
+    if (existingIndex >= 0) {
+      final load = existing[existingIndex];
+      final updatedNested = remainingSegments.isEmpty
+          ? load.nested
+          : _mergeRelationLoad(
+              load.nested,
+              RelationPath(segments: remainingSegments),
+              constraint,
+            );
+
+      // If it's the leaf segment, apply the constraint
+      final updatedPredicate = remainingSegments.isEmpty
+          ? _buildRelationLoadPredicate(segment.relation, constraint)
+          : load.predicate;
+
+      final updated = RelationLoad(
+        relation: load.relation,
+        predicate: updatedPredicate,
+        nested: updatedNested,
+      );
+
+      final result = List<RelationLoad>.from(existing);
+      result[existingIndex] = updated;
+      return result;
+    } else {
+      final nested = remainingSegments.isEmpty
+          ? const <RelationLoad>[]
+          : _mergeRelationLoad(
+              const [],
+              RelationPath(segments: remainingSegments),
+              constraint,
+            );
+
+      final predicate = remainingSegments.isEmpty
+          ? _buildRelationLoadPredicate(segment.relation, constraint)
+          : null;
+
+      final load = RelationLoad(
+        relation: segment.relation,
+        predicate: predicate,
+        nested: nested,
+      );
+
+      return [...existing, load];
+    }
   }
 
   /// Adds a `WITH COUNT` aggregate for a relation.

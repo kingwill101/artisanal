@@ -10,6 +10,7 @@ import 'query_tests.dart';
 import 'repository_input_variations_tests.dart';
 import 'repository_tests.dart';
 import 'transaction_tests.dart';
+import 'mixed_constructor_tests.dart';
 
 /// Runs all driver tests against the provided [dataSource].
 void runAllDriverTests() {
@@ -27,4 +28,5 @@ void runAllDriverTests() {
   runRepositoryInputVariationsTests();
   runDriverFactoryInheritanceTests();
   runPartialEntityTests();
+  runMixedConstructorTests();
 }

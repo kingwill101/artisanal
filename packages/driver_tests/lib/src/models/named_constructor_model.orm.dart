@@ -271,6 +271,22 @@ class NamedConstructorModelInsertDto
       if (value != null) 'value': value,
     };
   }
+
+  static const _NamedConstructorModelInsertDtoCopyWithSentinel
+  _copyWithSentinel = _NamedConstructorModelInsertDtoCopyWithSentinel();
+  NamedConstructorModelInsertDto copyWith({
+    Object? name = _copyWithSentinel,
+    Object? value = _copyWithSentinel,
+  }) {
+    return NamedConstructorModelInsertDto(
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      value: identical(value, _copyWithSentinel) ? this.value : value as int?,
+    );
+  }
+}
+
+class _NamedConstructorModelInsertDtoCopyWithSentinel {
+  const _NamedConstructorModelInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [NamedConstructorModel].
@@ -291,6 +307,24 @@ class NamedConstructorModelUpdateDto
       if (value != null) 'value': value,
     };
   }
+
+  static const _NamedConstructorModelUpdateDtoCopyWithSentinel
+  _copyWithSentinel = _NamedConstructorModelUpdateDtoCopyWithSentinel();
+  NamedConstructorModelUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? value = _copyWithSentinel,
+  }) {
+    return NamedConstructorModelUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      value: identical(value, _copyWithSentinel) ? this.value : value as int?,
+    );
+  }
+}
+
+class _NamedConstructorModelUpdateDtoCopyWithSentinel {
+  const _NamedConstructorModelUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [NamedConstructorModel].
@@ -338,6 +372,24 @@ class NamedConstructorModelPartial
       if (value != null) 'value': value,
     };
   }
+
+  static const _NamedConstructorModelPartialCopyWithSentinel _copyWithSentinel =
+      _NamedConstructorModelPartialCopyWithSentinel();
+  NamedConstructorModelPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? value = _copyWithSentinel,
+  }) {
+    return NamedConstructorModelPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      value: identical(value, _copyWithSentinel) ? this.value : value as int?,
+    );
+  }
+}
+
+class _NamedConstructorModelPartialCopyWithSentinel {
+  const _NamedConstructorModelPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [NamedConstructorModel].

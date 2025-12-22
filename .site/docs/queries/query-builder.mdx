@@ -90,6 +90,10 @@ If `DataSourceOptions.tablePrefix` is set, Ormed automatically prefixes all **un
 
 ```
 
+:::tip Qualified Columns
+You can use qualified column names (e.g., `table.column`) in where clauses. This is particularly useful when working with joins or many-to-many relationships where column names might collide.
+:::
+
 ### In / Not In
 
 ```dart file=../../examples/lib/queries.dart#where-in

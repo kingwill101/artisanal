@@ -200,6 +200,8 @@ class NoFactoryInsertDto implements InsertDto<$NoFactory> {
   Map<String, Object?> toMap() {
     return <String, Object?>{};
   }
+
+  NoFactoryInsertDto copyWith() => this;
 }
 
 /// Update DTO for [NoFactory].
@@ -213,6 +215,18 @@ class NoFactoryUpdateDto implements UpdateDto<$NoFactory> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _NoFactoryUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _NoFactoryUpdateDtoCopyWithSentinel();
+  NoFactoryUpdateDto copyWith({Object? id = _copyWithSentinel}) {
+    return NoFactoryUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _NoFactoryUpdateDtoCopyWithSentinel {
+  const _NoFactoryUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [NoFactory].
@@ -241,6 +255,18 @@ class NoFactoryPartial implements PartialEntity<$NoFactory> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id};
   }
+
+  static const _NoFactoryPartialCopyWithSentinel _copyWithSentinel =
+      _NoFactoryPartialCopyWithSentinel();
+  NoFactoryPartial copyWith({Object? id = _copyWithSentinel}) {
+    return NoFactoryPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _NoFactoryPartialCopyWithSentinel {
+  const _NoFactoryPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [NoFactory].

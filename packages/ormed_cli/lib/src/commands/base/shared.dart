@@ -294,7 +294,7 @@ const String initialSeedRegistryTemplate =
     '''
 import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
-import 'package:{{package_name}}/orm_registry.g.dart';
+import 'package:{{package_name}}/orm_registry.g.dart' as g;
 
 import 'seeders/database_seeder.dart';
 $seedImportsMarkerStart
@@ -324,7 +324,7 @@ Future<void> runProjectSeeds(
   List<String>? names,
   bool pretend = false,
 }) async {
-  bootstrapOrm(registry: connection.context.registry);
+  g.bootstrapOrm(registry: connection.context.registry);
   await SeederRunner().run(
     connection: connection,
     seeders: seeders,
@@ -337,7 +337,7 @@ Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
       args: args,
       seeds: seeders,
       beforeRun: (connection) =>
-          bootstrapOrm(registry: connection.context.registry),
+          g.bootstrapOrm(registry: connection.context.registry),
     );
 ''';
 

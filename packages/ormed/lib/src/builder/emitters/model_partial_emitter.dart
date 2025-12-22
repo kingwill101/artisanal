@@ -82,7 +82,34 @@ class ModelPartialEmitter {
     // Generate toMap() method
     _writeToMapMethod(buffer, visible.toList());
 
+    // Generate copyWith()
+    if (visible.isEmpty) {
+      buffer.writeln();
+      buffer.writeln('  ${className}Partial copyWith() => this;');
+    } else {
+      buffer.writeln();
+      buffer.writeln(
+          '  static const _${className}PartialCopyWithSentinel _copyWithSentinel = _${className}PartialCopyWithSentinel();');
+      buffer.write('  ${className}Partial copyWith({');
+      for (final field in visible) {
+        buffer.write('Object? ${field.name} = _copyWithSentinel, ');
+      }
+      buffer.writeln('}) {');
+      buffer.writeln('    return ${className}Partial(');
+      for (final field in visible) {
+        buffer.writeln(
+            '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,');
+      }
+      buffer.writeln('    );');
+      buffer.writeln('  }');
+    }
+
     buffer.writeln('}');
+
+    if (visible.isNotEmpty) {
+      buffer.writeln(
+          'class _${className}PartialCopyWithSentinel { const _${className}PartialCopyWithSentinel(); }');
+    }
   }
 
   void _writeToMapMethod(StringBuffer buffer, List<FieldDescriptor> fields) {

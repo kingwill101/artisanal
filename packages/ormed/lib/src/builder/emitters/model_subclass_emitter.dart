@@ -240,8 +240,23 @@ class ModelSubclassEmitter {
             '    return Model.query<$targetType>().where(\'${relation.foreignKey}\', $localKeyGetter);',
           );
         } else if (relation.kind == RelationKind.manyToMany) {
+          final ownerKeyField = context.fields.firstWhereOrNull(
+            (f) => f.isPrimaryKey,
+          );
+          final ownerKeyGetter = ownerKeyField?.name ?? 'getAttribute("id")';
+
+          buffer.writeln('    final query = Model.query<$targetType>();');
+          buffer.writeln('    final targetTable = query.definition.tableName;');
           buffer.writeln(
-            '    throw UnimplementedError("ManyToMany query generation not yet supported");',
+            '    final targetKey = ${relation.localKey != null ? "'${relation.localKey}'" : "query.definition.primaryKeyField?.columnName ?? 'id'"};',
+          );
+          buffer.writeln('    return query.join(');
+          buffer.writeln('      \'${relation.through}\',');
+          buffer.writeln('      \'\$targetTable.\$targetKey\',');
+          buffer.writeln('      \'=\',');
+          buffer.writeln('      \'${relation.through}.${relation.pivotRelatedKey}\',');
+          buffer.writeln(
+            '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );
         } else if (relation.kind == RelationKind.morphOne ||
             relation.kind == RelationKind.morphMany) {
@@ -469,54 +484,26 @@ class ModelSubclassEmitter {
   ) {
     final buffer = StringBuffer();
     buffer.write('({');
-    if (constructor.formalParameters.isEmpty) {
-      // No params
-    } else if (constructor.formalParameters.every((param) => param.isNamed)) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) continue;
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      final field = fields.firstWhereOrNull(
+        (f) => !f.isVirtual && f.name == paramName,
+      );
+      if (field == null) continue;
 
-        // Check if this field has a default value (e.g., auto-increment sentinel)
-        final hasDefaultValue = field.autoIncrement && !field.isNullable;
+      // Check if this field has a default value (e.g., auto-increment sentinel)
+      final hasDefaultValue = field.autoIncrement && !field.isNullable;
 
-        if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
-          buffer.write('required ');
-        }
-        buffer.write('${field.resolvedType} $paramName');
-
-        // Add default value for auto-increment fields
-        if (hasDefaultValue) {
-          buffer.write(' = 0');
-        }
-        buffer.write(', ');
+      if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
+        buffer.write('required ');
       }
-    } else if (constructor.formalParameters.every(
-      (param) => param.isPositional,
-    )) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
-        final field = fields.firstWhereOrNull(
-          (f) => !f.isVirtual && f.name == paramName,
-        );
-        if (field == null) continue;
+      buffer.write('${field.resolvedType} $paramName');
 
-        // Check if this field has a default value
-        final hasDefaultValue = field.autoIncrement && !field.isNullable;
-
-        if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
-          buffer.write('required ');
-        }
-        buffer.write('${field.resolvedType} $paramName');
-
-        // Add default value for auto-increment fields
-        if (hasDefaultValue) {
-          buffer.write(' = 0');
-        }
-        buffer.write(', ');
+      // Add default value for auto-increment fields
+      if (hasDefaultValue) {
+        buffer.write(' = 0');
       }
+      buffer.write(', ');
     }
     buffer.write('})');
     return buffer.toString();
@@ -528,18 +515,11 @@ class ModelSubclassEmitter {
       buffer.write('.${constructor.name}');
     }
     buffer.write('(');
-    if (constructor.formalParameters.isEmpty) {
-      // No params
-    } else if (constructor.formalParameters.every((param) => param.isNamed)) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      if (parameter.isNamed) {
         buffer.write('$paramName: $paramName, ');
-      }
-    } else if (constructor.formalParameters.every(
-      (param) => param.isPositional,
-    )) {
-      for (final parameter in constructor.formalParameters) {
-        final paramName = parameter.displayName;
+      } else {
         buffer.write('$paramName, ');
       }
     }

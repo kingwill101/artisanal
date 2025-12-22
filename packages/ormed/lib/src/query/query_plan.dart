@@ -549,10 +549,15 @@ class DistinctOnClause {
 
 /// Declaration describing an eager-loaded relation request.
 class RelationLoad {
-  RelationLoad({required this.relation, this.predicate});
+  RelationLoad({
+    required this.relation,
+    this.predicate,
+    this.nested = const [],
+  });
 
   final RelationDefinition relation;
   final QueryPredicate? predicate;
+  final List<RelationLoad> nested;
 }
 
 class RelationPath {

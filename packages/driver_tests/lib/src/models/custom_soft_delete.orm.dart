@@ -254,6 +254,24 @@ class CustomSoftDeleteInsertDto implements InsertDto<$CustomSoftDelete> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _CustomSoftDeleteInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CustomSoftDeleteInsertDtoCopyWithSentinel();
+  CustomSoftDeleteInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CustomSoftDeleteInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CustomSoftDeleteInsertDtoCopyWithSentinel {
+  const _CustomSoftDeleteInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [CustomSoftDelete].
@@ -271,6 +289,24 @@ class CustomSoftDeleteUpdateDto implements UpdateDto<$CustomSoftDelete> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _CustomSoftDeleteUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CustomSoftDeleteUpdateDtoCopyWithSentinel();
+  CustomSoftDeleteUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CustomSoftDeleteUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CustomSoftDeleteUpdateDtoCopyWithSentinel {
+  const _CustomSoftDeleteUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [CustomSoftDelete].
@@ -311,6 +347,24 @@ class CustomSoftDeletePartial implements PartialEntity<$CustomSoftDelete> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _CustomSoftDeletePartialCopyWithSentinel _copyWithSentinel =
+      _CustomSoftDeletePartialCopyWithSentinel();
+  CustomSoftDeletePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CustomSoftDeletePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CustomSoftDeletePartialCopyWithSentinel {
+  const _CustomSoftDeletePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [CustomSoftDelete].

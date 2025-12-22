@@ -361,6 +361,42 @@ class UserInsertDto implements InsertDto<$User> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _UserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserInsertDtoCopyWithSentinel();
+  UserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return UserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _UserInsertDtoCopyWithSentinel {
+  const _UserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [User].
@@ -399,6 +435,44 @@ class UserUpdateDto implements UpdateDto<$User> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _UserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserUpdateDtoCopyWithSentinel();
+  UserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return UserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _UserUpdateDtoCopyWithSentinel {
+  const _UserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [User].
@@ -482,6 +556,44 @@ class UserPartial implements PartialEntity<$User> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _UserPartialCopyWithSentinel _copyWithSentinel =
+      _UserPartialCopyWithSentinel();
+  UserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return UserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _UserPartialCopyWithSentinel {
+  const _UserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [User].

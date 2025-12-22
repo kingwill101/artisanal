@@ -199,6 +199,20 @@ class SettingInsertDto implements InsertDto<$Setting> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (payload != null) 'payload': payload};
   }
+
+  static const _SettingInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SettingInsertDtoCopyWithSentinel();
+  SettingInsertDto copyWith({Object? payload = _copyWithSentinel}) {
+    return SettingInsertDto(
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, dynamic>?,
+    );
+  }
+}
+
+class _SettingInsertDtoCopyWithSentinel {
+  const _SettingInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Setting].
@@ -216,6 +230,24 @@ class SettingUpdateDto implements UpdateDto<$Setting> {
       if (payload != null) 'payload': payload,
     };
   }
+
+  static const _SettingUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SettingUpdateDtoCopyWithSentinel();
+  SettingUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return SettingUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, dynamic>?,
+    );
+  }
+}
+
+class _SettingUpdateDtoCopyWithSentinel {
+  const _SettingUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Setting].
@@ -256,6 +288,24 @@ class SettingPartial implements PartialEntity<$Setting> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (payload != null) 'payload': payload};
   }
+
+  static const _SettingPartialCopyWithSentinel _copyWithSentinel =
+      _SettingPartialCopyWithSentinel();
+  SettingPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return SettingPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, dynamic>?,
+    );
+  }
+}
+
+class _SettingPartialCopyWithSentinel {
+  const _SettingPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Setting].
