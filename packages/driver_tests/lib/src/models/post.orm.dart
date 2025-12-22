@@ -388,6 +388,36 @@ class PostInsertDto implements InsertDto<$Post> {
       if (publishedAt != null) 'published_at': publishedAt,
     };
   }
+
+  static const _PostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostInsertDtoCopyWithSentinel();
+  PostInsertDto copyWith({
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? views = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+  }) {
+    return PostInsertDto(
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      views: identical(views, _copyWithSentinel) ? this.views : views as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+    );
+  }
+}
+
+class _PostInsertDtoCopyWithSentinel {
+  const _PostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Post].
@@ -420,6 +450,38 @@ class PostUpdateDto implements UpdateDto<$Post> {
       if (publishedAt != null) 'published_at': publishedAt,
     };
   }
+
+  static const _PostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostUpdateDtoCopyWithSentinel();
+  PostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? views = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+  }) {
+    return PostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      views: identical(views, _copyWithSentinel) ? this.views : views as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+    );
+  }
+}
+
+class _PostUpdateDtoCopyWithSentinel {
+  const _PostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Post].
@@ -497,6 +559,38 @@ class PostPartial implements PartialEntity<$Post> {
       if (publishedAt != null) 'published_at': publishedAt,
     };
   }
+
+  static const _PostPartialCopyWithSentinel _copyWithSentinel =
+      _PostPartialCopyWithSentinel();
+  PostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? views = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+  }) {
+    return PostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      views: identical(views, _copyWithSentinel) ? this.views : views as int?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+    );
+  }
+}
+
+class _PostPartialCopyWithSentinel {
+  const _PostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Post].

@@ -259,6 +259,18 @@ class NullableRelationsTestInsertDto
   Map<String, Object?> toMap() {
     return <String, Object?>{if (name != null) 'name': name};
   }
+
+  static const _NullableRelationsTestInsertDtoCopyWithSentinel
+  _copyWithSentinel = _NullableRelationsTestInsertDtoCopyWithSentinel();
+  NullableRelationsTestInsertDto copyWith({Object? name = _copyWithSentinel}) {
+    return NullableRelationsTestInsertDto(
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _NullableRelationsTestInsertDtoCopyWithSentinel {
+  const _NullableRelationsTestInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [NullableRelationsTest].
@@ -277,6 +289,22 @@ class NullableRelationsTestUpdateDto
       if (name != null) 'name': name,
     };
   }
+
+  static const _NullableRelationsTestUpdateDtoCopyWithSentinel
+  _copyWithSentinel = _NullableRelationsTestUpdateDtoCopyWithSentinel();
+  NullableRelationsTestUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return NullableRelationsTestUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _NullableRelationsTestUpdateDtoCopyWithSentinel {
+  const _NullableRelationsTestUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [NullableRelationsTest].
@@ -318,6 +346,22 @@ class NullableRelationsTestPartial
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (name != null) 'name': name};
   }
+
+  static const _NullableRelationsTestPartialCopyWithSentinel _copyWithSentinel =
+      _NullableRelationsTestPartialCopyWithSentinel();
+  NullableRelationsTestPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return NullableRelationsTestPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _NullableRelationsTestPartialCopyWithSentinel {
+  const _NullableRelationsTestPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [NullableRelationsTest].

@@ -202,6 +202,24 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostTagInsertDtoCopyWithSentinel();
+  PostTagInsertDto copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagInsertDto(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagInsertDtoCopyWithSentinel {
+  const _PostTagInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [PostTag].
@@ -219,6 +237,24 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostTagUpdateDtoCopyWithSentinel();
+  PostTagUpdateDto copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagUpdateDto(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagUpdateDtoCopyWithSentinel {
+  const _PostTagUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [PostTag].
@@ -262,6 +298,24 @@ class PostTagPartial implements PartialEntity<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagPartialCopyWithSentinel _copyWithSentinel =
+      _PostTagPartialCopyWithSentinel();
+  PostTagPartial copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagPartial(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagPartialCopyWithSentinel {
+  const _PostTagPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [PostTag].

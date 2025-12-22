@@ -229,6 +229,26 @@ class UniqueUserInsertDto implements InsertDto<$UniqueUser> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _UniqueUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UniqueUserInsertDtoCopyWithSentinel();
+  UniqueUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return UniqueUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _UniqueUserInsertDtoCopyWithSentinel {
+  const _UniqueUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [UniqueUser].
@@ -248,6 +268,28 @@ class UniqueUserUpdateDto implements UpdateDto<$UniqueUser> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _UniqueUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UniqueUserUpdateDtoCopyWithSentinel();
+  UniqueUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return UniqueUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _UniqueUserUpdateDtoCopyWithSentinel {
+  const _UniqueUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [UniqueUser].
@@ -298,6 +340,28 @@ class UniqueUserPartial implements PartialEntity<$UniqueUser> {
       if (active != null) 'active': active,
     };
   }
+
+  static const _UniqueUserPartialCopyWithSentinel _copyWithSentinel =
+      _UniqueUserPartialCopyWithSentinel();
+  UniqueUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return UniqueUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+    );
+  }
+}
+
+class _UniqueUserPartialCopyWithSentinel {
+  const _UniqueUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [UniqueUser].

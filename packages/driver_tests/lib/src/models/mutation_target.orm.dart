@@ -278,6 +278,30 @@ class MutationTargetInsertDto implements InsertDto<$MutationTarget> {
       if (category != null) 'category': category,
     };
   }
+
+  static const _MutationTargetInsertDtoCopyWithSentinel _copyWithSentinel =
+      _MutationTargetInsertDtoCopyWithSentinel();
+  MutationTargetInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? category = _copyWithSentinel,
+  }) {
+    return MutationTargetInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      category: identical(category, _copyWithSentinel)
+          ? this.category
+          : category as String?,
+    );
+  }
+}
+
+class _MutationTargetInsertDtoCopyWithSentinel {
+  const _MutationTargetInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [MutationTarget].
@@ -304,6 +328,30 @@ class MutationTargetUpdateDto implements UpdateDto<$MutationTarget> {
       if (category != null) 'category': category,
     };
   }
+
+  static const _MutationTargetUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _MutationTargetUpdateDtoCopyWithSentinel();
+  MutationTargetUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? category = _copyWithSentinel,
+  }) {
+    return MutationTargetUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      category: identical(category, _copyWithSentinel)
+          ? this.category
+          : category as String?,
+    );
+  }
+}
+
+class _MutationTargetUpdateDtoCopyWithSentinel {
+  const _MutationTargetUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [MutationTarget].
@@ -354,6 +402,30 @@ class MutationTargetPartial implements PartialEntity<$MutationTarget> {
       if (category != null) 'category': category,
     };
   }
+
+  static const _MutationTargetPartialCopyWithSentinel _copyWithSentinel =
+      _MutationTargetPartialCopyWithSentinel();
+  MutationTargetPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? category = _copyWithSentinel,
+  }) {
+    return MutationTargetPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      category: identical(category, _copyWithSentinel)
+          ? this.category
+          : category as String?,
+    );
+  }
+}
+
+class _MutationTargetPartialCopyWithSentinel {
+  const _MutationTargetPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [MutationTarget].

@@ -255,6 +255,24 @@ class CommentInsertDto implements InsertDto<$Comment> {
       if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CommentInsertDtoCopyWithSentinel();
+  CommentInsertDto copyWith({
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentInsertDto(
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentInsertDtoCopyWithSentinel {
+  const _CommentInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Comment].
@@ -274,6 +292,26 @@ class CommentUpdateDto implements UpdateDto<$Comment> {
       if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CommentUpdateDtoCopyWithSentinel();
+  CommentUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentUpdateDtoCopyWithSentinel {
+  const _CommentUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Comment].
@@ -320,6 +358,26 @@ class CommentPartial implements PartialEntity<$Comment> {
       if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentPartialCopyWithSentinel _copyWithSentinel =
+      _CommentPartialCopyWithSentinel();
+  CommentPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentPartialCopyWithSentinel {
+  const _CommentPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Comment].

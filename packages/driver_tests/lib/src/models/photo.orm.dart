@@ -265,6 +265,28 @@ class PhotoInsertDto implements InsertDto<$Photo> {
       if (path != null) 'path': path,
     };
   }
+
+  static const _PhotoInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PhotoInsertDtoCopyWithSentinel();
+  PhotoInsertDto copyWith({
+    Object? imageableId = _copyWithSentinel,
+    Object? imageableType = _copyWithSentinel,
+    Object? path = _copyWithSentinel,
+  }) {
+    return PhotoInsertDto(
+      imageableId: identical(imageableId, _copyWithSentinel)
+          ? this.imageableId
+          : imageableId as int?,
+      imageableType: identical(imageableType, _copyWithSentinel)
+          ? this.imageableType
+          : imageableType as String?,
+      path: identical(path, _copyWithSentinel) ? this.path : path as String?,
+    );
+  }
+}
+
+class _PhotoInsertDtoCopyWithSentinel {
+  const _PhotoInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Photo].
@@ -291,6 +313,30 @@ class PhotoUpdateDto implements UpdateDto<$Photo> {
       if (path != null) 'path': path,
     };
   }
+
+  static const _PhotoUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PhotoUpdateDtoCopyWithSentinel();
+  PhotoUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? imageableId = _copyWithSentinel,
+    Object? imageableType = _copyWithSentinel,
+    Object? path = _copyWithSentinel,
+  }) {
+    return PhotoUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      imageableId: identical(imageableId, _copyWithSentinel)
+          ? this.imageableId
+          : imageableId as int?,
+      imageableType: identical(imageableType, _copyWithSentinel)
+          ? this.imageableType
+          : imageableType as String?,
+      path: identical(path, _copyWithSentinel) ? this.path : path as String?,
+    );
+  }
+}
+
+class _PhotoUpdateDtoCopyWithSentinel {
+  const _PhotoUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Photo].
@@ -358,6 +404,30 @@ class PhotoPartial implements PartialEntity<$Photo> {
       if (path != null) 'path': path,
     };
   }
+
+  static const _PhotoPartialCopyWithSentinel _copyWithSentinel =
+      _PhotoPartialCopyWithSentinel();
+  PhotoPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? imageableId = _copyWithSentinel,
+    Object? imageableType = _copyWithSentinel,
+    Object? path = _copyWithSentinel,
+  }) {
+    return PhotoPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      imageableId: identical(imageableId, _copyWithSentinel)
+          ? this.imageableId
+          : imageableId as int?,
+      imageableType: identical(imageableType, _copyWithSentinel)
+          ? this.imageableType
+          : imageableType as String?,
+      path: identical(path, _copyWithSentinel) ? this.path : path as String?,
+    );
+  }
+}
+
+class _PhotoPartialCopyWithSentinel {
+  const _PhotoPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Photo].

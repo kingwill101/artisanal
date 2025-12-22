@@ -248,6 +248,28 @@ class ScopedUserInsertDto implements InsertDto<$ScopedUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ScopedUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ScopedUserInsertDtoCopyWithSentinel();
+  ScopedUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ScopedUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ScopedUserInsertDtoCopyWithSentinel {
+  const _ScopedUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ScopedUser].
@@ -269,6 +291,30 @@ class ScopedUserUpdateDto implements UpdateDto<$ScopedUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ScopedUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ScopedUserUpdateDtoCopyWithSentinel();
+  ScopedUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ScopedUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ScopedUserUpdateDtoCopyWithSentinel {
+  const _ScopedUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ScopedUser].
@@ -327,6 +373,30 @@ class ScopedUserPartial implements PartialEntity<$ScopedUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ScopedUserPartialCopyWithSentinel _copyWithSentinel =
+      _ScopedUserPartialCopyWithSentinel();
+  ScopedUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ScopedUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ScopedUserPartialCopyWithSentinel {
+  const _ScopedUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ScopedUser].

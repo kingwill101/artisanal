@@ -198,6 +198,20 @@ class TagInsertDto implements InsertDto<$Tag> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (label != null) 'label': label};
   }
+
+  static const _TagInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TagInsertDtoCopyWithSentinel();
+  TagInsertDto copyWith({Object? label = _copyWithSentinel}) {
+    return TagInsertDto(
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _TagInsertDtoCopyWithSentinel {
+  const _TagInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Tag].
@@ -215,6 +229,24 @@ class TagUpdateDto implements UpdateDto<$Tag> {
       if (label != null) 'label': label,
     };
   }
+
+  static const _TagUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TagUpdateDtoCopyWithSentinel();
+  TagUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return TagUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _TagUpdateDtoCopyWithSentinel {
+  const _TagUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Tag].
@@ -252,6 +284,24 @@ class TagPartial implements PartialEntity<$Tag> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (label != null) 'label': label};
   }
+
+  static const _TagPartialCopyWithSentinel _copyWithSentinel =
+      _TagPartialCopyWithSentinel();
+  TagPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return TagPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _TagPartialCopyWithSentinel {
+  const _TagPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Tag].

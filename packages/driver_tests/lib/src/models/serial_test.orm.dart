@@ -202,6 +202,20 @@ class SerialTestInsertDto implements InsertDto<$SerialTest> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (label != null) 'label': label};
   }
+
+  static const _SerialTestInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SerialTestInsertDtoCopyWithSentinel();
+  SerialTestInsertDto copyWith({Object? label = _copyWithSentinel}) {
+    return SerialTestInsertDto(
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _SerialTestInsertDtoCopyWithSentinel {
+  const _SerialTestInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [SerialTest].
@@ -219,6 +233,24 @@ class SerialTestUpdateDto implements UpdateDto<$SerialTest> {
       if (label != null) 'label': label,
     };
   }
+
+  static const _SerialTestUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SerialTestUpdateDtoCopyWithSentinel();
+  SerialTestUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return SerialTestUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _SerialTestUpdateDtoCopyWithSentinel {
+  const _SerialTestUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [SerialTest].
@@ -259,6 +291,24 @@ class SerialTestPartial implements PartialEntity<$SerialTest> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (label != null) 'label': label};
   }
+
+  static const _SerialTestPartialCopyWithSentinel _copyWithSentinel =
+      _SerialTestPartialCopyWithSentinel();
+  SerialTestPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return SerialTestPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      label: identical(label, _copyWithSentinel)
+          ? this.label
+          : label as String?,
+    );
+  }
+}
+
+class _SerialTestPartialCopyWithSentinel {
+  const _SerialTestPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [SerialTest].

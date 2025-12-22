@@ -314,6 +314,34 @@ class AttributeUserInsertDto implements InsertDto<$AttributeUser> {
       if (profile != null) 'profile': profile,
     };
   }
+
+  static const _AttributeUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AttributeUserInsertDtoCopyWithSentinel();
+  AttributeUserInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return AttributeUserInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+    );
+  }
+}
+
+class _AttributeUserInsertDtoCopyWithSentinel {
+  const _AttributeUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [AttributeUser].
@@ -343,6 +371,34 @@ class AttributeUserUpdateDto implements UpdateDto<$AttributeUser> {
       if (profile != null) 'profile': profile,
     };
   }
+
+  static const _AttributeUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AttributeUserUpdateDtoCopyWithSentinel();
+  AttributeUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return AttributeUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+    );
+  }
+}
+
+class _AttributeUserUpdateDtoCopyWithSentinel {
+  const _AttributeUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [AttributeUser].
@@ -411,6 +467,34 @@ class AttributeUserPartial implements PartialEntity<$AttributeUser> {
       if (profile != null) 'profile': profile,
     };
   }
+
+  static const _AttributeUserPartialCopyWithSentinel _copyWithSentinel =
+      _AttributeUserPartialCopyWithSentinel();
+  AttributeUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return AttributeUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+    );
+  }
+}
+
+class _AttributeUserPartialCopyWithSentinel {
+  const _AttributeUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [AttributeUser].
