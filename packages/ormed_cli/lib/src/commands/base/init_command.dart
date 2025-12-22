@@ -514,8 +514,9 @@ Future<void> _populateExisting({
   }
 
   final seedRegistryContent = [
+    "import 'package:ormed_cli/runtime.dart';",
     "import 'package:ormed/ormed.dart';",
-    "import 'package:$packageName/orm_registry.g.dart';",
+    "import 'package:$packageName/orm_registry.g.dart' as g;",
     "",
     ...seedImports,
     "",
@@ -530,7 +531,7 @@ Future<void> _populateExisting({
     "  List<String>? names,",
     "  bool pretend = false,",
     "}) async {",
-    "  bootstrapOrm(registry: connection.context.registry);",
+    "  g.bootstrapOrm(registry: connection.context.registry);",
     "  await SeederRunner().run(",
     "    connection: connection,",
     "    seeders: seeders,",
@@ -538,6 +539,13 @@ Future<void> _populateExisting({
     "    pretend: pretend,",
     "  );",
     "}",
+    "",
+    "Future<void> main(List<String> args) => runSeedRegistryEntrypoint(",
+    "      args: args,",
+    "      seeds: seeders,",
+    "      beforeRun: (connection) =>",
+    "          g.bootstrapOrm(registry: connection.context.registry),",
+    "    );",
   ].join('\n');
 
   if (seederFiles.isNotEmpty) {

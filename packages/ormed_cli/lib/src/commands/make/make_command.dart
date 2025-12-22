@@ -212,9 +212,10 @@ $down
 ''';
 }
 
-String _seederFileTemplate(String className) =>
+String _seederFileTemplate(String className, String packageName) =>
     '''
 import 'package:ormed/ormed.dart';
+import 'package:$packageName/orm_registry.g.dart';
 
 class $className extends DatabaseSeeder {
   $className(super.connection);
@@ -292,7 +293,8 @@ void _createSeeder({
   if (file.existsSync()) {
     throw UsageException('Seeder file ${file.path} already exists.', usage);
   }
-  file.writeAsStringSync(_seederFileTemplate(className));
+  final packageName = getPackageName(root);
+  file.writeAsStringSync(_seederFileTemplate(className, packageName));
   cliIO.success('Created seeder');
   cliIO.components.horizontalTable({
     'File': p.relative(file.path, from: root.path),
