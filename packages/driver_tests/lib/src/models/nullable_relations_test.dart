@@ -12,11 +12,9 @@ part 'nullable_relations_test.orm.dart';
 @OrmModel(table: 'nullable_relations_test')
 class NullableRelationsTest extends Model<NullableRelationsTest>
     with ModelFactoryCapable {
-  const NullableRelationsTest({
-    required this.id,
-    required this.name,
-  }) : nullableFieldComments = null,
-       nonNullableFieldComments = const [];
+  const NullableRelationsTest({required this.id, required this.name})
+    : nullableFieldComments = null,
+      nonNullableFieldComments = const [];
 
   @OrmField(isPrimaryKey: true, autoIncrement: true)
   final int id;

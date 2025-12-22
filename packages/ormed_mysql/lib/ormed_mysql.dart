@@ -17,6 +17,36 @@ export 'src/mysql_schema_dialect.dart';
 export 'src/mysql_type_mapper.dart';
 export 'src/mysql_value_types.dart';
 
+final _mysqlDriverRegistration = (() {
+  DriverAdapterRegistry.register('mysql', (config) {
+    return MySqlDriverAdapter.custom(config: config);
+  });
+
+  DriverRegistry.registerDriver('mysql', ({
+    required Directory root,
+    required ConnectionManager manager,
+    required ModelRegistry registry,
+    required String connectionName,
+    required ConnectionDefinition definition,
+  }) {
+    return registerMySqlOrmConnection(
+      name: connectionName,
+      database: DatabaseConfig(
+        driver: 'mysql',
+        options: Map<String, Object?>.from(definition.driver.options),
+      ),
+      registry: registry,
+      manager: manager,
+      singleton: true,
+    );
+  });
+  return null;
+})();
+
+/// Ensures MySQL driver registers with [DriverRegistry] and [DriverAdapterRegistry].
+void ensureMySqlDriverRegistration() => _mysqlDriverRegistration;
+
+/// Registers a MySQL ORM connection with the [manager].
 OrmConnectionHandle registerMySqlOrmConnection({
   required String name,
   required DatabaseConfig database,

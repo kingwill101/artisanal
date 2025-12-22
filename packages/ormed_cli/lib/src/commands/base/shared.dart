@@ -270,7 +270,8 @@ void main(List<String> args) {
 ''';
 
 /// Generate the default ormed.yaml content with the project-specific database path.
-String defaultOrmYaml(String packageName) => '''
+String defaultOrmYaml(String packageName) =>
+    '''
 driver:
   type: sqlite
   options:

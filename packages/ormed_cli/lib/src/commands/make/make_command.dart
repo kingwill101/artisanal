@@ -13,7 +13,8 @@ class MakeCommand extends Command<void> {
       ..addOption('name', abbr: 'n', help: 'Slug for the migration/seeder.')
       ..addOption(
         'format',
-        help: 'Migration authoring format (dart|sql). Defaults from ormed.yaml.',
+        help:
+            'Migration authoring format (dart|sql). Defaults from ormed.yaml.',
         allowed: const ['dart', 'sql'],
       )
       ..addOption(
@@ -424,7 +425,9 @@ void _createMigration({
   final registryPath = resolvePath(root, config.migrations.registry);
   final registry = File(registryPath);
   if (!registry.existsSync()) {
-    throw StateError('Registry file $registryPath not found. Run `ormed init`.');
+    throw StateError(
+      'Registry file $registryPath not found. Run `ormed init`.',
+    );
   }
   var content = registry.readAsStringSync();
 

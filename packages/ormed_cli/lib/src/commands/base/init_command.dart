@@ -59,7 +59,9 @@ class InitCommand extends Command<void> {
       final legacyFile = File(p.join(root.path, 'ormed.yaml'));
 
       if (configFile.existsSync()) {
-        cliIO.writeln(cliIO.style.info('Project already initialized (ormed.yaml exists).'));
+        cliIO.writeln(
+          cliIO.style.info('Project already initialized (ormed.yaml exists).'),
+        );
         if (!io.confirm('Do you want to re-initialize (overwrite files)?')) {
           if (!populateExisting) return;
         }
@@ -132,11 +134,13 @@ class InitCommand extends Command<void> {
       interactive: true,
     );
 
-    final datasourceFile =
-        File(p.join(root.path, 'lib', 'src', 'database', 'datasource.dart'));
+    final datasourceFile = File(
+      p.join(root.path, 'lib', 'src', 'database', 'datasource.dart'),
+    );
 
-    final driverTypes =
-        config.connections.values.map((c) => c.driver.type.toLowerCase()).toSet();
+    final driverTypes = config.connections.values
+        .map((c) => c.driver.type.toLowerCase())
+        .toSet();
     final driverImports = driverTypes
         .map((type) => _driverPackageMapping[type])
         .where((pkg) => pkg != null)
@@ -250,15 +254,16 @@ class InitCommand extends Command<void> {
       cliIO.newLine();
       cliIO.section('Installing Dependencies');
       cliIO.writeln('Running dart pub get...');
-      final pubGetResult = await Process.run(
-        'dart',
-        ['pub', 'get'],
-        workingDirectory: root.path,
-      );
+      final pubGetResult = await Process.run('dart', [
+        'pub',
+        'get',
+      ], workingDirectory: root.path);
       if (pubGetResult.exitCode != 0) {
-        cliIO.writeln(cliIO.style.warning(
-          'Failed to install dependencies. Run: dart pub get',
-        ));
+        cliIO.writeln(
+          cliIO.style.warning(
+            'Failed to install dependencies. Run: dart pub get',
+          ),
+        );
         return;
       }
       cliIO.success('Dependencies installed.');
@@ -268,19 +273,22 @@ class InitCommand extends Command<void> {
     cliIO.section('Code Generation');
     cliIO.writeln('Running build_runner to generate ORM registry...');
 
-    final result = await Process.run(
-      'dart',
-      ['run', 'build_runner', 'build', '--delete-conflicting-outputs'],
-      workingDirectory: root.path,
-    );
+    final result = await Process.run('dart', [
+      'run',
+      'build_runner',
+      'build',
+      '--delete-conflicting-outputs',
+    ], workingDirectory: root.path);
 
     if (result.exitCode == 0) {
       cliIO.success('Code generation completed.');
     } else {
-      cliIO.writeln(cliIO.style.warning(
-        'Code generation had issues (exit code ${result.exitCode}). '
-        'You may need to run: dart run build_runner build',
-      ));
+      cliIO.writeln(
+        cliIO.style.warning(
+          'Code generation had issues (exit code ${result.exitCode}). '
+          'You may need to run: dart run build_runner build',
+        ),
+      );
       if ((result.stderr as String).isNotEmpty) {
         cliIO.writeln(cliIO.style.muted(result.stderr.toString().trim()));
       }
@@ -307,8 +315,9 @@ class InitCommand extends Command<void> {
 
     final missingDrivers = <String>[];
     if (config != null) {
-      final driverTypes =
-          config.connections.values.map((c) => c.driver.type).toSet();
+      final driverTypes = config.connections.values
+          .map((c) => c.driver.type)
+          .toSet();
       for (final type in driverTypes) {
         final pkg = _driverPackageMapping[type.toLowerCase()];
         if (pkg != null && !(deps?.containsKey(pkg) ?? false)) {

@@ -43,9 +43,10 @@ final _sqliteDriverRegistration = (() {
   return null;
 })();
 
-/// Ensures sqlite driver registers with [DriverRegistry].
+/// Ensures sqlite driver registers with [DriverRegistry] and [DriverAdapterRegistry].
 void ensureSqliteDriverRegistration() => _sqliteDriverRegistration;
 
+/// Registers a SQLite ORM connection with the [manager].
 OrmConnectionHandle registerSqliteOrmConnection({
   required String name,
   required DatabaseConfig database,

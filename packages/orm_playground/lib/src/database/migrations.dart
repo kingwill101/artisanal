@@ -40,8 +40,7 @@ void main(List<String> args) {
     final snapshotIndex = args.indexOf('--schema-snapshot');
     SchemaSnapshot? snapshot;
     if (snapshotIndex != -1) {
-      final decoded =
-          utf8.decode(base64.decode(args[snapshotIndex + 1]));
+      final decoded = utf8.decode(base64.decode(args[snapshotIndex + 1]));
       final payload = jsonDecode(decoded) as Map<String, Object?>;
       snapshot = SchemaSnapshot.fromJson(payload);
     }

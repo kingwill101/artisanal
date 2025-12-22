@@ -125,7 +125,10 @@ Future<void> _animatedSeed(
     'Creating tags',
     run: () async {
       if (!hasTags || seedOverrides.contains('tags')) {
-        await playground_seeders.runProjectSeeds(ds.connection, names: ['tags']);
+        await playground_seeders.runProjectSeeds(
+          ds.connection,
+          names: ['tags'],
+        );
         if (animate) await Future.delayed(Duration(milliseconds: 100));
       }
       return TaskResult.success;

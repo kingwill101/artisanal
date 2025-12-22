@@ -1364,7 +1364,10 @@ void runRelationMutationTests() {
         final post = rows.first;
 
         expect(
-          () => post.saveRelation<Author>('author', const Author(id: 1, name: 'Test')),
+          () => post.saveRelation<Author>(
+            'author',
+            const Author(id: 1, name: 'Test'),
+          ),
           throwsA(
             isA<ArgumentError>().having(
               (e) => e.message,
@@ -1410,10 +1413,10 @@ void runRelationMutationTests() {
         expect(saved[1].authorId, equals(1));
 
         // Verify persisted
-        final dbPosts = await dataSource.context
-            .query<Post>()
-            .whereIn('id', [200, 201])
-            .get();
+        final dbPosts = await dataSource.context.query<Post>().whereIn('id', [
+          200,
+          201,
+        ]).get();
         expect(dbPosts, hasLength(2));
       });
     });
@@ -1486,7 +1489,8 @@ void runRelationMutationTests() {
         final post = rows.first;
 
         expect(
-          () => post.createRelation<Author>('author', {'id': 1, 'name': 'Test'}),
+          () =>
+              post.createRelation<Author>('author', {'id': 1, 'name': 'Test'}),
           throwsA(
             isA<ArgumentError>().having(
               (e) => e.message,
@@ -1498,15 +1502,13 @@ void runRelationMutationTests() {
       });
 
       test('accepts InsertDto as input', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createRelation<Post>(
           'posts',
-          PostInsertDto(
-            title: 'DTO Post',
-            publishedAt: DateTime(2024),
-          ),
+          PostInsertDto(title: 'DTO Post', publishedAt: DateTime(2024)),
         );
 
         expect(created.authorId, equals(author.id)); // FK was set
@@ -1514,15 +1516,13 @@ void runRelationMutationTests() {
       });
 
       test('accepts UpdateDto as input', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createRelation<Post>(
           'posts',
-          PostUpdateDto(
-            title: 'UpdateDto Post',
-            publishedAt: DateTime(2024),
-          ),
+          PostUpdateDto(title: 'UpdateDto Post', publishedAt: DateTime(2024)),
         );
 
         expect(created.authorId, equals(author.id)); // FK was set
@@ -1532,8 +1532,9 @@ void runRelationMutationTests() {
 
     group('createManyRelation() - hasMany', () {
       test('creates multiple related models', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createManyRelation<Post>('posts', [
           {'title': 'Post X', 'published_at': DateTime(2024)},
@@ -1545,16 +1546,17 @@ void runRelationMutationTests() {
         expect(created[1].authorId, equals(author.id));
 
         // Verify persisted
-        final dbPosts = await dataSource.context
-            .query<Post>()
-            .whereIn('id', [created[0].id, created[1].id])
-            .get();
+        final dbPosts = await dataSource.context.query<Post>().whereIn('id', [
+          created[0].id,
+          created[1].id,
+        ]).get();
         expect(dbPosts, hasLength(2));
       });
 
       test('accepts list of mixed input types (DTOs and maps)', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createManyRelation<Post>('posts', [
           {'title': 'Map Post', 'published_at': DateTime(2024)},
@@ -1571,42 +1573,55 @@ void runRelationMutationTests() {
     });
 
     group('createQuietlyRelation() - hasMany', () {
-      test('creates related model (behaves like createRelation for now)', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+      test(
+        'creates related model (behaves like createRelation for now)',
+        () async {
+          final author = await AuthorModelFactory.factory().create(
+            context: dataSource.context,
+          );
 
-        final created = await author.createQuietlyRelation<Post>('posts', {
-          'title': 'Quiet Post',
-          'published_at': DateTime(2024),
-        });
+          final created = await author.createQuietlyRelation<Post>('posts', {
+            'title': 'Quiet Post',
+            'published_at': DateTime(2024),
+          });
 
-        expect(created.authorId, equals(author.id));
-        expect(created.title, equals('Quiet Post'));
+          expect(created.authorId, equals(author.id));
+          expect(created.title, equals('Quiet Post'));
 
-        // Verify persisted
-        final dbPost = await dataSource.context
-            .query<Post>()
-            .where('id', created.id)
-            .first();
-        expect(dbPost, isNotNull);
-      });
+          // Verify persisted
+          final dbPost = await dataSource.context
+              .query<Post>()
+              .where('id', created.id)
+              .first();
+          expect(dbPost, isNotNull);
+        },
+      );
 
       test('suppresses model events when creating', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         // Track emitted events
         final events = <String>[];
-        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((event) {
+        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('creating');
         });
-        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((event) {
+        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('created');
         });
-        final savingUnsub = dataSource.context.events.on<ModelSavingEvent>((event) {
+        final savingUnsub = dataSource.context.events.on<ModelSavingEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('saving');
         });
-        final savedUnsub = dataSource.context.events.on<ModelSavedEvent>((event) {
+        final savedUnsub = dataSource.context.events.on<ModelSavedEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('saved');
         });
 
@@ -1618,7 +1633,11 @@ void runRelationMutationTests() {
           });
 
           // No events should be emitted for quietly created models
-          expect(events, isEmpty, reason: 'createQuietlyRelation should suppress all events');
+          expect(
+            events,
+            isEmpty,
+            reason: 'createQuietlyRelation should suppress all events',
+          );
         } finally {
           creatingUnsub();
           createdUnsub();
@@ -1630,8 +1649,9 @@ void runRelationMutationTests() {
 
     group('createManyQuietlyRelation() - hasMany', () {
       test('creates multiple related models without events', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createManyQuietlyRelation<Post>('posts', [
           {'title': 'Quiet A', 'published_at': DateTime(2024)},
@@ -1644,15 +1664,20 @@ void runRelationMutationTests() {
       });
 
       test('suppresses model events when creating multiple', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         // Track emitted events
         final events = <String>[];
-        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((event) {
+        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('creating');
         });
-        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((event) {
+        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((
+          event,
+        ) {
           if (event.tableName == 'posts') events.add('created');
         });
 
@@ -1663,7 +1688,11 @@ void runRelationMutationTests() {
           ]);
 
           // No events should be emitted
-          expect(events, isEmpty, reason: 'createManyQuietlyRelation should suppress all events');
+          expect(
+            events,
+            isEmpty,
+            reason: 'createManyQuietlyRelation should suppress all events',
+          );
         } finally {
           creatingUnsub();
           createdUnsub();
@@ -1671,8 +1700,9 @@ void runRelationMutationTests() {
       });
 
       test('accepts list of mixed input types (DTOs and maps)', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createManyQuietlyRelation<Post>('posts', [
           {'title': 'Quiet Map', 'published_at': DateTime(2024)},
@@ -1688,8 +1718,9 @@ void runRelationMutationTests() {
       });
 
       test('accepts InsertDto as input', () async {
-        final author = await AuthorModelFactory.factory()
-            .create(context: dataSource.context);
+        final author = await AuthorModelFactory.factory().create(
+          context: dataSource.context,
+        );
 
         final created = await author.createQuietlyRelation<Post>(
           'posts',
@@ -1704,10 +1735,14 @@ void runRelationMutationTests() {
     group('withoutEvents() - Query', () {
       test('insert suppresses creating/created events', () async {
         final events = <String>[];
-        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((event) {
+        final creatingUnsub = dataSource.context.events.on<ModelCreatingEvent>((
+          event,
+        ) {
           if (event.tableName == 'authors') events.add('creating');
         });
-        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((event) {
+        final createdUnsub = dataSource.context.events.on<ModelCreatedEvent>((
+          event,
+        ) {
           if (event.tableName == 'authors') events.add('created');
         });
 
@@ -1723,7 +1758,11 @@ void runRelationMutationTests() {
           await dataSource.context.query<Author>().withoutEvents().insertInput(
             const Author(id: 901, name: 'Quiet Insert'),
           );
-          expect(events, isEmpty, reason: 'withoutEvents() should suppress events');
+          expect(
+            events,
+            isEmpty,
+            reason: 'withoutEvents() should suppress events',
+          );
         } finally {
           creatingUnsub();
           createdUnsub();
@@ -1736,20 +1775,29 @@ void runRelationMutationTests() {
         ]);
 
         final events = <String>[];
-        final savingUnsub = dataSource.context.events.on<ModelSavingEvent>((event) {
+        final savingUnsub = dataSource.context.events.on<ModelSavingEvent>((
+          event,
+        ) {
           if (event.tableName == 'authors') events.add('saving');
         });
-        final savedUnsub = dataSource.context.events.on<ModelSavedEvent>((event) {
+        final savedUnsub = dataSource.context.events.on<ModelSavedEvent>((
+          event,
+        ) {
           if (event.tableName == 'authors') events.add('saved');
         });
 
         try {
           // withoutEvents() update should suppress events
-          await dataSource.context.query<Author>()
+          await dataSource.context
+              .query<Author>()
               .where('id', 950)
               .withoutEvents()
               .update({'name': 'After Update'});
-          expect(events, isEmpty, reason: 'withoutEvents() should suppress update events');
+          expect(
+            events,
+            isEmpty,
+            reason: 'withoutEvents() should suppress update events',
+          );
         } finally {
           savingUnsub();
           savedUnsub();
