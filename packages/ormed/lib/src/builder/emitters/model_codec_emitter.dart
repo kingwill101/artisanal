@@ -88,6 +88,9 @@ class ModelCodecEmitter {
           (f) => !f.isVirtual && f.name == paramName,
         );
         if (field == null) {
+          if (context.shouldSkipConstructorParameter(parameter)) {
+            continue;
+          }
           throw InvalidGenerationSourceError(
             'Constructor parameter $paramName is not backed by a field.',
             element: constructor,
@@ -105,6 +108,9 @@ class ModelCodecEmitter {
         (f) => !f.isVirtual && f.name == paramName,
       );
       if (field == null) {
+        if (context.shouldSkipConstructorParameter(parameter)) {
+          continue;
+        }
         throw InvalidGenerationSourceError(
           'Constructor parameter $paramName is not backed by a field.',
           element: constructor,

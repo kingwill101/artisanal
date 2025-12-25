@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
 import 'package:ormed/src/annotations.dart';
+import 'package:source_gen/source_gen.dart';
 
 import '../descriptors.dart';
 import '../model_context.dart';
@@ -92,7 +93,9 @@ class ModelSubclassEmitter {
     buffer.writeln(
       '  $modelSubclassName${_constructorParameters(context.constructor, context.fields)}',
     );
-    buffer.writeln('      : super${_superInvocation(context.constructor)} {');
+    buffer.writeln(
+      '      : super${_superInvocation(context.constructor, context.fields)} {',
+    );
     buffer.writeln('    _attachOrmRuntimeMetadata({');
     for (final field in context.fields.where((f) => !f.isVirtual)) {
       buffer.writeln("      '${field.columnName}': ${field.name},");
@@ -170,7 +173,7 @@ class ModelSubclassEmitter {
       // Determine return type based on relation type and field nullability
       final String returnType;
       if (isList) {
-        // List relations (hasMany, manyToMany, morphMany) always return non-nullable List
+        // List relations (hasMany, manyToMany, morphMany, morphToMany) always return non-nullable List
         // to provide a consistent API - empty list instead of null
         returnType = 'List<${relation.targetModel}>';
       } else {
@@ -264,7 +267,10 @@ class ModelSubclassEmitter {
             '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );
         } else if (relation.kind == RelationKind.morphOne ||
-            relation.kind == RelationKind.morphMany) {
+            relation.kind == RelationKind.morphMany ||
+            relation.kind == RelationKind.morphTo ||
+            relation.kind == RelationKind.morphToMany ||
+            relation.kind == RelationKind.morphedByMany) {
           buffer.writeln(
             '    throw UnimplementedError("Polymorphic relation query generation not yet supported");',
           );
@@ -494,7 +500,15 @@ class ModelSubclassEmitter {
       final field = fields.firstWhereOrNull(
         (f) => !f.isVirtual && f.name == paramName,
       );
-      if (field == null) continue;
+      if (field == null) {
+        if (context.shouldSkipConstructorParameter(parameter)) {
+          continue;
+        }
+        throw InvalidGenerationSourceError(
+          'Constructor parameter $paramName is not backed by a field.',
+          element: constructor,
+        );
+      }
 
       // Check if this field has a default value (e.g., auto-increment sentinel)
       final hasDefaultValue = field.autoIncrement && !field.isNullable;
@@ -514,7 +528,10 @@ class ModelSubclassEmitter {
     return buffer.toString();
   }
 
-  String _superInvocation(ConstructorElement constructor) {
+  String _superInvocation(
+    ConstructorElement constructor,
+    List<FieldDescriptor> fields,
+  ) {
     final buffer = StringBuffer();
     if ((constructor.name ?? '').isNotEmpty) {
       buffer.write('.${constructor.name}');
@@ -522,6 +539,18 @@ class ModelSubclassEmitter {
     buffer.write('(');
     for (final parameter in constructor.formalParameters) {
       final paramName = parameter.displayName;
+      final field = fields.firstWhereOrNull(
+        (f) => !f.isVirtual && f.name == paramName,
+      );
+      if (field == null) {
+        if (context.shouldSkipConstructorParameter(parameter)) {
+          continue;
+        }
+        throw InvalidGenerationSourceError(
+          'Constructor parameter $paramName is not backed by a field.',
+          element: constructor,
+        );
+      }
       if (parameter.isNamed) {
         buffer.write('$paramName: $paramName, ');
       } else {

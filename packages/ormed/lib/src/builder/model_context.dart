@@ -78,6 +78,8 @@ class ModelContext {
     }
 
     relations = _collectRelations();
+    ignoredFieldNames = _collectIgnoredFields();
+    relationFieldNames = relations.map((relation) => relation.name).toSet();
     scopes = _collectScopes();
 
     final softDeleteFields = fields
@@ -142,6 +144,8 @@ class ModelContext {
   late final String? softDeleteColumn;
   late final bool effectiveSoftDeletes;
   late final ConstructorElement constructor;
+  late final Set<String> ignoredFieldNames;
+  late final Set<String> relationFieldNames;
 
   /// Whether this model has factory support enabled via mixin or annotation.
   bool get hasFactory => mixinModelFactory || annotationHasFactory;
@@ -181,6 +185,23 @@ class ModelContext {
       );
     }
     return ctor;
+  }
+
+  bool shouldSkipConstructorParameter(FormalParameterElement parameter) {
+    final name = parameter.displayName;
+    final isIgnored =
+        ignoredFieldNames.contains(name) || relationFieldNames.contains(name);
+    if (!isIgnored) {
+      return false;
+    }
+    if (parameter.isRequiredNamed || parameter.isRequiredPositional) {
+      throw InvalidGenerationSourceError(
+        'Constructor parameter $name is required but is not backed by a field. '
+        'Make it optional with a default value or map it to an @OrmField.',
+        element: parameter,
+      );
+    }
+    return true;
   }
 
   List<FieldDescriptor> _collectFields() {
@@ -298,6 +319,38 @@ class ModelContext {
     }
 
     return descriptors;
+  }
+
+  Set<String> _collectIgnoredFields() {
+    final ignored = <String>{};
+    final seen = <String>{};
+
+    void collectFrom(InterfaceElement source) {
+      for (final field in source.fields) {
+        if (field.isStatic || field.isSynthetic || field.isPrivate) {
+          continue;
+        }
+        if (!seen.add(field.displayName)) {
+          continue;
+        }
+        final reader = readAnnotation(field, 'OrmField');
+        if (reader?.peek('ignore')?.boolValue ?? false) {
+          ignored.add(field.displayName);
+        }
+      }
+      if (source is ClassElement) {
+        for (final mixinType in source.mixins) {
+          collectFrom(mixinType.element);
+        }
+        final supertype = source.supertype;
+        if (supertype != null && supertype.element.name != 'Object') {
+          collectFrom(supertype.element);
+        }
+      }
+    }
+
+    collectFrom(element);
+    return ignored;
   }
 
   FieldDescriptor? _buildFieldDescriptor(FieldElement field) {
