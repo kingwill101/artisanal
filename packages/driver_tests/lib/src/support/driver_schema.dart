@@ -119,6 +119,13 @@ final List<MigrationEntry> driverTestMigrationEntries = [
     ),
     migration: const CreateMixedConstructorsTable(),
   ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 20),
+      'create_taggables_table',
+    ),
+    migration: const CreateTaggablesTable(),
+  ),
 ];
 
 /// Create a test schema manager for driver tests

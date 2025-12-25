@@ -12,7 +12,7 @@ class Photo extends Model<Photo> with ModelFactoryCapable {
     required this.imageableId,
     required this.imageableType,
     required this.path,
-  });
+  }) : imageable = null;
 
   @OrmField(isPrimaryKey: true, autoIncrement: true)
   final int id;
@@ -24,4 +24,12 @@ class Photo extends Model<Photo> with ModelFactoryCapable {
   final String imageableType;
 
   final String path;
+
+  @OrmField(ignore: true)
+  @OrmRelation(
+    kind: RelationKind.morphTo,
+    foreignKey: 'imageable_id',
+    morphType: 'imageable_type',
+  )
+  final OrmEntity? imageable;
 }

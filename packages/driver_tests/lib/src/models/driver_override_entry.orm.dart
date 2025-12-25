@@ -378,6 +378,7 @@ class _DriverOverrideEntryPartialCopyWithSentinel {
 class $DriverOverrideEntry extends DriverOverrideEntry
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$DriverOverrideEntry].
   $DriverOverrideEntry({int id = 0, required Map<String, Object?> payload})
     : super.new(id: id, payload: payload) {
     _attachOrmRuntimeMetadata({'id': id, 'payload': payload});
@@ -395,15 +396,19 @@ class $DriverOverrideEntry extends DriverOverrideEntry
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [payload].
   @override
   Map<String, Object?> get payload =>
       getAttribute<Map<String, Object?>>('payload') ?? super.payload;
 
+  /// Tracked setter for [payload].
   set payload(Map<String, Object?> value) => setAttribute('payload', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

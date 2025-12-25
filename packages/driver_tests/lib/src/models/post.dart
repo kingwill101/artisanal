@@ -21,6 +21,7 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     this.views,
   }) : author = null,
        tags = const [],
+       morphTags = const [],
        photos = const [],
        comments = const [];
 
@@ -57,6 +58,18 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     pivotRelatedKey: 'tag_id',
   )
   final List<Tag> tags;
+
+  @OrmField(ignore: true)
+  @OrmRelation(
+    kind: RelationKind.morphToMany,
+    target: Tag,
+    through: 'taggables',
+    pivotForeignKey: 'taggable_id',
+    pivotRelatedKey: 'tag_id',
+    morphType: 'taggable_type',
+    morphClass: 'Post',
+  )
+  final List<Tag> morphTags;
 
   @OrmField(ignore: true)
   @OrmRelation(

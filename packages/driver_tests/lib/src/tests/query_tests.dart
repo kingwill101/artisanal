@@ -29,6 +29,7 @@ void runDriverQueryTests() {
       await dataSource.repo<Post>().insertMany(buildDefaultPosts());
       await dataSource.repo<Tag>().insertMany(defaultTags.toList());
       await dataSource.repo<PostTag>().insertMany(defaultPostTags.toList());
+      await dataSource.repo<Taggable>().insertMany(defaultTaggables.toList());
       await dataSource.repo<Image>().insertMany(defaultImages.toList());
       await dataSource.repo<Photo>().insertMany(defaultPhotos.toList());
       await dataSource.context.query<Comment>().createMany(defaultComments);
@@ -222,6 +223,64 @@ void runDriverQueryTests() {
           .firstRow();
 
       expect(image?.relation<Photo>('primaryPhoto')?.path, 'cover.jpg');
+    });
+
+    test('eager loads morphTo relations', () async {
+      final photo = await dataSource.context
+          .query<Photo>()
+          .whereEquals('id', 1)
+          .withRelation('imageable')
+          .firstRow();
+
+      final imageable = photo?.relation<OrmEntity>('imageable');
+      expect(imageable, isA<Post>());
+      expect((imageable as Post).id, 1);
+    });
+
+    test('resolves morphTo aliases via morph map registry', () async {
+      dataSource.context.registry.registerMorphMap({
+        'post_alias': Post,
+      });
+      await dataSource.repo<Photo>().insertMany(const [
+        Photo(
+          id: 6,
+          imageableId: 2,
+          imageableType: 'post_alias',
+          path: 'alias.jpg',
+        ),
+      ]);
+
+      final photo = await dataSource.context
+          .query<Photo>()
+          .whereEquals('id', 6)
+          .withRelation('imageable')
+          .firstRow();
+
+      final imageable = photo?.relation<OrmEntity>('imageable');
+      expect(imageable, isA<Post>());
+      expect((imageable as Post).id, 2);
+    });
+
+    test('eager loads morphToMany relations', () async {
+      final post = await dataSource.context
+          .query<Post>()
+          .whereEquals('id', 1)
+          .withRelation('morphTags')
+          .firstRow();
+
+      final tags = post!.relationList<Tag>('morphTags');
+      expect(tags.map((t) => t.label), containsAll(['featured', 'draft']));
+    });
+
+    test('eager loads morphedByMany relations', () async {
+      final tag = await dataSource.context
+          .query<Tag>()
+          .whereEquals('id', 2)
+          .withRelation('morphedPosts')
+          .firstRow();
+
+      final posts = tag!.relationList<Post>('morphedPosts');
+      expect(posts.map((p) => p.id), containsAll([1, 2]));
     });
 
     test('eager loads hasOne relations', () async {

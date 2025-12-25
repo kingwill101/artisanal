@@ -96,7 +96,8 @@ class RelationResolver {
     final segments = <RelationSegment>[];
     ModelDefinition<OrmEntity> current = startDefinition;
 
-    for (final name in names) {
+    for (var i = 0; i < names.length; i++) {
+      final name = names[i];
       final relationDef = current.relations
           .cast<RelationDefinition?>()
           .firstWhere((r) => r?.name == name, orElse: () => null);
@@ -110,6 +111,14 @@ class RelationResolver {
       }
 
       final segment = segmentFor(current, relationDef);
+      if (segment.relation.kind == RelationKind.morphTo &&
+          i != names.length - 1) {
+        throw ArgumentError.value(
+          relation,
+          'relation',
+          'Relation path $relation cannot traverse morphTo segments.',
+        );
+      }
       segments.add(segment);
       current = segment.targetDefinition;
     }
@@ -132,16 +141,30 @@ class RelationResolver {
     ModelDefinition<OrmEntity> parent,
     RelationDefinition relation,
   ) {
-    final target = context.registry.expectByName(relation.targetModel);
-    final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
-
-    if (parentKey == null) {
-      throw StateError('Relation ${relation.name} requires a parent key.');
-    }
-
     switch (relation.kind) {
+      case RelationKind.morphTo:
+        final foreignKey = relation.foreignKey ?? '${relation.name}_id';
+        final morphColumn = relation.morphType ?? '${relation.name}_type';
+        final targetKey = relation.localKey ?? 'id';
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parent,
+          targetDefinition: parent,
+          parentKey: foreignKey,
+          childKey: targetKey,
+          foreignKeyOnParent: true,
+          morphTypeColumn: morphColumn,
+          expectSingleResult: true,
+        );
       case RelationKind.hasOne:
       case RelationKind.hasMany:
+        final target = context.registry.expectByName(relation.targetModel);
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final childKey = relation.foreignKey ?? '${parent.tableName}_id';
         return RelationSegment(
           name: relation.name,
@@ -155,6 +178,12 @@ class RelationResolver {
 
       case RelationKind.hasOneThrough:
       case RelationKind.hasManyThrough:
+        final target = context.registry.expectByName(relation.targetModel);
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final throughName =
             relation.throughModel ??
             (throw StateError(
@@ -187,6 +216,7 @@ class RelationResolver {
         );
 
       case RelationKind.belongsTo:
+        final target = context.registry.expectByName(relation.targetModel);
         final foreignKey = relation.foreignKey ?? '${relation.name}_id';
         final ownerKey =
             relation.localKey ?? target.primaryKeyField?.columnName;
@@ -205,6 +235,12 @@ class RelationResolver {
         );
 
       case RelationKind.manyToMany:
+        final target = context.registry.expectByName(relation.targetModel);
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final pivotTable =
             relation.through ?? '${parent.tableName}_${target.tableName}';
         final pivotParentKey =
@@ -230,6 +266,12 @@ class RelationResolver {
 
       case RelationKind.morphOne:
       case RelationKind.morphMany:
+        final target = context.registry.expectByName(relation.targetModel);
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final childKey =
             relation.foreignKey ??
             (throw StateError(
@@ -256,6 +298,50 @@ class RelationResolver {
           morphClass: morphClass,
           expectSingleResult: relation.kind == RelationKind.morphOne,
         );
+
+      case RelationKind.morphToMany:
+      case RelationKind.morphedByMany:
+        final target = context.registry.expectByName(relation.targetModel);
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
+        final pivotTable =
+            relation.through ?? '${parent.tableName}_${target.tableName}';
+        final pivotParentKey =
+            relation.pivotForeignKey ?? '${parent.tableName}_id';
+        final pivotRelatedKey =
+            relation.pivotRelatedKey ?? '${target.tableName}_id';
+        final targetKey =
+            relation.localKey ?? target.primaryKeyField?.columnName;
+        if (targetKey == null) {
+          throw StateError('Relation ${relation.name} requires a target key.');
+        }
+        final morphColumn =
+            relation.morphType ??
+            (throw StateError(
+              'Relation ${relation.name} requires a morph type column.',
+            ));
+        final morphClass =
+            relation.morphClass ??
+            (throw StateError(
+              'Relation ${relation.name} requires a morph class.',
+            ));
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parent,
+          targetDefinition: target,
+          parentKey: parentKey,
+          childKey: targetKey,
+          pivotTable: pivotTable,
+          pivotParentKey: pivotParentKey,
+          pivotRelatedKey: pivotRelatedKey,
+          morphTypeColumn: morphColumn,
+          morphClass: morphClass,
+          morphOnPivot: true,
+        );
     }
   }
 
@@ -279,6 +365,11 @@ class RelationResolver {
     PredicateCallback<OrmEntity>? constraint,
   ) {
     if (constraint == null) return null;
+    if (relation.kind == RelationKind.morphTo) {
+      throw StateError(
+        'Relation ${relation.name} does not support constraint callbacks.',
+      );
+    }
 
     final target = context.registry.expectByName(relation.targetModel);
     final builder = PredicateBuilder<OrmEntity>(target);
@@ -307,6 +398,11 @@ class RelationResolver {
     PredicateCallback<OrmEntity>? constraint,
   ) {
     if (constraint == null) return null;
+    if (path.segments.any((segment) => segment.relation.kind == RelationKind.morphTo)) {
+      throw StateError(
+        'Relation paths containing morphTo do not support constraint callbacks.',
+      );
+    }
 
     final builder = PredicateBuilder<OrmEntity>(path.leaf.targetDefinition);
     constraint(builder);

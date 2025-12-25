@@ -70,10 +70,15 @@ class RelationLoader {
             singleResult: false,
           );
           break;
+        case RelationKind.morphTo:
+          await _loadMorphTo(parentDefinition, parents, load, segment);
+          break;
         case RelationKind.belongsTo:
           await _loadBelongsTo(parentDefinition, parents, load, segment);
           break;
         case RelationKind.manyToMany:
+        case RelationKind.morphToMany:
+        case RelationKind.morphedByMany:
           await _loadManyToMany(parentDefinition, parents, load, segment);
           break;
       }
@@ -81,6 +86,9 @@ class RelationLoader {
       _syncRelationsToModels(parents, load.relation.name);
 
       // Load nested relations
+      if (load.relation.kind == RelationKind.morphTo) {
+        continue;
+      }
       if (load.nested.isNotEmpty) {
         final targetDefinition = segment.targetDefinition;
         final children = <QueryRow<OrmEntity>>[];
@@ -385,17 +393,27 @@ class RelationLoader {
       pivotParentColumn,
       pivotTargetColumn,
     );
+    final pivotFilters = <FilterClause>[
+      FilterClause(
+        field: pivotParentColumn,
+        operator: FilterOperator.inValues,
+        value: parentIds.toList(),
+      ),
+    ];
+    if (segment.usesMorph && segment.morphOnPivot) {
+      pivotFilters.add(
+        FilterClause(
+          field: segment.morphTypeColumn!,
+          operator: FilterOperator.equals,
+          value: segment.morphClass,
+        ),
+      );
+    }
     final pivotPlan = QueryPlan(
       definition: pivotDefinition,
       driverName: _driverName,
       tablePrefix: _tablePrefix,
-      filters: [
-        FilterClause(
-          field: pivotParentColumn,
-          operator: FilterOperator.inValues,
-          value: parentIds.toList(),
-        ),
-      ],
+      filters: pivotFilters,
     );
     final pivotRows = await context.driver.execute(pivotPlan);
     final parentToTargets = <Object?, List<Object?>>{};
@@ -522,6 +540,112 @@ class RelationLoader {
     }
   }
 
+  /// Loads a `morph-to` relation.
+  Future<void> _loadMorphTo<T extends OrmEntity>(
+    ModelDefinition<T> parentDefinition,
+    List<QueryRow<T>> parents,
+    RelationLoad load,
+    RelationSegment segment,
+  ) async {
+    final relation = load.relation;
+    final foreignKey = segment.parentKey;
+    final morphColumn = segment.morphTypeColumn;
+    if (morphColumn == null) {
+      throw StateError('Relation ${relation.name} requires a morph type column.');
+    }
+    if (load.predicate != null) {
+      throw StateError(
+        'Relation ${relation.name} does not support constraint callbacks.',
+      );
+    }
+
+    final refs = List<_MorphReference?>.filled(parents.length, null);
+    final groupedIds = <String, Set<Object?>>{};
+
+    for (var i = 0; i < parents.length; i++) {
+      final row = parents[i].row;
+      final rawType = row[morphColumn];
+      final rawId = row[foreignKey];
+      if (rawType == null || rawId == null) {
+        parents[i].relations[relation.name] = null;
+        continue;
+      }
+      final typeName = rawType is String ? rawType : rawType.toString();
+      if (typeName.isEmpty) {
+        parents[i].relations[relation.name] = null;
+        continue;
+      }
+      refs[i] = _MorphReference(typeName, rawId);
+      groupedIds.putIfAbsent(typeName, () => <Object?>{}).add(rawId);
+    }
+
+    if (groupedIds.isEmpty) {
+      return;
+    }
+
+    final lookupByType = <String, Map<Object?, OrmEntity>>{};
+    final nestedGroups = <ModelDefinition<OrmEntity>, List<QueryRow<OrmEntity>>>{};
+
+    for (final entry in groupedIds.entries) {
+      final typeName = entry.key;
+      final ids = entry.value;
+      if (ids.isEmpty) continue;
+
+      final definition = _registry.resolveMorphDefinition(typeName);
+      final targetKey =
+          relation.localKey ?? definition.primaryKeyField?.columnName;
+      if (targetKey == null) {
+        throw StateError('Relation ${relation.name} requires a target key.');
+      }
+
+      final targetPlan = QueryPlan(
+        definition: definition,
+        driverName: _driverName,
+        tablePrefix: _tablePrefix,
+        filters: [
+          FilterClause(
+            field: targetKey,
+            operator: FilterOperator.inValues,
+            value: ids.toList(),
+          ),
+        ],
+      );
+      final targetRows = await context.driver.execute(targetPlan);
+      final lookup = <Object?, OrmEntity>{};
+      for (final row in targetRows) {
+        final model = definition.fromMap(row, registry: _codecRegistry);
+        context.attachRuntimeMetadata(model);
+        lookup[row[targetKey]] = model;
+        if (load.nested.isNotEmpty) {
+          nestedGroups
+              .putIfAbsent(definition, () => <QueryRow<OrmEntity>>[])
+              .add(
+                QueryRow<OrmEntity>(
+                  model: model,
+                  row: definition.toMap(model, registry: _codecRegistry),
+                ),
+              );
+        }
+      }
+      lookupByType[typeName] = lookup;
+    }
+
+    for (var i = 0; i < parents.length; i++) {
+      final ref = refs[i];
+      if (ref == null) {
+        continue;
+      }
+      final lookup = lookupByType[ref.typeName];
+      parents[i].relations[relation.name] = lookup?[ref.id];
+    }
+
+    if (load.nested.isNotEmpty) {
+      for (final entry in nestedGroups.entries) {
+        await attach(entry.key, entry.value, load.nested);
+      }
+    }
+  }
+
   RelationSegment _segmentForRelation<T extends OrmEntity>(
     ModelDefinition<T> parentDefinition,
     RelationLoad load,
@@ -538,15 +662,30 @@ class RelationLoader {
     ModelDefinition<T> parent,
     RelationDefinition relation,
   ) {
-    final target = _registry.expectByName(relation.targetModel);
-    final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
-    if (parentKey == null) {
-      throw StateError('Relation ${relation.name} requires a parent key.');
-    }
     final parentDef = parent as ModelDefinition<OrmEntity>;
     switch (relation.kind) {
+      case RelationKind.morphTo:
+        final foreignKey = relation.foreignKey ?? '${relation.name}_id';
+        final morphColumn = relation.morphType ?? '${relation.name}_type';
+        final targetKey = relation.localKey ?? 'id';
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parentDef,
+          targetDefinition: parentDef,
+          parentKey: foreignKey,
+          childKey: targetKey,
+          foreignKeyOnParent: true,
+          morphTypeColumn: morphColumn,
+          expectSingleResult: true,
+        );
       case RelationKind.hasOne:
       case RelationKind.hasMany:
+        final target = _registry.expectByName(relation.targetModel);
+        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final childKey = relation.foreignKey ?? '${parent.tableName}_id';
         return RelationSegment(
           name: relation.name,
@@ -559,6 +698,11 @@ class RelationLoader {
         );
       case RelationKind.hasOneThrough:
       case RelationKind.hasManyThrough:
+        final target = _registry.expectByName(relation.targetModel);
+        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final throughName =
             relation.throughModel ??
             (throw StateError(
@@ -590,6 +734,7 @@ class RelationLoader {
           expectSingleResult: relation.kind == RelationKind.hasOneThrough,
         );
       case RelationKind.belongsTo:
+        final target = _registry.expectByName(relation.targetModel);
         final foreignKey = relation.foreignKey ?? '${relation.name}_id';
         final ownerKey =
             relation.localKey ?? target.primaryKeyField?.columnName;
@@ -607,6 +752,11 @@ class RelationLoader {
           expectSingleResult: true,
         );
       case RelationKind.manyToMany:
+        final target = _registry.expectByName(relation.targetModel);
+        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final pivotTable =
             relation.through ?? '${parent.tableName}_${target.tableName}';
         final pivotParentKey =
@@ -631,6 +781,11 @@ class RelationLoader {
         );
       case RelationKind.morphOne:
       case RelationKind.morphMany:
+        final target = _registry.expectByName(relation.targetModel);
+        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
         final childKey =
             relation.foreignKey ??
             (throw StateError(
@@ -656,6 +811,48 @@ class RelationLoader {
           morphTypeColumn: morphColumn,
           morphClass: morphClass,
           expectSingleResult: relation.kind == RelationKind.morphOne,
+        );
+      case RelationKind.morphToMany:
+      case RelationKind.morphedByMany:
+        final target = _registry.expectByName(relation.targetModel);
+        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        if (parentKey == null) {
+          throw StateError('Relation ${relation.name} requires a parent key.');
+        }
+        final pivotTable =
+            relation.through ?? '${parent.tableName}_${target.tableName}';
+        final pivotParentKey =
+            relation.pivotForeignKey ?? '${parent.tableName}_id';
+        final pivotRelatedKey =
+            relation.pivotRelatedKey ?? '${target.tableName}_id';
+        final targetKey =
+            relation.localKey ?? target.primaryKeyField?.columnName;
+        if (targetKey == null) {
+          throw StateError('Relation ${relation.name} requires a target key.');
+        }
+        final morphColumn =
+            relation.morphType ??
+            (throw StateError(
+              'Relation ${relation.name} requires a morph type column.',
+            ));
+        final morphClass =
+            relation.morphClass ??
+            (throw StateError(
+              'Relation ${relation.name} requires a morph class.',
+            ));
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parentDef,
+          targetDefinition: target,
+          parentKey: parentKey,
+          childKey: targetKey,
+          pivotTable: pivotTable,
+          pivotParentKey: pivotParentKey,
+          pivotRelatedKey: pivotRelatedKey,
+          morphTypeColumn: morphColumn,
+          morphClass: morphClass,
+          morphOnPivot: true,
         );
     }
   }
@@ -700,4 +897,11 @@ class _PivotCodec extends ModelCodec<AdHocRow> {
   @override
   AdHocRow decode(Map<String, Object?> data, ValueCodecRegistry registry) =>
       AdHocRow(data);
+}
+
+class _MorphReference {
+  const _MorphReference(this.typeName, this.id);
+
+  final String typeName;
+  final Object? id;
 }

@@ -327,6 +327,7 @@ class _PostTagPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$PostTag].
   $PostTag({required int postId, required int tagId})
     : super.new(postId: postId, tagId: tagId) {
     _attachOrmRuntimeMetadata({'post_id': postId, 'tag_id': tagId});
@@ -341,14 +342,18 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
     return $PostTag(postId: postId ?? this.postId, tagId: tagId ?? this.tagId);
   }
 
+  /// Tracked getter for [postId].
   @override
   int get postId => getAttribute<int>('post_id') ?? super.postId;
 
+  /// Tracked setter for [postId].
   set postId(int value) => setAttribute('post_id', value);
 
+  /// Tracked getter for [tagId].
   @override
   int get tagId => getAttribute<int>('tag_id') ?? super.tagId;
 
+  /// Tracked setter for [tagId].
   set tagId(int value) => setAttribute('tag_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

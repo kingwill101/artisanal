@@ -120,6 +120,17 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   pivotRelatedKey: 'tag_id',
 );
 
+const RelationDefinition _$PostMorphTagsRelation = RelationDefinition(
+  name: 'morphTags',
+  kind: RelationKind.morphToMany,
+  targetModel: 'Tag',
+  through: 'taggables',
+  pivotForeignKey: 'taggable_id',
+  pivotRelatedKey: 'tag_id',
+  morphType: 'taggable_type',
+  morphClass: 'Post',
+);
+
 const RelationDefinition _$PostPhotosRelation = RelationDefinition(
   name: 'photos',
   kind: RelationKind.morphMany,
@@ -168,6 +179,7 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
   relations: const [
     _$PostAuthorRelation,
     _$PostTagsRelation,
+    _$PostMorphTagsRelation,
     _$PostPhotosRelation,
     _$PostCommentsRelation,
   ],
@@ -604,6 +616,7 @@ class _PostPartialCopyWithSentinel {
 class $Post extends Post
     with ModelAttributes, TimestampsTZImpl
     implements OrmEntity {
+  /// Internal constructor for [$Post].
   $Post({
     int id = 0,
     required int authorId,
@@ -659,35 +672,47 @@ class $Post extends Post
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [authorId].
   @override
   int get authorId => getAttribute<int>('author_id') ?? super.authorId;
 
+  /// Tracked setter for [authorId].
   set authorId(int value) => setAttribute('author_id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [content].
   @override
   String? get content => getAttribute<String?>('content') ?? super.content;
 
+  /// Tracked setter for [content].
   set content(String? value) => setAttribute('content', value);
 
+  /// Tracked getter for [views].
   @override
   int? get views => getAttribute<int?>('views') ?? super.views;
 
+  /// Tracked setter for [views].
   set views(int? value) => setAttribute('views', value);
 
+  /// Tracked getter for [publishedAt].
   @override
   DateTime get publishedAt =>
       getAttribute<DateTime>('published_at') ?? super.publishedAt;
 
+  /// Tracked setter for [publishedAt].
   set publishedAt(DateTime value) => setAttribute('published_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -709,6 +734,14 @@ class $Post extends Post
       return getRelationList<Tag>('tags');
     }
     return super.tags;
+  }
+
+  @override
+  List<Tag> get morphTags {
+    if (relationLoaded('morphTags')) {
+      return getRelationList<Tag>('morphTags');
+    }
+    return super.morphTags;
   }
 
   @override
@@ -740,6 +773,12 @@ extension PostRelationQueries on Post {
     return query
         .join('post_tags', '$targetTable.$targetKey', '=', 'post_tags.tag_id')
         .where('post_tags.post_id', id);
+  }
+
+  Query<Tag> morphTagsQuery() {
+    throw UnimplementedError(
+      "Polymorphic relation query generation not yet supported",
+    );
   }
 
   Query<Photo> photosQuery() {

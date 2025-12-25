@@ -442,6 +442,7 @@ class _ActiveUserPartialCopyWithSentinel {
 class $ActiveUser extends ActiveUser
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$ActiveUser].
   $ActiveUser({
     int? id,
     required String email,
@@ -480,25 +481,33 @@ class $ActiveUser extends ActiveUser
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
+  /// Tracked getter for [settings].
   @override
   Map<String, Object?> get settings =>
       getAttribute<Map<String, Object?>>('settings') ?? super.settings;
 
+  /// Tracked setter for [settings].
   set settings(Map<String, Object?> value) => setAttribute('settings', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

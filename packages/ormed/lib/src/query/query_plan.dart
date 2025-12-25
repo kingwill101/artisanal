@@ -586,6 +586,7 @@ class RelationSegment {
     this.pivotRelatedKey,
     this.morphTypeColumn,
     this.morphClass,
+    this.morphOnPivot = false,
     this.expectSingleResult = false,
   });
 
@@ -604,6 +605,7 @@ class RelationSegment {
   final String? pivotRelatedKey;
   final String? morphTypeColumn;
   final String? morphClass;
+  final bool morphOnPivot;
   final bool expectSingleResult;
 
   bool get usesThrough => throughDefinition != null;

@@ -474,6 +474,7 @@ class _DerivedForFactoryPartialCopyWithSentinel {
 class $DerivedForFactory extends DerivedForFactory
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$DerivedForFactory].
   $DerivedForFactory({
     int id = 0,
     String? baseName,
@@ -517,28 +518,36 @@ class $DerivedForFactory extends DerivedForFactory
     );
   }
 
+  /// Tracked getter for [layerTwoFlag].
   @override
   bool? get layerTwoFlag =>
       getAttribute<bool?>('layer_two_flag') ?? super.layerTwoFlag;
 
+  /// Tracked setter for [layerTwoFlag].
   set layerTwoFlag(bool? value) => setAttribute('layer_two_flag', value);
 
+  /// Tracked getter for [layerOneNotes].
   @override
   Map<String, Object?>? get layerOneNotes =>
       getAttribute<Map<String, Object?>?>('layer_one_notes') ??
       super.layerOneNotes;
 
+  /// Tracked setter for [layerOneNotes].
   set layerOneNotes(Map<String, Object?>? value) =>
       setAttribute('layer_one_notes', value);
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [baseName].
   @override
   String? get baseName => getAttribute<String?>('base_name') ?? super.baseName;
 
+  /// Tracked setter for [baseName].
   set baseName(String? value) => setAttribute('base_name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

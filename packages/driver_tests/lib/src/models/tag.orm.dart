@@ -40,6 +40,17 @@ const RelationDefinition _$TagPostsRelation = RelationDefinition(
   pivotRelatedKey: 'post_id',
 );
 
+const RelationDefinition _$TagMorphedPostsRelation = RelationDefinition(
+  name: 'morphedPosts',
+  kind: RelationKind.morphedByMany,
+  targetModel: 'Post',
+  through: 'taggables',
+  pivotForeignKey: 'tag_id',
+  pivotRelatedKey: 'taggable_id',
+  morphType: 'taggable_type',
+  morphClass: 'Post',
+);
+
 Map<String, Object?> _encodeTagUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -55,7 +66,7 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
   modelName: 'Tag',
   tableName: 'tags',
   fields: const [_$TagIdField, _$TagLabelField],
-  relations: const [_$TagPostsRelation],
+  relations: const [_$TagPostsRelation, _$TagMorphedPostsRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
     hidden: const <String>[],
@@ -313,6 +324,7 @@ class _TagPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Tag extends Tag with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Tag].
   $Tag({int id = 0, required String label}) : super.new(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});
   }
@@ -326,14 +338,18 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     return $Tag(id: id ?? this.id, label: label ?? this.label);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [label].
   @override
   String get label => getAttribute<String>('label') ?? super.label;
 
+  /// Tracked setter for [label].
   set label(String value) => setAttribute('label', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -348,6 +364,14 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     }
     return super.posts;
   }
+
+  @override
+  List<Post> get morphedPosts {
+    if (relationLoaded('morphedPosts')) {
+      return getRelationList<Post>('morphedPosts');
+    }
+    return super.morphedPosts;
+  }
 }
 
 extension TagRelationQueries on Tag {
@@ -358,6 +382,12 @@ extension TagRelationQueries on Tag {
     return query
         .join('post_tags', '$targetTable.$targetKey', '=', 'post_tags.post_id')
         .where('post_tags.tag_id', id);
+  }
+
+  Query<Post> morphedPostsQuery() {
+    throw UnimplementedError(
+      "Polymorphic relation query generation not yet supported",
+    );
   }
 }
 

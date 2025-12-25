@@ -24,6 +24,7 @@ import 'src/models/scoped_user.dart';
 import 'src/models/serial_test.dart';
 import 'src/models/settings.dart';
 import 'src/models/tag.dart';
+import 'src/models/taggable.dart';
 import 'src/models/unique_user.dart';
 import 'src/models/user.dart';
 import 'src/models/user_profile.dart';
@@ -52,6 +53,7 @@ final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
   SerialTestOrmDefinition.definition,
   SettingOrmDefinition.definition,
   TagOrmDefinition.definition,
+  TaggableOrmDefinition.definition,
   UniqueUserOrmDefinition.definition,
   UserOrmDefinition.definition,
   UserProfileOrmDefinition.definition,
@@ -82,9 +84,11 @@ ModelRegistry buildOrmRegistry() => ModelRegistry()
   ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[20])
   ..registerTypeAlias<Setting>(_$ormModelDefinitions[21])
   ..registerTypeAlias<Tag>(_$ormModelDefinitions[22])
-  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[23])
-  ..registerTypeAlias<User>(_$ormModelDefinitions[24])
-  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[25]);
+  ..registerTypeAlias<Taggable>(_$ormModelDefinitions[23])
+  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[24])
+  ..registerTypeAlias<User>(_$ormModelDefinitions[25])
+  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[26])
+  ;
 
 List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
     List.unmodifiable(_$ormModelDefinitions);
@@ -115,9 +119,10 @@ extension GeneratedOrmModels on ModelRegistry {
     registerTypeAlias<SerialTest>(_$ormModelDefinitions[20]);
     registerTypeAlias<Setting>(_$ormModelDefinitions[21]);
     registerTypeAlias<Tag>(_$ormModelDefinitions[22]);
-    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[23]);
-    registerTypeAlias<User>(_$ormModelDefinitions[24]);
-    registerTypeAlias<UserProfile>(_$ormModelDefinitions[25]);
+    registerTypeAlias<Taggable>(_$ormModelDefinitions[23]);
+    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[24]);
+    registerTypeAlias<User>(_$ormModelDefinitions[25]);
+    registerTypeAlias<UserProfile>(_$ormModelDefinitions[26]);
     return this;
   }
 }
@@ -125,60 +130,29 @@ extension GeneratedOrmModels on ModelRegistry {
 /// Registers factory definitions for all models that have factory support.
 /// Call this before using [Model.factory<T>()] to ensure definitions are available.
 void registerOrmFactories() {
-  ModelFactoryRegistry.registerIfAbsent<ActiveUser>(
-    ActiveUserOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<Article>(
-    ArticleOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<AttributeUser>(
-    AttributeUserOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<ActiveUser>(ActiveUserOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<Article>(ArticleOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<AttributeUser>(AttributeUserOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Author>(AuthorOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<Comment>(
-    CommentOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<CustomSoftDelete>(
-    CustomSoftDeleteOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<DerivedForFactory>(
-    DerivedForFactoryOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<DriverOverrideEntry>(
-    DriverOverrideEntryOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<EventModel>(
-    EventModelOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<Comment>(CommentOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<CustomSoftDelete>(CustomSoftDeleteOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<DerivedForFactory>(DerivedForFactoryOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<DriverOverrideEntry>(DriverOverrideEntryOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<EventModel>(EventModelOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Image>(ImageOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<MutationTarget>(
-    MutationTargetOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<NamedConstructorModel>(
-    NamedConstructorModelOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<NullableRelationsTest>(
-    NullableRelationsTestOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<MutationTarget>(MutationTargetOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<NamedConstructorModel>(NamedConstructorModelOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<NullableRelationsTest>(NullableRelationsTestOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Photo>(PhotoOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Post>(PostOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<PostTag>(
-    PostTagOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<SerialTest>(
-    SerialTestOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<Setting>(
-    SettingOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<PostTag>(PostTagOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<SerialTest>(SerialTestOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<Setting>(SettingOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Tag>(TagOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<UniqueUser>(
-    UniqueUserOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<Taggable>(TaggableOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<UniqueUser>(UniqueUserOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<User>(UserOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<UserProfile>(
-    UserProfileOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<UserProfile>(UserProfileOrmDefinition.definition);
 }
 
 /// Combined setup: registers both model registry and factories.
@@ -202,14 +176,7 @@ void registerModelScopes({ScopeRegistry? scopeRegistry}) {
 }
 
 /// Bootstraps generated ORM pieces: registry, factories, event handlers, and scopes.
-ModelRegistry bootstrapOrm({
-  ModelRegistry? registry,
-  EventBus? bus,
-  ScopeRegistry? scopes,
-  bool registerFactories = true,
-  bool registerEventHandlers = true,
-  bool registerScopes = true,
-}) {
+ModelRegistry bootstrapOrm({ModelRegistry? registry, EventBus? bus, ScopeRegistry? scopes, bool registerFactories = true, bool registerEventHandlers = true, bool registerScopes = true}) {
   final reg = registry ?? buildOrmRegistry();
   if (registry != null) {
     reg.registerGeneratedModels();

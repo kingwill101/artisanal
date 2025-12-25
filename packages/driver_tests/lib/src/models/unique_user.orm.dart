@@ -373,6 +373,7 @@ class _UniqueUserPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $UniqueUser extends UniqueUser with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$UniqueUser].
   $UniqueUser({int id = 0, required String email, required bool active})
     : super.new(id: id, email: email, active: active) {
     _attachOrmRuntimeMetadata({'id': id, 'email': email, 'active': active});
@@ -391,19 +392,25 @@ class $UniqueUser extends UniqueUser with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

@@ -17,6 +17,7 @@ export 'serial_test.dart';
 export 'settings.dart';
 export 'unique_user.dart';
 export 'tag.dart';
+export 'taggable.dart';
 export 'user.dart';
 export 'user_profile.dart';
 export 'post_tag.dart';

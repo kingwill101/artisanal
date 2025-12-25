@@ -426,6 +426,7 @@ class _AuthorPartialCopyWithSentinel {
 class $Author extends Author
     with ModelAttributes, TimestampsImpl
     implements OrmEntity {
+  /// Internal constructor for [$Author].
   $Author({int id = 0, required String name, required bool active})
     : super.new(id: id, name: name, active: active) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name, 'active': active});
@@ -444,19 +445,25 @@ class $Author extends Author
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -484,6 +491,12 @@ class $Author extends Author
 extension AuthorRelationQueries on Author {
   Query<Post> postsQuery() {
     return Model.query<Post>().where('author_id', id);
+  }
+
+  Query<Comment> commentsQuery() {
+    throw UnimplementedError(
+      "Relation query generation not supported for RelationKind.hasManyThrough",
+    );
   }
 }
 

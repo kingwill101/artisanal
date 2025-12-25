@@ -6,6 +6,7 @@ export 'create_authors_table.dart';
 export 'create_posts_table.dart';
 export 'create_tags_table.dart';
 export 'create_post_tags_table.dart';
+export 'create_taggables_table.dart';
 export 'create_articles_table.dart';
 export 'create_photos_table.dart';
 export 'create_images_table.dart';

@@ -406,6 +406,7 @@ class _MixedConstructorModelPartialCopyWithSentinel {
 class $MixedConstructorModel extends MixedConstructorModel
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$MixedConstructorModel].
   $MixedConstructorModel({
     int id = 0,
     required String name,
@@ -427,20 +428,26 @@ class $MixedConstructorModel extends MixedConstructorModel
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [description].
   @override
   String? get description =>
       getAttribute<String?>('description') ?? super.description;
 
+  /// Tracked setter for [description].
   set description(String? value) => setAttribute('description', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

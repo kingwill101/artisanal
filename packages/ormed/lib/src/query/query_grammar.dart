@@ -1629,8 +1629,12 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
+        final morphAlias =
+            segment.usesPivot && segment.morphOnPivot
+                ? (aliasData.pivotAlias ?? aliasData.alias)
+                : aliasData.alias;
         whereClauses.add(
-          '${aliasData.alias}.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
         bindings.add(segment.morphClass);
@@ -1659,9 +1663,10 @@ class _SelectCompilation {
   ) {
     final segment = segments[index];
     final targetAlias = _nextAlias('rel');
+    String? pivotAlias;
     final buffer = StringBuffer('SELECT 1 FROM ');
     if (segment.usesPivot) {
-      final pivotAlias = _nextAlias('pivot');
+      pivotAlias = _nextAlias('pivot');
       buffer
         ..write('${_qualifiedPivotTable(segment.pivotTable!)} AS $pivotAlias ')
         ..write(
@@ -1699,10 +1704,14 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
+      final morphAlias =
+          segment.usesPivot && segment.morphOnPivot
+              ? pivotAlias ?? targetAlias
+              : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
-          '$targetAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
       bindings.add(segment.morphClass);
@@ -1751,8 +1760,9 @@ class _SelectCompilation {
           )
         : '1';
     final buffer = StringBuffer('SELECT $selectExpression FROM ');
+    String? pivotAlias;
     if (segment.usesPivot) {
-      final pivotAlias = _nextAlias('pivot');
+      pivotAlias = _nextAlias('pivot');
       buffer
         ..write('${_qualifiedPivotTable(segment.pivotTable!)} AS $pivotAlias ')
         ..write(
@@ -1790,10 +1800,14 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
+      final morphAlias =
+          segment.usesPivot && segment.morphOnPivot
+              ? pivotAlias ?? targetAlias
+              : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
-          '$targetAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
       bindings.add(segment.morphClass);
@@ -2022,8 +2036,12 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
+        final morphAlias =
+            segment.usesPivot && segment.morphOnPivot
+                ? (aliasData.pivotAlias ?? aliasData.alias)
+                : aliasData.alias;
         whereClauses.add(
-          '${aliasData.alias}.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
         bindings.add(segment.morphClass);

@@ -31,6 +31,12 @@ const defaultPostTags = [
   PostTag(postId: 3, tagId: 1),
 ];
 
+const defaultTaggables = [
+  Taggable(tagId: 1, taggableId: 1, taggableType: 'Post'),
+  Taggable(tagId: 2, taggableId: 1, taggableType: 'Post'),
+  Taggable(tagId: 2, taggableId: 2, taggableType: 'Post'),
+];
+
 const defaultImages = [
   Image(id: 101, label: 'Landing'),
   Image(id: 102, label: 'Archive'),
@@ -126,6 +132,7 @@ Future<void> seedGraph(DataSource dataSource, {List<User>? users}) async {
   await dataSource.repo<Post>().insertMany(buildDefaultPosts());
   await dataSource.repo<Tag>().insertMany(defaultTags.toList());
   await dataSource.repo<PostTag>().insertMany(defaultPostTags.toList());
+  await dataSource.repo<Taggable>().insertMany(defaultTaggables.toList());
   await dataSource.repo<Image>().insertMany(defaultImages.toList());
   await dataSource.repo<Photo>().insertMany(defaultPhotos.toList());
   await dataSource.context.query<Comment>().createMany(defaultComments);

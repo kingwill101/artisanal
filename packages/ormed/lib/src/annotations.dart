@@ -429,6 +429,72 @@ class OrmRelation {
          localKey: localKey,
        );
 
+  /// Creates a `morphTo` relation.
+  ///
+  /// [foreignKey] is the morph id column on the parent model.
+  /// [morphType] is the morph type/discriminator column on the parent model.
+  /// [localKey] is the target key on related models (defaults to their primary key).
+  const OrmRelation.morphTo({
+    String? foreignKey,
+    String? morphType,
+    String? localKey,
+  }) : this(
+         kind: RelationKind.morphTo,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+       );
+
+  /// Creates a `morphToMany` relation.
+  ///
+  /// Use [through] for the pivot/join table and provide pivot key overrides
+  /// as needed. [morphType] and [morphClass] describe the polymorphic pivot.
+  const OrmRelation.morphToMany({
+    Type? target,
+    String? through,
+    String? pivotForeignKey,
+    String? pivotRelatedKey,
+    String? foreignKey,
+    String? localKey,
+    String? morphType,
+    String? morphClass,
+  }) : this(
+         kind: RelationKind.morphToMany,
+         target: target,
+         through: through,
+         pivotForeignKey: pivotForeignKey,
+         pivotRelatedKey: pivotRelatedKey,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+         morphClass: morphClass,
+       );
+
+  /// Creates a `morphedByMany` relation.
+  ///
+  /// Use [through] for the pivot/join table and provide pivot key overrides
+  /// as needed. [morphType] and [morphClass] describe the polymorphic pivot.
+  const OrmRelation.morphedByMany({
+    Type? target,
+    String? through,
+    String? pivotForeignKey,
+    String? pivotRelatedKey,
+    String? foreignKey,
+    String? localKey,
+    String? morphType,
+    String? morphClass,
+  }) : this(
+         kind: RelationKind.morphedByMany,
+         target: target,
+         through: through,
+         pivotForeignKey: pivotForeignKey,
+         pivotRelatedKey: pivotRelatedKey,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+         morphClass: morphClass,
+       );
+
   /// The relationship kind (for example, [RelationKind.hasMany]).
   final RelationKind kind;
 
@@ -515,6 +581,15 @@ enum RelationKind {
 
   /// Polymorphic one-to-many relation.
   morphMany,
+
+  /// Polymorphic inverse relation.
+  morphTo,
+
+  /// Polymorphic many-to-many relation.
+  morphToMany,
+
+  /// Polymorphic inverse many-to-many relation.
+  morphedByMany,
 }
 
 /// Marks a field as the soft-delete column for a model.

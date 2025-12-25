@@ -375,6 +375,7 @@ class _UserProfilePartialCopyWithSentinel {
 class $UserProfile extends UserProfile
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$UserProfile].
   $UserProfile({int id = 0, required int userId, required String bio})
     : super.new(id: id, userId: userId, bio: bio) {
     _attachOrmRuntimeMetadata({'id': id, 'user_id': userId, 'bio': bio});
@@ -393,19 +394,25 @@ class $UserProfile extends UserProfile
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [userId].
   @override
   int get userId => getAttribute<int>('user_id') ?? super.userId;
 
+  /// Tracked setter for [userId].
   set userId(int value) => setAttribute('user_id', value);
 
+  /// Tracked getter for [bio].
   @override
   String get bio => getAttribute<String>('bio') ?? super.bio;
 
+  /// Tracked setter for [bio].
   set bio(String value) => setAttribute('bio', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

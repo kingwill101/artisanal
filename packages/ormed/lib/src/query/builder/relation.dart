@@ -333,7 +333,7 @@ extension RelationExtension<T extends OrmEntity> on Query<T> {
         'distinct relation ordering is only supported for count aggregates.',
       );
     }
-    final path = _resolveRelationPath(relation);
+    final path = _resolveRelationPath(relation, allowMorphTo: false);
     final where = _buildRelationPredicateConstraint(path, constraint);
     final order = RelationOrder(
       path: path,

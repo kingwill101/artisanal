@@ -319,6 +319,7 @@ class _ImagePartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Image extends Image with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Image].
   $Image({int id = 0, required String label})
     : super.new(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});
@@ -333,14 +334,18 @@ class $Image extends Image with ModelAttributes implements OrmEntity {
     return $Image(id: id ?? this.id, label: label ?? this.label);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [label].
   @override
   String get label => getAttribute<String>('label') ?? super.label;
 
+  /// Tracked setter for [label].
   set label(String value) => setAttribute('label', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

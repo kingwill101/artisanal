@@ -106,12 +106,14 @@ class RelationDescriptor {
 
   String get identifier => '_\$$owner${pascalize(name)}Relation';
 
-  /// Whether this is a list relation (hasMany, manyToMany, morphMany)
+  /// Whether this is a list relation (hasMany, manyToMany, morphMany, morphToMany)
   bool get isList =>
       kind == RelationKind.hasMany ||
       kind == RelationKind.hasManyThrough ||
       kind == RelationKind.manyToMany ||
-      kind == RelationKind.morphMany;
+      kind == RelationKind.morphMany ||
+      kind == RelationKind.morphToMany ||
+      kind == RelationKind.morphedByMany;
 
   /// The resolved type string for the relation field
   String get resolvedType => nonNullableTypeName(fieldType);

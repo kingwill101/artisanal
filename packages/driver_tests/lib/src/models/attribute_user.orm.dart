@@ -508,6 +508,7 @@ class _AttributeUserPartialCopyWithSentinel {
 class $AttributeUser extends AttributeUser
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$AttributeUser].
   $AttributeUser({
     required int id,
     required String email,
@@ -557,30 +558,40 @@ class $AttributeUser extends AttributeUser
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [secret].
   @override
   String get secret => getAttribute<String>('secret') ?? super.secret;
 
+  /// Tracked setter for [secret].
   set secret(String value) => setAttribute('secret', value);
 
+  /// Tracked getter for [role].
   @override
   String? get role => getAttribute<String?>('role') ?? super.role;
 
+  /// Tracked setter for [role].
   set role(String? value) => setAttribute('role', value);
 
+  /// Tracked getter for [profile].
   @override
   Map<String, Object?>? get profile =>
       getAttribute<Map<String, Object?>?>('profile') ?? super.profile;
 
+  /// Tracked setter for [profile].
   set profile(Map<String, Object?>? value) => setAttribute('profile', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
