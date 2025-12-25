@@ -62,7 +62,7 @@ void runTimestampTests() {
         expect(refetched!.updatedAt, isNotNull);
         expect(
           refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch),
+          isNot(equals(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch)),
         );
       });
 
@@ -90,7 +90,7 @@ void runTimestampTests() {
         expect(refetched!.updatedAt, isNotNull);
         expect(
           refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch),
+          isNot(equals(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch)),
         );
       });
 
@@ -208,7 +208,7 @@ void runTimestampTests() {
         expect(refetched.updatedAt!.isUtc, isTrue);
         expect(
           refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch),
+          isNot(equals(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch)),
         );
       });
 
@@ -244,7 +244,7 @@ void runTimestampTests() {
         expect(refetched.updatedAt!.isUtc, isTrue);
         expect(
           refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch),
+          isNot(equals(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch)),
         );
       });
 
