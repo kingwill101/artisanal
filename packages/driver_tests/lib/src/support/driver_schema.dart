@@ -126,6 +126,13 @@ final List<MigrationEntry> driverTestMigrationEntries = [
     ),
     migration: const CreateTaggablesTable(),
   ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 21),
+      'create_accessor_users_table',
+    ),
+    migration: const CreateAccessorUsersTable(),
+  ),
 ];
 
 /// Create a test schema manager for driver tests

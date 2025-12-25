@@ -1,6 +1,7 @@
 library;
 
 export 'create_users_table.dart';
+export 'create_accessor_users_table.dart';
 export 'create_user_profiles_table.dart';
 export 'create_authors_table.dart';
 export 'create_posts_table.dart';

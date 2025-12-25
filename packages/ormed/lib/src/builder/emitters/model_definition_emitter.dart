@@ -13,6 +13,8 @@ class ModelDefinitionEmitter {
     final buffer = StringBuffer();
     final fields = context.fields;
     final relations = context.relations;
+    final accessors = context.accessors;
+    final mutators = context.mutators;
     final className = context.className;
     final tableName = context.tableName;
     final schema = context.schema;
@@ -22,6 +24,7 @@ class ModelDefinitionEmitter {
     final fillableAnnotation = context.fillableAnnotation;
     final guardedAnnotation = context.guardedAnnotation;
     final castsAnnotation = context.castsAnnotation;
+    final appendsAnnotation = context.appendsAnnotation;
     final driverAnnotations = context.driverAnnotations;
     final connectionAnnotation = context.connectionAnnotation;
     final effectiveSoftDeletes = context.effectiveSoftDeletes;
@@ -77,6 +80,7 @@ class ModelDefinitionEmitter {
     buffer.writeln('    fillable: ${stringListLiteral(fillableAnnotation)},');
     buffer.writeln('    guarded: ${stringListLiteral(guardedAnnotation)},');
     buffer.writeln('    casts: ${stringMapLiteral(castsAnnotation)},');
+    buffer.writeln('    appends: ${stringListLiteral(appendsAnnotation)},');
     final fieldOverrides = fields.where((f) => f.attributeMetadata != null);
     if (fieldOverrides.isNotEmpty) {
       buffer.writeln('    fieldOverrides: const {');
@@ -123,6 +127,53 @@ class ModelDefinitionEmitter {
       "    softDeleteColumn: '${escape(metadataSoftDeleteColumn)}',",
     );
     buffer.writeln('  ),');
+    if (accessors.isNotEmpty) {
+      buffer.writeln('  accessors: {');
+      for (final accessor in accessors) {
+        final attribute = escape(accessor.attribute);
+        final target = className;
+        final modelExpr = '(model as $className)';
+        if (accessor.isGetter) {
+          buffer.writeln(
+            "    '$attribute': (model, value) => $target.${accessor.name},",
+          );
+        } else {
+          final valueExpr = accessor.takesValue
+              ? _castValue('value', accessor.valueType!)
+              : null;
+          final args = accessor.takesModel
+              ? valueExpr == null
+                  ? modelExpr
+                  : '$modelExpr, $valueExpr'
+              : valueExpr;
+          buffer.writeln(
+            "    '$attribute': (model, value) => $target.${accessor.name}(${args ?? ''}),",
+          );
+        }
+      }
+      buffer.writeln('  },');
+    }
+    if (mutators.isNotEmpty) {
+      buffer.writeln('  mutators: {');
+      for (final mutator in mutators) {
+        final attribute = escape(mutator.attribute);
+        final target = className;
+        final modelExpr = '(model as $className)';
+        final valueExpr = _castValue('value', mutator.valueType);
+        final args = mutator.takesModel ? '$modelExpr, $valueExpr' : valueExpr;
+        if (mutator.returnType == 'void') {
+          buffer.writeln("    '$attribute': (model, value) {");
+          buffer.writeln('      $target.${mutator.name}($args);');
+          buffer.writeln('      return value;');
+          buffer.writeln('    },');
+        } else {
+          buffer.writeln(
+            "    '$attribute': (model, value) => $target.${mutator.name}($args),",
+          );
+        }
+      }
+      buffer.writeln('  },');
+    }
     buffer.writeln('  untrackedToMap: _encode${className}Untracked,');
     if (generateCodec) {
       buffer.writeln('  codec: _${generatedClassName}Codec(),');
@@ -198,6 +249,13 @@ class ModelDefinitionEmitter {
       }
       buffer.writeln(');\n');
     }
+  }
+
+  String _castValue(String valueName, String dartType) {
+    if (dartType == 'dynamic' || dartType == 'Object?' || dartType == 'Object') {
+      return valueName;
+    }
+    return '$valueName as $dartType';
   }
 
   void _writeRelations(

@@ -1,6 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
 import 'package:ormed/ormed.dart';
+import 'src/models/accessor_user.dart';
 import 'src/models/active_user.dart';
 import 'src/models/article.dart';
 import 'src/models/attribute_user.dart';
@@ -30,6 +31,7 @@ import 'src/models/user.dart';
 import 'src/models/user_profile.dart';
 
 final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
+  AccessorUserOrmDefinition.definition,
   ActiveUserOrmDefinition.definition,
   ArticleOrmDefinition.definition,
   AttributeUserOrmDefinition.definition,
@@ -61,33 +63,34 @@ final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
 
 ModelRegistry buildOrmRegistry() => ModelRegistry()
   ..registerAll(_$ormModelDefinitions)
-  ..registerTypeAlias<ActiveUser>(_$ormModelDefinitions[0])
-  ..registerTypeAlias<Article>(_$ormModelDefinitions[1])
-  ..registerTypeAlias<AttributeUser>(_$ormModelDefinitions[2])
-  ..registerTypeAlias<Author>(_$ormModelDefinitions[3])
-  ..registerTypeAlias<Comment>(_$ormModelDefinitions[4])
-  ..registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[5])
-  ..registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[6])
-  ..registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[7])
-  ..registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[8])
-  ..registerTypeAlias<EventModel>(_$ormModelDefinitions[9])
-  ..registerTypeAlias<Image>(_$ormModelDefinitions[10])
-  ..registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[11])
-  ..registerTypeAlias<MutationTarget>(_$ormModelDefinitions[12])
-  ..registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[13])
-  ..registerTypeAlias<NoFactory>(_$ormModelDefinitions[14])
-  ..registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[15])
-  ..registerTypeAlias<Photo>(_$ormModelDefinitions[16])
-  ..registerTypeAlias<Post>(_$ormModelDefinitions[17])
-  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[18])
-  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[19])
-  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[20])
-  ..registerTypeAlias<Setting>(_$ormModelDefinitions[21])
-  ..registerTypeAlias<Tag>(_$ormModelDefinitions[22])
-  ..registerTypeAlias<Taggable>(_$ormModelDefinitions[23])
-  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[24])
-  ..registerTypeAlias<User>(_$ormModelDefinitions[25])
-  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[26])
+  ..registerTypeAlias<AccessorUser>(_$ormModelDefinitions[0])
+  ..registerTypeAlias<ActiveUser>(_$ormModelDefinitions[1])
+  ..registerTypeAlias<Article>(_$ormModelDefinitions[2])
+  ..registerTypeAlias<AttributeUser>(_$ormModelDefinitions[3])
+  ..registerTypeAlias<Author>(_$ormModelDefinitions[4])
+  ..registerTypeAlias<Comment>(_$ormModelDefinitions[5])
+  ..registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[6])
+  ..registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[7])
+  ..registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[8])
+  ..registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[9])
+  ..registerTypeAlias<EventModel>(_$ormModelDefinitions[10])
+  ..registerTypeAlias<Image>(_$ormModelDefinitions[11])
+  ..registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[12])
+  ..registerTypeAlias<MutationTarget>(_$ormModelDefinitions[13])
+  ..registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[14])
+  ..registerTypeAlias<NoFactory>(_$ormModelDefinitions[15])
+  ..registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[16])
+  ..registerTypeAlias<Photo>(_$ormModelDefinitions[17])
+  ..registerTypeAlias<Post>(_$ormModelDefinitions[18])
+  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[19])
+  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[20])
+  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[21])
+  ..registerTypeAlias<Setting>(_$ormModelDefinitions[22])
+  ..registerTypeAlias<Tag>(_$ormModelDefinitions[23])
+  ..registerTypeAlias<Taggable>(_$ormModelDefinitions[24])
+  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[25])
+  ..registerTypeAlias<User>(_$ormModelDefinitions[26])
+  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[27])
   ;
 
 List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
@@ -96,33 +99,34 @@ List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
 extension GeneratedOrmModels on ModelRegistry {
   ModelRegistry registerGeneratedModels() {
     registerAll(_$ormModelDefinitions);
-    registerTypeAlias<ActiveUser>(_$ormModelDefinitions[0]);
-    registerTypeAlias<Article>(_$ormModelDefinitions[1]);
-    registerTypeAlias<AttributeUser>(_$ormModelDefinitions[2]);
-    registerTypeAlias<Author>(_$ormModelDefinitions[3]);
-    registerTypeAlias<Comment>(_$ormModelDefinitions[4]);
-    registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[5]);
-    registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[6]);
-    registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[7]);
-    registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[8]);
-    registerTypeAlias<EventModel>(_$ormModelDefinitions[9]);
-    registerTypeAlias<Image>(_$ormModelDefinitions[10]);
-    registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[11]);
-    registerTypeAlias<MutationTarget>(_$ormModelDefinitions[12]);
-    registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[13]);
-    registerTypeAlias<NoFactory>(_$ormModelDefinitions[14]);
-    registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[15]);
-    registerTypeAlias<Photo>(_$ormModelDefinitions[16]);
-    registerTypeAlias<Post>(_$ormModelDefinitions[17]);
-    registerTypeAlias<PostTag>(_$ormModelDefinitions[18]);
-    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[19]);
-    registerTypeAlias<SerialTest>(_$ormModelDefinitions[20]);
-    registerTypeAlias<Setting>(_$ormModelDefinitions[21]);
-    registerTypeAlias<Tag>(_$ormModelDefinitions[22]);
-    registerTypeAlias<Taggable>(_$ormModelDefinitions[23]);
-    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[24]);
-    registerTypeAlias<User>(_$ormModelDefinitions[25]);
-    registerTypeAlias<UserProfile>(_$ormModelDefinitions[26]);
+    registerTypeAlias<AccessorUser>(_$ormModelDefinitions[0]);
+    registerTypeAlias<ActiveUser>(_$ormModelDefinitions[1]);
+    registerTypeAlias<Article>(_$ormModelDefinitions[2]);
+    registerTypeAlias<AttributeUser>(_$ormModelDefinitions[3]);
+    registerTypeAlias<Author>(_$ormModelDefinitions[4]);
+    registerTypeAlias<Comment>(_$ormModelDefinitions[5]);
+    registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[6]);
+    registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[7]);
+    registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[8]);
+    registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[9]);
+    registerTypeAlias<EventModel>(_$ormModelDefinitions[10]);
+    registerTypeAlias<Image>(_$ormModelDefinitions[11]);
+    registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[12]);
+    registerTypeAlias<MutationTarget>(_$ormModelDefinitions[13]);
+    registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[14]);
+    registerTypeAlias<NoFactory>(_$ormModelDefinitions[15]);
+    registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[16]);
+    registerTypeAlias<Photo>(_$ormModelDefinitions[17]);
+    registerTypeAlias<Post>(_$ormModelDefinitions[18]);
+    registerTypeAlias<PostTag>(_$ormModelDefinitions[19]);
+    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[20]);
+    registerTypeAlias<SerialTest>(_$ormModelDefinitions[21]);
+    registerTypeAlias<Setting>(_$ormModelDefinitions[22]);
+    registerTypeAlias<Tag>(_$ormModelDefinitions[23]);
+    registerTypeAlias<Taggable>(_$ormModelDefinitions[24]);
+    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[25]);
+    registerTypeAlias<User>(_$ormModelDefinitions[26]);
+    registerTypeAlias<UserProfile>(_$ormModelDefinitions[27]);
     return this;
   }
 }

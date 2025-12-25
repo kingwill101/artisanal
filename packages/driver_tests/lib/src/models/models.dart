@@ -1,6 +1,7 @@
 library;
 
 export 'active_user.dart';
+export 'accessor_user.dart';
 export 'attribute_user.dart';
 export 'author.dart';
 export 'comment.dart';

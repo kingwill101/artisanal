@@ -1,4 +1,5 @@
 import 'advanced_query_tests.dart';
+import 'attribute_accessor_tests.dart';
 import 'driver_override_tests.dart';
 import 'factory_inheritance_tests.dart';
 import 'join_tests.dart';
@@ -17,6 +18,7 @@ void runAllDriverTests() {
   runDriverQueryTests();
   runDriverJoinTests();
   runDriverAdvancedQueryTests();
+  runAttributeAccessorTests();
   runDriverMutationTests();
   runDriverOverrideTests();
   runModelEventCancelTests();

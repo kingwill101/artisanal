@@ -55,6 +55,7 @@ final ModelDefinition<$Setting> _$SettingDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     fieldOverrides: const {'payload': FieldAttributeMetadata(cast: 'json')},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',

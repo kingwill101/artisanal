@@ -153,6 +153,7 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     fillable: const <String>['email'],
     guarded: const <String>['id'],
     casts: const <String, String>{'createdAt': 'datetime'},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),

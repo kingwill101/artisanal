@@ -122,6 +122,46 @@ class RelationDescriptor {
   bool get isNullable => fieldType.nullabilitySuffix != NullabilitySuffix.none;
 }
 
+class AccessorDescriptor {
+  AccessorDescriptor({
+    required this.owner,
+    required this.name,
+    required this.attribute,
+    required this.returnType,
+    required this.takesValue,
+    required this.takesModel,
+    required this.isGetter,
+    this.valueType,
+  });
+
+  final String owner;
+  final String name;
+  final String attribute;
+  final String returnType;
+  final bool takesValue;
+  final bool takesModel;
+  final bool isGetter;
+  final String? valueType;
+}
+
+class MutatorDescriptor {
+  MutatorDescriptor({
+    required this.owner,
+    required this.name,
+    required this.attribute,
+    required this.valueType,
+    required this.returnType,
+    required this.takesModel,
+  });
+
+  final String owner;
+  final String name;
+  final String attribute;
+  final String valueType;
+  final String returnType;
+  final bool takesModel;
+}
+
 class ScopeDescriptor {
   ScopeDescriptor({
     required this.name,

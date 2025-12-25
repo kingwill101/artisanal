@@ -96,6 +96,7 @@ final ModelDefinition<$DerivedForFactory> _$DerivedForFactoryDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         fieldOverrides: const {
           'layer_two_flag': FieldAttributeMetadata(guarded: true),
           'layer_one_notes': FieldAttributeMetadata(cast: 'json'),

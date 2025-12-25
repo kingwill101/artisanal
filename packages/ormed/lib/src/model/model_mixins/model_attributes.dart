@@ -72,10 +72,30 @@ mixin ModelAttributes {
   Map<String, Object?> getAttributes() => attributes;
 
   /// Reads an attribute by column name.
-  T? getAttribute<T>(String column) => _ensureAttributes()[column] as T?;
+  T? getAttribute<T>(String column) {
+    final value = _ensureAttributes()[column];
+    final accessor = _accessorFor(column);
+    if (accessor == null) {
+      return value as T?;
+    }
+    return accessor(this as OrmEntity, value) as T?;
+  }
+
+  /// Reads an attribute value without applying accessors.
+  Object? getRawAttribute(String column) => _ensureAttributes()[column];
 
   /// Upserts an attribute value.
   void setAttribute(String column, Object? value) {
+    final mutator = _mutatorFor(column);
+    final nextValue =
+        mutator == null ? value : mutator(this as OrmEntity, value);
+    _ensureAttributes()[column] = nextValue;
+  }
+
+  /// Stores an attribute value without applying mutators.
+  ///
+  /// Intended for generated code that already applied mutators.
+  void setRawAttribute(String column, Object? value) {
     _ensureAttributes()[column] = value;
   }
 
@@ -193,6 +213,12 @@ mixin ModelAttributes {
 
   ModelDefinition<OrmEntity>? get _definition => modelDefinition;
 
+  AttributeAccessor? _accessorFor(String column) =>
+      modelDefinition?.accessors[column];
+
+  AttributeMutator? _mutatorFor(String column) =>
+      modelDefinition?.mutators[column];
+
   /// Fills attributes from [payload], respecting fillable/guarded metadata.
   ///
   /// Returns a map containing the values that were accepted. When [strict]
@@ -238,18 +264,55 @@ mixin ModelAttributes {
     final codecs = registry ?? ValueCodecRegistry.instance;
     final result = <String, Object?>{};
     final definition = _definition;
-    for (final entry in _ensureAttributes().entries) {
+    final accessors = definition?.accessors ?? const <String, AttributeAccessor>{};
+    final attrs = _ensureAttributes();
+    for (final entry in attrs.entries) {
       if (!_shouldSerializeColumn(entry.key, includeHidden, inspector)) {
         continue;
       }
-      final encoded = _encodeAttribute(
-        column: entry.key,
-        value: entry.value,
-        registry: codecs,
-        definition: definition,
-        inspector: inspector,
-      );
-      result[entry.key] = encoded;
+      final accessor = accessors[entry.key];
+      final value = accessor == null
+          ? entry.value
+          : accessor(this as OrmEntity, entry.value);
+      result[entry.key] =
+          accessor == null
+              ? _encodeAttribute(
+                column: entry.key,
+                value: value,
+                registry: codecs,
+                definition: definition,
+                inspector: inspector,
+              )
+              : codecs.encodeValue(value);
+    }
+
+    final appends = _metadata.appends;
+    if (appends.isNotEmpty) {
+      for (final attribute in appends) {
+        if (result.containsKey(attribute)) {
+          continue;
+        }
+        if (!_shouldSerializeColumn(attribute, includeHidden, inspector)) {
+          continue;
+        }
+        final accessor = accessors[attribute];
+        if (accessor != null) {
+          result[attribute] = codecs.encodeValue(
+            accessor(this as OrmEntity, attrs[attribute]),
+          );
+          continue;
+        }
+        if (!attrs.containsKey(attribute)) {
+          continue;
+        }
+        result[attribute] = _encodeAttribute(
+          column: attribute,
+          value: attrs[attribute],
+          registry: codecs,
+          definition: definition,
+          inspector: inspector,
+        );
+      }
     }
     return result;
   }

@@ -92,6 +92,7 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),

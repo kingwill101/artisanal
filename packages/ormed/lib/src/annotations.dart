@@ -51,6 +51,7 @@ class OrmModel {
     this.fillable = const [],
     this.guarded = const [],
     this.casts = const {},
+    this.appends = const [],
     this.connection,
     this.softDeletes = false,
     this.softDeletesColumn = 'deleted_at',
@@ -88,6 +89,9 @@ class OrmModel {
   /// If you override [OrmField.columnName], prefer setting [OrmField.cast] on
   /// that field so the cast follows the effective column name.
   final Map<String, String> casts;
+
+  /// Computed attributes to include when serializing via `toArray()`/`toJson()`.
+  final List<String> appends;
 
   /// A connection/driver name override.
   final String? connection;
@@ -530,6 +534,37 @@ class OrmRelation {
 
   /// The discriminator/class value for polymorphic relations.
   final String? morphClass;
+}
+
+/// Marks an instance getter or method as an attribute accessor.
+///
+/// Accessors customize how an attribute value is exposed. Prefer annotating a
+/// Dart getter for ergonomic access:
+///
+/// ```dart
+/// @OrmAccessor()
+/// String get fullName => '${getAttribute('first_name')} ${getAttribute('last_name')}';
+/// ```
+///
+/// Provide [attribute] to override the inferred column name.
+@immutable
+class OrmAccessor {
+  const OrmAccessor({this.attribute});
+
+  /// Column name or attribute key to associate with this accessor.
+  final String? attribute;
+}
+
+/// Marks an instance setter or method as an attribute mutator.
+///
+/// Mutators transform values before they are stored in the attribute map.
+/// Provide [attribute] to override the inferred column name.
+@immutable
+class OrmMutator {
+  const OrmMutator({this.attribute});
+
+  /// Column name or attribute key to associate with this mutator.
+  final String? attribute;
 }
 
 /// Marks a static model method as a query scope.

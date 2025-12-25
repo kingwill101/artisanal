@@ -53,6 +53,7 @@ final ModelDefinition<$NoFactory> _$NoFactoryDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     connection: 'analytics',
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
