@@ -204,6 +204,22 @@ class BaseItemInsertDto implements InsertDto<$BaseItem> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _BaseItemInsertDtoCopyWithSentinel _copyWithSentinel =
+      _BaseItemInsertDtoCopyWithSentinel();
+  BaseItemInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return BaseItemInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _BaseItemInsertDtoCopyWithSentinel {
+  const _BaseItemInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [BaseItem].
@@ -221,6 +237,22 @@ class BaseItemUpdateDto implements UpdateDto<$BaseItem> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _BaseItemUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _BaseItemUpdateDtoCopyWithSentinel();
+  BaseItemUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return BaseItemUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _BaseItemUpdateDtoCopyWithSentinel {
+  const _BaseItemUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [BaseItem].
@@ -254,6 +286,22 @@ class BaseItemPartial implements PartialEntity<$BaseItem> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (name != null) 'name': name};
   }
+
+  static const _BaseItemPartialCopyWithSentinel _copyWithSentinel =
+      _BaseItemPartialCopyWithSentinel();
+  BaseItemPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return BaseItemPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _BaseItemPartialCopyWithSentinel {
+  const _BaseItemPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [BaseItem].
@@ -265,6 +313,7 @@ class BaseItemPartial implements PartialEntity<$BaseItem> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $BaseItem extends BaseItem with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$BaseItem].
   $BaseItem({required int id, String? name}) : super.new(id: id, name: name) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name});
   }
@@ -278,14 +327,18 @@ class $BaseItem extends BaseItem with ModelAttributes implements OrmEntity {
     return $BaseItem(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -543,6 +596,26 @@ class SpecialItemInsertDto implements InsertDto<$SpecialItem> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _SpecialItemInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SpecialItemInsertDtoCopyWithSentinel();
+  SpecialItemInsertDto copyWith({
+    Object? tags = _copyWithSentinel,
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return SpecialItemInsertDto(
+      tags: identical(tags, _copyWithSentinel)
+          ? this.tags
+          : tags as List<String>?,
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _SpecialItemInsertDtoCopyWithSentinel {
+  const _SpecialItemInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [SpecialItem].
@@ -562,6 +635,26 @@ class SpecialItemUpdateDto implements UpdateDto<$SpecialItem> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _SpecialItemUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SpecialItemUpdateDtoCopyWithSentinel();
+  SpecialItemUpdateDto copyWith({
+    Object? tags = _copyWithSentinel,
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return SpecialItemUpdateDto(
+      tags: identical(tags, _copyWithSentinel)
+          ? this.tags
+          : tags as List<String>?,
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _SpecialItemUpdateDtoCopyWithSentinel {
+  const _SpecialItemUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [SpecialItem].
@@ -604,6 +697,26 @@ class SpecialItemPartial implements PartialEntity<$SpecialItem> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _SpecialItemPartialCopyWithSentinel _copyWithSentinel =
+      _SpecialItemPartialCopyWithSentinel();
+  SpecialItemPartial copyWith({
+    Object? tags = _copyWithSentinel,
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return SpecialItemPartial(
+      tags: identical(tags, _copyWithSentinel)
+          ? this.tags
+          : tags as List<String>?,
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _SpecialItemPartialCopyWithSentinel {
+  const _SpecialItemPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [SpecialItem].
@@ -617,6 +730,7 @@ class SpecialItemPartial implements PartialEntity<$SpecialItem> {
 class $SpecialItem extends SpecialItem
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$SpecialItem].
   $SpecialItem({required int id, String? name, List<String>? tags})
     : super.new(id: id, name: name, tags: tags) {
     _attachOrmRuntimeMetadata({'tags': tags, 'id': id, 'name': name});
@@ -635,19 +749,25 @@ class $SpecialItem extends SpecialItem
     );
   }
 
+  /// Tracked getter for [tags].
   @override
   List<String>? get tags => getAttribute<List<String>?>('tags') ?? super.tags;
 
+  /// Tracked setter for [tags].
   set tags(List<String>? value) => setAttribute('tags', value);
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

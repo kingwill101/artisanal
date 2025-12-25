@@ -248,6 +248,28 @@ class ScopedUserInsertDto implements InsertDto<$ScopedUser> {
       if (role != null) 'role': role,
     };
   }
+
+  static const _ScopedUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ScopedUserInsertDtoCopyWithSentinel();
+  ScopedUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+  }) {
+    return ScopedUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+    );
+  }
+}
+
+class _ScopedUserInsertDtoCopyWithSentinel {
+  const _ScopedUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ScopedUser].
@@ -269,6 +291,30 @@ class ScopedUserUpdateDto implements UpdateDto<$ScopedUser> {
       if (role != null) 'role': role,
     };
   }
+
+  static const _ScopedUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ScopedUserUpdateDtoCopyWithSentinel();
+  ScopedUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+  }) {
+    return ScopedUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+    );
+  }
+}
+
+class _ScopedUserUpdateDtoCopyWithSentinel {
+  const _ScopedUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ScopedUser].
@@ -327,6 +373,30 @@ class ScopedUserPartial implements PartialEntity<$ScopedUser> {
       if (role != null) 'role': role,
     };
   }
+
+  static const _ScopedUserPartialCopyWithSentinel _copyWithSentinel =
+      _ScopedUserPartialCopyWithSentinel();
+  ScopedUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+  }) {
+    return ScopedUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+    );
+  }
+}
+
+class _ScopedUserPartialCopyWithSentinel {
+  const _ScopedUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ScopedUser].
@@ -338,6 +408,7 @@ class ScopedUserPartial implements PartialEntity<$ScopedUser> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $ScopedUser extends ScopedUser with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$ScopedUser].
   $ScopedUser({
     int id = 0,
     required String email,
@@ -371,24 +442,32 @@ class $ScopedUser extends ScopedUser with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [role].
   @override
   String? get role => getAttribute<String?>('role') ?? super.role;
 
+  /// Tracked setter for [role].
   set role(String? value) => setAttribute('role', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

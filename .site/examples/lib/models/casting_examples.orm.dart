@@ -34,7 +34,7 @@ const FieldDefinition _$SettingsMetadataField = FieldDefinition(
 
 const FieldDefinition _$SettingsCreatedAtField = FieldDefinition(
   name: 'createdAt',
-  columnName: 'createdAt',
+  columnName: 'created_at',
   dartType: 'DateTime',
   resolvedType: 'DateTime?',
   isPrimaryKey: false,
@@ -53,7 +53,7 @@ Map<String, Object?> _encodeSettingsUntracked(
   return <String, Object?>{
     'id': registry.encodeField(_$SettingsIdField, m.id),
     'metadata': registry.encodeField(_$SettingsMetadataField, m.metadata),
-    'createdAt': registry.encodeField(_$SettingsCreatedAtField, m.createdAt),
+    'created_at': registry.encodeField(_$SettingsCreatedAtField, m.createdAt),
   };
 }
 
@@ -84,8 +84,8 @@ extension SettingsOrmDefinition on Settings {
   static ModelDefinition<$Settings> get definition => _$SettingsDefinition;
 }
 
-class Settingss {
-  const Settingss._();
+class Settings {
+  const Settings._();
 
   /// Starts building a query for [$Settings].
   ///
@@ -183,7 +183,7 @@ class _$SettingsCodec extends ModelCodec<$Settings> {
     return <String, Object?>{
       'id': registry.encodeField(_$SettingsIdField, model.id),
       'metadata': registry.encodeField(_$SettingsMetadataField, model.metadata),
-      'createdAt': registry.encodeField(
+      'created_at': registry.encodeField(
         _$SettingsCreatedAtField,
         model.createdAt,
       ),
@@ -201,7 +201,7 @@ class _$SettingsCodec extends ModelCodec<$Settings> {
         );
     final DateTime? settingsCreatedAtValue = registry.decodeField<DateTime?>(
       _$SettingsCreatedAtField,
-      data['createdAt'],
+      data['created_at'],
     );
     final model = $Settings(
       id: settingsIdValue,
@@ -211,7 +211,7 @@ class _$SettingsCodec extends ModelCodec<$Settings> {
     model._attachOrmRuntimeMetadata({
       'id': settingsIdValue,
       'metadata': settingsMetadataValue,
-      'createdAt': settingsCreatedAtValue,
+      'created_at': settingsCreatedAtValue,
     });
     return model;
   }
@@ -229,9 +229,29 @@ class SettingsInsertDto implements InsertDto<$Settings> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (metadata != null) 'metadata': metadata,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _SettingsInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SettingsInsertDtoCopyWithSentinel();
+  SettingsInsertDto copyWith({
+    Object? metadata = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return SettingsInsertDto(
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _SettingsInsertDtoCopyWithSentinel {
+  const _SettingsInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Settings].
@@ -248,9 +268,31 @@ class SettingsUpdateDto implements UpdateDto<$Settings> {
     return <String, Object?>{
       if (id != null) 'id': id,
       if (metadata != null) 'metadata': metadata,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _SettingsUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SettingsUpdateDtoCopyWithSentinel();
+  SettingsUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return SettingsUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _SettingsUpdateDtoCopyWithSentinel {
+  const _SettingsUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Settings].
@@ -267,7 +309,7 @@ class SettingsPartial implements PartialEntity<$Settings> {
     return SettingsPartial(
       id: row['id'] as int?,
       metadata: row['metadata'] as Map<String, Object?>?,
-      createdAt: row['createdAt'] as DateTime?,
+      createdAt: row['created_at'] as DateTime?,
     );
   }
 
@@ -290,9 +332,31 @@ class SettingsPartial implements PartialEntity<$Settings> {
     return {
       if (id != null) 'id': id,
       if (metadata != null) 'metadata': metadata,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _SettingsPartialCopyWithSentinel _copyWithSentinel =
+      _SettingsPartialCopyWithSentinel();
+  SettingsPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return SettingsPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _SettingsPartialCopyWithSentinel {
+  const _SettingsPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Settings].
@@ -304,12 +368,13 @@ class SettingsPartial implements PartialEntity<$Settings> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Settings extends Settings with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Settings].
   $Settings({int id = 0, Map<String, Object?>? metadata, DateTime? createdAt})
     : super.new(id: id, metadata: metadata, createdAt: createdAt) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'metadata': metadata,
-      'createdAt': createdAt,
+      'created_at': createdAt,
     });
   }
 
@@ -334,22 +399,28 @@ class $Settings extends Settings with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [metadata].
   @override
   Map<String, Object?>? get metadata =>
       getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
+  /// Tracked setter for [metadata].
   set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
-      getAttribute<DateTime?>('createdAt') ?? super.createdAt;
+      getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
-  set createdAt(DateTime? value) => setAttribute('createdAt', value);
+  /// Tracked setter for [createdAt].
+  set createdAt(DateTime? value) => setAttribute('created_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);
@@ -440,8 +511,8 @@ extension FieldCastSettingsOrmDefinition on FieldCastSettings {
       _$FieldCastSettingsDefinition;
 }
 
-class FieldCastSettingss {
-  const FieldCastSettingss._();
+class FieldCastSettings {
+  const FieldCastSettings._();
 
   /// Starts building a query for [$FieldCastSettings].
   ///
@@ -592,6 +663,20 @@ class FieldCastSettingsInsertDto implements InsertDto<$FieldCastSettings> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (metadata != null) 'metadata': metadata};
   }
+
+  static const _FieldCastSettingsInsertDtoCopyWithSentinel _copyWithSentinel =
+      _FieldCastSettingsInsertDtoCopyWithSentinel();
+  FieldCastSettingsInsertDto copyWith({Object? metadata = _copyWithSentinel}) {
+    return FieldCastSettingsInsertDto(
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _FieldCastSettingsInsertDtoCopyWithSentinel {
+  const _FieldCastSettingsInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [FieldCastSettings].
@@ -609,6 +694,24 @@ class FieldCastSettingsUpdateDto implements UpdateDto<$FieldCastSettings> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _FieldCastSettingsUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _FieldCastSettingsUpdateDtoCopyWithSentinel();
+  FieldCastSettingsUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return FieldCastSettingsUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _FieldCastSettingsUpdateDtoCopyWithSentinel {
+  const _FieldCastSettingsUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [FieldCastSettings].
@@ -648,6 +751,24 @@ class FieldCastSettingsPartial implements PartialEntity<$FieldCastSettings> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _FieldCastSettingsPartialCopyWithSentinel _copyWithSentinel =
+      _FieldCastSettingsPartialCopyWithSentinel();
+  FieldCastSettingsPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return FieldCastSettingsPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _FieldCastSettingsPartialCopyWithSentinel {
+  const _FieldCastSettingsPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [FieldCastSettings].
@@ -661,6 +782,7 @@ class FieldCastSettingsPartial implements PartialEntity<$FieldCastSettings> {
 class $FieldCastSettings extends FieldCastSettings
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$FieldCastSettings].
   $FieldCastSettings({int id = 0, Map<String, Object?>? metadata})
     : super.new(id: id, metadata: metadata) {
     _attachOrmRuntimeMetadata({'id': id, 'metadata': metadata});
@@ -678,15 +800,19 @@ class $FieldCastSettings extends FieldCastSettings
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [metadata].
   @override
   Map<String, Object?>? get metadata =>
       getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
+  /// Tracked setter for [metadata].
   set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -898,6 +1024,20 @@ class LinkInsertDto implements InsertDto<$Link> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (website != null) 'website': website};
   }
+
+  static const _LinkInsertDtoCopyWithSentinel _copyWithSentinel =
+      _LinkInsertDtoCopyWithSentinel();
+  LinkInsertDto copyWith({Object? website = _copyWithSentinel}) {
+    return LinkInsertDto(
+      website: identical(website, _copyWithSentinel)
+          ? this.website
+          : website as Uri?,
+    );
+  }
+}
+
+class _LinkInsertDtoCopyWithSentinel {
+  const _LinkInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Link].
@@ -915,6 +1055,24 @@ class LinkUpdateDto implements UpdateDto<$Link> {
       if (website != null) 'website': website,
     };
   }
+
+  static const _LinkUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _LinkUpdateDtoCopyWithSentinel();
+  LinkUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? website = _copyWithSentinel,
+  }) {
+    return LinkUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      website: identical(website, _copyWithSentinel)
+          ? this.website
+          : website as Uri?,
+    );
+  }
+}
+
+class _LinkUpdateDtoCopyWithSentinel {
+  const _LinkUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Link].
@@ -948,6 +1106,24 @@ class LinkPartial implements PartialEntity<$Link> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (website != null) 'website': website};
   }
+
+  static const _LinkPartialCopyWithSentinel _copyWithSentinel =
+      _LinkPartialCopyWithSentinel();
+  LinkPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? website = _copyWithSentinel,
+  }) {
+    return LinkPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      website: identical(website, _copyWithSentinel)
+          ? this.website
+          : website as Uri?,
+    );
+  }
+}
+
+class _LinkPartialCopyWithSentinel {
+  const _LinkPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Link].
@@ -959,6 +1135,7 @@ class LinkPartial implements PartialEntity<$Link> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Link extends Link with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Link].
   $Link({int id = 0, Uri? website}) : super.new(id: id, website: website) {
     _attachOrmRuntimeMetadata({'id': id, 'website': website});
   }
@@ -972,14 +1149,18 @@ class $Link extends Link with ModelAttributes implements OrmEntity {
     return $Link(id: id ?? this.id, website: website ?? this.website);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [website].
   @override
   Uri? get website => getAttribute<Uri?>('website') ?? super.website;
 
+  /// Tracked setter for [website].
   set website(Uri? value) => setAttribute('website', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

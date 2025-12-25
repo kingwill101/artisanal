@@ -241,6 +241,24 @@ class ValidatedUserInsertDto implements InsertDto<$ValidatedUser> {
       if (age != null) 'age': age,
     };
   }
+
+  static const _ValidatedUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ValidatedUserInsertDtoCopyWithSentinel();
+  ValidatedUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+  }) {
+    return ValidatedUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+    );
+  }
+}
+
+class _ValidatedUserInsertDtoCopyWithSentinel {
+  const _ValidatedUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ValidatedUser].
@@ -260,6 +278,26 @@ class ValidatedUserUpdateDto implements UpdateDto<$ValidatedUser> {
       if (age != null) 'age': age,
     };
   }
+
+  static const _ValidatedUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ValidatedUserUpdateDtoCopyWithSentinel();
+  ValidatedUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+  }) {
+    return ValidatedUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+    );
+  }
+}
+
+class _ValidatedUserUpdateDtoCopyWithSentinel {
+  const _ValidatedUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ValidatedUser].
@@ -310,6 +348,26 @@ class ValidatedUserPartial implements PartialEntity<$ValidatedUser> {
       if (age != null) 'age': age,
     };
   }
+
+  static const _ValidatedUserPartialCopyWithSentinel _copyWithSentinel =
+      _ValidatedUserPartialCopyWithSentinel();
+  ValidatedUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+  }) {
+    return ValidatedUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int?,
+    );
+  }
+}
+
+class _ValidatedUserPartialCopyWithSentinel {
+  const _ValidatedUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ValidatedUser].
@@ -323,6 +381,7 @@ class ValidatedUserPartial implements PartialEntity<$ValidatedUser> {
 class $ValidatedUser extends ValidatedUser
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$ValidatedUser].
   $ValidatedUser({int id = 0, required String email, required int age})
     : super.new(id: id, email: email, age: age) {
     _attachOrmRuntimeMetadata({'id': id, 'email': email, 'age': age});
@@ -341,19 +400,25 @@ class $ValidatedUser extends ValidatedUser
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [age].
   @override
   int get age => getAttribute<int>('age') ?? super.age;
 
+  /// Tracked setter for [age].
   set age(int value) => setAttribute('age', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

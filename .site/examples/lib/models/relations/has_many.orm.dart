@@ -74,8 +74,8 @@ extension UserWithPostsOrmDefinition on UserWithPosts {
       _$UserWithPostsDefinition;
 }
 
-class UserWithPostss {
-  const UserWithPostss._();
+class UserWithPosts {
+  const UserWithPosts._();
 
   /// Starts building a query for [$UserWithPosts].
   ///
@@ -222,6 +222,24 @@ class UserWithPostsInsertDto implements InsertDto<$UserWithPosts> {
       if (posts != null) 'posts': posts,
     };
   }
+
+  static const _UserWithPostsInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserWithPostsInsertDtoCopyWithSentinel();
+  UserWithPostsInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? posts = _copyWithSentinel,
+  }) {
+    return UserWithPostsInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      posts: identical(posts, _copyWithSentinel)
+          ? this.posts
+          : posts as List<UserPost>?,
+    );
+  }
+}
+
+class _UserWithPostsInsertDtoCopyWithSentinel {
+  const _UserWithPostsInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [UserWithPosts].
@@ -239,6 +257,24 @@ class UserWithPostsUpdateDto implements UpdateDto<$UserWithPosts> {
       if (posts != null) 'posts': posts,
     };
   }
+
+  static const _UserWithPostsUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserWithPostsUpdateDtoCopyWithSentinel();
+  UserWithPostsUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? posts = _copyWithSentinel,
+  }) {
+    return UserWithPostsUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      posts: identical(posts, _copyWithSentinel)
+          ? this.posts
+          : posts as List<UserPost>?,
+    );
+  }
+}
+
+class _UserWithPostsUpdateDtoCopyWithSentinel {
+  const _UserWithPostsUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [UserWithPosts].
@@ -275,6 +311,24 @@ class UserWithPostsPartial implements PartialEntity<$UserWithPosts> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (posts != null) 'posts': posts};
   }
+
+  static const _UserWithPostsPartialCopyWithSentinel _copyWithSentinel =
+      _UserWithPostsPartialCopyWithSentinel();
+  UserWithPostsPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? posts = _copyWithSentinel,
+  }) {
+    return UserWithPostsPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      posts: identical(posts, _copyWithSentinel)
+          ? this.posts
+          : posts as List<UserPost>?,
+    );
+  }
+}
+
+class _UserWithPostsPartialCopyWithSentinel {
+  const _UserWithPostsPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [UserWithPosts].
@@ -288,6 +342,7 @@ class UserWithPostsPartial implements PartialEntity<$UserWithPosts> {
 class $UserWithPosts extends UserWithPosts
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$UserWithPosts].
   $UserWithPosts({required int id, List<UserPost>? posts})
     : super.new(id: id, posts: posts) {
     _attachOrmRuntimeMetadata({'id': id, 'posts': posts});
@@ -302,15 +357,19 @@ class $UserWithPosts extends UserWithPosts
     return $UserWithPosts(id: id ?? this.id, posts: posts ?? this.posts);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [posts].
   @override
   List<UserPost>? get posts =>
       getAttribute<List<UserPost>?>('posts') ?? super.posts;
 
+  /// Tracked setter for [posts].
   set posts(List<UserPost>? value) => setAttribute('posts', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -323,7 +382,7 @@ class $UserWithPosts extends UserWithPosts
     if (relationLoaded('posts')) {
       return getRelationList<UserPost>('posts');
     }
-    return super.posts;
+    return super.posts ?? const [];
   }
 }
 
@@ -365,7 +424,7 @@ const FieldDefinition _$UserPostIdField = FieldDefinition(
 
 const FieldDefinition _$UserPostAuthorIdField = FieldDefinition(
   name: 'authorId',
-  columnName: 'authorId',
+  columnName: 'author_id',
   dartType: 'int',
   resolvedType: 'int',
   isPrimaryKey: false,
@@ -394,7 +453,7 @@ Map<String, Object?> _encodeUserPostUntracked(
   final m = model as UserPost;
   return <String, Object?>{
     'id': registry.encodeField(_$UserPostIdField, m.id),
-    'authorId': registry.encodeField(_$UserPostAuthorIdField, m.authorId),
+    'author_id': registry.encodeField(_$UserPostAuthorIdField, m.authorId),
     'title': registry.encodeField(_$UserPostTitleField, m.title),
   };
 }
@@ -524,7 +583,10 @@ class _$UserPostCodec extends ModelCodec<$UserPost> {
   Map<String, Object?> encode($UserPost model, ValueCodecRegistry registry) {
     return <String, Object?>{
       'id': registry.encodeField(_$UserPostIdField, model.id),
-      'authorId': registry.encodeField(_$UserPostAuthorIdField, model.authorId),
+      'author_id': registry.encodeField(
+        _$UserPostAuthorIdField,
+        model.authorId,
+      ),
       'title': registry.encodeField(_$UserPostTitleField, model.title),
     };
   }
@@ -535,7 +597,7 @@ class _$UserPostCodec extends ModelCodec<$UserPost> {
         registry.decodeField<int>(_$UserPostIdField, data['id']) ??
         (throw StateError('Field id on UserPost cannot be null.'));
     final int userPostAuthorIdValue =
-        registry.decodeField<int>(_$UserPostAuthorIdField, data['authorId']) ??
+        registry.decodeField<int>(_$UserPostAuthorIdField, data['author_id']) ??
         (throw StateError('Field authorId on UserPost cannot be null.'));
     final String userPostTitleValue =
         registry.decodeField<String>(_$UserPostTitleField, data['title']) ??
@@ -547,7 +609,7 @@ class _$UserPostCodec extends ModelCodec<$UserPost> {
     );
     model._attachOrmRuntimeMetadata({
       'id': userPostIdValue,
-      'authorId': userPostAuthorIdValue,
+      'author_id': userPostAuthorIdValue,
       'title': userPostTitleValue,
     });
     return model;
@@ -567,10 +629,32 @@ class UserPostInsertDto implements InsertDto<$UserPost> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
       if (title != null) 'title': title,
     };
   }
+
+  static const _UserPostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserPostInsertDtoCopyWithSentinel();
+  UserPostInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return UserPostInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _UserPostInsertDtoCopyWithSentinel {
+  const _UserPostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [UserPost].
@@ -586,10 +670,32 @@ class UserPostUpdateDto implements UpdateDto<$UserPost> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
       if (title != null) 'title': title,
     };
   }
+
+  static const _UserPostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserPostUpdateDtoCopyWithSentinel();
+  UserPostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return UserPostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _UserPostUpdateDtoCopyWithSentinel {
+  const _UserPostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [UserPost].
@@ -605,7 +711,7 @@ class UserPostPartial implements PartialEntity<$UserPost> {
   factory UserPostPartial.fromRow(Map<String, Object?> row) {
     return UserPostPartial(
       id: row['id'] as int?,
-      authorId: row['authorId'] as int?,
+      authorId: row['author_id'] as int?,
       title: row['title'] as String?,
     );
   }
@@ -636,10 +742,32 @@ class UserPostPartial implements PartialEntity<$UserPost> {
   Map<String, Object?> toMap() {
     return {
       if (id != null) 'id': id,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
       if (title != null) 'title': title,
     };
   }
+
+  static const _UserPostPartialCopyWithSentinel _copyWithSentinel =
+      _UserPostPartialCopyWithSentinel();
+  UserPostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return UserPostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _UserPostPartialCopyWithSentinel {
+  const _UserPostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [UserPost].
@@ -651,9 +779,14 @@ class UserPostPartial implements PartialEntity<$UserPost> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $UserPost extends UserPost with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$UserPost].
   $UserPost({required int id, required int authorId, required String title})
     : super.new(id: id, authorId: authorId, title: title) {
-    _attachOrmRuntimeMetadata({'id': id, 'authorId': authorId, 'title': title});
+    _attachOrmRuntimeMetadata({
+      'id': id,
+      'author_id': authorId,
+      'title': title,
+    });
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
@@ -673,19 +806,25 @@ class $UserPost extends UserPost with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [authorId].
   @override
-  int get authorId => getAttribute<int>('authorId') ?? super.authorId;
+  int get authorId => getAttribute<int>('author_id') ?? super.authorId;
 
-  set authorId(int value) => setAttribute('authorId', value);
+  /// Tracked setter for [authorId].
+  set authorId(int value) => setAttribute('author_id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

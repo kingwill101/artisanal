@@ -250,6 +250,24 @@ class DriverOverrideExampleInsertDto
       if (payload != null) 'payload': payload,
     };
   }
+
+  static const _DriverOverrideExampleInsertDtoCopyWithSentinel
+  _copyWithSentinel = _DriverOverrideExampleInsertDtoCopyWithSentinel();
+  DriverOverrideExampleInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideExampleInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideExampleInsertDtoCopyWithSentinel {
+  const _DriverOverrideExampleInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [DriverOverrideExample].
@@ -268,6 +286,24 @@ class DriverOverrideExampleUpdateDto
       if (payload != null) 'payload': payload,
     };
   }
+
+  static const _DriverOverrideExampleUpdateDtoCopyWithSentinel
+  _copyWithSentinel = _DriverOverrideExampleUpdateDtoCopyWithSentinel();
+  DriverOverrideExampleUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideExampleUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideExampleUpdateDtoCopyWithSentinel {
+  const _DriverOverrideExampleUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [DriverOverrideExample].
@@ -309,6 +345,24 @@ class DriverOverrideExamplePartial
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (payload != null) 'payload': payload};
   }
+
+  static const _DriverOverrideExamplePartialCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideExamplePartialCopyWithSentinel();
+  DriverOverrideExamplePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideExamplePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DriverOverrideExamplePartialCopyWithSentinel {
+  const _DriverOverrideExamplePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [DriverOverrideExample].
@@ -322,6 +376,7 @@ class DriverOverrideExamplePartial
 class $DriverOverrideExample extends DriverOverrideExample
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$DriverOverrideExample].
   $DriverOverrideExample({
     required int id,
     required Map<String, Object?> payload,
@@ -341,15 +396,19 @@ class $DriverOverrideExample extends DriverOverrideExample
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [payload].
   @override
   Map<String, Object?> get payload =>
       getAttribute<Map<String, Object?>>('payload') ?? super.payload;
 
+  /// Tracked setter for [payload].
   set payload(Map<String, Object?> value) => setAttribute('payload', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -585,6 +644,24 @@ class AuditedEventInsertDto implements InsertDto<$AuditedEvent> {
       if (action != null) 'action': action,
     };
   }
+
+  static const _AuditedEventInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuditedEventInsertDtoCopyWithSentinel();
+  AuditedEventInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? action = _copyWithSentinel,
+  }) {
+    return AuditedEventInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      action: identical(action, _copyWithSentinel)
+          ? this.action
+          : action as String?,
+    );
+  }
+}
+
+class _AuditedEventInsertDtoCopyWithSentinel {
+  const _AuditedEventInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [AuditedEvent].
@@ -602,6 +679,24 @@ class AuditedEventUpdateDto implements UpdateDto<$AuditedEvent> {
       if (action != null) 'action': action,
     };
   }
+
+  static const _AuditedEventUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuditedEventUpdateDtoCopyWithSentinel();
+  AuditedEventUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? action = _copyWithSentinel,
+  }) {
+    return AuditedEventUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      action: identical(action, _copyWithSentinel)
+          ? this.action
+          : action as String?,
+    );
+  }
+}
+
+class _AuditedEventUpdateDtoCopyWithSentinel {
+  const _AuditedEventUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [AuditedEvent].
@@ -642,6 +737,24 @@ class AuditedEventPartial implements PartialEntity<$AuditedEvent> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (action != null) 'action': action};
   }
+
+  static const _AuditedEventPartialCopyWithSentinel _copyWithSentinel =
+      _AuditedEventPartialCopyWithSentinel();
+  AuditedEventPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? action = _copyWithSentinel,
+  }) {
+    return AuditedEventPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      action: identical(action, _copyWithSentinel)
+          ? this.action
+          : action as String?,
+    );
+  }
+}
+
+class _AuditedEventPartialCopyWithSentinel {
+  const _AuditedEventPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [AuditedEvent].
@@ -655,6 +768,7 @@ class AuditedEventPartial implements PartialEntity<$AuditedEvent> {
 class $AuditedEvent extends AuditedEvent
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$AuditedEvent].
   $AuditedEvent({required int id, required String action})
     : super.new(id: id, action: action) {
     _attachOrmRuntimeMetadata({'id': id, 'action': action});
@@ -669,14 +783,18 @@ class $AuditedEvent extends AuditedEvent
     return $AuditedEvent(id: id ?? this.id, action: action ?? this.action);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [action].
   @override
   String get action => getAttribute<String>('action') ?? super.action;
 
+  /// Tracked setter for [action].
   set action(String value) => setAttribute('action', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

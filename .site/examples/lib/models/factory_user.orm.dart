@@ -236,6 +236,24 @@ class FactoryUserInsertDto implements InsertDto<$FactoryUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _FactoryUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _FactoryUserInsertDtoCopyWithSentinel();
+  FactoryUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return FactoryUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _FactoryUserInsertDtoCopyWithSentinel {
+  const _FactoryUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [FactoryUser].
@@ -255,6 +273,26 @@ class FactoryUserUpdateDto implements UpdateDto<$FactoryUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _FactoryUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _FactoryUserUpdateDtoCopyWithSentinel();
+  FactoryUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return FactoryUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _FactoryUserUpdateDtoCopyWithSentinel {
+  const _FactoryUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [FactoryUser].
@@ -301,6 +339,26 @@ class FactoryUserPartial implements PartialEntity<$FactoryUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _FactoryUserPartialCopyWithSentinel _copyWithSentinel =
+      _FactoryUserPartialCopyWithSentinel();
+  FactoryUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return FactoryUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _FactoryUserPartialCopyWithSentinel {
+  const _FactoryUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [FactoryUser].
@@ -314,6 +372,7 @@ class FactoryUserPartial implements PartialEntity<$FactoryUser> {
 class $FactoryUser extends FactoryUser
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$FactoryUser].
   $FactoryUser({int id = 0, required String email, String? name})
     : super.new(id: id, email: email, name: name) {
     _attachOrmRuntimeMetadata({'id': id, 'email': email, 'name': name});
@@ -332,19 +391,25 @@ class $FactoryUser extends FactoryUser
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

@@ -60,6 +60,62 @@ A many-to-many relationship using a pivot table. Ormed automatically handles the
   </TabItem>
 </Tabs>
 
+## Polymorphic Relationships
+
+Polymorphic relationships let a model belong to more than one type of model on
+a single association.
+
+<Tabs groupId="relationship-types-polymorphic" defaultValue="morph-one">
+  <TabItem value="morph-one" label="Morph One">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-one
+```
+
+  </TabItem>
+  <TabItem value="morph-many" label="Morph Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-many
+```
+
+  </TabItem>
+  <TabItem value="morph-to" label="Morph To">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-to
+```
+
+  </TabItem>
+  <TabItem value="morph-to-many" label="Morph To Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-to-many
+```
+
+  </TabItem>
+  <TabItem value="morphed-by-many" label="Morphed By Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morphed-by-many
+```
+
+  </TabItem>
+</Tabs>
+
+:::note Morph-to constraints
+`morphTo` relations do not support constraint callbacks and cannot be used as
+intermediate segments in nested relation paths. Use `morphTo` as the final
+segment when eager loading.
+:::
+
+### Morph Map Aliases
+
+If your morph types store aliases instead of full model names, register a map
+before loading relations:
+
+```dart
+dataSource.registry.registerMorphMap({
+  'post': Post,
+  'user': User,
+});
+```
+
 ## Loading Relations
 
 ### Eager Loading

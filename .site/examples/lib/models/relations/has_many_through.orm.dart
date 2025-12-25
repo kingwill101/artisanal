@@ -31,15 +31,16 @@ const FieldDefinition _$AuthorWithCommentsCommentsField = FieldDefinition(
   autoIncrement: false,
 );
 
-const RelationDefinition _$AuthorWithCommentsCommentsRelation = RelationDefinition(
-  name: 'comments',
-  kind: RelationKind.hasManyThrough,
-  targetModel: 'PostComment',
-  foreignKey: 'post_id',
-  localKey: 'id',
-  throughModel: 'AuthorPost',
-  throughForeignKey: 'author_id',
-);
+const RelationDefinition _$AuthorWithCommentsCommentsRelation =
+    RelationDefinition(
+      name: 'comments',
+      kind: RelationKind.hasManyThrough,
+      targetModel: 'PostComment',
+      foreignKey: 'post_id',
+      localKey: 'id',
+      throughModel: 'AuthorPost',
+      throughForeignKey: 'author_id',
+    );
 
 Map<String, Object?> _encodeAuthorWithCommentsUntracked(
   Object model,
@@ -83,8 +84,8 @@ extension AuthorWithCommentsOrmDefinition on AuthorWithComments {
       _$AuthorWithCommentsDefinition;
 }
 
-class AuthorWithCommentss {
-  const AuthorWithCommentss._();
+class AuthorWithComments {
+  const AuthorWithComments._();
 
   /// Starts building a query for [$AuthorWithComments].
   ///
@@ -243,6 +244,24 @@ class AuthorWithCommentsInsertDto implements InsertDto<$AuthorWithComments> {
       if (comments != null) 'comments': comments,
     };
   }
+
+  static const _AuthorWithCommentsInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorWithCommentsInsertDtoCopyWithSentinel();
+  AuthorWithCommentsInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? comments = _copyWithSentinel,
+  }) {
+    return AuthorWithCommentsInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      comments: identical(comments, _copyWithSentinel)
+          ? this.comments
+          : comments as List<PostComment>?,
+    );
+  }
+}
+
+class _AuthorWithCommentsInsertDtoCopyWithSentinel {
+  const _AuthorWithCommentsInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [AuthorWithComments].
@@ -260,6 +279,24 @@ class AuthorWithCommentsUpdateDto implements UpdateDto<$AuthorWithComments> {
       if (comments != null) 'comments': comments,
     };
   }
+
+  static const _AuthorWithCommentsUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorWithCommentsUpdateDtoCopyWithSentinel();
+  AuthorWithCommentsUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? comments = _copyWithSentinel,
+  }) {
+    return AuthorWithCommentsUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      comments: identical(comments, _copyWithSentinel)
+          ? this.comments
+          : comments as List<PostComment>?,
+    );
+  }
+}
+
+class _AuthorWithCommentsUpdateDtoCopyWithSentinel {
+  const _AuthorWithCommentsUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [AuthorWithComments].
@@ -299,6 +336,24 @@ class AuthorWithCommentsPartial implements PartialEntity<$AuthorWithComments> {
       if (comments != null) 'comments': comments,
     };
   }
+
+  static const _AuthorWithCommentsPartialCopyWithSentinel _copyWithSentinel =
+      _AuthorWithCommentsPartialCopyWithSentinel();
+  AuthorWithCommentsPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? comments = _copyWithSentinel,
+  }) {
+    return AuthorWithCommentsPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      comments: identical(comments, _copyWithSentinel)
+          ? this.comments
+          : comments as List<PostComment>?,
+    );
+  }
+}
+
+class _AuthorWithCommentsPartialCopyWithSentinel {
+  const _AuthorWithCommentsPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [AuthorWithComments].
@@ -312,6 +367,7 @@ class AuthorWithCommentsPartial implements PartialEntity<$AuthorWithComments> {
 class $AuthorWithComments extends AuthorWithComments
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$AuthorWithComments].
   $AuthorWithComments({required int id, List<PostComment>? comments})
     : super.new(id: id, comments: comments) {
     _attachOrmRuntimeMetadata({'id': id, 'comments': comments});
@@ -329,15 +385,19 @@ class $AuthorWithComments extends AuthorWithComments
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [comments].
   @override
   List<PostComment>? get comments =>
       getAttribute<List<PostComment>?>('comments') ?? super.comments;
 
+  /// Tracked setter for [comments].
   set comments(List<PostComment>? value) => setAttribute('comments', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -357,7 +417,7 @@ class $AuthorWithComments extends AuthorWithComments
 extension AuthorWithCommentsRelationQueries on AuthorWithComments {
   Query<PostComment> commentsQuery() {
     throw UnimplementedError(
-      'Relation query generation not supported for RelationKind.hasManyThrough',
+      "Relation query generation not supported for RelationKind.hasManyThrough",
     );
   }
 }
@@ -467,7 +527,8 @@ class AuthorPosts {
     String operator,
     dynamic value, {
     String? connection,
-  }) => Model.where<$AuthorPost>(column, operator, value, connection: connection);
+  }) =>
+      Model.where<$AuthorPost>(column, operator, value, connection: connection);
 
   static Query<$AuthorPost> whereIn(
     String column,
@@ -549,7 +610,10 @@ class _$AuthorPostCodec extends ModelCodec<$AuthorPost> {
         registry.decodeField<int>(_$AuthorPostIdField, data['id']) ??
         (throw StateError('Field id on AuthorPost cannot be null.'));
     final int authorPostAuthorIdValue =
-        registry.decodeField<int>(_$AuthorPostAuthorIdField, data['author_id']) ??
+        registry.decodeField<int>(
+          _$AuthorPostAuthorIdField,
+          data['author_id'],
+        ) ??
         (throw StateError('Field authorId on AuthorPost cannot be null.'));
     final model = $AuthorPost(
       id: authorPostIdValue,
@@ -578,6 +642,24 @@ class AuthorPostInsertDto implements InsertDto<$AuthorPost> {
       if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _AuthorPostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorPostInsertDtoCopyWithSentinel();
+  AuthorPostInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return AuthorPostInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _AuthorPostInsertDtoCopyWithSentinel {
+  const _AuthorPostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [AuthorPost].
@@ -595,6 +677,24 @@ class AuthorPostUpdateDto implements UpdateDto<$AuthorPost> {
       if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _AuthorPostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorPostUpdateDtoCopyWithSentinel();
+  AuthorPostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return AuthorPostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _AuthorPostUpdateDtoCopyWithSentinel {
+  const _AuthorPostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [AuthorPost].
@@ -638,6 +738,24 @@ class AuthorPostPartial implements PartialEntity<$AuthorPost> {
       if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _AuthorPostPartialCopyWithSentinel _copyWithSentinel =
+      _AuthorPostPartialCopyWithSentinel();
+  AuthorPostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return AuthorPostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _AuthorPostPartialCopyWithSentinel {
+  const _AuthorPostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [AuthorPost].
@@ -649,6 +767,7 @@ class AuthorPostPartial implements PartialEntity<$AuthorPost> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $AuthorPost extends AuthorPost with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$AuthorPost].
   $AuthorPost({required int id, required int authorId})
     : super.new(id: id, authorId: authorId) {
     _attachOrmRuntimeMetadata({'id': id, 'author_id': authorId});
@@ -663,14 +782,18 @@ class $AuthorPost extends AuthorPost with ModelAttributes implements OrmEntity {
     return $AuthorPost(id: id ?? this.id, authorId: authorId ?? this.authorId);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [authorId].
   @override
   int get authorId => getAttribute<int>('author_id') ?? super.authorId;
 
+  /// Tracked setter for [authorId].
   set authorId(int value) => setAttribute('author_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -802,7 +925,12 @@ class PostComments {
     String operator,
     dynamic value, {
     String? connection,
-  }) => Model.where<$PostComment>(column, operator, value, connection: connection);
+  }) => Model.where<$PostComment>(
+    column,
+    operator,
+    value,
+    connection: connection,
+  );
 
   static Query<$PostComment> whereIn(
     String column,
@@ -919,6 +1047,26 @@ class PostCommentInsertDto implements InsertDto<$PostComment> {
       if (body != null) 'body': body,
     };
   }
+
+  static const _PostCommentInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostCommentInsertDtoCopyWithSentinel();
+  PostCommentInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+  }) {
+    return PostCommentInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+    );
+  }
+}
+
+class _PostCommentInsertDtoCopyWithSentinel {
+  const _PostCommentInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [PostComment].
@@ -938,6 +1086,26 @@ class PostCommentUpdateDto implements UpdateDto<$PostComment> {
       if (body != null) 'body': body,
     };
   }
+
+  static const _PostCommentUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostCommentUpdateDtoCopyWithSentinel();
+  PostCommentUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+  }) {
+    return PostCommentUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+    );
+  }
+}
+
+class _PostCommentUpdateDtoCopyWithSentinel {
+  const _PostCommentUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [PostComment].
@@ -988,6 +1156,26 @@ class PostCommentPartial implements PartialEntity<$PostComment> {
       if (body != null) 'body': body,
     };
   }
+
+  static const _PostCommentPartialCopyWithSentinel _copyWithSentinel =
+      _PostCommentPartialCopyWithSentinel();
+  PostCommentPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+  }) {
+    return PostCommentPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+    );
+  }
+}
+
+class _PostCommentPartialCopyWithSentinel {
+  const _PostCommentPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [PostComment].
@@ -998,14 +1186,13 @@ class PostCommentPartial implements PartialEntity<$PostComment> {
 ///
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
-class $PostComment extends PostComment with ModelAttributes implements OrmEntity {
+class $PostComment extends PostComment
+    with ModelAttributes
+    implements OrmEntity {
+  /// Internal constructor for [$PostComment].
   $PostComment({required int id, required int postId, required String body})
     : super.new(id: id, postId: postId, body: body) {
-    _attachOrmRuntimeMetadata({
-      'id': id,
-      'post_id': postId,
-      'body': body,
-    });
+    _attachOrmRuntimeMetadata({'id': id, 'post_id': postId, 'body': body});
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
@@ -1021,19 +1208,25 @@ class $PostComment extends PostComment with ModelAttributes implements OrmEntity
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [postId].
   @override
   int get postId => getAttribute<int>('post_id') ?? super.postId;
 
+  /// Tracked setter for [postId].
   set postId(int value) => setAttribute('post_id', value);
 
+  /// Tracked getter for [body].
   @override
   String get body => getAttribute<String>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String value) => setAttribute('body', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

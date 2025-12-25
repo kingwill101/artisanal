@@ -217,6 +217,28 @@ class LogInsertDto implements InsertDto<$Log> {
       if (timestamp != null) 'timestamp': timestamp,
     };
   }
+
+  static const _LogInsertDtoCopyWithSentinel _copyWithSentinel =
+      _LogInsertDtoCopyWithSentinel();
+  LogInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? message = _copyWithSentinel,
+    Object? timestamp = _copyWithSentinel,
+  }) {
+    return LogInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      message: identical(message, _copyWithSentinel)
+          ? this.message
+          : message as String?,
+      timestamp: identical(timestamp, _copyWithSentinel)
+          ? this.timestamp
+          : timestamp as DateTime?,
+    );
+  }
+}
+
+class _LogInsertDtoCopyWithSentinel {
+  const _LogInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Log].
@@ -236,6 +258,28 @@ class LogUpdateDto implements UpdateDto<$Log> {
       if (timestamp != null) 'timestamp': timestamp,
     };
   }
+
+  static const _LogUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _LogUpdateDtoCopyWithSentinel();
+  LogUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? message = _copyWithSentinel,
+    Object? timestamp = _copyWithSentinel,
+  }) {
+    return LogUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      message: identical(message, _copyWithSentinel)
+          ? this.message
+          : message as String?,
+      timestamp: identical(timestamp, _copyWithSentinel)
+          ? this.timestamp
+          : timestamp as DateTime?,
+    );
+  }
+}
+
+class _LogUpdateDtoCopyWithSentinel {
+  const _LogUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Log].
@@ -282,6 +326,28 @@ class LogPartial implements PartialEntity<$Log> {
       if (timestamp != null) 'timestamp': timestamp,
     };
   }
+
+  static const _LogPartialCopyWithSentinel _copyWithSentinel =
+      _LogPartialCopyWithSentinel();
+  LogPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? message = _copyWithSentinel,
+    Object? timestamp = _copyWithSentinel,
+  }) {
+    return LogPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      message: identical(message, _copyWithSentinel)
+          ? this.message
+          : message as String?,
+      timestamp: identical(timestamp, _copyWithSentinel)
+          ? this.timestamp
+          : timestamp as DateTime?,
+    );
+  }
+}
+
+class _LogPartialCopyWithSentinel {
+  const _LogPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Log].
@@ -293,6 +359,7 @@ class LogPartial implements PartialEntity<$Log> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Log extends Log with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Log].
   $Log({required int id, required String message, DateTime? timestamp})
     : super.new(id: id, message: message, timestamp: timestamp) {
     _attachOrmRuntimeMetadata({
@@ -319,20 +386,26 @@ class $Log extends Log with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [message].
   @override
   String get message => getAttribute<String>('message') ?? super.message;
 
+  /// Tracked setter for [message].
   set message(String value) => setAttribute('message', value);
 
+  /// Tracked getter for [timestamp].
   @override
   DateTime? get timestamp =>
       getAttribute<DateTime?>('timestamp') ?? super.timestamp;
 
+  /// Tracked setter for [timestamp].
   set timestamp(DateTime? value) => setAttribute('timestamp', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

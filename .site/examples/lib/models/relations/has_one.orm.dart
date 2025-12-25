@@ -227,6 +227,24 @@ class UserWithProfileInsertDto implements InsertDto<$UserWithProfile> {
       if (profile != null) 'profile': profile,
     };
   }
+
+  static const _UserWithProfileInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserWithProfileInsertDtoCopyWithSentinel();
+  UserWithProfileInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return UserWithProfileInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Profile?,
+    );
+  }
+}
+
+class _UserWithProfileInsertDtoCopyWithSentinel {
+  const _UserWithProfileInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [UserWithProfile].
@@ -244,6 +262,24 @@ class UserWithProfileUpdateDto implements UpdateDto<$UserWithProfile> {
       if (profile != null) 'profile': profile,
     };
   }
+
+  static const _UserWithProfileUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserWithProfileUpdateDtoCopyWithSentinel();
+  UserWithProfileUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return UserWithProfileUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Profile?,
+    );
+  }
+}
+
+class _UserWithProfileUpdateDtoCopyWithSentinel {
+  const _UserWithProfileUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [UserWithProfile].
@@ -280,6 +316,24 @@ class UserWithProfilePartial implements PartialEntity<$UserWithProfile> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (profile != null) 'profile': profile};
   }
+
+  static const _UserWithProfilePartialCopyWithSentinel _copyWithSentinel =
+      _UserWithProfilePartialCopyWithSentinel();
+  UserWithProfilePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return UserWithProfilePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Profile?,
+    );
+  }
+}
+
+class _UserWithProfilePartialCopyWithSentinel {
+  const _UserWithProfilePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [UserWithProfile].
@@ -293,6 +347,7 @@ class UserWithProfilePartial implements PartialEntity<$UserWithProfile> {
 class $UserWithProfile extends UserWithProfile
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$UserWithProfile].
   $UserWithProfile({required int id, Profile? profile})
     : super.new(id: id, profile: profile) {
     _attachOrmRuntimeMetadata({'id': id, 'profile': profile});
@@ -310,14 +365,18 @@ class $UserWithProfile extends UserWithProfile
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [profile].
   @override
   Profile? get profile => getAttribute<Profile?>('profile') ?? super.profile;
 
+  /// Tracked setter for [profile].
   set profile(Profile? value) => setAttribute('profile', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -372,7 +431,7 @@ const FieldDefinition _$ProfileIdField = FieldDefinition(
 
 const FieldDefinition _$ProfileUserIdField = FieldDefinition(
   name: 'userId',
-  columnName: 'userId',
+  columnName: 'user_id',
   dartType: 'int',
   resolvedType: 'int',
   isPrimaryKey: false,
@@ -401,7 +460,7 @@ Map<String, Object?> _encodeProfileUntracked(
   final m = model as Profile;
   return <String, Object?>{
     'id': registry.encodeField(_$ProfileIdField, m.id),
-    'userId': registry.encodeField(_$ProfileUserIdField, m.userId),
+    'user_id': registry.encodeField(_$ProfileUserIdField, m.userId),
     'bio': registry.encodeField(_$ProfileBioField, m.bio),
   };
 }
@@ -523,7 +582,7 @@ class _$ProfileCodec extends ModelCodec<$Profile> {
   Map<String, Object?> encode($Profile model, ValueCodecRegistry registry) {
     return <String, Object?>{
       'id': registry.encodeField(_$ProfileIdField, model.id),
-      'userId': registry.encodeField(_$ProfileUserIdField, model.userId),
+      'user_id': registry.encodeField(_$ProfileUserIdField, model.userId),
       'bio': registry.encodeField(_$ProfileBioField, model.bio),
     };
   }
@@ -534,7 +593,7 @@ class _$ProfileCodec extends ModelCodec<$Profile> {
         registry.decodeField<int>(_$ProfileIdField, data['id']) ??
         (throw StateError('Field id on Profile cannot be null.'));
     final int profileUserIdValue =
-        registry.decodeField<int>(_$ProfileUserIdField, data['userId']) ??
+        registry.decodeField<int>(_$ProfileUserIdField, data['user_id']) ??
         (throw StateError('Field userId on Profile cannot be null.'));
     final String profileBioValue =
         registry.decodeField<String>(_$ProfileBioField, data['bio']) ??
@@ -546,7 +605,7 @@ class _$ProfileCodec extends ModelCodec<$Profile> {
     );
     model._attachOrmRuntimeMetadata({
       'id': profileIdValue,
-      'userId': profileUserIdValue,
+      'user_id': profileUserIdValue,
       'bio': profileBioValue,
     });
     return model;
@@ -566,10 +625,30 @@ class ProfileInsertDto implements InsertDto<$Profile> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
-      if (userId != null) 'userId': userId,
+      if (userId != null) 'user_id': userId,
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _ProfileInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ProfileInsertDtoCopyWithSentinel();
+  ProfileInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return ProfileInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _ProfileInsertDtoCopyWithSentinel {
+  const _ProfileInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Profile].
@@ -585,10 +664,30 @@ class ProfileUpdateDto implements UpdateDto<$Profile> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
-      if (userId != null) 'userId': userId,
+      if (userId != null) 'user_id': userId,
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _ProfileUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ProfileUpdateDtoCopyWithSentinel();
+  ProfileUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return ProfileUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _ProfileUpdateDtoCopyWithSentinel {
+  const _ProfileUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Profile].
@@ -604,7 +703,7 @@ class ProfilePartial implements PartialEntity<$Profile> {
   factory ProfilePartial.fromRow(Map<String, Object?> row) {
     return ProfilePartial(
       id: row['id'] as int?,
-      userId: row['userId'] as int?,
+      userId: row['user_id'] as int?,
       bio: row['bio'] as String?,
     );
   }
@@ -635,10 +734,30 @@ class ProfilePartial implements PartialEntity<$Profile> {
   Map<String, Object?> toMap() {
     return {
       if (id != null) 'id': id,
-      if (userId != null) 'userId': userId,
+      if (userId != null) 'user_id': userId,
       if (bio != null) 'bio': bio,
     };
   }
+
+  static const _ProfilePartialCopyWithSentinel _copyWithSentinel =
+      _ProfilePartialCopyWithSentinel();
+  ProfilePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return ProfilePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String?,
+    );
+  }
+}
+
+class _ProfilePartialCopyWithSentinel {
+  const _ProfilePartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Profile].
@@ -650,9 +769,10 @@ class ProfilePartial implements PartialEntity<$Profile> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Profile extends Profile with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Profile].
   $Profile({required int id, required int userId, required String bio})
     : super.new(id: id, userId: userId, bio: bio) {
-    _attachOrmRuntimeMetadata({'id': id, 'userId': userId, 'bio': bio});
+    _attachOrmRuntimeMetadata({'id': id, 'user_id': userId, 'bio': bio});
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
@@ -668,19 +788,25 @@ class $Profile extends Profile with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [userId].
   @override
-  int get userId => getAttribute<int>('userId') ?? super.userId;
+  int get userId => getAttribute<int>('user_id') ?? super.userId;
 
-  set userId(int value) => setAttribute('userId', value);
+  /// Tracked setter for [userId].
+  set userId(int value) => setAttribute('user_id', value);
 
+  /// Tracked getter for [bio].
   @override
   String get bio => getAttribute<String>('bio') ?? super.bio;
 
+  /// Tracked setter for [bio].
   set bio(String value) => setAttribute('bio', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

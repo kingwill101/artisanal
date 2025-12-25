@@ -240,6 +240,20 @@ class SoftDeletePostInsertDto implements InsertDto<$SoftDeletePost> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _SoftDeletePostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SoftDeletePostInsertDtoCopyWithSentinel();
+  SoftDeletePostInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return SoftDeletePostInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeletePostInsertDtoCopyWithSentinel {
+  const _SoftDeletePostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [SoftDeletePost].
@@ -257,6 +271,24 @@ class SoftDeletePostUpdateDto implements UpdateDto<$SoftDeletePost> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _SoftDeletePostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SoftDeletePostUpdateDtoCopyWithSentinel();
+  SoftDeletePostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeletePostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeletePostUpdateDtoCopyWithSentinel {
+  const _SoftDeletePostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [SoftDeletePost].
@@ -297,6 +329,24 @@ class SoftDeletePostPartial implements PartialEntity<$SoftDeletePost> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _SoftDeletePostPartialCopyWithSentinel _copyWithSentinel =
+      _SoftDeletePostPartialCopyWithSentinel();
+  SoftDeletePostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeletePostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeletePostPartialCopyWithSentinel {
+  const _SoftDeletePostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [SoftDeletePost].
@@ -310,6 +360,7 @@ class SoftDeletePostPartial implements PartialEntity<$SoftDeletePost> {
 class $SoftDeletePost extends SoftDeletePost
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$SoftDeletePost].
   $SoftDeletePost({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -324,14 +375,18 @@ class $SoftDeletePost extends SoftDeletePost
     return $SoftDeletePost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -604,6 +659,20 @@ class SoftDeleteArticleTzInsertDto implements InsertDto<$SoftDeleteArticleTz> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _SoftDeleteArticleTzInsertDtoCopyWithSentinel _copyWithSentinel =
+      _SoftDeleteArticleTzInsertDtoCopyWithSentinel();
+  SoftDeleteArticleTzInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return SoftDeleteArticleTzInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeleteArticleTzInsertDtoCopyWithSentinel {
+  const _SoftDeleteArticleTzInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [SoftDeleteArticleTz].
@@ -621,6 +690,24 @@ class SoftDeleteArticleTzUpdateDto implements UpdateDto<$SoftDeleteArticleTz> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _SoftDeleteArticleTzUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _SoftDeleteArticleTzUpdateDtoCopyWithSentinel();
+  SoftDeleteArticleTzUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeleteArticleTzUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeleteArticleTzUpdateDtoCopyWithSentinel {
+  const _SoftDeleteArticleTzUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [SoftDeleteArticleTz].
@@ -662,6 +749,24 @@ class SoftDeleteArticleTzPartial
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _SoftDeleteArticleTzPartialCopyWithSentinel _copyWithSentinel =
+      _SoftDeleteArticleTzPartialCopyWithSentinel();
+  SoftDeleteArticleTzPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeleteArticleTzPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _SoftDeleteArticleTzPartialCopyWithSentinel {
+  const _SoftDeleteArticleTzPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [SoftDeleteArticleTz].
@@ -675,6 +780,7 @@ class SoftDeleteArticleTzPartial
 class $SoftDeleteArticleTz extends SoftDeleteArticleTz
     with ModelAttributes, SoftDeletesTZImpl
     implements OrmEntity {
+  /// Internal constructor for [$SoftDeleteArticleTz].
   $SoftDeleteArticleTz({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -689,14 +795,18 @@ class $SoftDeleteArticleTz extends SoftDeleteArticleTz
     return $SoftDeleteArticleTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

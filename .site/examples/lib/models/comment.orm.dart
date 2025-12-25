@@ -33,7 +33,7 @@ const FieldDefinition _$CommentBodyField = FieldDefinition(
 
 const FieldDefinition _$CommentPostIdField = FieldDefinition(
   name: 'postId',
-  columnName: 'postId',
+  columnName: 'post_id',
   dartType: 'int',
   resolvedType: 'int?',
   isPrimaryKey: false,
@@ -51,7 +51,7 @@ Map<String, Object?> _encodeCommentUntracked(
   return <String, Object?>{
     'id': registry.encodeField(_$CommentIdField, m.id),
     'body': registry.encodeField(_$CommentBodyField, m.body),
-    'postId': registry.encodeField(_$CommentPostIdField, m.postId),
+    'post_id': registry.encodeField(_$CommentPostIdField, m.postId),
   };
 }
 
@@ -173,7 +173,7 @@ class _$CommentCodec extends ModelCodec<$Comment> {
     return <String, Object?>{
       'id': registry.encodeField(_$CommentIdField, model.id),
       'body': registry.encodeField(_$CommentBodyField, model.body),
-      'postId': registry.encodeField(_$CommentPostIdField, model.postId),
+      'post_id': registry.encodeField(_$CommentPostIdField, model.postId),
     };
   }
 
@@ -186,7 +186,7 @@ class _$CommentCodec extends ModelCodec<$Comment> {
         (throw StateError('Field body on Comment cannot be null.'));
     final int? commentPostIdValue = registry.decodeField<int?>(
       _$CommentPostIdField,
-      data['postId'],
+      data['post_id'],
     );
     final model = $Comment(
       id: commentIdValue,
@@ -196,7 +196,7 @@ class _$CommentCodec extends ModelCodec<$Comment> {
     model._attachOrmRuntimeMetadata({
       'id': commentIdValue,
       'body': commentBodyValue,
-      'postId': commentPostIdValue,
+      'post_id': commentPostIdValue,
     });
     return model;
   }
@@ -214,9 +214,27 @@ class CommentInsertDto implements InsertDto<$Comment> {
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (body != null) 'body': body,
-      if (postId != null) 'postId': postId,
+      if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CommentInsertDtoCopyWithSentinel();
+  CommentInsertDto copyWith({
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentInsertDto(
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentInsertDtoCopyWithSentinel {
+  const _CommentInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Comment].
@@ -233,9 +251,29 @@ class CommentUpdateDto implements UpdateDto<$Comment> {
     return <String, Object?>{
       if (id != null) 'id': id,
       if (body != null) 'body': body,
-      if (postId != null) 'postId': postId,
+      if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CommentUpdateDtoCopyWithSentinel();
+  CommentUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentUpdateDtoCopyWithSentinel {
+  const _CommentUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Comment].
@@ -252,7 +290,7 @@ class CommentPartial implements PartialEntity<$Comment> {
     return CommentPartial(
       id: row['id'] as int?,
       body: row['body'] as String?,
-      postId: row['postId'] as int?,
+      postId: row['post_id'] as int?,
     );
   }
 
@@ -279,9 +317,29 @@ class CommentPartial implements PartialEntity<$Comment> {
     return {
       if (id != null) 'id': id,
       if (body != null) 'body': body,
-      if (postId != null) 'postId': postId,
+      if (postId != null) 'post_id': postId,
     };
   }
+
+  static const _CommentPartialCopyWithSentinel _copyWithSentinel =
+      _CommentPartialCopyWithSentinel();
+  CommentPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+  }) {
+    return CommentPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+    );
+  }
+}
+
+class _CommentPartialCopyWithSentinel {
+  const _CommentPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Comment].
@@ -293,9 +351,10 @@ class CommentPartial implements PartialEntity<$Comment> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Comment extends Comment with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Comment].
   $Comment({int id = 0, required String body, int? postId})
     : super.new(id: id, body: body, postId: postId) {
-    _attachOrmRuntimeMetadata({'id': id, 'body': body, 'postId': postId});
+    _attachOrmRuntimeMetadata({'id': id, 'body': body, 'post_id': postId});
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
@@ -311,20 +370,26 @@ class $Comment extends Comment with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [body].
   @override
   String get body => getAttribute<String>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String value) => setAttribute('body', value);
 
+  /// Tracked getter for [postId].
   @override
-  int? get postId => getAttribute<int?>('postId') ?? super.postId;
+  int? get postId => getAttribute<int?>('post_id') ?? super.postId;
 
-  set postId(int? value) => setAttribute('postId', value);
+  /// Tracked setter for [postId].
+  set postId(int? value) => setAttribute('post_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);

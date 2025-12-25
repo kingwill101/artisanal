@@ -45,7 +45,7 @@ const FieldDefinition _$AdminPasswordField = FieldDefinition(
 
 const FieldDefinition _$AdminCreatedAtField = FieldDefinition(
   name: 'createdAt',
-  columnName: 'createdAt',
+  columnName: 'created_at',
   dartType: 'DateTime',
   resolvedType: 'DateTime?',
   isPrimaryKey: false,
@@ -65,7 +65,7 @@ Map<String, Object?> _encodeAdminUntracked(
     'id': registry.encodeField(_$AdminIdField, m.id),
     'email': registry.encodeField(_$AdminEmailField, m.email),
     'password': registry.encodeField(_$AdminPasswordField, m.password),
-    'createdAt': registry.encodeField(_$AdminCreatedAtField, m.createdAt),
+    'created_at': registry.encodeField(_$AdminCreatedAtField, m.createdAt),
   };
 }
 
@@ -193,7 +193,10 @@ class _$AdminCodec extends ModelCodec<$Admin> {
       'id': registry.encodeField(_$AdminIdField, model.id),
       'email': registry.encodeField(_$AdminEmailField, model.email),
       'password': registry.encodeField(_$AdminPasswordField, model.password),
-      'createdAt': registry.encodeField(_$AdminCreatedAtField, model.createdAt),
+      'created_at': registry.encodeField(
+        _$AdminCreatedAtField,
+        model.createdAt,
+      ),
     };
   }
 
@@ -210,7 +213,7 @@ class _$AdminCodec extends ModelCodec<$Admin> {
     );
     final DateTime? adminCreatedAtValue = registry.decodeField<DateTime?>(
       _$AdminCreatedAtField,
-      data['createdAt'],
+      data['created_at'],
     );
     final model = $Admin(
       id: adminIdValue,
@@ -222,7 +225,7 @@ class _$AdminCodec extends ModelCodec<$Admin> {
       'id': adminIdValue,
       'email': adminEmailValue,
       'password': adminPasswordValue,
-      'createdAt': adminCreatedAtValue,
+      'created_at': adminCreatedAtValue,
     });
     return model;
   }
@@ -242,9 +245,33 @@ class AdminInsertDto implements InsertDto<$Admin> {
     return <String, Object?>{
       if (email != null) 'email': email,
       if (password != null) 'password': password,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _AdminInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AdminInsertDtoCopyWithSentinel();
+  AdminInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? password = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return AdminInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      password: identical(password, _copyWithSentinel)
+          ? this.password
+          : password as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _AdminInsertDtoCopyWithSentinel {
+  const _AdminInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Admin].
@@ -263,9 +290,35 @@ class AdminUpdateDto implements UpdateDto<$Admin> {
       if (id != null) 'id': id,
       if (email != null) 'email': email,
       if (password != null) 'password': password,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _AdminUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AdminUpdateDtoCopyWithSentinel();
+  AdminUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? password = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return AdminUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      password: identical(password, _copyWithSentinel)
+          ? this.password
+          : password as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _AdminUpdateDtoCopyWithSentinel {
+  const _AdminUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Admin].
@@ -283,7 +336,7 @@ class AdminPartial implements PartialEntity<$Admin> {
       id: row['id'] as int?,
       email: row['email'] as String?,
       password: row['password'] as String?,
-      createdAt: row['createdAt'] as DateTime?,
+      createdAt: row['created_at'] as DateTime?,
     );
   }
 
@@ -317,9 +370,35 @@ class AdminPartial implements PartialEntity<$Admin> {
       if (id != null) 'id': id,
       if (email != null) 'email': email,
       if (password != null) 'password': password,
-      if (createdAt != null) 'createdAt': createdAt,
+      if (createdAt != null) 'created_at': createdAt,
     };
   }
+
+  static const _AdminPartialCopyWithSentinel _copyWithSentinel =
+      _AdminPartialCopyWithSentinel();
+  AdminPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? password = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return AdminPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      password: identical(password, _copyWithSentinel)
+          ? this.password
+          : password as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+}
+
+class _AdminPartialCopyWithSentinel {
+  const _AdminPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Admin].
@@ -331,6 +410,7 @@ class AdminPartial implements PartialEntity<$Admin> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Admin extends Admin with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Admin].
   $Admin({
     int id = 0,
     required String email,
@@ -346,7 +426,7 @@ class $Admin extends Admin with ModelAttributes implements OrmEntity {
       'id': id,
       'email': email,
       'password': password,
-      'createdAt': createdAt,
+      'created_at': createdAt,
     });
   }
 
@@ -374,26 +454,34 @@ class $Admin extends Admin with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [password].
   @override
   String? get password => getAttribute<String?>('password') ?? super.password;
 
+  /// Tracked setter for [password].
   set password(String? value) => setAttribute('password', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
-      getAttribute<DateTime?>('createdAt') ?? super.createdAt;
+      getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
-  set createdAt(DateTime? value) => setAttribute('createdAt', value);
+  /// Tracked setter for [createdAt].
+  set createdAt(DateTime? value) => setAttribute('created_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);

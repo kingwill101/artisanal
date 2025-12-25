@@ -200,6 +200,20 @@ class DocumentInsertDto implements InsertDto<$Document> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (metadata != null) 'metadata': metadata};
   }
+
+  static const _DocumentInsertDtoCopyWithSentinel _copyWithSentinel =
+      _DocumentInsertDtoCopyWithSentinel();
+  DocumentInsertDto copyWith({Object? metadata = _copyWithSentinel}) {
+    return DocumentInsertDto(
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DocumentInsertDtoCopyWithSentinel {
+  const _DocumentInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Document].
@@ -217,6 +231,24 @@ class DocumentUpdateDto implements UpdateDto<$Document> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _DocumentUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _DocumentUpdateDtoCopyWithSentinel();
+  DocumentUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return DocumentUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DocumentUpdateDtoCopyWithSentinel {
+  const _DocumentUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Document].
@@ -256,6 +288,24 @@ class DocumentPartial implements PartialEntity<$Document> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _DocumentPartialCopyWithSentinel _copyWithSentinel =
+      _DocumentPartialCopyWithSentinel();
+  DocumentPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return DocumentPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _DocumentPartialCopyWithSentinel {
+  const _DocumentPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Document].
@@ -267,6 +317,7 @@ class DocumentPartial implements PartialEntity<$Document> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Document extends Document with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Document].
   $Document({int id = 0, Map<String, Object?>? metadata})
     : super.new(id: id, metadata: metadata) {
     _attachOrmRuntimeMetadata({'id': id, 'metadata': metadata});
@@ -281,15 +332,19 @@ class $Document extends Document with ModelAttributes implements OrmEntity {
     return $Document(id: id ?? this.id, metadata: metadata ?? this.metadata);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [metadata].
   @override
   Map<String, Object?>? get metadata =>
       getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
+  /// Tracked setter for [metadata].
   set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

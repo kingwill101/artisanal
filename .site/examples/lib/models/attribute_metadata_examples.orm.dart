@@ -280,6 +280,32 @@ class AccountInsertDto implements InsertDto<$Account> {
       if (isAdmin != null) 'is_admin': isAdmin,
     };
   }
+
+  static const _AccountInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AccountInsertDtoCopyWithSentinel();
+  AccountInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? passwordHash = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? isAdmin = _copyWithSentinel,
+  }) {
+    return AccountInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      passwordHash: identical(passwordHash, _copyWithSentinel)
+          ? this.passwordHash
+          : passwordHash as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      isAdmin: identical(isAdmin, _copyWithSentinel)
+          ? this.isAdmin
+          : isAdmin as bool?,
+    );
+  }
+}
+
+class _AccountInsertDtoCopyWithSentinel {
+  const _AccountInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Account].
@@ -309,6 +335,34 @@ class AccountUpdateDto implements UpdateDto<$Account> {
       if (isAdmin != null) 'is_admin': isAdmin,
     };
   }
+
+  static const _AccountUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AccountUpdateDtoCopyWithSentinel();
+  AccountUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? passwordHash = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? isAdmin = _copyWithSentinel,
+  }) {
+    return AccountUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      passwordHash: identical(passwordHash, _copyWithSentinel)
+          ? this.passwordHash
+          : passwordHash as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      isAdmin: identical(isAdmin, _copyWithSentinel)
+          ? this.isAdmin
+          : isAdmin as bool?,
+    );
+  }
+}
+
+class _AccountUpdateDtoCopyWithSentinel {
+  const _AccountUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Account].
@@ -381,6 +435,34 @@ class AccountPartial implements PartialEntity<$Account> {
       if (isAdmin != null) 'is_admin': isAdmin,
     };
   }
+
+  static const _AccountPartialCopyWithSentinel _copyWithSentinel =
+      _AccountPartialCopyWithSentinel();
+  AccountPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? passwordHash = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? isAdmin = _copyWithSentinel,
+  }) {
+    return AccountPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      passwordHash: identical(passwordHash, _copyWithSentinel)
+          ? this.passwordHash
+          : passwordHash as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      isAdmin: identical(isAdmin, _copyWithSentinel)
+          ? this.isAdmin
+          : isAdmin as bool?,
+    );
+  }
+}
+
+class _AccountPartialCopyWithSentinel {
+  const _AccountPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Account].
@@ -392,6 +474,7 @@ class AccountPartial implements PartialEntity<$Account> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Account extends Account with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Account].
   $Account({
     int id = 0,
     required String email,
@@ -441,30 +524,40 @@ class $Account extends Account with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [passwordHash].
   @override
   String get passwordHash =>
       getAttribute<String>('password_hash') ?? super.passwordHash;
 
+  /// Tracked setter for [passwordHash].
   set passwordHash(String value) => setAttribute('password_hash', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
+  /// Tracked getter for [isAdmin].
   @override
   bool get isAdmin => getAttribute<bool>('is_admin') ?? super.isAdmin;
 
+  /// Tracked setter for [isAdmin].
   set isAdmin(bool value) => setAttribute('is_admin', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
