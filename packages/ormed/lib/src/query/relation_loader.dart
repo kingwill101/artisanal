@@ -48,6 +48,10 @@ class RelationLoader {
         case RelationKind.hasMany:
           await _loadHasMany(parentDefinition, parents, load, segment);
           break;
+        case RelationKind.hasOneThrough:
+        case RelationKind.hasManyThrough:
+          await _loadThrough(parentDefinition, parents, load, segment);
+          break;
         case RelationKind.morphOne:
           await _loadMorphMany(
             parentDefinition,
@@ -173,6 +177,116 @@ class RelationLoader {
       final key = childRow[foreignKey];
       if (key == null) continue;
       grouped.putIfAbsent(key, () => <dynamic>[]).add(model);
+    }
+
+    for (final row in parents) {
+      final key = row.row[parentKey];
+      final models = grouped[key] ?? const <dynamic>[];
+      if (singleResult) {
+        row.relations[relation.name] = models.isEmpty ? null : models.first;
+      } else {
+        row.relations[relation.name] = List.unmodifiable(models);
+      }
+    }
+  }
+
+  Future<void> _loadThrough<T extends OrmEntity>(
+    ModelDefinition<T> parentDefinition,
+    List<QueryRow<T>> parents,
+    RelationLoad load,
+    RelationSegment segment,
+  ) async {
+    final relation = load.relation;
+    final singleResult = segment.expectSingleResult;
+    final parentKey = segment.parentKey;
+    final targetDefinition = segment.targetDefinition;
+    final foreignKey = segment.childKey;
+    final throughDefinition = segment.throughDefinition;
+    final throughParentKey = segment.throughParentKey;
+    final throughChildKey = segment.throughChildKey;
+
+    if (throughDefinition == null ||
+        throughParentKey == null ||
+        throughChildKey == null) {
+      throw StateError(
+        'Relation ${relation.name} requires through relation metadata.',
+      );
+    }
+
+    final parentKeyValues = parents
+        .map((row) => row.row[parentKey])
+        .where((value) => value != null)
+        .toSet();
+    if (parentKeyValues.isEmpty) {
+      for (final row in parents) {
+        row.relations[relation.name] = singleResult ? null : const <dynamic>[];
+      }
+      return;
+    }
+
+    final throughPlan = QueryPlan(
+      definition: throughDefinition,
+      driverName: _driverName,
+      tablePrefix: _tablePrefix,
+      filters: [
+        FilterClause(
+          field: throughParentKey,
+          operator: FilterOperator.inValues,
+          value: parentKeyValues.toList(),
+        ),
+      ],
+      selects: [throughParentKey, throughChildKey],
+      disableAutoHydration: true,
+    );
+
+    final throughRows = await context.driver.execute(throughPlan);
+    final parentToThroughKeys = <Object?, List<Object?>>{};
+    final throughKeyToParents = <Object?, List<Object?>>{};
+
+    for (final row in throughRows) {
+      final parentId = row[throughParentKey];
+      final throughKey = row[throughChildKey];
+      if (parentId == null || throughKey == null) continue;
+      parentToThroughKeys
+          .putIfAbsent(parentId, () => <Object?>[])
+          .add(throughKey);
+      throughKeyToParents
+          .putIfAbsent(throughKey, () => <Object?>[])
+          .add(parentId);
+    }
+
+    if (throughKeyToParents.isEmpty) {
+      for (final row in parents) {
+        row.relations[relation.name] = singleResult ? null : const <dynamic>[];
+      }
+      return;
+    }
+
+    final targetPlan = QueryPlan(
+      definition: targetDefinition,
+      driverName: _driverName,
+      tablePrefix: _tablePrefix,
+      filters: [
+        FilterClause(
+          field: foreignKey,
+          operator: FilterOperator.inValues,
+          value: throughKeyToParents.keys.toList(),
+        ),
+      ],
+      predicate: load.predicate,
+    );
+    final targetRows = await context.driver.execute(targetPlan);
+    final grouped = <Object?, List<dynamic>>{};
+
+    for (final row in targetRows) {
+      final model = targetDefinition.fromMap(row, registry: _codecRegistry);
+      context.attachRuntimeMetadata(model);
+      final throughKey = row[foreignKey];
+      final parentIds = throughKeyToParents[throughKey];
+      if (parentIds == null) continue;
+      for (final parentId in parentIds) {
+        grouped.putIfAbsent(parentId, () => <dynamic>[]).add(model);
+      }
     }
 
     for (final row in parents) {
@@ -442,6 +556,38 @@ class RelationLoader {
           parentKey: parentKey,
           childKey: childKey,
           expectSingleResult: relation.kind == RelationKind.hasOne,
+        );
+      case RelationKind.hasOneThrough:
+      case RelationKind.hasManyThrough:
+        final throughName =
+            relation.throughModel ??
+            (throw StateError(
+              'Relation ${relation.name} requires a through model.',
+            ));
+        final throughDefinition = _registry.expectByName(throughName);
+        final throughParentKey =
+            relation.throughForeignKey ?? '${parent.tableName}_id';
+        final throughChildKey =
+            relation.throughLocalKey ??
+            throughDefinition.primaryKeyField?.columnName;
+        if (throughChildKey == null) {
+          throw StateError(
+            'Relation ${relation.name} requires a through key.',
+          );
+        }
+        final relatedForeignKey =
+            relation.foreignKey ?? '${throughDefinition.tableName}_id';
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parentDef,
+          targetDefinition: target,
+          parentKey: parentKey,
+          childKey: relatedForeignKey,
+          throughDefinition: throughDefinition,
+          throughParentKey: throughParentKey,
+          throughChildKey: throughChildKey,
+          expectSingleResult: relation.kind == RelationKind.hasOneThrough,
         );
       case RelationKind.belongsTo:
         final foreignKey = relation.foreignKey ?? '${relation.name}_id';

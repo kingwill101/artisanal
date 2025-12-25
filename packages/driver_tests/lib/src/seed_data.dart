@@ -45,7 +45,7 @@ const defaultPhotos = [
 ];
 
 final defaultComments = <Map<String, dynamic>>[
-  {'id': 1, 'body': 'Visible'},
+  {'id': 1, 'body': 'Visible', 'post_id': 1},
   {'id': 2, 'body': 'Hidden', 'deleted_at': DateTime.utc(2024, 4, 1)},
 ];
 

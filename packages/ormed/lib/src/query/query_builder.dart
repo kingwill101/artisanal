@@ -457,12 +457,16 @@ class Query<T extends OrmEntity> {
             final pivotAlias = segment.usesPivot
                 ? 'pivot_${aliasBase}_$i'
                 : null;
+            final throughAlias = segment.usesThrough
+                ? 'through_${aliasBase}_$i'
+                : null;
             edges.add(
               RelationJoinEdge(
                 segment: segment,
                 parentAlias: parentAlias,
                 alias: alias,
                 pivotAlias: pivotAlias,
+                throughAlias: throughAlias,
               ),
             );
             parentAlias = alias;
@@ -581,6 +585,48 @@ class Query<T extends OrmEntity> {
             ),
             alias: edge.alias,
             conditions: childConditions,
+          ),
+        );
+        continue;
+      }
+      if (segment.usesThrough) {
+        final throughAlias = edge.throughAlias;
+        if (throughAlias == null ||
+            segment.throughDefinition == null ||
+            segment.throughParentKey == null ||
+            segment.throughChildKey == null) {
+          continue;
+        }
+        definitions.add(
+          JoinDefinition(
+            type: joinType,
+            target: JoinTarget.table(
+              _qualifiedRelationTableName(segment.throughDefinition!),
+            ),
+            alias: throughAlias,
+            conditions: [
+              JoinCondition.column(
+                left: '$throughAlias.${segment.throughParentKey!}',
+                operator: '=',
+                right: '${edge.parentAlias}.${segment.parentKey}',
+              ),
+            ],
+          ),
+        );
+        definitions.add(
+          JoinDefinition(
+            type: joinType,
+            target: JoinTarget.table(
+              _qualifiedRelationTableName(segment.targetDefinition),
+            ),
+            alias: edge.alias,
+            conditions: [
+              JoinCondition.column(
+                left: '${edge.alias}.${segment.childKey}',
+                operator: '=',
+                right: '$throughAlias.${segment.throughChildKey!}',
+              ),
+            ],
           ),
         );
         continue;

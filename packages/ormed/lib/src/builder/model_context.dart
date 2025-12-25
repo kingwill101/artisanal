@@ -412,9 +412,13 @@ class ModelContext {
       }
 
       final targetType = annotation.peek('target')?.typeValue;
+      final throughType = annotation.peek('throughModel')?.typeValue;
       final targetModel = targetType != null && targetType is! DynamicType
           ? nonNullableTypeName(targetType)
           : _inferTargetModel(field.type);
+      final throughModel = throughType != null && throughType is! DynamicType
+          ? nonNullableTypeName(throughType)
+          : null;
 
       relations.add(
         RelationDescriptor(
@@ -426,6 +430,9 @@ class ModelContext {
           foreignKey: annotation.peek('foreignKey')?.stringValue,
           localKey: annotation.peek('localKey')?.stringValue,
           through: annotation.peek('through')?.stringValue,
+          throughModel: throughModel,
+          throughForeignKey: annotation.peek('throughForeignKey')?.stringValue,
+          throughLocalKey: annotation.peek('throughLocalKey')?.stringValue,
           pivotForeignKey: annotation.peek('pivotForeignKey')?.stringValue,
           pivotRelatedKey: annotation.peek('pivotRelatedKey')?.stringValue,
           morphType: annotation.peek('morphType')?.stringValue,

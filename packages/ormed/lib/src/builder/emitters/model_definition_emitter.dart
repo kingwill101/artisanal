@@ -220,6 +220,21 @@ class ModelDefinitionEmitter {
       if (relation.through != null) {
         buffer.writeln("  through: '${escape(relation.through!)}',");
       }
+      if (relation.throughModel != null) {
+        buffer.writeln(
+          "  throughModel: '${escape(relation.throughModel!)}',",
+        );
+      }
+      if (relation.throughForeignKey != null) {
+        buffer.writeln(
+          "  throughForeignKey: '${escape(relation.throughForeignKey!)}',",
+        );
+      }
+      if (relation.throughLocalKey != null) {
+        buffer.writeln(
+          "  throughLocalKey: '${escape(relation.throughLocalKey!)}',",
+        );
+      }
       if (relation.pivotForeignKey != null) {
         buffer.writeln(
           "  pivotForeignKey: '${escape(relation.pivotForeignKey!)}',",

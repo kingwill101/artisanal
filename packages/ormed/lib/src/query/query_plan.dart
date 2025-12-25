@@ -578,6 +578,9 @@ class RelationSegment {
     required this.parentKey,
     required this.childKey,
     this.foreignKeyOnParent = false,
+    this.throughDefinition,
+    this.throughParentKey,
+    this.throughChildKey,
     this.pivotTable,
     this.pivotParentKey,
     this.pivotRelatedKey,
@@ -593,12 +596,17 @@ class RelationSegment {
   final String parentKey;
   final String childKey;
   final bool foreignKeyOnParent;
+  final ModelDefinition<OrmEntity>? throughDefinition;
+  final String? throughParentKey;
+  final String? throughChildKey;
   final String? pivotTable;
   final String? pivotParentKey;
   final String? pivotRelatedKey;
   final String? morphTypeColumn;
   final String? morphClass;
   final bool expectSingleResult;
+
+  bool get usesThrough => throughDefinition != null;
 
   bool get usesPivot => pivotTable != null;
 
@@ -625,12 +633,14 @@ class RelationJoinEdge {
     required this.parentAlias,
     required this.alias,
     this.pivotAlias,
+    this.throughAlias,
   });
 
   final RelationSegment segment;
   final String parentAlias;
   final String alias;
   final String? pivotAlias;
+  final String? throughAlias;
 }
 
 class RelationPredicate extends QueryPredicate {

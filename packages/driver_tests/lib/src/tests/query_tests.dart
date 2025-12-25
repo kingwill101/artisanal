@@ -520,6 +520,20 @@ void runDriverQueryTests() {
           expect(ids, equals([1]));
         });
 
+        test('filters parents via hasManyThrough whereHas constraints', () async {
+          final ids = await dataSource.context
+              .query<Author>()
+              .whereHas(
+                'comments',
+                (comments) => comments.where('body', 'Visible'),
+              )
+              .orderBy('id')
+              .get()
+              .then((authors) => authors.map((a) => a.id).toList());
+
+          expect(ids, equals([1]));
+        });
+
         test('supports withCount and exposes alias in rows', () async {
           final rows = await dataSource.context
               .query<Author>()
@@ -541,6 +555,17 @@ void runDriverQueryTests() {
           expect(rows[0].row['userProfile_count'], 1);
           expect(rows[1].row['userProfile_count'], 1);
           expect(rows[2].row['userProfile_count'], 0);
+        });
+
+        test('supports withCount for hasManyThrough relations', () async {
+          final rows = await dataSource.context
+              .query<Author>()
+              .withCount('comments')
+              .orderBy('id')
+              .rows();
+
+          expect(rows[0].row['comments_count'], 1);
+          expect(rows[1].row['comments_count'], 0);
         });
 
         test('supports nested withCount over morph relations', () async {
@@ -591,6 +616,17 @@ void runDriverQueryTests() {
               .then((authors) => authors.map((a) => a.id).toList());
 
           expect(ids, equals([1]));
+        });
+
+        test('eager loads hasManyThrough relations', () async {
+          final authors = await dataSource.context
+              .query<Author>()
+              .withRelation('comments')
+              .orderBy('id')
+              .get();
+
+          expect(authors.first.comments, hasLength(1));
+          expect(authors.last.comments, isEmpty);
         });
 
         test('orders by relation aggregate', () async {

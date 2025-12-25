@@ -79,6 +79,9 @@ class RelationDescriptor {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
     this.morphType,
@@ -93,6 +96,9 @@ class RelationDescriptor {
   final String? foreignKey;
   final String? localKey;
   final String? through;
+  final String? throughModel;
+  final String? throughForeignKey;
+  final String? throughLocalKey;
   final String? pivotForeignKey;
   final String? pivotRelatedKey;
   final String? morphType;
@@ -103,6 +109,7 @@ class RelationDescriptor {
   /// Whether this is a list relation (hasMany, manyToMany, morphMany)
   bool get isList =>
       kind == RelationKind.hasMany ||
+      kind == RelationKind.hasManyThrough ||
       kind == RelationKind.manyToMany ||
       kind == RelationKind.morphMany;
 

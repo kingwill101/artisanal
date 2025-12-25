@@ -412,6 +412,9 @@ class RelationDefinition {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
     this.morphType,
@@ -435,6 +438,15 @@ class RelationDefinition {
 
   /// Through model for has-many-through relations.
   final String? through;
+
+  /// Intermediate model for through relations.
+  final String? throughModel;
+
+  /// Foreign key on the through model pointing back to the parent.
+  final String? throughForeignKey;
+
+  /// Key on the through model referenced by the related model's foreign key.
+  final String? throughLocalKey;
 
   /// Foreign key on the pivot table for many-to-many relations.
   final String? pivotForeignKey;

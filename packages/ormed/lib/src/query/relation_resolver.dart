@@ -153,6 +153,39 @@ class RelationResolver {
           expectSingleResult: relation.kind == RelationKind.hasOne,
         );
 
+      case RelationKind.hasOneThrough:
+      case RelationKind.hasManyThrough:
+        final throughName =
+            relation.throughModel ??
+            (throw StateError(
+              'Relation ${relation.name} requires a through model.',
+            ));
+        final throughDefinition = context.registry.expectByName(throughName);
+        final throughParentKey =
+            relation.throughForeignKey ?? '${parent.tableName}_id';
+        final throughChildKey =
+            relation.throughLocalKey ??
+            throughDefinition.primaryKeyField?.columnName;
+        if (throughChildKey == null) {
+          throw StateError(
+            'Relation ${relation.name} requires a through key.',
+          );
+        }
+        final relatedForeignKey =
+            relation.foreignKey ?? '${throughDefinition.tableName}_id';
+        return RelationSegment(
+          name: relation.name,
+          relation: relation,
+          parentDefinition: parent,
+          targetDefinition: target,
+          parentKey: parentKey,
+          childKey: relatedForeignKey,
+          throughDefinition: throughDefinition,
+          throughParentKey: throughParentKey,
+          throughChildKey: throughChildKey,
+          expectSingleResult: relation.kind == RelationKind.hasOneThrough,
+        );
+
       case RelationKind.belongsTo:
         final foreignKey = relation.foreignKey ?? '${relation.name}_id';
         final ownerKey =

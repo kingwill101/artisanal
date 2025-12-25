@@ -286,6 +286,9 @@ class OrmRelation {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
     this.morphType,
@@ -311,6 +314,54 @@ class OrmRelation {
          target: target,
          foreignKey: foreignKey,
          localKey: localKey,
+       );
+
+  /// Creates a `hasOneThrough` relation.
+  ///
+  /// [throughModel] is the intermediate model class.
+  /// [foreignKey] is the related model's foreign key referencing [throughModel].
+  /// [throughForeignKey] is the intermediate model's foreign key referencing
+  /// the parent model.
+  /// [throughLocalKey] is the intermediate model key referenced by [foreignKey].
+  const OrmRelation.hasOneThrough({
+    Type? target,
+    Type? throughModel,
+    String? foreignKey,
+    String? localKey,
+    String? throughForeignKey,
+    String? throughLocalKey,
+  }) : this(
+         kind: RelationKind.hasOneThrough,
+         target: target,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         throughModel: throughModel,
+         throughForeignKey: throughForeignKey,
+         throughLocalKey: throughLocalKey,
+       );
+
+  /// Creates a `hasManyThrough` relation.
+  ///
+  /// [throughModel] is the intermediate model class.
+  /// [foreignKey] is the related model's foreign key referencing [throughModel].
+  /// [throughForeignKey] is the intermediate model's foreign key referencing
+  /// the parent model.
+  /// [throughLocalKey] is the intermediate model key referenced by [foreignKey].
+  const OrmRelation.hasManyThrough({
+    Type? target,
+    Type? throughModel,
+    String? foreignKey,
+    String? localKey,
+    String? throughForeignKey,
+    String? throughLocalKey,
+  }) : this(
+         kind: RelationKind.hasManyThrough,
+         target: target,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         throughModel: throughModel,
+         throughForeignKey: throughForeignKey,
+         throughLocalKey: throughLocalKey,
        );
 
   /// Creates a `belongsTo` relation.
@@ -393,6 +444,15 @@ class OrmRelation {
   /// The join/pivot table for many-to-many relations.
   final String? through;
 
+  /// The intermediate model class for through relations.
+  final Type? throughModel;
+
+  /// Foreign key on the through model pointing back to the parent.
+  final String? throughForeignKey;
+
+  /// Key on the through model referenced by the related model's foreign key.
+  final String? throughLocalKey;
+
   /// The owner key column name on the pivot table.
   final String? pivotForeignKey;
 
@@ -437,6 +497,12 @@ enum RelationKind {
 
   /// One-to-many relation where the related model holds the foreign key.
   hasMany,
+
+  /// One-to-one relation through an intermediate model.
+  hasOneThrough,
+
+  /// One-to-many relation through an intermediate model.
+  hasManyThrough,
 
   /// Inverse relation where this model holds the foreign key.
   belongsTo,

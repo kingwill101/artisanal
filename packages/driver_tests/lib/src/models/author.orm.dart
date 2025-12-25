@@ -75,6 +75,16 @@ const RelationDefinition _$AuthorPostsRelation = RelationDefinition(
   localKey: 'id',
 );
 
+const RelationDefinition _$AuthorCommentsRelation = RelationDefinition(
+  name: 'comments',
+  kind: RelationKind.hasManyThrough,
+  targetModel: 'Comment',
+  foreignKey: 'post_id',
+  localKey: 'id',
+  throughModel: 'Post',
+  throughForeignKey: 'author_id',
+);
+
 Map<String, Object?> _encodeAuthorUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -97,7 +107,7 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     _$AuthorCreatedAtField,
     _$AuthorUpdatedAtField,
   ],
-  relations: const [_$AuthorPostsRelation],
+  relations: const [_$AuthorPostsRelation, _$AuthorCommentsRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
     hidden: const <String>[],
@@ -460,6 +470,14 @@ class $Author extends Author
       return getRelationList<Post>('posts');
     }
     return super.posts;
+  }
+
+  @override
+  List<Comment> get comments {
+    if (relationLoaded('comments')) {
+      return getRelationList<Comment>('comments');
+    }
+    return super.comments;
   }
 }
 
