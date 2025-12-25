@@ -1,0 +1,124 @@
+---
+title: Templates & Storage
+sidebar_position: 6
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Templates & Storage
+
+A full-stack application needs a way to render dynamic HTML and handle file uploads. We use **Liquify** for templating and **File Cloud** for storage.
+
+## Template renderer
+
+We wrap the Liquify engine in a `TemplateRenderer` class. This allows us to provide "shared data" (like the application name or current user) to all templates automatically.
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/templates/template_renderer.dart#template-renderer
+
+```
+
+## Layout shell
+
+Liquify supports layout inheritance, which means you can define a base "shell" for your application and have other templates "extend" it. This keeps your UI consistent and reduces duplication.
+
+<Tabs groupId="layout">
+  <TabItem value="header" label="Header">
+    The header contains the navigation bar and is shared across all pages.
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/layouts/base.liquid#layout-header
+    ```
+  </TabItem>
+  <TabItem value="content" label="Content slot">
+    The `{% block content %}` tag is where the specific page content will be injected.
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/layouts/base.liquid#layout-content
+    ```
+  </TabItem>
+</Tabs>
+
+## Movie catalog
+
+The movie catalog page iterates over a list of movies and displays them in a grid.
+
+<Tabs groupId="movies-index">
+  <TabItem value="hero" label="Hero">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/index.liquid#movies-index-hero
+    ```
+  </TabItem>
+  <TabItem value="list" label="List">
+    We use a `{% for movie in movies %}` loop to render each movie card.
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/index.liquid#movies-index-list
+    ```
+  </TabItem>
+  <TabItem value="empty" label="Empty state">
+    If no movies are found, we show a friendly message.
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/index.liquid#movies-index-empty
+    ```
+  </TabItem>
+</Tabs>
+
+## Movie detail
+
+The detail page shows more information about a specific movie, including its genre and summary.
+
+<Tabs groupId="movies-show">
+  <TabItem value="header" label="Header">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/show.liquid#movies-show-header
+    ```
+  </TabItem>
+  <TabItem value="actions" label="Actions">
+    Buttons for editing or deleting the movie.
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/show.liquid#movies-show-actions
+    ```
+  </TabItem>
+</Tabs>
+
+## Movie forms
+
+We use the same form fields for both creating and editing movies.
+
+<Tabs groupId="movie-forms">
+  <TabItem value="new" label="Create form">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/new.liquid#movies-form-fields
+    ```
+  </TabItem>
+  <TabItem value="edit" label="Edit form">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/movies/edit.liquid#movies-edit-form
+    ```
+  </TabItem>
+</Tabs>
+
+## File Storage
+
+We use the `StorageService` to handle movie poster uploads. In development, this saves files to a local `uploads/` directory. In production, you could easily swap this for an S3 or Google Cloud Storage implementation without changing your application logic.
+
+<Tabs groupId="storage">
+  <TabItem value="init" label="Initialization">
+    The storage service initializes a local disk driver and optionally connects to S3-compatible cloud storage.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/storage/storage.dart#storage-init
+    ```
+  </TabItem>
+  <TabItem value="save" label="Saving Files">
+    Files are saved with a timestamp prefix to ensure unique filenames.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/storage/storage.dart#storage-save
+    ```
+  </TabItem>
+</Tabs>
+
+## Genre pages
+
+Genre pages follow a similar pattern to the movie pages.
+
+<Tabs groupId="genre-pages">
+  <TabItem value="list" label="Genres list">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/genres/index.liquid#genres-index-list
+    ```
+  </TabItem>
+  <TabItem value="empty" label="Empty state">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/genres/index.liquid#genres-index-empty
+    ```
+  </TabItem>
+  <TabItem value="detail" label="Genre detail">
+    ```liquid file=../../../../packages/ormed/example/fullstack/templates/genres/show.liquid#genres-show-header
+    ```
+  </TabItem>
+</Tabs>

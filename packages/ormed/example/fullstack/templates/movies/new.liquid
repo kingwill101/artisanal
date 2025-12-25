@@ -1,0 +1,59 @@
+{% layout "layouts/base.liquid" %}
+
+{% block title %}Add Movie{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Add a movie</h1>
+  <p class="muted">Use the form below to add an entry to the catalog.</p>
+
+  {% comment %}// #region movies-form-errors{% endcomment %}
+  {% if errors.size > 0 %}
+  <div class="error-list">
+    <strong>Please fix the following:</strong>
+    <ul>
+      {% for error in errors %}
+        <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% comment %}// #endregion movies-form-errors{% endcomment %}
+
+  {% comment %}// #region movies-form-fields{% endcomment %}
+  <form method="post" action="/movies" enctype="multipart/form-data">
+    <div class="field">
+      <label for="title">Title</label>
+      <input id="title" name="title" type="text" value="{{ values.title }}" required />
+    </div>
+
+    <div class="field">
+      <label for="releaseYear">Release Year</label>
+      <input id="releaseYear" name="releaseYear" type="number" min="1888" value="{{ values.releaseYear }}" required />
+    </div>
+
+    <div class="field">
+      <label for="genreId">Genre</label>
+      <select id="genreId" name="genreId">
+        <option value="">Select a genre</option>
+        {% for genre in genres %}
+          <option value="{{ genre.id }}" {% if values.genreId == genre.id %}selected{% endif %}>{{ genre.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="summary">Summary</label>
+      <textarea id="summary" name="summary" rows="4">{{ values.summary }}</textarea>
+    </div>
+
+    <div class="field">
+      <label for="poster">Poster (optional)</label>
+      <input id="poster" name="poster" type="file" accept="image/*" />
+    </div>
+
+    <button class="button" type="submit">Save movie</button>
+  </form>
+  {% comment %}// #endregion movies-form-fields{% endcomment %}
+</div>
+{% endblock %}

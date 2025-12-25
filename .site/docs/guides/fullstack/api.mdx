@@ -1,0 +1,75 @@
+---
+title: JSON API
+sidebar_position: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# JSON API
+
+In addition to server-rendered HTML pages, our application provides a RESTful JSON API. This is useful for building mobile apps or single-page applications (SPAs) that need to interact with the same data.
+
+## Movie endpoints
+
+The API endpoints use the same database logic as the web handlers but return JSON responses instead of HTML.
+
+<Tabs groupId="api-movies">
+  <TabItem value="list" label="List">
+    Fetches a list of movies. We use `jsonEncode` to convert the model list to a JSON string.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-list-movies
+    ```
+  </TabItem>
+  <TabItem value="show" label="Show">
+    Fetches a single movie by ID.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-show-movie
+    ```
+  </TabItem>
+  <TabItem value="create" label="Create">
+    Creates a new movie from a JSON payload. We parse the request body and use `MovieInsertDto`.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-create-movie
+    ```
+  </TabItem>
+  <TabItem value="update" label="Update">
+    Updates an existing movie using a JSON payload and `MovieUpdateDto`.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-update-movie
+    ```
+  </TabItem>
+  <TabItem value="delete" label="Delete">
+    Deletes a movie by ID.
+    ```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-delete-movie
+    ```
+  </TabItem>
+</Tabs>
+
+## Genre endpoints
+
+<Tabs groupId="api-genres">
+  <TabItem value="list" label="List">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-list-genres
+
+```
+
+  </TabItem>
+  <TabItem value="show" label="Show">
+
+```dart file=../../../../packages/ormed/example/fullstack/lib/src/server/app.dart#api-show-genre
+
+```
+
+  </TabItem>
+</Tabs>
+
+### Payload Format
+All API payloads use the field names defined in your models. For example, when creating a movie, the JSON should look like this:
+
+```json
+{
+  "title": "Inception",
+  "releaseYear": 2010,
+  "summary": "A thief who steals corporate secrets through the use of dream-sharing technology.",
+  "genreId": 1
+}
+```
+

@@ -1,0 +1,20 @@
+{% layout "layouts/base.liquid" %}
+
+{% block title %}Delete {{ movie.title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Delete {{ movie.title }}?</h1>
+  <p class="muted">This action removes the movie from the catalog.</p>
+  {% if movie.genre %}
+    <p class="muted">Genre: {{ movie.genre.name }}</p>
+  {% endif %}
+
+  {% comment %}// #region movies-delete-form{% endcomment %}
+  <form method="post" action="/movies/{{ movie.id }}/delete">
+    <button class="button" type="submit">Yes, delete</button>
+    <a class="button alt" href="/movies/{{ movie.id }}">Cancel</a>
+  </form>
+  {% comment %}// #endregion movies-delete-form{% endcomment %}
+</div>
+{% endblock %}

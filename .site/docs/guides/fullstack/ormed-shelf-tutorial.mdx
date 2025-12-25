@@ -1,0 +1,55 @@
+---
+sidebar_position: 20
+---
+
+# Full‑Stack Movie Catalog (Shelf + Ormed)
+
+Welcome to the Full-Stack Movie Catalog tutorial! In this guide, we'll build a complete web application from scratch using **Ormed** for database persistence and **Shelf** for the web server.
+
+This isn't just a "Hello World" example. We'll build a meaningful application that includes:
+- **Database Modeling**: Defining structured data with relations.
+- **Migrations & Seeding**: Managing schema changes and initial data.
+- **Web Routing**: Handling both HTML pages and JSON API endpoints.
+- **Template Rendering**: Using Liquify for dynamic HTML.
+- **File Storage**: Handling image uploads for movie posters.
+- **Structured Logging**: Using Contextual for observable applications.
+- **Testing**: Ensuring reliability with unit and integration tests.
+
+:::note
+This guide is built from a runnable example project in `packages/ormed/example/fullstack` with region markers. Code blocks are embedded directly from the source to keep docs and code in sync.
+:::
+
+## What You’ll Build
+
+By the end of this tutorial, you'll have a movie catalog app with:
+- **Server-rendered pages**: Catalog, detail, edit, delete, and genre listings.
+- **REST APIs**: JSON endpoints for CRUD operations.
+- **SQLite persistence**: Using Ormed models and migrations.
+- **Layout inheritance**: Clean templates with shared layouts.
+- **Asset uploads**: Storing movie posters on disk.
+- **Observability**: Structured logging for easier debugging.
+
+## Guide Map
+
+1. [**Setup & Scaffolding**](./setup) - Initialize the project and dependencies.
+2. [**Models & Codegen**](./models) - Define your data structure.
+3. [**Migrations & Seed Data**](./migrations-seeds) - Prepare your database.
+4. [**Server & Web Routes**](./server-routes) - Build the web application.
+5. [**JSON API**](./api) - Expose your data via REST.
+6. [**Templates & Storage**](./templates-storage) - UI and file handling.
+7. [**Testing Strategy**](./testing) - Verify your work.
+8. [**CLI & Runbook**](./cli-runbook) - Manage the app.
+
+## Project Layout
+
+Understanding the project structure is key to navigating this tutorial:
+
+```
+example/fullstack/
+├── bin/                # Entry points (server + CLI)
+├── lib/src/            # App code (models, server, templates, storage)
+├── templates/          # Liquify templates
+├── uploads/            # Local storage for assets
+└── test/               # HTTP + property tests
+```
+

@@ -1,0 +1,45 @@
+{% layout "layouts/base.liquid" %}
+
+{% block title %}{{ genre.name }}{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% comment %}// #region genres-show-header{% endcomment %}
+  <h1>{{ genre.name }}</h1>
+  {% if genre.description %}
+    <p>{{ genre.description }}</p>
+  {% else %}
+    <p class="muted">No description yet.</p>
+  {% endif %}
+  <a class="button" href="/genres">Back to genres</a>
+  {% comment %}// #endregion genres-show-header{% endcomment %}
+</div>
+
+{% comment %}// #region genres-show-list{% endcomment %}
+<div class="grid grid-2">
+  {% for movie in movies %}
+    <article class="card">
+      <h2>{{ movie.title }}</h2>
+      <p class="muted">{{ movie.release_year }}</p>
+      {% if movie.poster_url %}
+        <img class="poster" src="{{ movie.poster_url }}" alt="Poster for {{ movie.title }}" />
+      {% endif %}
+      {% if movie.summary %}
+        <p>{{ movie.summary }}</p>
+      {% endif %}
+      <a class="button" href="/movies/{{ movie.id }}">View details</a>
+    </article>
+  {% endfor %}
+</div>
+{% comment %}// #endregion genres-show-list{% endcomment %}
+
+{% comment %}// #region genres-show-empty{% endcomment %}
+{% if movies.size == 0 %}
+  <div class="card">
+    <h3>No movies in this genre yet.</h3>
+    <p class="muted">Add a new movie to start the list.</p>
+    <a class="button" href="/movies/new">Add movie</a>
+  </div>
+{% endif %}
+{% comment %}// #endregion genres-show-empty{% endcomment %}
+{% endblock %}

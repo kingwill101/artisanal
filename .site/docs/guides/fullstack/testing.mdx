@@ -1,0 +1,187 @@
+---
+title: Testing Strategy
+sidebar_position: 7
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Testing Strategy
+
+Testing is a first-class citizen in Ormed. We recommend a multi-layered testing strategy that includes unit tests, integration tests, and property-based tests.
+
+## The Test Harness
+
+To make testing easier, we use a "Harness" pattern powered by **[server_testing](https://pub.dev/packages/server_testing)** and **[server_testing_shelf](https://pub.dev/packages/server_testing_shelf)**. 
+
+The harness allows us to run tests in two modes:
+1. **In-Memory**: Fast, isolated tests that run without opening a real network port.
+2. **Live Server**: Tests that run against a real HTTP server, useful for verifying network-level behavior.
+
+The harness sets up a fresh in-memory database, initializes the storage service, and bootstraps the Shelf server for each test. This ensures that tests are isolated and don't interfere with each other.
+
+```dart file=../../../../packages/ormed/example/fullstack/test/support/movie_catalog_harness.dart#testing-setup
+
+```
+
+### The `ormedGroup` Test Helper
+
+All our tests use **`ormedGroup`** as the top-level test group instead of the standard `group()` from the `test` package. This is a special test helper provided by Ormed that:
+
+1. **Manages Database Isolation**: Each `ormedGroup` gets its own isolated database state. Changes in one group don't affect others.
+2. **Provides a `DataSource`**: The callback receives a `DataSource` (`ds`) that's already connected and ready to use.
+3. **Handles Cleanup**: Automatically cleans up database resources after the test group completes.
+4. **Supports Transactions**: Uses transactions to roll back changes after each test, keeping tests fast and isolated.
+
+Inside an `ormedGroup`, you can still use the standard `group()` and `test()` functions as normal:
+
+```dart
+ormedGroup('My tests', (ds) {
+  // 'ds' is an isolated DataSource for this test group
+  late MyTestHarness harness;
+
+  setUpAll(() async {
+    harness = await createHarness(ds);
+  });
+  
+  // Standard group() works inside ormedGroup
+  group('Movie API', () {
+    test('creates a movie', () async {
+      // ...
+    });
+    
+    test('lists movies', () async {
+      // ...
+    });
+  });
+});
+```
+
+This pattern ensures that even when running tests in parallel, each `ormedGroup` has its own database state.
+
+## Web route tests
+
+Web route tests verify that our HTML pages are rendered correctly and that form submissions work as expected. We use `server_testing` to make HTTP requests against our server and verify the output.
+
+<Tabs groupId="web-tests">
+  <TabItem value="index" label="Index">
+    Verifies that the home page lists movies.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_web_test.dart#testing-web-index
+    ```
+  </TabItem>
+  <TabItem value="create" label="Create">
+    Verifies that submitting the "New Movie" form creates a record in the database.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_web_test.dart#testing-web-create
+    ```
+  </TabItem>
+  <TabItem value="delete" label="Delete">
+    Verifies that deleting a movie removes it from the database.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_web_test.dart#testing-web-delete
+    ```
+  </TabItem>
+</Tabs>
+
+## API tests
+
+API tests focus on the JSON endpoints. Instead of using assertion libraries directly, we interact with the **`TestResponse`** object returned by all `TestClient` methods (`getJson`, `postJson`, etc.).
+
+### The `TestResponse` Object
+
+The `TestResponse` class is a powerful wrapper that provides a fluent API for inspecting and asserting on HTTP responses. It includes built-in methods for common tasks:
+
+- **Status Assertions**: `assertStatus(200)`, `assertSuccess()`, `assertClientError()`, `assertServerError()`.
+- **Header Assertions**: `assertHasHeader('X-Request-ID')`, `assertHeader('Content-Type', 'application/json')`.
+- **Body Assertions**: `assertBodyContains('Movie created')`, `assertBodyIsEmpty()`.
+- **JSON Path Assertions**: `assertJsonPath('movie.title', 'Inception')` for quick, targeted checks.
+
+### Integrating `assertable_json`
+
+For complex JSON structures, `TestResponse` provides the **`assertJson()`** method. This method is the bridge to the **[assertable_json](https://pub.dev/packages/assertable_json)** package.
+
+When you call `assertJson()`, it provides an `AssertableJson` callback. This allows you to use the full power of `assertable_json` (like `scope`, `each`, and `etc()`) directly on the response:
+
+- **Strict by Default**: The library expects you to account for every property in the object. This prevents "leaky" APIs where unexpected data is sent to the client.
+- **The `etc()` Method**: Use `.etc()` when you only care about a subset of properties. It tells the library: "I've verified the fields I care about; ignore any other properties that might exist."
+
+<Tabs groupId="api-tests">
+  <TabItem value="list" label="List">
+    Notice how we chain assertions on the `response` and then use `assertJson` for deep structural verification.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_api_test.dart#testing-api-list
+    ```
+  </TabItem>
+  <TabItem value="create" label="Create">
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_api_test.dart#testing-api-create
+    ```
+  </TabItem>
+</Tabs>
+
+
+## Property tests (Stress Testing)
+
+Property-based testing (using **[property_testing](https://pub.dev/packages/property_testing)**) allows us to "stress test" our application by running hundreds of tests with randomly generated data.
+
+### Generators: `Gen` vs `Chaos`
+
+To generate test data, we use two types of generators:
+- **`Gen`**: Generates "well-behaved" data within specific bounds (e.g., a string between 1 and 40 characters, or a year between 1888 and 2030). This tests that your app handles valid input correctly.
+- **`Chaos`**: Generates "malicious" or "garbage" data (e.g., extremely long strings, negative numbers, or special characters). This is exceptionally powerful for finding edge cases in validation logic and ensuring your server never returns a `500 Internal Server Error`.
+
+### How it works: Building Complex Payloads
+
+Property testing is most effective when you generate complex, nested data structures. We use a functional approach to build these:
+
+- **`Gen.oneOfGen`**: This is the secret to effective stress testing. It allows you to mix "happy path" data (`Gen`) with "chaotic" data (`Chaos`). For example, a title generator might return a valid string 90% of the time and a chaotic string 10% of the time.
+- **Composition (`flatMap` & `map`)**: You don't just generate single values; you compose them. By using `flatMap`, you can chain multiple generators together to build a complete JSON payload. This ensures that every field in your request is being randomized simultaneously.
+
+1. **Define Generators**: Create individual generators for each field and compose them into a single payload generator.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_property_test.dart#testing-property-generators
+    ```
+
+2. **Define the Runner**: The `PropertyTestRunner` takes your generator and a test function. It executes your test logic (e.g., making an API request) hundreds of times, each time with a different payload.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_property_test.dart#testing-property-runner
+    ```
+
+3. **Shrinking**: If a failure is found, the library automatically tries to "shrink" the failing input to the smallest possible value that still causes the failure, making it much easier to debug.
+
+<Tabs groupId="property-tests">
+  <TabItem value="chaos" label="Chaos IDs">
+    Tests how the application handles random, potentially invalid IDs in the URL.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_property_test.dart#testing-property-chaos
+    ```
+  </TabItem>
+  <TabItem value="validation" label="Validation">
+    Heavily stress tests the movie creation API. We combine valid `Gen` data with invalid `Chaos` data to ensure the API always returns a `400 Bad Request` instead of crashing.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_property_test.dart#testing-property-validation
+    ```
+  </TabItem>
+  <TabItem value="upload" label="Upload">
+    Tests file uploads with randomized content and filenames.
+    ```dart file=../../../../packages/ormed/example/fullstack/test/movie_catalog_property_test.dart#testing-property-upload
+    ```
+  </TabItem>
+</Tabs>
+
+
+## Model Factories
+
+To avoid repetitive test data setup, Ormed generates **Model Factories** (e.g., `GenreModelFactory`, `MovieModelFactory`). Factories provide a clean way to create test instances with sensible defaults:
+
+- **Unique Data**: Factories can generate unique values for each test run.
+- **Overrides**: You can override specific fields while keeping defaults for others.
+- **Relationships**: Factories can automatically create related models.
+
+This keeps test data explicit and reduces boilerplate.
+
+## Playwright UI tests
+
+```ts file=../../../../packages/ormed/example/fullstack/playwright/tests/movie_catalog.spec.ts
+
+```
+
+Run from `example/fullstack/playwright`:
+
+```bash
+npm install
+npx playwright install
+npm test
+```

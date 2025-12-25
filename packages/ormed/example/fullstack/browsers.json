@@ -1,0 +1,6 @@
+{
+  "browsers": [
+    { "name": "firefox", "installByDefault": true },
+    { "name": "chromium", "installByDefault": false }
+  ]
+}

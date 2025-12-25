@@ -1,0 +1,75 @@
+---
+title: CLI & Runbook
+sidebar_position: 8
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# CLI & Runbook
+
+A professional application often needs a command-line interface (CLI) for administrative tasks like starting the server, running migrations, or seeding the database. We use **Artisanal** to build a Laravel-style CLI for our movie catalog.
+
+## Artisanal CLI
+
+The CLI is defined in `bin/cli.dart`. It uses a command-based structure where each task is a separate command.
+
+<Tabs groupId="cli">
+  <TabItem value="runner" label="Entry Point">
+    The entry point initializes the CLI and registers the available commands.
+    ```dart file=../../../../packages/ormed/example/fullstack/bin/cli.dart#cli-runner
+    ```
+  </TabItem>
+  <TabItem value="serve" label="Serve Command">
+    Starts the Shelf server.
+    ```dart file=../../../../packages/ormed/example/fullstack/bin/cli.dart#cli-serve
+    ```
+  </TabItem>
+  <TabItem value="migrate" label="Migrate Command">
+    Runs the database migrations.
+    ```dart file=../../../../packages/ormed/example/fullstack/bin/cli.dart#cli-migrate
+    ```
+  </TabItem>
+  <TabItem value="seed" label="Seed Command">
+    Seeds the database with initial data.
+    ```dart file=../../../../packages/ormed/example/fullstack/bin/cli.dart#cli-seed
+    ```
+  </TabItem>
+</Tabs>
+
+## Runbook
+
+Here's a quick reference for the common commands you'll use during development:
+
+### 1. Code Generation
+Run this whenever you change your models or add new ones.
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+### 2. Database Setup
+Prepare your database by running migrations and seeding it with data.
+```bash
+# Apply all pending migrations
+dart run ormed_cli:ormed migrate
+
+# Run the database seeders
+dart run ormed_cli:ormed seed
+```
+
+### 3. Running Tests
+Ensure everything is working correctly.
+```bash
+dart test
+```
+
+### 4. Starting the Server
+You can start the server directly or via the Artisanal CLI.
+```bash
+# Start server directly
+dart run bin/server.dart
+
+# Start server using the CLI (recommended)
+dart run bin/cli.dart serve
+```
+

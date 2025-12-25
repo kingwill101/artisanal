@@ -1,0 +1,35 @@
+{% layout "layouts/base.liquid" %}
+
+{% block title %}Genres{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Genres</h1>
+  <p class="muted">Browse categories that shape the catalog.</p>
+
+  {% comment %}// #region genres-index-empty{% endcomment %}
+  {% if genres.size == 0 %}
+    <p class="muted">No genres yet. Seed the database to get started.</p>
+  {% endif %}
+  {% comment %}// #endregion genres-index-empty{% endcomment %}
+
+  {% comment %}// #region genres-index-list{% endcomment %}
+  {% if genres.size > 0 %}
+    <div class="grid">
+      {% for genre in genres %}
+        <div class="card">
+          <h3>{{ genre.name }}</h3>
+          {% if genre.description %}
+            <p>{{ genre.description }}</p>
+          {% else %}
+            <p class="muted">No description yet.</p>
+          {% endif %}
+          <a class="button" href="/genres/{{ genre.id }}">View genre</a>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% comment %}// #endregion genres-index-list{% endcomment %}
+
+</div>
+{% endblock %}

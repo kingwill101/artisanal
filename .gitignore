@@ -7,3 +7,4 @@ third_party/
 build/
 orm_bootstrap_test/
 .github/prompts/
+.ck

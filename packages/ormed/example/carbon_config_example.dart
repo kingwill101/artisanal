@@ -1,6 +1,7 @@
 // ignore_for_file: unused_local_variable
 
 import 'package:ormed/ormed.dart';
+import 'package:ormed_sqlite/ormed_sqlite.dart';
 
 /// This example demonstrates Carbon integration with Ormed.
 ///
@@ -44,6 +45,7 @@ void main() async {
 Future<void> example1BasicSetup() async {
   print('\n=== Example 1: Basic Setup ===');
 
+  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
       driver: SqliteDriverAdapter.inMemory(),
@@ -71,6 +73,7 @@ Future<void> example2NamedTimezones() async {
   // Reset Carbon to demonstrate fresh configuration
   CarbonConfig.reset();
 
+  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
       driver: SqliteDriverAdapter.inMemory(),
@@ -102,6 +105,7 @@ Future<void> example3CustomLocale() async {
 
   CarbonConfig.reset();
 
+  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
       driver: SqliteDriverAdapter.inMemory(),
@@ -140,6 +144,7 @@ Future<void> example4ManualOverride() async {
     defaultLocale: 'ja_JP',
   );
 
+  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
       driver: SqliteDriverAdapter.inMemory(),
