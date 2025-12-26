@@ -2,6 +2,14 @@
 
 ## 0.1.0-dev+4
 
+- **Added**: Through relations support with `hasOneThrough` and `hasManyThrough` relation types.
+- **Added**: Polymorphic relations with `morphTo`, `morphToMany`, and `morphedByMany` support.
+- **Added**: Attribute accessors and mutators for get/set interception.
+- **Added**: Appended/computed attributes for serialization.
+- **Added**: Extended attribute casting system with custom cast handlers.
+- **Added**: Pivot enhancements including `withPivot` field selection and pivot timestamps.
+- **Added**: Raw query helpers `orderByRaw` and `groupByRaw`.
+- **Added**: Object input support for `fill`, `forceFill`, and `fillIfAbsent` methods.
 - **Refactored**: Decoupled database drivers from the core package. Drivers now register themselves via `DriverAdapterRegistry`.
 - **Added**: `DataSource.fromConfig` as the standard, driver-agnostic entry point for ORM initialization.
 - **Added**: `syncWithoutDetaching`, `syncWithPivotValues`, `toggle`, and `updateExistingPivot` methods for `ManyToMany` relationships.

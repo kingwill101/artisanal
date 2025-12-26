@@ -2,6 +2,12 @@
 
 ## 0.1.0-dev+4
 
+- **Added**: Support for through relations, polymorphic relations, and advanced query helpers.
+- **Added**: Pivot timestamp support for many-to-many relationships.
+- **Added**: Raw query helpers for `orderByRaw` and `groupByRaw`.
+
+## 0.1.0-dev+3
+
 - **Added**: `ensurePostgresDriverRegistration()` to register the driver with the core ORM.
 - **Added**: Package example demonstrating `DataSource.fromConfig` usage.
 - **Fixed**: Type-safe filter generation for certain PostgreSQL-specific queries (Issue #9).
