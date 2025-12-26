@@ -8,6 +8,7 @@ import 'package:ormed/src/annotations.dart';
 
 import '../connection/connection.dart';
 import '../contracts.dart';
+import '../core/monotonic_time.dart';
 import '../driver/driver.dart';
 import '../mutation/mutation_input_helper.dart';
 import '../query/query.dart';
@@ -1957,13 +1958,18 @@ abstract class Model<TModel extends Model<TModel>>
       );
     }
 
+    final pivotValues = _mergePivotTimestamps(
+      relationDef,
+      pivotData,
+      isInsert: true,
+    );
     final rows = ids.map((id) {
       final row = <String, dynamic>{
         pivotForeignKey: pkValue,
         pivotRelatedKey: id,
       };
-      if (pivotData != null) {
-        row.addAll(pivotData);
+      if (pivotValues.isNotEmpty) {
+        row.addAll(pivotValues);
       }
       return row;
     }).toList();
@@ -1972,7 +1978,8 @@ abstract class Model<TModel extends Model<TModel>>
     final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
       pivotForeignKey: pk,
       pivotRelatedKey: relatedPk,
-      ...?pivotData?.map((key, _) => MapEntry(key, null)),
+      ...pivotValues.map((key, _) => MapEntry(key, null)),
+      ..._pivotTimestampFieldDefinitions(relationDef),
     });
 
     final plan = MutationPlan.insert(definition: pivotDef, rows: rows);
@@ -2352,11 +2359,18 @@ abstract class Model<TModel extends Model<TModel>>
       );
     }
 
+    final pivotValues = _mergePivotTimestamps(
+      relationDef,
+      pivotData,
+      isInsert: false,
+    );
+
     // Build pivot definition with all fields
     final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
       pivotForeignKey: pk,
       pivotRelatedKey: relatedPk,
-      ...pivotData.map((key, _) => MapEntry(key, null)),
+      ...pivotValues.map((key, _) => MapEntry(key, null)),
+      ..._pivotTimestampFieldDefinitions(relationDef),
     });
 
     // Update the pivot record
@@ -2364,7 +2378,7 @@ abstract class Model<TModel extends Model<TModel>>
       definition: pivotDef,
       rows: [
         MutationRow(
-          values: pivotData,
+          values: pivotValues,
           keys: {pivotForeignKey: pkValue, pivotRelatedKey: id},
         ),
       ],
@@ -2432,6 +2446,56 @@ abstract class Model<TModel extends Model<TModel>>
 
     final results = await resolver.runSelect(selectPlan);
     return results.map((row) => row[pivotRelatedKey]).toList();
+  }
+
+  Map<String, dynamic> _mergePivotTimestamps(
+    RelationDefinition relationDef,
+    Map<String, dynamic>? pivotData, {
+    required bool isInsert,
+  }) {
+    final values = pivotData == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(pivotData);
+    if (!relationDef.pivotTimestamps) return values;
+
+    final now = monotonicNowUtc();
+    const createdAt = Timestamps.defaultCreatedAtColumn;
+    const updatedAt = Timestamps.defaultUpdatedAtColumn;
+    if (isInsert) {
+      if (!values.containsKey(createdAt) || values[createdAt] == null) {
+        values[createdAt] = now;
+      }
+      if (!values.containsKey(updatedAt) || values[updatedAt] == null) {
+        values[updatedAt] = now;
+      }
+    } else {
+      if (!values.containsKey(updatedAt) || values[updatedAt] == null) {
+        values[updatedAt] = now;
+      }
+    }
+    return values;
+  }
+
+  Map<String, FieldDefinition> _pivotTimestampFieldDefinitions(
+    RelationDefinition relationDef,
+  ) {
+    if (!relationDef.pivotTimestamps) return const {};
+    return const {
+      Timestamps.defaultCreatedAtColumn: FieldDefinition(
+        name: Timestamps.defaultCreatedAtColumn,
+        columnName: Timestamps.defaultCreatedAtColumn,
+        dartType: 'DateTime',
+        resolvedType: 'DateTime?',
+        isNullable: true,
+      ),
+      Timestamps.defaultUpdatedAtColumn: FieldDefinition(
+        name: Timestamps.defaultUpdatedAtColumn,
+        columnName: Timestamps.defaultUpdatedAtColumn,
+        dartType: 'DateTime',
+        resolvedType: 'DateTime?',
+        isNullable: true,
+      ),
+    };
   }
 
   // ==========================================================================

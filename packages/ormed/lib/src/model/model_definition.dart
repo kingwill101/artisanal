@@ -450,6 +450,7 @@ class RelationDefinition {
     this.pivotForeignKey,
     this.pivotRelatedKey,
     this.pivotColumns = const [],
+    this.pivotTimestamps = false,
     this.morphType,
     this.morphClass,
   });
@@ -489,6 +490,9 @@ class RelationDefinition {
 
   /// Additional pivot columns to select when eager loading.
   final List<String> pivotColumns;
+
+  /// Whether to automatically manage pivot timestamps.
+  final bool pivotTimestamps;
 
   /// Type column name for polymorphic relations.
   final String? morphType;

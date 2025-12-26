@@ -263,6 +263,7 @@ class RelationResolver {
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
           pivotColumns: relation.pivotColumns,
+          pivotTimestamps: relation.pivotTimestamps,
         );
 
       case RelationKind.morphOne:
@@ -340,6 +341,7 @@ class RelationResolver {
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
           pivotColumns: relation.pivotColumns,
+          pivotTimestamps: relation.pivotTimestamps,
           morphTypeColumn: morphColumn,
           morphClass: morphClass,
           morphOnPivot: true,

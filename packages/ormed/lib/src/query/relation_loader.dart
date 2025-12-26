@@ -372,7 +372,10 @@ class RelationLoader {
     final pivotParentColumn = segment.pivotParentKey;
     final pivotTargetColumn = segment.pivotRelatedKey;
     final pivotColumns = _normalizePivotColumns(
-      segment.pivotColumns,
+      [
+        ...segment.pivotColumns,
+        ..._pivotTimestampColumns(segment.pivotTimestamps),
+      ],
       pivotParentColumn,
       pivotTargetColumn,
     );
@@ -833,6 +836,7 @@ class RelationLoader {
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
           pivotColumns: relation.pivotColumns,
+          pivotTimestamps: relation.pivotTimestamps,
         );
       case RelationKind.morphOne:
       case RelationKind.morphMany:
@@ -906,6 +910,7 @@ class RelationLoader {
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
           pivotColumns: relation.pivotColumns,
+          pivotTimestamps: relation.pivotTimestamps,
           morphTypeColumn: morphColumn,
           morphClass: morphClass,
           morphOnPivot: true,
@@ -983,6 +988,14 @@ class RelationLoader {
       columns.add(morphTypeColumn);
     }
     return columns.toList(growable: false);
+  }
+
+  List<String> _pivotTimestampColumns(bool enabled) {
+    if (!enabled) return const [];
+    return const [
+      Timestamps.defaultCreatedAtColumn,
+      Timestamps.defaultUpdatedAtColumn,
+    ];
   }
 
   Map<String, Object?>? _pivotDataFromRow(

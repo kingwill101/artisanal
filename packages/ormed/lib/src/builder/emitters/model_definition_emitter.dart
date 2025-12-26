@@ -311,6 +311,9 @@ class ModelDefinitionEmitter {
           '  pivotColumns: ${stringListLiteral(relation.pivotColumns)},',
         );
       }
+      if (relation.pivotTimestamps) {
+        buffer.writeln('  pivotTimestamps: true,');
+      }
       if (relation.morphType != null) {
         buffer.writeln("  morphType: '${escape(relation.morphType!)}',");
       }
