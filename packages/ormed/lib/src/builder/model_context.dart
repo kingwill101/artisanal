@@ -647,7 +647,7 @@ class ModelContext {
       }
 
       final params = element.formalParameters;
-      if (params.length < 1 || params.length > 2 || params.any((p) => p.isNamed)) {
+      if (params.isEmpty || params.length > 2 || params.any((p) => p.isNamed)) {
         throw InvalidGenerationSourceError(
           '@OrmMutator methods must take 1 or 2 positional parameters.',
           element: element,
