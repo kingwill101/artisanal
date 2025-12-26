@@ -1,12 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:http_parser/http_parser.dart';
 import 'package:ormed/ormed.dart';
 import 'package:ormed_fullstack_example/src/models/genre.dart';
 import 'package:ormed_fullstack_example/src/models/movie.dart';
 import 'package:server_testing/server_testing.dart';
-import 'package:test/test.dart';
 
 import 'support/movie_catalog_harness.dart';
 
