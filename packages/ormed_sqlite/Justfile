@@ -4,4 +4,4 @@ default: test
 
 # Run the ormed_sqlite package tests
 test:
-	dart test
+	dart test --fail-fast

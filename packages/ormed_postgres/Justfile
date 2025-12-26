@@ -9,7 +9,7 @@ test:
 	docker compose -p {{PROJECT}} up -d --wait --wait-timeout 120; \
 	trap 'docker compose -p {{PROJECT}} down -v' EXIT; \
 	sleep 2; \
-	POSTGRES_URL={{POSTGRES_URL}} dart test -r expanded	
+	POSTGRES_URL={{POSTGRES_URL}} dart test -r expanded	  --fail-fast
 
 # Tear down any lingering containers.
 down:
