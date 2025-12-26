@@ -118,6 +118,7 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   through: 'post_tags',
   pivotForeignKey: 'post_id',
   pivotRelatedKey: 'tag_id',
+  pivotColumns: const <String>['sort_order', 'note'],
 );
 
 const RelationDefinition _$PostMorphTagsRelation = RelationDefinition(

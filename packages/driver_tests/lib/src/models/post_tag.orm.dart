@@ -31,6 +31,30 @@ const FieldDefinition _$PostTagTagIdField = FieldDefinition(
   autoIncrement: false,
 );
 
+const FieldDefinition _$PostTagSortOrderField = FieldDefinition(
+  name: 'sortOrder',
+  columnName: 'sort_order',
+  dartType: 'int',
+  resolvedType: 'int?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
+const FieldDefinition _$PostTagNoteField = FieldDefinition(
+  name: 'note',
+  columnName: 'note',
+  dartType: 'String',
+  resolvedType: 'String?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
 Map<String, Object?> _encodePostTagUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -39,13 +63,20 @@ Map<String, Object?> _encodePostTagUntracked(
   return <String, Object?>{
     'post_id': registry.encodeField(_$PostTagPostIdField, m.postId),
     'tag_id': registry.encodeField(_$PostTagTagIdField, m.tagId),
+    'sort_order': registry.encodeField(_$PostTagSortOrderField, m.sortOrder),
+    'note': registry.encodeField(_$PostTagNoteField, m.note),
   };
 }
 
 final ModelDefinition<$PostTag> _$PostTagDefinition = ModelDefinition(
   modelName: 'PostTag',
   tableName: 'post_tags',
-  fields: const [_$PostTagPostIdField, _$PostTagTagIdField],
+  fields: const [
+    _$PostTagPostIdField,
+    _$PostTagTagIdField,
+    _$PostTagSortOrderField,
+    _$PostTagNoteField,
+  ],
   relations: const [],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
@@ -165,6 +196,11 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
     return <String, Object?>{
       'post_id': registry.encodeField(_$PostTagPostIdField, model.postId),
       'tag_id': registry.encodeField(_$PostTagTagIdField, model.tagId),
+      'sort_order': registry.encodeField(
+        _$PostTagSortOrderField,
+        model.sortOrder,
+      ),
+      'note': registry.encodeField(_$PostTagNoteField, model.note),
     };
   }
 
@@ -176,13 +212,25 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
     final int postTagTagIdValue =
         registry.decodeField<int>(_$PostTagTagIdField, data['tag_id']) ??
         (throw StateError('Field tagId on PostTag cannot be null.'));
+    final int? postTagSortOrderValue = registry.decodeField<int?>(
+      _$PostTagSortOrderField,
+      data['sort_order'],
+    );
+    final String? postTagNoteValue = registry.decodeField<String?>(
+      _$PostTagNoteField,
+      data['note'],
+    );
     final model = $PostTag(
       postId: postTagPostIdValue,
       tagId: postTagTagIdValue,
+      sortOrder: postTagSortOrderValue,
+      note: postTagNoteValue,
     );
     model._attachOrmRuntimeMetadata({
       'post_id': postTagPostIdValue,
       'tag_id': postTagTagIdValue,
+      'sort_order': postTagSortOrderValue,
+      'note': postTagNoteValue,
     });
     return model;
   }
@@ -192,15 +240,19 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
 ///
 /// Auto-increment/DB-generated fields are omitted by default.
 class PostTagInsertDto implements InsertDto<$PostTag> {
-  const PostTagInsertDto({this.postId, this.tagId});
+  const PostTagInsertDto({this.postId, this.tagId, this.sortOrder, this.note});
   final int? postId;
   final int? tagId;
+  final int? sortOrder;
+  final String? note;
 
   @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (postId != null) 'post_id': postId,
       if (tagId != null) 'tag_id': tagId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (note != null) 'note': note,
     };
   }
 
@@ -209,12 +261,18 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
   PostTagInsertDto copyWith({
     Object? postId = _copyWithSentinel,
     Object? tagId = _copyWithSentinel,
+    Object? sortOrder = _copyWithSentinel,
+    Object? note = _copyWithSentinel,
   }) {
     return PostTagInsertDto(
       postId: identical(postId, _copyWithSentinel)
           ? this.postId
           : postId as int?,
       tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+      sortOrder: identical(sortOrder, _copyWithSentinel)
+          ? this.sortOrder
+          : sortOrder as int?,
+      note: identical(note, _copyWithSentinel) ? this.note : note as String?,
     );
   }
 }
@@ -227,15 +285,19 @@ class _PostTagInsertDtoCopyWithSentinel {
 ///
 /// All fields are optional; only provided entries are used in SET clauses.
 class PostTagUpdateDto implements UpdateDto<$PostTag> {
-  const PostTagUpdateDto({this.postId, this.tagId});
+  const PostTagUpdateDto({this.postId, this.tagId, this.sortOrder, this.note});
   final int? postId;
   final int? tagId;
+  final int? sortOrder;
+  final String? note;
 
   @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (postId != null) 'post_id': postId,
       if (tagId != null) 'tag_id': tagId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (note != null) 'note': note,
     };
   }
 
@@ -244,12 +306,18 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
   PostTagUpdateDto copyWith({
     Object? postId = _copyWithSentinel,
     Object? tagId = _copyWithSentinel,
+    Object? sortOrder = _copyWithSentinel,
+    Object? note = _copyWithSentinel,
   }) {
     return PostTagUpdateDto(
       postId: identical(postId, _copyWithSentinel)
           ? this.postId
           : postId as int?,
       tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+      sortOrder: identical(sortOrder, _copyWithSentinel)
+          ? this.sortOrder
+          : sortOrder as int?,
+      note: identical(note, _copyWithSentinel) ? this.note : note as String?,
     );
   }
 }
@@ -262,7 +330,7 @@ class _PostTagUpdateDtoCopyWithSentinel {
 ///
 /// All fields are nullable; intended for subset SELECTs.
 class PostTagPartial implements PartialEntity<$PostTag> {
-  const PostTagPartial({this.postId, this.tagId});
+  const PostTagPartial({this.postId, this.tagId, this.sortOrder, this.note});
 
   /// Creates a partial from a database row map.
   ///
@@ -272,11 +340,15 @@ class PostTagPartial implements PartialEntity<$PostTag> {
     return PostTagPartial(
       postId: row['post_id'] as int?,
       tagId: row['tag_id'] as int?,
+      sortOrder: row['sort_order'] as int?,
+      note: row['note'] as String?,
     );
   }
 
   final int? postId;
   final int? tagId;
+  final int? sortOrder;
+  final String? note;
 
   @override
   $PostTag toEntity() {
@@ -289,7 +361,12 @@ class PostTagPartial implements PartialEntity<$PostTag> {
     if (tagIdValue == null) {
       throw StateError('Missing required field: tagId');
     }
-    return $PostTag(postId: postIdValue, tagId: tagIdValue);
+    return $PostTag(
+      postId: postIdValue,
+      tagId: tagIdValue,
+      sortOrder: sortOrder,
+      note: note,
+    );
   }
 
   @override
@@ -297,6 +374,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
     return {
       if (postId != null) 'post_id': postId,
       if (tagId != null) 'tag_id': tagId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (note != null) 'note': note,
     };
   }
 
@@ -305,12 +384,18 @@ class PostTagPartial implements PartialEntity<$PostTag> {
   PostTagPartial copyWith({
     Object? postId = _copyWithSentinel,
     Object? tagId = _copyWithSentinel,
+    Object? sortOrder = _copyWithSentinel,
+    Object? note = _copyWithSentinel,
   }) {
     return PostTagPartial(
       postId: identical(postId, _copyWithSentinel)
           ? this.postId
           : postId as int?,
       tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+      sortOrder: identical(sortOrder, _copyWithSentinel)
+          ? this.sortOrder
+          : sortOrder as int?,
+      note: identical(note, _copyWithSentinel) ? this.note : note as String?,
     );
   }
 }
@@ -329,18 +414,42 @@ class _PostTagPartialCopyWithSentinel {
 /// or model factories to create tracked model instances.
 class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$PostTag].
-  $PostTag({required int postId, required int tagId})
-    : super.new(postId: postId, tagId: tagId) {
-    _attachOrmRuntimeMetadata({'post_id': postId, 'tag_id': tagId});
+  $PostTag({
+    required int postId,
+    required int tagId,
+    int? sortOrder,
+    String? note,
+  }) : super.new(
+         postId: postId,
+         tagId: tagId,
+         sortOrder: sortOrder,
+         note: note,
+       ) {
+    _attachOrmRuntimeMetadata({
+      'post_id': postId,
+      'tag_id': tagId,
+      'sort_order': sortOrder,
+      'note': note,
+    });
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
   factory $PostTag.fromModel(PostTag model) {
-    return $PostTag(postId: model.postId, tagId: model.tagId);
+    return $PostTag(
+      postId: model.postId,
+      tagId: model.tagId,
+      sortOrder: model.sortOrder,
+      note: model.note,
+    );
   }
 
-  $PostTag copyWith({int? postId, int? tagId}) {
-    return $PostTag(postId: postId ?? this.postId, tagId: tagId ?? this.tagId);
+  $PostTag copyWith({int? postId, int? tagId, int? sortOrder, String? note}) {
+    return $PostTag(
+      postId: postId ?? this.postId,
+      tagId: tagId ?? this.tagId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      note: note ?? this.note,
+    );
   }
 
   /// Tracked getter for [postId].
@@ -356,6 +465,20 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
 
   /// Tracked setter for [tagId].
   set tagId(int value) => setAttribute('tag_id', value);
+
+  /// Tracked getter for [sortOrder].
+  @override
+  int? get sortOrder => getAttribute<int?>('sort_order') ?? super.sortOrder;
+
+  /// Tracked setter for [sortOrder].
+  set sortOrder(int? value) => setAttribute('sort_order', value);
+
+  /// Tracked getter for [note].
+  @override
+  String? get note => getAttribute<String?>('note') ?? super.note;
+
+  /// Tracked setter for [note].
+  set note(String? value) => setAttribute('note', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);

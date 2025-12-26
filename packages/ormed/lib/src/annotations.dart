@@ -295,6 +295,7 @@ class OrmRelation {
     this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.withPivot = const [],
     this.morphType,
     this.morphClass,
   });
@@ -391,6 +392,7 @@ class OrmRelation {
     String? pivotRelatedKey,
     String? foreignKey,
     String? localKey,
+    List<String> withPivot = const [],
   }) : this(
          kind: RelationKind.manyToMany,
          target: target,
@@ -399,6 +401,7 @@ class OrmRelation {
          pivotRelatedKey: pivotRelatedKey,
          foreignKey: foreignKey,
          localKey: localKey,
+         withPivot: withPivot,
        );
 
   /// Creates a `morphOne` relation.
@@ -462,6 +465,7 @@ class OrmRelation {
     String? localKey,
     String? morphType,
     String? morphClass,
+    List<String> withPivot = const [],
   }) : this(
          kind: RelationKind.morphToMany,
          target: target,
@@ -472,6 +476,7 @@ class OrmRelation {
          localKey: localKey,
          morphType: morphType,
          morphClass: morphClass,
+         withPivot: withPivot,
        );
 
   /// Creates a `morphedByMany` relation.
@@ -487,6 +492,7 @@ class OrmRelation {
     String? localKey,
     String? morphType,
     String? morphClass,
+    List<String> withPivot = const [],
   }) : this(
          kind: RelationKind.morphedByMany,
          target: target,
@@ -497,6 +503,7 @@ class OrmRelation {
          localKey: localKey,
          morphType: morphType,
          morphClass: morphClass,
+         withPivot: withPivot,
        );
 
   /// The relationship kind (for example, [RelationKind.hasMany]).
@@ -528,6 +535,9 @@ class OrmRelation {
 
   /// The related key column name on the pivot table.
   final String? pivotRelatedKey;
+
+  /// Additional pivot columns to select when eager loading.
+  final List<String> withPivot;
 
   /// The discriminator/type column name for polymorphic relations.
   final String? morphType;

@@ -306,6 +306,11 @@ class ModelDefinitionEmitter {
           "  pivotRelatedKey: '${escape(relation.pivotRelatedKey!)}',",
         );
       }
+      if (relation.pivotColumns.isNotEmpty) {
+        buffer.writeln(
+          '  pivotColumns: ${stringListLiteral(relation.pivotColumns)},',
+        );
+      }
       if (relation.morphType != null) {
         buffer.writeln("  morphType: '${escape(relation.morphType!)}',");
       }

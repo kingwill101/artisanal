@@ -504,6 +504,7 @@ class ModelContext {
           throughLocalKey: annotation.peek('throughLocalKey')?.stringValue,
           pivotForeignKey: annotation.peek('pivotForeignKey')?.stringValue,
           pivotRelatedKey: annotation.peek('pivotRelatedKey')?.stringValue,
+          pivotColumns: readStringList(annotation.peek('withPivot')),
           morphType: annotation.peek('morphType')?.stringValue,
           morphClass: annotation.peek('morphClass')?.stringValue,
         ),

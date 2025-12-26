@@ -584,11 +584,12 @@ class RelationSegment {
     this.pivotTable,
     this.pivotParentKey,
     this.pivotRelatedKey,
+    List<String> pivotColumns = const [],
     this.morphTypeColumn,
     this.morphClass,
     this.morphOnPivot = false,
     this.expectSingleResult = false,
-  });
+  }) : pivotColumns = List.unmodifiable(pivotColumns);
 
   final String name;
   final RelationDefinition relation;
@@ -603,6 +604,7 @@ class RelationSegment {
   final String? pivotTable;
   final String? pivotParentKey;
   final String? pivotRelatedKey;
+  final List<String> pivotColumns;
   final String? morphTypeColumn;
   final String? morphClass;
   final bool morphOnPivot;

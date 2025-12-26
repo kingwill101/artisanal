@@ -56,6 +56,7 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     through: 'post_tags',
     pivotForeignKey: 'post_id',
     pivotRelatedKey: 'tag_id',
+    withPivot: ['sort_order', 'note'],
   )
   final List<Tag> tags;
 

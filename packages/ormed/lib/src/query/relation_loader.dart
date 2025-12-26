@@ -371,6 +371,11 @@ class RelationLoader {
     final pivotTable = segment.pivotTable;
     final pivotParentColumn = segment.pivotParentKey;
     final pivotTargetColumn = segment.pivotRelatedKey;
+    final pivotColumns = _normalizePivotColumns(
+      segment.pivotColumns,
+      pivotParentColumn,
+      pivotTargetColumn,
+    );
     if (pivotTable == null ||
         pivotParentColumn == null ||
         pivotTargetColumn == null) {
@@ -392,6 +397,10 @@ class RelationLoader {
       pivotTable,
       pivotParentColumn,
       pivotTargetColumn,
+      pivotColumns: _pivotExtraColumns(
+        pivotColumns,
+        segment.morphOnPivot ? segment.morphTypeColumn : null,
+      ),
     );
     final pivotFilters = <FilterClause>[
       FilterClause(
@@ -417,6 +426,7 @@ class RelationLoader {
     );
     final pivotRows = await context.driver.execute(pivotPlan);
     final parentToTargets = <Object?, List<Object?>>{};
+    final pivotDataByParent = <Object?, Map<Object?, Map<String, Object?>>>{};
     final targetIds = <Object?>{};
     for (final row in pivotRows) {
       final parentId = row[pivotParentColumn];
@@ -426,6 +436,17 @@ class RelationLoader {
       }
       parentToTargets.putIfAbsent(parentId, () => <Object?>[]).add(targetId);
       targetIds.add(targetId);
+      final pivotData = _pivotDataFromRow(
+        row,
+        pivotParentColumn,
+        pivotTargetColumn,
+        pivotColumns,
+      );
+      if (pivotData != null) {
+        pivotDataByParent
+            .putIfAbsent(parentId, () => <Object?, Map<String, Object?>>{})
+            .putIfAbsent(targetId, () => pivotData);
+      }
     }
 
     if (targetIds.isEmpty) {
@@ -451,6 +472,39 @@ class RelationLoader {
       predicate: load.predicate,
     );
     final targetRows = await context.driver.execute(targetPlan);
+    final usePivotData = pivotColumns.isNotEmpty;
+    if (usePivotData) {
+      final rowLookup = <Object?, Map<String, Object?>>{};
+      for (final row in targetRows) {
+        rowLookup[row[targetKey]] = row;
+      }
+      for (final row in parents) {
+        final key = row.row[parentKey];
+        final ids = parentToTargets[key] ?? const [];
+        final pivotDataForParent = pivotDataByParent[key];
+        final models = <dynamic>[];
+        for (final id in ids) {
+          final targetRow = rowLookup[id];
+          if (targetRow == null) {
+            continue;
+          }
+          final model =
+              targetDefinition.fromMap(targetRow, registry: _codecRegistry);
+          context.attachRuntimeMetadata(model);
+          final pivotData = pivotDataForParent?[id];
+          if (pivotData != null && model is ModelRelations) {
+            (model as ModelRelations).setRelation(
+              'pivot',
+              Map<String, Object?>.from(pivotData),
+            );
+          }
+          models.add(model);
+        }
+        row.relations[relation.name] = List.unmodifiable(models);
+      }
+      return;
+    }
+
     final lookup = <Object?, dynamic>{};
     for (final row in targetRows) {
       final model = targetDefinition.fromMap(row, registry: _codecRegistry);
@@ -778,6 +832,7 @@ class RelationLoader {
           pivotTable: pivotTable,
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
+          pivotColumns: relation.pivotColumns,
         );
       case RelationKind.morphOne:
       case RelationKind.morphMany:
@@ -850,6 +905,7 @@ class RelationLoader {
           pivotTable: pivotTable,
           pivotParentKey: pivotParentKey,
           pivotRelatedKey: pivotRelatedKey,
+          pivotColumns: relation.pivotColumns,
           morphTypeColumn: morphColumn,
           morphClass: morphClass,
           morphOnPivot: true,
@@ -860,8 +916,9 @@ class RelationLoader {
   ModelDefinition<AdHocRow> _pivotDefinition(
     String table,
     String parentColumn,
-    String targetColumn,
-  ) => ModelDefinition<AdHocRow>(
+    String targetColumn, {
+    List<String> pivotColumns = const [],
+  }) => ModelDefinition<AdHocRow>(
     modelName: '_Pivot_$table',
     tableName: table,
     fields: [
@@ -881,10 +938,69 @@ class RelationLoader {
         isPrimaryKey: false,
         isNullable: false,
       ),
+      ...pivotColumns.map(
+        (column) => FieldDefinition(
+          name: column,
+          columnName: column,
+          dartType: 'Object',
+          resolvedType: 'Object?',
+          isPrimaryKey: false,
+          isNullable: true,
+        ),
+      ),
     ],
     relations: const [],
     codec: const _PivotCodec(),
   );
+
+  List<String> _normalizePivotColumns(
+    List<String> columns,
+    String? parentColumn,
+    String? targetColumn,
+  ) {
+    if (columns.isEmpty) return const [];
+    final normalized = <String>{};
+    for (final column in columns) {
+      final trimmed = column.trim();
+      if (trimmed.isEmpty) continue;
+      if (trimmed == parentColumn || trimmed == targetColumn) {
+        continue;
+      }
+      normalized.add(trimmed);
+    }
+    return normalized.toList(growable: false);
+  }
+
+  List<String> _pivotExtraColumns(
+    List<String> pivotColumns,
+    String? morphTypeColumn,
+  ) {
+    if (pivotColumns.isEmpty && morphTypeColumn == null) {
+      return const [];
+    }
+    final columns = <String>{...pivotColumns};
+    if (morphTypeColumn != null && morphTypeColumn.trim().isNotEmpty) {
+      columns.add(morphTypeColumn);
+    }
+    return columns.toList(growable: false);
+  }
+
+  Map<String, Object?>? _pivotDataFromRow(
+    Map<String, Object?> row,
+    String parentColumn,
+    String targetColumn,
+    List<String> pivotColumns,
+  ) {
+    if (pivotColumns.isEmpty) return null;
+    final data = <String, Object?>{
+      parentColumn: row[parentColumn],
+      targetColumn: row[targetColumn],
+    };
+    for (final column in pivotColumns) {
+      data[column] = row[column];
+    }
+    return data;
+  }
 }
 
 class _PivotCodec extends ModelCodec<AdHocRow> {

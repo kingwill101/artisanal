@@ -86,6 +86,7 @@ class RelationDescriptor {
     this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.pivotColumns = const [],
     this.morphType,
     this.morphClass,
   });
@@ -103,6 +104,7 @@ class RelationDescriptor {
   final String? throughLocalKey;
   final String? pivotForeignKey;
   final String? pivotRelatedKey;
+  final List<String> pivotColumns;
   final String? morphType;
   final String? morphClass;
 

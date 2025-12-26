@@ -449,6 +449,7 @@ class RelationDefinition {
     this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.pivotColumns = const [],
     this.morphType,
     this.morphClass,
   });
@@ -485,6 +486,9 @@ class RelationDefinition {
 
   /// Related key on the pivot table for many-to-many relations.
   final String? pivotRelatedKey;
+
+  /// Additional pivot columns to select when eager loading.
+  final List<String> pivotColumns;
 
   /// Type column name for polymorphic relations.
   final String? morphType;
