@@ -1,6 +1,9 @@
 // Examples for casting documentation.
 // ignore_for_file: unused_local_variable
 
+import 'dart:convert';
+
+import 'package:decimal/decimal.dart';
 import 'package:ormed/ormed.dart';
 
 part 'casting_examples.orm.dart';
@@ -79,3 +82,102 @@ DataSource buildDataSource(DriverAdapter driver) {
   );
 }
 // #endregion casts-custom-register
+
+// #region casts-custom-handler
+class UppercaseCastHandler extends AttributeCastHandler {
+  const UppercaseCastHandler();
+
+  @override
+  Object? encode(Object? value, AttributeCastContext context) {
+    final text = value?.toString();
+    return text?.toUpperCase();
+  }
+
+  @override
+  Object? decode(Object? value, AttributeCastContext context) {
+    return value?.toString();
+  }
+}
+// #endregion casts-custom-handler
+
+// #region casts-custom-handler-ops
+class MaskOnSerializeCastHandler extends AttributeCastHandler {
+  const MaskOnSerializeCastHandler();
+
+  @override
+  Object? encode(Object? value, AttributeCastContext context) {
+    final text = value?.toString();
+    if (context.operation == CastOperation.serialize) {
+      return text == null ? null : '***';
+    }
+    return text;
+  }
+
+  @override
+  Object? decode(Object? value, AttributeCastContext context) {
+    return value?.toString();
+  }
+}
+// #endregion casts-custom-handler-ops
+
+// #region casts-custom-handler-register
+void registerCastHandlers(DataSource dataSource) {
+  dataSource.codecRegistry.registerCastHandler(
+    key: 'upper',
+    handler: const UppercaseCastHandler(),
+  );
+}
+// #endregion casts-custom-handler-register
+
+// #region casts-enum-encrypted
+enum AccountStatus { active, disabled }
+
+@OrmModel(table: 'accounts')
+class Account extends Model<Account> {
+  const Account({required this.id, required this.status, required this.secret});
+
+  @OrmField(isPrimaryKey: true)
+  final int id;
+
+  @OrmField(cast: 'enum')
+  final AccountStatus status;
+
+  @OrmField(cast: 'encrypted')
+  final String secret;
+}
+// #endregion casts-enum-encrypted
+
+// #region casts-encrypted-register
+class ExampleEncrypter extends ValueEncrypter {
+  const ExampleEncrypter();
+
+  @override
+  String encrypt(String value) => base64.encode(utf8.encode(value));
+
+  @override
+  String decrypt(String value) => utf8.decode(base64.decode(value));
+}
+
+void registerEncrypter(DataSource dataSource) {
+  dataSource.codecRegistry.registerEncrypter(const ExampleEncrypter());
+}
+// #endregion casts-encrypted-register
+
+// #region casts-arguments
+@OrmModel(
+  table: 'invoices',
+  casts: {
+    'amount': 'decimal:2',
+    'metadata': 'encrypted:json',
+  },
+)
+class Invoice extends Model<Invoice> {
+  const Invoice({required this.id, this.amount, this.metadata});
+
+  @OrmField(isPrimaryKey: true)
+  final int id;
+
+  final Decimal? amount;
+  final Map<String, Object?>? metadata;
+}
+// #endregion casts-arguments
