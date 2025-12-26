@@ -312,6 +312,7 @@ class FieldDefinition {
     this.columnType,
     this.defaultValueSql,
     this.codecType,
+    this.enumValues,
     this.driverOverrides = const {},
   });
 
@@ -350,6 +351,11 @@ class FieldDefinition {
 
   /// Codec type for value transformations.
   final String? codecType;
+
+  /// Enum values for enum-backed fields (used by enum casts).
+  ///
+  /// Stored as the enum's `values` list from generated code.
+  final Object? enumValues;
 
   /// Driver-specific overrides for this field.
   final Map<String, FieldDriverOverride> driverOverrides;

@@ -24,6 +24,7 @@ class FieldDescriptor {
     required this.isSoftDelete,
     this.isVirtual = false,
     this.softDeleteColumnName,
+    this.enumType,
     this.driverOverrides = const {},
     this.attributeMetadata,
   });
@@ -44,6 +45,7 @@ class FieldDescriptor {
   final bool isSoftDelete;
   final bool isVirtual;
   final String? softDeleteColumnName;
+  final String? enumType;
   final Map<String, DriverFieldOverrideDescriptor> driverOverrides;
   final FieldAttributeMetadata? attributeMetadata;
 

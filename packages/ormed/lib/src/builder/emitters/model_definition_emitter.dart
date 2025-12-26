@@ -226,6 +226,9 @@ class ModelDefinitionEmitter {
       if (field.codecType != null) {
         buffer.writeln("  codecType: '${field.codecType}',");
       }
+      if (field.enumType != null) {
+        buffer.writeln('  enumValues: ${field.enumType}.values,');
+      }
       if (field.driverOverrides.isNotEmpty) {
         buffer.writeln('  driverOverrides: {');
         field.driverOverrides.forEach((driver, override) {

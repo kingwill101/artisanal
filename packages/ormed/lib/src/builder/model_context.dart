@@ -369,6 +369,7 @@ class ModelContext {
         ? typeWithNullability.substring(0, typeWithNullability.length - 1)
         : typeWithNullability;
     final resolvedType = typeWithNullability;
+    final enumType = field.type.element is EnumElement ? type : null;
     final fieldName = field.displayName;
     final nullableOverride = reader?.peek('isNullable');
     // codecType comes from 'codec' (Type parameter)
@@ -407,6 +408,14 @@ class ModelContext {
     final effectiveCodecType = codecType != null
         ? maybeTypeName(codecType)
         : (castString ?? modelLevelCast);
+    final normalizedCast =
+        effectiveCodecType?.trim().toLowerCase().split(':').first;
+    if (normalizedCast == 'enum' && enumType == null) {
+      throw InvalidGenerationSourceError(
+        '@OrmField(cast: \'enum\') requires an enum-typed field on $className.',
+        element: field,
+      );
+    }
 
     // Check if this is an auto-increment field
     final isAutoIncrement = reader?.peek('autoIncrement')?.boolValue ?? false;
@@ -431,6 +440,7 @@ class ModelContext {
           (softDeleteViaMixin
               ? columnName
               : reader?.peek('columnName')?.stringValue),
+      enumType: enumType,
       driverOverrides: driverOverrides,
       attributeMetadata: attributeMetadata,
     );

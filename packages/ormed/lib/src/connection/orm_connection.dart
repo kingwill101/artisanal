@@ -84,6 +84,7 @@ class OrmConnection implements ConnectionResolver {
         QueryContext(
           registry: registry,
           driver: driver,
+          codecRegistry: _codecRegistry,
           scopeRegistry: scopeRegistry,
           connectionName: config.name,
           connectionDatabase: config.database,
@@ -457,7 +458,8 @@ class OrmConnection implements ConnectionResolver {
   ModelRegistry get registry => _registry;
 
   @override
-  ValueCodecRegistry get codecRegistry => _codecRegistry;
+  ValueCodecRegistry get codecRegistry =>
+      _codecRegistry.forDriver(_driver.metadata.name);
 
   @override
   Future<List<Map<String, Object?>>> runSelect(QueryPlan plan) =>

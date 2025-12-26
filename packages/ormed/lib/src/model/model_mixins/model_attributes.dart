@@ -336,7 +336,13 @@ mixin ModelAttributes {
   }) {
     final cast = inspector.castFor(column);
     if (cast != null) {
-      return registry.decodeByKey(cast, value);
+      final field = definition?.fieldByColumn(column);
+      return registry.decodeCast(
+        cast,
+        value,
+        field: field,
+        operation: CastOperation.assign,
+      );
     }
     if (definition == null) {
       return value;
@@ -357,7 +363,13 @@ mixin ModelAttributes {
   }) {
     final cast = inspector.castFor(column);
     if (cast != null) {
-      return registry.encodeByKey(cast, value);
+      final field = definition?.fieldByColumn(column);
+      return registry.encodeCast(
+        cast,
+        value,
+        field: field,
+        operation: CastOperation.serialize,
+      );
     }
     if (definition == null) {
       return value;
