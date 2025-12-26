@@ -456,7 +456,16 @@ class ValueCodecRegistry {
         }
         return date;
       case 'datetime':
-        return _coerceDateTime(value);
+        final dateTime = _coerceDateTime(value);
+        if (dateTime == null) return null;
+        if (operation == CastOperation.persist) {
+          final driverCodec =
+              _driverCodecForKey('DateTime') ?? _driverCodecForKey('datetime');
+          if (driverCodec != null) {
+            return driverCodec.encode(dateTime);
+          }
+        }
+        return dateTime;
       case 'timestamp':
         return _coerceTimestamp(value);
       case 'decimal':
@@ -528,6 +537,11 @@ class ValueCodecRegistry {
       case 'date':
         return _coerceDate(value) as T?;
       case 'datetime':
+        final driverCodec =
+            _driverCodecForKey('DateTime') ?? _driverCodecForKey('datetime');
+        if (driverCodec != null) {
+          return driverCodec.decode(value) as T?;
+        }
         return _coerceDateTime(value) as T?;
       case 'timestamp':
         return _coerceTimestamp(value) as T?;
@@ -723,7 +737,35 @@ DateTime? _coerceDateTime(Object? value) {
   if (value == null) return null;
   if (value is DateTime) return value;
   if (value is CarbonInterface) return value.toDateTime();
-  if (value is String) return DateTime.parse(value);
+  if (value is String) {
+    final raw = value.trim();
+    if (raw.isEmpty) return null;
+    final timezoneMatch = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').firstMatch(raw);
+    final hasTimezone = timezoneMatch != null;
+    if (hasTimezone) {
+      if (!raw.contains('T')) {
+        final tz = timezoneMatch!.group(1)!;
+        final datePart = raw.substring(0, timezoneMatch.start);
+        if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart)) {
+          return DateTime.parse('${datePart}T00:00:00$tz');
+        }
+      }
+      return DateTime.parse(raw);
+    }
+    var normalized = raw;
+    if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(normalized)) {
+      normalized = '${normalized}T00:00:00';
+    } else {
+      if (normalized.contains(' ')) {
+        normalized = normalized.replaceFirst(' ', 'T');
+      }
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$')
+          .hasMatch(normalized)) {
+        normalized = '$normalized:00';
+      }
+    }
+    return DateTime.parse('${normalized}Z');
+  }
   return null;
 }
 
