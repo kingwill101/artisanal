@@ -42,6 +42,7 @@ final ModelDefinition<$ItemWithIntPK> _$ItemWithIntPKDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -189,6 +190,18 @@ class ItemWithIntPKInsertDto implements InsertDto<$ItemWithIntPK> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _ItemWithIntPKInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ItemWithIntPKInsertDtoCopyWithSentinel();
+  ItemWithIntPKInsertDto copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithIntPKInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _ItemWithIntPKInsertDtoCopyWithSentinel {
+  const _ItemWithIntPKInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ItemWithIntPK].
@@ -202,6 +215,18 @@ class ItemWithIntPKUpdateDto implements UpdateDto<$ItemWithIntPK> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _ItemWithIntPKUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ItemWithIntPKUpdateDtoCopyWithSentinel();
+  ItemWithIntPKUpdateDto copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithIntPKUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _ItemWithIntPKUpdateDtoCopyWithSentinel {
+  const _ItemWithIntPKUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ItemWithIntPK].
@@ -234,6 +259,18 @@ class ItemWithIntPKPartial implements PartialEntity<$ItemWithIntPK> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id};
   }
+
+  static const _ItemWithIntPKPartialCopyWithSentinel _copyWithSentinel =
+      _ItemWithIntPKPartialCopyWithSentinel();
+  ItemWithIntPKPartial copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithIntPKPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _ItemWithIntPKPartialCopyWithSentinel {
+  const _ItemWithIntPKPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ItemWithIntPK].
@@ -247,6 +284,7 @@ class ItemWithIntPKPartial implements PartialEntity<$ItemWithIntPK> {
 class $ItemWithIntPK extends ItemWithIntPK
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$ItemWithIntPK].
   $ItemWithIntPK({required int id}) : super.new(id: id) {
     _attachOrmRuntimeMetadata({'id': id});
   }
@@ -260,9 +298,11 @@ class $ItemWithIntPK extends ItemWithIntPK
     return $ItemWithIntPK(id: id ?? this.id);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -324,6 +364,7 @@ _$ItemWithAutoIncrementDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -479,6 +520,8 @@ class ItemWithAutoIncrementInsertDto
   Map<String, Object?> toMap() {
     return <String, Object?>{};
   }
+
+  ItemWithAutoIncrementInsertDto copyWith() => this;
 }
 
 /// Update DTO for [ItemWithAutoIncrement].
@@ -493,6 +536,18 @@ class ItemWithAutoIncrementUpdateDto
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _ItemWithAutoIncrementUpdateDtoCopyWithSentinel
+  _copyWithSentinel = _ItemWithAutoIncrementUpdateDtoCopyWithSentinel();
+  ItemWithAutoIncrementUpdateDto copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithAutoIncrementUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _ItemWithAutoIncrementUpdateDtoCopyWithSentinel {
+  const _ItemWithAutoIncrementUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ItemWithAutoIncrement].
@@ -526,6 +581,18 @@ class ItemWithAutoIncrementPartial
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id};
   }
+
+  static const _ItemWithAutoIncrementPartialCopyWithSentinel _copyWithSentinel =
+      _ItemWithAutoIncrementPartialCopyWithSentinel();
+  ItemWithAutoIncrementPartial copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithAutoIncrementPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+}
+
+class _ItemWithAutoIncrementPartialCopyWithSentinel {
+  const _ItemWithAutoIncrementPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ItemWithAutoIncrement].
@@ -539,6 +606,7 @@ class ItemWithAutoIncrementPartial
 class $ItemWithAutoIncrement extends ItemWithAutoIncrement
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$ItemWithAutoIncrement].
   $ItemWithAutoIncrement({int id = 0}) : super.new(id: id) {
     _attachOrmRuntimeMetadata({'id': id});
   }
@@ -552,9 +620,11 @@ class $ItemWithAutoIncrement extends ItemWithAutoIncrement
     return $ItemWithAutoIncrement(id: id ?? this.id);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -616,6 +686,7 @@ final ModelDefinition<$ItemWithUuidPK> _$ItemWithUuidPKDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -763,6 +834,18 @@ class ItemWithUuidPKInsertDto implements InsertDto<$ItemWithUuidPK> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _ItemWithUuidPKInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ItemWithUuidPKInsertDtoCopyWithSentinel();
+  ItemWithUuidPKInsertDto copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithUuidPKInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+    );
+  }
+}
+
+class _ItemWithUuidPKInsertDtoCopyWithSentinel {
+  const _ItemWithUuidPKInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [ItemWithUuidPK].
@@ -776,6 +859,18 @@ class ItemWithUuidPKUpdateDto implements UpdateDto<$ItemWithUuidPK> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (id != null) 'id': id};
   }
+
+  static const _ItemWithUuidPKUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ItemWithUuidPKUpdateDtoCopyWithSentinel();
+  ItemWithUuidPKUpdateDto copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithUuidPKUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+    );
+  }
+}
+
+class _ItemWithUuidPKUpdateDtoCopyWithSentinel {
+  const _ItemWithUuidPKUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [ItemWithUuidPK].
@@ -808,6 +903,18 @@ class ItemWithUuidPKPartial implements PartialEntity<$ItemWithUuidPK> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id};
   }
+
+  static const _ItemWithUuidPKPartialCopyWithSentinel _copyWithSentinel =
+      _ItemWithUuidPKPartialCopyWithSentinel();
+  ItemWithUuidPKPartial copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithUuidPKPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String?,
+    );
+  }
+}
+
+class _ItemWithUuidPKPartialCopyWithSentinel {
+  const _ItemWithUuidPKPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [ItemWithUuidPK].
@@ -821,6 +928,7 @@ class ItemWithUuidPKPartial implements PartialEntity<$ItemWithUuidPK> {
 class $ItemWithUuidPK extends ItemWithUuidPK
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$ItemWithUuidPK].
   $ItemWithUuidPK({required String id}) : super.new(id: id) {
     _attachOrmRuntimeMetadata({'id': id});
   }
@@ -834,9 +942,11 @@ class $ItemWithUuidPK extends ItemWithUuidPK
     return $ItemWithUuidPK(id: id ?? this.id);
   }
 
+  /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(String value) => setAttribute('id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -942,6 +1052,7 @@ final ModelDefinition<$Contact> _$ContactDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1100,6 +1211,28 @@ class ContactInsertDto implements InsertDto<$Contact> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ContactInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ContactInsertDtoCopyWithSentinel();
+  ContactInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ContactInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ContactInsertDtoCopyWithSentinel {
+  const _ContactInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Contact].
@@ -1121,6 +1254,30 @@ class ContactUpdateDto implements UpdateDto<$Contact> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ContactUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ContactUpdateDtoCopyWithSentinel();
+  ContactUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ContactUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ContactUpdateDtoCopyWithSentinel {
+  const _ContactUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Contact].
@@ -1179,6 +1336,30 @@ class ContactPartial implements PartialEntity<$Contact> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _ContactPartialCopyWithSentinel _copyWithSentinel =
+      _ContactPartialCopyWithSentinel();
+  ContactPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return ContactPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _ContactPartialCopyWithSentinel {
+  const _ContactPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Contact].
@@ -1190,6 +1371,7 @@ class ContactPartial implements PartialEntity<$Contact> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Contact extends Contact with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Contact].
   $Contact({
     int id = 0,
     required String email,
@@ -1223,24 +1405,32 @@ class $Contact extends Contact with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('user_email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('user_email', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

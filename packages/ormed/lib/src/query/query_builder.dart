@@ -7,6 +7,7 @@ import 'package:ormed/src/query/plan/join_definition.dart';
 import 'package:ormed/src/query/plan/join_target.dart';
 import 'package:ormed/src/query/plan/join_type.dart';
 
+import '../annotations.dart';
 import '../core/orm_config.dart';
 import '../core/monotonic_time.dart';
 import '../events/event_bus.dart';
@@ -98,6 +99,7 @@ class Query<T extends OrmEntity> {
     required this.context,
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -115,6 +117,7 @@ class Query<T extends OrmEntity> {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -134,6 +137,7 @@ class Query<T extends OrmEntity> {
     bool suppressEvents = false,
   }) : _filters = filters ?? <FilterClause>[],
        _orders = orders ?? <OrderClause>[],
+       _rawOrders = rawOrders ?? <RawOrderExpression>[],
        _relations = relations ?? <RelationLoad>[],
        _joins = joins ?? <JoinDefinition>[],
        _indexHints = indexHints ?? <IndexHint>[],
@@ -151,6 +155,7 @@ class Query<T extends OrmEntity> {
        _projectionOrder = projectionOrder ?? <ProjectionOrderEntry>[],
        _aggregates = aggregates ?? <AggregateExpression>[],
        _groupBy = groupBy ?? <String>[],
+       _rawGroupBy = rawGroupBy ?? <RawGroupByExpression>[],
        _having = having,
        _relationAggregates = relationAggregates ?? <RelationAggregate>[],
        _relationOrders = relationOrders ?? <RelationOrder>[],
@@ -181,6 +186,7 @@ class Query<T extends OrmEntity> {
   final QueryContext context;
   final List<FilterClause> _filters;
   final List<OrderClause> _orders;
+  final List<RawOrderExpression> _rawOrders;
   final List<RelationLoad> _relations;
   final List<JoinDefinition> _joins;
   final List<IndexHint> _indexHints;
@@ -198,6 +204,7 @@ class Query<T extends OrmEntity> {
   final List<ProjectionOrderEntry> _projectionOrder;
   final List<AggregateExpression> _aggregates;
   final List<String> _groupBy;
+  final List<RawGroupByExpression> _rawGroupBy;
   final QueryPredicate? _having;
   final List<RelationAggregate> _relationAggregates;
   final List<RelationOrder> _relationOrders;
@@ -457,12 +464,16 @@ class Query<T extends OrmEntity> {
             final pivotAlias = segment.usesPivot
                 ? 'pivot_${aliasBase}_$i'
                 : null;
+            final throughAlias = segment.usesThrough
+                ? 'through_${aliasBase}_$i'
+                : null;
             edges.add(
               RelationJoinEdge(
                 segment: segment,
                 parentAlias: parentAlias,
                 alias: alias,
                 pivotAlias: pivotAlias,
+                throughAlias: throughAlias,
               ),
             );
             parentAlias = alias;
@@ -480,6 +491,7 @@ class Query<T extends OrmEntity> {
       tablePrefix: context.connectionTablePrefix,
       filters: _filters,
       orders: _orders,
+      rawOrders: _rawOrders,
       randomOrder: _randomOrder,
       randomSeed: _randomSeed,
       limit: _limit,
@@ -495,6 +507,7 @@ class Query<T extends OrmEntity> {
       projectionOrder: _projectionOrder,
       aggregates: _aggregates,
       groupBy: _groupBy,
+      rawGroupBy: _rawGroupBy,
       having: _having,
       relationAggregates: _relationAggregates,
       relationOrders: _relationOrders,
@@ -543,18 +556,28 @@ class Query<T extends OrmEntity> {
         if (pivotAlias == null) {
           continue;
         }
+        final pivotConditions = <JoinCondition>[
+          JoinCondition.column(
+            left: '$pivotAlias.${segment.pivotParentKey!}',
+            operator: '=',
+            right: '${edge.parentAlias}.${segment.parentKey}',
+          ),
+        ];
+        if (segment.usesMorph && segment.morphOnPivot) {
+          pivotConditions.add(
+            JoinCondition.value(
+              left: '$pivotAlias.${segment.morphTypeColumn!}',
+              operator: '=',
+              value: segment.morphClass,
+            ),
+          );
+        }
         definitions.add(
           JoinDefinition(
             type: joinType,
             target: JoinTarget.table(segment.pivotTable!),
             alias: pivotAlias,
-            conditions: [
-              JoinCondition.column(
-                left: '$pivotAlias.${segment.pivotParentKey!}',
-                operator: '=',
-                right: '${edge.parentAlias}.${segment.parentKey}',
-              ),
-            ],
+            conditions: pivotConditions,
           ),
         );
         final childConditions = <JoinCondition>[
@@ -564,7 +587,7 @@ class Query<T extends OrmEntity> {
             right: '$pivotAlias.${segment.pivotRelatedKey!}',
           ),
         ];
-        if (segment.usesMorph) {
+        if (segment.usesMorph && !segment.morphOnPivot) {
           childConditions.add(
             JoinCondition.value(
               left: '${edge.alias}.${segment.morphTypeColumn!}',
@@ -581,6 +604,48 @@ class Query<T extends OrmEntity> {
             ),
             alias: edge.alias,
             conditions: childConditions,
+          ),
+        );
+        continue;
+      }
+      if (segment.usesThrough) {
+        final throughAlias = edge.throughAlias;
+        if (throughAlias == null ||
+            segment.throughDefinition == null ||
+            segment.throughParentKey == null ||
+            segment.throughChildKey == null) {
+          continue;
+        }
+        definitions.add(
+          JoinDefinition(
+            type: joinType,
+            target: JoinTarget.table(
+              _qualifiedRelationTableName(segment.throughDefinition!),
+            ),
+            alias: throughAlias,
+            conditions: [
+              JoinCondition.column(
+                left: '$throughAlias.${segment.throughParentKey!}',
+                operator: '=',
+                right: '${edge.parentAlias}.${segment.parentKey}',
+              ),
+            ],
+          ),
+        );
+        definitions.add(
+          JoinDefinition(
+            type: joinType,
+            target: JoinTarget.table(
+              _qualifiedRelationTableName(segment.targetDefinition),
+            ),
+            alias: edge.alias,
+            conditions: [
+              JoinCondition.column(
+                left: '${edge.alias}.${segment.childKey}',
+                operator: '=',
+                right: '$throughAlias.${segment.throughChildKey!}',
+              ),
+            ],
           ),
         );
         continue;
@@ -635,6 +700,7 @@ class Query<T extends OrmEntity> {
     limit: null,
     offset: null,
     orders: const <OrderClause>[],
+    rawOrders: const <RawOrderExpression>[],
     aggregates: const <AggregateExpression>[],
     selects: const <String>[],
     rawSelects: const <RawSelectExpression>[],
@@ -857,6 +923,7 @@ class Query<T extends OrmEntity> {
   Query<T> _copyWith({
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -874,6 +941,7 @@ class Query<T extends OrmEntity> {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -896,6 +964,7 @@ class Query<T extends OrmEntity> {
     context: context,
     filters: filters ?? _filters,
     orders: orders ?? _orders,
+    rawOrders: rawOrders ?? _rawOrders,
     relations: relations ?? _relations,
     joins: joins ?? _joins,
     indexHints: indexHints ?? _indexHints,
@@ -915,6 +984,7 @@ class Query<T extends OrmEntity> {
     projectionOrder: projectionOrder ?? _projectionOrder,
     aggregates: aggregates ?? _aggregates,
     groupBy: groupBy ?? _groupBy,
+    rawGroupBy: rawGroupBy ?? _rawGroupBy,
     having: having ?? _having,
     relationAggregates: relationAggregates ?? _relationAggregates,
     relationOrders: relationOrders ?? _relationOrders,
@@ -1540,7 +1610,7 @@ class Query<T extends OrmEntity> {
     bool distinct = false,
     String? column,
   }) {
-    final path = _resolveRelationPath(relation);
+    final path = _resolveRelationPath(relation, allowMorphTo: false);
     final where = _buildRelationPredicateConstraint(path, constraint);
     final sanitized = relation.replaceAll('.', '_');
     final resolvedAlias =
@@ -1556,8 +1626,21 @@ class Query<T extends OrmEntity> {
     );
   }
 
-  RelationPath _resolveRelationPath(String relation) {
+  RelationPath _resolveRelationPath(
+    String relation, {
+    bool allowMorphTo = true,
+  }) {
     final path = _resolver.resolvePath(definition, relation);
+    if (!allowMorphTo) {
+      final morphSegment = path.segments.firstWhereOrNull(
+        (segment) => segment.relation.kind == RelationKind.morphTo,
+      );
+      if (morphSegment != null) {
+        throw StateError(
+          'Relation $relation cannot be used with morphTo segments (${morphSegment.name}).',
+        );
+      }
+    }
     _relationPaths.putIfAbsent(relation, () => path);
     return path;
   }

@@ -86,6 +86,7 @@ final ModelDefinition<$MutationTarget> _$MutationTargetDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -439,6 +440,7 @@ class _MutationTargetPartialCopyWithSentinel {
 class $MutationTarget extends MutationTarget
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$MutationTarget].
   $MutationTarget({
     required String id,
     String? name,
@@ -477,24 +479,32 @@ class $MutationTarget extends MutationTarget
     );
   }
 
+  /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('_id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(String value) => setAttribute('_id', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
+  /// Tracked getter for [active].
   @override
   bool? get active => getAttribute<bool?>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool? value) => setAttribute('active', value);
 
+  /// Tracked getter for [category].
   @override
   String? get category => getAttribute<String?>('category') ?? super.category;
 
+  /// Tracked setter for [category].
   set category(String? value) => setAttribute('category', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

@@ -158,6 +158,7 @@ final ModelDefinition<$Article> _$ArticleDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -671,6 +672,7 @@ class _ArticlePartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Article extends Article with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Article].
   $Article({
     int id = 0,
     required String title,
@@ -744,51 +746,69 @@ class $Article extends Article with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [body].
   @override
   String? get body => getAttribute<String?>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String? value) => setAttribute('body', value);
 
+  /// Tracked getter for [status].
   @override
   String get status => getAttribute<String>('status') ?? super.status;
 
+  /// Tracked setter for [status].
   set status(String value) => setAttribute('status', value);
 
+  /// Tracked getter for [rating].
   @override
   double get rating => getAttribute<double>('rating') ?? super.rating;
 
+  /// Tracked setter for [rating].
   set rating(double value) => setAttribute('rating', value);
 
+  /// Tracked getter for [priority].
   @override
   int get priority => getAttribute<int>('priority') ?? super.priority;
 
+  /// Tracked setter for [priority].
   set priority(int value) => setAttribute('priority', value);
 
+  /// Tracked getter for [publishedAt].
   @override
   DateTime get publishedAt =>
       getAttribute<DateTime>('published_at') ?? super.publishedAt;
 
+  /// Tracked setter for [publishedAt].
   set publishedAt(DateTime value) => setAttribute('published_at', value);
 
+  /// Tracked getter for [reviewedAt].
   @override
   DateTime? get reviewedAt =>
       getAttribute<DateTime?>('reviewed_at') ?? super.reviewedAt;
 
+  /// Tracked setter for [reviewedAt].
   set reviewedAt(DateTime? value) => setAttribute('reviewed_at', value);
 
+  /// Tracked getter for [categoryId].
   @override
   int get categoryId => getAttribute<int>('category_id') ?? super.categoryId;
 
+  /// Tracked setter for [categoryId].
   set categoryId(int value) => setAttribute('category_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

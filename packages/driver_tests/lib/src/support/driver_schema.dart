@@ -119,6 +119,27 @@ final List<MigrationEntry> driverTestMigrationEntries = [
     ),
     migration: const CreateMixedConstructorsTable(),
   ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 20),
+      'create_taggables_table',
+    ),
+    migration: const CreateTaggablesTable(),
+  ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 21),
+      'create_accessor_users_table',
+    ),
+    migration: const CreateAccessorUsersTable(),
+  ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 22),
+      'create_cast_samples_table',
+    ),
+    migration: const CreateCastSamplesTable(),
+  ),
 ];
 
 /// Create a test schema manager for driver tests

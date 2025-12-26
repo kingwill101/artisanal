@@ -35,6 +35,8 @@ Notes:
 - `fill(...)` defaults to `strict: false` (guarded keys are discarded).
 - Set `strict: true` to throw a `MassAssignmentException` when a guarded key is present.
 - Use `forceFill(...)` only for trusted/internal flows.
+- `fill` / `fillIfAbsent` / `forceFill` accept tracked models, DTOs, and partials in addition to maps.
+- Map keys can be Dart field names or column names (they are normalized).
 
 ## Serialization (hidden / visible)
 
@@ -43,3 +45,26 @@ Notes:
 ```dart file=../../examples/lib/models/attribute_metadata_examples.dart#attributes-serialize
 ```
 
+## Accessors and mutators
+
+Accessors let you transform attribute reads, while mutators normalize values when they are assigned.
+Define them as static members on the model, similar to query scopes.
+
+```dart file=../../examples/lib/models/attribute_metadata_examples.dart#attributes-accessors
+```
+
+:::note Static-only accessors
+Accessors and mutators must be declared as `static`. The generator exposes them
+on tracked models via extensions, so you can read `tracked.displayName` and call
+`tracked.normalizeEmail('User@Example.com')`. Accessors apply when using
+`getAttribute(...)` and serialization (`toArray`, `toJson`). Mutators apply when
+using `setAttribute(...)`, `fill(...)`, or tracked setters. Use
+`getRawAttribute(...)` / `setRawAttribute(...)` to bypass accessors/mutators.
+:::
+
+## Appends (computed attributes)
+
+Use `appends` to include computed attributes in `toArray()` / `toJson()` output.
+
+```dart file=../../examples/lib/models/attribute_metadata_examples.dart#attributes-appends
+```

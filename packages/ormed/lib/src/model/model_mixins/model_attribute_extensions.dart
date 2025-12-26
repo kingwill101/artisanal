@@ -67,7 +67,15 @@ extension ModelAttributeMapExtensions on Map<String, Object?> {
   }) {
     final cast = inspector.castFor(column);
     if (cast != null) {
-      return codecs.decodeByKey(cast, value);
+      final field = fields.firstWhereOrNull(
+        (entry) => entry.columnName == column,
+      );
+      return codecs.decodeCast(
+        cast,
+        value,
+        field: field,
+        operation: CastOperation.assign,
+      );
     }
     final field = fields.firstWhereOrNull(
       (entry) => entry.columnName == column,

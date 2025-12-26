@@ -28,6 +28,14 @@ A one-to-many relationship.
 ```
 
   </TabItem>
+  <TabItem value="has-many-through" label="Has Many Through">
+
+Load related models through an intermediate model.
+
+```dart file=../../examples/lib/models/relations/has_many_through.dart#relation-has-many-through
+```
+
+  </TabItem>
   <TabItem value="belongs-to" label="Belongs To">
 
 The inverse of hasOne/hasMany: this model owns the foreign key.
@@ -49,8 +57,75 @@ A many-to-many relationship using a pivot table. Ormed automatically handles the
 ```dart file=../../examples/lib/models/relations/belongs_to_many.dart#relation-belongs-to-many-tag
 ```
 
+Use `withPivot` to include pivot columns when loading the related models. The
+selected pivot values are attached as a `pivot` relation on each related model.
+
+```dart file=../../examples/lib/models/relations/belongs_to_many.dart#relation-belongs-to-many-pivot
+```
+
+```dart
+final pivot = tag.getRelation<Map<String, Object?>>('pivot');
+final sortOrder = pivot?['sort_order'];
+```
+
   </TabItem>
 </Tabs>
+
+## Polymorphic Relationships
+
+Polymorphic relationships let a model belong to more than one type of model on
+a single association.
+
+<Tabs groupId="relationship-types-polymorphic" defaultValue="morph-one">
+  <TabItem value="morph-one" label="Morph One">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-one
+```
+
+  </TabItem>
+  <TabItem value="morph-many" label="Morph Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-many
+```
+
+  </TabItem>
+  <TabItem value="morph-to" label="Morph To">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-to
+```
+
+  </TabItem>
+  <TabItem value="morph-to-many" label="Morph To Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morph-to-many
+```
+
+  </TabItem>
+  <TabItem value="morphed-by-many" label="Morphed By Many">
+
+```dart file=../../examples/lib/models/relations/polymorphic.dart#relation-morphed-by-many
+```
+
+  </TabItem>
+</Tabs>
+
+:::note Morph-to constraints
+`morphTo` relations do not support constraint callbacks and cannot be used as
+intermediate segments in nested relation paths. Use `morphTo` as the final
+segment when eager loading.
+:::
+
+### Morph Map Aliases
+
+If your morph types store aliases instead of full model names, register a map
+before loading relations:
+
+```dart
+dataSource.registry.registerMorphMap({
+  'post': Post,
+  'user': User,
+});
+```
 
 ## Loading Relations
 

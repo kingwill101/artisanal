@@ -28,6 +28,7 @@ class QueryContext implements ConnectionResolver {
   ///
   /// [registry] is the model registry containing all model definitions.
   /// [driver] is the database driver to use for all operations.
+  /// [codecRegistry] provides value codecs, cast handlers, and encrypters.
   /// [scopeRegistry] is an optional registry for global and local query scopes.
   /// [connectionName] is an optional name for the database connection.
   /// [connectionDatabase] is an optional name for the database.
@@ -41,6 +42,7 @@ class QueryContext implements ConnectionResolver {
   QueryContext({
     required this.registry,
     required this.driver,
+    ValueCodecRegistry? codecRegistry,
     ScopeRegistry? scopeRegistry,
     EventBus? events,
     this.connectionName,
@@ -52,9 +54,10 @@ class QueryContext implements ConnectionResolver {
     TransactionHook? afterTransactionHook,
     QueryLogHook? queryLogHook,
     bool Function()? pretendResolver,
-  }) : codecRegistry = ValueCodecRegistry.instance.forDriver(
-         driver.metadata.name,
-       ),
+  }) : codecRegistry =
+           (codecRegistry ?? ValueCodecRegistry.instance).forDriver(
+             driver.metadata.name,
+           ),
        scopeRegistry = scopeRegistry ?? ScopeRegistry(),
        events = events ?? EventBus.instance,
        queryCache = QueryCache(),

@@ -84,6 +84,7 @@ final ModelDefinition<$TimestampPost> _$TimestampPostDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -263,6 +264,20 @@ class TimestampPostInsertDto implements InsertDto<$TimestampPost> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _TimestampPostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TimestampPostInsertDtoCopyWithSentinel();
+  TimestampPostInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return TimestampPostInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampPostInsertDtoCopyWithSentinel {
+  const _TimestampPostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [TimestampPost].
@@ -280,6 +295,24 @@ class TimestampPostUpdateDto implements UpdateDto<$TimestampPost> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _TimestampPostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TimestampPostUpdateDtoCopyWithSentinel();
+  TimestampPostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampPostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampPostUpdateDtoCopyWithSentinel {
+  const _TimestampPostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [TimestampPost].
@@ -320,6 +353,24 @@ class TimestampPostPartial implements PartialEntity<$TimestampPost> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _TimestampPostPartialCopyWithSentinel _copyWithSentinel =
+      _TimestampPostPartialCopyWithSentinel();
+  TimestampPostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampPostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampPostPartialCopyWithSentinel {
+  const _TimestampPostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [TimestampPost].
@@ -333,6 +384,7 @@ class TimestampPostPartial implements PartialEntity<$TimestampPost> {
 class $TimestampPost extends TimestampPost
     with ModelAttributes, TimestampsImpl
     implements OrmEntity {
+  /// Internal constructor for [$TimestampPost].
   $TimestampPost({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -347,14 +399,18 @@ class $TimestampPost extends TimestampPost
     return $TimestampPost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -458,6 +514,7 @@ final ModelDefinition<$TimestampArticleTz> _$TimestampArticleTzDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -646,6 +703,20 @@ class TimestampArticleTzInsertDto implements InsertDto<$TimestampArticleTz> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _TimestampArticleTzInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TimestampArticleTzInsertDtoCopyWithSentinel();
+  TimestampArticleTzInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return TimestampArticleTzInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampArticleTzInsertDtoCopyWithSentinel {
+  const _TimestampArticleTzInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [TimestampArticleTz].
@@ -663,6 +734,24 @@ class TimestampArticleTzUpdateDto implements UpdateDto<$TimestampArticleTz> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _TimestampArticleTzUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TimestampArticleTzUpdateDtoCopyWithSentinel();
+  TimestampArticleTzUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampArticleTzUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampArticleTzUpdateDtoCopyWithSentinel {
+  const _TimestampArticleTzUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [TimestampArticleTz].
@@ -703,6 +792,24 @@ class TimestampArticleTzPartial implements PartialEntity<$TimestampArticleTz> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _TimestampArticleTzPartialCopyWithSentinel _copyWithSentinel =
+      _TimestampArticleTzPartialCopyWithSentinel();
+  TimestampArticleTzPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampArticleTzPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _TimestampArticleTzPartialCopyWithSentinel {
+  const _TimestampArticleTzPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [TimestampArticleTz].
@@ -716,6 +823,7 @@ class TimestampArticleTzPartial implements PartialEntity<$TimestampArticleTz> {
 class $TimestampArticleTz extends TimestampArticleTz
     with ModelAttributes, TimestampsTZImpl
     implements OrmEntity {
+  /// Internal constructor for [$TimestampArticleTz].
   $TimestampArticleTz({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -730,14 +838,18 @@ class $TimestampArticleTz extends TimestampArticleTz
     return $TimestampArticleTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

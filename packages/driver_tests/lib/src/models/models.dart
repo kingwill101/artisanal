@@ -1,6 +1,8 @@
 library;
 
 export 'active_user.dart';
+export 'accessor_user.dart';
+export 'cast_sample.dart';
 export 'attribute_user.dart';
 export 'author.dart';
 export 'comment.dart';
@@ -17,6 +19,7 @@ export 'serial_test.dart';
 export 'settings.dart';
 export 'unique_user.dart';
 export 'tag.dart';
+export 'taggable.dart';
 export 'user.dart';
 export 'user_profile.dart';
 export 'post_tag.dart';

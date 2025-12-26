@@ -79,6 +79,7 @@ _$NullableRelationsTestDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -375,6 +376,7 @@ class _NullableRelationsTestPartialCopyWithSentinel {
 class $NullableRelationsTest extends NullableRelationsTest
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$NullableRelationsTest].
   $NullableRelationsTest({int id = 0, required String name})
     : super.new(id: id, name: name) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name});
@@ -389,14 +391,18 @@ class $NullableRelationsTest extends NullableRelationsTest
     return $NullableRelationsTest(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

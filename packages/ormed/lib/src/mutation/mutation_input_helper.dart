@@ -93,8 +93,10 @@ class MutationInputHelper<T extends OrmEntity> {
           values[columnName] = codecs.encodeField(updatedAtField, now);
         }
       } else {
-        final now = _createTimestampValue(updatedAtField);
-        values[columnName] = codecs.encodeField(updatedAtField, now);
+        if (!values.containsKey(columnName)) {
+          final now = _createTimestampValue(updatedAtField);
+          values[columnName] = codecs.encodeField(updatedAtField, now);
+        }
       }
     } catch (_) {}
   }
@@ -137,7 +139,13 @@ class MutationInputHelper<T extends OrmEntity> {
         (f) => f.columnName == 'updated_at',
       );
       final columnName = updatedAtField.columnName;
-      attrs.setAttribute(columnName, now);
+      final hasOriginal = attrs.hasOriginalAttributes;
+      final explicit = hasOriginal
+          ? attrs.isDirty(columnName)
+          : attrs.hasAttribute(columnName);
+      if (!explicit) {
+        attrs.setAttribute(columnName, now);
+      }
     } catch (_) {}
   }
 
@@ -167,6 +175,29 @@ class MutationInputHelper<T extends OrmEntity> {
       _ when _isPrimaryKeyValue(input) => _normalizePrimaryKeyValue(input),
       // Unsupported types fall back to caller logic (e.g., extractPrimaryKey or pk fallback).
       _ => null,
+    };
+  }
+
+  /// Converts a fill-style input to a column/value map.
+  ///
+  /// Supports:
+  /// - tracked model instances (uses tracked attributes)
+  /// - [PartialEntity<T>]
+  /// - [InsertDto<T>], [UpdateDto<T>]
+  /// - [Map<String, Object?>]
+  Map<String, Object?> attributesInputToMap(Object input) {
+    return switch (input) {
+      ModelAttributes model => _normalizeColumnNames(model.attributes),
+      PartialEntity<dynamic> partial => _normalizeColumnNames(partial.toMap()),
+      InsertDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
+      UpdateDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
+      Map<String, Object?> m => _normalizeColumnNames(m),
+      Map m => _normalizeColumnNames(_stringKeyMap(m)),
+      _ => throw ArgumentError.value(
+        input,
+        'attributes',
+        'Expected tracked model, PartialEntity, InsertDto, UpdateDto, or Map<String, Object?>, got ${input.runtimeType}',
+      ),
     };
   }
 
@@ -204,6 +235,22 @@ class MutationInputHelper<T extends OrmEntity> {
     for (final entry in input.entries) {
       final columnName = _fieldToColumnName(entry.key);
       result[columnName] = entry.value;
+    }
+    return result;
+  }
+
+  Map<String, Object?> _stringKeyMap(Map input) {
+    final result = <String, Object?>{};
+    for (final entry in input.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        throw ArgumentError.value(
+          key,
+          'attributes',
+          'Expected string keys in attribute maps.',
+        );
+      }
+      result[key] = entry.value;
     }
     return result;
   }

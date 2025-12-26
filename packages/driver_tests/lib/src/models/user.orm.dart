@@ -153,6 +153,7 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     fillable: const <String>['email'],
     guarded: const <String>['id'],
     casts: const <String, String>{'createdAt': 'datetime'},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -605,6 +606,7 @@ class _UserPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $User extends User with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$User].
   $User({
     int id = 0,
     required String email,
@@ -672,47 +674,63 @@ class $User extends User with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
+  /// Tracked getter for [age].
   @override
   int? get age => getAttribute<int?>('age') ?? super.age;
 
+  /// Tracked setter for [age].
   set age(int? value) => setAttribute('age', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [profile].
   @override
   Map<String, Object?>? get profile =>
       getAttribute<Map<String, Object?>?>('profile') ?? super.profile;
 
+  /// Tracked setter for [profile].
   set profile(Map<String, Object?>? value) => setAttribute('profile', value);
 
+  /// Tracked getter for [metadata].
   @override
   Map<String, Object?>? get metadata =>
       getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
+  /// Tracked setter for [metadata].
   set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

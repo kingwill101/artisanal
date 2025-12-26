@@ -7,7 +7,11 @@ import TabItem from '@theme/TabItem';
 
 # Casting
 
-Casting lets you map a model field to a **codec key** (a string) so Ormed can consistently encode values **to the database** and decode values **back into Dart**.
+Casting lets you map a model field to a **codec key** (a string) so Ormed can consistently:
+- Normalize values when assigning (`fill`, `setAttribute`)
+- Decode values when hydrating from queries
+- Encode values when persisting mutations
+- Serialize values when calling `toArray()` / `toJson()`
 
 You can define casts:
 - Per-model with `@OrmModel(casts: {...})`
@@ -19,10 +23,52 @@ These keys are available out of the box:
 
 | Cast key | Dart type to use | Stored as | Notes |
 |---|---|---|---|
+| `date` | `DateTime` / `DateTime?` | Date (driver-dependent) | Normalizes to a date-only `DateTime`. |
 | `datetime` | `DateTime` / `DateTime?` | `DateTime` or ISO-8601 string (driver-dependent) | Supports `CarbonInterface` for input. Decodes to `DateTime`. |
+| `timestamp` | `int` / `int?` | Unix timestamp (seconds) | Converts from `DateTime`, `CarbonInterface`, or numeric values. |
+| `decimal` | `Decimal` / `Decimal?` | String | Uses `package:decimal`. |
+| `bool` / `boolean` | `bool` / `bool?` | Boolean | Accepts numeric and string inputs. |
+| `int` / `integer` | `int` / `int?` | Integer | Accepts numeric and string inputs. |
+| `double` / `float` / `real` | `double` / `double?` | Float | Accepts numeric and string inputs. |
+| `string` | `String` / `String?` | String | Coerces values to strings. |
+| `enum` | `MyEnum` / `MyEnum?` | Enum name | Requires `@OrmField(cast: 'enum')`. |
+| `encrypted` | `String` / `String?` | Encrypted string | Requires a registered encrypter. |
 | `json` | `Map<String, Object?>` / `Map<String, Object?>?` | JSON string | For JSON objects |
 | `object` | `Map<String, Object?>` / `Map<String, Object?>?` | JSON string | Alias for `json` |
 | `array` | `List<Object?>` / `List<Object?>?` | JSON string | For JSON arrays |
+
+:::note Enum + encrypted casts
+`enum` casts require `@OrmField(cast: 'enum')` on an enum-typed field. Encrypted
+casts require an encrypter to be registered via
+`dataSource.codecRegistry.registerEncrypter(...)` (recommended) or
+`ValueCodecRegistry.instance.registerEncrypter(...)` before decoding/encoding.
+Encrypted values are decrypted in model attributes and serialization; encryption
+is applied only when persisting changes.
+:::
+
+:::note Decimal scale
+Use `decimal:2` (or any `decimal:<scale>`) to format decimal values with a
+fixed scale on write. Decoding always returns a `Decimal`.
+:::
+
+## When casts run
+
+Ormed applies casts at multiple lifecycle points:
+
+- **Assign**: `fill`, `forceFill`, `setAttribute` on tracked models.
+- **Hydrate**: query results → model attributes.
+- **Persist**: building insert/update payloads for the driver.
+- **Serialize**: `toArray()` / `toJson()` output.
+
+Custom cast handlers receive `context.operation` so you can branch per stage:
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-custom-handler-ops
+```
+
+Notes for encrypted casts:
+- Assign uses the raw value (no decryption), so you can pass plaintext in `fill`.
+- Serialize does **not** re-encrypt values (so APIs get plaintext).
+- Persist encrypts before writing to the database.
 
 ## Defining casts
 
@@ -40,6 +86,54 @@ These keys are available out of the box:
 
   </TabItem>
 </Tabs>
+
+## Custom cast handlers
+
+For context-aware casts (like formatters or per-field logic), register an
+`AttributeCastHandler` and reference it by key from your model metadata.
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-custom-handler
+```
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-custom-handler-register
+```
+
+Register handlers on the data source registry (or before DataSource creation)
+so the active connection can see them.
+
+## Enum casts
+
+Enum casts store values by name and hydrate back to enum instances when possible.
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-enum-encrypted
+```
+
+Notes:
+- Stored values are enum names (`active`, `disabled`, etc).
+- Hydration accepts enum names or numeric indexes when values are available.
+- If the field metadata doesn’t include enum values, Ormed leaves the raw value.
+
+## Encrypted casts
+
+Encrypted casts require a `ValueEncrypter` registration. Register per data source
+to avoid leaking secrets across connections.
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-encrypted-register
+```
+
+Encrypted casts can wrap other cast keys by using arguments, e.g.
+`encrypted:json` or `encrypted:decimal:2` (see below).
+
+## Cast arguments
+
+Some casts accept arguments via `key:arg`:
+
+```dart file=../../examples/lib/models/casting_examples.dart#casts-arguments
+```
+
+Examples:
+- `decimal:2` formats writes with a fixed scale.
+- `encrypted:json` JSON-encodes values before encrypting.
 
 ### Precedence
 
@@ -74,4 +168,3 @@ You can define your own cast keys by registering a codec under that key, then re
 
   </TabItem>
 </Tabs>
-

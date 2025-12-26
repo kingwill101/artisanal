@@ -24,6 +24,7 @@ class ModelRegistry {
   final Map<Type, ModelDefinition<OrmEntity>> _definitions = {};
   final Map<String, ModelDefinition<OrmEntity>> _definitionsByName = {};
   final Map<String, ModelDefinition<OrmEntity>> _definitionsByTable = {};
+  final Map<String, ModelDefinition<OrmEntity>> _morphDefinitions = {};
   final StreamController<ModelDefinition<OrmEntity>> _onRegistered =
       StreamController.broadcast();
   final List<void Function(ModelDefinition<OrmEntity>)> _onRegisteredCallbacks =
@@ -126,6 +127,15 @@ class ModelRegistry {
     return definition as ModelDefinition<T>;
   }
 
+  /// Returns the registered [ModelDefinition] for a runtime [type] or throws.
+  ModelDefinition<OrmEntity> expectByType(Type type) {
+    final definition = _definitions[type];
+    if (definition == null) {
+      throw ModelNotRegistered(type);
+    }
+    return definition;
+  }
+
   /// Returns the model definition registered under [name] or throws.
   ModelDefinition<OrmEntity> expectByName(String name) {
     final definition = _definitionsByName[name];
@@ -151,6 +161,30 @@ class ModelRegistry {
 
   /// Whether a definition is registered for [T].
   bool contains<T>() => _definitions.containsKey(T);
+
+  /// Registers a morph type alias for a model type.
+  void registerMorphAlias(String alias, Type modelType) {
+    final definition = expectByType(modelType);
+    _morphDefinitions[alias] = definition;
+  }
+
+  /// Registers a morph map of aliases to model types.
+  void registerMorphMap(Map<String, Type> aliases) {
+    for (final entry in aliases.entries) {
+      registerMorphAlias(entry.key, entry.value);
+    }
+  }
+
+  /// Resolves a morph alias or model name to a registered model definition.
+  ModelDefinition<OrmEntity> resolveMorphDefinition(String aliasOrModelName) {
+    final definition =
+        _morphDefinitions[aliasOrModelName] ??
+        _definitionsByName[aliasOrModelName];
+    if (definition == null) {
+      throw ModelNotRegisteredByName(aliasOrModelName);
+    }
+    return definition;
+  }
 
   /// Iterable view of the registered definitions keyed by type.
   Iterable<ModelDefinition<OrmEntity>> get values => _definitions.values;

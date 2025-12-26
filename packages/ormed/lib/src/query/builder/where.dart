@@ -118,7 +118,7 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   ///   .get();
   /// ```
   Query<T> joinRelation(String relation, {JoinType type = JoinType.inner}) {
-    _resolveRelationPath(relation);
+    _resolveRelationPath(relation, allowMorphTo: false);
     final updated = Map<String, RelationJoinRequest>.from(_relationJoinRequests)
       ..[relation] = RelationJoinRequest(joinType: type);
     return _copyWith(relationJoinRequests: updated);
@@ -769,7 +769,7 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
     PredicateCallback<OrmEntity>? constraint, {
     required PredicateLogicalOperator logical,
   }) {
-    final path = _resolveRelationPath(relation);
+    final path = _resolveRelationPath(relation, allowMorphTo: false);
     final where = _buildRelationPredicateConstraint(path, constraint);
     final predicate = RelationPredicate(path: path, where: where);
     return _appendPredicate(predicate, logical);

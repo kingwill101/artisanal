@@ -11,6 +11,14 @@ import 'package:ormed/ormed.dart';
 typedef UntrackedModelEncoder =
     Map<String, Object?> Function(Object model, ValueCodecRegistry registry);
 
+/// Reads a model attribute value using a custom accessor.
+typedef AttributeAccessor =
+    Object? Function(OrmEntity model, Object? value);
+
+/// Transforms a model attribute value using a custom mutator.
+typedef AttributeMutator =
+    Object? Function(OrmEntity model, Object? value);
+
 /// Runtime description of a generated ORM model.
 ///
 /// Generated code registers a [ModelDefinition] for each `@OrmModel()` type.
@@ -32,6 +40,8 @@ class ModelDefinition<TModel extends OrmEntity> {
     this.relations = const [],
     this.softDeleteColumn,
     this.metadata = const ModelAttributesMetadata(),
+    this.accessors = const {},
+    this.mutators = const {},
   });
 
   /// The name of the model class.
@@ -65,6 +75,12 @@ class ModelDefinition<TModel extends OrmEntity> {
 
   /// Metadata controlling attribute behavior (hidden, fillable, etc.).
   final ModelAttributesMetadata metadata;
+
+  /// Attribute accessors keyed by column name.
+  final Map<String, AttributeAccessor> accessors;
+
+  /// Attribute mutators keyed by column name.
+  final Map<String, AttributeMutator> mutators;
 
   /// Returns the runtime type of the model.
   Type get modelType => TModel;
@@ -159,6 +175,8 @@ class ModelDefinition<TModel extends OrmEntity> {
     UntrackedModelEncoder? untrackedToMap,
     String? softDeleteColumn,
     ModelAttributesMetadata? metadata,
+    Map<String, AttributeAccessor>? accessors,
+    Map<String, AttributeMutator>? mutators,
   }) => ModelDefinition<TModel>(
     modelName: modelName ?? this.modelName,
     tableName: tableName ?? this.tableName,
@@ -169,6 +187,8 @@ class ModelDefinition<TModel extends OrmEntity> {
     untrackedToMap: untrackedToMap ?? this.untrackedToMap,
     softDeleteColumn: softDeleteColumn ?? this.softDeleteColumn,
     metadata: metadata ?? this.metadata,
+    accessors: accessors ?? this.accessors,
+    mutators: mutators ?? this.mutators,
   );
 }
 
@@ -180,6 +200,7 @@ class ModelAttributesMetadata {
     this.fillable = const <String>[],
     this.guarded = const <String>[],
     this.casts = const <String, String>{},
+    this.appends = const <String>[],
     this.fieldOverrides = const {},
     this.connection,
     this.softDeletes = false,
@@ -201,6 +222,9 @@ class ModelAttributesMetadata {
 
   /// Map of attribute names to their cast types.
   final Map<String, String> casts;
+
+  /// Computed attributes to append when serializing.
+  final List<String> appends;
 
   /// Per-field metadata overrides.
   final Map<String, FieldAttributeMetadata> fieldOverrides;
@@ -224,6 +248,7 @@ class ModelAttributesMetadata {
     List<String>? fillable,
     List<String>? guarded,
     Map<String, String>? casts,
+    List<String>? appends,
     Map<String, FieldAttributeMetadata>? fieldOverrides,
     String? connection,
     bool? softDeletes,
@@ -235,6 +260,7 @@ class ModelAttributesMetadata {
     fillable: fillable ?? this.fillable,
     guarded: guarded ?? this.guarded,
     casts: casts ?? this.casts,
+    appends: appends ?? this.appends,
     fieldOverrides: fieldOverrides ?? this.fieldOverrides,
     connection: connection ?? this.connection,
     softDeletes: softDeletes ?? this.softDeletes,
@@ -286,6 +312,7 @@ class FieldDefinition {
     this.columnType,
     this.defaultValueSql,
     this.codecType,
+    this.enumValues,
     this.driverOverrides = const {},
   });
 
@@ -324,6 +351,11 @@ class FieldDefinition {
 
   /// Codec type for value transformations.
   final String? codecType;
+
+  /// Enum values for enum-backed fields (used by enum casts).
+  ///
+  /// Stored as the enum's `values` list from generated code.
+  final Object? enumValues;
 
   /// Driver-specific overrides for this field.
   final Map<String, FieldDriverOverride> driverOverrides;
@@ -412,8 +444,14 @@ class RelationDefinition {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.pivotColumns = const [],
+    this.pivotTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -436,11 +474,29 @@ class RelationDefinition {
   /// Through model for has-many-through relations.
   final String? through;
 
+  /// Intermediate model for through relations.
+  final String? throughModel;
+
+  /// Foreign key on the through model pointing back to the parent.
+  final String? throughForeignKey;
+
+  /// Key on the through model referenced by the related model's foreign key.
+  final String? throughLocalKey;
+
   /// Foreign key on the pivot table for many-to-many relations.
   final String? pivotForeignKey;
 
   /// Related key on the pivot table for many-to-many relations.
   final String? pivotRelatedKey;
+
+  /// Additional pivot columns to select when eager loading.
+  final List<String> pivotColumns;
+
+  /// Whether to automatically manage pivot timestamps.
+  final bool pivotTimestamps;
+
+  /// Optional pivot model type name for many-to-many relations.
+  final String? pivotModel;
 
   /// Type column name for polymorphic relations.
   final String? morphType;

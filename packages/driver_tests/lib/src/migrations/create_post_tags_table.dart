@@ -8,6 +8,9 @@ class CreatePostTagsTable extends Migration {
     schema.create('post_tags', (table) {
       table.integer('post_id');
       table.integer('tag_id');
+      table.integer('sort_order').nullable();
+      table.string('note').nullable();
+      table.nullableTimestamps(precision: 6);
       table.primary(['post_id', 'tag_id']);
     });
   }

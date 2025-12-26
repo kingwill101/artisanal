@@ -45,7 +45,7 @@ const FieldDefinition _$PostContentField = FieldDefinition(
 
 const FieldDefinition _$PostAuthorIdField = FieldDefinition(
   name: 'authorId',
-  columnName: 'authorId',
+  columnName: 'author_id',
   dartType: 'int',
   resolvedType: 'int?',
   isPrimaryKey: false,
@@ -64,7 +64,7 @@ Map<String, Object?> _encodePostUntracked(
     'id': registry.encodeField(_$PostIdField, m.id),
     'title': registry.encodeField(_$PostTitleField, m.title),
     'content': registry.encodeField(_$PostContentField, m.content),
-    'authorId': registry.encodeField(_$PostAuthorIdField, m.authorId),
+    'author_id': registry.encodeField(_$PostAuthorIdField, m.authorId),
   };
 }
 
@@ -85,6 +85,7 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -192,7 +193,7 @@ class _$PostCodec extends ModelCodec<$Post> {
       'id': registry.encodeField(_$PostIdField, model.id),
       'title': registry.encodeField(_$PostTitleField, model.title),
       'content': registry.encodeField(_$PostContentField, model.content),
-      'authorId': registry.encodeField(_$PostAuthorIdField, model.authorId),
+      'author_id': registry.encodeField(_$PostAuthorIdField, model.authorId),
     };
   }
 
@@ -209,7 +210,7 @@ class _$PostCodec extends ModelCodec<$Post> {
     );
     final int? postAuthorIdValue = registry.decodeField<int?>(
       _$PostAuthorIdField,
-      data['authorId'],
+      data['author_id'],
     );
     final model = $Post(
       id: postIdValue,
@@ -221,7 +222,7 @@ class _$PostCodec extends ModelCodec<$Post> {
       'id': postIdValue,
       'title': postTitleValue,
       'content': postContentValue,
-      'authorId': postAuthorIdValue,
+      'author_id': postAuthorIdValue,
     });
     return model;
   }
@@ -241,9 +242,33 @@ class PostInsertDto implements InsertDto<$Post> {
     return <String, Object?>{
       if (title != null) 'title': title,
       if (content != null) 'content': content,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _PostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostInsertDtoCopyWithSentinel();
+  PostInsertDto copyWith({
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return PostInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _PostInsertDtoCopyWithSentinel {
+  const _PostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Post].
@@ -262,9 +287,35 @@ class PostUpdateDto implements UpdateDto<$Post> {
       if (id != null) 'id': id,
       if (title != null) 'title': title,
       if (content != null) 'content': content,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _PostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostUpdateDtoCopyWithSentinel();
+  PostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return PostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _PostUpdateDtoCopyWithSentinel {
+  const _PostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Post].
@@ -282,7 +333,7 @@ class PostPartial implements PartialEntity<$Post> {
       id: row['id'] as int?,
       title: row['title'] as String?,
       content: row['content'] as String?,
-      authorId: row['authorId'] as int?,
+      authorId: row['author_id'] as int?,
     );
   }
 
@@ -316,9 +367,35 @@ class PostPartial implements PartialEntity<$Post> {
       if (id != null) 'id': id,
       if (title != null) 'title': title,
       if (content != null) 'content': content,
-      if (authorId != null) 'authorId': authorId,
+      if (authorId != null) 'author_id': authorId,
     };
   }
+
+  static const _PostPartialCopyWithSentinel _copyWithSentinel =
+      _PostPartialCopyWithSentinel();
+  PostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return PostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int?,
+    );
+  }
+}
+
+class _PostPartialCopyWithSentinel {
+  const _PostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Post].
@@ -330,13 +407,14 @@ class PostPartial implements PartialEntity<$Post> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Post extends Post with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Post].
   $Post({int id = 0, required String title, String? content, int? authorId})
     : super.new(id: id, title: title, content: content, authorId: authorId) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'title': title,
       'content': content,
-      'authorId': authorId,
+      'author_id': authorId,
     });
   }
 
@@ -359,25 +437,33 @@ class $Post extends Post with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [content].
   @override
   String? get content => getAttribute<String?>('content') ?? super.content;
 
+  /// Tracked setter for [content].
   set content(String? value) => setAttribute('content', value);
 
+  /// Tracked getter for [authorId].
   @override
-  int? get authorId => getAttribute<int?>('authorId') ?? super.authorId;
+  int? get authorId => getAttribute<int?>('author_id') ?? super.authorId;
 
-  set authorId(int? value) => setAttribute('authorId', value);
+  /// Tracked setter for [authorId].
+  set authorId(int? value) => setAttribute('author_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);

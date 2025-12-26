@@ -51,6 +51,7 @@ class OrmModel {
     this.fillable = const [],
     this.guarded = const [],
     this.casts = const {},
+    this.appends = const [],
     this.connection,
     this.softDeletes = false,
     this.softDeletesColumn = 'deleted_at',
@@ -88,6 +89,9 @@ class OrmModel {
   /// If you override [OrmField.columnName], prefer setting [OrmField.cast] on
   /// that field so the cast follows the effective column name.
   final Map<String, String> casts;
+
+  /// Computed attributes to include when serializing via `toArray()`/`toJson()`.
+  final List<String> appends;
 
   /// A connection/driver name override.
   final String? connection;
@@ -286,8 +290,14 @@ class OrmRelation {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.withPivot = const [],
+    this.withTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -313,6 +323,54 @@ class OrmRelation {
          localKey: localKey,
        );
 
+  /// Creates a `hasOneThrough` relation.
+  ///
+  /// [throughModel] is the intermediate model class.
+  /// [foreignKey] is the related model's foreign key referencing [throughModel].
+  /// [throughForeignKey] is the intermediate model's foreign key referencing
+  /// the parent model.
+  /// [throughLocalKey] is the intermediate model key referenced by [foreignKey].
+  const OrmRelation.hasOneThrough({
+    Type? target,
+    Type? throughModel,
+    String? foreignKey,
+    String? localKey,
+    String? throughForeignKey,
+    String? throughLocalKey,
+  }) : this(
+         kind: RelationKind.hasOneThrough,
+         target: target,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         throughModel: throughModel,
+         throughForeignKey: throughForeignKey,
+         throughLocalKey: throughLocalKey,
+       );
+
+  /// Creates a `hasManyThrough` relation.
+  ///
+  /// [throughModel] is the intermediate model class.
+  /// [foreignKey] is the related model's foreign key referencing [throughModel].
+  /// [throughForeignKey] is the intermediate model's foreign key referencing
+  /// the parent model.
+  /// [throughLocalKey] is the intermediate model key referenced by [foreignKey].
+  const OrmRelation.hasManyThrough({
+    Type? target,
+    Type? throughModel,
+    String? foreignKey,
+    String? localKey,
+    String? throughForeignKey,
+    String? throughLocalKey,
+  }) : this(
+         kind: RelationKind.hasManyThrough,
+         target: target,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         throughModel: throughModel,
+         throughForeignKey: throughForeignKey,
+         throughLocalKey: throughLocalKey,
+       );
+
   /// Creates a `belongsTo` relation.
   const OrmRelation.belongsTo({
     Type? target,
@@ -336,6 +394,9 @@ class OrmRelation {
     String? pivotRelatedKey,
     String? foreignKey,
     String? localKey,
+    List<String> withPivot = const [],
+    bool withTimestamps = false,
+    Type? pivotModel,
   }) : this(
          kind: RelationKind.manyToMany,
          target: target,
@@ -344,6 +405,9 @@ class OrmRelation {
          pivotRelatedKey: pivotRelatedKey,
          foreignKey: foreignKey,
          localKey: localKey,
+         withPivot: withPivot,
+         withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
        );
 
   /// Creates a `morphOne` relation.
@@ -378,6 +442,84 @@ class OrmRelation {
          localKey: localKey,
        );
 
+  /// Creates a `morphTo` relation.
+  ///
+  /// [foreignKey] is the morph id column on the parent model.
+  /// [morphType] is the morph type/discriminator column on the parent model.
+  /// [localKey] is the target key on related models (defaults to their primary key).
+  const OrmRelation.morphTo({
+    String? foreignKey,
+    String? morphType,
+    String? localKey,
+  }) : this(
+         kind: RelationKind.morphTo,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+       );
+
+  /// Creates a `morphToMany` relation.
+  ///
+  /// Use [through] for the pivot/join table and provide pivot key overrides
+  /// as needed. [morphType] and [morphClass] describe the polymorphic pivot.
+  const OrmRelation.morphToMany({
+    Type? target,
+    String? through,
+    String? pivotForeignKey,
+    String? pivotRelatedKey,
+    String? foreignKey,
+    String? localKey,
+    String? morphType,
+    String? morphClass,
+    List<String> withPivot = const [],
+    bool withTimestamps = false,
+    Type? pivotModel,
+  }) : this(
+         kind: RelationKind.morphToMany,
+         target: target,
+         through: through,
+         pivotForeignKey: pivotForeignKey,
+         pivotRelatedKey: pivotRelatedKey,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+         morphClass: morphClass,
+         withPivot: withPivot,
+         withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
+       );
+
+  /// Creates a `morphedByMany` relation.
+  ///
+  /// Use [through] for the pivot/join table and provide pivot key overrides
+  /// as needed. [morphType] and [morphClass] describe the polymorphic pivot.
+  const OrmRelation.morphedByMany({
+    Type? target,
+    String? through,
+    String? pivotForeignKey,
+    String? pivotRelatedKey,
+    String? foreignKey,
+    String? localKey,
+    String? morphType,
+    String? morphClass,
+    List<String> withPivot = const [],
+    bool withTimestamps = false,
+    Type? pivotModel,
+  }) : this(
+         kind: RelationKind.morphedByMany,
+         target: target,
+         through: through,
+         pivotForeignKey: pivotForeignKey,
+         pivotRelatedKey: pivotRelatedKey,
+         foreignKey: foreignKey,
+         localKey: localKey,
+         morphType: morphType,
+         morphClass: morphClass,
+         withPivot: withPivot,
+         withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
+       );
+
   /// The relationship kind (for example, [RelationKind.hasMany]).
   final RelationKind kind;
 
@@ -393,17 +535,66 @@ class OrmRelation {
   /// The join/pivot table for many-to-many relations.
   final String? through;
 
+  /// The intermediate model class for through relations.
+  final Type? throughModel;
+
+  /// Foreign key on the through model pointing back to the parent.
+  final String? throughForeignKey;
+
+  /// Key on the through model referenced by the related model's foreign key.
+  final String? throughLocalKey;
+
   /// The owner key column name on the pivot table.
   final String? pivotForeignKey;
 
   /// The related key column name on the pivot table.
   final String? pivotRelatedKey;
 
+  /// Additional pivot columns to select when eager loading.
+  final List<String> withPivot;
+
+  /// Whether to automatically manage pivot timestamps (created_at/updated_at).
+  final bool withTimestamps;
+
+  /// Optional pivot model type for many-to-many relations.
+  final Type? pivotModel;
+
   /// The discriminator/type column name for polymorphic relations.
   final String? morphType;
 
   /// The discriminator/class value for polymorphic relations.
   final String? morphClass;
+}
+
+/// Marks an instance getter or method as an attribute accessor.
+///
+/// Accessors customize how an attribute value is exposed. Prefer annotating a
+/// Dart getter for ergonomic access:
+///
+/// ```dart
+/// @OrmAccessor()
+/// String get fullName => '${getAttribute('first_name')} ${getAttribute('last_name')}';
+/// ```
+///
+/// Provide [attribute] to override the inferred column name.
+@immutable
+class OrmAccessor {
+  const OrmAccessor({this.attribute});
+
+  /// Column name or attribute key to associate with this accessor.
+  final String? attribute;
+}
+
+/// Marks an instance setter or method as an attribute mutator.
+///
+/// Mutators transform values before they are stored in the attribute map.
+/// Provide [attribute] to override the inferred column name.
+@immutable
+class OrmMutator {
+  const OrmMutator({this.attribute});
+
+  /// Column name or attribute key to associate with this mutator.
+  final String? attribute;
 }
 
 /// Marks a static model method as a query scope.
@@ -438,6 +629,12 @@ enum RelationKind {
   /// One-to-many relation where the related model holds the foreign key.
   hasMany,
 
+  /// One-to-one relation through an intermediate model.
+  hasOneThrough,
+
+  /// One-to-many relation through an intermediate model.
+  hasManyThrough,
+
   /// Inverse relation where this model holds the foreign key.
   belongsTo,
 
@@ -449,6 +646,15 @@ enum RelationKind {
 
   /// Polymorphic one-to-many relation.
   morphMany,
+
+  /// Polymorphic inverse relation.
+  morphTo,
+
+  /// Polymorphic many-to-many relation.
+  morphToMany,
+
+  /// Polymorphic inverse many-to-many relation.
+  morphedByMany,
 }
 
 /// Marks a field as the soft-delete column for a model.

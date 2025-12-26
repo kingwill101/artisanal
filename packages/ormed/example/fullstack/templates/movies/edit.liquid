@@ -7,7 +7,11 @@
   <h1>Edit movie</h1>
   <p class="muted">Update the catalog entry.</p>
 
-  {% comment %}// #region movies-edit-errors{% endcomment %}
+  {% comment %}
+
+  // #region movies-edit-errors
+
+  {% endcomment %}
   {% if errors.size > 0 %}
   <div class="error-list">
     <strong>Please fix the following:</strong>
@@ -18,9 +22,14 @@
     </ul>
   </div>
   {% endif %}
-  {% comment %}// #endregion movies-edit-errors{% endcomment %}
+  {% comment %}
+  // #endregion movies-edit-errors
+  {% endcomment %}
+  {% comment %}
 
-  {% comment %}// #region movies-edit-form{% endcomment %}
+  // #region movies-edit-form
+
+  {% endcomment %}
   <form method="post" action="/movies/{{ movie.id }}/edit" enctype="multipart/form-data">
     <div class="field">
       <label for="title">Title</label>
@@ -50,6 +59,8 @@
     <button class="button" type="submit">Save changes</button>
     <a class="button alt" href="/movies/{{ movie.id }}">Cancel</a>
   </form>
-  {% comment %}// #endregion movies-edit-form{% endcomment %}
+  {% comment %}
+  // #endregion movies-edit-form
+  {% endcomment %}
 </div>
 {% endblock %}

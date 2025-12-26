@@ -12,6 +12,7 @@ part 'attribute_metadata_examples.orm.dart';
   guarded: ['is_admin'],
   hidden: ['password_hash'],
   visible: ['password_hash'],
+  appends: ['display_name'],
 )
 class Account extends Model<Account> {
   const Account({
@@ -34,8 +35,19 @@ class Account extends Model<Account> {
 
   @OrmField(columnName: 'is_admin', guarded: true)
   final bool isAdmin;
+
+  // #endregion attributes-model-level
+
+  // #region attributes-accessors
+  @OrmAccessor(attribute: 'display_name')
+  static String displayName(Account model, Object? _) =>
+      model.name ?? model.email;
+
+  @OrmMutator(attribute: 'email')
+  static String normalizeEmail(Account model, String? value) =>
+      value?.trim().toLowerCase() ?? model.email;
+  // #endregion attributes-accessors
 }
-// #endregion attributes-model-level
 
 // #region attributes-fill
 void massAssignmentExample() {
@@ -70,3 +82,16 @@ Map<String, Object?> serializationExample() {
 }
 
 // #endregion attributes-serialize
+
+// #region attributes-appends
+Map<String, Object?> appendsExample() {
+  final account = $Account(
+    id: 2,
+    email: 'User@Example.com',
+    passwordHash: 'hash',
+    name: 'User Name',
+  );
+
+  return account.toArray();
+}
+// #endregion attributes-appends

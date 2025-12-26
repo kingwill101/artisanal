@@ -54,6 +54,7 @@ final ModelDefinition<$PostWithTags> _$PostWithTagsDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -66,8 +67,8 @@ extension PostWithTagsOrmDefinition on PostWithTags {
       _$PostWithTagsDefinition;
 }
 
-class PostWithTagss {
-  const PostWithTagss._();
+class PostWithTags {
+  const PostWithTags._();
 
   /// Starts building a query for [$PostWithTags].
   ///
@@ -213,6 +214,22 @@ class PostWithTagsInsertDto implements InsertDto<$PostWithTags> {
       if (tags != null) 'tags': tags,
     };
   }
+
+  static const _PostWithTagsInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostWithTagsInsertDtoCopyWithSentinel();
+  PostWithTagsInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? tags = _copyWithSentinel,
+  }) {
+    return PostWithTagsInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      tags: identical(tags, _copyWithSentinel) ? this.tags : tags as List<Tag>?,
+    );
+  }
+}
+
+class _PostWithTagsInsertDtoCopyWithSentinel {
+  const _PostWithTagsInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [PostWithTags].
@@ -230,6 +247,22 @@ class PostWithTagsUpdateDto implements UpdateDto<$PostWithTags> {
       if (tags != null) 'tags': tags,
     };
   }
+
+  static const _PostWithTagsUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostWithTagsUpdateDtoCopyWithSentinel();
+  PostWithTagsUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? tags = _copyWithSentinel,
+  }) {
+    return PostWithTagsUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      tags: identical(tags, _copyWithSentinel) ? this.tags : tags as List<Tag>?,
+    );
+  }
+}
+
+class _PostWithTagsUpdateDtoCopyWithSentinel {
+  const _PostWithTagsUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [PostWithTags].
@@ -266,6 +299,22 @@ class PostWithTagsPartial implements PartialEntity<$PostWithTags> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (tags != null) 'tags': tags};
   }
+
+  static const _PostWithTagsPartialCopyWithSentinel _copyWithSentinel =
+      _PostWithTagsPartialCopyWithSentinel();
+  PostWithTagsPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? tags = _copyWithSentinel,
+  }) {
+    return PostWithTagsPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      tags: identical(tags, _copyWithSentinel) ? this.tags : tags as List<Tag>?,
+    );
+  }
+}
+
+class _PostWithTagsPartialCopyWithSentinel {
+  const _PostWithTagsPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [PostWithTags].
@@ -279,6 +328,7 @@ class PostWithTagsPartial implements PartialEntity<$PostWithTags> {
 class $PostWithTags extends PostWithTags
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$PostWithTags].
   $PostWithTags({required int id, List<Tag>? tags})
     : super.new(id: id, tags: tags) {
     _attachOrmRuntimeMetadata({'id': id, 'tags': tags});
@@ -293,14 +343,18 @@ class $PostWithTags extends PostWithTags
     return $PostWithTags(id: id ?? this.id, tags: tags ?? this.tags);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [tags].
   @override
   List<Tag>? get tags => getAttribute<List<Tag>?>('tags') ?? super.tags;
 
+  /// Tracked setter for [tags].
   set tags(List<Tag>? value) => setAttribute('tags', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -374,6 +428,7 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -509,6 +564,22 @@ class TagInsertDto implements InsertDto<$Tag> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _TagInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TagInsertDtoCopyWithSentinel();
+  TagInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return TagInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _TagInsertDtoCopyWithSentinel {
+  const _TagInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Tag].
@@ -526,6 +597,22 @@ class TagUpdateDto implements UpdateDto<$Tag> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _TagUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TagUpdateDtoCopyWithSentinel();
+  TagUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return TagUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _TagUpdateDtoCopyWithSentinel {
+  const _TagUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Tag].
@@ -563,6 +650,22 @@ class TagPartial implements PartialEntity<$Tag> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (name != null) 'name': name};
   }
+
+  static const _TagPartialCopyWithSentinel _copyWithSentinel =
+      _TagPartialCopyWithSentinel();
+  TagPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return TagPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _TagPartialCopyWithSentinel {
+  const _TagPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Tag].
@@ -574,6 +677,7 @@ class TagPartial implements PartialEntity<$Tag> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Tag extends Tag with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Tag].
   $Tag({required int id, required String name})
     : super.new(id: id, name: name) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name});
@@ -588,14 +692,18 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     return $Tag(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

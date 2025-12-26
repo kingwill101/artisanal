@@ -36,8 +36,18 @@ void runRelationsAccessorTests() {
         const Tag(id: 2, label: 'flutter'),
       ]);
       await dataSource.repo<PostTag>().insertMany([
-        const PostTag(postId: 1, tagId: 1),
-        const PostTag(postId: 1, tagId: 2),
+        const PostTag(
+          postId: 1,
+          tagId: 1,
+          sortOrder: 10,
+          note: 'primary',
+        ),
+        const PostTag(
+          postId: 1,
+          tagId: 2,
+          sortOrder: 20,
+          note: 'secondary',
+        ),
       ]);
     });
 
@@ -114,6 +124,23 @@ void runRelationsAccessorTests() {
         expect(post.relations, hasLength(2));
         expect(post.relations.containsKey('author'), isTrue);
         expect(post.relations.containsKey('tags'), isTrue);
+      });
+
+      test('pivot data is hydrated for many-to-many relations', () async {
+        final post = await dataSource.context
+            .query<Post>()
+            .withRelation('tags')
+            .where('id', 1)
+            .first();
+
+        expect(post, isNotNull);
+        final tags = post!.tags;
+        expect(tags, hasLength(2));
+
+        final pivot = tags.first.getRelation<PostTag>('pivot');
+        expect(pivot, isNotNull);
+        expect(pivot!.sortOrder, equals(10));
+        expect(pivot.note, equals('primary'));
       });
     });
 

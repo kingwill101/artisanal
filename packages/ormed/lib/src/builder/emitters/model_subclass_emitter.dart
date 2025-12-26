@@ -1,6 +1,7 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
 import 'package:ormed/src/annotations.dart';
+import 'package:source_gen/source_gen.dart';
 
 import '../descriptors.dart';
 import '../model_context.dart';
@@ -92,7 +93,9 @@ class ModelSubclassEmitter {
     buffer.writeln(
       '  $modelSubclassName${_constructorParameters(context.constructor, context.fields)}',
     );
-    buffer.writeln('      : super${_superInvocation(context.constructor)} {');
+    buffer.writeln(
+      '      : super${_superInvocation(context.constructor, context.fields)} {',
+    );
     buffer.writeln('    _attachOrmRuntimeMetadata({');
     for (final field in context.fields.where((f) => !f.isVirtual)) {
       buffer.writeln("      '${field.columnName}': ${field.name},");
@@ -170,7 +173,7 @@ class ModelSubclassEmitter {
       // Determine return type based on relation type and field nullability
       final String returnType;
       if (isList) {
-        // List relations (hasMany, manyToMany, morphMany) always return non-nullable List
+        // List relations (hasMany, manyToMany, morphMany, morphToMany) always return non-nullable List
         // to provide a consistent API - empty list instead of null
         returnType = 'List<${relation.targetModel}>';
       } else {
@@ -264,7 +267,10 @@ class ModelSubclassEmitter {
             '    ).where(\'${relation.through}.${relation.pivotForeignKey}\', $ownerKeyGetter);',
           );
         } else if (relation.kind == RelationKind.morphOne ||
-            relation.kind == RelationKind.morphMany) {
+            relation.kind == RelationKind.morphMany ||
+            relation.kind == RelationKind.morphTo ||
+            relation.kind == RelationKind.morphToMany ||
+            relation.kind == RelationKind.morphedByMany) {
           buffer.writeln(
             '    throw UnimplementedError("Polymorphic relation query generation not yet supported");',
           );
@@ -309,6 +315,10 @@ class ModelSubclassEmitter {
     // setAttribute() only exists on the generated subclass (via ModelAttributes mixin).
     // Users should use the generated model type or access via repository/query builder.
 
+    if (context.accessors.isNotEmpty || context.mutators.isNotEmpty) {
+      buffer.writeln(_emitAccessorExtensions());
+    }
+
     // Generate scope extensions and registrations
     if (context.scopes.isNotEmpty) {
       buffer.writeln(_emitScopeExtensions());
@@ -336,6 +346,81 @@ class ModelSubclassEmitter {
     buffer.writeln();
 
     return buffer.toString();
+  }
+
+  String _emitAccessorExtensions() {
+    final buffer = StringBuffer();
+    final className = context.className;
+    final trackedName = context.trackedModelClassName;
+    buffer.writeln('extension ${trackedName}Accessors on $trackedName {');
+
+    for (final accessor in context.accessors) {
+      buffer.writeln('  ${accessor.returnType} get ${accessor.name} {');
+      buffer.writeln(
+        '    return ${_accessorInvocation(accessor, className)};',
+      );
+      buffer.writeln('  }');
+    }
+
+    for (final mutator in context.mutators) {
+      final valueParam = '${mutator.valueType} value';
+      if (mutator.returnType == 'void') {
+        buffer.writeln('  void ${mutator.name}($valueParam) {');
+        buffer.writeln(
+          '    ${_mutatorInvocation(mutator, className, 'value')};',
+        );
+        buffer.writeln(
+          "    setRawAttribute('${mutator.attribute}', value);",
+        );
+        buffer.writeln('  }');
+      } else {
+        buffer.writeln(
+          '  ${mutator.returnType} ${mutator.name}($valueParam) {',
+        );
+        buffer.writeln(
+          '    final result = ${_mutatorInvocation(mutator, className, 'value')};',
+        );
+        buffer.writeln(
+          "    setRawAttribute('${mutator.attribute}', result);",
+        );
+        buffer.writeln('    return result;');
+        buffer.writeln('  }');
+      }
+    }
+
+    buffer.writeln('}');
+    buffer.writeln();
+    return buffer.toString();
+  }
+
+  String _accessorInvocation(AccessorDescriptor accessor, String className) {
+    if (accessor.isGetter) {
+      return '$className.${accessor.name}';
+    }
+    final valueExpr =
+        accessor.takesValue
+            ? _castValue(
+              "getRawAttribute('${accessor.attribute}')",
+              accessor.valueType!,
+            )
+            : null;
+    final args =
+        accessor.takesModel
+            ? valueExpr == null
+                ? 'this'
+                : 'this, $valueExpr'
+            : valueExpr ?? '';
+    return '$className.${accessor.name}($args)';
+  }
+
+  String _mutatorInvocation(
+    MutatorDescriptor mutator,
+    String className,
+    String valueName,
+  ) {
+    final valueExpr = _castValue(valueName, mutator.valueType);
+    final args = mutator.takesModel ? 'this, $valueExpr' : valueExpr;
+    return '$className.${mutator.name}($args)';
   }
 
   String _emitScopeRegistrations() {
@@ -382,6 +467,13 @@ class ModelSubclassEmitter {
     buffer.writeln('}');
     buffer.writeln();
     return buffer.toString();
+  }
+
+  String _castValue(String valueName, String dartType) {
+    if (dartType == 'dynamic' || dartType == 'Object?' || dartType == 'Object') {
+      return valueName;
+    }
+    return '$valueName as $dartType';
   }
 
   String _scopeMethodSignature(ScopeDescriptor scope) {
@@ -494,7 +586,15 @@ class ModelSubclassEmitter {
       final field = fields.firstWhereOrNull(
         (f) => !f.isVirtual && f.name == paramName,
       );
-      if (field == null) continue;
+      if (field == null) {
+        if (context.shouldSkipConstructorParameter(parameter)) {
+          continue;
+        }
+        throw InvalidGenerationSourceError(
+          'Constructor parameter $paramName is not backed by a field.',
+          element: constructor,
+        );
+      }
 
       // Check if this field has a default value (e.g., auto-increment sentinel)
       final hasDefaultValue = field.autoIncrement && !field.isNullable;
@@ -514,7 +614,10 @@ class ModelSubclassEmitter {
     return buffer.toString();
   }
 
-  String _superInvocation(ConstructorElement constructor) {
+  String _superInvocation(
+    ConstructorElement constructor,
+    List<FieldDescriptor> fields,
+  ) {
     final buffer = StringBuffer();
     if ((constructor.name ?? '').isNotEmpty) {
       buffer.write('.${constructor.name}');
@@ -522,6 +625,18 @@ class ModelSubclassEmitter {
     buffer.write('(');
     for (final parameter in constructor.formalParameters) {
       final paramName = parameter.displayName;
+      final field = fields.firstWhereOrNull(
+        (f) => !f.isVirtual && f.name == paramName,
+      );
+      if (field == null) {
+        if (context.shouldSkipConstructorParameter(parameter)) {
+          continue;
+        }
+        throw InvalidGenerationSourceError(
+          'Constructor parameter $paramName is not backed by a field.',
+          element: constructor,
+        );
+      }
       if (parameter.isNamed) {
         buffer.write('$paramName: $paramName, ');
       } else {

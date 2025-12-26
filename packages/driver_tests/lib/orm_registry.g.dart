@@ -1,10 +1,12 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // coverage:ignore-file
 import 'package:ormed/ormed.dart';
+import 'src/models/accessor_user.dart';
 import 'src/models/active_user.dart';
 import 'src/models/article.dart';
 import 'src/models/attribute_user.dart';
 import 'src/models/author.dart';
+import 'src/models/cast_sample.dart';
 import 'src/models/comment.dart';
 import 'src/models/custom_soft_delete.dart';
 import 'src/models/derived_for_factory.dart';
@@ -24,15 +26,18 @@ import 'src/models/scoped_user.dart';
 import 'src/models/serial_test.dart';
 import 'src/models/settings.dart';
 import 'src/models/tag.dart';
+import 'src/models/taggable.dart';
 import 'src/models/unique_user.dart';
 import 'src/models/user.dart';
 import 'src/models/user_profile.dart';
 
 final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
+  AccessorUserOrmDefinition.definition,
   ActiveUserOrmDefinition.definition,
   ArticleOrmDefinition.definition,
   AttributeUserOrmDefinition.definition,
   AuthorOrmDefinition.definition,
+  CastSampleOrmDefinition.definition,
   CommentOrmDefinition.definition,
   CustomSoftDeleteOrmDefinition.definition,
   DerivedForFactoryOrmDefinition.definition,
@@ -52,6 +57,7 @@ final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
   SerialTestOrmDefinition.definition,
   SettingOrmDefinition.definition,
   TagOrmDefinition.definition,
+  TaggableOrmDefinition.definition,
   UniqueUserOrmDefinition.definition,
   UserOrmDefinition.definition,
   UserProfileOrmDefinition.definition,
@@ -59,32 +65,36 @@ final List<ModelDefinition<OrmEntity>> _$ormModelDefinitions = [
 
 ModelRegistry buildOrmRegistry() => ModelRegistry()
   ..registerAll(_$ormModelDefinitions)
-  ..registerTypeAlias<ActiveUser>(_$ormModelDefinitions[0])
-  ..registerTypeAlias<Article>(_$ormModelDefinitions[1])
-  ..registerTypeAlias<AttributeUser>(_$ormModelDefinitions[2])
-  ..registerTypeAlias<Author>(_$ormModelDefinitions[3])
-  ..registerTypeAlias<Comment>(_$ormModelDefinitions[4])
-  ..registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[5])
-  ..registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[6])
-  ..registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[7])
-  ..registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[8])
-  ..registerTypeAlias<EventModel>(_$ormModelDefinitions[9])
-  ..registerTypeAlias<Image>(_$ormModelDefinitions[10])
-  ..registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[11])
-  ..registerTypeAlias<MutationTarget>(_$ormModelDefinitions[12])
-  ..registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[13])
-  ..registerTypeAlias<NoFactory>(_$ormModelDefinitions[14])
-  ..registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[15])
-  ..registerTypeAlias<Photo>(_$ormModelDefinitions[16])
-  ..registerTypeAlias<Post>(_$ormModelDefinitions[17])
-  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[18])
-  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[19])
-  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[20])
-  ..registerTypeAlias<Setting>(_$ormModelDefinitions[21])
-  ..registerTypeAlias<Tag>(_$ormModelDefinitions[22])
-  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[23])
-  ..registerTypeAlias<User>(_$ormModelDefinitions[24])
-  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[25]);
+  ..registerTypeAlias<AccessorUser>(_$ormModelDefinitions[0])
+  ..registerTypeAlias<ActiveUser>(_$ormModelDefinitions[1])
+  ..registerTypeAlias<Article>(_$ormModelDefinitions[2])
+  ..registerTypeAlias<AttributeUser>(_$ormModelDefinitions[3])
+  ..registerTypeAlias<Author>(_$ormModelDefinitions[4])
+  ..registerTypeAlias<CastSample>(_$ormModelDefinitions[5])
+  ..registerTypeAlias<Comment>(_$ormModelDefinitions[6])
+  ..registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[7])
+  ..registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[8])
+  ..registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[9])
+  ..registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[10])
+  ..registerTypeAlias<EventModel>(_$ormModelDefinitions[11])
+  ..registerTypeAlias<Image>(_$ormModelDefinitions[12])
+  ..registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[13])
+  ..registerTypeAlias<MutationTarget>(_$ormModelDefinitions[14])
+  ..registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[15])
+  ..registerTypeAlias<NoFactory>(_$ormModelDefinitions[16])
+  ..registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[17])
+  ..registerTypeAlias<Photo>(_$ormModelDefinitions[18])
+  ..registerTypeAlias<Post>(_$ormModelDefinitions[19])
+  ..registerTypeAlias<PostTag>(_$ormModelDefinitions[20])
+  ..registerTypeAlias<ScopedUser>(_$ormModelDefinitions[21])
+  ..registerTypeAlias<SerialTest>(_$ormModelDefinitions[22])
+  ..registerTypeAlias<Setting>(_$ormModelDefinitions[23])
+  ..registerTypeAlias<Tag>(_$ormModelDefinitions[24])
+  ..registerTypeAlias<Taggable>(_$ormModelDefinitions[25])
+  ..registerTypeAlias<UniqueUser>(_$ormModelDefinitions[26])
+  ..registerTypeAlias<User>(_$ormModelDefinitions[27])
+  ..registerTypeAlias<UserProfile>(_$ormModelDefinitions[28])
+  ;
 
 List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
     List.unmodifiable(_$ormModelDefinitions);
@@ -92,32 +102,35 @@ List<ModelDefinition<OrmEntity>> get generatedOrmModelDefinitions =>
 extension GeneratedOrmModels on ModelRegistry {
   ModelRegistry registerGeneratedModels() {
     registerAll(_$ormModelDefinitions);
-    registerTypeAlias<ActiveUser>(_$ormModelDefinitions[0]);
-    registerTypeAlias<Article>(_$ormModelDefinitions[1]);
-    registerTypeAlias<AttributeUser>(_$ormModelDefinitions[2]);
-    registerTypeAlias<Author>(_$ormModelDefinitions[3]);
-    registerTypeAlias<Comment>(_$ormModelDefinitions[4]);
-    registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[5]);
-    registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[6]);
-    registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[7]);
-    registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[8]);
-    registerTypeAlias<EventModel>(_$ormModelDefinitions[9]);
-    registerTypeAlias<Image>(_$ormModelDefinitions[10]);
-    registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[11]);
-    registerTypeAlias<MutationTarget>(_$ormModelDefinitions[12]);
-    registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[13]);
-    registerTypeAlias<NoFactory>(_$ormModelDefinitions[14]);
-    registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[15]);
-    registerTypeAlias<Photo>(_$ormModelDefinitions[16]);
-    registerTypeAlias<Post>(_$ormModelDefinitions[17]);
-    registerTypeAlias<PostTag>(_$ormModelDefinitions[18]);
-    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[19]);
-    registerTypeAlias<SerialTest>(_$ormModelDefinitions[20]);
-    registerTypeAlias<Setting>(_$ormModelDefinitions[21]);
-    registerTypeAlias<Tag>(_$ormModelDefinitions[22]);
-    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[23]);
-    registerTypeAlias<User>(_$ormModelDefinitions[24]);
-    registerTypeAlias<UserProfile>(_$ormModelDefinitions[25]);
+    registerTypeAlias<AccessorUser>(_$ormModelDefinitions[0]);
+    registerTypeAlias<ActiveUser>(_$ormModelDefinitions[1]);
+    registerTypeAlias<Article>(_$ormModelDefinitions[2]);
+    registerTypeAlias<AttributeUser>(_$ormModelDefinitions[3]);
+    registerTypeAlias<Author>(_$ormModelDefinitions[4]);
+    registerTypeAlias<CastSample>(_$ormModelDefinitions[5]);
+    registerTypeAlias<Comment>(_$ormModelDefinitions[6]);
+    registerTypeAlias<CustomSoftDelete>(_$ormModelDefinitions[7]);
+    registerTypeAlias<DerivedForFactory>(_$ormModelDefinitions[8]);
+    registerTypeAlias<DriverOverrideEntry>(_$ormModelDefinitions[9]);
+    registerTypeAlias<DriverOverrideModel>(_$ormModelDefinitions[10]);
+    registerTypeAlias<EventModel>(_$ormModelDefinitions[11]);
+    registerTypeAlias<Image>(_$ormModelDefinitions[12]);
+    registerTypeAlias<MixedConstructorModel>(_$ormModelDefinitions[13]);
+    registerTypeAlias<MutationTarget>(_$ormModelDefinitions[14]);
+    registerTypeAlias<NamedConstructorModel>(_$ormModelDefinitions[15]);
+    registerTypeAlias<NoFactory>(_$ormModelDefinitions[16]);
+    registerTypeAlias<NullableRelationsTest>(_$ormModelDefinitions[17]);
+    registerTypeAlias<Photo>(_$ormModelDefinitions[18]);
+    registerTypeAlias<Post>(_$ormModelDefinitions[19]);
+    registerTypeAlias<PostTag>(_$ormModelDefinitions[20]);
+    registerTypeAlias<ScopedUser>(_$ormModelDefinitions[21]);
+    registerTypeAlias<SerialTest>(_$ormModelDefinitions[22]);
+    registerTypeAlias<Setting>(_$ormModelDefinitions[23]);
+    registerTypeAlias<Tag>(_$ormModelDefinitions[24]);
+    registerTypeAlias<Taggable>(_$ormModelDefinitions[25]);
+    registerTypeAlias<UniqueUser>(_$ormModelDefinitions[26]);
+    registerTypeAlias<User>(_$ormModelDefinitions[27]);
+    registerTypeAlias<UserProfile>(_$ormModelDefinitions[28]);
     return this;
   }
 }
@@ -125,60 +138,29 @@ extension GeneratedOrmModels on ModelRegistry {
 /// Registers factory definitions for all models that have factory support.
 /// Call this before using [Model.factory<T>()] to ensure definitions are available.
 void registerOrmFactories() {
-  ModelFactoryRegistry.registerIfAbsent<ActiveUser>(
-    ActiveUserOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<Article>(
-    ArticleOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<AttributeUser>(
-    AttributeUserOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<ActiveUser>(ActiveUserOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<Article>(ArticleOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<AttributeUser>(AttributeUserOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Author>(AuthorOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<Comment>(
-    CommentOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<CustomSoftDelete>(
-    CustomSoftDeleteOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<DerivedForFactory>(
-    DerivedForFactoryOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<DriverOverrideEntry>(
-    DriverOverrideEntryOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<EventModel>(
-    EventModelOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<Comment>(CommentOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<CustomSoftDelete>(CustomSoftDeleteOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<DerivedForFactory>(DerivedForFactoryOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<DriverOverrideEntry>(DriverOverrideEntryOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<EventModel>(EventModelOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Image>(ImageOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<MutationTarget>(
-    MutationTargetOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<NamedConstructorModel>(
-    NamedConstructorModelOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<NullableRelationsTest>(
-    NullableRelationsTestOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<MutationTarget>(MutationTargetOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<NamedConstructorModel>(NamedConstructorModelOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<NullableRelationsTest>(NullableRelationsTestOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Photo>(PhotoOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Post>(PostOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<PostTag>(
-    PostTagOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<SerialTest>(
-    SerialTestOrmDefinition.definition,
-  );
-  ModelFactoryRegistry.registerIfAbsent<Setting>(
-    SettingOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<PostTag>(PostTagOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<SerialTest>(SerialTestOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<Setting>(SettingOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<Tag>(TagOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<UniqueUser>(
-    UniqueUserOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<Taggable>(TaggableOrmDefinition.definition);
+  ModelFactoryRegistry.registerIfAbsent<UniqueUser>(UniqueUserOrmDefinition.definition);
   ModelFactoryRegistry.registerIfAbsent<User>(UserOrmDefinition.definition);
-  ModelFactoryRegistry.registerIfAbsent<UserProfile>(
-    UserProfileOrmDefinition.definition,
-  );
+  ModelFactoryRegistry.registerIfAbsent<UserProfile>(UserProfileOrmDefinition.definition);
 }
 
 /// Combined setup: registers both model registry and factories.
@@ -202,14 +184,7 @@ void registerModelScopes({ScopeRegistry? scopeRegistry}) {
 }
 
 /// Bootstraps generated ORM pieces: registry, factories, event handlers, and scopes.
-ModelRegistry bootstrapOrm({
-  ModelRegistry? registry,
-  EventBus? bus,
-  ScopeRegistry? scopes,
-  bool registerFactories = true,
-  bool registerEventHandlers = true,
-  bool registerScopes = true,
-}) {
+ModelRegistry bootstrapOrm({ModelRegistry? registry, EventBus? bus, ScopeRegistry? scopes, bool registerFactories = true, bool registerEventHandlers = true, bool registerScopes = true}) {
   final reg = registry ?? buildOrmRegistry();
   if (registry != null) {
     reg.registerGeneratedModels();

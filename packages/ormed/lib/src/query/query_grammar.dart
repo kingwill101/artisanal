@@ -663,7 +663,8 @@ class _SelectCompilation {
     }
 
     if (requiresHydrationColumns && !plan.disableAutoHydration) {
-      final aggregateHydration = plan.groupBy.isNotEmpty;
+      final aggregateHydration =
+          plan.groupBy.isNotEmpty || plan.rawGroupBy.isNotEmpty;
       _hydrationColumnNames = const [];
       projections.addAll(
         _hydrationColumns(plan.definition, coveredColumns, aggregateHydration),
@@ -926,13 +927,21 @@ class _SelectCompilation {
         continue;
       }
       if (seen.add(column)) {
-        values.add(column);
+        values.add(grammar.wrapIdentifier(column));
       }
+    }
+    for (final raw in plan.rawGroupBy) {
+      final sql = raw.sql.trim();
+      if (sql.isEmpty) {
+        continue;
+      }
+      bindings.addAll(raw.bindings);
+      values.add(sql);
     }
     if (values.isEmpty) {
       return null;
     }
-    return values.map(grammar.wrapIdentifier).join(', ');
+    return values.join(', ');
   }
 
   String? _havingClause() => _compilePredicate(
@@ -968,6 +977,14 @@ class _SelectCompilation {
         return '$expression ${order.descending ? 'DESC' : 'ASC'}';
       }),
     );
+    for (final raw in plan.rawOrders) {
+      final sql = raw.sql.trim();
+      if (sql.isEmpty) {
+        continue;
+      }
+      bindings.addAll(raw.bindings);
+      clauses.add(sql);
+    }
     for (final relationOrder in plan.relationOrders) {
       final aggregate = RelationAggregate(
         type: relationOrder.aggregateType,
@@ -1528,6 +1545,7 @@ class _SelectCompilation {
     final whereClauses = <String>[];
     final includedAliases = <String>{leaf.alias};
     final includedPivots = <String>{};
+    final includedThrough = <String>{};
 
     for (var i = aliases.length - 1; i >= 0; i--) {
       final aliasData = aliases[i];
@@ -1569,6 +1587,41 @@ class _SelectCompilation {
               );
           }
         }
+      } else if (segment.usesThrough) {
+        final throughAlias = aliasData.throughAlias!;
+        if (includedThrough.add(throughAlias)) {
+          joins
+            ..write('JOIN ')
+            ..write(_qualifiedTable(segment.throughDefinition!))
+            ..write(' AS ')
+            ..write(throughAlias)
+            ..write(' ON ')
+            ..write(
+              '${aliasData.alias}.${grammar.wrapIdentifier(segment.childKey)} = '
+              '$throughAlias.${grammar.wrapIdentifier(segment.throughChildKey!)} ',
+            );
+        }
+
+        if (parentAlias == baseAlias) {
+          whereClauses.add(
+            '$throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+            '$baseAlias.${grammar.wrapIdentifier(segment.parentKey)}',
+          );
+        } else {
+          final parentDefinition = aliases[i - 1].segment.targetDefinition;
+          if (includedAliases.add(parentAlias)) {
+            joins
+              ..write('JOIN ')
+              ..write(_qualifiedTable(parentDefinition))
+              ..write(' AS ')
+              ..write(parentAlias)
+              ..write(' ON ')
+              ..write(
+                '$throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+                '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)} ',
+              );
+          }
+        }
       } else {
         final condition = _nonPivotRelationCondition(
           segment,
@@ -1593,8 +1646,12 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
+        final morphAlias =
+            segment.usesPivot && segment.morphOnPivot
+                ? (aliasData.pivotAlias ?? aliasData.alias)
+                : aliasData.alias;
         whereClauses.add(
-          '${aliasData.alias}.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
         bindings.add(segment.morphClass);
@@ -1623,9 +1680,10 @@ class _SelectCompilation {
   ) {
     final segment = segments[index];
     final targetAlias = _nextAlias('rel');
+    String? pivotAlias;
     final buffer = StringBuffer('SELECT 1 FROM ');
     if (segment.usesPivot) {
-      final pivotAlias = _nextAlias('pivot');
+      pivotAlias = _nextAlias('pivot');
       buffer
         ..write('${_qualifiedPivotTable(segment.pivotTable!)} AS $pivotAlias ')
         ..write(
@@ -1639,6 +1697,21 @@ class _SelectCompilation {
           'WHERE $pivotAlias.${grammar.wrapIdentifier(segment.pivotParentKey!)} = '
           '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)}',
         );
+    } else if (segment.usesThrough) {
+      final throughAlias = _nextAlias('through');
+      buffer
+        ..write('${_qualifiedTable(segment.targetDefinition)} AS $targetAlias ')
+        ..write(
+          'JOIN ${_qualifiedTable(segment.throughDefinition!)} AS $throughAlias ',
+        )
+        ..write(
+          'ON $targetAlias.${grammar.wrapIdentifier(segment.childKey)} = '
+          '$throughAlias.${grammar.wrapIdentifier(segment.throughChildKey!)} ',
+        )
+        ..write(
+          'WHERE $throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+          '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)}',
+        );
     } else {
       buffer
         ..write('${_qualifiedTable(segment.targetDefinition)} AS $targetAlias ')
@@ -1648,10 +1721,14 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
+      final morphAlias =
+          segment.usesPivot && segment.morphOnPivot
+              ? pivotAlias ?? targetAlias
+              : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
-          '$targetAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
       bindings.add(segment.morphClass);
@@ -1700,8 +1777,9 @@ class _SelectCompilation {
           )
         : '1';
     final buffer = StringBuffer('SELECT $selectExpression FROM ');
+    String? pivotAlias;
     if (segment.usesPivot) {
-      final pivotAlias = _nextAlias('pivot');
+      pivotAlias = _nextAlias('pivot');
       buffer
         ..write('${_qualifiedPivotTable(segment.pivotTable!)} AS $pivotAlias ')
         ..write(
@@ -1715,6 +1793,21 @@ class _SelectCompilation {
           'WHERE $pivotAlias.${grammar.wrapIdentifier(segment.pivotParentKey!)} = '
           '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)}',
         );
+    } else if (segment.usesThrough) {
+      final throughAlias = _nextAlias('through');
+      buffer
+        ..write('${_qualifiedTable(segment.targetDefinition)} AS $targetAlias ')
+        ..write(
+          'JOIN ${_qualifiedTable(segment.throughDefinition!)} AS $throughAlias ',
+        )
+        ..write(
+          'ON $targetAlias.${grammar.wrapIdentifier(segment.childKey)} = '
+          '$throughAlias.${grammar.wrapIdentifier(segment.throughChildKey!)} ',
+        )
+        ..write(
+          'WHERE $throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+          '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)}',
+        );
     } else {
       buffer
         ..write('${_qualifiedTable(segment.targetDefinition)} AS $targetAlias ')
@@ -1724,10 +1817,14 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
+      final morphAlias =
+          segment.usesPivot && segment.morphOnPivot
+              ? pivotAlias ?? targetAlias
+              : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
-          '$targetAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
       bindings.add(segment.morphClass);
@@ -1754,6 +1851,7 @@ class _SelectCompilation {
             edge.segment,
             edge.alias,
             edge.pivotAlias,
+            edge.throughAlias,
             edge.parentAlias == 'base' ? baseAlias : edge.parentAlias,
           ),
         );
@@ -1765,7 +1863,11 @@ class _SelectCompilation {
     for (final segment in path.segments) {
       final alias = _nextAlias('rel');
       final pivotAlias = segment.usesPivot ? _nextAlias('pivot') : null;
-      result.add(_RelationAlias(segment, alias, pivotAlias, parent));
+      final throughAlias =
+          segment.usesThrough ? _nextAlias('through') : null;
+      result.add(
+        _RelationAlias(segment, alias, pivotAlias, throughAlias, parent),
+      );
       parent = alias;
     }
     return result;
@@ -1850,6 +1952,7 @@ class _SelectCompilation {
     final whereClauses = <String>[];
     final includedAliases = <String>{leaf.alias};
     final includedPivots = <String>{};
+    final includedThrough = <String>{};
 
     for (var i = aliases.length - 1; i >= 0; i--) {
       final aliasData = aliases[i];
@@ -1891,6 +1994,41 @@ class _SelectCompilation {
               );
           }
         }
+      } else if (segment.usesThrough) {
+        final throughAlias = aliasData.throughAlias!;
+        if (includedThrough.add(throughAlias)) {
+          joins
+            ..write('JOIN ')
+            ..write(_qualifiedTable(segment.throughDefinition!))
+            ..write(' AS ')
+            ..write(throughAlias)
+            ..write(' ON ')
+            ..write(
+              '${aliasData.alias}.${grammar.wrapIdentifier(segment.childKey)} = '
+              '$throughAlias.${grammar.wrapIdentifier(segment.throughChildKey!)} ',
+            );
+        }
+
+        if (parentAlias == baseAlias) {
+          whereClauses.add(
+            '$throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+            '$baseAlias.${grammar.wrapIdentifier(segment.parentKey)}',
+          );
+        } else {
+          final parentDefinition = aliases[i - 1].segment.targetDefinition;
+          if (includedAliases.add(parentAlias)) {
+            joins
+              ..write('JOIN ')
+              ..write(_qualifiedTable(parentDefinition))
+              ..write(' AS ')
+              ..write(parentAlias)
+              ..write(' ON ')
+              ..write(
+                '$throughAlias.${grammar.wrapIdentifier(segment.throughParentKey!)} = '
+                '$parentAlias.${grammar.wrapIdentifier(segment.parentKey)} ',
+              );
+          }
+        }
       } else {
         final condition = _nonPivotRelationCondition(
           segment,
@@ -1915,8 +2053,12 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
+        final morphAlias =
+            segment.usesPivot && segment.morphOnPivot
+                ? (aliasData.pivotAlias ?? aliasData.alias)
+                : aliasData.alias;
         whereClauses.add(
-          '${aliasData.alias}.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
+          '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
         );
         bindings.add(segment.morphClass);
@@ -1993,10 +2135,17 @@ String _escapeBindingValue(Object? value) {
 }
 
 class _RelationAlias {
-  _RelationAlias(this.segment, this.alias, this.pivotAlias, this.parentAlias);
+  _RelationAlias(
+    this.segment,
+    this.alias,
+    this.pivotAlias,
+    this.throughAlias,
+    this.parentAlias,
+  );
 
   final RelationSegment segment;
   final String alias;
   final String? pivotAlias;
+  final String? throughAlias;
   final String parentAlias;
 }

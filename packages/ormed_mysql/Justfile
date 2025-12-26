@@ -16,7 +16,7 @@ test-mariadb:
 	docker compose -p ormed-mariadb -f {{MARIADB_COMPOSE}} up -d --wait --wait-timeout 120; \
 	trap 'docker compose -p ormed-mariadb -f {{MARIADB_COMPOSE}} down -v' EXIT; \
 	sleep 2; \
-	MARIADB_URL={{MARIADB_URL}} dart test test/mariadb_driver_shared_test.dart -r expanded
+	MARIADB_URL={{MARIADB_URL}} dart test test/mariadb_driver_shared_test.dart -r expanded  --fail-fast
 
 # Run the MySQL-backed tests using the local docker-compose.mysql file.
 test-mysql:
@@ -24,7 +24,7 @@ test-mysql:
 	docker compose -p ormed-mysql -f {{MYSQL_COMPOSE}} up -d --wait --wait-timeout 120; \
 	trap 'docker compose -p ormed-mysql -f {{MYSQL_COMPOSE}} down -v' EXIT; \
 	sleep 2; \
-	MYSQL_URL={{MYSQL_URL}} dart test test/mysql_driver_shared_test.dart -r expanded
+	MYSQL_URL={{MYSQL_URL}} dart test test/mysql_driver_shared_test.dart -r expanded  --fail-fast
 
 # Stop any leftover containers.
 down:

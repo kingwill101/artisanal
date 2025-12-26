@@ -72,6 +72,7 @@ _$NamedConstructorModelDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -403,6 +404,7 @@ class _NamedConstructorModelPartialCopyWithSentinel {
 class $NamedConstructorModel extends NamedConstructorModel
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$NamedConstructorModel].
   $NamedConstructorModel({
     required int? id,
     required String name,
@@ -428,19 +430,25 @@ class $NamedConstructorModel extends NamedConstructorModel
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [value].
   @override
   int get value => getAttribute<int>('value') ?? super.value;
 
+  /// Tracked setter for [value].
   set value(int value) => setAttribute('value', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

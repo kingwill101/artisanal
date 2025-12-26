@@ -75,6 +75,16 @@ const RelationDefinition _$AuthorPostsRelation = RelationDefinition(
   localKey: 'id',
 );
 
+const RelationDefinition _$AuthorCommentsRelation = RelationDefinition(
+  name: 'comments',
+  kind: RelationKind.hasManyThrough,
+  targetModel: 'Comment',
+  foreignKey: 'post_id',
+  localKey: 'id',
+  throughModel: 'Post',
+  throughForeignKey: 'author_id',
+);
+
 Map<String, Object?> _encodeAuthorUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -97,7 +107,7 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     _$AuthorCreatedAtField,
     _$AuthorUpdatedAtField,
   ],
-  relations: const [_$AuthorPostsRelation],
+  relations: const [_$AuthorPostsRelation, _$AuthorCommentsRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
     hidden: const <String>[],
@@ -105,6 +115,7 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -416,6 +427,7 @@ class _AuthorPartialCopyWithSentinel {
 class $Author extends Author
     with ModelAttributes, TimestampsImpl
     implements OrmEntity {
+  /// Internal constructor for [$Author].
   $Author({int id = 0, required String name, required bool active})
     : super.new(id: id, name: name, active: active) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name, 'active': active});
@@ -434,19 +446,25 @@ class $Author extends Author
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -461,11 +479,25 @@ class $Author extends Author
     }
     return super.posts;
   }
+
+  @override
+  List<Comment> get comments {
+    if (relationLoaded('comments')) {
+      return getRelationList<Comment>('comments');
+    }
+    return super.comments;
+  }
 }
 
 extension AuthorRelationQueries on Author {
   Query<Post> postsQuery() {
     return Model.query<Post>().where('author_id', id);
+  }
+
+  Query<Comment> commentsQuery() {
+    throw UnimplementedError(
+      "Relation query generation not supported for RelationKind.hasManyThrough",
+    );
   }
 }
 

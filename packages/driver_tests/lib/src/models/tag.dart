@@ -9,7 +9,9 @@ part 'tag.orm.dart';
 
 @OrmModel(table: 'tags')
 class Tag extends Model<Tag> with ModelFactoryCapable {
-  const Tag({required this.id, required this.label}) : posts = const [];
+  const Tag({required this.id, required this.label})
+    : posts = const [],
+      morphedPosts = const [];
 
   @OrmField(isPrimaryKey: true, autoIncrement: true)
   final int id;
@@ -25,4 +27,16 @@ class Tag extends Model<Tag> with ModelFactoryCapable {
     pivotRelatedKey: 'post_id',
   )
   final List<Post> posts;
+
+  @OrmField(ignore: true)
+  @OrmRelation(
+    kind: RelationKind.morphedByMany,
+    target: Post,
+    through: 'taggables',
+    pivotForeignKey: 'tag_id',
+    pivotRelatedKey: 'taggable_id',
+    morphType: 'taggable_type',
+    morphClass: 'Post',
+  )
+  final List<Post> morphedPosts;
 }

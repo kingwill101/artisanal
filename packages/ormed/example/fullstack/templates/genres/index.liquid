@@ -7,13 +7,22 @@
   <h1>Genres</h1>
   <p class="muted">Browse categories that shape the catalog.</p>
 
-  {% comment %}// #region genres-index-empty{% endcomment %}
+  {% comment %}
+
+  // #region genres-index-empty
+
+  {% endcomment %}
   {% if genres.size == 0 %}
     <p class="muted">No genres yet. Seed the database to get started.</p>
   {% endif %}
-  {% comment %}// #endregion genres-index-empty{% endcomment %}
+  {% comment %}
+  // #endregion genres-index-empty
+  {% endcomment %}
+  {% comment %}
 
-  {% comment %}// #region genres-index-list{% endcomment %}
+  // #region genres-index-list
+
+  {% endcomment %}
   {% if genres.size > 0 %}
     <div class="grid">
       {% for genre in genres %}
@@ -29,7 +38,8 @@
       {% endfor %}
     </div>
   {% endif %}
-  {% comment %}// #endregion genres-index-list{% endcomment %}
-
+  {% comment %}
+  // #endregion genres-index-list
+  {% endcomment %}
 </div>
 {% endblock %}

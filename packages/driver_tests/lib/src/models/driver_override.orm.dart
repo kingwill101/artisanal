@@ -72,6 +72,7 @@ final ModelDefinition<$DriverOverrideModel> _$DriverOverrideModelDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -372,6 +373,7 @@ class _DriverOverrideModelPartialCopyWithSentinel {
 class $DriverOverrideModel extends DriverOverrideModel
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$DriverOverrideModel].
   $DriverOverrideModel({required int id, required Map<String, Object?> payload})
     : super.new(id: id, payload: payload) {
     _attachOrmRuntimeMetadata({'id': id, 'payload': payload});
@@ -389,15 +391,19 @@ class $DriverOverrideModel extends DriverOverrideModel
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [payload].
   @override
   Map<String, Object?> get payload =>
       getAttribute<Map<String, Object?>>('payload') ?? super.payload;
 
+  /// Tracked setter for [payload].
   set payload(Map<String, Object?> value) => setAttribute('payload', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

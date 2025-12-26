@@ -7,7 +7,11 @@
   <h1>Add a movie</h1>
   <p class="muted">Use the form below to add an entry to the catalog.</p>
 
-  {% comment %}// #region movies-form-errors{% endcomment %}
+  {% comment %}
+
+  // #region movies-form-errors
+
+  {% endcomment %}
   {% if errors.size > 0 %}
   <div class="error-list">
     <strong>Please fix the following:</strong>
@@ -18,9 +22,14 @@
     </ul>
   </div>
   {% endif %}
-  {% comment %}// #endregion movies-form-errors{% endcomment %}
+  {% comment %}
+  // #endregion movies-form-errors
+  {% endcomment %}
+  {% comment %}
 
-  {% comment %}// #region movies-form-fields{% endcomment %}
+  // #region movies-form-fields
+
+  {% endcomment %}
   <form method="post" action="/movies" enctype="multipart/form-data">
     <div class="field">
       <label for="title">Title</label>
@@ -54,6 +63,8 @@
 
     <button class="button" type="submit">Save movie</button>
   </form>
-  {% comment %}// #endregion movies-form-fields{% endcomment %}
+  {% comment %}
+  // #endregion movies-form-fields
+  {% endcomment %}
 </div>
 {% endblock %}

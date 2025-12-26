@@ -73,6 +73,29 @@ void runConvenienceMethodsTests() {
         user.fillAttributes({'email': 'via-fillAttributes@example.com'});
         expect(user.getAttribute('email'), 'via-fillAttributes@example.com');
       });
+
+      test('accepts partials and DTOs', () async {
+        await dataSource.repo<User>().insert(
+          User(id: 1, email: 'test@example.com', active: true),
+        );
+
+        final user = await dataSource.context
+            .query<User>()
+            .where('id', 1)
+            .first();
+
+        expect(user, isNotNull);
+
+        user!.fill(UserPartial(email: 'partial@example.com', name: 'Ignored'));
+        expect(user.getAttribute('email'), 'partial@example.com');
+        expect(user.getAttribute('name'), isNull);
+
+        user.fill(
+          UserInsertDto(email: 'dto@example.com', name: 'Still Ignored'),
+        );
+        expect(user.getAttribute('email'), 'dto@example.com');
+        expect(user.getAttribute('name'), isNull);
+      });
     });
 
     group('forceFill()', () {
@@ -112,6 +135,47 @@ void runConvenienceMethodsTests() {
           () => user!.forceFill({'name': 'Test', 'email': 'test@example.com'}),
           returnsNormally,
         );
+      });
+
+      test('accepts DTO inputs', () async {
+        await dataSource.repo<User>().insert(
+          User(id: 1, email: 'test@example.com', active: true),
+        );
+
+        final user = await dataSource.context
+            .query<User>()
+            .where('id', 1)
+            .first();
+
+        expect(user, isNotNull);
+
+        user!.forceFill(
+          UserUpdateDto(name: 'Forced Name', email: 'forced@example.com'),
+        );
+        expect(user.getAttribute('name'), 'Forced Name');
+        expect(user.getAttribute('email'), 'forced@example.com');
+      });
+    });
+
+    group('fillIfAbsent()', () {
+      test('accepts DTO inputs', () async {
+        await dataSource.repo<User>().insert(
+          User(id: 1, email: 'original@example.com', active: true),
+        );
+
+        final user = await dataSource.context
+            .query<User>()
+            .where('id', 1)
+            .first();
+
+        expect(user, isNotNull);
+
+        user!.fillIfAbsent(UserInsertDto(email: 'new@example.com'));
+        expect(user.getAttribute('email'), 'original@example.com');
+
+        user.setAttribute('email', null);
+        user.fillIfAbsent(UserInsertDto(email: 'filled@example.com'));
+        expect(user.getAttribute('email'), 'filled@example.com');
       });
     });
 

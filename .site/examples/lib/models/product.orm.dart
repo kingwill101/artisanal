@@ -87,6 +87,7 @@ final ModelDefinition<$Product> _$ProductDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -246,6 +247,28 @@ class ProductInsertDto implements InsertDto<$Product> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _ProductInsertDtoCopyWithSentinel _copyWithSentinel =
+      _ProductInsertDtoCopyWithSentinel();
+  ProductInsertDto copyWith({
+    Object? sku = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return ProductInsertDto(
+      sku: identical(sku, _copyWithSentinel) ? this.sku : sku as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ProductInsertDtoCopyWithSentinel {
+  const _ProductInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Product].
@@ -267,6 +290,30 @@ class ProductUpdateDto implements UpdateDto<$Product> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _ProductUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _ProductUpdateDtoCopyWithSentinel();
+  ProductUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? sku = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return ProductUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      sku: identical(sku, _copyWithSentinel) ? this.sku : sku as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ProductUpdateDtoCopyWithSentinel {
+  const _ProductUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Product].
@@ -325,6 +372,30 @@ class ProductPartial implements PartialEntity<$Product> {
       if (metadata != null) 'metadata': metadata,
     };
   }
+
+  static const _ProductPartialCopyWithSentinel _copyWithSentinel =
+      _ProductPartialCopyWithSentinel();
+  ProductPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? sku = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return ProductPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      sku: identical(sku, _copyWithSentinel) ? this.sku : sku as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _ProductPartialCopyWithSentinel {
+  const _ProductPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Product].
@@ -336,6 +407,7 @@ class ProductPartial implements PartialEntity<$Product> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Product extends Product with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Product].
   $Product({
     int id = 0,
     required String sku,
@@ -374,25 +446,33 @@ class $Product extends Product with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [sku].
   @override
   String get sku => getAttribute<String>('sku') ?? super.sku;
 
+  /// Tracked setter for [sku].
   set sku(String value) => setAttribute('sku', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [metadata].
   @override
   Map<String, Object?>? get metadata =>
       getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
+  /// Tracked setter for [metadata].
   set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

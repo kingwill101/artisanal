@@ -84,6 +84,7 @@ final ModelDefinition<$EventModel> _$EventModelDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -385,6 +386,7 @@ class _EventModelPartialCopyWithSentinel {
 class $EventModel extends EventModel
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$EventModel].
   $EventModel({int id = 0, required String name, required int score})
     : super.new(id: id, name: name, score: score) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name, 'score': score});
@@ -403,19 +405,25 @@ class $EventModel extends EventModel
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [score].
   @override
   int get score => getAttribute<int>('score') ?? super.score;
 
+  /// Tracked setter for [score].
   set score(int value) => setAttribute('score', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

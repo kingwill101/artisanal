@@ -96,6 +96,7 @@ final ModelDefinition<$CombinedPost> _$CombinedPostDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -279,6 +280,20 @@ class CombinedPostInsertDto implements InsertDto<$CombinedPost> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _CombinedPostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CombinedPostInsertDtoCopyWithSentinel();
+  CombinedPostInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return CombinedPostInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostInsertDtoCopyWithSentinel {
+  const _CombinedPostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [CombinedPost].
@@ -296,6 +311,24 @@ class CombinedPostUpdateDto implements UpdateDto<$CombinedPost> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _CombinedPostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CombinedPostUpdateDtoCopyWithSentinel();
+  CombinedPostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostUpdateDtoCopyWithSentinel {
+  const _CombinedPostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [CombinedPost].
@@ -336,6 +369,24 @@ class CombinedPostPartial implements PartialEntity<$CombinedPost> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _CombinedPostPartialCopyWithSentinel _copyWithSentinel =
+      _CombinedPostPartialCopyWithSentinel();
+  CombinedPostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostPartialCopyWithSentinel {
+  const _CombinedPostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [CombinedPost].
@@ -349,6 +400,7 @@ class CombinedPostPartial implements PartialEntity<$CombinedPost> {
 class $CombinedPost extends CombinedPost
     with ModelAttributes, TimestampsImpl, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$CombinedPost].
   $CombinedPost({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -363,14 +415,18 @@ class $CombinedPost extends CombinedPost
     return $CombinedPost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -488,6 +544,7 @@ final ModelDefinition<$CombinedPostTz> _$CombinedPostTzDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -677,6 +734,20 @@ class CombinedPostTzInsertDto implements InsertDto<$CombinedPostTz> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (title != null) 'title': title};
   }
+
+  static const _CombinedPostTzInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CombinedPostTzInsertDtoCopyWithSentinel();
+  CombinedPostTzInsertDto copyWith({Object? title = _copyWithSentinel}) {
+    return CombinedPostTzInsertDto(
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostTzInsertDtoCopyWithSentinel {
+  const _CombinedPostTzInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [CombinedPostTz].
@@ -694,6 +765,24 @@ class CombinedPostTzUpdateDto implements UpdateDto<$CombinedPostTz> {
       if (title != null) 'title': title,
     };
   }
+
+  static const _CombinedPostTzUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CombinedPostTzUpdateDtoCopyWithSentinel();
+  CombinedPostTzUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPostTzUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostTzUpdateDtoCopyWithSentinel {
+  const _CombinedPostTzUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [CombinedPostTz].
@@ -734,6 +823,24 @@ class CombinedPostTzPartial implements PartialEntity<$CombinedPostTz> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (title != null) 'title': title};
   }
+
+  static const _CombinedPostTzPartialCopyWithSentinel _copyWithSentinel =
+      _CombinedPostTzPartialCopyWithSentinel();
+  CombinedPostTzPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPostTzPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+    );
+  }
+}
+
+class _CombinedPostTzPartialCopyWithSentinel {
+  const _CombinedPostTzPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [CombinedPostTz].
@@ -747,6 +854,7 @@ class CombinedPostTzPartial implements PartialEntity<$CombinedPostTz> {
 class $CombinedPostTz extends CombinedPostTz
     with ModelAttributes, TimestampsTZImpl, SoftDeletesTZImpl
     implements OrmEntity {
+  /// Internal constructor for [$CombinedPostTz].
   $CombinedPostTz({int id = 0, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -761,14 +869,18 @@ class $CombinedPostTz extends CombinedPostTz
     return $CombinedPostTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

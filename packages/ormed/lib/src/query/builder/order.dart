@@ -69,6 +69,7 @@ extension OrderExtension<T extends OrmEntity> on Query<T> {
   /// ```
   Query<T> orderByRandom([num? seed]) => _copyWith(
     orders: const <OrderClause>[],
+    rawOrders: const <RawOrderExpression>[],
     randomOrder: true,
     randomSeed: seed,
   );

@@ -92,6 +92,7 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -391,6 +392,7 @@ class _CommentPartialCopyWithSentinel {
 class $Comment extends Comment
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$Comment].
   $Comment({int id = 0, required String body, int? postId})
     : super.new(id: id, body: body, postId: postId) {
     _attachOrmRuntimeMetadata({'id': id, 'body': body, 'post_id': postId});
@@ -409,19 +411,25 @@ class $Comment extends Comment
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [body].
   @override
   String get body => getAttribute<String>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String value) => setAttribute('body', value);
 
+  /// Tracked getter for [postId].
   @override
   int? get postId => getAttribute<int?>('post_id') ?? super.postId;
 
+  /// Tracked setter for [postId].
   set postId(int? value) => setAttribute('post_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

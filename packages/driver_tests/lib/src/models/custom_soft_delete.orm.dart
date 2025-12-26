@@ -71,6 +71,7 @@ final ModelDefinition<$CustomSoftDelete> _$CustomSoftDeleteDefinition =
         fillable: const <String>[],
         guarded: const <String>[],
         casts: const <String, String>{},
+        appends: const <String>[],
         softDeletes: true,
         softDeleteColumn: 'removed_on',
       ),
@@ -378,6 +379,7 @@ class _CustomSoftDeletePartialCopyWithSentinel {
 class $CustomSoftDelete extends CustomSoftDelete
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$CustomSoftDelete].
   $CustomSoftDelete({required int id, required String title})
     : super.new(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
@@ -392,14 +394,18 @@ class $CustomSoftDelete extends CustomSoftDelete
     return $CustomSoftDelete(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

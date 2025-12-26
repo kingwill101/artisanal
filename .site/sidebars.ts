@@ -89,6 +89,21 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Guides',
       items: [
+        {
+          type: 'category',
+          label: 'Fullstack',
+          items: [
+            'guides/fullstack/setup',
+            'guides/fullstack/models',
+            'guides/fullstack/server-routes',
+            'guides/fullstack/templates-storage',
+            'guides/fullstack/migrations-seeds',
+            'guides/fullstack/cli-runbook',
+            'guides/fullstack/api',
+            'guides/fullstack/testing',
+            'guides/fullstack/ormed-shelf-tutorial',
+          ],
+        },
         'guides/testing',
         'guides/best-practices',
         'guides/date-time',

@@ -53,6 +53,7 @@ final ModelDefinition<$NoFactory> _$NoFactoryDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     connection: 'analytics',
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
@@ -280,6 +281,7 @@ class _NoFactoryPartialCopyWithSentinel {
 class $NoFactory extends NoFactory
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$NoFactory].
   $NoFactory({int? id}) : super.new(id: id) {
     _attachOrmRuntimeMetadata({'id': id});
   }
@@ -293,9 +295,11 @@ class $NoFactory extends NoFactory
     return $NoFactory(id: id ?? this.id);
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

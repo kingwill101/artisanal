@@ -4,7 +4,9 @@
 
 {% block content %}
 <div class="card">
-  {% comment %}// #region genres-show-header{% endcomment %}
+  {% comment %}
+  // #region genres-show-header
+  {% endcomment %}
   <h1>{{ genre.name }}</h1>
   {% if genre.description %}
     <p>{{ genre.description }}</p>
@@ -12,10 +14,16 @@
     <p class="muted">No description yet.</p>
   {% endif %}
   <a class="button" href="/genres">Back to genres</a>
-  {% comment %}// #endregion genres-show-header{% endcomment %}
+  {% comment %}
+  // #endregion genres-show-header
+  {% endcomment %}
 </div>
 
-{% comment %}// #region genres-show-list{% endcomment %}
+{% comment %}
+
+// #region genres-show-list
+
+{% endcomment %}
 <div class="grid grid-2">
   {% for movie in movies %}
     <article class="card">
@@ -31,9 +39,14 @@
     </article>
   {% endfor %}
 </div>
-{% comment %}// #endregion genres-show-list{% endcomment %}
+{% comment %}
+// #endregion genres-show-list
+{% endcomment %}
+{% comment %}
 
-{% comment %}// #region genres-show-empty{% endcomment %}
+// #region genres-show-empty
+
+{% endcomment %}
 {% if movies.size == 0 %}
   <div class="card">
     <h3>No movies in this genre yet.</h3>
@@ -41,5 +54,7 @@
     <a class="button" href="/movies/new">Add movie</a>
   </div>
 {% endif %}
-{% comment %}// #endregion genres-show-empty{% endcomment %}
+{% comment %}
+// #endregion genres-show-empty
+{% endcomment %}
 {% endblock %}

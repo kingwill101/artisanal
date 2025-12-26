@@ -55,6 +55,14 @@ const FieldDefinition _$PhotoPathField = FieldDefinition(
   autoIncrement: false,
 );
 
+const RelationDefinition _$PhotoImageableRelation = RelationDefinition(
+  name: 'imageable',
+  kind: RelationKind.morphTo,
+  targetModel: 'OrmEntity',
+  foreignKey: 'imageable_id',
+  morphType: 'imageable_type',
+);
+
 Map<String, Object?> _encodePhotoUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -83,7 +91,7 @@ final ModelDefinition<$Photo> _$PhotoDefinition = ModelDefinition(
     _$PhotoImageableTypeField,
     _$PhotoPathField,
   ],
-  relations: const [],
+  relations: const [_$PhotoImageableRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
     hidden: const <String>[],
@@ -91,6 +99,7 @@ final ModelDefinition<$Photo> _$PhotoDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -439,6 +448,7 @@ class _PhotoPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Photo extends Photo with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Photo].
   $Photo({
     int id = 0,
     required int imageableId,
@@ -482,30 +492,54 @@ class $Photo extends Photo with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [imageableId].
   @override
   int get imageableId => getAttribute<int>('imageable_id') ?? super.imageableId;
 
+  /// Tracked setter for [imageableId].
   set imageableId(int value) => setAttribute('imageable_id', value);
 
+  /// Tracked getter for [imageableType].
   @override
   String get imageableType =>
       getAttribute<String>('imageable_type') ?? super.imageableType;
 
+  /// Tracked setter for [imageableType].
   set imageableType(String value) => setAttribute('imageable_type', value);
 
+  /// Tracked getter for [path].
   @override
   String get path => getAttribute<String>('path') ?? super.path;
 
+  /// Tracked setter for [path].
   set path(String value) => setAttribute('path', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);
     attachModelDefinition(_$PhotoDefinition);
+  }
+
+  @override
+  OrmEntity? get imageable {
+    if (relationLoaded('imageable')) {
+      return getRelation<OrmEntity>('imageable');
+    }
+    return super.imageable;
+  }
+}
+
+extension PhotoRelationQueries on Photo {
+  Query<OrmEntity> imageableQuery() {
+    throw UnimplementedError(
+      "Polymorphic relation query generation not yet supported",
+    );
   }
 }
 

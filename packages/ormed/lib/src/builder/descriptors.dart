@@ -24,6 +24,7 @@ class FieldDescriptor {
     required this.isSoftDelete,
     this.isVirtual = false,
     this.softDeleteColumnName,
+    this.enumType,
     this.driverOverrides = const {},
     this.attributeMetadata,
   });
@@ -44,6 +45,7 @@ class FieldDescriptor {
   final bool isSoftDelete;
   final bool isVirtual;
   final String? softDeleteColumnName;
+  final String? enumType;
   final Map<String, DriverFieldOverrideDescriptor> driverOverrides;
   final FieldAttributeMetadata? attributeMetadata;
 
@@ -79,8 +81,14 @@ class RelationDescriptor {
     this.foreignKey,
     this.localKey,
     this.through,
+    this.throughModel,
+    this.throughForeignKey,
+    this.throughLocalKey,
     this.pivotForeignKey,
     this.pivotRelatedKey,
+    this.pivotColumns = const [],
+    this.pivotTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -93,24 +101,73 @@ class RelationDescriptor {
   final String? foreignKey;
   final String? localKey;
   final String? through;
+  final String? throughModel;
+  final String? throughForeignKey;
+  final String? throughLocalKey;
   final String? pivotForeignKey;
   final String? pivotRelatedKey;
+  final List<String> pivotColumns;
+  final bool pivotTimestamps;
+  final String? pivotModel;
   final String? morphType;
   final String? morphClass;
 
   String get identifier => '_\$$owner${pascalize(name)}Relation';
 
-  /// Whether this is a list relation (hasMany, manyToMany, morphMany)
+  /// Whether this is a list relation (hasMany, manyToMany, morphMany, morphToMany)
   bool get isList =>
       kind == RelationKind.hasMany ||
+      kind == RelationKind.hasManyThrough ||
       kind == RelationKind.manyToMany ||
-      kind == RelationKind.morphMany;
+      kind == RelationKind.morphMany ||
+      kind == RelationKind.morphToMany ||
+      kind == RelationKind.morphedByMany;
 
   /// The resolved type string for the relation field
   String get resolvedType => nonNullableTypeName(fieldType);
 
   /// Whether the relation field is nullable
   bool get isNullable => fieldType.nullabilitySuffix != NullabilitySuffix.none;
+}
+
+class AccessorDescriptor {
+  AccessorDescriptor({
+    required this.owner,
+    required this.name,
+    required this.attribute,
+    required this.returnType,
+    required this.takesValue,
+    required this.takesModel,
+    required this.isGetter,
+    this.valueType,
+  });
+
+  final String owner;
+  final String name;
+  final String attribute;
+  final String returnType;
+  final bool takesValue;
+  final bool takesModel;
+  final bool isGetter;
+  final String? valueType;
+}
+
+class MutatorDescriptor {
+  MutatorDescriptor({
+    required this.owner,
+    required this.name,
+    required this.attribute,
+    required this.valueType,
+    required this.returnType,
+    required this.takesModel,
+  });
+
+  final String owner;
+  final String name;
+  final String attribute;
+  final String valueType;
+  final String returnType;
+  final bool takesModel;
 }
 
 class ScopeDescriptor {

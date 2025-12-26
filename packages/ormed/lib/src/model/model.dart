@@ -8,6 +8,7 @@ import 'package:ormed/src/annotations.dart';
 
 import '../connection/connection.dart';
 import '../contracts.dart';
+import '../core/monotonic_time.dart';
 import '../driver/driver.dart';
 import '../mutation/mutation_input_helper.dart';
 import '../query/query.dart';
@@ -520,28 +521,36 @@ abstract class Model<TModel extends Model<TModel>>
   }
 
   /// Mass assigns [attributes], honoring fillable/guarded metadata.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> fill(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     bool strict = false,
     ValueCodecRegistry? registry,
   }) {
+    final codecs = _effectiveCodecRegistry(registry);
+    final normalized = _normalizeFillAttributes(attributes, codecs);
     _asAttributes.fillAttributes(
-      attributes,
+      normalized,
       strict: strict,
-      registry: _effectiveCodecRegistry(registry),
+      registry: codecs,
     );
     return _self();
   }
 
   /// Mass assigns only values that are currently absent.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> fillIfAbsent(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     bool strict = false,
     ValueCodecRegistry? registry,
   }) {
+    final codecs = _effectiveCodecRegistry(registry);
+    final normalized = _normalizeFillAttributes(attributes, codecs);
     final pending = <String, Object?>{};
     final existing = _asAttributes.attributes;
-    for (final entry in attributes.entries) {
+    for (final entry in normalized.entries) {
       if (!existing.containsKey(entry.key) || existing[entry.key] == null) {
         pending[entry.key] = entry.value;
       }
@@ -549,14 +558,16 @@ abstract class Model<TModel extends Model<TModel>>
     _asAttributes.fillAttributes(
       pending,
       strict: strict,
-      registry: _effectiveCodecRegistry(registry),
+      registry: codecs,
     );
     return _self();
   }
 
   /// Temporarily disables mass-assignment protection while [callback] runs.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> forceFill(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     ValueCodecRegistry? registry,
   }) {
     return ModelAttributes.unguarded(
@@ -566,6 +577,18 @@ abstract class Model<TModel extends Model<TModel>>
         registry: _effectiveCodecRegistry(registry),
       ),
     );
+  }
+
+  Map<String, Object?> _normalizeFillAttributes(
+    Object attributes,
+    ValueCodecRegistry registry,
+  ) {
+    final def = expectDefinition();
+    final helper = MutationInputHelper<TModel>(
+      definition: def,
+      codecs: registry,
+    );
+    return helper.attributesInputToMap(attributes);
   }
 
   /// Queues a JSON update using Laravel-style selector syntax
@@ -1935,23 +1958,39 @@ abstract class Model<TModel extends Model<TModel>>
       );
     }
 
+    final pivotValues = _mergePivotTimestamps(
+      relationDef,
+      pivotData,
+      isInsert: true,
+    );
     final rows = ids.map((id) {
       final row = <String, dynamic>{
         pivotForeignKey: pkValue,
         pivotRelatedKey: id,
       };
-      if (pivotData != null) {
-        row.addAll(pivotData);
+      if (pivotValues.isNotEmpty) {
+        row.addAll(pivotValues);
       }
       return row;
     }).toList();
 
-    // Build pivot table definition with proper column types
-    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
-      pivotForeignKey: pk,
-      pivotRelatedKey: relatedPk,
-      ...?pivotData?.map((key, _) => MapEntry(key, null)),
-    });
+    final pivotFieldDefs = _pivotModelFieldDefinitions(
+      relationDef,
+      resolver,
+    );
+    final pivotDef = _createPivotDefinition(
+      pivotTable,
+      def.schema,
+      _pivotColumnDefinitions(
+        pivotFieldDefs: pivotFieldDefs,
+        foreignKey: pivotForeignKey,
+        foreignKeyField: pk,
+        relatedKey: pivotRelatedKey,
+        relatedKeyField: relatedPk,
+        pivotValues: pivotValues,
+        timestampFields: _pivotTimestampFieldDefinitions(relationDef),
+      ),
+    );
 
     final plan = MutationPlan.insert(definition: pivotDef, rows: rows);
 
@@ -2330,19 +2369,36 @@ abstract class Model<TModel extends Model<TModel>>
       );
     }
 
-    // Build pivot definition with all fields
-    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
-      pivotForeignKey: pk,
-      pivotRelatedKey: relatedPk,
-      ...pivotData.map((key, _) => MapEntry(key, null)),
-    });
+    final pivotValues = _mergePivotTimestamps(
+      relationDef,
+      pivotData,
+      isInsert: false,
+    );
+
+    final pivotFieldDefs = _pivotModelFieldDefinitions(
+      relationDef,
+      resolver,
+    );
+    final pivotDef = _createPivotDefinition(
+      pivotTable,
+      def.schema,
+      _pivotColumnDefinitions(
+        pivotFieldDefs: pivotFieldDefs,
+        foreignKey: pivotForeignKey,
+        foreignKeyField: pk,
+        relatedKey: pivotRelatedKey,
+        relatedKeyField: relatedPk,
+        pivotValues: pivotValues,
+        timestampFields: _pivotTimestampFieldDefinitions(relationDef),
+      ),
+    );
 
     // Update the pivot record
     final plan = MutationPlan.update(
       definition: pivotDef,
       rows: [
         MutationRow(
-          values: pivotData,
+          values: pivotValues,
           keys: {pivotForeignKey: pkValue, pivotRelatedKey: id},
         ),
       ],
@@ -2410,6 +2466,94 @@ abstract class Model<TModel extends Model<TModel>>
 
     final results = await resolver.runSelect(selectPlan);
     return results.map((row) => row[pivotRelatedKey]).toList();
+  }
+
+  Map<String, dynamic> _mergePivotTimestamps(
+    RelationDefinition relationDef,
+    Map<String, dynamic>? pivotData, {
+    required bool isInsert,
+  }) {
+    final values = pivotData == null
+        ? <String, dynamic>{}
+        : Map<String, dynamic>.from(pivotData);
+    if (!relationDef.pivotTimestamps) return values;
+
+    final now = monotonicNowUtc();
+    const createdAt = Timestamps.defaultCreatedAtColumn;
+    const updatedAt = Timestamps.defaultUpdatedAtColumn;
+    if (isInsert) {
+      if (!values.containsKey(createdAt) || values[createdAt] == null) {
+        values[createdAt] = now;
+      }
+      if (!values.containsKey(updatedAt) || values[updatedAt] == null) {
+        values[updatedAt] = now;
+      }
+    } else {
+      if (!values.containsKey(updatedAt) || values[updatedAt] == null) {
+        values[updatedAt] = now;
+      }
+    }
+    return values;
+  }
+
+  Map<String, FieldDefinition> _pivotTimestampFieldDefinitions(
+    RelationDefinition relationDef,
+  ) {
+    if (!relationDef.pivotTimestamps) return const {};
+    return const {
+      Timestamps.defaultCreatedAtColumn: FieldDefinition(
+        name: Timestamps.defaultCreatedAtColumn,
+        columnName: Timestamps.defaultCreatedAtColumn,
+        dartType: 'DateTime',
+        resolvedType: 'DateTime?',
+        isNullable: true,
+      ),
+      Timestamps.defaultUpdatedAtColumn: FieldDefinition(
+        name: Timestamps.defaultUpdatedAtColumn,
+        columnName: Timestamps.defaultUpdatedAtColumn,
+        dartType: 'DateTime',
+        resolvedType: 'DateTime?',
+        isNullable: true,
+      ),
+    };
+  }
+
+  Map<String, FieldDefinition> _pivotModelFieldDefinitions(
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+  ) {
+    final pivotModel = relationDef.pivotModel;
+    if (pivotModel == null || pivotModel.isEmpty) {
+      return const {};
+    }
+    final definition = resolver.registry.expectByName(pivotModel);
+    return {
+      for (final field in definition.fields) field.columnName: field,
+    };
+  }
+
+  Map<String, FieldDefinition?> _pivotColumnDefinitions({
+    required Map<String, FieldDefinition> pivotFieldDefs,
+    required String foreignKey,
+    required FieldDefinition foreignKeyField,
+    required String relatedKey,
+    required FieldDefinition relatedKeyField,
+    required Map<String, dynamic> pivotValues,
+    required Map<String, FieldDefinition> timestampFields,
+  }) {
+    final columns = <String, FieldDefinition?>{
+      foreignKey: pivotFieldDefs[foreignKey] ?? foreignKeyField,
+      relatedKey: pivotFieldDefs[relatedKey] ?? relatedKeyField,
+    };
+    for (final entry in pivotValues.entries) {
+      columns[entry.key] = pivotFieldDefs[entry.key];
+    }
+    timestampFields.forEach((key, field) {
+      if (columns[key] == null) {
+        columns[key] = pivotFieldDefs[key] ?? field;
+      }
+    });
+    return columns;
   }
 
   // ==========================================================================

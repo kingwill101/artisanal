@@ -98,6 +98,7 @@ final ModelDefinition<$EventUser> _$EventUserDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -270,6 +271,28 @@ class EventUserInsertDto implements InsertDto<$EventUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _EventUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _EventUserInsertDtoCopyWithSentinel();
+  EventUserInsertDto copyWith({
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return EventUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _EventUserInsertDtoCopyWithSentinel {
+  const _EventUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [EventUser].
@@ -291,6 +314,30 @@ class EventUserUpdateDto implements UpdateDto<$EventUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _EventUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _EventUserUpdateDtoCopyWithSentinel();
+  EventUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return EventUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _EventUserUpdateDtoCopyWithSentinel {
+  const _EventUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [EventUser].
@@ -349,6 +396,30 @@ class EventUserPartial implements PartialEntity<$EventUser> {
       if (name != null) 'name': name,
     };
   }
+
+  static const _EventUserPartialCopyWithSentinel _copyWithSentinel =
+      _EventUserPartialCopyWithSentinel();
+  EventUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return EventUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+}
+
+class _EventUserPartialCopyWithSentinel {
+  const _EventUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [EventUser].
@@ -362,6 +433,7 @@ class EventUserPartial implements PartialEntity<$EventUser> {
 class $EventUser extends EventUser
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
+  /// Internal constructor for [$EventUser].
   $EventUser({
     int id = 0,
     required String email,
@@ -395,24 +467,32 @@ class $EventUser extends EventUser
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [name].
   @override
   String? get name => getAttribute<String?>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String? value) => setAttribute('name', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -487,6 +567,7 @@ final ModelDefinition<$AuditedUser> _$AuditedUserDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -637,6 +718,20 @@ class AuditedUserInsertDto implements InsertDto<$AuditedUser> {
   Map<String, Object?> toMap() {
     return <String, Object?>{if (email != null) 'email': email};
   }
+
+  static const _AuditedUserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuditedUserInsertDtoCopyWithSentinel();
+  AuditedUserInsertDto copyWith({Object? email = _copyWithSentinel}) {
+    return AuditedUserInsertDto(
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+    );
+  }
+}
+
+class _AuditedUserInsertDtoCopyWithSentinel {
+  const _AuditedUserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [AuditedUser].
@@ -654,6 +749,24 @@ class AuditedUserUpdateDto implements UpdateDto<$AuditedUser> {
       if (email != null) 'email': email,
     };
   }
+
+  static const _AuditedUserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuditedUserUpdateDtoCopyWithSentinel();
+  AuditedUserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+  }) {
+    return AuditedUserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+    );
+  }
+}
+
+class _AuditedUserUpdateDtoCopyWithSentinel {
+  const _AuditedUserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [AuditedUser].
@@ -694,6 +807,24 @@ class AuditedUserPartial implements PartialEntity<$AuditedUser> {
   Map<String, Object?> toMap() {
     return {if (id != null) 'id': id, if (email != null) 'email': email};
   }
+
+  static const _AuditedUserPartialCopyWithSentinel _copyWithSentinel =
+      _AuditedUserPartialCopyWithSentinel();
+  AuditedUserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+  }) {
+    return AuditedUserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+    );
+  }
+}
+
+class _AuditedUserPartialCopyWithSentinel {
+  const _AuditedUserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [AuditedUser].
@@ -707,6 +838,7 @@ class AuditedUserPartial implements PartialEntity<$AuditedUser> {
 class $AuditedUser extends AuditedUser
     with ModelAttributes
     implements OrmEntity {
+  /// Internal constructor for [$AuditedUser].
   $AuditedUser({int id = 0, required String email})
     : super.new(id: id, email: email) {
     _attachOrmRuntimeMetadata({'id': id, 'email': email});
@@ -721,14 +853,18 @@ class $AuditedUser extends AuditedUser
     return $AuditedUser(id: id ?? this.id, email: email ?? this.email);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

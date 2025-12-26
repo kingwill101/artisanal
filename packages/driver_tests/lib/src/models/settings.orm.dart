@@ -55,6 +55,7 @@ final ModelDefinition<$Setting> _$SettingDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     fieldOverrides: const {'payload': FieldAttributeMetadata(cast: 'json')},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
@@ -317,6 +318,7 @@ class _SettingPartialCopyWithSentinel {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Setting extends Setting with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Setting].
   $Setting({int id = 0, required Map<String, dynamic> payload})
     : super.new(id: id, payload: payload) {
     _attachOrmRuntimeMetadata({'id': id, 'payload': payload});
@@ -331,15 +333,19 @@ class $Setting extends Setting with ModelAttributes implements OrmEntity {
     return $Setting(id: id ?? this.id, payload: payload ?? this.payload);
   }
 
+  /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int value) => setAttribute('id', value);
 
+  /// Tracked getter for [payload].
   @override
   Map<String, dynamic> get payload =>
       getAttribute<Map<String, dynamic>>('payload') ?? super.payload;
 
+  /// Tracked setter for [payload].
   set payload(Map<String, dynamic> value) => setAttribute('payload', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

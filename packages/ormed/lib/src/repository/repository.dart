@@ -127,6 +127,7 @@ class Repository<T extends OrmEntity> extends RepositoryBase<T>
 
   @override
   ValueCodecRegistry get codecs =>
+      _queryContext?.codecRegistry ??
       ValueCodecRegistry.instance.forDriver(_driverName);
 
   @override
