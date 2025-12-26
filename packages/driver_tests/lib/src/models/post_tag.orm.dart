@@ -55,6 +55,30 @@ const FieldDefinition _$PostTagNoteField = FieldDefinition(
   autoIncrement: false,
 );
 
+const FieldDefinition _$PostTagCreatedAtField = FieldDefinition(
+  name: 'createdAt',
+  columnName: 'created_at',
+  dartType: 'DateTime',
+  resolvedType: 'DateTime?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
+const FieldDefinition _$PostTagUpdatedAtField = FieldDefinition(
+  name: 'updatedAt',
+  columnName: 'updated_at',
+  dartType: 'DateTime',
+  resolvedType: 'DateTime?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
 Map<String, Object?> _encodePostTagUntracked(
   Object model,
   ValueCodecRegistry registry,
@@ -65,6 +89,8 @@ Map<String, Object?> _encodePostTagUntracked(
     'tag_id': registry.encodeField(_$PostTagTagIdField, m.tagId),
     'sort_order': registry.encodeField(_$PostTagSortOrderField, m.sortOrder),
     'note': registry.encodeField(_$PostTagNoteField, m.note),
+    'created_at': registry.encodeField(_$PostTagCreatedAtField, m.createdAt),
+    'updated_at': registry.encodeField(_$PostTagUpdatedAtField, m.updatedAt),
   };
 }
 
@@ -76,6 +102,8 @@ final ModelDefinition<$PostTag> _$PostTagDefinition = ModelDefinition(
     _$PostTagTagIdField,
     _$PostTagSortOrderField,
     _$PostTagNoteField,
+    _$PostTagCreatedAtField,
+    _$PostTagUpdatedAtField,
   ],
   relations: const [],
   softDeleteColumn: 'deleted_at',
@@ -201,6 +229,14 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
         model.sortOrder,
       ),
       'note': registry.encodeField(_$PostTagNoteField, model.note),
+      'created_at': registry.encodeField(
+        _$PostTagCreatedAtField,
+        model.createdAt,
+      ),
+      'updated_at': registry.encodeField(
+        _$PostTagUpdatedAtField,
+        model.updatedAt,
+      ),
     };
   }
 
@@ -220,17 +256,29 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
       _$PostTagNoteField,
       data['note'],
     );
+    final DateTime? postTagCreatedAtValue = registry.decodeField<DateTime?>(
+      _$PostTagCreatedAtField,
+      data['created_at'],
+    );
+    final DateTime? postTagUpdatedAtValue = registry.decodeField<DateTime?>(
+      _$PostTagUpdatedAtField,
+      data['updated_at'],
+    );
     final model = $PostTag(
       postId: postTagPostIdValue,
       tagId: postTagTagIdValue,
       sortOrder: postTagSortOrderValue,
       note: postTagNoteValue,
+      createdAt: postTagCreatedAtValue,
+      updatedAt: postTagUpdatedAtValue,
     );
     model._attachOrmRuntimeMetadata({
       'post_id': postTagPostIdValue,
       'tag_id': postTagTagIdValue,
       'sort_order': postTagSortOrderValue,
       'note': postTagNoteValue,
+      'created_at': postTagCreatedAtValue,
+      'updated_at': postTagUpdatedAtValue,
     });
     return model;
   }
@@ -240,11 +288,20 @@ class _$PostTagCodec extends ModelCodec<$PostTag> {
 ///
 /// Auto-increment/DB-generated fields are omitted by default.
 class PostTagInsertDto implements InsertDto<$PostTag> {
-  const PostTagInsertDto({this.postId, this.tagId, this.sortOrder, this.note});
+  const PostTagInsertDto({
+    this.postId,
+    this.tagId,
+    this.sortOrder,
+    this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
   final int? postId;
   final int? tagId;
   final int? sortOrder;
   final String? note;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   @override
   Map<String, Object?> toMap() {
@@ -253,6 +310,8 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
 
@@ -263,6 +322,8 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
     Object? tagId = _copyWithSentinel,
     Object? sortOrder = _copyWithSentinel,
     Object? note = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
   }) {
     return PostTagInsertDto(
       postId: identical(postId, _copyWithSentinel)
@@ -273,6 +334,12 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
           ? this.sortOrder
           : sortOrder as int?,
       note: identical(note, _copyWithSentinel) ? this.note : note as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
     );
   }
 }
@@ -285,11 +352,20 @@ class _PostTagInsertDtoCopyWithSentinel {
 ///
 /// All fields are optional; only provided entries are used in SET clauses.
 class PostTagUpdateDto implements UpdateDto<$PostTag> {
-  const PostTagUpdateDto({this.postId, this.tagId, this.sortOrder, this.note});
+  const PostTagUpdateDto({
+    this.postId,
+    this.tagId,
+    this.sortOrder,
+    this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
   final int? postId;
   final int? tagId;
   final int? sortOrder;
   final String? note;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   @override
   Map<String, Object?> toMap() {
@@ -298,6 +374,8 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
 
@@ -308,6 +386,8 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
     Object? tagId = _copyWithSentinel,
     Object? sortOrder = _copyWithSentinel,
     Object? note = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
   }) {
     return PostTagUpdateDto(
       postId: identical(postId, _copyWithSentinel)
@@ -318,6 +398,12 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
           ? this.sortOrder
           : sortOrder as int?,
       note: identical(note, _copyWithSentinel) ? this.note : note as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
     );
   }
 }
@@ -330,7 +416,14 @@ class _PostTagUpdateDtoCopyWithSentinel {
 ///
 /// All fields are nullable; intended for subset SELECTs.
 class PostTagPartial implements PartialEntity<$PostTag> {
-  const PostTagPartial({this.postId, this.tagId, this.sortOrder, this.note});
+  const PostTagPartial({
+    this.postId,
+    this.tagId,
+    this.sortOrder,
+    this.note,
+    this.createdAt,
+    this.updatedAt,
+  });
 
   /// Creates a partial from a database row map.
   ///
@@ -342,6 +435,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
       tagId: row['tag_id'] as int?,
       sortOrder: row['sort_order'] as int?,
       note: row['note'] as String?,
+      createdAt: row['created_at'] as DateTime?,
+      updatedAt: row['updated_at'] as DateTime?,
     );
   }
 
@@ -349,6 +444,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
   final int? tagId;
   final int? sortOrder;
   final String? note;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   @override
   $PostTag toEntity() {
@@ -366,6 +463,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
       tagId: tagIdValue,
       sortOrder: sortOrder,
       note: note,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 
@@ -376,6 +475,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
 
@@ -386,6 +487,8 @@ class PostTagPartial implements PartialEntity<$PostTag> {
     Object? tagId = _copyWithSentinel,
     Object? sortOrder = _copyWithSentinel,
     Object? note = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
   }) {
     return PostTagPartial(
       postId: identical(postId, _copyWithSentinel)
@@ -396,6 +499,12 @@ class PostTagPartial implements PartialEntity<$PostTag> {
           ? this.sortOrder
           : sortOrder as int?,
       note: identical(note, _copyWithSentinel) ? this.note : note as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
     );
   }
 }
@@ -419,17 +528,23 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
     required int tagId,
     int? sortOrder,
     String? note,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) : super.new(
          postId: postId,
          tagId: tagId,
          sortOrder: sortOrder,
          note: note,
+         createdAt: createdAt,
+         updatedAt: updatedAt,
        ) {
     _attachOrmRuntimeMetadata({
       'post_id': postId,
       'tag_id': tagId,
       'sort_order': sortOrder,
       'note': note,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     });
   }
 
@@ -440,15 +555,26 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
       tagId: model.tagId,
       sortOrder: model.sortOrder,
       note: model.note,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
     );
   }
 
-  $PostTag copyWith({int? postId, int? tagId, int? sortOrder, String? note}) {
+  $PostTag copyWith({
+    int? postId,
+    int? tagId,
+    int? sortOrder,
+    String? note,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
     return $PostTag(
       postId: postId ?? this.postId,
       tagId: tagId ?? this.tagId,
       sortOrder: sortOrder ?? this.sortOrder,
       note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -479,6 +605,22 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
 
   /// Tracked setter for [note].
   set note(String? value) => setAttribute('note', value);
+
+  /// Tracked getter for [createdAt].
+  @override
+  DateTime? get createdAt =>
+      getAttribute<DateTime?>('created_at') ?? super.createdAt;
+
+  /// Tracked setter for [createdAt].
+  set createdAt(DateTime? value) => setAttribute('created_at', value);
+
+  /// Tracked getter for [updatedAt].
+  @override
+  DateTime? get updatedAt =>
+      getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
+
+  /// Tracked setter for [updatedAt].
+  set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);

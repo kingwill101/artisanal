@@ -12,6 +12,8 @@ class PostTag extends Model<PostTag> with ModelFactoryCapable {
     required this.tagId,
     this.sortOrder,
     this.note,
+    this.createdAt,
+    this.updatedAt,
   });
 
   @OrmField(columnName: 'post_id') // Remove isPrimaryKey: true
@@ -24,4 +26,10 @@ class PostTag extends Model<PostTag> with ModelFactoryCapable {
   final int? sortOrder;
 
   final String? note;
+
+  @OrmField(columnName: 'created_at')
+  final DateTime? createdAt;
+
+  @OrmField(columnName: 'updated_at')
+  final DateTime? updatedAt;
 }

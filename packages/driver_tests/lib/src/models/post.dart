@@ -7,6 +7,7 @@ import 'author.dart';
 import 'comment.dart';
 import 'tag.dart';
 import 'photo.dart';
+import 'post_tag.dart';
 
 part 'post.orm.dart';
 
@@ -57,6 +58,8 @@ class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
     pivotForeignKey: 'post_id',
     pivotRelatedKey: 'tag_id',
     withPivot: ['sort_order', 'note'],
+    withTimestamps: true,
+    pivotModel: PostTag,
   )
   final List<Tag> tags;
 

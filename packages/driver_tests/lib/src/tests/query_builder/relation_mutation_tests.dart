@@ -433,6 +433,42 @@ void runRelationMutationTests() {
         expect(pivotRecords.any((r) => r.tagId == 3), isTrue);
       });
 
+      test('attach sets pivot timestamps when enabled', () async {
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 1,
+            authorId: 1,
+            title: 'Post 1',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+        await dataSource.repo<Tag>().insertMany([
+          const Tag(id: 1, label: 'dart'),
+        ]);
+
+        final post = (await dataSource.context
+                .query<Post>()
+                .where('id', 1)
+                .get())
+            .first;
+
+        await post.attach('tags', [1]);
+
+        final pivotRecord = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 1)
+            .where('tag_id', 1)
+            .first();
+
+        expect(pivotRecord, isNotNull);
+        expect(pivotRecord!.createdAt, isNotNull);
+        expect(pivotRecord.updatedAt, isNotNull);
+        expect(
+          pivotRecord.updatedAt!.isBefore(pivotRecord.createdAt!),
+          isFalse,
+        );
+      });
+
       test('attach with empty list does nothing', () async {
         await dataSource.repo<Post>().insertMany([
           Post(
@@ -1227,6 +1263,46 @@ void runRelationMutationTests() {
             .get();
 
         expect(pivotRecords, hasLength(1));
+      });
+
+      test('updateExistingPivot bumps updated_at when enabled', () async {
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 1,
+            authorId: 1,
+            title: 'Post 1',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+        await dataSource.repo<Tag>().insertMany([
+          const Tag(id: 1, label: 'dart'),
+        ]);
+
+        final post =
+            (await dataSource.context.query<Post>().where('id', 1).get()).first;
+        await post.attach('tags', [1]);
+
+        final before = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 1)
+            .where('tag_id', 1)
+            .first();
+
+        expect(before, isNotNull);
+        expect(before!.updatedAt, isNotNull);
+
+        await post.updateExistingPivot('tags', 1, {'note': 'updated'});
+
+        final after = await dataSource.context
+            .query<PostTag>()
+            .where('post_id', 1)
+            .where('tag_id', 1)
+            .first();
+
+        expect(after, isNotNull);
+        expect(after!.updatedAt, isNotNull);
+        expect(after.updatedAt!.isAfter(before.updatedAt!), isTrue);
+        expect(after.createdAt, equals(before.createdAt));
       });
 
       test('returns self for method chaining', () async {

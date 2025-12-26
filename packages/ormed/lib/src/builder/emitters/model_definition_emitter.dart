@@ -314,6 +314,9 @@ class ModelDefinitionEmitter {
       if (relation.pivotTimestamps) {
         buffer.writeln('  pivotTimestamps: true,');
       }
+      if (relation.pivotModel != null) {
+        buffer.writeln("  pivotModel: '${escape(relation.pivotModel!)}',");
+      }
       if (relation.morphType != null) {
         buffer.writeln("  morphType: '${escape(relation.morphType!)}',");
       }

@@ -451,6 +451,7 @@ class RelationDefinition {
     this.pivotRelatedKey,
     this.pivotColumns = const [],
     this.pivotTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -493,6 +494,9 @@ class RelationDefinition {
 
   /// Whether to automatically manage pivot timestamps.
   final bool pivotTimestamps;
+
+  /// Optional pivot model type name for many-to-many relations.
+  final String? pivotModel;
 
   /// Type column name for polymorphic relations.
   final String? morphType;

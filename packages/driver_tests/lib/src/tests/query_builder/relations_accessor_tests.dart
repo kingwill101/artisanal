@@ -137,10 +137,10 @@ void runRelationsAccessorTests() {
         final tags = post!.tags;
         expect(tags, hasLength(2));
 
-        final pivot = tags.first.getRelation<Map<String, Object?>>('pivot');
+        final pivot = tags.first.getRelation<PostTag>('pivot');
         expect(pivot, isNotNull);
-        expect(pivot!['sort_order'], equals(10));
-        expect(pivot['note'], equals('primary'));
+        expect(pivot!.sortOrder, equals(10));
+        expect(pivot.note, equals('primary'));
       });
     });
 

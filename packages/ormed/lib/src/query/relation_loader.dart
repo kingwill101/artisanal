@@ -371,9 +371,11 @@ class RelationLoader {
     final pivotTable = segment.pivotTable;
     final pivotParentColumn = segment.pivotParentKey;
     final pivotTargetColumn = segment.pivotRelatedKey;
+    final pivotModelDefinition = _resolvePivotModelDefinition(relation);
     final pivotColumns = _normalizePivotColumns(
       [
         ...segment.pivotColumns,
+        ..._pivotModelColumns(pivotModelDefinition),
         ..._pivotTimestampColumns(segment.pivotTimestamps),
       ],
       pivotParentColumn,
@@ -444,6 +446,7 @@ class RelationLoader {
         pivotParentColumn,
         pivotTargetColumn,
         pivotColumns,
+        includeKeysOnly: pivotModelDefinition != null,
       );
       if (pivotData != null) {
         pivotDataByParent
@@ -475,7 +478,8 @@ class RelationLoader {
       predicate: load.predicate,
     );
     final targetRows = await context.driver.execute(targetPlan);
-    final usePivotData = pivotColumns.isNotEmpty;
+    final usePivotData =
+        pivotColumns.isNotEmpty || pivotModelDefinition != null;
     if (usePivotData) {
       final rowLookup = <Object?, Map<String, Object?>>{};
       for (final row in targetRows) {
@@ -496,9 +500,12 @@ class RelationLoader {
           context.attachRuntimeMetadata(model);
           final pivotData = pivotDataForParent?[id];
           if (pivotData != null && model is ModelRelations) {
+            final pivotValue = pivotModelDefinition == null
+                ? Map<String, Object?>.from(pivotData)
+                : _buildPivotModel(pivotModelDefinition, pivotData);
             (model as ModelRelations).setRelation(
               'pivot',
-              Map<String, Object?>.from(pivotData),
+              pivotValue,
             );
           }
           models.add(model);
@@ -990,6 +997,23 @@ class RelationLoader {
     return columns.toList(growable: false);
   }
 
+  ModelDefinition<OrmEntity>? _resolvePivotModelDefinition(
+    RelationDefinition relation,
+  ) {
+    final pivotModel = relation.pivotModel;
+    if (pivotModel == null || pivotModel.isEmpty) {
+      return null;
+    }
+    return _registry.expectByName(pivotModel);
+  }
+
+  List<String> _pivotModelColumns(ModelDefinition<OrmEntity>? pivotDefinition) {
+    if (pivotDefinition == null) return const [];
+    return pivotDefinition.fields
+        .map((field) => field.columnName)
+        .toList(growable: false);
+  }
+
   List<String> _pivotTimestampColumns(bool enabled) {
     if (!enabled) return const [];
     return const [
@@ -1002,9 +1026,10 @@ class RelationLoader {
     Map<String, Object?> row,
     String parentColumn,
     String targetColumn,
-    List<String> pivotColumns,
-  ) {
-    if (pivotColumns.isEmpty) return null;
+    List<String> pivotColumns, {
+    bool includeKeysOnly = false,
+  }) {
+    if (pivotColumns.isEmpty && !includeKeysOnly) return null;
     final data = <String, Object?>{
       parentColumn: row[parentColumn],
       targetColumn: row[targetColumn],
@@ -1013,6 +1038,20 @@ class RelationLoader {
       data[column] = row[column];
     }
     return data;
+  }
+
+  Object _buildPivotModel(
+    ModelDefinition<OrmEntity> pivotDefinition,
+    Map<String, Object?> pivotData,
+  ) {
+    final model = pivotDefinition.fromMap(
+      pivotData,
+      registry: _codecRegistry,
+    );
+    if (model is Model) {
+      context.attachRuntimeMetadata(model);
+    }
+    return model;
   }
 }
 

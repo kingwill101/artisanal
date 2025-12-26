@@ -297,6 +297,7 @@ class OrmRelation {
     this.pivotRelatedKey,
     this.withPivot = const [],
     this.withTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -395,6 +396,7 @@ class OrmRelation {
     String? localKey,
     List<String> withPivot = const [],
     bool withTimestamps = false,
+    Type? pivotModel,
   }) : this(
          kind: RelationKind.manyToMany,
          target: target,
@@ -405,6 +407,7 @@ class OrmRelation {
          localKey: localKey,
          withPivot: withPivot,
          withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
        );
 
   /// Creates a `morphOne` relation.
@@ -470,6 +473,7 @@ class OrmRelation {
     String? morphClass,
     List<String> withPivot = const [],
     bool withTimestamps = false,
+    Type? pivotModel,
   }) : this(
          kind: RelationKind.morphToMany,
          target: target,
@@ -482,6 +486,7 @@ class OrmRelation {
          morphClass: morphClass,
          withPivot: withPivot,
          withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
        );
 
   /// Creates a `morphedByMany` relation.
@@ -499,6 +504,7 @@ class OrmRelation {
     String? morphClass,
     List<String> withPivot = const [],
     bool withTimestamps = false,
+    Type? pivotModel,
   }) : this(
          kind: RelationKind.morphedByMany,
          target: target,
@@ -511,6 +517,7 @@ class OrmRelation {
          morphClass: morphClass,
          withPivot: withPivot,
          withTimestamps: withTimestamps,
+         pivotModel: pivotModel,
        );
 
   /// The relationship kind (for example, [RelationKind.hasMany]).
@@ -548,6 +555,9 @@ class OrmRelation {
 
   /// Whether to automatically manage pivot timestamps (created_at/updated_at).
   final bool withTimestamps;
+
+  /// Optional pivot model type for many-to-many relations.
+  final Type? pivotModel;
 
   /// The discriminator/type column name for polymorphic relations.
   final String? morphType;

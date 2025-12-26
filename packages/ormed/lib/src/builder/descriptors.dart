@@ -88,6 +88,7 @@ class RelationDescriptor {
     this.pivotRelatedKey,
     this.pivotColumns = const [],
     this.pivotTimestamps = false,
+    this.pivotModel,
     this.morphType,
     this.morphClass,
   });
@@ -107,6 +108,7 @@ class RelationDescriptor {
   final String? pivotRelatedKey;
   final List<String> pivotColumns;
   final bool pivotTimestamps;
+  final String? pivotModel;
   final String? morphType;
   final String? morphClass;
 

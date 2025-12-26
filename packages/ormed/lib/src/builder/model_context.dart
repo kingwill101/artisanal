@@ -482,11 +482,15 @@ class ModelContext {
 
       final targetType = annotation.peek('target')?.typeValue;
       final throughType = annotation.peek('throughModel')?.typeValue;
+      final pivotType = annotation.peek('pivotModel')?.typeValue;
       final targetModel = targetType != null && targetType is! DynamicType
           ? nonNullableTypeName(targetType)
           : _inferTargetModel(field.type);
       final throughModel = throughType != null && throughType is! DynamicType
           ? nonNullableTypeName(throughType)
+          : null;
+      final pivotModel = pivotType != null && pivotType is! DynamicType
+          ? nonNullableTypeName(pivotType)
           : null;
 
       relations.add(
@@ -506,6 +510,7 @@ class ModelContext {
           pivotRelatedKey: annotation.peek('pivotRelatedKey')?.stringValue,
           pivotColumns: readStringList(annotation.peek('withPivot')),
           pivotTimestamps: annotation.peek('withTimestamps')?.boolValue ?? false,
+          pivotModel: pivotModel,
           morphType: annotation.peek('morphType')?.stringValue,
           morphClass: annotation.peek('morphClass')?.stringValue,
         ),

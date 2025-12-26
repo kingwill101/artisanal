@@ -10,6 +10,7 @@ class CreatePostTagsTable extends Migration {
       table.integer('tag_id');
       table.integer('sort_order').nullable();
       table.string('note').nullable();
+      table.nullableTimestamps(precision: 6);
       table.primary(['post_id', 'tag_id']);
     });
   }
