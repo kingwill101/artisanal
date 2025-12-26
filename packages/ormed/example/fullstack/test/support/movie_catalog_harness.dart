@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:liquify/liquify.dart';
 import 'package:ormed/ormed.dart';
-import 'package:ormed_fullstack_example/orm_registry.g.dart';
 import 'package:ormed_fullstack_example/src/database/datasource.dart';
 import 'package:ormed_fullstack_example/src/database/database.dart';
 import 'package:ormed_fullstack_example/src/database/migrations.dart';
