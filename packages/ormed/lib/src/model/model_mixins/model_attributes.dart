@@ -552,6 +552,9 @@ mixin ModelAttributes {
     return original[attribute];
   }
 
+  /// Returns true when original attributes have been captured for dirty checks.
+  bool get hasOriginalAttributes => _getOriginalAttributes() != null;
+
   /// Gets only the attributes that have been modified.
   ///
   /// Returns a map containing only the changed attributes with their new values.

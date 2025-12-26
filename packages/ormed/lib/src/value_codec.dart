@@ -389,7 +389,12 @@ class ValueCodecRegistry {
         operation: CastOperation.persist,
       );
     }
-    return _codecFor(field).encode(value);
+    Object? normalized = value;
+    if (normalized is CarbonInterface &&
+        (field.dartType == 'DateTime' || field.dartType == 'DateTime?')) {
+      normalized = normalized.toDateTime();
+    }
+    return _codecFor(field).encode(normalized);
   }
 
   T? decodeField<T>(FieldDefinition field, Object? value) {

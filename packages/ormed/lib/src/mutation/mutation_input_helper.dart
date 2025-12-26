@@ -93,8 +93,10 @@ class MutationInputHelper<T extends OrmEntity> {
           values[columnName] = codecs.encodeField(updatedAtField, now);
         }
       } else {
-        final now = _createTimestampValue(updatedAtField);
-        values[columnName] = codecs.encodeField(updatedAtField, now);
+        if (!values.containsKey(columnName)) {
+          final now = _createTimestampValue(updatedAtField);
+          values[columnName] = codecs.encodeField(updatedAtField, now);
+        }
       }
     } catch (_) {}
   }
@@ -137,7 +139,13 @@ class MutationInputHelper<T extends OrmEntity> {
         (f) => f.columnName == 'updated_at',
       );
       final columnName = updatedAtField.columnName;
-      attrs.setAttribute(columnName, now);
+      final hasOriginal = attrs.hasOriginalAttributes;
+      final explicit = hasOriginal
+          ? attrs.isDirty(columnName)
+          : attrs.hasAttribute(columnName);
+      if (!explicit) {
+        attrs.setAttribute(columnName, now);
+      }
     } catch (_) {}
   }
 

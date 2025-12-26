@@ -1410,9 +1410,10 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
       );
 
       final columnName = updatedAtField.columnName;
+      final fieldName = updatedAtField.name;
 
       // Only set if not already provided by user
-      if (!values.containsKey(columnName)) {
+      if (!values.containsKey(columnName) && !values.containsKey(fieldName)) {
         // Use Carbon for Carbon/CarbonInterface fields, DateTime for DateTime fields
         final nowUtc = monotonicNowUtc();
         final fieldType = updatedAtField.dartType;

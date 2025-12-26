@@ -66,6 +66,30 @@ void runTimestampTests() {
         );
       });
 
+      test('explicit updatedAt in update map is preserved', () async {
+        final author = const Author(id: 1005, name: 'Explicit Map');
+        await Authors.repo(dataSource.options.name).insert(author.toTracked());
+
+        final explicit = Carbon.fromDateTime(
+          DateTime.utc(2020, 1, 2, 3, 4, 5),
+        );
+
+        await Authors.query(dataSource.options.name).where('id', 1005).update({
+          'name': 'Explicit Map Updated',
+          'updatedAt': explicit,
+        });
+
+        final fetched = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 1005).first();
+
+        expect(fetched, isNotNull);
+        expect(
+          fetched!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          equals(explicit.toDateTime().millisecondsSinceEpoch),
+        );
+      });
+
       test('touch() updates updatedAt', () async {
         final author = const Author(id: 1003, name: 'Touch Test');
         await Authors.repo(dataSource.options.name).insert(author.toTracked());
@@ -209,6 +233,40 @@ void runTimestampTests() {
         expect(
           refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
           isNot(equals(originalUpdatedAt!.toDateTime().millisecondsSinceEpoch)),
+        );
+      });
+
+      test('explicit updatedAt on tracked model is preserved (UTC)', () async {
+        final post = Post(
+          id: 2004,
+          authorId: 1,
+          title: 'Explicit Model Timestamp',
+          publishedAt: DateTime.now(),
+        );
+        await dataSource.repo<Post>().insert(post);
+
+        final fetched = await dataSource.context
+            .query<Post>()
+            .where('id', 2004)
+            .first();
+
+        final explicit = Carbon.fromDateTime(
+          DateTime.utc(2021, 2, 3, 4, 5, 6),
+        );
+        fetched!.updatedAt = explicit;
+
+        await dataSource.context.query<Post>().updateInputs([fetched]);
+
+        final refetched = await dataSource.context
+            .query<Post>()
+            .where('id', 2004)
+            .first();
+
+        expect(refetched, isNotNull);
+        expect(refetched!.updatedAt!.isUtc, isTrue);
+        expect(
+          refetched.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          equals(explicit.toDateTime().millisecondsSinceEpoch),
         );
       });
 
