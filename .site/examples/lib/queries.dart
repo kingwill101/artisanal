@@ -94,6 +94,16 @@ Future<void> orderingLimitingExamples(QueryContext context) async {
 }
 // #endregion ordering-limiting
 
+// #region group-limits
+Future<void> groupLimitExamples(QueryContext context) async {
+  final recentPerAuthor = await context
+      .query<$Post>()
+      .orderBy('publishedAt', descending: true)
+      .limitPerGroup(2, 'authorId', offset: 1)
+      .get();
+}
+// #endregion group-limits
+
 // #region aggregates
 Future<void> aggregateExamples(QueryContext context) async {
   // Count

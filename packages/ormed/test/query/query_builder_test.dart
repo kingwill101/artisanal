@@ -456,18 +456,17 @@ void main() {
 
   group('group limits', () {
     test('limitPerGroup stores metadata on the plan', () {
-      // TODO: Implement limitPerGroup when window function support is available
-      // final plan = context
-      //     .query<Post>()
-      //     .orderBy('publishedAt', descending: true)
-      //     .limitPerGroup(2, 'authorId', offset: 1)
-      //     .debugPlan();
+      final plan = context
+          .query<Post>()
+          .orderBy('publishedAt', descending: true)
+          .limitPerGroup(2, 'authorId', offset: 1)
+          .debugPlan();
 
-      // final limit = plan.groupLimit;
-      // expect(limit, isNotNull);
-      // expect(limit!.column, 'author_id');
-      // expect(limit.limit, 2);
-      // expect(limit.offset, 1);
+      final limit = plan.groupLimit;
+      expect(limit, isNotNull);
+      expect(limit!.column, 'author_id');
+      expect(limit.limit, 2);
+      expect(limit.offset, 1);
     });
   });
 
