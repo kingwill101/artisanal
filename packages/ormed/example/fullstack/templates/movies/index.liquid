@@ -3,7 +3,9 @@
 {% block title %}Movie Catalog{% endblock %}
 
 {% block content %}
-{% comment %}// #region movies-index-hero{% endcomment %}
+{% comment %}
+// #region movies-index-hero
+{% endcomment %}
 <section class="hero">
   <div class="hero-card">
     <h1>Movie Catalog</h1>
@@ -16,9 +18,14 @@
     <a class="button alt" href="/movies/new">Upload a poster</a>
   </div>
 </section>
-{% comment %}// #endregion movies-index-hero{% endcomment %}
+{% comment %}
+// #endregion movies-index-hero
+{% endcomment %}
+{% comment %}
 
-{% comment %}// #region movies-index-list{% endcomment %}
+// #region movies-index-list
+
+{% endcomment %}
 <div class="grid grid-2">
   {% for movie in movies %}
   <article class="card">
@@ -34,9 +41,14 @@
   </article>
   {% endfor %}
 </div>
-{% comment %}// #endregion movies-index-list{% endcomment %}
+{% comment %}
+// #endregion movies-index-list
+{% endcomment %}
+{% comment %}
 
-{% comment %}// #region movies-index-empty{% endcomment %}
+// #region movies-index-empty
+
+{% endcomment %}
 {% if movies.size == 0 %}
   <div class="card">
     <h3>No movies yet.</h3>
@@ -44,5 +56,7 @@
     <a class="button" href="/movies/new">Add movie</a>
   </div>
 {% endif %}
-{% comment %}// #endregion movies-index-empty{% endcomment %}
+{% comment %}
+// #endregion movies-index-empty
+{% endcomment %}
 {% endblock %}

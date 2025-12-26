@@ -203,7 +203,9 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  {% comment %}// #region layout-header{% endcomment %}
+  {% comment %}
+  // #region layout-header
+  {% endcomment %}
   <header>
     <div>
       <div class="tag">Curated</div>
@@ -216,14 +218,20 @@
       <a href="/movies/new">Add Movie</a>
     </nav>
   </header>
-  {% comment %}// #endregion layout-header{% endcomment %}
+  {% comment %}
+  // #endregion layout-header
+  {% endcomment %}
+  {% comment %}
 
-  {% comment %}// #region layout-content{% endcomment %}
+  // #region layout-content
+
+  {% endcomment %}
   <main>
     {% block content %}{% endblock %}
   </main>
-  {% comment %}// #endregion layout-content{% endcomment %}
-
+  {% comment %}
+  // #endregion layout-content
+  {% endcomment %}
   <footer>
     <span>&copy; {{ year }} {{ app_name }}</span>
   </footer>
