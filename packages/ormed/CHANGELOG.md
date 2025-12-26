@@ -9,6 +9,7 @@
 - **Added**: Extended attribute casting system with custom cast handlers.
 - **Added**: Pivot enhancements including `withPivot` field selection and pivot timestamps.
 - **Added**: Raw query helpers `orderByRaw` and `groupByRaw`.
+- **Fixed**: `updatedAt` now respects explicitly provided values during updates (dirty-check aware).
 - **Added**: Object input support for `fill`, `forceFill`, and `fillIfAbsent` methods.
 - **Refactored**: Decoupled database drivers from the core package. Drivers now register themselves via `DriverAdapterRegistry`.
 - **Added**: `DataSource.fromConfig` as the standard, driver-agnostic entry point for ORM initialization.
