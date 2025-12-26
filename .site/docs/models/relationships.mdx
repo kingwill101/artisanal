@@ -57,6 +57,17 @@ A many-to-many relationship using a pivot table. Ormed automatically handles the
 ```dart file=../../examples/lib/models/relations/belongs_to_many.dart#relation-belongs-to-many-tag
 ```
 
+Use `withPivot` to include pivot columns when loading the related models. The
+selected pivot values are attached as a `pivot` relation on each related model.
+
+```dart file=../../examples/lib/models/relations/belongs_to_many.dart#relation-belongs-to-many-pivot
+```
+
+```dart
+final pivot = tag.getRelation<Map<String, Object?>>('pivot');
+final sortOrder = pivot?['sort_order'];
+```
+
   </TabItem>
 </Tabs>
 
