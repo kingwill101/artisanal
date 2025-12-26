@@ -520,28 +520,36 @@ abstract class Model<TModel extends Model<TModel>>
   }
 
   /// Mass assigns [attributes], honoring fillable/guarded metadata.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> fill(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     bool strict = false,
     ValueCodecRegistry? registry,
   }) {
+    final codecs = _effectiveCodecRegistry(registry);
+    final normalized = _normalizeFillAttributes(attributes, codecs);
     _asAttributes.fillAttributes(
-      attributes,
+      normalized,
       strict: strict,
-      registry: _effectiveCodecRegistry(registry),
+      registry: codecs,
     );
     return _self();
   }
 
   /// Mass assigns only values that are currently absent.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> fillIfAbsent(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     bool strict = false,
     ValueCodecRegistry? registry,
   }) {
+    final codecs = _effectiveCodecRegistry(registry);
+    final normalized = _normalizeFillAttributes(attributes, codecs);
     final pending = <String, Object?>{};
     final existing = _asAttributes.attributes;
-    for (final entry in attributes.entries) {
+    for (final entry in normalized.entries) {
       if (!existing.containsKey(entry.key) || existing[entry.key] == null) {
         pending[entry.key] = entry.value;
       }
@@ -549,14 +557,16 @@ abstract class Model<TModel extends Model<TModel>>
     _asAttributes.fillAttributes(
       pending,
       strict: strict,
-      registry: _effectiveCodecRegistry(registry),
+      registry: codecs,
     );
     return _self();
   }
 
   /// Temporarily disables mass-assignment protection while [callback] runs.
+  ///
+  /// Supports maps, tracked models, DTOs, and partial entities.
   Model<TModel> forceFill(
-    Map<String, Object?> attributes, {
+    Object attributes, {
     ValueCodecRegistry? registry,
   }) {
     return ModelAttributes.unguarded(
@@ -566,6 +576,18 @@ abstract class Model<TModel extends Model<TModel>>
         registry: _effectiveCodecRegistry(registry),
       ),
     );
+  }
+
+  Map<String, Object?> _normalizeFillAttributes(
+    Object attributes,
+    ValueCodecRegistry registry,
+  ) {
+    final def = expectDefinition();
+    final helper = MutationInputHelper<TModel>(
+      definition: def,
+      codecs: registry,
+    );
+    return helper.attributesInputToMap(attributes);
   }
 
   /// Queues a JSON update using Laravel-style selector syntax

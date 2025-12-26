@@ -35,6 +35,8 @@ Notes:
 - `fill(...)` defaults to `strict: false` (guarded keys are discarded).
 - Set `strict: true` to throw a `MassAssignmentException` when a guarded key is present.
 - Use `forceFill(...)` only for trusted/internal flows.
+- `fill` / `fillIfAbsent` / `forceFill` accept tracked models, DTOs, and partials in addition to maps.
+- Map keys can be Dart field names or column names (they are normalized).
 
 ## Serialization (hidden / visible)
 

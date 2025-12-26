@@ -170,6 +170,29 @@ class MutationInputHelper<T extends OrmEntity> {
     };
   }
 
+  /// Converts a fill-style input to a column/value map.
+  ///
+  /// Supports:
+  /// - tracked model instances (uses tracked attributes)
+  /// - [PartialEntity<T>]
+  /// - [InsertDto<T>], [UpdateDto<T>]
+  /// - [Map<String, Object?>]
+  Map<String, Object?> attributesInputToMap(Object input) {
+    return switch (input) {
+      ModelAttributes model => _normalizeColumnNames(model.attributes),
+      PartialEntity<dynamic> partial => _normalizeColumnNames(partial.toMap()),
+      InsertDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
+      UpdateDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
+      Map<String, Object?> m => _normalizeColumnNames(m),
+      Map m => _normalizeColumnNames(_stringKeyMap(m)),
+      _ => throw ArgumentError.value(
+        input,
+        'attributes',
+        'Expected tracked model, PartialEntity, InsertDto, UpdateDto, or Map<String, Object?>, got ${input.runtimeType}',
+      ),
+    };
+  }
+
   /// Extracts primary key from supported inputs.
   Object? extractPrimaryKey(Object input) {
     final pkField = definition.primaryKeyField;
@@ -204,6 +227,22 @@ class MutationInputHelper<T extends OrmEntity> {
     for (final entry in input.entries) {
       final columnName = _fieldToColumnName(entry.key);
       result[columnName] = entry.value;
+    }
+    return result;
+  }
+
+  Map<String, Object?> _stringKeyMap(Map input) {
+    final result = <String, Object?>{};
+    for (final entry in input.entries) {
+      final key = entry.key;
+      if (key is! String) {
+        throw ArgumentError.value(
+          key,
+          'attributes',
+          'Expected string keys in attribute maps.',
+        );
+      }
+      result[key] = entry.value;
     }
     return result;
   }
