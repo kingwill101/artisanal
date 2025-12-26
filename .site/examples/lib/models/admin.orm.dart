@@ -86,6 +86,7 @@ final ModelDefinition<$Admin> _$AdminDefinition = ModelDefinition(
     fillable: const <String>['email'],
     guarded: const <String>['id'],
     casts: const <String, String>{'createdAt': 'datetime'},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),

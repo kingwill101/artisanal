@@ -102,10 +102,19 @@ final ModelDefinition<$Account> _$AccountDefinition = ModelDefinition(
     fillable: const <String>['email', 'name'],
     guarded: const <String>['is_admin'],
     casts: const <String, String>{},
+    appends: const <String>['display_name'],
     fieldOverrides: const {'is_admin': FieldAttributeMetadata(guarded: true)},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
+  accessors: {
+    'display_name': (model, value) =>
+        Account.displayName((model as Account), value),
+  },
+  mutators: {
+    'email': (model, value) =>
+        Account.normalizeEmail((model as Account), value as String?),
+  },
   untrackedToMap: _encodeAccountUntracked,
   codec: _$AccountCodec(),
 );
@@ -577,6 +586,18 @@ extension AccountOrmExtension on Account {
   /// and persistence operations like save() and touch().
   $Account toTracked() {
     return $Account.fromModel(this);
+  }
+}
+
+extension $AccountAccessors on $Account {
+  String get displayName {
+    return Account.displayName(this, getRawAttribute('display_name'));
+  }
+
+  String normalizeEmail(String? value) {
+    final result = Account.normalizeEmail(this, value as String?);
+    setRawAttribute('email', result);
+    return result;
   }
 }
 
