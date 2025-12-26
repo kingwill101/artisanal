@@ -446,7 +446,15 @@ class ValueCodecRegistry {
       case 'string':
         return _coerceString(value);
       case 'date':
-        return _coerceDate(value);
+        final date = _coerceDate(value);
+        if (date == null) return null;
+        if (operation == CastOperation.persist) {
+          final driverCodec = _driverCodecForKey('date');
+          if (driverCodec != null) {
+            return driverCodec.encode(date);
+          }
+        }
+        return date;
       case 'datetime':
         return _coerceDateTime(value);
       case 'timestamp':

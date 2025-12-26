@@ -44,8 +44,10 @@ void registerPostgresCodecs() {
   const pathCodec = _PostgresTypedValueCodec<Path>(Type.path);
   const polygonCodec = _PostgresTypedValueCodec<Polygon>(Type.polygon);
   const circleCodec = _PostgresTypedValueCodec<Circle>(Type.circle);
+  const dateCodec = _PostgresTypedValueCodec<DateTime>(Type.date);
 
   ValueCodecRegistry.instance.registerDriver('postgres', {
+    'date': dateCodec,
     'DateTime': timestampCodec,
     'DateTime?': timestampCodec,
     'Time': timeCodec,
