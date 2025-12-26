@@ -71,14 +71,11 @@ class DriverTestConfig {
       case DriverCapability.relationAggregates:
         return _capabilities.contains(DriverCapability.relationAggregates);
       case DriverCapability.caseInsensitiveLike:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return supportsCaseInsensitiveLike;
       case DriverCapability.rightJoin:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return supportsRightJoin;
       case DriverCapability.distinctOn:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return supportsDistinctOn;
       case DriverCapability.databaseManagement:
         return _capabilities.contains(DriverCapability.databaseManagement);
       case DriverCapability.foreignKeyConstraintControl:
