@@ -121,6 +121,7 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -314,6 +315,38 @@ class CommentInsertDto implements InsertDto<$Comment> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _CommentInsertDtoCopyWithSentinel _copyWithSentinel =
+      _CommentInsertDtoCopyWithSentinel();
+  CommentInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return CommentInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _CommentInsertDtoCopyWithSentinel {
+  const _CommentInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Comment].
@@ -346,6 +379,38 @@ class CommentUpdateDto implements UpdateDto<$Comment> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _CommentUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _CommentUpdateDtoCopyWithSentinel();
+  CommentUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return CommentUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _CommentUpdateDtoCopyWithSentinel {
+  const _CommentUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Comment].
@@ -415,6 +480,38 @@ class CommentPartial implements PartialEntity<$Comment> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _CommentPartialCopyWithSentinel _copyWithSentinel =
+      _CommentPartialCopyWithSentinel();
+  CommentPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return CommentPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _CommentPartialCopyWithSentinel {
+  const _CommentPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Comment].
@@ -426,6 +523,7 @@ class CommentPartial implements PartialEntity<$Comment> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Comment extends Comment with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Comment].
   $Comment({
     int? id,
     required int postId,
@@ -481,36 +579,48 @@ class $Comment extends Comment with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [postId].
   @override
   int get postId => getAttribute<int>('post_id') ?? super.postId;
 
+  /// Tracked setter for [postId].
   set postId(int value) => setAttribute('post_id', value);
 
+  /// Tracked getter for [userId].
   @override
   int? get userId => getAttribute<int?>('user_id') ?? super.userId;
 
+  /// Tracked setter for [userId].
   set userId(int? value) => setAttribute('user_id', value);
 
+  /// Tracked getter for [body].
   @override
   String get body => getAttribute<String>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String value) => setAttribute('body', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

@@ -54,6 +54,7 @@ final ModelDefinition<$PostTag> _$PostTagDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -198,6 +199,24 @@ class PostTagInsertDto implements InsertDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostTagInsertDtoCopyWithSentinel();
+  PostTagInsertDto copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagInsertDto(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagInsertDtoCopyWithSentinel {
+  const _PostTagInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [PostTag].
@@ -215,6 +234,24 @@ class PostTagUpdateDto implements UpdateDto<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostTagUpdateDtoCopyWithSentinel();
+  PostTagUpdateDto copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagUpdateDto(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagUpdateDtoCopyWithSentinel {
+  const _PostTagUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [PostTag].
@@ -258,6 +295,24 @@ class PostTagPartial implements PartialEntity<$PostTag> {
       if (tagId != null) 'tag_id': tagId,
     };
   }
+
+  static const _PostTagPartialCopyWithSentinel _copyWithSentinel =
+      _PostTagPartialCopyWithSentinel();
+  PostTagPartial copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+  }) {
+    return PostTagPartial(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int?,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int?,
+    );
+  }
+}
+
+class _PostTagPartialCopyWithSentinel {
+  const _PostTagPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [PostTag].
@@ -269,6 +324,7 @@ class PostTagPartial implements PartialEntity<$PostTag> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$PostTag].
   $PostTag({required int postId, required int tagId})
     : super.new(postId: postId, tagId: tagId) {
     _attachOrmRuntimeMetadata({'post_id': postId, 'tag_id': tagId});
@@ -283,14 +339,18 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
     return $PostTag(postId: postId ?? this.postId, tagId: tagId ?? this.tagId);
   }
 
+  /// Tracked getter for [postId].
   @override
   int get postId => getAttribute<int>('post_id') ?? super.postId;
 
+  /// Tracked setter for [postId].
   set postId(int value) => setAttribute('post_id', value);
 
+  /// Tracked getter for [tagId].
   @override
   int get tagId => getAttribute<int>('tag_id') ?? super.tagId;
 
+  /// Tracked setter for [tagId].
   set tagId(int value) => setAttribute('tag_id', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
