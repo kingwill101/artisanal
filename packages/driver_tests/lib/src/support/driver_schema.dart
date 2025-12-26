@@ -133,6 +133,13 @@ final List<MigrationEntry> driverTestMigrationEntries = [
     ),
     migration: const CreateAccessorUsersTable(),
   ),
+  MigrationEntry(
+    id: MigrationId(
+      DateTime.utc(2023, 1, 1, 0, 0, 22),
+      'create_cast_samples_table',
+    ),
+    migration: const CreateCastSamplesTable(),
+  ),
 ];
 
 /// Create a test schema manager for driver tests
