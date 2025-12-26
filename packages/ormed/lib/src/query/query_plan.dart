@@ -13,6 +13,7 @@ class QueryPlan {
     this.tablePrefix,
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     this.randomOrder = false,
     this.randomSeed,
     this.limit,
@@ -29,6 +30,7 @@ class QueryPlan {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     this.having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -44,6 +46,7 @@ class QueryPlan {
     this.disableCache = false,
   }) : filters = List.unmodifiable(filters ?? const []),
        orders = List.unmodifiable(orders ?? const []),
+       rawOrders = List.unmodifiable(rawOrders ?? const []),
        relations = List.unmodifiable(relations ?? const []),
        indexHints = List.unmodifiable(indexHints ?? const <IndexHint>[]),
        fullTextWheres = List.unmodifiable(
@@ -58,6 +61,7 @@ class QueryPlan {
        ),
        aggregates = List.unmodifiable(aggregates ?? const []),
        groupBy = List.unmodifiable(groupBy ?? const []),
+       rawGroupBy = List.unmodifiable(rawGroupBy ?? const []),
        relationAggregates = List.unmodifiable(
          relationAggregates ?? const <RelationAggregate>[],
        ),
@@ -76,6 +80,7 @@ class QueryPlan {
   final String? tablePrefix;
   final List<FilterClause> filters;
   final List<OrderClause> orders;
+  final List<RawOrderExpression> rawOrders;
   final bool randomOrder;
   final num? randomSeed;
   final int? limit;
@@ -91,6 +96,7 @@ class QueryPlan {
   final List<ProjectionOrderEntry> projectionOrder;
   final List<AggregateExpression> aggregates;
   final List<String> groupBy;
+  final List<RawGroupByExpression> rawGroupBy;
   final QueryPredicate? having;
   final List<RelationAggregate> relationAggregates;
   final List<RelationOrder> relationOrders;
@@ -109,6 +115,7 @@ class QueryPlan {
   QueryPlan copyWith({
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     bool? randomOrder,
     num? randomSeed,
     int? limit,
@@ -125,6 +132,7 @@ class QueryPlan {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -145,6 +153,7 @@ class QueryPlan {
     tablePrefix: tablePrefix ?? this.tablePrefix,
     filters: filters ?? this.filters,
     orders: orders ?? this.orders,
+    rawOrders: rawOrders ?? this.rawOrders,
     randomOrder: randomOrder ?? this.randomOrder,
     randomSeed: randomSeed ?? this.randomSeed,
     limit: limit ?? this.limit,
@@ -161,6 +170,7 @@ class QueryPlan {
     projectionOrder: projectionOrder ?? this.projectionOrder,
     aggregates: aggregates ?? this.aggregates,
     groupBy: groupBy ?? this.groupBy,
+    rawGroupBy: rawGroupBy ?? this.rawGroupBy,
     having: having ?? this.having,
     relationAggregates: relationAggregates ?? this.relationAggregates,
     relationOrders: relationOrders ?? this.relationOrders,
@@ -182,12 +192,14 @@ class QueryPlan {
       'QueryPlan(${definition.tableName}',
       if (filters.isNotEmpty) 'filters: ${filters.length}',
       if (orders.isNotEmpty) 'orders: ${orders.length}',
+      if (rawOrders.isNotEmpty) 'rawOrders: ${rawOrders.length}',
       if (limit != null) 'limit: $limit',
       if (offset != null) 'offset: $offset',
       if (joins.isNotEmpty) 'joins: ${joins.length}',
       if (relations.isNotEmpty) 'relations: ${relations.length}',
       if (selects.isNotEmpty) 'selects: ${selects.length}',
       if (aggregates.isNotEmpty) 'aggregates: ${aggregates.length}',
+      if (rawGroupBy.isNotEmpty) 'rawGroupBy: ${rawGroupBy.length}',
       if (distinct) 'distinct',
     ];
     return '${parts.join(', ')})';
@@ -494,6 +506,24 @@ class RawSelectExpression {
 
   final String sql;
   final String? alias;
+  final List<Object?> bindings;
+}
+
+/// Raw ORDER BY expression.
+class RawOrderExpression {
+  RawOrderExpression({required this.sql, List<Object?>? bindings})
+    : bindings = List.unmodifiable(bindings ?? const []);
+
+  final String sql;
+  final List<Object?> bindings;
+}
+
+/// Raw GROUP BY expression.
+class RawGroupByExpression {
+  RawGroupByExpression({required this.sql, List<Object?>? bindings})
+    : bindings = List.unmodifiable(bindings ?? const []);
+
+  final String sql;
   final List<Object?> bindings;
 }
 

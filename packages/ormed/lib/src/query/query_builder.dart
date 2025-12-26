@@ -99,6 +99,7 @@ class Query<T extends OrmEntity> {
     required this.context,
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -116,6 +117,7 @@ class Query<T extends OrmEntity> {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -135,6 +137,7 @@ class Query<T extends OrmEntity> {
     bool suppressEvents = false,
   }) : _filters = filters ?? <FilterClause>[],
        _orders = orders ?? <OrderClause>[],
+       _rawOrders = rawOrders ?? <RawOrderExpression>[],
        _relations = relations ?? <RelationLoad>[],
        _joins = joins ?? <JoinDefinition>[],
        _indexHints = indexHints ?? <IndexHint>[],
@@ -152,6 +155,7 @@ class Query<T extends OrmEntity> {
        _projectionOrder = projectionOrder ?? <ProjectionOrderEntry>[],
        _aggregates = aggregates ?? <AggregateExpression>[],
        _groupBy = groupBy ?? <String>[],
+       _rawGroupBy = rawGroupBy ?? <RawGroupByExpression>[],
        _having = having,
        _relationAggregates = relationAggregates ?? <RelationAggregate>[],
        _relationOrders = relationOrders ?? <RelationOrder>[],
@@ -182,6 +186,7 @@ class Query<T extends OrmEntity> {
   final QueryContext context;
   final List<FilterClause> _filters;
   final List<OrderClause> _orders;
+  final List<RawOrderExpression> _rawOrders;
   final List<RelationLoad> _relations;
   final List<JoinDefinition> _joins;
   final List<IndexHint> _indexHints;
@@ -199,6 +204,7 @@ class Query<T extends OrmEntity> {
   final List<ProjectionOrderEntry> _projectionOrder;
   final List<AggregateExpression> _aggregates;
   final List<String> _groupBy;
+  final List<RawGroupByExpression> _rawGroupBy;
   final QueryPredicate? _having;
   final List<RelationAggregate> _relationAggregates;
   final List<RelationOrder> _relationOrders;
@@ -485,6 +491,7 @@ class Query<T extends OrmEntity> {
       tablePrefix: context.connectionTablePrefix,
       filters: _filters,
       orders: _orders,
+      rawOrders: _rawOrders,
       randomOrder: _randomOrder,
       randomSeed: _randomSeed,
       limit: _limit,
@@ -500,6 +507,7 @@ class Query<T extends OrmEntity> {
       projectionOrder: _projectionOrder,
       aggregates: _aggregates,
       groupBy: _groupBy,
+      rawGroupBy: _rawGroupBy,
       having: _having,
       relationAggregates: _relationAggregates,
       relationOrders: _relationOrders,
@@ -692,6 +700,7 @@ class Query<T extends OrmEntity> {
     limit: null,
     offset: null,
     orders: const <OrderClause>[],
+    rawOrders: const <RawOrderExpression>[],
     aggregates: const <AggregateExpression>[],
     selects: const <String>[],
     rawSelects: const <RawSelectExpression>[],
@@ -914,6 +923,7 @@ class Query<T extends OrmEntity> {
   Query<T> _copyWith({
     List<FilterClause>? filters,
     List<OrderClause>? orders,
+    List<RawOrderExpression>? rawOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -931,6 +941,7 @@ class Query<T extends OrmEntity> {
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
+    List<RawGroupByExpression>? rawGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -953,6 +964,7 @@ class Query<T extends OrmEntity> {
     context: context,
     filters: filters ?? _filters,
     orders: orders ?? _orders,
+    rawOrders: rawOrders ?? _rawOrders,
     relations: relations ?? _relations,
     joins: joins ?? _joins,
     indexHints: indexHints ?? _indexHints,
@@ -972,6 +984,7 @@ class Query<T extends OrmEntity> {
     projectionOrder: projectionOrder ?? _projectionOrder,
     aggregates: aggregates ?? _aggregates,
     groupBy: groupBy ?? _groupBy,
+    rawGroupBy: rawGroupBy ?? _rawGroupBy,
     having: having ?? _having,
     relationAggregates: relationAggregates ?? _relationAggregates,
     relationOrders: relationOrders ?? _relationOrders,

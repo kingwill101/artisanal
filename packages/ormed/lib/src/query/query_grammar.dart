@@ -663,7 +663,8 @@ class _SelectCompilation {
     }
 
     if (requiresHydrationColumns && !plan.disableAutoHydration) {
-      final aggregateHydration = plan.groupBy.isNotEmpty;
+      final aggregateHydration =
+          plan.groupBy.isNotEmpty || plan.rawGroupBy.isNotEmpty;
       _hydrationColumnNames = const [];
       projections.addAll(
         _hydrationColumns(plan.definition, coveredColumns, aggregateHydration),
@@ -926,13 +927,21 @@ class _SelectCompilation {
         continue;
       }
       if (seen.add(column)) {
-        values.add(column);
+        values.add(grammar.wrapIdentifier(column));
       }
+    }
+    for (final raw in plan.rawGroupBy) {
+      final sql = raw.sql.trim();
+      if (sql.isEmpty) {
+        continue;
+      }
+      bindings.addAll(raw.bindings);
+      values.add(sql);
     }
     if (values.isEmpty) {
       return null;
     }
-    return values.map(grammar.wrapIdentifier).join(', ');
+    return values.join(', ');
   }
 
   String? _havingClause() => _compilePredicate(
@@ -968,6 +977,14 @@ class _SelectCompilation {
         return '$expression ${order.descending ? 'DESC' : 'ASC'}';
       }),
     );
+    for (final raw in plan.rawOrders) {
+      final sql = raw.sql.trim();
+      if (sql.isEmpty) {
+        continue;
+      }
+      bindings.addAll(raw.bindings);
+      clauses.add(sql);
+    }
     for (final relationOrder in plan.relationOrders) {
       final aggregate = RelationAggregate(
         type: relationOrder.aggregateType,

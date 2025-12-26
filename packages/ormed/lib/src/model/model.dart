@@ -1974,13 +1974,23 @@ abstract class Model<TModel extends Model<TModel>>
       return row;
     }).toList();
 
-    // Build pivot table definition with proper column types
-    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
-      pivotForeignKey: pk,
-      pivotRelatedKey: relatedPk,
-      ...pivotValues.map((key, _) => MapEntry(key, null)),
-      ..._pivotTimestampFieldDefinitions(relationDef),
-    });
+    final pivotFieldDefs = _pivotModelFieldDefinitions(
+      relationDef,
+      resolver,
+    );
+    final pivotDef = _createPivotDefinition(
+      pivotTable,
+      def.schema,
+      _pivotColumnDefinitions(
+        pivotFieldDefs: pivotFieldDefs,
+        foreignKey: pivotForeignKey,
+        foreignKeyField: pk,
+        relatedKey: pivotRelatedKey,
+        relatedKeyField: relatedPk,
+        pivotValues: pivotValues,
+        timestampFields: _pivotTimestampFieldDefinitions(relationDef),
+      ),
+    );
 
     final plan = MutationPlan.insert(definition: pivotDef, rows: rows);
 
@@ -2365,13 +2375,23 @@ abstract class Model<TModel extends Model<TModel>>
       isInsert: false,
     );
 
-    // Build pivot definition with all fields
-    final pivotDef = _createPivotDefinition(pivotTable, def.schema, {
-      pivotForeignKey: pk,
-      pivotRelatedKey: relatedPk,
-      ...pivotValues.map((key, _) => MapEntry(key, null)),
-      ..._pivotTimestampFieldDefinitions(relationDef),
-    });
+    final pivotFieldDefs = _pivotModelFieldDefinitions(
+      relationDef,
+      resolver,
+    );
+    final pivotDef = _createPivotDefinition(
+      pivotTable,
+      def.schema,
+      _pivotColumnDefinitions(
+        pivotFieldDefs: pivotFieldDefs,
+        foreignKey: pivotForeignKey,
+        foreignKeyField: pk,
+        relatedKey: pivotRelatedKey,
+        relatedKeyField: relatedPk,
+        pivotValues: pivotValues,
+        timestampFields: _pivotTimestampFieldDefinitions(relationDef),
+      ),
+    );
 
     // Update the pivot record
     final plan = MutationPlan.update(
@@ -2496,6 +2516,44 @@ abstract class Model<TModel extends Model<TModel>>
         isNullable: true,
       ),
     };
+  }
+
+  Map<String, FieldDefinition> _pivotModelFieldDefinitions(
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+  ) {
+    final pivotModel = relationDef.pivotModel;
+    if (pivotModel == null || pivotModel.isEmpty) {
+      return const {};
+    }
+    final definition = resolver.registry.expectByName(pivotModel);
+    return {
+      for (final field in definition.fields) field.columnName: field,
+    };
+  }
+
+  Map<String, FieldDefinition?> _pivotColumnDefinitions({
+    required Map<String, FieldDefinition> pivotFieldDefs,
+    required String foreignKey,
+    required FieldDefinition foreignKeyField,
+    required String relatedKey,
+    required FieldDefinition relatedKeyField,
+    required Map<String, dynamic> pivotValues,
+    required Map<String, FieldDefinition> timestampFields,
+  }) {
+    final columns = <String, FieldDefinition?>{
+      foreignKey: pivotFieldDefs[foreignKey] ?? foreignKeyField,
+      relatedKey: pivotFieldDefs[relatedKey] ?? relatedKeyField,
+    };
+    for (final entry in pivotValues.entries) {
+      columns[entry.key] = pivotFieldDefs[entry.key];
+    }
+    timestampFields.forEach((key, field) {
+      if (columns[key] == null) {
+        columns[key] = pivotFieldDefs[key] ?? field;
+      }
+    });
+    return columns;
   }
 
   // ==========================================================================

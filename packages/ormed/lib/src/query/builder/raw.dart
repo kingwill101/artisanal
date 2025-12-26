@@ -28,13 +28,8 @@ extension RawQueryExtension<T extends OrmEntity> on Query<T> {
   ///   .get();
   /// ```
   Query<T> orderByRaw(String sql, [List<Object?> bindings = const []]) {
-    // NOTE: Full implementation requires adding rawOrderings field to QueryPlan
-    // For now, this is a placeholder that documents the API
-    // Integration with SQL grammar still needed
-    throw UnimplementedError(
-      'orderByRaw() requires integration with QueryPlan and SQL grammar. '
-      'Use whereRaw() or selectRaw() as workarounds for now.',
-    );
+    final expression = RawOrderExpression(sql: sql, bindings: bindings);
+    return _copyWith(rawOrders: [..._rawOrders, expression]);
   }
 
   /// Adds a raw GROUP BY expression.
@@ -52,12 +47,7 @@ extension RawQueryExtension<T extends OrmEntity> on Query<T> {
   ///   .get();
   /// ```
   Query<T> groupByRaw(String sql, [List<Object?> bindings = const []]) {
-    // NOTE: Full implementation requires adding rawGroupBys field to QueryPlan
-    // For now, this is a placeholder that documents the API
-    // Integration with SQL grammar still needed
-    throw UnimplementedError(
-      'groupByRaw() requires integration with QueryPlan and SQL grammar. '
-      'Use whereRaw() or selectRaw() as workarounds for now.',
-    );
+    final expression = RawGroupByExpression(sql: sql, bindings: bindings);
+    return _copyWith(rawGroupBy: [..._rawGroupBy, expression]);
   }
 }
