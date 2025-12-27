@@ -11,7 +11,7 @@ import 'post_tag.dart';
 
 part 'post.orm.dart';
 
-@OrmModel(table: 'posts')
+@OrmModel(table: 'posts', touches: ['author', 'tags'])
 class Post extends Model<Post> with ModelFactoryCapable, TimestampsTZ {
   const Post({
     required this.id,

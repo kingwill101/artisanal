@@ -73,6 +73,8 @@ void runCastingTests() {
       expect(tracked.startedOn.year, 2024);
       expect(tracked.startedOn.month, 1);
       expect(tracked.startedOn.day, 10);
+      expect(tracked.startedOn.hour, 0);
+      expect(tracked.startedOn.minute, 0);
       expect(tracked.updatedAt.toUtc(), equals(updatedAt));
       expect(tracked.amount, Decimal.parse('123.45'));
       expect(tracked.status, CastStatus.active);
@@ -83,6 +85,37 @@ void runCastingTests() {
       expect(payload['status'], 'active');
       expect(payload['secret'], 'top secret');
       expect(payload['is_active'], true);
+    });
+
+    test('casts numeric timestamps to datetime', () async {
+      const seconds = 1700000000;
+      final expected = DateTime.fromMillisecondsSinceEpoch(
+        seconds * 1000,
+        isUtc: true,
+      );
+      final model = CastSample(
+        id: 2,
+        name: 'Numeric Timestamp',
+        isActive: true,
+        visits: 1,
+        ratio: 1.2,
+        startedOn: DateTime.utc(2024, 1, 1),
+        updatedAt: DateTime.utc(2024, 1, 1),
+        amount: Decimal.parse('1.00'),
+        status: CastStatus.draft,
+        secret: 'secret',
+      ).toTracked();
+
+      model.fill({'updated_at': seconds}, registry: dataSource.codecRegistry);
+      await dataSource.repo<CastSample>().insert(model);
+
+      final fetched = await dataSource.context
+          .query<CastSample>()
+          .where('id', 2)
+          .first();
+      final tracked = fetched!.toTracked();
+
+      expect(tracked.updatedAt.toUtc(), equals(expected));
     });
   });
 }

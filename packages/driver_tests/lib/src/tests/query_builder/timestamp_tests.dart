@@ -104,8 +104,7 @@ void runTimestampTests() {
         await Future.delayed(const Duration(milliseconds: 500));
 
         // Touch the model
-        fetchedTracked.touch();
-        await fetchedTracked.save();
+        await fetchedTracked.touch();
 
         final refetched = await Authors.query(
           dataSource.options.name,
@@ -290,8 +289,7 @@ void runTimestampTests() {
         await Future.delayed(const Duration(milliseconds: 100));
 
         // Touch
-        fetchedTracked.touch();
-        await fetchedTracked.save();
+        await fetchedTracked.touch();
 
         final refetched = await dataSource.context
             .query<Post>()
@@ -428,6 +426,111 @@ void runTimestampTests() {
 
         final frenchFormat = fetched.createdAt!.locale('fr').format('l d F Y');
         expect(frenchFormat, isA<String>());
+      });
+    });
+
+    group('Touching', () {
+      test('touches owners on save when configured', () async {
+        final author = const Author(id: 3000, name: 'Touch Owner');
+        await Authors.repo(dataSource.options.name).insert(author.toTracked());
+
+        final post = Post(
+          id: 3001,
+          authorId: 3000,
+          title: 'Touch Parent',
+          publishedAt: DateTime.now(),
+        );
+        await Posts.repo(dataSource.options.name).insert(post.toTracked());
+
+        final fetchedPost = await Posts.query(
+          dataSource.options.name,
+        ).where('id', 3001).first();
+        final beforeAuthor = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3000).first();
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        fetchedPost!.title = 'Touch Parent Updated';
+        await fetchedPost.save();
+
+        final afterAuthor = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3000).first();
+
+        expect(afterAuthor, isNotNull);
+        expect(beforeAuthor, isNotNull);
+        expect(
+          afterAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          greaterThan(
+            beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          ),
+        );
+      });
+
+      test('withoutTouching suppresses owner touching', () async {
+        final author = const Author(id: 3002, name: 'No Touch Owner');
+        await Authors.repo(dataSource.options.name).insert(author.toTracked());
+
+        final post = Post(
+          id: 3003,
+          authorId: 3002,
+          title: 'No Touch Parent',
+          publishedAt: DateTime.now(),
+        );
+        await Posts.repo(dataSource.options.name).insert(post.toTracked());
+
+        final fetchedPost = await Posts.query(
+          dataSource.options.name,
+        ).where('id', 3003).first();
+        final beforeAuthor = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3002).first();
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        await Model.withoutTouchingOn(<Type>[Post], () async {
+          fetchedPost!.title = 'No Touch Parent Updated';
+          await fetchedPost.save();
+        });
+
+        final afterAuthor = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3002).first();
+
+        expect(afterAuthor, isNotNull);
+        expect(beforeAuthor, isNotNull);
+        expect(
+          afterAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          equals(
+            beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          ),
+        );
+      });
+
+      test('withoutTimestamps skips automatic updated_at', () async {
+        final author = const Author(id: 3004, name: 'No Timestamp');
+        await Authors.repo(dataSource.options.name).insert(author.toTracked());
+
+        final before = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3004).first();
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        await Model.withoutTimestampsOn(<Type>[Author], () async {
+          await Authors.query(
+            dataSource.options.name,
+          ).where('id', 3004).update({'name': 'No Timestamp Updated'});
+        });
+
+        final after = await Authors.query(
+          dataSource.options.name,
+        ).where('id', 3004).first();
+
+        expect(before, isNotNull);
+        expect(after, isNotNull);
+        expect(
+          after!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          equals(before!.updatedAt!.toDateTime().millisecondsSinceEpoch),
+        );
       });
     });
   });

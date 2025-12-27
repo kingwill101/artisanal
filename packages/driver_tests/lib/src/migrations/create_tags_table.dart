@@ -8,6 +8,7 @@ class CreateTagsTable extends Migration {
     schema.create('tags', (table) {
       table.integer('id').primaryKey().autoIncrement();
       table.string('label');
+      table.timestamps();
     });
   }
 
