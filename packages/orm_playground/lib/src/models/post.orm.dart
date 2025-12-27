@@ -170,6 +170,7 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -379,6 +380,46 @@ class PostInsertDto implements InsertDto<$Post> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _PostInsertDtoCopyWithSentinel _copyWithSentinel =
+      _PostInsertDtoCopyWithSentinel();
+  PostInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? published = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return PostInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      published: identical(published, _copyWithSentinel)
+          ? this.published
+          : published as bool?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _PostInsertDtoCopyWithSentinel {
+  const _PostInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Post].
@@ -417,6 +458,46 @@ class PostUpdateDto implements UpdateDto<$Post> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _PostUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _PostUpdateDtoCopyWithSentinel();
+  PostUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? published = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return PostUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      published: identical(published, _copyWithSentinel)
+          ? this.published
+          : published as bool?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _PostUpdateDtoCopyWithSentinel {
+  const _PostUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Post].
@@ -500,6 +581,46 @@ class PostPartial implements PartialEntity<$Post> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _PostPartialCopyWithSentinel _copyWithSentinel =
+      _PostPartialCopyWithSentinel();
+  PostPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? published = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return PostPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      title: identical(title, _copyWithSentinel)
+          ? this.title
+          : title as String?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      published: identical(published, _copyWithSentinel)
+          ? this.published
+          : published as bool?,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _PostPartialCopyWithSentinel {
+  const _PostPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Post].
@@ -511,6 +632,7 @@ class PostPartial implements PartialEntity<$Post> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Post extends Post with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Post].
   $Post({
     int? id,
     required int userId,
@@ -578,47 +700,63 @@ class $Post extends Post with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [userId].
   @override
   int get userId => getAttribute<int>('user_id') ?? super.userId;
 
+  /// Tracked setter for [userId].
   set userId(int value) => setAttribute('user_id', value);
 
+  /// Tracked getter for [title].
   @override
   String get title => getAttribute<String>('title') ?? super.title;
 
+  /// Tracked setter for [title].
   set title(String value) => setAttribute('title', value);
 
+  /// Tracked getter for [body].
   @override
   String? get body => getAttribute<String?>('body') ?? super.body;
 
+  /// Tracked setter for [body].
   set body(String? value) => setAttribute('body', value);
 
+  /// Tracked getter for [published].
   @override
   bool get published => getAttribute<bool>('published') ?? super.published;
 
+  /// Tracked setter for [published].
   set published(bool value) => setAttribute('published', value);
 
+  /// Tracked getter for [publishedAt].
   @override
   DateTime? get publishedAt =>
       getAttribute<DateTime?>('published_at') ?? super.publishedAt;
 
+  /// Tracked setter for [publishedAt].
   set publishedAt(DateTime? value) => setAttribute('published_at', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
@@ -657,7 +795,12 @@ extension PostRelationQueries on Post {
   }
 
   Query<Tag> tagsQuery() {
-    throw UnimplementedError("ManyToMany query generation not yet supported");
+    final query = Model.query<Tag>();
+    final targetTable = query.definition.tableName;
+    final targetKey = query.definition.primaryKeyField?.columnName ?? 'id';
+    return query
+        .join('post_tags', '$targetTable.$targetKey', '=', 'post_tags.tag_id')
+        .where('post_tags.post_id', id);
   }
 
   Query<Comment> commentsQuery() {

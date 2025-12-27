@@ -7,8 +7,8 @@ import 'post.dart';
 
 part 'tag.orm.dart';
 
-@OrmModel(table: 'tags')
-class Tag extends Model<Tag> with ModelFactoryCapable {
+@OrmModel(table: 'tags', touches: ['posts'])
+class Tag extends Model<Tag> with ModelFactoryCapable, Timestamps {
   const Tag({required this.id, required this.label})
     : posts = const [],
       morphedPosts = const [];

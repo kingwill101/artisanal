@@ -742,14 +742,23 @@ DateTime? _coerceDateTime(Object? value) {
   if (value == null) return null;
   if (value is DateTime) return value;
   if (value is CarbonInterface) return value.toDateTime();
+  if (value is num) {
+    final seconds = value.toInt();
+    return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+  }
   if (value is String) {
     final raw = value.trim();
     if (raw.isEmpty) return null;
+    final numeric = num.tryParse(raw);
+    if (numeric != null) {
+      final seconds = numeric.toInt();
+      return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+    }
     final timezoneMatch = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').firstMatch(raw);
     final hasTimezone = timezoneMatch != null;
     if (hasTimezone) {
       if (!raw.contains('T')) {
-        final tz = timezoneMatch!.group(1)!;
+        final tz = timezoneMatch.group(1)!;
         final datePart = raw.substring(0, timezoneMatch.start);
         if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(datePart)) {
           return DateTime.parse('${datePart}T00:00:00$tz');
@@ -800,7 +809,7 @@ Decimal? _coerceDecimal(Object? value) {
   throw StateError('Unsupported Decimal value "$value".');
 }
 
-Object? _encodeEnum(Object? value, FieldDefinition? _field) {
+Object? _encodeEnum(Object? value, FieldDefinition? _) {
   if (value == null) return null;
   if (value is Enum) return value.name;
   return value;

@@ -118,7 +118,7 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   through: 'post_tags',
   pivotForeignKey: 'post_id',
   pivotRelatedKey: 'tag_id',
-  pivotColumns: const <String>['sort_order', 'note'],
+  pivotColumns: <String>['sort_order', 'note'],
   pivotTimestamps: true,
   pivotModel: 'PostTag',
 );
@@ -194,6 +194,8 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>['author', 'tags'],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),

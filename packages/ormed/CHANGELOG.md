@@ -2,6 +2,10 @@
 
 ## 0.1.0-dev+4
 
+- **Added**: Relationship touching with `touches`, `touch()`, and `touchOwners()` for keeping related `updated_at` values in sync.
+- **Added**: `withoutTouchingOn` / `withoutTimestampsOn` scopes to suppress automatic touching or timestamp updates.
+- **Added**: `@OrmModel(timestamps: false)` to disable automatic timestamp updates while still using timestamp fields.
+- **Improved**: Timestamp casting accepts numeric epoch inputs (seconds) in addition to `DateTime`/Carbon types.
 - **Added**: Through relations support with `hasOneThrough` and `hasManyThrough` relation types.
 - **Added**: Polymorphic relations with `morphTo`, `morphToMany`, and `morphedByMany` support.
 - **Added**: Attribute accessors and mutators for get/set interception.

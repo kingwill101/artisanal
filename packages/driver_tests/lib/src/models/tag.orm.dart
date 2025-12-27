@@ -31,6 +31,30 @@ const FieldDefinition _$TagLabelField = FieldDefinition(
   autoIncrement: false,
 );
 
+const FieldDefinition _$TagCreatedAtField = FieldDefinition(
+  name: 'createdAt',
+  columnName: 'created_at',
+  dartType: 'DateTime',
+  resolvedType: 'DateTime?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
+const FieldDefinition _$TagUpdatedAtField = FieldDefinition(
+  name: 'updatedAt',
+  columnName: 'updated_at',
+  dartType: 'DateTime',
+  resolvedType: 'DateTime?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
 const RelationDefinition _$TagPostsRelation = RelationDefinition(
   name: 'posts',
   kind: RelationKind.manyToMany,
@@ -65,7 +89,12 @@ Map<String, Object?> _encodeTagUntracked(
 final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
   modelName: 'Tag',
   tableName: 'tags',
-  fields: const [_$TagIdField, _$TagLabelField],
+  fields: const [
+    _$TagIdField,
+    _$TagLabelField,
+    _$TagCreatedAtField,
+    _$TagUpdatedAtField,
+  ],
   relations: const [_$TagPostsRelation, _$TagMorphedPostsRelation],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
@@ -75,6 +104,8 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>['posts'],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -183,6 +214,14 @@ class _$TagCodec extends ModelCodec<$Tag> {
     return <String, Object?>{
       'id': registry.encodeField(_$TagIdField, model.id),
       'label': registry.encodeField(_$TagLabelField, model.label),
+      'created_at': registry.encodeField(
+        _$TagCreatedAtField,
+        model.getAttribute<DateTime?>('created_at'),
+      ),
+      'updated_at': registry.encodeField(
+        _$TagUpdatedAtField,
+        model.getAttribute<DateTime?>('updated_at'),
+      ),
     };
   }
 
@@ -193,8 +232,21 @@ class _$TagCodec extends ModelCodec<$Tag> {
     final String tagLabelValue =
         registry.decodeField<String>(_$TagLabelField, data['label']) ??
         (throw StateError('Field label on Tag cannot be null.'));
+    final DateTime? tagCreatedAtValue = registry.decodeField<DateTime?>(
+      _$TagCreatedAtField,
+      data['created_at'],
+    );
+    final DateTime? tagUpdatedAtValue = registry.decodeField<DateTime?>(
+      _$TagUpdatedAtField,
+      data['updated_at'],
+    );
     final model = $Tag(id: tagIdValue, label: tagLabelValue);
-    model._attachOrmRuntimeMetadata({'id': tagIdValue, 'label': tagLabelValue});
+    model._attachOrmRuntimeMetadata({
+      'id': tagIdValue,
+      'label': tagLabelValue,
+      'created_at': tagCreatedAtValue,
+      'updated_at': tagUpdatedAtValue,
+    });
     return model;
   }
 }
@@ -324,7 +376,7 @@ class _TagPartialCopyWithSentinel {
 ///
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
-class $Tag extends Tag with ModelAttributes implements OrmEntity {
+class $Tag extends Tag with ModelAttributes, TimestampsImpl implements OrmEntity {
   /// Internal constructor for [$Tag].
   $Tag({int id = 0, required String label}) : super.new(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});

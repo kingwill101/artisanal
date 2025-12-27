@@ -85,6 +85,8 @@ void themeUsage() {
       .bold();
 
   final errorStyle = Style().foreground(theme.error);
+  titleStyle.render('Title');
+  errorStyle.render('Error');
 }
 // #endregion
 
@@ -302,6 +304,7 @@ void setGlobalVerbosity() {
 void consoleComponents() async {
   final console = Console();
   // Components are available on the console
+  console.write('');
 }
 // #endregion
 
@@ -342,6 +345,7 @@ void compositorUsage() {
   final sidebarLayer = newLayer('Sidebar');
   final modalLayer = newLayer('Modal');
   final targetBuffer = Buffer.create(80, 24);
+  targetBuffer.touch(0, 0);
 
   compositor.addLayers([backgroundLayer, sidebarLayer, modalLayer]);
 

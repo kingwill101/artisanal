@@ -2,6 +2,25 @@ part of '../query_builder.dart';
 
 /// Extension providing GROUP BY and HAVING clause methods for query results.
 extension GroupingExtension<T extends OrmEntity> on Query<T> {
+  /// Limits the number of rows returned per group.
+  ///
+  /// This applies a window function over [column] and caps the number of rows
+  /// returned for each group. Use [offset] to skip the first rows per group.
+  ///
+  /// Example:
+  /// ```dart
+  /// final latestPostsPerAuthor = await context.query<Post>()
+  ///   .orderBy('publishedAt', descending: true)
+  ///   .limitPerGroup(2, 'authorId')
+  ///   .get();
+  /// ```
+  Query<T> limitPerGroup(int limit, String column, {int? offset}) {
+    final resolved = _ensureField(column).columnName;
+    return _copyWith(
+      groupLimit: GroupLimit(column: resolved, limit: limit, offset: offset),
+    );
+  }
+
   /// Groups rows by the provided [columns].
   ///
   /// This method adds a `GROUP BY` clause to the query, often used in conjunction

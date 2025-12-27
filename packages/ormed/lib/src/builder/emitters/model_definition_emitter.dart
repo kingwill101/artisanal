@@ -25,9 +25,11 @@ class ModelDefinitionEmitter {
     final guardedAnnotation = context.guardedAnnotation;
     final castsAnnotation = context.castsAnnotation;
     final appendsAnnotation = context.appendsAnnotation;
+    final touchesAnnotation = context.touchesAnnotation;
     final driverAnnotations = context.driverAnnotations;
     final connectionAnnotation = context.connectionAnnotation;
     final effectiveSoftDeletes = context.effectiveSoftDeletes;
+    final timestampsFlag = context.annotationTimestampsFlag;
     final generateCodec = context.generateCodec;
 
     _writeFields(buffer, fields);
@@ -81,6 +83,8 @@ class ModelDefinitionEmitter {
     buffer.writeln('    guarded: ${stringListLiteral(guardedAnnotation)},');
     buffer.writeln('    casts: ${stringMapLiteral(castsAnnotation)},');
     buffer.writeln('    appends: ${stringListLiteral(appendsAnnotation)},');
+    buffer.writeln('    touches: ${stringListLiteral(touchesAnnotation)},');
+    buffer.writeln('    timestamps: ${boolLiteral(timestampsFlag)},');
     final fieldOverrides = fields.where((f) => f.attributeMetadata != null);
     if (fieldOverrides.isNotEmpty) {
       buffer.writeln('    fieldOverrides: const {');

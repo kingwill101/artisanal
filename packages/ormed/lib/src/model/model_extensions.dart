@@ -319,16 +319,12 @@ extension ModelTimestampExtensions<T extends Model<T>> on Model<T> {
     }
   }
 
-  /// Updates the updatedAt timestamp to the current time.
+  /// Updates the updatedAt timestamp and persists it.
   ///
   /// For TimestampsTZ models, uses UTC time.
-  /// Only works if this is a tracked model instance with timestamp support.
-  void touch() {
-    if (this is TimestampsImpl) {
-      (this as TimestampsImpl).touch();
-    } else if (this is TimestampsTZImpl) {
-      (this as TimestampsTZImpl).touch();
-    }
+  /// Returns `false` when timestamping is disabled.
+  Future<bool> touch() {
+    return (this as Model).touch();
   }
 
   /// Saves the current model instance to the database.

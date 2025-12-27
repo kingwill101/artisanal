@@ -85,6 +85,7 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -254,6 +255,30 @@ class AuthorInsertDto implements InsertDto<$Author> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _AuthorInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorInsertDtoCopyWithSentinel();
+  AuthorInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return AuthorInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _AuthorInsertDtoCopyWithSentinel {
+  const _AuthorInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Author].
@@ -275,6 +300,30 @@ class AuthorUpdateDto implements UpdateDto<$Author> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _AuthorUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AuthorUpdateDtoCopyWithSentinel();
+  AuthorUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return AuthorUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _AuthorUpdateDtoCopyWithSentinel {
+  const _AuthorUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Author].
@@ -325,6 +374,30 @@ class AuthorPartial implements PartialEntity<$Author> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _AuthorPartialCopyWithSentinel _copyWithSentinel =
+      _AuthorPartialCopyWithSentinel();
+  AuthorPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return AuthorPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _AuthorPartialCopyWithSentinel {
+  const _AuthorPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Author].
@@ -336,6 +409,7 @@ class AuthorPartial implements PartialEntity<$Author> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Author extends Author with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Author].
   $Author({
     int? id,
     required String name,
@@ -379,26 +453,34 @@ class $Author extends Author with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

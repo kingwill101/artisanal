@@ -579,7 +579,7 @@ extension $AccessorUserAccessors on $AccessorUser {
   }
 
   String normalizeEmail(String? value) {
-    final result = AccessorUser.normalizeEmail(this, value as String?);
+    final result = AccessorUser.normalizeEmail(this, value);
     setRawAttribute('email', result);
     return result;
   }

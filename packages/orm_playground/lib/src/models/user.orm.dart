@@ -113,6 +113,7 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -299,6 +300,38 @@ class UserInsertDto implements InsertDto<$User> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _UserInsertDtoCopyWithSentinel _copyWithSentinel =
+      _UserInsertDtoCopyWithSentinel();
+  UserInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return UserInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _UserInsertDtoCopyWithSentinel {
+  const _UserInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [User].
@@ -331,6 +364,38 @@ class UserUpdateDto implements UpdateDto<$User> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _UserUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _UserUpdateDtoCopyWithSentinel();
+  UserUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return UserUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _UserUpdateDtoCopyWithSentinel {
+  const _UserUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [User].
@@ -404,6 +469,38 @@ class UserPartial implements PartialEntity<$User> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _UserPartialCopyWithSentinel _copyWithSentinel =
+      _UserPartialCopyWithSentinel();
+  UserPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return UserPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel)
+          ? this.email
+          : email as String?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _UserPartialCopyWithSentinel {
+  const _UserPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [User].
@@ -415,6 +512,7 @@ class UserPartial implements PartialEntity<$User> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $User extends User with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$User].
   $User({
     int? id,
     required String email,
@@ -470,36 +568,48 @@ class $User extends User with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [email].
   @override
   String get email => getAttribute<String>('email') ?? super.email;
 
+  /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [active].
   @override
   bool get active => getAttribute<bool>('active') ?? super.active;
 
+  /// Tracked setter for [active].
   set active(bool value) => setAttribute('active', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {

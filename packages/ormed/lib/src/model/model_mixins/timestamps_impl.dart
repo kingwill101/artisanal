@@ -58,19 +58,6 @@ mixin TimestampsImpl on ModelAttributes {
     });
   }
 
-  /// Updates the updatedAt timestamp to the current time.
-  void touch() {
-    var now = Carbon.now().toDateTime();
-    final previous = getAttribute<DateTime?>(_updatedAtColumn);
-    if (previous != null &&
-        now.millisecondsSinceEpoch <= previous.millisecondsSinceEpoch) {
-      now = DateTime.fromMillisecondsSinceEpoch(
-        previous.millisecondsSinceEpoch + 1,
-        isUtc: previous.isUtc,
-      );
-    }
-    updatedAt = now;
-  }
 }
 
 /// Implementation mixin for timezone-aware timestamp functionality.
@@ -135,19 +122,6 @@ mixin TimestampsTZImpl on ModelAttributes {
     });
   }
 
-  /// Updates the updatedAt timestamp to the current time in UTC.
-  void touch() {
-    var now = Carbon.now().toUtc().toDateTime();
-    final previous = getAttribute<DateTime?>(_updatedAtColumn);
-    if (previous != null &&
-        now.millisecondsSinceEpoch <= previous.millisecondsSinceEpoch) {
-      now = DateTime.fromMillisecondsSinceEpoch(
-        previous.millisecondsSinceEpoch + 1,
-        isUtc: true,
-      );
-    }
-    updatedAt = now;
-  }
 }
 
 /// Implementation mixin for timezone-aware soft-delete functionality.

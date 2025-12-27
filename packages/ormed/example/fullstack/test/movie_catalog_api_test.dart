@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:ormed/ormed.dart';
 import 'package:ormed_fullstack_example/src/models/genre.dart';
 import 'package:server_testing/server_testing.dart';
-import 'package:test/test.dart';
 
 import 'support/movie_catalog_harness.dart';
 

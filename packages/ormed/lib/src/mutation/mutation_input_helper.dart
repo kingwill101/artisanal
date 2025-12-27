@@ -67,6 +67,9 @@ class MutationInputHelper<T extends OrmEntity> {
     Map<String, Object?> values, {
     required bool isInsert,
   }) {
+    if (!_timestampsEnabled) {
+      return;
+    }
     if (isInsert) {
       try {
         final createdAtField = definition.fields.firstWhere(
@@ -104,6 +107,7 @@ class MutationInputHelper<T extends OrmEntity> {
   /// Applies timestamps on tracked models (snake_case only) for inserts.
   void applyInsertTimestampsToModel(T model) {
     if (model is! ModelAttributes) return;
+    if (!_timestampsEnabled) return;
     final attrs = model as ModelAttributes;
     final now = monotonicNowUtc();
 
@@ -131,6 +135,7 @@ class MutationInputHelper<T extends OrmEntity> {
   /// Applies updated_at timestamp on tracked models (snake_case only) for updates.
   void applyUpdateTimestampsToModel(T model) {
     if (model is! ModelAttributes) return;
+    if (!_timestampsEnabled) return;
     final attrs = model as ModelAttributes;
     final now = monotonicNowUtc();
 
@@ -307,6 +312,17 @@ class MutationInputHelper<T extends OrmEntity> {
       return Carbon.fromDateTime(nowUtc);
     }
     return nowUtc;
+  }
+
+  bool get _timestampsEnabled {
+    if (!definition.metadata.timestamps) return false;
+    if (Model.isIgnoringTimestamps(
+      definition.modelType,
+      modelName: definition.modelName,
+    )) {
+      return false;
+    }
+    return true;
   }
 
   /// Converts an update input to a map suitable for updates.

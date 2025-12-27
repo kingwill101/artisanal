@@ -201,6 +201,8 @@ class ModelAttributesMetadata {
     this.guarded = const <String>[],
     this.casts = const <String, String>{},
     this.appends = const <String>[],
+    this.touches = const <String>[],
+    this.timestamps = true,
     this.fieldOverrides = const {},
     this.connection,
     this.softDeletes = false,
@@ -226,6 +228,12 @@ class ModelAttributesMetadata {
   /// Computed attributes to append when serializing.
   final List<String> appends;
 
+  /// Relation names to touch when this model is saved.
+  final List<String> touches;
+
+  /// Whether automatic timestamps (created_at/updated_at) are enabled.
+  final bool timestamps;
+
   /// Per-field metadata overrides.
   final Map<String, FieldAttributeMetadata> fieldOverrides;
 
@@ -249,6 +257,8 @@ class ModelAttributesMetadata {
     List<String>? guarded,
     Map<String, String>? casts,
     List<String>? appends,
+    List<String>? touches,
+    bool? timestamps,
     Map<String, FieldAttributeMetadata>? fieldOverrides,
     String? connection,
     bool? softDeletes,
@@ -261,6 +271,8 @@ class ModelAttributesMetadata {
     guarded: guarded ?? this.guarded,
     casts: casts ?? this.casts,
     appends: appends ?? this.appends,
+    touches: touches ?? this.touches,
+    timestamps: timestamps ?? this.timestamps,
     fieldOverrides: fieldOverrides ?? this.fieldOverrides,
     connection: connection ?? this.connection,
     softDeletes: softDeletes ?? this.softDeletes,

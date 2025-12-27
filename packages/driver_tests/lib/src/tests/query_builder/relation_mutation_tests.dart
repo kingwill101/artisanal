@@ -469,6 +469,59 @@ void runRelationMutationTests() {
         );
       });
 
+      test('attach touches parent and related when configured', () async {
+        await dataSource.repo<Post>().insertMany([
+          Post(
+            id: 10,
+            authorId: 1,
+            title: 'Post Touch',
+            publishedAt: DateTime(2024),
+          ),
+        ]);
+        await dataSource.repo<Tag>().insertMany([
+          const Tag(id: 11, label: 'touch'),
+        ]);
+
+        final postBefore = await dataSource.context
+            .query<Post>()
+            .where('id', 10)
+            .first();
+        final tagBefore = await dataSource.context
+            .query<Tag>()
+            .where('id', 11)
+            .first();
+
+        expect(postBefore, isNotNull);
+        expect(tagBefore, isNotNull);
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        await postBefore!.attach('tags', [11]);
+
+        final postAfter = await dataSource.context
+            .query<Post>()
+            .where('id', 10)
+            .first();
+        final tagAfter = await dataSource.context
+            .query<Tag>()
+            .where('id', 11)
+            .first();
+
+        expect(postAfter, isNotNull);
+        expect(tagAfter, isNotNull);
+        expect(
+          postAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          greaterThan(
+            postBefore.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          ),
+        );
+        expect(
+          tagAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          greaterThan(
+            tagBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch,
+          ),
+        );
+      });
+
       test('attach with empty list does nothing', () async {
         await dataSource.repo<Post>().insertMany([
           Post(

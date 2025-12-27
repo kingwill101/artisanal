@@ -85,6 +85,7 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     fillable: const <String>[],
     guarded: const <String>[],
     casts: const <String, String>{},
+    appends: const <String>[],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -245,6 +246,30 @@ class TagInsertDto implements InsertDto<$Tag> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _TagInsertDtoCopyWithSentinel _copyWithSentinel =
+      _TagInsertDtoCopyWithSentinel();
+  TagInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return TagInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _TagInsertDtoCopyWithSentinel {
+  const _TagInsertDtoCopyWithSentinel();
 }
 
 /// Update DTO for [Tag].
@@ -266,6 +291,30 @@ class TagUpdateDto implements UpdateDto<$Tag> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _TagUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _TagUpdateDtoCopyWithSentinel();
+  TagUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return TagUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _TagUpdateDtoCopyWithSentinel {
+  const _TagUpdateDtoCopyWithSentinel();
 }
 
 /// Partial projection for [Tag].
@@ -316,6 +365,30 @@ class TagPartial implements PartialEntity<$Tag> {
       if (updatedAt != null) 'updated_at': updatedAt,
     };
   }
+
+  static const _TagPartialCopyWithSentinel _copyWithSentinel =
+      _TagPartialCopyWithSentinel();
+  TagPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return TagPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+}
+
+class _TagPartialCopyWithSentinel {
+  const _TagPartialCopyWithSentinel();
 }
 
 /// Generated tracked model class for [Tag].
@@ -327,6 +400,7 @@ class TagPartial implements PartialEntity<$Tag> {
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
 class $Tag extends Tag with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Tag].
   $Tag({
     int? id,
     required String name,
@@ -370,26 +444,34 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
 
+  /// Tracked setter for [id].
   set id(int? value) => setAttribute('id', value);
 
+  /// Tracked getter for [name].
   @override
   String get name => getAttribute<String>('name') ?? super.name;
 
+  /// Tracked setter for [name].
   set name(String value) => setAttribute('name', value);
 
+  /// Tracked getter for [createdAt].
   @override
   DateTime? get createdAt =>
       getAttribute<DateTime?>('created_at') ?? super.createdAt;
 
+  /// Tracked setter for [createdAt].
   set createdAt(DateTime? value) => setAttribute('created_at', value);
 
+  /// Tracked getter for [updatedAt].
   @override
   DateTime? get updatedAt =>
       getAttribute<DateTime?>('updated_at') ?? super.updatedAt;
 
+  /// Tracked setter for [updatedAt].
   set updatedAt(DateTime? value) => setAttribute('updated_at', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
