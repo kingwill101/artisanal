@@ -1,6 +1,8 @@
 import 'dart:io' as dartio;
 
 import 'package:args/command_runner.dart' as args;
+import 'package:args/command_runner.dart' show UsageException;
+export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
