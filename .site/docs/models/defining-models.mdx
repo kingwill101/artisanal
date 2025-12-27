@@ -44,7 +44,17 @@ After running `dart run build_runner build`, this generates:
 <Tabs groupId="model-annotation-options" defaultValue="notes">
   <TabItem value="notes" label="Notes">
 
-Use options to control table naming, timestamps, soft deletes, and other model-level behavior.
+Use options to control table naming, timestamps, touches, soft deletes, and other model-level behavior.
+
+Key options include:
+<ul>
+  <li>
+    <code>timestamps</code>: enable/disable automatic <code>created_at</code> / <code>updated_at</code> updates
+  </li>
+  <li>
+    <code>touches</code>: relation names to touch (update <code>updated_at</code>) when this model changes
+  </li>
+</ul>
 
   </TabItem>
   <TabItem value="example" label="Example">

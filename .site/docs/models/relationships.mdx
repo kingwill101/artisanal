@@ -178,6 +178,44 @@ Load relations on-demand:
 ```dart file=../../examples/lib/relations/loading.dart#check-loaded
 ```
 
+## Touching Related Models
+
+To automatically update related models' `updated_at` when this model changes,
+declare the relations to touch:
+
+```dart
+@OrmModel(touches: ['author', 'tags'])
+class Post extends Model<Post> with Timestamps {
+  @OrmRelation.belongsTo(target: User, foreignKey: 'author_id')
+  User? author;
+
+  @OrmRelation.belongsToMany(target: Tag, through: 'post_tags')
+  List<Tag>? tags;
+}
+```
+
+When a touched model is saved or deleted, Ormed updates the related models'
+`updated_at` (for belongs-to, has-one/has-many, and many-to-many relations).
+
+Manual control is also available:
+
+```dart
+await post.touch(); // update this model's updated_at
+await post.touchOwners(); // update touched relations
+```
+
+:::note Touching requires timestamps
+Only models with timestamps enabled (and an `updated_at` column) are touched.
+:::
+
+To suppress touching within a scope:
+
+```dart
+await Model.withoutTouchingOn(<Type>[Post], () async {
+  await post.save();
+});
+```
+
 ## Relation Manipulation
 
 ### Setting Relations

@@ -221,6 +221,26 @@ Future<void> saveUpsertExample(DataSource dataSource) async {
 }
 // #endregion model-save-upsert
 
+// #region model-touch
+Future<void> touchExample(DataSource dataSource) async {
+  final post = await dataSource.query<$Post>().find(1);
+  if (post == null) return;
+
+  await post.touch(); // update this model's updated_at
+  await post.touchOwners(); // update touched relations
+}
+// #endregion model-touch
+
+// #region model-touch-scope
+Future<void> touchScopeExample(DataSource dataSource) async {
+  await Model.withoutTouchingOn(<Type>[Post], () async {
+    final post = await dataSource.query<$Post>().find(1);
+    if (post == null) return;
+    await post.save(); // skips touching related models
+  });
+}
+// #endregion model-touch-scope
+
 // #region model-static-helpers
 Future<void> staticHelpersExample() async {
   // Assumes a default connection is configured (see DataSource docs).

@@ -143,6 +143,20 @@ The `save()` method uses upsert semantics:
 
 ```
 
+## Touching
+
+### touch() / touchOwners()
+
+Update the model's `updated_at`, or the `updated_at` of configured relations:
+
+```dart file=../../examples/lib/usage/model_methods.dart#model-touch
+```
+
+### Disabling Touching
+
+```dart file=../../examples/lib/usage/model_methods.dart#model-touch-scope
+```
+
 ## Static Helpers
 
 Once a default connection is configured, Ormed provides two convenient access patterns:

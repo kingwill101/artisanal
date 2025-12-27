@@ -110,6 +110,31 @@ You can manually set timestamps if needed:
 ```dart file=../../examples/lib/models/timestamp_model.dart#timestamps-manual
 ```
 
+## Disabling Automatic Updates
+
+If you still want timestamp columns but need to control updates yourself, disable
+auto-updates at the model level:
+
+```dart
+@OrmModel(table: 'audit_logs', timestamps: false)
+class AuditLog extends Model<AuditLog> with Timestamps {
+  const AuditLog({required this.id, required this.message});
+
+  @OrmField(isPrimaryKey: true)
+  final int id;
+
+  final String message;
+}
+```
+
+You can also suppress timestamp updates for a scoped block:
+
+```dart
+await Model.withoutTimestampsOn(<Type>[Post], () async {
+  await Posts.query().where('id', 42).update({'title': 'No touch'});
+});
+```
+
 ## Without Timestamps
 
 If you don't need automatic timestamps, simply don't include the mixin:
