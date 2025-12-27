@@ -1403,6 +1403,13 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
   /// Only adds if not already present in values and field exists with snake_case name.
   /// Returns the raw value (DateTime or Carbon) based on field type - not encoded since _normalizeUpdateValues will handle encoding.
   Map<String, Object?> _addUpdateTimestamp(Map<String, Object?> values) {
+    if (!definition.metadata.timestamps ||
+        Model.isIgnoringTimestamps(
+          definition.modelType,
+          modelName: definition.modelName,
+        )) {
+      return values;
+    }
     // Check if model has updated_at field (snake_case only)
     try {
       final updatedAtField = definition.fields.firstWhere(

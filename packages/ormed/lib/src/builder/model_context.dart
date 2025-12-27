@@ -39,6 +39,7 @@ class ModelContext {
           inferTableName(element.displayName),
       schema = annotation.peek('schema')?.stringValue,
       generateCodec = annotation.peek('generateCodec')?.boolValue ?? true,
+      annotationTimestampsFlag = annotation.peek('timestamps')?.boolValue ?? true,
       mixinSoftDeletes = element.mixins.any(isSoftDeletesMixin),
       mixinSoftDeletesTZ = element.mixins.any(isSoftDeletesTZMixin),
       mixinTimestamps = element.mixins.any(isTimestampsMixin),
@@ -65,6 +66,7 @@ class ModelContext {
       guardedAnnotation = readStringList(annotation.peek('guarded')),
       castsAnnotation = readStringMap(annotation.peek('casts')),
       appendsAnnotation = readStringList(annotation.peek('appends')),
+      touchesAnnotation = readStringList(annotation.peek('touches')),
       driverAnnotations = readStringList(annotation.peek('driverAnnotations')),
       annotationPrimaryKeys = readStringList(annotation.peek('primaryKey')),
       connectionAnnotation = annotation.peek('connection')?.stringValue,
@@ -119,6 +121,7 @@ class ModelContext {
   final String? tableName;
   final String? schema;
   final bool generateCodec;
+  final bool annotationTimestampsFlag;
   final bool mixinSoftDeletes;
   final bool mixinSoftDeletesTZ;
   final bool mixinTimestamps;
@@ -138,6 +141,7 @@ class ModelContext {
   final List<String> annotationPrimaryKeys;
   final Map<String, String> castsAnnotation;
   final List<String> appendsAnnotation;
+  final List<String> touchesAnnotation;
   final String? connectionAnnotation;
   final String? constructorOverride;
 

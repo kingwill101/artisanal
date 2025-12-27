@@ -1,9 +1,11 @@
 library;
 
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:carbonized/carbonized.dart';
+import 'package:inflector_dart/inflector_dart.dart' as inflector;
 import 'package:ormed/src/annotations.dart';
 
 import '../connection/connection.dart';
@@ -61,6 +63,9 @@ abstract class Model<TModel extends Model<TModel>>
   static ConnectionRole _defaultConnectionRole = ConnectionRole.primary;
 
   static final Expando<bool> _modelExists = Expando<bool>('_modelExists');
+  static final Expando<bool> _touchingOwners = Expando<bool>('_touchingOwners');
+  static final List<Type> _ignoreTimestampsOn = <Type>[];
+  static final List<Type> _ignoreTouchOn = <Type>[];
 
   // ignore: unused_element
   bool get _exists => _modelExists[this] ?? false;
@@ -78,6 +83,106 @@ abstract class Model<TModel extends Model<TModel>>
   /// This is used internally after hydration/persistence.
   void markAsExisting() {
     _exists = true;
+  }
+
+  /// Whether automatic timestamps are enabled for this model instance.
+  ///
+  /// Override in subclasses to disable timestamps at runtime.
+  bool get timestamps => true;
+
+  /// Whether this model uses timestamps after applying ignore scopes.
+  bool get usesTimestamps {
+    if (!timestamps) return false;
+    if (Model.isIgnoringTimestamps(
+      runtimeType,
+      modelName: _isTracked ? _asAttributes.modelDefinition?.modelName : null,
+    )) {
+      return false;
+    }
+    if (_isTracked) {
+      final definition = _asAttributes.modelDefinition;
+      if (definition != null && !definition.metadata.timestamps) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// Relation names that should be touched when this model is saved.
+  TouchesList get touches => TouchesList(_resolveTouchedRelations());
+
+  // ---------------------------------------------------------------------------
+  // Timestamp/touch scopes
+  // ---------------------------------------------------------------------------
+
+  /// Disable timestamps for the given model classes during the callback scope.
+  static T withoutTimestampsOn<T>(
+    Iterable<Type> models,
+    T Function() callback,
+  ) {
+    _ignoreTimestampsOn.addAll(models);
+    try {
+      return callback();
+    } finally {
+      _removeIgnoreScopes(_ignoreTimestampsOn, models);
+    }
+  }
+
+  /// Disable touching for the given model classes during the callback scope.
+  static T withoutTouchingOn<T>(Iterable<Type> models, T Function() callback) {
+    _ignoreTouchOn.addAll(models);
+    try {
+      return callback();
+    } finally {
+      _removeIgnoreScopes(_ignoreTouchOn, models);
+    }
+  }
+
+  /// Returns true if the given model type is ignoring timestamps.
+  static bool isIgnoringTimestamps(Type modelType, {String? modelName}) {
+    for (final ignored in _ignoreTimestampsOn) {
+      if (ignored == modelType) return true;
+      if (modelName != null) {
+        final ignoredName = ignored.toString();
+        if (ignoredName == modelName || ignoredName == '\$$modelName') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Returns true if the given model type is ignoring touches.
+  static bool isIgnoringTouch(Type modelType, {String? modelName}) {
+    for (final ignored in _ignoreTouchOn) {
+      if (ignored == modelType) return true;
+      if (modelName != null) {
+        final ignoredName = ignored.toString();
+        if (ignoredName == modelName || ignoredName == '\$$modelName') {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /// Disable timestamps for this model's runtime type during the callback scope.
+  T withoutTimestamps<T>(T Function() callback) =>
+      Model.withoutTimestampsOn(<Type>[runtimeType], callback);
+
+  /// Disable touching for this model's runtime type during the callback scope.
+  T withoutTouching<T>(T Function() callback) =>
+      Model.withoutTouchingOn(<Type>[runtimeType], callback);
+
+  static void _removeIgnoreScopes(List<Type> stack, Iterable<Type> models) {
+    for (final model in models) {
+      for (var i = stack.length - 1; i >= 0; i--) {
+        if (stack[i] == model) {
+          stack.removeAt(i);
+          break;
+        }
+      }
+    }
   }
 
   // ============================================================================
@@ -105,6 +210,16 @@ abstract class Model<TModel extends Model<TModel>>
   /// Access to ModelRelations mixin functionality.
   /// Only works on tracked instances (those with the mixin).
   ModelRelations get _asRelations => this as ModelRelations;
+
+  List<String> _resolveTouchedRelations() {
+    if (_isTracked) {
+      final def = _asAttributes.modelDefinition;
+      if (def != null && def.metadata.touches.isNotEmpty) {
+        return def.metadata.touches;
+      }
+    }
+    return const [];
+  }
 
   /// Binds a global resolver factory so model helpers know how to persist.
   static void bindConnectionResolver({
@@ -608,12 +723,13 @@ abstract class Model<TModel extends Model<TModel>>
   void clearQueuedJsonMutations() => _asAttributes.clearJsonAttributeUpdates();
 
   /// Persists the model using the active resolver and returns the stored copy.
-  Future<TModel> save({bool returning = true}) async {
+  Future<TModel> save({bool returning = true, bool touch = true}) async {
     final def = expectDefinition();
     final resolver = _resolveResolverFor(def);
     final repository = _repositoryFor(def, resolver);
     final pkValue = _primaryKeyValue(def);
     List<TModel> persisted;
+    final shouldTouchOwners = touch && _shouldTouchOwners(requireDirty: true);
 
     if (def.primaryKeyField == null || pkValue == null) {
       persisted = await repository.insertMany(<TModel>[_self()]);
@@ -623,6 +739,9 @@ abstract class Model<TModel extends Model<TModel>>
 
     final result = persisted.isNotEmpty ? persisted.first : _self();
     _syncFrom(result, def, resolver);
+    if (shouldTouchOwners) {
+      await touchOwners();
+    }
     return result;
   }
 
@@ -641,6 +760,9 @@ abstract class Model<TModel extends Model<TModel>>
       throw StateError(
         'Model ${def.modelName} is missing primary key ${pk.name}.',
       );
+    }
+    if (_shouldTouchOwners(requireDirty: false)) {
+      await touchOwners();
     }
     if (!force && def.usesSoftDeletes) {
       final column =
@@ -702,6 +824,110 @@ abstract class Model<TModel extends Model<TModel>>
     );
     await resolver.runMutation(plan);
     _asAttributes.setAttribute(column, null);
+  }
+
+  /// Touches the model's timestamp column and persists the change.
+  ///
+  /// When [attribute] is provided, that column is updated instead of the
+  /// default updated_at column.
+  Future<bool> touch([String? attribute]) async {
+    if (attribute == null && !usesTimestamps) {
+      return false;
+    }
+
+    final def = expectDefinition();
+    final resolver = _resolveResolverFor(def);
+    final updatedAtField = attribute == null
+        ? _updatedAtField(def as ModelDefinition<OrmEntity>)
+        : def.fieldByColumn(attribute) ?? def.fieldByName(attribute);
+    if (updatedAtField == null) {
+      return false;
+    }
+
+    if (attribute == null &&
+        !_timestampsEnabledForDefinition(def as ModelDefinition<OrmEntity>)) {
+      return false;
+    }
+
+    final timestamp = _timestampValue(updatedAtField);
+    if (_isTracked) {
+      _asAttributes.setAttribute(updatedAtField.columnName, timestamp);
+    }
+
+    final pk = def.primaryKeyField;
+    if (pk == null) {
+      throw StateError(
+        'Model ${def.modelName} must declare a primary key before touch.',
+      );
+    }
+    final key = _primaryKeyValue(def);
+    if (key == null) {
+      throw StateError(
+        'Model ${def.modelName} is missing primary key ${pk.name}.',
+      );
+    }
+
+    final encoded = resolver.codecRegistry.encodeField(
+      updatedAtField,
+      timestamp,
+    );
+    final plan = MutationPlan.update(
+      definition: def,
+      rows: [
+        MutationRow(
+          values: {updatedAtField.columnName: encoded},
+          keys: {pk.columnName: key},
+        ),
+      ],
+      driverName: resolver.driver.metadata.name,
+    );
+    await resolver.runMutation(plan);
+    return true;
+  }
+
+  /// Touches the owning relations of the model.
+  Future<void> touchOwners() async {
+    if (!_shouldTouchOwners(requireDirty: false)) {
+      return;
+    }
+    if (_touchingOwners[this] == true) {
+      return;
+    }
+
+    _touchingOwners[this] = true;
+    try {
+      final def = expectDefinition();
+      final resolver = _resolveResolverFor(def);
+      final context = _requireQueryContext(resolver);
+      for (final relationName in touches) {
+        final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
+          (r) => r?.name == relationName,
+          orElse: () => null,
+        );
+        if (relationDef == null) {
+          continue;
+        }
+
+        await _touchRelation(def, relationDef, resolver, context);
+
+        if (!_isTracked) {
+          continue;
+        }
+
+        final loaded = _asRelations.getRelation<dynamic>(relationName);
+        if (loaded is Model) {
+          await loaded.touchOwners();
+        } else if (loaded is Iterable) {
+          for (final item in loaded) {
+            if (item is Model) {
+              await item.touchOwners();
+            }
+          }
+        }
+      }
+    } finally {
+      _touchingOwners[this] = false;
+    }
   }
 
   /// Returns a fresh instance of this model from the database.
@@ -1121,6 +1347,202 @@ abstract class Model<TModel extends Model<TModel>>
         definition.metadata.softDeleteColumn,
       );
     }
+  }
+
+  bool _shouldTouchOwners({required bool requireDirty}) {
+    final touched = touches;
+    if (touched.isEmpty) {
+      return false;
+    }
+    final def = expectDefinition() as ModelDefinition<OrmEntity>;
+    if (_isIgnoringTouchForDefinition(def)) {
+      return false;
+    }
+    if (!requireDirty) {
+      return true;
+    }
+    if (!_isTracked) {
+      return false;
+    }
+    final attrs = _asAttributes;
+    if (!attrs.hasOriginalAttributes) {
+      return false;
+    }
+    return attrs.isDirty();
+  }
+
+  bool _isIgnoringTouchForDefinition(ModelDefinition<OrmEntity> definition) {
+    if (!usesTimestamps) return true;
+    if (Model.isIgnoringTouch(
+      runtimeType,
+      modelName: definition.modelName,
+    )) {
+      return true;
+    }
+    if (_updatedAtField(definition) == null) return true;
+    return false;
+  }
+
+  bool _timestampsEnabledForDefinition(ModelDefinition<OrmEntity> definition) {
+    if (!definition.metadata.timestamps) return false;
+    if (Model.isIgnoringTimestamps(
+      definition.modelType,
+      modelName: definition.modelName,
+    )) {
+      return false;
+    }
+    return true;
+  }
+
+  FieldDefinition? _updatedAtField(ModelDefinition<OrmEntity> definition) =>
+      definition.fieldByColumn('updated_at') ??
+      definition.fieldByName('updatedAt');
+
+  Object _timestampValue(FieldDefinition field) {
+    final nowUtc = monotonicNowUtc();
+    final type = field.dartType;
+    if (type == 'Carbon' ||
+        type == 'Carbon?' ||
+        type == 'CarbonInterface' ||
+        type == 'CarbonInterface?') {
+      return Carbon.fromDateTime(nowUtc);
+    }
+    return nowUtc;
+  }
+
+  Future<void> _touchRelation(
+    ModelDefinition<OrmEntity> definition,
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+    QueryContext context,
+  ) async {
+    if (!_timestampsEnabledForDefinition(definition)) {
+      return;
+    }
+
+    switch (relationDef.kind) {
+      case RelationKind.belongsTo:
+        await _touchBelongsTo(definition, relationDef, resolver, context);
+        return;
+      case RelationKind.hasOne:
+      case RelationKind.hasMany:
+        await _touchHasOneOrMany(definition, relationDef, resolver, context);
+        return;
+      case RelationKind.manyToMany:
+        await _touchManyToMany(definition, relationDef, resolver, context);
+        return;
+      default:
+        return;
+    }
+  }
+
+  Future<void> _touchBelongsTo(
+    ModelDefinition<OrmEntity> definition,
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+    QueryContext context,
+  ) async {
+    final target = context.registry.expectByName(relationDef.targetModel);
+    if (!_timestampsEnabledForDefinition(target)) return;
+    if (Model.isIgnoringTouch(
+      target.modelType,
+      modelName: target.modelName,
+    )) {
+      return;
+    }
+
+    final resolverPath = RelationResolver(context);
+    final segment = resolverPath.segmentFor(definition, relationDef);
+    final foreignKey = segment.parentKey;
+    final ownerKey = segment.childKey;
+
+    final foreignValue = _attributeValue(definition, foreignKey);
+    if (foreignValue == null) return;
+
+    final updatedAtField = _updatedAtField(target);
+    if (updatedAtField == null) return;
+
+    final query = context.queryFromDefinition(target as dynamic);
+    await query
+        .where(ownerKey, foreignValue)
+        .update({updatedAtField.columnName: _timestampValue(updatedAtField)});
+  }
+
+  Future<void> _touchHasOneOrMany(
+    ModelDefinition<OrmEntity> definition,
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+    QueryContext context,
+  ) async {
+    final target = context.registry.expectByName(relationDef.targetModel);
+    if (!_timestampsEnabledForDefinition(target)) return;
+    if (Model.isIgnoringTouch(
+      target.modelType,
+      modelName: target.modelName,
+    )) {
+      return;
+    }
+
+    final resolverPath = RelationResolver(context);
+    final segment = resolverPath.segmentFor(definition, relationDef);
+    final parentKey = segment.parentKey;
+    final foreignKey = segment.childKey;
+
+    final parentValue = _attributeValue(definition, parentKey);
+    if (parentValue == null) return;
+
+    final updatedAtField = _updatedAtField(target);
+    if (updatedAtField == null) return;
+
+    final query = context.queryFromDefinition(target as dynamic);
+    await query
+        .where(foreignKey, parentValue)
+        .update({updatedAtField.columnName: _timestampValue(updatedAtField)});
+  }
+
+  Future<void> _touchManyToMany(
+    ModelDefinition<OrmEntity> definition,
+    RelationDefinition relationDef,
+    ConnectionResolver resolver,
+    QueryContext context,
+  ) async {
+    final target = context.registry.expectByName(relationDef.targetModel);
+    if (!_timestampsEnabledForDefinition(target)) return;
+    if (Model.isIgnoringTouch(
+      target.modelType,
+      modelName: target.modelName,
+    )) {
+      return;
+    }
+
+    final updatedAtField = _updatedAtField(target);
+    if (updatedAtField == null) return;
+
+    final ids = await _getPivotRelatedIds(
+      relationDef,
+      definition as ModelDefinition<TModel>,
+      resolver,
+    );
+    if (ids.isEmpty) return;
+
+    final targetPk = target.primaryKeyField?.columnName;
+    if (targetPk == null) return;
+
+    final query = context.queryFromDefinition(target as dynamic);
+    await query.whereIn(targetPk, ids).update({
+      updatedAtField.columnName: _timestampValue(updatedAtField),
+    });
+  }
+
+  Object? _attributeValue(ModelDefinition<OrmEntity> definition, String column) {
+    if (_isTracked) {
+      final value = _asAttributes.getAttribute<Object?>(column);
+      if (value != null) return value;
+    }
+    final codecs =
+        connectionResolver?.codecRegistry ?? ValueCodecRegistry.instance;
+    final values = definition.toMap(_self(), registry: codecs);
+    return values[column];
   }
 
   /// Lazily loads a relation on this model instance.
@@ -1995,6 +2417,7 @@ abstract class Model<TModel extends Model<TModel>>
     final plan = MutationPlan.insert(definition: pivotDef, rows: rows);
 
     await resolver.runMutation(plan);
+    await _touchIfTouching(relationDef, def, resolver);
 
     // Reload the relation to sync cache
     await load(relationName);
@@ -2118,6 +2541,7 @@ abstract class Model<TModel extends Model<TModel>>
       final plan = MutationPlan.delete(definition: pivotDef, rows: deleteRows);
 
       await resolver.runMutation(plan);
+      await _touchIfTouching(relationDef, def, resolver);
     }
 
     // Reload the relation to sync cache
@@ -2405,6 +2829,7 @@ abstract class Model<TModel extends Model<TModel>>
     );
 
     await resolver.runMutation(plan);
+    await _touchIfTouching(relationDef, def, resolver);
 
     // Reload the relation to sync cache
     await load(relationName);
@@ -2466,6 +2891,53 @@ abstract class Model<TModel extends Model<TModel>>
 
     final results = await resolver.runSelect(selectPlan);
     return results.map((row) => row[pivotRelatedKey]).toList();
+  }
+
+  Future<void> _touchIfTouching(
+    RelationDefinition relationDef,
+    ModelDefinition<TModel> def,
+    ConnectionResolver resolver,
+  ) async {
+    final context = _requireQueryContext(resolver);
+    final parentDef = def as ModelDefinition<OrmEntity>;
+    if (_isIgnoringTouchForDefinition(parentDef)) {
+      return;
+    }
+
+    final relatedDef = context.registry.expectByName(relationDef.targetModel);
+    final inverseRelation = _guessInverseRelationName(parentDef.modelName);
+    if (relatedDef.metadata.touches.contains(inverseRelation)) {
+      await _touchSelf(parentDef, resolver, context);
+    }
+
+    if (touches.contains(relationDef.name)) {
+      await _touchManyToMany(parentDef, relationDef, resolver, context);
+    }
+  }
+
+  Future<void> _touchSelf(
+    ModelDefinition<OrmEntity> definition,
+    ConnectionResolver resolver,
+    QueryContext context,
+  ) async {
+    if (_isIgnoringTouchForDefinition(definition)) return;
+    final updatedAtField = _updatedAtField(definition);
+    if (updatedAtField == null) return;
+    final pk = definition.primaryKeyField;
+    if (pk == null) return;
+    final key = _primaryKeyValue(definition as ModelDefinition<TModel>);
+    if (key == null) return;
+
+    final query = context.queryFromDefinition(definition as dynamic);
+    await query.where(pk.columnName, key).update({
+      updatedAtField.columnName: _timestampValue(updatedAtField),
+    });
+  }
+
+  String _guessInverseRelationName(String modelName) {
+    if (modelName.isEmpty) return modelName;
+    final lower = modelName[0].toLowerCase() + modelName.substring(1);
+    return inflector.pluralize(lower);
   }
 
   Map<String, dynamic> _mergePivotTimestamps(
@@ -3065,4 +3537,37 @@ extension ModelRegistryX on ModelRegistry {
     register(definition);
     return this;
   }
+}
+
+extension ModelScopeExtensions on Type {
+  /// Disable timestamps for this model type during the callback scope.
+  T withoutTimestamps<T>(T Function() callback) =>
+      Model.withoutTimestampsOn(<Type>[this], callback);
+
+  /// Disable touching for this model type during the callback scope.
+  T withoutTouching<T>(T Function() callback) =>
+      Model.withoutTouchingOn(<Type>[this], callback);
+}
+
+/// Immutable list wrapper for touched relations that also supports call syntax.
+class TouchesList extends ListMixin<String> {
+  TouchesList(Iterable<String> values) : _values = List.unmodifiable(values);
+
+  final List<String> _values;
+
+  bool call(String relation) => _values.contains(relation);
+
+  @override
+  int get length => _values.length;
+
+  @override
+  set length(int newLength) =>
+      throw UnsupportedError('TouchesList is read-only.');
+
+  @override
+  String operator [](int index) => _values[index];
+
+  @override
+  void operator []=(int index, String value) =>
+      throw UnsupportedError('TouchesList is read-only.');
 }

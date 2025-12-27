@@ -46,12 +46,14 @@ class OrmModel {
     this.table,
     this.schema,
     this.generateCodec = true,
+    this.timestamps = true,
     this.hidden = const [],
     this.visible = const [],
     this.fillable = const [],
     this.guarded = const [],
     this.casts = const {},
     this.appends = const [],
+    this.touches = const [],
     this.connection,
     this.softDeletes = false,
     this.softDeletesColumn = 'deleted_at',
@@ -68,6 +70,9 @@ class OrmModel {
 
   /// Whether the generator should emit codec helpers for this model.
   final bool generateCodec;
+
+  /// Whether automatic timestamps (created_at/updated_at) are enabled.
+  final bool timestamps;
 
   /// Column names that should be hidden when serializing.
   final List<String> hidden;
@@ -92,6 +97,9 @@ class OrmModel {
 
   /// Computed attributes to include when serializing via `toArray()`/`toJson()`.
   final List<String> appends;
+
+  /// Relation names to touch when this model is saved.
+  final List<String> touches;
 
   /// A connection/driver name override.
   final String? connection;

@@ -742,9 +742,18 @@ DateTime? _coerceDateTime(Object? value) {
   if (value == null) return null;
   if (value is DateTime) return value;
   if (value is CarbonInterface) return value.toDateTime();
+  if (value is num) {
+    final seconds = value.toInt();
+    return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+  }
   if (value is String) {
     final raw = value.trim();
     if (raw.isEmpty) return null;
+    final numeric = num.tryParse(raw);
+    if (numeric != null) {
+      final seconds = numeric.toInt();
+      return DateTime.fromMillisecondsSinceEpoch(seconds * 1000, isUtc: true);
+    }
     final timezoneMatch = RegExp(r'(Z|[+-]\d{2}:?\d{2})$').firstMatch(raw);
     final hasTimezone = timezoneMatch != null;
     if (hasTimezone) {
