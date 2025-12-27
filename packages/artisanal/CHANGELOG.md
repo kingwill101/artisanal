@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+4
+
+- **Improved**: Aligned with core ormed releases for advanced ORM features.
+- **Updated**: Dependencies bumped to latest stable versions.
+
 ## 0.1.0-dev+3
 
 - Synchronized release.
