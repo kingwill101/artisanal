@@ -102,6 +102,8 @@ final ModelDefinition<$AttributeUser> _$AttributeUserDefinition =
         guarded: const <String>['id'],
         casts: const <String, String>{'profile': 'json'},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         fieldOverrides: const {
           'secret': FieldAttributeMetadata(hidden: true),
           'role': FieldAttributeMetadata(fillable: true),

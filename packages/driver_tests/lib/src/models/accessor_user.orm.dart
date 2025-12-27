@@ -89,6 +89,8 @@ final ModelDefinition<$AccessorUser> _$AccessorUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>['full_name', 'email_domain'],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -579,7 +581,7 @@ extension $AccessorUserAccessors on $AccessorUser {
   }
 
   String normalizeEmail(String? value) {
-    final result = AccessorUser.normalizeEmail(this, value);
+    final result = AccessorUser.normalizeEmail(this, value as String?);
     setRawAttribute('email', result);
     return result;
   }

@@ -64,6 +64,8 @@ final ModelDefinition<$Image> _$ImageDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),

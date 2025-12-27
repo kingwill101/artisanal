@@ -93,6 +93,8 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -204,10 +206,11 @@ class _$CommentCodec extends ModelCodec<$Comment> {
       'id': registry.encodeField(_$CommentIdField, model.id),
       'body': registry.encodeField(_$CommentBodyField, model.body),
       'post_id': registry.encodeField(_$CommentPostIdField, model.postId),
-      'deleted_at': registry.encodeField(
-        _$CommentDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$CommentDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -235,7 +238,7 @@ class _$CommentCodec extends ModelCodec<$Comment> {
       'id': commentIdValue,
       'body': commentBodyValue,
       'post_id': commentPostIdValue,
-      'deleted_at': commentDeletedAtValue,
+      if (data.containsKey('deleted_at')) 'deleted_at': commentDeletedAtValue,
     });
     return model;
   }

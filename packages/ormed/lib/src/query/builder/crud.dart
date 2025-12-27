@@ -1227,7 +1227,7 @@ extension CrudExtension<T extends OrmEntity> on Query<T> {
         final provided =
             baseMap.containsKey(field.columnName) ||
             baseMap.containsKey(field.name);
-        if (!provided && encoded[field.columnName] == null) {
+        if (!provided && isEffectivelyNull(encoded[field.columnName])) {
           encoded.remove(field.columnName);
         }
       }

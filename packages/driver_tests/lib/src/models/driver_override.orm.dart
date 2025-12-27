@@ -73,6 +73,8 @@ final ModelDefinition<$DriverOverrideModel> _$DriverOverrideModelDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),

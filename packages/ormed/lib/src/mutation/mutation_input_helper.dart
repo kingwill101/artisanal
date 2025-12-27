@@ -3,6 +3,7 @@ import 'package:carbonized/carbonized.dart';
 import 'package:ormed/src/model/model.dart';
 
 import '../core/monotonic_time.dart';
+import '../core/sql_null.dart';
 import '../contracts.dart';
 import '../value_codec.dart';
 
@@ -288,7 +289,7 @@ class MutationInputHelper<T extends OrmEntity> {
     return false;
   }
 
-  bool _isNullValue(Object? value) => value == null;
+  bool _isNullValue(Object? value) => isEffectivelyNull(value);
 
   bool _isPrimaryKeyValue(Object? value) =>
       value is num || value is String || value is bool;

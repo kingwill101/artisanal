@@ -85,6 +85,8 @@ final ModelDefinition<$EventModel> _$EventModelDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -201,10 +203,11 @@ class _$EventModelCodec extends ModelCodec<$EventModel> {
       'id': registry.encodeField(_$EventModelIdField, model.id),
       'name': registry.encodeField(_$EventModelNameField, model.name),
       'score': registry.encodeField(_$EventModelScoreField, model.score),
-      'deleted_at': registry.encodeField(
-        _$EventModelDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$EventModelDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -231,7 +234,8 @@ class _$EventModelCodec extends ModelCodec<$EventModel> {
       'id': eventModelIdValue,
       'name': eventModelNameValue,
       'score': eventModelScoreValue,
-      'deleted_at': eventModelDeletedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': eventModelDeletedAtValue,
     });
     return model;
   }

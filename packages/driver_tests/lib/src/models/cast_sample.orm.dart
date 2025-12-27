@@ -180,6 +180,8 @@ final ModelDefinition<$CastSample> _$CastSampleDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     fieldOverrides: const {
       'name': FieldAttributeMetadata(cast: 'string'),
       'is_active': FieldAttributeMetadata(cast: 'boolean'),

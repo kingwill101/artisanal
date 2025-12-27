@@ -72,6 +72,8 @@ final ModelDefinition<$CustomSoftDelete> _$CustomSoftDeleteDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: true,
         softDeleteColumn: 'removed_on',
       ),
@@ -201,10 +203,11 @@ class _$CustomSoftDeleteCodec extends ModelCodec<$CustomSoftDelete> {
     return <String, Object?>{
       'id': registry.encodeField(_$CustomSoftDeleteIdField, model.id),
       'title': registry.encodeField(_$CustomSoftDeleteTitleField, model.title),
-      'removed_on': registry.encodeField(
-        _$CustomSoftDeleteDeletedAtField,
-        model.getAttribute<DateTime?>('removed_on'),
-      ),
+      if (model.hasAttribute('removed_on'))
+        'removed_on': registry.encodeField(
+          _$CustomSoftDeleteDeletedAtField,
+          model.getAttribute<DateTime?>('removed_on'),
+        ),
     };
   }
 
@@ -234,7 +237,8 @@ class _$CustomSoftDeleteCodec extends ModelCodec<$CustomSoftDelete> {
     model._attachOrmRuntimeMetadata({
       'id': customSoftDeleteIdValue,
       'title': customSoftDeleteTitleValue,
-      'removed_on': customSoftDeleteDeletedAtValue,
+      if (data.containsKey('removed_on'))
+        'removed_on': customSoftDeleteDeletedAtValue,
     });
     return model;
   }

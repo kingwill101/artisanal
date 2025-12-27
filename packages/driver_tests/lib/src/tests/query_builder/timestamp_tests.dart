@@ -1,5 +1,5 @@
 import 'package:ormed/ormed.dart';
-import 'package:test/test.dart';
+import 'package:test/test.dart' hide Tags;
 
 import '../../models/models.dart';
 
@@ -37,6 +37,21 @@ void runTimestampTests() {
         expect(fetched.updatedAt, isA<CarbonInterface>());
       });
 
+      test('InsertDto sets timestamps when omitted', () async {
+        final label = 'dto_${DateTime.now().microsecondsSinceEpoch}';
+        final inserted = await Tags.repo(
+          dataSource.options.name,
+        ).insert(TagInsertDto(label: label));
+
+        final fetched = await Tags.query(
+          dataSource.options.name,
+        ).where('id', inserted.id).first();
+
+        expect(fetched, isNotNull);
+        expect(fetched!.createdAt, isNotNull);
+        expect(fetched.updatedAt, isNotNull);
+      });
+
       test('updatedAt changes on update', () async {
         final author = const Author(id: 1002, name: 'Original Name');
         await Authors.repo(dataSource.options.name).insert(author.toTracked());
@@ -70,9 +85,7 @@ void runTimestampTests() {
         final author = const Author(id: 1005, name: 'Explicit Map');
         await Authors.repo(dataSource.options.name).insert(author.toTracked());
 
-        final explicit = Carbon.fromDateTime(
-          DateTime.utc(2020, 1, 2, 3, 4, 5),
-        );
+        final explicit = Carbon.fromDateTime(DateTime.utc(2020, 1, 2, 3, 4, 5));
 
         await Authors.query(dataSource.options.name).where('id', 1005).update({
           'name': 'Explicit Map Updated',
@@ -249,9 +262,7 @@ void runTimestampTests() {
             .where('id', 2004)
             .first();
 
-        final explicit = Carbon.fromDateTime(
-          DateTime.utc(2021, 2, 3, 4, 5, 6),
-        );
+        final explicit = Carbon.fromDateTime(DateTime.utc(2021, 2, 3, 4, 5, 6));
         fetched!.updatedAt = explicit;
 
         await dataSource.context.query<Post>().updateInputs([fetched]);
@@ -500,9 +511,7 @@ void runTimestampTests() {
         expect(beforeAuthor, isNotNull);
         expect(
           afterAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          equals(
-            beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          ),
+          equals(beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch),
         );
       });
 

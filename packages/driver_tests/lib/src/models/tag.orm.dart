@@ -214,14 +214,16 @@ class _$TagCodec extends ModelCodec<$Tag> {
     return <String, Object?>{
       'id': registry.encodeField(_$TagIdField, model.id),
       'label': registry.encodeField(_$TagLabelField, model.label),
-      'created_at': registry.encodeField(
-        _$TagCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$TagUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$TagCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$TagUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -244,8 +246,8 @@ class _$TagCodec extends ModelCodec<$Tag> {
     model._attachOrmRuntimeMetadata({
       'id': tagIdValue,
       'label': tagLabelValue,
-      'created_at': tagCreatedAtValue,
-      'updated_at': tagUpdatedAtValue,
+      if (data.containsKey('created_at')) 'created_at': tagCreatedAtValue,
+      if (data.containsKey('updated_at')) 'updated_at': tagUpdatedAtValue,
     });
     return model;
   }
@@ -376,7 +378,9 @@ class _TagPartialCopyWithSentinel {
 ///
 /// **Do not instantiate this class directly.** Use queries, repositories,
 /// or model factories to create tracked model instances.
-class $Tag extends Tag with ModelAttributes, TimestampsImpl implements OrmEntity {
+class $Tag extends Tag
+    with ModelAttributes, TimestampsImpl
+    implements OrmEntity {
   /// Internal constructor for [$Tag].
   $Tag({int id = 0, required String label}) : super.new(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});

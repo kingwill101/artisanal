@@ -116,6 +116,8 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -227,14 +229,16 @@ class _$AuthorCodec extends ModelCodec<$Author> {
       'id': registry.encodeField(_$AuthorIdField, model.id),
       'name': registry.encodeField(_$AuthorNameField, model.name),
       'active': registry.encodeField(_$AuthorActiveField, model.active),
-      'created_at': registry.encodeField(
-        _$AuthorCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$AuthorUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$AuthorCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$AuthorUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -265,8 +269,8 @@ class _$AuthorCodec extends ModelCodec<$Author> {
       'id': authorIdValue,
       'name': authorNameValue,
       'active': authorActiveValue,
-      'created_at': authorCreatedAtValue,
-      'updated_at': authorUpdatedAtValue,
+      if (data.containsKey('created_at')) 'created_at': authorCreatedAtValue,
+      if (data.containsKey('updated_at')) 'updated_at': authorUpdatedAtValue,
     });
     return model;
   }

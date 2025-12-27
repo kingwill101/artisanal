@@ -118,7 +118,7 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   through: 'post_tags',
   pivotForeignKey: 'post_id',
   pivotRelatedKey: 'tag_id',
-  pivotColumns: <String>['sort_order', 'note'],
+  pivotColumns: const <String>['sort_order', 'note'],
   pivotTimestamps: true,
   pivotModel: 'PostTag',
 );
@@ -314,14 +314,16 @@ class _$PostCodec extends ModelCodec<$Post> {
         _$PostPublishedAtField,
         model.publishedAt,
       ),
-      'created_at': registry.encodeField(
-        _$PostCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$PostUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$PostCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$PostUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -372,8 +374,8 @@ class _$PostCodec extends ModelCodec<$Post> {
       'content': postContentValue,
       'views': postViewsValue,
       'published_at': postPublishedAtValue,
-      'created_at': postCreatedAtValue,
-      'updated_at': postUpdatedAtValue,
+      if (data.containsKey('created_at')) 'created_at': postCreatedAtValue,
+      if (data.containsKey('updated_at')) 'updated_at': postUpdatedAtValue,
     });
     return model;
   }

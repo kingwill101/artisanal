@@ -100,6 +100,8 @@ final ModelDefinition<$ActiveUser> _$ActiveUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     connection: 'analytics',
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
@@ -221,10 +223,11 @@ class _$ActiveUserCodec extends ModelCodec<$ActiveUser> {
         _$ActiveUserSettingsField,
         model.settings,
       ),
-      'deleted_at': registry.encodeField(
-        _$ActiveUserDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$ActiveUserDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -262,7 +265,8 @@ class _$ActiveUserCodec extends ModelCodec<$ActiveUser> {
       'email': activeUserEmailValue,
       'name': activeUserNameValue,
       'settings': activeUserSettingsValue,
-      'deleted_at': activeUserDeletedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': activeUserDeletedAtValue,
     });
     return model;
   }

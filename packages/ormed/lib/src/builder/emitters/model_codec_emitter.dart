@@ -37,9 +37,16 @@ class ModelCodecEmitter {
       final accessor = field.isVirtual
           ? "model.getAttribute<${field.resolvedType}>('${field.columnName}')"
           : 'model.${field.name}';
-      buffer.writeln(
-        "      '${field.columnName}': registry.encodeField(${field.identifier}, $accessor),",
-      );
+      if (field.isVirtual) {
+        buffer.writeln("      if (model.hasAttribute('${field.columnName}'))");
+        buffer.writeln(
+          "        '${field.columnName}': registry.encodeField(${field.identifier}, $accessor),",
+        );
+      } else {
+        buffer.writeln(
+          "      '${field.columnName}': registry.encodeField(${field.identifier}, $accessor),",
+        );
+      }
     }
     buffer.writeln('    };');
     buffer.writeln('  }\n');
@@ -58,7 +65,15 @@ class ModelCodecEmitter {
     );
     buffer.writeln('    model._attachOrmRuntimeMetadata({');
     for (final field in fields) {
-      buffer.writeln("      '${field.columnName}': ${field.localIdentifier},");
+      if (field.isVirtual) {
+        buffer.writeln(
+          "      if (data.containsKey('${field.columnName}')) '${field.columnName}': ${field.localIdentifier},",
+        );
+      } else {
+        buffer.writeln(
+          "      '${field.columnName}': ${field.localIdentifier},",
+        );
+      }
     }
     buffer.writeln('    });');
     buffer.writeln('    return model;');

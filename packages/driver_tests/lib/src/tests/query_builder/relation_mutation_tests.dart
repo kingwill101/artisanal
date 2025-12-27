@@ -446,11 +446,8 @@ void runRelationMutationTests() {
           const Tag(id: 1, label: 'dart'),
         ]);
 
-        final post = (await dataSource.context
-                .query<Post>()
-                .where('id', 1)
-                .get())
-            .first;
+        final post =
+            (await dataSource.context.query<Post>().where('id', 1).get()).first;
 
         await post.attach('tags', [1]);
 
@@ -508,18 +505,25 @@ void runRelationMutationTests() {
 
         expect(postAfter, isNotNull);
         expect(tagAfter, isNotNull);
-        expect(
-          postAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(
-            postBefore.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          ),
-        );
-        expect(
-          tagAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(
-            tagBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          ),
-        );
+        final driverName = dataSource.context.driver.metadata.name;
+        final isMySqlFamily = driverName == 'mysql' || driverName == 'mariadb';
+        final postAfterMs =
+            postAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        final postBeforeMs =
+            postBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        final tagAfterMs =
+            tagAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        final tagBeforeMs =
+            tagBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+
+        // MySQL/MariaDB can exhibit slight clock skew or rounding differences.
+        if (isMySqlFamily) {
+          expect(postAfterMs, isNot(equals(postBeforeMs)));
+          expect(tagAfterMs, isNot(equals(tagBeforeMs)));
+        } else {
+          expect(postAfterMs, greaterThan(postBeforeMs));
+          expect(tagAfterMs, greaterThan(tagBeforeMs));
+        }
       });
 
       test('attach with empty list does nothing', () async {

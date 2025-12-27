@@ -54,6 +54,8 @@ final ModelDefinition<$NoFactory> _$NoFactoryDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     connection: 'analytics',
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
@@ -165,10 +167,11 @@ class _$NoFactoryCodec extends ModelCodec<$NoFactory> {
   Map<String, Object?> encode($NoFactory model, ValueCodecRegistry registry) {
     return <String, Object?>{
       'id': registry.encodeField(_$NoFactoryIdField, model.id),
-      'deleted_at': registry.encodeField(
-        _$NoFactoryDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$NoFactoryDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -185,7 +188,7 @@ class _$NoFactoryCodec extends ModelCodec<$NoFactory> {
     final model = $NoFactory(id: noFactoryIdValue);
     model._attachOrmRuntimeMetadata({
       'id': noFactoryIdValue,
-      'deleted_at': noFactoryDeletedAtValue,
+      if (data.containsKey('deleted_at')) 'deleted_at': noFactoryDeletedAtValue,
     });
     return model;
   }

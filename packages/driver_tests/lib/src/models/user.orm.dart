@@ -154,6 +154,8 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     guarded: const <String>['id'],
     casts: const <String, String>{'createdAt': 'datetime'},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
