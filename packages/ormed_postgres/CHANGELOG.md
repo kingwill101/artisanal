@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+5
+
+- **Fixed**: Insert builders now omit columns not provided so Postgres defaults (e.g., timestamps) apply.
+
 ## 0.1.0-dev+4
 
 - **Added**: Support for through relations, polymorphic relations, and advanced query helpers.
