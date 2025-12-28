@@ -8,9 +8,7 @@ DataSource createDataSource() {
   ensureSqliteDriverRegistration();
 
   final config = loadOrmConfig();
-  return DataSource.fromConfig(
-    config,
-    registry: bootstrapOrm(),
-  );
+  return DataSource.fromConfig(config, registry: bootstrapOrm());
 }
+
 // #endregion datasource-helper

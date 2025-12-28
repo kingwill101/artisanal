@@ -85,38 +85,34 @@ void main() {
 
     // #region testing-web-create
     test('POST /movies creates a movie', () async {
-      await withClient(
-        harness,
-        (client) async {
-          final genre = await GenreModelFactory.factory()
-              .state({'name': 'Test Drama', 'description': 'Factory seed.'})
-              .create(context: ds.context);
+      await withClient(harness, (client) async {
+        final genre = await GenreModelFactory.factory()
+            .state({'name': 'Test Drama', 'description': 'Factory seed.'})
+            .create(context: ds.context);
 
-          final response = await client.multipart('/movies', (builder) {
-            builder.addField('title', 'North Star');
-            builder.addField('releaseYear', '2022');
-            builder.addField('genreId', genre.id.toString());
-            builder.addField('summary', 'A drifting crew returns home.');
-            builder.addFileFromBytes(
-              name: 'poster',
-              bytes: Uint8List.fromList([1, 2, 3, 4, 5]),
-              filename: 'poster.jpg',
-              contentType: MediaType('image', 'jpeg'),
-            );
-          });
+        final response = await client.multipart('/movies', (builder) {
+          builder.addField('title', 'North Star');
+          builder.addField('releaseYear', '2022');
+          builder.addField('genreId', genre.id.toString());
+          builder.addField('summary', 'A drifting crew returns home.');
+          builder.addFileFromBytes(
+            name: 'poster',
+            bytes: Uint8List.fromList([1, 2, 3, 4, 5]),
+            filename: 'poster.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          );
+        });
 
-          response.assertStatus(HttpStatus.found);
-          final location = response.headers['location']?.first ?? '';
-          expect(location, startsWith('/movies/'));
+        response.assertStatus(HttpStatus.found);
+        final location = response.headers['location']?.first ?? '';
+        expect(location, startsWith('/movies/'));
 
-          final index = await client.get('/');
-          index
-            ..assertStatus(HttpStatus.ok)
-            ..assertBodyContains('North Star')
-            ..assertBodyContains(genre.name);
-        },
-        mode: TransportMode.ephemeralServer,
-      );
+        final index = await client.get('/');
+        index
+          ..assertStatus(HttpStatus.ok)
+          ..assertBodyContains('North Star')
+          ..assertBodyContains(genre.name);
+      }, mode: TransportMode.ephemeralServer);
     });
     // #endregion testing-web-create
 
@@ -153,27 +149,23 @@ void main() {
     });
 
     test('POST /movies/:id/edit updates a movie', () async {
-      await withClient(
-        harness,
-        (client) async {
-          final response = await client.multipart('/movies/1/edit', (builder) {
-            builder.addField('title', 'City of Amber');
-            builder.addField('releaseYear', '2006');
-            builder.addField('genreId', '');
-            builder.addField(
-              'summary',
-              'A renewed edit of the underground tale.',
-            );
-          });
+      await withClient(harness, (client) async {
+        final response = await client.multipart('/movies/1/edit', (builder) {
+          builder.addField('title', 'City of Amber');
+          builder.addField('releaseYear', '2006');
+          builder.addField('genreId', '');
+          builder.addField(
+            'summary',
+            'A renewed edit of the underground tale.',
+          );
+        });
 
-          response.assertStatus(HttpStatus.found);
-          final show = await client.get('/movies/1');
-          show
-            ..assertStatus(HttpStatus.ok)
-            ..assertBodyContains('A renewed edit of the underground tale.');
-        },
-        mode: TransportMode.ephemeralServer,
-      );
+        response.assertStatus(HttpStatus.found);
+        final show = await client.get('/movies/1');
+        show
+          ..assertStatus(HttpStatus.ok)
+          ..assertBodyContains('A renewed edit of the underground tale.');
+      }, mode: TransportMode.ephemeralServer);
     });
     // #endregion testing-web-edit
 

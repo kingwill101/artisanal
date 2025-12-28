@@ -10,10 +10,7 @@ class AppDatabaseSeeder extends DatabaseSeeder {
   @override
   Future<void> run() async {
     // #region seed-root
-    await call([
-      GenreSeeder.new,
-      MovieSeeder.new,
-    ]);
+    await call([GenreSeeder.new, MovieSeeder.new]);
     // #endregion seed-root
   }
 }

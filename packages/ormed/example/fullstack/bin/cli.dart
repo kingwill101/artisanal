@@ -5,13 +5,14 @@ import 'package:ormed_fullstack_example/src/server/server.dart';
 
 // #region cli-runner
 Future<void> main(List<String> args) async {
-  final runner = CommandRunner(
-    'movie-catalog',
-    'CLI for the Ormed + Shelf movie catalog example.',
-  )
-    ..addCommand(ServeCommand())
-    ..addCommand(MigrateCommand())
-    ..addCommand(SeedCommand());
+  final runner =
+      CommandRunner(
+          'movie-catalog',
+          'CLI for the Ormed + Shelf movie catalog example.',
+        )
+        ..addCommand(ServeCommand())
+        ..addCommand(MigrateCommand())
+        ..addCommand(SeedCommand());
 
   await runner.run(args);
 }
@@ -24,11 +25,11 @@ abstract class BaseCommand extends Command<void> {
   final Console io;
 
   Future<int> runProcess(List<String> args) async {
-    final process = await Process.start(
-      'dart',
-      ['run', 'ormed_cli:ormed', ...args],
-      mode: ProcessStartMode.inheritStdio,
-    );
+    final process = await Process.start('dart', [
+      'run',
+      'ormed_cli:ormed',
+      ...args,
+    ], mode: ProcessStartMode.inheritStdio);
     return process.exitCode;
   }
 }
@@ -78,6 +79,7 @@ class MigrateCommand extends BaseCommand {
       io.error('Migration failed with code $exitCode.');
     }
   }
+
   // #endregion cli-migrate
 }
 
@@ -99,5 +101,6 @@ class SeedCommand extends BaseCommand {
       io.error('Seed failed with code $exitCode.');
     }
   }
+
   // #endregion cli-seed
 }

@@ -88,4 +88,5 @@ Future<MovieCatalogTestHarness> createMovieCatalogHarness(
     uploadsDir: uploadsDir,
   );
 }
+
 // #endregion testing-setup

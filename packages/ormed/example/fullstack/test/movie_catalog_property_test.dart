@@ -125,7 +125,6 @@ void main() {
       expect(report.success, isTrue, reason: report.report);
     });
 
-
     test('property: invalid JSON never 500', () async {
       final client = TestClient.inMemory(harness.requestHandler);
 
@@ -209,11 +208,7 @@ void main() {
 
       final payloadGen = titleGen.flatMap(
         (title) => yearGen.map((year) {
-          return {
-            'title': title,
-            'releaseYear': year,
-            'genreId': '',
-          };
+          return {'title': title, 'releaseYear': year, 'genreId': ''};
         }),
       );
 

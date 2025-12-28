@@ -5,29 +5,26 @@ import 'package:ormed_fullstack_example/orm_registry.g.dart';
 import 'seeders/database_seeder.dart';
 // <ORM-SEED-IMPORTS>
 import 'seeders/genre_seeder.dart';
-import 'seeders/movie_seeder.dart';// </ORM-SEED-IMPORTS>
+import 'seeders/movie_seeder.dart'; // </ORM-SEED-IMPORTS>
 
 /// Registered seeders for this project.
-/// 
+///
 /// Used by `ormed seed` command and can be imported for programmatic seeding.
 final List<SeederRegistration> seeders = <SeederRegistration>[
-// <ORM-SEED-REGISTRY>
+  // <ORM-SEED-REGISTRY>
   SeederRegistration(
     name: 'AppDatabaseSeeder',
     factory: (connection) => AppDatabaseSeeder(connection),
   ),
-  SeederRegistration(
-    name: 'GenreSeeder',
-    factory: GenreSeeder.new,
-  ),
+  SeederRegistration(name: 'GenreSeeder', factory: GenreSeeder.new),
   SeederRegistration(
     name: 'MovieSeeder',
     factory: MovieSeeder.new,
-  ),// </ORM-SEED-REGISTRY>
+  ), // </ORM-SEED-REGISTRY>
 ];
 
 /// Run project seeders on the given connection.
-/// 
+///
 /// Example:
 /// ```dart
 /// await runProjectSeeds(connection);
@@ -48,8 +45,8 @@ Future<void> runProjectSeeds(
 }
 
 Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
-      args: args,
-      seeds: seeders,
-      beforeRun: (connection) =>
-          bootstrapOrm(registry: connection.context.registry),
-    );
+  args: args,
+  seeds: seeders,
+  beforeRun: (connection) =>
+      bootstrapOrm(registry: connection.context.registry),
+);

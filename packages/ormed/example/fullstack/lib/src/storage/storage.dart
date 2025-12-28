@@ -22,10 +22,7 @@ class StorageService {
     Storage.initialize({
       'default': 'uploads',
       'disks': {
-        'uploads': {
-          'driver': 'local',
-          'root': uploadsRoot,
-        },
+        'uploads': {'driver': 'local', 'root': uploadsRoot},
       },
     });
 
@@ -55,10 +52,7 @@ class StorageService {
     return '/uploads/${p.posix.normalize(storagePath)}';
   }
 
-  Future<String?> cloudDownloadUrl(
-    String storagePath,
-    Duration ttl,
-  ) async {
+  Future<String?> cloudDownloadUrl(String storagePath, Duration ttl) async {
     if (_cloud == null) return null;
     return _cloud!.driver.presignDownload(storagePath, ttl);
   }
@@ -96,4 +90,5 @@ class StorageService {
     return '$stamp-$base';
   }
 }
+
 // #endregion storage-service

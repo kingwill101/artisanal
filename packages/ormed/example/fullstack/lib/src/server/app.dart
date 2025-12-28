@@ -81,7 +81,10 @@ class MovieCatalogApp {
   }
 
   Future<Response> _newMovie(Request request) async {
-    final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
+    final genres = await database.dataSource
+        .query<$Genre>()
+        .orderBy('name')
+        .get();
 
     final html = await templates.render('movies/new.liquid', {
       'genres': genres.map(_genreViewModel).toList(),
@@ -94,7 +97,10 @@ class MovieCatalogApp {
 
   Future<Response> _genresIndex(Request request) async {
     // #region handler-genres
-    final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
+    final genres = await database.dataSource
+        .query<$Genre>()
+        .orderBy('name')
+        .get();
 
     final html = await templates.render('genres/index.liquid', {
       'genres': genres.map(_genreViewModel).toList(),
@@ -157,7 +163,10 @@ class MovieCatalogApp {
     // #region handler-create-validation
     final errors = _validateMovieForm(fields);
     if (errors.isNotEmpty) {
-      final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
+      final genres = await database.dataSource
+          .query<$Genre>()
+          .orderBy('name')
+          .get();
       final html = await templates.render('movies/new.liquid', {
         'genres': genres.map(_genreViewModel).toList(),
         'errors': errors,
@@ -176,13 +185,15 @@ class MovieCatalogApp {
 
     // #region handler-create-db
     final repo = database.dataSource.repo<$Movie>();
-    final movie = await repo.insert(MovieInsertDto(
-      title: fields['title']!.trim(),
-      releaseYear: int.parse(fields['releaseYear']!),
-      summary: _nullIfEmpty(fields['summary']),
-      posterPath: posterPath,
-      genreId: _parseOptionalInt(fields['genreId']),
-    ));
+    final movie = await repo.insert(
+      MovieInsertDto(
+        title: fields['title']!.trim(),
+        releaseYear: int.parse(fields['releaseYear']!),
+        summary: _nullIfEmpty(fields['summary']),
+        posterPath: posterPath,
+        genreId: _parseOptionalInt(fields['genreId']),
+      ),
+    );
     // #endregion handler-create-db
 
     // #region handler-create-logging
@@ -199,7 +210,6 @@ class MovieCatalogApp {
     return Response.found('/movies/${movie.id}');
     // #endregion handler-create
   }
-
 
   Future<Response> _showMovie(Request request, String id) async {
     // #region handler-show
@@ -241,7 +251,10 @@ class MovieCatalogApp {
       return Response.notFound('Movie not found');
     }
 
-    final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
+    final genres = await database.dataSource
+        .query<$Genre>()
+        .orderBy('name')
+        .get();
 
     final html = await templates.render('movies/edit.liquid', {
       'movie': _movieViewModel(movie),
@@ -281,7 +294,10 @@ class MovieCatalogApp {
     // #region handler-update-validation
     final errors = _validateMovieForm(fields);
     if (errors.isNotEmpty) {
-      final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
+      final genres = await database.dataSource
+          .query<$Genre>()
+          .orderBy('name')
+          .get();
       final html = await templates.render('movies/edit.liquid', {
         'movie': {'id': movieId},
         'genres': genres.map(_genreViewModel).toList(),
@@ -319,7 +335,6 @@ class MovieCatalogApp {
     return Response.found('/movies/${movie.id}');
     // #endregion handler-update
   }
-
 
   Future<Response> _confirmDeleteMovie(Request request, String id) async {
     // #region handler-delete-confirm
@@ -378,18 +393,17 @@ class MovieCatalogApp {
         .orderBy('createdAt', descending: true)
         .get();
 
-    return _json({
-      'movies': movies.map(_movieViewModel).toList(),
-    });
+    return _json({'movies': movies.map(_movieViewModel).toList()});
     // #endregion api-list-movies
   }
 
   Future<Response> _apiListGenres(Request request) async {
     // #region api-list-genres
-    final genres = await database.dataSource.query<$Genre>().orderBy('name').get();
-    return _json({
-      'genres': genres.map(_genreViewModel).toList(),
-    });
+    final genres = await database.dataSource
+        .query<$Genre>()
+        .orderBy('name')
+        .get();
+    return _json({'genres': genres.map(_genreViewModel).toList()});
     // #endregion api-list-genres
   }
 
@@ -452,13 +466,15 @@ class MovieCatalogApp {
     }
 
     final repo = database.dataSource.repo<$Movie>();
-    final movie = await repo.insert(MovieInsertDto(
-      title: payload['title']!.trim(),
-      releaseYear: payload['releaseYear']!,
-      summary: _nullIfEmpty(payload['summary']),
-      posterPath: _nullIfEmpty(payload['posterPath']),
-      genreId: _parseOptionalInt(payload['genreId']),
-    ));
+    final movie = await repo.insert(
+      MovieInsertDto(
+        title: payload['title']!.trim(),
+        releaseYear: payload['releaseYear']!,
+        summary: _nullIfEmpty(payload['summary']),
+        posterPath: _nullIfEmpty(payload['posterPath']),
+        genreId: _parseOptionalInt(payload['genreId']),
+      ),
+    );
 
     return _json({'movie': _movieViewModel(movie)}, status: HttpStatus.created);
     // #endregion api-create-movie
@@ -485,10 +501,7 @@ class MovieCatalogApp {
       genreId: _parseOptionalInt(payload['genreId']),
     );
 
-    final movie = await repo.update(
-      update,
-      where: {'id': movieId},
-    );
+    final movie = await repo.update(update, where: {'id': movieId});
 
     return _json({'movie': _movieViewModel(movie)});
     // #endregion api-update-movie
@@ -524,10 +537,7 @@ class MovieCatalogApp {
       'poster_url': posterUrl,
       'genre': movie.genre == null
           ? null
-          : {
-              'id': movie.genre!.id,
-              'name': movie.genre!.name,
-            },
+          : {'id': movie.genre!.id, 'name': movie.genre!.name},
     };
   }
 
@@ -538,7 +548,6 @@ class MovieCatalogApp {
       'description': genre.description,
     };
   }
-
 
   List<String> _validateMovieForm(Map<String, String> fields) {
     final errors = <String>[];

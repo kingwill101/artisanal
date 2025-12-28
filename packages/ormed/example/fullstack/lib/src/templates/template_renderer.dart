@@ -8,10 +8,7 @@ class TemplateRenderer {
   final Root root;
   final Map<String, Object?> _sharedData;
 
-  Future<String> render(
-    String templatePath,
-    Map<String, Object?> data,
-  ) async {
+  Future<String> render(String templatePath, Map<String, Object?> data) async {
     final template = Template.fromFile(
       templatePath,
       root,
@@ -20,4 +17,5 @@ class TemplateRenderer {
     return template.renderAsync();
   }
 }
+
 // #endregion template-renderer

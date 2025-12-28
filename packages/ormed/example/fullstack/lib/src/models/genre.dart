@@ -21,4 +21,5 @@ class Genre extends Model<Genre> {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 }
+
 // #endregion model-genre

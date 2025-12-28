@@ -27,4 +27,5 @@ class AppDatabase {
     return Future.value();
   }
 }
+
 // #endregion database-init

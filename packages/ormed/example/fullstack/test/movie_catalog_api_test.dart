@@ -300,7 +300,10 @@ void main() {
     test('DELETE /api/movies/:id removes a movie', () async {
       await withClient(harness, (client) async {
         final genre = await GenreModelFactory.factory()
-            .state({'name': 'Delete API Genre', 'description': 'Delete factory'})
+            .state({
+              'name': 'Delete API Genre',
+              'description': 'Delete factory',
+            })
             .create(context: ds.context);
         final created = await client.postJson('/api/movies', {
           'title': 'Marrow Lines',

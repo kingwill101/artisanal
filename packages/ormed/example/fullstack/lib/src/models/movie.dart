@@ -34,4 +34,5 @@ class Movie extends Model<Movie> {
   final DateTime? createdAt;
   final DateTime? updatedAt;
 }
+
 // #endregion model-movie
