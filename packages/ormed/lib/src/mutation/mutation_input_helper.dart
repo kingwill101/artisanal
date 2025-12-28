@@ -47,6 +47,23 @@ class MutationInputHelper<T extends OrmEntity> {
     };
   }
 
+  Map<String, Object?> _encodeInsertMap(Map<String, Object?> input) {
+    final result = <String, Object?>{};
+    for (final entry in input.entries) {
+      final field = definition.fieldByColumn(entry.key);
+      if (field == null) {
+        result[entry.key] = entry.value;
+        continue;
+      }
+      try {
+        result[entry.key] = codecs.encodeField(field, entry.value);
+      } on TypeError {
+        result[entry.key] = entry.value;
+      }
+    }
+    return result;
+  }
+
   Map<String, Object?> _modelToInsertMap(
     T model, {
     required bool applySentinelFiltering,
