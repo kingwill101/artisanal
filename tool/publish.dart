@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:path/path.dart' as p;
 
@@ -15,6 +16,7 @@ final packages = [
 Future<void> main(List<String> args) async {
   final isDryRun = !args.contains('--force');
   final includeUnchanged = args.contains('--include-unchanged');
+  final skipPublished = args.contains('--skip-published');
   final baselineRef = await _resolveBaselineRef();
 
   print('--- ORMed Release Automation ---');
@@ -31,6 +33,9 @@ Future<void> main(List<String> args) async {
   if (includeUnchanged) {
     print('[INFO] Including unchanged packages.');
   }
+  if (skipPublished) {
+    print('[INFO] Skipping already published versions.');
+  }
 
   try {
     for (final pkgPath in packages) {
@@ -39,6 +44,7 @@ Future<void> main(List<String> args) async {
         isDryRun,
         baselineRef: baselineRef,
         includeUnchanged: includeUnchanged,
+        skipPublished: skipPublished,
       );
     }
     print('\n[SUCCESS] All packages processed successfully!');
@@ -53,6 +59,7 @@ Future<void> publishPackage(
   bool isDryRun, {
   required String? baselineRef,
   required bool includeUnchanged,
+  required bool skipPublished,
 }) async {
   final fullPath = p.join(Directory.current.path, pkgPath);
   final pubspecFile = File(p.join(fullPath, 'pubspec.yaml'));
@@ -61,12 +68,23 @@ Future<void> publishPackage(
     throw Exception('pubspec.yaml not found in $pkgPath');
   }
 
-  final name = p.basename(pkgPath);
+  final pubspec = _readPubspec(pubspecFile);
+  final name = pubspec.name ?? p.basename(pkgPath);
+  final version = pubspec.version;
   if (!includeUnchanged) {
     final changed = await _packageChangedSince(pkgPath, baselineRef);
     if (!changed) {
       print(
         '\n--> Skipping $name ($pkgPath): no changes since ${baselineRef ?? 'initial commit'}.',
+      );
+      return;
+    }
+  }
+  if (skipPublished && version != null) {
+    final published = await _isVersionPublished(name, version);
+    if (published) {
+      print(
+        '\n--> Skipping $name ($pkgPath): $version already published.',
       );
       return;
     }
@@ -134,4 +152,99 @@ Future<bool> _packageChangedSince(String pkgPath, String? baselineRef) async {
   }
   final output = (result.stdout as String).trim();
   return output.isNotEmpty;
+}
+
+_PubspecInfo _readPubspec(File pubspecFile) {
+  final namePattern = RegExp(r'^name:\s*(.+)$');
+  final versionPattern = RegExp(r'^version:\s*(.+)$');
+  String? name;
+  String? version;
+  for (final rawLine in pubspecFile.readAsLinesSync()) {
+    final line = rawLine.trim();
+    if (line.isEmpty || line.startsWith('#')) {
+      continue;
+    }
+    final nameMatch = namePattern.firstMatch(line);
+    if (nameMatch != null) {
+      name = _stripQuotes(nameMatch.group(1));
+      continue;
+    }
+    final versionMatch = versionPattern.firstMatch(line);
+    if (versionMatch != null) {
+      version = _stripQuotes(versionMatch.group(1));
+    }
+  }
+  return _PubspecInfo(name: name, version: version);
+}
+
+String? _stripQuotes(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  if (trimmed.length >= 2) {
+    final start = trimmed[0];
+    final end = trimmed[trimmed.length - 1];
+    if ((start == '"' && end == '"') || (start == '\'' && end == '\'')) {
+      return trimmed.substring(1, trimmed.length - 1);
+    }
+  }
+  return trimmed;
+}
+
+Future<bool> _isVersionPublished(String packageName, String version) async {
+  final info = await _fetchPubPackageInfo(packageName);
+  if (info == null) return false;
+  return info.versions.contains(version);
+}
+
+Future<_PubPackageInfo?> _fetchPubPackageInfo(String packageName) async {
+  final client = HttpClient();
+  try {
+    final uri = Uri.https('pub.dev', '/api/packages/$packageName');
+    final request = await client.getUrl(uri);
+    final response = await request.close();
+    if (response.statusCode != HttpStatus.ok) {
+      return null;
+    }
+    final body = await response.transform(utf8.decoder).join();
+    final decoded = jsonDecode(body) as Map<String, dynamic>;
+    final versions = <String>{};
+    final versionEntries = decoded['versions'];
+    if (versionEntries is List) {
+      for (final entry in versionEntries) {
+        if (entry is Map<String, dynamic>) {
+          final version = entry['version'];
+          if (version is String) {
+            versions.add(version);
+          }
+        }
+      }
+    }
+    final latest = decoded['latest'];
+    String? latestVersion;
+    if (latest is Map<String, dynamic>) {
+      final latestValue = latest['version'];
+      if (latestValue is String) {
+        latestVersion = latestValue;
+      }
+    }
+    return _PubPackageInfo(latestVersion, versions);
+  } catch (_) {
+    return null;
+  } finally {
+    client.close(force: true);
+  }
+}
+
+class _PubspecInfo {
+  const _PubspecInfo({required this.name, required this.version});
+
+  final String? name;
+  final String? version;
+}
+
+class _PubPackageInfo {
+  const _PubPackageInfo(this.latestVersion, this.versions);
+
+  final String? latestVersion;
+  final Set<String> versions;
 }

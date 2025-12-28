@@ -24,6 +24,12 @@ dart tool/publish.dart --force
 dart tool/publish.dart --include-unchanged
 ```
 
+- Skip packages that already have the requested version on pub.dev:
+
+```bash
+dart tool/publish.dart --skip-published
+```
+
 ### Notes
 
 - The script compares each package against the latest git tag (`git describe --tags --abbrev=0`).
