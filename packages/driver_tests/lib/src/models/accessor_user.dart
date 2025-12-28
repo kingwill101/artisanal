@@ -2,10 +2,7 @@ import 'package:ormed/ormed.dart';
 
 part 'accessor_user.orm.dart';
 
-@OrmModel(
-  table: 'accessor_users',
-  appends: ['full_name', 'email_domain'],
-)
+@OrmModel(table: 'accessor_users', appends: ['full_name', 'email_domain'])
 class AccessorUser extends Model<AccessorUser> {
   const AccessorUser({
     required this.id,

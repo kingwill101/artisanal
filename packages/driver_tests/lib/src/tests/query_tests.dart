@@ -238,9 +238,7 @@ void runDriverQueryTests() {
     });
 
     test('resolves morphTo aliases via morph map registry', () async {
-      dataSource.context.registry.registerMorphMap({
-        'post_alias': Post,
-      });
+      dataSource.context.registry.registerMorphMap({'post_alias': Post});
       await dataSource.repo<Photo>().insertMany(const [
         Photo(
           id: 6,
@@ -579,19 +577,22 @@ void runDriverQueryTests() {
           expect(ids, equals([1]));
         });
 
-        test('filters parents via hasManyThrough whereHas constraints', () async {
-          final ids = await dataSource.context
-              .query<Author>()
-              .whereHas(
-                'comments',
-                (comments) => comments.where('body', 'Visible'),
-              )
-              .orderBy('id')
-              .get()
-              .then((authors) => authors.map((a) => a.id).toList());
+        test(
+          'filters parents via hasManyThrough whereHas constraints',
+          () async {
+            final ids = await dataSource.context
+                .query<Author>()
+                .whereHas(
+                  'comments',
+                  (comments) => comments.where('body', 'Visible'),
+                )
+                .orderBy('id')
+                .get()
+                .then((authors) => authors.map((a) => a.id).toList());
 
-          expect(ids, equals([1]));
-        });
+            expect(ids, equals([1]));
+          },
+        );
 
         test('supports withCount and exposes alias in rows', () async {
           final rows = await dataSource.context

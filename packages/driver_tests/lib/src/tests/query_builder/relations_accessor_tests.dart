@@ -36,18 +36,8 @@ void runRelationsAccessorTests() {
         const Tag(id: 2, label: 'flutter'),
       ]);
       await dataSource.repo<PostTag>().insertMany([
-        const PostTag(
-          postId: 1,
-          tagId: 1,
-          sortOrder: 10,
-          note: 'primary',
-        ),
-        const PostTag(
-          postId: 1,
-          tagId: 2,
-          sortOrder: 20,
-          note: 'secondary',
-        ),
+        const PostTag(postId: 1, tagId: 1, sortOrder: 10, note: 'primary'),
+        const PostTag(postId: 1, tagId: 2, sortOrder: 20, note: 'secondary'),
       ]);
     });
 

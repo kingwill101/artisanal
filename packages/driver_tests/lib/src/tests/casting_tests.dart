@@ -43,20 +43,17 @@ void runCastingTests() {
         secret: 'seed',
       ).toTracked();
 
-      model.fill(
-        {
-          'name': 123,
-          'is_active': 'true',
-          'visits': '12',
-          'ratio': '3.14',
-          'started_on': '2024-01-10',
-          'updated_at': updatedAt.toIso8601String(),
-          'amount': '123.45',
-          'status': 'active',
-          'secret': 'top secret',
-        },
-        registry: dataSource.codecRegistry,
-      );
+      model.fill({
+        'name': 123,
+        'is_active': 'true',
+        'visits': '12',
+        'ratio': '3.14',
+        'started_on': '2024-01-10',
+        'updated_at': updatedAt.toIso8601String(),
+        'amount': '123.45',
+        'status': 'active',
+        'secret': 'top secret',
+      }, registry: dataSource.codecRegistry);
 
       await dataSource.repo<CastSample>().insert(model);
 
