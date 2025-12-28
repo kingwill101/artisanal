@@ -510,7 +510,7 @@ void runRelationMutationTests() {
         final postAfterMs =
             postAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
         final postBeforeMs =
-            postBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+            postBefore.updatedAt!.toDateTime().millisecondsSinceEpoch;
         final tagAfterMs =
             tagAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
         final tagBeforeMs =

@@ -424,7 +424,7 @@ class JsonValueRecordInsertDto implements InsertDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -497,7 +497,7 @@ class JsonValueRecordUpdateDto implements UpdateDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -605,7 +605,7 @@ class JsonValueRecordPartial implements PartialEntity<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
