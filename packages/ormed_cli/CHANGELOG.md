@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+5
+
+- **Updated**: Align dependencies on `ormed` `0.1.0-dev+5`.
+
 ## 0.1.0-dev+4
 
 - **Improved**: `ormed init` now scaffolds a `datasource.dart` file that automatically handles driver registration and provides a type-safe `DataSource` instance.

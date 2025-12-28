@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+5
+
+- **Updated**: Align dependency on `ormed` `0.1.0-dev+5`.
+
 ## 0.1.0-dev+4
 
 - **Added**: Support for through relations, polymorphic relations, and advanced query helpers.

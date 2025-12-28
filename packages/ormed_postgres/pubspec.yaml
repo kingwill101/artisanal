@@ -1,6 +1,6 @@
 name: ormed_postgres
 description: PostgreSQL adapter for the routed ORM driver interface.
-version: 0.1.0-dev+4
+version: 0.1.0-dev+5
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
 documentation: https://ormed.vercel.app/
@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  ormed: ^0.1.0-dev+4
+  ormed: ^0.1.0-dev+5
   postgres: ^3.5.9
   carbonized: ^0.1.0
   decimal: ^3.2.4
