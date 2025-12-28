@@ -21,6 +21,18 @@ class InitCommand extends Command<void> {
         negatable: false,
         help: 'Print the canonical path for each scaffolded artifact.',
       )
+      ..addMultiOption(
+        'only',
+        help:
+            'Only scaffold selected artifacts (config, migrations, seeders, datasource).',
+        allowed: const ['config', 'migrations', 'seeders', 'datasource'],
+        allowedHelp: const {
+          'config': 'ormed.yaml configuration file',
+          'migrations': 'Migrations directory + registry',
+          'seeders': 'Seeders directory + registry',
+          'datasource': 'DataSource entrypoint',
+        },
+      )
       // New: populate existing migrations/seeders into registries if present
       ..addFlag(
         'populate-existing',
@@ -50,12 +62,31 @@ class InitCommand extends Command<void> {
     final showPaths = argResults?['paths'] == true;
     final populateExisting = argResults?['populate-existing'] == true;
     final skipBuild = argResults?['skip-build'] == true;
+    final onlyTargets =
+        (argResults?['only'] as List<String>? ?? const <String>[])
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toSet();
+    final restrictScaffold = onlyTargets.isNotEmpty;
+    final includeConfig = !restrictScaffold || onlyTargets.contains('config');
+    final includeMigrations =
+        !restrictScaffold || onlyTargets.contains('migrations');
+    final includeSeeders = !restrictScaffold || onlyTargets.contains('seeders');
+    final includeDatasource =
+        !restrictScaffold || onlyTargets.contains('datasource');
     final root = findProjectRoot();
     final tracker = _ArtifactTracker(root);
+    final configFile = File(p.join(root.path, 'ormed.yaml'));
+
+    if (!includeConfig && !configFile.existsSync()) {
+      usageException(
+        'ormed.yaml is required when using --only without config. '
+        'Run `ormed init` or include --only=config.',
+      );
+    }
 
     // If config exists, offer re-initialize
-    if (!force) {
-      final configFile = File(p.join(root.path, 'ormed.yaml'));
+    if (includeConfig && !force) {
       final legacyFile = File(p.join(root.path, 'ormed.yaml'));
 
       if (configFile.existsSync()) {
@@ -75,109 +106,126 @@ class InitCommand extends Command<void> {
     }
 
     final packageName = getPackageName(root);
-    final configFile = File(p.join(root.path, 'ormed.yaml'));
-    _writeFile(
-      file: configFile,
-      content: defaultOrmYaml(packageName),
-      label: 'ormed.yaml',
-      force: force,
-      tracker: tracker,
-      interactive: true,
-    );
+    if (includeConfig) {
+      _writeFile(
+        file: configFile,
+        content: defaultOrmYaml(packageName),
+        label: 'ormed.yaml',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
+    }
 
     // Load config
     final config = loadOrmProjectConfig(configFile);
 
-    await _ensureDependencies(root, config: config, skipBuild: skipBuild);
+    if (includeDatasource || includeMigrations || includeSeeders) {
+      await _ensureDependencies(root, config: config, skipBuild: skipBuild);
+    }
 
     // Directories
-    final migrationsDir = Directory(
-      resolvePath(root, config.migrations.directory),
-    );
-    final hasExistingMigrations = _hasDartFiles(migrationsDir);
-    _ensureDirectory(migrationsDir, 'migrations directory', tracker);
+    Directory? migrationsDir;
+    Directory? seedersDir;
+    File? registry;
+    File? seedRegistry;
+    Directory? schemaDumpDir;
+    var hasExistingMigrations = false;
+    var hasExistingSeeders = false;
 
-    final registry = File(resolvePath(root, config.migrations.registry));
-    _writeFile(
-      file: registry,
-      content: initialRegistryTemplate,
-      label: 'migrations registry',
-      force: force,
-      tracker: tracker,
-      interactive: true,
-    );
+    if (includeMigrations) {
+      migrationsDir = Directory(resolvePath(root, config.migrations.directory));
+      hasExistingMigrations = _hasDartFiles(migrationsDir);
+      _ensureDirectory(migrationsDir, 'migrations directory', tracker);
 
-    final seedersDir = Directory(resolvePath(root, config.seeds!.directory));
-    final hasExistingSeeders = _hasDartFiles(seedersDir);
-    _ensureDirectory(seedersDir, 'seeders directory', tracker);
+      registry = File(resolvePath(root, config.migrations.registry));
+      _writeFile(
+        file: registry,
+        content: initialRegistryTemplate,
+        label: 'migrations registry',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
 
-    final seedRegistry = File(resolvePath(root, config.seeds!.registry));
-    _writeFile(
-      file: seedRegistry,
-      content: initialSeedRegistryTemplate.replaceAll(
-        '{{package_name}}',
-        packageName,
-      ),
-      label: 'seeders registry',
-      force: force,
-      tracker: tracker,
-      interactive: true,
-    );
-
-    final defaultSeeder = File(p.join(seedersDir.path, 'database_seeder.dart'));
-    _writeFile(
-      file: defaultSeeder,
-      content: _defaultSeederTemplate,
-      label: 'database seeder',
-      force: force,
-      tracker: tracker,
-      interactive: true,
-    );
-
-    final datasourceFile = File(
-      p.join(root.path, 'lib', 'src', 'database', 'datasource.dart'),
-    );
-
-    final driverTypes = config.connections.values
-        .map((c) => c.driver.type.toLowerCase())
-        .toSet();
-    final driverImports = driverTypes
-        .map((type) => _driverPackageMapping[type])
-        .where((pkg) => pkg != null)
-        .map((pkg) => "import 'package:$pkg/$pkg.dart';")
-        .join('\n');
-    final driverRegistrations = driverTypes
-        .map((type) => _driverRegistrationMapping[type])
-        .where((fn) => fn != null)
-        .map((fn) => "  $fn();")
-        .join('\n');
-
-    _writeFile(
-      file: datasourceFile,
-      content: _datasourceTemplate
-          .replaceAll('{{package_name}}', packageName)
-          .replaceAll('{{driver_imports}}', driverImports)
-          .replaceAll('{{driver_registrations}}', driverRegistrations),
-      label: 'DataSource entrypoint',
-      force: force,
-      tracker: tracker,
-      interactive: true,
-    );
-
-    // Ensure schema dump parent directory exists
-    final schemaDumpPath = resolvePath(root, config.migrations.schemaDump);
-    final schemaDumpDir = Directory(p.dirname(schemaDumpPath));
-    if (!schemaDumpDir.existsSync()) {
-      schemaDumpDir.createSync(recursive: true);
-      tracker.paths['schema_dir'] = schemaDumpDir.path;
+      // Ensure schema dump parent directory exists
+      final schemaDumpPath = resolvePath(root, config.migrations.schemaDump);
+      schemaDumpDir = Directory(p.dirname(schemaDumpPath));
+      if (!schemaDumpDir.existsSync()) {
+        schemaDumpDir.createSync(recursive: true);
+        tracker.paths['schema_dir'] = schemaDumpDir.path;
+      }
+      final gitkeep = File(p.join(schemaDumpDir.path, '.gitkeep'));
+      if (!gitkeep.existsSync()) {
+        gitkeep.writeAsStringSync('');
+      }
     }
-    final gitkeep = File(p.join(schemaDumpDir.path, '.gitkeep'));
-    if (!gitkeep.existsSync()) {
-      gitkeep.writeAsStringSync('');
+
+    if (includeSeeders) {
+      seedersDir = Directory(resolvePath(root, config.seeds!.directory));
+      hasExistingSeeders = _hasDartFiles(seedersDir);
+      _ensureDirectory(seedersDir, 'seeders directory', tracker);
+
+      seedRegistry = File(resolvePath(root, config.seeds!.registry));
+      _writeFile(
+        file: seedRegistry,
+        content: initialSeedRegistryTemplate.replaceAll(
+          '{{package_name}}',
+          packageName,
+        ),
+        label: 'seeders registry',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
+
+      final defaultSeeder = File(
+        p.join(seedersDir.path, 'database_seeder.dart'),
+      );
+      _writeFile(
+        file: defaultSeeder,
+        content: _defaultSeederTemplate,
+        label: 'database seeder',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
+    }
+
+    if (includeDatasource) {
+      final datasourceFile = File(
+        p.join(root.path, 'lib', 'src', 'database', 'datasource.dart'),
+      );
+
+      final driverTypes = config.connections.values
+          .map((c) => c.driver.type.toLowerCase())
+          .toSet();
+      final driverImports = driverTypes
+          .map((type) => _driverPackageMapping[type])
+          .where((pkg) => pkg != null)
+          .map((pkg) => "import 'package:$pkg/$pkg.dart';")
+          .join('\n');
+      final driverRegistrations = driverTypes
+          .map((type) => _driverRegistrationMapping[type])
+          .where((fn) => fn != null)
+          .map((fn) => "  $fn();")
+          .join('\n');
+
+      _writeFile(
+        file: datasourceFile,
+        content: _datasourceTemplate
+            .replaceAll('{{package_name}}', packageName)
+            .replaceAll('{{driver_imports}}', driverImports)
+            .replaceAll('{{driver_registrations}}', driverRegistrations),
+        label: 'DataSource entrypoint',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
     }
 
     // Populate existing artifacts into registries
-    if (populateExisting) {
+    if (populateExisting && (includeMigrations || includeSeeders)) {
       await _populateExisting(
         io: cliIO,
         root: root,
@@ -187,17 +235,19 @@ class InitCommand extends Command<void> {
         seedersDir: seedersDir,
         registryFile: registry,
         seedRegistryFile: seedRegistry,
+        includeMigrations: includeMigrations,
+        includeSeeders: includeSeeders,
       );
     } else {
       // If not explicitly requested, check whether dirs contain files and prompt
       if (hasExistingMigrations || hasExistingSeeders) {
         cliIO.section('Existing artifacts detected');
-        if (hasExistingMigrations) {
+        if (hasExistingMigrations && migrationsDir != null) {
           cliIO.writeln(
             '• Found existing migrations in ${tracker.relative(migrationsDir.path)}',
           );
         }
-        if (hasExistingSeeders) {
+        if (hasExistingSeeders && seedersDir != null) {
           cliIO.writeln(
             '• Found existing seeders in ${tracker.relative(seedersDir.path)}',
           );
@@ -219,16 +269,21 @@ class InitCommand extends Command<void> {
             seedersDir: seedersDir,
             registryFile: registry,
             seedRegistryFile: seedRegistry,
+            includeMigrations: includeMigrations,
+            includeSeeders: includeSeeders,
           );
         }
       }
     }
 
     cliIO.newLine();
-    cliIO.components.horizontalTable({
-      'Ledger table': config.migrations.ledgerTable,
-      'Schema dump directory': p.relative(schemaDumpDir.path, from: root.path),
-    });
+    if (includeMigrations && schemaDumpDir != null) {
+      cliIO.components.horizontalTable({
+        'Ledger table': config.migrations.ledgerTable,
+        'Schema dump directory':
+            p.relative(schemaDumpDir.path, from: root.path),
+      });
+    }
 
     if (showPaths) {
       cliIO.section('Scaffolded artifact paths');
@@ -238,7 +293,9 @@ class InitCommand extends Command<void> {
     }
 
     // Run build_runner to generate orm_registry.g.dart
-    if (!skipBuild) {
+    final shouldBuild =
+        !skipBuild && (includeDatasource || includeMigrations || includeSeeders);
+    if (shouldBuild) {
       await _runBuildRunner(root);
     }
 
@@ -306,12 +363,16 @@ class InitCommand extends Command<void> {
     final pubspec = loadYaml(pubspecFile.readAsStringSync()) as YamlMap;
     final deps = pubspec['dependencies'] as YamlMap?;
     final devDeps = pubspec['dev_dependencies'] as YamlMap?;
+    final overrides = pubspec['dependency_overrides'] as YamlMap?;
 
-    final hasOrmed = deps?.containsKey('ormed') ?? false;
-    final hasOrmedCli =
-        (deps?.containsKey('ormed_cli') ?? false) ||
-        (devDeps?.containsKey('ormed_cli') ?? false);
-    final hasBuildRunner = devDeps?.containsKey('build_runner') ?? false;
+    bool hasPackage(String name) =>
+        (deps?.containsKey(name) ?? false) ||
+        (devDeps?.containsKey(name) ?? false) ||
+        (overrides?.containsKey(name) ?? false);
+
+    final hasOrmed = hasPackage('ormed');
+    final hasOrmedCli = hasPackage('ormed_cli');
+    final hasBuildRunner = hasPackage('build_runner');
 
     final missingDrivers = <String>[];
     if (config != null) {
@@ -320,7 +381,7 @@ class InitCommand extends Command<void> {
           .toSet();
       for (final type in driverTypes) {
         final pkg = _driverPackageMapping[type.toLowerCase()];
-        if (pkg != null && !(deps?.containsKey(pkg) ?? false)) {
+        if (pkg != null && !hasPackage(pkg)) {
           missingDrivers.add(pkg);
         }
       }
@@ -499,160 +560,179 @@ Future<void> _populateExisting({
   required Directory root,
   required OrmProjectConfig config,
   required String packageName,
-  required Directory migrationsDir,
-  required Directory seedersDir,
-  required File registryFile,
-  required File seedRegistryFile,
+  required Directory? migrationsDir,
+  required Directory? seedersDir,
+  required File? registryFile,
+  required File? seedRegistryFile,
+  required bool includeMigrations,
+  required bool includeSeeders,
 }) async {
   io.section('Populating registries from existing files');
 
-  // Migrations: gather files like migrations/m_*.dart and rebuild registry
-  final migrationFiles =
-      migrationsDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'))
-          .where((f) => f.path != registryFile.path)
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+  if (includeMigrations) {
+    final migrationsDirResolved = migrationsDir;
+    final registryFileResolved = registryFile;
+    if (migrationsDirResolved == null || registryFileResolved == null) {
+      throw StateError('Missing migrations registry context for population.');
+    }
 
-  // Seeders: gather files in seeders dir
-  final seederFiles =
-      seedersDir
-          .listSync(recursive: true)
-          .whereType<File>()
-          .where((f) => f.path.endsWith('.dart'))
-          .where((f) => p.basename(f.path) != 'database_seeder.dart')
-          .where((f) => f.path != seedRegistryFile.path)
-          .toList()
-        ..sort((a, b) => a.path.compareTo(b.path));
+    // Migrations: gather files like migrations/m_*.dart and rebuild registry
+    final migrationFiles =
+        migrationsDirResolved
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'))
+            .where((f) => f.path != registryFileResolved.path)
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
 
-  // Build migration registry content skeleton by importing and registering
-  final migrationImports = <String>[];
-  final migrationEntries = <String>[];
-  for (final f in migrationFiles) {
-    final rel = p.relative(f.path, from: p.dirname(registryFile.path));
-    final importPath = rel.replaceAll('\\', '/');
-    // Guess class name from filename, keep a conservative fallback
-    final base = p.basenameWithoutExtension(f.path);
-    // Expected pattern: m_YYYY..._name.dart => class CreateUsersTable or similar
-    // We cannot reliably infer class – we import and leave a TODO entry
-    migrationImports.add("import '$importPath';");
-    migrationEntries.add("  // TODO: Add entry for $base (imported above)");
+    // Build migration registry content skeleton by importing and registering
+    final migrationImports = <String>[];
+    final migrationEntries = <String>[];
+    for (final f in migrationFiles) {
+      final rel = p.relative(f.path, from: p.dirname(registryFileResolved.path));
+      final importPath = rel.replaceAll('\\', '/');
+      // Guess class name from filename, keep a conservative fallback
+      final base = p.basenameWithoutExtension(f.path);
+      // Expected pattern: m_YYYY..._name.dart => class CreateUsersTable or similar
+      // We cannot reliably infer class – we import and leave a TODO entry
+      migrationImports.add("import '$importPath';");
+      migrationEntries.add("  // TODO: Add entry for $base (imported above)");
+    }
+
+    final registryContent = [
+      "import 'dart:convert';",
+      "",
+      "import 'package:ormed/migrations.dart';",
+      "",
+      ...migrationImports,
+      "",
+      "final List<MigrationEntry> _entries = [",
+      ...migrationEntries,
+      "];",
+      "",
+      "/// Build migration descriptors sorted by timestamp.",
+      "List<MigrationDescriptor> buildMigrations() =>",
+      "    MigrationEntry.buildDescriptors(_entries);",
+      "",
+      "MigrationEntry? _findEntry(String rawId) {",
+      "  for (final entry in _entries) {",
+      "    if (entry.id.toString() == rawId) return entry;",
+      "  }",
+      "  return null;",
+      "}",
+      "",
+      "void main(List<String> args) {",
+      "  if (args.contains('--dump-json')) {",
+      "    final payload = buildMigrations().map((m) => m.toJson()).toList();",
+      "    print(jsonEncode(payload));",
+      "    return;",
+      "  }",
+      "",
+      "  final planIndex = args.indexOf('--plan-json');",
+      "  if (planIndex != -1) {",
+      "    final id = args[planIndex + 1];",
+      "    final entry = _findEntry(id);",
+      "    if (entry == null) {",
+      "      throw StateError('Unknown migration id ' + id + '.');",
+      "    }",
+      "    final directionName = args[args.indexOf('--direction') + 1];",
+      "    final direction = MigrationDirection.values.byName(directionName);",
+      "    final snapshotIndex = args.indexOf('--schema-snapshot');",
+      "    SchemaSnapshot? snapshot;",
+      "    if (snapshotIndex != -1) {",
+      "      final decoded = utf8.decode(base64.decode(args[snapshotIndex + 1]));",
+      "      final payload = jsonDecode(decoded) as Map<String, Object?>;",
+      "      snapshot = SchemaSnapshot.fromJson(payload);",
+      "    }",
+      "    final plan = entry.migration.plan(direction, snapshot: snapshot);",
+      "    print(jsonEncode(plan.toJson()));",
+      "  }",
+      "}",
+    ].join('\n');
+
+    if (migrationFiles.isNotEmpty) {
+      registryFileResolved.writeAsStringSync(registryContent);
+      io.success(
+        'Populated migrations registry with ${migrationFiles.length} imports (manual entry TODOs left).',
+      );
+    } else {
+      io.writeln(io.style.muted('No migration files found.'));
+    }
   }
 
-  final registryContent = [
-    "import 'dart:convert';",
-    "",
-    "import 'package:ormed/migrations.dart';",
-    "",
-    ...migrationImports,
-    "",
-    "final List<MigrationEntry> _entries = [",
-    ...migrationEntries,
-    "];",
-    "",
-    "/// Build migration descriptors sorted by timestamp.",
-    "List<MigrationDescriptor> buildMigrations() =>",
-    "    MigrationEntry.buildDescriptors(_entries);",
-    "",
-    "MigrationEntry? _findEntry(String rawId) {",
-    "  for (final entry in _entries) {",
-    "    if (entry.id.toString() == rawId) return entry;",
-    "  }",
-    "  return null;",
-    "}",
-    "",
-    "void main(List<String> args) {",
-    "  if (args.contains('--dump-json')) {",
-    "    final payload = buildMigrations().map((m) => m.toJson()).toList();",
-    "    print(jsonEncode(payload));",
-    "    return;",
-    "  }",
-    "",
-    "  final planIndex = args.indexOf('--plan-json');",
-    "  if (planIndex != -1) {",
-    "    final id = args[planIndex + 1];",
-    "    final entry = _findEntry(id);",
-    "    if (entry == null) {",
-    "      throw StateError('Unknown migration id ' + id + '.');",
-    "    }",
-    "    final directionName = args[args.indexOf('--direction') + 1];",
-    "    final direction = MigrationDirection.values.byName(directionName);",
-    "    final snapshotIndex = args.indexOf('--schema-snapshot');",
-    "    SchemaSnapshot? snapshot;",
-    "    if (snapshotIndex != -1) {",
-    "      final decoded = utf8.decode(base64.decode(args[snapshotIndex + 1]));",
-    "      final payload = jsonDecode(decoded) as Map<String, Object?>;",
-    "      snapshot = SchemaSnapshot.fromJson(payload);",
-    "    }",
-    "    final plan = entry.migration.plan(direction, snapshot: snapshot);",
-    "    print(jsonEncode(plan.toJson()));",
-    "  }",
-    "}",
-  ].join('\n');
+  if (includeSeeders) {
+    final seedersDirResolved = seedersDir;
+    final seedRegistryFileResolved = seedRegistryFile;
+    if (seedersDirResolved == null || seedRegistryFileResolved == null) {
+      throw StateError('Missing seed registry context for population.');
+    }
 
-  if (migrationFiles.isNotEmpty) {
-    registryFile.writeAsStringSync(registryContent);
-    io.success(
-      'Populated migrations registry with ${migrationFiles.length} imports (manual entry TODOs left).',
-    );
-  } else {
-    io.writeln(io.style.muted('No migration files found.'));
-  }
+    // Seeders: gather files in seeders dir
+    final seederFiles =
+        seedersDirResolved
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'))
+            .where((f) => p.basename(f.path) != 'database_seeder.dart')
+            .where((f) => f.path != seedRegistryFileResolved.path)
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
 
-  // Build seed registry
-  final seedImports = <String>[];
-  final seedRegistrations = <String>[];
-  for (final f in seederFiles) {
-    final rel = p.relative(f.path, from: p.dirname(seedRegistryFile.path));
-    final importPath = rel.replaceAll('\\', '/');
-    final base = p.basenameWithoutExtension(f.path);
-    seedImports.add("import '$importPath';");
-    seedRegistrations.add("  // TODO: Register seeder for $base");
-  }
+    // Build seed registry
+    final seedImports = <String>[];
+    final seedRegistrations = <String>[];
+    for (final f in seederFiles) {
+      final rel =
+          p.relative(f.path, from: p.dirname(seedRegistryFileResolved.path));
+      final importPath = rel.replaceAll('\\', '/');
+      final base = p.basenameWithoutExtension(f.path);
+      seedImports.add("import '$importPath';");
+      seedRegistrations.add("  // TODO: Register seeder for $base");
+    }
 
-  final seedRegistryContent = [
-    "import 'package:ormed_cli/runtime.dart';",
-    "import 'package:ormed/ormed.dart';",
-    "import 'package:$packageName/orm_registry.g.dart' as g;",
-    "",
-    ...seedImports,
-    "",
-    "/// Registered seeders for this project.",
-    "final List<SeederRegistration> seeders = <SeederRegistration>[",
-    ...seedRegistrations,
-    "];",
-    "",
-    "/// Run project seeders on the given connection.",
-    "Future<void> runProjectSeeds(",
-    "  OrmConnection connection, {",
-    "  List<String>? names,",
-    "  bool pretend = false,",
-    "}) async {",
-    "  g.bootstrapOrm(registry: connection.context.registry);",
-    "  await SeederRunner().run(",
-    "    connection: connection,",
-    "    seeders: seeders,",
-    "    names: names,",
-    "    pretend: pretend,",
-    "  );",
-    "}",
-    "",
-    "Future<void> main(List<String> args) => runSeedRegistryEntrypoint(",
-    "      args: args,",
-    "      seeds: seeders,",
-    "      beforeRun: (connection) =>",
-    "          g.bootstrapOrm(registry: connection.context.registry),",
-    "    );",
-  ].join('\n');
+    final seedRegistryContent = [
+      "import 'package:ormed_cli/runtime.dart';",
+      "import 'package:ormed/ormed.dart';",
+      "import 'package:$packageName/orm_registry.g.dart' as g;",
+      "",
+      ...seedImports,
+      "",
+      "/// Registered seeders for this project.",
+      "final List<SeederRegistration> seeders = <SeederRegistration>[",
+      ...seedRegistrations,
+      "];",
+      "",
+      "/// Run project seeders on the given connection.",
+      "Future<void> runProjectSeeds(",
+      "  OrmConnection connection, {",
+      "  List<String>? names,",
+      "  bool pretend = false,",
+      "}) async {",
+      "  g.bootstrapOrm(registry: connection.context.registry);",
+      "  await SeederRunner().run(",
+      "    connection: connection,",
+      "    seeders: seeders,",
+      "    names: names,",
+      "    pretend: pretend,",
+      "  );",
+      "}",
+      "",
+      "Future<void> main(List<String> args) => runSeedRegistryEntrypoint(",
+      "      args: args,",
+      "      seeds: seeders,",
+      "      beforeRun: (connection) =>",
+      "          g.bootstrapOrm(registry: connection.context.registry),",
+      "    );",
+    ].join('\n');
 
-  if (seederFiles.isNotEmpty) {
-    seedRegistryFile.writeAsStringSync(seedRegistryContent);
-    io.success(
-      'Populated seed registry with ${seederFiles.length} imports (manual registration TODOs left).',
-    );
-  } else {
-    io.writeln(io.style.muted('No seeder files found.'));
+    if (seederFiles.isNotEmpty) {
+      seedRegistryFileResolved.writeAsStringSync(seedRegistryContent);
+      io.success(
+        'Populated seed registry with ${seederFiles.length} imports (manual registration TODOs left).',
+      );
+    } else {
+      io.writeln(io.style.muted('No seeder files found.'));
+    }
   }
 }

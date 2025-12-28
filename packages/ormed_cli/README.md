@@ -49,6 +49,10 @@ ormed init
 
 # Overwrite existing files
 ormed init --force
+
+# Scaffold only selected artifacts
+ormed init --only=datasource
+ormed init --only=migrations --only=seeders
 ```
 
 The `init` command creates:
@@ -56,6 +60,9 @@ The `init` command creates:
 - `lib/src/database/datasource.dart`: The recommended entrypoint for your application
 - `lib/src/database/migrations.dart`: Migration registry
 - `lib/src/database/seeders.dart`: Seeder registry
+
+You can limit scaffolding to specific artifacts by passing `--only` with one or more
+of: `config`, `migrations`, `seeders`, `datasource`.
 
 ### Migration Management
 

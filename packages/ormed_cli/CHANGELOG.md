@@ -3,6 +3,8 @@
 ## 0.1.0-dev+5
 
 - **Updated**: Align dependencies on `ormed` `0.1.0-dev+5`.
+- **Added**: `ormed init --only` to scaffold selected artifacts.
+- **Fixed**: Dependency prompt now treats `dependencies`, `dev_dependencies`, and `dependency_overrides` as valid declarations.
 
 ## 0.1.0-dev+4
 

@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart';
+import 'package:args/command_runner.dart' show UsageException;
+import 'package:ormed_cli/src/commands/base/shared.dart' show defaultOrmYaml;
 import 'package:ormed_cli/src/commands/base/init_command.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
@@ -334,6 +336,88 @@ seeds:
           runInit(['init', '--no-interaction', '--skip-build']),
           throwsA(isA<FileSystemException>()),
         );
+      },
+    );
+
+    test('--only=datasource scaffolds only datasource', () async {
+      // Provide config so datasource can resolve driver types.
+      File(p.join(scratchDir.path, 'ormed.yaml'))
+          .writeAsStringSync(defaultOrmYaml('test_project'));
+
+      await runInit(['init', '--only=datasource', '--skip-build']);
+
+      final datasourceFile = File(
+        p.join(scratchDir.path, 'lib/src/database/datasource.dart'),
+      );
+      expect(datasourceFile.existsSync(), isTrue);
+
+      final migrationsReg = File(
+        p.join(scratchDir.path, 'lib/src/database/migrations.dart'),
+      );
+      final seedersReg = File(
+        p.join(scratchDir.path, 'lib/src/database/seeders.dart'),
+      );
+      expect(migrationsReg.existsSync(), isFalse);
+      expect(seedersReg.existsSync(), isFalse);
+    });
+
+    test('--only=migrations --only=seeders skips datasource', () async {
+      File(p.join(scratchDir.path, 'ormed.yaml'))
+          .writeAsStringSync(defaultOrmYaml('test_project'));
+
+      await runInit([
+        'init',
+        '--only=migrations',
+        '--only=seeders',
+        '--skip-build',
+      ]);
+
+      final migrationsReg = File(
+        p.join(scratchDir.path, 'lib/src/database/migrations.dart'),
+      );
+      final seedersReg = File(
+        p.join(scratchDir.path, 'lib/src/database/seeders.dart'),
+      );
+      expect(migrationsReg.existsSync(), isTrue);
+      expect(seedersReg.existsSync(), isTrue);
+
+      final datasourceFile = File(
+        p.join(scratchDir.path, 'lib/src/database/datasource.dart'),
+      );
+      expect(datasourceFile.existsSync(), isFalse);
+    });
+
+    test('--only without config errors when ormed.yaml is missing', () async {
+      await expectLater(
+        runInit(['init', '--only=datasource', '--skip-build']),
+        throwsA(isA<UsageException>()),
+      );
+    });
+
+    test(
+      'does not prompt for dependencies when packages already declared',
+      () async {
+        File(p.join(scratchDir.path, 'pubspec.yaml')).writeAsStringSync('''
+name: test_project
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+dev_dependencies:
+  ormed_cli: any
+  build_runner: any
+dependency_overrides:
+  ormed: any
+  ormed_sqlite: any
+''');
+
+        var promptCount = 0;
+        String readLine() {
+          promptCount++;
+          return 'n';
+        }
+
+        await runInit(['init', '--skip-build'], readLine: readLine);
+
+        expect(promptCount, equals(0));
       },
     );
   });

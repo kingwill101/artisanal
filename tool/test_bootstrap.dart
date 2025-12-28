@@ -4,14 +4,18 @@ import 'package:path/path.dart' as p;
 final testDir = 'orm_bootstrap_test';
 final ormedRoot = Directory.current.path;
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
+  final options = BootstrapOptions.fromArgs(args);
   print('--- Starting Bootstrap E2E Test (Dart) ---');
 
   try {
     await cleanup();
     await createProject();
     await addDependencies();
-    await initOrm();
+    await initOrm(options);
+    if (options.multiDatasource) {
+      await configureMultipleDatasources();
+    }
     await createModel();
     await runBuildRunner();
     await createDartMigration();
@@ -21,7 +25,7 @@ Future<void> main() async {
     await runSeeders();
     await analyzeProject();
     await verifyFiles();
-    await runVerificationScript();
+    await runVerificationScript(options);
 
     print('\n[SUCCESS] All bootstrap tests passed!');
   } catch (e, st) {
@@ -29,6 +33,50 @@ Future<void> main() async {
     print(st);
     exit(1);
   }
+}
+
+class BootstrapOptions {
+  const BootstrapOptions({
+    required this.multiDatasource,
+    required this.verifyInitOnly,
+  });
+
+  final bool multiDatasource;
+  final bool verifyInitOnly;
+
+  factory BootstrapOptions.fromArgs(List<String> args) {
+    var multiDatasource = false;
+    var verifyInitOnly = false;
+
+    for (final arg in args) {
+      switch (arg) {
+        case '--multi-datasource':
+          multiDatasource = true;
+          break;
+        case '--verify-init-only':
+          verifyInitOnly = true;
+          break;
+        case '--help':
+        case '-h':
+          _printUsage();
+          exit(0);
+      }
+    }
+
+    return BootstrapOptions(
+      multiDatasource: multiDatasource,
+      verifyInitOnly: verifyInitOnly,
+    );
+  }
+}
+
+void _printUsage() {
+  print('Usage: dart tool/test_bootstrap.dart [options]');
+  print('');
+  print('Options:');
+  print('  --multi-datasource   Configure and verify multiple datasources');
+  print('  --verify-init-only   Validate init --only behavior');
+  print('  -h, --help           Show this help message');
 }
 
 Future<void> cleanup() async {
@@ -77,14 +125,103 @@ dependency_overrides:
   ], workingDirectory: testDir);
 }
 
-Future<void> initOrm() async {
+Future<void> initOrm(BootstrapOptions options) async {
   print('Initializing ORM...');
+  if (options.verifyInitOnly) {
+    await run('dart', [
+      'run',
+      'ormed_cli:ormed',
+      'init',
+      '--no-interaction',
+      '--only=config',
+      '--only=datasource',
+    ], workingDirectory: testDir);
+    await verifyInitOnlyArtifacts();
+    await run('dart', [
+      'run',
+      'ormed_cli:ormed',
+      'init',
+      '--no-interaction',
+      '--force',
+    ], workingDirectory: testDir);
+    return;
+  }
+
   await run('dart', [
     'run',
     'ormed_cli:ormed',
     'init',
     '--no-interaction',
   ], workingDirectory: testDir);
+}
+
+Future<void> verifyInitOnlyArtifacts() async {
+  print('Verifying init --only artifacts...');
+  final ormYaml = File(p.join(testDir, 'ormed.yaml'));
+  final datasourceFile = File(
+    p.join(testDir, 'lib/src/database/datasource.dart'),
+  );
+  if (!ormYaml.existsSync()) {
+    throw Exception('Expected ormed.yaml to be created by init --only');
+  }
+  if (!datasourceFile.existsSync()) {
+    throw Exception(
+      'Expected datasource.dart to be created by init --only',
+    );
+  }
+
+  final migrationsReg = File(
+    p.join(testDir, 'lib/src/database/migrations.dart'),
+  );
+  final seedersReg = File(
+    p.join(testDir, 'lib/src/database/seeders.dart'),
+  );
+  if (migrationsReg.existsSync() || seedersReg.existsSync()) {
+    throw Exception(
+      'init --only should not scaffold migrations/seeders registry files',
+    );
+  }
+}
+
+Future<void> configureMultipleDatasources() async {
+  print('Configuring multiple datasources...');
+  final configFile = File(p.join(testDir, 'ormed.yaml'));
+  if (!configFile.existsSync()) {
+    throw Exception('ormed.yaml not found for multi-datasource config');
+  }
+
+  final primaryDb = 'database/$testDir.sqlite';
+  final analyticsDb = 'database/${testDir}_analytics.sqlite';
+  configFile.writeAsStringSync('''
+default_connection: primary
+connections:
+  primary:
+    driver:
+      type: sqlite
+      options:
+        database: $primaryDb
+    migrations:
+      directory: lib/src/database/migrations
+      registry: lib/src/database/migrations.dart
+      ledger_table: orm_migrations
+      schema_dump: database/schema.sql
+    seeds:
+      directory: lib/src/database/seeders
+      registry: lib/src/database/seeders.dart
+  analytics:
+    driver:
+      type: sqlite
+      options:
+        database: $analyticsDb
+    migrations:
+      directory: lib/src/database/migrations
+      registry: lib/src/database/migrations.dart
+      ledger_table: orm_migrations
+      schema_dump: database/schema.sql
+    seeds:
+      directory: lib/src/database/seeders
+      registry: lib/src/database/seeders.dart
+''');
 }
 
 Future<void> createModel() async {
@@ -267,9 +404,11 @@ Future<void> verifyFiles() async {
   }
 }
 
-Future<void> runVerificationScript() async {
+Future<void> runVerificationScript(BootstrapOptions options) async {
   print('Creating and running verification script...');
   final verifyFile = File(p.join(testDir, 'bin/verify_orm.dart'));
+  final multiDatasource = options.multiDatasource;
+  final analyticsDb = 'database/${testDir}_analytics.sqlite';
   verifyFile.writeAsStringSync('''
 import 'dart:io';
 import 'package:ormed/ormed.dart';
@@ -291,13 +430,24 @@ void main() async {
   }
 
   print('Verifying database content...');
-  final ds = DataSource(DataSourceOptions(
-    driver: SqliteDriverAdapter.file('database/orm_bootstrap_test.sqlite'),
-    registry: registry,
-  ));
-  await ds.init();
-
-  final connection = ds.connection;
+  ${multiDatasource ? "ensureSqliteDriverRegistration();" : ""}
+  ${multiDatasource ? "final config = loadOrmConfig();" : ""}
+  ${multiDatasource ? "final sources = <String, DataSource>{};" : ""}
+  ${multiDatasource ? "for (final name in config.connections.keys) {" : ""}
+  ${multiDatasource ? "  final ds = DataSource.fromConfig(config.withConnection(name), registry: registry);" : ""}
+  ${multiDatasource ? "  await ds.init();" : ""}
+  ${multiDatasource ? "  sources[name] = ds;" : ""}
+  ${multiDatasource ? "}" : ""}
+  ${multiDatasource ? "if (sources.length < 2) {" : ""}
+  ${multiDatasource ? "  print('Error: Expected multiple datasources to be configured.');" : ""}
+  ${multiDatasource ? "  exit(1);" : ""}
+  ${multiDatasource ? "}" : ""}
+  ${multiDatasource ? "final primary = sources[config.activeConnectionName] ?? sources.values.first;" : ""}
+  ${multiDatasource ? "final analytics = sources['analytics'];" : ""}
+  ${multiDatasource ? "if (analytics != null) {" : ""}
+  ${multiDatasource ? "  await analytics.connection.driver.executeRaw('SELECT 1');" : ""}
+  ${multiDatasource ? "}" : ""}
+  ${multiDatasource ? "final connection = primary.connection;" : "final ds = DataSource(DataSourceOptions(driver: SqliteDriverAdapter.file('database/orm_bootstrap_test.sqlite'), registry: registry,)); await ds.init(); final connection = ds.connection;"}
   final users = await connection.table('users').get();
   
   print('Found \${users.length} users');
@@ -326,7 +476,12 @@ void main() async {
     exit(1);
   }
 
-  await ds.dispose();
+  ${multiDatasource ? "final analyticsFile = File('$analyticsDb');" : ""}
+  ${multiDatasource ? "if (!analyticsFile.existsSync()) {" : ""}
+  ${multiDatasource ? "  print('Error: Analytics database was not created.');" : ""}
+  ${multiDatasource ? "  exit(1);" : ""}
+  ${multiDatasource ? "}" : ""}
+  ${multiDatasource ? "for (final source in sources.values) { await source.dispose(); }" : "await ds.dispose();"}
   print('Success: Bootstrap verification passed!');
 }
 ''');
