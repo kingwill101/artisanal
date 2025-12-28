@@ -6,6 +6,7 @@
 - **Added**: InsertDto timestamp auto-fill test coverage.
 - **Adjusted**: Touch timestamp assertions for MySQL/MariaDB clock jitter.
 - **Added**: Upsert regression coverage for JSON casts across multiple field types.
+- **Adjusted**: Pivot updated_at assertions to tolerate MySQL/MariaDB precision limits.
 
 ## 0.1.0-dev+4
 

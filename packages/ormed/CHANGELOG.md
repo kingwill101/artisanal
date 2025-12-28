@@ -8,6 +8,7 @@
 - **Fixed**: JSON casts now accept raw strings and mixed JSON values for `Object?` fields.
 - **Fixed**: JSON cast decoding now handles byte payloads from MySQL/MariaDB drivers.
 - **Fixed**: Map/DTO insert & upsert inputs now apply field codecs (casts) consistently.
+- **Changed**: Automatic timestamps now use plain UTC time without monotonic state.
 
 ## 0.1.0-dev+4
 

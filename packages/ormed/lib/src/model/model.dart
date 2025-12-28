@@ -10,7 +10,7 @@ import 'package:ormed/src/annotations.dart';
 
 import '../connection/connection.dart';
 import '../contracts.dart';
-import '../core/monotonic_time.dart';
+import '../core/utc_time.dart';
 import '../driver/driver.dart';
 import '../mutation/mutation_input_helper.dart';
 import '../query/query.dart';
@@ -1384,7 +1384,7 @@ abstract class Model<TModel extends Model<TModel>>
       definition.fieldByName('updatedAt');
 
   Object _timestampValue(FieldDefinition field) {
-    final nowUtc = monotonicNowUtc();
+    final nowUtc = utcNow();
     final type = field.dartType;
     if (type == 'Carbon' ||
         type == 'Carbon?' ||
@@ -2923,7 +2923,7 @@ abstract class Model<TModel extends Model<TModel>>
         : Map<String, dynamic>.from(pivotData);
     if (!relationDef.pivotTimestamps) return values;
 
-    final now = monotonicNowUtc();
+    final now = utcNow();
     const createdAt = Timestamps.defaultCreatedAtColumn;
     const updatedAt = Timestamps.defaultUpdatedAtColumn;
     if (isInsert) {

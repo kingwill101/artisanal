@@ -2,7 +2,7 @@ import 'package:carbonized/carbonized.dart' show Carbon;
 import 'package:carbonized/carbonized.dart';
 import 'package:ormed/src/model/model.dart';
 
-import '../core/monotonic_time.dart';
+import '../core/utc_time.dart';
 import '../core/sql_null.dart';
 import '../contracts.dart';
 import '../value_codec.dart';
@@ -131,7 +131,7 @@ class MutationInputHelper<T extends OrmEntity> {
     if (model is! ModelAttributes) return;
     if (!_timestampsEnabled) return;
     final attrs = model as ModelAttributes;
-    final now = monotonicNowUtc();
+    final now = utcNow();
 
     try {
       final createdAtField = definition.fields.firstWhere(
@@ -159,7 +159,7 @@ class MutationInputHelper<T extends OrmEntity> {
     if (model is! ModelAttributes) return;
     if (!_timestampsEnabled) return;
     final attrs = model as ModelAttributes;
-    final now = monotonicNowUtc();
+    final now = utcNow();
 
     try {
       final updatedAtField = definition.fields.firstWhere(
@@ -325,7 +325,7 @@ class MutationInputHelper<T extends OrmEntity> {
   }
 
   Object _createTimestampValue(FieldDefinition field) {
-    final nowUtc = monotonicNowUtc();
+    final nowUtc = utcNow();
     final type = field.dartType;
     if (type == 'Carbon' ||
         type == 'Carbon?' ||

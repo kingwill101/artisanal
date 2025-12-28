@@ -1358,7 +1358,14 @@ void runRelationMutationTests() {
 
         expect(after, isNotNull);
         expect(after!.updatedAt, isNotNull);
-        expect(after.updatedAt!.isAfter(before.updatedAt!), isTrue);
+        final driverName = dataSource.context.driver.metadata.name;
+        final isMySqlFamily = driverName == 'mysql' || driverName == 'mariadb';
+        // MySQL/MariaDB may round fractional seconds on write/read.
+        if (isMySqlFamily) {
+          expect(after.updatedAt!.isBefore(before.updatedAt!), isFalse);
+        } else {
+          expect(after.updatedAt!.isAfter(before.updatedAt!), isTrue);
+        }
         expect(after.createdAt, equals(before.createdAt));
       });
 
