@@ -158,6 +158,18 @@ class MixedConstructorModels {
   /// {@macro ormed.repository}
   static Repository<$MixedConstructorModel> repo([String? connection]) =>
       Model.repository<$MixedConstructorModel>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MixedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MixedConstructorModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MixedConstructorModel model, {
+    ValueCodecRegistry? registry,
+  }) => _$MixedConstructorModelDefinition.toMap(model, registry: registry);
 }
 
 class MixedConstructorModelFactory {
@@ -431,6 +443,16 @@ class $MixedConstructorModel extends MixedConstructorModel
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MixedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MixedConstructorModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MixedConstructorModelDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -459,7 +481,37 @@ class $MixedConstructorModel extends MixedConstructorModel
   }
 }
 
+class _MixedConstructorModelCopyWithSentinel {
+  const _MixedConstructorModelCopyWithSentinel();
+}
+
 extension MixedConstructorModelOrmExtension on MixedConstructorModel {
+  static const _MixedConstructorModelCopyWithSentinel _copyWithSentinel =
+      _MixedConstructorModelCopyWithSentinel();
+  MixedConstructorModel copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? description = _copyWithSentinel,
+  }) {
+    return MixedConstructorModel.new(
+      identical(id, _copyWithSentinel) ? this.id : id as int,
+      identical(name, _copyWithSentinel) ? this.name : name as String,
+      description: identical(description, _copyWithSentinel)
+          ? this.description
+          : description as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MixedConstructorModelDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MixedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MixedConstructorModelDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

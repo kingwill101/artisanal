@@ -173,6 +173,18 @@ class AccessorUsers {
   /// {@macro ormed.repository}
   static Repository<$AccessorUser> repo([String? connection]) =>
       Model.repository<$AccessorUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $AccessorUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccessorUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $AccessorUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$AccessorUserDefinition.toMap(model, registry: registry);
 }
 
 class AccessorUserModelFactory {
@@ -520,6 +532,16 @@ class $AccessorUser extends AccessorUser
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $AccessorUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccessorUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccessorUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -554,7 +576,41 @@ class $AccessorUser extends AccessorUser
   }
 }
 
+class _AccessorUserCopyWithSentinel {
+  const _AccessorUserCopyWithSentinel();
+}
+
 extension AccessorUserOrmExtension on AccessorUser {
+  static const _AccessorUserCopyWithSentinel _copyWithSentinel =
+      _AccessorUserCopyWithSentinel();
+  AccessorUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? firstName = _copyWithSentinel,
+    Object? lastName = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+  }) {
+    return AccessorUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      firstName: identical(firstName, _copyWithSentinel)
+          ? this.firstName
+          : firstName as String,
+      lastName: identical(lastName, _copyWithSentinel)
+          ? this.lastName
+          : lastName as String,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccessorUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static AccessorUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccessorUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

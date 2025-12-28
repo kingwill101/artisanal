@@ -158,6 +158,18 @@ class EventModels {
   /// {@macro ormed.repository}
   static Repository<$EventModel> repo([String? connection]) =>
       Model.repository<$EventModel>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $EventModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$EventModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $EventModel model, {
+    ValueCodecRegistry? registry,
+  }) => _$EventModelDefinition.toMap(model, registry: registry);
 }
 
 class EventModelFactory {
@@ -409,6 +421,16 @@ class $EventModel extends EventModel
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $EventModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$EventModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$EventModelDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -437,7 +459,35 @@ class $EventModel extends EventModel
   }
 }
 
+class _EventModelCopyWithSentinel {
+  const _EventModelCopyWithSentinel();
+}
+
 extension EventModelOrmExtension on EventModel {
+  static const _EventModelCopyWithSentinel _copyWithSentinel =
+      _EventModelCopyWithSentinel();
+  EventModel copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? score = _copyWithSentinel,
+  }) {
+    return EventModel.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      score: identical(score, _copyWithSentinel) ? this.score : score as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$EventModelDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static EventModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$EventModelDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

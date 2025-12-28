@@ -153,6 +153,18 @@ class DriverOverrideModels {
   /// {@macro ormed.repository}
   static Repository<$DriverOverrideModel> repo([String? connection]) =>
       Model.repository<$DriverOverrideModel>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $DriverOverrideModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $DriverOverrideModel model, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideModelDefinition.toMap(model, registry: registry);
 }
 
 class DriverOverrideModelFactory {
@@ -393,6 +405,16 @@ class $DriverOverrideModel extends DriverOverrideModel
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $DriverOverrideModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DriverOverrideModelDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -414,7 +436,35 @@ class $DriverOverrideModel extends DriverOverrideModel
   }
 }
 
+class _DriverOverrideModelCopyWithSentinel {
+  const _DriverOverrideModelCopyWithSentinel();
+}
+
 extension DriverOverrideModelOrmExtension on DriverOverrideModel {
+  static const _DriverOverrideModelCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideModelCopyWithSentinel();
+  DriverOverrideModel copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideModel.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DriverOverrideModelDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static DriverOverrideModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideModelDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

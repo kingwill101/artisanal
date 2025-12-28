@@ -168,6 +168,18 @@ class NullableRelationsTests {
   /// {@macro ormed.repository}
   static Repository<$NullableRelationsTest> repo([String? connection]) =>
       Model.repository<$NullableRelationsTest>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $NullableRelationsTest fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NullableRelationsTestDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $NullableRelationsTest model, {
+    ValueCodecRegistry? registry,
+  }) => _$NullableRelationsTestDefinition.toMap(model, registry: registry);
 }
 
 class NullableRelationsTestModelFactory {
@@ -393,6 +405,16 @@ class $NullableRelationsTest extends NullableRelationsTest
     return $NullableRelationsTest(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $NullableRelationsTest fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NullableRelationsTestDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NullableRelationsTestDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -439,7 +461,33 @@ extension NullableRelationsTestRelationQueries on NullableRelationsTest {
   }
 }
 
+class _NullableRelationsTestCopyWithSentinel {
+  const _NullableRelationsTestCopyWithSentinel();
+}
+
 extension NullableRelationsTestOrmExtension on NullableRelationsTest {
+  static const _NullableRelationsTestCopyWithSentinel _copyWithSentinel =
+      _NullableRelationsTestCopyWithSentinel();
+  NullableRelationsTest copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return NullableRelationsTest.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NullableRelationsTestDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static NullableRelationsTest fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NullableRelationsTestDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -165,6 +165,18 @@ class MutationTargets {
   /// {@macro ormed.repository}
   static Repository<$MutationTarget> repo([String? connection]) =>
       Model.repository<$MutationTarget>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MutationTarget fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MutationTargetDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MutationTarget model, {
+    ValueCodecRegistry? registry,
+  }) => _$MutationTargetDefinition.toMap(model, registry: registry);
 }
 
 class MutationTargetModelFactory {
@@ -481,6 +493,16 @@ class $MutationTarget extends MutationTarget
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MutationTarget fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MutationTargetDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MutationTargetDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('_id') ?? super.id;
@@ -515,7 +537,41 @@ class $MutationTarget extends MutationTarget
   }
 }
 
+class _MutationTargetCopyWithSentinel {
+  const _MutationTargetCopyWithSentinel();
+}
+
 extension MutationTargetOrmExtension on MutationTarget {
+  static const _MutationTargetCopyWithSentinel _copyWithSentinel =
+      _MutationTargetCopyWithSentinel();
+  MutationTarget copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? category = _copyWithSentinel,
+  }) {
+    return MutationTarget.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool?,
+      category: identical(category, _copyWithSentinel)
+          ? this.category
+          : category as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MutationTargetDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MutationTarget fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MutationTargetDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

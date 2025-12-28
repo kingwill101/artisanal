@@ -15,6 +15,7 @@ class ModelSubclassEmitter {
     final buffer = StringBuffer();
     final className = context.className;
     final modelSubclassName = context.trackedModelClassName;
+    final definitionName = '_${modelSubclassName}Definition';
 
     // Generate documentation for the tracked model class
     buffer.writeln('/// Generated tracked model class for [$className].');
@@ -137,6 +138,23 @@ class ModelSubclassEmitter {
       buffer.writeln('  }\n');
     }
 
+    buffer.writeln(
+      '  /// Builds a tracked model from a column/value map.',
+    );
+    buffer.writeln(
+      '  static $modelSubclassName fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln('      $definitionName.fromMap(data, registry: registry);');
+    buffer.writeln();
+    buffer.writeln(
+      '  /// Converts this tracked model to a column/value map.',
+    );
+    buffer.writeln(
+      '  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln('      $definitionName.toMap(this, registry: registry);');
+    buffer.writeln();
+
     for (final field in context.fields.where((f) => !f.isVirtual)) {
       buffer.writeln('  /// Tracked getter for [${field.name}].');
       buffer.writeln('  @override');
@@ -155,9 +173,7 @@ class ModelSubclassEmitter {
       '  void _attachOrmRuntimeMetadata(Map<String, Object?> values) {',
     );
     buffer.writeln('    replaceAttributes(values);');
-    buffer.writeln(
-      '    attachModelDefinition(_${modelSubclassName}Definition);',
-    );
+    buffer.writeln('    attachModelDefinition($definitionName);');
     if (context.effectiveSoftDeletes) {
       buffer.writeln(
         "    attachSoftDeleteColumn('${context.softDeleteColumn}');",
@@ -288,9 +304,53 @@ class ModelSubclassEmitter {
       buffer.writeln();
     }
 
-    // Generate toTracked() extension for converting user models to ORM-managed models
+    // Generate user-model extension for copyWith + toTracked helpers.
     final extensionName = '${className}OrmExtension';
+    final copyWithParams = _copyWithParameters(
+      context.constructor,
+      context.fields,
+    );
+    if (copyWithParams.isNotEmpty) {
+      final sentinelName = '_${className}CopyWithSentinel';
+      buffer.writeln('class $sentinelName { const $sentinelName(); }');
+      buffer.writeln();
+    }
     buffer.writeln('extension $extensionName on $className {');
+    if (copyWithParams.isNotEmpty) {
+      final sentinelName = '_${className}CopyWithSentinel';
+      buffer.writeln(
+        '  static const $sentinelName _copyWithSentinel = $sentinelName();',
+      );
+      buffer.write('  $className copyWith({');
+      for (final param in copyWithParams) {
+        buffer.write('Object? ${param.displayName} = _copyWithSentinel, ');
+      }
+      buffer.writeln('}) {');
+      buffer.writeln(
+        '    return $className${_userConstructorInvocation(context.constructor, copyWithParams)};',
+      );
+      buffer.writeln('  }');
+      buffer.writeln();
+    } else {
+      buffer.writeln('  $className copyWith() => this;');
+      buffer.writeln();
+    }
+    buffer.writeln(
+      '  /// Converts this model to a column/value map.',
+    );
+    buffer.writeln(
+      '  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln('      $definitionName.toMap(this, registry: registry);');
+    buffer.writeln();
+    buffer.writeln(
+      '  /// Builds a model from a column/value map.',
+    );
+    buffer.writeln(
+      '  static $className fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln('      $definitionName.fromMap(data, registry: registry);');
+    buffer.writeln();
     buffer.writeln('  /// The Type of the generated ORM-managed model class.');
     buffer.writeln(
       '  /// Use this when you need to specify the tracked model type explicitly,',
@@ -605,6 +665,58 @@ class ModelSubclassEmitter {
       buffer.write(', ');
     }
     buffer.write('})');
+    return buffer.toString();
+  }
+
+  List<FormalParameterElement> _copyWithParameters(
+    ConstructorElement constructor,
+    List<FieldDescriptor> fields,
+  ) {
+    final params = <FormalParameterElement>[];
+    for (final parameter in constructor.formalParameters) {
+      final paramName = parameter.displayName;
+      final hasField = fields.any(
+        (field) => !field.isVirtual && field.name == paramName,
+      );
+      final isIgnoredOrRelation =
+          context.ignoredFieldNames.contains(paramName) ||
+          context.relationFieldNames.contains(paramName);
+      if (hasField || isIgnoredOrRelation) {
+        params.add(parameter);
+        continue;
+      }
+      if (context.shouldSkipConstructorParameter(parameter)) {
+        continue;
+      }
+      throw InvalidGenerationSourceError(
+        'Constructor parameter $paramName is not backed by a field.',
+        element: parameter,
+      );
+    }
+    return params;
+  }
+
+  String _userConstructorInvocation(
+    ConstructorElement constructor,
+    List<FormalParameterElement> parameters,
+  ) {
+    final buffer = StringBuffer();
+    if ((constructor.name ?? '').isNotEmpty) {
+      buffer.write('.${constructor.name}');
+    }
+    buffer.write('(');
+    for (final parameter in parameters) {
+      final name = parameter.displayName;
+      final typeName = parameter.type.getDisplayString();
+      final valueExpr =
+          'identical($name, _copyWithSentinel) ? this.$name : $name as $typeName';
+      if (parameter.isNamed) {
+        buffer.write('$name: $valueExpr, ');
+      } else {
+        buffer.write('$valueExpr, ');
+      }
+    }
+    buffer.write(')');
     return buffer.toString();
   }
 

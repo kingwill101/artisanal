@@ -174,6 +174,18 @@ class Tags {
   /// {@macro ormed.repository}
   static Repository<$Tag> repo([String? connection]) =>
       Model.repository<$Tag>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Tag model, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.toMap(model, registry: registry);
 }
 
 class TagModelFactory {
@@ -395,6 +407,16 @@ class $Tag extends Tag
     return $Tag(id: id ?? this.id, label: label ?? this.label);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TagDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -448,7 +470,32 @@ extension TagRelationQueries on Tag {
   }
 }
 
+class _TagCopyWithSentinel {
+  const _TagCopyWithSentinel();
+}
+
 extension TagOrmExtension on Tag {
+  static const _TagCopyWithSentinel _copyWithSentinel = _TagCopyWithSentinel();
+  Tag copyWith({
+    Object? id = _copyWithSentinel,
+    Object? label = _copyWithSentinel,
+  }) {
+    return Tag.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      label: identical(label, _copyWithSentinel) ? this.label : label as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TagDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -173,6 +173,18 @@ class Photos {
   /// {@macro ormed.repository}
   static Repository<$Photo> repo([String? connection]) =>
       Model.repository<$Photo>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Photo fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PhotoDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Photo model, {
+    ValueCodecRegistry? registry,
+  }) => _$PhotoDefinition.toMap(model, registry: registry);
 }
 
 class PhotoModelFactory {
@@ -494,6 +506,16 @@ class $Photo extends Photo with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Photo fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PhotoDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PhotoDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -545,7 +567,41 @@ extension PhotoRelationQueries on Photo {
   }
 }
 
+class _PhotoCopyWithSentinel {
+  const _PhotoCopyWithSentinel();
+}
+
 extension PhotoOrmExtension on Photo {
+  static const _PhotoCopyWithSentinel _copyWithSentinel =
+      _PhotoCopyWithSentinel();
+  Photo copyWith({
+    Object? id = _copyWithSentinel,
+    Object? imageableId = _copyWithSentinel,
+    Object? imageableType = _copyWithSentinel,
+    Object? path = _copyWithSentinel,
+  }) {
+    return Photo.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      imageableId: identical(imageableId, _copyWithSentinel)
+          ? this.imageableId
+          : imageableId as int,
+      imageableType: identical(imageableType, _copyWithSentinel)
+          ? this.imageableType
+          : imageableType as String,
+      path: identical(path, _copyWithSentinel) ? this.path : path as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PhotoDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Photo fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PhotoDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

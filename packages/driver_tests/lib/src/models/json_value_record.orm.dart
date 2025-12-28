@@ -241,6 +241,18 @@ class JsonValueRecords {
   /// {@macro ormed.repository}
   static Repository<$JsonValueRecord> repo([String? connection]) =>
       Model.repository<$JsonValueRecord>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $JsonValueRecord fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$JsonValueRecordDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $JsonValueRecord model, {
+    ValueCodecRegistry? registry,
+  }) => _$JsonValueRecordDefinition.toMap(model, registry: registry);
 }
 
 class JsonValueRecordModelFactory {
@@ -702,6 +714,16 @@ class $JsonValueRecord extends JsonValueRecord
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $JsonValueRecord fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$JsonValueRecordDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$JsonValueRecordDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('id') ?? super.id;
@@ -765,7 +787,55 @@ class $JsonValueRecord extends JsonValueRecord
   }
 }
 
+class _JsonValueRecordCopyWithSentinel {
+  const _JsonValueRecordCopyWithSentinel();
+}
+
 extension JsonValueRecordOrmExtension on JsonValueRecord {
+  static const _JsonValueRecordCopyWithSentinel _copyWithSentinel =
+      _JsonValueRecordCopyWithSentinel();
+  JsonValueRecord copyWith({
+    Object? id = _copyWithSentinel,
+    Object? objectValue = _copyWithSentinel,
+    Object? stringValue = _copyWithSentinel,
+    Object? mapDynamic = _copyWithSentinel,
+    Object? mapObject = _copyWithSentinel,
+    Object? listDynamic = _copyWithSentinel,
+    Object? listObject = _copyWithSentinel,
+  }) {
+    return JsonValueRecord.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String,
+      objectValue: identical(objectValue, _copyWithSentinel)
+          ? this.objectValue
+          : objectValue as Object?,
+      stringValue: identical(stringValue, _copyWithSentinel)
+          ? this.stringValue
+          : stringValue as String?,
+      mapDynamic: identical(mapDynamic, _copyWithSentinel)
+          ? this.mapDynamic
+          : mapDynamic as Map<String, dynamic>?,
+      mapObject: identical(mapObject, _copyWithSentinel)
+          ? this.mapObject
+          : mapObject as Map<String, Object?>?,
+      listDynamic: identical(listDynamic, _copyWithSentinel)
+          ? this.listDynamic
+          : listDynamic as List<dynamic>?,
+      listObject: identical(listObject, _copyWithSentinel)
+          ? this.listObject
+          : listObject as List<Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$JsonValueRecordDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static JsonValueRecord fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$JsonValueRecordDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -3,6 +3,8 @@
 ## 0.1.0-dev+6
 
 - **Added**: Typed predicate field accessors for `where` callbacks (e.g. `q.title.eq(...)`) and typed relation helpers (`withPosts`, `whereHasPosts`).
+- **Added**: Generated `copyWith` extensions for user-defined models with sentinel-based null handling, including constructor-backed relation fields.
+- **Added**: Generated `toMap`/`fromMap` helpers for user and tracked models using column-name maps.
 
 ## 0.1.0-dev+5
 

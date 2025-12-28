@@ -150,6 +150,18 @@ class Taggables {
   /// {@macro ormed.repository}
   static Repository<$Taggable> repo([String? connection]) =>
       Model.repository<$Taggable>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Taggable fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TaggableDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Taggable model, {
+    ValueCodecRegistry? registry,
+  }) => _$TaggableDefinition.toMap(model, registry: registry);
 }
 
 class TaggableModelFactory {
@@ -436,6 +448,16 @@ class $Taggable extends Taggable with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Taggable fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TaggableDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TaggableDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [tagId].
   @override
   int get tagId => getAttribute<int>('tag_id') ?? super.tagId;
@@ -464,7 +486,39 @@ class $Taggable extends Taggable with ModelAttributes implements OrmEntity {
   }
 }
 
+class _TaggableCopyWithSentinel {
+  const _TaggableCopyWithSentinel();
+}
+
 extension TaggableOrmExtension on Taggable {
+  static const _TaggableCopyWithSentinel _copyWithSentinel =
+      _TaggableCopyWithSentinel();
+  Taggable copyWith({
+    Object? tagId = _copyWithSentinel,
+    Object? taggableId = _copyWithSentinel,
+    Object? taggableType = _copyWithSentinel,
+  }) {
+    return Taggable.new(
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int,
+      taggableId: identical(taggableId, _copyWithSentinel)
+          ? this.taggableId
+          : taggableId as int,
+      taggableType: identical(taggableType, _copyWithSentinel)
+          ? this.taggableType
+          : taggableType as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TaggableDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Taggable fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TaggableDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

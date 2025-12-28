@@ -267,6 +267,18 @@ class Posts {
   /// {@macro ormed.repository}
   static Repository<$Post> repo([String? connection]) =>
       Model.repository<$Post>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Post model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.toMap(model, registry: registry);
 }
 
 class PostModelFactory {
@@ -680,6 +692,16 @@ class $Post extends Post
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -800,7 +822,47 @@ extension PostRelationQueries on Post {
   }
 }
 
+class _PostCopyWithSentinel {
+  const _PostCopyWithSentinel();
+}
+
 extension PostOrmExtension on Post {
+  static const _PostCopyWithSentinel _copyWithSentinel =
+      _PostCopyWithSentinel();
+  Post copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? content = _copyWithSentinel,
+    Object? views = _copyWithSentinel,
+  }) {
+    return Post.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime,
+      content: identical(content, _copyWithSentinel)
+          ? this.content
+          : content as String?,
+      views: identical(views, _copyWithSentinel) ? this.views : views as int?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

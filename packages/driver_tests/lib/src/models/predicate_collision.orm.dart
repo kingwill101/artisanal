@@ -162,6 +162,18 @@ class PredicateCollisions {
   /// {@macro ormed.repository}
   static Repository<$PredicateCollision> repo([String? connection]) =>
       Model.repository<$PredicateCollision>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $PredicateCollision fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PredicateCollisionDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $PredicateCollision model, {
+    ValueCodecRegistry? registry,
+  }) => _$PredicateCollisionDefinition.toMap(model, registry: registry);
 }
 
 class PredicateCollisionModelFactory {
@@ -446,6 +458,16 @@ class $PredicateCollision extends PredicateCollision
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $PredicateCollision fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PredicateCollisionDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PredicateCollisionDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -473,7 +495,37 @@ class $PredicateCollision extends PredicateCollision
   }
 }
 
+class _PredicateCollisionCopyWithSentinel {
+  const _PredicateCollisionCopyWithSentinel();
+}
+
 extension PredicateCollisionOrmExtension on PredicateCollision {
+  static const _PredicateCollisionCopyWithSentinel _copyWithSentinel =
+      _PredicateCollisionCopyWithSentinel();
+  PredicateCollision copyWith({
+    Object? id = _copyWithSentinel,
+    Object? where = _copyWithSentinel,
+    Object? orWhere = _copyWithSentinel,
+  }) {
+    return PredicateCollision.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      where: identical(where, _copyWithSentinel) ? this.where : where as String,
+      orWhere: identical(orWhere, _copyWithSentinel)
+          ? this.orWhere
+          : orWhere as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PredicateCollisionDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static PredicateCollision fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PredicateCollisionDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

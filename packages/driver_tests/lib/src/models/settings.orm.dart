@@ -129,6 +129,18 @@ class Settings {
   /// {@macro ormed.repository}
   static Repository<$Setting> repo([String? connection]) =>
       Model.repository<$Setting>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Setting fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Setting model, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingDefinition.toMap(model, registry: registry);
 }
 
 class SettingModelFactory {
@@ -335,6 +347,16 @@ class $Setting extends Setting with ModelAttributes implements OrmEntity {
     return $Setting(id: id ?? this.id, payload: payload ?? this.payload);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Setting fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SettingDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -356,7 +378,35 @@ class $Setting extends Setting with ModelAttributes implements OrmEntity {
   }
 }
 
+class _SettingCopyWithSentinel {
+  const _SettingCopyWithSentinel();
+}
+
 extension SettingOrmExtension on Setting {
+  static const _SettingCopyWithSentinel _copyWithSentinel =
+      _SettingCopyWithSentinel();
+  Setting copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return Setting.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, dynamic>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SettingDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Setting fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

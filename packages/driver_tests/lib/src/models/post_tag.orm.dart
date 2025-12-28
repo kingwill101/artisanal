@@ -186,6 +186,18 @@ class PostTags {
   /// {@macro ormed.repository}
   static Repository<$PostTag> repo([String? connection]) =>
       Model.repository<$PostTag>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $PostTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostTagDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $PostTag model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostTagDefinition.toMap(model, registry: registry);
 }
 
 class PostTagModelFactory {
@@ -580,6 +592,16 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $PostTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostTagDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostTagDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [postId].
   @override
   int get postId => getAttribute<int>('post_id') ?? super.postId;
@@ -630,7 +652,49 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
   }
 }
 
+class _PostTagCopyWithSentinel {
+  const _PostTagCopyWithSentinel();
+}
+
 extension PostTagOrmExtension on PostTag {
+  static const _PostTagCopyWithSentinel _copyWithSentinel =
+      _PostTagCopyWithSentinel();
+  PostTag copyWith({
+    Object? postId = _copyWithSentinel,
+    Object? tagId = _copyWithSentinel,
+    Object? sortOrder = _copyWithSentinel,
+    Object? note = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return PostTag.new(
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int,
+      tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int,
+      sortOrder: identical(sortOrder, _copyWithSentinel)
+          ? this.sortOrder
+          : sortOrder as int?,
+      note: identical(note, _copyWithSentinel) ? this.note : note as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostTagDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static PostTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostTagDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

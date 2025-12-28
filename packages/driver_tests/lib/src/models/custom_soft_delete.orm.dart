@@ -155,6 +155,18 @@ class CustomSoftDeletes {
   /// {@macro ormed.repository}
   static Repository<$CustomSoftDelete> repo([String? connection]) =>
       Model.repository<$CustomSoftDelete>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $CustomSoftDelete fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CustomSoftDeleteDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $CustomSoftDelete model, {
+    ValueCodecRegistry? registry,
+  }) => _$CustomSoftDeleteDefinition.toMap(model, registry: registry);
 }
 
 class CustomSoftDeleteModelFactory {
@@ -398,6 +410,16 @@ class $CustomSoftDelete extends CustomSoftDelete
     return $CustomSoftDelete(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $CustomSoftDelete fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CustomSoftDeleteDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CustomSoftDeleteDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -419,7 +441,33 @@ class $CustomSoftDelete extends CustomSoftDelete
   }
 }
 
+class _CustomSoftDeleteCopyWithSentinel {
+  const _CustomSoftDeleteCopyWithSentinel();
+}
+
 extension CustomSoftDeleteOrmExtension on CustomSoftDelete {
+  static const _CustomSoftDeleteCopyWithSentinel _copyWithSentinel =
+      _CustomSoftDeleteCopyWithSentinel();
+  CustomSoftDelete copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CustomSoftDelete.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CustomSoftDeleteDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static CustomSoftDelete fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CustomSoftDeleteDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

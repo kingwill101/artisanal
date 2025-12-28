@@ -260,6 +260,18 @@ class CastSamples {
   /// {@macro ormed.repository}
   static Repository<$CastSample> repo([String? connection]) =>
       Model.repository<$CastSample>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $CastSample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CastSampleDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $CastSample model, {
+    ValueCodecRegistry? registry,
+  }) => _$CastSampleDefinition.toMap(model, registry: registry);
 }
 
 class CastSampleModelFactory {
@@ -841,6 +853,16 @@ class $CastSample extends CastSample with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $CastSample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CastSampleDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CastSampleDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -919,7 +941,63 @@ class $CastSample extends CastSample with ModelAttributes implements OrmEntity {
   }
 }
 
+class _CastSampleCopyWithSentinel {
+  const _CastSampleCopyWithSentinel();
+}
+
 extension CastSampleOrmExtension on CastSample {
+  static const _CastSampleCopyWithSentinel _copyWithSentinel =
+      _CastSampleCopyWithSentinel();
+  CastSample copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? isActive = _copyWithSentinel,
+    Object? visits = _copyWithSentinel,
+    Object? ratio = _copyWithSentinel,
+    Object? startedOn = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+    Object? amount = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+  }) {
+    return CastSample.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      isActive: identical(isActive, _copyWithSentinel)
+          ? this.isActive
+          : isActive as bool,
+      visits: identical(visits, _copyWithSentinel)
+          ? this.visits
+          : visits as int,
+      ratio: identical(ratio, _copyWithSentinel) ? this.ratio : ratio as double,
+      startedOn: identical(startedOn, _copyWithSentinel)
+          ? this.startedOn
+          : startedOn as DateTime,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime,
+      amount: identical(amount, _copyWithSentinel)
+          ? this.amount
+          : amount as Decimal,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as CastStatus,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CastSampleDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static CastSample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CastSampleDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

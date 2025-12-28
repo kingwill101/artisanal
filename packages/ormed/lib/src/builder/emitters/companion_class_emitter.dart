@@ -110,6 +110,28 @@ class CompanionClassEmitter {
     );
     buffer.writeln();
 
+    buffer.writeln(
+      '  /// Builds a tracked model from a column/value map.',
+    );
+    buffer.writeln(
+      '  static $generatedClassName fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln(
+      '      _${generatedClassName}Definition.fromMap(data, registry: registry);',
+    );
+    buffer.writeln();
+
+    buffer.writeln(
+      '  /// Converts a tracked model to a column/value map.',
+    );
+    buffer.writeln(
+      '  static Map<String, Object?> toMap($generatedClassName model, {ValueCodecRegistry? registry}) =>',
+    );
+    buffer.writeln(
+      '      _${generatedClassName}Definition.toMap(model, registry: registry);',
+    );
+    buffer.writeln();
+
     buffer.writeln('}');
     buffer.writeln();
 

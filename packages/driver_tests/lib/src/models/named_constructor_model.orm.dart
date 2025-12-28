@@ -161,6 +161,18 @@ class NamedConstructorModels {
   /// {@macro ormed.repository}
   static Repository<$NamedConstructorModel> repo([String? connection]) =>
       Model.repository<$NamedConstructorModel>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $NamedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NamedConstructorModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $NamedConstructorModel model, {
+    ValueCodecRegistry? registry,
+  }) => _$NamedConstructorModelDefinition.toMap(model, registry: registry);
 }
 
 class NamedConstructorModelFactory {
@@ -432,6 +444,16 @@ class $NamedConstructorModel extends NamedConstructorModel
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $NamedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NamedConstructorModelDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NamedConstructorModelDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -459,7 +481,35 @@ class $NamedConstructorModel extends NamedConstructorModel
   }
 }
 
+class _NamedConstructorModelCopyWithSentinel {
+  const _NamedConstructorModelCopyWithSentinel();
+}
+
 extension NamedConstructorModelOrmExtension on NamedConstructorModel {
+  static const _NamedConstructorModelCopyWithSentinel _copyWithSentinel =
+      _NamedConstructorModelCopyWithSentinel();
+  NamedConstructorModel copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? value = _copyWithSentinel,
+  }) {
+    return NamedConstructorModel.fromDatabase(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      value: identical(value, _copyWithSentinel) ? this.value : value as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NamedConstructorModelDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static NamedConstructorModel fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NamedConstructorModelDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -231,6 +231,18 @@ class Articles {
   /// {@macro ormed.repository}
   static Repository<$Article> repo([String? connection]) =>
       Model.repository<$Article>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Article fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ArticleDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Article model, {
+    ValueCodecRegistry? registry,
+  }) => _$ArticleDefinition.toMap(model, registry: registry);
 }
 
 class ArticleModelFactory {
@@ -748,6 +760,16 @@ class $Article extends Article with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Article fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ArticleDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ArticleDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -819,7 +841,59 @@ class $Article extends Article with ModelAttributes implements OrmEntity {
   }
 }
 
+class _ArticleCopyWithSentinel {
+  const _ArticleCopyWithSentinel();
+}
+
 extension ArticleOrmExtension on Article {
+  static const _ArticleCopyWithSentinel _copyWithSentinel =
+      _ArticleCopyWithSentinel();
+  Article copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? rating = _copyWithSentinel,
+    Object? priority = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? reviewedAt = _copyWithSentinel,
+    Object? categoryId = _copyWithSentinel,
+  }) {
+    return Article.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as String,
+      rating: identical(rating, _copyWithSentinel)
+          ? this.rating
+          : rating as double,
+      priority: identical(priority, _copyWithSentinel)
+          ? this.priority
+          : priority as int,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime,
+      reviewedAt: identical(reviewedAt, _copyWithSentinel)
+          ? this.reviewedAt
+          : reviewedAt as DateTime?,
+      categoryId: identical(categoryId, _copyWithSentinel)
+          ? this.categoryId
+          : categoryId as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ArticleDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Article fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ArticleDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

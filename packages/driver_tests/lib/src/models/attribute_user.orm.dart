@@ -186,6 +186,18 @@ class AttributeUsers {
   /// {@macro ormed.repository}
   static Repository<$AttributeUser> repo([String? connection]) =>
       Model.repository<$AttributeUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $AttributeUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AttributeUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $AttributeUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$AttributeUserDefinition.toMap(model, registry: registry);
 }
 
 class AttributeUserModelFactory {
@@ -561,6 +573,16 @@ class $AttributeUser extends AttributeUser
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $AttributeUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AttributeUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AttributeUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -603,7 +625,43 @@ class $AttributeUser extends AttributeUser
   }
 }
 
+class _AttributeUserCopyWithSentinel {
+  const _AttributeUserCopyWithSentinel();
+}
+
 extension AttributeUserOrmExtension on AttributeUser {
+  static const _AttributeUserCopyWithSentinel _copyWithSentinel =
+      _AttributeUserCopyWithSentinel();
+  AttributeUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return AttributeUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Map<String, Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AttributeUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static AttributeUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AttributeUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

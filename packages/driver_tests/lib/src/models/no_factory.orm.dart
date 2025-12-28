@@ -124,6 +124,18 @@ class NoFactories {
   /// {@macro ormed.repository}
   static Repository<$NoFactory> repo([String? connection]) =>
       Model.repository<$NoFactory>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $NoFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NoFactoryDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $NoFactory model, {
+    ValueCodecRegistry? registry,
+  }) => _$NoFactoryDefinition.toMap(model, registry: registry);
 }
 
 class NoFactoryModelFactory {
@@ -298,6 +310,16 @@ class $NoFactory extends NoFactory
     return $NoFactory(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $NoFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NoFactoryDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NoFactoryDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -312,7 +334,29 @@ class $NoFactory extends NoFactory
   }
 }
 
+class _NoFactoryCopyWithSentinel {
+  const _NoFactoryCopyWithSentinel();
+}
+
 extension NoFactoryOrmExtension on NoFactory {
+  static const _NoFactoryCopyWithSentinel _copyWithSentinel =
+      _NoFactoryCopyWithSentinel();
+  NoFactory copyWith({Object? id = _copyWithSentinel}) {
+    return NoFactory.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$NoFactoryDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static NoFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$NoFactoryDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

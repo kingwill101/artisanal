@@ -186,6 +186,18 @@ class DerivedForFactories {
   /// {@macro ormed.repository}
   static Repository<$DerivedForFactory> repo([String? connection]) =>
       Model.repository<$DerivedForFactory>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $DerivedForFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DerivedForFactoryDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $DerivedForFactory model, {
+    ValueCodecRegistry? registry,
+  }) => _$DerivedForFactoryDefinition.toMap(model, registry: registry);
 }
 
 class DerivedForFactoryModelFactory {
@@ -521,6 +533,16 @@ class $DerivedForFactory extends DerivedForFactory
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $DerivedForFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DerivedForFactoryDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DerivedForFactoryDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [layerTwoFlag].
   @override
   bool? get layerTwoFlag =>
@@ -559,7 +581,43 @@ class $DerivedForFactory extends DerivedForFactory
   }
 }
 
+class _DerivedForFactoryCopyWithSentinel {
+  const _DerivedForFactoryCopyWithSentinel();
+}
+
 extension DerivedForFactoryOrmExtension on DerivedForFactory {
+  static const _DerivedForFactoryCopyWithSentinel _copyWithSentinel =
+      _DerivedForFactoryCopyWithSentinel();
+  DerivedForFactory copyWith({
+    Object? id = _copyWithSentinel,
+    Object? baseName = _copyWithSentinel,
+    Object? layerOneNotes = _copyWithSentinel,
+    Object? layerTwoFlag = _copyWithSentinel,
+  }) {
+    return DerivedForFactory.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      baseName: identical(baseName, _copyWithSentinel)
+          ? this.baseName
+          : baseName as String?,
+      layerOneNotes: identical(layerOneNotes, _copyWithSentinel)
+          ? this.layerOneNotes
+          : layerOneNotes as Map<String, Object?>?,
+      layerTwoFlag: identical(layerTwoFlag, _copyWithSentinel)
+          ? this.layerTwoFlag
+          : layerTwoFlag as bool?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DerivedForFactoryDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static DerivedForFactory fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DerivedForFactoryDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

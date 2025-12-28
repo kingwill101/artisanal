@@ -145,6 +145,18 @@ class UniqueUsers {
   /// {@macro ormed.repository}
   static Repository<$UniqueUser> repo([String? connection]) =>
       Model.repository<$UniqueUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $UniqueUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UniqueUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $UniqueUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$UniqueUserDefinition.toMap(model, registry: registry);
 }
 
 class UniqueUserModelFactory {
@@ -395,6 +407,16 @@ class $UniqueUser extends UniqueUser with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $UniqueUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UniqueUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UniqueUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -422,7 +444,37 @@ class $UniqueUser extends UniqueUser with ModelAttributes implements OrmEntity {
   }
 }
 
+class _UniqueUserCopyWithSentinel {
+  const _UniqueUserCopyWithSentinel();
+}
+
 extension UniqueUserOrmExtension on UniqueUser {
+  static const _UniqueUserCopyWithSentinel _copyWithSentinel =
+      _UniqueUserCopyWithSentinel();
+  UniqueUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+  }) {
+    return UniqueUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UniqueUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static UniqueUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UniqueUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
