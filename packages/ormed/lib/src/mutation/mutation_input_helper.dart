@@ -32,9 +32,13 @@ class MutationInputHelper<T extends OrmEntity> {
         model,
         applySentinelFiltering: applySentinelFiltering,
       ),
-      InsertDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
-      UpdateDto<dynamic> dto => _normalizeColumnNames(dto.toMap()),
-      Map<String, Object?> m => _normalizeColumnNames(m),
+      InsertDto<dynamic> dto => _encodeInsertMap(
+        _normalizeColumnNames(dto.toMap()),
+      ),
+      UpdateDto<dynamic> dto => _encodeInsertMap(
+        _normalizeColumnNames(dto.toMap()),
+      ),
+      Map<String, Object?> m => _encodeInsertMap(_normalizeColumnNames(m)),
       _ => throw ArgumentError.value(
         input,
         'input',

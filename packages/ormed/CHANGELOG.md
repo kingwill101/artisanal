@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-dev+5
+
+- **Fixed**: Treat driver SQL NULL wrapper values as null when applying timestamp defaults.
+- **Improved**: Generated codecs now omit virtual attributes (timestamps/soft deletes) unless explicitly set.
+- **Added**: Core tests for SQL NULL handling helpers.
+- **Fixed**: JSON casts now accept raw strings and mixed JSON values for `Object?` fields.
+- **Fixed**: JSON cast decoding now handles byte payloads from MySQL/MariaDB drivers.
+- **Fixed**: Map/DTO insert & upsert inputs now apply field codecs (casts) consistently.
+
 ## 0.1.0-dev+4
 
 - **Added**: Relationship touching with `touches`, `touch()`, and `touchOwners()` for keeping related `updated_at` values in sync.

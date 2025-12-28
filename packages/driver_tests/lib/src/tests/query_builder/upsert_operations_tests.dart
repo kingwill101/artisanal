@@ -105,6 +105,52 @@ void runUpsertOperationsTests() {
       expect(updated.active, isTrue);
     });
 
+    test('upsert() handles json casts across value types', () async {
+      final record = await dataSource.query<JsonValueRecord>().upsert({
+        'id': 'json-value-1',
+        'object_value': 'done',
+        'string_value': 'ok',
+        'map_dynamic': {'count': 2},
+        'map_object': {'flag': true},
+        'list_dynamic': [1, 'two'],
+        'list_object': [
+          false,
+          {'key': 'value'},
+        ],
+      });
+
+      expect(record.objectValue, 'done');
+      expect(record.stringValue, 'ok');
+      expect(record.mapDynamic, equals({'count': 2}));
+      expect(record.mapObject, equals({'flag': true}));
+      expect(record.listDynamic, equals([1, 'two']));
+      expect(
+        record.listObject,
+        equals([
+          false,
+          {'key': 'value'},
+        ]),
+      );
+
+      final fetched = await dataSource
+          .query<JsonValueRecord>()
+          .whereEquals('id', 'json-value-1')
+          .first();
+      expect(fetched, isNotNull);
+      expect(fetched?.objectValue, 'done');
+      expect(fetched?.stringValue, 'ok');
+      expect(fetched?.mapDynamic, equals({'count': 2}));
+      expect(fetched?.mapObject, equals({'flag': true}));
+      expect(fetched?.listDynamic, equals([1, 'two']));
+      expect(
+        fetched?.listObject,
+        equals([
+          false,
+          {'key': 'value'},
+        ]),
+      );
+    });
+
     test('upsertMany() inserts multiple new records', () async {
       final users = await dataSource.query<User>().upsertMany([
         {'email': 'batch1@example.com', 'active': true},

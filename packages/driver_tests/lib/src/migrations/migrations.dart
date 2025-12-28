@@ -24,3 +24,4 @@ export 'create_nullable_relations_test_table.dart';
 export 'create_scoped_users_table.dart';
 export 'create_mixed_constructors_table.dart';
 export 'create_insert_defaults_table.dart';
+export 'create_json_value_records_table.dart';

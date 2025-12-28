@@ -1,10 +1,23 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:carbonized/carbonized.dart';
 import 'package:decimal/decimal.dart';
 import 'package:ormed/src/model/model.dart';
 
 import 'exceptions.dart';
+
+Map<String, Object?> _stringKeyMap(Map value) {
+  final result = <String, Object?>{};
+  for (final entry in value.entries) {
+    final key = entry.key;
+    if (key is! String) {
+      throw FormatException('Expected string keys in JSON map, got $key.');
+    }
+    result[key] = entry.value;
+  }
+  return result;
+}
 
 /// Converts between backend driver payloads and Dart values.
 abstract class ValueCodec<TDart> {
@@ -163,11 +176,43 @@ class JsonCodec extends ValueCodec<Map<String, Object?>> {
   Map<String, Object?>? decode(Object? value) {
     if (value == null) return null;
     if (value is Map<String, Object?>) return value;
+    if (value is Map) {
+      return _stringKeyMap(value);
+    }
     if (value is String) {
       final decoded = jsonDecode(value) as Map<String, dynamic>;
       return decoded.map((key, dynamic entry) => MapEntry(key, entry));
     }
     throw FormatException('Cannot decode $value to Map<String, Object?>');
+  }
+}
+
+/// Codec for JSON values of any type (object, array, string, number, bool).
+///
+/// This is useful for `Object?` fields that use `cast: 'json'`.
+class JsonValueCodec extends ValueCodec<Object?> {
+  const JsonValueCodec();
+
+  @override
+  Object? encode(Object? value) {
+    if (value == null) return null;
+    return jsonEncode(value);
+  }
+
+  @override
+  Object? decode(Object? value) {
+    if (value == null) return null;
+    if (value is Map || value is List || value is num || value is bool) {
+      return value;
+    }
+    if (value is String) {
+      try {
+        return jsonDecode(value);
+      } on FormatException {
+        return value;
+      }
+    }
+    return value;
   }
 }
 
@@ -274,15 +319,22 @@ class ValueCodecRegistry {
   final Map<String, AttributeCastHandler> _castHandlers;
 
   /// Clone the registry with additional codecs. Driver overlays are copied.
+  /// Encrypter sharing can be disabled via [shareEncrypter].
   ValueCodecRegistry fork({
     Map<String, ValueCodec<dynamic>> codecs = const {},
     ValueEncrypter? encrypter,
     Map<String, AttributeCastHandler>? castHandlers,
+    bool shareEncrypter = true,
   }) => ValueCodecRegistry._(
     {..._codecs, ...codecs},
     _cloneDriverCodecs(_driverCodecs),
     activeDriver: _activeDriver,
-    encrypterRef: _EncrypterRef(encrypter ?? _encrypterRef.value),
+    encrypterRef:
+        encrypter != null
+            ? _EncrypterRef(encrypter)
+            : (shareEncrypter
+                ? _encrypterRef
+                : _EncrypterRef(_encrypterRef.value)),
     castHandlers:
         castHandlers ?? Map<String, AttributeCastHandler>.from(_castHandlers),
   );
@@ -482,6 +534,9 @@ class ValueCodecRegistry {
             : decimal.toStringAsFixed(scale);
       case 'enum':
         return _encodeEnum(value, field);
+      case 'json':
+      case 'object':
+        return _encodeJsonCast(value, field);
       case 'encrypted':
         if (operation == CastOperation.serialize) return value;
         return _encodeEncrypted(parsed, value, field, this);
@@ -555,6 +610,9 @@ class ValueCodecRegistry {
         return _coerceDecimal(value) as T?;
       case 'enum':
         return _decodeEnum(value, field) as T?;
+      case 'json':
+      case 'object':
+        return _decodeJsonCast<T>(value, field);
       case 'encrypted':
         if (operation == CastOperation.assign) {
           return value as T?;
@@ -567,6 +625,186 @@ class ValueCodecRegistry {
       throw CodecNotFound(key, field);
     }
     return codec.decode(value) as T?;
+  }
+
+  Object? _encodeJsonCast(Object? value, FieldDefinition? field) {
+    if (value == null) return null;
+    if (_isJsonMapField(field)) {
+      final map = _coerceJsonMap(value);
+      return jsonEncode(map);
+    }
+    if (_isJsonListField(field)) {
+      final list = _coerceJsonList(value);
+      return jsonEncode(list);
+    }
+    return jsonEncode(value);
+  }
+
+  T? _decodeJsonCast<T>(Object? value, FieldDefinition? field) {
+    if (value == null) return null;
+    if (_isJsonMapField(field)) {
+      if (_isDynamicMapField(field)) {
+        return _decodeJsonMapDynamic(value) as T?;
+      }
+      return _decodeJsonMap(value) as T?;
+    }
+    if (_isJsonListField(field)) {
+      return _decodeJsonList(value) as T?;
+    }
+    return _decodeJsonValue(value, allowRawString: true) as T?;
+  }
+
+  bool _isJsonMapField(FieldDefinition? field) {
+    final type = _jsonFieldType(field);
+    return type == 'Map' || type.startsWith('Map<');
+  }
+
+  bool _isJsonListField(FieldDefinition? field) {
+    final type = _jsonFieldType(field);
+    return type == 'List' || type.startsWith('List<');
+  }
+
+  String _jsonFieldType(FieldDefinition? field) {
+    final raw = field?.resolvedType ?? field?.dartType ?? '';
+    return raw.replaceAll('?', '');
+  }
+
+  bool _isDynamicMapField(FieldDefinition? field) {
+    final type = _jsonFieldType(field);
+    return type == 'Map<String, dynamic>' || type == 'Map<String,dynamic>';
+  }
+
+  Map<String, Object?> _coerceJsonMap(Object? value) {
+    if (value is Map) {
+      return _stringKeyMap(value);
+    }
+    if (value is String) {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        return _stringKeyMap(decoded);
+      }
+    }
+    throw FormatException('Cannot encode $value as JSON object.');
+  }
+
+  List<Object?> _coerceJsonList(Object? value) {
+    if (value is List) {
+      return List<Object?>.from(value);
+    }
+    if (value is String) {
+      final decoded = jsonDecode(value);
+      if (decoded is List) {
+        return List<Object?>.from(decoded);
+      }
+    }
+    throw FormatException('Cannot encode $value as JSON array.');
+  }
+
+  Map<String, Object?> _decodeJsonMap(Object? value) {
+    if (value is Map) {
+      return _stringKeyMap(value);
+    }
+    if (value is Uint8List || value is TypedData) {
+      final jsonString = _decodeJsonString(value);
+      if (jsonString != null) {
+        final decoded = jsonDecode(jsonString);
+        if (decoded is Map) {
+          return _stringKeyMap(decoded);
+        }
+      }
+    } else if (value is String) {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        return _stringKeyMap(decoded);
+      }
+    }
+    throw FormatException('Cannot decode $value to Map<String, Object?>.');
+  }
+
+  Map<String, dynamic> _decodeJsonMapDynamic(Object? value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(_stringKeyMap(value));
+    }
+    if (value is Uint8List || value is TypedData) {
+      final jsonString = _decodeJsonString(value);
+      if (jsonString != null) {
+        final decoded = jsonDecode(jsonString);
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(_stringKeyMap(decoded));
+        }
+      }
+    } else if (value is String) {
+      final decoded = jsonDecode(value);
+      if (decoded is Map) {
+        return Map<String, dynamic>.from(_stringKeyMap(decoded));
+      }
+    }
+    throw FormatException('Cannot decode $value to Map<String, dynamic>.');
+  }
+
+  List<Object?> _decodeJsonList(Object? value) {
+    if (value is Uint8List || value is TypedData) {
+      final jsonString = _decodeJsonString(value);
+      if (jsonString != null) {
+        final decoded = jsonDecode(jsonString);
+        if (decoded is List) {
+          return List<Object?>.from(decoded);
+        }
+      }
+    } else if (value is List) {
+      return List<Object?>.from(value);
+    } else if (value is String) {
+      final decoded = jsonDecode(value);
+      if (decoded is List) {
+        return List<Object?>.from(decoded);
+      }
+    }
+    throw FormatException('Cannot decode $value to List<Object?>.');
+  }
+
+  Object? _decodeJsonValue(Object? value, {required bool allowRawString}) {
+    if (value == null) return null;
+    if (value is Map || value is num || value is bool) {
+      return value;
+    }
+    if (value is Uint8List || value is TypedData) {
+      final jsonString = _decodeJsonString(value);
+      if (jsonString != null) {
+        try {
+          return jsonDecode(jsonString);
+        } on FormatException {
+          if (allowRawString) {
+            return jsonString;
+          }
+          rethrow;
+        }
+      }
+    } else if (value is List) {
+      return value;
+    } else if (value is String) {
+      try {
+        return jsonDecode(value);
+      } on FormatException {
+        if (allowRawString) {
+          return value;
+        }
+        rethrow;
+      }
+    }
+    return value;
+  }
+
+  String? _decodeJsonString(Object? value) {
+    if (value is String) return value;
+    if (value is Uint8List) return utf8.decode(value);
+    if (value is TypedData) {
+      final bytes = value.buffer.asUint8List(
+        value.offsetInBytes,
+        value.lengthInBytes,
+      );
+      return utf8.decode(bytes);
+    }
+    return null;
   }
 
   ValueCodec<dynamic>? _driverCodecForKey(String key) {
@@ -630,7 +868,8 @@ String _normalizeCastKey(String key) => key.trim().toLowerCase();
 ///
 /// Basic types use IdentityCodec (no conversion).
 /// Cast keys support Laravel-style @OrmField(cast: 'json') syntax:
-/// - 'json' / 'object': Encodes Map to JSON string, decodes JSON string to Map
+/// - 'json': Encodes Map to JSON string, decodes JSON string to Map
+/// - 'object': Encodes any JSON value, decodes JSON string to dynamic value
 /// - 'array': Encodes List to JSON string, decodes JSON string to List
 Map<String, ValueCodec<dynamic>> get _defaultCodecs => const {
   // Basic types
@@ -661,7 +900,7 @@ Map<String, ValueCodec<dynamic>> get _defaultCodecs => const {
   // Common cast keys (Laravel-style)
   'json': JsonCodec(),
   'array': JsonArrayCodec(),
-  'object': JsonCodec(), // Alias for json
+  'object': JsonValueCodec(), // Alias for json values
 };
 
 class _CastKey {

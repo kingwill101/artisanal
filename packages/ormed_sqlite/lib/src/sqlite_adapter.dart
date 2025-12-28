@@ -1985,9 +1985,15 @@ class SqliteDriverAdapter
     final metadata = definition.metadata;
     final overrideCast = metadata.fieldOverrides[column]?.cast;
     final cast = overrideCast ?? metadata.casts[column];
+    final field = definition.fieldByColumn(column);
     if (cast != null) {
       try {
-        return _codecs.encodeByKey(cast, value);
+        final normalizedCast = cast.trim().toLowerCase();
+        if ((normalizedCast == 'json' || normalizedCast == 'object') &&
+            value is String) {
+          return value;
+        }
+        return _codecs.encodeCast(cast, value, field: field);
       } on TypeError {
         return value;
       }
@@ -1995,7 +2001,6 @@ class SqliteDriverAdapter
     if (value is Map || value is List) {
       return jsonEncode(value);
     }
-    final field = definition.fieldByColumn(column);
     if (field != null) {
       try {
         return _codecs.encodeField(field, value);
@@ -2028,14 +2033,14 @@ class SqliteDriverAdapter
     final metadata = definition.metadata;
     final overrideCast = metadata.fieldOverrides[column]?.cast;
     final cast = overrideCast ?? metadata.casts[column];
+    final field = definition.fieldByColumn(column);
     if (cast != null) {
       try {
-        return _codecs.decodeByKey(cast, value);
+        return _codecs.decodeCast(cast, value, field: field);
       } on TypeError {
         return value;
       }
     }
-    final field = definition.fieldByColumn(column);
     if (field != null) {
       try {
         return _codecs.decodeField(field, value);

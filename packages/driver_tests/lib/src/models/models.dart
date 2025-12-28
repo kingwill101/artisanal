@@ -10,6 +10,7 @@ export 'custom_soft_delete.dart';
 export 'driver_override.dart';
 export 'derived_for_factory.dart';
 export 'image.dart';
+export 'json_value_record.dart';
 export 'mutation_target.dart';
 export 'named_constructor_model.dart';
 export 'no_factory.dart';

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+5
+
+- **Fixed**: Insert builders now omit columns not provided so SQLite defaults (including timestamps) apply.
+- **Fixed**: JSON cast encoding/decoding now uses cast semantics to accept scalar JSON values.
+
 ## 0.1.0-dev+4
 
 - **Added**: Support for through relations, polymorphic relations, and advanced query helpers.
