@@ -6,6 +6,8 @@ import 'package:ormed_postgres/ormed_postgres.dart';
 import 'package:test/test.dart';
 
 void main() {
+  final uniqueSchema = 'test_codec_${DateTime.now().millisecondsSinceEpoch}';
+
   group('Postgres codecs', () {
     late DataSource dataSource;
     late PostgresDriverAdapter driverAdapter;
@@ -47,28 +49,38 @@ void main() {
           driver: driverAdapter,
           entities: [...generatedOrmModelDefinitions, eventRecordDefinition],
           codecs: customCodecs,
+          defaultSchema: uniqueSchema,
         ),
       );
 
       await dataSource.init();
+
+      await driverAdapter.executeRaw(
+        'CREATE SCHEMA IF NOT EXISTS "$uniqueSchema"',
+      );
+      await driverAdapter.executeRaw('SET search_path TO "$uniqueSchema"');
     });
 
     tearDownAll(() async {
+      await driverAdapter.executeRaw(
+        'DROP SCHEMA IF EXISTS "$uniqueSchema" CASCADE',
+      );
       await dataSource.dispose();
     });
 
     test('jsonb, arrays, and intervals round-trip through repositories', () async {
       final schemaDriver = driverAdapter as SchemaDriver;
+      final schemaBuilder = SchemaBuilder(defaultSchema: uniqueSchema);
 
       // Drop table if it exists from previous test run
       try {
-        final dropBuilder = SchemaBuilder()..drop('event_records');
+        final dropBuilder = schemaBuilder..drop('event_records');
         await schemaDriver.applySchemaPlan(dropBuilder.build());
       } catch (_) {
         // Ignore if table doesn't exist
       }
 
-      final builder = SchemaBuilder()
+      final builder = SchemaBuilder(defaultSchema: uniqueSchema)
         ..create('event_records', (table) {
           table.increments('id');
           table.jsonb('metadata').nullable();
