@@ -147,8 +147,8 @@ class ModelDefinitionEmitter {
               : null;
           final args = accessor.takesModel
               ? valueExpr == null
-                  ? modelExpr
-                  : '$modelExpr, $valueExpr'
+                    ? modelExpr
+                    : '$modelExpr, $valueExpr'
               : valueExpr;
           buffer.writeln(
             "    '$attribute': (model, value) => $target.${accessor.name}(${args ?? ''}),",
@@ -259,7 +259,9 @@ class ModelDefinitionEmitter {
   }
 
   String _castValue(String valueName, String dartType) {
-    if (dartType == 'dynamic' || dartType == 'Object?' || dartType == 'Object') {
+    if (dartType == 'dynamic' ||
+        dartType == 'Object?' ||
+        dartType == 'Object') {
       return valueName;
     }
     return '$valueName as $dartType';
@@ -286,9 +288,7 @@ class ModelDefinitionEmitter {
         buffer.writeln("  through: '${escape(relation.through!)}',");
       }
       if (relation.throughModel != null) {
-        buffer.writeln(
-          "  throughModel: '${escape(relation.throughModel!)}',",
-        );
+        buffer.writeln("  throughModel: '${escape(relation.throughModel!)}',");
       }
       if (relation.throughForeignKey != null) {
         buffer.writeln(

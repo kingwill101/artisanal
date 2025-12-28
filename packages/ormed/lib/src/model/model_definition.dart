@@ -12,12 +12,10 @@ typedef UntrackedModelEncoder =
     Map<String, Object?> Function(Object model, ValueCodecRegistry registry);
 
 /// Reads a model attribute value using a custom accessor.
-typedef AttributeAccessor =
-    Object? Function(OrmEntity model, Object? value);
+typedef AttributeAccessor = Object? Function(OrmEntity model, Object? value);
 
 /// Transforms a model attribute value using a custom mutator.
-typedef AttributeMutator =
-    Object? Function(OrmEntity model, Object? value);
+typedef AttributeMutator = Object? Function(OrmEntity model, Object? value);
 
 /// Runtime description of a generated ORM model.
 ///

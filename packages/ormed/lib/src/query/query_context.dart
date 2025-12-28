@@ -54,10 +54,9 @@ class QueryContext implements ConnectionResolver {
     TransactionHook? afterTransactionHook,
     QueryLogHook? queryLogHook,
     bool Function()? pretendResolver,
-  }) : codecRegistry =
-           (codecRegistry ?? ValueCodecRegistry.instance).forDriver(
-             driver.metadata.name,
-           ),
+  }) : codecRegistry = (codecRegistry ?? ValueCodecRegistry.instance).forDriver(
+         driver.metadata.name,
+       ),
        scopeRegistry = scopeRegistry ?? ScopeRegistry(),
        events = events ?? EventBus.instance,
        queryCache = QueryCache(),

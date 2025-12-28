@@ -515,16 +515,17 @@ class ValueCodecRegistry {
     final handler = _castHandlerFor(parsed.base);
     if (handler != null) {
       return handler.decode(
-        value,
-        AttributeCastContext(
-          cast: parsed.raw,
-          base: parsed.base,
-          arguments: parsed.args,
-          registry: this,
-          operation: operation,
-          field: field,
-        ),
-      ) as T?;
+            value,
+            AttributeCastContext(
+              cast: parsed.raw,
+              base: parsed.base,
+              arguments: parsed.args,
+              registry: this,
+              operation: operation,
+              field: field,
+            ),
+          )
+          as T?;
     }
     switch (parsed.normalizedBase) {
       case 'bool':
@@ -773,8 +774,7 @@ DateTime? _coerceDateTime(Object? value) {
       if (normalized.contains(' ')) {
         normalized = normalized.replaceFirst(' ', 'T');
       }
-      if (RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$')
-          .hasMatch(normalized)) {
+      if (RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$').hasMatch(normalized)) {
         normalized = '$normalized:00';
       }
     }

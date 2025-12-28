@@ -39,7 +39,8 @@ class ModelContext {
           inferTableName(element.displayName),
       schema = annotation.peek('schema')?.stringValue,
       generateCodec = annotation.peek('generateCodec')?.boolValue ?? true,
-      annotationTimestampsFlag = annotation.peek('timestamps')?.boolValue ?? true,
+      annotationTimestampsFlag =
+          annotation.peek('timestamps')?.boolValue ?? true,
       mixinSoftDeletes = element.mixins.any(isSoftDeletesMixin),
       mixinSoftDeletesTZ = element.mixins.any(isSoftDeletesTZMixin),
       mixinTimestamps = element.mixins.any(isTimestampsMixin),
@@ -412,8 +413,11 @@ class ModelContext {
     final effectiveCodecType = codecType != null
         ? maybeTypeName(codecType)
         : (castString ?? modelLevelCast);
-    final normalizedCast =
-        effectiveCodecType?.trim().toLowerCase().split(':').first;
+    final normalizedCast = effectiveCodecType
+        ?.trim()
+        .toLowerCase()
+        .split(':')
+        .first;
     if (normalizedCast == 'enum' && enumType == null) {
       throw InvalidGenerationSourceError(
         '@OrmField(cast: \'enum\') requires an enum-typed field on $className.',
@@ -513,7 +517,8 @@ class ModelContext {
           pivotForeignKey: annotation.peek('pivotForeignKey')?.stringValue,
           pivotRelatedKey: annotation.peek('pivotRelatedKey')?.stringValue,
           pivotColumns: readStringList(annotation.peek('withPivot')),
-          pivotTimestamps: annotation.peek('withTimestamps')?.boolValue ?? false,
+          pivotTimestamps:
+              annotation.peek('withTimestamps')?.boolValue ?? false,
           pivotModel: pivotModel,
           morphType: annotation.peek('morphType')?.stringValue,
           morphClass: annotation.peek('morphClass')?.stringValue,

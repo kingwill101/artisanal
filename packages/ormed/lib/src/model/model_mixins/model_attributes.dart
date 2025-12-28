@@ -87,8 +87,9 @@ mixin ModelAttributes {
   /// Upserts an attribute value.
   void setAttribute(String column, Object? value) {
     final mutator = _mutatorFor(column);
-    final nextValue =
-        mutator == null ? value : mutator(this as OrmEntity, value);
+    final nextValue = mutator == null
+        ? value
+        : mutator(this as OrmEntity, value);
     _ensureAttributes()[column] = nextValue;
   }
 
@@ -264,7 +265,8 @@ mixin ModelAttributes {
     final codecs = registry ?? ValueCodecRegistry.instance;
     final result = <String, Object?>{};
     final definition = _definition;
-    final accessors = definition?.accessors ?? const <String, AttributeAccessor>{};
+    final accessors =
+        definition?.accessors ?? const <String, AttributeAccessor>{};
     final attrs = _ensureAttributes();
     for (final entry in attrs.entries) {
       if (!_shouldSerializeColumn(entry.key, includeHidden, inspector)) {
@@ -274,16 +276,15 @@ mixin ModelAttributes {
       final value = accessor == null
           ? entry.value
           : accessor(this as OrmEntity, entry.value);
-      result[entry.key] =
-          accessor == null
-              ? _encodeAttribute(
-                column: entry.key,
-                value: value,
-                registry: codecs,
-                definition: definition,
-                inspector: inspector,
-              )
-              : codecs.encodeValue(value);
+      result[entry.key] = accessor == null
+          ? _encodeAttribute(
+              column: entry.key,
+              value: value,
+              registry: codecs,
+              definition: definition,
+              inspector: inspector,
+            )
+          : codecs.encodeValue(value);
     }
 
     final appends = _metadata.appends;

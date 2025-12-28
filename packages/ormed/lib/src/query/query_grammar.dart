@@ -1646,10 +1646,9 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
-        final morphAlias =
-            segment.usesPivot && segment.morphOnPivot
-                ? (aliasData.pivotAlias ?? aliasData.alias)
-                : aliasData.alias;
+        final morphAlias = segment.usesPivot && segment.morphOnPivot
+            ? (aliasData.pivotAlias ?? aliasData.alias)
+            : aliasData.alias;
         whereClauses.add(
           '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',
@@ -1721,10 +1720,9 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
-      final morphAlias =
-          segment.usesPivot && segment.morphOnPivot
-              ? pivotAlias ?? targetAlias
-              : targetAlias;
+      final morphAlias = segment.usesPivot && segment.morphOnPivot
+          ? pivotAlias ?? targetAlias
+          : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
@@ -1817,10 +1815,9 @@ class _SelectCompilation {
         );
     }
     if (segment.usesMorph) {
-      final morphAlias =
-          segment.usesPivot && segment.morphOnPivot
-              ? pivotAlias ?? targetAlias
-              : targetAlias;
+      final morphAlias = segment.usesPivot && segment.morphOnPivot
+          ? pivotAlias ?? targetAlias
+          : targetAlias;
       buffer
         ..write(' AND ')
         ..write(
@@ -1863,8 +1860,7 @@ class _SelectCompilation {
     for (final segment in path.segments) {
       final alias = _nextAlias('rel');
       final pivotAlias = segment.usesPivot ? _nextAlias('pivot') : null;
-      final throughAlias =
-          segment.usesThrough ? _nextAlias('through') : null;
+      final throughAlias = segment.usesThrough ? _nextAlias('through') : null;
       result.add(
         _RelationAlias(segment, alias, pivotAlias, throughAlias, parent),
       );
@@ -2053,10 +2049,9 @@ class _SelectCompilation {
       }
 
       if (segment.usesMorph) {
-        final morphAlias =
-            segment.usesPivot && segment.morphOnPivot
-                ? (aliasData.pivotAlias ?? aliasData.alias)
-                : aliasData.alias;
+        final morphAlias = segment.usesPivot && segment.morphOnPivot
+            ? (aliasData.pivotAlias ?? aliasData.alias)
+            : aliasData.alias;
         whereClauses.add(
           '$morphAlias.${grammar.wrapIdentifier(segment.morphTypeColumn!)} = '
           '${grammar.parameterPlaceholder()}',

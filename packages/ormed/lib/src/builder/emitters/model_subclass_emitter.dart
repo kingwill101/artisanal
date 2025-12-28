@@ -356,9 +356,7 @@ class ModelSubclassEmitter {
 
     for (final accessor in context.accessors) {
       buffer.writeln('  ${accessor.returnType} get ${accessor.name} {');
-      buffer.writeln(
-        '    return ${_accessorInvocation(accessor, className)};',
-      );
+      buffer.writeln('    return ${_accessorInvocation(accessor, className)};');
       buffer.writeln('  }');
     }
 
@@ -369,9 +367,7 @@ class ModelSubclassEmitter {
         buffer.writeln(
           '    ${_mutatorInvocation(mutator, className, 'value')};',
         );
-        buffer.writeln(
-          "    setRawAttribute('${mutator.attribute}', value);",
-        );
+        buffer.writeln("    setRawAttribute('${mutator.attribute}', value);");
         buffer.writeln('  }');
       } else {
         buffer.writeln(
@@ -380,9 +376,7 @@ class ModelSubclassEmitter {
         buffer.writeln(
           '    final result = ${_mutatorInvocation(mutator, className, 'value')};',
         );
-        buffer.writeln(
-          "    setRawAttribute('${mutator.attribute}', result);",
-        );
+        buffer.writeln("    setRawAttribute('${mutator.attribute}', result);");
         buffer.writeln('    return result;');
         buffer.writeln('  }');
       }
@@ -397,19 +391,17 @@ class ModelSubclassEmitter {
     if (accessor.isGetter) {
       return '$className.${accessor.name}';
     }
-    final valueExpr =
-        accessor.takesValue
-            ? _castValue(
-              "getRawAttribute('${accessor.attribute}')",
-              accessor.valueType!,
-            )
-            : null;
-    final args =
-        accessor.takesModel
-            ? valueExpr == null
-                ? 'this'
-                : 'this, $valueExpr'
-            : valueExpr ?? '';
+    final valueExpr = accessor.takesValue
+        ? _castValue(
+            "getRawAttribute('${accessor.attribute}')",
+            accessor.valueType!,
+          )
+        : null;
+    final args = accessor.takesModel
+        ? valueExpr == null
+              ? 'this'
+              : 'this, $valueExpr'
+        : valueExpr ?? '';
     return '$className.${accessor.name}($args)';
   }
 
@@ -470,7 +462,9 @@ class ModelSubclassEmitter {
   }
 
   String _castValue(String valueName, String dartType) {
-    if (dartType == 'dynamic' || dartType == 'Object?' || dartType == 'Object') {
+    if (dartType == 'dynamic' ||
+        dartType == 'Object?' ||
+        dartType == 'Object') {
       return valueName;
     }
     return '$valueName as $dartType';

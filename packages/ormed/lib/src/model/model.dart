@@ -645,11 +645,7 @@ abstract class Model<TModel extends Model<TModel>>
   }) {
     final codecs = _effectiveCodecRegistry(registry);
     final normalized = _normalizeFillAttributes(attributes, codecs);
-    _asAttributes.fillAttributes(
-      normalized,
-      strict: strict,
-      registry: codecs,
-    );
+    _asAttributes.fillAttributes(normalized, strict: strict, registry: codecs);
     return _self();
   }
 
@@ -670,21 +666,14 @@ abstract class Model<TModel extends Model<TModel>>
         pending[entry.key] = entry.value;
       }
     }
-    _asAttributes.fillAttributes(
-      pending,
-      strict: strict,
-      registry: codecs,
-    );
+    _asAttributes.fillAttributes(pending, strict: strict, registry: codecs);
     return _self();
   }
 
   /// Temporarily disables mass-assignment protection while [callback] runs.
   ///
   /// Supports maps, tracked models, DTOs, and partial entities.
-  Model<TModel> forceFill(
-    Object attributes, {
-    ValueCodecRegistry? registry,
-  }) {
+  Model<TModel> forceFill(Object attributes, {ValueCodecRegistry? registry}) {
     return ModelAttributes.unguarded(
       () => fill(
         attributes,
@@ -900,10 +889,9 @@ abstract class Model<TModel extends Model<TModel>>
       final resolver = _resolveResolverFor(def);
       final context = _requireQueryContext(resolver);
       for (final relationName in touches) {
-        final relationDef = def.relations.cast<RelationDefinition?>().firstWhere(
-          (r) => r?.name == relationName,
-          orElse: () => null,
-        );
+        final relationDef = def.relations
+            .cast<RelationDefinition?>()
+            .firstWhere((r) => r?.name == relationName, orElse: () => null);
         if (relationDef == null) {
           continue;
         }
@@ -1373,10 +1361,7 @@ abstract class Model<TModel extends Model<TModel>>
 
   bool _isIgnoringTouchForDefinition(ModelDefinition<OrmEntity> definition) {
     if (!usesTimestamps) return true;
-    if (Model.isIgnoringTouch(
-      runtimeType,
-      modelName: definition.modelName,
-    )) {
+    if (Model.isIgnoringTouch(runtimeType, modelName: definition.modelName)) {
       return true;
     }
     if (_updatedAtField(definition) == null) return true;
@@ -1444,10 +1429,7 @@ abstract class Model<TModel extends Model<TModel>>
   ) async {
     final target = context.registry.expectByName(relationDef.targetModel);
     if (!_timestampsEnabledForDefinition(target)) return;
-    if (Model.isIgnoringTouch(
-      target.modelType,
-      modelName: target.modelName,
-    )) {
+    if (Model.isIgnoringTouch(target.modelType, modelName: target.modelName)) {
       return;
     }
 
@@ -1463,9 +1445,9 @@ abstract class Model<TModel extends Model<TModel>>
     if (updatedAtField == null) return;
 
     final query = context.queryFromDefinition(target as dynamic);
-    await query
-        .where(ownerKey, foreignValue)
-        .update({updatedAtField.columnName: _timestampValue(updatedAtField)});
+    await query.where(ownerKey, foreignValue).update({
+      updatedAtField.columnName: _timestampValue(updatedAtField),
+    });
   }
 
   Future<void> _touchHasOneOrMany(
@@ -1476,10 +1458,7 @@ abstract class Model<TModel extends Model<TModel>>
   ) async {
     final target = context.registry.expectByName(relationDef.targetModel);
     if (!_timestampsEnabledForDefinition(target)) return;
-    if (Model.isIgnoringTouch(
-      target.modelType,
-      modelName: target.modelName,
-    )) {
+    if (Model.isIgnoringTouch(target.modelType, modelName: target.modelName)) {
       return;
     }
 
@@ -1495,9 +1474,9 @@ abstract class Model<TModel extends Model<TModel>>
     if (updatedAtField == null) return;
 
     final query = context.queryFromDefinition(target as dynamic);
-    await query
-        .where(foreignKey, parentValue)
-        .update({updatedAtField.columnName: _timestampValue(updatedAtField)});
+    await query.where(foreignKey, parentValue).update({
+      updatedAtField.columnName: _timestampValue(updatedAtField),
+    });
   }
 
   Future<void> _touchManyToMany(
@@ -1508,10 +1487,7 @@ abstract class Model<TModel extends Model<TModel>>
   ) async {
     final target = context.registry.expectByName(relationDef.targetModel);
     if (!_timestampsEnabledForDefinition(target)) return;
-    if (Model.isIgnoringTouch(
-      target.modelType,
-      modelName: target.modelName,
-    )) {
+    if (Model.isIgnoringTouch(target.modelType, modelName: target.modelName)) {
       return;
     }
 
@@ -1534,7 +1510,10 @@ abstract class Model<TModel extends Model<TModel>>
     });
   }
 
-  Object? _attributeValue(ModelDefinition<OrmEntity> definition, String column) {
+  Object? _attributeValue(
+    ModelDefinition<OrmEntity> definition,
+    String column,
+  ) {
     if (_isTracked) {
       final value = _asAttributes.getAttribute<Object?>(column);
       if (value != null) return value;
@@ -2396,10 +2375,7 @@ abstract class Model<TModel extends Model<TModel>>
       return row;
     }).toList();
 
-    final pivotFieldDefs = _pivotModelFieldDefinitions(
-      relationDef,
-      resolver,
-    );
+    final pivotFieldDefs = _pivotModelFieldDefinitions(relationDef, resolver);
     final pivotDef = _createPivotDefinition(
       pivotTable,
       def.schema,
@@ -2799,10 +2775,7 @@ abstract class Model<TModel extends Model<TModel>>
       isInsert: false,
     );
 
-    final pivotFieldDefs = _pivotModelFieldDefinitions(
-      relationDef,
-      resolver,
-    );
+    final pivotFieldDefs = _pivotModelFieldDefinitions(relationDef, resolver);
     final pivotDef = _createPivotDefinition(
       pivotTable,
       def.schema,
@@ -2999,9 +2972,7 @@ abstract class Model<TModel extends Model<TModel>>
       return const {};
     }
     final definition = resolver.registry.expectByName(pivotModel);
-    return {
-      for (final field in definition.fields) field.columnName: field,
-    };
+    return {for (final field in definition.fields) field.columnName: field};
   }
 
   Map<String, FieldDefinition?> _pivotColumnDefinitions({

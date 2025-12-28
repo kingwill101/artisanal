@@ -495,18 +495,17 @@ class RelationLoader {
           if (targetRow == null) {
             continue;
           }
-          final model =
-              targetDefinition.fromMap(targetRow, registry: _codecRegistry);
+          final model = targetDefinition.fromMap(
+            targetRow,
+            registry: _codecRegistry,
+          );
           context.attachRuntimeMetadata(model);
           final pivotData = pivotDataForParent?[id];
           if (pivotData != null && model is ModelRelations) {
             final pivotValue = pivotModelDefinition == null
                 ? Map<String, Object?>.from(pivotData)
                 : _buildPivotModel(pivotModelDefinition, pivotData);
-            (model as ModelRelations).setRelation(
-              'pivot',
-              pivotValue,
-            );
+            (model as ModelRelations).setRelation('pivot', pivotValue);
           }
           models.add(model);
         }
@@ -615,7 +614,9 @@ class RelationLoader {
     final foreignKey = segment.parentKey;
     final morphColumn = segment.morphTypeColumn;
     if (morphColumn == null) {
-      throw StateError('Relation ${relation.name} requires a morph type column.');
+      throw StateError(
+        'Relation ${relation.name} requires a morph type column.',
+      );
     }
     if (load.predicate != null) {
       throw StateError(
@@ -648,7 +649,8 @@ class RelationLoader {
     }
 
     final lookupByType = <String, Map<Object?, OrmEntity>>{};
-    final nestedGroups = <ModelDefinition<OrmEntity>, List<QueryRow<OrmEntity>>>{};
+    final nestedGroups =
+        <ModelDefinition<OrmEntity>, List<QueryRow<OrmEntity>>>{};
 
     for (final entry in groupedIds.entries) {
       final typeName = entry.key;
@@ -746,7 +748,8 @@ class RelationLoader {
       case RelationKind.hasOne:
       case RelationKind.hasMany:
         final target = _registry.expectByName(relation.targetModel);
-        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
         if (parentKey == null) {
           throw StateError('Relation ${relation.name} requires a parent key.');
         }
@@ -763,7 +766,8 @@ class RelationLoader {
       case RelationKind.hasOneThrough:
       case RelationKind.hasManyThrough:
         final target = _registry.expectByName(relation.targetModel);
-        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
         if (parentKey == null) {
           throw StateError('Relation ${relation.name} requires a parent key.');
         }
@@ -779,9 +783,7 @@ class RelationLoader {
             relation.throughLocalKey ??
             throughDefinition.primaryKeyField?.columnName;
         if (throughChildKey == null) {
-          throw StateError(
-            'Relation ${relation.name} requires a through key.',
-          );
+          throw StateError('Relation ${relation.name} requires a through key.');
         }
         final relatedForeignKey =
             relation.foreignKey ?? '${throughDefinition.tableName}_id';
@@ -817,7 +819,8 @@ class RelationLoader {
         );
       case RelationKind.manyToMany:
         final target = _registry.expectByName(relation.targetModel);
-        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
         if (parentKey == null) {
           throw StateError('Relation ${relation.name} requires a parent key.');
         }
@@ -848,7 +851,8 @@ class RelationLoader {
       case RelationKind.morphOne:
       case RelationKind.morphMany:
         final target = _registry.expectByName(relation.targetModel);
-        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
         if (parentKey == null) {
           throw StateError('Relation ${relation.name} requires a parent key.');
         }
@@ -881,7 +885,8 @@ class RelationLoader {
       case RelationKind.morphToMany:
       case RelationKind.morphedByMany:
         final target = _registry.expectByName(relation.targetModel);
-        final parentKey = relation.localKey ?? parent.primaryKeyField?.columnName;
+        final parentKey =
+            relation.localKey ?? parent.primaryKeyField?.columnName;
         if (parentKey == null) {
           throw StateError('Relation ${relation.name} requires a parent key.');
         }
@@ -1044,10 +1049,7 @@ class RelationLoader {
     ModelDefinition<OrmEntity> pivotDefinition,
     Map<String, Object?> pivotData,
   ) {
-    final model = pivotDefinition.fromMap(
-      pivotData,
-      registry: _codecRegistry,
-    );
+    final model = pivotDefinition.fromMap(pivotData, registry: _codecRegistry);
     if (model is Model) {
       context.attachRuntimeMetadata(model);
     }

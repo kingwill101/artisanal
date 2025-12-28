@@ -57,7 +57,6 @@ mixin TimestampsImpl on ModelAttributes {
       ),
     });
   }
-
 }
 
 /// Implementation mixin for timezone-aware timestamp functionality.
@@ -121,7 +120,6 @@ mixin TimestampsTZImpl on ModelAttributes {
       ),
     });
   }
-
 }
 
 /// Implementation mixin for timezone-aware soft-delete functionality.

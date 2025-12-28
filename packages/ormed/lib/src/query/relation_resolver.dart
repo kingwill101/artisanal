@@ -196,9 +196,7 @@ class RelationResolver {
             relation.throughLocalKey ??
             throughDefinition.primaryKeyField?.columnName;
         if (throughChildKey == null) {
-          throw StateError(
-            'Relation ${relation.name} requires a through key.',
-          );
+          throw StateError('Relation ${relation.name} requires a through key.');
         }
         final relatedForeignKey =
             relation.foreignKey ?? '${throughDefinition.tableName}_id';
@@ -402,7 +400,9 @@ class RelationResolver {
     PredicateCallback<OrmEntity>? constraint,
   ) {
     if (constraint == null) return null;
-    if (path.segments.any((segment) => segment.relation.kind == RelationKind.morphTo)) {
+    if (path.segments.any(
+      (segment) => segment.relation.kind == RelationKind.morphTo,
+    )) {
       throw StateError(
         'Relation paths containing morphTo do not support constraint callbacks.',
       );
