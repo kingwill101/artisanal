@@ -1295,14 +1295,31 @@ class SqliteDriverAdapter
     if (plan.rows.isEmpty) {
       return _emptyShape;
     }
-    // Filter out auto-increment fields with value 0 or null - let SQLite generate them
+    // Only insert columns present in the input rows.
+    // Auto-increment fields are included only when explicitly set to a non-zero value.
     final columnsToInsert = plan.definition.fields
-        .where((f) {
-          if (!f.autoIncrement) return true;
-          final firstRowValue = plan.rows.first.values[f.columnName];
-          return firstRowValue != null && firstRowValue != 0;
+        .where((field) {
+          var provided = false;
+          var hasNonZeroAuto = false;
+          for (final row in plan.rows) {
+            if (!row.values.containsKey(field.columnName)) {
+              continue;
+            }
+            provided = true;
+            if (field.autoIncrement) {
+              final value = row.values[field.columnName];
+              if (value != null && value != 0) {
+                hasNonZeroAuto = true;
+                break;
+              }
+            }
+          }
+
+          if (!provided) return false;
+          if (!field.autoIncrement) return true;
+          return hasNonZeroAuto;
         })
-        .map((f) => f.columnName)
+        .map((field) => field.columnName)
         .toList();
 
     final columnSql = columnsToInsert.map(_quote).join(', ');

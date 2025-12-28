@@ -11,6 +11,7 @@ import 'query_builder/convenience_methods_tests.dart';
 import 'query_builder/date_time_tests.dart';
 import 'query_builder/fresh_tests.dart';
 import 'query_builder/generated_relation_accessors_tests.dart';
+import 'query_builder/insert_defaults_tests.dart';
 import 'query_builder/join_clauses_tests.dart';
 import 'query_builder/json_query_tests.dart';
 import 'query_builder/lazy_loading_tests.dart';
@@ -47,6 +48,7 @@ void runDriverQueryBuilderTests() {
   runRelationResolverCacheTests();
   runGeneratedRelationAccessorsTests();
   runCrudOperationsTests();
+  runInsertDefaultsTests();
   runUpsertOperationsTests();
 
   // New tests for missing coverage

@@ -1165,7 +1165,17 @@ class PostgresDriverAdapter
   _PostgresMutationShape _buildInsertShape(MutationPlan plan) {
     if (plan.rows.isEmpty) return _PostgresMutationShape.empty();
     final insertFields = plan.definition.fields
-        .where((field) => !_shouldUseDefaultForInsert(field, plan.rows))
+        .where((field) {
+          if (_shouldUseDefaultForInsert(field, plan.rows)) {
+            return false;
+          }
+          for (final row in plan.rows) {
+            if (row.values.containsKey(field.columnName)) {
+              return true;
+            }
+          }
+          return false;
+        })
         .toList(growable: false);
     final returning = plan.returning
         ? ' RETURNING ${_returningColumns(plan.definition)}'
