@@ -43,6 +43,8 @@ final ModelDefinition<$ItemWithIntPK> _$ItemWithIntPKDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -325,6 +327,11 @@ extension ItemWithIntPKOrmExtension on ItemWithIntPK {
   }
 }
 
+extension ItemWithIntPKPredicateFields on PredicateBuilder<ItemWithIntPK> {
+  PredicateField<ItemWithIntPK, int> get id =>
+      PredicateField<ItemWithIntPK, int>(this, 'id');
+}
+
 void registerItemWithIntPKEventHandlers(EventBus bus) {
   // No event handlers registered for ItemWithIntPK.
 }
@@ -365,6 +372,8 @@ _$ItemWithAutoIncrementDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -647,6 +656,12 @@ extension ItemWithAutoIncrementOrmExtension on ItemWithAutoIncrement {
   }
 }
 
+extension ItemWithAutoIncrementPredicateFields
+    on PredicateBuilder<ItemWithAutoIncrement> {
+  PredicateField<ItemWithAutoIncrement, int> get id =>
+      PredicateField<ItemWithAutoIncrement, int>(this, 'id');
+}
+
 void registerItemWithAutoIncrementEventHandlers(EventBus bus) {
   // No event handlers registered for ItemWithAutoIncrement.
 }
@@ -687,6 +702,8 @@ final ModelDefinition<$ItemWithUuidPK> _$ItemWithUuidPKDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -969,6 +986,11 @@ extension ItemWithUuidPKOrmExtension on ItemWithUuidPK {
   }
 }
 
+extension ItemWithUuidPKPredicateFields on PredicateBuilder<ItemWithUuidPK> {
+  PredicateField<ItemWithUuidPK, String> get id =>
+      PredicateField<ItemWithUuidPK, String>(this, 'id');
+}
+
 void registerItemWithUuidPKEventHandlers(EventBus bus) {
   // No event handlers registered for ItemWithUuidPK.
 }
@@ -1053,6 +1075,8 @@ final ModelDefinition<$Contact> _$ContactDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1451,6 +1475,17 @@ extension ContactOrmExtension on Contact {
   $Contact toTracked() {
     return $Contact.fromModel(this);
   }
+}
+
+extension ContactPredicateFields on PredicateBuilder<Contact> {
+  PredicateField<Contact, int> get id =>
+      PredicateField<Contact, int>(this, 'id');
+  PredicateField<Contact, String> get email =>
+      PredicateField<Contact, String>(this, 'email');
+  PredicateField<Contact, bool> get active =>
+      PredicateField<Contact, bool>(this, 'active');
+  PredicateField<Contact, String?> get name =>
+      PredicateField<Contact, String?>(this, 'name');
 }
 
 void registerContactEventHandlers(EventBus bus) {

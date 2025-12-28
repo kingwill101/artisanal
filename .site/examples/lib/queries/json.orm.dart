@@ -1,7 +1,7 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // dart format width=80
 
-part of 'user.dart';
+part of 'json.dart';
 
 // **************************************************************************
 // OrmModelGenerator
@@ -31,28 +31,17 @@ const FieldDefinition _$UserEmailField = FieldDefinition(
   autoIncrement: false,
 );
 
-const FieldDefinition _$UserNameField = FieldDefinition(
-  name: 'name',
-  columnName: 'name',
-  dartType: 'String',
-  resolvedType: 'String?',
+const FieldDefinition _$UserMetadataField = FieldDefinition(
+  name: 'metadata',
+  columnName: 'metadata',
+  dartType: 'Map<String, Object?>',
+  resolvedType: 'Map<String, Object?>?',
   isPrimaryKey: false,
   isNullable: true,
   isUnique: false,
   isIndexed: false,
   autoIncrement: false,
-);
-
-const FieldDefinition _$UserCreatedAtField = FieldDefinition(
-  name: 'createdAt',
-  columnName: 'created_at',
-  dartType: 'DateTime',
-  resolvedType: 'DateTime?',
-  isPrimaryKey: false,
-  isNullable: true,
-  isUnique: false,
-  isIndexed: false,
-  autoIncrement: false,
+  codecType: 'json',
 );
 
 Map<String, Object?> _encodeUserUntracked(
@@ -63,20 +52,14 @@ Map<String, Object?> _encodeUserUntracked(
   return <String, Object?>{
     'id': registry.encodeField(_$UserIdField, m.id),
     'email': registry.encodeField(_$UserEmailField, m.email),
-    'name': registry.encodeField(_$UserNameField, m.name),
-    'created_at': registry.encodeField(_$UserCreatedAtField, m.createdAt),
+    'metadata': registry.encodeField(_$UserMetadataField, m.metadata),
   };
 }
 
 final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
   modelName: 'User',
   tableName: 'users',
-  fields: const [
-    _$UserIdField,
-    _$UserEmailField,
-    _$UserNameField,
-    _$UserCreatedAtField,
-  ],
+  fields: const [_$UserIdField, _$UserEmailField, _$UserMetadataField],
   relations: const [],
   softDeleteColumn: 'deleted_at',
   metadata: ModelAttributesMetadata(
@@ -88,6 +71,7 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     appends: const <String>[],
     touches: const <String>[],
     timestamps: true,
+    fieldOverrides: const {'metadata': FieldAttributeMetadata(cast: 'json')},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -194,8 +178,7 @@ class _$UserCodec extends ModelCodec<$User> {
     return <String, Object?>{
       'id': registry.encodeField(_$UserIdField, model.id),
       'email': registry.encodeField(_$UserEmailField, model.email),
-      'name': registry.encodeField(_$UserNameField, model.name),
-      'created_at': registry.encodeField(_$UserCreatedAtField, model.createdAt),
+      'metadata': registry.encodeField(_$UserMetadataField, model.metadata),
     };
   }
 
@@ -206,25 +189,20 @@ class _$UserCodec extends ModelCodec<$User> {
     final String userEmailValue =
         registry.decodeField<String>(_$UserEmailField, data['email']) ??
         (throw StateError('Field email on User cannot be null.'));
-    final String? userNameValue = registry.decodeField<String?>(
-      _$UserNameField,
-      data['name'],
-    );
-    final DateTime? userCreatedAtValue = registry.decodeField<DateTime?>(
-      _$UserCreatedAtField,
-      data['created_at'],
-    );
+    final Map<String, Object?>? userMetadataValue = registry
+        .decodeField<Map<String, Object?>?>(
+          _$UserMetadataField,
+          data['metadata'],
+        );
     final model = $User(
       id: userIdValue,
       email: userEmailValue,
-      name: userNameValue,
-      createdAt: userCreatedAtValue,
+      metadata: userMetadataValue,
     );
     model._attachOrmRuntimeMetadata({
       'id': userIdValue,
       'email': userEmailValue,
-      'name': userNameValue,
-      'created_at': userCreatedAtValue,
+      'metadata': userMetadataValue,
     });
     return model;
   }
@@ -234,17 +212,15 @@ class _$UserCodec extends ModelCodec<$User> {
 ///
 /// Auto-increment/DB-generated fields are omitted by default.
 class UserInsertDto implements InsertDto<$User> {
-  const UserInsertDto({this.email, this.name, this.createdAt});
+  const UserInsertDto({this.email, this.metadata});
   final String? email;
-  final String? name;
-  final DateTime? createdAt;
+  final Map<String, Object?>? metadata;
 
   @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (email != null) 'email': email,
-      if (name != null) 'name': name,
-      if (createdAt != null) 'created_at': createdAt,
+      if (metadata != null) 'metadata': metadata,
     };
   }
 
@@ -252,17 +228,15 @@ class UserInsertDto implements InsertDto<$User> {
       _UserInsertDtoCopyWithSentinel();
   UserInsertDto copyWith({
     Object? email = _copyWithSentinel,
-    Object? name = _copyWithSentinel,
-    Object? createdAt = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
   }) {
     return UserInsertDto(
       email: identical(email, _copyWithSentinel)
           ? this.email
           : email as String?,
-      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
-      createdAt: identical(createdAt, _copyWithSentinel)
-          ? this.createdAt
-          : createdAt as DateTime?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
     );
   }
 }
@@ -275,19 +249,17 @@ class _UserInsertDtoCopyWithSentinel {
 ///
 /// All fields are optional; only provided entries are used in SET clauses.
 class UserUpdateDto implements UpdateDto<$User> {
-  const UserUpdateDto({this.id, this.email, this.name, this.createdAt});
+  const UserUpdateDto({this.id, this.email, this.metadata});
   final int? id;
   final String? email;
-  final String? name;
-  final DateTime? createdAt;
+  final Map<String, Object?>? metadata;
 
   @override
   Map<String, Object?> toMap() {
     return <String, Object?>{
       if (id != null) 'id': id,
       if (email != null) 'email': email,
-      if (name != null) 'name': name,
-      if (createdAt != null) 'created_at': createdAt,
+      if (metadata != null) 'metadata': metadata,
     };
   }
 
@@ -296,18 +268,16 @@ class UserUpdateDto implements UpdateDto<$User> {
   UserUpdateDto copyWith({
     Object? id = _copyWithSentinel,
     Object? email = _copyWithSentinel,
-    Object? name = _copyWithSentinel,
-    Object? createdAt = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
   }) {
     return UserUpdateDto(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       email: identical(email, _copyWithSentinel)
           ? this.email
           : email as String?,
-      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
-      createdAt: identical(createdAt, _copyWithSentinel)
-          ? this.createdAt
-          : createdAt as DateTime?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
     );
   }
 }
@@ -320,7 +290,7 @@ class _UserUpdateDtoCopyWithSentinel {
 ///
 /// All fields are nullable; intended for subset SELECTs.
 class UserPartial implements PartialEntity<$User> {
-  const UserPartial({this.id, this.email, this.name, this.createdAt});
+  const UserPartial({this.id, this.email, this.metadata});
 
   /// Creates a partial from a database row map.
   ///
@@ -330,15 +300,13 @@ class UserPartial implements PartialEntity<$User> {
     return UserPartial(
       id: row['id'] as int?,
       email: row['email'] as String?,
-      name: row['name'] as String?,
-      createdAt: row['created_at'] as DateTime?,
+      metadata: row['metadata'] as Map<String, Object?>?,
     );
   }
 
   final int? id;
   final String? email;
-  final String? name;
-  final DateTime? createdAt;
+  final Map<String, Object?>? metadata;
 
   @override
   $User toEntity() {
@@ -351,12 +319,7 @@ class UserPartial implements PartialEntity<$User> {
     if (emailValue == null) {
       throw StateError('Missing required field: email');
     }
-    return $User(
-      id: idValue,
-      email: emailValue,
-      name: name,
-      createdAt: createdAt,
-    );
+    return $User(id: idValue, email: emailValue, metadata: metadata);
   }
 
   @override
@@ -364,8 +327,7 @@ class UserPartial implements PartialEntity<$User> {
     return {
       if (id != null) 'id': id,
       if (email != null) 'email': email,
-      if (name != null) 'name': name,
-      if (createdAt != null) 'created_at': createdAt,
+      if (metadata != null) 'metadata': metadata,
     };
   }
 
@@ -374,18 +336,16 @@ class UserPartial implements PartialEntity<$User> {
   UserPartial copyWith({
     Object? id = _copyWithSentinel,
     Object? email = _copyWithSentinel,
-    Object? name = _copyWithSentinel,
-    Object? createdAt = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
   }) {
     return UserPartial(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       email: identical(email, _copyWithSentinel)
           ? this.email
           : email as String?,
-      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
-      createdAt: identical(createdAt, _copyWithSentinel)
-          ? this.createdAt
-          : createdAt as DateTime?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
     );
   }
 }
@@ -404,32 +364,21 @@ class _UserPartialCopyWithSentinel {
 /// or model factories to create tracked model instances.
 class $User extends User with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$User].
-  $User({int id = 0, required String email, String? name, DateTime? createdAt})
-    : super.new(id: id, email: email, name: name, createdAt: createdAt) {
-    _attachOrmRuntimeMetadata({
-      'id': id,
-      'email': email,
-      'name': name,
-      'created_at': createdAt,
-    });
+  $User({int id = 0, required String email, Map<String, Object?>? metadata})
+    : super.new(id: id, email: email, metadata: metadata) {
+    _attachOrmRuntimeMetadata({'id': id, 'email': email, 'metadata': metadata});
   }
 
   /// Creates a tracked model instance from a user-defined model instance.
   factory $User.fromModel(User model) {
-    return $User(
-      id: model.id,
-      email: model.email,
-      name: model.name,
-      createdAt: model.createdAt,
-    );
+    return $User(id: model.id, email: model.email, metadata: model.metadata);
   }
 
-  $User copyWith({int? id, String? email, String? name, DateTime? createdAt}) {
+  $User copyWith({int? id, String? email, Map<String, Object?>? metadata}) {
     return $User(
       id: id ?? this.id,
       email: email ?? this.email,
-      name: name ?? this.name,
-      createdAt: createdAt ?? this.createdAt,
+      metadata: metadata ?? this.metadata,
     );
   }
 
@@ -447,20 +396,13 @@ class $User extends User with ModelAttributes implements OrmEntity {
   /// Tracked setter for [email].
   set email(String value) => setAttribute('email', value);
 
-  /// Tracked getter for [name].
+  /// Tracked getter for [metadata].
   @override
-  String? get name => getAttribute<String?>('name') ?? super.name;
+  Map<String, Object?>? get metadata =>
+      getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
 
-  /// Tracked setter for [name].
-  set name(String? value) => setAttribute('name', value);
-
-  /// Tracked getter for [createdAt].
-  @override
-  DateTime? get createdAt =>
-      getAttribute<DateTime?>('created_at') ?? super.createdAt;
-
-  /// Tracked setter for [createdAt].
-  set createdAt(DateTime? value) => setAttribute('created_at', value);
+  /// Tracked setter for [metadata].
+  set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
 
   void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
     replaceAttributes(values);
@@ -486,10 +428,8 @@ extension UserPredicateFields on PredicateBuilder<User> {
   PredicateField<User, int> get id => PredicateField<User, int>(this, 'id');
   PredicateField<User, String> get email =>
       PredicateField<User, String>(this, 'email');
-  PredicateField<User, String?> get name =>
-      PredicateField<User, String?>(this, 'name');
-  PredicateField<User, DateTime?> get createdAt =>
-      PredicateField<User, DateTime?>(this, 'createdAt');
+  PredicateField<User, Map<String, Object?>?> get metadata =>
+      PredicateField<User, Map<String, Object?>?>(this, 'metadata');
 }
 
 void registerUserEventHandlers(EventBus bus) {

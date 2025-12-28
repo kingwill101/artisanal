@@ -99,6 +99,8 @@ final ModelDefinition<$EventUser> _$EventUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -212,10 +214,11 @@ class _$EventUserCodec extends ModelCodec<$EventUser> {
       'email': registry.encodeField(_$EventUserEmailField, model.email),
       'active': registry.encodeField(_$EventUserActiveField, model.active),
       'name': registry.encodeField(_$EventUserNameField, model.name),
-      'deleted_at': registry.encodeField(
-        _$EventUserDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$EventUserDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -248,7 +251,7 @@ class _$EventUserCodec extends ModelCodec<$EventUser> {
       'email': eventUserEmailValue,
       'active': eventUserActiveValue,
       'name': eventUserNameValue,
-      'deleted_at': eventUserDeletedAtValue,
+      if (data.containsKey('deleted_at')) 'deleted_at': eventUserDeletedAtValue,
     });
     return model;
   }
@@ -516,6 +519,17 @@ extension EventUserOrmExtension on EventUser {
   }
 }
 
+extension EventUserPredicateFields on PredicateBuilder<EventUser> {
+  PredicateField<EventUser, int> get id =>
+      PredicateField<EventUser, int>(this, 'id');
+  PredicateField<EventUser, String> get email =>
+      PredicateField<EventUser, String>(this, 'email');
+  PredicateField<EventUser, bool> get active =>
+      PredicateField<EventUser, bool>(this, 'active');
+  PredicateField<EventUser, String?> get name =>
+      PredicateField<EventUser, String?>(this, 'name');
+}
+
 void registerEventUserEventHandlers(EventBus bus) {
   // No event handlers registered for EventUser.
 }
@@ -568,6 +582,8 @@ final ModelDefinition<$AuditedUser> _$AuditedUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -885,6 +901,13 @@ extension AuditedUserOrmExtension on AuditedUser {
   $AuditedUser toTracked() {
     return $AuditedUser.fromModel(this);
   }
+}
+
+extension AuditedUserPredicateFields on PredicateBuilder<AuditedUser> {
+  PredicateField<AuditedUser, int> get id =>
+      PredicateField<AuditedUser, int>(this, 'id');
+  PredicateField<AuditedUser, String> get email =>
+      PredicateField<AuditedUser, String>(this, 'email');
 }
 
 void registerAuditedUserEventHandlers(EventBus bus) {

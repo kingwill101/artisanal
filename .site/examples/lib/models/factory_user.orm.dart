@@ -72,6 +72,8 @@ final ModelDefinition<$FactoryUser> _$FactoryUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -431,6 +433,15 @@ extension FactoryUserOrmExtension on FactoryUser {
   $FactoryUser toTracked() {
     return $FactoryUser.fromModel(this);
   }
+}
+
+extension FactoryUserPredicateFields on PredicateBuilder<FactoryUser> {
+  PredicateField<FactoryUser, int> get id =>
+      PredicateField<FactoryUser, int>(this, 'id');
+  PredicateField<FactoryUser, String> get email =>
+      PredicateField<FactoryUser, String>(this, 'email');
+  PredicateField<FactoryUser, String?> get name =>
+      PredicateField<FactoryUser, String?>(this, 'name');
 }
 
 void registerFactoryUserEventHandlers(EventBus bus) {

@@ -51,6 +51,8 @@ final ModelDefinition<$MorphUser> _$MorphUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -335,6 +337,22 @@ extension MorphUserOrmExtension on MorphUser {
   }
 }
 
+extension MorphUserPredicateFields on PredicateBuilder<MorphUser> {
+  PredicateField<MorphUser, int> get id =>
+      PredicateField<MorphUser, int>(this, 'id');
+}
+
+extension MorphUserTypedRelations on Query<MorphUser> {
+  Query<MorphUser> withAvatar([PredicateCallback<MorphPhoto>? constraint]) =>
+      withRelationTyped('avatar', constraint);
+  Query<MorphUser> whereHasAvatar([
+    PredicateCallback<MorphPhoto>? constraint,
+  ]) => whereHasTyped('avatar', constraint);
+  Query<MorphUser> orWhereHasAvatar([
+    PredicateCallback<MorphPhoto>? constraint,
+  ]) => orWhereHasTyped('avatar', constraint);
+}
+
 void registerMorphUserEventHandlers(EventBus bus) {
   // No event handlers registered for MorphUser.
 }
@@ -384,6 +402,8 @@ final ModelDefinition<$MorphPostPhotos> _$MorphPostPhotosDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -682,6 +702,23 @@ extension MorphPostPhotosOrmExtension on MorphPostPhotos {
   }
 }
 
+extension MorphPostPhotosPredicateFields on PredicateBuilder<MorphPostPhotos> {
+  PredicateField<MorphPostPhotos, int> get id =>
+      PredicateField<MorphPostPhotos, int>(this, 'id');
+}
+
+extension MorphPostPhotosTypedRelations on Query<MorphPostPhotos> {
+  Query<MorphPostPhotos> withPhotos([
+    PredicateCallback<MorphPhoto>? constraint,
+  ]) => withRelationTyped('photos', constraint);
+  Query<MorphPostPhotos> whereHasPhotos([
+    PredicateCallback<MorphPhoto>? constraint,
+  ]) => whereHasTyped('photos', constraint);
+  Query<MorphPostPhotos> orWhereHasPhotos([
+    PredicateCallback<MorphPhoto>? constraint,
+  ]) => orWhereHasTyped('photos', constraint);
+}
+
 void registerMorphPostPhotosEventHandlers(EventBus bus) {
   // No event handlers registered for MorphPostPhotos.
 }
@@ -765,6 +802,8 @@ final ModelDefinition<$MorphPhoto> _$MorphPhotoDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1162,6 +1201,26 @@ extension MorphPhotoOrmExtension on MorphPhoto {
   }
 }
 
+extension MorphPhotoPredicateFields on PredicateBuilder<MorphPhoto> {
+  PredicateField<MorphPhoto, int> get id =>
+      PredicateField<MorphPhoto, int>(this, 'id');
+  PredicateField<MorphPhoto, int?> get imageableId =>
+      PredicateField<MorphPhoto, int?>(this, 'imageableId');
+  PredicateField<MorphPhoto, String?> get imageableType =>
+      PredicateField<MorphPhoto, String?>(this, 'imageableType');
+}
+
+extension MorphPhotoTypedRelations on Query<MorphPhoto> {
+  Query<MorphPhoto> withImageable([PredicateCallback<OrmEntity>? constraint]) =>
+      withRelationTyped('imageable', constraint);
+  Query<MorphPhoto> whereHasImageable([
+    PredicateCallback<OrmEntity>? constraint,
+  ]) => whereHasTyped('imageable', constraint);
+  Query<MorphPhoto> orWhereHasImageable([
+    PredicateCallback<OrmEntity>? constraint,
+  ]) => orWhereHasTyped('imageable', constraint);
+}
+
 void registerMorphPhotoEventHandlers(EventBus bus) {
   // No event handlers registered for MorphPhoto.
 }
@@ -1213,6 +1272,8 @@ final ModelDefinition<$MorphPostTags> _$MorphPostTagsDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -1511,6 +1572,22 @@ extension MorphPostTagsOrmExtension on MorphPostTags {
   }
 }
 
+extension MorphPostTagsPredicateFields on PredicateBuilder<MorphPostTags> {
+  PredicateField<MorphPostTags, int> get id =>
+      PredicateField<MorphPostTags, int>(this, 'id');
+}
+
+extension MorphPostTagsTypedRelations on Query<MorphPostTags> {
+  Query<MorphPostTags> withTags([PredicateCallback<MorphTag>? constraint]) =>
+      withRelationTyped('tags', constraint);
+  Query<MorphPostTags> whereHasTags([
+    PredicateCallback<MorphTag>? constraint,
+  ]) => whereHasTyped('tags', constraint);
+  Query<MorphPostTags> orWhereHasTags([
+    PredicateCallback<MorphTag>? constraint,
+  ]) => orWhereHasTyped('tags', constraint);
+}
+
 void registerMorphPostTagsEventHandlers(EventBus bus) {
   // No event handlers registered for MorphPostTags.
 }
@@ -1559,6 +1636,8 @@ final ModelDefinition<$MorphTag> _$MorphTagDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1840,6 +1919,22 @@ extension MorphTagOrmExtension on MorphTag {
   $MorphTag toTracked() {
     return $MorphTag.fromModel(this);
   }
+}
+
+extension MorphTagPredicateFields on PredicateBuilder<MorphTag> {
+  PredicateField<MorphTag, int> get id =>
+      PredicateField<MorphTag, int>(this, 'id');
+}
+
+extension MorphTagTypedRelations on Query<MorphTag> {
+  Query<MorphTag> withPosts([PredicateCallback<MorphPostTags>? constraint]) =>
+      withRelationTyped('posts', constraint);
+  Query<MorphTag> whereHasPosts([
+    PredicateCallback<MorphPostTags>? constraint,
+  ]) => whereHasTyped('posts', constraint);
+  Query<MorphTag> orWhereHasPosts([
+    PredicateCallback<MorphPostTags>? constraint,
+  ]) => orWhereHasTyped('posts', constraint);
 }
 
 void registerMorphTagEventHandlers(EventBus bus) {

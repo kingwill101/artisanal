@@ -73,6 +73,8 @@ _$DriverOverrideExampleDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -432,6 +434,17 @@ extension DriverOverrideExampleOrmExtension on DriverOverrideExample {
   }
 }
 
+extension DriverOverrideExamplePredicateFields
+    on PredicateBuilder<DriverOverrideExample> {
+  PredicateField<DriverOverrideExample, int> get id =>
+      PredicateField<DriverOverrideExample, int>(this, 'id');
+  PredicateField<DriverOverrideExample, Map<String, Object?>> get payload =>
+      PredicateField<DriverOverrideExample, Map<String, Object?>>(
+        this,
+        'payload',
+      );
+}
+
 void registerDriverOverrideExampleEventHandlers(EventBus bus) {
   // No event handlers registered for DriverOverrideExample.
 }
@@ -484,6 +497,8 @@ final ModelDefinition<$AuditedEvent> _$AuditedEventDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     driverAnnotations: const [DriverModel('audited')],
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
@@ -817,6 +832,13 @@ extension AuditedEventOrmExtension on AuditedEvent {
   $AuditedEvent toTracked() {
     return $AuditedEvent.fromModel(this);
   }
+}
+
+extension AuditedEventPredicateFields on PredicateBuilder<AuditedEvent> {
+  PredicateField<AuditedEvent, int> get id =>
+      PredicateField<AuditedEvent, int>(this, 'id');
+  PredicateField<AuditedEvent, String> get action =>
+      PredicateField<AuditedEvent, String>(this, 'action');
 }
 
 void registerAuditedEventEventHandlers(EventBus bus) {

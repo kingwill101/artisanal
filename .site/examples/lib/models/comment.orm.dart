@@ -68,6 +68,8 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -410,6 +412,15 @@ extension CommentOrmExtension on Comment {
   $Comment toTracked() {
     return $Comment.fromModel(this);
   }
+}
+
+extension CommentPredicateFields on PredicateBuilder<Comment> {
+  PredicateField<Comment, int> get id =>
+      PredicateField<Comment, int>(this, 'id');
+  PredicateField<Comment, String> get body =>
+      PredicateField<Comment, String>(this, 'body');
+  PredicateField<Comment, int?> get postId =>
+      PredicateField<Comment, int?>(this, 'postId');
 }
 
 void registerCommentEventHandlers(EventBus bus) {

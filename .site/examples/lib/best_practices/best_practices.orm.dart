@@ -73,6 +73,8 @@ final ModelDefinition<$ValidatedUser> _$ValidatedUserDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -440,6 +442,15 @@ extension ValidatedUserOrmExtension on ValidatedUser {
   $ValidatedUser toTracked() {
     return $ValidatedUser.fromModel(this);
   }
+}
+
+extension ValidatedUserPredicateFields on PredicateBuilder<ValidatedUser> {
+  PredicateField<ValidatedUser, int> get id =>
+      PredicateField<ValidatedUser, int>(this, 'id');
+  PredicateField<ValidatedUser, String> get email =>
+      PredicateField<ValidatedUser, String>(this, 'email');
+  PredicateField<ValidatedUser, int> get age =>
+      PredicateField<ValidatedUser, int>(this, 'age');
 }
 
 void registerValidatedUserEventHandlers(EventBus bus) {

@@ -68,6 +68,8 @@ final ModelDefinition<$Log> _$LogDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -427,6 +429,14 @@ extension LogOrmExtension on Log {
   $Log toTracked() {
     return $Log.fromModel(this);
   }
+}
+
+extension LogPredicateFields on PredicateBuilder<Log> {
+  PredicateField<Log, int> get id => PredicateField<Log, int>(this, 'id');
+  PredicateField<Log, String> get message =>
+      PredicateField<Log, String>(this, 'message');
+  PredicateField<Log, DateTime?> get timestamp =>
+      PredicateField<Log, DateTime?>(this, 'timestamp');
 }
 
 void registerLogEventHandlers(EventBus bus) {

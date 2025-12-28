@@ -97,6 +97,8 @@ final ModelDefinition<$PostWithAuthor> _$PostWithAuthorDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -568,6 +570,29 @@ extension PostWithAuthorOrmExtension on PostWithAuthor {
   }
 }
 
+extension PostWithAuthorPredicateFields on PredicateBuilder<PostWithAuthor> {
+  PredicateField<PostWithAuthor, int> get id =>
+      PredicateField<PostWithAuthor, int>(this, 'id');
+  PredicateField<PostWithAuthor, int> get authorId =>
+      PredicateField<PostWithAuthor, int>(this, 'authorId');
+  PredicateField<PostWithAuthor, String> get title =>
+      PredicateField<PostWithAuthor, String>(this, 'title');
+  PredicateField<PostWithAuthor, PostAuthor?> get author =>
+      PredicateField<PostWithAuthor, PostAuthor?>(this, 'author');
+}
+
+extension PostWithAuthorTypedRelations on Query<PostWithAuthor> {
+  Query<PostWithAuthor> withAuthor([
+    PredicateCallback<PostAuthor>? constraint,
+  ]) => withRelationTyped('author', constraint);
+  Query<PostWithAuthor> whereHasAuthor([
+    PredicateCallback<PostAuthor>? constraint,
+  ]) => whereHasTyped('author', constraint);
+  Query<PostWithAuthor> orWhereHasAuthor([
+    PredicateCallback<PostAuthor>? constraint,
+  ]) => orWhereHasTyped('author', constraint);
+}
+
 void registerPostWithAuthorEventHandlers(EventBus bus) {
   // No event handlers registered for PostWithAuthor.
 }
@@ -620,6 +645,8 @@ final ModelDefinition<$PostAuthor> _$PostAuthorDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -929,6 +956,13 @@ extension PostAuthorOrmExtension on PostAuthor {
   $PostAuthor toTracked() {
     return $PostAuthor.fromModel(this);
   }
+}
+
+extension PostAuthorPredicateFields on PredicateBuilder<PostAuthor> {
+  PredicateField<PostAuthor, int> get id =>
+      PredicateField<PostAuthor, int>(this, 'id');
+  PredicateField<PostAuthor, String> get name =>
+      PredicateField<PostAuthor, String>(this, 'name');
 }
 
 void registerPostAuthorEventHandlers(EventBus bus) {

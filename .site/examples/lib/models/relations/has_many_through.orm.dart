@@ -73,6 +73,8 @@ final ModelDefinition<$AuthorWithComments> _$AuthorWithCommentsDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -437,6 +439,26 @@ extension AuthorWithCommentsOrmExtension on AuthorWithComments {
   }
 }
 
+extension AuthorWithCommentsPredicateFields
+    on PredicateBuilder<AuthorWithComments> {
+  PredicateField<AuthorWithComments, int> get id =>
+      PredicateField<AuthorWithComments, int>(this, 'id');
+  PredicateField<AuthorWithComments, List<PostComment>?> get comments =>
+      PredicateField<AuthorWithComments, List<PostComment>?>(this, 'comments');
+}
+
+extension AuthorWithCommentsTypedRelations on Query<AuthorWithComments> {
+  Query<AuthorWithComments> withComments([
+    PredicateCallback<PostComment>? constraint,
+  ]) => withRelationTyped('comments', constraint);
+  Query<AuthorWithComments> whereHasComments([
+    PredicateCallback<PostComment>? constraint,
+  ]) => whereHasTyped('comments', constraint);
+  Query<AuthorWithComments> orWhereHasComments([
+    PredicateCallback<PostComment>? constraint,
+  ]) => orWhereHasTyped('comments', constraint);
+}
+
 void registerAuthorWithCommentsEventHandlers(EventBus bus) {
   // No event handlers registered for AuthorWithComments.
 }
@@ -489,6 +511,8 @@ final ModelDefinition<$AuthorPost> _$AuthorPostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -818,6 +842,13 @@ extension AuthorPostOrmExtension on AuthorPost {
   }
 }
 
+extension AuthorPostPredicateFields on PredicateBuilder<AuthorPost> {
+  PredicateField<AuthorPost, int> get id =>
+      PredicateField<AuthorPost, int>(this, 'id');
+  PredicateField<AuthorPost, int> get authorId =>
+      PredicateField<AuthorPost, int>(this, 'authorId');
+}
+
 void registerAuthorPostEventHandlers(EventBus bus) {
   // No event handlers registered for AuthorPost.
 }
@@ -887,6 +918,8 @@ final ModelDefinition<$PostComment> _$PostCommentDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1250,6 +1283,15 @@ extension PostCommentOrmExtension on PostComment {
   $PostComment toTracked() {
     return $PostComment.fromModel(this);
   }
+}
+
+extension PostCommentPredicateFields on PredicateBuilder<PostComment> {
+  PredicateField<PostComment, int> get id =>
+      PredicateField<PostComment, int>(this, 'id');
+  PredicateField<PostComment, int> get postId =>
+      PredicateField<PostComment, int>(this, 'postId');
+  PredicateField<PostComment, String> get body =>
+      PredicateField<PostComment, String>(this, 'body');
 }
 
 void registerPostCommentEventHandlers(EventBus bus) {

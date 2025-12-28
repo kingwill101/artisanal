@@ -63,6 +63,8 @@ final ModelDefinition<$UserWithProfile> _$UserWithProfileDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -414,6 +416,25 @@ extension UserWithProfileOrmExtension on UserWithProfile {
   }
 }
 
+extension UserWithProfilePredicateFields on PredicateBuilder<UserWithProfile> {
+  PredicateField<UserWithProfile, int> get id =>
+      PredicateField<UserWithProfile, int>(this, 'id');
+  PredicateField<UserWithProfile, Profile?> get profile =>
+      PredicateField<UserWithProfile, Profile?>(this, 'profile');
+}
+
+extension UserWithProfileTypedRelations on Query<UserWithProfile> {
+  Query<UserWithProfile> withProfile([
+    PredicateCallback<Profile>? constraint,
+  ]) => withRelationTyped('profile', constraint);
+  Query<UserWithProfile> whereHasProfile([
+    PredicateCallback<Profile>? constraint,
+  ]) => whereHasTyped('profile', constraint);
+  Query<UserWithProfile> orWhereHasProfile([
+    PredicateCallback<Profile>? constraint,
+  ]) => orWhereHasTyped('profile', constraint);
+}
+
 void registerUserWithProfileEventHandlers(EventBus bus) {
   // No event handlers registered for UserWithProfile.
 }
@@ -479,6 +500,8 @@ final ModelDefinition<$Profile> _$ProfileDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -829,6 +852,15 @@ extension ProfileOrmExtension on Profile {
   $Profile toTracked() {
     return $Profile.fromModel(this);
   }
+}
+
+extension ProfilePredicateFields on PredicateBuilder<Profile> {
+  PredicateField<Profile, int> get id =>
+      PredicateField<Profile, int>(this, 'id');
+  PredicateField<Profile, int> get userId =>
+      PredicateField<Profile, int>(this, 'userId');
+  PredicateField<Profile, String> get bio =>
+      PredicateField<Profile, String>(this, 'bio');
 }
 
 void registerProfileEventHandlers(EventBus bus) {

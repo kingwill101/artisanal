@@ -10,6 +10,7 @@ import 'models/user.dart';
 import 'models/user.orm.dart';
 import 'models/post.dart';
 import 'models/post.orm.dart';
+import 'models/relations/has_many.dart';
 
 Future<void> basicQueryExample(QueryContext context) async {
   // Find all users
@@ -73,6 +74,20 @@ Future<void> whereClauseExamples(QueryContext context) async {
   await context.query<$User>().whereBetween('age', 18, 65).get();
 }
 // #endregion where-clauses
+
+// #region where-typed-predicate
+Future<void> whereTypedPredicateExamples(QueryContext context) async {
+  // Typed predicate fields via whereTyped
+  await context
+      .query<$User>()
+      .whereTyped((q) => q.email.eq('alice@example.com'))
+      .get();
+
+  // Typed field access also works in untyped callbacks (dynamic), but without
+  // static checking.
+  await context.query<$User>().where((q) => q.name.isNotNull()).get();
+}
+// #endregion where-typed-predicate
 
 // #region ordering-limiting
 Future<void> orderingLimitingExamples(QueryContext context) async {
@@ -150,6 +165,16 @@ Future<void> relationExamples(QueryContext context) async {
       .get();
 }
 // #endregion relations
+
+// #region typed-relation-helpers
+Future<void> typedRelationHelpers(QueryContext context) async {
+  final users = await context
+      .query<$UserWithPosts>()
+      .whereHasPosts((q) => q.title.like('%Dart%'))
+      .withPosts((q) => q.title.like('%Dart%'))
+      .get();
+}
+// #endregion typed-relation-helpers
 
 // #region query-getting-started
 Future<void> queryGettingStarted(DataSource dataSource) async {

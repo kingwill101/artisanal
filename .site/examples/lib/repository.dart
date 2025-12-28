@@ -151,12 +151,24 @@ Future<void> whereTypesExamples(DataSource dataSource) async {
 }
 // #endregion repo-where-types
 
+// #region repo-where-typed
+Future<void> whereTypedCallbackExample(DataSource dataSource) async {
+  final userRepo = dataSource.repo<$User>();
+
+  await userRepo.update(
+    UserUpdateDto(name: 'Test'),
+    where: (Query<$User> q) =>
+        q.whereTyped((p) => p.email.eq('test@example.com')),
+  );
+}
+// #endregion repo-where-typed
+
 // #region repo-where-typing-caution
-// ✅ Correct - parameter is typed
-// where: (Query<$User> q) => q.whereEquals('email', 'test@example.com')
+// ✅ Preferred - typed parameter enables typed predicate fields
+// where: (Query<$User> q) => q.whereTyped((p) => p.email.eq('test@example.com'))
 //
-// ❌ Wrong - untyped parameter won't work with extension methods
-// where: (q) => q.whereEquals('email', 'test@example.com')
+// ✅ Works, but `q` is dynamic (less static checking)
+// where: (q) => q.whereTyped((p) => p.email.eq('test@example.com'))
 // #endregion repo-where-typing-caution
 
 // #region repo-delete

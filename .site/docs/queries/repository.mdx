@@ -94,8 +94,15 @@ The `where` parameter accepts various input types:
 
 ```
 
+### Typed Where Callbacks
+
+```dart file=../../examples/lib/repository.dart#repo-where-typed
+```
+
 :::caution Important
-When using a callback function for `where`, you **must** explicitly type the parameter:
+When using a callback function for `where`, the parameter is `dynamic` unless you
+explicitly type it. Untyped callbacks still work, but you lose static checking.
+If you want typed predicate field accessors, type the parameter.
 ```dart file=../../examples/lib/repository.dart#repo-where-typing-caution
 ```
 :::

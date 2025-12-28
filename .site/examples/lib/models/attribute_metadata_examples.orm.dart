@@ -103,6 +103,8 @@ final ModelDefinition<$Account> _$AccountDefinition = ModelDefinition(
     guarded: const <String>['is_admin'],
     casts: const <String, String>{},
     appends: const <String>['display_name'],
+    touches: const <String>[],
+    timestamps: true,
     fieldOverrides: const {'is_admin': FieldAttributeMetadata(guarded: true)},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
@@ -599,6 +601,19 @@ extension $AccountAccessors on $Account {
     setRawAttribute('email', result);
     return result;
   }
+}
+
+extension AccountPredicateFields on PredicateBuilder<Account> {
+  PredicateField<Account, int> get id =>
+      PredicateField<Account, int>(this, 'id');
+  PredicateField<Account, String> get email =>
+      PredicateField<Account, String>(this, 'email');
+  PredicateField<Account, String> get passwordHash =>
+      PredicateField<Account, String>(this, 'passwordHash');
+  PredicateField<Account, String?> get name =>
+      PredicateField<Account, String?>(this, 'name');
+  PredicateField<Account, bool> get isAdmin =>
+      PredicateField<Account, bool>(this, 'isAdmin');
 }
 
 void registerAccountEventHandlers(EventBus bus) {

@@ -55,6 +55,8 @@ final ModelDefinition<$PostWithTags> _$PostWithTagsDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -377,6 +379,13 @@ extension PostWithTagsOrmExtension on PostWithTags {
   }
 }
 
+extension PostWithTagsPredicateFields on PredicateBuilder<PostWithTags> {
+  PredicateField<PostWithTags, int> get id =>
+      PredicateField<PostWithTags, int>(this, 'id');
+  PredicateField<PostWithTags, List<Tag>?> get tags =>
+      PredicateField<PostWithTags, List<Tag>?>(this, 'tags');
+}
+
 void registerPostWithTagsEventHandlers(EventBus bus) {
   // No event handlers registered for PostWithTags.
 }
@@ -429,6 +438,8 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -724,6 +735,12 @@ extension TagOrmExtension on Tag {
   $Tag toTracked() {
     return $Tag.fromModel(this);
   }
+}
+
+extension TagPredicateFields on PredicateBuilder<Tag> {
+  PredicateField<Tag, int> get id => PredicateField<Tag, int>(this, 'id');
+  PredicateField<Tag, String> get name =>
+      PredicateField<Tag, String>(this, 'name');
 }
 
 void registerTagEventHandlers(EventBus bus) {

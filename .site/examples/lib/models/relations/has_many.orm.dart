@@ -63,6 +63,8 @@ final ModelDefinition<$UserWithPosts> _$UserWithPostsDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -407,6 +409,24 @@ extension UserWithPostsOrmExtension on UserWithPosts {
   }
 }
 
+extension UserWithPostsPredicateFields on PredicateBuilder<UserWithPosts> {
+  PredicateField<UserWithPosts, int> get id =>
+      PredicateField<UserWithPosts, int>(this, 'id');
+  PredicateField<UserWithPosts, List<UserPost>?> get posts =>
+      PredicateField<UserWithPosts, List<UserPost>?>(this, 'posts');
+}
+
+extension UserWithPostsTypedRelations on Query<UserWithPosts> {
+  Query<UserWithPosts> withPosts([PredicateCallback<UserPost>? constraint]) =>
+      withRelationTyped('posts', constraint);
+  Query<UserWithPosts> whereHasPosts([
+    PredicateCallback<UserPost>? constraint,
+  ]) => whereHasTyped('posts', constraint);
+  Query<UserWithPosts> orWhereHasPosts([
+    PredicateCallback<UserPost>? constraint,
+  ]) => orWhereHasTyped('posts', constraint);
+}
+
 void registerUserWithPostsEventHandlers(EventBus bus) {
   // No event handlers registered for UserWithPosts.
 }
@@ -476,6 +496,8 @@ final ModelDefinition<$UserPost> _$UserPostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -847,6 +869,15 @@ extension UserPostOrmExtension on UserPost {
   $UserPost toTracked() {
     return $UserPost.fromModel(this);
   }
+}
+
+extension UserPostPredicateFields on PredicateBuilder<UserPost> {
+  PredicateField<UserPost, int> get id =>
+      PredicateField<UserPost, int>(this, 'id');
+  PredicateField<UserPost, int> get authorId =>
+      PredicateField<UserPost, int>(this, 'authorId');
+  PredicateField<UserPost, String> get title =>
+      PredicateField<UserPost, String>(this, 'title');
 }
 
 void registerUserPostEventHandlers(EventBus bus) {

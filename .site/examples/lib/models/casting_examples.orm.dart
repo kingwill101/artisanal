@@ -74,6 +74,8 @@ final ModelDefinition<$Settings> _$SettingsDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{'metadata': 'json', 'createdAt': 'datetime'},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -443,6 +445,15 @@ extension SettingsOrmExtension on Settings {
   }
 }
 
+extension SettingsPredicateFields on PredicateBuilder<Settings> {
+  PredicateField<Settings, int> get id =>
+      PredicateField<Settings, int>(this, 'id');
+  PredicateField<Settings, Map<String, Object?>?> get metadata =>
+      PredicateField<Settings, Map<String, Object?>?>(this, 'metadata');
+  PredicateField<Settings, DateTime?> get createdAt =>
+      PredicateField<Settings, DateTime?>(this, 'createdAt');
+}
+
 void registerSettingsEventHandlers(EventBus bus) {
   // No event handlers registered for Settings.
 }
@@ -500,6 +511,8 @@ _$FieldCastSettingsDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     fieldOverrides: const {'metadata': FieldAttributeMetadata(cast: 'json')},
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
@@ -837,6 +850,17 @@ extension FieldCastSettingsOrmExtension on FieldCastSettings {
   }
 }
 
+extension FieldCastSettingsPredicateFields
+    on PredicateBuilder<FieldCastSettings> {
+  PredicateField<FieldCastSettings, int> get id =>
+      PredicateField<FieldCastSettings, int>(this, 'id');
+  PredicateField<FieldCastSettings, Map<String, Object?>?> get metadata =>
+      PredicateField<FieldCastSettings, Map<String, Object?>?>(
+        this,
+        'metadata',
+      );
+}
+
 void registerFieldCastSettingsEventHandlers(EventBus bus) {
   // No event handlers registered for FieldCastSettings.
 }
@@ -890,6 +914,8 @@ final ModelDefinition<$Link> _$LinkDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{'website': 'uri'},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -1186,6 +1212,911 @@ extension LinkOrmExtension on Link {
   }
 }
 
+extension LinkPredicateFields on PredicateBuilder<Link> {
+  PredicateField<Link, int> get id => PredicateField<Link, int>(this, 'id');
+  PredicateField<Link, Uri?> get website =>
+      PredicateField<Link, Uri?>(this, 'website');
+}
+
 void registerLinkEventHandlers(EventBus bus) {
   // No event handlers registered for Link.
+}
+
+const FieldDefinition _$AccountIdField = FieldDefinition(
+  name: 'id',
+  columnName: 'id',
+  dartType: 'int',
+  resolvedType: 'int',
+  isPrimaryKey: true,
+  isNullable: false,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
+const FieldDefinition _$AccountStatusField = FieldDefinition(
+  name: 'status',
+  columnName: 'status',
+  dartType: 'AccountStatus',
+  resolvedType: 'AccountStatus',
+  isPrimaryKey: false,
+  isNullable: false,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+  codecType: 'enum',
+  enumValues: AccountStatus.values,
+);
+
+const FieldDefinition _$AccountSecretField = FieldDefinition(
+  name: 'secret',
+  columnName: 'secret',
+  dartType: 'String',
+  resolvedType: 'String',
+  isPrimaryKey: false,
+  isNullable: false,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+  codecType: 'encrypted',
+);
+
+Map<String, Object?> _encodeAccountUntracked(
+  Object model,
+  ValueCodecRegistry registry,
+) {
+  final m = model as Account;
+  return <String, Object?>{
+    'id': registry.encodeField(_$AccountIdField, m.id),
+    'status': registry.encodeField(_$AccountStatusField, m.status),
+    'secret': registry.encodeField(_$AccountSecretField, m.secret),
+  };
+}
+
+final ModelDefinition<$Account> _$AccountDefinition = ModelDefinition(
+  modelName: 'Account',
+  tableName: 'accounts',
+  fields: const [_$AccountIdField, _$AccountStatusField, _$AccountSecretField],
+  relations: const [],
+  softDeleteColumn: 'deleted_at',
+  metadata: ModelAttributesMetadata(
+    hidden: const <String>[],
+    visible: const <String>[],
+    fillable: const <String>[],
+    guarded: const <String>[],
+    casts: const <String, String>{},
+    appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
+    fieldOverrides: const {
+      'status': FieldAttributeMetadata(cast: 'enum'),
+      'secret': FieldAttributeMetadata(cast: 'encrypted'),
+    },
+    softDeletes: false,
+    softDeleteColumn: 'deleted_at',
+  ),
+  untrackedToMap: _encodeAccountUntracked,
+  codec: _$AccountCodec(),
+);
+
+extension AccountOrmDefinition on Account {
+  static ModelDefinition<$Account> get definition => _$AccountDefinition;
+}
+
+class Accounts {
+  const Accounts._();
+
+  /// Starts building a query for [$Account].
+  ///
+  /// {@macro ormed.query}
+  static Query<$Account> query([String? connection]) =>
+      Model.query<$Account>(connection: connection);
+
+  static Future<$Account?> find(Object id, {String? connection}) =>
+      Model.find<$Account>(id, connection: connection);
+
+  static Future<$Account> findOrFail(Object id, {String? connection}) =>
+      Model.findOrFail<$Account>(id, connection: connection);
+
+  static Future<List<$Account>> all({String? connection}) =>
+      Model.all<$Account>(connection: connection);
+
+  static Future<int> count({String? connection}) =>
+      Model.count<$Account>(connection: connection);
+
+  static Future<bool> anyExist({String? connection}) =>
+      Model.anyExist<$Account>(connection: connection);
+
+  static Query<$Account> where(
+    String column,
+    String operator,
+    dynamic value, {
+    String? connection,
+  }) => Model.where<$Account>(column, operator, value, connection: connection);
+
+  static Query<$Account> whereIn(
+    String column,
+    List<dynamic> values, {
+    String? connection,
+  }) => Model.whereIn<$Account>(column, values, connection: connection);
+
+  static Query<$Account> orderBy(
+    String column, {
+    String direction = "asc",
+    String? connection,
+  }) => Model.orderBy<$Account>(
+    column,
+    direction: direction,
+    connection: connection,
+  );
+
+  static Query<$Account> limit(int count, {String? connection}) =>
+      Model.limit<$Account>(count, connection: connection);
+
+  /// Creates a [Repository] for [$Account].
+  ///
+  /// {@macro ormed.repository}
+  static Repository<$Account> repo([String? connection]) =>
+      Model.repository<$Account>(connection: connection);
+}
+
+class AccountModelFactory {
+  const AccountModelFactory._();
+
+  static ModelDefinition<$Account> get definition => _$AccountDefinition;
+
+  static ModelCodec<$Account> get codec => definition.codec;
+
+  static Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => definition.fromMap(data, registry: registry);
+
+  static Map<String, Object?> toMap(
+    Account model, {
+    ValueCodecRegistry? registry,
+  }) => definition.toMap(model.toTracked(), registry: registry);
+
+  static void registerWith(ModelRegistry registry) =>
+      registry.register(definition);
+
+  static ModelFactoryConnection<Account> withConnection(QueryContext context) =>
+      ModelFactoryConnection<Account>(definition: definition, context: context);
+
+  static ModelFactoryBuilder<Account> factory({
+    GeneratorProvider? generatorProvider,
+  }) => ModelFactoryBuilder<Account>(
+    definition: definition,
+    generatorProvider: generatorProvider,
+  );
+}
+
+class _$AccountCodec extends ModelCodec<$Account> {
+  const _$AccountCodec();
+  @override
+  Map<String, Object?> encode($Account model, ValueCodecRegistry registry) {
+    return <String, Object?>{
+      'id': registry.encodeField(_$AccountIdField, model.id),
+      'status': registry.encodeField(_$AccountStatusField, model.status),
+      'secret': registry.encodeField(_$AccountSecretField, model.secret),
+    };
+  }
+
+  @override
+  $Account decode(Map<String, Object?> data, ValueCodecRegistry registry) {
+    final int accountIdValue =
+        registry.decodeField<int>(_$AccountIdField, data['id']) ??
+        (throw StateError('Field id on Account cannot be null.'));
+    final AccountStatus accountStatusValue =
+        registry.decodeField<AccountStatus>(
+          _$AccountStatusField,
+          data['status'],
+        ) ??
+        (throw StateError('Field status on Account cannot be null.'));
+    final String accountSecretValue =
+        registry.decodeField<String>(_$AccountSecretField, data['secret']) ??
+        (throw StateError('Field secret on Account cannot be null.'));
+    final model = $Account(
+      id: accountIdValue,
+      status: accountStatusValue,
+      secret: accountSecretValue,
+    );
+    model._attachOrmRuntimeMetadata({
+      'id': accountIdValue,
+      'status': accountStatusValue,
+      'secret': accountSecretValue,
+    });
+    return model;
+  }
+}
+
+/// Insert DTO for [Account].
+///
+/// Auto-increment/DB-generated fields are omitted by default.
+class AccountInsertDto implements InsertDto<$Account> {
+  const AccountInsertDto({this.id, this.status, this.secret});
+  final int? id;
+  final AccountStatus? status;
+  final String? secret;
+
+  @override
+  Map<String, Object?> toMap() {
+    return <String, Object?>{
+      if (id != null) 'id': id,
+      if (status != null) 'status': status,
+      if (secret != null) 'secret': secret,
+    };
+  }
+
+  static const _AccountInsertDtoCopyWithSentinel _copyWithSentinel =
+      _AccountInsertDtoCopyWithSentinel();
+  AccountInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+  }) {
+    return AccountInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as AccountStatus?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+    );
+  }
+}
+
+class _AccountInsertDtoCopyWithSentinel {
+  const _AccountInsertDtoCopyWithSentinel();
+}
+
+/// Update DTO for [Account].
+///
+/// All fields are optional; only provided entries are used in SET clauses.
+class AccountUpdateDto implements UpdateDto<$Account> {
+  const AccountUpdateDto({this.id, this.status, this.secret});
+  final int? id;
+  final AccountStatus? status;
+  final String? secret;
+
+  @override
+  Map<String, Object?> toMap() {
+    return <String, Object?>{
+      if (id != null) 'id': id,
+      if (status != null) 'status': status,
+      if (secret != null) 'secret': secret,
+    };
+  }
+
+  static const _AccountUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _AccountUpdateDtoCopyWithSentinel();
+  AccountUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+  }) {
+    return AccountUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as AccountStatus?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+    );
+  }
+}
+
+class _AccountUpdateDtoCopyWithSentinel {
+  const _AccountUpdateDtoCopyWithSentinel();
+}
+
+/// Partial projection for [Account].
+///
+/// All fields are nullable; intended for subset SELECTs.
+class AccountPartial implements PartialEntity<$Account> {
+  const AccountPartial({this.id, this.status, this.secret});
+
+  /// Creates a partial from a database row map.
+  ///
+  /// The [row] keys should be column names (snake_case).
+  /// Missing columns will result in null field values.
+  factory AccountPartial.fromRow(Map<String, Object?> row) {
+    return AccountPartial(
+      id: row['id'] as int?,
+      status: row['status'] as AccountStatus?,
+      secret: row['secret'] as String?,
+    );
+  }
+
+  final int? id;
+  final AccountStatus? status;
+  final String? secret;
+
+  @override
+  $Account toEntity() {
+    // Basic required-field check: non-nullable fields must be present.
+    final int? idValue = id;
+    if (idValue == null) {
+      throw StateError('Missing required field: id');
+    }
+    final AccountStatus? statusValue = status;
+    if (statusValue == null) {
+      throw StateError('Missing required field: status');
+    }
+    final String? secretValue = secret;
+    if (secretValue == null) {
+      throw StateError('Missing required field: secret');
+    }
+    return $Account(id: idValue, status: statusValue, secret: secretValue);
+  }
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      if (id != null) 'id': id,
+      if (status != null) 'status': status,
+      if (secret != null) 'secret': secret,
+    };
+  }
+
+  static const _AccountPartialCopyWithSentinel _copyWithSentinel =
+      _AccountPartialCopyWithSentinel();
+  AccountPartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+  }) {
+    return AccountPartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as AccountStatus?,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String?,
+    );
+  }
+}
+
+class _AccountPartialCopyWithSentinel {
+  const _AccountPartialCopyWithSentinel();
+}
+
+/// Generated tracked model class for [Account].
+///
+/// This class extends the user-defined [Account] model and adds
+/// attribute tracking, change detection, and relationship management.
+/// Instances of this class are returned by queries and repositories.
+///
+/// **Do not instantiate this class directly.** Use queries, repositories,
+/// or model factories to create tracked model instances.
+class $Account extends Account with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Account].
+  $Account({
+    required int id,
+    required AccountStatus status,
+    required String secret,
+  }) : super.new(id: id, status: status, secret: secret) {
+    _attachOrmRuntimeMetadata({'id': id, 'status': status, 'secret': secret});
+  }
+
+  /// Creates a tracked model instance from a user-defined model instance.
+  factory $Account.fromModel(Account model) {
+    return $Account(id: model.id, status: model.status, secret: model.secret);
+  }
+
+  $Account copyWith({int? id, AccountStatus? status, String? secret}) {
+    return $Account(
+      id: id ?? this.id,
+      status: status ?? this.status,
+      secret: secret ?? this.secret,
+    );
+  }
+
+  /// Tracked getter for [id].
+  @override
+  int get id => getAttribute<int>('id') ?? super.id;
+
+  /// Tracked setter for [id].
+  set id(int value) => setAttribute('id', value);
+
+  /// Tracked getter for [status].
+  @override
+  AccountStatus get status =>
+      getAttribute<AccountStatus>('status') ?? super.status;
+
+  /// Tracked setter for [status].
+  set status(AccountStatus value) => setAttribute('status', value);
+
+  /// Tracked getter for [secret].
+  @override
+  String get secret => getAttribute<String>('secret') ?? super.secret;
+
+  /// Tracked setter for [secret].
+  set secret(String value) => setAttribute('secret', value);
+
+  void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
+    replaceAttributes(values);
+    attachModelDefinition(_$AccountDefinition);
+  }
+}
+
+extension AccountOrmExtension on Account {
+  /// The Type of the generated ORM-managed model class.
+  /// Use this when you need to specify the tracked model type explicitly,
+  /// for example in generic type parameters.
+  static Type get trackedType => $Account;
+
+  /// Converts this immutable model to a tracked ORM-managed model.
+  /// The tracked model supports attribute tracking, change detection,
+  /// and persistence operations like save() and touch().
+  $Account toTracked() {
+    return $Account.fromModel(this);
+  }
+}
+
+extension AccountPredicateFields on PredicateBuilder<Account> {
+  PredicateField<Account, int> get id =>
+      PredicateField<Account, int>(this, 'id');
+  PredicateField<Account, AccountStatus> get status =>
+      PredicateField<Account, AccountStatus>(this, 'status');
+  PredicateField<Account, String> get secret =>
+      PredicateField<Account, String>(this, 'secret');
+}
+
+void registerAccountEventHandlers(EventBus bus) {
+  // No event handlers registered for Account.
+}
+
+const FieldDefinition _$InvoiceIdField = FieldDefinition(
+  name: 'id',
+  columnName: 'id',
+  dartType: 'int',
+  resolvedType: 'int',
+  isPrimaryKey: true,
+  isNullable: false,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+);
+
+const FieldDefinition _$InvoiceAmountField = FieldDefinition(
+  name: 'amount',
+  columnName: 'amount',
+  dartType: 'Decimal',
+  resolvedType: 'Decimal?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+  codecType: 'decimal:2',
+);
+
+const FieldDefinition _$InvoiceMetadataField = FieldDefinition(
+  name: 'metadata',
+  columnName: 'metadata',
+  dartType: 'Map<String, Object?>',
+  resolvedType: 'Map<String, Object?>?',
+  isPrimaryKey: false,
+  isNullable: true,
+  isUnique: false,
+  isIndexed: false,
+  autoIncrement: false,
+  codecType: 'encrypted:json',
+);
+
+Map<String, Object?> _encodeInvoiceUntracked(
+  Object model,
+  ValueCodecRegistry registry,
+) {
+  final m = model as Invoice;
+  return <String, Object?>{
+    'id': registry.encodeField(_$InvoiceIdField, m.id),
+    'amount': registry.encodeField(_$InvoiceAmountField, m.amount),
+    'metadata': registry.encodeField(_$InvoiceMetadataField, m.metadata),
+  };
+}
+
+final ModelDefinition<$Invoice> _$InvoiceDefinition = ModelDefinition(
+  modelName: 'Invoice',
+  tableName: 'invoices',
+  fields: const [
+    _$InvoiceIdField,
+    _$InvoiceAmountField,
+    _$InvoiceMetadataField,
+  ],
+  relations: const [],
+  softDeleteColumn: 'deleted_at',
+  metadata: ModelAttributesMetadata(
+    hidden: const <String>[],
+    visible: const <String>[],
+    fillable: const <String>[],
+    guarded: const <String>[],
+    casts: const <String, String>{
+      'amount': 'decimal:2',
+      'metadata': 'encrypted:json',
+    },
+    appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
+    softDeletes: false,
+    softDeleteColumn: 'deleted_at',
+  ),
+  untrackedToMap: _encodeInvoiceUntracked,
+  codec: _$InvoiceCodec(),
+);
+
+extension InvoiceOrmDefinition on Invoice {
+  static ModelDefinition<$Invoice> get definition => _$InvoiceDefinition;
+}
+
+class Invoices {
+  const Invoices._();
+
+  /// Starts building a query for [$Invoice].
+  ///
+  /// {@macro ormed.query}
+  static Query<$Invoice> query([String? connection]) =>
+      Model.query<$Invoice>(connection: connection);
+
+  static Future<$Invoice?> find(Object id, {String? connection}) =>
+      Model.find<$Invoice>(id, connection: connection);
+
+  static Future<$Invoice> findOrFail(Object id, {String? connection}) =>
+      Model.findOrFail<$Invoice>(id, connection: connection);
+
+  static Future<List<$Invoice>> all({String? connection}) =>
+      Model.all<$Invoice>(connection: connection);
+
+  static Future<int> count({String? connection}) =>
+      Model.count<$Invoice>(connection: connection);
+
+  static Future<bool> anyExist({String? connection}) =>
+      Model.anyExist<$Invoice>(connection: connection);
+
+  static Query<$Invoice> where(
+    String column,
+    String operator,
+    dynamic value, {
+    String? connection,
+  }) => Model.where<$Invoice>(column, operator, value, connection: connection);
+
+  static Query<$Invoice> whereIn(
+    String column,
+    List<dynamic> values, {
+    String? connection,
+  }) => Model.whereIn<$Invoice>(column, values, connection: connection);
+
+  static Query<$Invoice> orderBy(
+    String column, {
+    String direction = "asc",
+    String? connection,
+  }) => Model.orderBy<$Invoice>(
+    column,
+    direction: direction,
+    connection: connection,
+  );
+
+  static Query<$Invoice> limit(int count, {String? connection}) =>
+      Model.limit<$Invoice>(count, connection: connection);
+
+  /// Creates a [Repository] for [$Invoice].
+  ///
+  /// {@macro ormed.repository}
+  static Repository<$Invoice> repo([String? connection]) =>
+      Model.repository<$Invoice>(connection: connection);
+}
+
+class InvoiceModelFactory {
+  const InvoiceModelFactory._();
+
+  static ModelDefinition<$Invoice> get definition => _$InvoiceDefinition;
+
+  static ModelCodec<$Invoice> get codec => definition.codec;
+
+  static Invoice fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => definition.fromMap(data, registry: registry);
+
+  static Map<String, Object?> toMap(
+    Invoice model, {
+    ValueCodecRegistry? registry,
+  }) => definition.toMap(model.toTracked(), registry: registry);
+
+  static void registerWith(ModelRegistry registry) =>
+      registry.register(definition);
+
+  static ModelFactoryConnection<Invoice> withConnection(QueryContext context) =>
+      ModelFactoryConnection<Invoice>(definition: definition, context: context);
+
+  static ModelFactoryBuilder<Invoice> factory({
+    GeneratorProvider? generatorProvider,
+  }) => ModelFactoryBuilder<Invoice>(
+    definition: definition,
+    generatorProvider: generatorProvider,
+  );
+}
+
+class _$InvoiceCodec extends ModelCodec<$Invoice> {
+  const _$InvoiceCodec();
+  @override
+  Map<String, Object?> encode($Invoice model, ValueCodecRegistry registry) {
+    return <String, Object?>{
+      'id': registry.encodeField(_$InvoiceIdField, model.id),
+      'amount': registry.encodeField(_$InvoiceAmountField, model.amount),
+      'metadata': registry.encodeField(_$InvoiceMetadataField, model.metadata),
+    };
+  }
+
+  @override
+  $Invoice decode(Map<String, Object?> data, ValueCodecRegistry registry) {
+    final int invoiceIdValue =
+        registry.decodeField<int>(_$InvoiceIdField, data['id']) ??
+        (throw StateError('Field id on Invoice cannot be null.'));
+    final Decimal? invoiceAmountValue = registry.decodeField<Decimal?>(
+      _$InvoiceAmountField,
+      data['amount'],
+    );
+    final Map<String, Object?>? invoiceMetadataValue = registry
+        .decodeField<Map<String, Object?>?>(
+          _$InvoiceMetadataField,
+          data['metadata'],
+        );
+    final model = $Invoice(
+      id: invoiceIdValue,
+      amount: invoiceAmountValue,
+      metadata: invoiceMetadataValue,
+    );
+    model._attachOrmRuntimeMetadata({
+      'id': invoiceIdValue,
+      'amount': invoiceAmountValue,
+      'metadata': invoiceMetadataValue,
+    });
+    return model;
+  }
+}
+
+/// Insert DTO for [Invoice].
+///
+/// Auto-increment/DB-generated fields are omitted by default.
+class InvoiceInsertDto implements InsertDto<$Invoice> {
+  const InvoiceInsertDto({this.id, this.amount, this.metadata});
+  final int? id;
+  final Decimal? amount;
+  final Map<String, Object?>? metadata;
+
+  @override
+  Map<String, Object?> toMap() {
+    return <String, Object?>{
+      if (id != null) 'id': id,
+      if (amount != null) 'amount': amount,
+      if (metadata != null) 'metadata': metadata,
+    };
+  }
+
+  static const _InvoiceInsertDtoCopyWithSentinel _copyWithSentinel =
+      _InvoiceInsertDtoCopyWithSentinel();
+  InvoiceInsertDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? amount = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return InvoiceInsertDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      amount: identical(amount, _copyWithSentinel)
+          ? this.amount
+          : amount as Decimal?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _InvoiceInsertDtoCopyWithSentinel {
+  const _InvoiceInsertDtoCopyWithSentinel();
+}
+
+/// Update DTO for [Invoice].
+///
+/// All fields are optional; only provided entries are used in SET clauses.
+class InvoiceUpdateDto implements UpdateDto<$Invoice> {
+  const InvoiceUpdateDto({this.id, this.amount, this.metadata});
+  final int? id;
+  final Decimal? amount;
+  final Map<String, Object?>? metadata;
+
+  @override
+  Map<String, Object?> toMap() {
+    return <String, Object?>{
+      if (id != null) 'id': id,
+      if (amount != null) 'amount': amount,
+      if (metadata != null) 'metadata': metadata,
+    };
+  }
+
+  static const _InvoiceUpdateDtoCopyWithSentinel _copyWithSentinel =
+      _InvoiceUpdateDtoCopyWithSentinel();
+  InvoiceUpdateDto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? amount = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return InvoiceUpdateDto(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      amount: identical(amount, _copyWithSentinel)
+          ? this.amount
+          : amount as Decimal?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _InvoiceUpdateDtoCopyWithSentinel {
+  const _InvoiceUpdateDtoCopyWithSentinel();
+}
+
+/// Partial projection for [Invoice].
+///
+/// All fields are nullable; intended for subset SELECTs.
+class InvoicePartial implements PartialEntity<$Invoice> {
+  const InvoicePartial({this.id, this.amount, this.metadata});
+
+  /// Creates a partial from a database row map.
+  ///
+  /// The [row] keys should be column names (snake_case).
+  /// Missing columns will result in null field values.
+  factory InvoicePartial.fromRow(Map<String, Object?> row) {
+    return InvoicePartial(
+      id: row['id'] as int?,
+      amount: row['amount'] as Decimal?,
+      metadata: row['metadata'] as Map<String, Object?>?,
+    );
+  }
+
+  final int? id;
+  final Decimal? amount;
+  final Map<String, Object?>? metadata;
+
+  @override
+  $Invoice toEntity() {
+    // Basic required-field check: non-nullable fields must be present.
+    final int? idValue = id;
+    if (idValue == null) {
+      throw StateError('Missing required field: id');
+    }
+    return $Invoice(id: idValue, amount: amount, metadata: metadata);
+  }
+
+  @override
+  Map<String, Object?> toMap() {
+    return {
+      if (id != null) 'id': id,
+      if (amount != null) 'amount': amount,
+      if (metadata != null) 'metadata': metadata,
+    };
+  }
+
+  static const _InvoicePartialCopyWithSentinel _copyWithSentinel =
+      _InvoicePartialCopyWithSentinel();
+  InvoicePartial copyWith({
+    Object? id = _copyWithSentinel,
+    Object? amount = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return InvoicePartial(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      amount: identical(amount, _copyWithSentinel)
+          ? this.amount
+          : amount as Decimal?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+}
+
+class _InvoicePartialCopyWithSentinel {
+  const _InvoicePartialCopyWithSentinel();
+}
+
+/// Generated tracked model class for [Invoice].
+///
+/// This class extends the user-defined [Invoice] model and adds
+/// attribute tracking, change detection, and relationship management.
+/// Instances of this class are returned by queries and repositories.
+///
+/// **Do not instantiate this class directly.** Use queries, repositories,
+/// or model factories to create tracked model instances.
+class $Invoice extends Invoice with ModelAttributes implements OrmEntity {
+  /// Internal constructor for [$Invoice].
+  $Invoice({required int id, Decimal? amount, Map<String, Object?>? metadata})
+    : super.new(id: id, amount: amount, metadata: metadata) {
+    _attachOrmRuntimeMetadata({
+      'id': id,
+      'amount': amount,
+      'metadata': metadata,
+    });
+  }
+
+  /// Creates a tracked model instance from a user-defined model instance.
+  factory $Invoice.fromModel(Invoice model) {
+    return $Invoice(
+      id: model.id,
+      amount: model.amount,
+      metadata: model.metadata,
+    );
+  }
+
+  $Invoice copyWith({
+    int? id,
+    Decimal? amount,
+    Map<String, Object?>? metadata,
+  }) {
+    return $Invoice(
+      id: id ?? this.id,
+      amount: amount ?? this.amount,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
+  /// Tracked getter for [id].
+  @override
+  int get id => getAttribute<int>('id') ?? super.id;
+
+  /// Tracked setter for [id].
+  set id(int value) => setAttribute('id', value);
+
+  /// Tracked getter for [amount].
+  @override
+  Decimal? get amount => getAttribute<Decimal?>('amount') ?? super.amount;
+
+  /// Tracked setter for [amount].
+  set amount(Decimal? value) => setAttribute('amount', value);
+
+  /// Tracked getter for [metadata].
+  @override
+  Map<String, Object?>? get metadata =>
+      getAttribute<Map<String, Object?>?>('metadata') ?? super.metadata;
+
+  /// Tracked setter for [metadata].
+  set metadata(Map<String, Object?>? value) => setAttribute('metadata', value);
+
+  void _attachOrmRuntimeMetadata(Map<String, Object?> values) {
+    replaceAttributes(values);
+    attachModelDefinition(_$InvoiceDefinition);
+  }
+}
+
+extension InvoiceOrmExtension on Invoice {
+  /// The Type of the generated ORM-managed model class.
+  /// Use this when you need to specify the tracked model type explicitly,
+  /// for example in generic type parameters.
+  static Type get trackedType => $Invoice;
+
+  /// Converts this immutable model to a tracked ORM-managed model.
+  /// The tracked model supports attribute tracking, change detection,
+  /// and persistence operations like save() and touch().
+  $Invoice toTracked() {
+    return $Invoice.fromModel(this);
+  }
+}
+
+extension InvoicePredicateFields on PredicateBuilder<Invoice> {
+  PredicateField<Invoice, int> get id =>
+      PredicateField<Invoice, int>(this, 'id');
+  PredicateField<Invoice, Decimal?> get amount =>
+      PredicateField<Invoice, Decimal?>(this, 'amount');
+  PredicateField<Invoice, Map<String, Object?>?> get metadata =>
+      PredicateField<Invoice, Map<String, Object?>?>(this, 'metadata');
+}
+
+void registerInvoiceEventHandlers(EventBus bus) {
+  // No event handlers registered for Invoice.
 }

@@ -86,6 +86,8 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -483,6 +485,16 @@ extension PostOrmExtension on Post {
   $Post toTracked() {
     return $Post.fromModel(this);
   }
+}
+
+extension PostPredicateFields on PredicateBuilder<Post> {
+  PredicateField<Post, int> get id => PredicateField<Post, int>(this, 'id');
+  PredicateField<Post, String> get title =>
+      PredicateField<Post, String>(this, 'title');
+  PredicateField<Post, String?> get content =>
+      PredicateField<Post, String?>(this, 'content');
+  PredicateField<Post, int?> get authorId =>
+      PredicateField<Post, int?>(this, 'authorId');
 }
 
 void registerPostEventHandlers(EventBus bus) {

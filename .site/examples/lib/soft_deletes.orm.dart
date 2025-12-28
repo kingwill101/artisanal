@@ -97,6 +97,8 @@ final ModelDefinition<$CombinedPost> _$CombinedPostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: true,
     softDeleteColumn: 'deleted_at',
   ),
@@ -217,18 +219,21 @@ class _$CombinedPostCodec extends ModelCodec<$CombinedPost> {
     return <String, Object?>{
       'id': registry.encodeField(_$CombinedPostIdField, model.id),
       'title': registry.encodeField(_$CombinedPostTitleField, model.title),
-      'deleted_at': registry.encodeField(
-        _$CombinedPostDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
-      'created_at': registry.encodeField(
-        _$CombinedPostCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$CombinedPostUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$CombinedPostDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$CombinedPostCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$CombinedPostUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -261,9 +266,12 @@ class _$CombinedPostCodec extends ModelCodec<$CombinedPost> {
     model._attachOrmRuntimeMetadata({
       'id': combinedPostIdValue,
       'title': combinedPostTitleValue,
-      'deleted_at': combinedPostDeletedAtValue,
-      'created_at': combinedPostCreatedAtValue,
-      'updated_at': combinedPostUpdatedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': combinedPostDeletedAtValue,
+      if (data.containsKey('created_at'))
+        'created_at': combinedPostCreatedAtValue,
+      if (data.containsKey('updated_at'))
+        'updated_at': combinedPostUpdatedAtValue,
     });
     return model;
   }
@@ -450,6 +458,13 @@ extension CombinedPostOrmExtension on CombinedPost {
   }
 }
 
+extension CombinedPostPredicateFields on PredicateBuilder<CombinedPost> {
+  PredicateField<CombinedPost, int> get id =>
+      PredicateField<CombinedPost, int>(this, 'id');
+  PredicateField<CombinedPost, String> get title =>
+      PredicateField<CombinedPost, String>(this, 'title');
+}
+
 void registerCombinedPostEventHandlers(EventBus bus) {
   // No event handlers registered for CombinedPost.
 }
@@ -545,6 +560,8 @@ final ModelDefinition<$CombinedPostTz> _$CombinedPostTzDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -665,18 +682,21 @@ class _$CombinedPostTzCodec extends ModelCodec<$CombinedPostTz> {
     return <String, Object?>{
       'id': registry.encodeField(_$CombinedPostTzIdField, model.id),
       'title': registry.encodeField(_$CombinedPostTzTitleField, model.title),
-      'deleted_at': registry.encodeField(
-        _$CombinedPostTzDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
-      'created_at': registry.encodeField(
-        _$CombinedPostTzCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$CombinedPostTzUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$CombinedPostTzDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$CombinedPostTzCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$CombinedPostTzUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -715,9 +735,12 @@ class _$CombinedPostTzCodec extends ModelCodec<$CombinedPostTz> {
     model._attachOrmRuntimeMetadata({
       'id': combinedPostTzIdValue,
       'title': combinedPostTzTitleValue,
-      'deleted_at': combinedPostTzDeletedAtValue,
-      'created_at': combinedPostTzCreatedAtValue,
-      'updated_at': combinedPostTzUpdatedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': combinedPostTzDeletedAtValue,
+      if (data.containsKey('created_at'))
+        'created_at': combinedPostTzCreatedAtValue,
+      if (data.containsKey('updated_at'))
+        'updated_at': combinedPostTzUpdatedAtValue,
     });
     return model;
   }
@@ -901,6 +924,13 @@ extension CombinedPostTzOrmExtension on CombinedPostTz {
   $CombinedPostTz toTracked() {
     return $CombinedPostTz.fromModel(this);
   }
+}
+
+extension CombinedPostTzPredicateFields on PredicateBuilder<CombinedPostTz> {
+  PredicateField<CombinedPostTz, int> get id =>
+      PredicateField<CombinedPostTz, int>(this, 'id');
+  PredicateField<CombinedPostTz, String> get title =>
+      PredicateField<CombinedPostTz, String>(this, 'title');
 }
 
 void registerCombinedPostTzEventHandlers(EventBus bus) {

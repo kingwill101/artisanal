@@ -56,6 +56,8 @@ final ModelDefinition<$Document> _$DocumentDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -366,6 +368,13 @@ extension DocumentOrmExtension on Document {
   $Document toTracked() {
     return $Document.fromModel(this);
   }
+}
+
+extension DocumentPredicateFields on PredicateBuilder<Document> {
+  PredicateField<Document, int> get id =>
+      PredicateField<Document, int>(this, 'id');
+  PredicateField<Document, Map<String, Object?>?> get metadata =>
+      PredicateField<Document, Map<String, Object?>?>(this, 'metadata');
 }
 
 void registerDocumentEventHandlers(EventBus bus) {

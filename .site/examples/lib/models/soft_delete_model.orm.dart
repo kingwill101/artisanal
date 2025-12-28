@@ -72,6 +72,8 @@ final ModelDefinition<$SoftDeletePost> _$SoftDeletePostDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: true,
         softDeleteColumn: 'deleted_at',
       ),
@@ -192,10 +194,11 @@ class _$SoftDeletePostCodec extends ModelCodec<$SoftDeletePost> {
     return <String, Object?>{
       'id': registry.encodeField(_$SoftDeletePostIdField, model.id),
       'title': registry.encodeField(_$SoftDeletePostTitleField, model.title),
-      'deleted_at': registry.encodeField(
-        _$SoftDeletePostDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$SoftDeletePostDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -224,7 +227,8 @@ class _$SoftDeletePostCodec extends ModelCodec<$SoftDeletePost> {
     model._attachOrmRuntimeMetadata({
       'id': softDeletePostIdValue,
       'title': softDeletePostTitleValue,
-      'deleted_at': softDeletePostDeletedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': softDeletePostDeletedAtValue,
     });
     return model;
   }
@@ -411,6 +415,13 @@ extension SoftDeletePostOrmExtension on SoftDeletePost {
   }
 }
 
+extension SoftDeletePostPredicateFields on PredicateBuilder<SoftDeletePost> {
+  PredicateField<SoftDeletePost, int> get id =>
+      PredicateField<SoftDeletePost, int>(this, 'id');
+  PredicateField<SoftDeletePost, String> get title =>
+      PredicateField<SoftDeletePost, String>(this, 'title');
+}
+
 void registerSoftDeletePostEventHandlers(EventBus bus) {
   // No event handlers registered for SoftDeletePost.
 }
@@ -480,6 +491,8 @@ final ModelDefinition<$SoftDeleteArticleTz> _$SoftDeleteArticleTzDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -609,10 +622,11 @@ class _$SoftDeleteArticleTzCodec extends ModelCodec<$SoftDeleteArticleTz> {
         _$SoftDeleteArticleTzTitleField,
         model.title,
       ),
-      'deleted_at': registry.encodeField(
-        _$SoftDeleteArticleTzDeletedAtField,
-        model.getAttribute<DateTime?>('deleted_at'),
-      ),
+      if (model.hasAttribute('deleted_at'))
+        'deleted_at': registry.encodeField(
+          _$SoftDeleteArticleTzDeletedAtField,
+          model.getAttribute<DateTime?>('deleted_at'),
+        ),
     };
   }
 
@@ -644,7 +658,8 @@ class _$SoftDeleteArticleTzCodec extends ModelCodec<$SoftDeleteArticleTz> {
     model._attachOrmRuntimeMetadata({
       'id': softDeleteArticleTzIdValue,
       'title': softDeleteArticleTzTitleValue,
-      'deleted_at': softDeleteArticleTzDeletedAtValue,
+      if (data.containsKey('deleted_at'))
+        'deleted_at': softDeleteArticleTzDeletedAtValue,
     });
     return model;
   }
@@ -829,6 +844,14 @@ extension SoftDeleteArticleTzOrmExtension on SoftDeleteArticleTz {
   $SoftDeleteArticleTz toTracked() {
     return $SoftDeleteArticleTz.fromModel(this);
   }
+}
+
+extension SoftDeleteArticleTzPredicateFields
+    on PredicateBuilder<SoftDeleteArticleTz> {
+  PredicateField<SoftDeleteArticleTz, int> get id =>
+      PredicateField<SoftDeleteArticleTz, int>(this, 'id');
+  PredicateField<SoftDeleteArticleTz, String> get title =>
+      PredicateField<SoftDeleteArticleTz, String>(this, 'title');
 }
 
 void registerSoftDeleteArticleTzEventHandlers(EventBus bus) {

@@ -88,6 +88,8 @@ final ModelDefinition<$Product> _$ProductDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -493,6 +495,17 @@ extension ProductOrmExtension on Product {
   $Product toTracked() {
     return $Product.fromModel(this);
   }
+}
+
+extension ProductPredicateFields on PredicateBuilder<Product> {
+  PredicateField<Product, int> get id =>
+      PredicateField<Product, int>(this, 'id');
+  PredicateField<Product, String> get sku =>
+      PredicateField<Product, String>(this, 'sku');
+  PredicateField<Product, bool> get active =>
+      PredicateField<Product, bool>(this, 'active');
+  PredicateField<Product, Map<String, Object?>?> get metadata =>
+      PredicateField<Product, Map<String, Object?>?>(this, 'metadata');
 }
 
 void registerProductEventHandlers(EventBus bus) {

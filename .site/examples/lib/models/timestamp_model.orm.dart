@@ -85,6 +85,8 @@ final ModelDefinition<$TimestampPost> _$TimestampPostDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -205,14 +207,16 @@ class _$TimestampPostCodec extends ModelCodec<$TimestampPost> {
     return <String, Object?>{
       'id': registry.encodeField(_$TimestampPostIdField, model.id),
       'title': registry.encodeField(_$TimestampPostTitleField, model.title),
-      'created_at': registry.encodeField(
-        _$TimestampPostCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$TimestampPostUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$TimestampPostCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$TimestampPostUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -246,8 +250,10 @@ class _$TimestampPostCodec extends ModelCodec<$TimestampPost> {
     model._attachOrmRuntimeMetadata({
       'id': timestampPostIdValue,
       'title': timestampPostTitleValue,
-      'created_at': timestampPostCreatedAtValue,
-      'updated_at': timestampPostUpdatedAtValue,
+      if (data.containsKey('created_at'))
+        'created_at': timestampPostCreatedAtValue,
+      if (data.containsKey('updated_at'))
+        'updated_at': timestampPostUpdatedAtValue,
     });
     return model;
   }
@@ -433,6 +439,13 @@ extension TimestampPostOrmExtension on TimestampPost {
   }
 }
 
+extension TimestampPostPredicateFields on PredicateBuilder<TimestampPost> {
+  PredicateField<TimestampPost, int> get id =>
+      PredicateField<TimestampPost, int>(this, 'id');
+  PredicateField<TimestampPost, String> get title =>
+      PredicateField<TimestampPost, String>(this, 'title');
+}
+
 void registerTimestampPostEventHandlers(EventBus bus) {
   // No event handlers registered for TimestampPost.
 }
@@ -515,6 +528,8 @@ final ModelDefinition<$TimestampArticleTz> _$TimestampArticleTzDefinition =
         guarded: const <String>[],
         casts: const <String, String>{},
         appends: const <String>[],
+        touches: const <String>[],
+        timestamps: true,
         softDeletes: false,
         softDeleteColumn: 'deleted_at',
       ),
@@ -644,14 +659,16 @@ class _$TimestampArticleTzCodec extends ModelCodec<$TimestampArticleTz> {
         _$TimestampArticleTzTitleField,
         model.title,
       ),
-      'created_at': registry.encodeField(
-        _$TimestampArticleTzCreatedAtField,
-        model.getAttribute<DateTime?>('created_at'),
-      ),
-      'updated_at': registry.encodeField(
-        _$TimestampArticleTzUpdatedAtField,
-        model.getAttribute<DateTime?>('updated_at'),
-      ),
+      if (model.hasAttribute('created_at'))
+        'created_at': registry.encodeField(
+          _$TimestampArticleTzCreatedAtField,
+          model.getAttribute<DateTime?>('created_at'),
+        ),
+      if (model.hasAttribute('updated_at'))
+        'updated_at': registry.encodeField(
+          _$TimestampArticleTzUpdatedAtField,
+          model.getAttribute<DateTime?>('updated_at'),
+        ),
     };
   }
 
@@ -685,8 +702,10 @@ class _$TimestampArticleTzCodec extends ModelCodec<$TimestampArticleTz> {
     model._attachOrmRuntimeMetadata({
       'id': timestampArticleTzIdValue,
       'title': timestampArticleTzTitleValue,
-      'created_at': timestampArticleTzCreatedAtValue,
-      'updated_at': timestampArticleTzUpdatedAtValue,
+      if (data.containsKey('created_at'))
+        'created_at': timestampArticleTzCreatedAtValue,
+      if (data.containsKey('updated_at'))
+        'updated_at': timestampArticleTzUpdatedAtValue,
     });
     return model;
   }
@@ -870,6 +889,14 @@ extension TimestampArticleTzOrmExtension on TimestampArticleTz {
   $TimestampArticleTz toTracked() {
     return $TimestampArticleTz.fromModel(this);
   }
+}
+
+extension TimestampArticleTzPredicateFields
+    on PredicateBuilder<TimestampArticleTz> {
+  PredicateField<TimestampArticleTz, int> get id =>
+      PredicateField<TimestampArticleTz, int>(this, 'id');
+  PredicateField<TimestampArticleTz, String> get title =>
+      PredicateField<TimestampArticleTz, String>(this, 'title');
 }
 
 void registerTimestampArticleTzEventHandlers(EventBus bus) {

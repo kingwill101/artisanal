@@ -3,6 +3,8 @@
 
 import 'package:ormed/ormed.dart';
 
+part 'json.orm.dart';
+
 // #region json-model-field
 @OrmModel(table: 'users')
 class User extends Model<User> {

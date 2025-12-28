@@ -86,6 +86,8 @@ final ModelDefinition<$ScopedUser> _$ScopedUserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -510,6 +512,17 @@ void registerScopedUserScopes(ScopeRegistry registry) {
   registry.addLocalScope<$ScopedUser>('roleIs', (query, args) {
     return query.roleIs(role: args[0] as String);
   });
+}
+
+extension ScopedUserPredicateFields on PredicateBuilder<ScopedUser> {
+  PredicateField<ScopedUser, int> get id =>
+      PredicateField<ScopedUser, int>(this, 'id');
+  PredicateField<ScopedUser, String> get email =>
+      PredicateField<ScopedUser, String>(this, 'email');
+  PredicateField<ScopedUser, bool> get active =>
+      PredicateField<ScopedUser, bool>(this, 'active');
+  PredicateField<ScopedUser, String?> get role =>
+      PredicateField<ScopedUser, String?>(this, 'role');
 }
 
 void registerScopedUserEventHandlers(EventBus bus) {

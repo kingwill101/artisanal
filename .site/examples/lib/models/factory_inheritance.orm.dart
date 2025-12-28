@@ -55,6 +55,8 @@ final ModelDefinition<$BaseItem> _$BaseItemDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -362,6 +364,13 @@ extension BaseItemOrmExtension on BaseItem {
   }
 }
 
+extension BaseItemPredicateFields on PredicateBuilder<BaseItem> {
+  PredicateField<BaseItem, int> get id =>
+      PredicateField<BaseItem, int>(this, 'id');
+  PredicateField<BaseItem, String?> get name =>
+      PredicateField<BaseItem, String?>(this, 'name');
+}
+
 void registerBaseItemEventHandlers(EventBus bus) {
   // No event handlers registered for BaseItem.
 }
@@ -431,6 +440,8 @@ final ModelDefinition<$SpecialItem> _$SpecialItemDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -790,6 +801,15 @@ extension SpecialItemOrmExtension on SpecialItem {
   $SpecialItem toTracked() {
     return $SpecialItem.fromModel(this);
   }
+}
+
+extension SpecialItemPredicateFields on PredicateBuilder<SpecialItem> {
+  PredicateField<SpecialItem, List<String>?> get tags =>
+      PredicateField<SpecialItem, List<String>?>(this, 'tags');
+  PredicateField<SpecialItem, int> get id =>
+      PredicateField<SpecialItem, int>(this, 'id');
+  PredicateField<SpecialItem, String?> get name =>
+      PredicateField<SpecialItem, String?>(this, 'name');
 }
 
 void registerSpecialItemEventHandlers(EventBus bus) {

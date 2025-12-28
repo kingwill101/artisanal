@@ -73,6 +73,7 @@ If `DataSourceOptions.tablePrefix` is set, Ormed automatically prefixes all **un
 - Prefer `whereEquals('id', id)` for primary key lookups.
 - Use `whereIn` for sets, and `whereBetween` for ranges.
 - Group complex logic with `where((q) => ...)` so operator precedence is explicit.
+- Use `whereTyped((q) => q.field.eq(...))` for typed predicate fields; untyped callbacks still work but are dynamic.
 
 </TabItem>
 <TabItem value="examples" label="Examples">
@@ -130,6 +131,11 @@ You can use qualified column names (e.g., `table.column`) in where clauses. This
 
 ```
 
+### Typed Predicate Fields
+
+```dart file=../../examples/lib/queries.dart#where-typed-predicate
+```
+
 ## Ordering
 
 ```dart file=../../examples/lib/queries.dart#ordering-limiting
@@ -161,6 +167,11 @@ that supports window functions.
 
 ```dart file=../../examples/lib/queries.dart#relations
 
+```
+
+### Typed Relation Helpers
+
+```dart file=../../examples/lib/queries.dart#typed-relation-helpers
 ```
 
 ## Raw Expressions

@@ -87,6 +87,8 @@ final ModelDefinition<$Admin> _$AdminDefinition = ModelDefinition(
     guarded: const <String>['id'],
     casts: const <String, String>{'createdAt': 'datetime'},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -502,6 +504,16 @@ extension AdminOrmExtension on Admin {
   $Admin toTracked() {
     return $Admin.fromModel(this);
   }
+}
+
+extension AdminPredicateFields on PredicateBuilder<Admin> {
+  PredicateField<Admin, int> get id => PredicateField<Admin, int>(this, 'id');
+  PredicateField<Admin, String> get email =>
+      PredicateField<Admin, String>(this, 'email');
+  PredicateField<Admin, String?> get password =>
+      PredicateField<Admin, String?>(this, 'password');
+  PredicateField<Admin, DateTime?> get createdAt =>
+      PredicateField<Admin, DateTime?>(this, 'createdAt');
 }
 
 void registerAdminEventHandlers(EventBus bus) {
