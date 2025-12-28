@@ -147,6 +147,18 @@ class ValidatedUsers {
   /// {@macro ormed.repository}
   static Repository<$ValidatedUser> repo([String? connection]) =>
       Model.repository<$ValidatedUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $ValidatedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ValidatedUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $ValidatedUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$ValidatedUserDefinition.toMap(model, registry: registry);
 }
 
 class ValidatedUserModelFactory {
@@ -403,6 +415,16 @@ class $ValidatedUser extends ValidatedUser
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $ValidatedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ValidatedUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ValidatedUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -430,7 +452,35 @@ class $ValidatedUser extends ValidatedUser
   }
 }
 
+class _ValidatedUserCopyWithSentinel {
+  const _ValidatedUserCopyWithSentinel();
+}
+
 extension ValidatedUserOrmExtension on ValidatedUser {
+  static const _ValidatedUserCopyWithSentinel _copyWithSentinel =
+      _ValidatedUserCopyWithSentinel();
+  ValidatedUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? age = _copyWithSentinel,
+  }) {
+    return ValidatedUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      age: identical(age, _copyWithSentinel) ? this.age : age as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ValidatedUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static ValidatedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ValidatedUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

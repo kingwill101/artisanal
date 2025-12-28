@@ -120,6 +120,18 @@ class MorphUsers {
   /// {@macro ormed.repository}
   static Repository<$MorphUser> repo([String? connection]) =>
       Model.repository<$MorphUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MorphUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MorphUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphUserDefinition.toMap(model, registry: registry);
 }
 
 class MorphUserModelFactory {
@@ -294,6 +306,16 @@ class $MorphUser extends MorphUser with ModelAttributes implements OrmEntity {
     return $MorphUser(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MorphUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -323,7 +345,35 @@ extension MorphUserRelationQueries on MorphUser {
   }
 }
 
+class _MorphUserCopyWithSentinel {
+  const _MorphUserCopyWithSentinel();
+}
+
 extension MorphUserOrmExtension on MorphUser {
+  static const _MorphUserCopyWithSentinel _copyWithSentinel =
+      _MorphUserCopyWithSentinel();
+  MorphUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? avatar = _copyWithSentinel,
+  }) {
+    return MorphUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      avatar: identical(avatar, _copyWithSentinel)
+          ? this.avatar
+          : avatar as MorphPhoto?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MorphUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -476,6 +526,18 @@ class MorphPostPhotos {
   /// {@macro ormed.repository}
   static Repository<$MorphPostPhotos> repo([String? connection]) =>
       Model.repository<$MorphPostPhotos>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MorphPostPhotos fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostPhotosDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MorphPostPhotos model, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostPhotosDefinition.toMap(model, registry: registry);
 }
 
 class MorphPostPhotosModelFactory {
@@ -659,6 +721,16 @@ class $MorphPostPhotos extends MorphPostPhotos
     return $MorphPostPhotos(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MorphPostPhotos fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostPhotosDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPostPhotosDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -688,7 +760,35 @@ extension MorphPostPhotosRelationQueries on MorphPostPhotos {
   }
 }
 
+class _MorphPostPhotosCopyWithSentinel {
+  const _MorphPostPhotosCopyWithSentinel();
+}
+
 extension MorphPostPhotosOrmExtension on MorphPostPhotos {
+  static const _MorphPostPhotosCopyWithSentinel _copyWithSentinel =
+      _MorphPostPhotosCopyWithSentinel();
+  MorphPostPhotos copyWith({
+    Object? id = _copyWithSentinel,
+    Object? photos = _copyWithSentinel,
+  }) {
+    return MorphPostPhotos.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      photos: identical(photos, _copyWithSentinel)
+          ? this.photos
+          : photos as List<MorphPhoto>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPostPhotosDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MorphPostPhotos fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostPhotosDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -871,6 +971,18 @@ class MorphPhotos {
   /// {@macro ormed.repository}
   static Repository<$MorphPhoto> repo([String? connection]) =>
       Model.repository<$MorphPhoto>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MorphPhoto fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPhotoDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MorphPhoto model, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPhotoDefinition.toMap(model, registry: registry);
 }
 
 class MorphPhotoModelFactory {
@@ -1142,6 +1254,16 @@ class $MorphPhoto extends MorphPhoto with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MorphPhoto fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPhotoDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPhotoDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1187,7 +1309,43 @@ extension MorphPhotoRelationQueries on MorphPhoto {
   }
 }
 
+class _MorphPhotoCopyWithSentinel {
+  const _MorphPhotoCopyWithSentinel();
+}
+
 extension MorphPhotoOrmExtension on MorphPhoto {
+  static const _MorphPhotoCopyWithSentinel _copyWithSentinel =
+      _MorphPhotoCopyWithSentinel();
+  MorphPhoto copyWith({
+    Object? id = _copyWithSentinel,
+    Object? imageableId = _copyWithSentinel,
+    Object? imageableType = _copyWithSentinel,
+    Object? imageable = _copyWithSentinel,
+  }) {
+    return MorphPhoto.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      imageableId: identical(imageableId, _copyWithSentinel)
+          ? this.imageableId
+          : imageableId as int?,
+      imageableType: identical(imageableType, _copyWithSentinel)
+          ? this.imageableType
+          : imageableType as String?,
+      imageable: identical(imageable, _copyWithSentinel)
+          ? this.imageable
+          : imageable as OrmEntity?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPhotoDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MorphPhoto fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPhotoDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -1346,6 +1504,18 @@ class MorphPostTags {
   /// {@macro ormed.repository}
   static Repository<$MorphPostTags> repo([String? connection]) =>
       Model.repository<$MorphPostTags>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MorphPostTags fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostTagsDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MorphPostTags model, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostTagsDefinition.toMap(model, registry: registry);
 }
 
 class MorphPostTagsModelFactory {
@@ -1529,6 +1699,16 @@ class $MorphPostTags extends MorphPostTags
     return $MorphPostTags(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MorphPostTags fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostTagsDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPostTagsDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1558,7 +1738,35 @@ extension MorphPostTagsRelationQueries on MorphPostTags {
   }
 }
 
+class _MorphPostTagsCopyWithSentinel {
+  const _MorphPostTagsCopyWithSentinel();
+}
+
 extension MorphPostTagsOrmExtension on MorphPostTags {
+  static const _MorphPostTagsCopyWithSentinel _copyWithSentinel =
+      _MorphPostTagsCopyWithSentinel();
+  MorphPostTags copyWith({
+    Object? id = _copyWithSentinel,
+    Object? tags = _copyWithSentinel,
+  }) {
+    return MorphPostTags.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      tags: identical(tags, _copyWithSentinel)
+          ? this.tags
+          : tags as List<MorphTag>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphPostTagsDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MorphPostTags fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphPostTagsDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -1704,6 +1912,18 @@ class MorphTags {
   /// {@macro ormed.repository}
   static Repository<$MorphTag> repo([String? connection]) =>
       Model.repository<$MorphTag>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $MorphTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphTagDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $MorphTag model, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphTagDefinition.toMap(model, registry: registry);
 }
 
 class MorphTagModelFactory {
@@ -1878,6 +2098,16 @@ class $MorphTag extends MorphTag with ModelAttributes implements OrmEntity {
     return $MorphTag(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $MorphTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphTagDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphTagDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1907,7 +2137,35 @@ extension MorphTagRelationQueries on MorphTag {
   }
 }
 
+class _MorphTagCopyWithSentinel {
+  const _MorphTagCopyWithSentinel();
+}
+
 extension MorphTagOrmExtension on MorphTag {
+  static const _MorphTagCopyWithSentinel _copyWithSentinel =
+      _MorphTagCopyWithSentinel();
+  MorphTag copyWith({
+    Object? id = _copyWithSentinel,
+    Object? posts = _copyWithSentinel,
+  }) {
+    return MorphTag.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      posts: identical(posts, _copyWithSentinel)
+          ? this.posts
+          : posts as List<MorphPostTags>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$MorphTagDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static MorphTag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$MorphTagDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

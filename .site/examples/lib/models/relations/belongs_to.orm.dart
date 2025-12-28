@@ -171,6 +171,18 @@ class PostWithAuthors {
   /// {@macro ormed.repository}
   static Repository<$PostWithAuthor> repo([String? connection]) =>
       Model.repository<$PostWithAuthor>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $PostWithAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostWithAuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $PostWithAuthor model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostWithAuthorDefinition.toMap(model, registry: registry);
 }
 
 class PostWithAuthorModelFactory {
@@ -508,6 +520,16 @@ class $PostWithAuthor extends PostWithAuthor
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $PostWithAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostWithAuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostWithAuthorDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -556,7 +578,41 @@ extension PostWithAuthorRelationQueries on PostWithAuthor {
   }
 }
 
+class _PostWithAuthorCopyWithSentinel {
+  const _PostWithAuthorCopyWithSentinel();
+}
+
 extension PostWithAuthorOrmExtension on PostWithAuthor {
+  static const _PostWithAuthorCopyWithSentinel _copyWithSentinel =
+      _PostWithAuthorCopyWithSentinel();
+  PostWithAuthor copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? author = _copyWithSentinel,
+  }) {
+    return PostWithAuthor.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+      author: identical(author, _copyWithSentinel)
+          ? this.author
+          : author as PostAuthor?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostWithAuthorDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static PostWithAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostWithAuthorDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -714,6 +770,18 @@ class PostAuthors {
   /// {@macro ormed.repository}
   static Repository<$PostAuthor> repo([String? connection]) =>
       Model.repository<$PostAuthor>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $PostAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostAuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $PostAuthor model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostAuthorDefinition.toMap(model, registry: registry);
 }
 
 class PostAuthorModelFactory {
@@ -924,6 +992,16 @@ class $PostAuthor extends PostAuthor with ModelAttributes implements OrmEntity {
     return $PostAuthor(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $PostAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostAuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostAuthorDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -944,7 +1022,33 @@ class $PostAuthor extends PostAuthor with ModelAttributes implements OrmEntity {
   }
 }
 
+class _PostAuthorCopyWithSentinel {
+  const _PostAuthorCopyWithSentinel();
+}
+
 extension PostAuthorOrmExtension on PostAuthor {
+  static const _PostAuthorCopyWithSentinel _copyWithSentinel =
+      _PostAuthorCopyWithSentinel();
+  PostAuthor copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return PostAuthor.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostAuthorDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static PostAuthor fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostAuthorDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

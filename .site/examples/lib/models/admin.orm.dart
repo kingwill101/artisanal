@@ -155,6 +155,18 @@ class Admins {
   /// {@macro ormed.repository}
   static Repository<$Admin> repo([String? connection]) =>
       Model.repository<$Admin>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Admin fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AdminDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Admin model, {
+    ValueCodecRegistry? registry,
+  }) => _$AdminDefinition.toMap(model, registry: registry);
 }
 
 class AdminModelFactory {
@@ -457,6 +469,16 @@ class $Admin extends Admin with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Admin fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AdminDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AdminDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -492,7 +514,41 @@ class $Admin extends Admin with ModelAttributes implements OrmEntity {
   }
 }
 
+class _AdminCopyWithSentinel {
+  const _AdminCopyWithSentinel();
+}
+
 extension AdminOrmExtension on Admin {
+  static const _AdminCopyWithSentinel _copyWithSentinel =
+      _AdminCopyWithSentinel();
+  Admin copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? password = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return Admin.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      password: identical(password, _copyWithSentinel)
+          ? this.password
+          : password as String?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AdminDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Admin fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AdminDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -159,6 +159,18 @@ class TimestampPosts {
   /// {@macro ormed.repository}
   static Repository<$TimestampPost> repo([String? connection]) =>
       Model.repository<$TimestampPost>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $TimestampPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $TimestampPost model, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampPostDefinition.toMap(model, registry: registry);
 }
 
 class TimestampPostModelFactory {
@@ -405,6 +417,16 @@ class $TimestampPost extends TimestampPost
     return $TimestampPost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $TimestampPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TimestampPostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -425,7 +447,33 @@ class $TimestampPost extends TimestampPost
   }
 }
 
+class _TimestampPostCopyWithSentinel {
+  const _TimestampPostCopyWithSentinel();
+}
+
 extension TimestampPostOrmExtension on TimestampPost {
+  static const _TimestampPostCopyWithSentinel _copyWithSentinel =
+      _TimestampPostCopyWithSentinel();
+  TimestampPost copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampPost.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TimestampPostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static TimestampPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampPostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -608,6 +656,18 @@ class TimestampArticleTzs {
   /// {@macro ormed.repository}
   static Repository<$TimestampArticleTz> repo([String? connection]) =>
       Model.repository<$TimestampArticleTz>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $TimestampArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampArticleTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $TimestampArticleTz model, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampArticleTzDefinition.toMap(model, registry: registry);
 }
 
 class TimestampArticleTzModelFactory {
@@ -857,6 +917,16 @@ class $TimestampArticleTz extends TimestampArticleTz
     return $TimestampArticleTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $TimestampArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampArticleTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TimestampArticleTzDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -877,7 +947,33 @@ class $TimestampArticleTz extends TimestampArticleTz
   }
 }
 
+class _TimestampArticleTzCopyWithSentinel {
+  const _TimestampArticleTzCopyWithSentinel();
+}
+
 extension TimestampArticleTzOrmExtension on TimestampArticleTz {
+  static const _TimestampArticleTzCopyWithSentinel _copyWithSentinel =
+      _TimestampArticleTzCopyWithSentinel();
+  TimestampArticleTz copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return TimestampArticleTz.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TimestampArticleTzDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static TimestampArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TimestampArticleTzDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

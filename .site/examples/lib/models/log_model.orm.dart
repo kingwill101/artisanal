@@ -133,6 +133,18 @@ class Logs {
   /// {@macro ormed.repository}
   static Repository<$Log> repo([String? connection]) =>
       Model.repository<$Log>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Log fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LogDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Log model, {
+    ValueCodecRegistry? registry,
+  }) => _$LogDefinition.toMap(model, registry: registry);
 }
 
 class LogModelFactory {
@@ -389,6 +401,16 @@ class $Log extends Log with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Log fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LogDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$LogDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -417,7 +439,38 @@ class $Log extends Log with ModelAttributes implements OrmEntity {
   }
 }
 
+class _LogCopyWithSentinel {
+  const _LogCopyWithSentinel();
+}
+
 extension LogOrmExtension on Log {
+  static const _LogCopyWithSentinel _copyWithSentinel = _LogCopyWithSentinel();
+  Log copyWith({
+    Object? id = _copyWithSentinel,
+    Object? message = _copyWithSentinel,
+    Object? timestamp = _copyWithSentinel,
+  }) {
+    return Log.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      message: identical(message, _copyWithSentinel)
+          ? this.message
+          : message as String,
+      timestamp: identical(timestamp, _copyWithSentinel)
+          ? this.timestamp
+          : timestamp as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$LogDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Log fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LogDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

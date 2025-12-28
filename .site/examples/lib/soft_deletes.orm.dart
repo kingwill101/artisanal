@@ -171,6 +171,18 @@ class CombinedPosts {
   /// {@macro ormed.repository}
   static Repository<$CombinedPost> repo([String? connection]) =>
       Model.repository<$CombinedPost>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $CombinedPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $CombinedPost model, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostDefinition.toMap(model, registry: registry);
 }
 
 class CombinedPostModelFactory {
@@ -423,6 +435,16 @@ class $CombinedPost extends CombinedPost
     return $CombinedPost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $CombinedPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CombinedPostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -444,7 +466,33 @@ class $CombinedPost extends CombinedPost
   }
 }
 
+class _CombinedPostCopyWithSentinel {
+  const _CombinedPostCopyWithSentinel();
+}
+
 extension CombinedPostOrmExtension on CombinedPost {
+  static const _CombinedPostCopyWithSentinel _copyWithSentinel =
+      _CombinedPostCopyWithSentinel();
+  CombinedPost copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPost.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CombinedPostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static CombinedPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -634,6 +682,18 @@ class CombinedPostTzs {
   /// {@macro ormed.repository}
   static Repository<$CombinedPostTz> repo([String? connection]) =>
       Model.repository<$CombinedPostTz>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $CombinedPostTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $CombinedPostTz model, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostTzDefinition.toMap(model, registry: registry);
 }
 
 class CombinedPostTzModelFactory {
@@ -892,6 +952,16 @@ class $CombinedPostTz extends CombinedPostTz
     return $CombinedPostTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $CombinedPostTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CombinedPostTzDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -912,7 +982,33 @@ class $CombinedPostTz extends CombinedPostTz
   }
 }
 
+class _CombinedPostTzCopyWithSentinel {
+  const _CombinedPostTzCopyWithSentinel();
+}
+
 extension CombinedPostTzOrmExtension on CombinedPostTz {
+  static const _CombinedPostTzCopyWithSentinel _copyWithSentinel =
+      _CombinedPostTzCopyWithSentinel();
+  CombinedPostTz copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return CombinedPostTz.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CombinedPostTzDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static CombinedPostTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CombinedPostTzDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

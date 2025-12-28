@@ -10,6 +10,32 @@ import '../models/post.orm.dart';
 import '../models/product.dart';
 import '../models/product.orm.dart';
 
+// #region model-copywith
+void copyWithExample() {
+  final user = User(id: 1, email: 'user@example.com', name: 'Ada');
+
+  final renamed = user.copyWith(name: 'Grace');
+  final cleared = user.copyWith(name: null);
+
+  print(renamed.name); // Grace
+  print(cleared.name); // null
+}
+// #endregion model-copywith
+
+// #region model-map-helpers
+void mapHelpersExample() {
+  final user = User(id: 1, email: 'user@example.com', name: 'Ada');
+
+  final map = user.toMap();
+  final decoded = UserOrmExtension.fromMap(map);
+  final tracked = $User.fromMap(map);
+
+  print(map['email']); // user@example.com
+  print(decoded.runtimeType); // $User
+  print(tracked.email); // user@example.com
+}
+// #endregion model-map-helpers
+
 // #region model-replicate
 Future<void> replicateExample(DataSource dataSource) async {
   final original = await dataSource.query<$User>().find(1);

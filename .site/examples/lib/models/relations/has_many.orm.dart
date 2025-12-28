@@ -137,6 +137,18 @@ class UserWithPosts {
   /// {@macro ormed.repository}
   static Repository<$UserWithPosts> repo([String? connection]) =>
       Model.repository<$UserWithPosts>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $UserWithPosts fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithPostsDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $UserWithPosts model, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithPostsDefinition.toMap(model, registry: registry);
 }
 
 class UserWithPostsModelFactory {
@@ -360,6 +372,16 @@ class $UserWithPosts extends UserWithPosts
     return $UserWithPosts(id: id ?? this.id, posts: posts ?? this.posts);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $UserWithPosts fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithPostsDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserWithPostsDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -395,7 +417,35 @@ extension UserWithPostsRelationQueries on UserWithPosts {
   }
 }
 
+class _UserWithPostsCopyWithSentinel {
+  const _UserWithPostsCopyWithSentinel();
+}
+
 extension UserWithPostsOrmExtension on UserWithPosts {
+  static const _UserWithPostsCopyWithSentinel _copyWithSentinel =
+      _UserWithPostsCopyWithSentinel();
+  UserWithPosts copyWith({
+    Object? id = _copyWithSentinel,
+    Object? posts = _copyWithSentinel,
+  }) {
+    return UserWithPosts.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      posts: identical(posts, _copyWithSentinel)
+          ? this.posts
+          : posts as List<UserPost>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserWithPostsDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static UserWithPosts fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithPostsDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -564,6 +614,18 @@ class UserPosts {
   /// {@macro ormed.repository}
   static Repository<$UserPost> repo([String? connection]) =>
       Model.repository<$UserPost>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $UserPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $UserPost model, {
+    ValueCodecRegistry? registry,
+  }) => _$UserPostDefinition.toMap(model, registry: registry);
 }
 
 class UserPostModelFactory {
@@ -830,6 +892,16 @@ class $UserPost extends UserPost with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $UserPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserPostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -857,7 +929,37 @@ class $UserPost extends UserPost with ModelAttributes implements OrmEntity {
   }
 }
 
+class _UserPostCopyWithSentinel {
+  const _UserPostCopyWithSentinel();
+}
+
 extension UserPostOrmExtension on UserPost {
+  static const _UserPostCopyWithSentinel _copyWithSentinel =
+      _UserPostCopyWithSentinel();
+  UserPost copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return UserPost.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserPostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static UserPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserPostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

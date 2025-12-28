@@ -156,6 +156,18 @@ class Products {
   /// {@macro ormed.repository}
   static Repository<$Product> repo([String? connection]) =>
       Model.repository<$Product>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Product fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProductDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Product model, {
+    ValueCodecRegistry? registry,
+  }) => _$ProductDefinition.toMap(model, registry: registry);
 }
 
 class ProductModelFactory {
@@ -448,6 +460,16 @@ class $Product extends Product with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Product fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProductDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ProductDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -483,7 +505,41 @@ class $Product extends Product with ModelAttributes implements OrmEntity {
   }
 }
 
+class _ProductCopyWithSentinel {
+  const _ProductCopyWithSentinel();
+}
+
 extension ProductOrmExtension on Product {
+  static const _ProductCopyWithSentinel _copyWithSentinel =
+      _ProductCopyWithSentinel();
+  Product copyWith({
+    Object? id = _copyWithSentinel,
+    Object? sku = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return Product.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      sku: identical(sku, _copyWithSentinel) ? this.sku : sku as String,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ProductDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Product fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProductDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

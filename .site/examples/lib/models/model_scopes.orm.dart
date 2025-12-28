@@ -155,6 +155,18 @@ class ScopedUsers {
   /// {@macro ormed.repository}
   static Repository<$ScopedUser> repo([String? connection]) =>
       Model.repository<$ScopedUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $ScopedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ScopedUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $ScopedUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$ScopedUserDefinition.toMap(model, registry: registry);
 }
 
 class ScopedUserModelFactory {
@@ -445,6 +457,16 @@ class $ScopedUser extends ScopedUser with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $ScopedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ScopedUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ScopedUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -479,7 +501,39 @@ class $ScopedUser extends ScopedUser with ModelAttributes implements OrmEntity {
   }
 }
 
+class _ScopedUserCopyWithSentinel {
+  const _ScopedUserCopyWithSentinel();
+}
+
 extension ScopedUserOrmExtension on ScopedUser {
+  static const _ScopedUserCopyWithSentinel _copyWithSentinel =
+      _ScopedUserCopyWithSentinel();
+  ScopedUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? role = _copyWithSentinel,
+  }) {
+    return ScopedUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool,
+      role: identical(role, _copyWithSentinel) ? this.role : role as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ScopedUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static ScopedUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ScopedUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

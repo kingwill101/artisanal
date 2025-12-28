@@ -155,6 +155,18 @@ class DriverOverrideExamples {
   /// {@macro ormed.repository}
   static Repository<$DriverOverrideExample> repo([String? connection]) =>
       Model.repository<$DriverOverrideExample>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $DriverOverrideExample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideExampleDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $DriverOverrideExample model, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideExampleDefinition.toMap(model, registry: registry);
 }
 
 class DriverOverrideExampleModelFactory {
@@ -399,6 +411,16 @@ class $DriverOverrideExample extends DriverOverrideExample
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $DriverOverrideExample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideExampleDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DriverOverrideExampleDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -420,7 +442,35 @@ class $DriverOverrideExample extends DriverOverrideExample
   }
 }
 
+class _DriverOverrideExampleCopyWithSentinel {
+  const _DriverOverrideExampleCopyWithSentinel();
+}
+
 extension DriverOverrideExampleOrmExtension on DriverOverrideExample {
+  static const _DriverOverrideExampleCopyWithSentinel _copyWithSentinel =
+      _DriverOverrideExampleCopyWithSentinel();
+  DriverOverrideExample copyWith({
+    Object? id = _copyWithSentinel,
+    Object? payload = _copyWithSentinel,
+  }) {
+    return DriverOverrideExample.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      payload: identical(payload, _copyWithSentinel)
+          ? this.payload
+          : payload as Map<String, Object?>,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DriverOverrideExampleDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static DriverOverrideExample fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DriverOverrideExampleDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -572,6 +622,18 @@ class AuditedEvents {
   /// {@macro ormed.repository}
   static Repository<$AuditedEvent> repo([String? connection]) =>
       Model.repository<$AuditedEvent>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $AuditedEvent fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuditedEventDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $AuditedEvent model, {
+    ValueCodecRegistry? registry,
+  }) => _$AuditedEventDefinition.toMap(model, registry: registry);
 }
 
 class AuditedEventModelFactory {
@@ -800,6 +862,16 @@ class $AuditedEvent extends AuditedEvent
     return $AuditedEvent(id: id ?? this.id, action: action ?? this.action);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $AuditedEvent fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuditedEventDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuditedEventDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -820,7 +892,35 @@ class $AuditedEvent extends AuditedEvent
   }
 }
 
+class _AuditedEventCopyWithSentinel {
+  const _AuditedEventCopyWithSentinel();
+}
+
 extension AuditedEventOrmExtension on AuditedEvent {
+  static const _AuditedEventCopyWithSentinel _copyWithSentinel =
+      _AuditedEventCopyWithSentinel();
+  AuditedEvent copyWith({
+    Object? id = _copyWithSentinel,
+    Object? action = _copyWithSentinel,
+  }) {
+    return AuditedEvent.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      action: identical(action, _copyWithSentinel)
+          ? this.action
+          : action as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuditedEventDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static AuditedEvent fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuditedEventDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

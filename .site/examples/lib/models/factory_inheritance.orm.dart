@@ -127,6 +127,18 @@ class BaseItems {
   /// {@macro ormed.repository}
   static Repository<$BaseItem> repo([String? connection]) =>
       Model.repository<$BaseItem>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $BaseItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$BaseItemDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $BaseItem model, {
+    ValueCodecRegistry? registry,
+  }) => _$BaseItemDefinition.toMap(model, registry: registry);
 }
 
 class BaseItemModelFactory {
@@ -330,6 +342,16 @@ class $BaseItem extends BaseItem with ModelAttributes implements OrmEntity {
     return $BaseItem(id: id ?? this.id, name: name ?? this.name);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $BaseItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$BaseItemDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$BaseItemDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -350,7 +372,33 @@ class $BaseItem extends BaseItem with ModelAttributes implements OrmEntity {
   }
 }
 
+class _BaseItemCopyWithSentinel {
+  const _BaseItemCopyWithSentinel();
+}
+
 extension BaseItemOrmExtension on BaseItem {
+  static const _BaseItemCopyWithSentinel _copyWithSentinel =
+      _BaseItemCopyWithSentinel();
+  BaseItem copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return BaseItem.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$BaseItemDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static BaseItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$BaseItemDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -518,6 +566,18 @@ class SpecialItems {
   /// {@macro ormed.repository}
   static Repository<$SpecialItem> repo([String? connection]) =>
       Model.repository<$SpecialItem>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $SpecialItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SpecialItemDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $SpecialItem model, {
+    ValueCodecRegistry? registry,
+  }) => _$SpecialItemDefinition.toMap(model, registry: registry);
 }
 
 class SpecialItemModelFactory {
@@ -762,6 +822,16 @@ class $SpecialItem extends SpecialItem
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $SpecialItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SpecialItemDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SpecialItemDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [tags].
   @override
   List<String>? get tags => getAttribute<List<String>?>('tags') ?? super.tags;
@@ -789,7 +859,37 @@ class $SpecialItem extends SpecialItem
   }
 }
 
+class _SpecialItemCopyWithSentinel {
+  const _SpecialItemCopyWithSentinel();
+}
+
 extension SpecialItemOrmExtension on SpecialItem {
+  static const _SpecialItemCopyWithSentinel _copyWithSentinel =
+      _SpecialItemCopyWithSentinel();
+  SpecialItem copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? tags = _copyWithSentinel,
+  }) {
+    return SpecialItem.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      tags: identical(tags, _copyWithSentinel)
+          ? this.tags
+          : tags as List<String>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SpecialItemDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static SpecialItem fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SpecialItemDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

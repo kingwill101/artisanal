@@ -142,6 +142,18 @@ class Settings {
   /// {@macro ormed.repository}
   static Repository<$Settings> repo([String? connection]) =>
       Model.repository<$Settings>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Settings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingsDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Settings model, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingsDefinition.toMap(model, registry: registry);
 }
 
 class SettingsModelFactory {
@@ -402,6 +414,16 @@ class $Settings extends Settings with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Settings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingsDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SettingsDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -431,7 +453,39 @@ class $Settings extends Settings with ModelAttributes implements OrmEntity {
   }
 }
 
+class _SettingsCopyWithSentinel {
+  const _SettingsCopyWithSentinel();
+}
+
 extension SettingsOrmExtension on Settings {
+  static const _SettingsCopyWithSentinel _copyWithSentinel =
+      _SettingsCopyWithSentinel();
+  Settings copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+  }) {
+    return Settings.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SettingsDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Settings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SettingsDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -589,6 +643,18 @@ class FieldCastSettings {
   /// {@macro ormed.repository}
   static Repository<$FieldCastSettings> repo([String? connection]) =>
       Model.repository<$FieldCastSettings>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $FieldCastSettings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FieldCastSettingsDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $FieldCastSettings model, {
+    ValueCodecRegistry? registry,
+  }) => _$FieldCastSettingsDefinition.toMap(model, registry: registry);
 }
 
 class FieldCastSettingsModelFactory {
@@ -815,6 +881,16 @@ class $FieldCastSettings extends FieldCastSettings
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $FieldCastSettings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FieldCastSettingsDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$FieldCastSettingsDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -836,7 +912,35 @@ class $FieldCastSettings extends FieldCastSettings
   }
 }
 
+class _FieldCastSettingsCopyWithSentinel {
+  const _FieldCastSettingsCopyWithSentinel();
+}
+
 extension FieldCastSettingsOrmExtension on FieldCastSettings {
+  static const _FieldCastSettingsCopyWithSentinel _copyWithSentinel =
+      _FieldCastSettingsCopyWithSentinel();
+  FieldCastSettings copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return FieldCastSettings.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$FieldCastSettingsDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static FieldCastSettings fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FieldCastSettingsDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -982,6 +1086,18 @@ class Links {
   /// {@macro ormed.repository}
   static Repository<$Link> repo([String? connection]) =>
       Model.repository<$Link>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Link fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LinkDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Link model, {
+    ValueCodecRegistry? registry,
+  }) => _$LinkDefinition.toMap(model, registry: registry);
 }
 
 class LinkModelFactory {
@@ -1178,6 +1294,16 @@ class $Link extends Link with ModelAttributes implements OrmEntity {
     return $Link(id: id ?? this.id, website: website ?? this.website);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Link fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LinkDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$LinkDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1198,7 +1324,35 @@ class $Link extends Link with ModelAttributes implements OrmEntity {
   }
 }
 
+class _LinkCopyWithSentinel {
+  const _LinkCopyWithSentinel();
+}
+
 extension LinkOrmExtension on Link {
+  static const _LinkCopyWithSentinel _copyWithSentinel =
+      _LinkCopyWithSentinel();
+  Link copyWith({
+    Object? id = _copyWithSentinel,
+    Object? website = _copyWithSentinel,
+  }) {
+    return Link.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      website: identical(website, _copyWithSentinel)
+          ? this.website
+          : website as Uri?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$LinkDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Link fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$LinkDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -1358,6 +1512,18 @@ class Accounts {
   /// {@macro ormed.repository}
   static Repository<$Account> repo([String? connection]) =>
       Model.repository<$Account>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Account model, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.toMap(model, registry: registry);
 }
 
 class AccountModelFactory {
@@ -1615,6 +1781,16 @@ class $Account extends Account with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccountDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1643,7 +1819,39 @@ class $Account extends Account with ModelAttributes implements OrmEntity {
   }
 }
 
+class _AccountCopyWithSentinel {
+  const _AccountCopyWithSentinel();
+}
+
 extension AccountOrmExtension on Account {
+  static const _AccountCopyWithSentinel _copyWithSentinel =
+      _AccountCopyWithSentinel();
+  Account copyWith({
+    Object? id = _copyWithSentinel,
+    Object? status = _copyWithSentinel,
+    Object? secret = _copyWithSentinel,
+  }) {
+    return Account.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      status: identical(status, _copyWithSentinel)
+          ? this.status
+          : status as AccountStatus,
+      secret: identical(secret, _copyWithSentinel)
+          ? this.secret
+          : secret as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccountDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -1808,6 +2016,18 @@ class Invoices {
   /// {@macro ormed.repository}
   static Repository<$Invoice> repo([String? connection]) =>
       Model.repository<$Invoice>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Invoice fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$InvoiceDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Invoice model, {
+    ValueCodecRegistry? registry,
+  }) => _$InvoiceDefinition.toMap(model, registry: registry);
 }
 
 class InvoiceModelFactory {
@@ -2066,6 +2286,16 @@ class $Invoice extends Invoice with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Invoice fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$InvoiceDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$InvoiceDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -2094,7 +2324,39 @@ class $Invoice extends Invoice with ModelAttributes implements OrmEntity {
   }
 }
 
+class _InvoiceCopyWithSentinel {
+  const _InvoiceCopyWithSentinel();
+}
+
 extension InvoiceOrmExtension on Invoice {
+  static const _InvoiceCopyWithSentinel _copyWithSentinel =
+      _InvoiceCopyWithSentinel();
+  Invoice copyWith({
+    Object? id = _copyWithSentinel,
+    Object? amount = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return Invoice.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      amount: identical(amount, _copyWithSentinel)
+          ? this.amount
+          : amount as Decimal?,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$InvoiceDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Invoice fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$InvoiceDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

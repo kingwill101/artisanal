@@ -137,6 +137,18 @@ class UserWithProfiles {
   /// {@macro ormed.repository}
   static Repository<$UserWithProfile> repo([String? connection]) =>
       Model.repository<$UserWithProfile>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $UserWithProfile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithProfileDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $UserWithProfile model, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithProfileDefinition.toMap(model, registry: registry);
 }
 
 class UserWithProfileModelFactory {
@@ -368,6 +380,16 @@ class $UserWithProfile extends UserWithProfile
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $UserWithProfile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithProfileDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserWithProfileDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -402,7 +424,35 @@ extension UserWithProfileRelationQueries on UserWithProfile {
   }
 }
 
+class _UserWithProfileCopyWithSentinel {
+  const _UserWithProfileCopyWithSentinel();
+}
+
 extension UserWithProfileOrmExtension on UserWithProfile {
+  static const _UserWithProfileCopyWithSentinel _copyWithSentinel =
+      _UserWithProfileCopyWithSentinel();
+  UserWithProfile copyWith({
+    Object? id = _copyWithSentinel,
+    Object? profile = _copyWithSentinel,
+  }) {
+    return UserWithProfile.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      profile: identical(profile, _copyWithSentinel)
+          ? this.profile
+          : profile as Profile?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserWithProfileDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static UserWithProfile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserWithProfileDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -568,6 +618,18 @@ class Profiles {
   /// {@macro ormed.repository}
   static Repository<$Profile> repo([String? connection]) =>
       Model.repository<$Profile>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Profile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProfileDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Profile model, {
+    ValueCodecRegistry? registry,
+  }) => _$ProfileDefinition.toMap(model, registry: registry);
 }
 
 class ProfileModelFactory {
@@ -813,6 +875,16 @@ class $Profile extends Profile with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Profile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProfileDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ProfileDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -840,7 +912,37 @@ class $Profile extends Profile with ModelAttributes implements OrmEntity {
   }
 }
 
+class _ProfileCopyWithSentinel {
+  const _ProfileCopyWithSentinel();
+}
+
 extension ProfileOrmExtension on Profile {
+  static const _ProfileCopyWithSentinel _copyWithSentinel =
+      _ProfileCopyWithSentinel();
+  Profile copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? bio = _copyWithSentinel,
+  }) {
+    return Profile.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int,
+      bio: identical(bio, _copyWithSentinel) ? this.bio : bio as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ProfileDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Profile fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ProfileDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

@@ -153,6 +153,18 @@ class AuthorWithComments {
   /// {@macro ormed.repository}
   static Repository<$AuthorWithComments> repo([String? connection]) =>
       Model.repository<$AuthorWithComments>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $AuthorWithComments fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorWithCommentsDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $AuthorWithComments model, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorWithCommentsDefinition.toMap(model, registry: registry);
 }
 
 class AuthorWithCommentsModelFactory {
@@ -388,6 +400,16 @@ class $AuthorWithComments extends AuthorWithComments
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $AuthorWithComments fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorWithCommentsDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorWithCommentsDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -425,7 +447,35 @@ extension AuthorWithCommentsRelationQueries on AuthorWithComments {
   }
 }
 
+class _AuthorWithCommentsCopyWithSentinel {
+  const _AuthorWithCommentsCopyWithSentinel();
+}
+
 extension AuthorWithCommentsOrmExtension on AuthorWithComments {
+  static const _AuthorWithCommentsCopyWithSentinel _copyWithSentinel =
+      _AuthorWithCommentsCopyWithSentinel();
+  AuthorWithComments copyWith({
+    Object? id = _copyWithSentinel,
+    Object? comments = _copyWithSentinel,
+  }) {
+    return AuthorWithComments.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      comments: identical(comments, _copyWithSentinel)
+          ? this.comments
+          : comments as List<PostComment>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorWithCommentsDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static AuthorWithComments fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorWithCommentsDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -580,6 +630,18 @@ class AuthorPosts {
   /// {@macro ormed.repository}
   static Repository<$AuthorPost> repo([String? connection]) =>
       Model.repository<$AuthorPost>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $AuthorPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $AuthorPost model, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorPostDefinition.toMap(model, registry: registry);
 }
 
 class AuthorPostModelFactory {
@@ -808,6 +870,16 @@ class $AuthorPost extends AuthorPost with ModelAttributes implements OrmEntity {
     return $AuthorPost(id: id ?? this.id, authorId: authorId ?? this.authorId);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $AuthorPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorPostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorPostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -828,7 +900,35 @@ class $AuthorPost extends AuthorPost with ModelAttributes implements OrmEntity {
   }
 }
 
+class _AuthorPostCopyWithSentinel {
+  const _AuthorPostCopyWithSentinel();
+}
+
 extension AuthorPostOrmExtension on AuthorPost {
+  static const _AuthorPostCopyWithSentinel _copyWithSentinel =
+      _AuthorPostCopyWithSentinel();
+  AuthorPost copyWith({
+    Object? id = _copyWithSentinel,
+    Object? authorId = _copyWithSentinel,
+  }) {
+    return AuthorPost.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      authorId: identical(authorId, _copyWithSentinel)
+          ? this.authorId
+          : authorId as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorPostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static AuthorPost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorPostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -992,6 +1092,18 @@ class PostComments {
   /// {@macro ormed.repository}
   static Repository<$PostComment> repo([String? connection]) =>
       Model.repository<$PostComment>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $PostComment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostCommentDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $PostComment model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostCommentDefinition.toMap(model, registry: registry);
 }
 
 class PostCommentModelFactory {
@@ -1244,6 +1356,16 @@ class $PostComment extends PostComment
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $PostComment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostCommentDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostCommentDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1271,7 +1393,37 @@ class $PostComment extends PostComment
   }
 }
 
+class _PostCommentCopyWithSentinel {
+  const _PostCommentCopyWithSentinel();
+}
+
 extension PostCommentOrmExtension on PostComment {
+  static const _PostCommentCopyWithSentinel _copyWithSentinel =
+      _PostCommentCopyWithSentinel();
+  PostComment copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+  }) {
+    return PostComment.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostCommentDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static PostComment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostCommentDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

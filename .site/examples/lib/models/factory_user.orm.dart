@@ -150,6 +150,18 @@ class FactoryUsers {
   /// {@macro ormed.repository}
   static Repository<$FactoryUser> repo([String? connection]) =>
       Model.repository<$FactoryUser>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $FactoryUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FactoryUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $FactoryUser model, {
+    ValueCodecRegistry? registry,
+  }) => _$FactoryUserDefinition.toMap(model, registry: registry);
 }
 
 class FactoryUserModelFactory {
@@ -394,6 +406,16 @@ class $FactoryUser extends FactoryUser
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $FactoryUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FactoryUserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$FactoryUserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -421,7 +443,35 @@ class $FactoryUser extends FactoryUser
   }
 }
 
+class _FactoryUserCopyWithSentinel {
+  const _FactoryUserCopyWithSentinel();
+}
+
 extension FactoryUserOrmExtension on FactoryUser {
+  static const _FactoryUserCopyWithSentinel _copyWithSentinel =
+      _FactoryUserCopyWithSentinel();
+  FactoryUser copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return FactoryUser.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$FactoryUserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static FactoryUser fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$FactoryUserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

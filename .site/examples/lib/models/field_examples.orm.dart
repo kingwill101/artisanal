@@ -117,6 +117,18 @@ class ItemWithIntPKs {
   /// {@macro ormed.repository}
   static Repository<$ItemWithIntPK> repo([String? connection]) =>
       Model.repository<$ItemWithIntPK>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithIntPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithIntPKDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $ItemWithIntPK model, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithIntPKDefinition.toMap(model, registry: registry);
 }
 
 class ItemWithIntPKModelFactory {
@@ -300,6 +312,16 @@ class $ItemWithIntPK extends ItemWithIntPK
     return $ItemWithIntPK(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithIntPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithIntPKDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithIntPKDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -313,7 +335,29 @@ class $ItemWithIntPK extends ItemWithIntPK
   }
 }
 
+class _ItemWithIntPKCopyWithSentinel {
+  const _ItemWithIntPKCopyWithSentinel();
+}
+
 extension ItemWithIntPKOrmExtension on ItemWithIntPK {
+  static const _ItemWithIntPKCopyWithSentinel _copyWithSentinel =
+      _ItemWithIntPKCopyWithSentinel();
+  ItemWithIntPK copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithIntPK.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithIntPKDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static ItemWithIntPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithIntPKDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -454,6 +498,18 @@ class ItemWithAutoIncrements {
   /// {@macro ormed.repository}
   static Repository<$ItemWithAutoIncrement> repo([String? connection]) =>
       Model.repository<$ItemWithAutoIncrement>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithAutoIncrement fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithAutoIncrementDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $ItemWithAutoIncrement model, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithAutoIncrementDefinition.toMap(model, registry: registry);
 }
 
 class ItemWithAutoIncrementModelFactory {
@@ -629,6 +685,16 @@ class $ItemWithAutoIncrement extends ItemWithAutoIncrement
     return $ItemWithAutoIncrement(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithAutoIncrement fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithAutoIncrementDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithAutoIncrementDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -642,7 +708,29 @@ class $ItemWithAutoIncrement extends ItemWithAutoIncrement
   }
 }
 
+class _ItemWithAutoIncrementCopyWithSentinel {
+  const _ItemWithAutoIncrementCopyWithSentinel();
+}
+
 extension ItemWithAutoIncrementOrmExtension on ItemWithAutoIncrement {
+  static const _ItemWithAutoIncrementCopyWithSentinel _copyWithSentinel =
+      _ItemWithAutoIncrementCopyWithSentinel();
+  ItemWithAutoIncrement copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithAutoIncrement.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithAutoIncrementDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static ItemWithAutoIncrement fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithAutoIncrementDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -776,6 +864,18 @@ class ItemWithUuidPKs {
   /// {@macro ormed.repository}
   static Repository<$ItemWithUuidPK> repo([String? connection]) =>
       Model.repository<$ItemWithUuidPK>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithUuidPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithUuidPKDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $ItemWithUuidPK model, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithUuidPKDefinition.toMap(model, registry: registry);
 }
 
 class ItemWithUuidPKModelFactory {
@@ -959,6 +1059,16 @@ class $ItemWithUuidPK extends ItemWithUuidPK
     return $ItemWithUuidPK(id: id ?? this.id);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $ItemWithUuidPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithUuidPKDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithUuidPKDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   String get id => getAttribute<String>('id') ?? super.id;
@@ -972,7 +1082,29 @@ class $ItemWithUuidPK extends ItemWithUuidPK
   }
 }
 
+class _ItemWithUuidPKCopyWithSentinel {
+  const _ItemWithUuidPKCopyWithSentinel();
+}
+
 extension ItemWithUuidPKOrmExtension on ItemWithUuidPK {
+  static const _ItemWithUuidPKCopyWithSentinel _copyWithSentinel =
+      _ItemWithUuidPKCopyWithSentinel();
+  ItemWithUuidPK copyWith({Object? id = _copyWithSentinel}) {
+    return ItemWithUuidPK.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ItemWithUuidPKDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static ItemWithUuidPK fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ItemWithUuidPKDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -1143,6 +1275,18 @@ class Contacts {
   /// {@macro ormed.repository}
   static Repository<$Contact> repo([String? connection]) =>
       Model.repository<$Contact>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Contact fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ContactDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Contact model, {
+    ValueCodecRegistry? registry,
+  }) => _$ContactDefinition.toMap(model, registry: registry);
 }
 
 class ContactModelFactory {
@@ -1429,6 +1573,16 @@ class $Contact extends Contact with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Contact fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ContactDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ContactDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -1463,7 +1617,39 @@ class $Contact extends Contact with ModelAttributes implements OrmEntity {
   }
 }
 
+class _ContactCopyWithSentinel {
+  const _ContactCopyWithSentinel();
+}
+
 extension ContactOrmExtension on Contact {
+  static const _ContactCopyWithSentinel _copyWithSentinel =
+      _ContactCopyWithSentinel();
+  Contact copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+  }) {
+    return Contact.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$ContactDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Contact fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$ContactDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

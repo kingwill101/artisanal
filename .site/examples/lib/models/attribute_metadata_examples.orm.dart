@@ -180,6 +180,18 @@ class Accounts {
   /// {@macro ormed.repository}
   static Repository<$Account> repo([String? connection]) =>
       Model.repository<$Account>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Account model, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.toMap(model, registry: registry);
 }
 
 class AccountModelFactory {
@@ -535,6 +547,16 @@ class $Account extends Account with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccountDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -577,7 +599,43 @@ class $Account extends Account with ModelAttributes implements OrmEntity {
   }
 }
 
+class _AccountCopyWithSentinel {
+  const _AccountCopyWithSentinel();
+}
+
 extension AccountOrmExtension on Account {
+  static const _AccountCopyWithSentinel _copyWithSentinel =
+      _AccountCopyWithSentinel();
+  Account copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? passwordHash = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? isAdmin = _copyWithSentinel,
+  }) {
+    return Account.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      passwordHash: identical(passwordHash, _copyWithSentinel)
+          ? this.passwordHash
+          : passwordHash as String,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String?,
+      isAdmin: identical(isAdmin, _copyWithSentinel)
+          ? this.isAdmin
+          : isAdmin as bool,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AccountDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Account fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AccountDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

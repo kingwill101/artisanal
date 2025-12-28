@@ -124,6 +124,18 @@ class Documents {
   /// {@macro ormed.repository}
   static Repository<$Document> repo([String? connection]) =>
       Model.repository<$Document>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Document fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DocumentDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Document model, {
+    ValueCodecRegistry? registry,
+  }) => _$DocumentDefinition.toMap(model, registry: registry);
 }
 
 class DocumentModelFactory {
@@ -335,6 +347,16 @@ class $Document extends Document with ModelAttributes implements OrmEntity {
     return $Document(id: id ?? this.id, metadata: metadata ?? this.metadata);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Document fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DocumentDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DocumentDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -356,7 +378,35 @@ class $Document extends Document with ModelAttributes implements OrmEntity {
   }
 }
 
+class _DocumentCopyWithSentinel {
+  const _DocumentCopyWithSentinel();
+}
+
 extension DocumentOrmExtension on Document {
+  static const _DocumentCopyWithSentinel _copyWithSentinel =
+      _DocumentCopyWithSentinel();
+  Document copyWith({
+    Object? id = _copyWithSentinel,
+    Object? metadata = _copyWithSentinel,
+  }) {
+    return Document.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      metadata: identical(metadata, _copyWithSentinel)
+          ? this.metadata
+          : metadata as Map<String, Object?>?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$DocumentDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Document fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$DocumentDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.

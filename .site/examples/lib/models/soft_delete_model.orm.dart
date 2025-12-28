@@ -146,6 +146,18 @@ class SoftDeletePosts {
   /// {@macro ormed.repository}
   static Repository<$SoftDeletePost> repo([String? connection]) =>
       Model.repository<$SoftDeletePost>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $SoftDeletePost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeletePostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $SoftDeletePost model, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeletePostDefinition.toMap(model, registry: registry);
 }
 
 class SoftDeletePostModelFactory {
@@ -380,6 +392,16 @@ class $SoftDeletePost extends SoftDeletePost
     return $SoftDeletePost(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $SoftDeletePost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeletePostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SoftDeletePostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -401,7 +423,33 @@ class $SoftDeletePost extends SoftDeletePost
   }
 }
 
+class _SoftDeletePostCopyWithSentinel {
+  const _SoftDeletePostCopyWithSentinel();
+}
+
 extension SoftDeletePostOrmExtension on SoftDeletePost {
+  static const _SoftDeletePostCopyWithSentinel _copyWithSentinel =
+      _SoftDeletePostCopyWithSentinel();
+  SoftDeletePost copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeletePost.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SoftDeletePostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static SoftDeletePost fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeletePostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -571,6 +619,18 @@ class SoftDeleteArticleTzs {
   /// {@macro ormed.repository}
   static Repository<$SoftDeleteArticleTz> repo([String? connection]) =>
       Model.repository<$SoftDeleteArticleTz>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $SoftDeleteArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeleteArticleTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $SoftDeleteArticleTz model, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeleteArticleTzDefinition.toMap(model, registry: registry);
 }
 
 class SoftDeleteArticleTzModelFactory {
@@ -812,6 +872,16 @@ class $SoftDeleteArticleTz extends SoftDeleteArticleTz
     return $SoftDeleteArticleTz(id: id ?? this.id, title: title ?? this.title);
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $SoftDeleteArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeleteArticleTzDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SoftDeleteArticleTzDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int get id => getAttribute<int>('id') ?? super.id;
@@ -832,7 +902,33 @@ class $SoftDeleteArticleTz extends SoftDeleteArticleTz
   }
 }
 
+class _SoftDeleteArticleTzCopyWithSentinel {
+  const _SoftDeleteArticleTzCopyWithSentinel();
+}
+
 extension SoftDeleteArticleTzOrmExtension on SoftDeleteArticleTz {
+  static const _SoftDeleteArticleTzCopyWithSentinel _copyWithSentinel =
+      _SoftDeleteArticleTzCopyWithSentinel();
+  SoftDeleteArticleTz copyWith({
+    Object? id = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+  }) {
+    return SoftDeleteArticleTz.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$SoftDeleteArticleTzDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static SoftDeleteArticleTz fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$SoftDeleteArticleTzDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
