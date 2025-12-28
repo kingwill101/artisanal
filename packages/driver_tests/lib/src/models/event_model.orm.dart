@@ -451,6 +451,15 @@ extension EventModelOrmExtension on EventModel {
   }
 }
 
+extension EventModelPredicateFields on PredicateBuilder<EventModel> {
+  PredicateField<EventModel, int> get id =>
+      PredicateField<EventModel, int>(this, 'id');
+  PredicateField<EventModel, String> get name =>
+      PredicateField<EventModel, String>(this, 'name');
+  PredicateField<EventModel, int> get score =>
+      PredicateField<EventModel, int>(this, 'score');
+}
+
 void registerEventModelEventHandlers(EventBus bus) {
   bus.on<ModelSavingEvent>((event) {
     if (event.modelType != EventModel && event.modelType != $EventModel) {

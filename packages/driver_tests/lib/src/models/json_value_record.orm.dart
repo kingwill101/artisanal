@@ -424,7 +424,7 @@ class JsonValueRecordInsertDto implements InsertDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue,
+          : objectValue as Object?,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -497,7 +497,7 @@ class JsonValueRecordUpdateDto implements UpdateDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue,
+          : objectValue as Object?,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -542,7 +542,7 @@ class JsonValueRecordPartial implements PartialEntity<$JsonValueRecord> {
   factory JsonValueRecordPartial.fromRow(Map<String, Object?> row) {
     return JsonValueRecordPartial(
       id: row['id'] as String?,
-      objectValue: row['object_value'],
+      objectValue: row['object_value'] as Object?,
       stringValue: row['string_value'] as String?,
       mapDynamic: row['map_dynamic'] as Map<String, dynamic>?,
       mapObject: row['map_object'] as Map<String, Object?>?,
@@ -605,7 +605,7 @@ class JsonValueRecordPartial implements PartialEntity<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue,
+          : objectValue as Object?,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -777,6 +777,26 @@ extension JsonValueRecordOrmExtension on JsonValueRecord {
   $JsonValueRecord toTracked() {
     return $JsonValueRecord.fromModel(this);
   }
+}
+
+extension JsonValueRecordPredicateFields on PredicateBuilder<JsonValueRecord> {
+  PredicateField<JsonValueRecord, String> get id =>
+      PredicateField<JsonValueRecord, String>(this, 'id');
+  PredicateField<JsonValueRecord, Object?> get objectValue =>
+      PredicateField<JsonValueRecord, Object?>(this, 'objectValue');
+  PredicateField<JsonValueRecord, String?> get stringValue =>
+      PredicateField<JsonValueRecord, String?>(this, 'stringValue');
+  PredicateField<JsonValueRecord, Map<String, dynamic>?> get mapDynamic =>
+      PredicateField<JsonValueRecord, Map<String, dynamic>?>(
+        this,
+        'mapDynamic',
+      );
+  PredicateField<JsonValueRecord, Map<String, Object?>?> get mapObject =>
+      PredicateField<JsonValueRecord, Map<String, Object?>?>(this, 'mapObject');
+  PredicateField<JsonValueRecord, List<dynamic>?> get listDynamic =>
+      PredicateField<JsonValueRecord, List<dynamic>?>(this, 'listDynamic');
+  PredicateField<JsonValueRecord, List<Object?>?> get listObject =>
+      PredicateField<JsonValueRecord, List<Object?>?>(this, 'listObject');
 }
 
 void registerJsonValueRecordEventHandlers(EventBus bus) {

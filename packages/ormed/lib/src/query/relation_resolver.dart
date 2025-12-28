@@ -379,6 +379,29 @@ class RelationResolver {
     return builder.build();
   }
 
+  /// Converts a typed constraint callback to a [QueryPredicate].
+  ///
+  /// This variant accepts a typed [PredicateCallback] so generated helpers can
+  /// expose type-safe relation constraints.
+  QueryPredicate? predicateForTyped<T extends OrmEntity>(
+    RelationDefinition relation,
+    PredicateCallback<T>? constraint,
+  ) {
+    if (constraint == null) return null;
+    if (relation.kind == RelationKind.morphTo) {
+      throw StateError(
+        'Relation ${relation.name} does not support constraint callbacks.',
+      );
+    }
+
+    final target =
+        context.registry.expectByName(relation.targetModel)
+            as ModelDefinition<T>;
+    final builder = PredicateBuilder<T>(target);
+    constraint(builder);
+    return builder.build();
+  }
+
   /// Converts a constraint callback to a [QueryPredicate] using a relation path.
   ///
   /// This is useful for nested relation constraints where you need the
@@ -409,6 +432,26 @@ class RelationResolver {
     }
 
     final builder = PredicateBuilder<OrmEntity>(path.leaf.targetDefinition);
+    constraint(builder);
+    return builder.build();
+  }
+
+  /// Converts a typed constraint callback to a [QueryPredicate] using a path.
+  QueryPredicate? predicateForPathTyped<T extends OrmEntity>(
+    RelationPath path,
+    PredicateCallback<T>? constraint,
+  ) {
+    if (constraint == null) return null;
+    if (path.segments.any(
+      (segment) => segment.relation.kind == RelationKind.morphTo,
+    )) {
+      throw StateError(
+        'Relation paths containing morphTo do not support constraint callbacks.',
+      );
+    }
+
+    final target = path.leaf.targetDefinition as ModelDefinition<T>;
+    final builder = PredicateBuilder<T>(target);
     constraint(builder);
     return builder.build();
   }

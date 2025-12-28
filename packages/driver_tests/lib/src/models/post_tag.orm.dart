@@ -644,6 +644,21 @@ extension PostTagOrmExtension on PostTag {
   }
 }
 
+extension PostTagPredicateFields on PredicateBuilder<PostTag> {
+  PredicateField<PostTag, int> get postId =>
+      PredicateField<PostTag, int>(this, 'postId');
+  PredicateField<PostTag, int> get tagId =>
+      PredicateField<PostTag, int>(this, 'tagId');
+  PredicateField<PostTag, int?> get sortOrder =>
+      PredicateField<PostTag, int?>(this, 'sortOrder');
+  PredicateField<PostTag, String?> get note =>
+      PredicateField<PostTag, String?>(this, 'note');
+  PredicateField<PostTag, DateTime?> get createdAt =>
+      PredicateField<PostTag, DateTime?>(this, 'createdAt');
+  PredicateField<PostTag, DateTime?> get updatedAt =>
+      PredicateField<PostTag, DateTime?>(this, 'updatedAt');
+}
+
 void registerPostTagEventHandlers(EventBus bus) {
   // No event handlers registered for PostTag.
 }

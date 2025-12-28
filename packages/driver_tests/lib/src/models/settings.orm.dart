@@ -370,6 +370,13 @@ extension SettingOrmExtension on Setting {
   }
 }
 
+extension SettingPredicateFields on PredicateBuilder<Setting> {
+  PredicateField<Setting, int> get id =>
+      PredicateField<Setting, int>(this, 'id');
+  PredicateField<Setting, Map<String, dynamic>> get payload =>
+      PredicateField<Setting, Map<String, dynamic>>(this, 'payload');
+}
+
 void registerSettingEventHandlers(EventBus bus) {
   // No event handlers registered for Setting.
 }

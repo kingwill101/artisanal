@@ -438,6 +438,15 @@ extension UserProfileOrmExtension on UserProfile {
   }
 }
 
+extension UserProfilePredicateFields on PredicateBuilder<UserProfile> {
+  PredicateField<UserProfile, int> get id =>
+      PredicateField<UserProfile, int>(this, 'id');
+  PredicateField<UserProfile, int> get userId =>
+      PredicateField<UserProfile, int>(this, 'userId');
+  PredicateField<UserProfile, String> get bio =>
+      PredicateField<UserProfile, String>(this, 'bio');
+}
+
 void registerUserProfileEventHandlers(EventBus bus) {
   // No event handlers registered for UserProfile.
 }

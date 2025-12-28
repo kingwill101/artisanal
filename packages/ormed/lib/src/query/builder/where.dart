@@ -75,6 +75,29 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   Query<T> whereGreaterThanOrEqual(String field, Object value) =>
       _appendSimpleCondition(field, FilterOperator.greaterThanOrEqual, value);
 
+  /// Adds a typed predicate callback to the query.
+  ///
+  /// Use this when you want typed predicate field accessors inside the callback:
+  /// ```dart
+  /// final users = await context.query<User>()
+  ///   .whereTyped((q) => q.email.eq('alice@example.com'))
+  ///   .get();
+  /// ```
+  Query<T> whereTyped(PredicateCallback<T> callback) => _addWhere(
+    callback,
+    null,
+    PredicateOperator.equals,
+    logical: PredicateLogicalOperator.and,
+  );
+
+  /// Adds a typed predicate callback with `OR` logic.
+  Query<T> orWhereTyped(PredicateCallback<T> callback) => _addWhere(
+    callback,
+    null,
+    PredicateOperator.equals,
+    logical: PredicateLogicalOperator.or,
+  );
+
   /// Adds a `<` comparison for [field].
   ///
   /// This method adds a `WHERE field < value` clause to the query.
@@ -170,6 +193,9 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   ///          .orWhere('status', 'admin');
   ///   })
   ///   .get();
+  ///
+  /// For typed predicate field accessors inside the callback, prefer
+  /// [whereTyped].
   /// ```
   Query<T> where(
     Object fieldOrCallback, [
@@ -694,6 +720,26 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
     logical: PredicateLogicalOperator.and,
   );
 
+  /// Typed variant of [whereHas] that accepts a typed predicate callback.
+  Query<T> whereHasTyped<TRelated extends OrmEntity>(
+    String relation, [
+    PredicateCallback<TRelated>? constraint,
+  ]) => _addRelationWhereTyped(
+    relation,
+    constraint,
+    logical: PredicateLogicalOperator.and,
+  );
+
+  /// Typed variant of [orWhereHas] that accepts a typed predicate callback.
+  Query<T> orWhereHasTyped<TRelated extends OrmEntity>(
+    String relation, [
+    PredicateCallback<TRelated>? constraint,
+  ]) => _addRelationWhereTyped(
+    relation,
+    constraint,
+    logical: PredicateLogicalOperator.or,
+  );
+
   Query<T> _addWhere(
     Object fieldOrCallback,
     Object? value,
@@ -771,6 +817,17 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   }) {
     final path = _resolveRelationPath(relation, allowMorphTo: false);
     final where = _buildRelationPredicateConstraint(path, constraint);
+    final predicate = RelationPredicate(path: path, where: where);
+    return _appendPredicate(predicate, logical);
+  }
+
+  Query<T> _addRelationWhereTyped<TRelated extends OrmEntity>(
+    String relation,
+    PredicateCallback<TRelated>? constraint, {
+    required PredicateLogicalOperator logical,
+  }) {
+    final path = _resolveRelationPath(relation, allowMorphTo: false);
+    final where = _buildRelationPredicateConstraintTyped(path, constraint);
     final predicate = RelationPredicate(path: path, where: where);
     return _appendPredicate(predicate, logical);
   }

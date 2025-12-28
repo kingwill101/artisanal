@@ -387,6 +387,21 @@ extension ImageOrmExtension on Image {
   }
 }
 
+extension ImagePredicateFields on PredicateBuilder<Image> {
+  PredicateField<Image, int> get id => PredicateField<Image, int>(this, 'id');
+  PredicateField<Image, String> get label =>
+      PredicateField<Image, String>(this, 'label');
+}
+
+extension ImageTypedRelations on Query<Image> {
+  Query<Image> withPrimaryPhoto([PredicateCallback<Photo>? constraint]) =>
+      withRelationTyped('primaryPhoto', constraint);
+  Query<Image> whereHasPrimaryPhoto([PredicateCallback<Photo>? constraint]) =>
+      whereHasTyped('primaryPhoto', constraint);
+  Query<Image> orWhereHasPrimaryPhoto([PredicateCallback<Photo>? constraint]) =>
+      orWhereHasTyped('primaryPhoto', constraint);
+}
+
 void registerImageEventHandlers(EventBus bus) {
   // No event handlers registered for Image.
 }

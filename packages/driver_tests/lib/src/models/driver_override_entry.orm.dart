@@ -434,6 +434,17 @@ extension DriverOverrideEntryOrmExtension on DriverOverrideEntry {
   }
 }
 
+extension DriverOverrideEntryPredicateFields
+    on PredicateBuilder<DriverOverrideEntry> {
+  PredicateField<DriverOverrideEntry, int> get id =>
+      PredicateField<DriverOverrideEntry, int>(this, 'id');
+  PredicateField<DriverOverrideEntry, Map<String, Object?>> get payload =>
+      PredicateField<DriverOverrideEntry, Map<String, Object?>>(
+        this,
+        'payload',
+      );
+}
+
 void registerDriverOverrideEntryEventHandlers(EventBus bus) {
   // No event handlers registered for DriverOverrideEntry.
 }

@@ -372,6 +372,13 @@ extension SerialTestOrmExtension on SerialTest {
   }
 }
 
+extension SerialTestPredicateFields on PredicateBuilder<SerialTest> {
+  PredicateField<SerialTest, int> get id =>
+      PredicateField<SerialTest, int>(this, 'id');
+  PredicateField<SerialTest, String> get label =>
+      PredicateField<SerialTest, String>(this, 'label');
+}
+
 void registerSerialTestEventHandlers(EventBus bus) {
   // No event handlers registered for SerialTest.
 }

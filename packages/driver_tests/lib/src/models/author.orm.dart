@@ -519,6 +519,29 @@ extension AuthorOrmExtension on Author {
   }
 }
 
+extension AuthorPredicateFields on PredicateBuilder<Author> {
+  PredicateField<Author, int> get id => PredicateField<Author, int>(this, 'id');
+  PredicateField<Author, String> get name =>
+      PredicateField<Author, String>(this, 'name');
+  PredicateField<Author, bool> get active =>
+      PredicateField<Author, bool>(this, 'active');
+}
+
+extension AuthorTypedRelations on Query<Author> {
+  Query<Author> withPosts([PredicateCallback<Post>? constraint]) =>
+      withRelationTyped('posts', constraint);
+  Query<Author> whereHasPosts([PredicateCallback<Post>? constraint]) =>
+      whereHasTyped('posts', constraint);
+  Query<Author> orWhereHasPosts([PredicateCallback<Post>? constraint]) =>
+      orWhereHasTyped('posts', constraint);
+  Query<Author> withComments([PredicateCallback<Comment>? constraint]) =>
+      withRelationTyped('comments', constraint);
+  Query<Author> whereHasComments([PredicateCallback<Comment>? constraint]) =>
+      whereHasTyped('comments', constraint);
+  Query<Author> orWhereHasComments([PredicateCallback<Comment>? constraint]) =>
+      orWhereHasTyped('comments', constraint);
+}
+
 void registerAuthorEventHandlers(EventBus bus) {
   // No event handlers registered for Author.
 }

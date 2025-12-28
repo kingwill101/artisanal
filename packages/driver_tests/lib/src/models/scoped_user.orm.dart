@@ -514,6 +514,17 @@ void registerScopedUserScopes(ScopeRegistry registry) {
   });
 }
 
+extension ScopedUserPredicateFields on PredicateBuilder<ScopedUser> {
+  PredicateField<ScopedUser, int> get id =>
+      PredicateField<ScopedUser, int>(this, 'id');
+  PredicateField<ScopedUser, String> get email =>
+      PredicateField<ScopedUser, String>(this, 'email');
+  PredicateField<ScopedUser, bool> get active =>
+      PredicateField<ScopedUser, bool>(this, 'active');
+  PredicateField<ScopedUser, String?> get name =>
+      PredicateField<ScopedUser, String?>(this, 'name');
+}
+
 void registerScopedUserEventHandlers(EventBus bus) {
   // No event handlers registered for ScopedUser.
 }

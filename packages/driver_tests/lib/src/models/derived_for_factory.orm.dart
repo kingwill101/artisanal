@@ -573,6 +573,21 @@ extension DerivedForFactoryOrmExtension on DerivedForFactory {
   }
 }
 
+extension DerivedForFactoryPredicateFields
+    on PredicateBuilder<DerivedForFactory> {
+  PredicateField<DerivedForFactory, bool?> get layerTwoFlag =>
+      PredicateField<DerivedForFactory, bool?>(this, 'layerTwoFlag');
+  PredicateField<DerivedForFactory, Map<String, Object?>?> get layerOneNotes =>
+      PredicateField<DerivedForFactory, Map<String, Object?>?>(
+        this,
+        'layerOneNotes',
+      );
+  PredicateField<DerivedForFactory, int> get id =>
+      PredicateField<DerivedForFactory, int>(this, 'id');
+  PredicateField<DerivedForFactory, String?> get baseName =>
+      PredicateField<DerivedForFactory, String?>(this, 'baseName');
+}
+
 void registerDerivedForFactoryEventHandlers(EventBus bus) {
   // No event handlers registered for DerivedForFactory.
 }

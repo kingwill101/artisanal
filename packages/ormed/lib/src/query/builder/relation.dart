@@ -33,6 +33,21 @@ extension RelationExtension<T extends OrmEntity> on Query<T> {
     );
   }
 
+  /// Typed variant of [withRelation] that accepts a typed predicate callback.
+  Query<T> withRelationTyped<TRelated extends OrmEntity>(
+    String name, [
+    PredicateCallback<TRelated>? constraint,
+  ]) {
+    final path = _resolveRelationPath(name);
+    final predicate = _buildRelationLoadPredicateTyped(
+      path.leaf.relation,
+      constraint,
+    );
+    return _copyWith(
+      relations: _mergeRelationLoadTyped(_relations, path, predicate),
+    );
+  }
+
   /// Requests eager loading for multiple relations.
   ///
   /// [names] is a list of relation names to eager load.
@@ -105,6 +120,62 @@ extension RelationExtension<T extends OrmEntity> on Query<T> {
       final load = RelationLoad(
         relation: segment.relation,
         predicate: predicate,
+        nested: nested,
+      );
+
+      return [...existing, load];
+    }
+  }
+
+  List<RelationLoad> _mergeRelationLoadTyped(
+    List<RelationLoad> existing,
+    RelationPath path,
+    QueryPredicate? predicate,
+  ) {
+    if (path.segments.isEmpty) return existing;
+
+    final segment = path.segments.first;
+    final remainingSegments = path.segments.skip(1).toList();
+
+    final existingIndex = existing.indexWhere(
+      (r) => r.relation.name == segment.name,
+    );
+
+    if (existingIndex >= 0) {
+      final load = existing[existingIndex];
+      final updatedNested = remainingSegments.isEmpty
+          ? load.nested
+          : _mergeRelationLoadTyped(
+              load.nested,
+              RelationPath(segments: remainingSegments),
+              predicate,
+            );
+
+      final updatedPredicate = remainingSegments.isEmpty
+          ? predicate
+          : load.predicate;
+
+      final updated = RelationLoad(
+        relation: load.relation,
+        predicate: updatedPredicate,
+        nested: updatedNested,
+      );
+
+      final result = List<RelationLoad>.from(existing);
+      result[existingIndex] = updated;
+      return result;
+    } else {
+      final nested = remainingSegments.isEmpty
+          ? const <RelationLoad>[]
+          : _mergeRelationLoadTyped(
+              const [],
+              RelationPath(segments: remainingSegments),
+              predicate,
+            );
+
+      final load = RelationLoad(
+        relation: segment.relation,
+        predicate: remainingSegments.isEmpty ? predicate : null,
         nested: nested,
       );
 

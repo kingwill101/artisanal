@@ -436,6 +436,15 @@ extension UniqueUserOrmExtension on UniqueUser {
   }
 }
 
+extension UniqueUserPredicateFields on PredicateBuilder<UniqueUser> {
+  PredicateField<UniqueUser, int> get id =>
+      PredicateField<UniqueUser, int>(this, 'id');
+  PredicateField<UniqueUser, String> get email =>
+      PredicateField<UniqueUser, String>(this, 'email');
+  PredicateField<UniqueUser, bool> get active =>
+      PredicateField<UniqueUser, bool>(this, 'active');
+}
+
 void registerUniqueUserEventHandlers(EventBus bus) {
   // No event handlers registered for UniqueUser.
 }

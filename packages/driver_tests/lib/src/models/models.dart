@@ -16,6 +16,7 @@ export 'named_constructor_model.dart';
 export 'no_factory.dart';
 export 'photo.dart';
 export 'post.dart';
+export 'predicate_collision.dart';
 export 'serial_test.dart';
 export 'settings.dart';
 export 'unique_user.dart';

@@ -617,6 +617,19 @@ extension AttributeUserOrmExtension on AttributeUser {
   }
 }
 
+extension AttributeUserPredicateFields on PredicateBuilder<AttributeUser> {
+  PredicateField<AttributeUser, int> get id =>
+      PredicateField<AttributeUser, int>(this, 'id');
+  PredicateField<AttributeUser, String> get email =>
+      PredicateField<AttributeUser, String>(this, 'email');
+  PredicateField<AttributeUser, String> get secret =>
+      PredicateField<AttributeUser, String>(this, 'secret');
+  PredicateField<AttributeUser, String?> get role =>
+      PredicateField<AttributeUser, String?>(this, 'role');
+  PredicateField<AttributeUser, Map<String, Object?>?> get profile =>
+      PredicateField<AttributeUser, Map<String, Object?>?>(this, 'profile');
+}
+
 void registerAttributeUserEventHandlers(EventBus bus) {
   // No event handlers registered for AttributeUser.
 }

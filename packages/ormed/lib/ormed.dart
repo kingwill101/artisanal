@@ -355,6 +355,7 @@ export 'src/query/plan/join_definition.dart';
 export 'src/query/plan/join_target.dart';
 export 'src/query/plan/join_type.dart';
 export 'src/query/query.dart';
+export 'src/query/query_builder.dart' show PredicateBuilder, PredicateField;
 export 'src/query/query_grammar.dart';
 export 'src/query/query_logger.dart';
 export 'src/query/query_plan.dart';

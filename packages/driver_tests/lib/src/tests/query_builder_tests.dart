@@ -28,11 +28,13 @@ import 'query_builder/scope_tests.dart';
 import 'query_builder/select_clauses_tests.dart';
 import 'query_builder/subquery_tests.dart';
 import 'query_builder/timestamp_tests.dart';
+import 'query_builder/typed_predicate_fields_tests.dart';
 import 'query_builder/upsert_operations_tests.dart';
 import 'query_builder/where_clauses_tests.dart';
 
 void runDriverQueryBuilderTests() {
   runWhereClausesTests();
+  runTypedPredicateFieldsTests();
   runOrderByClausesTests();
   runLimitOffsetClausesTests();
   runSelectClausesTests();

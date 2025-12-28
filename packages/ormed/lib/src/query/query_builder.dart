@@ -51,6 +51,8 @@ part 'builder/paginate.dart';
 
 part 'builder/predicate.dart';
 
+part 'builder/predicate_field.dart';
+
 part 'builder/raw.dart';
 
 part 'builder/relation.dart';
@@ -1653,11 +1655,24 @@ class Query<T extends OrmEntity> {
     return _resolver.predicateForPath(path, constraint);
   }
 
+  QueryPredicate? _buildRelationPredicateConstraintTyped<
+    TRelated extends OrmEntity
+  >(RelationPath path, PredicateCallback<TRelated>? constraint) {
+    return _resolver.predicateForPathTyped(path, constraint);
+  }
+
   QueryPredicate? _buildRelationLoadPredicate(
     RelationDefinition relation,
     PredicateCallback<OrmEntity>? constraint,
   ) {
     return _resolver.predicateFor(relation, constraint);
+  }
+
+  QueryPredicate? _buildRelationLoadPredicateTyped<TRelated extends OrmEntity>(
+    RelationDefinition relation,
+    PredicateCallback<TRelated>? constraint,
+  ) {
+    return _resolver.predicateForTyped(relation, constraint);
   }
 
   String _resolveHavingField(String field) {

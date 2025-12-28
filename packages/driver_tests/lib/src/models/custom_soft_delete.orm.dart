@@ -433,6 +433,14 @@ extension CustomSoftDeleteOrmExtension on CustomSoftDelete {
   }
 }
 
+extension CustomSoftDeletePredicateFields
+    on PredicateBuilder<CustomSoftDelete> {
+  PredicateField<CustomSoftDelete, int> get id =>
+      PredicateField<CustomSoftDelete, int>(this, 'id');
+  PredicateField<CustomSoftDelete, String> get title =>
+      PredicateField<CustomSoftDelete, String>(this, 'title');
+}
+
 void registerCustomSoftDeleteEventHandlers(EventBus bus) {
   // No event handlers registered for CustomSoftDelete.
 }

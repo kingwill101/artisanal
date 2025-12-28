@@ -536,6 +536,17 @@ extension ActiveUserOrmExtension on ActiveUser {
   }
 }
 
+extension ActiveUserPredicateFields on PredicateBuilder<ActiveUser> {
+  PredicateField<ActiveUser, int?> get id =>
+      PredicateField<ActiveUser, int?>(this, 'id');
+  PredicateField<ActiveUser, String> get email =>
+      PredicateField<ActiveUser, String>(this, 'email');
+  PredicateField<ActiveUser, String?> get name =>
+      PredicateField<ActiveUser, String?>(this, 'name');
+  PredicateField<ActiveUser, Map<String, Object?>> get settings =>
+      PredicateField<ActiveUser, Map<String, Object?>>(this, 'settings');
+}
+
 void registerActiveUserEventHandlers(EventBus bus) {
   // No event handlers registered for ActiveUser.
 }

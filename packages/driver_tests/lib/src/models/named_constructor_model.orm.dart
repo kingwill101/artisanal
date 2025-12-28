@@ -473,6 +473,16 @@ extension NamedConstructorModelOrmExtension on NamedConstructorModel {
   }
 }
 
+extension NamedConstructorModelPredicateFields
+    on PredicateBuilder<NamedConstructorModel> {
+  PredicateField<NamedConstructorModel, int?> get id =>
+      PredicateField<NamedConstructorModel, int?>(this, 'id');
+  PredicateField<NamedConstructorModel, String> get name =>
+      PredicateField<NamedConstructorModel, String>(this, 'name');
+  PredicateField<NamedConstructorModel, int> get value =>
+      PredicateField<NamedConstructorModel, int>(this, 'value');
+}
+
 void registerNamedConstructorModelEventHandlers(EventBus bus) {
   // No event handlers registered for NamedConstructorModel.
 }

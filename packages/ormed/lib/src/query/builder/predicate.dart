@@ -10,6 +10,8 @@ class PredicateBuilder<T extends OrmEntity> {
   QueryPredicate? _predicate;
 
   /// Adds a basic `WHERE` clause to the predicate.
+  ///
+  /// For typed predicate field accessors inside callbacks, prefer [whereTyped].
   PredicateBuilder<T> where(
     Object fieldOrCallback, [
     Object? value,
@@ -33,6 +35,28 @@ class PredicateBuilder<T extends OrmEntity> {
       fieldOrCallback,
       value,
       operator,
+      logical: PredicateLogicalOperator.or,
+    );
+    return this;
+  }
+
+  /// Adds a typed predicate callback with `AND` logic.
+  PredicateBuilder<T> whereTyped(PredicateCallback<T> callback) {
+    _addWhere(
+      callback,
+      null,
+      PredicateOperator.equals,
+      logical: PredicateLogicalOperator.and,
+    );
+    return this;
+  }
+
+  /// Adds a typed predicate callback with `OR` logic.
+  PredicateBuilder<T> orWhereTyped(PredicateCallback<T> callback) {
+    _addWhere(
+      callback,
+      null,
+      PredicateOperator.equals,
       logical: PredicateLogicalOperator.or,
     );
     return this;
@@ -186,6 +210,28 @@ class PredicateBuilder<T extends OrmEntity> {
   );
 
   QueryPredicate? build() => _predicate;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.isGetter) {
+      final name = _symbolName(invocation.memberName);
+      if (name != null) {
+        final field = definition.fields.firstWhereOrNull(
+          (f) => f.name == name || f.columnName == name,
+        );
+        if (field != null) {
+          return PredicateField<T, Object?>(this, field.name);
+        }
+      }
+    }
+    return super.noSuchMethod(invocation);
+  }
+
+  String? _symbolName(Symbol symbol) {
+    final value = symbol.toString();
+    final match = RegExp(r'\"(.+)\"').firstMatch(value);
+    return match?.group(1);
+  }
 
   PredicateBuilder<T> _appendPredicate(
     QueryPredicate predicate,

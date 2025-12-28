@@ -529,6 +529,17 @@ extension MutationTargetOrmExtension on MutationTarget {
   }
 }
 
+extension MutationTargetPredicateFields on PredicateBuilder<MutationTarget> {
+  PredicateField<MutationTarget, String> get id =>
+      PredicateField<MutationTarget, String>(this, 'id');
+  PredicateField<MutationTarget, String?> get name =>
+      PredicateField<MutationTarget, String?>(this, 'name');
+  PredicateField<MutationTarget, bool?> get active =>
+      PredicateField<MutationTarget, bool?>(this, 'active');
+  PredicateField<MutationTarget, String?> get category =>
+      PredicateField<MutationTarget, String?>(this, 'category');
+}
+
 void registerMutationTargetEventHandlers(EventBus bus) {
   // No event handlers registered for MutationTarget.
 }

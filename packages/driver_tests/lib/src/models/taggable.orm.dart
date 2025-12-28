@@ -478,6 +478,15 @@ extension TaggableOrmExtension on Taggable {
   }
 }
 
+extension TaggablePredicateFields on PredicateBuilder<Taggable> {
+  PredicateField<Taggable, int> get tagId =>
+      PredicateField<Taggable, int>(this, 'tagId');
+  PredicateField<Taggable, int> get taggableId =>
+      PredicateField<Taggable, int>(this, 'taggableId');
+  PredicateField<Taggable, String> get taggableType =>
+      PredicateField<Taggable, String>(this, 'taggableType');
+}
+
 void registerTaggableEventHandlers(EventBus bus) {
   // No event handlers registered for Taggable.
 }

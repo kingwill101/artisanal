@@ -581,10 +581,21 @@ extension $AccessorUserAccessors on $AccessorUser {
   }
 
   String normalizeEmail(String? value) {
-    final result = AccessorUser.normalizeEmail(this, value);
+    final result = AccessorUser.normalizeEmail(this, value as String?);
     setRawAttribute('email', result);
     return result;
   }
+}
+
+extension AccessorUserPredicateFields on PredicateBuilder<AccessorUser> {
+  PredicateField<AccessorUser, int> get id =>
+      PredicateField<AccessorUser, int>(this, 'id');
+  PredicateField<AccessorUser, String> get firstName =>
+      PredicateField<AccessorUser, String>(this, 'firstName');
+  PredicateField<AccessorUser, String> get lastName =>
+      PredicateField<AccessorUser, String>(this, 'lastName');
+  PredicateField<AccessorUser, String> get email =>
+      PredicateField<AccessorUser, String>(this, 'email');
 }
 
 void registerAccessorUserEventHandlers(EventBus bus) {

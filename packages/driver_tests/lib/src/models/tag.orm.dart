@@ -462,6 +462,27 @@ extension TagOrmExtension on Tag {
   }
 }
 
+extension TagPredicateFields on PredicateBuilder<Tag> {
+  PredicateField<Tag, int> get id => PredicateField<Tag, int>(this, 'id');
+  PredicateField<Tag, String> get label =>
+      PredicateField<Tag, String>(this, 'label');
+}
+
+extension TagTypedRelations on Query<Tag> {
+  Query<Tag> withPosts([PredicateCallback<Post>? constraint]) =>
+      withRelationTyped('posts', constraint);
+  Query<Tag> whereHasPosts([PredicateCallback<Post>? constraint]) =>
+      whereHasTyped('posts', constraint);
+  Query<Tag> orWhereHasPosts([PredicateCallback<Post>? constraint]) =>
+      orWhereHasTyped('posts', constraint);
+  Query<Tag> withMorphedPosts([PredicateCallback<Post>? constraint]) =>
+      withRelationTyped('morphedPosts', constraint);
+  Query<Tag> whereHasMorphedPosts([PredicateCallback<Post>? constraint]) =>
+      whereHasTyped('morphedPosts', constraint);
+  Query<Tag> orWhereHasMorphedPosts([PredicateCallback<Post>? constraint]) =>
+      orWhereHasTyped('morphedPosts', constraint);
+}
+
 void registerTagEventHandlers(EventBus bus) {
   // No event handlers registered for Tag.
 }

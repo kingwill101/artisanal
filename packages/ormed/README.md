@@ -266,13 +266,13 @@ final List<Comment> comments;
 ## Query Builder
 
 ```dart
-final posts = await ds.query<$Post>()
+final posts = await ds.query<Post>()
     // Filtering
-    .whereEquals('status', 'published')
+    .whereTyped((q) => q.status.eq('published'))
     .whereIn('category_id', [1, 2, 3])
     .whereNull('deleted_at')
     .whereBetween('views', 100, 1000)
-    .whereHas('comments', (q) => q.whereEquals('approved', true))
+    .whereHasComments((q) => q.body.like('%approved%'))
     
     // Eager loading
     .with_(['author', 'tags'])
@@ -287,11 +287,11 @@ final posts = await ds.query<$Post>()
     .get();
 
 // Aggregates
-final count = await ds.query<$Post>().count();
-final avgViews = await ds.query<$Post>().avg('views');
+final count = await ds.query<Post>().count();
+final avgViews = await ds.query<Post>().avg('views');
 
 // Pagination
-final page = await ds.query<$Post>().paginate(page: 2, perPage: 15);
+final page = await ds.query<Post>().paginate(page: 2, perPage: 15);
 ```
 
 ## Migrations

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Added**: Typed predicate field accessors for `where` callbacks (e.g. `q.title.eq(...)`) and typed relation helpers (`withPosts`, `whereHasPosts`).
+
 ## 0.1.0-dev+5
 
 - **Fixed**: Treat driver SQL NULL wrapper values as null when applying timestamp defaults.

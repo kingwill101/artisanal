@@ -12,6 +12,7 @@ import 'emitters/model_dto_emitter.dart';
 import 'emitters/model_event_handler_emitter.dart';
 import 'emitters/model_factory_emitter.dart';
 import 'emitters/model_partial_emitter.dart';
+import 'emitters/model_predicate_fields_emitter.dart';
 import 'emitters/model_subclass_emitter.dart';
 import 'factory_extension.dart';
 import 'model_context.dart';
@@ -54,6 +55,7 @@ class OrmModelGenerator extends GeneratorForAnnotation<OrmModel> {
     buffer.writeln(ModelDtoEmitter(context).emit());
     buffer.writeln(ModelPartialEmitter(context).emit());
     buffer.writeln(ModelSubclassEmitter(context).emit());
+    buffer.writeln(ModelPredicateFieldsEmitter(context).emit());
     buffer.writeln(ModelEventHandlerEmitter(context).emit());
     return buffer.toString();
   }

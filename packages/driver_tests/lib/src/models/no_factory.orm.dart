@@ -326,6 +326,11 @@ extension NoFactoryOrmExtension on NoFactory {
   }
 }
 
+extension NoFactoryPredicateFields on PredicateBuilder<NoFactory> {
+  PredicateField<NoFactory, int?> get id =>
+      PredicateField<NoFactory, int?>(this, 'id');
+}
+
 void registerNoFactoryEventHandlers(EventBus bus) {
   // No event handlers registered for NoFactory.
 }

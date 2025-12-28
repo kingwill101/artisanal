@@ -473,6 +473,16 @@ extension MixedConstructorModelOrmExtension on MixedConstructorModel {
   }
 }
 
+extension MixedConstructorModelPredicateFields
+    on PredicateBuilder<MixedConstructorModel> {
+  PredicateField<MixedConstructorModel, int> get id =>
+      PredicateField<MixedConstructorModel, int>(this, 'id');
+  PredicateField<MixedConstructorModel, String> get name =>
+      PredicateField<MixedConstructorModel, String>(this, 'name');
+  PredicateField<MixedConstructorModel, String?> get description =>
+      PredicateField<MixedConstructorModel, String?>(this, 'description');
+}
+
 void registerMixedConstructorModelEventHandlers(EventBus bus) {
   // No event handlers registered for MixedConstructorModel.
 }

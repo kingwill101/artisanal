@@ -118,7 +118,7 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   through: 'post_tags',
   pivotForeignKey: 'post_id',
   pivotRelatedKey: 'tag_id',
-  pivotColumns: <String>['sort_order', 'note'],
+  pivotColumns: const <String>['sort_order', 'note'],
   pivotTimestamps: true,
   pivotModel: 'PostTag',
 );
@@ -812,6 +812,53 @@ extension PostOrmExtension on Post {
   $Post toTracked() {
     return $Post.fromModel(this);
   }
+}
+
+extension PostPredicateFields on PredicateBuilder<Post> {
+  PredicateField<Post, int> get id => PredicateField<Post, int>(this, 'id');
+  PredicateField<Post, int> get authorId =>
+      PredicateField<Post, int>(this, 'authorId');
+  PredicateField<Post, String> get title =>
+      PredicateField<Post, String>(this, 'title');
+  PredicateField<Post, String?> get content =>
+      PredicateField<Post, String?>(this, 'content');
+  PredicateField<Post, int?> get views =>
+      PredicateField<Post, int?>(this, 'views');
+  PredicateField<Post, DateTime> get publishedAt =>
+      PredicateField<Post, DateTime>(this, 'publishedAt');
+}
+
+extension PostTypedRelations on Query<Post> {
+  Query<Post> withAuthor([PredicateCallback<Author>? constraint]) =>
+      withRelationTyped('author', constraint);
+  Query<Post> whereHasAuthor([PredicateCallback<Author>? constraint]) =>
+      whereHasTyped('author', constraint);
+  Query<Post> orWhereHasAuthor([PredicateCallback<Author>? constraint]) =>
+      orWhereHasTyped('author', constraint);
+  Query<Post> withTags([PredicateCallback<Tag>? constraint]) =>
+      withRelationTyped('tags', constraint);
+  Query<Post> whereHasTags([PredicateCallback<Tag>? constraint]) =>
+      whereHasTyped('tags', constraint);
+  Query<Post> orWhereHasTags([PredicateCallback<Tag>? constraint]) =>
+      orWhereHasTyped('tags', constraint);
+  Query<Post> withMorphTags([PredicateCallback<Tag>? constraint]) =>
+      withRelationTyped('morphTags', constraint);
+  Query<Post> whereHasMorphTags([PredicateCallback<Tag>? constraint]) =>
+      whereHasTyped('morphTags', constraint);
+  Query<Post> orWhereHasMorphTags([PredicateCallback<Tag>? constraint]) =>
+      orWhereHasTyped('morphTags', constraint);
+  Query<Post> withPhotos([PredicateCallback<Photo>? constraint]) =>
+      withRelationTyped('photos', constraint);
+  Query<Post> whereHasPhotos([PredicateCallback<Photo>? constraint]) =>
+      whereHasTyped('photos', constraint);
+  Query<Post> orWhereHasPhotos([PredicateCallback<Photo>? constraint]) =>
+      orWhereHasTyped('photos', constraint);
+  Query<Post> withComments([PredicateCallback<Comment>? constraint]) =>
+      withRelationTyped('comments', constraint);
+  Query<Post> whereHasComments([PredicateCallback<Comment>? constraint]) =>
+      whereHasTyped('comments', constraint);
+  Query<Post> orWhereHasComments([PredicateCallback<Comment>? constraint]) =>
+      orWhereHasTyped('comments', constraint);
 }
 
 void registerPostEventHandlers(EventBus bus) {

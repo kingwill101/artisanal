@@ -769,6 +769,34 @@ extension UserOrmExtension on User {
   }
 }
 
+extension UserPredicateFields on PredicateBuilder<User> {
+  PredicateField<User, int> get id => PredicateField<User, int>(this, 'id');
+  PredicateField<User, String> get email =>
+      PredicateField<User, String>(this, 'email');
+  PredicateField<User, bool> get active =>
+      PredicateField<User, bool>(this, 'active');
+  PredicateField<User, String?> get name =>
+      PredicateField<User, String?>(this, 'name');
+  PredicateField<User, int?> get age => PredicateField<User, int?>(this, 'age');
+  PredicateField<User, DateTime?> get createdAt =>
+      PredicateField<User, DateTime?>(this, 'createdAt');
+  PredicateField<User, Map<String, Object?>?> get profile =>
+      PredicateField<User, Map<String, Object?>?>(this, 'profile');
+  PredicateField<User, Map<String, Object?>?> get metadata =>
+      PredicateField<User, Map<String, Object?>?>(this, 'metadata');
+}
+
+extension UserTypedRelations on Query<User> {
+  Query<User> withUserProfile([PredicateCallback<UserProfile>? constraint]) =>
+      withRelationTyped('userProfile', constraint);
+  Query<User> whereHasUserProfile([
+    PredicateCallback<UserProfile>? constraint,
+  ]) => whereHasTyped('userProfile', constraint);
+  Query<User> orWhereHasUserProfile([
+    PredicateCallback<UserProfile>? constraint,
+  ]) => orWhereHasTyped('userProfile', constraint);
+}
+
 void registerUserEventHandlers(EventBus bus) {
   // No event handlers registered for User.
 }

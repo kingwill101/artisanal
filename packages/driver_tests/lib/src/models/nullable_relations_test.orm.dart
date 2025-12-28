@@ -453,6 +453,35 @@ extension NullableRelationsTestOrmExtension on NullableRelationsTest {
   }
 }
 
+extension NullableRelationsTestPredicateFields
+    on PredicateBuilder<NullableRelationsTest> {
+  PredicateField<NullableRelationsTest, int> get id =>
+      PredicateField<NullableRelationsTest, int>(this, 'id');
+  PredicateField<NullableRelationsTest, String> get name =>
+      PredicateField<NullableRelationsTest, String>(this, 'name');
+}
+
+extension NullableRelationsTestTypedRelations on Query<NullableRelationsTest> {
+  Query<NullableRelationsTest> withNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => withRelationTyped('nullableFieldComments', constraint);
+  Query<NullableRelationsTest> whereHasNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => whereHasTyped('nullableFieldComments', constraint);
+  Query<NullableRelationsTest> orWhereHasNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => orWhereHasTyped('nullableFieldComments', constraint);
+  Query<NullableRelationsTest> withNonNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => withRelationTyped('nonNullableFieldComments', constraint);
+  Query<NullableRelationsTest> whereHasNonNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => whereHasTyped('nonNullableFieldComments', constraint);
+  Query<NullableRelationsTest> orWhereHasNonNullableFieldComments([
+    PredicateCallback<Comment>? constraint,
+  ]) => orWhereHasTyped('nonNullableFieldComments', constraint);
+}
+
 void registerNullableRelationsTestEventHandlers(EventBus bus) {
   // No event handlers registered for NullableRelationsTest.
 }

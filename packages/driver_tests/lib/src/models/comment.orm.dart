@@ -470,6 +470,24 @@ extension CommentOrmExtension on Comment {
   }
 }
 
+extension CommentPredicateFields on PredicateBuilder<Comment> {
+  PredicateField<Comment, int> get id =>
+      PredicateField<Comment, int>(this, 'id');
+  PredicateField<Comment, String> get body =>
+      PredicateField<Comment, String>(this, 'body');
+  PredicateField<Comment, int?> get postId =>
+      PredicateField<Comment, int?>(this, 'postId');
+}
+
+extension CommentTypedRelations on Query<Comment> {
+  Query<Comment> withPost([PredicateCallback<Post>? constraint]) =>
+      withRelationTyped('post', constraint);
+  Query<Comment> whereHasPost([PredicateCallback<Post>? constraint]) =>
+      whereHasTyped('post', constraint);
+  Query<Comment> orWhereHasPost([PredicateCallback<Post>? constraint]) =>
+      orWhereHasTyped('post', constraint);
+}
+
 void registerCommentEventHandlers(EventBus bus) {
   // No event handlers registered for Comment.
 }

@@ -933,6 +933,29 @@ extension CastSampleOrmExtension on CastSample {
   }
 }
 
+extension CastSamplePredicateFields on PredicateBuilder<CastSample> {
+  PredicateField<CastSample, int> get id =>
+      PredicateField<CastSample, int>(this, 'id');
+  PredicateField<CastSample, String> get name =>
+      PredicateField<CastSample, String>(this, 'name');
+  PredicateField<CastSample, bool> get isActive =>
+      PredicateField<CastSample, bool>(this, 'isActive');
+  PredicateField<CastSample, int> get visits =>
+      PredicateField<CastSample, int>(this, 'visits');
+  PredicateField<CastSample, double> get ratio =>
+      PredicateField<CastSample, double>(this, 'ratio');
+  PredicateField<CastSample, DateTime> get startedOn =>
+      PredicateField<CastSample, DateTime>(this, 'startedOn');
+  PredicateField<CastSample, DateTime> get updatedAt =>
+      PredicateField<CastSample, DateTime>(this, 'updatedAt');
+  PredicateField<CastSample, Decimal> get amount =>
+      PredicateField<CastSample, Decimal>(this, 'amount');
+  PredicateField<CastSample, CastStatus> get status =>
+      PredicateField<CastSample, CastStatus>(this, 'status');
+  PredicateField<CastSample, String> get secret =>
+      PredicateField<CastSample, String>(this, 'secret');
+}
+
 void registerCastSampleEventHandlers(EventBus bus) {
   // No event handlers registered for CastSample.
 }

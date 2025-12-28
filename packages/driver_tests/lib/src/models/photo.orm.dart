@@ -559,6 +559,26 @@ extension PhotoOrmExtension on Photo {
   }
 }
 
+extension PhotoPredicateFields on PredicateBuilder<Photo> {
+  PredicateField<Photo, int> get id => PredicateField<Photo, int>(this, 'id');
+  PredicateField<Photo, int> get imageableId =>
+      PredicateField<Photo, int>(this, 'imageableId');
+  PredicateField<Photo, String> get imageableType =>
+      PredicateField<Photo, String>(this, 'imageableType');
+  PredicateField<Photo, String> get path =>
+      PredicateField<Photo, String>(this, 'path');
+}
+
+extension PhotoTypedRelations on Query<Photo> {
+  Query<Photo> withImageable([PredicateCallback<OrmEntity>? constraint]) =>
+      withRelationTyped('imageable', constraint);
+  Query<Photo> whereHasImageable([PredicateCallback<OrmEntity>? constraint]) =>
+      whereHasTyped('imageable', constraint);
+  Query<Photo> orWhereHasImageable([
+    PredicateCallback<OrmEntity>? constraint,
+  ]) => orWhereHasTyped('imageable', constraint);
+}
+
 void registerPhotoEventHandlers(EventBus bus) {
   // No event handlers registered for Photo.
 }

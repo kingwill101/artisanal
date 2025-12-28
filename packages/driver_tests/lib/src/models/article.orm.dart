@@ -833,6 +833,27 @@ extension ArticleOrmExtension on Article {
   }
 }
 
+extension ArticlePredicateFields on PredicateBuilder<Article> {
+  PredicateField<Article, int> get id =>
+      PredicateField<Article, int>(this, 'id');
+  PredicateField<Article, String> get title =>
+      PredicateField<Article, String>(this, 'title');
+  PredicateField<Article, String?> get body =>
+      PredicateField<Article, String?>(this, 'body');
+  PredicateField<Article, String> get status =>
+      PredicateField<Article, String>(this, 'status');
+  PredicateField<Article, double> get rating =>
+      PredicateField<Article, double>(this, 'rating');
+  PredicateField<Article, int> get priority =>
+      PredicateField<Article, int>(this, 'priority');
+  PredicateField<Article, DateTime> get publishedAt =>
+      PredicateField<Article, DateTime>(this, 'publishedAt');
+  PredicateField<Article, DateTime?> get reviewedAt =>
+      PredicateField<Article, DateTime?>(this, 'reviewedAt');
+  PredicateField<Article, int> get categoryId =>
+      PredicateField<Article, int>(this, 'categoryId');
+}
+
 void registerArticleEventHandlers(EventBus bus) {
   // No event handlers registered for Article.
 }
