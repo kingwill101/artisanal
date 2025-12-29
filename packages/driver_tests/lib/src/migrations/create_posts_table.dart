@@ -12,6 +12,7 @@ class CreatePostsTable extends Migration {
       table.text('content').nullable();
       table.integer('views').nullable();
       table.dateTime('published_at');
+      table.fullText(['title', 'content']);
       table.nullableTimestampsTz(
         precision: 6,
       ); // Adds created_at and updated_at (UTC, nullable, microsecond precision)

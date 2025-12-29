@@ -54,6 +54,80 @@ void main() {
     expect(sql.contains('FOR UPDATE'), isFalse);
   });
 
+  test('full text clauses compile using FTS table', () {
+    final fullTextDefinition = AdHocModelDefinition(
+      tableName: 'articles',
+      columns: const [
+        AdHocColumn(name: 'id', columnName: 'id', isPrimaryKey: true),
+        AdHocColumn(name: 'title', columnName: 'title'),
+        AdHocColumn(name: 'body', columnName: 'body'),
+      ],
+    );
+
+    String ftsTableName(String table, String indexName) {
+      final raw =
+          '${table}_$indexName'.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final collapsed = raw.replaceAll(RegExp(r'_+'), '_');
+      final base = collapsed.isEmpty ? 'idx' : collapsed;
+      return '${base}_fts';
+    }
+
+    final clause = FullTextWhere(
+      columns: const ['title', 'body'],
+      value: 'dart',
+      tableName: 'articles',
+    );
+    final plan = QueryPlan(
+      definition: fullTextDefinition,
+      fullTextWheres: [clause],
+    );
+
+    final compilation = grammar.compileSelect(plan);
+    final sql = compilation.sql;
+    final expectedIndexName = 'articles_title_body_fulltext';
+    final expectedFts = ftsTableName('articles', expectedIndexName);
+
+    expect(sql, contains('MATCH'));
+    expect(sql, contains('"articles".rowid'));
+    expect(sql, contains('"$expectedFts"'));
+    expect(compilation.bindings.single, 'dart');
+  });
+
+  test('full text clauses honor explicit index names', () {
+    final fullTextDefinition = AdHocModelDefinition(
+      tableName: 'articles',
+      columns: const [
+        AdHocColumn(name: 'id', columnName: 'id', isPrimaryKey: true),
+        AdHocColumn(name: 'title', columnName: 'title'),
+      ],
+    );
+
+    String ftsTableName(String table, String indexName) {
+      final raw =
+          '${table}_$indexName'.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final collapsed = raw.replaceAll(RegExp(r'_+'), '_');
+      final base = collapsed.isEmpty ? 'idx' : collapsed;
+      return '${base}_fts';
+    }
+
+    const indexName = 'articles_title_search';
+    final clause = FullTextWhere(
+      columns: const ['title'],
+      value: 'orm',
+      tableName: 'articles',
+      indexName: indexName,
+    );
+    final plan = QueryPlan(
+      definition: fullTextDefinition,
+      fullTextWheres: [clause],
+    );
+
+    final compilation = grammar.compileSelect(plan);
+    final expectedFts = ftsTableName('articles', indexName);
+    expect(compilation.sql, contains('"$expectedFts"'));
+    expect(compilation.bindings.single, 'orm');
+  });
+
   test('json contains compiles json_each query', () {
     final plan = plan0(
       jsonWheres: [

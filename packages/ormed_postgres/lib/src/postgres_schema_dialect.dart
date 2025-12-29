@@ -251,7 +251,7 @@ class PostgresSchemaDialect extends SchemaDialect {
   String _fullTextExpression(IndexDefinition definition) {
     if (definition.columns.length == 1 && !definition.raw) {
       final column = _quote(definition.columns.first);
-      return "to_tsvector('simple', COALESCE($column::text, ''))";
+      return "to_tsvector('simple'::regconfig, COALESCE($column::text, ''))";
     }
     final segments = definition.columns
         .map((column) {
@@ -259,8 +259,8 @@ class PostgresSchemaDialect extends SchemaDialect {
           final needsCast = definition.raw ? value : '$value::text';
           return "COALESCE($needsCast, '')";
         })
-        .join(', ');
-    return "to_tsvector('simple', concat_ws(' ', $segments))";
+        .join(" || ' ' || ");
+    return "to_tsvector('simple'::regconfig, $segments)";
   }
 
   List<SchemaStatement> _alterColumnStatements(

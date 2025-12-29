@@ -640,6 +640,7 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
   /// [language] is an optional language for the full-text search.
   /// [mode] specifies the full-text search mode (e.g., [FullTextMode.natural]).
   /// [expanded] indicates whether to expand the search query.
+  /// [indexName] optionally targets a specific full-text index (SQLite FTS).
   ///
   /// Example:
   /// ```dart
@@ -653,6 +654,7 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
     String? language,
     FullTextMode mode = FullTextMode.natural,
     bool expanded = false,
+    String? indexName,
   }) {
     if (columns.isEmpty) {
       throw ArgumentError.value(columns, 'columns', 'must not be empty.');
@@ -663,6 +665,11 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
       language: language,
       mode: mode,
       expanded: expanded,
+      tableName: definition.tableName,
+      tablePrefix: context.connectionTablePrefix,
+      tableAlias: _tableAlias,
+      indexName: indexName,
+      schema: definition.schema,
     );
     return _copyWith(fullTextWheres: [..._fullTextWheres, clause]);
   }

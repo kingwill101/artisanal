@@ -242,7 +242,7 @@ void main() {
     );
     expect(
       indexSql,
-      contains("to_tsvector('simple', COALESCE(\"notes\"::text, ''))"),
+      contains("to_tsvector('simple'::regconfig, COALESCE(\"notes\"::text, ''))"),
     );
     expect(
       indexSql,

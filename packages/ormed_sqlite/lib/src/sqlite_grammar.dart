@@ -8,6 +8,11 @@ class SqliteQueryGrammar extends QueryGrammar {
 
   final bool supportsWindowFunctions;
 
+  static final RegExp _identifier = RegExp(r'^[A-Za-z_][A-Za-z0-9_]*$');
+  static final RegExp _qualifiedIdentifier = RegExp(
+    r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)+$',
+  );
+
   @override
   String wrapIdentifier(String value) {
     final escaped = value.replaceAll('"', '""');
@@ -40,6 +45,23 @@ class SqliteQueryGrammar extends QueryGrammar {
   String wrapUnion(String sql) => 'select * from ($sql)';
 
   @override
+  String compileFullText(FullTextWhere clause) {
+    final tableName = _resolveFullTextTableName(clause);
+    if (tableName.isEmpty) {
+      return '';
+    }
+    final indexName = _resolveFullTextIndexName(clause, tableName);
+    final base = _artifactBaseName(tableName, indexName);
+    final ftsTable = wrapIdentifier('${base}_fts');
+    final rowIdTarget =
+        clause.tableAlias != null && clause.tableAlias!.isNotEmpty
+        ? wrapIdentifier(clause.tableAlias!)
+        : _wrapQualifiedTable(tableName);
+    return '$rowIdTarget.rowid IN '
+        '(SELECT rowid FROM $ftsTable WHERE $ftsTable MATCH ${parameterPlaceholder()})';
+  }
+
+  @override
   String wrapJsonSelectorReference(
     String columnReference,
     JsonSelector selector,
@@ -50,6 +72,53 @@ class SqliteQueryGrammar extends QueryGrammar {
     String columnReference,
     JsonSelector selector,
   ) => _jsonTarget(columnReference, selector.path);
+
+  String _resolveFullTextTableName(FullTextWhere clause) {
+    final table = clause.tableName?.trim() ?? '';
+    if (table.isEmpty) {
+      return '';
+    }
+    final schema = clause.schema?.trim();
+    final prefix = clause.tablePrefix?.trim();
+    if (schema != null && schema.isNotEmpty) {
+      return table;
+    }
+    if (_qualifiedIdentifier.hasMatch(table)) {
+      return table;
+    }
+    if (!_identifier.hasMatch(table)) {
+      return table;
+    }
+    if (prefix != null && prefix.isNotEmpty && !table.startsWith(prefix)) {
+      return '$prefix$table';
+    }
+    return table;
+  }
+
+  String _resolveFullTextIndexName(FullTextWhere clause, String tableName) {
+    final explicit = clause.indexName?.trim();
+    if (explicit != null && explicit.isNotEmpty) {
+      return explicit;
+    }
+    final columnPart = clause.columns.join('_');
+    return '${tableName}_${columnPart}_fulltext';
+  }
+
+  String _artifactBaseName(String table, String indexName) {
+    final raw = '${table}_$indexName'.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+    final collapsed = raw.replaceAll(RegExp(r'_+'), '_');
+    return collapsed.isEmpty ? 'idx' : collapsed;
+  }
+
+  String _wrapQualifiedTable(String table) {
+    if (table.contains('.')) {
+      return table
+          .split('.')
+          .map((segment) => wrapIdentifier(segment))
+          .join('.');
+    }
+    return wrapIdentifier(table);
+  }
 
   @override
   String compileWhereNull(String column, String resolvedColumn) {

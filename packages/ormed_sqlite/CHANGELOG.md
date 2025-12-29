@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Added**: SQLite full-text query compilation for `whereFullText`, using FTS virtual tables.
+
 ## 0.1.0-dev+5
 
 - **Fixed**: Insert builders now omit columns not provided so SQLite defaults (including timestamps) apply.
