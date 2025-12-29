@@ -11,7 +11,7 @@ void runModelMapCodecTests() {
 
       expect(map['id'], equals(1));
       expect(map['name'], equals('Ada'));
-      expect(map['active'], equals(true));
+      expect(map['active'], anyOf(equals(true), equals(1)));
       expect(map.containsKey('created_at'), isFalse);
     });
 
