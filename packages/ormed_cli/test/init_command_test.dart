@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart';
-import 'package:args/command_runner.dart' show UsageException;
 import 'package:ormed_cli/src/commands/base/shared.dart' show defaultOrmYaml;
 import 'package:ormed_cli/src/commands/base/init_command.dart';
 import 'package:path/path.dart' as p;
@@ -51,12 +50,14 @@ environment:
     Future<void> runInit(
       List<String> args, {
       String Function()? readLine,
+      void Function(int code)? setExitCode,
     }) async {
       final runner = CommandRunner<void>(
         'ormed',
         'ORM CLI',
         ansi: false,
         readLine: readLine,
+        setExitCode: setExitCode,
       )..addCommand(InitCommand());
       await runner.run(args);
     }
@@ -344,7 +345,12 @@ seeds:
       File(p.join(scratchDir.path, 'ormed.yaml'))
           .writeAsStringSync(defaultOrmYaml('test_project'));
 
-      await runInit(['init', '--only=datasource', '--skip-build']);
+      await runInit([
+        'init',
+        '--only=datasource',
+        '--no-interaction',
+        '--skip-build',
+      ]);
 
       final datasourceFile = File(
         p.join(scratchDir.path, 'lib/src/database/datasource.dart'),
@@ -369,6 +375,7 @@ seeds:
         'init',
         '--only=migrations',
         '--only=seeders',
+        '--no-interaction',
         '--skip-build',
       ]);
 
@@ -388,10 +395,12 @@ seeds:
     });
 
     test('--only without config errors when ormed.yaml is missing', () async {
-      await expectLater(
-        runInit(['init', '--only=datasource', '--skip-build']),
-        throwsA(isA<UsageException>()),
+      var exitCode = 0;
+      await runInit(
+        ['init', '--only=datasource', '--skip-build'],
+        setExitCode: (code) => exitCode = code,
       );
+      expect(exitCode, equals(64));
     });
 
     test(
