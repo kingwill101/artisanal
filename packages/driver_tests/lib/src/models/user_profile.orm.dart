@@ -458,7 +458,7 @@ extension UserProfileOrmExtension on UserProfile {
     Object? userId = _copyWithSentinel,
     Object? bio = _copyWithSentinel,
   }) {
-    return UserProfile.new(
+    return UserProfile(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       userId: identical(userId, _copyWithSentinel)
           ? this.userId

@@ -389,7 +389,7 @@ extension SettingOrmExtension on Setting {
     Object? id = _copyWithSentinel,
     Object? payload = _copyWithSentinel,
   }) {
-    return Setting.new(
+    return Setting(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       payload: identical(payload, _copyWithSentinel)
           ? this.payload

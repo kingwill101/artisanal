@@ -480,7 +480,7 @@ extension TagOrmExtension on Tag {
     Object? id = _copyWithSentinel,
     Object? label = _copyWithSentinel,
   }) {
-    return Tag.new(
+    return Tag(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       label: identical(label, _copyWithSentinel) ? this.label : label as String,
     );

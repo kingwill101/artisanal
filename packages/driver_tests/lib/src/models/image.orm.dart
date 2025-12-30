@@ -406,7 +406,7 @@ extension ImageOrmExtension on Image {
     Object? id = _copyWithSentinel,
     Object? label = _copyWithSentinel,
   }) {
-    return Image.new(
+    return Image(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       label: identical(label, _copyWithSentinel) ? this.label : label as String,
     );

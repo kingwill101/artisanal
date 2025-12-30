@@ -507,7 +507,7 @@ extension PredicateCollisionOrmExtension on PredicateCollision {
     Object? where = _copyWithSentinel,
     Object? orWhere = _copyWithSentinel,
   }) {
-    return PredicateCollision.new(
+    return PredicateCollision(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       where: identical(where, _copyWithSentinel) ? this.where : where as String,
       orWhere: identical(orWhere, _copyWithSentinel)

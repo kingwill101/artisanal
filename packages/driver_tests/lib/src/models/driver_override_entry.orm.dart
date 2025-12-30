@@ -453,7 +453,7 @@ extension DriverOverrideEntryOrmExtension on DriverOverrideEntry {
     Object? id = _copyWithSentinel,
     Object? payload = _copyWithSentinel,
   }) {
-    return DriverOverrideEntry.new(
+    return DriverOverrideEntry(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       payload: identical(payload, _copyWithSentinel)
           ? this.payload

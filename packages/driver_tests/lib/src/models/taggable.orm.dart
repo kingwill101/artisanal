@@ -498,7 +498,7 @@ extension TaggableOrmExtension on Taggable {
     Object? taggableId = _copyWithSentinel,
     Object? taggableType = _copyWithSentinel,
   }) {
-    return Taggable.new(
+    return Taggable(
       tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int,
       taggableId: identical(taggableId, _copyWithSentinel)
           ? this.taggableId

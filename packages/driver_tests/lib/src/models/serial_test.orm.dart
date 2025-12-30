@@ -391,7 +391,7 @@ extension SerialTestOrmExtension on SerialTest {
     Object? id = _copyWithSentinel,
     Object? label = _copyWithSentinel,
   }) {
-    return SerialTest.new(
+    return SerialTest(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       label: identical(label, _copyWithSentinel) ? this.label : label as String,
     );

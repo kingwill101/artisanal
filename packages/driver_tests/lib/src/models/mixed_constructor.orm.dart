@@ -493,7 +493,7 @@ extension MixedConstructorModelOrmExtension on MixedConstructorModel {
     Object? name = _copyWithSentinel,
     Object? description = _copyWithSentinel,
   }) {
-    return MixedConstructorModel.new(
+    return MixedConstructorModel(
       identical(id, _copyWithSentinel) ? this.id : id as int,
       identical(name, _copyWithSentinel) ? this.name : name as String,
       description: identical(description, _copyWithSentinel)

@@ -447,7 +447,7 @@ extension DriverOverrideModelOrmExtension on DriverOverrideModel {
     Object? id = _copyWithSentinel,
     Object? payload = _copyWithSentinel,
   }) {
-    return DriverOverrideModel.new(
+    return DriverOverrideModel(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       payload: identical(payload, _copyWithSentinel)
           ? this.payload

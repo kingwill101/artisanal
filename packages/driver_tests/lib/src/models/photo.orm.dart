@@ -580,7 +580,7 @@ extension PhotoOrmExtension on Photo {
     Object? imageableType = _copyWithSentinel,
     Object? path = _copyWithSentinel,
   }) {
-    return Photo.new(
+    return Photo(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       imageableId: identical(imageableId, _copyWithSentinel)
           ? this.imageableId

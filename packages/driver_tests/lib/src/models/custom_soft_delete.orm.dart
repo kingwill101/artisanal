@@ -452,7 +452,7 @@ extension CustomSoftDeleteOrmExtension on CustomSoftDelete {
     Object? id = _copyWithSentinel,
     Object? title = _copyWithSentinel,
   }) {
-    return CustomSoftDelete.new(
+    return CustomSoftDelete(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       title: identical(title, _copyWithSentinel) ? this.title : title as String,
     );

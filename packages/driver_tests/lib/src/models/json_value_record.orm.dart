@@ -436,7 +436,7 @@ class JsonValueRecordInsertDto implements InsertDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -509,7 +509,7 @@ class JsonValueRecordUpdateDto implements UpdateDto<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -554,7 +554,7 @@ class JsonValueRecordPartial implements PartialEntity<$JsonValueRecord> {
   factory JsonValueRecordPartial.fromRow(Map<String, Object?> row) {
     return JsonValueRecordPartial(
       id: row['id'] as String?,
-      objectValue: row['object_value'] as Object?,
+      objectValue: row['object_value'],
       stringValue: row['string_value'] as String?,
       mapDynamic: row['map_dynamic'] as Map<String, dynamic>?,
       mapObject: row['map_object'] as Map<String, Object?>?,
@@ -617,7 +617,7 @@ class JsonValueRecordPartial implements PartialEntity<$JsonValueRecord> {
       id: identical(id, _copyWithSentinel) ? this.id : id as String?,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
@@ -803,11 +803,11 @@ extension JsonValueRecordOrmExtension on JsonValueRecord {
     Object? listDynamic = _copyWithSentinel,
     Object? listObject = _copyWithSentinel,
   }) {
-    return JsonValueRecord.new(
+    return JsonValueRecord(
       id: identical(id, _copyWithSentinel) ? this.id : id as String,
       objectValue: identical(objectValue, _copyWithSentinel)
           ? this.objectValue
-          : objectValue as Object?,
+          : objectValue,
       stringValue: identical(stringValue, _copyWithSentinel)
           ? this.stringValue
           : stringValue as String?,
