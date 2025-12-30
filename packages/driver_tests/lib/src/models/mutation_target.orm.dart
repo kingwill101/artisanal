@@ -550,7 +550,7 @@ extension MutationTargetOrmExtension on MutationTarget {
     Object? active = _copyWithSentinel,
     Object? category = _copyWithSentinel,
   }) {
-    return MutationTarget(
+    return MutationTarget.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as String,
       name: identical(name, _copyWithSentinel) ? this.name : name as String?,
       active: identical(active, _copyWithSentinel)

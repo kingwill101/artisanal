@@ -456,7 +456,7 @@ extension UniqueUserOrmExtension on UniqueUser {
     Object? email = _copyWithSentinel,
     Object? active = _copyWithSentinel,
   }) {
-    return UniqueUser(
+    return UniqueUser.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       active: identical(active, _copyWithSentinel)

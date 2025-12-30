@@ -65,8 +65,10 @@ void main() {
     );
 
     String ftsTableName(String table, String indexName) {
-      final raw =
-          '${table}_$indexName'.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final raw = '${table}_$indexName'.replaceAll(
+        RegExp(r'[^A-Za-z0-9]+'),
+        '_',
+      );
       final collapsed = raw.replaceAll(RegExp(r'_+'), '_');
       final base = collapsed.isEmpty ? 'idx' : collapsed;
       return '${base}_fts';
@@ -103,8 +105,10 @@ void main() {
     );
 
     String ftsTableName(String table, String indexName) {
-      final raw =
-          '${table}_$indexName'.replaceAll(RegExp(r'[^A-Za-z0-9]+'), '_');
+      final raw = '${table}_$indexName'.replaceAll(
+        RegExp(r'[^A-Za-z0-9]+'),
+        '_',
+      );
       final collapsed = raw.replaceAll(RegExp(r'_+'), '_');
       final base = collapsed.isEmpty ? 'idx' : collapsed;
       return '${base}_fts';

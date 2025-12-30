@@ -114,6 +114,8 @@ final ModelDefinition<$User> _$UserDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -180,6 +182,18 @@ class Users {
   /// {@macro ormed.repository}
   static Repository<$User> repo([String? connection]) =>
       Model.repository<$User>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $User fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $User model, {
+    ValueCodecRegistry? registry,
+  }) => _$UserDefinition.toMap(model, registry: registry);
 }
 
 class UserModelFactory {
@@ -568,6 +582,16 @@ class $User extends User with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $User fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -618,7 +642,47 @@ class $User extends User with ModelAttributes implements OrmEntity {
   }
 }
 
+class _UserCopyWithSentinel {
+  const _UserCopyWithSentinel();
+}
+
 extension UserOrmExtension on User {
+  static const _UserCopyWithSentinel _copyWithSentinel =
+      _UserCopyWithSentinel();
+  User copyWith({
+    Object? id = _copyWithSentinel,
+    Object? email = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? active = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return User.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      email: identical(email, _copyWithSentinel) ? this.email : email as String,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      active: identical(active, _copyWithSentinel)
+          ? this.active
+          : active as bool,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$UserDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static User fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$UserDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -630,6 +694,20 @@ extension UserOrmExtension on User {
   $User toTracked() {
     return $User.fromModel(this);
   }
+}
+
+extension UserPredicateFields on PredicateBuilder<User> {
+  PredicateField<User, int?> get id => PredicateField<User, int?>(this, 'id');
+  PredicateField<User, String> get email =>
+      PredicateField<User, String>(this, 'email');
+  PredicateField<User, String> get name =>
+      PredicateField<User, String>(this, 'name');
+  PredicateField<User, bool> get active =>
+      PredicateField<User, bool>(this, 'active');
+  PredicateField<User, DateTime?> get createdAt =>
+      PredicateField<User, DateTime?>(this, 'createdAt');
+  PredicateField<User, DateTime?> get updatedAt =>
+      PredicateField<User, DateTime?>(this, 'updatedAt');
 }
 
 void registerUserEventHandlers(EventBus bus) {

@@ -16,5 +16,4 @@ bool isSqlNullValue(Object? value) {
 }
 
 /// Returns true when [value] is null or a SQL NULL wrapper.
-bool isEffectivelyNull(Object? value) =>
-    value == null || isSqlNullValue(value);
+bool isEffectivelyNull(Object? value) => value == null || isSqlNullValue(value);

@@ -507,14 +507,18 @@ void runRelationMutationTests() {
         expect(tagAfter, isNotNull);
         final driverName = dataSource.context.driver.metadata.name;
         final isMySqlFamily = driverName == 'mysql' || driverName == 'mariadb';
-        final postAfterMs =
-            postAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
-        final postBeforeMs =
-            postBefore.updatedAt!.toDateTime().millisecondsSinceEpoch;
-        final tagAfterMs =
-            tagAfter!.updatedAt!.toDateTime().millisecondsSinceEpoch;
-        final tagBeforeMs =
-            tagBefore!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        final postAfterMs = postAfter!.updatedAt!
+            .toDateTime()
+            .millisecondsSinceEpoch;
+        final postBeforeMs = postBefore.updatedAt!
+            .toDateTime()
+            .millisecondsSinceEpoch;
+        final tagAfterMs = tagAfter!.updatedAt!
+            .toDateTime()
+            .millisecondsSinceEpoch;
+        final tagBeforeMs = tagBefore!.updatedAt!
+            .toDateTime()
+            .millisecondsSinceEpoch;
 
         // MySQL/MariaDB can exhibit slight clock skew or rounding differences.
         if (isMySqlFamily) {

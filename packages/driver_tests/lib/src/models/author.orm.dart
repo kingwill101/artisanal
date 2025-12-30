@@ -541,7 +541,7 @@ extension AuthorOrmExtension on Author {
     Object? posts = _copyWithSentinel,
     Object? comments = _copyWithSentinel,
   }) {
-    return Author(
+    return Author.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       active: identical(active, _copyWithSentinel)

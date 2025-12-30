@@ -46,17 +46,17 @@ class PgvectorExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.orderBy,
-          key: PgvectorExtensionKeys.distance,
-          compile: _compileDistance,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: PgvectorExtensionKeys.within,
-          compile: _compileWithin,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.orderBy,
+      key: PgvectorExtensionKeys.distance,
+      compile: _compileDistance,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: PgvectorExtensionKeys.within,
+      compile: _compileWithin,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileDistance(
@@ -125,10 +125,7 @@ String _vectorLiteral(List<num> vector) {
 
 String _qualifiedColumn(DriverExtensionContext context, String column) {
   if (column.contains('.')) {
-    return column
-        .split('.')
-        .map(context.grammar.wrapIdentifier)
-        .join('.');
+    return column.split('.').map(context.grammar.wrapIdentifier).join('.');
   }
   return '${context.tableIdentifier}.${context.grammar.wrapIdentifier(column)}';
 }
@@ -144,10 +141,9 @@ extension PgvectorQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> orderByPgvectorDistance(
     PgvectorDistancePayload payload, {
     bool descending = false,
-  }) =>
-      orderByExtension(
-        PgvectorExtensionKeys.distance,
-        payload: payload,
-        descending: descending,
-      );
+  }) => orderByExtension(
+    PgvectorExtensionKeys.distance,
+    payload: payload,
+    descending: descending,
+  );
 }

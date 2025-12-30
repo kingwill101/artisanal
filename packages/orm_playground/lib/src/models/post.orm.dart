@@ -171,6 +171,8 @@ final ModelDefinition<$Post> _$PostDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -237,6 +239,18 @@ class Posts {
   /// {@macro ormed.repository}
   static Repository<$Post> repo([String? connection]) =>
       Model.repository<$Post>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Post model, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.toMap(model, registry: registry);
 }
 
 class PostModelFactory {
@@ -700,6 +714,16 @@ class $Post extends Post with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -808,7 +832,55 @@ extension PostRelationQueries on Post {
   }
 }
 
+class _PostCopyWithSentinel {
+  const _PostCopyWithSentinel();
+}
+
 extension PostOrmExtension on Post {
+  static const _PostCopyWithSentinel _copyWithSentinel =
+      _PostCopyWithSentinel();
+  Post copyWith({
+    Object? id = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? title = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? published = _copyWithSentinel,
+    Object? publishedAt = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return Post.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int,
+      title: identical(title, _copyWithSentinel) ? this.title : title as String,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String?,
+      published: identical(published, _copyWithSentinel)
+          ? this.published
+          : published as bool,
+      publishedAt: identical(publishedAt, _copyWithSentinel)
+          ? this.publishedAt
+          : publishedAt as DateTime?,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$PostDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Post fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$PostDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -820,6 +892,45 @@ extension PostOrmExtension on Post {
   $Post toTracked() {
     return $Post.fromModel(this);
   }
+}
+
+extension PostPredicateFields on PredicateBuilder<Post> {
+  PredicateField<Post, int?> get id => PredicateField<Post, int?>(this, 'id');
+  PredicateField<Post, int> get userId =>
+      PredicateField<Post, int>(this, 'userId');
+  PredicateField<Post, String> get title =>
+      PredicateField<Post, String>(this, 'title');
+  PredicateField<Post, String?> get body =>
+      PredicateField<Post, String?>(this, 'body');
+  PredicateField<Post, bool> get published =>
+      PredicateField<Post, bool>(this, 'published');
+  PredicateField<Post, DateTime?> get publishedAt =>
+      PredicateField<Post, DateTime?>(this, 'publishedAt');
+  PredicateField<Post, DateTime?> get createdAt =>
+      PredicateField<Post, DateTime?>(this, 'createdAt');
+  PredicateField<Post, DateTime?> get updatedAt =>
+      PredicateField<Post, DateTime?>(this, 'updatedAt');
+}
+
+extension PostTypedRelations on Query<Post> {
+  Query<Post> withAuthor([PredicateCallback<User>? constraint]) =>
+      withRelationTyped('author', constraint);
+  Query<Post> whereHasAuthor([PredicateCallback<User>? constraint]) =>
+      whereHasTyped('author', constraint);
+  Query<Post> orWhereHasAuthor([PredicateCallback<User>? constraint]) =>
+      orWhereHasTyped('author', constraint);
+  Query<Post> withTags([PredicateCallback<Tag>? constraint]) =>
+      withRelationTyped('tags', constraint);
+  Query<Post> whereHasTags([PredicateCallback<Tag>? constraint]) =>
+      whereHasTyped('tags', constraint);
+  Query<Post> orWhereHasTags([PredicateCallback<Tag>? constraint]) =>
+      orWhereHasTyped('tags', constraint);
+  Query<Post> withComments([PredicateCallback<Comment>? constraint]) =>
+      withRelationTyped('comments', constraint);
+  Query<Post> whereHasComments([PredicateCallback<Comment>? constraint]) =>
+      whereHasTyped('comments', constraint);
+  Query<Post> orWhereHasComments([PredicateCallback<Comment>? constraint]) =>
+      orWhereHasTyped('comments', constraint);
 }
 
 void registerPostEventHandlers(EventBus bus) {

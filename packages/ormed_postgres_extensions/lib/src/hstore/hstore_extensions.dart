@@ -43,22 +43,22 @@ class HstoreExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: HstoreExtensionKeys.hasKey,
-          compile: _compileHasKey,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: HstoreExtensionKeys.contains,
-          compile: _compileContains,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: HstoreExtensionKeys.get,
-          compile: _compileGet,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: HstoreExtensionKeys.hasKey,
+      compile: _compileHasKey,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: HstoreExtensionKeys.contains,
+      compile: _compileContains,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: HstoreExtensionKeys.get,
+      compile: _compileGet,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileHasKey(
@@ -125,11 +125,15 @@ DriverExtensionFragment _compileGet(
 }
 
 String _hstoreLiteral(Map<String, String?> entries) {
-  final pairs = entries.entries.map((entry) {
-    final key = _escape(entry.key);
-    final value = entry.value == null ? 'NULL' : '"${_escape(entry.value!)}"';
-    return '"$key"=>$value';
-  }).join(',');
+  final pairs = entries.entries
+      .map((entry) {
+        final key = _escape(entry.key);
+        final value = entry.value == null
+            ? 'NULL'
+            : '"${_escape(entry.value!)}"';
+        return '"$key"=>$value';
+      })
+      .join(',');
   return pairs;
 }
 
@@ -151,13 +155,6 @@ extension HstoreQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> orWhereHstoreContains(HstoreContainsPayload payload) =>
       orWhereExtension(HstoreExtensionKeys.contains, payload);
 
-  Query<T> selectHstoreGet(
-    HstoreGetPayload payload, {
-    String? alias,
-  }) =>
-      selectExtension(
-        HstoreExtensionKeys.get,
-        payload: payload,
-        alias: alias,
-      );
+  Query<T> selectHstoreGet(HstoreGetPayload payload, {String? alias}) =>
+      selectExtension(HstoreExtensionKeys.get, payload: payload, alias: alias);
 }

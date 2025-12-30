@@ -63,13 +63,13 @@ class SqliteDriverAdapter
     String path, {
     List<DriverExtension> extensions = const [],
   }) : this.custom(
-        config: DatabaseConfig(
-          driver: 'sqlite',
-          options: {'path': path},
-          name: path,
-        ),
-        extensions: extensions,
-      );
+         config: DatabaseConfig(
+           driver: 'sqlite',
+           options: {'path': path},
+           name: path,
+         ),
+         extensions: extensions,
+       );
 
   /// Creates an adapter for the provided [config] and [connections].
   SqliteDriverAdapter.custom({
@@ -117,8 +117,7 @@ class SqliteDriverAdapter
     registerSqliteCodecs();
 
     _grammar = SqliteQueryGrammar(
-      supportsWindowFunctions:
-          sqlite.sqlite3.version.versionNumber >= 3025000,
+      supportsWindowFunctions: sqlite.sqlite3.version.versionNumber >= 3025000,
       extensions: _extensions,
     );
 

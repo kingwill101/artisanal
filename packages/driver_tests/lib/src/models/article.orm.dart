@@ -859,7 +859,7 @@ extension ArticleOrmExtension on Article {
     Object? reviewedAt = _copyWithSentinel,
     Object? categoryId = _copyWithSentinel,
   }) {
-    return Article(
+    return Article.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       title: identical(title, _copyWithSentinel) ? this.title : title as String,
       body: identical(body, _copyWithSentinel) ? this.body : body as String?,

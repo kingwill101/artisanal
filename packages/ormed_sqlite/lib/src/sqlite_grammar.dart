@@ -4,10 +4,7 @@ import 'package:ormed/ormed.dart';
 
 /// SQLite implementation of the shared [QueryGrammar].
 class SqliteQueryGrammar extends QueryGrammar {
-  SqliteQueryGrammar({
-    this.supportsWindowFunctions = true,
-    super.extensions,
-  });
+  SqliteQueryGrammar({this.supportsWindowFunctions = true, super.extensions});
 
   final bool supportsWindowFunctions;
 

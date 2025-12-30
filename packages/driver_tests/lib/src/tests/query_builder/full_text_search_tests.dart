@@ -48,9 +48,10 @@ void runFullTextSearchTests() {
       });
 
       test('adds full text clause to the query plan', () {
-        final query = dataSource.context
-            .query<Post>()
-            .whereFullText(['title', 'content'], 'dart');
+        final query = dataSource.context.query<Post>().whereFullText([
+          'title',
+          'content',
+        ], 'dart');
 
         final plan = query.debugPlan();
         expect(plan.fullTextWheres, hasLength(1));
@@ -65,10 +66,10 @@ void runFullTextSearchTests() {
 
       test('passes full text index name through the plan', () {
         final query = dataSource.context.query<Post>().whereFullText(
-              ['title', 'content'],
-              'dart',
-              indexName: 'posts_title_content_fulltext',
-            );
+          ['title', 'content'],
+          'dart',
+          indexName: 'posts_title_content_fulltext',
+        );
 
         final plan = query.debugPlan();
         expect(plan.fullTextWheres, hasLength(1));
@@ -79,10 +80,10 @@ void runFullTextSearchTests() {
       });
 
       test('retains bindings in order', () {
-        final preview = dataSource.context
-            .query<Post>()
-            .whereFullText(['title', 'content'], 'dart')
-            .toSql();
+        final preview = dataSource.context.query<Post>().whereFullText([
+          'title',
+          'content',
+        ], 'dart').toSql();
 
         expect(preview.parameters, equals(['dart']));
       });

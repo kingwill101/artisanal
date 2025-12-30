@@ -960,7 +960,7 @@ extension CastSampleOrmExtension on CastSample {
     Object? status = _copyWithSentinel,
     Object? secret = _copyWithSentinel,
   }) {
-    return CastSample(
+    return CastSample.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       isActive: identical(isActive, _copyWithSentinel)

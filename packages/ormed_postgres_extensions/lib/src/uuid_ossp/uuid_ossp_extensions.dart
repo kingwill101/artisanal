@@ -12,17 +12,17 @@ class UuidOsspExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: UuidOsspExtensionKeys.v4,
-          compile: _compileV4,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: UuidOsspExtensionKeys.v1,
-          compile: _compileV1,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: UuidOsspExtensionKeys.v4,
+      compile: _compileV4,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: UuidOsspExtensionKeys.v1,
+      compile: _compileV1,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileV4(
@@ -41,13 +41,9 @@ DriverExtensionFragment _compileV1(
 
 /// Convenience query helpers for uuid-ossp extensions.
 extension UuidOsspQueryExtensions<T extends OrmEntity> on Query<T> {
-  Query<T> selectUuidOsspV4({String? alias}) => selectExtension(
-        UuidOsspExtensionKeys.v4,
-        alias: alias,
-      );
+  Query<T> selectUuidOsspV4({String? alias}) =>
+      selectExtension(UuidOsspExtensionKeys.v4, alias: alias);
 
-  Query<T> selectUuidOsspV1({String? alias}) => selectExtension(
-        UuidOsspExtensionKeys.v1,
-        alias: alias,
-      );
+  Query<T> selectUuidOsspV1({String? alias}) =>
+      selectExtension(UuidOsspExtensionKeys.v1, alias: alias);
 }

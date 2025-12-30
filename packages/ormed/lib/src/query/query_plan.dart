@@ -524,15 +524,11 @@ class RawPredicate extends QueryPredicate {
 
 /// Custom predicate compiled by a driver extension.
 class CustomPredicate extends QueryPredicate {
-  CustomPredicate({
-    required this.kind,
-    required this.key,
-    this.payload,
-  }) : assert(
-         kind == DriverExtensionKind.where ||
-             kind == DriverExtensionKind.having,
-         'CustomPredicate kind must be where or having.',
-       );
+  CustomPredicate({required this.kind, required this.key, this.payload})
+    : assert(
+        kind == DriverExtensionKind.where || kind == DriverExtensionKind.having,
+        'CustomPredicate kind must be where or having.',
+      );
 
   final DriverExtensionKind kind;
   final String key;

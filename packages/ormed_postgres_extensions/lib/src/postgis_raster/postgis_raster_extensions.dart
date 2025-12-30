@@ -23,17 +23,17 @@ class PostgisRasterExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PostgisRasterExtensionKeys.width,
-          compile: _compileWidth,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PostgisRasterExtensionKeys.height,
-          compile: _compileHeight,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PostgisRasterExtensionKeys.width,
+      compile: _compileWidth,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PostgisRasterExtensionKeys.height,
+      compile: _compileHeight,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileWidth(
@@ -75,20 +75,18 @@ extension PostgisRasterQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> selectPostgisRasterWidth(
     PostgisRasterDimensionPayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PostgisRasterExtensionKeys.width,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PostgisRasterExtensionKeys.width,
+    payload: payload,
+    alias: alias,
+  );
 
   Query<T> selectPostgisRasterHeight(
     PostgisRasterDimensionPayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PostgisRasterExtensionKeys.height,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PostgisRasterExtensionKeys.height,
+    payload: payload,
+    alias: alias,
+  );
 }

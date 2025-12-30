@@ -110,9 +110,7 @@ class CompanionClassEmitter {
     );
     buffer.writeln();
 
-    buffer.writeln(
-      '  /// Builds a tracked model from a column/value map.',
-    );
+    buffer.writeln('  /// Builds a tracked model from a column/value map.');
     buffer.writeln(
       '  static $generatedClassName fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
     );
@@ -121,9 +119,7 @@ class CompanionClassEmitter {
     );
     buffer.writeln();
 
-    buffer.writeln(
-      '  /// Converts a tracked model to a column/value map.',
-    );
+    buffer.writeln('  /// Converts a tracked model to a column/value map.');
     buffer.writeln(
       '  static Map<String, Object?> toMap($generatedClassName model, {ValueCodecRegistry? registry}) =>',
     );

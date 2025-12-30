@@ -138,17 +138,13 @@ class ModelSubclassEmitter {
       buffer.writeln('  }\n');
     }
 
-    buffer.writeln(
-      '  /// Builds a tracked model from a column/value map.',
-    );
+    buffer.writeln('  /// Builds a tracked model from a column/value map.');
     buffer.writeln(
       '  static $modelSubclassName fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
     );
     buffer.writeln('      $definitionName.fromMap(data, registry: registry);');
     buffer.writeln();
-    buffer.writeln(
-      '  /// Converts this tracked model to a column/value map.',
-    );
+    buffer.writeln('  /// Converts this tracked model to a column/value map.');
     buffer.writeln(
       '  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>',
     );
@@ -335,17 +331,13 @@ class ModelSubclassEmitter {
       buffer.writeln('  $className copyWith() => this;');
       buffer.writeln();
     }
-    buffer.writeln(
-      '  /// Converts this model to a column/value map.',
-    );
+    buffer.writeln('  /// Converts this model to a column/value map.');
     buffer.writeln(
       '  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>',
     );
     buffer.writeln('      $definitionName.toMap(this, registry: registry);');
     buffer.writeln();
-    buffer.writeln(
-      '  /// Builds a model from a column/value map.',
-    );
+    buffer.writeln('  /// Builds a model from a column/value map.');
     buffer.writeln(
       '  static $className fromMap(Map<String, Object?> data, {ValueCodecRegistry? registry}) =>',
     );

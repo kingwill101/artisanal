@@ -165,17 +165,13 @@ Future<void> verifyInitOnlyArtifacts() async {
     throw Exception('Expected ormed.yaml to be created by init --only');
   }
   if (!datasourceFile.existsSync()) {
-    throw Exception(
-      'Expected datasource.dart to be created by init --only',
-    );
+    throw Exception('Expected datasource.dart to be created by init --only');
   }
 
   final migrationsReg = File(
     p.join(testDir, 'lib/src/database/migrations.dart'),
   );
-  final seedersReg = File(
-    p.join(testDir, 'lib/src/database/seeders.dart'),
-  );
+  final seedersReg = File(p.join(testDir, 'lib/src/database/seeders.dart'));
   if (migrationsReg.existsSync() || seedersReg.existsSync()) {
     throw Exception(
       'init --only should not scaffold migrations/seeders registry files',

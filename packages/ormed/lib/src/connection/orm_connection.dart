@@ -222,9 +222,8 @@ class OrmConnection implements ConnectionResolver {
   }
 
   contextual.Logger _buildDefaultContextualLogger({String? logFilePath}) {
-    final logger =
-        contextual.Logger(defaultChannelEnabled: false)
-          ..withContext({'prefix': 'ormed'});
+    final logger = contextual.Logger(defaultChannelEnabled: false)
+      ..withContext({'prefix': 'ormed'});
     final resolvedPath = logFilePath?.trim();
     if (resolvedPath != null && resolvedPath.isNotEmpty) {
       logger.addChannel(

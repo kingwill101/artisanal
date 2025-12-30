@@ -76,8 +76,7 @@ class DatePredicateCompilation {
 /// database dialects.
 abstract class QueryGrammar {
   QueryGrammar({DriverExtensionRegistry? extensions})
-    : extensions =
-          extensions ?? DriverExtensionRegistry(driverName: 'unknown');
+    : extensions = extensions ?? DriverExtensionRegistry(driverName: 'unknown');
 
   final DriverExtensionRegistry extensions;
 
@@ -786,12 +785,11 @@ class _SelectCompilation {
     if (join.conditions.isEmpty) {
       return null;
     }
-    final joinAlias =
-        join.alias != null && join.alias!.isNotEmpty
-            ? grammar.wrapIdentifier(join.alias!)
-            : join.target.isSubquery
-            ? null
-            : _formatTableReference(join.target.table!);
+    final joinAlias = join.alias != null && join.alias!.isNotEmpty
+        ? grammar.wrapIdentifier(join.alias!)
+        : join.target.isSubquery
+        ? null
+        : _formatTableReference(join.target.table!);
     final buffer = StringBuffer();
     for (final condition in join.conditions) {
       final prefix = buffer.isEmpty

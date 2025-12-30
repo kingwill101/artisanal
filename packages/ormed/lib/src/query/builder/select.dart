@@ -94,11 +94,7 @@ extension SelectExtension<T extends OrmEntity> on Query<T> {
   ///   .selectExtension('rank', payload: {'weight': 0.8}, alias: 'score')
   ///   .get();
   /// ```
-  Query<T> selectExtension(
-    String key, {
-    Object? payload,
-    String? alias,
-  }) {
+  Query<T> selectExtension(String key, {Object? payload, String? alias}) {
     final expression = CustomSelectExpression(
       key: key,
       payload: payload,

@@ -39,10 +39,7 @@ class PostgisWithinPayload {
 /// Payload for distance ordering using ST_Distance.
 @immutable
 class PostgisDistancePayload {
-  const PostgisDistancePayload({
-    required this.column,
-    required this.point,
-  });
+  const PostgisDistancePayload({required this.column, required this.point});
 
   final String column;
   final PostgisPoint point;
@@ -62,22 +59,22 @@ class PostgisExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: PostgisExtensionKeys.within,
-          compile: _compileWithin,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.orderBy,
-          key: PostgisExtensionKeys.distance,
-          compile: _compileDistance,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PostgisExtensionKeys.geoJson,
-          compile: _compileGeoJson,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: PostgisExtensionKeys.within,
+      compile: _compileWithin,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.orderBy,
+      key: PostgisExtensionKeys.distance,
+      compile: _compileDistance,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PostgisExtensionKeys.geoJson,
+      compile: _compileGeoJson,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileWithin(
@@ -102,12 +99,7 @@ DriverExtensionFragment _compileWithin(
 
   return DriverExtensionFragment(
     sql: sql,
-    bindings: [
-      point.longitude,
-      point.latitude,
-      point.srid,
-      payload.meters,
-    ],
+    bindings: [point.longitude, point.latitude, point.srid, payload.meters],
   );
 }
 
@@ -132,11 +124,7 @@ DriverExtensionFragment _compileDistance(
 
   return DriverExtensionFragment(
     sql: sql,
-    bindings: [
-      point.longitude,
-      point.latitude,
-      point.srid,
-    ],
+    bindings: [point.longitude, point.latitude, point.srid],
   );
 }
 
@@ -157,10 +145,7 @@ DriverExtensionFragment _compileGeoJson(
 
 String _qualifiedColumn(DriverExtensionContext context, String column) {
   if (column.contains('.')) {
-    return column
-        .split('.')
-        .map(context.grammar.wrapIdentifier)
-        .join('.');
+    return column.split('.').map(context.grammar.wrapIdentifier).join('.');
   }
   return '${context.tableIdentifier}.${context.grammar.wrapIdentifier(column)}';
 }
@@ -176,20 +161,18 @@ extension PostgisQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> orderByPostgisDistance(
     PostgisDistancePayload payload, {
     bool descending = false,
-  }) =>
-      orderByExtension(
-        PostgisExtensionKeys.distance,
-        payload: payload,
-        descending: descending,
-      );
+  }) => orderByExtension(
+    PostgisExtensionKeys.distance,
+    payload: payload,
+    descending: descending,
+  );
 
   Query<T> selectPostgisGeoJson(
     PostgisGeoJsonPayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PostgisExtensionKeys.geoJson,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PostgisExtensionKeys.geoJson,
+    payload: payload,
+    alias: alias,
+  );
 }

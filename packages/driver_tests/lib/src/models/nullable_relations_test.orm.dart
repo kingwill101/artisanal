@@ -472,7 +472,7 @@ extension NullableRelationsTestOrmExtension on NullableRelationsTest {
     Object? id = _copyWithSentinel,
     Object? name = _copyWithSentinel,
   }) {
-    return NullableRelationsTest(
+    return NullableRelationsTest.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
     );

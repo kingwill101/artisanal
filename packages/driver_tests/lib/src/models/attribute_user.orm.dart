@@ -639,7 +639,7 @@ extension AttributeUserOrmExtension on AttributeUser {
     Object? role = _copyWithSentinel,
     Object? profile = _copyWithSentinel,
   }) {
-    return AttributeUser(
+    return AttributeUser.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       secret: identical(secret, _copyWithSentinel)

@@ -26,10 +26,7 @@ class PgTrgmSimilarityPayload {
 /// Payload for similarity ordering.
 @immutable
 class PgTrgmOrderPayload {
-  const PgTrgmOrderPayload({
-    required this.column,
-    required this.value,
-  });
+  const PgTrgmOrderPayload({required this.column, required this.value});
 
   final String column;
   final String value;
@@ -41,17 +38,17 @@ class PgTrgmExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: PgTrgmExtensionKeys.similarity,
-          compile: _compileSimilarity,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.orderBy,
-          key: PgTrgmExtensionKeys.similarityOrder,
-          compile: _compileSimilarityOrder,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: PgTrgmExtensionKeys.similarity,
+      compile: _compileSimilarity,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.orderBy,
+      key: PgTrgmExtensionKeys.similarityOrder,
+      compile: _compileSimilarityOrder,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileSimilarity(
@@ -114,10 +111,9 @@ extension PgTrgmQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> orderByPgTrgmSimilarity(
     PgTrgmOrderPayload payload, {
     bool descending = true,
-  }) =>
-      orderByExtension(
-        PgTrgmExtensionKeys.similarityOrder,
-        payload: payload,
-        descending: descending,
-      );
+  }) => orderByExtension(
+    PgTrgmExtensionKeys.similarityOrder,
+    payload: payload,
+    descending: descending,
+  );
 }

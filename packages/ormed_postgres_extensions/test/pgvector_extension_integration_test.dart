@@ -8,12 +8,9 @@ import 'package:test/test.dart';
 Future<void> main() async {
   final pgvectorUrl = Platform.environment['PGVECTOR_URL'];
   if (pgvectorUrl == null) {
-    group(
-      'pgvector extensions',
-      () {
-        test('requires PGVECTOR_URL', () {}, skip: 'PGVECTOR_URL not set');
-      },
-    );
+    group('pgvector extensions', () {
+      test('requires PGVECTOR_URL', () {}, skip: 'PGVECTOR_URL not set');
+    });
     return;
   }
 
@@ -52,49 +49,43 @@ Future<void> main() async {
     await dataSource.dispose();
   });
 
-  ormedGroup(
-    'pgvector extensions',
-    (scopedDataSource) {
-      setUp(() async {
-        await scopedDataSource.options.driver.executeRaw(
-          '''
+  ormedGroup('pgvector extensions', (scopedDataSource) {
+    setUp(() async {
+      await scopedDataSource.options.driver.executeRaw('''
 INSERT INTO items (name, embedding)
 VALUES
   ('origin', '[0,0,0]'),
   ('nearby', '[0.1,0.1,0.1]'),
   ('far', '[2,2,2]')
-''',
-        );
-      });
+''');
+    });
 
-      test('orders and filters by vector distance', () async {
-        final origin = const [0.0, 0.0, 0.0];
-        final withinPayload = PgvectorWithinPayload(
-          column: 'embedding',
-          vector: origin,
-          maxDistance: 0.5,
-          metric: PgvectorDistanceMetric.l2,
-        );
-        final distancePayload = PgvectorDistancePayload(
-          column: 'embedding',
-          vector: origin,
-          metric: PgvectorDistanceMetric.l2,
-        );
+    test('orders and filters by vector distance', () async {
+      final origin = const [0.0, 0.0, 0.0];
+      final withinPayload = PgvectorWithinPayload(
+        column: 'embedding',
+        vector: origin,
+        maxDistance: 0.5,
+        metric: PgvectorDistanceMetric.l2,
+      );
+      final distancePayload = PgvectorDistancePayload(
+        column: 'embedding',
+        vector: origin,
+        metric: PgvectorDistanceMetric.l2,
+      );
 
-        final rows = await scopedDataSource
-            .query<AdHocRow>()
-            .select(['id', 'name'])
-            .wherePgvectorWithin(withinPayload)
-            .orderByPgvectorDistance(distancePayload)
-            .rows();
+      final rows = await scopedDataSource
+          .query<AdHocRow>()
+          .select(['id', 'name'])
+          .wherePgvectorWithin(withinPayload)
+          .orderByPgvectorDistance(distancePayload)
+          .rows();
 
-        expect(rows, hasLength(2));
-        expect(rows.first.row['name'], 'origin');
-        expect(rows.last.row['name'], 'nearby');
-      });
-    },
-    config: config,
-  );
+      expect(rows, hasLength(2));
+      expect(rows.first.row['name'], 'origin');
+      expect(rows.last.row['name'], 'nearby');
+    });
+  }, config: config);
 }
 
 final ModelDefinition<AdHocRow> _itemDefinition = ModelDefinition<AdHocRow>(

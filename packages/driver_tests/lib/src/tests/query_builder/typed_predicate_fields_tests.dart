@@ -248,26 +248,31 @@ void runTypedPredicateFieldsTests() {
       expect(typed.parameters, equals(untyped.parameters));
     });
 
-    test('reserved field names are skipped in generated predicate fields', () async {
-      final uri = await Isolate.resolvePackageUri(
-        Uri.parse('package:driver_tests/src/models/predicate_collision.orm.dart'),
-      );
-      expect(uri, isNotNull);
-      final contents = await File.fromUri(uri!).readAsString();
-      final start = contents.indexOf(
-        'extension PredicateCollisionPredicateFields',
-      );
-      expect(start, isNot(equals(-1)));
-      final end = contents.indexOf(
-        'void registerPredicateCollisionEventHandlers',
-        start,
-      );
-      expect(end, isNot(equals(-1)));
-      final extensionBody = contents.substring(start, end);
-      expect(extensionBody, isNot(contains('get where')));
-      expect(extensionBody, isNot(contains('get orWhere')));
-      expect(extensionBody, contains('get id'));
-    });
+    test(
+      'reserved field names are skipped in generated predicate fields',
+      () async {
+        final uri = await Isolate.resolvePackageUri(
+          Uri.parse(
+            'package:driver_tests/src/models/predicate_collision.orm.dart',
+          ),
+        );
+        expect(uri, isNotNull);
+        final contents = await File.fromUri(uri!).readAsString();
+        final start = contents.indexOf(
+          'extension PredicateCollisionPredicateFields',
+        );
+        expect(start, isNot(equals(-1)));
+        final end = contents.indexOf(
+          'void registerPredicateCollisionEventHandlers',
+          start,
+        );
+        expect(end, isNot(equals(-1)));
+        final extensionBody = contents.substring(start, end);
+        expect(extensionBody, isNot(contains('get where')));
+        expect(extensionBody, isNot(contains('get orWhere')));
+        expect(extensionBody, contains('get id'));
+      },
+    );
 
     test('whereHas relation constraint uses typed callback', () async {
       final baseId = nextId();

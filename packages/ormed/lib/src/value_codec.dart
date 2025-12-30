@@ -329,12 +329,9 @@ class ValueCodecRegistry {
     {..._codecs, ...codecs},
     _cloneDriverCodecs(_driverCodecs),
     activeDriver: _activeDriver,
-    encrypterRef:
-        encrypter != null
-            ? _EncrypterRef(encrypter)
-            : (shareEncrypter
-                ? _encrypterRef
-                : _EncrypterRef(_encrypterRef.value)),
+    encrypterRef: encrypter != null
+        ? _EncrypterRef(encrypter)
+        : (shareEncrypter ? _encrypterRef : _EncrypterRef(_encrypterRef.value)),
     castHandlers:
         castHandlers ?? Map<String, AttributeCastHandler>.from(_castHandlers),
   );

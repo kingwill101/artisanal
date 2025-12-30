@@ -594,7 +594,7 @@ extension DerivedForFactoryOrmExtension on DerivedForFactory {
     Object? layerOneNotes = _copyWithSentinel,
     Object? layerTwoFlag = _copyWithSentinel,
   }) {
-    return DerivedForFactory(
+    return DerivedForFactory.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       baseName: identical(baseName, _copyWithSentinel)
           ? this.baseName

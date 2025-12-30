@@ -33,17 +33,17 @@ class LtreeExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: LtreeExtensionKeys.contains,
-          compile: _compileContains,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: LtreeExtensionKeys.matches,
-          compile: _compileMatches,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: LtreeExtensionKeys.contains,
+      compile: _compileContains,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: LtreeExtensionKeys.matches,
+      compile: _compileMatches,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileContains(

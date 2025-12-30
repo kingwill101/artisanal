@@ -8,12 +8,9 @@ import 'package:test/test.dart';
 Future<void> main() async {
   final postgisUrl = Platform.environment['POSTGIS_URL'];
   if (postgisUrl == null) {
-    group(
-      'PostGIS raster extensions',
-      () {
-        test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
-      },
-    );
+    group('PostGIS raster extensions', () {
+      test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
+    });
     return;
   }
 
@@ -54,12 +51,10 @@ Future<void> main() async {
     await dataSource.dispose();
   });
 
-  ormedGroup(
-    'PostGIS raster extensions',
-    (scopedDataSource) {
-      setUp(() async {
-        final driver = scopedDataSource.options.driver;
-        await driver.executeRaw('''
+  ormedGroup('PostGIS raster extensions', (scopedDataSource) {
+    setUp(() async {
+      final driver = scopedDataSource.options.driver;
+      await driver.executeRaw('''
 INSERT INTO raster_items (rast)
 VALUES (
   ST_AddBand(
@@ -70,28 +65,26 @@ VALUES (
   )
 )
 ''');
-      });
+    });
 
-      test('reads raster dimensions', () async {
-        final rows = await scopedDataSource.context
-            .table('raster_items')
-            .selectPostgisRasterWidth(
-              const PostgisRasterDimensionPayload(column: 'rast'),
-              alias: 'width',
-            )
-            .selectPostgisRasterHeight(
-              const PostgisRasterDimensionPayload(column: 'rast'),
-              alias: 'height',
-            )
-            .limit(1)
-            .rows();
+    test('reads raster dimensions', () async {
+      final rows = await scopedDataSource.context
+          .table('raster_items')
+          .selectPostgisRasterWidth(
+            const PostgisRasterDimensionPayload(column: 'rast'),
+            alias: 'width',
+          )
+          .selectPostgisRasterHeight(
+            const PostgisRasterDimensionPayload(column: 'rast'),
+            alias: 'height',
+          )
+          .limit(1)
+          .rows();
 
-        expect(rows.first.row['width'], anyOf(1, 1.0));
-        expect(rows.first.row['height'], anyOf(1, 1.0));
-      });
-    },
-    config: config,
-  );
+      expect(rows.first.row['width'], anyOf(1, 1.0));
+      expect(rows.first.row['height'], anyOf(1, 1.0));
+    });
+  }, config: config);
 }
 
 class _CreateRasterExtension extends Migration {
@@ -100,7 +93,9 @@ class _CreateRasterExtension extends Migration {
   @override
   void up(SchemaBuilder schema) {
     schema.raw('CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public');
-    schema.raw('CREATE EXTENSION IF NOT EXISTS postgis_raster WITH SCHEMA public');
+    schema.raw(
+      'CREATE EXTENSION IF NOT EXISTS postgis_raster WITH SCHEMA public',
+    );
     schema.raw('''
 CREATE TABLE raster_items (
   id SERIAL PRIMARY KEY,

@@ -21,12 +21,7 @@ void runModelCopyWithTests() {
 
     test('relation fields in constructor can be replaced', () {
       final originalPosts = [
-        Post(
-          id: 1,
-          authorId: 42,
-          title: 'First',
-          publishedAt: DateTime(2024),
-        ),
+        Post(id: 1, authorId: 42, title: 'First', publishedAt: DateTime(2024)),
       ];
       final author = Author(
         id: 42,

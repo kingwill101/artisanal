@@ -16,37 +16,37 @@ class _TestDriverExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: _demoSelectKey,
-          compile: _compileSelect,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: _demoWhereKey,
-          compile: _compileWhere,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.orderBy,
-          key: _demoOrderKey,
-          compile: _compileOrder,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.groupBy,
-          key: _demoGroupKey,
-          compile: _compileGroup,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.having,
-          key: _demoHavingKey,
-          compile: _compileHaving,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.join,
-          key: _demoJoinKey,
-          compile: _compileJoin,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: _demoSelectKey,
+      compile: _compileSelect,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: _demoWhereKey,
+      compile: _compileWhere,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.orderBy,
+      key: _demoOrderKey,
+      compile: _compileOrder,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.groupBy,
+      key: _demoGroupKey,
+      compile: _compileGroup,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.having,
+      key: _demoHavingKey,
+      compile: _compileHaving,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.join,
+      key: _demoJoinKey,
+      compile: _compileJoin,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileSelect(
@@ -120,17 +120,17 @@ class _DuplicateExtension extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: 'dupe_key',
-          compile: _compileWhere,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: 'dupe_key',
-          compile: _compileWhere,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: 'dupe_key',
+      compile: _compileWhere,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: 'dupe_key',
+      compile: _compileWhere,
+    ),
+  ];
 }
 
 void runDriverExtensionTests() {
@@ -151,9 +151,9 @@ void runDriverExtensionTests() {
     if (driver is! DriverExtensionHost) {
       fail('Driver ${driver.runtimeType} does not support extensions.');
     }
-    (driver as DriverExtensionHost).registerExtensions(
-      const [_TestDriverExtensions()],
-    );
+    (driver as DriverExtensionHost).registerExtensions(const [
+      _TestDriverExtensions(),
+    ]);
 
     test('compiles custom clause fragments', () {
       final preview = dataSource.context

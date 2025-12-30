@@ -30,17 +30,17 @@ class PostgisTopologyExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PostgisTopologyExtensionKeys.create,
-          compile: _compileCreate,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PostgisTopologyExtensionKeys.drop,
-          compile: _compileDrop,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PostgisTopologyExtensionKeys.create,
+      compile: _compileCreate,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PostgisTopologyExtensionKeys.drop,
+      compile: _compileDrop,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileCreate(
@@ -88,20 +88,18 @@ extension PostgisTopologyQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> selectPostgisTopologyCreate(
     PostgisTopologyCreatePayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PostgisTopologyExtensionKeys.create,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PostgisTopologyExtensionKeys.create,
+    payload: payload,
+    alias: alias,
+  );
 
   Query<T> selectPostgisTopologyDrop(
     PostgisTopologyDropPayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PostgisTopologyExtensionKeys.drop,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PostgisTopologyExtensionKeys.drop,
+    payload: payload,
+    alias: alias,
+  );
 }

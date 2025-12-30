@@ -23,12 +23,12 @@ class CitextExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.where,
-          key: CitextExtensionKeys.equals,
-          compile: _compileEquals,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.where,
+      key: CitextExtensionKeys.equals,
+      compile: _compileEquals,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileEquals(

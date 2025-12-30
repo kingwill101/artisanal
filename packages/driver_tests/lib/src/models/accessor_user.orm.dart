@@ -589,7 +589,7 @@ extension AccessorUserOrmExtension on AccessorUser {
     Object? lastName = _copyWithSentinel,
     Object? email = _copyWithSentinel,
   }) {
-    return AccessorUser(
+    return AccessorUser.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       firstName: identical(firstName, _copyWithSentinel)
           ? this.firstName
@@ -637,7 +637,7 @@ extension $AccessorUserAccessors on $AccessorUser {
   }
 
   String normalizeEmail(String? value) {
-    final result = AccessorUser.normalizeEmail(this, value);
+    final result = AccessorUser.normalizeEmail(this, value as String?);
     setRawAttribute('email', result);
     return result;
   }

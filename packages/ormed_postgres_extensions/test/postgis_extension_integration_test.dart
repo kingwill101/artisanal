@@ -8,12 +8,9 @@ import 'package:test/test.dart';
 Future<void> main() async {
   final postgisUrl = Platform.environment['POSTGIS_URL'];
   if (postgisUrl == null) {
-    group(
-      'PostGIS extensions',
-      () {
-        test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
-      },
-    );
+    group('PostGIS extensions', () {
+      test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
+    });
     return;
   }
 
@@ -52,50 +49,44 @@ Future<void> main() async {
     await dataSource.dispose();
   });
 
-  ormedGroup(
-    'PostGIS extensions',
-    (scopedDataSource) {
-      setUp(() async {
-        await scopedDataSource.options.driver.executeRaw(
-          '''
+  ormedGroup('PostGIS extensions', (scopedDataSource) {
+    setUp(() async {
+      await scopedDataSource.options.driver.executeRaw('''
 INSERT INTO places (name, location)
 VALUES
   ('origin', ST_SetSRID(ST_MakePoint(0, 0), 4326)),
   ('nearby', ST_SetSRID(ST_MakePoint(0.01, 0), 4326)),
   ('far', ST_SetSRID(ST_MakePoint(1, 0), 4326))
-''',
-        );
-      });
+''');
+    });
 
-      test('within-radius filter, distance order, and geojson select', () async {
-        final origin = const PostgisPoint(longitude: 0, latitude: 0);
-        final withinPayload = PostgisWithinPayload(
-          column: 'location',
-          point: origin,
-          meters: 2000,
-        );
-        final distancePayload = PostgisDistancePayload(
-          column: 'location',
-          point: origin,
-        );
-        final geoPayload = const PostgisGeoJsonPayload(column: 'location');
+    test('within-radius filter, distance order, and geojson select', () async {
+      final origin = const PostgisPoint(longitude: 0, latitude: 0);
+      final withinPayload = PostgisWithinPayload(
+        column: 'location',
+        point: origin,
+        meters: 2000,
+      );
+      final distancePayload = PostgisDistancePayload(
+        column: 'location',
+        point: origin,
+      );
+      final geoPayload = const PostgisGeoJsonPayload(column: 'location');
 
-        final rows = await scopedDataSource
-            .query<AdHocRow>()
-            .select(['id', 'name'])
-            .selectPostgisGeoJson(geoPayload, alias: 'location_geojson')
-            .wherePostgisWithin(withinPayload)
-            .orderByPostgisDistance(distancePayload)
-            .rows();
+      final rows = await scopedDataSource
+          .query<AdHocRow>()
+          .select(['id', 'name'])
+          .selectPostgisGeoJson(geoPayload, alias: 'location_geojson')
+          .wherePostgisWithin(withinPayload)
+          .orderByPostgisDistance(distancePayload)
+          .rows();
 
-        expect(rows, hasLength(2));
-        expect(rows.first.row['name'], 'origin');
-        expect(rows.last.row['name'], 'nearby');
-        expect(rows.first.row['location_geojson'], isA<String>());
-      });
-    },
-    config: config,
-  );
+      expect(rows, hasLength(2));
+      expect(rows.first.row['name'], 'origin');
+      expect(rows.last.row['name'], 'nearby');
+      expect(rows.first.row['location_geojson'], isA<String>());
+    });
+  }, config: config);
 }
 
 final ModelDefinition<AdHocRow> _placeDefinition = ModelDefinition<AdHocRow>(

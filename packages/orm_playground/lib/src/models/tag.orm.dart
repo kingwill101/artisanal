@@ -86,6 +86,8 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -149,6 +151,18 @@ class Tags {
   /// {@macro ormed.repository}
   static Repository<$Tag> repo([String? connection]) =>
       Model.repository<$Tag>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Tag model, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.toMap(model, registry: registry);
 }
 
 class TagModelFactory {
@@ -444,6 +458,16 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TagDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -480,7 +504,40 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
   }
 }
 
+class _TagCopyWithSentinel {
+  const _TagCopyWithSentinel();
+}
+
 extension TagOrmExtension on Tag {
+  static const _TagCopyWithSentinel _copyWithSentinel = _TagCopyWithSentinel();
+  Tag copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return Tag.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$TagDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Tag fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$TagDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -492,6 +549,16 @@ extension TagOrmExtension on Tag {
   $Tag toTracked() {
     return $Tag.fromModel(this);
   }
+}
+
+extension TagPredicateFields on PredicateBuilder<Tag> {
+  PredicateField<Tag, int?> get id => PredicateField<Tag, int?>(this, 'id');
+  PredicateField<Tag, String> get name =>
+      PredicateField<Tag, String>(this, 'name');
+  PredicateField<Tag, DateTime?> get createdAt =>
+      PredicateField<Tag, DateTime?>(this, 'createdAt');
+  PredicateField<Tag, DateTime?> get updatedAt =>
+      PredicateField<Tag, DateTime?>(this, 'updatedAt');
 }
 
 void registerTagEventHandlers(EventBus bus) {

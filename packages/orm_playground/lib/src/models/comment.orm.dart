@@ -122,6 +122,8 @@ final ModelDefinition<$Comment> _$CommentDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -188,6 +190,18 @@ class Comments {
   /// {@macro ormed.repository}
   static Repository<$Comment> repo([String? connection]) =>
       Model.repository<$Comment>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Comment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CommentDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Comment model, {
+    ValueCodecRegistry? registry,
+  }) => _$CommentDefinition.toMap(model, registry: registry);
 }
 
 class CommentModelFactory {
@@ -579,6 +593,16 @@ class $Comment extends Comment with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Comment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CommentDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CommentDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -643,7 +667,49 @@ extension CommentRelationQueries on Comment {
   }
 }
 
+class _CommentCopyWithSentinel {
+  const _CommentCopyWithSentinel();
+}
+
 extension CommentOrmExtension on Comment {
+  static const _CommentCopyWithSentinel _copyWithSentinel =
+      _CommentCopyWithSentinel();
+  Comment copyWith({
+    Object? id = _copyWithSentinel,
+    Object? postId = _copyWithSentinel,
+    Object? userId = _copyWithSentinel,
+    Object? body = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return Comment.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      postId: identical(postId, _copyWithSentinel)
+          ? this.postId
+          : postId as int,
+      userId: identical(userId, _copyWithSentinel)
+          ? this.userId
+          : userId as int?,
+      body: identical(body, _copyWithSentinel) ? this.body : body as String,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$CommentDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Comment fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$CommentDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -655,6 +721,30 @@ extension CommentOrmExtension on Comment {
   $Comment toTracked() {
     return $Comment.fromModel(this);
   }
+}
+
+extension CommentPredicateFields on PredicateBuilder<Comment> {
+  PredicateField<Comment, int?> get id =>
+      PredicateField<Comment, int?>(this, 'id');
+  PredicateField<Comment, int> get postId =>
+      PredicateField<Comment, int>(this, 'postId');
+  PredicateField<Comment, int?> get userId =>
+      PredicateField<Comment, int?>(this, 'userId');
+  PredicateField<Comment, String> get body =>
+      PredicateField<Comment, String>(this, 'body');
+  PredicateField<Comment, DateTime?> get createdAt =>
+      PredicateField<Comment, DateTime?>(this, 'createdAt');
+  PredicateField<Comment, DateTime?> get updatedAt =>
+      PredicateField<Comment, DateTime?>(this, 'updatedAt');
+}
+
+extension CommentTypedRelations on Query<Comment> {
+  Query<Comment> withAuthor([PredicateCallback<User>? constraint]) =>
+      withRelationTyped('author', constraint);
+  Query<Comment> whereHasAuthor([PredicateCallback<User>? constraint]) =>
+      whereHasTyped('author', constraint);
+  Query<Comment> orWhereHasAuthor([PredicateCallback<User>? constraint]) =>
+      orWhereHasTyped('author', constraint);
 }
 
 void registerCommentEventHandlers(EventBus bus) {

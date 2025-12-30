@@ -342,8 +342,9 @@ seeds:
 
     test('--only=datasource scaffolds only datasource', () async {
       // Provide config so datasource can resolve driver types.
-      File(p.join(scratchDir.path, 'ormed.yaml'))
-          .writeAsStringSync(defaultOrmYaml('test_project'));
+      File(
+        p.join(scratchDir.path, 'ormed.yaml'),
+      ).writeAsStringSync(defaultOrmYaml('test_project'));
 
       await runInit([
         'init',
@@ -368,8 +369,9 @@ seeds:
     });
 
     test('--only=migrations --only=seeders skips datasource', () async {
-      File(p.join(scratchDir.path, 'ormed.yaml'))
-          .writeAsStringSync(defaultOrmYaml('test_project'));
+      File(
+        p.join(scratchDir.path, 'ormed.yaml'),
+      ).writeAsStringSync(defaultOrmYaml('test_project'));
 
       await runInit([
         'init',
@@ -396,10 +398,11 @@ seeds:
 
     test('--only without config errors when ormed.yaml is missing', () async {
       var exitCode = 0;
-      await runInit(
-        ['init', '--only=datasource', '--skip-build'],
-        setExitCode: (code) => exitCode = code,
-      );
+      await runInit([
+        'init',
+        '--only=datasource',
+        '--skip-build',
+      ], setExitCode: (code) => exitCode = code);
       expect(exitCode, equals(64));
     });
 

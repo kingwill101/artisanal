@@ -8,12 +8,9 @@ import 'package:test/test.dart';
 Future<void> main() async {
   final postgisUrl = Platform.environment['POSTGIS_URL'];
   if (postgisUrl == null) {
-    group(
-      'PostGIS topology extensions',
-      () {
-        test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
-      },
-    );
+    group('PostGIS topology extensions', () {
+      test('requires POSTGIS_URL', () {}, skip: 'POSTGIS_URL not set');
+    });
     return;
   }
 
@@ -54,40 +51,33 @@ Future<void> main() async {
     await dataSource.dispose();
   });
 
-  ormedGroup(
-    'PostGIS topology extensions',
-    (scopedDataSource) {
-      setUp(() async {
-        final driver = scopedDataSource.options.driver;
-        await driver.executeRaw('INSERT INTO topology_items DEFAULT VALUES');
-      });
+  ormedGroup('PostGIS topology extensions', (scopedDataSource) {
+    setUp(() async {
+      final driver = scopedDataSource.options.driver;
+      await driver.executeRaw('INSERT INTO topology_items DEFAULT VALUES');
+    });
 
-      test('creates and drops topology', () async {
-        final schemaName = scopedDataSource.options.defaultSchema ?? 'public';
-        final topologyName = 'ormed_topology_${schemaName.replaceAll('-', '_')}';
-        final driver = scopedDataSource.options.driver;
+    test('creates and drops topology', () async {
+      final schemaName = scopedDataSource.options.defaultSchema ?? 'public';
+      final topologyName = 'ormed_topology_${schemaName.replaceAll('-', '_')}';
+      final driver = scopedDataSource.options.driver;
 
-        await _dropTopology(driver, topologyName);
+      await _dropTopology(driver, topologyName);
 
-        final rows = await scopedDataSource.context
-            .table('topology_items')
-            .selectPostgisTopologyCreate(
-              PostgisTopologyCreatePayload(
-                name: topologyName,
-                srid: 4326,
-              ),
-              alias: 'topology_id',
-            )
-            .limit(1)
-            .rows();
+      final rows = await scopedDataSource.context
+          .table('topology_items')
+          .selectPostgisTopologyCreate(
+            PostgisTopologyCreatePayload(name: topologyName, srid: 4326),
+            alias: 'topology_id',
+          )
+          .limit(1)
+          .rows();
 
-        expect(rows.first.row['topology_id'], isNotNull);
+      expect(rows.first.row['topology_id'], isNotNull);
 
-        await _dropTopology(driver, topologyName);
-      });
-    },
-    config: config,
-  );
+      await _dropTopology(driver, topologyName);
+    });
+  }, config: config);
 }
 
 Future<void> _dropTopology(DriverAdapter driver, String name) async {
@@ -108,7 +98,9 @@ class _CreateTopologyExtension extends Migration {
   @override
   void up(SchemaBuilder schema) {
     schema.raw('CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA public');
-    schema.raw('CREATE EXTENSION IF NOT EXISTS postgis_topology WITH SCHEMA public');
+    schema.raw(
+      'CREATE EXTENSION IF NOT EXISTS postgis_topology WITH SCHEMA public',
+    );
     schema.raw('''
 CREATE TABLE topology_items (
   id SERIAL PRIMARY KEY

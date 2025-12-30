@@ -280,8 +280,10 @@ class InitCommand extends Command<void> {
     if (includeMigrations && schemaDumpDir != null) {
       cliIO.components.horizontalTable({
         'Ledger table': config.migrations.ledgerTable,
-        'Schema dump directory':
-            p.relative(schemaDumpDir.path, from: root.path),
+        'Schema dump directory': p.relative(
+          schemaDumpDir.path,
+          from: root.path,
+        ),
       });
     }
 
@@ -294,7 +296,8 @@ class InitCommand extends Command<void> {
 
     // Run build_runner to generate orm_registry.g.dart
     final shouldBuild =
-        !skipBuild && (includeDatasource || includeMigrations || includeSeeders);
+        !skipBuild &&
+        (includeDatasource || includeMigrations || includeSeeders);
     if (shouldBuild) {
       await _runBuildRunner(root);
     }
@@ -590,7 +593,10 @@ Future<void> _populateExisting({
     final migrationImports = <String>[];
     final migrationEntries = <String>[];
     for (final f in migrationFiles) {
-      final rel = p.relative(f.path, from: p.dirname(registryFileResolved.path));
+      final rel = p.relative(
+        f.path,
+        from: p.dirname(registryFileResolved.path),
+      );
       final importPath = rel.replaceAll('\\', '/');
       // Guess class name from filename, keep a conservative fallback
       final base = p.basenameWithoutExtension(f.path);
@@ -683,8 +689,10 @@ Future<void> _populateExisting({
     final seedImports = <String>[];
     final seedRegistrations = <String>[];
     for (final f in seederFiles) {
-      final rel =
-          p.relative(f.path, from: p.dirname(seedRegistryFileResolved.path));
+      final rel = p.relative(
+        f.path,
+        from: p.dirname(seedRegistryFileResolved.path),
+      );
       final importPath = rel.replaceAll('\\', '/');
       final base = p.basenameWithoutExtension(f.path);
       seedImports.add("import '$importPath';");

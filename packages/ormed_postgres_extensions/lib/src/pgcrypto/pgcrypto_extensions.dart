@@ -22,17 +22,17 @@ class PgcryptoExtensions extends DriverExtension {
 
   @override
   List<DriverExtensionHandler> get handlers => const [
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PgcryptoExtensionKeys.digest,
-          compile: _compileDigest,
-        ),
-        DriverExtensionHandler(
-          kind: DriverExtensionKind.select,
-          key: PgcryptoExtensionKeys.genRandomUuid,
-          compile: _compileGenRandomUuid,
-        ),
-      ];
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PgcryptoExtensionKeys.digest,
+      compile: _compileDigest,
+    ),
+    DriverExtensionHandler(
+      kind: DriverExtensionKind.select,
+      key: PgcryptoExtensionKeys.genRandomUuid,
+      compile: _compileGenRandomUuid,
+    ),
+  ];
 }
 
 DriverExtensionFragment _compileDigest(
@@ -67,15 +67,12 @@ extension PgcryptoQueryExtensions<T extends OrmEntity> on Query<T> {
   Query<T> selectPgcryptoDigest(
     PgcryptoDigestPayload payload, {
     String? alias,
-  }) =>
-      selectExtension(
-        PgcryptoExtensionKeys.digest,
-        payload: payload,
-        alias: alias,
-      );
+  }) => selectExtension(
+    PgcryptoExtensionKeys.digest,
+    payload: payload,
+    alias: alias,
+  );
 
-  Query<T> selectPgcryptoGenRandomUuid({String? alias}) => selectExtension(
-        PgcryptoExtensionKeys.genRandomUuid,
-        alias: alias,
-      );
+  Query<T> selectPgcryptoGenRandomUuid({String? alias}) =>
+      selectExtension(PgcryptoExtensionKeys.genRandomUuid, alias: alias);
 }

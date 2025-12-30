@@ -342,7 +342,7 @@ extension NoFactoryOrmExtension on NoFactory {
   static const _NoFactoryCopyWithSentinel _copyWithSentinel =
       _NoFactoryCopyWithSentinel();
   NoFactory copyWith({Object? id = _copyWithSentinel}) {
-    return NoFactory(
+    return NoFactory.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
     );
   }

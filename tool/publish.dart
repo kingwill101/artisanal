@@ -38,6 +38,7 @@ Future<void> main(List<String> args) async {
   }
 
   try {
+    await _formatRepository();
     for (final pkgPath in packages) {
       await publishPackage(
         pkgPath,
@@ -52,6 +53,21 @@ Future<void> main(List<String> args) async {
     print('\n[FAILURE] Publishing interrupted: $e');
     exit(1);
   }
+}
+
+Future<void> _formatRepository() async {
+  print('\n--> Running dart format at repo root...');
+  final process = await Process.start(
+    'dart',
+    ['format', '.'],
+    workingDirectory: Directory.current.path,
+    mode: ProcessStartMode.inheritStdio,
+  );
+  final exitCode = await process.exitCode;
+  if (exitCode != 0) {
+    throw Exception('dart format failed (exit code $exitCode)');
+  }
+  print('✓ dart format complete.');
 }
 
 Future<void> publishPackage(
@@ -83,9 +99,7 @@ Future<void> publishPackage(
   if (skipPublished && version != null) {
     final published = await _isVersionPublished(name, version);
     if (published) {
-      print(
-        '\n--> Skipping $name ($pkgPath): $version already published.',
-      );
+      print('\n--> Skipping $name ($pkgPath): $version already published.');
       return;
     }
   }
@@ -127,10 +141,7 @@ Future<void> publishPackage(
 }
 
 Future<String?> _resolveBaselineRef() async {
-  final result = await Process.run(
-    'git',
-    ['describe', '--tags', '--abbrev=0'],
-  );
+  final result = await Process.run('git', ['describe', '--tags', '--abbrev=0']);
   if (result.exitCode != 0) {
     return null;
   }
@@ -140,10 +151,13 @@ Future<String?> _resolveBaselineRef() async {
 
 Future<bool> _packageChangedSince(String pkgPath, String? baselineRef) async {
   if (baselineRef == null) return true;
-  final result = await Process.run(
-    'git',
-    ['diff', '--name-only', '$baselineRef...HEAD', '--', pkgPath],
-  );
+  final result = await Process.run('git', [
+    'diff',
+    '--name-only',
+    '$baselineRef...HEAD',
+    '--',
+    pkgPath,
+  ]);
   if (result.exitCode != 0) {
     final stderr = (result.stderr as String).trim();
     throw Exception(

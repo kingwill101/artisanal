@@ -86,6 +86,8 @@ final ModelDefinition<$Author> _$AuthorDefinition = ModelDefinition(
     guarded: const <String>[],
     casts: const <String, String>{},
     appends: const <String>[],
+    touches: const <String>[],
+    timestamps: true,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -152,6 +154,18 @@ class Authors {
   /// {@macro ormed.repository}
   static Repository<$Author> repo([String? connection]) =>
       Model.repository<$Author>(connection: connection);
+
+  /// Builds a tracked model from a column/value map.
+  static $Author fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts a tracked model to a column/value map.
+  static Map<String, Object?> toMap(
+    $Author model, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorDefinition.toMap(model, registry: registry);
 }
 
 class AuthorModelFactory {
@@ -453,6 +467,16 @@ class $Author extends Author with ModelAttributes implements OrmEntity {
     );
   }
 
+  /// Builds a tracked model from a column/value map.
+  static $Author fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorDefinition.fromMap(data, registry: registry);
+
+  /// Converts this tracked model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorDefinition.toMap(this, registry: registry);
+
   /// Tracked getter for [id].
   @override
   int? get id => getAttribute<int?>('id') ?? super.id;
@@ -489,7 +513,41 @@ class $Author extends Author with ModelAttributes implements OrmEntity {
   }
 }
 
+class _AuthorCopyWithSentinel {
+  const _AuthorCopyWithSentinel();
+}
+
 extension AuthorOrmExtension on Author {
+  static const _AuthorCopyWithSentinel _copyWithSentinel =
+      _AuthorCopyWithSentinel();
+  Author copyWith({
+    Object? id = _copyWithSentinel,
+    Object? name = _copyWithSentinel,
+    Object? createdAt = _copyWithSentinel,
+    Object? updatedAt = _copyWithSentinel,
+  }) {
+    return Author.new(
+      id: identical(id, _copyWithSentinel) ? this.id : id as int?,
+      name: identical(name, _copyWithSentinel) ? this.name : name as String,
+      createdAt: identical(createdAt, _copyWithSentinel)
+          ? this.createdAt
+          : createdAt as DateTime?,
+      updatedAt: identical(updatedAt, _copyWithSentinel)
+          ? this.updatedAt
+          : updatedAt as DateTime?,
+    );
+  }
+
+  /// Converts this model to a column/value map.
+  Map<String, Object?> toMap({ValueCodecRegistry? registry}) =>
+      _$AuthorDefinition.toMap(this, registry: registry);
+
+  /// Builds a model from a column/value map.
+  static Author fromMap(
+    Map<String, Object?> data, {
+    ValueCodecRegistry? registry,
+  }) => _$AuthorDefinition.fromMap(data, registry: registry);
+
   /// The Type of the generated ORM-managed model class.
   /// Use this when you need to specify the tracked model type explicitly,
   /// for example in generic type parameters.
@@ -501,6 +559,17 @@ extension AuthorOrmExtension on Author {
   $Author toTracked() {
     return $Author.fromModel(this);
   }
+}
+
+extension AuthorPredicateFields on PredicateBuilder<Author> {
+  PredicateField<Author, int?> get id =>
+      PredicateField<Author, int?>(this, 'id');
+  PredicateField<Author, String> get name =>
+      PredicateField<Author, String>(this, 'name');
+  PredicateField<Author, DateTime?> get createdAt =>
+      PredicateField<Author, DateTime?>(this, 'createdAt');
+  PredicateField<Author, DateTime?> get updatedAt =>
+      PredicateField<Author, DateTime?>(this, 'updatedAt');
 }
 
 void registerAuthorEventHandlers(EventBus bus) {

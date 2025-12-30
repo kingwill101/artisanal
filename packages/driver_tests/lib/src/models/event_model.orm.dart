@@ -471,7 +471,7 @@ extension EventModelOrmExtension on EventModel {
     Object? name = _copyWithSentinel,
     Object? score = _copyWithSentinel,
   }) {
-    return EventModel(
+    return EventModel.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       score: identical(score, _copyWithSentinel) ? this.score : score as int,

@@ -36,10 +36,11 @@ class DriverExtensionContext {
 }
 
 /// Function signature used to compile a custom clause.
-typedef DriverExtensionCompiler = DriverExtensionFragment Function(
-  DriverExtensionContext context,
-  Object? payload,
-);
+typedef DriverExtensionCompiler =
+    DriverExtensionFragment Function(
+      DriverExtensionContext context,
+      Object? payload,
+    );
 
 /// Handler for a driver extension clause.
 class DriverExtensionHandler {
@@ -68,9 +69,9 @@ class DriverExtensionConflictError extends StateError {
     required this.kind,
     required this.key,
   }) : super(
-          'Driver extension "$key" already registered for '
-          '${_describeKind(kind)} on "$driverName".',
-        );
+         'Driver extension "$key" already registered for '
+         '${_describeKind(kind)} on "$driverName".',
+       );
 
   final String driverName;
   final DriverExtensionKind kind;
@@ -84,9 +85,9 @@ class MissingDriverExtensionError extends StateError {
     required this.kind,
     required this.key,
   }) : super(
-          'Missing driver extension "$key" for '
-          '${_describeKind(kind)} on "$driverName".',
-        );
+         'Missing driver extension "$key" for '
+         '${_describeKind(kind)} on "$driverName".',
+       );
 
   final String driverName;
   final DriverExtensionKind kind;
@@ -95,10 +96,13 @@ class MissingDriverExtensionError extends StateError {
 
 /// Registry of driver extension handlers by clause kind.
 class DriverExtensionRegistry {
-  DriverExtensionRegistry({required this.driverName, Iterable<DriverExtension>? extensions})
-    : _handlers = {
-        for (final kind in DriverExtensionKind.values) kind: <String, DriverExtensionHandler>{},
-      } {
+  DriverExtensionRegistry({
+    required this.driverName,
+    Iterable<DriverExtension>? extensions,
+  }) : _handlers = {
+         for (final kind in DriverExtensionKind.values)
+           kind: <String, DriverExtensionHandler>{},
+       } {
     if (extensions != null) {
       registerAll(extensions);
     }
@@ -125,7 +129,11 @@ class DriverExtensionRegistry {
   void registerHandler(DriverExtensionHandler handler) {
     final key = handler.key.trim();
     if (key.isEmpty) {
-      throw ArgumentError.value(handler.key, 'key', 'Extension keys cannot be empty.');
+      throw ArgumentError.value(
+        handler.key,
+        'key',
+        'Extension keys cannot be empty.',
+      );
     }
     final kindHandlers = _handlers[handler.kind]!;
     if (kindHandlers.containsKey(key)) {

@@ -667,7 +667,7 @@ extension PostTagOrmExtension on PostTag {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return PostTag(
+    return PostTag.new(
       postId: identical(postId, _copyWithSentinel)
           ? this.postId
           : postId as int,

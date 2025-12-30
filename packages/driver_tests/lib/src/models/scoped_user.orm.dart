@@ -514,7 +514,7 @@ extension ScopedUserOrmExtension on ScopedUser {
     Object? active = _copyWithSentinel,
     Object? name = _copyWithSentinel,
   }) {
-    return ScopedUser(
+    return ScopedUser.new(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       active: identical(active, _copyWithSentinel)

@@ -160,29 +160,31 @@ void main() {
       await subscription.cancel();
     });
 
-    test('default contextual logger uses a single channel for file logging',
-        () async {
-      final tempDir = await Directory.systemTemp.createTemp(
-        'ormed-log-channel',
-      );
-      final printed = <String>[];
+    test(
+      'default contextual logger uses a single channel for file logging',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'ormed-log-channel',
+        );
+        final printed = <String>[];
 
-      await runZoned(
-        () async {
-          connection.attachDefaultContextualLogger(
-            logFilePath: '${tempDir.path}/ormed',
-          );
-          await connection.query<Author>().get();
-          await Future<void>.delayed(const Duration(milliseconds: 1));
-        },
-        zoneSpecification: ZoneSpecification(
-          print: (self, parent, zone, line) => printed.add(line),
-        ),
-      );
+        await runZoned(
+          () async {
+            connection.attachDefaultContextualLogger(
+              logFilePath: '${tempDir.path}/ormed',
+            );
+            await connection.query<Author>().get();
+            await Future<void>.delayed(const Duration(milliseconds: 1));
+          },
+          zoneSpecification: ZoneSpecification(
+            print: (self, parent, zone, line) => printed.add(line),
+          ),
+        );
 
-      expect(printed, isEmpty);
-      await tempDir.delete(recursive: true);
-    });
+        expect(printed, isEmpty);
+        await tempDir.delete(recursive: true);
+      },
+    );
 
     test('enableQueryLog captures queries', () async {
       connection.enableQueryLog();
@@ -325,21 +327,24 @@ void main() {
       await subscription.cancel();
     });
 
-    test('contextual logger is not attached when logging is disabled', () async {
-      final logger = contextual.Logger(defaultChannelEnabled: false);
-      dataSource = DataSource(
-        DataSourceOptions(
-          driver: driver,
-          registry: registry,
-          logging: false,
-          logger: logger,
-        ),
-      );
-      await dataSource.init();
+    test(
+      'contextual logger is not attached when logging is disabled',
+      () async {
+        final logger = contextual.Logger(defaultChannelEnabled: false);
+        dataSource = DataSource(
+          DataSourceOptions(
+            driver: driver,
+            registry: registry,
+            logging: false,
+            logger: logger,
+          ),
+        );
+        await dataSource.init();
 
-      expect(dataSource.logger, isNull);
-      expect(dataSource.connection.logger, isNull);
-    });
+        expect(dataSource.logger, isNull);
+        expect(dataSource.connection.logger, isNull);
+      },
+    );
 
     test('beforeExecuting flows from DataSource', () async {
       dataSource = DataSource(
