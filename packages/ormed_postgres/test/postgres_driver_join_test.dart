@@ -89,7 +89,7 @@ void main() {
           )
           .debugPlan();
 
-      final sql = const PostgresQueryGrammar().compileSelect(plan).sql;
+      final sql = PostgresQueryGrammar().compileSelect(plan).sql;
       expect(sql.toUpperCase(), contains('JOIN LATERAL'));
     });
   });
