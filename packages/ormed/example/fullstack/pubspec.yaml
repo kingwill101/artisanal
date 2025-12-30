@@ -7,7 +7,7 @@ environment:
   sdk: ^3.10.4
 
 dependencies:
-  artisanal: ^0.1.0-dev+5
+  artisanal: ^0.1.0
   contextual: ^2.0.0
   contextual_shelf: ^0.2.0
   file_cloud: ^0.1.0

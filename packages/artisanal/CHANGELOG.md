@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0
+
+- **Release**: Promote Artisanal to a stable 0.1.0 release.
+
 ## 0.1.0-dev+5
 
 - export args classes

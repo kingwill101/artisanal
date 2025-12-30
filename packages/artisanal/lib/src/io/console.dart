@@ -673,7 +673,6 @@ class Console {
     for (final line in lines) {
       writeln('${labelStyle.render('[$label]')} $line');
     }
-    newLine();
   }
 }
 
