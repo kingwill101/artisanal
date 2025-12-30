@@ -27,6 +27,7 @@ The `DataSource` class provides a modern, declarative API for configuring and us
 | `defaultSchema` | `String?` | `null` | Default schema for ad-hoc queries |
 | `codecs` | `Map<String, ValueCodec>` | `{}` | Custom value codecs to register |
 | `logging` | `bool` | `false` | Enable query logging |
+| `logger` | `contextual.Logger?` | `null` | Optional contextual logger for default query logging (used only when `logging` is true) |
 
 ### Example Configuration (with generated registry)
 
@@ -124,6 +125,11 @@ Query tables without a model definition:
 ### Access Query Log
 
 ```dart file=../../examples/lib/datasource.dart#datasource-query-log-access
+```
+
+### Contextual Logger
+
+```dart file=../../examples/lib/datasource.dart#datasource-logging-logger
 ```
 
 ### Pretend Mode

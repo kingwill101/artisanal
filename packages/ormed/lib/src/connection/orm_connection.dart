@@ -112,6 +112,7 @@ class OrmConnection implements ConnectionResolver {
   bool _includeLogParameters = true;
   double _totalQueryDuration = 0.0;
   void Function()? _defaultContextualLoggerUnsubscribe;
+  contextual.Logger? _defaultContextualLogger;
 
   final List<QueryLogEntry> _queryLog = [];
 
@@ -132,6 +133,9 @@ class OrmConnection implements ConnectionResolver {
 
   /// Whether query logging is enabled.
   bool get loggingQueries => _loggingQueries;
+
+  /// Contextual logger attached for query logging, if any.
+  contextual.Logger? get logger => _defaultContextualLogger;
 
   /// Immutable view of recorded query log entries.
   List<QueryLogEntry> get queryLog => List.unmodifiable(_queryLog);
@@ -193,6 +197,7 @@ class OrmConnection implements ConnectionResolver {
     }
     final resolvedLogger =
         logger ?? _buildDefaultContextualLogger(logFilePath: logFilePath);
+    _defaultContextualLogger = resolvedLogger;
     _defaultContextualLoggerUnsubscribe = listen((event) {
       final context = contextual.Context({
         'connection': name,
@@ -217,19 +222,21 @@ class OrmConnection implements ConnectionResolver {
   }
 
   contextual.Logger _buildDefaultContextualLogger({String? logFilePath}) {
-    final logger = contextual.Logger()
-      ..withContext({'prefix': 'ormed'})
-      ..addChannel(
-        'console',
-        contextual.ConsoleLogDriver(),
-        formatter: contextual.PrettyLogFormatter(),
-      );
+    final logger =
+        contextual.Logger(defaultChannelEnabled: false)
+          ..withContext({'prefix': 'ormed'});
     final resolvedPath = logFilePath?.trim();
     if (resolvedPath != null && resolvedPath.isNotEmpty) {
       logger.addChannel(
         'file',
         contextual.DailyFileLogDriver(resolvedPath),
         formatter: contextual.PlainTextLogFormatter(),
+      );
+    } else {
+      logger.addChannel(
+        'console',
+        contextual.ConsoleLogDriver(),
+        formatter: contextual.PrettyLogFormatter(),
       );
     }
     return logger;

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:contextual/contextual.dart' as contextual;
+
 import 'carbon_config.dart';
 import 'connection/connection.dart';
 import 'contracts.dart';
@@ -35,6 +37,7 @@ class DataSourceOptions {
     this.driverExtensions = const [],
     this.logging = false,
     this.logFilePath,
+    this.logger,
     this.carbonTimezone = 'UTC',
     this.carbonLocale = 'en_US',
     this.enableNamedTimezones = false,
@@ -92,6 +95,11 @@ class DataSourceOptions {
   /// Example: "logs/ormed" yields "logs/ormed-YYYY-MM-DD.log".
   final String? logFilePath;
 
+  /// Optional contextual logger used for default query logging.
+  ///
+  /// This is only used when [logging] is enabled.
+  final contextual.Logger? logger;
+
   /// Default timezone for Carbon date/time instances.
   /// Defaults to 'UTC'. Use 'America/New_York', 'Europe/London', etc.
   /// for named timezones (requires [enableNamedTimezones] = true).
@@ -119,6 +127,7 @@ class DataSourceOptions {
     List<DriverExtension>? driverExtensions,
     bool? logging,
     String? logFilePath,
+    contextual.Logger? logger,
     String? carbonTimezone,
     String? carbonLocale,
     bool? enableNamedTimezones,
@@ -135,6 +144,7 @@ class DataSourceOptions {
     driverExtensions: driverExtensions ?? this.driverExtensions,
     logging: logging ?? this.logging,
     logFilePath: logFilePath ?? this.logFilePath,
+    logger: logger ?? this.logger,
     carbonTimezone: carbonTimezone ?? this.carbonTimezone,
     carbonLocale: carbonLocale ?? this.carbonLocale,
     enableNamedTimezones: enableNamedTimezones ?? this.enableNamedTimezones,
@@ -211,6 +221,7 @@ class DataSource {
     ModelRegistry? registry,
     ScopeRegistry? scopeRegistry,
     Map<String, ValueCodec<dynamic>> codecs = const {},
+    contextual.Logger? logger,
   }) {
     final driverConfig = config.driver;
     return DataSource(
@@ -224,6 +235,7 @@ class DataSource {
         database: driverConfig.options['database']?.toString(),
         tablePrefix: driverConfig.options['table_prefix']?.toString() ?? '',
         defaultSchema: driverConfig.options['default_schema']?.toString(),
+        logger: logger,
       ),
     );
   }
@@ -254,6 +266,12 @@ class DataSource {
   OrmConnection get connection {
     _ensureInitialized();
     return _connection!;
+  }
+
+  /// The contextual logger attached for query logging, if any.
+  contextual.Logger? get logger {
+    _ensureInitialized();
+    return _connection!.logger;
   }
 
   /// The underlying query context.
@@ -345,6 +363,7 @@ class DataSource {
       _connection!.enableQueryLog();
       _connection!.attachDefaultContextualLogger(
         logFilePath: options.logFilePath,
+        logger: options.logger,
       );
     }
 

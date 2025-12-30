@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:contextual/contextual.dart' as contextual;
 import 'package:ormed/ormed.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
 
@@ -191,6 +192,20 @@ DataSource createDataSourceWithLogging(DriverAdapter driver) {
   return ds;
 }
 // #endregion datasource-logging-options
+
+// #region datasource-logging-logger
+DataSource createDataSourceWithLogger(DriverAdapter driver) {
+  final logger = contextual.Logger(defaultChannelEnabled: false);
+  return DataSource(
+    DataSourceOptions(
+      driver: driver,
+      entities: [UserOrmDefinition.definition],
+      logging: true,
+      logger: logger,
+    ),
+  );
+}
+// #endregion datasource-logging-logger
 
 // #region datasource-query-log-access
 void accessQueryLog(DataSource ds) {
