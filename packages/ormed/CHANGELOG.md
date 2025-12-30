@@ -8,6 +8,7 @@
 - **Added**: Driver extension registry and query builder hooks (`selectExtension`, `whereExtension`, `orderByExtension`, `groupByExtension`, `havingExtension`, join constraints).
 - **Added**: Full-text query compilation for `whereFullText` across Postgres, MySQL/MariaDB, and SQLite, including optional index targeting.
 - **Docs**: Added driver extension tutorial and examples.
+- **Added**: DataSource logging can now use an injected contextual `logger` and exposes it for inspection.
 
 ## 0.1.0-dev+5
 
