@@ -3,6 +3,7 @@
 ## 0.1.0
 
 - **Release**: Promote Artisanal to a stable 0.1.0 release.
+- **Changed**: Console labeled logs no longer append an extra blank line.
 
 ## 0.1.0-dev+5
 
