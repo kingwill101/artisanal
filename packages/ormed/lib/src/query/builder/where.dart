@@ -98,6 +98,26 @@ extension WhereExtension<T extends OrmEntity> on Query<T> {
     logical: PredicateLogicalOperator.or,
   );
 
+  /// Adds a custom WHERE predicate compiled by a driver extension.
+  Query<T> whereExtension(String key, [Object? payload]) {
+    final predicate = CustomPredicate(
+      kind: DriverExtensionKind.where,
+      key: key,
+      payload: payload,
+    );
+    return _appendPredicate(predicate, PredicateLogicalOperator.and);
+  }
+
+  /// Adds a custom WHERE predicate using OR logic.
+  Query<T> orWhereExtension(String key, [Object? payload]) {
+    final predicate = CustomPredicate(
+      kind: DriverExtensionKind.where,
+      key: key,
+      payload: payload,
+    );
+    return _appendPredicate(predicate, PredicateLogicalOperator.or);
+  }
+
   /// Adds a `<` comparison for [field].
   ///
   /// This method adds a `WHERE field < value` clause to the query.

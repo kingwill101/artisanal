@@ -55,6 +55,23 @@ extension OrderExtension<T extends OrmEntity> on Query<T> {
     );
   }
 
+  /// Orders results using a driver extension expression.
+  ///
+  /// [key] selects the registered extension handler. Use [payload] to pass
+  /// custom data to the handler.
+  Query<T> orderByExtension(
+    String key, {
+    Object? payload,
+    bool descending = false,
+  }) {
+    final expression = CustomOrderExpression(
+      key: key,
+      payload: payload,
+      descending: descending,
+    );
+    return _copyWith(customOrders: [..._customOrders, expression]);
+  }
+
   /// Orders results randomly.
   ///
   /// This method adds a `ORDER BY RANDOM()` (or equivalent) clause to the query.
@@ -70,6 +87,7 @@ extension OrderExtension<T extends OrmEntity> on Query<T> {
   Query<T> orderByRandom([num? seed]) => _copyWith(
     orders: const <OrderClause>[],
     rawOrders: const <RawOrderExpression>[],
+    customOrders: const <CustomOrderExpression>[],
     randomOrder: true,
     randomSeed: seed,
   );

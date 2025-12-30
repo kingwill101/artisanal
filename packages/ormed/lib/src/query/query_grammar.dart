@@ -75,7 +75,11 @@ class DatePredicateCompilation {
 /// This class provides a base for implementing SQL grammars for different
 /// database dialects.
 abstract class QueryGrammar {
-  const QueryGrammar();
+  QueryGrammar({DriverExtensionRegistry? extensions})
+    : extensions =
+          extensions ?? DriverExtensionRegistry(driverName: 'unknown');
+
+  final DriverExtensionRegistry extensions;
 
   /// Compiles a [QueryPlan] into a [QueryCompilation].
   ///
@@ -596,9 +600,12 @@ class _SelectCompilation {
     final hasCustomProjection =
         plan.selects.isNotEmpty ||
         plan.rawSelects.isNotEmpty ||
+        plan.customSelects.isNotEmpty ||
         plan.aggregates.isNotEmpty;
     final requiresHydrationColumns =
-        plan.selects.isNotEmpty || plan.rawSelects.isNotEmpty;
+        plan.selects.isNotEmpty ||
+        plan.rawSelects.isNotEmpty ||
+        plan.customSelects.isNotEmpty;
     final coveredColumns = <String>{
       ...plan.selects,
       for (final raw in plan.rawSelects)
@@ -606,6 +613,8 @@ class _SelectCompilation {
           raw.alias!
         else
           _rawSelectColumn(raw.sql) ?? '',
+      for (final custom in plan.customSelects)
+        if (custom.alias != null && custom.alias!.isNotEmpty) custom.alias!,
     }..removeWhere((column) => column.isEmpty);
 
     if (!hasCustomProjection) {
@@ -628,6 +637,9 @@ class _SelectCompilation {
             : '';
         projections.add('${raw.sql}$alias');
       }
+      for (final custom in plan.customSelects) {
+        projections.add(_compileCustomSelect(custom));
+      }
     } else {
       for (final entry in plan.projectionOrder) {
         switch (entry.kind) {
@@ -642,6 +654,10 @@ class _SelectCompilation {
                 ? ' AS ${grammar.wrapIdentifier(raw.alias!)}'
                 : '';
             projections.add('${raw.sql}$alias');
+            break;
+          case ProjectionKind.custom:
+            final custom = plan.customSelects[entry.index];
+            projections.add(_compileCustomSelect(custom));
             break;
         }
       }
@@ -664,7 +680,9 @@ class _SelectCompilation {
 
     if (requiresHydrationColumns && !plan.disableAutoHydration) {
       final aggregateHydration =
-          plan.groupBy.isNotEmpty || plan.rawGroupBy.isNotEmpty;
+          plan.groupBy.isNotEmpty ||
+          plan.rawGroupBy.isNotEmpty ||
+          plan.customGroupBy.isNotEmpty;
       _hydrationColumnNames = const [];
       projections.addAll(
         _hydrationColumns(plan.definition, coveredColumns, aggregateHydration),
@@ -768,6 +786,12 @@ class _SelectCompilation {
     if (join.conditions.isEmpty) {
       return null;
     }
+    final joinAlias =
+        join.alias != null && join.alias!.isNotEmpty
+            ? grammar.wrapIdentifier(join.alias!)
+            : join.target.isSubquery
+            ? null
+            : _formatTableReference(join.target.table!);
     final buffer = StringBuffer();
     for (final condition in join.conditions) {
       final prefix = buffer.isEmpty
@@ -775,6 +799,28 @@ class _SelectCompilation {
           : condition.boolean == PredicateLogicalOperator.and
           ? ' AND '
           : ' OR ';
+      if (condition.isCustom) {
+        final handler = grammar.extensions.resolve(
+          DriverExtensionKind.join,
+          condition.key!,
+        );
+        final fragment = handler.compile(
+          DriverExtensionContext(
+            grammar: grammar,
+            plan: plan,
+            tableIdentifier: _baseTable,
+            joinAlias: joinAlias,
+          ),
+          condition.payload,
+        );
+        bindings.addAll(fragment.bindings);
+        buffer
+          ..write(prefix)
+          ..write('(')
+          ..write(fragment.sql)
+          ..write(')');
+        continue;
+      }
       if (condition.isRaw) {
         buffer
           ..write(prefix)
@@ -938,6 +984,13 @@ class _SelectCompilation {
       bindings.addAll(raw.bindings);
       values.add(sql);
     }
+    for (final custom in plan.customGroupBy) {
+      final sql = _compileCustomGroupBy(custom).trim();
+      if (sql.isEmpty) {
+        continue;
+      }
+      values.add(sql);
+    }
     if (values.isEmpty) {
       return null;
     }
@@ -983,6 +1036,13 @@ class _SelectCompilation {
         continue;
       }
       bindings.addAll(raw.bindings);
+      clauses.add(sql);
+    }
+    for (final custom in plan.customOrders) {
+      final sql = _compileCustomOrder(custom).trim();
+      if (sql.isEmpty) {
+        continue;
+      }
       clauses.add(sql);
     }
     for (final relationOrder in plan.relationOrders) {
@@ -1097,6 +1157,25 @@ class _SelectCompilation {
       case RawPredicate():
         bindings.addAll(predicate.bindings);
         return '(${predicate.sql})';
+      case CustomPredicate():
+        final handler = grammar.extensions.resolve(
+          predicate.kind,
+          predicate.key,
+        );
+        final fragment = handler.compile(
+          DriverExtensionContext(
+            grammar: grammar,
+            plan: plan,
+            tableIdentifier: tableIdentifier ?? _baseTable,
+          ),
+          predicate.payload,
+        );
+        bindings.addAll(fragment.bindings);
+        final sql = fragment.sql.trim();
+        if (sql.isEmpty) {
+          return '';
+        }
+        return '($sql)';
       case SubqueryPredicate():
         return _compileSubqueryPredicate(predicate);
       case RelationPredicate():
@@ -1335,6 +1414,61 @@ class _SelectCompilation {
         : '';
     final fn = grammar.aggregateName(aggregate.function);
     return '$fn($expression)$alias';
+  }
+
+  String _compileCustomSelect(CustomSelectExpression expression) {
+    final handler = grammar.extensions.resolve(
+      DriverExtensionKind.select,
+      expression.key,
+    );
+    final fragment = handler.compile(
+      DriverExtensionContext(
+        grammar: grammar,
+        plan: plan,
+        tableIdentifier: _baseTable,
+      ),
+      expression.payload,
+    );
+    bindings.addAll(fragment.bindings);
+    final alias = expression.alias != null
+        ? ' AS ${grammar.wrapIdentifier(expression.alias!)}'
+        : '';
+    return '${fragment.sql}$alias';
+  }
+
+  String _compileCustomGroupBy(CustomGroupByExpression expression) {
+    final handler = grammar.extensions.resolve(
+      DriverExtensionKind.groupBy,
+      expression.key,
+    );
+    final fragment = handler.compile(
+      DriverExtensionContext(
+        grammar: grammar,
+        plan: plan,
+        tableIdentifier: _baseTable,
+      ),
+      expression.payload,
+    );
+    bindings.addAll(fragment.bindings);
+    return fragment.sql;
+  }
+
+  String _compileCustomOrder(CustomOrderExpression expression) {
+    final handler = grammar.extensions.resolve(
+      DriverExtensionKind.orderBy,
+      expression.key,
+    );
+    final fragment = handler.compile(
+      DriverExtensionContext(
+        grammar: grammar,
+        plan: plan,
+        tableIdentifier: _baseTable,
+      ),
+      expression.payload,
+    );
+    bindings.addAll(fragment.bindings);
+    final direction = expression.descending ? 'DESC' : 'ASC';
+    return '${fragment.sql} $direction';
   }
 
   String _formatExpression(String expression) {

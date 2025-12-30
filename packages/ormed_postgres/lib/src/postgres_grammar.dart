@@ -4,7 +4,7 @@ import 'package:ormed/ormed.dart';
 
 /// Postgres-flavoured query grammar that simply double-quotes identifiers.
 class PostgresQueryGrammar extends QueryGrammar {
-  const PostgresQueryGrammar();
+  PostgresQueryGrammar({super.extensions});
 
   @override
   String wrapIdentifier(String value) {

@@ -41,6 +41,12 @@ extension GroupingExtension<T extends OrmEntity> on Query<T> {
     return _copyWith(groupBy: [..._groupBy, ...mapped]);
   }
 
+  /// Adds a custom GROUP BY expression compiled by a driver extension.
+  Query<T> groupByExtension(String key, [Object? payload]) {
+    final expression = CustomGroupByExpression(key: key, payload: payload);
+    return _copyWith(customGroupBy: [..._customGroupBy, expression]);
+  }
+
   /// Adds a HAVING predicate over grouped rows.
   ///
   /// This method is similar to `where` but applies conditions to the results
@@ -84,6 +90,16 @@ extension GroupingExtension<T extends OrmEntity> on Query<T> {
     return _appendHavingPredicate(predicate, PredicateLogicalOperator.and);
   }
 
+  /// Adds a custom HAVING predicate compiled by a driver extension.
+  Query<T> havingExtension(String key, [Object? payload]) {
+    final predicate = CustomPredicate(
+      kind: DriverExtensionKind.having,
+      key: key,
+      payload: payload,
+    );
+    return _appendHavingPredicate(predicate, PredicateLogicalOperator.and);
+  }
+
   /// Adds a raw HAVING fragment using OR logic.
   ///
   /// This method is similar to [havingRaw] but applies `OR` logic when
@@ -101,6 +117,16 @@ extension GroupingExtension<T extends OrmEntity> on Query<T> {
   /// ```
   Query<T> orHavingRaw(String sql, [List<Object?> bindings = const []]) {
     final predicate = RawPredicate(sql: sql, bindings: bindings);
+    return _appendHavingPredicate(predicate, PredicateLogicalOperator.or);
+  }
+
+  /// Adds a custom HAVING predicate using OR logic.
+  Query<T> orHavingExtension(String key, [Object? payload]) {
+    final predicate = CustomPredicate(
+      kind: DriverExtensionKind.having,
+      key: key,
+      payload: payload,
+    );
     return _appendHavingPredicate(predicate, PredicateLogicalOperator.or);
   }
 

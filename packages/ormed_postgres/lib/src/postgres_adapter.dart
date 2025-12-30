@@ -10,7 +10,11 @@ import 'schema_state.dart';
 
 /// PostgreSQL implementation of the routed ORM driver adapter.
 class PostgresDriverAdapter
-    implements DriverAdapter, SchemaDriver, SchemaStateProvider {
+    implements
+        DriverAdapter,
+        SchemaDriver,
+        SchemaStateProvider,
+        DriverExtensionHost {
   /// Registers PostgreSQL-specific codecs and type mapper with the global registries.
   /// Call this once during application initialization before using PostgreSQL.
   static void registerCodecs() {
@@ -35,6 +39,7 @@ class PostgresDriverAdapter
   PostgresDriverAdapter.custom({
     required DatabaseConfig config,
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) : _metadata = const DriverMetadata(
          name: 'postgres',
          supportsReturning: true,
@@ -68,7 +73,10 @@ class PostgresDriverAdapter
          },
        ),
        _schemaCompiler = SchemaPlanCompiler(PostgresSchemaDialect()),
-       _grammar = const PostgresQueryGrammar(),
+       _extensions = DriverExtensionRegistry(
+         driverName: 'postgres',
+         extensions: extensions,
+       ),
        _connections =
            connections ??
            ConnectionFactory(
@@ -79,6 +87,8 @@ class PostgresDriverAdapter
     // Auto-register PostgreSQL codecs on first instantiation
     registerPostgresCodecs();
 
+    _grammar = PostgresQueryGrammar(extensions: _extensions);
+
     _planCompiler = ClosurePlanCompiler(
       compileSelect: _compileSelectPreview,
       compileMutation: _compileMutationPreview,
@@ -88,9 +98,11 @@ class PostgresDriverAdapter
   factory PostgresDriverAdapter.fromUrl(
     String url, {
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) => PostgresDriverAdapter.custom(
     config: DatabaseConfig(driver: 'postgres', options: {'url': url}),
     connections: connections,
+    extensions: extensions,
   );
 
   factory PostgresDriverAdapter.insecureLocal({
@@ -98,6 +110,7 @@ class PostgresDriverAdapter
     String username = 'postgres',
     String? password,
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) => PostgresDriverAdapter.custom(
     config: DatabaseConfig(
       driver: 'postgres',
@@ -110,12 +123,14 @@ class PostgresDriverAdapter
       },
     ),
     connections: connections,
+    extensions: extensions,
   );
 
   final DriverMetadata _metadata;
   final ValueCodecRegistry _codecs;
   final SchemaPlanCompiler _schemaCompiler;
-  final PostgresQueryGrammar _grammar;
+  final DriverExtensionRegistry _extensions;
+  late final PostgresQueryGrammar _grammar;
   final ConnectionFactory _connections;
   final DatabaseConfig _config;
   late final PlanCompiler _planCompiler;
@@ -131,6 +146,14 @@ class PostgresDriverAdapter
 
   @override
   ValueCodecRegistry get codecs => _codecs;
+
+  @override
+  DriverExtensionRegistry get driverExtensions => _extensions;
+
+  @override
+  void registerExtensions(Iterable<DriverExtension> extensions) {
+    _extensions.registerAll(extensions);
+  }
 
   @override
   Future<void> close() async {

@@ -1,0 +1,49 @@
+set shell := ["bash", "-lc"]
+
+POSTGIS_COMPOSE := "../../tool/docker/postgis/docker-compose.yml"
+PGVECTOR_COMPOSE := "../../tool/docker/pgvector/docker-compose.yml"
+POSTGRES_EXT_COMPOSE := "../../tool/docker/postgres/docker-compose.yml"
+POSTGIS_URL := "postgres://postgres:postgres@localhost:65432/ormed_postgis"
+PGVECTOR_URL := "postgres://postgres:postgres@localhost:65433/ormed_pgvector"
+POSTGRES_EXT_URL := "postgres://postgres:postgres@localhost:65431/ormed_extensions"
+POSTGIS_PROJECT := "ormed-postgis"
+PGVECTOR_PROJECT := "ormed-pgvector"
+POSTGRES_EXT_PROJECT := "ormed-postgres-extensions"
+
+# Run all Postgres extension integration tests.
+test: test-postgis test-pgvector test-contrib
+
+# Run PostGIS extension integration tests.
+test-postgis:
+	set -euo pipefail; \
+	docker compose -p {{POSTGIS_PROJECT}} -f {{POSTGIS_COMPOSE}} up -d --wait --wait-timeout 120; \
+	trap 'docker compose -p {{POSTGIS_PROJECT}} -f {{POSTGIS_COMPOSE}} down -v' EXIT; \
+	sleep 2; \
+	POSTGIS_URL={{POSTGIS_URL}} dart test -r expanded --fail-fast test/postgis*_integration_test.dart
+
+# Run pgvector extension integration tests.
+test-pgvector:
+	set -euo pipefail; \
+	docker compose -p {{PGVECTOR_PROJECT}} -f {{PGVECTOR_COMPOSE}} up -d --wait --wait-timeout 120; \
+	trap 'docker compose -p {{PGVECTOR_PROJECT}} -f {{PGVECTOR_COMPOSE}} down -v' EXIT; \
+	sleep 2; \
+	PGVECTOR_URL={{PGVECTOR_URL}} dart test -r expanded --fail-fast test/pgvector_extension_integration_test.dart
+
+# Run Postgres contrib extension integration tests.
+test-contrib:
+	set -euo pipefail; \
+	docker compose -p {{POSTGRES_EXT_PROJECT}} -f {{POSTGRES_EXT_COMPOSE}} up -d --wait --wait-timeout 120; \
+	trap 'docker compose -p {{POSTGRES_EXT_PROJECT}} -f {{POSTGRES_EXT_COMPOSE}} down -v' EXIT; \
+	sleep 2; \
+	POSTGRES_EXT_URL={{POSTGRES_EXT_URL}} dart test -r expanded --fail-fast test/postgres_contrib_extension_integration_test.dart
+
+# Tear down any lingering containers.
+down:
+	docker compose -p {{POSTGIS_PROJECT}} -f {{POSTGIS_COMPOSE}} down -v || true
+	docker compose -p {{PGVECTOR_PROJECT}} -f {{PGVECTOR_COMPOSE}} down -v || true
+	docker compose -p {{POSTGRES_EXT_PROJECT}} -f {{POSTGRES_EXT_COMPOSE}} down -v || true
+
+up:
+	docker compose -p {{POSTGIS_PROJECT}} -f {{POSTGIS_COMPOSE}} up -d --wait --wait-timeout 120
+	docker compose -p {{PGVECTOR_PROJECT}} -f {{PGVECTOR_COMPOSE}} up -d --wait --wait-timeout 120
+	docker compose -p {{POSTGRES_EXT_PROJECT}} -f {{POSTGRES_EXT_COMPOSE}} up -d --wait --wait-timeout 120

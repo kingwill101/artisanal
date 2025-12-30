@@ -18,7 +18,11 @@ import 'schema_state.dart';
 
 /// Shared MySQL/MariaDB implementation of the routed ORM driver adapter.
 class MySqlDriverAdapter
-    implements DriverAdapter, SchemaDriver, SchemaStateProvider {
+    implements
+        DriverAdapter,
+        SchemaDriver,
+        SchemaStateProvider,
+        DriverExtensionHost {
   /// Registers MySQL/MariaDB-specific codecs and type mapper with the global registries.
   /// Call this once during application initialization before using MySQL.
   static void registerCodecs() {
@@ -35,6 +39,7 @@ class MySqlDriverAdapter
     ConnectionFactory? connections,
     String driverName = 'mysql',
     bool isMariaDb = false,
+    List<DriverExtension> extensions = const [],
   }) : _driverName = driverName,
        _metadata = DriverMetadata(
          name: driverName,
@@ -65,7 +70,10 @@ class MySqlDriverAdapter
        _schemaCompiler = SchemaPlanCompiler(
          MySqlSchemaDialect(isMariaDb: isMariaDb),
        ),
-       _grammar = const MySqlQueryGrammar(),
+       _extensions = DriverExtensionRegistry(
+         driverName: driverName,
+         extensions: extensions,
+       ),
        _connections =
            connections ??
            ConnectionFactory(
@@ -79,6 +87,8 @@ class MySqlDriverAdapter
     // Auto-register MySQL codecs on first instantiation
     registerMySqlCodecs();
 
+    _grammar = MySqlQueryGrammar(extensions: _extensions);
+
     _planCompiler = ClosurePlanCompiler(
       compileSelect: _compileSelectPreview,
       compileMutation: _compileMutationPreview,
@@ -88,9 +98,11 @@ class MySqlDriverAdapter
   factory MySqlDriverAdapter.fromUrl(
     String url, {
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) => MySqlDriverAdapter.custom(
     config: DatabaseConfig(driver: 'mysql', options: {'url': url}),
     connections: connections,
+    extensions: extensions,
   );
 
   factory MySqlDriverAdapter.insecureLocal({
@@ -101,6 +113,7 @@ class MySqlDriverAdapter
     String host = '127.0.0.1',
     String? timezone,
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) => MySqlDriverAdapter.custom(
     config: DatabaseConfig(
       driver: 'mysql',
@@ -114,6 +127,7 @@ class MySqlDriverAdapter
       },
     ),
     connections: connections,
+    extensions: extensions,
   );
 
   // ignore: unused_field
@@ -121,7 +135,8 @@ class MySqlDriverAdapter
   final DriverMetadata _metadata;
   final ValueCodecRegistry _codecs;
   final SchemaPlanCompiler _schemaCompiler;
-  final MySqlQueryGrammar _grammar;
+  final DriverExtensionRegistry _extensions;
+  late final MySqlQueryGrammar _grammar;
   final ConnectionFactory _connections;
   final DatabaseConfig _config;
   late final PlanCompiler _planCompiler;
@@ -137,6 +152,14 @@ class MySqlDriverAdapter
 
   @override
   ValueCodecRegistry get codecs => _codecs;
+
+  @override
+  DriverExtensionRegistry get driverExtensions => _extensions;
+
+  @override
+  void registerExtensions(Iterable<DriverExtension> extensions) {
+    _extensions.registerAll(extensions);
+  }
 
   @override
   Future<void> close() async {

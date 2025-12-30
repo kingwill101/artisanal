@@ -3,7 +3,7 @@ import 'package:ormed_sqlite/src/sqlite_grammar.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const grammar = SqliteQueryGrammar();
+  final grammar = SqliteQueryGrammar();
   final definition = AdHocModelDefinition(
     tableName: 'articles',
     columns: const [
@@ -288,7 +288,7 @@ void main() {
   });
 
   test('group limit degrades when window functions disabled', () {
-    const legacyGrammar = SqliteQueryGrammar(supportsWindowFunctions: false);
+    final legacyGrammar = SqliteQueryGrammar(supportsWindowFunctions: false);
     final limitedPlan = QueryPlan(
       definition: definition,
       groupLimit: const GroupLimit(column: 'id', limit: 2),

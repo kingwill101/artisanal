@@ -88,3 +88,13 @@ Available helpers:
 - The adapter automatically enables `RETURNING` support and schema inspection.
 - Migrations and seeds are configured separately in `ormed.yaml`. See Getting Started → Configuration.
 - For plan/previews/schema internals, see Drivers → Internals.
+
+## Extensions
+
+Driver extensions let you register custom clause compilers for SQLite queries.
+
+```dart file=../../examples/lib/drivers/extensions.dart#sqlite-extension-definition
+```
+
+```dart file=../../examples/lib/drivers/extensions.dart#sqlite-extension-usage
+```

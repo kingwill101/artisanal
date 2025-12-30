@@ -2,6 +2,7 @@ import 'package:ormed/src/model/model.dart';
 import 'package:ormed/src/query/plan/join_definition.dart';
 
 import '../contracts.dart';
+import 'driver_extension.dart';
 import 'json_path.dart';
 
 /// Immutable description of a query that `QueryExecutor` implementations
@@ -14,6 +15,7 @@ class QueryPlan {
     List<FilterClause>? filters,
     List<OrderClause>? orders,
     List<RawOrderExpression>? rawOrders,
+    List<CustomOrderExpression>? customOrders,
     this.randomOrder = false,
     this.randomSeed,
     this.limit,
@@ -27,10 +29,12 @@ class QueryPlan {
     this.predicate,
     List<String>? selects,
     List<RawSelectExpression>? rawSelects,
+    List<CustomSelectExpression>? customSelects,
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
     List<RawGroupByExpression>? rawGroupBy,
+    List<CustomGroupByExpression>? customGroupBy,
     this.having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -47,6 +51,7 @@ class QueryPlan {
   }) : filters = List.unmodifiable(filters ?? const []),
        orders = List.unmodifiable(orders ?? const []),
        rawOrders = List.unmodifiable(rawOrders ?? const []),
+       customOrders = List.unmodifiable(customOrders ?? const []),
        relations = List.unmodifiable(relations ?? const []),
        indexHints = List.unmodifiable(indexHints ?? const <IndexHint>[]),
        fullTextWheres = List.unmodifiable(
@@ -56,12 +61,14 @@ class QueryPlan {
        dateWheres = List.unmodifiable(dateWheres ?? const <DateWhereClause>[]),
        selects = List.unmodifiable(selects ?? const []),
        rawSelects = List.unmodifiable(rawSelects ?? const []),
+       customSelects = List.unmodifiable(customSelects ?? const []),
        projectionOrder = List.unmodifiable(
          projectionOrder ?? const <ProjectionOrderEntry>[],
        ),
        aggregates = List.unmodifiable(aggregates ?? const []),
        groupBy = List.unmodifiable(groupBy ?? const []),
        rawGroupBy = List.unmodifiable(rawGroupBy ?? const []),
+       customGroupBy = List.unmodifiable(customGroupBy ?? const []),
        relationAggregates = List.unmodifiable(
          relationAggregates ?? const <RelationAggregate>[],
        ),
@@ -81,6 +88,7 @@ class QueryPlan {
   final List<FilterClause> filters;
   final List<OrderClause> orders;
   final List<RawOrderExpression> rawOrders;
+  final List<CustomOrderExpression> customOrders;
   final bool randomOrder;
   final num? randomSeed;
   final int? limit;
@@ -93,10 +101,12 @@ class QueryPlan {
   final QueryPredicate? predicate;
   final List<String> selects;
   final List<RawSelectExpression> rawSelects;
+  final List<CustomSelectExpression> customSelects;
   final List<ProjectionOrderEntry> projectionOrder;
   final List<AggregateExpression> aggregates;
   final List<String> groupBy;
   final List<RawGroupByExpression> rawGroupBy;
+  final List<CustomGroupByExpression> customGroupBy;
   final QueryPredicate? having;
   final List<RelationAggregate> relationAggregates;
   final List<RelationOrder> relationOrders;
@@ -116,6 +126,7 @@ class QueryPlan {
     List<FilterClause>? filters,
     List<OrderClause>? orders,
     List<RawOrderExpression>? rawOrders,
+    List<CustomOrderExpression>? customOrders,
     bool? randomOrder,
     num? randomSeed,
     int? limit,
@@ -129,10 +140,12 @@ class QueryPlan {
     QueryPredicate? predicate,
     List<String>? selects,
     List<RawSelectExpression>? rawSelects,
+    List<CustomSelectExpression>? customSelects,
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
     List<RawGroupByExpression>? rawGroupBy,
+    List<CustomGroupByExpression>? customGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -154,6 +167,7 @@ class QueryPlan {
     filters: filters ?? this.filters,
     orders: orders ?? this.orders,
     rawOrders: rawOrders ?? this.rawOrders,
+    customOrders: customOrders ?? this.customOrders,
     randomOrder: randomOrder ?? this.randomOrder,
     randomSeed: randomSeed ?? this.randomSeed,
     limit: limit ?? this.limit,
@@ -167,10 +181,12 @@ class QueryPlan {
     predicate: predicate ?? this.predicate,
     selects: selects ?? this.selects,
     rawSelects: rawSelects ?? this.rawSelects,
+    customSelects: customSelects ?? this.customSelects,
     projectionOrder: projectionOrder ?? this.projectionOrder,
     aggregates: aggregates ?? this.aggregates,
     groupBy: groupBy ?? this.groupBy,
     rawGroupBy: rawGroupBy ?? this.rawGroupBy,
+    customGroupBy: customGroupBy ?? this.customGroupBy,
     having: having ?? this.having,
     relationAggregates: relationAggregates ?? this.relationAggregates,
     relationOrders: relationOrders ?? this.relationOrders,
@@ -331,6 +347,8 @@ class JoinCondition {
     this.boolean = PredicateLogicalOperator.and,
   }) : value = null,
        rawSql = null,
+       key = null,
+       payload = null,
        bindings = const [];
 
   const JoinCondition.value({
@@ -340,6 +358,8 @@ class JoinCondition {
     this.boolean = PredicateLogicalOperator.and,
   }) : right = null,
        rawSql = null,
+       key = null,
+       payload = null,
        bindings = const [];
 
   const JoinCondition.raw({
@@ -349,13 +369,28 @@ class JoinCondition {
   }) : left = null,
        operator = null,
        right = null,
-       value = null;
+       value = null,
+       key = null,
+       payload = null;
+
+  const JoinCondition.custom({
+    required this.key,
+    this.payload,
+    this.boolean = PredicateLogicalOperator.and,
+  }) : left = null,
+       operator = null,
+       right = null,
+       value = null,
+       rawSql = null,
+       bindings = const [];
 
   final String? left;
   final String? operator;
   final String? right;
   final Object? value;
   final String? rawSql;
+  final String? key;
+  final Object? payload;
   final List<Object?> bindings;
   final PredicateLogicalOperator boolean;
 
@@ -365,6 +400,8 @@ class JoinCondition {
   bool get isValueComparison => left != null && value != null && rawSql == null;
 
   bool get isRaw => rawSql != null;
+
+  bool get isCustom => key != null;
 }
 
 /// Filter clause applied to a single column.
@@ -485,6 +522,23 @@ class RawPredicate extends QueryPredicate {
   final List<Object?> bindings;
 }
 
+/// Custom predicate compiled by a driver extension.
+class CustomPredicate extends QueryPredicate {
+  CustomPredicate({
+    required this.kind,
+    required this.key,
+    this.payload,
+  }) : assert(
+         kind == DriverExtensionKind.where ||
+             kind == DriverExtensionKind.having,
+         'CustomPredicate kind must be where or having.',
+       );
+
+  final DriverExtensionKind kind;
+  final String key;
+  final Object? payload;
+}
+
 /// Subquery predicate for WHERE IN, WHERE EXISTS, etc.
 class SubqueryPredicate extends QueryPredicate {
   const SubqueryPredicate({
@@ -519,6 +573,15 @@ class RawSelectExpression {
   final List<Object?> bindings;
 }
 
+/// Custom select expression compiled by a driver extension.
+class CustomSelectExpression {
+  CustomSelectExpression({required this.key, this.payload, this.alias});
+
+  final String key;
+  final Object? payload;
+  final String? alias;
+}
+
 /// Raw ORDER BY expression.
 class RawOrderExpression {
   RawOrderExpression({required this.sql, List<Object?>? bindings})
@@ -526,6 +589,19 @@ class RawOrderExpression {
 
   final String sql;
   final List<Object?> bindings;
+}
+
+/// Custom ORDER BY expression compiled by a driver extension.
+class CustomOrderExpression {
+  const CustomOrderExpression({
+    required this.key,
+    this.payload,
+    this.descending = false,
+  });
+
+  final String key;
+  final Object? payload;
+  final bool descending;
 }
 
 /// Raw GROUP BY expression.
@@ -537,7 +613,15 @@ class RawGroupByExpression {
   final List<Object?> bindings;
 }
 
-enum ProjectionKind { column, raw }
+/// Custom GROUP BY expression compiled by a driver extension.
+class CustomGroupByExpression {
+  const CustomGroupByExpression({required this.key, this.payload});
+
+  final String key;
+  final Object? payload;
+}
+
+enum ProjectionKind { column, raw, custom }
 
 class ProjectionOrderEntry {
   const ProjectionOrderEntry._(this.kind, this.index);
@@ -546,6 +630,9 @@ class ProjectionOrderEntry {
     : this._(ProjectionKind.column, index);
 
   const ProjectionOrderEntry.raw(int index) : this._(ProjectionKind.raw, index);
+
+  const ProjectionOrderEntry.custom(int index)
+    : this._(ProjectionKind.custom, index);
 
   final ProjectionKind kind;
   final int index;

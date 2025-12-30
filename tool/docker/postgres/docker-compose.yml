@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ormed-postgres-extensions
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ormed_extensions
+    ports:
+      - "65431:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ormed_extensions"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ormed_extensions_data:/var/lib/postgresql/data
+
+volumes:
+  ormed_extensions_data:

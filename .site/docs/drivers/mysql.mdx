@@ -119,6 +119,17 @@ void main() async {
 | `init` | `List<String>` | `[]` | SQL statements executed after connecting and applying charset/timezone/sqlMode/session. |
 | `schema` | `String?` | — | Optional schema/database qualifier used when compiling fully-qualified table names. |
 
+## Extensions
+
+Driver extensions let you register custom clause compilers for MySQL/MariaDB
+without dropping down to raw SQL helpers.
+
+```dart file=../../examples/lib/drivers/extensions.dart#mysql-extension-definition
+```
+
+```dart file=../../examples/lib/drivers/extensions.dart#mysql-extension-usage
+```
+
 ## Data types
 
 Ormed uses driver codecs to map some MySQL/MariaDB column types to richer Dart types when they appear as model fields.

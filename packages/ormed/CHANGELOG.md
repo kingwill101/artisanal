@@ -5,7 +5,9 @@
 - **Added**: Typed predicate field accessors for `where` callbacks (e.g. `q.title.eq(...)`) and typed relation helpers (`withPosts`, `whereHasPosts`).
 - **Added**: Generated `copyWith` extensions for user-defined models with sentinel-based null handling, including constructor-backed relation fields.
 - **Added**: Generated `toMap`/`fromMap` helpers for user and tracked models using column-name maps.
-- **Added**: SQLite full-text query compilation for `whereFullText`, including optional index targeting.
+- **Added**: Driver extension registry and query builder hooks (`selectExtension`, `whereExtension`, `orderByExtension`, `groupByExtension`, `havingExtension`, join constraints).
+- **Added**: Full-text query compilation for `whereFullText` across Postgres, MySQL/MariaDB, and SQLite, including optional index targeting.
+- **Docs**: Added driver extension tutorial and examples.
 
 ## 0.1.0-dev+5
 

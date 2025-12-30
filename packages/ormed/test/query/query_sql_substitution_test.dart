@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('QueryGrammar substituteBindingsIntoRawSql', () {
-    const grammar = _PreviewGrammar();
+    final grammar = _PreviewGrammar();
 
     test('escapes values and replaces placeholders', () {
       final sql =
@@ -27,7 +27,7 @@ void main() {
   });
 
   group('QueryGrammar tablePrefix', () {
-    const grammar = _PreviewGrammar();
+    final grammar = _PreviewGrammar();
 
     test('applies prefix to unqualified table names', () {
       final definition = ModelDefinition<AdHocRow>(
@@ -84,9 +84,7 @@ void main() {
   });
 }
 
-class _PreviewGrammar extends QueryGrammar {
-  const _PreviewGrammar();
-}
+class _PreviewGrammar extends QueryGrammar {}
 
 class _AdHocCodec extends ModelCodec<AdHocRow> {
   const _AdHocCodec();

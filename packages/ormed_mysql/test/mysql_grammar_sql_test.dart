@@ -5,7 +5,7 @@ import 'package:ormed_mysql/ormed_mysql.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const grammar = MySqlQueryGrammar();
+  final grammar = MySqlQueryGrammar();
   final definition = AdHocModelDefinition(
     tableName: 'articles',
     columns: const [

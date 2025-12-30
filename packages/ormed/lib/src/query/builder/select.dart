@@ -15,7 +15,11 @@ extension SelectExtension<T extends OrmEntity> on Query<T> {
         .map((field) => _ensureField(field).columnName)
         .toList();
     final preservedRaw = _projectionOrder
-        .where((entry) => entry.kind == ProjectionKind.raw)
+        .where(
+          (entry) =>
+              entry.kind == ProjectionKind.raw ||
+              entry.kind == ProjectionKind.custom,
+        )
         .toList(growable: false);
     final order = <ProjectionOrderEntry>[
       for (var i = 0; i < mapped.length; i++) ProjectionOrderEntry.column(i),
@@ -77,6 +81,35 @@ extension SelectExtension<T extends OrmEntity> on Query<T> {
       ProjectionOrderEntry.raw(newRaw.length - 1),
     ];
     return _copyWith(rawSelects: newRaw, projectionOrder: order);
+  }
+
+  /// Adds a custom select expression compiled by a driver extension.
+  ///
+  /// Use [key] to select the registered extension handler, and [payload] to
+  /// pass custom parameters to the handler.
+  ///
+  /// Example:
+  /// ```dart
+  /// final users = await context.query<User>()
+  ///   .selectExtension('rank', payload: {'weight': 0.8}, alias: 'score')
+  ///   .get();
+  /// ```
+  Query<T> selectExtension(
+    String key, {
+    Object? payload,
+    String? alias,
+  }) {
+    final expression = CustomSelectExpression(
+      key: key,
+      payload: payload,
+      alias: alias,
+    );
+    final newCustom = [..._customSelects, expression];
+    final order = [
+      ..._projectionOrder,
+      ProjectionOrderEntry.custom(newCustom.length - 1),
+    ];
+    return _copyWith(customSelects: newCustom, projectionOrder: order);
   }
 
   /// Returns the value of [field] from the first row, or `null` when missing.

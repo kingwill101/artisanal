@@ -11,6 +11,7 @@ export 'mutation/mutation_operation.dart';
 export 'mutation/mutation_plan.dart';
 export 'mutation/mutation_result.dart';
 export 'mutation/mutation_row.dart';
+export '../query/driver_extension.dart';
 export 'query_row_identifier.dart';
 export 'statement/document_statement_payload.dart';
 export 'statement/sql_statement_payload.dart';

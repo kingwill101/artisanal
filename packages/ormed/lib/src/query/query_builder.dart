@@ -103,6 +103,7 @@ class Query<T extends OrmEntity> {
     List<FilterClause>? filters,
     List<OrderClause>? orders,
     List<RawOrderExpression>? rawOrders,
+    List<CustomOrderExpression>? customOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -117,10 +118,12 @@ class Query<T extends OrmEntity> {
     QueryPredicate? predicate,
     List<String>? selects,
     List<RawSelectExpression>? rawSelects,
+    List<CustomSelectExpression>? customSelects,
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
     List<RawGroupByExpression>? rawGroupBy,
+    List<CustomGroupByExpression>? customGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -141,6 +144,7 @@ class Query<T extends OrmEntity> {
   }) : _filters = filters ?? <FilterClause>[],
        _orders = orders ?? <OrderClause>[],
        _rawOrders = rawOrders ?? <RawOrderExpression>[],
+       _customOrders = customOrders ?? <CustomOrderExpression>[],
        _relations = relations ?? <RelationLoad>[],
        _joins = joins ?? <JoinDefinition>[],
        _indexHints = indexHints ?? <IndexHint>[],
@@ -155,10 +159,12 @@ class Query<T extends OrmEntity> {
        _predicate = predicate,
        _selects = selects ?? <String>[],
        _rawSelects = rawSelects ?? <RawSelectExpression>[],
+       _customSelects = customSelects ?? <CustomSelectExpression>[],
        _projectionOrder = projectionOrder ?? <ProjectionOrderEntry>[],
        _aggregates = aggregates ?? <AggregateExpression>[],
        _groupBy = groupBy ?? <String>[],
        _rawGroupBy = rawGroupBy ?? <RawGroupByExpression>[],
+       _customGroupBy = customGroupBy ?? <CustomGroupByExpression>[],
        _having = having,
        _relationAggregates = relationAggregates ?? <RelationAggregate>[],
        _relationOrders = relationOrders ?? <RelationOrder>[],
@@ -190,6 +196,7 @@ class Query<T extends OrmEntity> {
   final List<FilterClause> _filters;
   final List<OrderClause> _orders;
   final List<RawOrderExpression> _rawOrders;
+  final List<CustomOrderExpression> _customOrders;
   final List<RelationLoad> _relations;
   final List<JoinDefinition> _joins;
   final List<IndexHint> _indexHints;
@@ -204,10 +211,12 @@ class Query<T extends OrmEntity> {
   final QueryPredicate? _predicate;
   final List<String> _selects;
   final List<RawSelectExpression> _rawSelects;
+  final List<CustomSelectExpression> _customSelects;
   final List<ProjectionOrderEntry> _projectionOrder;
   final List<AggregateExpression> _aggregates;
   final List<String> _groupBy;
   final List<RawGroupByExpression> _rawGroupBy;
+  final List<CustomGroupByExpression> _customGroupBy;
   final QueryPredicate? _having;
   final List<RelationAggregate> _relationAggregates;
   final List<RelationOrder> _relationOrders;
@@ -411,6 +420,7 @@ class Query<T extends OrmEntity> {
     final hasCustomProjection =
         plan.selects.isNotEmpty ||
         plan.rawSelects.isNotEmpty ||
+        plan.customSelects.isNotEmpty ||
         plan.aggregates.isNotEmpty;
     if (!hasCustomProjection && plan.distinctOn.isEmpty) {
       return Map<String, Object?>.from(row);
@@ -423,6 +433,12 @@ class Query<T extends OrmEntity> {
     }
     for (final raw in plan.rawSelects) {
       final alias = raw.alias;
+      if (alias != null && row.containsKey(alias)) {
+        filtered[alias] = row[alias];
+      }
+    }
+    for (final custom in plan.customSelects) {
+      final alias = custom.alias;
       if (alias != null && row.containsKey(alias)) {
         filtered[alias] = row[alias];
       }
@@ -495,6 +511,7 @@ class Query<T extends OrmEntity> {
       filters: _filters,
       orders: _orders,
       rawOrders: _rawOrders,
+      customOrders: _customOrders,
       randomOrder: _randomOrder,
       randomSeed: _randomSeed,
       limit: _limit,
@@ -507,10 +524,12 @@ class Query<T extends OrmEntity> {
       predicate: _predicate,
       selects: _selects,
       rawSelects: _rawSelects,
+      customSelects: _customSelects,
       projectionOrder: _projectionOrder,
       aggregates: _aggregates,
       groupBy: _groupBy,
       rawGroupBy: _rawGroupBy,
+      customGroupBy: _customGroupBy,
       having: _having,
       relationAggregates: _relationAggregates,
       relationOrders: _relationOrders,
@@ -704,9 +723,11 @@ class Query<T extends OrmEntity> {
     offset: null,
     orders: const <OrderClause>[],
     rawOrders: const <RawOrderExpression>[],
+    customOrders: const <CustomOrderExpression>[],
     aggregates: const <AggregateExpression>[],
     selects: const <String>[],
     rawSelects: const <RawSelectExpression>[],
+    customSelects: const <CustomSelectExpression>[],
     projectionOrder: const <ProjectionOrderEntry>[],
     relationAggregates: const <RelationAggregate>[],
     relationOrders: const <RelationOrder>[],
@@ -884,6 +905,7 @@ class Query<T extends OrmEntity> {
       return plan.copyWith(
         selects: [pkField.columnName],
         rawSelects: const [],
+        customSelects: const [],
         aggregates: const [],
         projectionOrder: const [ProjectionOrderEntry.column(0)],
       );
@@ -891,6 +913,7 @@ class Query<T extends OrmEntity> {
     return plan.copyWith(
       selects: const <String>[],
       rawSelects: const <RawSelectExpression>[],
+      customSelects: const <CustomSelectExpression>[],
       aggregates: const [],
       projectionOrder: const <ProjectionOrderEntry>[],
     );
@@ -927,6 +950,7 @@ class Query<T extends OrmEntity> {
     List<FilterClause>? filters,
     List<OrderClause>? orders,
     List<RawOrderExpression>? rawOrders,
+    List<CustomOrderExpression>? customOrders,
     List<RelationLoad>? relations,
     List<JoinDefinition>? joins,
     List<IndexHint>? indexHints,
@@ -941,10 +965,12 @@ class Query<T extends OrmEntity> {
     QueryPredicate? predicate,
     List<String>? selects,
     List<RawSelectExpression>? rawSelects,
+    List<CustomSelectExpression>? customSelects,
     List<ProjectionOrderEntry>? projectionOrder,
     List<AggregateExpression>? aggregates,
     List<String>? groupBy,
     List<RawGroupByExpression>? rawGroupBy,
+    List<CustomGroupByExpression>? customGroupBy,
     QueryPredicate? having,
     List<RelationAggregate>? relationAggregates,
     List<RelationOrder>? relationOrders,
@@ -968,6 +994,7 @@ class Query<T extends OrmEntity> {
     filters: filters ?? _filters,
     orders: orders ?? _orders,
     rawOrders: rawOrders ?? _rawOrders,
+    customOrders: customOrders ?? _customOrders,
     relations: relations ?? _relations,
     joins: joins ?? _joins,
     indexHints: indexHints ?? _indexHints,
@@ -984,10 +1011,12 @@ class Query<T extends OrmEntity> {
     predicate: predicate ?? _predicate,
     selects: selects ?? _selects,
     rawSelects: rawSelects ?? _rawSelects,
+    customSelects: customSelects ?? _customSelects,
     projectionOrder: projectionOrder ?? _projectionOrder,
     aggregates: aggregates ?? _aggregates,
     groupBy: groupBy ?? _groupBy,
     rawGroupBy: rawGroupBy ?? _rawGroupBy,
+    customGroupBy: customGroupBy ?? _customGroupBy,
     having: having ?? _having,
     relationAggregates: relationAggregates ?? _relationAggregates,
     relationOrders: relationOrders ?? _relationOrders,

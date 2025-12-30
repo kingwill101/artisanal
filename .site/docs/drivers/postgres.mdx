@@ -143,3 +143,42 @@ Use `package:ormed_postgres/migrations.dart` when you want Postgres-specific sch
 - Supports `RETURNING`, JSON/JSONB operators, window functions, and schema introspection.
 - Migrations and seeds are configured separately in `ormed.yaml`. See Getting Started → Configuration.
 - For plan/previews/schema internals, see Drivers → Internals.
+
+## Extensions
+
+Postgres extensions are exposed through Ormed’s driver‑extension hooks. You
+register extension handlers per data source and then call them via
+`selectExtension`, `whereExtension`, `orderByExtension`, etc. For background on
+the extension system, see
+[Driver Internals → Driver extensions](./internals/overview#driver-extensions).
+
+### Mini tutorial
+
+Define a driver extension (this example adds a case-insensitive match using
+`ILIKE`):
+
+```dart file=../../examples/lib/drivers/extensions.dart#postgres-extension-definition
+```
+
+Register the extension and call it from the query builder:
+
+```dart file=../../examples/lib/drivers/extensions.dart#postgres-extension-usage
+```
+
+If the extension requires Postgres DDL, apply it in a migration before using
+the handlers:
+
+```dart
+final schema = SchemaBuilder()
+  ..raw('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+```
+
+### Reference implementation (not published)
+
+Example extensions live in the repo under
+`packages/ormed_postgres_extensions` (PostGIS, pgvector, pg_trgm, hstore,
+ltree, citext, uuid‑ossp, pgcrypto). These are reference implementations, not
+published packages:
+
+- [PostGIS integration test](https://github.com/RoutedDart/ormed/blob/master/packages/ormed_postgres_extensions/test/postgis_extension_integration_test.dart)
+- [pgvector integration test](https://github.com/RoutedDart/ormed/blob/master/packages/ormed_postgres_extensions/test/pgvector_extension_integration_test.dart)

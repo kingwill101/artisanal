@@ -70,4 +70,22 @@ class JoinBuilder {
     );
     return this;
   }
+
+  /// Adds a custom JOIN constraint compiled by a driver extension.
+  JoinBuilder onExtension(String key, [Object? payload]) {
+    _conditions.add(JoinCondition.custom(key: key, payload: payload));
+    return this;
+  }
+
+  /// Adds a custom JOIN constraint using OR logic.
+  JoinBuilder orOnExtension(String key, [Object? payload]) {
+    _conditions.add(
+      JoinCondition.custom(
+        key: key,
+        payload: payload,
+        boolean: PredicateLogicalOperator.or,
+      ),
+    );
+    return this;
+  }
 }

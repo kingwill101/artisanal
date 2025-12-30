@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Added**: Full-text query compilation for `whereFullText`, including websearch/phrase/boolean modes.
+- **Added**: Driver extension registry integration for custom query clauses.
+
 ## 0.1.0-dev+5
 
 - **Fixed**: Insert builders now omit columns not provided so Postgres defaults (e.g., timestamps) apply.

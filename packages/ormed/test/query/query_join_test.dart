@@ -84,7 +84,7 @@ void main() {
           .orderBy('id')
           .debugPlan();
 
-      final sql = const SqliteQueryGrammar().compileSelect(plan).sql;
+      final sql = SqliteQueryGrammar().compileSelect(plan).sql;
       expect(sql, contains('JOIN "posts"'));
       expect(sql, contains('ON "posts"."author_id" ='));
     });
@@ -103,7 +103,7 @@ void main() {
           )
           .debugPlan();
 
-      final sql = const PostgresQueryGrammar().compileSelect(plan).sql;
+      final sql = PostgresQueryGrammar().compileSelect(plan).sql;
       expect(sql, contains('JOIN LATERAL'));
     });
 
@@ -119,7 +119,7 @@ void main() {
           )
           .debugPlan();
 
-      final sql = const MySqlQueryGrammar().compileSelect(plan).sql;
+      final sql = MySqlQueryGrammar().compileSelect(plan).sql;
       expect(sql, contains('JOIN LATERAL'));
     });
 
@@ -136,7 +136,7 @@ void main() {
           .debugPlan();
 
       expect(
-        () => const SqliteQueryGrammar().compileSelect(plan),
+        () => SqliteQueryGrammar().compileSelect(plan),
         throwsA(isA<UnsupportedError>()),
       );
     });
@@ -149,7 +149,7 @@ void main() {
           .debugPlan();
 
       expect(
-        () => const SqliteQueryGrammar().compileSelect(plan),
+        () => SqliteQueryGrammar().compileSelect(plan),
         throwsA(isA<UnsupportedError>()),
       );
     });
@@ -161,7 +161,7 @@ void main() {
           .rightJoin('posts', 'posts.author_id', '=', 'base.id')
           .debugPlan();
 
-      final sql = const PostgresQueryGrammar().compileSelect(plan).sql;
+      final sql = PostgresQueryGrammar().compileSelect(plan).sql;
       expect(sql.toUpperCase(), contains('RIGHT JOIN'));
     });
 
@@ -172,7 +172,7 @@ void main() {
           .straightJoin('posts', 'posts.author_id', '=', 'base.id')
           .debugPlan();
 
-      final sql = const MySqlQueryGrammar().compileSelect(plan).sql;
+      final sql = MySqlQueryGrammar().compileSelect(plan).sql;
       expect(sql.toUpperCase(), contains('STRAIGHT_JOIN'));
     });
   });

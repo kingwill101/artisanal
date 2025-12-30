@@ -6,6 +6,7 @@ workspace:
   - packages/ormed_sqlite
   - packages/ormed_postgres
   - packages/ormed_mysql
+  - packages/ormed_postgres_extensions
   - packages/ormed_cli
   - packages/artisanal
   - packages/orm_playground

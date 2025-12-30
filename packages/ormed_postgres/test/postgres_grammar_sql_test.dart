@@ -5,7 +5,7 @@ import 'package:ormed_postgres/src/postgres_grammar.dart';
 import 'package:test/test.dart';
 
 void main() {
-  const grammar = PostgresQueryGrammar();
+  final grammar = PostgresQueryGrammar();
   final definition = AdHocModelDefinition(
     tableName: 'articles',
     columns: const [

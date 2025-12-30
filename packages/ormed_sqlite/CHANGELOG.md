@@ -2,7 +2,8 @@
 
 ## 0.1.0-dev+6
 
-- **Added**: SQLite full-text query compilation for `whereFullText`, using FTS virtual tables.
+- **Added**: SQLite full-text query compilation for `whereFullText`, including optional index targeting.
+- **Added**: Driver extension registry integration for custom query clauses.
 
 ## 0.1.0-dev+5
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Added**: Full-text query compilation for `whereFullText`, including boolean/phrase/websearch modes.
+- **Added**: Driver extension registry integration for custom query clauses.
+
 ## 0.1.0-dev+5
 
 - **Updated**: Align dependency on `ormed` `0.1.0-dev+5`.

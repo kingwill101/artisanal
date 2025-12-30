@@ -9,6 +9,7 @@ import 'query_builder/chunking_streaming_tests.dart';
 import 'query_builder/conditional_tests.dart';
 import 'query_builder/convenience_methods_tests.dart';
 import 'query_builder/date_time_tests.dart';
+import 'query_builder/driver_extension_tests.dart';
 import 'query_builder/fresh_tests.dart';
 import 'query_builder/full_text_search_tests.dart';
 import 'query_builder/generated_relation_accessors_tests.dart';
@@ -69,4 +70,5 @@ void runDriverQueryBuilderTests() {
   runChangeTrackingTests();
   runConvenienceMethodsTests();
   runTimestampTests();
+  runDriverExtensionTests();
 }

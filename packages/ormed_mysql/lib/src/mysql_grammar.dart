@@ -4,7 +4,7 @@ import 'package:ormed/ormed.dart';
 
 /// Query grammar that quotes identifiers for MySQL/MariaDB dialects.
 class MySqlQueryGrammar extends QueryGrammar {
-  const MySqlQueryGrammar();
+  MySqlQueryGrammar({super.extensions});
 
   @override
   String wrapIdentifier(String value) {

@@ -17,7 +17,11 @@ import 'sqlite_type_mapper.dart';
 
 /// Adapter that executes [QueryPlan] objects against SQLite databases.
 class SqliteDriverAdapter
-    implements DriverAdapter, SchemaDriver, SchemaStateProvider {
+    implements
+        DriverAdapter,
+        SchemaDriver,
+        SchemaStateProvider,
+        DriverExtensionHost {
   /// Registers SQLite-specific codecs and type mapper with the global registries.
   /// Call this once during application initialization before using SQLite.
   static void registerCodecs() {
@@ -45,28 +49,33 @@ class SqliteDriverAdapter
   }
 
   /// Opens an in-memory database connection using the shared connector.
-  SqliteDriverAdapter.inMemory()
+  SqliteDriverAdapter.inMemory({List<DriverExtension> extensions = const []})
     : this.custom(
         config: const DatabaseConfig(
           driver: 'sqlite',
           options: {'memory': true},
         ),
+        extensions: extensions,
       );
 
   /// Opens a database stored at [path].
-  SqliteDriverAdapter.file(String path)
-    : this.custom(
+  SqliteDriverAdapter.file(
+    String path, {
+    List<DriverExtension> extensions = const [],
+  }) : this.custom(
         config: DatabaseConfig(
           driver: 'sqlite',
           options: {'path': path},
           name: path,
         ),
+        extensions: extensions,
       );
 
   /// Creates an adapter for the provided [config] and [connections].
   SqliteDriverAdapter.custom({
     required DatabaseConfig config,
     ConnectionFactory? connections,
+    List<DriverExtension> extensions = const [],
   }) : _metadata = const DriverMetadata(
          name: 'sqlite',
          supportsReturning: true,
@@ -95,9 +104,9 @@ class SqliteDriverAdapter
          },
        ),
        _schemaCompiler = SchemaPlanCompiler(SqliteSchemaDialect()),
-       _grammar = SqliteQueryGrammar(
-         supportsWindowFunctions:
-             sqlite.sqlite3.version.versionNumber >= 3025000,
+       _extensions = DriverExtensionRegistry(
+         driverName: 'sqlite',
+         extensions: extensions,
        ),
        _connections =
            connections ??
@@ -106,6 +115,12 @@ class SqliteDriverAdapter
        _codecs = ValueCodecRegistry.instance.forDriver('sqlite') {
     // Auto-register SQLite codecs on first instantiation
     registerSqliteCodecs();
+
+    _grammar = SqliteQueryGrammar(
+      supportsWindowFunctions:
+          sqlite.sqlite3.version.versionNumber >= 3025000,
+      extensions: _extensions,
+    );
 
     _planCompiler = ClosurePlanCompiler(
       compileSelect: _compileSelectPreview,
@@ -116,7 +131,8 @@ class SqliteDriverAdapter
   final DriverMetadata _metadata;
   final ValueCodecRegistry _codecs;
   final SchemaPlanCompiler _schemaCompiler;
-  final SqliteQueryGrammar _grammar;
+  final DriverExtensionRegistry _extensions;
+  late final SqliteQueryGrammar _grammar;
   final ConnectionFactory _connections;
   final DatabaseConfig _config;
   late final PlanCompiler _planCompiler;
@@ -133,6 +149,14 @@ class SqliteDriverAdapter
 
   @override
   ValueCodecRegistry get codecs => _codecs;
+
+  @override
+  DriverExtensionRegistry get driverExtensions => _extensions;
+
+  @override
+  void registerExtensions(Iterable<DriverExtension> extensions) {
+    _extensions.registerAll(extensions);
+  }
 
   @override
   Future<void> close() async {

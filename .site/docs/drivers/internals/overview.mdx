@@ -44,3 +44,53 @@ Important distinction:
 Next:
 - “Plans & Previews” dives into what lives inside `QueryPlan` / `MutationPlan` and how previews are normalized.
 - “Schema” covers the schema interfaces used by migrations, schema dumps, and introspection.
+
+## Driver extensions
+
+Driver extensions let third-party packages register custom query clause compilers
+without resorting to raw SQL helpers. Extensions are registered per driver and
+exposed through query builder helpers:
+
+```dart
+final dataSource = DataSource(
+  DataSourceOptions(
+    driver: PostgresDriverAdapter.fromUrl(env['DATABASE_URL']!),
+    driverExtensions: [MyVectorSearchExtension()],
+    entities: registry.allDefinitions,
+  ),
+);
+```
+
+```dart
+final preview = dataSource.query<Post>()
+  .selectExtension('vector_rank', payload: {'query': embedding}, alias: 'rank')
+  .whereExtension('vector_match', {'query': embedding})
+  .orderByExtension('vector_rank', payload: {'query': embedding}, descending: true)
+  .toSql();
+```
+
+Supported hooks include:
+- `selectExtension`
+- `whereExtension` / `havingExtension`
+- `orderByExtension` / `groupByExtension`
+- `JoinBuilder.onExtension` for JOIN constraints
+
+If a custom clause key is missing for the active driver, compilation fails with
+an actionable error that includes the missing key and driver name.
+
+### Postgres extensions example package
+
+A consolidated Postgres extensions package lives in
+`packages/ormed_postgres_extensions`. It ships typed payloads and handlers for
+PostGIS (`ST_DWithin`, `ST_Distance`, `ST_AsGeoJSON`), pgvector distance
+operations, and contrib extensions like `pg_trgm`, `hstore`, `ltree`, `citext`,
+`uuid-ossp`, and `pgcrypto`. This package is a reference implementation and is
+not published.
+
+Integration tests and Docker Compose setups live alongside it:
+
+- `packages/ormed_postgres_extensions/test/postgis_extension_integration_test.dart`
+- `packages/ormed_postgres_extensions/test/pgvector_extension_integration_test.dart`
+- `tool/docker/postgis/docker-compose.yml`
+- `tool/docker/postgres/docker-compose.yml`
+- `tool/docker/pgvector/docker-compose.yml`

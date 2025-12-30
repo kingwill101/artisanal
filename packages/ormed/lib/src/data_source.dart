@@ -32,6 +32,7 @@ class DataSourceOptions {
     this.tablePrefix = '',
     this.defaultSchema,
     this.codecs = const {},
+    this.driverExtensions = const [],
     this.logging = false,
     this.logFilePath,
     this.carbonTimezone = 'UTC',
@@ -79,6 +80,9 @@ class DataSourceOptions {
   /// Additional value codecs to register beyond the standard set.
   final Map<String, ValueCodec<dynamic>> codecs;
 
+  /// Driver extension modules registered for this data source.
+  final List<DriverExtension> driverExtensions;
+
   /// Whether to enable query logging and default contextual query logs.
   final bool logging;
 
@@ -112,6 +116,7 @@ class DataSourceOptions {
     String? tablePrefix,
     String? defaultSchema,
     Map<String, ValueCodec<dynamic>>? codecs,
+    List<DriverExtension>? driverExtensions,
     bool? logging,
     String? logFilePath,
     String? carbonTimezone,
@@ -127,6 +132,7 @@ class DataSourceOptions {
     tablePrefix: tablePrefix ?? this.tablePrefix,
     defaultSchema: defaultSchema ?? this.defaultSchema,
     codecs: codecs ?? this.codecs,
+    driverExtensions: driverExtensions ?? this.driverExtensions,
     logging: logging ?? this.logging,
     logFilePath: logFilePath ?? this.logFilePath,
     carbonTimezone: carbonTimezone ?? this.carbonTimezone,
@@ -303,6 +309,19 @@ class DataSource {
 
     // Register all model definitions
     _registry.registerAll(options.entities);
+
+    if (options.driverExtensions.isNotEmpty) {
+      final driver = options.driver;
+      if (driver is DriverExtensionHost) {
+        (driver as DriverExtensionHost).registerExtensions(
+          options.driverExtensions,
+        );
+      } else {
+        throw StateError(
+          'Driver ${driver.metadata.name} does not support driver extensions.',
+        );
+      }
+    }
 
     // Create the connection configuration
     final config = ConnectionConfig(
