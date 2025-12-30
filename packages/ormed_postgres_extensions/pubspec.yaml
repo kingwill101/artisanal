@@ -1,6 +1,6 @@
 name: ormed_postgres_extensions
 description: Postgres extension handlers (PostGIS, pgvector) for Ormed.
-version: 0.1.0-dev+5
+version: 0.1.0-dev+6
 publish_to: none
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
@@ -11,8 +11,8 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  ormed: ^0.1.0-dev+5
-  ormed_postgres: ^0.1.0-dev+5
+  ormed: ^0.1.0-dev+6
+  ormed_postgres: ^0.1.0-dev+6
   meta: ^1.17.0
 
 dev_dependencies:

@@ -1,6 +1,6 @@
 name: driver_tests
 description: Shared ORM driver integration test suites reused by ORM drivers.
-version: 0.1.0-dev+5
+version: 0.1.0-dev+6
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
 documentation: https://ormed.vercel.app/
@@ -18,7 +18,7 @@ environment:
 dependencies:
   decimal: ^3.2.4
   json_annotation: ^4.9.0
-  ormed: ^0.1.0-dev+5
+  ormed: ^0.1.0-dev+6
   test: ^1.28.0
 
 dev_dependencies:

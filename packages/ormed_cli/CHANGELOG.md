@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Updated**: Synchronized ormed changes.
+
 ## 0.1.0-dev+5
 
 - **Updated**: Align dependencies on `ormed` `0.1.0-dev+5`.
