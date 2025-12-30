@@ -98,8 +98,9 @@ class ModelPartialEmitter {
       buffer.writeln('}) {');
       buffer.writeln('    return ${className}Partial(');
       for (final field in visible) {
+        final valueExpr = _copyWithCastValue(field.name, field.dartType);
         buffer.writeln(
-          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : $valueExpr,',
         );
       }
       buffer.writeln('    );');
@@ -144,12 +145,41 @@ class ModelPartialEmitter {
     );
     buffer.writeln('    return ${className}Partial(');
     for (final field in fields) {
-      buffer.writeln(
-        "      ${field.name}: row['${field.columnName}'] as ${field.dartType}?,",
-      );
+      final valueExpr = _rowValueExpression(field);
+      buffer.writeln('      ${field.name}: $valueExpr,');
     }
     buffer.writeln('    );');
     buffer.writeln('  }');
     buffer.writeln();
+  }
+
+  String _copyWithCastValue(String valueName, String dartType) {
+    final castType = _copyWithCastType(dartType);
+    if (castType == 'dynamic' ||
+        castType == 'Object' ||
+        castType == 'Object?') {
+      return valueName;
+    }
+    return '$valueName as $castType';
+  }
+
+  String _rowValueExpression(FieldDescriptor field) {
+    final castType = _copyWithCastType(field.dartType);
+    if (castType == 'dynamic' ||
+        castType == 'Object' ||
+        castType == 'Object?') {
+      return "row['${field.columnName}']";
+    }
+    return "row['${field.columnName}'] as $castType";
+  }
+
+  String _copyWithCastType(String dartType) {
+    if (dartType == 'dynamic') {
+      return 'dynamic';
+    }
+    if (dartType.endsWith('?')) {
+      return dartType;
+    }
+    return '$dartType?';
   }
 }

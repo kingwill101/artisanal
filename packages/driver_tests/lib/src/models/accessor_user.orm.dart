@@ -494,12 +494,7 @@ class $AccessorUser extends AccessorUser
     required String firstName,
     required String lastName,
     required String email,
-  }) : super.new(
-         id: id,
-         firstName: firstName,
-         lastName: lastName,
-         email: email,
-       ) {
+  }) : super(id: id, firstName: firstName, lastName: lastName, email: email) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'first_name': firstName,
@@ -589,7 +584,7 @@ extension AccessorUserOrmExtension on AccessorUser {
     Object? lastName = _copyWithSentinel,
     Object? email = _copyWithSentinel,
   }) {
-    return AccessorUser.new(
+    return AccessorUser(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       firstName: identical(firstName, _copyWithSentinel)
           ? this.firstName
@@ -637,7 +632,7 @@ extension $AccessorUserAccessors on $AccessorUser {
   }
 
   String normalizeEmail(String? value) {
-    final result = AccessorUser.normalizeEmail(this, value as String?);
+    final result = AccessorUser.normalizeEmail(this, value);
     setRawAttribute('email', result);
     return result;
   }

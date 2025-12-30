@@ -697,7 +697,7 @@ class $Article extends Article with ModelAttributes implements OrmEntity {
     required DateTime publishedAt,
     DateTime? reviewedAt,
     required int categoryId,
-  }) : super.new(
+  }) : super(
          id: id,
          title: title,
          body: body,
@@ -859,7 +859,7 @@ extension ArticleOrmExtension on Article {
     Object? reviewedAt = _copyWithSentinel,
     Object? categoryId = _copyWithSentinel,
   }) {
-    return Article.new(
+    return Article(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       title: identical(title, _copyWithSentinel) ? this.title : title as String,
       body: identical(body, _copyWithSentinel) ? this.body : body as String?,

@@ -392,7 +392,7 @@ class $NullableRelationsTest extends NullableRelationsTest
     implements OrmEntity {
   /// Internal constructor for [$NullableRelationsTest].
   $NullableRelationsTest({int id = 0, required String name})
-    : super.new(id: id, name: name) {
+    : super(id: id, name: name) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name});
   }
 
@@ -472,7 +472,7 @@ extension NullableRelationsTestOrmExtension on NullableRelationsTest {
     Object? id = _copyWithSentinel,
     Object? name = _copyWithSentinel,
   }) {
-    return NullableRelationsTest.new(
+    return NullableRelationsTest(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
     );

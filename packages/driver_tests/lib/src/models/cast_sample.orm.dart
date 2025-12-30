@@ -785,7 +785,7 @@ class $CastSample extends CastSample with ModelAttributes implements OrmEntity {
     required Decimal amount,
     required CastStatus status,
     required String secret,
-  }) : super.new(
+  }) : super(
          id: id,
          name: name,
          isActive: isActive,
@@ -960,7 +960,7 @@ extension CastSampleOrmExtension on CastSample {
     Object? status = _copyWithSentinel,
     Object? secret = _copyWithSentinel,
   }) {
-    return CastSample.new(
+    return CastSample(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       isActive: identical(isActive, _copyWithSentinel)

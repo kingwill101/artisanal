@@ -394,7 +394,7 @@ class $Tag extends Tag
     with ModelAttributes, TimestampsImpl
     implements OrmEntity {
   /// Internal constructor for [$Tag].
-  $Tag({int id = 0, required String label}) : super.new(id: id, label: label) {
+  $Tag({int id = 0, required String label}) : super(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});
   }
 
@@ -480,7 +480,7 @@ extension TagOrmExtension on Tag {
     Object? id = _copyWithSentinel,
     Object? label = _copyWithSentinel,
   }) {
-    return Tag.new(
+    return Tag(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       label: identical(label, _copyWithSentinel) ? this.label : label as String,
     );

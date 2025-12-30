@@ -334,7 +334,7 @@ class _SettingPartialCopyWithSentinel {
 class $Setting extends Setting with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$Setting].
   $Setting({int id = 0, required Map<String, dynamic> payload})
-    : super.new(id: id, payload: payload) {
+    : super(id: id, payload: payload) {
     _attachOrmRuntimeMetadata({'id': id, 'payload': payload});
   }
 
@@ -389,7 +389,7 @@ extension SettingOrmExtension on Setting {
     Object? id = _copyWithSentinel,
     Object? payload = _copyWithSentinel,
   }) {
-    return Setting.new(
+    return Setting(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       payload: identical(payload, _copyWithSentinel)
           ? this.payload

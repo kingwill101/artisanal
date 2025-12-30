@@ -495,7 +495,7 @@ class $DerivedForFactory extends DerivedForFactory
     String? baseName,
     Map<String, Object?>? layerOneNotes,
     bool? layerTwoFlag,
-  }) : super.new(
+  }) : super(
          id: id,
          baseName: baseName,
          layerOneNotes: layerOneNotes,
@@ -594,7 +594,7 @@ extension DerivedForFactoryOrmExtension on DerivedForFactory {
     Object? layerOneNotes = _copyWithSentinel,
     Object? layerTwoFlag = _copyWithSentinel,
   }) {
-    return DerivedForFactory.new(
+    return DerivedForFactory(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       baseName: identical(baseName, _copyWithSentinel)
           ? this.baseName

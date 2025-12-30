@@ -419,11 +419,7 @@ class $Taggable extends Taggable with ModelAttributes implements OrmEntity {
     required int tagId,
     required int taggableId,
     required String taggableType,
-  }) : super.new(
-         tagId: tagId,
-         taggableId: taggableId,
-         taggableType: taggableType,
-       ) {
+  }) : super(tagId: tagId, taggableId: taggableId, taggableType: taggableType) {
     _attachOrmRuntimeMetadata({
       'tag_id': tagId,
       'taggable_id': taggableId,
@@ -498,7 +494,7 @@ extension TaggableOrmExtension on Taggable {
     Object? taggableId = _copyWithSentinel,
     Object? taggableType = _copyWithSentinel,
   }) {
-    return Taggable.new(
+    return Taggable(
       tagId: identical(tagId, _copyWithSentinel) ? this.tagId : tagId as int,
       taggableId: identical(taggableId, _copyWithSentinel)
           ? this.taggableId

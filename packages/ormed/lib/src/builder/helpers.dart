@@ -151,10 +151,11 @@ Map<String, String> readStringMap(ConstantReader? reader) {
   return Map.unmodifiable(map);
 }
 
-String stringListLiteral(List<String> values) {
-  if (values.isEmpty) return 'const <String>[]';
+String stringListLiteral(List<String> values, {bool constLiteral = true}) {
+  final prefix = constLiteral ? 'const ' : '';
+  if (values.isEmpty) return '${prefix}<String>[]';
   final entries = values.map((entry) => "'${escape(entry)}'");
-  return 'const <String>[${entries.join(', ')}]';
+  return '${prefix}<String>[${entries.join(', ')}]';
 }
 
 String stringMapLiteral(Map<String, String> values) {

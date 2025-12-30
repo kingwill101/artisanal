@@ -312,7 +312,7 @@ class ModelDefinitionEmitter {
       }
       if (relation.pivotColumns.isNotEmpty) {
         buffer.writeln(
-          '  pivotColumns: ${stringListLiteral(relation.pivotColumns)},',
+          '  pivotColumns: ${stringListLiteral(relation.pivotColumns, constLiteral: false)},',
         );
       }
       if (relation.pivotTimestamps) {

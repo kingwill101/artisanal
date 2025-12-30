@@ -297,7 +297,7 @@ class $NoFactory extends NoFactory
     with ModelAttributes, SoftDeletesImpl
     implements OrmEntity {
   /// Internal constructor for [$NoFactory].
-  $NoFactory({int? id}) : super.new(id: id) {
+  $NoFactory({int? id}) : super(id: id) {
     _attachOrmRuntimeMetadata({'id': id});
   }
 
@@ -342,7 +342,7 @@ extension NoFactoryOrmExtension on NoFactory {
   static const _NoFactoryCopyWithSentinel _copyWithSentinel =
       _NoFactoryCopyWithSentinel();
   NoFactory copyWith({Object? id = _copyWithSentinel}) {
-    return NoFactory.new(
+    return NoFactory(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
     );
   }

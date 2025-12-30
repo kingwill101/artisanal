@@ -468,7 +468,7 @@ class $Photo extends Photo with ModelAttributes implements OrmEntity {
     required int imageableId,
     required String imageableType,
     required String path,
-  }) : super.new(
+  }) : super(
          id: id,
          imageableId: imageableId,
          imageableType: imageableType,
@@ -580,7 +580,7 @@ extension PhotoOrmExtension on Photo {
     Object? imageableType = _copyWithSentinel,
     Object? path = _copyWithSentinel,
   }) {
-    return Photo.new(
+    return Photo(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       imageableId: identical(imageableId, _copyWithSentinel)
           ? this.imageableId

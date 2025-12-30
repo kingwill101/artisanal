@@ -81,8 +81,9 @@ class ModelDtoEmitter {
       buffer.writeln('}) {');
       buffer.writeln('    return ${className}InsertDto(');
       for (final field in insertable) {
+        final valueExpr = _copyWithCastValue(field.name, field.dartType);
         buffer.writeln(
-          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : $valueExpr,',
         );
       }
       buffer.writeln('    );');
@@ -155,8 +156,9 @@ class ModelDtoEmitter {
       buffer.writeln('}) {');
       buffer.writeln('    return ${className}UpdateDto(');
       for (final field in updatable) {
+        final valueExpr = _copyWithCastValue(field.name, field.dartType);
         buffer.writeln(
-          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : ${field.name} as ${field.dartType}?,',
+          '      ${field.name}: identical(${field.name}, _copyWithSentinel) ? this.${field.name} : $valueExpr,',
         );
       }
       buffer.writeln('    );');
@@ -170,5 +172,25 @@ class ModelDtoEmitter {
         'class _${className}UpdateDtoCopyWithSentinel { const _${className}UpdateDtoCopyWithSentinel(); }',
       );
     }
+  }
+
+  String _copyWithCastValue(String valueName, String dartType) {
+    final castType = _copyWithCastType(dartType);
+    if (castType == 'dynamic' ||
+        castType == 'Object' ||
+        castType == 'Object?') {
+      return valueName;
+    }
+    return '$valueName as $castType';
+  }
+
+  String _copyWithCastType(String dartType) {
+    if (dartType == 'dynamic') {
+      return 'dynamic';
+    }
+    if (dartType.endsWith('?')) {
+      return dartType;
+    }
+    return '$dartType?';
   }
 }

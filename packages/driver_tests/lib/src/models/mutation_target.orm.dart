@@ -460,7 +460,7 @@ class $MutationTarget extends MutationTarget
     String? name,
     bool? active,
     String? category,
-  }) : super.new(id: id, name: name, active: active, category: category) {
+  }) : super(id: id, name: name, active: active, category: category) {
     _attachOrmRuntimeMetadata({
       '_id': id,
       'name': name,
@@ -550,7 +550,7 @@ extension MutationTargetOrmExtension on MutationTarget {
     Object? active = _copyWithSentinel,
     Object? category = _copyWithSentinel,
   }) {
-    return MutationTarget.new(
+    return MutationTarget(
       id: identical(id, _copyWithSentinel) ? this.id : id as String,
       name: identical(name, _copyWithSentinel) ? this.name : name as String?,
       active: identical(active, _copyWithSentinel)

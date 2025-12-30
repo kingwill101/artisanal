@@ -397,7 +397,7 @@ class $CustomSoftDelete extends CustomSoftDelete
     implements OrmEntity {
   /// Internal constructor for [$CustomSoftDelete].
   $CustomSoftDelete({required int id, required String title})
-    : super.new(id: id, title: title) {
+    : super(id: id, title: title) {
     _attachOrmRuntimeMetadata({'id': id, 'title': title});
   }
 
@@ -452,7 +452,7 @@ extension CustomSoftDeleteOrmExtension on CustomSoftDelete {
     Object? id = _copyWithSentinel,
     Object? title = _copyWithSentinel,
   }) {
-    return CustomSoftDelete.new(
+    return CustomSoftDelete(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       title: identical(title, _copyWithSentinel) ? this.title : title as String,
     );

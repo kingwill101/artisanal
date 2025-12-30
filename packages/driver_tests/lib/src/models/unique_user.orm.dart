@@ -390,7 +390,7 @@ class _UniqueUserPartialCopyWithSentinel {
 class $UniqueUser extends UniqueUser with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$UniqueUser].
   $UniqueUser({int id = 0, required String email, required bool active})
-    : super.new(id: id, email: email, active: active) {
+    : super(id: id, email: email, active: active) {
     _attachOrmRuntimeMetadata({'id': id, 'email': email, 'active': active});
   }
 
@@ -456,7 +456,7 @@ extension UniqueUserOrmExtension on UniqueUser {
     Object? email = _copyWithSentinel,
     Object? active = _copyWithSentinel,
   }) {
-    return UniqueUser.new(
+    return UniqueUser(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       active: identical(active, _copyWithSentinel)

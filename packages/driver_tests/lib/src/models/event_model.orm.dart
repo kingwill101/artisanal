@@ -404,7 +404,7 @@ class $EventModel extends EventModel
     implements OrmEntity {
   /// Internal constructor for [$EventModel].
   $EventModel({int id = 0, required String name, required int score})
-    : super.new(id: id, name: name, score: score) {
+    : super(id: id, name: name, score: score) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name, 'score': score});
   }
 
@@ -471,7 +471,7 @@ extension EventModelOrmExtension on EventModel {
     Object? name = _copyWithSentinel,
     Object? score = _copyWithSentinel,
   }) {
-    return EventModel.new(
+    return EventModel(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       score: identical(score, _copyWithSentinel) ? this.score : score as int,

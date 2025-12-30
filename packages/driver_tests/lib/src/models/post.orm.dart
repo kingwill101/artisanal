@@ -118,7 +118,7 @@ const RelationDefinition _$PostTagsRelation = RelationDefinition(
   through: 'post_tags',
   pivotForeignKey: 'post_id',
   pivotRelatedKey: 'tag_id',
-  pivotColumns: const <String>['sort_order', 'note'],
+  pivotColumns: <String>['sort_order', 'note'],
   pivotTimestamps: true,
   pivotModel: 'PostTag',
 );
@@ -644,7 +644,7 @@ class $Post extends Post
     required DateTime publishedAt,
     String? content,
     int? views,
-  }) : super.new(
+  }) : super(
          id: id,
          authorId: authorId,
          title: title,
@@ -837,7 +837,7 @@ extension PostOrmExtension on Post {
     Object? content = _copyWithSentinel,
     Object? views = _copyWithSentinel,
   }) {
-    return Post.new(
+    return Post(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       authorId: identical(authorId, _copyWithSentinel)
           ? this.authorId

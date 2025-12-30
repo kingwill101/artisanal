@@ -630,7 +630,7 @@ class $User extends User with ModelAttributes implements OrmEntity {
     Map<String, Object?>? profile,
     Map<String, Object?>? metadata,
     DateTime? createdAt,
-  }) : super.new(
+  }) : super(
          id: id,
          email: email,
          active: active,
@@ -794,7 +794,7 @@ extension UserOrmExtension on User {
     Object? metadata = _copyWithSentinel,
     Object? createdAt = _copyWithSentinel,
   }) {
-    return User.new(
+    return User(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       active: identical(active, _copyWithSentinel)

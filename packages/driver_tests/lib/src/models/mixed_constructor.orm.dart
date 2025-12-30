@@ -426,7 +426,7 @@ class $MixedConstructorModel extends MixedConstructorModel
     int id = 0,
     required String name,
     String? description,
-  }) : super.new(id, name, description: description) {
+  }) : super(id, name, description: description) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'name': name,
@@ -493,7 +493,7 @@ extension MixedConstructorModelOrmExtension on MixedConstructorModel {
     Object? name = _copyWithSentinel,
     Object? description = _copyWithSentinel,
   }) {
-    return MixedConstructorModel.new(
+    return MixedConstructorModel(
       identical(id, _copyWithSentinel) ? this.id : id as int,
       identical(name, _copyWithSentinel) ? this.name : name as String,
       description: identical(description, _copyWithSentinel)

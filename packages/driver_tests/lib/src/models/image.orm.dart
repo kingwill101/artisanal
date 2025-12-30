@@ -335,8 +335,7 @@ class _ImagePartialCopyWithSentinel {
 /// or model factories to create tracked model instances.
 class $Image extends Image with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$Image].
-  $Image({int id = 0, required String label})
-    : super.new(id: id, label: label) {
+  $Image({int id = 0, required String label}) : super(id: id, label: label) {
     _attachOrmRuntimeMetadata({'id': id, 'label': label});
   }
 
@@ -406,7 +405,7 @@ extension ImageOrmExtension on Image {
     Object? id = _copyWithSentinel,
     Object? label = _copyWithSentinel,
   }) {
-    return Image.new(
+    return Image(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       label: identical(label, _copyWithSentinel) ? this.label : label as String,
     );

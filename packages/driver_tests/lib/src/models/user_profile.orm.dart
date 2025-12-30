@@ -392,7 +392,7 @@ class $UserProfile extends UserProfile
     implements OrmEntity {
   /// Internal constructor for [$UserProfile].
   $UserProfile({int id = 0, required int userId, required String bio})
-    : super.new(id: id, userId: userId, bio: bio) {
+    : super(id: id, userId: userId, bio: bio) {
     _attachOrmRuntimeMetadata({'id': id, 'user_id': userId, 'bio': bio});
   }
 
@@ -458,7 +458,7 @@ extension UserProfileOrmExtension on UserProfile {
     Object? userId = _copyWithSentinel,
     Object? bio = _copyWithSentinel,
   }) {
-    return UserProfile.new(
+    return UserProfile(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       userId: identical(userId, _copyWithSentinel)
           ? this.userId

@@ -462,8 +462,7 @@ class ModelSubclassEmitter {
     String className,
     String valueName,
   ) {
-    final valueExpr = _castValue(valueName, mutator.valueType);
-    final args = mutator.takesModel ? 'this, $valueExpr' : valueExpr;
+    final args = mutator.takesModel ? 'this, $valueName' : valueName;
     return '$className.${mutator.name}($args)';
   }
 
@@ -693,15 +692,14 @@ class ModelSubclassEmitter {
     List<FormalParameterElement> parameters,
   ) {
     final buffer = StringBuffer();
-    if ((constructor.name ?? '').isNotEmpty) {
-      buffer.write('.${constructor.name}');
-    }
+    buffer.write(_constructorNameSuffix(constructor));
     buffer.write('(');
     for (final parameter in parameters) {
       final name = parameter.displayName;
       final typeName = parameter.type.getDisplayString();
+      final castValue = _castValue(name, typeName);
       final valueExpr =
-          'identical($name, _copyWithSentinel) ? this.$name : $name as $typeName';
+          'identical($name, _copyWithSentinel) ? this.$name : $castValue';
       if (parameter.isNamed) {
         buffer.write('$name: $valueExpr, ');
       } else {
@@ -717,9 +715,7 @@ class ModelSubclassEmitter {
     List<FieldDescriptor> fields,
   ) {
     final buffer = StringBuffer();
-    if ((constructor.name ?? '').isNotEmpty) {
-      buffer.write('.${constructor.name}');
-    }
+    buffer.write(_constructorNameSuffix(constructor));
     buffer.write('(');
     for (final parameter in constructor.formalParameters) {
       final paramName = parameter.displayName;
@@ -743,5 +739,13 @@ class ModelSubclassEmitter {
     }
     buffer.write(')');
     return buffer.toString();
+  }
+
+  String _constructorNameSuffix(ConstructorElement constructor) {
+    final name = constructor.name ?? '';
+    if (name.isEmpty || name == 'new') {
+      return '';
+    }
+    return '.$name';
   }
 }

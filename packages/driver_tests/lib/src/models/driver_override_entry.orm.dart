@@ -395,7 +395,7 @@ class $DriverOverrideEntry extends DriverOverrideEntry
     implements OrmEntity {
   /// Internal constructor for [$DriverOverrideEntry].
   $DriverOverrideEntry({int id = 0, required Map<String, Object?> payload})
-    : super.new(id: id, payload: payload) {
+    : super(id: id, payload: payload) {
     _attachOrmRuntimeMetadata({'id': id, 'payload': payload});
   }
 
@@ -453,7 +453,7 @@ extension DriverOverrideEntryOrmExtension on DriverOverrideEntry {
     Object? id = _copyWithSentinel,
     Object? payload = _copyWithSentinel,
   }) {
-    return DriverOverrideEntry.new(
+    return DriverOverrideEntry(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       payload: identical(payload, _copyWithSentinel)
           ? this.payload

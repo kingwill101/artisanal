@@ -465,7 +465,7 @@ class $ActiveUser extends ActiveUser
     required String email,
     String? name,
     required Map<String, Object?> settings,
-  }) : super.new(id: id, email: email, name: name, settings: settings) {
+  }) : super(id: id, email: email, name: name, settings: settings) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'email': email,
@@ -557,7 +557,7 @@ extension ActiveUserOrmExtension on ActiveUser {
     Object? name = _copyWithSentinel,
     Object? settings = _copyWithSentinel,
   }) {
-    return ActiveUser.new(
+    return ActiveUser(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       name: identical(name, _copyWithSentinel) ? this.name : name as String?,

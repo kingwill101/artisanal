@@ -445,7 +445,7 @@ class $Author extends Author
     implements OrmEntity {
   /// Internal constructor for [$Author].
   $Author({int id = 0, required String name, required bool active})
-    : super.new(id: id, name: name, active: active) {
+    : super(id: id, name: name, active: active) {
     _attachOrmRuntimeMetadata({'id': id, 'name': name, 'active': active});
   }
 
@@ -541,7 +541,7 @@ extension AuthorOrmExtension on Author {
     Object? posts = _copyWithSentinel,
     Object? comments = _copyWithSentinel,
   }) {
-    return Author.new(
+    return Author(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       active: identical(active, _copyWithSentinel)

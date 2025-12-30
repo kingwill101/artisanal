@@ -544,7 +544,7 @@ class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
     String? note,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
+  }) : super(
          postId: postId,
          tagId: tagId,
          sortOrder: sortOrder,
@@ -667,7 +667,7 @@ extension PostTagOrmExtension on PostTag {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return PostTag.new(
+    return PostTag(
       postId: identical(postId, _copyWithSentinel)
           ? this.postId
           : postId as int,

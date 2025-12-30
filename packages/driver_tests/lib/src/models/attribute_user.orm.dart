@@ -530,7 +530,7 @@ class $AttributeUser extends AttributeUser
     required String secret,
     String? role,
     Map<String, Object?>? profile,
-  }) : super.new(
+  }) : super(
          id: id,
          email: email,
          secret: secret,
@@ -639,7 +639,7 @@ extension AttributeUserOrmExtension on AttributeUser {
     Object? role = _copyWithSentinel,
     Object? profile = _copyWithSentinel,
   }) {
-    return AttributeUser.new(
+    return AttributeUser(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       secret: identical(secret, _copyWithSentinel)

@@ -429,7 +429,7 @@ class $ScopedUser extends ScopedUser with ModelAttributes implements OrmEntity {
     required String email,
     required bool active,
     String? name,
-  }) : super.new(id: id, email: email, active: active, name: name) {
+  }) : super(id: id, email: email, active: active, name: name) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'email': email,
@@ -514,7 +514,7 @@ extension ScopedUserOrmExtension on ScopedUser {
     Object? active = _copyWithSentinel,
     Object? name = _copyWithSentinel,
   }) {
-    return ScopedUser.new(
+    return ScopedUser(
       id: identical(id, _copyWithSentinel) ? this.id : id as int,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       active: identical(active, _copyWithSentinel)
