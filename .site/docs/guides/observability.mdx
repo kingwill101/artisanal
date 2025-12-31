@@ -18,6 +18,7 @@ The simplest way to observe queries is via the built-in query log on `OrmConnect
 
 - Use this for development or simple production diagnostics.
 - Disable parameter capture for sensitive fields by setting `includeParameters: false`.
+- When enabled, transaction boundaries (BEGIN/COMMIT/ROLLBACK/SAVEPOINT) are also logged as `type: transaction`.
 
 </TabItem>
 <TabItem value="code" label="Code">
@@ -42,13 +43,13 @@ The simplest way to observe queries is via the built-in query log on `OrmConnect
 
 | Field | Description |
 | --- | --- |
-| `type` | `'query'` or `'mutation'` |
+| `type` | `'query'`, `'mutation'`, or `'transaction'` |
 | `sql` | The SQL statement with bindings interpolated |
 | `preview` | Full `StatementPreview` with raw SQL and parameter lists |
 | `duration` | Execution time |
 | `success` | `true` if no error was thrown |
-| `model` | Model name (e.g., `'User'`) |
-| `table` | Table name (e.g., `'users'`) |
+| `model` | Model name (e.g., `'User'`) when applicable |
+| `table` | Table name (e.g., `'users'`) when applicable |
 | `rowCount` | Rows returned or affected |
 | `error` | Exception object when `success` is `false` |
 | `parameters` | Bind values (empty when `includeParameters` is `false`) |

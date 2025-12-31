@@ -93,6 +93,7 @@ class OrmConnection implements ConnectionResolver {
           beforeMutationHook: _dispatchBeforeMutation,
           beforeTransactionHook: _dispatchBeforeTransaction,
           afterTransactionHook: _dispatchAfterTransaction,
+          afterTransactionOutcomeHook: _dispatchTransactionOutcome,
           queryLogHook: _handleQueryLogEntry,
           pretendResolver: () => _pretending,
         );
@@ -496,8 +497,22 @@ class OrmConnection implements ConnectionResolver {
   }
 
   Future<void> _dispatchAfterTransaction() async {
-    // Note: We don't know if it was commit or rollback here.
-    // The transaction hooks in QueryContext should be updated to differentiate.
+    // No-op: transaction outcome hook now handles commit/rollback events.
+  }
+
+  Future<void> _dispatchTransactionOutcome(
+    TransactionOutcome outcome,
+    TransactionScope scope,
+  ) async {
+    if (scope != TransactionScope.root) {
+      return;
+    }
+    switch (outcome) {
+      case TransactionOutcome.committed:
+        _fireEvent(TransactionCommitted(this));
+      case TransactionOutcome.rolledBack:
+        _fireEvent(TransactionRolledBack(this));
+    }
   }
 
   String? _generateAlias(String table) {

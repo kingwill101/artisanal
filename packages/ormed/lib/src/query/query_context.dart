@@ -37,6 +37,8 @@ class QueryContext implements ConnectionResolver {
   /// [beforeMutationHook] is a callback executed before each mutation.
   /// [beforeTransactionHook] is a callback executed before each transaction.
   /// [afterTransactionHook] is a callback executed after each transaction.
+  /// [afterTransactionOutcomeHook] is a callback executed after each transaction
+  /// outcome, with commit/rollback and scope details.
   /// [queryLogHook] is a callback for logging query events.
   /// [pretendResolver] is a function to determine if queries should be pretended.
   QueryContext({
@@ -52,6 +54,7 @@ class QueryContext implements ConnectionResolver {
     MutationHook? beforeMutationHook,
     TransactionHook? beforeTransactionHook,
     TransactionHook? afterTransactionHook,
+    TransactionOutcomeHook? afterTransactionOutcomeHook,
     QueryLogHook? queryLogHook,
     bool Function()? pretendResolver,
   }) : codecRegistry = (codecRegistry ?? ValueCodecRegistry.instance).forDriver(
@@ -64,6 +67,7 @@ class QueryContext implements ConnectionResolver {
        _beforeMutationHook = beforeMutationHook,
        _beforeTransactionHook = beforeTransactionHook,
        _afterTransactionHook = afterTransactionHook,
+       _afterTransactionOutcomeHook = afterTransactionOutcomeHook,
        _queryLogHook = queryLogHook,
        _pretendResolver = pretendResolver {
     _registerSoftDeleteScopes();
@@ -104,12 +108,14 @@ class QueryContext implements ConnectionResolver {
   final MutationHook? _beforeMutationHook;
   final TransactionHook? _beforeTransactionHook;
   final TransactionHook? _afterTransactionHook;
+  final TransactionOutcomeHook? _afterTransactionOutcomeHook;
   final QueryLogHook? _queryLogHook;
   final bool Function()? _pretendResolver;
   final List<void Function(QueryEvent)> _queryListeners = [];
   final List<void Function(MutationEvent)> _mutationListeners = [];
   final List<ExecutingStatementCallback> _beforeExecutingCallbacks = [];
   final List<_LongQuerySubscription> _longQuerySubscriptions = [];
+  int _transactionDepth = 0;
 
   /// Returns a [Query] bound to the registered [ModelDefinition] for [T].
   ///
@@ -846,26 +852,99 @@ class QueryContext implements ConnectionResolver {
   Future<R> transaction<R>(Future<R> Function() callback) {
     final before = _beforeTransactionHook;
     final after = _afterTransactionHook;
-    if (before == null && after == null) {
-      return driver.transaction(callback);
+    final outcomeHook = _afterTransactionOutcomeHook;
+    final depthBefore = _transactionDepth;
+    final scope =
+        depthBefore == 0 ? TransactionScope.root : TransactionScope.savepoint;
+    _transactionDepth = depthBefore + 1;
+    Future<R> runTransaction() {
+      if (before == null && after == null) {
+        return driver.transaction(() async {
+          _emitTransactionLog(
+            type: 'transaction',
+            sql: scope == TransactionScope.root
+                ? 'BEGIN'
+                : _savepointSql(depthBefore + 1),
+          );
+          try {
+            final result = await callback();
+            _emitTransactionLog(
+              type: 'transaction',
+              sql: scope == TransactionScope.root
+                  ? 'COMMIT'
+                  : _releaseSavepointSql(depthBefore + 1),
+            );
+            if (outcomeHook != null) {
+              await outcomeHook(TransactionOutcome.committed, scope);
+            }
+            return result;
+          } catch (error) {
+            _emitTransactionLog(
+              type: 'transaction',
+              sql: scope == TransactionScope.root
+                  ? 'ROLLBACK'
+                  : _rollbackSavepointSql(depthBefore + 1),
+              error: error,
+            );
+            if (outcomeHook != null) {
+              await outcomeHook(TransactionOutcome.rolledBack, scope);
+            }
+            rethrow;
+          }
+        });
+      }
+      return driver.transaction(() async {
+        if (before != null) {
+          await before();
+        }
+        _emitTransactionLog(
+          type: 'transaction',
+          sql: scope == TransactionScope.root
+              ? 'BEGIN'
+              : _savepointSql(depthBefore + 1),
+        );
+        try {
+          final result = await callback();
+          if (after != null) {
+            await after();
+          }
+          _emitTransactionLog(
+            type: 'transaction',
+            sql: scope == TransactionScope.root
+                ? 'COMMIT'
+                : _releaseSavepointSql(depthBefore + 1),
+          );
+          if (outcomeHook != null) {
+            await outcomeHook(TransactionOutcome.committed, scope);
+          }
+          return result;
+        } catch (error) {
+          if (after != null) {
+            await after();
+          }
+          _emitTransactionLog(
+            type: 'transaction',
+            sql: scope == TransactionScope.root
+                ? 'ROLLBACK'
+                : _rollbackSavepointSql(depthBefore + 1),
+            error: error,
+          );
+          if (outcomeHook != null) {
+            await outcomeHook(TransactionOutcome.rolledBack, scope);
+          }
+          rethrow;
+        }
+      });
     }
-    return driver.transaction(() async {
-      if (before != null) {
-        await before();
-      }
-      try {
-        final result = await callback();
-        if (after != null) {
-          await after();
-        }
-        return result;
-      } catch (error) {
-        if (after != null) {
-          await after();
-        }
-        rethrow;
-      }
-    });
+
+    try {
+      return runTransaction().whenComplete(() {
+        _transactionDepth = depthBefore;
+      });
+    } catch (error) {
+      _transactionDepth = depthBefore;
+      rethrow;
+    }
   }
 
   void _emitQuery(QueryEvent event) {
@@ -925,7 +1004,7 @@ class QueryContext implements ConnectionResolver {
 
   void _recordQueryLog({
     required String type,
-    required ModelDefinition<OrmEntity> definition,
+    ModelDefinition<OrmEntity>? definition,
     required StatementPreview preview,
     required Duration duration,
     int? rowCount,
@@ -939,13 +1018,38 @@ class QueryContext implements ConnectionResolver {
         preview: preview,
         duration: duration,
         success: error == null,
-        model: definition.modelName,
-        table: definition.tableName,
+        model: definition?.modelName,
+        table: definition?.tableName,
         rowCount: rowCount,
         error: error,
       ),
     );
   }
+
+  void _emitTransactionLog({
+    required String type,
+    required String sql,
+    Object? error,
+  }) {
+    if (_queryLogHook == null) return;
+    _recordQueryLog(
+      type: type,
+      definition: null,
+      preview: StatementPreview(
+        payload: SqlStatementPayload(sql: sql, parameters: const []),
+        resolvedText: sql,
+      ),
+      duration: Duration.zero,
+      rowCount: null,
+      error: error,
+    );
+  }
+
+  String _savepointSql(int depth) => 'SAVEPOINT sp_$depth';
+
+  String _releaseSavepointSql(int depth) => 'RELEASE SAVEPOINT sp_$depth';
+
+  String _rollbackSavepointSql(int depth) => 'ROLLBACK TO SAVEPOINT sp_$depth';
 
   void _registerSoftDeleteScopes() {
     for (final definition in registry.values) {
