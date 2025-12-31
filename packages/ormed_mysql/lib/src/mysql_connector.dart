@@ -180,9 +180,7 @@ class MySqlConnectionSettings {
     }
 
     final sessionVariables =
-        _mapOption(options, 'session') ??
-        _mapOption(options, 'sessionVariables') ??
-        const <String, Object?>{};
+        _mapOption(options, 'session') ?? const <String, Object?>{};
     final initStatements = _stringListOption(options, 'init');
 
     return MySqlConnectionSettings(

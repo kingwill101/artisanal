@@ -14,8 +14,12 @@ export 'src/sqlite_codecs.dart';
 
 final _sqliteDriverRegistration = (() {
   DriverAdapterRegistry.register('sqlite', (config) {
-    final database = config.option('database') ?? 'database.sqlite';
-    return SqliteDriverAdapter.file(database);
+    final options = Map<String, Object?>.from(config.options);
+    options['database'] ??= 'database.sqlite';
+    options.putIfAbsent('path', () => options['database']);
+    return SqliteDriverAdapter.custom(
+      config: DatabaseConfig(driver: 'sqlite', options: options),
+    );
   });
 
   DriverRegistry.registerDriver('sqlite', ({
@@ -25,16 +29,19 @@ final _sqliteDriverRegistration = (() {
     required String connectionName,
     required ConnectionDefinition definition,
   }) {
-    final database = definition.driver.option('database') ?? 'database.sqlite';
+    final options = Map<String, Object?>.from(definition.driver.options);
+    final database = options['database']?.toString() ?? 'database.sqlite';
     final resolved = p.normalize(p.join(root.path, database));
+    options['database'] = database;
+    options['path'] = resolved;
     return registerSqliteOrmConnection(
       name: connectionName,
-      database: DatabaseConfig(driver: 'sqlite', options: {'path': resolved}),
+      database: DatabaseConfig(driver: 'sqlite', options: options),
       registry: registry,
       connection: ConnectionConfig(
         name: connectionName,
         database: resolved,
-        options: Map<String, Object?>.from(definition.driver.options),
+        options: Map<String, Object?>.from(options),
       ),
       manager: manager,
       singleton: true,

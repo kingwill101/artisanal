@@ -397,14 +397,14 @@ Map<String, Object?> _normalizeOptions(Object? options) {
   if (options is YamlMap) {
     return Map<String, Object?>.fromEntries(
       options.entries.map(
-        (entry) => MapEntry(entry.key.toString(), entry.value),
+        (entry) => MapEntry(entry.key.toString(), _convert(entry.value)),
       ),
     );
   }
   if (options is Map) {
     return Map<String, Object?>.fromEntries(
       options.entries.map(
-        (entry) => MapEntry(entry.key.toString(), entry.value),
+        (entry) => MapEntry(entry.key.toString(), _convert(entry.value)),
       ),
     );
   }

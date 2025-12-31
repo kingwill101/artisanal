@@ -26,6 +26,11 @@ driver:
   type: sqlite
   options:
     database: database.sqlite   # relative to project root
+    session:
+      foreign_keys: true
+      journal_mode: WAL
+    init:
+      - PRAGMA busy_timeout = 5000
 ```
 
 ## Use in code (DataSource)
@@ -82,6 +87,8 @@ Available helpers:
 | `database` | `String` | `database.sqlite` | Path to the `.sqlite` file (relative to project root or absolute). |
 | `path` | `String?` | — | Alias for `database` used by some programmatic helpers. |
 | `memory` | `bool` | `false` | When true, connects to an in-memory database (tests / ephemeral usage). |
+| `session` | `Map<String, Object?>` | `{}` | Session pragmas applied via `PRAGMA key = value`. |
+| `init` | `List<String>` | `[]` | SQL statements executed after connecting. |
 
 ### Notes
 

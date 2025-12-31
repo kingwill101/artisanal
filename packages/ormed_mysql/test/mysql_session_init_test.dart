@@ -1,0 +1,38 @@
+import 'dart:io';
+
+import 'package:ormed/ormed.dart';
+import 'package:ormed_mysql/ormed_mysql.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('session and init options apply on connect', () async {
+    final url =
+        Platform.environment['MYSQL_URL'] ??
+        'mysql://root:secret@localhost:6605/orm_test';
+
+    final adapter = MySqlDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'mysql',
+        options: {
+          'url': url,
+          'session': {'sql_notes': 0},
+          'init': ["SET time_zone = '+02:00'"],
+        },
+      ),
+    );
+
+    final rows = await adapter.queryRaw(
+      'SELECT @@sql_notes AS sql_notes, @@time_zone AS time_zone',
+    );
+    final row = rows.first;
+    final sqlNotesValue = row['sql_notes'];
+    final sqlNotes = sqlNotesValue is int
+        ? sqlNotesValue
+        : int.tryParse(sqlNotesValue.toString());
+    expect(sqlNotes, 0);
+
+    expect(row['time_zone'], '+02:00');
+
+    await adapter.close();
+  });
+}

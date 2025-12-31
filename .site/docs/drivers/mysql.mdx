@@ -115,8 +115,8 @@ void main() async {
 | `collation` | `String?` | `utf8mb4_general_ci` | Collation for the connection and `SET NAMES ... COLLATE ...`. |
 | `timezone` | `String` | `+00:00` | Session timezone applied via `SET time_zone = ...`. |
 | `sqlMode` | `String?` | — | Session SQL mode string (alias: `sql_mode`). |
-| `session` | `Map<String, Object?>` | `{}` | Session variables applied via `SET @@key = value` (alias: `sessionVariables`). |
-| `init` | `List<String>` | `[]` | SQL statements executed after connecting and applying charset/timezone/sqlMode/session. |
+| `session` | `Map<String, Object?>` | `{}` | Session variables applied via `SET @@key = value`. |
+| `init` | `List<String>` | `[]` | SQL statements executed after connecting and applying charset/timezone/sqlMode. |
 | `schema` | `String?` | — | Optional schema/database qualifier used when compiling fully-qualified table names. |
 
 ## Extensions

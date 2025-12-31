@@ -24,6 +24,19 @@ class PostgresConnector extends Connector<Connection> {
   ) async {
     final settings = PostgresConnectionSettings.fromEndpoint(endpoint);
     final connection = await _builder(settings);
+
+    final sessionOptions = _sessionOptions(endpoint.options);
+    for (final entry in sessionOptions.entries) {
+      final key = entry.key.toString().trim();
+      if (key.isEmpty) continue;
+      await connection.execute('SET $key = ${_pgLiteral(entry.value)}');
+    }
+
+    final initStatements = _initStatements(endpoint.options);
+    for (final statement in initStatements) {
+      if (statement.trim().isEmpty) continue;
+      await connection.execute(statement);
+    }
     return ConnectionHandle<Connection>(
       client: connection,
       metadata: ConnectionMetadata(
@@ -199,3 +212,43 @@ Duration? _durationOption(Map<String, Object?> options, String key) {
   }
   return null;
 }
+
+Map<String, Object?> _sessionOptions(Map<String, Object?> options) {
+  return _mapFrom(options['session']);
+}
+
+List<String> _initStatements(Map<String, Object?> options) {
+  return _stringListFrom(options['init']);
+}
+
+Map<String, Object?> _mapFrom(Object? value) {
+  if (value == null) return const {};
+  if (value is Map<String, Object?>) {
+    return Map<String, Object?>.from(value);
+  }
+  if (value is Map) {
+    return value.map((key, dynamic v) => MapEntry(key.toString(), v));
+  }
+  return const {};
+}
+
+List<String> _stringListFrom(Object? value) {
+  if (value == null) return const [];
+  if (value is List<String>) return List<String>.from(value);
+  if (value is List) {
+    return value.map((entry) => entry.toString()).toList();
+  }
+  if (value is String && value.isNotEmpty) {
+    return [value];
+  }
+  return const [];
+}
+
+String _pgLiteral(Object? value) {
+  if (value == null) return 'NULL';
+  if (value is bool) return value ? 'TRUE' : 'FALSE';
+  if (value is num) return value.toString();
+  return _quote(value.toString());
+}
+
+String _quote(String value) => '\'${value.replaceAll('\'', "''")}\'';

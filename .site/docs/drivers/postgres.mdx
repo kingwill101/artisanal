@@ -31,6 +31,10 @@ driver:
     url: postgres://postgres:postgres@localhost:6543/orm_test
     sslmode: disable # disable | require | verify-full
     schema: public
+    session:
+      search_path: public
+    init:
+      - SET application_name = 'ormed'
 ```
 
 </TabItem>
@@ -137,6 +141,8 @@ Use `package:ormed_postgres/migrations.dart` when you want Postgres-specific sch
 | `timezone` | `String` | `UTC` | Session timezone. |
 | `applicationName` | `String?` | — | Tags sessions for monitoring (`application_name` in URL query is also supported). |
 | `schema` | `String` | `public` | Default schema used when qualifying tables for migrations/queries. |
+| `session` | `Map<String, Object?>` | `{}` | Session settings applied via `SET key = value`. |
+| `init` | `List<String>` | `[]` | SQL statements executed after connecting. |
 
 ### Notes
 
