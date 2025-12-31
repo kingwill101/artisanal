@@ -1,0 +1,51 @@
+---
+title: Analyzer Plugin
+---
+
+Ormed ships an analyzer plugin that catches common query mistakes at edit time,
+including unknown fields, unknown relations, typed predicate misuse, and unsafe
+raw SQL interpolation.
+
+## Install
+
+Add the plugin to `analysis_options.yaml` in the workspace root:
+
+```yaml
+plugins:
+  ormed_analyzer:
+    path: ./packages/ormed_analyzer
+```
+
+If you use a published version instead of a path, replace `path` with a version
+constraint.
+
+## Configure diagnostics
+
+You can enable/disable rules or set severity per rule:
+
+```yaml
+plugins:
+  ormed_analyzer:
+    path: ./packages/ormed_analyzer
+    diagnostics:
+      ormed_unknown_field: error
+      ormed_unknown_relation: warning
+      ormed_typed_predicate_field: warning
+      ormed_raw_sql_interpolation: info
+```
+
+Supported values are `true`, `false`, `info`, `warning`, and `error`.
+
+## Rules
+
+- `ormed_unknown_field`: Unknown fields/columns in query builder calls.
+- `ormed_unknown_relation`: Unknown relations in `withRelation` / `whereHas`.
+- `ormed_typed_predicate_field`: Typed predicate access on unknown fields.
+- `ormed_raw_sql_interpolation`: Raw SQL interpolation without bindings.
+
+## Example
+
+```dart
+final users = await context.query<User>()
+  .where('emali', 'a@b.com'); // flagged by the plugin
+```

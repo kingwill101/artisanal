@@ -682,7 +682,7 @@ extension CommentOrmExtension on Comment {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return Comment.new(
+    return Comment(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       postId: identical(postId, _copyWithSentinel)
           ? this.postId

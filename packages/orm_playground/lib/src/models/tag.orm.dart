@@ -516,7 +516,7 @@ extension TagOrmExtension on Tag {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return Tag.new(
+    return Tag(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       createdAt: identical(createdAt, _copyWithSentinel)

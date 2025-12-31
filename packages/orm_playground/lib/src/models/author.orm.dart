@@ -526,7 +526,7 @@ extension AuthorOrmExtension on Author {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return Author.new(
+    return Author(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,
       createdAt: identical(createdAt, _copyWithSentinel)

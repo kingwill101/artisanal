@@ -60,7 +60,7 @@ Future<void> main() async {
           .straightJoin('authors', 'authors.id', '=', 'posts.author_id')
           .debugPlan();
 
-      final sql = const MySqlQueryGrammar().compileSelect(plan).sql;
+      final sql = MySqlQueryGrammar().compileSelect(plan).sql;
       expect(sql.toUpperCase(), contains('STRAIGHT_JOIN'));
     });
 
@@ -75,7 +75,7 @@ Future<void> main() async {
           )
           .debugPlan();
 
-      final sql = const MySqlQueryGrammar().compileSelect(plan).sql;
+      final sql = MySqlQueryGrammar().compileSelect(plan).sql;
       expect(sql.toUpperCase(), contains('JOIN LATERAL'));
     });
   });

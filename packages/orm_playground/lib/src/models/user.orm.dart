@@ -657,7 +657,7 @@ extension UserOrmExtension on User {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return User.new(
+    return User(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       email: identical(email, _copyWithSentinel) ? this.email : email as String,
       name: identical(name, _copyWithSentinel) ? this.name : name as String,

@@ -849,7 +849,7 @@ extension PostOrmExtension on Post {
     Object? createdAt = _copyWithSentinel,
     Object? updatedAt = _copyWithSentinel,
   }) {
-    return Post.new(
+    return Post(
       id: identical(id, _copyWithSentinel) ? this.id : id as int?,
       userId: identical(userId, _copyWithSentinel)
           ? this.userId

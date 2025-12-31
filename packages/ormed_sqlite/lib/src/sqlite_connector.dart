@@ -11,9 +11,7 @@ class SqliteConnector extends Connector<sqlite.Database> {
   ) async {
     final options = endpoint.options;
     final inMemory = options['memory'] == true;
-    final path =
-        options['path'] as String? ??
-        options['database'] as String?;
+    final path = options['path'] as String? ?? options['database'] as String?;
     late final sqlite.Database database;
     if (inMemory) {
       database = sqlite.sqlite3.openInMemory();

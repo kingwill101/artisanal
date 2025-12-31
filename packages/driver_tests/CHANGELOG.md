@@ -1,9 +1,5 @@
 # Changelog
 
-## 0.1.0-dev+6
-
-- **Updated**: Synchronized ormed changes.
-
 ## 0.1.0-dev+5
 
 - **Added**: Insert defaults test coverage for timestamp columns.

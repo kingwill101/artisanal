@@ -854,8 +854,9 @@ class QueryContext implements ConnectionResolver {
     final after = _afterTransactionHook;
     final outcomeHook = _afterTransactionOutcomeHook;
     final depthBefore = _transactionDepth;
-    final scope =
-        depthBefore == 0 ? TransactionScope.root : TransactionScope.savepoint;
+    final scope = depthBefore == 0
+        ? TransactionScope.root
+        : TransactionScope.savepoint;
     _transactionDepth = depthBefore + 1;
     Future<R> runTransaction() {
       if (before == null && after == null) {

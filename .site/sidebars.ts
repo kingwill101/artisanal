@@ -105,6 +105,7 @@ const sidebars: SidebarsConfig = {
           ],
         },
         'guides/testing',
+        'guides/analyzer-plugin',
         'guides/best-practices',
         'guides/date-time',
         'guides/observability',

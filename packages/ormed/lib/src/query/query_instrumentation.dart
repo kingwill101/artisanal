@@ -3,10 +3,8 @@ part of 'query.dart';
 typedef QueryHook = void Function(QueryPlan plan);
 typedef MutationHook = void Function(MutationPlan plan);
 typedef TransactionHook = FutureOr<void> Function();
-typedef TransactionOutcomeHook = FutureOr<void> Function(
-  TransactionOutcome outcome,
-  TransactionScope scope,
-);
+typedef TransactionOutcomeHook =
+    FutureOr<void> Function(TransactionOutcome outcome, TransactionScope scope);
 typedef QueryLogHook = void Function(QueryLogEntry entry);
 typedef ExecutingStatementCallback =
     void Function(ExecutingStatement statement);
