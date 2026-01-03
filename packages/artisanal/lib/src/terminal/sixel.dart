@@ -14,7 +14,7 @@ class SixelImage {
     buffer.write('\x1bPq');
 
     // Set pixel aspect ratio (1:1)
-    buffer.write('\"1;1');
+    buffer.write('"1;1');
 
     final width = image.width;
     final height = image.height;

@@ -573,8 +573,8 @@ class ListModel extends ViewComponent {
 
   // Internal state
   List<ListItem> _items;
-  ItemDelegate _delegate;
-  FilterFunc _filter;
+  final ItemDelegate _delegate;
+  final FilterFunc _filter;
   late PaginatorModel _paginator;
   late TextInputModel _filterInput;
   late SpinnerModel _spinner;
@@ -1229,7 +1229,7 @@ class ListModel extends ViewComponent {
         // Truncate if needed (simplified)
         if (view.length > _width - spinnerWidth) {
           view =
-              view.substring(0, math.max(0, _width - spinnerWidth - 1)) + '…';
+              '${view.substring(0, math.max(0, _width - spinnerWidth - 1))}…';
         }
       }
     }
@@ -1271,7 +1271,7 @@ class ListModel extends ViewComponent {
       final filtered = _filterState == FilterState.filterApplied;
       if (filtered) {
         var f = _filterInput.value.trim();
-        if (f.length > 10) f = f.substring(0, 9) + '…';
+        if (f.length > 10) f = '${f.substring(0, 9)}…';
         status += '“$f” ';
       }
       status += itemsDisplay;

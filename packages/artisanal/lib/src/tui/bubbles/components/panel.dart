@@ -45,8 +45,8 @@ class PanelComponent extends DisplayComponent {
       borderStyle ?? Style().dim(),
     );
     final titleStyle = renderConfig.configureStyle(Style().bold());
-    final border = (String s) => effectiveBorderStyle.render(s);
-    final titleFn = (String s) => titleStyle.render(s);
+    String border(String s) => effectiveBorderStyle.render(s);
+    String titleFn(String s) => titleStyle.render(s);
 
     // Calculate width
     final contentWidth = lines
@@ -178,7 +178,7 @@ class Panel extends DisplayComponent {
   Panel({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String? _title;
   final List<String> _content = [];

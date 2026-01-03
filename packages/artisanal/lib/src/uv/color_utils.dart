@@ -87,6 +87,6 @@ double _round3(double x) => (x * 1000).roundToDouble() / 1000;
 /// Returns whether [c] is considered dark using HSL lightness.
 bool isDarkColor(UvRgb? c) {
   if (c == null) return true;
-  final (_, __, l) = rgbToHsl(c.r, c.g, c.b);
+  final (_, _, l) = rgbToHsl(c.r, c.g, c.b);
   return l < 0.5;
 }

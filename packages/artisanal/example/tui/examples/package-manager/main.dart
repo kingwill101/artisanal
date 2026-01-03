@@ -140,7 +140,7 @@ class PackageManagerModel implements tui.Model {
 
     final pkgCount =
         ' ${index.toString().padLeft(w)}/${n.toString().padLeft(w)}';
-    final spin = _spinnerStyle.render(spinner.view()) + ' ';
+    final spin = '${_spinnerStyle.render(spinner.view())} ';
     final prog = progress.view();
 
     final pkgName = _currentPkgNameStyle.render(packages[index]);

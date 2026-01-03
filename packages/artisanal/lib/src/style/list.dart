@@ -101,16 +101,16 @@ class LipList {
     // Mirror lipgloss v2 defaults: enumerator + indenter styles include
     // right padding of 1, and we render without inserting an extra space
     // between prefix and item.
-    enumeratorStyleFunc((_, __) => Style().paddingRight(1));
-    indenterStyleFunc((_, __) => Style().paddingRight(1));
+    enumeratorStyleFunc((_, _) => Style().paddingRight(1));
+    indenterStyleFunc((_, _) => Style().paddingRight(1));
   }
 
   final lip_tree.Tree _tree;
   ListEnumeratorFunc _enumerator = ListEnumerators.bullet;
-  ListIndenterFunc _indenter = (_, __) => ' ';
-  ListStyleFunc _itemStyleFunc = (_, __) => Style();
-  ListStyleFunc _enumeratorStyleFunc = (_, __) => Style().paddingRight(1);
-  ListStyleFunc _indenterStyleFunc = (_, __) => Style().paddingRight(1);
+  ListIndenterFunc _indenter = (_, _) => ' ';
+  ListStyleFunc _itemStyleFunc = (_, _) => Style();
+  ListStyleFunc _enumeratorStyleFunc = (_, _) => Style().paddingRight(1);
+  ListStyleFunc _indenterStyleFunc = (_, _) => Style().paddingRight(1);
 
   /// Creates a new list with the given items.
   ///
@@ -194,7 +194,7 @@ class LipList {
 
   /// Sets a static style for all items.
   LipList itemStyle(Style style) {
-    _itemStyleFunc = (_, __) => style;
+    _itemStyleFunc = (_, _) => style;
     _syncRenderer();
     return this;
   }
@@ -208,7 +208,7 @@ class LipList {
 
   /// Sets a static style for all enumerators.
   LipList enumeratorStyle(Style style) {
-    _enumeratorStyleFunc = (_, __) => style;
+    _enumeratorStyleFunc = (_, _) => style;
     _syncRenderer();
     return this;
   }
@@ -222,7 +222,7 @@ class LipList {
 
   /// Sets a static style for all indenters.
   LipList indenterStyle(Style style) {
-    _indenterStyleFunc = (_, __) => style;
+    _indenterStyleFunc = (_, _) => style;
     _syncRenderer();
     return this;
   }
@@ -332,7 +332,7 @@ class ListEnumerators {
 
   /// Creates a fixed enumerator that always returns the same string.
   static ListEnumeratorFunc fixed(String symbol) {
-    return (_, __) => symbol;
+    return (_, _) => symbol;
   }
 
   /// Creates a custom enumerator from a simple index function.
@@ -416,5 +416,5 @@ class ListIndenters {
 
   /// Creates a fixed indenter.
   static ListIndenterFunc fixed(String indent) =>
-      (_, __) => indent;
+      (_, _) => indent;
 }

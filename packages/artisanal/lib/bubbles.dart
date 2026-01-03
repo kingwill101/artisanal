@@ -70,6 +70,6 @@
 /// Use `RenderConfig` to adapt these components to the current terminal
 /// width and color capabilities.
 /// {@endtemplate}
-library artisanal.bubbles;
+library;
 
 export 'src/tui/bubbles/bubbles.dart';

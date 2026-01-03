@@ -347,7 +347,7 @@ void main() {
 
     group('Highlights', () {
       test('highlightNext scrolls to the next highlight', () {
-        final content = 'Line 1\n' * 10 + 'Target\n' + 'Line 2\n' * 10;
+        final content = '${'Line 1\n' * 10}Target\n${'Line 2\n' * 10}';
         final style = Style().bold();
 
         // Find the index of "Target" in the full content.
@@ -372,7 +372,7 @@ void main() {
       });
 
       test('highlightPrev scrolls to the previous highlight', () {
-        final content = 'Target 1\n' + 'Line\n' * 10 + 'Target 2\n';
+        final content = 'Target 1\n${'Line\n' * 10}Target 2\n';
         final style = Style().bold();
 
         final t1Idx = content.indexOf('Target 1');

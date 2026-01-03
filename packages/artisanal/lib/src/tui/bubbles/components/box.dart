@@ -209,7 +209,7 @@ class BoxBuilder extends DisplayComponent {
   BoxBuilder({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String? _title;
   final List<String> _content = [];

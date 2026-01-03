@@ -70,7 +70,7 @@ class TwoColumnDetail extends DisplayComponent {
   TwoColumnDetail({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String _left = '';
   String _right = '';
@@ -218,7 +218,7 @@ class TwoColumnDetailList extends DisplayComponent {
   TwoColumnDetailList({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   final List<(String, String)> _rows = [];
   String _fillChar = '.';

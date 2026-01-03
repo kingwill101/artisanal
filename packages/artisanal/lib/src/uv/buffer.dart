@@ -25,6 +25,7 @@
 /// renderer.render(buf);
 /// renderer.flush();
 /// ```
+library;
 import 'ansi.dart';
 import 'cell.dart';
 import 'drawable.dart';
@@ -238,7 +239,7 @@ final class Buffer {
   /// Resizes the buffer to [width] × [height], preserving content where possible.
   void resize(int width, int height) {
     if (width < 0 || height <= 0) {
-      lines..clear();
+      lines.clear();
       touched = <LineData?>[];
       return;
     }
@@ -606,10 +607,13 @@ final class ScreenBuffer
   int width() => buffer.width();
   int height() => buffer.height();
 
+  @override
   Rectangle bounds() => buffer.bounds();
 
+  @override
   Cell? cellAt(int x, int y) => buffer.cellAt(x, y);
 
+  @override
   void setCell(int x, int y, Cell? cell) => buffer.setCell(x, y, cell);
 
   void resize(int width, int height) => buffer.resize(width, height);

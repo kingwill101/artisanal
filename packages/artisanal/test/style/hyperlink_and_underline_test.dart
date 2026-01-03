@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('Style hyperlink + underline variants', () {
-    int _expectUnderlinedColorSegment(
+    int expectUnderlinedColorSegment(
       String rendered,
       String char, {
       required String underlineStart,
@@ -94,13 +94,13 @@ void main() {
       // Ordering matters: underline color must be inside the underline span.
       // Rendering is applied per grapheme/rune, so check each character segment.
       var cursor = 0;
-      cursor = _expectUnderlinedColorSegment(
+      cursor = expectUnderlinedColorSegment(
         rendered,
         'H',
         underlineStart: '\x1b[4m',
         startAt: cursor,
       );
-      cursor = _expectUnderlinedColorSegment(
+      cursor = expectUnderlinedColorSegment(
         rendered,
         'i',
         underlineStart: '\x1b[4m',
@@ -121,13 +121,13 @@ void main() {
       expect(rendered, contains('\x1b[24m'));
 
       var cursor = 0;
-      cursor = _expectUnderlinedColorSegment(
+      cursor = expectUnderlinedColorSegment(
         rendered,
         'H',
         underlineStart: '\x1b[4:3m',
         startAt: cursor,
       );
-      cursor = _expectUnderlinedColorSegment(
+      cursor = expectUnderlinedColorSegment(
         rendered,
         'i',
         underlineStart: '\x1b[4:3m',

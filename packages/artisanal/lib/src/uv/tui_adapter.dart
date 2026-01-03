@@ -134,14 +134,18 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [CursorColorMsg(hex: hex)];
   }
 
-  if (ev is uvev.MouseClickEvent)
+  if (ev is uvev.MouseClickEvent) {
     return [_mouseMsg(MouseAction.press, ev.mouse())];
-  if (ev is uvev.MouseReleaseEvent)
+  }
+  if (ev is uvev.MouseReleaseEvent) {
     return [_mouseMsg(MouseAction.release, ev.mouse())];
-  if (ev is uvev.MouseMotionEvent)
+  }
+  if (ev is uvev.MouseMotionEvent) {
     return [_mouseMsg(MouseAction.motion, ev.mouse())];
-  if (ev is uvev.MouseWheelEvent)
+  }
+  if (ev is uvev.MouseWheelEvent) {
     return [_mouseMsg(MouseAction.wheel, ev.mouse())];
+  }
 
   // Unknown/unsupported UV events are currently dropped.
   return const [];

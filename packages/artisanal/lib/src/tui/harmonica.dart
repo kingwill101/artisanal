@@ -140,7 +140,7 @@ class Projectile {
   final double deltaTime;
   Point _pos;
   Vector _vel;
-  Vector _acc;
+  final Vector _acc;
 
   /// Advance one frame and return the new position.
   Point update() {

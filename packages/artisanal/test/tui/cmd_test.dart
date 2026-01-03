@@ -460,7 +460,7 @@ void main() {
     });
 
     test('orNone returns original command if not null', () async {
-      final Cmd? someCmd = Cmd.message(const TestMsg('value'));
+      final Cmd someCmd = Cmd.message(const TestMsg('value'));
       final cmd = someCmd.orNone();
       final msg = await cmd.execute();
       expect(msg, isA<TestMsg>());
@@ -472,7 +472,7 @@ void main() {
     });
 
     test('isActive is true for non-null', () {
-      final Cmd? someCmd = Cmd.none();
+      final Cmd someCmd = Cmd.none();
       expect(someCmd.isActive, isTrue);
     });
   });

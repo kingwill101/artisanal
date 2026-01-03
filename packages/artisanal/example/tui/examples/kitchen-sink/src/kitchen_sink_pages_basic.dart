@@ -1,4 +1,4 @@
-part of kitchen_sink;
+part of 'kitchen_sink.dart';
 
 final class _OverviewPage extends _KitchenSinkPage {
   const _OverviewPage() : super(help: 'Overview: what this app covers');

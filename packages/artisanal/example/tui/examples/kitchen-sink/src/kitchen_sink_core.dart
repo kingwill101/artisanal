@@ -10,7 +10,8 @@
 /// Options:
 ///   --legacy-input     Use the legacy KeyParser (default is UV decoder)
 ///   --uv-renderer      Use UV renderer (cell-buffer diff)
-part of kitchen_sink;
+
+part of 'kitchen_sink.dart';
 
 enum _Page {
   overview('Overview'),
@@ -379,7 +380,7 @@ class _KitchenSinkModel extends tui.Model {
 
     final title = _style(Style()).bold().render('Kitchen Sink');
     final mode = _style(Style()).dim().render(
-      'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}  size=${_width}x${_height}  bg=${_theme.backgroundHex ?? '(unknown)'}  dark=${_theme.hasDarkBackground ?? '(unknown)'}  emoji=${emojiEnabled ? 'on' : 'off'}',
+      'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}  size=${_width}x$_height  bg=${_theme.backgroundHex ?? '(unknown)'}  dark=${_theme.hasDarkBackground ?? '(unknown)'}  emoji=${emojiEnabled ? 'on' : 'off'}',
     );
 
     final maxW = _width.clamp(10, 1000);

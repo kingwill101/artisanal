@@ -408,7 +408,7 @@ void main() {
         expect(alert.prefix('[TEST]'), same(alert));
         expect(alert.prefixStyle(Style()), same(alert));
         expect(alert.messageStyle(Style()), same(alert));
-        expect(alert.messageStyleFunc((_, __) => null), same(alert));
+        expect(alert.messageStyleFunc((_, _) => null), same(alert));
         expect(alert.border(Border.rounded), same(alert));
         expect(alert.borderStyle(Style()), same(alert));
         expect(alert.padding(1), same(alert));
@@ -513,16 +513,16 @@ void main() {
 
   group('AlertStyleFunc', () {
     test('typedef accepts correct signature', () {
-      AlertStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return Style().bold();
-      };
+      }
       expect(func('test', 0), isA<Style>());
     });
 
     test('can return null', () {
-      AlertStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return null;
-      };
+      }
       expect(func('test', 0), isNull);
     });
   });

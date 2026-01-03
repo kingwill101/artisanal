@@ -18,6 +18,7 @@
 /// final s = StyledString('\x1b[1mHello\x1b[0m'); // bold Hello
 /// s.draw(screen, screen.bounds());
 /// ```
+library;
 import 'buffer.dart';
 import 'cell.dart';
 import 'drawable.dart';
@@ -47,6 +48,7 @@ final class StyledString implements Drawable {
   int height() => text.split('\n').length;
 
   /// Returns the bounds required to render [text] using grapheme widths.
+  @override
   Rectangle bounds() => styledStringBounds(text, WidthMethod.grapheme);
 
   @override

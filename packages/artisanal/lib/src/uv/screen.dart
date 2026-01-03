@@ -23,6 +23,7 @@
 ///   }
 /// }
 /// ```
+library;
 import 'cell.dart';
 import 'geometry.dart';
 import '../unicode/width.dart';

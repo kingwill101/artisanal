@@ -186,8 +186,8 @@ void main() {
         ..indenterStyle(
           Style().foreground(const BasicColor('12')).paddingRight(1),
         )
-        ..enumeratorFunc((_, __) => '->')
-        ..indenterFunc((_, __) => '->');
+        ..enumeratorFunc((_, _) => '->')
+        ..indenterFunc((_, _) => '->');
 
       _expectGolden('test/testdata/tree/TestTreeCustom.golden', tr.render());
     });
@@ -224,9 +224,9 @@ void main() {
             ..root('Parent')
             ..child('child 1')
             ..child('child 2')
-            ..itemStyleFunc((_, __) => Style().setString('*'))
+            ..itemStyleFunc((_, _) => Style().setString('*'))
             ..enumeratorStyleFunc(
-              (_, __) => Style().setString('+').paddingRight(1),
+              (_, _) => Style().setString('+').paddingRight(1),
             ),
         )
         ..child('Baz');
@@ -263,8 +263,8 @@ void main() {
           (Tree(renderConfig: cfg)
               ..root('Silly')
               ..children(['Willy ', 'Nilly']))
-            ..itemStyleFunc((_, __) => Style())
-            ..enumeratorStyleFunc((_, __) => Style());
+            ..itemStyleFunc((_, _) => Style())
+            ..enumeratorStyleFunc((_, _) => Style());
       _expectGolden(
         'test/testdata/tree/TestTreeStyleNilFuncs.golden',
         tr.render(),
@@ -327,7 +327,7 @@ void main() {
       final table =
           (Table(renderConfig: cfg)
                 ..width(20)
-                ..styleFunc((_, __, ___) => Style().padding(0, 1))
+                ..styleFunc((_, _, __) => Style().padding(0, 1))
                 ..headers(['Foo', 'Bar'])
                 ..row(['Qux', 'Baz'])
                 ..row(['Qux', 'Baz']))
@@ -402,7 +402,7 @@ void main() {
       final paddingsStyle = Style().paddingLeft(1).paddingBottom(1);
       final tr = (Tree(renderConfig: cfg)
         ..enumeratorFunc((_, i) => i == 1 ? '│\n│' : ' ')
-        ..indenterFunc((_, __) => ' ')
+        ..indenterFunc((_, _) => ' ')
         ..itemStyle(paddingsStyle)
         ..child('Foo Document\nThe Foo Files')
         ..child('Bar Document\nThe Bar Files')
@@ -419,7 +419,7 @@ void main() {
       final subtree = (Tree(renderConfig: cfg)
         ..root('Baz')
         ..enumeratorFunc((_, i) => i == 1 ? '│\n│' : ' ')
-        ..indenterFunc((_, __) => ' ')
+        ..indenterFunc((_, _) => ' ')
         ..itemStyle(paddingsStyle)
         ..child('Foo Document\nThe Foo Files')
         ..child('Bar Document\nThe Bar Files')
@@ -439,7 +439,7 @@ void main() {
 
     test('TestMultilinePrefixInception', () {
       String glowEnum(_, int i) => i == 1 ? '│\n│' : ' ';
-      String glowIndent(_, __) => '  ';
+      String glowIndent(_, _) => '  ';
       final paddingsStyle = Style().paddingLeft(1).paddingBottom(1);
 
       final tr = (Tree(renderConfig: cfg)

@@ -1,6 +1,7 @@
 /// Files tree example - ported from lipgloss/examples/tree/files
 ///
 /// Demonstrates building a tree from filesystem directories.
+library;
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart';

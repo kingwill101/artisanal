@@ -2,6 +2,7 @@
 ///
 /// Port of the Go lipgloss layout example:
 /// https://github.com/charmbracelet/lipgloss/blob/master/examples/layout/main.go
+library;
 
 import 'dart:io';
 import 'dart:math' as math;

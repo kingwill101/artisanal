@@ -269,17 +269,17 @@ void main() {
 
   group('TableStyleFunc', () {
     test('typedef accepts correct signature', () {
-      TableStyleFunc func = (int row, int col, String data) {
+      Style? func(int row, int col, String data) {
         return Style().bold();
-      };
+      }
 
       expect(func(0, 0, 'test'), isA<Style>());
     });
 
     test('can return null', () {
-      TableStyleFunc func = (int row, int col, String data) {
+      Style? func(int row, int col, String data) {
         return null;
-      };
+      }
 
       expect(func(0, 0, 'test'), isNull);
     });
@@ -519,8 +519,9 @@ void main() {
           .row(['ERR'])
           .baseStyle(base)
           .styleFunc((row, col, data) {
-            if (data == 'OK')
+            if (data == 'OK') {
               return Style().foreground(const BasicColor('2')); // Green
+            }
             return null;
           });
 

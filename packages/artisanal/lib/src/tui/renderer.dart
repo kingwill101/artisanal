@@ -391,6 +391,7 @@ class UltravioletTuiRenderer implements TuiRenderer {
   DateTime? _lastRenderTime;
 
   /// Returns the render metrics from the underlying UV renderer.
+  @override
   uv_term.RenderMetrics? get metrics => _renderer?.metrics;
 
   void printLine(String text) {

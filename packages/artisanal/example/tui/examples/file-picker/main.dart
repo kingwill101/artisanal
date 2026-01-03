@@ -96,7 +96,7 @@ class FilePickerExampleModel implements tui.Model {
       buffer.write('Pick a file:');
     } else {
       buffer.write(
-        'Selected file: ' + filepicker.styles.selected.render(selectedFile),
+        'Selected file: ${filepicker.styles.selected.render(selectedFile)}',
       );
     }
     buffer

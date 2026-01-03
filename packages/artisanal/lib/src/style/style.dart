@@ -2176,7 +2176,7 @@ class Style {
       final params = _hyperlinkParams;
       final prefix = params.isEmpty
           ? '\x1b]8;;${_hyperlinkUrl!}\x1b\\'
-          : '\x1b]8;${params};${_hyperlinkUrl!}\x1b\\';
+          : '\x1b]8;$params;${_hyperlinkUrl!}\x1b\\';
       styled = '$prefix$styled\x1b]8;;\x1b\\';
       hasAnsi = true;
     }

@@ -2,7 +2,7 @@
 ///
 /// {@category Ultraviolet}
 /// {@subCategory Graphics}
-library artisanal.uv.halfblock;
+library;
 
 import 'package:image/image.dart' as img;
 import 'cell.dart';

@@ -63,7 +63,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
     WriteRaw? errRaw,
     ReadLine? readLine,
     ExitCodeSetter? setExitCode,
-    int? usageLineLength,
+    super.usageLineLength,
   }) : _out = out ?? ((line) => dartio.stdout.writeln(line)),
        _err = err ?? ((line) => dartio.stderr.writeln(line)),
        _outRaw = outRaw ?? ((text) => dartio.stdout.write(text)),
@@ -79,8 +79,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
                  : (ansi == false ? ColorProfile.ascii : null),
              forceNoAnsi: ansi == false,
            ),
-       _rendererInjected = renderer != null,
-       super(usageLineLength: usageLineLength) {
+       _rendererInjected = renderer != null {
     _setupGlobalFlags();
   }
 

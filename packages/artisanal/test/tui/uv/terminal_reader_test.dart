@@ -6,10 +6,6 @@ class MockCancelReader extends CancelReader {
   MockCancelReader(this.controller) : super(controller.stream);
   final StreamController<List<int>> controller;
 
-  @override
-  void start() {
-    super.start();
-  }
 
   @override
   bool cancel() => true;

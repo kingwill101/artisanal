@@ -8,7 +8,7 @@ void main() {
 
       const blue = '\x1b[34m';
       const reset = '\x1b[0m';
-      final input = '${blue}AAA BBB${reset}';
+      final input = '${blue}AAA BBB$reset';
 
       final rendered = style.render(input);
       final lines = rendered.split('\n');
@@ -23,7 +23,7 @@ void main() {
 
       const blue = '\x1b[34m';
       const reset = '\x1b[0m';
-      final input = '${blue}AAA BBB${reset}';
+      final input = '${blue}AAA BBB$reset';
 
       final rendered = style.render(input);
       final lines = rendered.split('\n');
@@ -40,7 +40,7 @@ void main() {
 
         const linkStart = '\x1b]8;;https://example.com\x07';
         const linkEnd = '\x1b]8;;\x07';
-        final input = '${linkStart}AAA BBB${linkEnd}';
+        final input = '${linkStart}AAA BBB$linkEnd';
 
         final rendered = style.render(input);
         final lines = rendered.split('\n');
@@ -58,7 +58,7 @@ void main() {
 
         const linkStart = '\x1b]8;;https://example.com\x07';
         const linkEnd = '\x1b]8;;\x07';
-        final input = '${linkStart}AAA BBB${linkEnd}';
+        final input = '${linkStart}AAA BBB$linkEnd';
 
         final rendered = style.render(input);
         final lines = rendered.split('\n');

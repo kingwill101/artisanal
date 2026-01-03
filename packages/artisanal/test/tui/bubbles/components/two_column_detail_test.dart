@@ -317,7 +317,7 @@ void main() {
         expect(detail.leftStyle(Style()), same(detail));
         expect(detail.rightStyle(Style()), same(detail));
         expect(detail.fillStyle(Style()), same(detail));
-        expect(detail.styleFunc((_, __) => null), same(detail));
+        expect(detail.styleFunc((_, _) => null), same(detail));
       });
     });
   });
@@ -469,7 +469,7 @@ void main() {
         expect(list.leftStyle(Style()), same(list));
         expect(list.rightStyle(Style()), same(list));
         expect(list.fillStyle(Style()), same(list));
-        expect(list.styleFunc((_, __) => null), same(list));
+        expect(list.styleFunc((_, _) => null), same(list));
       });
     });
   });
@@ -536,35 +536,35 @@ void main() {
 
   group('TwoColumnStyleFunc', () {
     test('typedef accepts correct signature', () {
-      TwoColumnStyleFunc func = (String text, bool isLeft) {
+      Style? func(String text, bool isLeft) {
         return Style().bold();
-      };
+      }
       expect(func('test', true), isA<Style>());
     });
 
     test('can return null', () {
-      TwoColumnStyleFunc func = (String text, bool isLeft) {
+      Style? func(String text, bool isLeft) {
         return null;
-      };
+      }
       expect(func('test', true), isNull);
     });
 
     test('receives correct isLeft value for left column', () {
       bool? received;
-      TwoColumnStyleFunc func = (String text, bool isLeft) {
+      Style? func(String text, bool isLeft) {
         received = isLeft;
         return null;
-      };
+      }
       func('left', true);
       expect(received, isTrue);
     });
 
     test('receives correct isLeft value for right column', () {
       bool? received;
-      TwoColumnStyleFunc func = (String text, bool isLeft) {
+      Style? func(String text, bool isLeft) {
         received = isLeft;
         return null;
-      };
+      }
       func('right', false);
       expect(received, isFalse);
     });

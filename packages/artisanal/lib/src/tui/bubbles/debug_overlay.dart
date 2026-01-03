@@ -234,7 +234,7 @@ final class DebugOverlayModel {
     final content =
         '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} (${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})\n'
         '${label.render('Frame Time:')} ${(avgFrameTimeUs / 1000).toStringAsFixed(2)}ms\n'
-        '${label.render('Render Time:')} ${avgRenderTimeUs}µs (${renderPct.toStringAsFixed(1)}%)\n'
+        '${label.render('Render Time:')} $avgRenderTimeUsµs (${renderPct.toStringAsFixed(1)}%)\n'
         '${label.render('Frames:')} $frameCount (skipped: $skippedFrames)\n'
         '${label.render('Cells:')} ${terminalWidth * terminalHeight}\n'
         '${label.render('Renderer:')} $rendererLabel';

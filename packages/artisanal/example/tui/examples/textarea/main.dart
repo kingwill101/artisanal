@@ -66,7 +66,7 @@ class TextareaModel implements tui.Model {
   String view() {
     final errLine = error == null
         ? ''
-        : Style().foreground(const AnsiColor(196)).render('$error') + '\n\n';
+        : '${Style().foreground(const AnsiColor(196)).render('$error')}\n\n';
     return 'Tell me a story.\n\n${textarea.view()}\n\n$errLine(ctrl+c to quit)\n\n';
   }
 }

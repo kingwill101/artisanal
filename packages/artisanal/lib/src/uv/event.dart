@@ -24,6 +24,7 @@
 ///   }
 /// }
 /// ```
+library;
 import 'dart:convert' show jsonEncode;
 
 import 'cell.dart' show UvRgb;

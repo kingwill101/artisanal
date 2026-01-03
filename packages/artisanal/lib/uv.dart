@@ -111,7 +111,7 @@
 /// be unavailable on legacy terminals; fall back to [UvBasic16] or
 /// [UvIndexed256] palettes.
 /// {@endtemplate}
-library artisanal.uv;
+library;
 
 export 'src/uv/terminal.dart' show Terminal;
 export 'src/uv/buffer.dart' show Buffer, Line, LineData;

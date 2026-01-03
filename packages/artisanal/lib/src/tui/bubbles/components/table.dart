@@ -216,7 +216,7 @@ class Table extends DisplayComponent {
   Table({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   /// Row index constant for the header row in [styleFunc].
   static const int headerRow = -1;

@@ -1,4 +1,4 @@
-part of kitchen_sink;
+part of 'kitchen_sink.dart';
 
 final class _LipglossPage extends _KitchenSinkPage {
   _LipglossPage()
@@ -54,10 +54,12 @@ final class _LipglossPage extends _KitchenSinkPage {
             .indenterStyle(m._style(Style()).dim())
             .itemStyleFunc((children, index) {
               final v = children[index].value.toString();
-              if (v.contains('🍞'))
+              if (v.contains('🍞')) {
                 return m._style(Style()).foreground(Colors.rose);
-              if (v.contains('🥬'))
+              }
+              if (v.contains('🥬')) {
                 return m._style(Style()).foreground(Colors.lime);
+              }
               return m._style(Style());
             })
             .render();

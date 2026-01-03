@@ -1,6 +1,7 @@
 /// Rounded tree example - ported from lipgloss/examples/tree/rounded
 ///
 /// Demonstrates tree with rounded enumerator and custom styles.
+library;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';

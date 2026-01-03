@@ -1,6 +1,7 @@
 /// Makeup tree example - ported from lipgloss/examples/tree/makeup
 ///
 /// Demonstrates a tree with nested items and rounded enumerators.
+library;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';

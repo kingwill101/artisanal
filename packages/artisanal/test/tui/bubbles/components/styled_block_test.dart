@@ -405,7 +405,7 @@ void main() {
         expect(block.foregroundColor(Colors.white), same(block));
         expect(block.prefixStyle(Style()), same(block));
         expect(block.contentStyle(Style()), same(block));
-        expect(block.contentStyleFunc((_, __) => null), same(block));
+        expect(block.contentStyleFunc((_, _) => null), same(block));
         expect(block.border(Border.rounded), same(block));
         expect(block.borderStyle(Style()), same(block));
         expect(block.padding(1), same(block));
@@ -510,16 +510,16 @@ void main() {
 
   group('StyledBlockStyleFunc', () {
     test('typedef accepts correct signature', () {
-      StyledBlockStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return Style().bold();
-      };
+      }
       expect(func('test', 0), isA<Style>());
     });
 
     test('can return null', () {
-      StyledBlockStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return null;
-      };
+      }
       expect(func('test', 0), isNull);
     });
   });

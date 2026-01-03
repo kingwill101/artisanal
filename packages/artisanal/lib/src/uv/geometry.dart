@@ -19,6 +19,7 @@
 ///   // use bar with Screen/Canvas operations
 /// }
 /// ```
+library;
 import 'dart:math' as math;
 
 /// Upstream: `third_party/ultraviolet/buffer.go` (`Position`, `Rectangle`).

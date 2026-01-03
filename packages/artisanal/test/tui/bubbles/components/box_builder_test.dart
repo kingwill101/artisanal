@@ -450,7 +450,7 @@ void main() {
         expect(box.titleStyle(Style()), same(box));
         expect(box.borderStyle(Style()), same(box));
         expect(box.contentStyle(Style()), same(box));
-        expect(box.contentStyleFunc((_, __) => null), same(box));
+        expect(box.contentStyleFunc((_, _) => null), same(box));
         expect(box.titleAlign(BoxAlign.center), same(box));
         expect(box.contentAlign(BoxAlign.center), same(box));
         expect(box.padding(1), same(box));
@@ -527,16 +527,16 @@ void main() {
 
   group('BoxContentStyleFunc', () {
     test('typedef accepts correct signature', () {
-      BoxContentStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return Style().bold();
-      };
+      }
       expect(func('test', 0), isA<Style>());
     });
 
     test('can return null', () {
-      BoxContentStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return null;
-      };
+      }
       expect(func('test', 0), isNull);
     });
   });

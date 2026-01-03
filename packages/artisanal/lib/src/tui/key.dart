@@ -624,8 +624,9 @@ class KeyParser {
 
   if (rune < min) return (consumed: 1, rune: b0, ok: false);
   if (rune > 0x10ffff) return (consumed: 1, rune: b0, ok: false);
-  if (rune >= 0xD800 && rune <= 0xDFFF)
+  if (rune >= 0xD800 && rune <= 0xDFFF) {
     return (consumed: 1, rune: b0, ok: false);
+  }
 
   return (consumed: need, rune: rune, ok: true);
 }

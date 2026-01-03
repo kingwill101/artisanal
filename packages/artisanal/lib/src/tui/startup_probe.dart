@@ -93,7 +93,9 @@ final class StartupProbeRunner {
 
 extension<T> on Iterable<T> {
   T? get firstOrNull {
-    for (final v in this) return v;
+    for (final v in this) {
+      return v;
+    }
     return null;
   }
 }

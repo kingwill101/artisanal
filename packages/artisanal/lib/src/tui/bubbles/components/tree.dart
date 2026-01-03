@@ -206,8 +206,8 @@ class TreeComponent extends DisplayComponent {
     final nodeStyle = renderConfig.configureStyle(
       Style().foreground(Colors.info),
     );
-    final nodeFn = (String s) => nodeStyle.render(s);
-    final leafFn = (String s) => s;
+    String nodeFn(String s) => nodeStyle.render(s);
+    String leafFn(String s) => s;
     final e = enumerator;
 
     if (showRoot) {
@@ -453,9 +453,9 @@ final class _TreeRendererStyle {
 final class _TreeRenderer {
   _TreeRenderer()
     : style = _TreeRendererStyle(
-        enumeratorStyle: (_, __) => Style().paddingRight(1),
-        indenterStyle: (_, __) => Style().paddingRight(1),
-        itemStyle: (_, __) => Style(),
+        enumeratorStyle: (_, _) => Style().paddingRight(1),
+        indenterStyle: (_, _) => Style().paddingRight(1),
+        itemStyle: (_, _) => Style(),
         rootStyle: Style(),
       ),
       enumerator = _defaultEnumerator,
@@ -549,6 +549,7 @@ class Tree extends DisplayComponent implements TreeNode {
     return this;
   }
 
+  @override
   Iterable<TreeNode> get childrenNodes {
     final len = _children.length;
     final end = (len - _offsetEnd).clamp(0, len);
@@ -679,7 +680,7 @@ class Tree extends DisplayComponent implements TreeNode {
   }
 
   Tree enumeratorStyle(Style style) {
-    _ensureRenderer().style.enumeratorStyle = (_, __) => style;
+    _ensureRenderer().style.enumeratorStyle = (_, _) => style;
     return this;
   }
 
@@ -692,7 +693,7 @@ class Tree extends DisplayComponent implements TreeNode {
   }
 
   Tree indenterStyle(Style style) {
-    _ensureRenderer().style.indenterStyle = (_, __) => style;
+    _ensureRenderer().style.indenterStyle = (_, _) => style;
     return this;
   }
 
@@ -705,7 +706,7 @@ class Tree extends DisplayComponent implements TreeNode {
   }
 
   Tree itemStyle(Style style) {
-    _ensureRenderer().style.itemStyle = (_, __) => style;
+    _ensureRenderer().style.itemStyle = (_, _) => style;
     return this;
   }
 

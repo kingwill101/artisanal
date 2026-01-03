@@ -1,4 +1,4 @@
-part of kitchen_sink;
+part of 'kitchen_sink.dart';
 
 final class _WidgetsPage extends _KitchenSinkPage {
   _WidgetsPage()
@@ -974,8 +974,9 @@ String? _readUptimePretty() {
     final days = total ~/ 86400;
     final hours = (total % 86400) ~/ 3600;
     final mins = (total % 3600) ~/ 60;
-    if (days > 0)
+    if (days > 0) {
       return '$days day${days == 1 ? '' : 's'}, $hours hour${hours == 1 ? '' : 's'}, $mins min';
+    }
     if (hours > 0) return '$hours hour${hours == 1 ? '' : 's'}, $mins min';
     return '$mins min';
   } catch (_) {
@@ -1064,7 +1065,7 @@ class _LipglossV2Page extends _KitchenSinkPage {
         .marginChar('#')
         .marginBackground(Colors.warning)
         .foreground(Colors.white);
-    buffer.writeln('${labelStyle.render('Margin Char/Bg:')}');
+    buffer.writeln(labelStyle.render('Margin Char/Bg:'));
     buffer.writeln(
       marginStyle.render('Styled box with hash margins on yellow background'),
     );
@@ -1124,8 +1125,9 @@ class _LipglossV2Page extends _KitchenSinkPage {
         .row(['StyleFunc', 'Overrides'])
         .baseStyle(baseStyle)
         .styleFunc((row, col, data) {
-          if (data == 'Overrides')
+          if (data == 'Overrides') {
             return Style().foreground(Colors.success).bold().unsetItalic();
+          }
           return null;
         })
         .border(Border.rounded);

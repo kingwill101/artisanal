@@ -185,8 +185,9 @@ class _AnsiRenderer {
 
   String _wrap(String text, {required int indent}) {
     final available = (width - indent).clamp(10, width);
-    if (stringWidth(text) <= available)
+    if (stringWidth(text) <= available) {
       return text.padLeft(indent + text.length);
+    }
 
     final words = text.split(RegExp(r'\\s+'));
     final lines = <String>[];

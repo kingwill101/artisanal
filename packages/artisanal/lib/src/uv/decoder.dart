@@ -20,6 +20,7 @@
 ///   // handle typed events (Key/Mouse/Window/Device)
 /// }
 /// ```
+library;
 import 'dart:convert';
 
 import 'event.dart';
@@ -203,10 +204,11 @@ final class EventDecoder {
         default:
           // Alt-modified sequences: ESC + <utf8/control>
           final (n, ev) = parseUtf8(buf.sublist(1));
-          if (n == 0)
+          if (n == 0) {
             return allowIncompleteEsc
                 ? (1, KeyPressEvent(Key(code: keyEscape)))
                 : (0, null);
+          }
           if (ev is KeyPressEvent) {
             final k = ev.key();
             return (
@@ -475,7 +477,7 @@ final class EventDecoder {
     }
 
     final params = _parseParams(paramsBytes);
-    final cmd = '${priv}${inter}${String.fromCharCode(finalByte)}';
+    final cmd = '$priv$inter${String.fromCharCode(finalByte)}';
 
     // Handle SGR mouse: CSI < ... (M|m)
     if (priv.toString() == '<' && (finalByte == 0x4d || finalByte == 0x6d)) {
@@ -870,8 +872,9 @@ final class EventDecoder {
     final (btn, mod, isMotion, isRelease) = _decodeX10Button(b);
     final m = Mouse(x: x, y: y, button: btn, mod: mod);
     if (isMotion) return MouseMotionEvent(m);
-    if (btn >= MouseButton.wheelUp && btn <= MouseButton.wheelRight)
+    if (btn >= MouseButton.wheelUp && btn <= MouseButton.wheelRight) {
       return MouseWheelEvent(m);
+    }
     if (isRelease) return MouseReleaseEvent(m);
     return MouseClickEvent(m);
   }
@@ -922,8 +925,9 @@ final class EventDecoder {
     final (btn, mod, motion, isRelease) = _decodeX10Button(b);
     final m = Mouse(x: x - 1, y: y - 1, button: btn, mod: mod);
     if (motion) return MouseMotionEvent(m);
-    if (btn >= MouseButton.wheelUp && btn <= MouseButton.wheelRight)
+    if (btn >= MouseButton.wheelUp && btn <= MouseButton.wheelRight) {
       return MouseWheelEvent(m);
+    }
     if (release || isRelease) return MouseReleaseEvent(m);
     return MouseClickEvent(m);
   }
@@ -1059,7 +1063,9 @@ final class EventDecoder {
 
     // Params (0x30..0x3f)
     final paramsStart = i;
-    while (i < buf.length && buf[i] >= 0x30 && buf[i] <= 0x3f) i++;
+    while (i < buf.length && buf[i] >= 0x30 && buf[i] <= 0x3f) {
+      i++;
+    }
     final params = _parseParams(buf.sublist(paramsStart, i));
 
     // Intermediates (0x20..0x2f) - keep the last one.
@@ -1844,8 +1850,9 @@ int? _xParseRgbComponent(String hex) {
   // Reject overlongs, surrogates, and out-of-range code points.
   if (rune < min) return (consumed: 1, rune: b0, ok: false);
   if (rune > 0x10ffff) return (consumed: 1, rune: b0, ok: false);
-  if (rune >= 0xD800 && rune <= 0xDFFF)
+  if (rune >= 0xD800 && rune <= 0xDFFF) {
     return (consumed: 1, rune: b0, ok: false);
+  }
 
   return (consumed: need, rune: rune, ok: true);
 }
@@ -1900,8 +1907,9 @@ final class _AnsiParams {
     int defaultValue, {
     int subIndex = 0,
   }) {
-    if (index < 0 || index >= params.length)
+    if (index < 0 || index >= params.length) {
       return (value: defaultValue, ok: false);
+    }
     final p = params[index];
     if (subIndex >= p.values.length) return (value: defaultValue, ok: false);
     final v = p.values[subIndex];
@@ -2083,7 +2091,7 @@ int translateControlKeyState(int cks) {
 
 Event? parseWin32InputKeyEvent(
   int vkc,
-  int _sc,
+  int sc,
   int uc,
   bool keyDown,
   int cks,

@@ -21,6 +21,7 @@
 /// renderer.render(buf);
 /// renderer.flush();
 /// ```
+library;
 import 'dart:convert' show jsonEncode;
 import 'dart:io' show Platform;
 

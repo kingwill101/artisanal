@@ -2,6 +2,7 @@
 ///
 /// Provides [Padding], [Margin], and [Align] types for controlling
 /// spacing and alignment in styled content.
+library;
 
 /// Underline style variants, inspired by lipgloss v2.
 ///

@@ -50,7 +50,7 @@
 /// - `verbose`: Detailed information for debugging.
 /// - `debug`: Maximum detail, including internal state.
 /// {@endtemplate}
-library artisanal;
+library;
 
 import 'src/io/console.dart' show Console;
 

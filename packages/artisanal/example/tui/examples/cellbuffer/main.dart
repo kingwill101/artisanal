@@ -209,8 +209,8 @@ class CellbufferModel implements tui.Model {
         if (!cells.ready) return (this, null);
 
         cells.wipe();
-        final (nx, nvx) = spring.update(this.x, xVelocity, targetX);
-        final (ny, nvy) = spring.update(this.y, yVelocity, targetY);
+        final (nx, nvx) = spring.update(x, xVelocity, targetX);
+        final (ny, nvy) = spring.update(y, yVelocity, targetY);
         _drawEllipse(cells, nx, ny, 16, 8);
         return (
           copyWith(x: nx, y: ny, xVelocity: nvx, yVelocity: nvy),

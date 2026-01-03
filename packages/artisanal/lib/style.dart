@@ -72,7 +72,7 @@
 /// You can also use [Style.width] and [Style.height] to create fixed-size
 /// boxes with alignment.
 /// {@endtemplate}
-library artisanal.style;
+library;
 
 export 'src/style/style.dart';
 export 'src/layout/layout.dart' show Layout;

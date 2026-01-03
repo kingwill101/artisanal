@@ -674,8 +674,12 @@ class TextInputModel extends ViewComponent {
     }
 
     var i = _pos - 1;
-    while (i >= 0 && _isWhitespace(_value[i])) i--;
-    while (i >= 0 && !_isWhitespace(_value[i])) i--;
+    while (i >= 0 && _isWhitespace(_value[i])) {
+      i--;
+    }
+    while (i >= 0 && !_isWhitespace(_value[i])) {
+      i--;
+    }
     final start = (i + 1).clamp(0, _pos);
 
     _value = [..._value.sublist(0, start), ..._value.sublist(_pos)];
@@ -692,8 +696,12 @@ class TextInputModel extends ViewComponent {
     }
 
     var i = _pos;
-    while (i < _value.length && _isWhitespace(_value[i])) i++;
-    while (i < _value.length && !_isWhitespace(_value[i])) i++;
+    while (i < _value.length && _isWhitespace(_value[i])) {
+      i++;
+    }
+    while (i < _value.length && !_isWhitespace(_value[i])) {
+      i++;
+    }
 
     _value = [..._value.sublist(0, _pos), ..._value.sublist(i)];
     error = _validate(_value);
@@ -709,8 +717,12 @@ class TextInputModel extends ViewComponent {
     }
 
     var i = _pos - 1;
-    while (i >= 0 && _isWhitespace(_value[i])) i--;
-    while (i >= 0 && !_isWhitespace(_value[i])) i--;
+    while (i >= 0 && _isWhitespace(_value[i])) {
+      i--;
+    }
+    while (i >= 0 && !_isWhitespace(_value[i])) {
+      i--;
+    }
     position = (i + 1).clamp(0, _value.length);
   }
 
@@ -723,8 +735,12 @@ class TextInputModel extends ViewComponent {
     }
 
     var i = _pos;
-    while (i < _value.length && _isWhitespace(_value[i])) i++;
-    while (i < _value.length && !_isWhitespace(_value[i])) i++;
+    while (i < _value.length && _isWhitespace(_value[i])) {
+      i++;
+    }
+    while (i < _value.length && !_isWhitespace(_value[i])) {
+      i++;
+    }
     position = i;
   }
 
@@ -734,15 +750,23 @@ class TextInputModel extends ViewComponent {
 
     if (_isWhitespace(_value[pos])) {
       var start = pos;
-      while (start > 0 && _isWhitespace(_value[start - 1])) start--;
+      while (start > 0 && _isWhitespace(_value[start - 1])) {
+        start--;
+      }
       var end = pos;
-      while (end < _value.length && _isWhitespace(_value[end])) end++;
+      while (end < _value.length && _isWhitespace(_value[end])) {
+        end++;
+      }
       return (start, end);
     } else {
       var start = pos;
-      while (start > 0 && !_isWhitespace(_value[start - 1])) start--;
+      while (start > 0 && !_isWhitespace(_value[start - 1])) {
+        start--;
+      }
       var end = pos;
-      while (end < _value.length && !_isWhitespace(_value[end])) end++;
+      while (end < _value.length && !_isWhitespace(_value[end])) {
+        end++;
+      }
       return (start, end);
     }
   }

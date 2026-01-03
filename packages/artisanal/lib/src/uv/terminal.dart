@@ -34,6 +34,7 @@
 ///   await term.stop();           // close: restore terminal
 /// }
 /// ```
+library;
 import 'dart:async';
 import 'dart:io';
 

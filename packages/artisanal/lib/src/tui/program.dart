@@ -1589,7 +1589,7 @@ class Program<M extends Model> {
       );
       // Set shape and blink
       final code = view.cursor!.shape.encode(blink: view.cursor!.blink);
-      _terminal?.write('\x1b[${code} q');
+      _terminal?.write('\x1b[$code q');
       // Set color if provided
       if (view.cursor!.color != null) {
         _terminal?.write('\x1b]12;${view.cursor!.color!.toHex()}\x07');

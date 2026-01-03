@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+7
+
+- **Added**: `session` options to set connection-level settings (via `SET ...`) on connect.
+- **Added**: `init` statements list to run initialization SQL on connect.
+
 ## 0.1.0-dev+6
 
 - **Added**: Full-text query compilation for `whereFullText`, including websearch/phrase/boolean modes.

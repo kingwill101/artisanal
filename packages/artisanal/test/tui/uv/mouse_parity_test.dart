@@ -438,7 +438,7 @@ void main() {
   group('UV parity: parse SGR mouse events', () {
     test('SGR mouse table', () {
       String encode(int b, int x, int y, bool release) =>
-          '\x1b[<${b};${x + 1};${y + 1}${release ? 'm' : 'M'}';
+          '\x1b[<$b;${x + 1};${y + 1}${release ? 'm' : 'M'}';
 
       final tt = <({String name, String seq, Event expected})>[
         (

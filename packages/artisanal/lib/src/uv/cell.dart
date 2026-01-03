@@ -21,6 +21,7 @@
 ///   link: const Link(url: 'https://example.com'),
 /// );
 /// ```
+library;
 import '../unicode/width.dart';
 
 /// Upstream: `third_party/ultraviolet/cell.go` (`Link`).

@@ -378,7 +378,9 @@ final class TrelloModel implements tui.Model {
     final current = (c < colScroll.length ? colScroll[c] : 0);
     final next = (current + delta).clamp(0, maxScroll);
     final nextScroll = List<int>.from(colScroll);
-    while (nextScroll.length < columns.length) nextScroll.add(0);
+    while (nextScroll.length < columns.length) {
+      nextScroll.add(0);
+    }
     nextScroll[c] = next;
     return copyWith(colScroll: nextScroll);
   }
@@ -403,7 +405,9 @@ final class TrelloModel implements tui.Model {
 
     if (nextScrollVal == scroll && idx == focusIndex) return this;
     final nextScroll = List<int>.from(colScroll);
-    while (nextScroll.length < columns.length) nextScroll.add(0);
+    while (nextScroll.length < columns.length) {
+      nextScroll.add(0);
+    }
     nextScroll[c] = nextScrollVal;
     return copyWith(focusIndex: idx, colScroll: nextScroll);
   }
@@ -411,7 +415,9 @@ final class TrelloModel implements tui.Model {
   TrelloModel _clampScrolls() {
     if (columns.isEmpty) return this;
     final next = List<int>.from(colScroll);
-    while (next.length < columns.length) next.add(0);
+    while (next.length < columns.length) {
+      next.add(0);
+    }
     for (var i = 0; i < columns.length; i++) {
       next[i] = next[i].clamp(0, _maxScrollFor(i));
     }
@@ -692,8 +698,9 @@ final class TrelloModel implements tui.Model {
         if (idx >= cardsLen) return (c, cardsLen);
 
         // If we're in the gap, insert *after* the preceding card.
-        if (within >= _cardPanelHeight)
+        if (within >= _cardPanelHeight) {
           return (c, (idx + 1).clamp(0, cardsLen));
+        }
         return (c, idx);
       }
     }
@@ -902,7 +909,9 @@ final class TrelloModel implements tui.Model {
 
     // Ensure the column block fits the viewport height.
     final out = lines.map((l) => Style().width(_colWidth).render(l)).toList();
-    while (out.length < boardH) out.add(' ' * _colWidth);
+    while (out.length < boardH) {
+      out.add(' ' * _colWidth);
+    }
     if (out.length > boardH) return out.sublist(0, boardH);
     return out;
   }

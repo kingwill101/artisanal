@@ -187,10 +187,12 @@ class SystemInfo {
   }
 
   String formatBytes(int bytes) {
-    if (bytes >= 1024 * 1024 * 1024)
+    if (bytes >= 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}G';
-    if (bytes >= 1024 * 1024)
+    }
+    if (bytes >= 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}M';
+    }
     if (bytes >= 1024) return '${(bytes / 1024).toStringAsFixed(1)}K';
     return '${bytes}B';
   }

@@ -85,8 +85,8 @@ class TerminalRenderer implements Renderer {
   IOSink _output;
   ColorProfile? _overrideProfile;
   bool? _overrideDarkBackground;
-  bool? _overrideNoAnsi;
-  bool? _overrideIsTty;
+  final bool? _overrideNoAnsi;
+  final bool? _overrideIsTty;
 
   ColorProfile? _cachedProfile;
   bool? _cachedDarkBackground;

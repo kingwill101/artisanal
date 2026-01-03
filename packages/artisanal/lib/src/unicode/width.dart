@@ -3,6 +3,7 @@
 ///
 /// Note: This is intentionally minimal-first. The Ultraviolet parity tests we
 /// port initially mostly cover ASCII + common wide (CJK/emoji) characters.
+library;
 import 'grapheme.dart' as uni;
 
 /// Runtime configuration for width calculations that depend on terminal

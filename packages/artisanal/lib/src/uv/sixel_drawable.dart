@@ -2,7 +2,7 @@
 ///
 /// {@category Ultraviolet}
 /// {@subCategory Graphics}
-library artisanal.uv.sixel;
+library;
 
 import 'package:image/image.dart' as img;
 import 'cell.dart';

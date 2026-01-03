@@ -366,26 +366,26 @@ class FilePickerModel extends ViewComponent {
   // Fields
   // ─────────────────────────────────────────────────────────────────────────────
 
-  String _currentDirectory;
+  final String _currentDirectory;
   List<String> _allowedTypes;
   bool _fileAllowed;
   bool _dirAllowed;
-  bool _showHidden;
-  bool _showPermissions;
-  bool _showSize;
+  final bool _showHidden;
+  final bool _showPermissions;
+  final bool _showSize;
   int _height;
-  bool _autoHeight;
-  String _cursor;
-  FilePickerKeyMap _keyMap;
-  FilePickerStyles _styles;
-  List<FileEntry> _files;
-  int _selected;
+  final bool _autoHeight;
+  final String _cursor;
+  final FilePickerKeyMap _keyMap;
+  final FilePickerStyles _styles;
+  final List<FileEntry> _files;
+  final int _selected;
   int _min;
   int _max;
-  String? _selectedPath;
-  List<_ViewState> _selectedStack;
+  final String? _selectedPath;
+  final List<_ViewState> _selectedStack;
   final int _id;
-  String? _errorMessage;
+  final String? _errorMessage;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Getters

@@ -1450,15 +1450,23 @@ class TextAreaModel extends ViewComponent {
 
     if (_isWhitespace(line[pos])) {
       var start = pos;
-      while (start > 0 && _isWhitespace(line[start - 1])) start--;
+      while (start > 0 && _isWhitespace(line[start - 1])) {
+        start--;
+      }
       var end = pos;
-      while (end < line.length && _isWhitespace(line[end])) end++;
+      while (end < line.length && _isWhitespace(line[end])) {
+        end++;
+      }
       return (start, end);
     } else {
       var start = pos;
-      while (start > 0 && !_isWhitespace(line[start - 1])) start--;
+      while (start > 0 && !_isWhitespace(line[start - 1])) {
+        start--;
+      }
       var end = pos;
-      while (end < line.length && !_isWhitespace(line[end])) end++;
+      while (end < line.length && !_isWhitespace(line[end])) {
+        end++;
+      }
       return (start, end);
     }
   }

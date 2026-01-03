@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+7
+
+- **Added**: `session` options to apply PRAGMA settings on connect.
+- **Added**: `init` statements list to run initialization SQL on connect.
+- **Changed**: SQLite driver registration now preserves `database`/`path` options when building connections.
+
 ## 0.1.0-dev+6
 
 - **Added**: SQLite full-text query compilation for `whereFullText`, including optional index targeting.

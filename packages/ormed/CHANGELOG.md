@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+7
+
+- **Added**: Transaction outcome hooks/events that distinguish commit vs rollback (with savepoint scope details).
+- **Added**: Transaction boundary logging in query logs (BEGIN/COMMIT/ROLLBACK and savepoints).
+
 ## 0.1.0-dev+6
 
 - **Added**: Typed predicate field accessors for `where` callbacks (e.g. `q.title.eq(...)`) and typed relation helpers (`withPosts`, `whereHasPosts`).

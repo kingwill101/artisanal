@@ -122,7 +122,7 @@
 ///
 /// Configure these via [ProgramOptions].
 /// {@endtemplate}
-library artisanal.tui;
+library;
 
 export 'src/tui/tui.dart';
 export 'src/tui/bubbles/bubbles.dart' hide ValidateFunc, PasteMsg;

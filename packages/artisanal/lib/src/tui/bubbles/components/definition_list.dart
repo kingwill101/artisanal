@@ -89,7 +89,7 @@ class DefinitionList extends DisplayComponent {
   DefinitionList({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   final List<(String, String)> _items = [];
   String _separator = ':';
@@ -276,7 +276,7 @@ class GroupedDefinitionList extends DisplayComponent {
   GroupedDefinitionList({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   final List<(String, Map<String, String>)> _groups = [];
   String _separator = ':';

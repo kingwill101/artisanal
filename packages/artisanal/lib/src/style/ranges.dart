@@ -267,8 +267,9 @@ String _penStateAt(List<_Token> tokens, int cellIndex) {
   }
 
   final prefix = StringBuffer();
-  if (!link.isZero)
+  if (!link.isZero) {
     prefix.write(uv_ansi.UvAnsi.setHyperlink(link.url, link.params));
+  }
   if (!style.isZero) prefix.write(uv_ops.styleToSgr(style));
   return prefix.toString();
 }

@@ -683,18 +683,24 @@ class CommandCenterModel implements tui.Model {
         // D is taken by debug filter
 
         // Main tab switching (1-6)
-        if (key.isChar('1'))
+        if (key.isChar('1')) {
           return (copyWith(activeMainTab: 0, debugOverlay: nextDebug), null);
-        if (key.isChar('2'))
+        }
+        if (key.isChar('2')) {
           return (copyWith(activeMainTab: 1, debugOverlay: nextDebug), null);
-        if (key.isChar('3'))
+        }
+        if (key.isChar('3')) {
           return (copyWith(activeMainTab: 2, debugOverlay: nextDebug), null);
-        if (key.isChar('4'))
+        }
+        if (key.isChar('4')) {
           return (copyWith(activeMainTab: 3, debugOverlay: nextDebug), null);
-        if (key.isChar('5'))
+        }
+        if (key.isChar('5')) {
           return (copyWith(activeMainTab: 4, debugOverlay: nextDebug), null);
-        if (key.isChar('6'))
+        }
+        if (key.isChar('6')) {
           return (copyWith(activeMainTab: 5, debugOverlay: nextDebug), null);
+        }
 
         // Log level filter toggles (F1-F4 or Shift+I/D/W/E)
         if (key.isChar('I')) {
@@ -881,8 +887,9 @@ class CommandCenterModel implements tui.Model {
         // Update viewport content with filtered logs
         final filtered = newLogs.where((log) {
           if (!levelFilter.contains(log.level)) return false;
-          if (projectFilter != null && log.project != projectFilter)
+          if (projectFilter != null && log.project != projectFilter) {
             return false;
+          }
           if (searchQuery.isNotEmpty) {
             final query = searchQuery.toLowerCase();
             if (!log.message.toLowerCase().contains(query) &&
@@ -988,8 +995,9 @@ class CommandCenterModel implements tui.Model {
   ) {
     final filtered = logs.where((log) {
       if (!newLevelFilter.contains(log.level)) return false;
-      if (newProjectFilter != null && log.project != newProjectFilter)
+      if (newProjectFilter != null && log.project != newProjectFilter) {
         return false;
+      }
       if (newSearchQuery.isNotEmpty) {
         final query = newSearchQuery.toLowerCase();
         if (!log.message.toLowerCase().contains(query) &&

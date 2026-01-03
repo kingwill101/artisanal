@@ -423,16 +423,24 @@ class ViewportModel extends ViewComponent {
     if (_isWhitespace(line[x])) {
       // Find whitespace block
       var start = x;
-      while (start > 0 && _isWhitespace(line[start - 1])) start--;
+      while (start > 0 && _isWhitespace(line[start - 1])) {
+        start--;
+      }
       var end = x;
-      while (end < line.length && _isWhitespace(line[end])) end++;
+      while (end < line.length && _isWhitespace(line[end])) {
+        end++;
+      }
       return (start, end);
     } else {
       // Find word block
       var start = x;
-      while (start > 0 && !_isWhitespace(line[start - 1])) start--;
+      while (start > 0 && !_isWhitespace(line[start - 1])) {
+        start--;
+      }
       var end = x;
-      while (end < line.length && !_isWhitespace(line[end])) end++;
+      while (end < line.length && !_isWhitespace(line[end])) {
+        end++;
+      }
       return (start, end);
     }
   }

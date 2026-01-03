@@ -103,7 +103,7 @@ class Alert extends DisplayComponent {
   Alert({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String _message = '';
   String? _prefix;

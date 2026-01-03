@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+7
+
+- **Changed**: MySQL session variables now use the `session` option (removed `sessionVariables` alias).
+
 ## 0.1.0-dev+6
 
 - **Added**: Full-text query compilation for `whereFullText`, including boolean/phrase/websearch modes.

@@ -28,6 +28,7 @@
 /// StyledString('Title').draw(canvas, rect(2, 0, 5, 1));
 /// final rendered = canvas.render(); // -> use in your renderer
 /// ```
+library;
 import 'cell.dart';
 import 'drawable.dart';
 import 'geometry.dart';

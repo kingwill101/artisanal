@@ -402,7 +402,7 @@ void main() {
         expect(panel.titleStyle(Style()), same(panel));
         expect(panel.borderStyle(Style()), same(panel));
         expect(panel.contentStyle(Style()), same(panel));
-        expect(panel.contentStyleFunc((_, __) => null), same(panel));
+        expect(panel.contentStyleFunc((_, _) => null), same(panel));
         expect(panel.titleAlign(PanelAlignment.center), same(panel));
         expect(panel.contentAlign(PanelAlignment.center), same(panel));
         expect(panel.padding(1), same(panel));
@@ -446,16 +446,16 @@ void main() {
 
   group('PanelContentStyleFunc', () {
     test('typedef accepts correct signature', () {
-      PanelContentStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return Style().bold();
-      };
+      }
       expect(func('test', 0), isA<Style>());
     });
 
     test('can return null', () {
-      PanelContentStyleFunc func = (String line, int lineIndex) {
+      Style? func(String line, int lineIndex) {
         return null;
-      };
+      }
       expect(func('test', 0), isNull);
     });
   });

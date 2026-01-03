@@ -1,6 +1,7 @@
 /// Toggle tree example - ported from lipgloss/examples/tree/toggle
 ///
 /// Demonstrates a tree with collapsible directory-style nodes.
+library;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';

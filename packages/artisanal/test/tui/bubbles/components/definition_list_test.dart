@@ -319,7 +319,7 @@ void main() {
         expect(list.termStyle(Style()), same(list));
         expect(list.descriptionStyle(Style()), same(list));
         expect(list.separatorStyle(Style()), same(list));
-        expect(list.styleFunc((_, __, ___, ____) => null), same(list));
+        expect(list.styleFunc((_, _, _, _) => null), same(list));
       });
     });
   });
@@ -447,7 +447,7 @@ void main() {
         expect(list.termStyle(Style()), same(list));
         expect(list.descriptionStyle(Style()), same(list));
         expect(list.separatorStyle(Style()), same(list));
-        expect(list.styleFunc((_, __, ___, ____) => null), same(list));
+        expect(list.styleFunc((_, _, _, _) => null), same(list));
       });
     });
   });
@@ -514,18 +514,16 @@ void main() {
 
   group('DefinitionStyleFunc', () {
     test('typedef accepts correct signature', () {
-      DefinitionStyleFunc func =
-          (String term, String desc, int index, bool isTerm) {
+      Style? func(String term, String desc, int index, bool isTerm) {
             return Style().bold();
-          };
+          }
       expect(func('term', 'desc', 0, true), isA<Style>());
     });
 
     test('can return null', () {
-      DefinitionStyleFunc func =
-          (String term, String desc, int index, bool isTerm) {
+      Style? func(String term, String desc, int index, bool isTerm) {
             return null;
-          };
+          }
       expect(func('term', 'desc', 0, true), isNull);
     });
   });

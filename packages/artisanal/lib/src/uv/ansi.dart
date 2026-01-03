@@ -72,7 +72,7 @@ abstract final class UvAnsi {
   static String cursorPosition(int col1, int row1) {
     // Upstream (`x/ansi`): `CursorPosition(1,1)` compacts to `ESC [ H`.
     if (col1 == 1 && row1 == 1) return cursorHomePosition;
-    return '\x1b[${row1};${col1}H';
+    return '\x1b[$row1;${col1}H';
   }
 
   /// Returns an ANSI sequence that moves to absolute 1-based [row1].
@@ -98,7 +98,7 @@ abstract final class UvAnsi {
   static String deleteCharacter(int n) => n == 1 ? '\x1b[P' : '\x1b[${n}P';
 
   /// Returns an ANSI sequence to insert [n] characters.
-  static String insertCharacter(int n) => n == 1 ? '\x1b[@' : '\x1b[${n}@';
+  static String insertCharacter(int n) => n == 1 ? '\x1b[@' : '\x1b[$n@';
 
   /// Returns an ANSI sequence to erase [n] characters.
   static String eraseCharacter(int n) => n == 1 ? '\x1b[X' : '\x1b[${n}X';
@@ -115,7 +115,7 @@ abstract final class UvAnsi {
 
   /// Returns an ANSI sequence to set scrolling margins to [top1]/[bottom1].
   static String setTopBottomMargins(int top1, int bottom1) =>
-      '\x1b[${top1};${bottom1}r';
+      '\x1b[$top1;${bottom1}r';
 
   /// Returns an OSC 8 hyperlink sequence for [url] and [params].
   static String setHyperlink(String url, String params) {

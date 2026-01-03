@@ -57,7 +57,7 @@
 /// access the [Console] via the `console` property if the command is run
 /// through an Artisanal runner.
 /// {@endtemplate}
-library artisanal.args;
+library;
 
 export 'src/runner/command.dart' show Command;
 export 'src/runner/command_listing.dart'

@@ -196,7 +196,7 @@ class StyledBlock extends DisplayComponent {
   StyledBlock({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String _message = '';
   String? _prefix;
@@ -646,7 +646,7 @@ class Comment extends DisplayComponent {
   Comment({RenderConfig renderConfig = const RenderConfig()})
     : _renderConfig = renderConfig;
 
-  RenderConfig _renderConfig;
+  final RenderConfig _renderConfig;
 
   String _text = '';
   String _prefix = '//';

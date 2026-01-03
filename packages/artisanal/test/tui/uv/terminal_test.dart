@@ -96,7 +96,7 @@ class _MockIOSink implements IOSink {
   void addError(Object error, [StackTrace? stackTrace]) {}
 
   @override
-  set encoding(Encoding _encoding) {}
+  set encoding(Encoding encoding) {}
   @override
   Encoding get encoding => utf8;
 

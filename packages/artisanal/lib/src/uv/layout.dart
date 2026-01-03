@@ -33,6 +33,7 @@
 /// final top = rows.top;
 /// final bottom = rows.bottom;
 /// ```
+library;
 import 'geometry.dart';
 
 /// Layout constraints.
