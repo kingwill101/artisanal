@@ -67,7 +67,21 @@ Future<void> _formatRepository() async {
   if (exitCode != 0) {
     throw Exception('dart format failed (exit code $exitCode)');
   }
+  await _ensureCleanGitStatus('dart format');
   print('✓ dart format complete.');
+}
+
+Future<void> _ensureCleanGitStatus(String step) async {
+  final result = await Process.run('git', ['status', '--porcelain']);
+  if (result.exitCode != 0) {
+    throw Exception('git status failed while checking $step.');
+  }
+  final output = (result.stdout as String).trim();
+  if (output.isNotEmpty) {
+    throw Exception(
+      'Repository has uncommitted changes after $step. Commit or stash before publishing.\n$output',
+    );
+  }
 }
 
 Future<void> publishPackage(
