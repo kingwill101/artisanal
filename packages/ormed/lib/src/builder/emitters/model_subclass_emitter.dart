@@ -1,10 +1,22 @@
 import 'package:analyzer/dart/element/element.dart';
 import 'package:collection/collection.dart';
+import 'package:meta/meta.dart';
 import 'package:ormed/src/annotations.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../descriptors.dart';
 import '../model_context.dart';
+
+@visibleForTesting
+String castValueForType(String valueName, String dartType) {
+  if (dartType == 'dynamic' || dartType == 'Object?') {
+    return valueName;
+  }
+  if (dartType == 'Object') {
+    return '$valueName as Object';
+  }
+  return '$valueName as $dartType';
+}
 
 class ModelSubclassEmitter {
   ModelSubclassEmitter(this.context);
@@ -513,12 +525,7 @@ class ModelSubclassEmitter {
   }
 
   String _castValue(String valueName, String dartType) {
-    if (dartType == 'dynamic' ||
-        dartType == 'Object?' ||
-        dartType == 'Object') {
-      return valueName;
-    }
-    return '$valueName as $dartType';
+    return castValueForType(valueName, dartType);
   }
 
   String _scopeMethodSignature(ScopeDescriptor scope) {
