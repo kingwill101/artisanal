@@ -9,12 +9,17 @@ void main() {
     final url =
         Platform.environment['MYSQL_URL'] ??
         'mysql://root:secret@localhost:6605/orm_test';
+    final connectionInfo = MySqlConnectionInfo.fromUrl(
+      url,
+      secureByDefault: true,
+    );
 
     final adapter = MySqlDriverAdapter.custom(
       config: DatabaseConfig(
         driver: 'mysql',
         options: {
           'url': url,
+          'ssl': connectionInfo.secure,
           'session': {'sql_notes': 0},
           'init': ["SET time_zone = '+02:00'"],
         },
