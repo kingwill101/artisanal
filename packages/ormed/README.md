@@ -69,45 +69,156 @@ analyzer:
 
 Field and selection validation:
 - `ormed_unknown_field`: unknown field/column in query builder calls.
+```dart
+Model.query<Post>()
+.where('missing_field', true); // ormed_unknown_field
+```
 - `ormed_unknown_select_field`: unknown column in `select([...])`.
+```dart
+Model.query<Post>()
+.select(['missing_select']); // ormed_unknown_select_field
+```
 - `ormed_duplicate_select_field`: duplicate column in `select([...])`.
+```dart
+Model.query<Post>()
+.select(['title', 'title']); // ormed_duplicate_select_field
+```
 - `ormed_unknown_order_field`: unknown column in `orderBy(...)`.
+```dart
+Model.query<Post>()
+.orderBy('missing_order'); // ormed_unknown_order_field
+```
 - `ormed_unknown_group_field`: unknown column in `groupBy(...)`.
+```dart
+Model.query<Post>()
+.groupBy(['missing_group']); // ormed_unknown_group_field
+```
 - `ormed_unknown_having_field`: unknown column in `having(...)`.
+```dart
+Model.query<Post>()
+.having('missing_having', PredicateOperator.equals, 1); // ormed_unknown_having_field
+```
 
 Relation validation:
 - `ormed_unknown_relation`: unknown relation in `withRelation(...)` or similar.
+```dart
+Model.query<Post>()
+.withRelation('missingRelation'); // ormed_unknown_relation
+```
 - `ormed_unknown_nested_relation`: unknown nested relation path.
+```dart
+Model.query<Post>()
+.withRelation('comments.missingRelation'); // ormed_unknown_nested_relation
+```
 - `ormed_invalid_where_has`: `whereHas(...)` targets a missing relation.
+```dart
+Model.query<Post>()
+.whereHas('missingRelation'); // ormed_invalid_where_has
+```
 - `ormed_relation_field_mismatch`: relation callback uses a field from the wrong model.
+```dart
+Model.query<Post>()
+.whereHas('comments', (q) => q.where('email', 'oops')); // ormed_relation_field_mismatch
+```
 - `ormed_missing_pivot_field`: missing pivot field in many-to-many definitions.
+```dart
+Model.query<Post>()
+.withRelation(const RelationDefinition(name: 'tags', kind: RelationKind.manyToMany, targetModel: 'Tag', pivotColumns: ['missing_pivot'], pivotModel: 'PostTag')); // ormed_missing_pivot_field
+```
 
 Type-aware predicate checks:
 - `ormed_type_mismatch_eq`: `whereEquals(...)` value type mismatches the field.
+```dart
+Model.query<Post>()
+.whereEquals('userId', 'not_an_int'); // ormed_type_mismatch_eq
+```
 - `ormed_where_in_type_mismatch`: `whereIn(...)` values mismatch the field type.
+```dart
+Model.query<Post>()
+.whereIn('userId', ['not_an_int']); // ormed_where_in_type_mismatch
+```
 - `ormed_where_between_type_mismatch`: `whereBetween(...)` values mismatch the field type.
+```dart
+Model.query<Post>()
+.whereBetween('userId', 'a', 'z'); // ormed_where_between_type_mismatch
+```
 - `ormed_typed_predicate_field`: typed predicate field does not exist on the model.
+```dart
+Model.query<Post>()
+.whereTyped((q) => q.legacy.eq('oops')); // ormed_typed_predicate_field
+```
 
 Query safety and performance:
 - `ormed_update_delete_without_where`: `update()` or `delete()` without constraints.
+```dart
+Model.query<Post>()
+.update({'title': 'updated'}); // ormed_update_delete_without_where
+```
+```dart
+Model.query<Post>()
+.delete(); // ormed_update_delete_without_where
+```
 - `ormed_offset_without_order`: `offset()` without `orderBy`.
+```dart
+Model.query<Post>()
+.offset(10); // ormed_offset_without_order
+```
 - `ormed_limit_without_order`: `limit()` without `orderBy`.
+```dart
+Model.query<Post>()
+.limit(10); // ormed_limit_without_order
+```
 - `ormed_get_without_limit`: `get()`, `rows()`, `getPartial()`,
   `Model.all()`, `ModelCompanion.all()`, or generated companion `Posts.all()`
   used without a `limit()` or chunk/paginate alternative.
+```dart
+Model.query<Post>()
+.get(); // ormed_get_without_limit
+```
+```dart
+Posts.all(); // ormed_get_without_limit
+```
 
 Raw SQL safety:
 - `ormed_raw_sql_interpolation`: raw SQL with string interpolation and no bindings.
+```dart
+Model.query<Post>()
+.whereRaw('title = $title'); // ormed_raw_sql_interpolation
+```
 - `ormed_raw_sql_alias_missing`: `selectRaw(...)` without an alias.
+```dart
+Model.query<Post>()
+.selectRaw('count(*)'); // ormed_raw_sql_alias_missing
+```
 
 DTO validation:
 - `ormed_insert_missing_required`: insert DTO missing required fields.
+```dart
+Model.repository<Post>()
+.insert(PostInsertDto()); // ormed_insert_missing_required
+```
 - `ormed_update_missing_pk`: update DTO missing a primary key (or missing where).
+```dart
+Model.repository<Post>()
+.update(PostUpdateDto(title: 'updated')); // ormed_update_missing_pk
+```
 
 Soft delete and timestamp checks:
 - `ormed_with_trashed_on_non_soft_delete`
+```dart
+Model.query<User>()
+.withTrashed(); // ormed_with_trashed_on_non_soft_delete
+```
 - `ormed_without_timestamps_on_timestamped_model`
+```dart
+User(email: 'a@b.com', name: 'Test')
+.withoutTimestamps(() {}); // ormed_without_timestamps_on_timestamped_model
+```
 - `ormed_updated_at_access_on_without_timestamps`
+```dart
+Tag(id: 1, name: 'ormed')
+.updatedAt; // ormed_updated_at_access_on_without_timestamps
+```
 
 ### Suppressing diagnostics
 
