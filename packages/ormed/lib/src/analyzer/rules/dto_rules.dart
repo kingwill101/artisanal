@@ -277,7 +277,6 @@ Set<String> _mapLiteralKeys(SetOrMapLiteral map) {
   for (final element in map.elements) {
     if (element is! MapLiteralEntry) continue;
     final key = element.key;
-    if (key == null) continue;
     final value = simpleStringLiteralValue(key);
     if (value != null) {
       keys.add(value);

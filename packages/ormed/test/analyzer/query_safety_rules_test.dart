@@ -24,7 +24,7 @@ class UpdateDeleteWithoutWhereRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_updateWithoutWhere() async {
+  Future<void> testUpdateWithoutWhere() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -40,7 +40,7 @@ void build(Query<User> query) {
     await assertDiagnostics(content, [lint(offset, 'update'.length)]);
   }
 
-  Future<void> test_updateWithWhereSplitChain() async {
+  Future<void> testUpdateWithWhereSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -56,7 +56,7 @@ void build(Query<User> query) {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_deleteWithWhereSplitChain() async {
+  Future<void> testDeleteWithWhereSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -72,7 +72,7 @@ void build(Query<User> query) {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_deleteWithoutWhereSplitChainStillWarns() async {
+  Future<void> testDeleteWithoutWhereSplitChainStillWarns() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -100,7 +100,7 @@ class OffsetWithoutOrderRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_offsetWithoutOrder() async {
+  Future<void> testOffsetWithoutOrder() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -116,7 +116,7 @@ void build(Query<User> query) {
     await assertDiagnostics(content, [lint(offset, 'offset'.length)]);
   }
 
-  Future<void> test_offsetWithOrderSplitChain() async {
+  Future<void> testOffsetWithOrderSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -143,7 +143,7 @@ class LimitWithoutOrderRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_limitWithoutOrder() async {
+  Future<void> testLimitWithoutOrder() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -159,7 +159,7 @@ void build(Query<User> query) {
     await assertDiagnostics(content, [lint(offset, 'limit'.length)]);
   }
 
-  Future<void> test_limitWithOrderSplitChain() async {
+  Future<void> testLimitWithOrderSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -186,7 +186,7 @@ class GetWithoutLimitRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_getWithoutLimit() async {
+  Future<void> testGetWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -202,7 +202,7 @@ void build(Query<User> query) {
     await assertDiagnostics(content, [lint(offset, 'get'.length)]);
   }
 
-  Future<void> test_getWithLimitSplitChain() async {
+  Future<void> testGetWithLimitSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -218,7 +218,7 @@ void build(Query<User> query) {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_rowsWithoutLimit() async {
+  Future<void> testRowsWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -234,7 +234,7 @@ void build(Query<User> query) {
     await assertDiagnostics(content, [lint(offset, 'rows'.length)]);
   }
 
-  Future<void> test_rowsWithLimitSplitChain() async {
+  Future<void> testRowsWithLimitSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -250,7 +250,7 @@ void build(Query<User> query) {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_getPartialWithoutLimit() async {
+  Future<void> testGetPartialWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -275,7 +275,7 @@ void build(Query<Post> query) {
     await assertDiagnostics(content, [lint(offset, 'getPartial'.length)]);
   }
 
-  Future<void> test_getPartialWithLimitSplitChain() async {
+  Future<void> testGetPartialWithLimitSplitChain() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -300,7 +300,7 @@ void build(Query<Post> query) {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_getWithLimitCascade() async {
+  Future<void> testGetWithLimitCascade() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -316,7 +316,7 @@ void build() {
     await assertNoDiagnostics(content);
   }
 
-  Future<void> test_modelAllWithoutLimit() async {
+  Future<void> testModelAllWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -332,7 +332,7 @@ void build() {
     await assertDiagnostics(content, [lint(offset, 'all'.length)]);
   }
 
-  Future<void> test_companionAllWithoutLimit() async {
+  Future<void> testCompanionAllWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -349,7 +349,7 @@ void build() {
     await assertDiagnostics(content, [lint(offset, 'all'.length)]);
   }
 
-  Future<void> test_generatedCompanionAllWithoutLimit() async {
+  Future<void> testGeneratedCompanionAllWithoutLimit() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -371,7 +371,7 @@ void build() {
     await assertDiagnostics(content, [lint(offset, 'all'.length)]);
   }
 
-  Future<void> test_unrelatedAllDoesNotWarn() async {
+  Future<void> testUnrelatedAllDoesNotWarn() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

@@ -153,9 +153,9 @@ Map<String, String> readStringMap(ConstantReader? reader) {
 
 String stringListLiteral(List<String> values, {bool constLiteral = true}) {
   final prefix = constLiteral ? 'const ' : '';
-  if (values.isEmpty) return '${prefix}<String>[]';
+  if (values.isEmpty) return '$prefix<String>[]';
   final entries = values.map((entry) => "'${escape(entry)}'");
-  return '${prefix}<String>[${entries.join(', ')}]';
+  return '$prefix<String>[${entries.join(', ')}]';
 }
 
 String stringMapLiteral(Map<String, String> values) {

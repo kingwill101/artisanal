@@ -108,7 +108,7 @@ dependency_overrides:
   ormed_mysql: { path: "$ormedRoot/packages/ormed_mysql" }
 ''';
 
-  pubspecFile.writeAsStringSync(content + '\n' + overrides);
+  pubspecFile.writeAsStringSync('$content\n$overrides');
 
   await run('dart', [
     'pub',

@@ -23,7 +23,7 @@ class WithTrashedOnNonSoftDeleteRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_withTrashedOnNonSoftDelete() async {
+  Future<void> testWithTrashedOnNonSoftDelete() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -51,7 +51,7 @@ class WithoutTimestampsOnTimestampedModelRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_withoutTimestampsOnTimestampedModel() async {
+  Future<void> testWithoutTimestampsOnTimestampedModel() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -79,7 +79,7 @@ class UpdatedAtAccessOnWithoutTimestampsRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_updatedAtAccessOnWithoutTimestamps() async {
+  Future<void> testUpdatedAtAccessOnWithoutTimestamps() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

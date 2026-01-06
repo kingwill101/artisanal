@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../lib/runtime.dart';
+import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
 import 'package:test/test.dart';
 

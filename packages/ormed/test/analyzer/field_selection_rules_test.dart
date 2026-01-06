@@ -24,7 +24,7 @@ class UnknownSelectFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownSelectField() async {
+  Future<void> testUnknownSelectField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -54,7 +54,7 @@ class DuplicateSelectFieldRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_duplicateSelectField() async {
+  Future<void> testDuplicateSelectField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -83,7 +83,7 @@ class UnknownOrderFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownOrderField() async {
+  Future<void> testUnknownOrderField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -112,7 +112,7 @@ class UnknownGroupFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownGroupField() async {
+  Future<void> testUnknownGroupField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -141,7 +141,7 @@ class UnknownHavingFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownHavingField() async {
+  Future<void> testUnknownHavingField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

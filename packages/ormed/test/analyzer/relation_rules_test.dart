@@ -23,7 +23,7 @@ class UnknownNestedRelationRuleTest extends AnalysisRuleTest with OrmedTestMixin
     super.setUp();
   }
 
-  Future<void> test_unknownNestedRelation() async {
+  Future<void> testUnknownNestedRelation() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -52,7 +52,7 @@ class InvalidWhereHasRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_invalidWhereHas() async {
+  Future<void> testInvalidWhereHas() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -82,7 +82,7 @@ class RelationFieldMismatchRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_relationFieldMismatch() async {
+  Future<void> testRelationFieldMismatch() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -111,7 +111,7 @@ class MissingPivotFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_missingPivotField() async {
+  Future<void> testMissingPivotField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

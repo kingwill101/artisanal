@@ -1,4 +1,4 @@
-library ormed_postgres_extensions;
+library;
 
 export 'package:ormed_postgres/migrations.dart';
 

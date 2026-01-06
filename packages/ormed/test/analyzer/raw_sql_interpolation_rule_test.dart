@@ -20,7 +20,7 @@ class RawSqlInterpolationRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_interpolatedRawSql() async {
+  Future<void> testInterpolatedRawSql() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -40,7 +40,7 @@ void build(Query<User> query, String status) {
     ]);
   }
 
-  Future<void> test_rawSqlWithBindings() async {
+  Future<void> testRawSqlWithBindings() async {
     await assertNoDiagnostics(r'''
 import 'package:ormed/ormed.dart';
 

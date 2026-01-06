@@ -309,7 +309,7 @@ environment:
       'errors when registry path collides with directory (malformed ormed.yaml)',
       () async {
         // Write an ormed.yaml where registry paths equal their directories.
-        File(p.join(scratchDir.path, 'ormed.yaml'))..writeAsStringSync('''
+        File(p.join(scratchDir.path, 'ormed.yaml')).writeAsStringSync('''
 driver:
   type: sqlite
   options:

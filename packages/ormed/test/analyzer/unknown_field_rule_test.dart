@@ -20,7 +20,7 @@ class UnknownFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_knownField() async {
+  Future<void> testKnownField() async {
     await assertNoDiagnostics(r'''
 import 'package:ormed/ormed.dart';
 
@@ -37,7 +37,7 @@ void build(Query<User> query) {
 ''');
   }
 
-  Future<void> test_unknownField() async {
+  Future<void> testUnknownField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

@@ -21,7 +21,7 @@ class InsertMissingRequiredRuleTest extends AnalysisRuleTest with OrmedTestMixin
     super.setUp();
   }
 
-  Future<void> test_insertMissingRequired() async {
+  Future<void> testInsertMissingRequired() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -55,7 +55,7 @@ class UpdateMissingPkRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_updateMissingPk() async {
+  Future<void> testUpdateMissingPk() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

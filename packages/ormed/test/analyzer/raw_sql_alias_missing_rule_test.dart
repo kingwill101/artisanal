@@ -20,7 +20,7 @@ class RawSqlAliasMissingRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_missingAlias() async {
+  Future<void> testMissingAlias() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

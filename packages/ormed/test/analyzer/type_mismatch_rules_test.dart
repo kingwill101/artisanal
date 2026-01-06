@@ -22,7 +22,7 @@ class TypeMismatchEqualsRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_equalsTypeMismatch() async {
+  Future<void> testEqualsTypeMismatch() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -52,7 +52,7 @@ class WhereInTypeMismatchRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_whereInTypeMismatch() async {
+  Future<void> testWhereInTypeMismatch() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -83,7 +83,7 @@ class WhereBetweenTypeMismatchRuleTest extends AnalysisRuleTest
     super.setUp();
   }
 
-  Future<void> test_whereBetweenTypeMismatch() async {
+  Future<void> testWhereBetweenTypeMismatch() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

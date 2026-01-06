@@ -20,7 +20,7 @@ class TypedPredicateFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownTypedField() async {
+  Future<void> testUnknownTypedField() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 

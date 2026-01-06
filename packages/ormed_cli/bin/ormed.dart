@@ -1,6 +1,6 @@
 import 'package:artisanal/args.dart';
 
-import '../lib/src/commands.dart';
+import 'package:ormed_cli/src/commands.dart';
 
 Future<void> main(List<String> args) async {
   final runner = CommandRunner<void>('ormed', 'Routed ORM CLI')

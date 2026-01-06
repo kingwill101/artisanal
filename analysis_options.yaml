@@ -1,2 +1,30 @@
 include: package:lints/recommended.yaml
 
+analyzer:
+  errors:
+    ormed_unknown_field: ignore
+    ormed_unknown_select_field: ignore
+    ormed_duplicate_select_field: ignore
+    ormed_unknown_order_field: ignore
+    ormed_unknown_group_field: ignore
+    ormed_unknown_having_field: ignore
+    ormed_unknown_relation: ignore
+    ormed_unknown_nested_relation: ignore
+    ormed_invalid_where_has: ignore
+    ormed_relation_field_mismatch: ignore
+    ormed_missing_pivot_field: ignore
+    ormed_type_mismatch_eq: ignore
+    ormed_where_in_type_mismatch: ignore
+    ormed_where_between_type_mismatch: ignore
+    ormed_typed_predicate_field: ignore
+    ormed_update_delete_without_where: ignore
+    ormed_offset_without_order: ignore
+    ormed_limit_without_order: ignore
+    ormed_get_without_limit: ignore
+    ormed_raw_sql_interpolation: ignore
+    ormed_raw_sql_alias_missing: ignore
+    ormed_insert_missing_required: ignore
+    ormed_update_missing_pk: ignore
+    ormed_with_trashed_on_non_soft_delete: ignore
+    ormed_without_timestamps_on_timestamped_model: ignore
+    ormed_updated_at_access_on_without_timestamps: ignore

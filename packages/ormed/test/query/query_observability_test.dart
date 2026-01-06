@@ -251,14 +251,12 @@ void main() {
       final rollbackEvents = <TransactionRolledBack>[];
       connection.onEvent<TransactionRolledBack>(rollbackEvents.add);
 
-      try {
-        await connection.transaction(() async {
+      await expectLater(
+        connection.transaction(() async {
           throw StateError('fail');
-        });
-        fail('Expected transaction to throw.');
-      } on StateError {
-        // expected
-      }
+        }),
+        throwsA(isA<StateError>()),
+      );
 
       expect(rollbackEvents, hasLength(1));
       expect(rollbackEvents.first.connection, same(connection));
@@ -290,16 +288,14 @@ void main() {
 
     test('nested transaction rollback logs rollback to savepoint', () async {
       connection.enableQueryLog();
-      try {
-        await connection.transaction(() async {
+      await expectLater(
+        connection.transaction(() async {
           await connection.transaction(() async {
             throw StateError('nested fail');
           });
-        });
-        fail('Expected nested transaction to throw.');
-      } on StateError {
-        // expected
-      }
+        }),
+        throwsA(isA<StateError>()),
+      );
 
       final sqls = connection.queryLog.map((entry) => entry.sql).toList();
       expect(sqls, contains('ROLLBACK TO SAVEPOINT sp_2'));

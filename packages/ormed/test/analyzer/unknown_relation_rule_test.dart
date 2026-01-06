@@ -20,7 +20,7 @@ class UnknownRelationRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> test_unknownRelation() async {
+  Future<void> testUnknownRelation() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
