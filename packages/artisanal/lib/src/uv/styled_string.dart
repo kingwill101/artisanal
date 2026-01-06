@@ -82,20 +82,20 @@ StyledString newStyledString(String str) => StyledString(str);
 
 // --- ANSI parsing helpers ----------------------------------------------------
 
-final class _SgrParam {
-  const _SgrParam(this.value, this.sub);
+final class SgrParam {
+  const SgrParam(this.value, this.sub);
   final int value;
   final List<int> sub;
   bool get hasSub => sub.isNotEmpty;
 }
 
-List<_SgrParam> _parseSgrParams(String raw) {
+List<SgrParam> _parseSgrParams(String raw) {
   if (raw.isEmpty) return const [];
   final parts = raw.split(';');
-  final out = <_SgrParam>[];
+  final out = <SgrParam>[];
   for (final part in parts) {
     if (part.isEmpty) {
-      out.add(const _SgrParam(0, []));
+      out.add(const SgrParam(0, []));
       continue;
     }
     final subParts = part.split(':');
@@ -105,7 +105,7 @@ List<_SgrParam> _parseSgrParams(String raw) {
       final s = subParts[i];
       sub.add(int.tryParse(s.isEmpty ? '0' : s) ?? 0);
     }
-    out.add(_SgrParam(value, sub));
+    out.add(SgrParam(value, sub));
   }
   return out;
 }
@@ -126,7 +126,7 @@ final class LinkState {
   Link link;
 }
 
-void readStyle(List<_SgrParam> params, StyleState out) {
+void readStyle(List<SgrParam> params, StyleState out) {
   // Upstream: `third_party/ultraviolet/styled.go` (`ReadStyle`).
   if (params.isEmpty) {
     out.style = const UvStyle();

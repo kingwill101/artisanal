@@ -653,16 +653,16 @@ class Program<M extends Model> {
     } finally {
       await _cleanup();
       _running = false;
+    }
 
-      // Print panic information after terminal is restored
-      if (_panic != null) {
-        _printPanic(_panic!, _panicStackTrace);
-        return;
-      }
+    // Print panic information after terminal is restored
+    if (_panic != null) {
+      _printPanic(_panic!, _panicStackTrace);
+      return;
+    }
 
-      if (_cancelled) {
-        throw ProgramCancelledError();
-      }
+    if (_cancelled) {
+      throw ProgramCancelledError();
     }
   }
 

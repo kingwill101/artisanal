@@ -327,7 +327,7 @@ void main() {
       final table =
           (Table(renderConfig: cfg)
                 ..width(20)
-                ..styleFunc((_, _, __) => Style().padding(0, 1))
+                ..styleFunc((_, _, _) => Style().padding(0, 1))
                 ..headers(['Foo', 'Bar'])
                 ..row(['Qux', 'Baz'])
                 ..row(['Qux', 'Baz']))

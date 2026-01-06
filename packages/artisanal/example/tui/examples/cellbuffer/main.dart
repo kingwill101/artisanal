@@ -19,8 +19,8 @@ tui.Cmd _animate() => tui.Cmd.tick(
   (_) => const FrameMsg(),
 );
 
-class _Spring {
-  _Spring({required this.frequency, required this.damping});
+class Spring {
+  Spring({required this.frequency, required this.damping});
 
   final double frequency;
   final double damping;
@@ -38,7 +38,7 @@ class _Spring {
   }
 }
 
-class _CellBuffer {
+class CellBuffer {
   List<String> cells = [];
   int stride = 0;
 
@@ -76,7 +76,7 @@ class _CellBuffer {
   }
 }
 
-void _drawEllipse(_CellBuffer cb, double xc, double yc, double rx, double ry) {
+void _drawEllipse(CellBuffer cb, double xc, double yc, double rx, double ry) {
   var dx = 0.0, dy = 0.0;
   var x = 0.0;
   var y = ry;
@@ -128,25 +128,23 @@ void _drawEllipse(_CellBuffer cb, double xc, double yc, double rx, double ry) {
 
 class CellbufferModel implements tui.Model {
   CellbufferModel({
-    _CellBuffer? cells,
-    _Spring? spring,
+    CellBuffer? cells,
+    Spring? spring,
     double? targetX,
     double? targetY,
     double? x,
     double? y,
-    double xVelocity = 0,
-    double yVelocity = 0,
-  }) : cells = cells ?? _CellBuffer(),
-       spring = spring ?? _Spring(frequency: _frequency, damping: _damping),
+    this.xVelocity = 0,
+    this.yVelocity = 0,
+  }) : cells = cells ?? CellBuffer(),
+       spring = spring ?? Spring(frequency: _frequency, damping: _damping),
        targetX = targetX ?? 0,
        targetY = targetY ?? 0,
        x = x ?? 0,
-       y = y ?? 0,
-       xVelocity = xVelocity,
-       yVelocity = yVelocity;
+       y = y ?? 0;
 
-  final _CellBuffer cells;
-  final _Spring spring;
+  final CellBuffer cells;
+  final Spring spring;
   final double targetX;
   final double targetY;
   final double x;
@@ -155,8 +153,8 @@ class CellbufferModel implements tui.Model {
   final double yVelocity;
 
   CellbufferModel copyWith({
-    _CellBuffer? cells,
-    _Spring? spring,
+    CellBuffer? cells,
+    Spring? spring,
     double? targetX,
     double? targetY,
     double? x,

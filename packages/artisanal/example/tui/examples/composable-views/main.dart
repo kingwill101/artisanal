@@ -4,7 +4,7 @@ library;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
-enum _SessionState { timer, spinner }
+enum SessionState { timer, spinner }
 
 const _defaultTime = Duration(minutes: 1);
 
@@ -46,7 +46,7 @@ class ComposableViewsModel implements tui.Model {
 
   factory ComposableViewsModel.initial() {
     return ComposableViewsModel(
-      state: _SessionState.timer,
+      state: SessionState.timer,
       timer: tui.TimerModel(
         timeout: _defaultTime,
         interval: const Duration(seconds: 1),
@@ -56,7 +56,7 @@ class ComposableViewsModel implements tui.Model {
     );
   }
 
-  final _SessionState state;
+  final SessionState state;
   final tui.TimerModel timer;
   final tui.SpinnerModel spinner;
   final int index;
@@ -104,15 +104,15 @@ class ComposableViewsModel implements tui.Model {
     // Toggle focus.
     if (key.type == tui.KeyType.tab) {
       model = model.copyWith(
-        state: state == _SessionState.timer
-            ? _SessionState.spinner
-            : _SessionState.timer,
+        state: state == SessionState.timer
+            ? SessionState.spinner
+            : SessionState.timer,
       );
     }
 
     // New timer/spinner.
     if (key.type == tui.KeyType.runes && rune == 0x6e) {
-      if (state == _SessionState.timer) {
+      if (state == SessionState.timer) {
         final resetTimer = tui.TimerModel(
           timeout: _defaultTime,
           interval: timer.interval,
@@ -132,17 +132,17 @@ class ComposableViewsModel implements tui.Model {
 
   (ComposableViewsModel, tui.Cmd?) _updateFocused(tui.Msg msg) {
     switch (state) {
-      case _SessionState.spinner:
+      case SessionState.spinner:
         final (newSpinner, cmd) = spinner.update(msg);
         return (copyWith(spinner: newSpinner), cmd);
-      case _SessionState.timer:
+      case SessionState.timer:
         final (newTimer, cmd) = timer.update(msg);
         return (copyWith(timer: newTimer), cmd);
     }
   }
 
   ComposableViewsModel copyWith({
-    _SessionState? state,
+    SessionState? state,
     tui.TimerModel? timer,
     tui.SpinnerModel? spinner,
     int? index,
@@ -156,18 +156,18 @@ class ComposableViewsModel implements tui.Model {
   }
 
   String _currentFocusedLabel() {
-    return state == _SessionState.timer ? 'timer' : 'spinner';
+    return state == SessionState.timer ? 'timer' : 'spinner';
   }
 
   @override
   String view() {
     final timerText = timer.view().padLeft(4);
-    final timerBox = state == _SessionState.timer
+    final timerBox = state == SessionState.timer
         ? _focusedModelStyle.render(timerText)
         : _modelStyle.render(timerText);
 
     final spinnerText = _spinnerStyle.render(spinner.view());
-    final spinnerBox = state == _SessionState.spinner
+    final spinnerBox = state == SessionState.spinner
         ? _focusedModelStyle.render(spinnerText)
         : _modelStyle.render(spinnerText);
 

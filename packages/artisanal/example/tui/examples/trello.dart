@@ -22,19 +22,19 @@ const _boardTop = 2;
 
 // Accents are derived from the active theme palette.
 
-final class _BoardColumn {
-  const _BoardColumn({required this.title, required this.cards});
+final class BoardColumn {
+  const BoardColumn({required this.title, required this.cards});
 
   final String title;
   final List<String> cards;
 
-  _BoardColumn copyWith({String? title, List<String>? cards}) {
-    return _BoardColumn(title: title ?? this.title, cards: cards ?? this.cards);
+  BoardColumn copyWith({String? title, List<String>? cards}) {
+    return BoardColumn(title: title ?? this.title, cards: cards ?? this.cards);
   }
 }
 
-final class _DragState {
-  const _DragState({
+final class DragState {
+  const DragState({
     required this.fromCol,
     required this.fromIndex,
     required this.card,
@@ -52,13 +52,13 @@ final class _DragState {
   final int? hoverCol;
   final int? hoverIndex;
 
-  _DragState copyWith({
+  DragState copyWith({
     int? x,
     int? y,
     Object? hoverCol = _undefined,
     Object? hoverIndex = _undefined,
   }) {
-    return _DragState(
+    return DragState(
       fromCol: fromCol,
       fromIndex: fromIndex,
       card: card,
@@ -74,8 +74,8 @@ final class _DragState {
 
 const _undefined = Object();
 
-final class _ModalState {
-  const _ModalState({
+final class ModalState {
+  const ModalState({
     required this.targetCol,
     required this.insertIndex,
     required this.width,
@@ -93,7 +93,7 @@ final class _ModalState {
   final int y;
   final tui.TextInputModel input;
 
-  _ModalState copyWith({
+  ModalState copyWith({
     int? targetCol,
     int? insertIndex,
     int? width,
@@ -102,7 +102,7 @@ final class _ModalState {
     int? y,
     tui.TextInputModel? input,
   }) {
-    return _ModalState(
+    return ModalState(
       targetCol: targetCol ?? this.targetCol,
       insertIndex: insertIndex ?? this.insertIndex,
       width: width ?? this.width,
@@ -131,7 +131,7 @@ final class TrelloModel implements tui.Model {
   factory TrelloModel.initial() {
     return TrelloModel(
       columns: const [
-        _BoardColumn(
+        BoardColumn(
           title: 'Backlog',
           cards: [
             'Add Trello example',
@@ -140,11 +140,11 @@ final class TrelloModel implements tui.Model {
             'Scroll columns',
           ],
         ),
-        _BoardColumn(
+        BoardColumn(
           title: 'Doing',
           cards: ['Viewport selection parity', 'UV renderer fixes'],
         ),
-        _BoardColumn(
+        BoardColumn(
           title: 'Done',
           cards: [
             'Kitchen sink split files',
@@ -168,19 +168,19 @@ final class TrelloModel implements tui.Model {
     );
   }
 
-  final List<_BoardColumn> columns;
+  final List<BoardColumn> columns;
   final int width;
   final int height;
   final int focusCol;
   final int focusIndex;
   final List<int> colScroll;
-  final _DragState? drag;
-  final _ModalState? modal;
+  final DragState? drag;
+  final ModalState? modal;
   final DebugOverlayModel debug;
   final String theme;
 
   TrelloModel copyWith({
-    List<_BoardColumn>? columns,
+    List<BoardColumn>? columns,
     int? width,
     int? height,
     int? focusCol,
@@ -198,8 +198,8 @@ final class TrelloModel implements tui.Model {
       focusCol: focusCol ?? this.focusCol,
       focusIndex: focusIndex ?? this.focusIndex,
       colScroll: colScroll ?? this.colScroll,
-      drag: drag == _undefined ? this.drag : drag as _DragState?,
-      modal: modal == _undefined ? this.modal : modal as _ModalState?,
+      drag: drag == _undefined ? this.drag : drag as DragState?,
+      modal: modal == _undefined ? this.modal : modal as ModalState?,
       debug: debug ?? this.debug,
       theme: theme ?? this.theme,
     );
@@ -457,7 +457,7 @@ final class TrelloModel implements tui.Model {
     final focusCmd = input.focus();
 
     final modal = _layoutModal(
-      _ModalState(
+      ModalState(
         targetCol: col,
         insertIndex: insertAt,
         width: w,
@@ -470,7 +470,7 @@ final class TrelloModel implements tui.Model {
     return (copyWith(modal: modal, drag: null), focusCmd);
   }
 
-  _ModalState _layoutModal(_ModalState m) {
+  ModalState _layoutModal(ModalState m) {
     final x = ((width - m.width) ~/ 2).clamp(0, math.max(0, width - 1)).toInt();
     final y = ((height - m.height) ~/ 2)
         .clamp(0, math.max(0, height - 1))
@@ -478,7 +478,7 @@ final class TrelloModel implements tui.Model {
     return m.copyWith(x: x, y: y);
   }
 
-  (tui.Model, tui.Cmd?) _updateModal(_ModalState m, tui.Key key) {
+  (tui.Model, tui.Cmd?) _updateModal(ModalState m, tui.Key key) {
     if (key.type == tui.KeyType.escape) {
       return (copyWith(modal: null), null);
     }
@@ -495,7 +495,7 @@ final class TrelloModel implements tui.Model {
     return (copyWith(modal: nextModal), cmd);
   }
 
-  TrelloModel _modalPress(_ModalState m, int x, int y) {
+  TrelloModel _modalPress(ModalState m, int x, int y) {
     final inside =
         x >= m.x && x < m.x + m.width && y >= m.y && y < m.y + m.height;
     if (!inside) return copyWith(modal: null);
@@ -523,7 +523,7 @@ final class TrelloModel implements tui.Model {
     final idx = focusIndex.clamp(0, columns[col].cards.length - 1);
     final card = columns[col].cards[idx];
     return copyWith(
-      drag: _DragState(
+      drag: DragState(
         fromCol: col,
         fromIndex: idx,
         card: card,
@@ -566,7 +566,7 @@ final class TrelloModel implements tui.Model {
     return copyWith(
       focusCol: col,
       focusIndex: idx,
-      drag: _DragState(
+      drag: DragState(
         fromCol: col,
         fromIndex: idx,
         card: card,
@@ -732,7 +732,7 @@ final class TrelloModel implements tui.Model {
     return View(content: _padToScreen(composed), cursor: cursor);
   }
 
-  (String, uv.Cursor?) _renderModal(_ModalState m) {
+  (String, uv.Cursor?) _renderModal(ModalState m) {
     final prompt = _textDimStyle().render('Enter to add • Esc to cancel');
     final inputObj = m.input.view();
     final inputLine = switch (inputObj) {

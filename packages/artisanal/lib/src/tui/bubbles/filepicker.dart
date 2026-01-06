@@ -185,8 +185,8 @@ class FilePickerStyles {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Stores the view state when navigating into directories.
-class _ViewState {
-  const _ViewState(this.selected, this.min, this.max);
+class ViewState {
+  const ViewState(this.selected, this.min, this.max);
 
   final int selected;
   final int min;
@@ -338,7 +338,7 @@ class FilePickerModel extends ViewComponent {
     required int min,
     required int max,
     required String? selectedPath,
-    required List<_ViewState> selectedStack,
+    required List<ViewState> selectedStack,
     required int id,
     String? errorMessage,
   }) : _currentDirectory = currentDirectory,
@@ -383,7 +383,7 @@ class FilePickerModel extends ViewComponent {
   int _min;
   int _max;
   final String? _selectedPath;
-  final List<_ViewState> _selectedStack;
+  final List<ViewState> _selectedStack;
   final int _id;
   final String? _errorMessage;
 
@@ -466,7 +466,7 @@ class FilePickerModel extends ViewComponent {
     int? max,
     String? selectedPath,
     bool clearSelectedPath = false,
-    List<_ViewState>? selectedStack,
+    List<ViewState>? selectedStack,
     int? id,
     String? errorMessage,
     bool clearError = false,
@@ -726,7 +726,7 @@ class FilePickerModel extends ViewComponent {
     final parentDir = p.dirname(_currentDirectory);
 
     // Pop view state if available
-    final List<_ViewState> newStack;
+    final List<ViewState> newStack;
     final int newSelected;
     final int newMin;
     final int newMax;
@@ -812,7 +812,7 @@ class FilePickerModel extends ViewComponent {
     final newDir = p.join(_currentDirectory, file.name);
 
     // Push current view state
-    final newStack = [..._selectedStack, _ViewState(_selected, _min, _max)];
+    final newStack = [..._selectedStack, ViewState(_selected, _min, _max)];
 
     return (
       copyWith(

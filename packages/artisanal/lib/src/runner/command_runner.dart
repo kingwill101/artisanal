@@ -1,6 +1,6 @@
 import 'dart:io' as dartio;
 
-import 'package:args/command_runner.dart' as args;
+import 'package:args/command_runner.dart' as args_pkg;
 import 'package:args/command_runner.dart' show UsageException;
 export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
 
@@ -42,7 +42,7 @@ typedef ExitCodeSetter = void Function(int code);
 ///
 /// await runner.run(args);
 /// ```
-class CommandRunner<T> extends args.CommandRunner<T> {
+class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// Creates a new command runner.
   ///
   /// - [executableName]: The name of the executable (shown in usage).
@@ -118,7 +118,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
   String get usage => formatGlobalUsage();
 
   @override
-  Never usageException(String message) => throw args.UsageException(
+  Never usageException(String message) => throw args_pkg.UsageException(
     message,
     formatGlobalUsage(includeDescription: false),
   );
@@ -133,8 +133,8 @@ class CommandRunner<T> extends args.CommandRunner<T> {
   void printUsage() => writeOut(formatGlobalUsage());
 
   @override
-  Future<T?> run(Iterable<String> arguments) async {
-    final ansi = _resolveAnsiForArgs(arguments);
+  Future<T?> run(Iterable<String> args) async {
+    final ansi = _resolveAnsiForArgs(args);
     if (_rendererInjected) {
       // Deterministic behavior for tests: respect explicit --ansi/--no-ansi but
       // do not auto-detect terminal capabilities.
@@ -156,13 +156,13 @@ class CommandRunner<T> extends args.CommandRunner<T> {
       }
     }
 
-    _verbosity = _resolveVerbosityForArgs(arguments);
-    _interactive = _resolveInteractiveForArgs(arguments);
+    _verbosity = _resolveVerbosityForArgs(args);
+    _interactive = _resolveInteractiveForArgs(args);
     _io = null;
 
     try {
-      return await super.run(arguments);
-    } on args.UsageException catch (e) {
+      return await super.run(args);
+    } on args_pkg.UsageException catch (e) {
       _printUsageError(e);
       _setExitCode(usageExitCode);
       return null;
@@ -234,7 +234,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
   }
 
   Iterable<CommandListingEntry> _uniqueTopLevelEntries() {
-    final seen = <args.Command<T>>{};
+    final seen = <args_pkg.Command<T>>{};
     final unique = <CommandListingEntry>[];
     for (final cmd in commands.values) {
       if (!seen.add(cmd)) continue;
@@ -245,7 +245,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
     return unique;
   }
 
-  void _printUsageError(args.UsageException e) {
+  void _printUsageError(args_pkg.UsageException e) {
     final message = e.message.trim();
     if (message.isNotEmpty) {
       writeErr(_error('Error: $message'));

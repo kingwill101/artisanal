@@ -9,19 +9,22 @@ import 'package:artisanal/tui.dart' as tui;
 
 // #region viewport_usage
 class PagerModel implements tui.Model {
-  PagerModel({required this.content, tui.ViewportModel? viewport})
-    : viewport = viewport ?? tui.ViewportModel();
+  PagerModel({
+    required this.content,
+    tui.ViewportModel? viewport,
+    this.ready = false,
+  }) : viewport = viewport ?? tui.ViewportModel();
 
   final String content;
   final tui.ViewportModel viewport;
-  final bool ready = false;
+  final bool ready;
 
   PagerModel copyWith({
     String? content,
     tui.ViewportModel? viewport,
     bool? ready,
   }) {
-    return _PagerState(
+    return PagerModel(
       content: content ?? this.content,
       viewport: viewport ?? this.viewport,
       ready: ready ?? this.ready,
@@ -93,17 +96,6 @@ class PagerModel implements tui.Model {
   }
 }
 // #endregion
-
-class _PagerState extends PagerModel {
-  _PagerState({
-    required super.content,
-    required super.viewport,
-    required this.ready,
-  });
-
-  @override
-  final bool ready;
-}
 
 String _hLine(int width) => width <= 0 ? '' : '─' * width;
 int _widthOf(String text) => Style.visibleLength(text);

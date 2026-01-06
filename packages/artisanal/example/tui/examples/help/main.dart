@@ -34,12 +34,10 @@ class HelpModel implements tui.Model {
   HelpModel({
     HelpKeys? keys,
     tui.HelpModel? help,
-    String lastKey = '',
-    bool quitting = false,
+    this.lastKey = '',
+    this.quitting = false,
   }) : keys = keys ?? HelpKeys(),
        help = help ?? tui.HelpModel(),
-       lastKey = lastKey,
-       quitting = quitting,
        inputStyle = Style().foreground(const AnsiColor(204));
 
   final HelpKeys keys;

@@ -39,8 +39,8 @@ class Help {
 class KeyBinding {
   /// Creates a new key binding.
   KeyBinding({List<String>? keys, Help? help, bool disabled = false})
-    : _keys = keys ?? [],
-      _help = help ?? const Help(),
+    : keys = keys ?? [],
+      help = help ?? const Help(),
       _disabled = disabled;
 
   /// Creates a key binding with the given keys.
@@ -56,28 +56,23 @@ class KeyBinding {
     );
   }
 
-  List<String> _keys;
-  Help _help;
-  bool _disabled;
-
   /// The keys that trigger this binding.
-  List<String> get keys => _keys;
-
-  /// Sets the keys for this binding.
-  set keys(List<String> value) => _keys = value;
+  List<String> keys;
 
   /// The help information for this binding.
-  Help get help => _help;
+  Help help;
+
+  bool _disabled;
 
   /// Sets the help text for this binding.
   void setHelp(String key, String desc) {
-    _help = Help(key: key, desc: desc);
+    help = Help(key: key, desc: desc);
   }
 
   /// Whether this binding is enabled.
   ///
   /// Disabled bindings won't be activated and won't show up in help.
-  bool get enabled => !_disabled && _keys.isNotEmpty;
+  bool get enabled => !_disabled && keys.isNotEmpty;
 
   /// Enables or disables this binding.
   set enabled(bool value) => _disabled = !value;
@@ -90,8 +85,8 @@ class KeyBinding {
 
   /// Removes the keys and help from this binding, effectively nullifying it.
   void unbind() {
-    _keys = [];
-    _help = const Help();
+    keys = [];
+    help = const Help();
   }
 }
 

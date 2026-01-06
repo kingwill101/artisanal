@@ -1,4 +1,5 @@
 import 'package:artisanal/src/tui/bubbles/stopwatch.dart';
+import 'package:artisanal/src/tui/cmd.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:test/test.dart';
 
@@ -196,7 +197,7 @@ void main() {
           );
           stopwatch = updated;
 
-          var cmd;
+          Cmd? cmd;
           (updated, cmd) = stopwatch.update(
             StopwatchTickMsg(DateTime.now(), stopwatch.tag, stopwatch.id),
           );

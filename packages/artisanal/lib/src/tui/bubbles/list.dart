@@ -373,8 +373,8 @@ class ListStyles {
     Style? noItems,
     Style? paginationStyle,
     Style? helpStyle,
-    String? activePaginationDot,
-    String? inactivePaginationDot,
+    this.activePaginationDot,
+    this.inactivePaginationDot,
     Style? arabicPagination,
     Style? spinner,
     Style? dividerDot,
@@ -389,8 +389,6 @@ class ListStyles {
        noItems = noItems ?? Style(),
        paginationStyle = paginationStyle ?? Style(),
        helpStyle = helpStyle ?? Style(),
-       activePaginationDot = activePaginationDot,
-       inactivePaginationDot = inactivePaginationDot,
        arabicPagination = arabicPagination ?? Style(),
        spinner = spinner ?? Style(),
        dividerDot = dividerDot ?? Style();
@@ -521,14 +519,14 @@ class ListModel extends ViewComponent {
            statusMessageLifetime ?? const Duration(seconds: 1),
        _width = width,
        _height = height {
-    _paginator = PaginatorModel(
+    paginator = PaginatorModel(
       type: PaginationType.dots,
       activeDot: this.styles.activePaginationDot ?? '●',
       inactiveDot: this.styles.inactivePaginationDot ?? '○',
     );
-    _filterInput = TextInputModel(prompt: 'Filter: ', charLimit: 64);
-    _spinner = SpinnerModel(spinner: Spinners.line);
-    _help = HelpModel();
+    filterInput = TextInputModel(prompt: 'Filter: ', charLimit: 64);
+    spinner = SpinnerModel(spinner: Spinners.line);
+    help = HelpModel();
     _updatePagination();
   }
 
@@ -575,10 +573,10 @@ class ListModel extends ViewComponent {
   List<ListItem> _items;
   final ItemDelegate _delegate;
   final FilterFunc _filter;
-  late PaginatorModel _paginator;
-  late TextInputModel _filterInput;
-  late SpinnerModel _spinner;
-  late HelpModel _help;
+  late PaginatorModel paginator;
+  late TextInputModel filterInput;
+  late SpinnerModel spinner;
+  late HelpModel help;
   int _cursor = 0;
   int _width;
   int _height;
@@ -701,16 +699,13 @@ class ListModel extends ViewComponent {
   void setSize(int width, int height) {
     _width = width;
     _height = height;
-    _help = _help.copyWith(width: width);
+    help = help.copyWith(width: width);
     // Update filter input width
-    final promptWidth = styles.title.render(_filterInput.prompt).length;
-    _filterInput.width = width - promptWidth;
+    final promptWidth = styles.title.render(filterInput.prompt).length;
+    filterInput.width = width - promptWidth;
     _updatePagination();
     updateKeybindings();
   }
-
-  /// Gets the spinner model.
-  SpinnerModel get spinner => _spinner;
 
   /// Whether the spinner is currently showing.
   bool get isShowingSpinner => _showSpinner;
@@ -718,18 +713,15 @@ class ListModel extends ViewComponent {
   /// Gets the current status message.
   String get statusMessage => _statusMessage;
 
-  /// Sets the spinner model.
-  set spinner(SpinnerModel value) => _spinner = value;
-
   /// Sets the spinner animation.
   void setSpinner(Spinner s) {
-    _spinner = _spinner.copyWith(spinner: s);
+    spinner = spinner.copyWith(spinner: s);
   }
 
   /// Starts the spinner.
   Cmd? startSpinner() {
     _showSpinner = true;
-    return _spinner.tick();
+    return spinner.tick();
   }
 
   /// Stops the spinner.
@@ -746,24 +738,6 @@ class ListModel extends ViewComponent {
     return startSpinner();
   }
 
-  /// Gets the filter input model.
-  TextInputModel get filterInput => _filterInput;
-
-  /// Sets the filter input model.
-  set filterInput(TextInputModel value) => _filterInput = value;
-
-  /// Gets the paginator model.
-  PaginatorModel get paginator => _paginator;
-
-  /// Sets the paginator model.
-  set paginator(PaginatorModel value) => _paginator = value;
-
-  /// Gets the help model.
-  HelpModel get help => _help;
-
-  /// Sets the help model.
-  set help(HelpModel value) => _help = value;
-
   /// Gets visible items (filtered or all).
   List<ListItem> get visibleItems {
     if (_filterState != FilterState.unfiltered) {
@@ -773,7 +747,7 @@ class ListModel extends ViewComponent {
   }
 
   /// Gets the current index in the visible items.
-  int get index => _paginator.page * _paginator.perPage + _cursor;
+  int get index => paginator.page * paginator.perPage + _cursor;
 
   /// Gets the global index in the unfiltered items.
   int get globalIndex {
@@ -809,7 +783,7 @@ class ListModel extends ViewComponent {
   FilterState get filterState => _filterState;
 
   /// Gets the current filter value.
-  String get filterValue => _filterInput.value;
+  String get filterValue => filterInput.value;
 
   /// Whether currently setting a filter.
   bool get settingFilter => _filterState == FilterState.filtering;
@@ -820,7 +794,7 @@ class ListModel extends ViewComponent {
   /// Move cursor up.
   void cursorUp() {
     _cursor--;
-    if (_cursor < 0 && _paginator.onFirstPage) {
+    if (_cursor < 0 && paginator.onFirstPage) {
       if (infiniteScrolling) {
         goToEnd();
         return;
@@ -829,7 +803,7 @@ class ListModel extends ViewComponent {
       return;
     }
     if (_cursor >= 0) return;
-    _paginator.prevPage();
+    paginator.prevPage();
     _cursor = _maxCursorIndex();
   }
 
@@ -838,8 +812,8 @@ class ListModel extends ViewComponent {
     final maxIdx = _maxCursorIndex();
     _cursor++;
     if (_cursor <= maxIdx) return;
-    if (!_paginator.onLastPage) {
-      _paginator.nextPage();
+    if (!paginator.onLastPage) {
+      paginator.nextPage();
       _cursor = 0;
       return;
     }
@@ -851,34 +825,34 @@ class ListModel extends ViewComponent {
 
   /// Go to start.
   void goToStart() {
-    _paginator = _paginator.copyWith(page: 0);
+    paginator = paginator.copyWith(page: 0);
     _cursor = 0;
   }
 
   /// Go to end.
   void goToEnd() {
-    _paginator = _paginator.copyWith(
-      page: math.max(0, _paginator.totalPages - 1),
+    paginator = paginator.copyWith(
+      page: math.max(0, paginator.totalPages - 1),
     );
     _cursor = _maxCursorIndex();
   }
 
   /// Go to previous page.
   void prevPage() {
-    _paginator = _paginator.prevPage();
+    paginator = paginator.prevPage();
     _cursor = _cursor.clamp(0, _maxCursorIndex());
   }
 
   /// Go to next page.
   void nextPage() {
-    _paginator = _paginator.nextPage();
+    paginator = paginator.nextPage();
     _cursor = _cursor.clamp(0, _maxCursorIndex());
   }
 
   /// Select item at index.
   void select(int index) {
-    _paginator = _paginator.copyWith(page: index ~/ _paginator.perPage);
-    _cursor = index % _paginator.perPage;
+    paginator = paginator.copyWith(page: index ~/ paginator.perPage);
+    _cursor = index % paginator.perPage;
   }
 
   /// Reset selection to start.
@@ -929,7 +903,7 @@ class ListModel extends ViewComponent {
         keyMap.filter.disable();
         keyMap.clearFilter.disable();
         keyMap.cancelWhileFiltering.enable();
-        keyMap.acceptWhileFiltering.enabled = _filterInput.value.isNotEmpty;
+        keyMap.acceptWhileFiltering.enabled = filterInput.value.isNotEmpty;
         keyMap.quit.disable();
         keyMap.showFullHelp.disable();
         keyMap.closeFullHelp.disable();
@@ -940,7 +914,7 @@ class ListModel extends ViewComponent {
         keyMap.cursorUp.enabled = hasItems;
         keyMap.cursorDown.enabled = hasItems;
 
-        final hasPages = _paginator.totalPages > 1;
+        final hasPages = paginator.totalPages > 1;
         keyMap.nextPage.enabled = hasPages;
         keyMap.prevPage.enabled = hasPages;
 
@@ -959,13 +933,13 @@ class ListModel extends ViewComponent {
   }
 
   int _maxCursorIndex() {
-    return math.max(0, _paginator.itemsOnPage(visibleItems.length) - 1);
+    return math.max(0, paginator.itemsOnPage(visibleItems.length) - 1);
   }
 
   void _resetFiltering() {
     if (_filterState == FilterState.unfiltered) return;
     _filterState = FilterState.unfiltered;
-    _filterInput.reset();
+    filterInput.reset();
     _filteredItems = [];
     _updatePagination();
     updateKeybindings();
@@ -973,7 +947,7 @@ class ListModel extends ViewComponent {
 
   void _runFilter() {
     final targets = _items.map((i) => i.filterValue()).toList();
-    final ranks = _filter(_filterInput.value, targets);
+    final ranks = _filter(filterInput.value, targets);
     _filteredItems = ranks
         .map(
           (r) => FilteredItem(
@@ -1002,7 +976,7 @@ class ListModel extends ViewComponent {
       availHeight -= 1; // Help line
     }
 
-    _paginator = _paginator.copyWith(
+    paginator = paginator.copyWith(
       perPage: math.max(
         1,
         availHeight ~/ (_delegate.height + _delegate.spacing),
@@ -1011,19 +985,19 @@ class ListModel extends ViewComponent {
 
     final pages = visibleItems.length;
     if (pages < 1) {
-      _paginator = _paginator.setTotalPages(1);
+      paginator = paginator.setTotalPages(1);
     } else {
-      _paginator = _paginator.setTotalPages(pages);
+      paginator = paginator.setTotalPages(pages);
     }
 
     // Restore index
-    _paginator = _paginator.copyWith(page: idx ~/ _paginator.perPage);
-    _cursor = idx % _paginator.perPage;
+    paginator = paginator.copyWith(page: idx ~/ paginator.perPage);
+    _cursor = idx % paginator.perPage;
 
     // Keep page in bounds
-    if (_paginator.page >= _paginator.totalPages - 1) {
-      _paginator = _paginator.copyWith(
-        page: math.max(0, _paginator.totalPages - 1),
+    if (paginator.page >= paginator.totalPages - 1) {
+      paginator = paginator.copyWith(
+        page: math.max(0, paginator.totalPages - 1),
       );
     }
   }
@@ -1047,8 +1021,8 @@ class ListModel extends ViewComponent {
     }
 
     if (msg is SpinnerTickMsg) {
-      final (newSpinner, cmd) = _spinner.update(msg);
-      _spinner = newSpinner;
+      final (newSpinner, cmd) = spinner.update(msg);
+      spinner = newSpinner;
       if (_showSpinner && cmd != null) cmds.add(cmd);
     }
 
@@ -1089,11 +1063,11 @@ class ListModel extends ViewComponent {
         goToEnd();
       } else if (keyMatches(msg.key, [keyMap.showFullHelp]) ||
           keyMatches(msg.key, [keyMap.closeFullHelp])) {
-        _help = _help.copyWith(showAll: !_help.showAll);
+        help = help.copyWith(showAll: !help.showAll);
         _updatePagination();
       } else if (keyMatches(msg.key, [keyMap.filter]) && filteringEnabled) {
         hideStatusMessage();
-        if (_filterInput.value.isEmpty) {
+        if (filterInput.value.isEmpty) {
           _filteredItems = _items
               .asMap()
               .entries
@@ -1102,8 +1076,8 @@ class ListModel extends ViewComponent {
         }
         goToStart();
         _filterState = FilterState.filtering;
-        _filterInput.cursorEnd();
-        final focusCmd = _filterInput.focus();
+        filterInput.cursorEnd();
+        final focusCmd = filterInput.focus();
         if (focusCmd != null) cmds.add(focusCmd);
         updateKeybindings();
       }
@@ -1132,20 +1106,20 @@ class ListModel extends ViewComponent {
           _resetFiltering();
           return Cmd.batch(cmds);
         }
-        _filterInput.blur();
+        filterInput.blur();
         _filterState = FilterState.filterApplied;
         updateKeybindings();
-        if (_filterInput.value.isEmpty) {
+        if (filterInput.value.isEmpty) {
           _resetFiltering();
         }
       } else {
         // Forward to filter input
-        final oldValue = _filterInput.value;
-        final (_, inputCmd) = _filterInput.update(msg);
+        final oldValue = filterInput.value;
+        final (_, inputCmd) = filterInput.update(msg);
         if (inputCmd != null) cmds.add(inputCmd);
 
         // If changed, re-run filter
-        if (_filterInput.value != oldValue) {
+        if (filterInput.value != oldValue) {
           _runFilter();
           updateKeybindings();
         }
@@ -1203,7 +1177,7 @@ class ListModel extends ViewComponent {
     var view = '';
     var titleBarStyle = styles.titleBar;
 
-    final spinnerView = _spinner.view();
+    final spinnerView = spinner.view();
     final spinnerWidth = spinnerView.length;
     const spinnerLeftGap = ' ';
     final spinnerOnLeft =
@@ -1211,7 +1185,7 @@ class ListModel extends ViewComponent {
         _showSpinner;
 
     if (showFilter && _filterState == FilterState.filtering) {
-      view += _filterInput.view() as String;
+      view += filterInput.view() as String;
     } else if (showTitle) {
       if (_showSpinner && spinnerOnLeft) {
         view += spinnerView + spinnerLeftGap;
@@ -1270,7 +1244,7 @@ class ListModel extends ViewComponent {
     } else {
       final filtered = _filterState == FilterState.filterApplied;
       if (filtered) {
-        var f = _filterInput.value.trim();
+        var f = filterInput.value.trim();
         if (f.length > 10) f = '${f.substring(0, 9)}…';
         status += '“$f” ';
       }
@@ -1287,19 +1261,19 @@ class ListModel extends ViewComponent {
   }
 
   String _paginationView() {
-    if (_paginator.totalPages < 2) {
+    if (paginator.totalPages < 2) {
       return '';
     }
 
-    var s = _paginator.view();
+    var s = paginator.view();
 
     // If the dot pagination is wider than the width of the window
     // use the arabic paginator.
     if (s.length > _width) {
-      final oldType = _paginator.type;
-      _paginator = _paginator.copyWith(type: PaginationType.arabic);
-      s = styles.arabicPagination.render(_paginator.view());
-      _paginator = _paginator.copyWith(type: oldType);
+      final oldType = paginator.type;
+      paginator = paginator.copyWith(type: PaginationType.arabic);
+      s = styles.arabicPagination.render(paginator.view());
+      paginator = paginator.copyWith(type: oldType);
     }
 
     var style = styles.paginationStyle;
@@ -1311,7 +1285,7 @@ class ListModel extends ViewComponent {
   }
 
   String _helpView() {
-    return styles.helpStyle.render(_help.view(keyMap));
+    return styles.helpStyle.render(help.view(keyMap));
   }
 
   String _populatedView(int height) {
@@ -1325,8 +1299,8 @@ class ListModel extends ViewComponent {
     }
 
     final buffer = StringBuffer();
-    final start = _paginator.page * _paginator.perPage;
-    final end = math.min(start + _paginator.perPage, items.length);
+    final start = paginator.page * paginator.perPage;
+    final end = math.min(start + paginator.perPage, items.length);
     final docs = items.sublist(start, end);
 
     for (var i = 0; i < docs.length; i++) {
@@ -1337,10 +1311,10 @@ class ListModel extends ViewComponent {
     }
 
     // Pad to fill available height
-    final itemsOnPage = _paginator.itemsOnPage(items.length);
-    if (itemsOnPage < _paginator.perPage) {
+    final itemsOnPage = paginator.itemsOnPage(items.length);
+    if (itemsOnPage < paginator.perPage) {
       var n =
-          (_paginator.perPage - itemsOnPage) *
+          (paginator.perPage - itemsOnPage) *
           (_delegate.height + _delegate.spacing);
       if (items.isEmpty) {
         n -= _delegate.height - 1;

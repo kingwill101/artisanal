@@ -15,7 +15,13 @@ class PreventQuitKeys {
 }
 
 class PreventQuitModel implements tui.Model {
-  PreventQuitModel({tui.TextAreaModel? textarea, PreventQuitKeys? keys})
+  PreventQuitModel({
+    tui.TextAreaModel? textarea,
+    PreventQuitKeys? keys,
+    this.saveText = '',
+    this.hasChanges = false,
+    this.quitting = false,
+  })
     : textarea =
           textarea ?? tui.TextAreaModel(placeholder: 'Only the best words')
             ..focus(),
@@ -23,37 +29,26 @@ class PreventQuitModel implements tui.Model {
 
   final tui.TextAreaModel textarea;
   final PreventQuitKeys keys;
-  final String saveText = '';
-  final bool hasChanges = false;
-  final bool quitting = false;
+  final String saveText;
+  final bool hasChanges;
+  final bool quitting;
 
   PreventQuitModel copyWith({
     tui.TextAreaModel? textarea,
+    PreventQuitKeys? keys,
     String? saveText,
     bool? hasChanges,
     bool? quitting,
   }) {
     return PreventQuitModel(
       textarea: textarea ?? this.textarea,
-      keys: keys,
-    )._withState(
-      saveText ?? this.saveText,
-      hasChanges ?? this.hasChanges,
-      quitting ?? this.quitting,
+      keys: keys ?? this.keys,
+      saveText: saveText ?? this.saveText,
+      hasChanges: hasChanges ?? this.hasChanges,
+      quitting: quitting ?? this.quitting,
     );
   }
 
-  PreventQuitModel _withState(String saveText, bool hasChanges, bool quitting) {
-    return _PreventQuitStateful(
-      textarea: textarea,
-      keys: keys,
-      saveText: saveText,
-      hasChanges: hasChanges,
-      quitting: quitting,
-    );
-  }
-
-  @override
   @override
   tui.Cmd? init() => textarea.focus();
 
@@ -77,7 +72,14 @@ class PreventQuitModel implements tui.Model {
           hasChanges = false;
         } else if (key.matchesSingle(keys.quit)) {
           quitting = true;
-          return (_withState(saveText, hasChanges, quitting), tui.Cmd.quit());
+          return (
+            copyWith(
+              saveText: saveText,
+              hasChanges: hasChanges,
+              quitting: quitting,
+            ),
+            tui.Cmd.quit(),
+          );
         } else if (key.type == tui.KeyType.runes) {
           saveText = '';
           hasChanges = true;
@@ -94,11 +96,12 @@ class PreventQuitModel implements tui.Model {
     if (cmd != null) cmds.add(cmd);
 
     return (
-      _withState(
-        saveText,
-        hasChanges,
-        quitting,
-      ).copyWith(textarea: newTextarea),
+      copyWith(
+        saveText: saveText,
+        hasChanges: hasChanges,
+        quitting: quitting,
+        textarea: newTextarea,
+      ),
       cmds.isNotEmpty ? tui.Cmd.batch(cmds) : null,
     );
   }
@@ -111,10 +114,16 @@ class PreventQuitModel implements tui.Model {
           msg.key.runes.isNotEmpty &&
           msg.key.runes.first == 0x79; // y
       if (msg.key.matchesSingle(keys.quit) || isYes) {
-        return (_withState(saveText, false, true), tui.Cmd.quit());
+        return (
+          copyWith(saveText: saveText, hasChanges: false, quitting: true),
+          tui.Cmd.quit(),
+        );
       }
       // Cancel quit
-      return (_withState(saveText, hasChanges, false), null);
+      return (
+        copyWith(saveText: saveText, hasChanges: hasChanges, quitting: false),
+        null,
+      );
     }
     return (this, null);
   }
@@ -147,26 +156,6 @@ class PreventQuitModel implements tui.Model {
         '${textarea.view()}\n\n '
         '$saveTextStyled\n $help\n\n';
   }
-}
-
-/// Internal class to hold mutable flags immutably.
-class _PreventQuitStateful extends PreventQuitModel {
-  _PreventQuitStateful({
-    required super.textarea,
-    required PreventQuitKeys keys,
-    required this.saveText,
-    required this.hasChanges,
-    required this.quitting,
-  }) : super(keys: keys);
-
-  @override
-  final String saveText;
-
-  @override
-  final bool hasChanges;
-
-  @override
-  final bool quitting;
 }
 
 tui.Msg? preventQuitFilter(tui.Model model, tui.Msg msg) {

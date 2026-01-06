@@ -1,4 +1,4 @@
-name: _
+name: ormed_workspace
 publish_to: none
 workspace:
   - packages/ormed
