@@ -21,11 +21,10 @@ class PreventQuitModel implements tui.Model {
     this.saveText = '',
     this.hasChanges = false,
     this.quitting = false,
-  })
-    : textarea =
-          textarea ?? tui.TextAreaModel(placeholder: 'Only the best words')
-            ..focus(),
-      keys = keys ?? PreventQuitKeys();
+  }) : textarea =
+           textarea ?? tui.TextAreaModel(placeholder: 'Only the best words')
+             ..focus(),
+       keys = keys ?? PreventQuitKeys();
 
   final tui.TextAreaModel textarea;
   final PreventQuitKeys keys;

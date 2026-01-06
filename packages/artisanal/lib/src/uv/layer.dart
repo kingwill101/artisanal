@@ -33,6 +33,7 @@
 /// // void paint(Screen scr) => comp.draw(scr, comp.bounds());
 /// ```
 library;
+
 import 'dart:math' as math;
 
 import 'canvas.dart';

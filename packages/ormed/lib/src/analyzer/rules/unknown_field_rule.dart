@@ -125,5 +125,4 @@ class _Visitor extends SimpleAstVisitor<void> {
 
     rule.reportAtNode(expression, arguments: [value, modelInfo.modelName]);
   }
-
 }

@@ -516,6 +516,7 @@ void main() {
       Style? func(String line, int lineIndex) {
         return Style().bold();
       }
+
       expect(func('test', 0), isA<Style>());
     });
 
@@ -523,6 +524,7 @@ void main() {
       Style? func(String line, int lineIndex) {
         return null;
       }
+
       expect(func('test', 0), isNull);
     });
   });

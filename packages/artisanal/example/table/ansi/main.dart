@@ -2,6 +2,7 @@
 ///
 /// Demonstrates a simple table with styled cell values.
 library;
+
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';

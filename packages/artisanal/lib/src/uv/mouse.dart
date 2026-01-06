@@ -18,6 +18,7 @@
 /// final name = MouseButton.toName(MouseButton.left); // "left"
 /// ```
 library;
+
 import 'key.dart';
 
 /// Mouse mode.

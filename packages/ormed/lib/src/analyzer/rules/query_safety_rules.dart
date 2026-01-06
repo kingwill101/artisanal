@@ -101,7 +101,8 @@ class GetWithoutLimitRule extends AnalysisRule {
   GetWithoutLimitRule()
     : super(
         name: 'ormed_get_without_limit',
-        description: 'Warns when get/rows/getPartial is called without a limit.',
+        description:
+            'Warns when get/rows/getPartial is called without a limit.',
       );
 
   @override
@@ -258,8 +259,10 @@ bool _isAllInvocation(MethodInvocation node) {
   }
 
   final target = node.realTarget ?? node.target;
-  final modelCompanionType =
-      modelTypeNameFromExpression(target, 'ModelCompanion');
+  final modelCompanionType = modelTypeNameFromExpression(
+    target,
+    'ModelCompanion',
+  );
   if (modelCompanionType != null) return true;
 
   return false;
@@ -444,14 +447,15 @@ _QueryChainState? _stateFromExpression(
   }
   if (expression is CascadeExpression) {
     if (!_isQueryType(expression.staticType)) return null;
-    final base = _stateFromExpression(expression.target, state) ??
-        _QueryChainState();
+    final base =
+        _stateFromExpression(expression.target, state) ?? _QueryChainState();
     base.merge(_modifiersFromCascade(expression));
     return base;
   }
   if (expression is MethodInvocation) {
     if (!_isQueryType(expression.staticType)) return null;
-    final base = _stateFromExpression(
+    final base =
+        _stateFromExpression(
           expression.realTarget ?? expression.target,
           state,
         ) ??
@@ -563,9 +567,7 @@ const Set<String> _whereMethods = {
   'orWhereHasTyped',
 };
 
-const Set<String> _limitMethods = {
-  'limit',
-};
+const Set<String> _limitMethods = {'limit'};
 
 const Set<String> _orderMethods = {
   'orderBy',

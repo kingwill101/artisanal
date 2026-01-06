@@ -73,9 +73,7 @@ class AltScreenModel implements tui.Model {
         .background(const AnsiColor(235));
     final helpStyle = Style().foreground(const AnsiColor(241));
 
-    return '\n\n  You\'re in ${keywordStyle.render(mode)}\n\n\n${helpStyle.render(
-          '  space: switch modes • ctrl-z: suspend • q/esc: exit\n',
-        )}';
+    return '\n\n  You\'re in ${keywordStyle.render(mode)}\n\n\n${helpStyle.render('  space: switch modes • ctrl-z: suspend • q/esc: exit\n')}';
   }
 }
 

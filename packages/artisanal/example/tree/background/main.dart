@@ -2,6 +2,7 @@
 ///
 /// Demonstrates tree with background colors on items and enumerators.
 library;
+
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';

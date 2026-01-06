@@ -26,6 +26,7 @@
 /// renderer.flush();
 /// ```
 library;
+
 import 'ansi.dart';
 import 'cell.dart';
 import 'drawable.dart';

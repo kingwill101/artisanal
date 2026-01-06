@@ -12,7 +12,8 @@ void main() {
 }
 
 @reflectiveTest
-class InsertMissingRequiredRuleTest extends AnalysisRuleTest with OrmedTestMixin {
+class InsertMissingRequiredRuleTest extends AnalysisRuleTest
+    with OrmedTestMixin {
   @override
   void setUp() {
     rule = InsertMissingRequiredRule();

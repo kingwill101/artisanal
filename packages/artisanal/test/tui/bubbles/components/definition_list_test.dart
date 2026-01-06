@@ -515,15 +515,17 @@ void main() {
   group('DefinitionStyleFunc', () {
     test('typedef accepts correct signature', () {
       Style? func(String term, String desc, int index, bool isTerm) {
-            return Style().bold();
-          }
+        return Style().bold();
+      }
+
       expect(func('term', 'desc', 0, true), isA<Style>());
     });
 
     test('can return null', () {
       Style? func(String term, String desc, int index, bool isTerm) {
-            return null;
-          }
+        return null;
+      }
+
       expect(func('term', 'desc', 0, true), isNull);
     });
   });

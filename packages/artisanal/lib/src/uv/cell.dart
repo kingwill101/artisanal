@@ -22,6 +22,7 @@
 /// );
 /// ```
 library;
+
 import '../unicode/width.dart';
 
 /// Upstream: `third_party/ultraviolet/cell.go` (`Link`).

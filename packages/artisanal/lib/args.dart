@@ -63,4 +63,9 @@ export 'src/runner/command.dart' show Command;
 export 'src/runner/command_listing.dart'
     show CommandListingEntry, formatCommandListing, indentBlock;
 export 'src/runner/command_runner.dart'
-    show CommandRunner, ArgParser, ArgParserException, ArgResults, UsageException;
+    show
+        CommandRunner,
+        ArgParser,
+        ArgParserException,
+        ArgResults,
+        UsageException;

@@ -19,6 +19,7 @@
 /// s.draw(screen, screen.bounds());
 /// ```
 library;
+
 import 'buffer.dart';
 import 'cell.dart';
 import 'drawable.dart';

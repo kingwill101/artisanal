@@ -182,7 +182,10 @@ class _WhereInMismatchVisitor extends SimpleAstVisitor<void> {
       if (valueCategory == null) continue;
       sawLiteral = true;
       if (valueCategory != fieldCategory) {
-        rule.reportAtNode(element, arguments: [field.name, modelInfo.modelName]);
+        rule.reportAtNode(
+          element,
+          arguments: [field.name, modelInfo.modelName],
+        );
         return;
       }
     }

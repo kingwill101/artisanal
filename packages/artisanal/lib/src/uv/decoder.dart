@@ -21,6 +21,7 @@
 /// }
 /// ```
 library;
+
 import 'dart:convert';
 
 import 'event.dart';

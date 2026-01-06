@@ -19,6 +19,7 @@
 /// final rendered = canvas.render();
 /// ```
 library;
+
 import 'cell.dart';
 import 'buffer.dart';
 import 'drawable.dart';

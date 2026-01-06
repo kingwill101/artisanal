@@ -31,7 +31,10 @@ class InsertMissingRequiredRule extends AnalysisRule {
     RuleContext context,
   ) {
     final index = OrmModelIndexCache.forContext(context);
-    registry.addMethodInvocation(this, _InsertMissingRequiredVisitor(this, index));
+    registry.addMethodInvocation(
+      this,
+      _InsertMissingRequiredVisitor(this, index),
+    );
   }
 }
 
@@ -116,10 +119,7 @@ class _UpdateMissingPkVisitor extends SimpleAstVisitor<void> {
     'updateManyRaw',
   };
 
-  static const Set<String> _queryMethods = {
-    'updateInputs',
-    'updateInputsRaw',
-  };
+  static const Set<String> _queryMethods = {'updateInputs', 'updateInputsRaw'};
 
   @override
   void visitMethodInvocation(MethodInvocation node) {
@@ -210,7 +210,10 @@ bool? _isMissingPrimaryKey(
   final pkNames = {pkField.name, pkField.columnName};
 
   if (input is InstanceCreationExpression) {
-    final dtoModel = _modelNameFromDto(input.constructorName.type.name.lexeme, 'UpdateDto');
+    final dtoModel = _modelNameFromDto(
+      input.constructorName.type.name.lexeme,
+      'UpdateDto',
+    );
     if (dtoModel == null || dtoModel != modelInfo.modelName) {
       return null;
     }
@@ -285,10 +288,7 @@ Set<String> _mapLiteralKeys(SetOrMapLiteral map) {
   return keys;
 }
 
-bool _missingFromProvided(
-  List<OrmFieldInfo> required,
-  Set<String> provided,
-) {
+bool _missingFromProvided(List<OrmFieldInfo> required, Set<String> provided) {
   for (final field in required) {
     if (!provided.contains(field.name)) {
       return true;

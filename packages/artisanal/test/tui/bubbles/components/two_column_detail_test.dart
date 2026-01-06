@@ -539,6 +539,7 @@ void main() {
       Style? func(String text, bool isLeft) {
         return Style().bold();
       }
+
       expect(func('test', true), isA<Style>());
     });
 
@@ -546,6 +547,7 @@ void main() {
       Style? func(String text, bool isLeft) {
         return null;
       }
+
       expect(func('test', true), isNull);
     });
 
@@ -555,6 +557,7 @@ void main() {
         received = isLeft;
         return null;
       }
+
       func('left', true);
       expect(received, isTrue);
     });
@@ -565,6 +568,7 @@ void main() {
         received = isLeft;
         return null;
       }
+
       func('right', false);
       expect(received, isFalse);
     });

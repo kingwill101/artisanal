@@ -344,7 +344,8 @@ void build() {
   ModelCompanion<User>().all();
 }
 ''';
-    final offset = content.indexOf('ModelCompanion<User>().all') +
+    final offset =
+        content.indexOf('ModelCompanion<User>().all') +
         'ModelCompanion<User>().'.length;
     await assertDiagnostics(content, [lint(offset, 'all'.length)]);
   }

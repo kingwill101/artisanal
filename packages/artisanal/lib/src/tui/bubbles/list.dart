@@ -831,9 +831,7 @@ class ListModel extends ViewComponent {
 
   /// Go to end.
   void goToEnd() {
-    paginator = paginator.copyWith(
-      page: math.max(0, paginator.totalPages - 1),
-    );
+    paginator = paginator.copyWith(page: math.max(0, paginator.totalPages - 1));
     _cursor = _maxCursorIndex();
   }
 

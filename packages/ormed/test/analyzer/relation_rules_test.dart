@@ -14,7 +14,8 @@ void main() {
 }
 
 @reflectiveTest
-class UnknownNestedRelationRuleTest extends AnalysisRuleTest with OrmedTestMixin {
+class UnknownNestedRelationRuleTest extends AnalysisRuleTest
+    with OrmedTestMixin {
   @override
   void setUp() {
     rule = UnknownNestedRelationRule();

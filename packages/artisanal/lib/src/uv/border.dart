@@ -29,6 +29,7 @@
 /// final rendered = canvas.render(); // -> use in your renderer
 /// ```
 library;
+
 import 'cell.dart';
 import 'drawable.dart';
 import 'geometry.dart';

@@ -64,7 +64,9 @@ void build(User user) {
 }
 ''';
     final offset = content.indexOf('withoutTimestamps');
-    await assertDiagnostics(content, [lint(offset, 'withoutTimestamps'.length)]);
+    await assertDiagnostics(content, [
+      lint(offset, 'withoutTimestamps'.length),
+    ]);
   }
 }
 
