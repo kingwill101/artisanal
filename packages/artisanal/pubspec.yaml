@@ -1,6 +1,6 @@
 name: artisanal
 description: A full-stack terminal toolkit for Dart featuring Lip Gloss styling, Bubble Tea TUI architecture, and Ultraviolet rendering.
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
 documentation: https://ormed.vercel.app/

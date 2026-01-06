@@ -1,6 +1,6 @@
 name: ormed_sqlite
 description: SQLite adapter for the routed ORM driver interface.
-version: 0.1.0-dev+6
+version: 0.1.0-dev+7
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
 documentation: https://ormed.vercel.app/
@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  ormed: ^0.1.0-dev+6
+  ormed: ^0.1.0-dev+7
   sqlite3: ^3.1.1
   meta: ^1.17.0
   path: ^1.9.1
@@ -25,4 +25,4 @@ dev_dependencies:
   lints: ^6.0.0
   build_runner: ^2.10.4
   test: ^1.28.0
-  driver_tests:
+  driver_tests: ^0.1.0-dev+7

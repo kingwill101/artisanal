@@ -7,14 +7,14 @@ environment:
   sdk: ^3.10.4
 
 dependencies:
-  artisanal: ^0.1.0
+  artisanal: ^0.1.1
   contextual: ^2.0.0
   contextual_shelf: ^0.2.0
   file_cloud: ^0.1.0
   liquify: ^1.4.1
-  ormed: ^0.1.0-dev+6
-  ormed_cli: ^0.1.0-dev+6
-  ormed_sqlite: ^0.1.0-dev+6
+  ormed: ^0.1.0-dev+7
+  ormed_cli: ^0.1.0-dev+7
+  ormed_sqlite: ^0.1.0-dev+7
   path: ^1.9.1
   shelf: ^1.4.2
   shelf_multipart: ^2.0.1

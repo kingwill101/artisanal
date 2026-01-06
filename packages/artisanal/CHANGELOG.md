@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- **Updated**: Synced release with ORMed dev+7.
+
 ## 0.1.0
 
 - **Release**: Promote Artisanal to a stable 0.1.0 release.
