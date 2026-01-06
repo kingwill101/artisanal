@@ -4,6 +4,8 @@
 
 - **Added**: Transaction outcome hooks/events that distinguish commit vs rollback (with savepoint scope details).
 - **Added**: Transaction boundary logging in query logs (BEGIN/COMMIT/ROLLBACK and savepoints).
+- **Added**: Analyzer plugin is now included in `ormed` (no separate `ormed_analyzer` package).
+- **Added**: Analyzer diagnostics for select/order/group/having validation, nested relation checks, relation callback field mismatch, missing pivot fields, type-aware predicates, query safety (limit/order + unbounded get/all), raw SQL alias checks, DTO validation, and soft-delete/timestamp misuse; supports split-chain tracking.
 - **Fixed**: `copyWith` now casts non-nullable `Object` fields to avoid analyzer errors.
 
 ## 0.1.0-dev+6
