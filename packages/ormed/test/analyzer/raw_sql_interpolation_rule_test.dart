@@ -1,7 +1,7 @@
 import 'package:analyzer_testing/analysis_rule/analysis_rule.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import 'package:ormed_analyzer/src/rules/raw_sql_interpolation_rule.dart';
+import 'package:ormed/src/analyzer/rules/raw_sql_interpolation_rule.dart';
 import 'support/ormed_test_mixin.dart';
 
 void main() {

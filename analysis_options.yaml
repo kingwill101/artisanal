@@ -1,5 +1,2 @@
 include: package:lints/recommended.yaml
 
-plugins:
-  ormed_analyzer:
-    path: packages/ormed_analyzer

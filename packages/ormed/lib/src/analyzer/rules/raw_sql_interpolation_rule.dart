@@ -46,6 +46,7 @@ class _Visitor extends SimpleAstVisitor<void> {
     'havingRaw',
     'orHavingRaw',
     'selectRaw',
+    'joinRaw',
   };
 
   static const Set<String> _rawTargets = {

@@ -1,26 +1,26 @@
 import 'package:analyzer_testing/analysis_rule/analysis_rule.dart';
 import 'package:test_reflective_loader/test_reflective_loader.dart';
 
-import 'package:ormed_analyzer/src/rules/typed_predicate_field_rule.dart';
+import 'package:ormed/src/analyzer/rules/unknown_relation_rule.dart';
 import 'support/ormed_test_mixin.dart';
 
 void main() {
   defineReflectiveSuite(() {
-    defineReflectiveTests(TypedPredicateFieldRuleTest);
+    defineReflectiveTests(UnknownRelationRuleTest);
   });
 }
 
 @reflectiveTest
-class TypedPredicateFieldRuleTest extends AnalysisRuleTest with OrmedTestMixin {
+class UnknownRelationRuleTest extends AnalysisRuleTest with OrmedTestMixin {
   @override
   void setUp() {
-    rule = TypedPredicateFieldRule();
+    rule = UnknownRelationRule();
     addMockOrmedPackage();
     writeOrmFixture();
     super.setUp();
   }
 
-  Future<void> test_unknownTypedField() async {
+  Future<void> test_unknownRelation() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -31,11 +31,10 @@ class User extends Model<User> with ModelFactoryCapable {
 }
 
 void build(Query<User> query) {
-  // ignore: undefined_getter
-  query.whereTyped((q) => q.emali.eq('a'));
+  query.withRelation('postz');
 }
 ''';
-    final offset = content.indexOf('emali');
-    await assertDiagnostics(content, [lint(offset, 'emali'.length)]);
+    final offset = content.indexOf("'postz'");
+    await assertDiagnostics(content, [lint(offset, "'postz'".length)]);
   }
 }

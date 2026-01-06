@@ -71,11 +71,6 @@ class _Visitor extends SimpleAstVisitor<void> {
     'orWhereBetween',
     'orWhereNotBetween',
     'orWhereBitwise',
-    'orderBy',
-    'groupBy',
-    'having',
-    'select',
-    'distinct',
   };
 
   static const Set<String> _doubleFieldMethods = {
@@ -124,28 +119,11 @@ class _Visitor extends SimpleAstVisitor<void> {
       return;
     }
 
-    final value = _stringLiteralValue(expression);
+    final value = simpleStringLiteralValue(expression);
     if (value == null) return;
     if (modelInfo.allFieldNames.contains(value)) return;
 
     rule.reportAtNode(expression, arguments: [value, modelInfo.modelName]);
   }
 
-  String? _stringLiteralValue(Expression expression) {
-    if (expression is SimpleStringLiteral) {
-      return expression.value;
-    }
-    if (expression is AdjacentStrings) {
-      final buffer = StringBuffer();
-      for (final string in expression.strings) {
-        if (string is SimpleStringLiteral) {
-          buffer.write(string.value);
-        } else {
-          return null;
-        }
-      }
-      return buffer.toString();
-    }
-    return null;
-  }
 }

@@ -45,10 +45,6 @@ class _Visitor extends SimpleAstVisitor<void> {
   static const Set<String> _relationMethods = {
     'withRelation',
     'withRelationTyped',
-    'whereHas',
-    'whereHasTyped',
-    'orWhereHas',
-    'orWhereHasTyped',
   };
 
   @override
@@ -68,29 +64,12 @@ class _Visitor extends SimpleAstVisitor<void> {
     final args = node.argumentList.arguments;
     if (args.isEmpty) return;
 
-    final relation = _stringLiteralValue(args.first);
+    final relation = simpleStringLiteralValue(args.first);
     if (relation == null) return;
+    if (relation.contains('.')) return;
 
     if (!modelInfo.relationNames.contains(relation)) {
       rule.reportAtNode(args.first, arguments: [relation, modelInfo.modelName]);
     }
-  }
-
-  String? _stringLiteralValue(Expression expression) {
-    if (expression is SimpleStringLiteral) {
-      return expression.value;
-    }
-    if (expression is AdjacentStrings) {
-      final buffer = StringBuffer();
-      for (final string in expression.strings) {
-        if (string is SimpleStringLiteral) {
-          buffer.write(string.value);
-        } else {
-          return null;
-        }
-      }
-      return buffer.toString();
-    }
-    return null;
   }
 }
