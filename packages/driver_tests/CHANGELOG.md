@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+6
+
+- **Updated**: Regenerated ORM registry output.
+- **Maintenance**: Formatting updates to generated files.
+
 ## 0.1.0-dev+5
 
 - **Added**: Insert defaults test coverage for timestamp columns.
