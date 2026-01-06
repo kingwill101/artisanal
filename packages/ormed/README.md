@@ -30,6 +30,122 @@ dev_dependencies:
   build_runner: ^2.4.0
 ```
 
+## Analyzer Plugin (Preview)
+
+Ormed ships an optional analyzer plugin (no separate package) that inspects your
+query builder usage, DTOs, and model metadata during analysis. It helps catch
+unsafe patterns, invalid field names, and other common pitfalls before runtime.
+
+### Enable the plugin
+
+1) Add `ormed` to `dev_dependencies`.
+2) Enable the plugin in your project's `analysis_options.yaml`:
+
+```yaml
+analyzer:
+  plugins:
+    - ormed
+```
+
+> After changing `analysis_options.yaml`, restart the Dart Analysis Server.
+> If you previously used the standalone `ormed_analyzer` package, remove it from
+> your `pubspec.yaml` and switch to the `ormed` plugin above.
+
+### How it works
+
+- The plugin scans generated `*.orm.dart` files to build a model index. Run
+  `build_runner` first so the definitions exist.
+- Query modifiers are tracked within the same function body, including split
+  chains and cascades:
+  ```dart
+  final q = query.where('email', '=', 'a@example.com');
+  q.get(); // no warning because the earlier where() is tracked
+  ```
+- The tracker is intra-procedural (no cross-function tracking) and does not
+  model control-flow branches precisely.
+- Only literal field names can be validated. Dynamic strings are ignored.
+
+### Diagnostics (grouped)
+
+Field and selection validation:
+- `ormed_unknown_field`: unknown field/column in query builder calls.
+- `ormed_unknown_select_field`: unknown column in `select([...])`.
+- `ormed_duplicate_select_field`: duplicate column in `select([...])`.
+- `ormed_unknown_order_field`: unknown column in `orderBy(...)`.
+- `ormed_unknown_group_field`: unknown column in `groupBy(...)`.
+- `ormed_unknown_having_field`: unknown column in `having(...)`.
+
+Relation validation:
+- `ormed_unknown_relation`: unknown relation in `withRelation(...)` or similar.
+- `ormed_unknown_nested_relation`: unknown nested relation path.
+- `ormed_invalid_where_has`: `whereHas(...)` targets a missing relation.
+- `ormed_relation_field_mismatch`: relation callback uses a field from the wrong model.
+- `ormed_missing_pivot_field`: missing pivot field in many-to-many definitions.
+
+Type-aware predicate checks:
+- `ormed_type_mismatch_eq`: `whereEquals(...)` value type mismatches the field.
+- `ormed_where_in_type_mismatch`: `whereIn(...)` values mismatch the field type.
+- `ormed_where_between_type_mismatch`: `whereBetween(...)` values mismatch the field type.
+- `ormed_typed_predicate_field`: typed predicate field does not exist on the model.
+
+Query safety and performance:
+- `ormed_update_delete_without_where`: `update()` or `delete()` without constraints.
+- `ormed_offset_without_order`: `offset()` without `orderBy`.
+- `ormed_limit_without_order`: `limit()` without `orderBy`.
+- `ormed_get_without_limit`: `get()`, `rows()`, `getPartial()`,
+  `Model.all()`, `ModelCompanion.all()`, or generated companion `Posts.all()`
+  used without a `limit()` or chunk/paginate alternative.
+
+Raw SQL safety:
+- `ormed_raw_sql_interpolation`: raw SQL with string interpolation and no bindings.
+- `ormed_raw_sql_alias_missing`: `selectRaw(...)` without an alias.
+
+DTO validation:
+- `ormed_insert_missing_required`: insert DTO missing required fields.
+- `ormed_update_missing_pk`: update DTO missing a primary key (or missing where).
+
+Soft delete and timestamp checks:
+- `ormed_with_trashed_on_non_soft_delete`
+- `ormed_without_timestamps_on_timestamped_model`
+- `ormed_updated_at_access_on_without_timestamps`
+
+### Suppressing diagnostics
+
+Suppress a single diagnostic with:
+
+```dart
+// ignore: ormed/ormed_unknown_field
+```
+
+Or suppress an entire file:
+
+```dart
+// ignore_for_file: ormed/ormed_get_without_limit
+```
+
+### Generated code warnings
+
+The plugin analyzes generated `.orm.dart` files by default (it needs them to
+build the model index). If you do not want warnings in generated files, add
+excludes to `analysis_options.yaml`:
+
+```yaml
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.orm.dart"
+```
+
+### AOT snapshot workaround
+
+If your project uses `ormed_sqlite`, the analyzer plugin may fail to compile
+an AOT snapshot because `ormed_sqlite` depends on build hooks. In that case,
+run analysis with:
+
+```bash
+dart analyze --no-use-aot-snapshot
+```
+
 ## Getting Started
 
 The recommended way to use Ormed is via the `ormed` CLI, which manages migrations, seeders, and project scaffolding.
