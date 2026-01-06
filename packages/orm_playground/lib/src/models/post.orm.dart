@@ -656,7 +656,7 @@ class $Post extends Post with ModelAttributes implements OrmEntity {
     DateTime? publishedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
+  }) : super(
          id: id,
          userId: userId,
          title: title,

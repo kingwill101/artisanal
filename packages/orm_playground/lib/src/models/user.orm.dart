@@ -534,7 +534,7 @@ class $User extends User with ModelAttributes implements OrmEntity {
     required bool active,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
+  }) : super(
          id: id,
          email: email,
          name: name,

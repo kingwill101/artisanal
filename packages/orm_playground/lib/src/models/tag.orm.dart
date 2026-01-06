@@ -87,7 +87,7 @@ final ModelDefinition<$Tag> _$TagDefinition = ModelDefinition(
     casts: const <String, String>{},
     appends: const <String>[],
     touches: const <String>[],
-    timestamps: true,
+    timestamps: false,
     softDeletes: false,
     softDeleteColumn: 'deleted_at',
   ),
@@ -420,12 +420,7 @@ class $Tag extends Tag with ModelAttributes implements OrmEntity {
     required String name,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
-         id: id,
-         name: name,
-         createdAt: createdAt,
-         updatedAt: updatedAt,
-       ) {
+  }) : super(id: id, name: name, createdAt: createdAt, updatedAt: updatedAt) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'name': name,

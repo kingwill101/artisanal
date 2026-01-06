@@ -9,8 +9,6 @@ workspace:
   - packages/ormed_postgres_extensions
   - packages/ormed_cli
   - packages/artisanal
-  - packages/ormed_analyzer
-  - packages/orm_playground
   - .site/examples
 
 funding:

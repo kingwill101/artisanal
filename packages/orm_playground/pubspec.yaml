@@ -4,11 +4,11 @@ version: 0.1.0-dev+6
 publish_to: none
 environment:
   sdk: ">=3.10.0 <4.0.0"
-resolution: workspace
 # Add regular dependencies here.
 dependencies:
   path: ^1.9.1
-  ormed: ^0.1.0-dev+6
+  ormed:
+    path: ../ormed
   ormed_sqlite: ^0.1.0-dev+6
   ormed_cli: ^0.1.0-dev+6
   artisanal: ^0.1.0
@@ -17,5 +17,17 @@ dev_dependencies:
   lints: ^6.0.0
   test: ^1.28.0
   build_runner: ^2.10.4
-  ormed_analyzer: ^0.1.0-dev+6
   driver_tests: ^0.1.0-dev+6
+
+
+dependency_overrides:
+  artisanal:
+    path: ../artisanal
+  ormed:
+    path: ../ormed
+  ormed_sqlite:
+    path: ../ormed_sqlite
+  ormed_cli:
+    path: ../ormed_cli
+  driver_tests:
+    path: ../driver_tests

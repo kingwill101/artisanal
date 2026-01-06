@@ -13,9 +13,14 @@
 
 include: package:lints/recommended.yaml
 
+analyzer:
+  plugins:
+    - ormed
 
 plugins:
-  ormed_analyzer:
+  ormed:
+    path: ../ormed
+
 # Uncomment the following section to specify additional rules.
 
 # linter:

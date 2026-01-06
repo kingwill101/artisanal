@@ -545,7 +545,7 @@ class $Comment extends Comment with ModelAttributes implements OrmEntity {
     required String body,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
+  }) : super(
          id: id,
          postId: postId,
          userId: userId,

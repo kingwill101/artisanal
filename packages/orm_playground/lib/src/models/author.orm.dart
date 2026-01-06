@@ -429,12 +429,7 @@ class $Author extends Author with ModelAttributes implements OrmEntity {
     required String name,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : super.new(
-         id: id,
-         name: name,
-         createdAt: createdAt,
-         updatedAt: updatedAt,
-       ) {
+  }) : super(id: id, name: name, createdAt: createdAt, updatedAt: updatedAt) {
     _attachOrmRuntimeMetadata({
       'id': id,
       'name': name,

@@ -340,7 +340,7 @@ class _PostTagPartialCopyWithSentinel {
 class $PostTag extends PostTag with ModelAttributes implements OrmEntity {
   /// Internal constructor for [$PostTag].
   $PostTag({required int postId, required int tagId})
-    : super.new(postId: postId, tagId: tagId) {
+    : super(postId: postId, tagId: tagId) {
     _attachOrmRuntimeMetadata({'post_id': postId, 'tag_id': tagId});
   }
 

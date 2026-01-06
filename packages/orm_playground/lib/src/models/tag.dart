@@ -2,7 +2,7 @@ import 'package:ormed/ormed.dart';
 
 part 'tag.orm.dart';
 
-@OrmModel(table: 'tags')
+@OrmModel(table: 'tags', timestamps: false)
 class Tag extends Model<Tag> {
   const Tag({this.id, required this.name, this.createdAt, this.updatedAt});
 
