@@ -4,6 +4,7 @@
 
 - **Added**: Transaction outcome hooks/events that distinguish commit vs rollback (with savepoint scope details).
 - **Added**: Transaction boundary logging in query logs (BEGIN/COMMIT/ROLLBACK and savepoints).
+- **Fixed**: `copyWith` now casts non-nullable `Object` fields to avoid analyzer errors.
 
 ## 0.1.0-dev+6
 
