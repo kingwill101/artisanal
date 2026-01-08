@@ -30,6 +30,41 @@ dev_dependencies:
   build_runner: ^2.4.0
 ```
 
+## Model Factories
+
+Model factories generate test data and seed records. You can extend the default
+generator with an external factory class to define defaults, named states, and
+custom builder hooks.
+
+```dart
+class PostFactory extends ModelFactoryDefinition<Post> {
+  const PostFactory();
+
+  @override
+  Map<String, Object?> defaults() => const {
+        'title': 'Hello Ormed',
+        'status': 'draft',
+      };
+
+  @override
+  Map<String, StateTransformer<Post>> get states => const {
+        'published': _publishedState,
+      };
+
+  static Map<String, Object?> _publishedState(Map<String, Object?> attrs) =>
+      {'status': 'published'};
+}
+
+void main() {
+  ModelFactoryRegistry.registerFactory<Post>(const PostFactory());
+
+  final post = Post.factory().make();
+  final published = ModelFactoryRegistry.externalFactoryFor<Post>()!
+      .stateNamed('published')
+      .make();
+}
+```
+
 ## Analyzer Plugin (Preview)
 
 Ormed ships an optional analyzer plugin (no separate package) that inspects your

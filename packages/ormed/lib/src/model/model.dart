@@ -305,9 +305,7 @@ abstract class Model<TModel extends Model<TModel>>
   static ModelFactoryBuilder<TModel> factory<TModel extends Model<TModel>>({
     GeneratorProvider? generatorProvider,
   }) {
-    final definition = ModelFactoryRegistry.definitionFor<TModel>();
-    return ModelFactoryBuilder<TModel>(
-      definition: definition,
+    return ModelFactoryRegistry.factoryFor<TModel>(
       generatorProvider: generatorProvider,
     );
   }

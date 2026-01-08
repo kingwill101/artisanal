@@ -859,6 +859,30 @@ void main() {
         expect(model.role, 'from_sequence');
       });
     });
+
+    group('External Factory Definitions', () {
+      const externalFactory = _ExternalFactoryUserFactory();
+
+      setUpAll(() {
+        ModelFactoryRegistry.register<ExternalFactoryUser>(
+          _externalFactoryUserDefinition,
+        );
+        ModelFactoryRegistry.registerFactory<ExternalFactoryUser>(
+          externalFactory,
+        );
+      });
+
+      test('Model.factory uses external defaults', () {
+        final values = Model.factory<ExternalFactoryUser>().values();
+        expect(values['name'], 'Ormed User');
+        expect(values['role'], 'member');
+      });
+
+      test('stateNamed applies named state', () {
+        final model = externalFactory.stateNamed('admin').make();
+        expect(model.role, 'admin');
+      });
+    });
   });
 }
 
@@ -916,4 +940,86 @@ class _DoubleFieldTestProvider extends GeneratorProvider {
     // Fall back to default for actual generation
     return const DefaultFieldGeneratorProvider().generate(field, context);
   }
+}
+
+class ExternalFactoryUser extends Model<ExternalFactoryUser> {
+  const ExternalFactoryUser({this.id, required this.name, this.role});
+
+  final int? id;
+  final String name;
+  final String? role;
+}
+
+class _ExternalFactoryUserCodec extends ModelCodec<ExternalFactoryUser> {
+  const _ExternalFactoryUserCodec();
+
+  @override
+  Map<String, Object?> encode(
+    ExternalFactoryUser model,
+    ValueCodecRegistry registry,
+  ) => {'id': model.id, 'name': model.name, 'role': model.role};
+
+  @override
+  ExternalFactoryUser decode(
+    Map<String, Object?> data,
+    ValueCodecRegistry registry,
+  ) {
+    return ExternalFactoryUser(
+      id: data['id'] as int?,
+      name: data['name'] as String? ?? 'unknown',
+      role: data['role'] as String?,
+    );
+  }
+}
+
+const _externalFactoryUserDefinition = ModelDefinition<ExternalFactoryUser>(
+  modelName: 'ExternalFactoryUser',
+  tableName: 'external_factory_users',
+  fields: [
+    FieldDefinition(
+      name: 'id',
+      columnName: 'id',
+      dartType: 'int?',
+      resolvedType: 'int?',
+      isPrimaryKey: true,
+      isNullable: true,
+      autoIncrement: true,
+    ),
+    FieldDefinition(
+      name: 'name',
+      columnName: 'name',
+      dartType: 'String',
+      resolvedType: 'String',
+      isPrimaryKey: false,
+      isNullable: false,
+    ),
+    FieldDefinition(
+      name: 'role',
+      columnName: 'role',
+      dartType: 'String?',
+      resolvedType: 'String?',
+      isPrimaryKey: false,
+      isNullable: true,
+    ),
+  ],
+  codec: _ExternalFactoryUserCodec(),
+);
+
+class _ExternalFactoryUserFactory
+    extends ModelFactoryDefinition<ExternalFactoryUser> {
+  const _ExternalFactoryUserFactory();
+
+  @override
+  Map<String, Object?> defaults() => const {
+        'name': 'Ormed User',
+        'role': 'member',
+      };
+
+  @override
+  Map<String, StateTransformer<ExternalFactoryUser>> get states => const {
+        'admin': _adminState,
+      };
+
+  static Map<String, Object?> _adminState(Map<String, Object?> attributes) =>
+      {'role': 'admin'};
 }

@@ -4,6 +4,7 @@
 
 - **Added**: Structured OrmException/DriverException for richer runtime and CLI messaging.
 - **Added**: `dart run ormed` now prints guidance for running the CLI package.
+- **Added**: External model factory definitions with named states and registry-based overrides.
 - **Fixed**: Generated tracked model constructors now mirror user constructor shapes.
 
 ## 0.1.0-dev+7

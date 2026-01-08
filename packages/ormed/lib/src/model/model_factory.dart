@@ -130,6 +130,56 @@ class DefaultFieldGeneratorProvider extends GeneratorProvider {
   }
 }
 
+/// Base class for defining external factory behavior.
+///
+/// Override [defaults], [states], and [configure] to customize model generation.
+abstract class ModelFactoryDefinition<TModel extends OrmEntity> {
+  const ModelFactoryDefinition();
+
+  /// The model definition backing this factory.
+  ModelDefinition<TModel> get definition =>
+      ModelFactoryRegistry.definitionFor<TModel>();
+
+  /// Optional generator provider to use when no override is supplied.
+  GeneratorProvider? get generatorProvider => null;
+
+  /// Base attributes applied to every factory instance.
+  Map<String, Object?> defaults() => const {};
+
+  /// Named state transformations that can be applied on demand.
+  Map<String, StateTransformer<TModel>> get states =>
+      <String, StateTransformer<TModel>>{};
+
+  /// Hook for configuring the builder (sequences, callbacks, etc).
+  void configure(ModelFactoryBuilder<TModel> builder) {}
+
+  /// Creates a builder pre-configured with defaults and hooks.
+  ModelFactoryBuilder<TModel> builder({GeneratorProvider? generatorProvider}) {
+    final builder = ModelFactoryBuilder<TModel>(
+      definition: definition,
+      generatorProvider: generatorProvider ?? this.generatorProvider,
+    );
+    final defaultAttributes = defaults();
+    if (defaultAttributes.isNotEmpty) {
+      builder.state(defaultAttributes);
+    }
+    configure(builder);
+    return builder;
+  }
+
+  /// Creates a builder with a named state applied.
+  ModelFactoryBuilder<TModel> stateNamed(
+    String name, {
+    GeneratorProvider? generatorProvider,
+  }) {
+    final state = states[name];
+    if (state == null) {
+      throw StateError('No factory state named "$name" for $TModel.');
+    }
+    return builder(generatorProvider: generatorProvider).stateUsing(state);
+  }
+}
+
 /// Builder used by generated factory helpers.
 ///
 /// Configure the builder using [state], [sequence], and [withOverrides], then
@@ -500,6 +550,8 @@ class ModelFactoryRegistry {
   ModelFactoryRegistry._();
 
   static final Map<Type, ModelDefinition<OrmEntity>> _definitions = {};
+  static final Map<Type, ModelFactoryDefinition<OrmEntity>> _externalFactories =
+      {};
 
   /// Registers [definition] for `TModel`.
   ///
@@ -520,10 +572,44 @@ class ModelFactoryRegistry {
         as ModelDefinition<TModel>;
   }
 
+  /// Registers an external factory definition for `TModel`.
+  static ModelFactoryDefinition<TModel> registerFactory<
+    TModel extends OrmEntity
+  >(
+    ModelFactoryDefinition<TModel> factory,
+  ) {
+    _externalFactories[TModel] = factory;
+    return factory;
+  }
+
+  /// Returns the registered external factory for `TModel`, if any.
+  static ModelFactoryDefinition<TModel>? externalFactoryFor<
+    TModel extends OrmEntity
+  >() {
+    final factory = _externalFactories[TModel];
+    if (factory == null) return null;
+    return factory as ModelFactoryDefinition<TModel>;
+  }
+
+  /// Returns a factory builder for `TModel`, preferring external factories.
+  static ModelFactoryBuilder<TModel> factoryFor<TModel extends OrmEntity>({
+    GeneratorProvider? generatorProvider,
+  }) {
+    final external = externalFactoryFor<TModel>();
+    if (external != null) {
+      return external.builder(generatorProvider: generatorProvider);
+    }
+    final definition = definitionFor<TModel>();
+    return ModelFactoryBuilder<TModel>(
+      definition: definition,
+      generatorProvider: generatorProvider,
+    );
+  }
+
   /// Returns the registered definition for `TModel`.
   ///
   /// Throws a [StateError] if the factory definition has not been registered.
-  static ModelDefinition<TModel> definitionFor<TModel extends Model<TModel>>() {
+  static ModelDefinition<TModel> definitionFor<TModel extends OrmEntity>() {
     final definition = _definitions[TModel];
     if (definition == null) {
       throw StateError(

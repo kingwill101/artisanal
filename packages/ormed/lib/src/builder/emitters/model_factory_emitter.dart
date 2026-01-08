@@ -59,8 +59,7 @@ class ModelFactoryEmitter {
     // factory method
     buffer.writeln('  static ModelFactoryBuilder<$className> factory({');
     buffer.writeln('    GeneratorProvider? generatorProvider,');
-    buffer.writeln('  }) => ModelFactoryBuilder<$className>(');
-    buffer.writeln('      definition: definition,');
+    buffer.writeln('  }) => ModelFactoryRegistry.factoryFor<$className>(');
     buffer.writeln('      generatorProvider: generatorProvider,');
     buffer.writeln('    );');
 
