@@ -3,6 +3,7 @@
 ## 0.1.0-dev+8
 
 - **Updated**: Synced dependency versions for dev+8.
+- **Added**: Playground factory helpers and external factory registration for demo seed data.
 
 ## 0.1.0-dev+7
 
