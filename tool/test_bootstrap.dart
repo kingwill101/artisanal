@@ -13,6 +13,7 @@ Future<void> main(List<String> args) async {
     await createProject();
     await addDependencies();
     await initOrm(options);
+    await verifyAnalyzerConfig();
     if (options.multiDatasource) {
       await configureMultipleDatasources();
     }
@@ -135,6 +136,7 @@ Future<void> initOrm(BootstrapOptions options) async {
       '--no-interaction',
       '--only=config',
       '--only=datasource',
+      '--with-analyzer',
     ], workingDirectory: testDir);
     await verifyInitOnlyArtifacts();
     await run('dart', [
@@ -143,6 +145,7 @@ Future<void> initOrm(BootstrapOptions options) async {
       'init',
       '--no-interaction',
       '--force',
+      '--with-analyzer',
     ], workingDirectory: testDir);
     return;
   }
@@ -152,6 +155,7 @@ Future<void> initOrm(BootstrapOptions options) async {
     'ormed_cli:ormed',
     'init',
     '--no-interaction',
+    '--with-analyzer',
   ], workingDirectory: testDir);
 }
 
@@ -222,23 +226,40 @@ connections:
 
 Future<void> createModel() async {
   print('Creating a model...');
-  final modelDir = Directory(p.join(testDir, 'lib/src/models'));
-  modelDir.createSync(recursive: true);
+  await run('dart', [
+    'run',
+    'ormed_cli:ormed',
+    'make:model',
+    'User',
+    '--table',
+    'users',
+  ], workingDirectory: testDir);
 
-  final modelFile = File(p.join(modelDir.path, 'user.dart'));
+  final modelFile = File(
+    p.join(testDir, 'lib/src/database/models/user.dart'),
+  );
   modelFile.writeAsStringSync('''
 import 'package:ormed/ormed.dart';
 
 part 'user.orm.dart';
 
-@OrmModel()
+@OrmModel(table: 'users')
 class User extends Model<User> {
+  const User({
+    required this.id,
+    required this.name,
+    required this.email,
+    required this.emailAddress,
+    this.bio,
+  });
+
+  @OrmField(isPrimaryKey: true, autoIncrement: true)
+  final int id;
+
   final String name;
   final String email;
   final String emailAddress;
   final String? bio;
-
-  User({required this.name, required this.email, required this.emailAddress, this.bio});
 }
 ''');
 }
@@ -333,7 +354,7 @@ Future<void> createSeeder() async {
   );
   seederFile.writeAsStringSync('''
 import 'package:ormed/ormed.dart';
-import 'package:orm_bootstrap_test/src/models/user.dart';
+import 'package:orm_bootstrap_test/src/database/models/user.dart';
 
 class UserSeeder extends DatabaseSeeder {
   UserSeeder(super.connection);
@@ -387,7 +408,7 @@ Future<void> analyzeProject() async {
 Future<void> verifyFiles() async {
   print('Verifying generated files...');
   final files = [
-    'lib/src/models/user.orm.dart',
+    'lib/src/database/models/user.orm.dart',
     'lib/orm_registry.g.dart',
     'database/$testDir.sqlite',
   ];
@@ -400,6 +421,18 @@ Future<void> verifyFiles() async {
   }
 }
 
+Future<void> verifyAnalyzerConfig() async {
+  print('Verifying analyzer plugin config...');
+  final options = File(p.join(testDir, 'analysis_options.yaml'));
+  if (!options.existsSync()) {
+    throw Exception('analysis_options.yaml was not created.');
+  }
+  final text = options.readAsStringSync();
+  if (!text.contains('- ormed')) {
+    throw Exception('analysis_options.yaml is missing the Ormed analyzer plugin.');
+  }
+}
+
 Future<void> runVerificationScript(BootstrapOptions options) async {
   print('Creating and running verification script...');
   final verifyFile = File(p.join(testDir, 'bin/verify_orm.dart'));
@@ -409,7 +442,7 @@ Future<void> runVerificationScript(BootstrapOptions options) async {
 import 'dart:io';
 import 'package:ormed/ormed.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
-import 'package:orm_bootstrap_test/src/models/user.dart';
+import 'package:orm_bootstrap_test/src/database/models/user.dart';
 import 'package:orm_bootstrap_test/orm_registry.g.dart';
 
 void main() async {

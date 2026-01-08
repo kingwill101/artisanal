@@ -6,6 +6,7 @@ Future<void> main(List<String> args) async {
   final runner = CommandRunner<void>('ormed', 'Routed ORM CLI')
     ..addCommand(InitCommand())
     ..addCommand(MakeCommand())
+    ..addCommand(MakeModelCommand())
     ..addCommand(ApplyCommand())
     ..addCommand(ExportCommand())
     ..addCommand(RollbackCommand())

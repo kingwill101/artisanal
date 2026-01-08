@@ -4,6 +4,8 @@
 
 - **Improved**: CLI now prints structured OrmException hints.
 - **Fixed**: Seed registry scaffolding avoids analyzer dependency warnings.
+- **Added**: `make:model` scaffolds models in `lib/src/database/models`.
+- **Added**: `init --with-analyzer` writes analyzer plugin configuration.
 - **Updated**: Synced dependency versions for dev+8.
 
 ## 0.1.0-dev+7

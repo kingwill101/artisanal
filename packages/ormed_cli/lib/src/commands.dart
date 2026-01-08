@@ -4,6 +4,7 @@ export 'commands/db/seed_command.dart';
 export 'commands/db/wipe_command.dart';
 export 'commands/base/init_command.dart';
 export 'commands/make/make_command.dart';
+export 'commands/make/make_model_command.dart';
 export 'commands/migrate/migrate_command.dart';
 export 'commands/migrate/export_command.dart';
 export 'commands/migrate/fresh_command.dart';

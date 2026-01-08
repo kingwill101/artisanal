@@ -1,3 +1,5 @@
+import 'dart:io' as system_io;
+
 import 'package:artisanal/args.dart';
 import 'package:ormed/ormed.dart';
 
@@ -141,7 +143,7 @@ abstract class RunnerCommand extends Command<void> {
       if (error.hint != null && error.hint!.trim().isNotEmpty) {
         cliIO.note(error.hint!.trim());
       }
-      exitCode = 1;
+      system_io.exitCode = 1;
     } finally {
       reporter.dispose();
       await connectionHandle.dispose();

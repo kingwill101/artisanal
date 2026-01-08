@@ -432,5 +432,20 @@ dependency_overrides:
         expect(promptCount, equals(0));
       },
     );
+
+    test('--with-analyzer writes analyzer plugin config', () async {
+      await runInit([
+        'init',
+        '--no-interaction',
+        '--skip-build',
+        '--with-analyzer',
+      ]);
+
+      final options = File(p.join(scratchDir.path, 'analysis_options.yaml'));
+      expect(options.existsSync(), isTrue);
+      final text = options.readAsStringSync();
+      expect(text, contains('plugins:'));
+      expect(text, contains('- ormed'));
+    });
   });
 }

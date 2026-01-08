@@ -46,6 +46,11 @@ class InitCommand extends Command<void> {
         negatable: false,
         hide: true,
         help: 'Skip running build_runner (for testing).',
+      )
+      ..addFlag(
+        'with-analyzer',
+        negatable: false,
+        help: 'Add the Ormed analyzer plugin to analysis_options.yaml.',
       );
   }
 
@@ -62,6 +67,7 @@ class InitCommand extends Command<void> {
     final showPaths = argResults?['paths'] == true;
     final populateExisting = argResults?['populate-existing'] == true;
     final skipBuild = argResults?['skip-build'] == true;
+    final withAnalyzer = argResults?['with-analyzer'] == true;
     final onlyTargets =
         (argResults?['only'] as List<String>? ?? const <String>[])
             .map((value) => value.trim())
@@ -122,6 +128,9 @@ class InitCommand extends Command<void> {
 
     if (includeDatasource || includeMigrations || includeSeeders) {
       await _ensureDependencies(root, config: config, skipBuild: skipBuild);
+    }
+    if (withAnalyzer) {
+      _ensureAnalyzerPluginConfig(root: root, tracker: tracker);
     }
 
     // Directories
@@ -304,6 +313,7 @@ class InitCommand extends Command<void> {
 
     cliIO.newLine();
     cliIO.success('Project initialized successfully.');
+    _printNextSteps(withAnalyzer: withAnalyzer);
   }
 
   Future<void> _runBuildRunner(Directory root) async {
@@ -436,6 +446,76 @@ class InitCommand extends Command<void> {
       }
     }
   }
+}
+
+void _printNextSteps({required bool withAnalyzer}) {
+  cliIO.newLine();
+  cliIO.section('Next steps');
+  cliIO.writeln('• Add models and include `part \'<model>.orm.dart\';`');
+  cliIO.writeln('• Run: dart run build_runner build');
+  if (withAnalyzer) {
+    cliIO.writeln('• Restart your analyzer to pick up the Ormed plugin');
+  }
+}
+
+void _ensureAnalyzerPluginConfig({
+  required Directory root,
+  required _ArtifactTracker tracker,
+}) {
+  final file = File(p.join(root.path, 'analysis_options.yaml'));
+  final pluginLine = '- ormed';
+  if (!file.existsSync()) {
+    file.writeAsStringSync(
+      'analyzer:\n  plugins:\n    $pluginLine\n',
+    );
+    tracker.paths['analysis_options.yaml'] = file.path;
+    return;
+  }
+
+  final lines = file.readAsLinesSync();
+  if (lines.any((line) => line.trim() == pluginLine)) {
+    return;
+  }
+
+  int analyzerIndex = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].trim() == 'analyzer:') {
+      analyzerIndex = i;
+      break;
+    }
+  }
+
+  if (analyzerIndex == -1) {
+    lines.add('');
+    lines.add('analyzer:');
+    lines.add('  plugins:');
+    lines.add('    $pluginLine');
+    file.writeAsStringSync(lines.join('\n'));
+    return;
+  }
+
+  int pluginsIndex = -1;
+  for (var i = analyzerIndex + 1; i < lines.length; i++) {
+    final trimmed = lines[i].trim();
+    if (trimmed.isEmpty) continue;
+    if (trimmed.endsWith(':') && !trimmed.startsWith('plugins:')) {
+      break;
+    }
+    if (trimmed == 'plugins:') {
+      pluginsIndex = i;
+      break;
+    }
+  }
+
+  if (pluginsIndex == -1) {
+    lines.insert(analyzerIndex + 1, '  plugins:');
+    lines.insert(analyzerIndex + 2, '    $pluginLine');
+    file.writeAsStringSync(lines.join('\n'));
+    return;
+  }
+
+  lines.insert(pluginsIndex + 1, '    $pluginLine');
+  file.writeAsStringSync(lines.join('\n'));
 }
 
 const String _datasourceTemplate = r'''
