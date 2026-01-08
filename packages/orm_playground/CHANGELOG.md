@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+8
+
+- **Updated**: Synced dependency versions for dev+8.
+
 ## 0.1.0-dev+7
 
 - **Added**: Analyzer plugin examples and workspace plugin enablement.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+8
+
+- **Improved**: CLI now prints structured OrmException hints.
+- **Fixed**: Seed registry scaffolding avoids analyzer dependency warnings.
+- **Updated**: Synced dependency versions for dev+8.
+
 ## 0.1.0-dev+7
 
 - **Updated**: Synced dependency versions for dev+7.

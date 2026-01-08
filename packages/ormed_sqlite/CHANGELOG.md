@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+8
+
+- **Improved**: SQLite migration error now explains primary key limitations.
+- **Updated**: Synced dependency versions for dev+8.
+
 ## 0.1.0-dev+7
 
 - **Added**: `session` options to apply PRAGMA settings on connect.

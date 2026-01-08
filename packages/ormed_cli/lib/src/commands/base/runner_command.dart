@@ -136,6 +136,12 @@ abstract class RunnerCommand extends Command<void> {
           reporter,
         );
       });
+    } on OrmException catch (error) {
+      cliIO.error(error.toString());
+      if (error.hint != null && error.hint!.trim().isNotEmpty) {
+        cliIO.note(error.hint!.trim());
+      }
+      exitCode = 1;
     } finally {
       reporter.dispose();
       await connectionHandle.dispose();

@@ -1,4 +1,5 @@
 import 'package:ormed/migrations.dart';
+import 'package:ormed/ormed.dart' show DriverException;
 
 /// Generates SQLite-compatible SQL for schema mutations.
 class SqliteSchemaDialect extends SchemaDialect {
@@ -131,8 +132,13 @@ class SqliteSchemaDialect extends SchemaDialect {
           final definition = indexCommand.definition;
           if (definition == null) continue;
           if (definition.type == IndexType.primary) {
-            throw UnsupportedError(
-              'SQLite does not support ALTER TABLE ADD PRIMARY KEY.',
+            throw DriverException(
+              driver: driverName,
+              operation: 'alter_table_add_primary_key',
+              message:
+                  'SQLite cannot add a primary key after table creation.',
+              hint:
+                  'Use schema.create() for new tables or rebuild the table to add a primary key.',
             );
           }
           // Pass unquoted table name - _indexStatements will quote it

@@ -1,5 +1,36 @@
 import 'package:ormed/src/model/model.dart';
 
+/// Base exception type for Ormed runtime errors that should be user-facing.
+class OrmException implements Exception {
+  OrmException(this.message, {this.hint, this.cause, this.stackTrace});
+
+  final String message;
+  final String? hint;
+  final Object? cause;
+  final StackTrace? stackTrace;
+
+  @override
+  String toString() => message;
+}
+
+/// Driver-specific exception with structured context for CLI/runtime output.
+class DriverException extends OrmException {
+  DriverException({
+    required this.driver,
+    required this.operation,
+    required String message,
+    String? hint,
+    Object? cause,
+    StackTrace? stackTrace,
+  }) : super(message, hint: hint, cause: cause, stackTrace: stackTrace);
+
+  final String driver;
+  final String operation;
+
+  @override
+  String toString() => 'DriverException($driver/$operation): $message';
+}
+
 /// Thrown when a requested codec type is missing from the registry.
 class CodecNotFound implements Exception {
   CodecNotFound(this.typeKey, this.field);

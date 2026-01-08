@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+8
+
+- **Added**: Structured OrmException/DriverException for richer runtime and CLI messaging.
+- **Added**: `dart run ormed` now prints guidance for running the CLI package.
+- **Fixed**: Generated tracked model constructors now mirror user constructor shapes.
+
 ## 0.1.0-dev+7
 
 - **Added**: Transaction outcome hooks/events that distinguish commit vs rollback (with savepoint scope details).

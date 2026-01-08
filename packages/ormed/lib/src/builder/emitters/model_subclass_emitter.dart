@@ -631,8 +631,10 @@ class ModelSubclassEmitter {
     ConstructorElement constructor,
     List<FieldDescriptor> fields,
   ) {
-    final buffer = StringBuffer();
-    buffer.write('({');
+    final requiredPositional = <String>[];
+    final optionalPositional = <String>[];
+    final named = <String>[];
+
     for (final parameter in constructor.formalParameters) {
       final paramName = parameter.displayName;
       final field = fields.firstWhereOrNull(
@@ -648,21 +650,56 @@ class ModelSubclassEmitter {
         );
       }
 
-      // Check if this field has a default value (e.g., auto-increment sentinel)
-      final hasDefaultValue = field.autoIncrement && !field.isNullable;
-
-      if (!hasDefaultValue && (parameter.isRequired || !field.isNullable)) {
-        buffer.write('required ');
+      final typeName = parameter.type.getDisplayString();
+      final defaultValue = parameter.defaultValueCode;
+      if (parameter.isNamed) {
+        final requiredPrefix = parameter.isRequiredNamed ? 'required ' : '';
+        var entry = '$requiredPrefix$typeName $paramName';
+        if (!parameter.isRequiredNamed && defaultValue != null) {
+          entry += ' = $defaultValue';
+        }
+        named.add(entry);
+        continue;
       }
-      buffer.write('${field.resolvedType} $paramName');
-
-      // Add default value for auto-increment fields
-      if (hasDefaultValue) {
-        buffer.write(' = 0');
+      var entry = '$typeName $paramName';
+      if (parameter.isOptionalPositional && defaultValue != null) {
+        entry += ' = $defaultValue';
       }
-      buffer.write(', ');
+      if (parameter.isOptionalPositional) {
+        optionalPositional.add(entry);
+      } else {
+        requiredPositional.add(entry);
+      }
     }
-    buffer.write('})');
+
+    if (requiredPositional.isEmpty &&
+        optionalPositional.isEmpty &&
+        named.isEmpty) {
+      return '()';
+    }
+
+    final buffer = StringBuffer();
+    buffer.write('(');
+    if (requiredPositional.isNotEmpty) {
+      buffer.write(requiredPositional.join(', '));
+    }
+    if (optionalPositional.isNotEmpty) {
+      if (requiredPositional.isNotEmpty) {
+        buffer.write(', ');
+      }
+      buffer.write('[');
+      buffer.write(optionalPositional.join(', '));
+      buffer.write(']');
+    }
+    if (named.isNotEmpty) {
+      if (requiredPositional.isNotEmpty || optionalPositional.isNotEmpty) {
+        buffer.write(', ');
+      }
+      buffer.write('{');
+      buffer.write(named.join(', '));
+      buffer.write('}');
+    }
+    buffer.write(')');
     return buffer.toString();
   }
 

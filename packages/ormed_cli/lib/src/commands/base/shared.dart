@@ -293,6 +293,8 @@ const String seedRegistryMarkerEnd = '// </ORM-SEED-REGISTRY>';
 
 const String initialSeedRegistryTemplate =
     '''
+// ignore_for_file: depend_on_referenced_packages
+
 import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
 import 'package:{{package_name}}/orm_registry.g.dart' as g;
