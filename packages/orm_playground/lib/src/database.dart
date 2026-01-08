@@ -8,6 +8,8 @@ import 'package:orm_playground/orm_registry.g.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
 import 'package:path/path.dart' as p;
 
+import 'factories/playground_factories.dart';
+
 /// Helper that manages playground database connections using the DataSource API.
 ///
 /// ## Single-tenant usage:
@@ -85,6 +87,7 @@ class PlaygroundDatabase {
     final tenantConfig = _config.withConnection(tenant);
     final driverConfig = tenantConfig.activeConnection.driver;
     final dbPath = _resolveDatabasePath(driverConfig);
+    registerPlaygroundFactories();
 
     final ds = DataSource(
       DataSourceOptions(

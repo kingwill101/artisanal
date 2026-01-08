@@ -172,6 +172,10 @@ To avoid repetitive test data setup, Ormed generates **Model Factories** (e.g., 
 
 This keeps test data explicit and reduces boilerplate.
 
+If you want more control, you can register external factory classes that define
+defaults and named states in a dedicated file. This keeps test data logic
+organized as factories grow.
+
 ## Playwright UI tests
 
 ```ts file=../../../../packages/ormed/example/fullstack/playwright/tests/movie_catalog.spec.ts

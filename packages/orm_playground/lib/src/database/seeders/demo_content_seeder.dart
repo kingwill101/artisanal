@@ -1,6 +1,8 @@
 import 'package:orm_playground/orm_playground.dart';
 import 'package:ormed/ormed.dart';
 
+import '../../factories/playground_factories.dart';
+
 /// Seeds the sample user/post/tag/comment relationships the playground expects.
 class DemoContentSeeder extends DatabaseSeeder {
   DemoContentSeeder(super.connection);
@@ -8,20 +10,20 @@ class DemoContentSeeder extends DatabaseSeeder {
   @override
   Future<void> run() async {
     final admin = await _ensureUser(
+      factory: adminUserFactory(),
       email: 'playground@routed.dev',
-      name: 'Playground Admin',
     );
     final guest = await _ensureUser(
+      factory: guestUserFactory(),
       email: 'guest@routed.dev',
-      name: 'Guest Author',
     );
     final tags = await _ensureTags();
     await _ensurePosts(connection, [admin, guest], tags);
   }
 
   Future<User> _ensureUser({
+    required ModelFactoryBuilder<User> factory,
     required String email,
-    required String name,
   }) async {
     final existing = await connection
         .query<User>()
@@ -30,13 +32,11 @@ class DemoContentSeeder extends DatabaseSeeder {
     if (existing != null) return existing;
 
     final now = DateTime.now().toUtc();
-    final user = User(
-      email: email,
-      name: name,
-      active: true,
-      createdAt: now,
-      updatedAt: now,
-    );
+    final user = factory.withOverrides({
+      'email': email,
+      'createdAt': now,
+      'updatedAt': now,
+    }).make();
     await connection.repository<User>().insert(user);
     return (await connection
         .query<User>()

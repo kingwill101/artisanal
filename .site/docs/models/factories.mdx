@@ -31,6 +31,33 @@ The generator detects `ModelFactoryCapable` anywhere in the inheritance chain.
 
 ```
 
+## External Factory Classes
+
+Define factories in their own class to keep defaults, states, and hooks in a
+single place:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-definition
+
+```
+
+Register the external factory before using it:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-registration
+
+```
+
+Then use `Model.factory()` as usual:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-usage
+
+```
+
+Named states can be applied through the factory definition:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-state
+
+```
+
 ## Factory Builder API
 
 | Method | Description |

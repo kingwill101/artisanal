@@ -2,6 +2,7 @@ import 'package:ormed_cli/runtime.dart';
 import 'package:ormed/ormed.dart';
 import 'package:orm_playground/orm_registry.g.dart' as g;
 
+import '../factories/playground_factories.dart';
 import 'seeders/database_seeder.dart';
 // <ORM-SEED-IMPORTS>
 // </ORM-SEED-IMPORTS>
@@ -31,6 +32,7 @@ Future<void> runProjectSeeds(
   bool pretend = false,
 }) async {
   g.bootstrapOrm(registry: connection.context.registry);
+  registerPlaygroundFactories();
   await SeederRunner().run(
     connection: connection,
     seeders: seeders,
@@ -42,6 +44,8 @@ Future<void> runProjectSeeds(
 Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
   args: args,
   seeds: seeders,
-  beforeRun: (connection) =>
-      g.bootstrapOrm(registry: connection.context.registry),
+  beforeRun: (connection) {
+    g.bootstrapOrm(registry: connection.context.registry);
+    registerPlaygroundFactories();
+  },
 );
