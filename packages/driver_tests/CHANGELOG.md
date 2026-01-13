@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+9
+
+- **Updated**: Synced release with ORMed dev+9.
+
 ## 0.1.0-dev+8
 
 - **Updated**: Synced dependency versions for dev+8.

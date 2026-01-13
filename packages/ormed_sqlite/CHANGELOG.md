@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.0-dev+9
+
+- **Refactor**: Relocated dialect-specific integration tests and grammar tests from core into the driver package.
+- **Improved**: `applySchemaPlan` no longer wraps operations in transactions to ensure compatibility with standardized migration runner behavior.
+
 ## 0.1.0-dev+8
 
 - **Improved**: SQLite migration error now explains primary key limitations.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0-dev+9
+
+- **Refactor**: Decoupled core package from driver-specific dependencies (`ormed_sqlite`, `ormed_mysql`, `ormed_postgres`).
+- **Added**: `MockDriver` and `InMemoryQueryExecutor` for isolated grammar and primitive validation without driver dependencies.
+- **Improved**: Schema migration runner now ensures boarder compatibility by avoiding implicit transactions for DDL (standardized across all drivers).
+- **Fixed**: PostgreSQL JSON encoding now recursively handles `AdHocRow`, `ModelAttributes`, and DTOs within nested Maps and Iterables.
+
 ## 0.1.0-dev+8
 
 - **Added**: Structured OrmException/DriverException for richer runtime and CLI messaging.

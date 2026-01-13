@@ -537,14 +537,12 @@ abstract class ModelCodec<TModel> {
 /// Used internally for table queries and raw SQL results.
 class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   AdHocModelDefinition({
-    required String tableName,
-    String? schema,
+    required super.tableName,
+    super.schema,
     this.alias,
     List<AdHocColumn> columns = const [],
   }) : super(
          modelName: 'AdHoc<$tableName>',
-         tableName: tableName,
-         schema: schema,
          fields: [],
          codec: _AdHocCodec({}),
        ) {

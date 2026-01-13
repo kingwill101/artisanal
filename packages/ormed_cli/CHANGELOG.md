@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+9
+
+- **Updated**: Synced with core schema migration changes to avoid transaction issues in MySQL.
+
 ## 0.1.0-dev+8
 
 - **Improved**: CLI now prints structured OrmException hints.
