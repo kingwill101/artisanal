@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:carbonized/carbonized.dart';
 import 'package:decimal/decimal.dart';
-import 'package:ormed/src/model/model.dart';
+import 'contracts.dart';
+import 'model/model_definition.dart';
+import 'model/model_mixins/model_attributes.dart';
 
 import 'exceptions.dart';
 
@@ -641,8 +643,10 @@ class ValueCodecRegistry {
     if (value == null) return null;
 
     Object? encodeNested(Object? val) {
-      if (val is AdHocRow) return val.toMap();
-      if (val is OrmEntity) return val.attributes.toMap();
+      if (val is AdHocRow) return val;
+      if (val is ModelAttributes) return val.attributes;
+      if (val is InsertDto) return val.toMap();
+      if (val is UpdateDto) return val.toMap();
       if (val is Map) {
         return val.map((k, v) => MapEntry(k.toString(), encodeNested(v)));
       }
@@ -656,12 +660,10 @@ class ValueCodecRegistry {
       final map = _coerceJsonMap(value);
       return jsonEncode(encodeNested(map));
     }
-
     if (_isJsonListField(field)) {
       final list = _coerceJsonList(value);
       return jsonEncode(encodeNested(list));
     }
-
     return jsonEncode(encodeNested(value));
   }
 

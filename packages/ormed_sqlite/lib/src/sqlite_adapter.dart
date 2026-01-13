@@ -416,18 +416,8 @@ class SqliteDriverAdapter
   Future<void> applySchemaPlan(SchemaPlan plan) async {
     final preview = describeSchemaPlan(plan);
 
-    Future<void> runner() async {
-      for (final statement in preview.statements) {
-        await executeRaw(statement.sql, statement.parameters);
-      }
-    }
-
-    if (metadata.supportsTransactions) {
-      await transaction<void>(() async {
-        await runner();
-      });
-    } else {
-      await runner();
+    for (final statement in preview.statements) {
+      await executeRaw(statement.sql, statement.parameters);
     }
   }
 

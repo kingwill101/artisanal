@@ -316,35 +316,17 @@ class PostgresDriverAdapter
   Future<void> applySchemaPlan(SchemaPlan plan) async {
     final preview = describeSchemaPlan(plan);
 
-    Future<void> runner() async {
-      for (final statement in preview.statements) {
-        final session = await _executionSession();
-        final prepared = _prepareStatement(statement.sql, statement.parameters);
-        if (prepared.parameters.isEmpty) {
-          await session.execute(prepared.query);
-        } else {
-          await session.execute(
-            prepared.query,
-            parameters: prepared.parameters,
-          );
-        }
+    for (final statement in preview.statements) {
+      final session = await _executionSession();
+      final prepared = _prepareStatement(statement.sql, statement.parameters);
+      if (prepared.parameters.isEmpty) {
+        await session.execute(prepared.query);
+      } else {
+        await session.execute(
+          prepared.query,
+          parameters: prepared.parameters,
+        );
       }
-    }
-
-    // PostgreSQL does not allow CREATE DATABASE or DROP DATABASE inside a transaction block.
-    // We check if the plan contains any such operations.
-    final hasDatabaseOps = plan.mutations.any(
-      (m) =>
-          m.operation == SchemaMutationOperation.createDatabase ||
-          m.operation == SchemaMutationOperation.dropDatabase,
-    );
-
-    if (metadata.supportsTransactions && !hasDatabaseOps) {
-      await transaction(() async {
-        await runner();
-      });
-    } else {
-      await runner();
     }
   }
 
