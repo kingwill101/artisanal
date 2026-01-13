@@ -531,15 +531,29 @@ abstract class ModelCodec<TModel> {
 /// Used internally for table queries and raw SQL results.
 class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   AdHocModelDefinition({
+    required String tableName,
+    String? schema,
+    String? alias,
+    List<AdHocColumn> columns = const [],
+  }) : this._internal(
+         tableName: tableName,
+         schema: schema,
+         alias: alias,
+         columns: columns,
+         fieldsMap: <String, FieldDefinition>{},
+       );
+
+  AdHocModelDefinition._internal({
     required super.tableName,
     super.schema,
-    this.alias,
-    List<AdHocColumn> columns = const [],
-  }) : _fields = <String, FieldDefinition>{},
+    required this.alias,
+    required List<AdHocColumn> columns,
+    required Map<String, FieldDefinition> fieldsMap,
+  }) : _fields = fieldsMap,
        super(
          modelName: 'AdHoc<$tableName>',
          fields: const [],
-         codec: const _MapModelCodec(),
+         codec: _AdHocCodec(fieldsMap),
        ) {
     for (final column in columns) {
       registerColumn(column);
@@ -550,6 +564,9 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   final String? alias;
 
   final Map<String, FieldDefinition> _fields;
+
+  @override
+  List<FieldDefinition> get fields => _fields.values.toSet().toList();
 
   /// Returns a field definition for the given name, creating one if needed.
   FieldDefinition fieldFor(String name) {
@@ -580,6 +597,7 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
       isNullable: column.isNullable,
       columnType: column.columnType,
       defaultValueSql: column.defaultValueSql,
+      codecType: column.codecType,
     );
     _registerField(definition, column.name);
     if (column.columnName != null && column.columnName != column.name) {
@@ -592,6 +610,40 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   }
 }
 
+class _AdHocCodec extends ModelCodec<AdHocRow> {
+  _AdHocCodec(this._fields);
+
+  Map<String, FieldDefinition> _fields;
+
+  @override
+  Map<String, Object?> encode(AdHocRow model, ValueCodecRegistry registry) {
+    final result = <String, Object?>{};
+    for (final entry in model.entries) {
+      final field = _fields[entry.key];
+      if (field != null) {
+        result[entry.key] = registry.encodeField(field, entry.value);
+      } else {
+        result[entry.key] = entry.value;
+      }
+    }
+    return result;
+  }
+
+  @override
+  AdHocRow decode(Map<String, Object?> data, ValueCodecRegistry registry) {
+    final result = <String, Object?>{};
+    for (final entry in data.entries) {
+      final field = _fields[entry.key];
+      if (field != null) {
+        result[entry.key] = registry.decodeField(field, entry.value);
+      } else {
+        result[entry.key] = entry.value;
+      }
+    }
+    return AdHocRow(result);
+  }
+}
+
 /// Column definition for ad-hoc queries.
 class AdHocColumn {
   const AdHocColumn({
@@ -601,6 +653,7 @@ class AdHocColumn {
     this.resolvedType,
     this.columnType,
     this.defaultValueSql,
+    this.codecType,
     this.isNullable = true,
     this.isPrimaryKey = false,
   });
@@ -623,23 +676,14 @@ class AdHocColumn {
   /// SQL default value expression.
   final String? defaultValueSql;
 
+  /// Codec type for transformations.
+  final String? codecType;
+
   /// Whether this column can be null.
   final bool isNullable;
 
   /// Whether this column is a primary key.
   final bool isPrimaryKey;
-}
-
-class _MapModelCodec extends ModelCodec<AdHocRow> {
-  const _MapModelCodec();
-
-  @override
-  Map<String, Object?> encode(AdHocRow model, ValueCodecRegistry registry) =>
-      Map<String, Object?>.from(model);
-
-  @override
-  AdHocRow decode(Map<String, Object?> data, ValueCodecRegistry registry) =>
-      AdHocRow(data);
 }
 
 /// A wrapper definition that uses an underlying registered model definition

@@ -451,7 +451,7 @@ class ValueCodecRegistry {
     if (castKey != null) {
       return decodeCast<T>(castKey, value, field: field);
     }
-    return _codecFor(field).decode(value) as T?;
+    return _decodeResult<T>(_codecFor(field).decode(value), field);
   }
 
   /// Encodes [value] using the codec registered under [key].
@@ -621,7 +621,20 @@ class ValueCodecRegistry {
       if (field == null) return value as T?;
       throw CodecNotFound(key, field);
     }
-    return codec.decode(value) as T?;
+    return _decodeResult<T>(codec.decode(value), field);
+  }
+
+  T? _decodeResult<T>(Object? decoded, FieldDefinition? field) {
+    if (decoded is List) {
+      final casted = _tryCastList<T>(decoded, field);
+      if (casted != null) return casted;
+    }
+    if (decoded is Map) {
+      final casted = _tryCastMap<T>(decoded, field);
+      if (casted != null) return casted;
+    }
+    if (decoded is T) return decoded as T;
+    return decoded as T?;
   }
 
   Object? _encodeJsonCast(Object? value, FieldDefinition? field) {
@@ -646,9 +659,41 @@ class ValueCodecRegistry {
       return _decodeJsonMap(value) as T?;
     }
     if (_isJsonListField(field)) {
-      return _decodeJsonList(value) as T?;
+      return _decodeJsonListTyped<T>(value, field);
     }
     return _decodeJsonValue(value, allowRawString: true) as T?;
+  }
+
+  T? _decodeJsonListTyped<T>(Object? value, FieldDefinition? field) {
+    return _decodeResult<T>(_decodeJsonList(value), field);
+  }
+
+  T? _tryCastList<T>(List result, FieldDefinition? field) {
+    final type = field != null 
+        ? _jsonFieldType(field) 
+        : T.toString().replaceAll('?', '');
+        
+    if (type == 'List<String>' && result is! List<String>) return result.cast<String>() as T;
+    if (type == 'List<int>' && result is! List<int>) return result.cast<int>() as T;
+    if (type == 'List<double>' && result is! List<double>) return result.cast<double>() as T;
+    if (type == 'List<num>' && result is! List<num>) return result.cast<num>() as T;
+    if (type == 'List<bool>' && result is! List<bool>) return result.cast<bool>() as T;
+    if (type == 'List<DateTime>' && result is! List<DateTime>) return result.cast<DateTime>() as T;
+    
+    if (result is T) return result as T;
+    return null;
+  }
+
+  T? _tryCastMap<T>(Map result, FieldDefinition? field) {
+    final type = field != null 
+        ? _jsonFieldType(field) 
+        : T.toString().replaceAll('?', '');
+        
+    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>) return result.cast<String, Object?>() as T;
+    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>) return result.cast<String, dynamic>() as T;
+    
+    if (result is T) return result as T;
+    return null;
   }
 
   bool _isJsonMapField(FieldDefinition? field) {
