@@ -8,8 +8,8 @@ environment:
 
 dependencies:
   artisanal: ^0.1.1
-  contextual: ^2.0.0
-  contextual_shelf: ^0.2.0
+  contextual: ^2.1.0
+  contextual_shelf: ^0.3.0
   file_cloud: ^0.1.0
   liquify: ^1.4.1
   ormed: ^0.1.0-dev+8

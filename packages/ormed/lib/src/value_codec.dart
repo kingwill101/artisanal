@@ -639,15 +639,30 @@ class ValueCodecRegistry {
 
   Object? _encodeJsonCast(Object? value, FieldDefinition? field) {
     if (value == null) return null;
+
+    Object? encodeNested(Object? val) {
+      if (val is AdHocRow) return val.toMap();
+      if (val is OrmEntity) return val.attributes.toMap();
+      if (val is Map) {
+        return val.map((k, v) => MapEntry(k.toString(), encodeNested(v)));
+      }
+      if (val is Iterable) {
+        return val.map(encodeNested).toList();
+      }
+      return val;
+    }
+
     if (_isJsonMapField(field)) {
       final map = _coerceJsonMap(value);
-      return jsonEncode(map);
+      return jsonEncode(encodeNested(map));
     }
+
     if (_isJsonListField(field)) {
       final list = _coerceJsonList(value);
-      return jsonEncode(list);
+      return jsonEncode(encodeNested(list));
     }
-    return jsonEncode(value);
+
+    return jsonEncode(encodeNested(value));
   }
 
   T? _decodeJsonCast<T>(Object? value, FieldDefinition? field) {

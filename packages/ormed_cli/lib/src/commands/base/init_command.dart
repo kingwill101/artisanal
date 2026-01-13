@@ -171,34 +171,41 @@ class InitCommand extends Command<void> {
     }
 
     if (includeSeeders) {
-      seedersDir = Directory(resolvePath(root, config.seeds!.directory));
-      hasExistingSeeders = _hasDartFiles(seedersDir);
-      _ensureDirectory(seedersDir, 'seeders directory', tracker);
+      final seeds = config.seeds;
+      if (seeds == null) {
+        cliIO.warning(
+          'No seeds configuration found in ormed.yaml. Skipping seed scaffolding.',
+        );
+      } else {
+        seedersDir = Directory(resolvePath(root, seeds.directory));
+        hasExistingSeeders = _hasDartFiles(seedersDir);
+        _ensureDirectory(seedersDir, 'seeders directory', tracker);
 
-      seedRegistry = File(resolvePath(root, config.seeds!.registry));
-      _writeFile(
-        file: seedRegistry,
-        content: initialSeedRegistryTemplate.replaceAll(
-          '{{package_name}}',
-          packageName,
-        ),
-        label: 'seeders registry',
-        force: force,
-        tracker: tracker,
-        interactive: true,
-      );
+        seedRegistry = File(resolvePath(root, seeds.registry));
+        _writeFile(
+          file: seedRegistry,
+          content: initialSeedRegistryTemplate.replaceAll(
+            '{{package_name}}',
+            packageName,
+          ),
+          label: 'seeders registry',
+          force: force,
+          tracker: tracker,
+          interactive: true,
+        );
 
-      final defaultSeeder = File(
-        p.join(seedersDir.path, 'database_seeder.dart'),
-      );
-      _writeFile(
-        file: defaultSeeder,
-        content: _defaultSeederTemplate,
-        label: 'database seeder',
-        force: force,
-        tracker: tracker,
-        interactive: true,
-      );
+        final defaultSeeder = File(
+          p.join(seedersDir.path, 'database_seeder.dart'),
+        );
+        _writeFile(
+          file: defaultSeeder,
+          content: _defaultSeederTemplate,
+          label: 'database seeder',
+          force: force,
+          tracker: tracker,
+          interactive: true,
+        );
+      }
     }
 
     if (includeDatasource) {

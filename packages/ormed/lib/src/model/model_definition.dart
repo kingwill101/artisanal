@@ -121,12 +121,18 @@ class ModelDefinition<TModel extends OrmEntity> {
     covariant dynamic model, {
     ValueCodecRegistry? registry,
   }) {
+    final reg = registry ?? ValueCodecRegistry.instance;
+
+    // Use the codec for AdHocRow (used in table() queries) so that casting and
+    // field encoding are correctly applied before persisting.
+    if (model is AdHocRow) {
+      return codec.encode(model as TModel, reg);
+    }
+
     // Handle ad-hoc queries where model is already a Map
     if (model is Map<String, Object?>) {
       return Map<String, Object?>.from(model);
     }
-
-    final reg = registry ?? ValueCodecRegistry.instance;
 
     // Tracked model: let the generated codec handle encoding (includes virtual
     // fields like timestamps and soft delete columns).
@@ -533,28 +539,17 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   AdHocModelDefinition({
     required String tableName,
     String? schema,
-    String? alias,
+    this.alias,
     List<AdHocColumn> columns = const [],
-  }) : this._internal(
+  }) : super(
+         modelName: 'AdHoc<$tableName>',
          tableName: tableName,
          schema: schema,
-         alias: alias,
-         columns: columns,
-         fieldsMap: <String, FieldDefinition>{},
-       );
-
-  AdHocModelDefinition._internal({
-    required super.tableName,
-    super.schema,
-    required this.alias,
-    required List<AdHocColumn> columns,
-    required Map<String, FieldDefinition> fieldsMap,
-  }) : _fields = fieldsMap,
-       super(
-         modelName: 'AdHoc<$tableName>',
-         fields: const [],
-         codec: _AdHocCodec(fieldsMap),
+         fields: [],
+         codec: _AdHocCodec({}),
        ) {
+    // We must initialize the codec with our internal map
+    (codec as _AdHocCodec)._fields = _lookup;
     for (final column in columns) {
       registerColumn(column);
     }
@@ -563,14 +558,15 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
   /// Optional table alias.
   final String? alias;
 
-  final Map<String, FieldDefinition> _fields;
+  final List<FieldDefinition> _explicitFields = [];
+  final Map<String, FieldDefinition> _lookup = {};
 
   @override
-  List<FieldDefinition> get fields => _fields.values.toSet().toList();
+  List<FieldDefinition> get fields => _explicitFields;
 
   /// Returns a field definition for the given name, creating one if needed.
   FieldDefinition fieldFor(String name) {
-    final existing = _fields[name];
+    final existing = _lookup[name];
     if (existing != null) {
       return existing;
     }
@@ -582,7 +578,7 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
       isPrimaryKey: false,
       isNullable: true,
     );
-    _registerField(definition, name);
+    _lookup[name] = definition;
     return definition;
   }
 
@@ -599,14 +595,12 @@ class AdHocModelDefinition extends ModelDefinition<AdHocRow> {
       defaultValueSql: column.defaultValueSql,
       codecType: column.codecType,
     );
-    _registerField(definition, column.name);
-    if (column.columnName != null && column.columnName != column.name) {
-      _fields[column.columnName!] = definition;
-    }
-  }
 
-  void _registerField(FieldDefinition field, String key) {
-    _fields[key] = field;
+    _explicitFields.add(definition);
+    _lookup[column.name] = definition;
+    if (column.columnName != null && column.columnName != column.name) {
+      _lookup[column.columnName!] = definition;
+    }
   }
 }
 
