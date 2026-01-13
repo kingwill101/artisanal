@@ -686,29 +686,37 @@ class ValueCodecRegistry {
   }
 
   T? _tryCastList<T>(List result, FieldDefinition? field) {
-    final type = field != null 
-        ? _jsonFieldType(field) 
+    final type = field != null
+        ? _jsonFieldType(field)
         : T.toString().replaceAll('?', '');
-        
-    if (type == 'List<String>' && result is! List<String>) return result.cast<String>() as T;
-    if (type == 'List<int>' && result is! List<int>) return result.cast<int>() as T;
-    if (type == 'List<double>' && result is! List<double>) return result.cast<double>() as T;
-    if (type == 'List<num>' && result is! List<num>) return result.cast<num>() as T;
-    if (type == 'List<bool>' && result is! List<bool>) return result.cast<bool>() as T;
-    if (type == 'List<DateTime>' && result is! List<DateTime>) return result.cast<DateTime>() as T;
-    
+
+    if (type == 'List<String>' && result is! List<String>)
+      return result.cast<String>() as T;
+    if (type == 'List<int>' && result is! List<int>)
+      return result.cast<int>() as T;
+    if (type == 'List<double>' && result is! List<double>)
+      return result.cast<double>() as T;
+    if (type == 'List<num>' && result is! List<num>)
+      return result.cast<num>() as T;
+    if (type == 'List<bool>' && result is! List<bool>)
+      return result.cast<bool>() as T;
+    if (type == 'List<DateTime>' && result is! List<DateTime>)
+      return result.cast<DateTime>() as T;
+
     if (result is T) return result as T;
     return null;
   }
 
   T? _tryCastMap<T>(Map result, FieldDefinition? field) {
-    final type = field != null 
-        ? _jsonFieldType(field) 
+    final type = field != null
+        ? _jsonFieldType(field)
         : T.toString().replaceAll('?', '');
-        
-    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>) return result.cast<String, Object?>() as T;
-    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>) return result.cast<String, dynamic>() as T;
-    
+
+    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>)
+      return result.cast<String, Object?>() as T;
+    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>)
+      return result.cast<String, dynamic>() as T;
+
     if (result is T) return result as T;
     return null;
   }

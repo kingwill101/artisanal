@@ -7,20 +7,17 @@ class MockDriver extends InMemoryQueryExecutor {
 
   @override
   DriverMetadata get metadata => const DriverMetadata(
-        name: 'mock',
-        capabilities: {
-          DriverCapability.joins,
-          DriverCapability.sqlPreviews,
-          DriverCapability.advancedQueryBuilders,
-        },
-      );
+    name: 'mock',
+    capabilities: {
+      DriverCapability.joins,
+      DriverCapability.sqlPreviews,
+      DriverCapability.advancedQueryBuilders,
+    },
+  );
 }
 
 /// Helper to bootstrap a generic ORM context for tests.
 QueryContext mockContext() {
   final registry = bootstrapOrm();
-  return QueryContext(
-    registry: registry,
-    driver: MockDriver(),
-  );
+  return QueryContext(registry: registry, driver: MockDriver());
 }

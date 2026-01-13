@@ -322,10 +322,7 @@ class PostgresDriverAdapter
       if (prepared.parameters.isEmpty) {
         await session.execute(prepared.query);
       } else {
-        await session.execute(
-          prepared.query,
-          parameters: prepared.parameters,
-        );
+        await session.execute(prepared.query, parameters: prepared.parameters);
       }
     }
   }

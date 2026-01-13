@@ -135,8 +135,7 @@ class SqliteSchemaDialect extends SchemaDialect {
             throw DriverException(
               driver: driverName,
               operation: 'alter_table_add_primary_key',
-              message:
-                  'SQLite cannot add a primary key after table creation.',
+              message: 'SQLite cannot add a primary key after table creation.',
               hint:
                   'Use schema.create() for new tables or rebuild the table to add a primary key.',
             );

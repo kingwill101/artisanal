@@ -235,9 +235,7 @@ Future<void> createModel() async {
     'users',
   ], workingDirectory: testDir);
 
-  final modelFile = File(
-    p.join(testDir, 'lib/src/database/models/user.dart'),
-  );
+  final modelFile = File(p.join(testDir, 'lib/src/database/models/user.dart'));
   modelFile.writeAsStringSync('''
 import 'package:ormed/ormed.dart';
 
@@ -429,7 +427,9 @@ Future<void> verifyAnalyzerConfig() async {
   }
   final text = options.readAsStringSync();
   if (!text.contains('- ormed')) {
-    throw Exception('analysis_options.yaml is missing the Ormed analyzer plugin.');
+    throw Exception(
+      'analysis_options.yaml is missing the Ormed analyzer plugin.',
+    );
   }
 }
 

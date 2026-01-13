@@ -17,7 +17,10 @@ void main() {
         scratchParent.createSync(recursive: true);
       }
       scratchDir = Directory(
-        p.join(scratchParent.path, DateTime.now().microsecondsSinceEpoch.toString()),
+        p.join(
+          scratchParent.path,
+          DateTime.now().microsecondsSinceEpoch.toString(),
+        ),
       );
       scratchDir.createSync(recursive: true);
 

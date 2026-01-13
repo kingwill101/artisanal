@@ -164,7 +164,10 @@ void runCastingTests() {
         'id': 1,
         'tags': ['a', 'b', 'c'],
         'scores': [1, 2, 3],
-        'metadata': {'key': 'value', 'nested': {'a': 1}},
+        'metadata': {
+          'key': 'value',
+          'nested': {'a': 1},
+        },
       });
 
       final row = await query.where('id', 1).first();
@@ -181,7 +184,13 @@ void runCastingTests() {
       expect(scores, equals([1, 2, 3]));
       expect(scores, isA<List<int>>());
 
-      expect(metadata, equals({'key': 'value', 'nested': {'a': 1}}));
+      expect(
+        metadata,
+        equals({
+          'key': 'value',
+          'nested': {'a': 1},
+        }),
+      );
       expect(metadata, isA<Map<String, dynamic>>());
     });
   });

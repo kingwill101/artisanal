@@ -9,16 +9,14 @@ class PlaygroundUserFactory extends ModelFactoryDefinition<User> {
   const PlaygroundUserFactory();
 
   @override
-  Map<String, Object?> defaults() => const {
-        'active': true,
-      };
+  Map<String, Object?> defaults() => const {'active': true};
 
   @override
   Map<String, StateTransformer<User>> get states => const {
-        'admin': _adminState,
-        'guest': _guestState,
-        'inactive': _inactiveState,
-      };
+    'admin': _adminState,
+    'guest': _guestState,
+    'inactive': _inactiveState,
+  };
 
   @override
   void configure(ModelFactoryBuilder<User> builder) {
@@ -58,9 +56,7 @@ class PlaygroundUserFactory extends ModelFactoryDefinition<User> {
       };
 
   static Map<String, Object?> _inactiveState(Map<String, Object?> attributes) =>
-      const {
-        'active': false,
-      };
+      const {'active': false};
 }
 
 void registerPlaygroundFactories() {

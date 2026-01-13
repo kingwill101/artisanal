@@ -472,9 +472,7 @@ void _ensureAnalyzerPluginConfig({
   final file = File(p.join(root.path, 'analysis_options.yaml'));
   final pluginLine = '- ormed';
   if (!file.existsSync()) {
-    file.writeAsStringSync(
-      'analyzer:\n  plugins:\n    $pluginLine\n',
-    );
+    file.writeAsStringSync('analyzer:\n  plugins:\n    $pluginLine\n');
     tracker.paths['analysis_options.yaml'] = file.path;
     return;
   }
