@@ -635,7 +635,7 @@ class ValueCodecRegistry {
       final casted = _tryCastMap<T>(decoded, field);
       if (casted != null) return casted;
     }
-    if (decoded is T) return decoded as T;
+    if (decoded is T) return decoded;
     return decoded as T?;
   }
 
@@ -690,18 +690,24 @@ class ValueCodecRegistry {
         ? _jsonFieldType(field)
         : T.toString().replaceAll('?', '');
 
-    if (type == 'List<String>' && result is! List<String>)
+    if (type == 'List<String>' && result is! List<String>) {
       return result.cast<String>() as T;
-    if (type == 'List<int>' && result is! List<int>)
+    }
+    if (type == 'List<int>' && result is! List<int>) {
       return result.cast<int>() as T;
-    if (type == 'List<double>' && result is! List<double>)
+    }
+    if (type == 'List<double>' && result is! List<double>) {
       return result.cast<double>() as T;
-    if (type == 'List<num>' && result is! List<num>)
+    }
+    if (type == 'List<num>' && result is! List<num>) {
       return result.cast<num>() as T;
-    if (type == 'List<bool>' && result is! List<bool>)
+    }
+    if (type == 'List<bool>' && result is! List<bool>) {
       return result.cast<bool>() as T;
-    if (type == 'List<DateTime>' && result is! List<DateTime>)
+    }
+    if (type == 'List<DateTime>' && result is! List<DateTime>) {
       return result.cast<DateTime>() as T;
+    }
 
     if (result is T) return result as T;
     return null;
@@ -712,10 +718,12 @@ class ValueCodecRegistry {
         ? _jsonFieldType(field)
         : T.toString().replaceAll('?', '');
 
-    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>)
+    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>) {
       return result.cast<String, Object?>() as T;
-    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>)
+    }
+    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>) {
       return result.cast<String, dynamic>() as T;
+    }
 
     if (result is T) return result as T;
     return null;

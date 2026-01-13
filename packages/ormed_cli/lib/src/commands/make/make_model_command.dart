@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:args/command_runner.dart' show UsageException;
 import 'package:artisanal/args.dart';
 import 'package:path/path.dart' as p;
 
