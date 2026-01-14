@@ -27,7 +27,10 @@ export '../terminal/terminal.dart'
         TtyTerminal,
         StringTerminal,
         RawModeGuard,
-        Ansi;
+        Ansi,
+        sharedStdinStream,
+        isSharedStdinStreamStarted,
+        shutdownSharedStdinStream;
 
 /// Alias for backward compatibility.
 ///

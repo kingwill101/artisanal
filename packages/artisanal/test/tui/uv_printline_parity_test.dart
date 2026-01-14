@@ -34,6 +34,7 @@ void main() {
           altScreen: false,
           hideCursor: false,
           useUltravioletRenderer: true,
+          useUltravioletInputDecoder: false,
         ),
         terminal: terminal,
       );
@@ -67,6 +68,7 @@ void main() {
           altScreen: true,
           hideCursor: false,
           useUltravioletRenderer: true,
+          useUltravioletInputDecoder: false,
         ),
         terminal: terminal,
       );

@@ -46,3 +46,9 @@ export 'terminal_base.dart'
         TtyTerminal,
         StringTerminal,
         RawModeGuard;
+
+export 'stdin_stream.dart'
+    show
+        sharedStdinStream,
+        isSharedStdinStreamStarted,
+        shutdownSharedStdinStream;

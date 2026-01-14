@@ -126,7 +126,8 @@ class InitCommand extends Command<void> {
     // Load config
     final config = loadOrmProjectConfig(configFile);
 
-    if (includeDatasource || includeMigrations || includeSeeders) {
+    if (!skipBuild &&
+        (includeDatasource || includeMigrations || includeSeeders)) {
       await _ensureDependencies(root, config: config, skipBuild: skipBuild);
     }
     if (withAnalyzer) {

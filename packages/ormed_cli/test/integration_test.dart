@@ -138,6 +138,12 @@ void main() {
 name: test_project
 environment:
   sdk: ">=3.0.0 <4.0.0"
+dependencies:
+  ormed: any
+  ormed_sqlite: any
+dev_dependencies:
+  ormed_cli: any
+  build_runner: any
 ''');
 
       testMigrationLoader = TestMigrationRegistryLoader();

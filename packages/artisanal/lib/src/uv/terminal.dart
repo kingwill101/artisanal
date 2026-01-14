@@ -143,7 +143,10 @@ class Terminal
   ///
   /// This enters raw mode, initializes the renderer, starts listening for
   /// input and resize events, and queries terminal capabilities.
-  Future<void> start() async {
+  ///
+  /// If [handleSignals] is true (default), installs a SIGINT handler that
+  /// restores terminal state and exits the process.
+  Future<void> start({bool handleSignals = true}) async {
     if (_running) return;
     _running = true;
 
@@ -158,10 +161,12 @@ class Terminal
     }
 
     // Handle SIGINT to ensure terminal state is restored.
-    _sigintSubscription = ProcessSignal.sigint.watch().listen((_) {
-      stop();
-      exit(0);
-    });
+    if (handleSignals) {
+      _sigintSubscription = ProcessSignal.sigint.watch().listen((_) async {
+        await stop();
+        exit(0);
+      });
+    }
 
     _reader.start();
     _readerSubscription = _reader.events.listen((event) {
@@ -237,9 +242,12 @@ class Terminal
     }
 
     await _readerSubscription?.cancel();
+    _readerSubscription = null;
     await _winchSubscription?.cancel();
+    _winchSubscription = null;
     await _sigintSubscription?.cancel();
-    _winch.stop();
+    _sigintSubscription = null;
+    await _winch.stop();
     await _reader.close();
   }
 

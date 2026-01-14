@@ -34,6 +34,7 @@ class SharedInputStream {
     }
     _controller ??= StreamController<List<int>>.broadcast(
       onListen: _ensureStarted,
+      onCancel: _onCancel,
     );
     return _controller!.stream;
   }
@@ -53,6 +54,14 @@ class SharedInputStream {
       },
       cancelOnError: false,
     );
+  }
+
+  Future<void>? _onCancel() {
+    // We intentionally do NOT cancel the source subscription here.
+    // If we are listening to stdin, canceling the subscription would make
+    // it impossible to listen again later (since stdin is a single-subscription stream).
+    // Instead, we rely on the explicit shutdown() call to clean up.
+    return null;
   }
 
   Future<void> shutdown() async {

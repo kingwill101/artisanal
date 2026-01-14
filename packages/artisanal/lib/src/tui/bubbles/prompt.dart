@@ -32,6 +32,7 @@ const promptProgramOptions = ProgramOptions(
   sendInterrupt: false,
   useUltravioletRenderer: false,
   useUltravioletInputDecoder: false,
+  shutdownSharedStdinOnExit: false,
 );
 
 /// Dedicated defaults for full-screen text editing prompts.
@@ -45,6 +46,7 @@ const textareaPromptOptions = ProgramOptions(
   sendInterrupt: false,
   useUltravioletRenderer: true,
   useUltravioletInputDecoder: true,
+  shutdownSharedStdinOnExit: false,
 );
 
 /// Runs a [PasswordModel] and resolves to the submitted password, or `null` if

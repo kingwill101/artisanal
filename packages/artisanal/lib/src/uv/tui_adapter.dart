@@ -168,19 +168,28 @@ term.Key _toTermKey(uvk.Key key) {
 
   // Common control/special keys (represented as ASCII codes in UV).
   switch (key.code) {
-    case uvk.keyEnter:
+    case uvk.keyEnter: // 0x0D (CR)
       return term.Key(term.KeyType.enter, alt: alt, ctrl: ctrl, shift: shift);
-    case uvk.keyTab:
+    case 0x0A: // 0x0A (LF)
+      return term.Key(term.KeyType.enter, alt: alt, ctrl: ctrl, shift: shift);
+    case uvk.keyTab: // 0x09 (HT)
       return term.Key(term.KeyType.tab, alt: alt, ctrl: ctrl, shift: shift);
-    case uvk.keyBackspace:
+    case uvk.keyBackspace: // 0x7F (DEL)
       return term.Key(
         term.KeyType.backspace,
         alt: alt,
         ctrl: ctrl,
         shift: shift,
       );
-    case uvk.keyEscape:
+    case uvk.keyEscape: // 0x1B (ESC)
       return term.Key(term.KeyType.escape, alt: alt, ctrl: ctrl, shift: shift);
+    case 0x08: // 0x08 (BS / Ctrl+H)
+      return term.Key(
+        term.KeyType.backspace,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+      );
   }
 
   // Keypad keys (Kitty protocol / application mode).
@@ -247,11 +256,20 @@ term.Key _toTermKey(uvk.Key key) {
 
   // C0/C1 mapped to ctrl+<letter> in UV (code points in ASCII range).
   if (key.code < uvk.keyExtended) {
+    var code = key.code;
+    var finalCtrl = ctrl;
+    if (code == 0) {
+      code = 0x20; // Space
+      finalCtrl = true;
+    } else if (code >= 1 && code <= 26) {
+      code += 96; // 1 -> 'a' (97)
+      finalCtrl = true;
+    }
     return term.Key(
       term.KeyType.runes,
-      runes: [key.code],
+      runes: [code],
       alt: alt,
-      ctrl: ctrl,
+      ctrl: finalCtrl,
     );
   }
 

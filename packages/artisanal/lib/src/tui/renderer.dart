@@ -527,6 +527,7 @@ class UltravioletTuiRenderer implements TuiRenderer {
     _initialize();
     _renderer?.erase();
     _dirty = true;
+    _lastRenderTime = null;
     _pendingView = '';
     unawaited(terminal.flush());
   }

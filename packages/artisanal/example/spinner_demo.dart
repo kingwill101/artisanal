@@ -15,7 +15,7 @@ void main() async {
     message: 'Loading data...',
     terminal: terminal,
     task: () async {
-      await Future<void>.delayed(const Duration(seconds: 3));
+      await Future<void>.delayed(const Duration(seconds: 5));
     },
   );
 

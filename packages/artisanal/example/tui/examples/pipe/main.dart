@@ -8,16 +8,18 @@ import 'package:artisanal/artisanal.dart' show Style, AnsiColor;
 import 'package:artisanal/tui.dart' as tui;
 
 class PipeModel implements tui.Model {
-  PipeModel({required this.initial})
-    : input = tui.TextInputModel(
-        prompt: '',
-        cursor: tui.CursorModel(
-          // Match lipgloss color 63
-          char: ' ',
-          blinkSpeed: const Duration(milliseconds: 530),
-        ),
-        width: 48,
-      )..value = initial;
+  PipeModel({required this.initial, tui.TextInputModel? input})
+    : input =
+          input ??
+          (tui.TextInputModel(
+            prompt: '',
+            cursor: tui.CursorModel(
+              // Match lipgloss color 63
+              char: ' ',
+              blinkSpeed: const Duration(milliseconds: 530),
+            ),
+            width: 48,
+          )..value = initial);
 
   final String initial;
   final tui.TextInputModel input;
@@ -29,25 +31,24 @@ class PipeModel implements tui.Model {
 
   @override
   (tui.Model, tui.Cmd?) update(tui.Msg msg) {
+    if (msg is tui.InterruptMsg) {
+      return (this, tui.Cmd.quit());
+    }
+
     if (msg is tui.KeyMsg) {
       switch (msg.key.type) {
         case tui.KeyType.enter:
         case tui.KeyType.escape:
           return (this, tui.Cmd.quit());
         default:
-          if (msg.key.ctrl && msg.key.runes.firstOrNull == 0x63) {
-            // Ctrl+C
+          if (msg.key.isCtrlC) {
             return (this, tui.Cmd.quit());
           }
       }
     }
 
     final (newInput, cmd) = input.update(msg);
-    return (PipeModel(initial: initial)._withInput(newInput), cmd);
-  }
-
-  PipeModel _withInput(tui.TextInputModel newInput) {
-    return PipeModel(initial: initial)..input.value = newInput.value;
+    return (PipeModel(initial: initial, input: newInput), cmd);
   }
 
   @override
@@ -61,7 +62,9 @@ class PipeModel implements tui.Model {
 
 Future<void> main() async {
   final isPiped = !io.stdin.hasTerminal;
-  final data = isPiped ? await utf8.decoder.bind(io.stdin).join() : '';
+  final data = isPiped
+      ? await utf8.decoder.bind(tui.sharedStdinStream).join()
+      : '';
 
   if (!isPiped || data.isEmpty) {
     io.stderr.writeln('Try piping in some text.'); // tui:allow-stdout

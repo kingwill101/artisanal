@@ -6,8 +6,6 @@
 /// Run with: dart run example/tui_list.dart
 library;
 
-import 'dart:io' as io;
-
 import 'package:artisanal/tui.dart';
 
 /// The list selection model.
@@ -122,7 +120,7 @@ void main() async {
     ),
   );
 
-  io.stdout.writeln(
+  Cmd.println(
     // tui:allow-stdout
     result.selected == null
         ? 'No selection made. Maybe next time!'

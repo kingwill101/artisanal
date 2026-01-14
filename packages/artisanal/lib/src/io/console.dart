@@ -119,6 +119,8 @@ class Console {
   /// The terminal width for formatting.
   final int terminalWidth;
 
+  StdioTerminal? _cachedPromptTerminal;
+
   final WriteLine _out;
   final WriteLine _err;
   final WriteRaw _outRaw;
@@ -141,6 +143,12 @@ class Console {
   /// io.components.bulletList(['Item 1', 'Item 2']);
   /// ```
   Components get components => _components ??= Components(io: this);
+
+  /// Disposes of console resources, including any active terminal.
+  void dispose() {
+    _cachedPromptTerminal?.dispose();
+    _cachedPromptTerminal = null;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Basic Output
@@ -424,8 +432,10 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Terminal instance used for inline prompts and animations.
-  StdioTerminal get promptTerminal =>
-      StdioTerminal(stdout: _stdout ?? io.stdout, stdin: _stdin ?? io.stdin);
+  StdioTerminal get promptTerminal => _cachedPromptTerminal ??= StdioTerminal(
+    stdout: _stdout ?? io.stdout,
+    stdin: _stdin ?? io.stdin,
+  );
 
   /// Creates a new progress bar.
   Iterable<T> progressIterate<T>(Iterable<T> iterable, {int? max}) sync* {

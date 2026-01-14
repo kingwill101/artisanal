@@ -37,8 +37,8 @@ class SizeNotifier {
   }
 
   /// Stops the notifier and cleans up resources.
-  void stop() {
-    _subscription?.cancel();
+  Future<void> stop() async {
+    await _subscription?.cancel();
     _subscription = null;
   }
 

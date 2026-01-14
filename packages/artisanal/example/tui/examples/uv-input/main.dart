@@ -8,8 +8,6 @@
 ///   --uv-renderer      Use the UV renderer (cell-buffer diff)
 library;
 
-import 'dart:io' as io;
-
 import 'package:artisanal/artisanal.dart' show Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/src/terminal/ansi.dart' as term_ansi;
@@ -172,7 +170,7 @@ String _clipToWidth(String s, int maxWidth) {
 
 void main(List<String> args) async {
   if (args.contains('-h') || args.contains('--help')) {
-    io.stdout.writeln(''' // tui:allow-stdout
+    tui.Cmd.println(''' // tui:allow-stdout
 UV input decoder demo
 
 Usage:

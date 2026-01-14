@@ -58,17 +58,16 @@ class CancelReader {
 
   /// Cancels the reader.
   ///
-  /// Returns true if the reader was successfully canceled.
-  bool cancel() {
+  /// Returns a future that completes when the reader is successfully canceled.
+  Future<void> cancel() async {
     _isCanceled = true;
-    _subscription?.cancel();
+    await _subscription?.cancel();
     _subscription = null;
-    return true;
   }
 
   /// Closes the reader and cleans up resources.
   Future<void> close() async {
-    cancel();
+    await cancel();
     if (!_controller.isClosed) {
       await _controller.close();
     }

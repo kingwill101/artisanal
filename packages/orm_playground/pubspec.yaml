@@ -11,7 +11,7 @@ dependencies:
     path: ../ormed
   ormed_sqlite: ^0.1.0-dev+9
   ormed_cli: ^0.1.0-dev+9
-  artisanal: ^0.1.1
+  artisanal: ^0.1.2
 
 dev_dependencies:
   lints: ^6.0.0

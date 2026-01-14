@@ -584,7 +584,10 @@ void main() {
     test('renders initial view', () async {
       final program = Program(
         const CounterModel(42),
-        options: const ProgramOptions(altScreen: false),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletRenderer: false,
+        ),
         terminal: terminal,
       );
 
@@ -1467,8 +1470,11 @@ void main() {
 
     test('printf formats arguments', () async {
       final program = Program(
-        CounterModel(),
-        options: const ProgramOptions(altScreen: false),
+        const CounterModel(),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletRenderer: false,
+        ),
         terminal: terminal,
       );
 
