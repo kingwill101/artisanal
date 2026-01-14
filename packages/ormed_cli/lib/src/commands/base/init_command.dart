@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
@@ -8,6 +9,10 @@ import '../../config.dart';
 import 'shared.dart';
 
 class InitCommand extends Command<void> {
+  /// For internal testing: allows running from a specific directory without changing CWD.
+  @visibleForTesting
+  Directory? workingDirectory;
+
   InitCommand() {
     argParser
       ..addFlag(
@@ -80,7 +85,7 @@ class InitCommand extends Command<void> {
     final includeSeeders = !restrictScaffold || onlyTargets.contains('seeders');
     final includeDatasource =
         !restrictScaffold || onlyTargets.contains('datasource');
-    final root = findProjectRoot();
+    final root = findProjectRoot(workingDirectory);
     final tracker = _ArtifactTracker(root);
     final configFile = File(p.join(root.path, 'ormed.yaml'));
 
