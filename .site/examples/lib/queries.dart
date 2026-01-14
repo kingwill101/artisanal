@@ -687,3 +687,241 @@ Future<void> crudExamples(DataSource dataSource) async {
   );
 }
 // #endregion crud
+
+// #region utility-methods
+Future<void> utilityMethodsExamples(DataSource dataSource) async {
+  // Conditional query building with when()
+  final orderStatus = 'shipped';
+  final orders = await dataSource
+      .query<$Post>()
+      .when(orderStatus == 'shipped', (q) => q.whereEquals('status', 'shipped'))
+      .get();
+
+  // unless() - inverse of when()
+  final postsIgnoreDraft = await dataSource
+      .query<$Post>()
+      .unless(
+        false,
+        (q) => q.whereEquals('status', 'published'),
+      )
+      .get();
+
+  // tap() - debug/inspect query without modifying it
+  final users = await dataSource
+      .query<$User>()
+      .tap((q) => print('Query: ${q}')) // inspect
+      .whereEquals('active', true)
+      .get();
+
+  // value() - get single column value
+  final maxAge = await dataSource
+      .query<$User>()
+      .orderBy('age', descending: true)
+      .value<int>('age');
+
+  print('Max age: $maxAge');
+}
+// #endregion utility-methods
+
+// #region advanced-joins
+Future<void> advancedJoinsExamples(DataSource dataSource) async {
+  // Join with WHERE clause combined
+  final usersWithActiveComments = await dataSource
+      .query<$User>()
+      .joinWhere('comments', 'users.id', '=', 'comments.user_id')
+      .where('comments.status', '=', 'active')
+      .get();
+
+  // Left join with WHERE
+  final allUsersWithActiveComments = await dataSource
+      .query<$User>()
+      .leftJoinWhere('comments', 'users.id', '=', 'comments.user_id')
+      .get();
+
+  // Join a subquery
+  final recentPostsByTopAuthors = await dataSource.query<$Post>().joinSub(
+    'top_authors',
+    (q) => q
+        .select(['id', 'name'])
+        .where('posts', '>', 10),
+    'top_authors.id',
+    '=',
+    'posts.author_id',
+  ).get();
+
+  // Straight join (MySQL - forces left-to-right evaluation)
+  final straightJoinExample = await dataSource
+      .query<$User>()
+      .straightJoin('posts', 'users.id', '=', 'posts.user_id')
+      .get();
+
+  // Cross join subquery (Cartesian product with subquery)
+  final cartesianWithSubquery = await dataSource
+      .query<$Product>()
+      .crossJoinSub(
+        'sizes',
+        (q) => q.select(['id', 'name']).from('sizes'),
+      )
+      .get();
+}
+// #endregion advanced-joins
+
+// #region json-queries
+Future<void> jsonQueryExamples(DataSource dataSource) async {
+  // JSON contains - check if JSON field contains a value
+  final usersWithRole = await dataSource
+      .query<$User>()
+      .whereJsonContains('permissions', 'admin')
+      .get();
+
+  // JSON contains key - check if JSON field has a specific key
+  final usersWithFeatureFlag = await dataSource
+      .query<$User>()
+      .whereJsonContainsKey('features', 'beta_access')
+      .get();
+
+  // JSON length - filter by JSON array/object size
+  final usersWithMultipleTags = await dataSource
+      .query<$User>()
+      .whereJsonLength('tags', '>', 2)
+      .get();
+
+  // JSON overlaps - check if two JSON arrays share elements
+  final usersWithCommonTags = await dataSource
+      .query<$User>()
+      .whereJsonOverlaps('tags', ['popular', 'featured'])
+      .get();
+
+  // Complex: combine JSON query with other conditions
+  final activeAdminsWithFeature = await dataSource
+      .query<$User>()
+      .whereEquals('active', true)
+      .whereJsonContains('roles', 'admin')
+      .whereJsonContainsKey('features', 'analytics')
+      .get();
+}
+// #endregion json-queries
+
+// #region index-hints
+Future<void> indexHintsExamples(DataSource dataSource) async {
+  // Use index hint - suggest an index (not required to use)
+  final usersWithIndex = await dataSource
+      .query<$User>()
+      .useIndex(['email_idx'])
+      .whereEquals('email', 'john@example.com')
+      .get();
+
+  // Force index - require use of specific index
+  final forcedIndexQuery = await dataSource
+      .query<$User>()
+      .forceIndex(['active_user_idx'])
+      .whereEquals('active', true)
+      .get();
+
+  // Ignore index - exclude specific index from optimizer
+  final ignoreIndexQuery = await dataSource
+      .query<$User>()
+      .ignoreIndex(['slow_index'])
+      .whereEquals('role', 'admin')
+      .get();
+
+  // Multiple indexes
+  final multiIndexQuery = await dataSource
+      .query<$User>()
+      .useIndex(['email_idx', 'active_idx'])
+      .get();
+}
+// #endregion index-hints
+
+// #region soft-delete-advanced
+Future<void> softDeleteAdvancedExamples(DataSource dataSource) async {
+  // Default: excludes soft-deleted records
+  final activePosts = await dataSource.query<$Post>().get();
+
+  // Include soft-deleted records
+  final allPostsIncludingDeleted = await dataSource
+      .query<$Post>()
+      .withTrashed()
+      .get();
+
+  // Only soft-deleted records
+  final onlyDeletedPosts = await dataSource.query<$Post>().onlyTrashed().get();
+
+  // Restore soft-deleted record
+  final restoredCount = await dataSource
+      .query<$Post>()
+      .onlyTrashed()
+      .whereEquals('id', 1)
+      .restore();
+
+  print('Restored $restoredCount posts');
+
+  // Permanently delete without triggering soft delete
+  final permanentlyDeleted = await dataSource
+      .query<$Post>()
+      .whereEquals('id', 2)
+      .forceDelete();
+
+  // Restore multiple records
+  final bulkRestore = await dataSource
+      .query<$Post>()
+      .onlyTrashed()
+      .whereNull('restore_reason')
+      .restore();
+}
+// #endregion soft-delete-advanced
+
+// #region order-advanced
+Future<void> advancedOrderingExamples(DataSource dataSource) async {
+  // Random order
+  final randomUsers = await dataSource
+      .query<$User>()
+      .orderByRandom()
+      .limit(10)
+      .get();
+
+  // Raw order expression
+  final customOrdered = await dataSource
+      .query<$User>()
+      .orderByRaw("CASE WHEN active = 1 THEN 0 ELSE 1 END, name")
+      .get();
+
+  // Order by relation count (users with most posts first)
+  final usersByPostCount = await dataSource
+      .query<$User>()
+      .orderByRelation('posts', 'desc')
+      .get();
+
+  // Combine multiple orderings
+  final complexOrder = await dataSource
+      .query<$User>()
+      .whereEquals('active', true)
+      .orderBy('role')
+      .orderByRaw('LENGTH(name)')
+      .orderByRandom()
+      .get();
+}
+// #endregion order-advanced
+
+// #region where-column
+Future<void> whereColumnExamples(DataSource dataSource) async {
+  // Compare two columns
+  final usersWithBalanceAboveLimit = await dataSource
+      .query<$User>()
+      .whereColumn('balance', '>', 'credit_limit')
+      .get();
+
+  // Check column equality
+  final usersWithSameCityAsProfile = await dataSource
+      .query<$User>()
+      .whereColumn('city', '=', 'profile.city')
+      .get();
+
+  // Combined with other conditions
+  final activeUsersOverLimit = await dataSource
+      .query<$User>()
+      .whereEquals('active', true)
+      .whereColumn('debt', '>', 'max_debt_allowed')
+      .get();
+}
+// #endregion where-column
