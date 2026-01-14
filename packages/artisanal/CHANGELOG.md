@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- **Fixed**: CI deadlocks when reading `stdin` multiple times by introducing `SharedInputStream`.
+- **Fixed**: Resolved UV renderer regressions and TUI input normalization issues.
+- **Improved**: Guarded `startupProbes` against `disableRenderer` configuration.
+
 ## 0.1.1
 
 - **Updated**: Synced release with ORMed dev+7.

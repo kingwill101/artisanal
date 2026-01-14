@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+10
+
+- **Fixed**: CLI test stability by hardening working directory management and avoiding `PathNotFoundException`.
+- **Added**: `--skip-build` flag to `ormed init` for faster scaffolding in CI/tests.
+- **Updated**: Synced with Artisanal 0.1.2.
+
 ## 0.1.0-dev+9
 
 - **Updated**: Synced with core schema migration changes to avoid transaction issues in MySQL.
