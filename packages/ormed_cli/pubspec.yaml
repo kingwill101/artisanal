@@ -1,6 +1,6 @@
 name: ormed_cli
 description: Command-line tooling for the routed ORM (migrations generator & runner).
-version: 0.1.0-dev+10
+version: 0.1.0-dev+9
 repository: https://github.com/RoutedDart/ormed
 issue_tracker: https://github.com/RoutedDart/ormed/issues
 documentation: https://ormed.vercel.app/
