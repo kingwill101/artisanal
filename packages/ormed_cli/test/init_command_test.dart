@@ -39,7 +39,6 @@ dev_dependencies:
   ormed_cli: any
   build_runner: any
 ''');
-
     });
 
     tearDown(() {

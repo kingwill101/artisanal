@@ -344,6 +344,7 @@ Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
     );
 ''';
 
+/// Context for a resolved ORM project, containing the root directory and config file.
 class OrmProjectContext {
   OrmProjectContext({required this.root, required this.configFile});
 
@@ -373,6 +374,10 @@ String getPackageName(Directory root) {
   return pubspec['name'] as String;
 }
 
+/// Resolves the ORM project context, locating the `ormed.yaml` config file.
+///
+/// If [configPath] is provided, it attempts to resolve that specific file.
+/// Otherwise, it searches for `ormed.yaml` in the current or parent directories.
 OrmProjectContext resolveOrmProject({String? configPath}) {
   if (configPath != null && configPath.trim().isNotEmpty) {
     final normalized = p.normalize(

@@ -21,6 +21,13 @@ export 'src/config.dart'
         SeedSection,
         loadOrmProjectConfig;
 
+/// Run a list of registered seeders on the provided [connection].
+///
+/// If [names] is provided, only seeders with matching names will be run.
+///
+/// [pretend] can be set to true to log queries instead of executing them.
+///
+/// [beforeRun] is a callback invoked before execution (e.g. to bootstrap the registry).
 Future<void> runSeedRegistryOnConnection(
   OrmConnection connection,
   List<SeederRegistration> seeds, {
@@ -56,6 +63,9 @@ Future<void> runSeedRegistryOnConnection(
   }
 }
 
+/// Entrypoint for running seeders from a generated seed registry script.
+///
+/// Parses arguments to determine whether to run seeders or list available ones.
 Future<void> runSeedRegistryEntrypoint({
   required List<String> args,
   required List<SeederRegistration> seeds,
