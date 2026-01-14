@@ -142,6 +142,68 @@ You can use qualified column names (e.g., `table.column`) in where clauses. This
 
 ```
 
+## Joins
+
+Join multiple tables to query related data in a single query. Use `join` for inner joins (only matching rows), `leftJoin` to include all left-side rows even without matches, `rightJoin` for all right-side rows, and `crossJoin` for Cartesian products. `joinRelation` leverages defined model relationships.
+
+```dart file=../../examples/lib/queries.dart#joins
+
+```
+
+## Subqueries
+
+Filter results based on the output of another query. Subqueries are useful when you need to filter by aggregate results or check for existence of related records without joining. Use `whereInSubquery` to match values from a subquery, `whereExists` for existence checks (often more efficient than joins for filtering).
+
+```dart file=../../examples/lib/queries.dart#subqueries
+
+```
+
+## Group By & Having
+
+Group rows by column values and aggregate data. Use `groupBy` to group rows, then filter the grouped results with `having` (not `where` — `where` filters before grouping, `having` filters after). Commonly used with aggregate functions like `count`, `sum`, `avg`.
+
+```dart file=../../examples/lib/queries.dart#grouping
+
+```
+
+## Pagination
+
+### Numbered pages with totals
+
+Use `paginate` when you need total counts and page metadata.
+
+```dart file=../../examples/lib/queries.dart#pagination-basic
+
+```
+
+### Simple pagination (no count)
+
+Skip the count query with `simplePaginate` to quickly determine if more pages exist.
+
+```dart file=../../examples/lib/queries.dart#pagination-simple
+
+```
+
+### Cursor pagination
+
+`cursorPaginate` avoids `OFFSET` for large datasets and can paginate on any sortable column (default: primary key).
+
+```dart file=../../examples/lib/queries.dart#pagination-cursor
+
+```
+
+### Chunking and streaming
+
+Process large tables without loading everything at once. `chunk` uses offset/limit; `chunkById`/`eachById` walk an ordered column; streaming yields rows as they arrive.
+
+```dart file=../../examples/lib/queries.dart#pagination-chunking
+
+```
+
+```dart file=../../examples/lib/queries.dart#pagination-streaming
+
+```
+
 ## Group Limits
 
 Limit results per group using window functions. This requires a driver/database
@@ -203,5 +265,37 @@ For models with soft deletes:
 Cache query results for improved performance:
 
 ```dart file=../../examples/lib/queries.dart#query-caching
+
+```
+
+## Unions
+
+Combine result sets from multiple queries. `union` removes duplicate rows (slower but cleaner), while `unionAll` keeps all rows including duplicates (faster). Both queries must have the same column structure. `insertUsing` efficiently bulk-inserts rows from another query.
+
+```dart file=../../examples/lib/queries.dart#unions
+
+```
+
+## Locking
+
+Lock rows within transactions to prevent race conditions and ensure data consistency. Use `lockForUpdate` when you'll modify the rows (prevents other transactions from reading or modifying), or `sharedLock` when you only need to read (allows concurrent reads but prevents modifications). Always use within a transaction.
+
+```dart file=../../examples/lib/queries.dart#locking
+
+```
+
+## Scopes & Macros
+
+Encapsulate reusable query logic. **Local scopes** are model-specific constraints (e.g., `User.scope('active')`), **global scopes** automatically apply to all queries for a model (e.g., soft deletes), and **macros** work across any model type. Use `withoutGlobalScopes` to bypass automatic filters when needed.
+
+```dart file=../../examples/lib/queries.dart#scopes
+
+```
+
+## CRUD Operations
+
+Create, update, and delete records.
+
+```dart file=../../examples/lib/queries.dart#crud
 
 ```

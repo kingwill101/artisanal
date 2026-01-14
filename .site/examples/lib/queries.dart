@@ -365,3 +365,325 @@ Future<void> queryCaching(DataSource dataSource) async {
 }
 
 // #endregion query-caching
+
+// #region pagination-basic
+Future<void> paginationWithTotals(DataSource dataSource) async {
+  final usersPage = await dataSource
+      .query<$User>()
+      .paginate(perPage: 10, page: 2);
+
+  print('Total users: ${usersPage.total}');
+  print('Page ${usersPage.currentPage} of ${usersPage.lastPage}');
+
+  for (final row in usersPage.items) {
+    print('User ${row.model.id}: ${row.model.email}');
+  }
+}
+// #endregion pagination-basic
+
+// #region pagination-simple
+Future<void> paginationWithoutCount(DataSource dataSource) async {
+  final page = await dataSource
+      .query<$User>()
+      .simplePaginate(perPage: 20, page: 1);
+
+  print('Loaded ${page.items.length} users');
+  print('Has more pages: ${page.hasMorePages}');
+}
+// #endregion pagination-simple
+
+// #region pagination-cursor
+Future<void> cursorPagination(DataSource dataSource) async {
+  final firstPage = await dataSource
+      .query<$User>()
+      .cursorPaginate(perPage: 5, column: 'id');
+
+  final nextPage = await dataSource
+      .query<$User>()
+      .cursorPaginate(
+        perPage: 5,
+        column: 'id',
+        cursor: firstPage.nextCursor,
+      );
+
+  print('Has more: ${nextPage.hasMore}');
+  print('Next cursor: ${nextPage.nextCursor}');
+}
+// #endregion pagination-cursor
+
+// #region pagination-chunking
+Future<void> paginationChunking(DataSource dataSource) async {
+  await dataSource.query<$User>().chunk(100, (rows) async {
+    for (final row in rows) {
+      print('Chunk user: ${row.model.id}');
+    }
+    return true; // continue
+  });
+
+  await dataSource.query<$User>().chunkById(50, (rows) async {
+    for (final row in rows) {
+      print('Chunk by id user: ${row.model.id}');
+    }
+    return true;
+  }, column: 'id');
+
+  await dataSource.query<$User>().eachById(25, (row) async {
+    if (row.model.id == 42) {
+      return false; // stop early
+    }
+    return true;
+  }, column: 'id');
+}
+// #endregion pagination-chunking
+
+// #region pagination-streaming
+Future<void> paginationStreaming(DataSource dataSource) async {
+  await for (final row in dataSource
+      .query<$User>()
+      .streamRows(eagerLoadBatchSize: 200)) {
+    print('Row email: ${row.model.email}');
+  }
+
+  await for (final user in dataSource.query<$User>().streamModels()) {
+    print('User model: ${user.email}');
+  }
+}
+// #endregion pagination-streaming
+
+// #region joins
+Future<void> joinsExamples(DataSource dataSource) async {
+  // Inner join
+  final usersWithPosts = await dataSource
+      .query<$User>()
+      .join('posts', 'users.id', '=', 'posts.author_id')
+      .get();
+
+  // Left join - includes users without posts
+  final allUsersWithOptionalPosts = await dataSource
+      .query<$User>()
+      .leftJoin('posts', 'users.id', '=', 'posts.author_id')
+      .get();
+
+  // Right join
+  final allPostsWithOptionalUsers = await dataSource
+      .query<$Post>()
+      .rightJoin('users', 'posts.author_id', '=', 'users.id')
+      .get();
+
+  // Cross join - Cartesian product
+  final productColors = await dataSource
+      .query<$User>()
+      .crossJoin('colors')
+      .get();
+
+  // Join with callback for complex conditions
+  final activeUserPosts = await dataSource.query<$User>().join('posts', (join) {
+    join.on('users.id', '=', 'posts.author_id')
+        .where('posts.status', '=', 'published');
+  }).get();
+
+  // Join through relationships
+  final usersWithPublishedPosts = await dataSource
+      .query<$User>()
+      .joinRelation('posts')
+      .whereEquals('posts.published', true)
+      .get();
+}
+// #endregion joins
+
+// #region subqueries
+Future<void> subqueryExamples(DataSource dataSource) async {
+  // WHERE IN subquery - users with published posts
+  final activeAuthors = await dataSource.query<$User>().whereInSubquery(
+    'id',
+    dataSource.query<$Post>().select(['author_id']).whereEquals('published', true),
+  ).get();
+
+  // WHERE NOT IN subquery - users without posts
+  final usersWithoutPosts = await dataSource.query<$User>().whereNotInSubquery(
+    'id',
+    dataSource.query<$Post>().select(['author_id']),
+  ).get();
+
+  // WHERE EXISTS - users with at least one comment
+  final usersWithComments = await dataSource.query<$User>().whereExists(
+    dataSource.query<$Comment>().whereColumn('comments.user_id', 'users.id'),
+  ).get();
+
+  // WHERE NOT EXISTS - users with no comments
+  final usersWithoutComments = await dataSource.query<$User>().whereNotExists(
+    dataSource.query<$Comment>().whereColumn('comments.user_id', 'users.id'),
+  ).get();
+}
+// #endregion subqueries
+
+// #region unions
+Future<void> unionExamples(DataSource dataSource) async {
+  // UNION - combine results, removing duplicates
+  final activeOrAdminUsers = await dataSource
+      .query<$User>()
+      .whereEquals('active', true)
+      .union(dataSource.query<$User>().whereEquals('role', 'admin'))
+      .get();
+
+  // UNION ALL - combine results, keeping duplicates
+  final allUsersIncludingDupes = await dataSource
+      .query<$User>()
+      .whereEquals('active', true)
+      .unionAll(dataSource.query<$User>().whereEquals('role', 'admin'))
+      .get();
+
+  // INSERT USING - bulk insert from another query
+  final archivedCount = await dataSource.query<$User>().insertUsing(
+    ['name', 'email', 'archived_at'],
+    dataSource
+        .query<$User>()
+        .whereEquals('active', false)
+        .select(['name', 'email'])
+        .selectRaw('NOW()'),
+  );
+}
+// #endregion unions
+
+// #region locking
+Future<void> lockingExamples(DataSource dataSource) async {
+  await dataSource.transaction(() async {
+    // Lock for update - prevents other transactions from modifying
+    final user = await dataSource
+        .query<$User>()
+        .whereEquals('id', 1)
+        .lockForUpdate()
+        .first();
+
+    // Update the locked row
+    if (user != null) {
+      await dataSource
+          .query<$User>()
+          .whereEquals('id', 1)
+          .update({'balance': user.row['balance'] + 100});
+    }
+  });
+
+  await dataSource.transaction(() async {
+    // Shared lock - allows reads but prevents modifications
+    final user = await dataSource
+        .query<$User>()
+        .whereEquals('id', 1)
+        .sharedLock()
+        .first();
+
+    // Can read but other transactions can't modify
+    print('User balance: ${user?.row['balance']}');
+  });
+}
+// #endregion locking
+
+// #region scopes
+Future<void> scopesExamples(DataSource dataSource) async {
+  // Apply a local scope (must be registered first)
+  final activeUsers = await dataSource.query<$User>().scope('active').get();
+
+  // Apply a query macro (global, works on any model)
+  final recentPosts = await dataSource
+      .query<$Post>()
+      .macro('recent', [7]) // last 7 days
+      .get();
+
+  // Ignore global scopes
+  final allPosts = await dataSource
+      .query<$Post>()
+      .withoutGlobalScopes() // includes soft-deleted
+      .get();
+
+  // Ignore specific global scope
+  final postsIncludingDeleted = await dataSource
+      .query<$Post>()
+      .withoutGlobalScope('softDeletes')
+      .get();
+}
+// #endregion scopes
+
+// #region grouping
+Future<void> groupingExamples(DataSource dataSource) async {
+  // Group by single column
+  final usersByCity = await dataSource
+      .query<$User>()
+      .select(['city'])
+      .countAggregate(alias: 'total')
+      .groupBy(['city'])
+      .get();
+
+  // Group by multiple columns
+  final usersByStateAndCity = await dataSource
+      .query<$User>()
+      .select(['state', 'city'])
+      .countAggregate(alias: 'total')
+      .groupBy(['state', 'city'])
+      .get();
+
+  // HAVING clause - filter grouped results
+  final popularCities = await dataSource
+      .query<$User>()
+      .select(['city'])
+      .countAggregate(alias: 'user_count')
+      .groupBy(['city'])
+      .having('user_count', PredicateOperator.greaterThan, 100)
+      .get();
+
+  // HAVING with raw SQL
+  final citiesWithHighTotalAge = await dataSource
+      .query<$User>()
+      .select(['city'])
+      .groupBy(['city'])
+      .havingRaw('SUM(age) > ?', [500])
+      .get();
+}
+// #endregion grouping
+
+// #region crud
+Future<void> crudExamples(DataSource dataSource) async {
+  // Create a single record
+  final user = await dataSource.query<$User>().create({
+    'name': 'John Doe',
+    'email': 'john@example.com',
+  });
+
+  // Create multiple records
+  final users = await dataSource.query<$User>().createMany([
+    {'name': 'Alice', 'email': 'alice@example.com'},
+    {'name': 'Bob', 'email': 'bob@example.com'},
+  ]);
+
+  // Update records
+  final updatedCount = await dataSource
+      .query<$User>()
+      .whereEquals('active', false)
+      .update({'status': 'inactive'});
+
+  // Delete records
+  final deletedCount = await dataSource
+      .query<$User>()
+      .whereEquals('banned', true)
+      .delete();
+
+  // Increment/decrement
+  await dataSource
+      .query<$User>()
+      .whereEquals('id', 1)
+      .increment('login_count', 1);
+
+  await dataSource
+      .query<$User>()
+      .whereEquals('id', 1)
+      .decrement('credits', 10);
+
+  // Upsert - insert or update if exists
+  await dataSource.query<$User>().upsert(
+    [
+      {'email': 'john@example.com', 'name': 'John Updated'},
+    ],
+    uniqueBy: ['email'],
+    update: ['name'],
+  );
+}
+// #endregion crud
