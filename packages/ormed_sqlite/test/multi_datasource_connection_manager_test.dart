@@ -85,6 +85,35 @@ void main() {
       expect(await primaryConn.query<ActiveUser>().get(), isEmpty);
     });
   }, config: analyticsConfig);
+
+  test('connection manager usage without ormedGroup stays isolated', () async {
+    final primaryConn = ConnectionManager.instance.connection('primary');
+    final analyticsConn = ConnectionManager.instance.connection('analytics');
+
+    await primaryConn.driver.executeRaw('DELETE FROM active_users');
+    await analyticsConn.driver.executeRaw('DELETE FROM active_users');
+
+    await primaryConn.repository<ActiveUser>().insert(
+      const ActiveUser(
+        email: 'manual-primary@example.com',
+        name: 'Manual Primary',
+      ),
+    );
+    await analyticsConn.repository<ActiveUser>().insert(
+      const ActiveUser(
+        email: 'manual-analytics@example.com',
+        name: 'Manual Analytics',
+      ),
+    );
+
+    final primaryResults = await primaryConn.query<ActiveUser>().get();
+    final analyticsResults = await analyticsConn.query<ActiveUser>().get();
+
+    expect(primaryResults, hasLength(1));
+    expect(analyticsResults, hasLength(1));
+    expect(primaryResults.first.email, 'manual-primary@example.com');
+    expect(analyticsResults.first.email, 'manual-analytics@example.com');
+  });
 }
 
 class _CreateActiveUsersTable extends Migration {
