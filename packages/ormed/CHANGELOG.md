@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Added**: test helpers now generated via `ormed init` include dual SQLite datasources, `primaryTestConfig`/`analyticsTestConfig`, and connection helpers so user tests can rely on shared migrations without managing the multi-datasource wiring manually.
+- **Added**: bootstrap test harness writes and runs a helper-driven test while the CLI template now offers `--only=tests` and a reusable helper to prove connection isolation in generated apps.
+- **Improved**: `setUpOrmed` runs migrations for the provided `DataSource` by default, adds deterministic parallel `groupId`s, and optionally provisions a Postgres schema per config key so shared manager reuse stays conflict-free.
+- **Improved**: `TestDatabaseManager` accepts an optional `baseSchema`, ensures it is created/selected before migrations, and tracks it for cleanup.
+- **Switched**: internal hashing helpers now use `hashlib` instead of `crypto`.
+
 ## 0.1.0-dev+9
 
 - **Refactor**: Decoupled core package from driver-specific dependencies (`ormed_sqlite`, `ormed_mysql`, `ormed_postgres`).
