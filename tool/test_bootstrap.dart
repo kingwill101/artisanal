@@ -22,10 +22,10 @@ Future<void> main(List<String> args) async {
     await createDartMigration();
     await createSqlMigration();
     await runMigrations();
-  await createSeeder();
-  await runSeeders();
-  await runHelperTest();
-  await analyzeProject();
+    await createSeeder();
+    await runSeeders();
+    await runHelperTest();
+    await analyzeProject();
     await verifyFiles();
     await runVerificationScript(options);
 
@@ -406,7 +406,9 @@ Future<void> runHelperTest() async {
     testDirPath.createSync(recursive: true);
   }
 
-  final helperTestFile = File(p.join(testDir, 'test', 'ormed_helper_test.dart'));
+  final helperTestFile = File(
+    p.join(testDir, 'test', 'ormed_helper_test.dart'),
+  );
   helperTestFile.writeAsStringSync('''
 import 'package:ormed/ormed.dart';
 import 'package:orm_bootstrap_test/test/helpers/ormed_test_helper.dart';
@@ -442,7 +444,10 @@ void main() {
 ''');
 
   print('Running helper-driven test...');
-  await run('dart', ['test', 'test/ormed_helper_test.dart'], workingDirectory: testDir);
+  await run('dart', [
+    'test',
+    'test/ormed_helper_test.dart',
+  ], workingDirectory: testDir);
 }
 
 Future<void> analyzeProject() async {

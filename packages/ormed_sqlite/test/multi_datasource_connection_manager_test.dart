@@ -1,6 +1,5 @@
 import 'package:driver_tests/driver_tests.dart';
 import 'package:ormed/ormed.dart';
-import 'package:ormed/testing.dart';
 import 'package:ormed_sqlite/ormed_sqlite.dart';
 import 'package:test/test.dart';
 
@@ -67,7 +66,9 @@ void main() {
       expect(primaryRows, isEmpty);
     });
 
-    ormedTest('connection manager routes by name without conflicts', (db) async {
+    ormedTest('connection manager routes by name without conflicts', (
+      db,
+    ) async {
       final analyticsConn = ConnectionManager.instance.connection('analytics');
       final primaryConn = ConnectionManager.instance.connection('primary');
 

@@ -201,7 +201,8 @@ OrmedTestConfig setUpOrmed({
   // For migrateWithTransactions, we WANT to share the provisioned database
   // across multiple test files (like Laravel's RefreshDatabase).
   // But each test file gets its own config key to track its lifecycle.
-  TestDatabaseManager? manager;
+  late final TestDatabaseManager resolvedManager;
+  var hasResolvedManager = false;
 
   // Look for an existing manager that can be shared
   for (final entry in _managers.entries) {
@@ -211,9 +212,10 @@ OrmedTestConfig setUpOrmed({
       // Verify configurations match (same migrations, etc.)
       if (strategy == DatabaseIsolationStrategy.migrateWithTransactions) {
         // For migrateWithTransactions, we share the manager
-        manager = existingManager;
+        resolvedManager = existingManager;
         // Store under our config key as well
-        _managers[configKey] = manager;
+        _managers[configKey] = resolvedManager;
+        hasResolvedManager = true;
         break;
       } else {
         // For other strategies, we need separate databases per test file
@@ -223,13 +225,13 @@ OrmedTestConfig setUpOrmed({
   }
 
   // Create new manager if we didn't find one to share
-  if (manager == null) {
+  if (!hasResolvedManager) {
     final baseSchema = _resolveBaseSchemaName(
       dataSource: dataSource,
       configKey: configKey,
       migrateBaseDatabase: migrateBaseDatabase,
     );
-    manager = TestDatabaseManager(
+    resolvedManager = TestDatabaseManager(
       baseDataSource: dataSource,
       runMigrations: runMigrations,
       migrations: migrations,
@@ -239,10 +241,8 @@ OrmedTestConfig setUpOrmed({
       adapterFactory: adapterFactory,
       baseSchema: baseSchema,
     );
-    _managers[configKey] = manager;
+    _managers[configKey] = resolvedManager;
   }
-
-  final resolvedManager = manager!;
 
   // Create the config object
   final config = OrmedTestConfig._(
