@@ -1,7 +1,6 @@
 import 'dart:async';
-import 'dart:convert';
 
-import 'package:crypto/crypto.dart' show sha256;
+import 'package:hashlib/hashlib.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
@@ -109,7 +108,7 @@ String _generateConfigKey(String dataSourceName, {String? hint}) {
   // Use timestamp + counter + datasource name for uniqueness
   final timestamp = DateTime.now().microsecondsSinceEpoch;
   final raw = '$dataSourceName:$timestamp:${hint ?? ''}';
-  final hash = sha256.convert(utf8.encode(raw)).toString().substring(0, 16);
+  final hash = sha256.string(raw).toString().substring(0, 16);
   return '${dataSourceName}_$hash';
 }
 
@@ -129,6 +128,9 @@ String _generateConfigKey(String dataSourceName, {String? hint}) {
 ///   runAllDriverTests(config); // Pass config to tests
 /// }
 /// ```
+/// [migrateBaseDatabase] defaults to true and runs the configured migrations
+/// on the manager's base data source so the connections registered with
+/// [ConnectionManager] are usable outside of an [ormedGroup].
 OrmedTestConfig setUpOrmed({
   required DataSource dataSource,
   Future<void> Function(DataSource)? runMigrations,
@@ -139,6 +141,7 @@ OrmedTestConfig setUpOrmed({
       DatabaseIsolationStrategy.migrateWithTransactions,
   bool parallel = false, // Deprecated, ignored
   DriverAdapter Function(String testDbName)? adapterFactory,
+  bool migrateBaseDatabase = true,
 
   //TODO
   //ModelRegistry reigstry
@@ -153,10 +156,8 @@ OrmedTestConfig setUpOrmed({
 
   // Create the configuration hash for collision detection
   final configHash = sha256
-      .convert(
-        utf8.encode(
-          '$dbName:${migrations?.length ?? 0}:${migrationDescriptors?.length ?? 0}:$strategy',
-        ),
+      .string(
+        '$dbName:${migrations?.length ?? 0}:${migrationDescriptors?.length ?? 0}:$strategy',
       )
       .toString()
       .substring(0, 16);
@@ -200,6 +201,8 @@ OrmedTestConfig setUpOrmed({
     _managers[configKey] = manager;
   }
 
+  final resolvedManager = manager!;
+
   // Create the config object
   final config = OrmedTestConfig._(
     configKey: configKey,
@@ -214,8 +217,14 @@ OrmedTestConfig setUpOrmed({
   _configStack.add(config);
 
   setUpAll(() async {
-    await manager!.initialize();
+    await resolvedManager.initialize();
   });
+
+  if (migrateBaseDatabase) {
+    setUpAll(() async {
+      await resolvedManager.migrate(resolvedManager.baseDataSource);
+    });
+  }
 
   tearDownAll(() async {
     // Remove from config stack
@@ -226,7 +235,7 @@ OrmedTestConfig setUpOrmed({
           : null;
     }
 
-    await manager!.cleanup();
+    await resolvedManager.cleanup();
     _managers.remove(configKey);
   });
 

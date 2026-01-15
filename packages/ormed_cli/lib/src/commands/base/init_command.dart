@@ -29,13 +29,20 @@ class InitCommand extends Command<void> {
       ..addMultiOption(
         'only',
         help:
-            'Only scaffold selected artifacts (config, migrations, seeders, datasource).',
-        allowed: const ['config', 'migrations', 'seeders', 'datasource'],
+            'Only scaffold selected artifacts (config, migrations, seeders, datasource, tests).',
+        allowed: const [
+          'config',
+          'migrations',
+          'seeders',
+          'datasource',
+          'tests',
+        ],
         allowedHelp: const {
           'config': 'ormed.yaml configuration file',
           'migrations': 'Migrations directory + registry',
           'seeders': 'Seeders directory + registry',
           'datasource': 'DataSource entrypoint',
+          'tests': 'Sample test harness helper',
         },
       )
       // New: populate existing migrations/seeders into registries if present
@@ -85,6 +92,8 @@ class InitCommand extends Command<void> {
     final includeSeeders = !restrictScaffold || onlyTargets.contains('seeders');
     final includeDatasource =
         !restrictScaffold || onlyTargets.contains('datasource');
+    final includeTestHelpers =
+        !restrictScaffold || onlyTargets.contains('tests');
     final root = findProjectRoot(workingDirectory);
     final tracker = _ArtifactTracker(root);
     final configFile = File(p.join(root.path, 'ormed.yaml'));
@@ -240,6 +249,23 @@ class InitCommand extends Command<void> {
             .replaceAll('{{driver_imports}}', driverImports)
             .replaceAll('{{driver_registrations}}', driverRegistrations),
         label: 'DataSource entrypoint',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
+    }
+
+    if (includeTestHelpers) {
+      final testHelperFile = File(
+        p.join(root.path, 'lib', 'test', 'helpers', 'ormed_test_helper.dart'),
+      );
+      _writeFile(
+        file: testHelperFile,
+        content: initialTestHelperTemplate.replaceAll(
+          '{{package_name}}',
+          packageName,
+        ),
+        label: 'test helper',
         force: force,
         tracker: tracker,
         interactive: true,

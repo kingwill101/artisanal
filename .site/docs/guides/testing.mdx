@@ -7,9 +7,7 @@ import TabItem from '@theme/TabItem';
 
 # Testing
 
-Ormed provides comprehensive testing facilities for isolated, reliable database tests.
-
-To get started, import the testing utilities:
+Ormed provides testing utilities for isolated database tests.
 
 ```dart
 import 'package:ormed/testing.dart';
@@ -17,34 +15,29 @@ import 'package:ormed/testing.dart';
 
 ## Isolation Strategies
 
-Ormed supports several strategies for isolating database state between tests. You can configure the strategy in `setUpOrmed`.
+Configure the isolation strategy in `setUpOrmed`.
 
-### `migrateWithTransactions` (Default)
-The fastest strategy. It runs migrations once per group and wraps each test in a transaction that is rolled back after the test completes.
+| Strategy | Description |
+|----------|-------------|
+| `migrateWithTransactions` | Default. Runs migrations once, wraps each test in a rolled-back transaction. |
+| `truncate` | Runs migrations once, truncates tables after each test. Use when testing transactions. |
+| `recreate` | Drops and recreates the schema for every test. Slowest but complete isolation. |
 
-### `truncate`
-Runs migrations once per group and truncates all tables after each test. This is useful for drivers that don't support nested transactions or when you need to test transaction behavior itself.
+## ormedGroup and ormedTest
 
-### `recreate`
-The most thorough but slowest strategy. It drops and recreates the entire schema/database for every test.
+### ormedGroup
 
-## Group vs Test Isolation
-
-Ormed provides two primary functions for defining tests: `ormedGroup` and `ormedTest`.
-
-### `ormedGroup`
-Use `ormedGroup` to group related tests that share a common database setup. Every group gets its own unique database for true concurrency.
+Groups related tests with a shared database.
 
 ```dart
 ormedGroup('User Management', (ds) {
-  // This database is provisioned once for the group
+  // Database provisioned once for the group
 });
 ```
 
-### `ormedTest`
-Use `ormedTest` for individual test cases. 
-- When used **inside** an `ormedGroup`, it inherits the group's `DataSource` and isolation strategy.
-- When used **standalone**, it creates a completely fresh database for that specific test.
+### ormedTest
+
+Individual test cases. Inherits the group's `DataSource` when nested, or creates a fresh database when standalone.
 
 ```dart
 ormedTest('can create user', (ds) async {
@@ -54,25 +47,23 @@ ormedTest('can create user', (ds) async {
 ```
 
 ## DataSource Injection
-Both `ormedGroup` and `ormedTest` inject a `DataSource` instance into their callbacks. **Always use this injected instance** to ensure your tests run against the isolated test database rather than a global or shared instance.
 
-### Accessing the Current DataSource
-If you need to access the `DataSource` within standard `setUp` or `tearDown` blocks, you can use the `currentTestDataSource` getter:
+Both `ormedGroup` and `ormedTest` inject a `DataSource`. Use this instance for isolated test databases.
+
+Access within `setUp` or `tearDown`:
 
 ```dart
 setUp(() {
   final ds = currentTestDataSource;
-  // Perform setup using the isolated data source
 });
 ```
 
 ## Core Setup
-The `setUpOrmed` function is the entry point for configuring your test environment. It should be called once in your `main()` function before defining any tests.
+
+Call `setUpOrmed` once in `main()` before defining tests.
 
 <Tabs groupId="testing-core" defaultValue="basic">
   <TabItem value="basic" label="Basic">
-
-Create a fresh DataSource for each test suite.
 
 ```dart file=../../examples/lib/testing/testing.dart#testing-basic-setup
 ```
@@ -80,15 +71,11 @@ Create a fresh DataSource for each test suite.
   </TabItem>
   <TabItem value="in-memory" label="SQLite in-memory">
 
-Fast, isolated tests.
-
 ```dart file=../../examples/lib/testing/testing.dart#testing-in-memory
 ```
 
   </TabItem>
   <TabItem value="seeders" label="Seeders">
-
-Define a seeder class for consistent test data.
 
 ```dart file=../../examples/lib/testing/testing.dart#testing-seeder
 ```
@@ -96,15 +83,11 @@ Define a seeder class for consistent test data.
   </TabItem>
   <TabItem value="real-db" label="Real DB">
 
-Integration tests with SQLite on disk.
-
 ```dart file=../../examples/lib/testing/testing.dart#testing-real-db
 ```
 
   </TabItem>
   <TabItem value="migration-harness" label="Migrations">
-
-Migration-aware test harness.
 
 ```dart file=../../examples/lib/testing/testing.dart#testing-migration-harness
 ```
@@ -112,7 +95,7 @@ Migration-aware test harness.
   </TabItem>
 </Tabs>
 
-## Static Helpers in Tests
+## Static Helpers
 
 Set a default DataSource for `Model` static helpers:
 
@@ -121,47 +104,55 @@ Set a default DataSource for `Model` static helpers:
 
 ## Testing Relations
 
-Ensure all related entities are registered:
+Register all related entities:
 
 ```dart file=../../examples/lib/testing/testing.dart#testing-relations
 ```
 
 ## Parallel Testing
 
-For parallel test execution without conflicts:
-
 ```dart file=../../examples/lib/testing/testing.dart#testing-parallel
 ```
 
-## Best Practices
-
-### Use SQLite In-Memory for Unit Tests
-
-```dart file=../../examples/lib/testing/testing.dart#testing-best-practices-in-memory
-```
-
-### Use Real Databases for Integration Tests
-
-```dart file=../../examples/lib/testing/testing.dart#testing-best-practices-real-db
-```
-
-### Keep Tests Isolated
-
-```dart file=../../examples/lib/testing/testing.dart#testing-keep-isolated
-```
-
-### Use Factories for Test Data
+## Factories
 
 ```dart file=../../examples/lib/testing/testing.dart#testing-factories
 ```
 
-### Test Both Success and Failure Cases
+## Transaction Testing
 
-```dart file=../../examples/lib/testing/testing.dart#testing-success-failure
+```dart file=../../examples/lib/testing/testing.dart#testing-transaction-testing
 ```
 
-## Advanced: TestDatabaseManager
-`TestDatabaseManager` is the underlying engine that manages the lifecycle of test databases. While `ormedGroup` and `ormedTest` are the preferred high-level APIs, you can access the manager via the `testDatabaseManager` getter if you need lower-level control, such as manually seeding data or checking migration status.
+## Relationship Testing
+
+```dart file=../../examples/lib/testing/testing.dart#testing-relationship-testing
+```
+
+## Constraint Violations
+
+```dart file=../../examples/lib/testing/testing.dart#testing-validation-errors
+```
+
+## Data Integrity
+
+```dart file=../../examples/lib/testing/testing.dart#testing-data-integrity
+```
+
+## Cleanup Strategies
+
+```dart file=../../examples/lib/testing/testing.dart#testing-cleanup-strategies
+```
+
+| Strategy | Speed | Use Case |
+|----------|-------|----------|
+| `migrateWithTransactions` | Fast | Default |
+| `truncate` | Moderate | Testing transaction behavior |
+| `recreate` | Slow | Schema changes, full isolation |
+
+## TestDatabaseManager
+
+Access the underlying manager for lower-level control:
 
 ```dart
 final manager = testDatabaseManager;

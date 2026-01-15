@@ -40,6 +40,15 @@ single place:
 
 ```
 
+### When to Use External Factories
+
+Use external factories when:
+- **Reusing across tests**: The factory is used in multiple test files
+- **Complex defaults**: The factory has many fields or complex initialization logic
+- **Multiple variants**: You need several named states (admin, pending, completed, etc.)
+- **Factory hooks**: You need `afterMaking()` or `afterCreating()` callbacks
+- **Project-wide consistency**: You want standardized defaults across your test suite
+
 Register the external factory before using it:
 
 ```dart file=../../examples/lib/factories/external_factory.dart#factory-external-registration
@@ -57,6 +66,60 @@ Named states can be applied through the factory definition:
 ```dart file=../../examples/lib/factories/external_factory.dart#factory-external-state
 
 ```
+
+## Advanced External Factory Patterns
+
+### Factory Hooks and Configuration
+
+Configure callbacks directly in your factory definition using the `configure()` method:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-with-hooks
+
+```
+
+This keeps all factory logic in one place, making it easier to understand and maintain factory behavior.
+
+### Multiple States and Variants
+
+Define named states for different model variations:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-multiple-states
+
+```
+
+This is more maintainable than passing complex override maps repeatedly in tests.
+
+### Factory Composition and Inheritance
+
+Create specialized factories that inherit from base factories:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-composition
+
+```
+
+This prevents duplication and ensures consistency across related factory definitions.
+
+### Custom Field Generators
+
+Override field generation logic for specific scenarios:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-custom-generator
+
+```
+
+### Project Organization
+
+Keep factories organized and easy to discover:
+
+```dart file=../../examples/lib/factories/external_factory.dart#factory-external-organization
+
+```
+
+Benefits:
+- **Consistency**: All factories follow the same patterns
+- **Maintainability**: Easy to update defaults across tests
+- **Discoverability**: Related factories grouped together
+- **Isolation**: Factories don't pollute model files
 
 ## Factory Builder API
 
@@ -246,4 +309,130 @@ Use `withConnection` to get query and repository access:
 
 ```dart file=../../examples/lib/factories/basic.dart#factory-connection-bound
 
+```
+
+## Best Practices
+
+### 1. Keep Factories Simple
+
+Factories should generate valid, realistic data. Complex logic belongs in application code, not factories:
+
+```dart
+// ❌ Avoid: Complex business logic
+class OrderFactory extends ModelFactoryDefinition<Order> {
+  @override
+  void configure(ModelFactoryBuilder<Order> builder) {
+    builder.afterCreating((order) async {
+      // Don't put business logic here
+      await calculateTax(order);
+      await checkInventory(order);
+    });
+  }
+}
+
+// ✅ Good: Just set realistic defaults
+class OrderFactory extends ModelFactoryDefinition<Order> {
+  @override
+  Map<String, Object?> defaults() => {
+    'status': 'pending',
+    'total': 100.0,
+    'tax': 15.0,
+  };
+}
+```
+
+### 2. Use States for Variations
+
+Instead of creating multiple factories, use states for variations of the same model:
+
+```dart
+// ❌ Avoid: Multiple nearly-identical factories
+class PendingOrderFactory extends ModelFactoryDefinition<Order> {
+  @override
+  Map<String, Object?> defaults() => {'status': 'pending'};
+}
+
+class CompletedOrderFactory extends ModelFactoryDefinition<Order> {
+  @override
+  Map<String, Object?> defaults() => {'status': 'completed'};
+}
+
+// ✅ Good: One factory with multiple states
+class OrderFactory extends ModelFactoryDefinition<Order> {
+  @override
+  Map<String, Object?> defaults() => {'status': 'pending'};
+
+  @override
+  Map<String, StateTransformer<Order>> get states => {
+    'completed': (attrs) => {'status': 'completed'},
+    'cancelled': (attrs) => {'status': 'cancelled'},
+  };
+}
+```
+
+### 3. Preserve Referential Integrity
+
+When creating models with relationships, ensure foreign keys are valid:
+
+```dart
+// ✅ Good: Create related models
+await ormedTest('creates post with valid user_id', (fixture) async {
+  final user = await FactoryUser.factory().create();
+  final post = await FactoryPost.factory()
+    .withField('user_id', user.id)
+    .create();
+  expect(post.userId, equals(user.id));
+});
+```
+
+### 4. Use Seeds for Debugging
+
+When a test fails non-deterministically, seed the factory to reproduce it:
+
+```dart
+// First run: fails randomly
+final user = FactoryUser.factory().make();
+
+// Second run: fix the seed to reproduce the failure
+final user = FactoryUser.factory().seed(12345).make();
+```
+
+### 5. Separate Fixture Setup
+
+Extract repeated factory patterns into helper methods:
+
+```dart
+Future<(FactoryUser, List<FactoryPost>)> createUserWithPosts(int count) async {
+  final user = await FactoryUser.factory().create();
+  final posts = await FactoryPost.factory()
+    .withField('user_id', user.id)
+    .count(count)
+    .create();
+  return (user, posts);
+}
+
+// Usage in tests:
+await ormedTest('user has 5 posts', (fixture) async {
+  final (user, posts) = await createUserWithPosts(5);
+  expect(user.posts, hasLength(5));
+});
+```
+
+### 6. Override Only What Matters
+
+Keep test intent clear by only overriding fields relevant to what you're testing:
+
+```dart
+// ❌ Unclear: Sets many fields unrelated to test
+final user = await FactoryUser.factory()
+  .withField('name', 'John')
+  .withField('email', 'john@test.com')
+  .withField('status', 'active')
+  .withField('created_at', DateTime.now())
+  .create();
+
+// ✅ Clear: Only override what the test cares about
+final user = await FactoryUser.factory()
+  .withField('email', 'john@test.com')
+  .create();
 ```

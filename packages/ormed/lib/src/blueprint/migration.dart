@@ -1,7 +1,7 @@
 import 'dart:async' show FutureOr;
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
+import 'package:hashlib/hashlib.dart';
 
 import 'schema_builder.dart';
 import 'schema_plan.dart';
@@ -196,7 +196,7 @@ class MigrationDescriptor {
 
 String _checksumForPlans(SchemaPlan up, SchemaPlan down) {
   final payload = jsonEncode({'up': up.toJson(), 'down': down.toJson()});
-  return sha1.convert(utf8.encode(payload)).toString();
+  return sha1.string(payload).toString();
 }
 
 /// Format timestamp as YYYYMMDDHHMMSS (14 digits, no separators)
