@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:hashlib/hashlib.dart';
 import 'package:meta/meta.dart';
@@ -97,10 +98,21 @@ class _GroupContext {
 /// Global group counter for unique IDs
 int _groupCounter = 0;
 
+final Random _groupIdRandom = _createGroupIdRandom();
+
+Random _createGroupIdRandom() {
+  try {
+    return Random.secure();
+  } on UnsupportedError {
+    return Random();
+  }
+}
+
 /// Generate a unique group ID
 String _generateGroupId() {
-  final timestamp = DateTime.now().millisecondsSinceEpoch;
-  return 'g${timestamp}_${_groupCounter++}';
+  final timestamp = DateTime.now().microsecondsSinceEpoch;
+  final randomBits = _groupIdRandom.nextInt(0x7fffffff);
+  return 'g${timestamp}_${randomBits.toRadixString(16)}_${_groupCounter++}';
 }
 
 /// Generate a unique configuration key based on DataSource name and call context
@@ -110,6 +122,29 @@ String _generateConfigKey(String dataSourceName, {String? hint}) {
   final raw = '$dataSourceName:$timestamp:${hint ?? ''}';
   final hash = sha256.string(raw).toString().substring(0, 16);
   return '${dataSourceName}_$hash';
+}
+
+String? _resolveBaseSchemaName({
+  required DataSource dataSource,
+  required String configKey,
+  required bool migrateBaseDatabase,
+}) {
+  if (!migrateBaseDatabase) {
+    return null;
+  }
+  if (dataSource.options.defaultSchema != null) {
+    return null;
+  }
+  final driverName = dataSource.options.driver.metadata.name.toLowerCase();
+  if (driverName != 'postgres') {
+    return null;
+  }
+
+  final suffix = configKey.split('_').last.trim();
+  final hash = suffix.isEmpty
+      ? sha256.string(configKey).toString().substring(0, 16)
+      : suffix;
+  return 'ormed_test_$hash';
 }
 
 /// Configures Ormed for testing.
@@ -189,6 +224,11 @@ OrmedTestConfig setUpOrmed({
 
   // Create new manager if we didn't find one to share
   if (manager == null) {
+    final baseSchema = _resolveBaseSchemaName(
+      dataSource: dataSource,
+      configKey: configKey,
+      migrateBaseDatabase: migrateBaseDatabase,
+    );
     manager = TestDatabaseManager(
       baseDataSource: dataSource,
       runMigrations: runMigrations,
@@ -197,6 +237,7 @@ OrmedTestConfig setUpOrmed({
       seeders: seeders,
       strategy: strategy,
       adapterFactory: adapterFactory,
+      baseSchema: baseSchema,
     );
     _managers[configKey] = manager;
   }
