@@ -575,17 +575,14 @@ class ModelFactoryRegistry {
   /// Registers an external factory definition for `TModel`.
   static ModelFactoryDefinition<TModel> registerFactory<
     TModel extends OrmEntity
-  >(
-    ModelFactoryDefinition<TModel> factory,
-  ) {
+  >(ModelFactoryDefinition<TModel> factory) {
     _externalFactories[TModel] = factory;
     return factory;
   }
 
   /// Returns the registered external factory for `TModel`, if any.
-  static ModelFactoryDefinition<TModel>? externalFactoryFor<
-    TModel extends OrmEntity
-  >() {
+  static ModelFactoryDefinition<TModel>?
+  externalFactoryFor<TModel extends OrmEntity>() {
     final factory = _externalFactories[TModel];
     if (factory == null) return null;
     return factory as ModelFactoryDefinition<TModel>;

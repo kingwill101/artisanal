@@ -86,7 +86,14 @@
 library;
 
 // Terminal abstraction
-export 'terminal.dart' show TuiTerminal, StdioTerminal, TerminalState;
+export 'terminal.dart'
+    show
+        TuiTerminal,
+        StdioTerminal,
+        TerminalState,
+        sharedStdinStream,
+        isSharedStdinStreamStarted,
+        shutdownSharedStdinStream;
 
 // Components
 export 'component.dart' show ViewComponent, StaticComponent, ComponentHost;

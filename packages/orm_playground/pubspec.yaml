@@ -1,6 +1,6 @@
 name: orm_playground
 description: A sample command-line application.
-version: 0.1.0-dev+8
+version: 0.1.0-dev+9
 publish_to: none
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -9,15 +9,15 @@ dependencies:
   path: ^1.9.1
   ormed:
     path: ../ormed
-  ormed_sqlite: ^0.1.0-dev+8
-  ormed_cli: ^0.1.0-dev+8
-  artisanal: ^0.1.1
+  ormed_sqlite: ^0.1.0-dev+9
+  ormed_cli: ^0.1.0-dev+9
+  artisanal: ^0.1.2
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.28.0
   build_runner: ^2.10.4
-  driver_tests: ^0.1.0-dev+8
+  driver_tests: ^0.1.0-dev+9
 
 
 dependency_overrides:

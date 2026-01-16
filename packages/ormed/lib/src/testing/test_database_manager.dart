@@ -37,6 +37,7 @@ class TestDatabaseManager {
   final DatabaseIsolationStrategy _strategy;
   final List<DatabaseSeeder Function(OrmConnection)>? _seeders;
   final DriverAdapter Function(String testDbName)? _adapterFactory;
+  final String? _baseSchema;
 
   /// Resolved migration descriptors
   List<MigrationDescriptor>? _resolvedMigrationDescriptors;
@@ -56,6 +57,7 @@ class TestDatabaseManager {
     DatabaseIsolationStrategy strategy =
         DatabaseIsolationStrategy.migrateWithTransactions,
     DriverAdapter Function(String testDbName)? adapterFactory,
+    String? baseSchema,
     // Deprecated/Removed parameters
     bool parallel = false,
   }) : _baseDataSource = baseDataSource,
@@ -64,7 +66,8 @@ class TestDatabaseManager {
        _migrationDescriptors = migrationDescriptors,
        _seeders = seeders,
        _strategy = strategy,
-       _adapterFactory = adapterFactory;
+       _adapterFactory = adapterFactory,
+       _baseSchema = baseSchema;
 
   DatabaseIsolationStrategy get strategy => _strategy;
 
@@ -212,7 +215,33 @@ class TestDatabaseManager {
 
   /// Run migrations on a specific datasource
   Future<void> migrate(DataSource dataSource) async {
+    await _ensureBaseSchema(dataSource);
     await _prepareDatabase(dataSource);
+  }
+
+  Future<void> _ensureBaseSchema(DataSource dataSource) async {
+    final baseSchema = _baseSchema;
+    if (baseSchema == null) {
+      return;
+    }
+    if (!identical(dataSource, _baseDataSource)) {
+      return;
+    }
+    if (dataSource.options.defaultSchema != null) {
+      return;
+    }
+
+    final driver = dataSource.connection.driver;
+    if (driver is! SchemaDriver) {
+      return;
+    }
+
+    final schemaDriver = driver as SchemaDriver;
+    if (!_createdDatabases.contains(baseSchema)) {
+      await schemaDriver.createSchema(baseSchema);
+      _createdDatabases.add(baseSchema);
+    }
+    await schemaDriver.setCurrentSchema(baseSchema);
   }
 
   /// Run seeders on a specific datasource

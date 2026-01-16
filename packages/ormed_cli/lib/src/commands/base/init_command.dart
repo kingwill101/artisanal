@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
@@ -8,6 +9,10 @@ import '../../config.dart';
 import 'shared.dart';
 
 class InitCommand extends Command<void> {
+  /// For internal testing: allows running from a specific directory without changing CWD.
+  @visibleForTesting
+  Directory? workingDirectory;
+
   InitCommand() {
     argParser
       ..addFlag(
@@ -24,13 +29,20 @@ class InitCommand extends Command<void> {
       ..addMultiOption(
         'only',
         help:
-            'Only scaffold selected artifacts (config, migrations, seeders, datasource).',
-        allowed: const ['config', 'migrations', 'seeders', 'datasource'],
+            'Only scaffold selected artifacts (config, migrations, seeders, datasource, tests).',
+        allowed: const [
+          'config',
+          'migrations',
+          'seeders',
+          'datasource',
+          'tests',
+        ],
         allowedHelp: const {
           'config': 'ormed.yaml configuration file',
           'migrations': 'Migrations directory + registry',
           'seeders': 'Seeders directory + registry',
           'datasource': 'DataSource entrypoint',
+          'tests': 'Sample test harness helper',
         },
       )
       // New: populate existing migrations/seeders into registries if present
@@ -80,7 +92,9 @@ class InitCommand extends Command<void> {
     final includeSeeders = !restrictScaffold || onlyTargets.contains('seeders');
     final includeDatasource =
         !restrictScaffold || onlyTargets.contains('datasource');
-    final root = findProjectRoot();
+    final includeTestHelpers =
+        !restrictScaffold || onlyTargets.contains('tests');
+    final root = findProjectRoot(workingDirectory);
     final tracker = _ArtifactTracker(root);
     final configFile = File(p.join(root.path, 'ormed.yaml'));
 
@@ -126,7 +140,8 @@ class InitCommand extends Command<void> {
     // Load config
     final config = loadOrmProjectConfig(configFile);
 
-    if (includeDatasource || includeMigrations || includeSeeders) {
+    if (!skipBuild &&
+        (includeDatasource || includeMigrations || includeSeeders)) {
       await _ensureDependencies(root, config: config, skipBuild: skipBuild);
     }
     if (withAnalyzer) {
@@ -171,34 +186,41 @@ class InitCommand extends Command<void> {
     }
 
     if (includeSeeders) {
-      seedersDir = Directory(resolvePath(root, config.seeds!.directory));
-      hasExistingSeeders = _hasDartFiles(seedersDir);
-      _ensureDirectory(seedersDir, 'seeders directory', tracker);
+      final seeds = config.seeds;
+      if (seeds == null) {
+        cliIO.warning(
+          'No seeds configuration found in ormed.yaml. Skipping seed scaffolding.',
+        );
+      } else {
+        seedersDir = Directory(resolvePath(root, seeds.directory));
+        hasExistingSeeders = _hasDartFiles(seedersDir);
+        _ensureDirectory(seedersDir, 'seeders directory', tracker);
 
-      seedRegistry = File(resolvePath(root, config.seeds!.registry));
-      _writeFile(
-        file: seedRegistry,
-        content: initialSeedRegistryTemplate.replaceAll(
-          '{{package_name}}',
-          packageName,
-        ),
-        label: 'seeders registry',
-        force: force,
-        tracker: tracker,
-        interactive: true,
-      );
+        seedRegistry = File(resolvePath(root, seeds.registry));
+        _writeFile(
+          file: seedRegistry,
+          content: initialSeedRegistryTemplate.replaceAll(
+            '{{package_name}}',
+            packageName,
+          ),
+          label: 'seeders registry',
+          force: force,
+          tracker: tracker,
+          interactive: true,
+        );
 
-      final defaultSeeder = File(
-        p.join(seedersDir.path, 'database_seeder.dart'),
-      );
-      _writeFile(
-        file: defaultSeeder,
-        content: _defaultSeederTemplate,
-        label: 'database seeder',
-        force: force,
-        tracker: tracker,
-        interactive: true,
-      );
+        final defaultSeeder = File(
+          p.join(seedersDir.path, 'database_seeder.dart'),
+        );
+        _writeFile(
+          file: defaultSeeder,
+          content: _defaultSeederTemplate,
+          label: 'database seeder',
+          force: force,
+          tracker: tracker,
+          interactive: true,
+        );
+      }
     }
 
     if (includeDatasource) {
@@ -227,6 +249,23 @@ class InitCommand extends Command<void> {
             .replaceAll('{{driver_imports}}', driverImports)
             .replaceAll('{{driver_registrations}}', driverRegistrations),
         label: 'DataSource entrypoint',
+        force: force,
+        tracker: tracker,
+        interactive: true,
+      );
+    }
+
+    if (includeTestHelpers) {
+      final testHelperFile = File(
+        p.join(root.path, 'lib', 'test', 'helpers', 'ormed_test_helper.dart'),
+      );
+      _writeFile(
+        file: testHelperFile,
+        content: initialTestHelperTemplate.replaceAll(
+          '{{package_name}}',
+          packageName,
+        ),
+        label: 'test helper',
         force: force,
         tracker: tracker,
         interactive: true,
@@ -465,9 +504,7 @@ void _ensureAnalyzerPluginConfig({
   final file = File(p.join(root.path, 'analysis_options.yaml'));
   final pluginLine = '- ormed';
   if (!file.existsSync()) {
-    file.writeAsStringSync(
-      'analyzer:\n  plugins:\n    $pluginLine\n',
-    );
+    file.writeAsStringSync('analyzer:\n  plugins:\n    $pluginLine\n');
     tracker.paths['analysis_options.yaml'] = file.path;
     return;
   }

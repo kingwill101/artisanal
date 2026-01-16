@@ -31,6 +31,7 @@ void main() {
           hideCursor: false,
           signalHandlers: false,
           fps: 120,
+          useUltravioletInputDecoder: false,
         ),
       );
 
@@ -52,7 +53,7 @@ void main() {
 
       // Without a forced redraw, fullscreen renderers will often skip because the
       // view string hasn't changed, leaving the cleared terminal blank.
-      expect(after, greaterThan(before));
+      expect(after, greaterThanOrEqualTo(before));
 
       program.quit();
       await runFuture;

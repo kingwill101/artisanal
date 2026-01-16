@@ -22,7 +22,7 @@ Build everything from rich command-line tools to complex interactive TUI applica
 
 ```yaml
 dependencies:
-  artisanal: ^0.0.1
+  artisanal: ^0.1.2
 ```
 
 > **Note**: This package uses workspace resolution. Use a path or git reference in standalone projects.

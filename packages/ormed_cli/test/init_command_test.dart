@@ -8,14 +8,11 @@ import 'package:test/test.dart';
 
 void main() {
   group('init command', () {
-    late Directory repoRoot;
     late Directory scratchParent;
     late Directory scratchDir;
-    late Directory originalCwd;
 
     setUp(() {
-      repoRoot = Directory.current;
-      originalCwd = Directory.current;
+      final repoRoot = Directory.current;
 
       scratchParent = Directory(
         p.join(repoRoot.path, '.dart_tool', 'ormed_cli_tests'),
@@ -35,13 +32,16 @@ void main() {
 name: test_project
 environment:
   sdk: ">=3.0.0 <4.0.0"
+dependencies:
+  ormed: any
+  ormed_sqlite: any
+dev_dependencies:
+  ormed_cli: any
+  build_runner: any
 ''');
-
-      Directory.current = scratchDir;
     });
 
     tearDown(() {
-      Directory.current = originalCwd;
       if (scratchDir.existsSync()) {
         scratchDir.deleteSync(recursive: true);
       }
@@ -52,13 +52,16 @@ environment:
       String Function()? readLine,
       void Function(int code)? setExitCode,
     }) async {
+      final cmd = InitCommand();
+      cmd.workingDirectory = scratchDir;
+
       final runner = CommandRunner<void>(
         'ormed',
         'ORM CLI',
         ansi: false,
         readLine: readLine,
         setExitCode: setExitCode,
-      )..addCommand(InitCommand());
+      )..addCommand(cmd);
       await runner.run(args);
     }
 

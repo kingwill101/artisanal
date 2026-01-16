@@ -7,7 +7,7 @@ class MockCancelReader extends CancelReader {
   final StreamController<List<int>> controller;
 
   @override
-  bool cancel() => true;
+  Future<void> cancel() async {}
 
   @override
   Future<void> close() async {

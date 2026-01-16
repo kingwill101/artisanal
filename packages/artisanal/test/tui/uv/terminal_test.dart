@@ -23,13 +23,13 @@ void main() {
       final eventFuture = terminal.events.firstWhere(
         (e) => e is WindowSizeEvent,
       );
-      await terminal.start();
+      await terminal.start(handleSignals: false);
       await eventFuture;
       await terminal.stop();
     });
 
     test('receives key events', () async {
-      await terminal.start();
+      await terminal.start(handleSignals: false);
       final eventFuture = terminal.events
           .where((e) => e is KeyPressEvent)
           .first;
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('draw writes to output', () async {
-      await terminal.start();
+      await terminal.start(handleSignals: false);
       terminal.resize(10, 10);
       terminal.setCell(0, 0, Cell(content: 'X'));
       terminal.draw();

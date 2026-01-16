@@ -17,7 +17,9 @@ funding:
 environment:
   sdk: ">=3.10.0 <4.0.0"
 dependencies:
-  contextual: ^2.0.0
+  contextual: ^2.1.0
   liquify: ^1.4.1
   path: ^1.9.1
   uuid: ^4.5.2
+dev_dependencies:
+  build_runner: ^2.10.5

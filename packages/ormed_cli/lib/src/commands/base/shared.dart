@@ -344,6 +344,67 @@ Future<void> main(List<String> args) => runSeedRegistryEntrypoint(
     );
 ''';
 
+const String initialTestHelperTemplate = r'''
+import 'package:{{package_name}}/orm_registry.g.dart';
+import 'package:ormed/ormed.dart';
+import 'package:ormed_sqlite/ormed_sqlite.dart';
+
+final ModelRegistry _registry = bootstrapOrm();
+
+final DataSource _primaryDataSource = DataSource(
+  DataSourceOptions(
+    name: 'primary',
+    driver: SqliteDriverAdapter.inMemory(),
+    registry: _registry,
+  ),
+);
+
+final DataSource _analyticsDataSource = DataSource(
+  DataSourceOptions(
+    name: 'analytics',
+    driver: SqliteDriverAdapter.inMemory(),
+    registry: _registry,
+  ),
+);
+
+final OrmedTestConfig primaryTestConfig = setUpOrmed(
+  dataSource: _primaryDataSource,
+  migrations: const [_CreateTestUsersTable()],
+  adapterFactory: (_) => SqliteDriverAdapter.inMemory(),
+);
+
+final OrmedTestConfig analyticsTestConfig = setUpOrmed(
+  dataSource: _analyticsDataSource,
+  migrations: const [_CreateTestUsersTable()],
+  adapterFactory: (_) => SqliteDriverAdapter.inMemory(),
+);
+
+OrmConnection primaryTestConnection() =>
+    ConnectionManager.instance.connection('primary');
+
+OrmConnection analyticsTestConnection() =>
+    ConnectionManager.instance.connection('analytics');
+
+class _CreateTestUsersTable extends Migration {
+  const _CreateTestUsersTable();
+
+  @override
+  Future<void> up(SchemaBuilder schema) async {
+    schema.create('users', (table) {
+      table.integer('id').primaryKey().autoIncrement();
+      table.string('email').unique();
+      table.string('name');
+    });
+  }
+
+  @override
+  Future<void> down(SchemaBuilder schema) async {
+    schema.drop('users', ifExists: true);
+  }
+}
+''';
+
+/// Context for a resolved ORM project, containing the root directory and config file.
 class OrmProjectContext {
   OrmProjectContext({required this.root, required this.configFile});
 
@@ -373,6 +434,10 @@ String getPackageName(Directory root) {
   return pubspec['name'] as String;
 }
 
+/// Resolves the ORM project context, locating the `ormed.yaml` config file.
+///
+/// If [configPath] is provided, it attempts to resolve that specific file.
+/// Otherwise, it searches for `ormed.yaml` in the current or parent directories.
 OrmProjectContext resolveOrmProject({String? configPath}) {
   if (configPath != null && configPath.trim().isNotEmpty) {
     final normalized = p.normalize(

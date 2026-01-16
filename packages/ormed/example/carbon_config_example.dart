@@ -1,7 +1,7 @@
 // ignore_for_file: unused_local_variable
 
+import 'package:driver_tests/driver_tests.dart';
 import 'package:ormed/ormed.dart';
-import 'package:ormed_sqlite/ormed_sqlite.dart';
 
 /// This example demonstrates Carbon integration with Ormed.
 ///
@@ -45,11 +45,12 @@ void main() async {
 Future<void> example1BasicSetup() async {
   print('\n=== Example 1: Basic Setup ===');
 
-  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
-      driver: SqliteDriverAdapter.inMemory(),
-      entities: [], // Add your model definitions here
+      driver: InMemoryQueryExecutor(),
+      entities: [
+        PostOrmDefinition.definition,
+      ], // Add your model definitions here
       // Carbon uses defaults: UTC, en_US, no named timezones
     ),
   );
@@ -73,11 +74,10 @@ Future<void> example2NamedTimezones() async {
   // Reset Carbon to demonstrate fresh configuration
   CarbonConfig.reset();
 
-  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
-      driver: SqliteDriverAdapter.inMemory(),
-      entities: [],
+      driver: InMemoryQueryExecutor(),
+      entities: [PostOrmDefinition.definition],
       carbonTimezone: 'America/New_York',
       enableNamedTimezones: true, // Enable TimeMachine
     ),
@@ -105,11 +105,10 @@ Future<void> example3CustomLocale() async {
 
   CarbonConfig.reset();
 
-  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
-      driver: SqliteDriverAdapter.inMemory(),
-      entities: [],
+      driver: InMemoryQueryExecutor(),
+      entities: [PostOrmDefinition.definition],
       carbonTimezone: 'UTC',
       carbonLocale: 'fr_FR', // French locale
     ),
@@ -144,11 +143,10 @@ Future<void> example4ManualOverride() async {
     defaultLocale: 'ja_JP',
   );
 
-  ensureSqliteDriverRegistration();
   final ds = DataSource(
     DataSourceOptions(
-      driver: SqliteDriverAdapter.inMemory(),
-      entities: [],
+      driver: InMemoryQueryExecutor(),
+      entities: [PostOrmDefinition.definition],
       carbonTimezone: 'America/New_York', // This will be ignored
       carbonLocale: 'en_US', // This will be ignored
       enableNamedTimezones: true,

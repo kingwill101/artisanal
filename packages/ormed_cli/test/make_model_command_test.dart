@@ -8,8 +8,10 @@ import 'package:test/test.dart';
 void main() {
   group('MakeModelCommand', () {
     late Directory scratchDir;
+    late Directory originalCwd;
 
     setUp(() {
+      originalCwd = Directory.current;
       final scratchParent = Directory(
         p.join(Directory.systemTemp.path, 'ormed_cli_make_model_test'),
       );
@@ -17,7 +19,10 @@ void main() {
         scratchParent.createSync(recursive: true);
       }
       scratchDir = Directory(
-        p.join(scratchParent.path, DateTime.now().microsecondsSinceEpoch.toString()),
+        p.join(
+          scratchParent.path,
+          DateTime.now().microsecondsSinceEpoch.toString(),
+        ),
       );
       scratchDir.createSync(recursive: true);
 
@@ -43,6 +48,7 @@ seeds:
     });
 
     tearDown(() {
+      Directory.current = originalCwd;
       if (scratchDir.existsSync()) {
         scratchDir.deleteSync(recursive: true);
       }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+9
+
+- **Refactor**: Relocated dialect-specific integration tests and grammar tests from core into the driver package.
+- **Improved**: Standardized schema migration behavior to avoid transaction-related DDL errors.
+- **Fixed**: Verified support for recursive JSON encoding of nested ORM objects (implemented in core).
+
 ## 0.1.0-dev+8
 
 - **Updated**: Synced dependency versions for dev+8.

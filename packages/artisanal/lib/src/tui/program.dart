@@ -1032,6 +1032,7 @@ class Program<M extends Model> {
   }
 
   Future<void> _runStartupProbesIfNeeded() async {
+    if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
     if (!_options.useUltravioletInputDecoder) return;
     // Avoid messing with normal terminal output in inline mode. Users can

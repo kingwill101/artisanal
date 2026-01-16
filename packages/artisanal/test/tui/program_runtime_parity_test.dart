@@ -261,7 +261,10 @@ void main() {
         terminal: term,
       );
       await program.run();
-      expect(term.operations, isNot(contains('enterAlt')));
+      expect(
+        term.operations,
+        isNot(anyOf(contains('enterAlt'), contains('enterAltScreen'))),
+      );
       expect(term.operations, isNot(contains('hideCursor')));
     });
   });

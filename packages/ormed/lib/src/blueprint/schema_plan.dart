@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:collection/collection.dart';
-import 'package:crypto/crypto.dart';
+import 'package:hashlib/hashlib.dart';
 import 'package:ormed/src/blueprint/table_blueprint.dart';
 
 /// High-level operations supported by the schema planner.
@@ -275,4 +275,4 @@ class SchemaPlan {
   int get hashCode => const DeepCollectionEquality().hash(toJson());
 }
 
-String _sha1(String input) => sha1.convert(utf8.encode(input)).toString();
+String _sha1(String input) => sha1.string(input).toString();

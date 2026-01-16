@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:math';
 
-import 'package:crypto/crypto.dart' show sha256;
+import 'package:hashlib/hashlib.dart';
 import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 
@@ -98,10 +98,21 @@ class _GroupContext {
 /// Global group counter for unique IDs
 int _groupCounter = 0;
 
+final Random _groupIdRandom = _createGroupIdRandom();
+
+Random _createGroupIdRandom() {
+  try {
+    return Random.secure();
+  } on UnsupportedError {
+    return Random();
+  }
+}
+
 /// Generate a unique group ID
 String _generateGroupId() {
-  final timestamp = DateTime.now().millisecondsSinceEpoch;
-  return 'g${timestamp}_${_groupCounter++}';
+  final timestamp = DateTime.now().microsecondsSinceEpoch;
+  final randomBits = _groupIdRandom.nextInt(0x7fffffff);
+  return 'g${timestamp}_${randomBits.toRadixString(16)}_${_groupCounter++}';
 }
 
 /// Generate a unique configuration key based on DataSource name and call context
@@ -109,8 +120,31 @@ String _generateConfigKey(String dataSourceName, {String? hint}) {
   // Use timestamp + counter + datasource name for uniqueness
   final timestamp = DateTime.now().microsecondsSinceEpoch;
   final raw = '$dataSourceName:$timestamp:${hint ?? ''}';
-  final hash = sha256.convert(utf8.encode(raw)).toString().substring(0, 16);
+  final hash = sha256.string(raw).toString().substring(0, 16);
   return '${dataSourceName}_$hash';
+}
+
+String? _resolveBaseSchemaName({
+  required DataSource dataSource,
+  required String configKey,
+  required bool migrateBaseDatabase,
+}) {
+  if (!migrateBaseDatabase) {
+    return null;
+  }
+  if (dataSource.options.defaultSchema != null) {
+    return null;
+  }
+  final driverName = dataSource.options.driver.metadata.name.toLowerCase();
+  if (driverName != 'postgres') {
+    return null;
+  }
+
+  final suffix = configKey.split('_').last.trim();
+  final hash = suffix.isEmpty
+      ? sha256.string(configKey).toString().substring(0, 16)
+      : suffix;
+  return 'ormed_test_$hash';
 }
 
 /// Configures Ormed for testing.
@@ -129,6 +163,9 @@ String _generateConfigKey(String dataSourceName, {String? hint}) {
 ///   runAllDriverTests(config); // Pass config to tests
 /// }
 /// ```
+/// [migrateBaseDatabase] defaults to true and runs the configured migrations
+/// on the manager's base data source so the connections registered with
+/// [ConnectionManager] are usable outside of an [ormedGroup].
 OrmedTestConfig setUpOrmed({
   required DataSource dataSource,
   Future<void> Function(DataSource)? runMigrations,
@@ -139,6 +176,7 @@ OrmedTestConfig setUpOrmed({
       DatabaseIsolationStrategy.migrateWithTransactions,
   bool parallel = false, // Deprecated, ignored
   DriverAdapter Function(String testDbName)? adapterFactory,
+  bool migrateBaseDatabase = true,
 
   //TODO
   //ModelRegistry reigstry
@@ -153,10 +191,8 @@ OrmedTestConfig setUpOrmed({
 
   // Create the configuration hash for collision detection
   final configHash = sha256
-      .convert(
-        utf8.encode(
-          '$dbName:${migrations?.length ?? 0}:${migrationDescriptors?.length ?? 0}:$strategy',
-        ),
+      .string(
+        '$dbName:${migrations?.length ?? 0}:${migrationDescriptors?.length ?? 0}:$strategy',
       )
       .toString()
       .substring(0, 16);
@@ -165,7 +201,8 @@ OrmedTestConfig setUpOrmed({
   // For migrateWithTransactions, we WANT to share the provisioned database
   // across multiple test files (like Laravel's RefreshDatabase).
   // But each test file gets its own config key to track its lifecycle.
-  TestDatabaseManager? manager;
+  late final TestDatabaseManager resolvedManager;
+  var hasResolvedManager = false;
 
   // Look for an existing manager that can be shared
   for (final entry in _managers.entries) {
@@ -175,9 +212,10 @@ OrmedTestConfig setUpOrmed({
       // Verify configurations match (same migrations, etc.)
       if (strategy == DatabaseIsolationStrategy.migrateWithTransactions) {
         // For migrateWithTransactions, we share the manager
-        manager = existingManager;
+        resolvedManager = existingManager;
         // Store under our config key as well
-        _managers[configKey] = manager;
+        _managers[configKey] = resolvedManager;
+        hasResolvedManager = true;
         break;
       } else {
         // For other strategies, we need separate databases per test file
@@ -187,8 +225,13 @@ OrmedTestConfig setUpOrmed({
   }
 
   // Create new manager if we didn't find one to share
-  if (manager == null) {
-    manager = TestDatabaseManager(
+  if (!hasResolvedManager) {
+    final baseSchema = _resolveBaseSchemaName(
+      dataSource: dataSource,
+      configKey: configKey,
+      migrateBaseDatabase: migrateBaseDatabase,
+    );
+    resolvedManager = TestDatabaseManager(
       baseDataSource: dataSource,
       runMigrations: runMigrations,
       migrations: migrations,
@@ -196,8 +239,9 @@ OrmedTestConfig setUpOrmed({
       seeders: seeders,
       strategy: strategy,
       adapterFactory: adapterFactory,
+      baseSchema: baseSchema,
     );
-    _managers[configKey] = manager;
+    _managers[configKey] = resolvedManager;
   }
 
   // Create the config object
@@ -214,8 +258,14 @@ OrmedTestConfig setUpOrmed({
   _configStack.add(config);
 
   setUpAll(() async {
-    await manager!.initialize();
+    await resolvedManager.initialize();
   });
+
+  if (migrateBaseDatabase) {
+    setUpAll(() async {
+      await resolvedManager.migrate(resolvedManager.baseDataSource);
+    });
+  }
 
   tearDownAll(() async {
     // Remove from config stack
@@ -226,7 +276,7 @@ OrmedTestConfig setUpOrmed({
           : null;
     }
 
-    await manager!.cleanup();
+    await resolvedManager.cleanup();
     _managers.remove(configKey);
   });
 

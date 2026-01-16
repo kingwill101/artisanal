@@ -3,7 +3,9 @@ import 'dart:typed_data';
 
 import 'package:carbonized/carbonized.dart';
 import 'package:decimal/decimal.dart';
-import 'package:ormed/src/model/model.dart';
+import 'contracts.dart';
+import 'model/model_definition.dart';
+import 'model/model_mixins/model_attributes.dart';
 
 import 'exceptions.dart';
 
@@ -451,7 +453,7 @@ class ValueCodecRegistry {
     if (castKey != null) {
       return decodeCast<T>(castKey, value, field: field);
     }
-    return _codecFor(field).decode(value) as T?;
+    return _decodeResult<T>(_codecFor(field).decode(value), field);
   }
 
   /// Encodes [value] using the codec registered under [key].
@@ -621,20 +623,48 @@ class ValueCodecRegistry {
       if (field == null) return value as T?;
       throw CodecNotFound(key, field);
     }
-    return codec.decode(value) as T?;
+    return _decodeResult<T>(codec.decode(value), field);
+  }
+
+  T? _decodeResult<T>(Object? decoded, FieldDefinition? field) {
+    if (decoded is List) {
+      final casted = _tryCastList<T>(decoded, field);
+      if (casted != null) return casted;
+    }
+    if (decoded is Map) {
+      final casted = _tryCastMap<T>(decoded, field);
+      if (casted != null) return casted;
+    }
+    if (decoded is T) return decoded;
+    return decoded as T?;
   }
 
   Object? _encodeJsonCast(Object? value, FieldDefinition? field) {
     if (value == null) return null;
+
+    Object? encodeNested(Object? val) {
+      if (val is AdHocRow) return val;
+      if (val is ModelAttributes) return val.attributes;
+      if (val is InsertDto) return val.toMap();
+      if (val is UpdateDto) return val.toMap();
+      if (val is Map) {
+        return val.map((k, v) => MapEntry(k.toString(), encodeNested(v)));
+      }
+      if (val is Iterable) {
+        return val.map(encodeNested).toList();
+      }
+      return val;
+    }
+
     if (_isJsonMapField(field)) {
       final map = _coerceJsonMap(value);
-      return jsonEncode(map);
+      return jsonEncode(encodeNested(map));
     }
     if (_isJsonListField(field)) {
       final list = _coerceJsonList(value);
-      return jsonEncode(list);
+      return jsonEncode(encodeNested(list));
     }
-    return jsonEncode(value);
+    return jsonEncode(encodeNested(value));
   }
 
   T? _decodeJsonCast<T>(Object? value, FieldDefinition? field) {
@@ -646,9 +676,57 @@ class ValueCodecRegistry {
       return _decodeJsonMap(value) as T?;
     }
     if (_isJsonListField(field)) {
-      return _decodeJsonList(value) as T?;
+      return _decodeJsonListTyped<T>(value, field);
     }
     return _decodeJsonValue(value, allowRawString: true) as T?;
+  }
+
+  T? _decodeJsonListTyped<T>(Object? value, FieldDefinition? field) {
+    return _decodeResult<T>(_decodeJsonList(value), field);
+  }
+
+  T? _tryCastList<T>(List result, FieldDefinition? field) {
+    final type = field != null
+        ? _jsonFieldType(field)
+        : T.toString().replaceAll('?', '');
+
+    if (type == 'List<String>' && result is! List<String>) {
+      return result.cast<String>() as T;
+    }
+    if (type == 'List<int>' && result is! List<int>) {
+      return result.cast<int>() as T;
+    }
+    if (type == 'List<double>' && result is! List<double>) {
+      return result.cast<double>() as T;
+    }
+    if (type == 'List<num>' && result is! List<num>) {
+      return result.cast<num>() as T;
+    }
+    if (type == 'List<bool>' && result is! List<bool>) {
+      return result.cast<bool>() as T;
+    }
+    if (type == 'List<DateTime>' && result is! List<DateTime>) {
+      return result.cast<DateTime>() as T;
+    }
+
+    if (result is T) return result as T;
+    return null;
+  }
+
+  T? _tryCastMap<T>(Map result, FieldDefinition? field) {
+    final type = field != null
+        ? _jsonFieldType(field)
+        : T.toString().replaceAll('?', '');
+
+    if (type == 'Map<String, Object?>' && result is! Map<String, Object?>) {
+      return result.cast<String, Object?>() as T;
+    }
+    if (type == 'Map<String, dynamic>' && result is! Map<String, dynamic>) {
+      return result.cast<String, dynamic>() as T;
+    }
+
+    if (result is T) return result as T;
+    return null;
   }
 
   bool _isJsonMapField(FieldDefinition? field) {

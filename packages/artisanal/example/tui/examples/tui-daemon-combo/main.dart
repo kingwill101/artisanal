@@ -123,12 +123,12 @@ String _randomEmoji() {
 }
 
 void _printUsage() {
-  io.stdout.writeln('Usage: dart main.dart [-d] [-h]'); // tui:allow-stdout
-  io.stdout.writeln(
+  tui.Cmd.println('Usage: dart main.dart [-d] [-h]'); // tui:allow-stdout
+  tui.Cmd.println(
     // tui:allow-stdout
     '  -d   daemon mode (no TUI, but we still run tasks)',
   );
-  io.stdout.writeln('  -h   show this help'); // tui:allow-stdout
+  tui.Cmd.println('  -h   show this help'); // tui:allow-stdout
 }
 
 Future<void> main(List<String> args) async {

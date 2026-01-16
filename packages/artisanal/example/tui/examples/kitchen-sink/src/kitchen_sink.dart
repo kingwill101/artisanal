@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 import 'dart:math' as math;
 import 'package:artisanal/style.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' as uv;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 
 /// This example demonstrates using the [View] object to control terminal metadata
@@ -10,13 +11,13 @@ void main() async {
       '\x1b[31mRed\x1b[31m Still Red\x1b[31m More Red\x1b[0m Reset';
   final compressed = compressAnsi(redundant);
 
-  print('--- ANSI Compression Demo ---');
-  print('Original:   "$redundant" (length: ${redundant.length})');
-  print('Compressed: "$compressed" (length: ${compressed.length})');
-  print('Saved ${redundant.length - compressed.length} bytes.');
-  print('-----------------------------\n');
+  Println('--- ANSI Compression Demo ---');
+  Println('Original:   "$redundant" (length: ${redundant.length})');
+  Println('Compressed: "$compressed" (length: ${compressed.length})');
+  Println('Saved ${redundant.length - compressed.length} bytes.');
+  Println('-----------------------------\n');
 
-  print('Starting TUI Metadata Demo in 2 seconds...');
+  Println('Starting TUI Metadata Demo in 2 seconds...');
   await Future.delayed(const Duration(seconds: 2));
 
   await runProgram(

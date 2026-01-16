@@ -970,7 +970,7 @@ class TextInputModel extends ViewComponent {
         _nextSuggestion();
       } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
         _previousSuggestion();
-      } else if (msg.key.runes.isNotEmpty) {
+      } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
         // Regular character input
         _insertRunes(msg.key.runes);
       }

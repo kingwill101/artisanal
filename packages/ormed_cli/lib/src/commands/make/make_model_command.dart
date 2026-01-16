@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:args/command_runner.dart' show UsageException;
 import 'package:artisanal/args.dart';
 import 'package:path/path.dart' as p;
 
@@ -13,7 +12,8 @@ class MakeModelCommand extends Command<void> {
       ..addOption('name', abbr: 'n', help: 'Class name for the model.')
       ..addOption(
         'path',
-        help: 'Override the models directory (relative to project root unless --realpath is set).',
+        help:
+            'Override the models directory (relative to project root unless --realpath is set).',
       )
       ..addFlag(
         'realpath',
@@ -22,7 +22,8 @@ class MakeModelCommand extends Command<void> {
       )
       ..addOption(
         'table',
-        help: 'Override the database table name (defaults to pluralized snake case).',
+        help:
+            'Override the database table name (defaults to pluralized snake case).',
       )
       ..addOption(
         'config',
@@ -35,7 +36,8 @@ class MakeModelCommand extends Command<void> {
   String get name => 'make:model';
 
   @override
-  String get description => 'Create a new model file with @OrmModel scaffolding.';
+  String get description =>
+      'Create a new model file with @OrmModel scaffolding.';
 
   @override
   Future<void> run() async {
@@ -80,10 +82,9 @@ class MakeModelCommand extends Command<void> {
     }
 
     final tableOption = (argResults?['table'] as String?)?.trim();
-    final tableName =
-        tableOption == null || tableOption.isEmpty
-            ? _pluralize(snake)
-            : tableOption;
+    final tableName = tableOption == null || tableOption.isEmpty
+        ? _pluralize(snake)
+        : tableOption;
 
     file.writeAsStringSync(_modelTemplate(className, snake, tableName));
 

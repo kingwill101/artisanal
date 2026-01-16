@@ -509,7 +509,7 @@ abstract class _KitchenSinkPage {
 
 Future<void> runKitchenSink(List<String> args) async {
   if (args.contains('-h') || args.contains('--help')) {
-    io.stdout.writeln(''' // tui:allow-stdout
+    Cmd.println(''' // tui:allow-stdout
 Kitchen-sink TUI
 
 Usage:

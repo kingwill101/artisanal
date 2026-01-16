@@ -1,7 +1,7 @@
 import 'package:ormed/ormed.dart';
-import 'package:ormed_sqlite/ormed_sqlite.dart';
 import 'package:test/test.dart';
 import 'package:driver_tests/driver_tests.dart';
+import 'support/mock_driver.dart';
 
 void main() {
   late DataSource dataSource;
@@ -10,7 +10,7 @@ void main() {
     dataSource = DataSource(
       DataSourceOptions(
         name: 'test_db',
-        driver: SqliteDriverAdapter.inMemory(),
+        driver: MockDriver(),
         registry: buildOrmRegistry(),
       ),
     );
@@ -62,7 +62,7 @@ void main() {
       final uninit = DataSource(
         DataSourceOptions(
           name: 'uninit',
-          driver: SqliteDriverAdapter.inMemory(),
+          driver: MockDriver(),
           registry: buildOrmRegistry(),
         ),
       );
@@ -79,7 +79,7 @@ void main() {
       final ds2 = DataSource(
         DataSourceOptions(
           name: 'second',
-          driver: SqliteDriverAdapter.inMemory(),
+          driver: MockDriver(),
           registry: buildOrmRegistry(),
         ),
       );

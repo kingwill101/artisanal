@@ -9,6 +9,7 @@ import '../renderer/renderer.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../style/verbosity.dart';
+import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';
 
 /// Callback for writing a line to output.
@@ -166,6 +167,11 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       _printUsageError(e);
       _setExitCode(usageExitCode);
       return null;
+    } finally {
+      _io?.dispose();
+      if (isSharedStdinStreamStarted) {
+        await shutdownSharedStdinStream();
+      }
     }
   }
 

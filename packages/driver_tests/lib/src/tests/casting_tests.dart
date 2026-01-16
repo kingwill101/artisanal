@@ -114,5 +114,84 @@ void runCastingTests() {
 
       expect(tracked.updatedAt.toUtc(), equals(expected));
     });
+
+    test('collection casting ensures typed collections are returned', () async {
+      final definition = AdHocModelDefinition(tableName: 'ad_hoc_collections');
+      definition.registerColumn(
+        const AdHocColumn(name: 'id', isPrimaryKey: true, dartType: 'int'),
+      );
+      definition.registerColumn(
+        const AdHocColumn(
+          name: 'tags',
+          dartType: 'List<String>',
+          codecType: 'json',
+        ),
+      );
+      definition.registerColumn(
+        const AdHocColumn(
+          name: 'scores',
+          dartType: 'List<int>',
+          codecType: 'json',
+        ),
+      );
+      definition.registerColumn(
+        const AdHocColumn(
+          name: 'metadata',
+          dartType: 'Map<String, dynamic>',
+          codecType: 'json',
+        ),
+      );
+
+      final schemaDriver = dataSource.context.driver as SchemaDriver;
+
+      // We might need to create the table first
+      final dropBuilder = SchemaBuilder();
+      dropBuilder.drop('ad_hoc_collections', ifExists: true);
+      await schemaDriver.applySchemaPlan(dropBuilder.build());
+
+      final createBuilder = SchemaBuilder();
+      createBuilder.create('ad_hoc_collections', (table) {
+        table.integer('id').primaryKey();
+        table.json('tags').nullable();
+        table.json('scores').nullable();
+        table.json('metadata').nullable();
+      });
+      await schemaDriver.applySchemaPlan(createBuilder.build());
+
+      final query = dataSource.context.queryFromDefinition(definition);
+
+      await query.create({
+        'id': 1,
+        'tags': ['a', 'b', 'c'],
+        'scores': [1, 2, 3],
+        'metadata': {
+          'key': 'value',
+          'nested': {'a': 1},
+        },
+      });
+
+      final row = await query.where('id', 1).first();
+      expect(row, isNotNull);
+
+      // Direct access via [] which uses the decoded value from _AdHocCodec
+      final tags = row!['tags'];
+      final scores = row['scores'];
+      final metadata = row['metadata'];
+
+      expect(tags, equals(['a', 'b', 'c']));
+      expect(tags, isA<List<String>>());
+
+      expect(scores, equals([1, 2, 3]));
+      expect(scores, isA<List<int>>());
+
+      expect(
+        metadata,
+        equals({
+          'key': 'value',
+          'nested': {'a': 1},
+        }),
+      );
+      expect(metadata, isA<Map<String, dynamic>>());
+    });
   });
 }

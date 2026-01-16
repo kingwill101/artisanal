@@ -160,6 +160,10 @@ void main() async {
 
 </details>
 
+### Test helper
+
+`ormed init` also writes `lib/test/helpers/ormed_test_helper.dart`. The helper wires up two SQLite `DataSource`s via `setUpOrmed` (primary + analytics), runs the sample `_CreateTestUsersTable` migration, and exposes `primaryTestConfig`, `analyticsTestConfig`, and helpers such as `primaryTestConnection()`. Import it in your tests and pass the configs into `ormedGroup` or call `primaryTestConnection()` when you just need the default connection.
+
 ---
 
 ## 📦 Packages

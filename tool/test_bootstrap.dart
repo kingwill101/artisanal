@@ -24,6 +24,7 @@ Future<void> main(List<String> args) async {
     await runMigrations();
     await createSeeder();
     await runSeeders();
+    await runHelperTest();
     await analyzeProject();
     await verifyFiles();
     await runVerificationScript(options);
@@ -235,9 +236,7 @@ Future<void> createModel() async {
     'users',
   ], workingDirectory: testDir);
 
-  final modelFile = File(
-    p.join(testDir, 'lib/src/database/models/user.dart'),
-  );
+  final modelFile = File(p.join(testDir, 'lib/src/database/models/user.dart'));
   modelFile.writeAsStringSync('''
 import 'package:ormed/ormed.dart';
 
@@ -400,6 +399,57 @@ Future<void> runSeeders() async {
   ], workingDirectory: testDir);
 }
 
+Future<void> runHelperTest() async {
+  print('Writing helper-driven test file...');
+  final testDirPath = Directory(p.join(testDir, 'test'));
+  if (!testDirPath.existsSync()) {
+    testDirPath.createSync(recursive: true);
+  }
+
+  final helperTestFile = File(
+    p.join(testDir, 'test', 'ormed_helper_test.dart'),
+  );
+  helperTestFile.writeAsStringSync('''
+import 'package:ormed/ormed.dart';
+import 'package:orm_bootstrap_test/test/helpers/ormed_test_helper.dart';
+import 'package:test/test.dart' as test;
+
+void main() {
+  ormedGroup('Helper test suite', (ds) {
+    ormedTest('primary helper connection can insert and read rows', (db) async {
+      await primaryTestConnection().driver.executeRaw(
+        'INSERT INTO users (email, name) VALUES (?, ?)',
+        ['helper@example.com', 'Helper'],
+      );
+
+      final rows = await primaryTestConnection()
+          .driver
+          .queryRaw('SELECT COUNT(*) AS count FROM users');
+      test.expect(rows.single['count'], test.equals(1));
+    });
+  }, config: primaryTestConfig);
+
+  ormedGroup('Helper analytics suite', (ds) {
+    ormedTest('analytics helper connection stays empty', (db) async {
+      final analyticsRows = await analyticsTestConnection()
+          .driver
+          .queryRaw('SELECT COUNT(*) AS count FROM users');
+      test.expect(analyticsRows.single['count'], test.equals(0));
+
+      final primaryConn = ConnectionManager.instance.connection('primary');
+      test.expect(primaryConn.name, test.equals('primary'));
+    });
+  }, config: analyticsTestConfig);
+}
+''');
+
+  print('Running helper-driven test...');
+  await run('dart', [
+    'test',
+    'test/ormed_helper_test.dart',
+  ], workingDirectory: testDir);
+}
+
 Future<void> analyzeProject() async {
   print('Analyzing project...');
   await run('dart', ['analyze'], workingDirectory: testDir);
@@ -429,7 +479,9 @@ Future<void> verifyAnalyzerConfig() async {
   }
   final text = options.readAsStringSync();
   if (!text.contains('- ormed')) {
-    throw Exception('analysis_options.yaml is missing the Ormed analyzer plugin.');
+    throw Exception(
+      'analysis_options.yaml is missing the Ormed analyzer plugin.',
+    );
   }
 }
 

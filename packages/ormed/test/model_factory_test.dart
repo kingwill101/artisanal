@@ -1011,15 +1011,16 @@ class _ExternalFactoryUserFactory
 
   @override
   Map<String, Object?> defaults() => const {
-        'name': 'Ormed User',
-        'role': 'member',
-      };
+    'name': 'Ormed User',
+    'role': 'member',
+  };
 
   @override
   Map<String, StateTransformer<ExternalFactoryUser>> get states => const {
-        'admin': _adminState,
-      };
+    'admin': _adminState,
+  };
 
-  static Map<String, Object?> _adminState(Map<String, Object?> attributes) =>
-      {'role': 'admin'};
+  static Map<String, Object?> _adminState(Map<String, Object?> attributes) => {
+    'role': 'admin',
+  };
 }
