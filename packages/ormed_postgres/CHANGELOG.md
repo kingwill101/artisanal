@@ -3,6 +3,7 @@
 ## 0.1.0-dev+10
 
 - **Fixed**: Query deletes using fallback row identifiers now project the identifier, avoiding `ctid` lookup errors.
+- **Fixed**: Query delete/update fallback projections now reset projection order to avoid RangeError with custom selects.
 - **Added**: Session option allowlist and validation for `session` keys.
 - **Improved**: Full-text language identifiers are validated and preview SQL formatting ignores placeholders inside string literals.
 

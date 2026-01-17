@@ -1345,6 +1345,8 @@ class PostgresDriverAdapter
                 alias: primaryKey,
               ),
             ],
+            customSelects: const [],
+            projectionOrder: const [],
             aggregates: const [],
           )
         : queryPlan;
@@ -1398,6 +1400,8 @@ class PostgresDriverAdapter
             rawSelects: [
               RawSelectExpression(sql: '$baseReference.$keyAlias', alias: key),
             ],
+            customSelects: const [],
+            projectionOrder: const [],
             aggregates: const [],
           )
         : queryPlan;
