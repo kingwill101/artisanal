@@ -163,7 +163,9 @@ class ModelSubclassEmitter {
     buffer.writeln('      $definitionName.toMap(this, registry: registry);');
     buffer.writeln();
 
-    for (final field in context.fields.where((f) => !f.isVirtual)) {
+    for (final field in context.fields.where(
+      (f) => !f.isVirtual && !context.relationFieldNames.contains(f.name),
+    )) {
       buffer.writeln('  /// Tracked getter for [${field.name}].');
       buffer.writeln('  @override');
       buffer.writeln(
