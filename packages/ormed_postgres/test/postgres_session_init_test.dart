@@ -30,4 +30,78 @@ void main() {
 
     await adapter.close();
   });
+
+  test('rejects invalid session option keys', () async {
+    final url =
+        Platform.environment['POSTGRES_URL'] ??
+        'postgres://postgres:postgres@localhost:6543/orm_test';
+
+    final adapter = PostgresDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'postgres',
+        options: {
+          'url': url,
+          'session': {'search_path;DROP': 'public'},
+        },
+      ),
+    );
+
+    try {
+      await expectLater(
+        () => adapter.queryRaw('SELECT 1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  test('rejects session option keys not in allowlist', () async {
+    final url =
+        Platform.environment['POSTGRES_URL'] ??
+        'postgres://postgres:postgres@localhost:6543/orm_test';
+
+    final adapter = PostgresDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'postgres',
+        options: {
+          'url': url,
+          'session': {'search_path': 'public'},
+          'sessionAllowlist': ['application_name'],
+        },
+      ),
+    );
+
+    try {
+      await expectLater(
+        () => adapter.queryRaw('SELECT 1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  test('accepts allowlisted session option keys', () async {
+    final url =
+        Platform.environment['POSTGRES_URL'] ??
+        'postgres://postgres:postgres@localhost:6543/orm_test';
+
+    final adapter = PostgresDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'postgres',
+        options: {
+          'url': url,
+          'session': {'search_path': 'public'},
+          'sessionAllowlist': ['search_path'],
+        },
+      ),
+    );
+
+    final searchPath = await adapter.queryRaw('SHOW search_path');
+    final searchPathValue = searchPath.first.values.first.toString();
+    expect(searchPathValue, contains('public'));
+
+    await adapter.close();
+  });
 }
