@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:source_gen/source_gen.dart';
 
 import '../descriptors.dart';
+import '../helpers.dart';
 import '../model_context.dart';
 
 class ModelCodecEmitter {
@@ -150,12 +151,13 @@ class ModelCodecEmitter {
     }
     // Fields with SQL defaults can be null during decode - use type-appropriate defaults
     if (field.defaultValueSql != null && field.defaultValueSql!.isNotEmpty) {
-      return "$access ?? ${_dartDefaultForType(field.dartType)}";
+      return "$access ?? ${_dartDefaultForType(field)}";
     }
     return "$access ?? (throw StateError('Field ${field.name} on ${context.className} cannot be null.'))";
   }
 
-  String _dartDefaultForType(String dartType) {
+  String _dartDefaultForType(FieldDescriptor field) {
+    final dartType = field.dartType;
     switch (dartType) {
       case 'bool':
         return 'false';
@@ -166,8 +168,100 @@ class ModelCodecEmitter {
       case 'String':
         return "''";
       default:
-        return 'null'; // For complex types, default to null (shouldn't happen for non-nullable)
+        if (field.enumType != null) {
+          return _enumDefaultForSql(field);
+        }
+        if (dartType.startsWith('Map<') || dartType == 'Map') {
+          return 'const {}';
+        }
+        if (dartType.startsWith('List<') || dartType == 'List') {
+          return 'const []';
+        }
+        return "(throw StateError('Cannot provide default for non-nullable ${field.dartType} field ${field.name} on ${context.className}.'))";
     }
+  }
+
+  String _enumDefaultForSql(FieldDescriptor field) {
+    final enumType = field.enumType!;
+    final rawDefault = field.defaultValueSql;
+    final parsedValue = _parseEnumDefaultValue(rawDefault);
+    if (parsedValue == null || parsedValue.isEmpty) {
+      return '$enumType.values.first';
+    }
+    final escapedValue = escape(parsedValue);
+    final escapedRaw = rawDefault == null ? '' : escape(rawDefault);
+    return '$enumType.values.firstWhere((value) => value.name == \'$escapedValue\', '
+        'orElse: () => throw StateError('
+        '\'Cannot map defaultValueSql $escapedRaw to $enumType for ${field.name} on ${context.className}.\'))';
+  }
+
+  String? _parseEnumDefaultValue(String? rawDefault) {
+    if (rawDefault == null) {
+      return null;
+    }
+    var value = rawDefault.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+
+    value = _stripSqlCast(value);
+    value = _stripWrappingParentheses(value);
+    if (value.isEmpty) {
+      return null;
+    }
+
+    value = _stripSqlQuotes(value);
+    if (value.contains('.')) {
+      value = value.split('.').last.trim();
+    }
+
+    return value.isEmpty ? null : value;
+  }
+
+  String _stripSqlCast(String value) {
+    var cleaned = value.trim();
+    final castMatch =
+        RegExp(r'^cast\\((.*)\\)$', caseSensitive: false).firstMatch(cleaned);
+    if (castMatch != null) {
+      cleaned = castMatch.group(1)!.trim();
+      final asMatch =
+          RegExp(r'\\s+as\\s+', caseSensitive: false).firstMatch(cleaned);
+      if (asMatch != null) {
+        cleaned = cleaned.substring(0, asMatch.start).trim();
+      }
+    }
+
+    final parts = cleaned.split(RegExp(r'\\s*::\\s*'));
+    return parts.isEmpty ? cleaned : parts.first.trim();
+  }
+
+  String _stripWrappingParentheses(String value) {
+    var cleaned = value.trim();
+    while (cleaned.startsWith('(') && cleaned.endsWith(')')) {
+      cleaned = cleaned.substring(1, cleaned.length - 1).trim();
+    }
+    return cleaned;
+  }
+
+  String _stripSqlQuotes(String value) {
+    var cleaned = value.trim();
+    if (cleaned.length >= 2 &&
+        (cleaned.startsWith("E'") || cleaned.startsWith("e'"))) {
+      cleaned = cleaned.substring(1);
+    }
+    if (cleaned.length >= 2) {
+      final quote = cleaned[0];
+      if ((quote == '\'' && cleaned.endsWith('\'')) ||
+          (quote == '"' && cleaned.endsWith('"'))) {
+        cleaned = cleaned.substring(1, cleaned.length - 1);
+        if (quote == '\'') {
+          cleaned = cleaned.replaceAll("''", "'");
+        } else {
+          cleaned = cleaned.replaceAll('""', '"');
+        }
+      }
+    }
+    return cleaned;
   }
 
   String _unsupportedCodec(String className) =>
