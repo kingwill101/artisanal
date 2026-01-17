@@ -20,7 +20,7 @@ class RawSqlInterpolationRuleTest extends AnalysisRuleTest with OrmedTestMixin {
     super.setUp();
   }
 
-  Future<void> testInterpolatedRawSql() async {
+  Future<void> test_interpolated_raw_sql() async {
     const content = r'''
 import 'package:ormed/ormed.dart';
 
@@ -40,7 +40,7 @@ void build(Query<User> query, String status) {
     ]);
   }
 
-  Future<void> testRawSqlWithBindings() async {
+  Future<void> test_raw_sql_with_bindings() async {
     await assertNoDiagnostics(r'''
 import 'package:ormed/ormed.dart';
 
@@ -54,5 +54,30 @@ void build(Query<User> query, String status) {
   query.whereRaw('status = ?', [status]);
 }
 ''');
+  }
+
+  Future<void> test_rule_disabled_via_analysis_options() async {
+    newAnalysisOptionsYamlFile(
+      testPackageRootPath,
+      '''
+ormed:
+  lints:
+    raw_sql_interpolation: ignore
+''',
+    );
+    const content = r'''
+import 'package:ormed/ormed.dart';
+
+class User extends Model<User> with ModelFactoryCapable {
+  User({required this.id, required this.email});
+  final int id;
+  final String email;
+}
+
+void build(Query<User> query, String status) {
+  query.whereRaw('status = $status');
+}
+''';
+    await assertNoDiagnostics(content);
   }
 }
