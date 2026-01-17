@@ -140,6 +140,7 @@ class Query<T extends OrmEntity> {
     List<QueryUnion>? unions,
     Duration? cacheTtl,
     bool disableCache = false,
+    bool disableAutoHydration = false,
     bool suppressEvents = false,
   }) : _filters = filters ?? <FilterClause>[],
        _orders = orders ?? <OrderClause>[],
@@ -187,6 +188,7 @@ class Query<T extends OrmEntity> {
        _unions = unions ?? const <QueryUnion>[],
        _cacheTtl = cacheTtl,
        _disableCache = disableCache,
+       _disableAutoHydration = disableAutoHydration,
        _suppressEvents = suppressEvents {
     OrmConfig.ensureInitialized();
   }
@@ -233,6 +235,7 @@ class Query<T extends OrmEntity> {
   final List<QueryUnion> _unions;
   final Duration? _cacheTtl;
   final bool _disableCache;
+  final bool _disableAutoHydration;
   final bool _suppressEvents;
 
   static const String _softDeleteScope =
@@ -543,6 +546,7 @@ class Query<T extends OrmEntity> {
       unions: _unions,
       cacheTtl: _cacheTtl,
       disableCache: _disableCache,
+      disableAutoHydration: _disableAutoHydration,
     );
   }
 
@@ -878,9 +882,27 @@ class Query<T extends OrmEntity> {
     final fallbackIdentifier = metadata.queryUpdateRowIdentifier?.column;
     final requiresPk = metadata.requiresPrimaryKeyForQueryUpdate;
     final identifier = pkField?.columnName ?? fallbackIdentifier;
-    if (identifier == null && requiresPk) {
+    if (identifier == null) {
+      if (requiresPk) {
+        throw StateError(
+          '$feature requires ${definition.modelName} to declare a primary key.',
+        );
+      }
       throw StateError(
-        '$feature requires ${definition.modelName} to declare a primary key.',
+        '$feature requires ${definition.modelName} to declare a primary key '
+        'or configure a query row identifier for the ${metadata.name} driver.',
+      );
+    }
+    if (pkField == null && fallbackIdentifier != null) {
+      context.emitWarning(
+        QueryWarning(
+          message:
+              '$feature uses fallback row identifier "$fallbackIdentifier" '
+              'for ${definition.modelName}; ensure the identifier is stable.',
+          definition: definition,
+          feature: feature,
+          driverName: metadata.name,
+        ),
       );
     }
     final plan = _buildPlan();
@@ -930,6 +952,9 @@ class Query<T extends OrmEntity> {
   /// Whether model events are suppressed for this query.
   bool get suppressEvents => _suppressEvents;
 
+  /// Whether auto-hydration of model columns is disabled for this query.
+  bool get disableAutoHydration => _disableAutoHydration;
+
   /// Returns a query that suppresses all model lifecycle events.
   ///
   /// Use this for bulk operations where you don't want to trigger
@@ -945,6 +970,18 @@ class Query<T extends OrmEntity> {
   /// await User.query().where('status', 'inactive').withoutEvents().update({'archived': true});
   /// ```
   Query<T> withoutEvents() => _copyWith(suppressEvents: true);
+
+  /// Disables auto-hydration columns for aggregate or projection-heavy queries.
+  ///
+  /// Example:
+  /// ```dart
+  /// final rows = await User.query()
+  ///   .groupBy(['team_id'])
+  ///   .selectRaw('team_id, COUNT(*) AS total')
+  ///   .withoutAutoHydration()
+  ///   .rows();
+  /// ```
+  Query<T> withoutAutoHydration() => _copyWith(disableAutoHydration: true);
 
   Query<T> _copyWith({
     List<FilterClause>? filters,
@@ -987,6 +1024,7 @@ class Query<T extends OrmEntity> {
     List<QueryUnion>? unions,
     Duration? cacheTtl,
     bool? disableCache,
+    bool? disableAutoHydration,
     bool? suppressEvents,
   }) => Query(
     definition: definition,
@@ -1033,6 +1071,7 @@ class Query<T extends OrmEntity> {
     unions: unions ?? _unions,
     cacheTtl: cacheTtl ?? _cacheTtl,
     disableCache: disableCache ?? _disableCache,
+    disableAutoHydration: disableAutoHydration ?? _disableAutoHydration,
     suppressEvents: suppressEvents ?? _suppressEvents,
   );
 

@@ -74,6 +74,29 @@ void runDriverQueryTests() {
     });
 
     test(
+      'preview SQL keeps literal question marks with escaped quotes',
+      () async {
+        final supportsRaw = metadata.supportsCapability(DriverCapability.rawSQL);
+        if (!supportsRaw) return;
+
+        final events = <QueryEvent>[];
+        dataSource.context.onQuery(events.add);
+
+        await dataSource.context
+            .query<User>()
+            .selectRaw("CASE WHEN 'it''s ?' = 'it''s ?' THEN 1 ELSE 0 END AS flag")
+            .whereEquals('id', 1)
+            .limit(1)
+            .get();
+
+        expect(events, isNotEmpty);
+        final preview = events.last.preview.sqlWithBindings;
+        expect(preview, contains("it''s ?"));
+        expect(preview, isNot(contains("it''s 1")));
+      },
+    );
+
+    test(
       'records query errors in events',
       () async {
         final events = <QueryEvent>[];

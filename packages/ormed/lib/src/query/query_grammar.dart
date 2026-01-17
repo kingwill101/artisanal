@@ -439,10 +439,12 @@ abstract class QueryGrammar {
 class _SelectCompilation {
   _SelectCompilation(this.plan, this.grammar) {
     final rawGroupLimit = plan.groupLimit;
-    _groupLimit =
-        rawGroupLimit != null && grammar.supportsGroupLimit(rawGroupLimit)
-        ? rawGroupLimit
-        : null;
+    if (rawGroupLimit != null && !grammar.supportsGroupLimit(rawGroupLimit)) {
+      throw UnsupportedError(
+        'Group limit queries are not supported by this driver.',
+      );
+    }
+    _groupLimit = rawGroupLimit;
     final table = grammar.wrapIdentifier(
       _prefixedTableName(
         plan.definition.tableName,

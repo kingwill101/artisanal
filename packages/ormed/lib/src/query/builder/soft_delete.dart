@@ -104,6 +104,16 @@ extension SoftDeleteExtension<T extends OrmEntity> on Query<T> {
       final fallbackIdentifier = driverMetadata.queryUpdateRowIdentifier;
       final identifier = pk?.columnName ?? fallbackIdentifier?.column;
       if (identifier != null && pk == null) {
+        context.emitWarning(
+          QueryWarning(
+            message:
+                'forceDelete uses fallback row identifier "${identifier}" '
+                'for ${definition.modelName}; ensure the identifier is stable.',
+            definition: definition,
+            feature: 'forceDelete',
+            driverName: driverMetadata.name,
+          ),
+        );
         final selection = withTrashed();
         final plan = MutationPlan.queryDelete(
           definition: definition,
