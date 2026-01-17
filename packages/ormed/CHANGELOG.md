@@ -6,6 +6,7 @@
 - **Added**: `disableAutoHydration` to opt out of automatic hydration when building queries.
 - **Improved**: `raw_sql_interpolation` analyzer lint is now configurable (or disable-able) via `analysis_options.yaml`.
 - **Fixed**: Non-nullable enum defaults now parse CAST() expressions correctly, and generated tracked models no longer duplicate relation getters.
+- **Fixed**: SQL preview now surfaces unsupported query features instead of masking errors.
 
 ## 0.1.0-dev+9
 

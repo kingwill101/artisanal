@@ -13,7 +13,7 @@ extension UtilityExtension<T extends OrmEntity> on Query<T> {
   ///   .toSql();
   /// print(sql.sqlWithBindings);
   /// ```
-  StatementPreview toSql() => context.describeQuery(_buildPlan());
+  StatementPreview toSql() => context.driver.describeQuery(_buildPlan());
 
   /// Returns the number of rows that match the current query.
   ///
