@@ -40,4 +40,94 @@ void main() {
 
     await adapter.close();
   });
+
+  test('rejects invalid session option keys', () async {
+    final url =
+        Platform.environment['MYSQL_URL'] ??
+        'mysql://root:secret@localhost:6605/orm_test';
+    final connectionInfo = MySqlConnectionInfo.fromUrl(
+      url,
+      secureByDefault: true,
+    );
+
+    final adapter = MySqlDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'mysql',
+        options: {
+          'url': url,
+          'ssl': connectionInfo.secure,
+          'session': {'sql_notes;DROP': 0},
+        },
+      ),
+    );
+    try {
+      await expectLater(
+        () => adapter.queryRaw('SELECT 1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  test('rejects session option keys not in allowlist', () async {
+    final url =
+        Platform.environment['MYSQL_URL'] ??
+        'mysql://root:secret@localhost:6605/orm_test';
+    final connectionInfo = MySqlConnectionInfo.fromUrl(
+      url,
+      secureByDefault: true,
+    );
+
+    final adapter = MySqlDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'mysql',
+        options: {
+          'url': url,
+          'ssl': connectionInfo.secure,
+          'session': {'sql_notes': 0},
+          'sessionAllowlist': ['sql_mode'],
+        },
+      ),
+    );
+    try {
+      await expectLater(
+        () => adapter.queryRaw('SELECT 1'),
+        throwsA(isA<ArgumentError>()),
+      );
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  test('accepts allowlisted session option keys', () async {
+    final url =
+        Platform.environment['MYSQL_URL'] ??
+        'mysql://root:secret@localhost:6605/orm_test';
+    final connectionInfo = MySqlConnectionInfo.fromUrl(
+      url,
+      secureByDefault: true,
+    );
+
+    final adapter = MySqlDriverAdapter.custom(
+      config: DatabaseConfig(
+        driver: 'mysql',
+        options: {
+          'url': url,
+          'ssl': connectionInfo.secure,
+          'session': {'sql_notes': 0},
+          'sessionAllowlist': ['sql_notes'],
+        },
+      ),
+    );
+
+    final rows = await adapter.queryRaw('SELECT @@sql_notes AS sql_notes');
+    final sqlNotesValue = rows.first['sql_notes'];
+    final sqlNotes = sqlNotesValue is int
+        ? sqlNotesValue
+        : int.tryParse(sqlNotesValue.toString());
+    expect(sqlNotes, 0);
+
+    await adapter.close();
+  });
 }

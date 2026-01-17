@@ -87,7 +87,22 @@ class MySqlDriverAdapter
     // Auto-register MySQL codecs on first instantiation
     registerMySqlCodecs();
 
-    _grammar = MySqlQueryGrammar(extensions: _extensions);
+    final supportsWindowFunctions =
+        _boolOption(config.options, 'supportsWindowFunctions') ??
+        _boolOption(config.options, 'windowFunctions') ??
+        _boolOption(config.options, 'supports_window_functions') ??
+        !isMariaDb;
+    final supportsLateralJoins =
+        _boolOption(config.options, 'supportsLateralJoins') ??
+        _boolOption(config.options, 'lateralJoins') ??
+        _boolOption(config.options, 'supports_lateral_joins') ??
+        !isMariaDb;
+
+    _grammar = MySqlQueryGrammar(
+      supportsWindowFunctions: supportsWindowFunctions,
+      supportsLateralJoins: supportsLateralJoins,
+      extensions: _extensions,
+    );
 
     _planCompiler = ClosurePlanCompiler(
       compileSelect: _compileSelectPreview,
@@ -255,13 +270,14 @@ class MySqlDriverAdapter
   StatementPreview _compileSelectPreview(QueryPlan plan) {
     final compilation = _grammar.compileSelect(plan);
     final normalized = normalizeMySqlParameters(compilation.bindings);
+    final previewSql = _formatPreviewSql(compilation.sql, normalized.length);
     final resolved = _grammar.substituteBindingsIntoRawSql(
       compilation.sql,
       _encodePreviewParameters(normalized),
     );
     return StatementPreview(
       payload: SqlStatementPayload(
-        sql: compilation.sql,
+        sql: previewSql,
         parameters: normalized,
       ),
       resolvedText: resolved,
@@ -2146,16 +2162,32 @@ class MySqlDriverAdapter
   String _formatPreviewSql(String sql, int parameterCount) {
     final buffer = StringBuffer();
     var index = 0;
+    var inLiteral = false;
     for (var i = 0; i < sql.length; i++) {
       final char = sql[i];
-      if (char == '?') {
-        index++;
-        buffer
-          ..write(':p')
-          ..write(index);
-      } else {
+      final next = i + 1 < sql.length ? sql[i + 1] : null;
+      if (char == "'") {
+        if (next == "'") {
+          buffer.write("''");
+          i++;
+          continue;
+        }
+        inLiteral = !inLiteral;
         buffer.write(char);
+        continue;
       }
+      if (char == '?' && !inLiteral) {
+        if (index < parameterCount) {
+          index++;
+          buffer
+            ..write(':p')
+            ..write(index);
+        } else {
+          buffer.write(char);
+        }
+        continue;
+      }
+      buffer.write(char);
     }
     if (index != parameterCount) {
       throw StateError(
@@ -2164,6 +2196,22 @@ class MySqlDriverAdapter
     }
     return buffer.toString();
   }
+}
+
+bool? _boolOption(Map<String, Object?> source, String key) {
+  final value = source[key];
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') return true;
+    if (normalized == 'false' || normalized == '0') return false;
+  }
+  if (value is num) {
+    if (value == 1) return true;
+    if (value == 0) return false;
+  }
+  return null;
 }
 
 class _JsonUpdateTemplate {
