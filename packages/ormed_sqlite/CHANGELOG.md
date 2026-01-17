@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+10
+
+- **Added**: Configurable `supportsReturning` and `supportsWindowFunctions` overrides; returning clauses are suppressed when disabled.
+- **Added**: Session option allowlist and validation for PRAGMA keys.
+- **Improved**: Streaming queries decode lazily, and group-limit now throws when window functions are disabled.
+
 ## 0.1.0-dev+9
 
 - **Refactor**: Relocated dialect-specific integration tests and grammar tests from core into the driver package.

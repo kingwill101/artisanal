@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+10
+
+- **Fixed**: Query deletes using fallback row identifiers now project the identifier, avoiding `ctid` lookup errors.
+- **Added**: Session option allowlist and validation for `session` keys.
+- **Improved**: Full-text language identifiers are validated and preview SQL formatting ignores placeholders inside string literals.
+
 ## 0.1.0-dev+9
 
 - **Refactor**: Relocated dialect-specific integration tests and grammar tests from core into the driver package.
