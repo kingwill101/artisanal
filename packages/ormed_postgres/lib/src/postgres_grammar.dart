@@ -6,6 +6,10 @@ import 'package:ormed/ormed.dart';
 class PostgresQueryGrammar extends QueryGrammar {
   PostgresQueryGrammar({super.extensions});
 
+  static final RegExp _fullTextLanguagePattern = RegExp(
+    r'^[A-Za-z_][A-Za-z0-9_]*$',
+  );
+
   @override
   String wrapIdentifier(String value) {
     final escaped = value.replaceAll('"', '""');
@@ -114,6 +118,13 @@ class PostgresQueryGrammar extends QueryGrammar {
   @override
   String compileFullText(FullTextWhere clause) {
     final language = clause.language ?? 'english';
+    if (!_fullTextLanguagePattern.hasMatch(language)) {
+      throw ArgumentError.value(
+        language,
+        'language',
+        'Invalid full-text language identifier.',
+      );
+    }
     final vectors = clause.columns
         .map((column) => "to_tsvector('$language', ${wrapIdentifier(column)})")
         .join(' || ');

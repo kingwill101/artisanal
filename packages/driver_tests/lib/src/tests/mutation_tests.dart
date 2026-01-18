@@ -743,6 +743,113 @@ void runDriverMutationTests() {
           ? false
           : 'Driver does not support RETURNING mutations',
     );
+
+    test('query updates warn when using fallback row identifiers', () async {
+      final table =
+          'orm_warning_updates_${DateTime.now().microsecondsSinceEpoch}';
+      final driver = dataSource.connection.driver;
+      await driver.executeRaw(
+        'CREATE TABLE $table (id INTEGER, name TEXT)',
+      );
+      await driver.executeRaw(
+        'INSERT INTO $table (id, name) VALUES (?, ?)',
+        [1, 'alpha'],
+      );
+
+      final warnings = <QueryWarning>[];
+      dataSource.context.onWarning(warnings.add);
+
+      try {
+        final columns = const [
+          AdHocColumn(name: 'id', columnName: 'id'),
+          AdHocColumn(name: 'name', columnName: 'name'),
+        ];
+
+        await dataSource.context
+            .table(table, columns: columns)
+            .whereEquals('id', 1)
+            .update({'name': 'beta'});
+
+        expect(
+          warnings.any((warning) => warning.feature == 'update'),
+          isTrue,
+        );
+      } finally {
+        await driver.executeRaw('DROP TABLE IF EXISTS $table');
+      }
+    });
+
+    test('forceDelete warns when using fallback row identifiers', () async {
+      final table =
+          'orm_warning_deletes_${DateTime.now().microsecondsSinceEpoch}';
+      final driver = dataSource.connection.driver;
+      await driver.executeRaw(
+        'CREATE TABLE $table (id INTEGER, name TEXT)',
+      );
+      await driver.executeRaw(
+        'INSERT INTO $table (id, name) VALUES (?, ?)',
+        [1, 'alpha'],
+      );
+
+      final warnings = <QueryWarning>[];
+      dataSource.context.onWarning(warnings.add);
+
+      try {
+        final columns = const [
+          AdHocColumn(name: 'id', columnName: 'id'),
+          AdHocColumn(name: 'name', columnName: 'name'),
+        ];
+
+        await dataSource.context
+            .table(table, columns: columns)
+            .whereEquals('id', 1)
+            .forceDelete();
+
+        expect(
+          warnings.any((warning) => warning.feature == 'forceDelete'),
+          isTrue,
+        );
+      } finally {
+        await driver.executeRaw('DROP TABLE IF EXISTS $table');
+      }
+    });
+
+    test(
+      'forceDelete with custom projections works with fallback identifiers',
+      () async {
+        final table =
+            'orm_projection_delete_${DateTime.now().microsecondsSinceEpoch}';
+        final driver = dataSource.connection.driver;
+        await driver.executeRaw(
+          'CREATE TABLE $table (id INTEGER, name TEXT)',
+        );
+        await driver.executeRaw(
+          'INSERT INTO $table (id, name) VALUES (?, ?)',
+          [1, 'alpha'],
+        );
+
+        try {
+          final columns = const [
+            AdHocColumn(name: 'id', columnName: 'id'),
+            AdHocColumn(name: 'name', columnName: 'name'),
+          ];
+
+          final deleted = await dataSource.context
+              .table(table, columns: columns)
+              .select(['name'])
+              .selectRaw('1 AS projection_marker')
+              .whereEquals('id', 1)
+              .forceDelete();
+
+          expect(deleted, 1);
+        } finally {
+          await driver.executeRaw('DROP TABLE IF EXISTS $table');
+        }
+      },
+      skip: metadata.name == 'postgres'
+          ? false
+          : 'Postgres fallback identifier repro only',
+    );
   });
 }
 

@@ -74,6 +74,20 @@ void main() {
     expect(compilation.bindings.single, 'eloquent tips');
   });
 
+  test('full text search rejects invalid language identifiers', () {
+    final clause = FullTextWhere(
+      columns: const ['title'],
+      value: 'ormed',
+      language: "english;DROP",
+      mode: FullTextMode.natural,
+    );
+    final plan = plan0(fullText: [clause]);
+    expect(
+      () => grammar.compileSelect(plan),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
+
   test('lock clause maps shared variants', () {
     final sql = grammar.compileSelect(plan0(lock: 'shared')).sql;
     expect(sql.trim().endsWith('FOR SHARE'), isTrue);

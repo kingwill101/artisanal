@@ -291,16 +291,17 @@ void main() {
     expect(sql, contains('__orm_group'));
   });
 
-  test('group limit degrades when window functions disabled', () {
+  test('group limit throws when window functions disabled', () {
     final legacyGrammar = SqliteQueryGrammar(supportsWindowFunctions: false);
     final limitedPlan = QueryPlan(
       definition: definition,
       groupLimit: const GroupLimit(column: 'id', limit: 2),
       orders: const [OrderClause(field: 'id')],
     );
-    final sql = legacyGrammar.compileSelect(limitedPlan).sql;
-    expect(sql.contains('ROW_NUMBER'), isFalse);
-    expect(sql.contains('__orm_group'), isFalse);
+    expect(
+      () => legacyGrammar.compileSelect(limitedPlan),
+      throwsA(isA<UnsupportedError>()),
+    );
   });
 
   test('wrapUnion nests each select', () {

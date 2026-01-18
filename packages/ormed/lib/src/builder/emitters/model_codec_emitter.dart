@@ -220,19 +220,22 @@ class ModelCodecEmitter {
 
   String _stripSqlCast(String value) {
     var cleaned = value.trim();
+    if (cleaned.isEmpty) {
+      return cleaned;
+    }
+    cleaned = cleaned.split(RegExp(r'\s*::\s*')).first.trim();
     final castMatch =
-        RegExp(r'^cast\\((.*)\\)$', caseSensitive: false).firstMatch(cleaned);
+        RegExp(r'^cast\s*\((.*)\)$', caseSensitive: false).firstMatch(cleaned);
     if (castMatch != null) {
       cleaned = castMatch.group(1)!.trim();
       final asMatch =
-          RegExp(r'\\s+as\\s+', caseSensitive: false).firstMatch(cleaned);
+          RegExp(r'\s+as\s+', caseSensitive: false).firstMatch(cleaned);
       if (asMatch != null) {
         cleaned = cleaned.substring(0, asMatch.start).trim();
       }
     }
 
-    final parts = cleaned.split(RegExp(r'\\s*::\\s*'));
-    return parts.isEmpty ? cleaned : parts.first.trim();
+    return cleaned;
   }
 
   String _stripWrappingParentheses(String value) {

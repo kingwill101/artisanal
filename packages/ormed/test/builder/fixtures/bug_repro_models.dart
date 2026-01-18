@@ -7,6 +7,7 @@ class DefaultValueModel extends Model<DefaultValueModel> {
   const DefaultValueModel({
     required this.id,
     this.status = TestStatus.active,
+    this.castStatus = TestStatus.active,
     this.metadata = const {},
     this.tags = const [],
   });
@@ -16,6 +17,9 @@ class DefaultValueModel extends Model<DefaultValueModel> {
 
   @OrmField(defaultValueSql: "'active'")
   final TestStatus status;
+
+  @OrmField(defaultValueSql: "CAST('active' AS test_status)")
+  final TestStatus castStatus;
 
   @OrmField(columnType: 'jsonb', defaultValueSql: "'{}'::jsonb")
   final Map<String, String> metadata;

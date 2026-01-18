@@ -79,6 +79,19 @@ void main() {
     expect(sql, contains('ORDER BY RAND(123)'));
   });
 
+  test('group limit throws when window functions are disabled', () {
+    final legacyGrammar = MySqlQueryGrammar(supportsWindowFunctions: false);
+    final plan = QueryPlan(
+      definition: definition,
+      groupLimit: const GroupLimit(column: 'id', limit: 2),
+      orders: const [OrderClause(field: 'id')],
+    );
+    expect(
+      () => legacyGrammar.compileSelect(plan),
+      throwsA(isA<UnsupportedError>()),
+    );
+  });
+
   test('order by json selector unwraps value', () {
     final plan = plan0(
       orders: const [

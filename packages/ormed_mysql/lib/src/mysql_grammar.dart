@@ -4,7 +4,14 @@ import 'package:ormed/ormed.dart';
 
 /// Query grammar that quotes identifiers for MySQL/MariaDB dialects.
 class MySqlQueryGrammar extends QueryGrammar {
-  MySqlQueryGrammar({super.extensions});
+  MySqlQueryGrammar({
+    this.supportsWindowFunctions = true,
+    bool supportsLateralJoins = true,
+    super.extensions,
+  }) : _supportsLateralJoins = supportsLateralJoins;
+
+  final bool supportsWindowFunctions;
+  final bool _supportsLateralJoins;
 
   @override
   String wrapIdentifier(String value) {
@@ -22,7 +29,10 @@ class MySqlQueryGrammar extends QueryGrammar {
   };
 
   @override
-  bool get supportsLateralJoins => true;
+  bool get supportsLateralJoins => _supportsLateralJoins;
+
+  @override
+  bool supportsGroupLimit(GroupLimit groupLimit) => supportsWindowFunctions;
 
   @override
   String compileRandom([num? seed]) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-dev+10
+
+- **Updated**: Synced dependency versions for dev+10.
+
 ## 0.1.0-dev+9
 
 - **Fixed**: CLI test stability by hardening working directory management and avoiding `PathNotFoundException`.

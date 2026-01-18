@@ -89,6 +89,7 @@ class OrmConnection implements ConnectionResolver {
           connectionName: config.name,
           connectionDatabase: config.database,
           connectionTablePrefix: config.tablePrefix,
+          cacheInvalidationPolicy: _cacheInvalidationPolicy(config.options),
           beforeQueryHook: _dispatchBeforeQuery,
           beforeMutationHook: _dispatchBeforeMutation,
           beforeTransactionHook: _dispatchBeforeTransaction,
@@ -583,6 +584,36 @@ class OrmConnection implements ConnectionResolver {
     if (event is QueryExecuted) {
       _fireQueryExecuted(event);
     }
+  }
+}
+
+QueryCacheInvalidationPolicy _cacheInvalidationPolicy(
+  Map<String, Object?> options,
+) {
+  final raw =
+      options['cacheInvalidationPolicy'] ??
+      options['cacheInvalidation'] ??
+      options['cache_invalidation_policy'] ??
+      options['cache_invalidation'];
+  if (raw == null) {
+    return QueryCacheInvalidationPolicy.none;
+  }
+  if (raw is QueryCacheInvalidationPolicy) {
+    return raw;
+  }
+  final normalized = raw.toString().trim().toLowerCase();
+  switch (normalized) {
+    case 'flushonwrite':
+    case 'flush_on_write':
+    case 'flush-on-write':
+    case 'write':
+      return QueryCacheInvalidationPolicy.flushOnWrite;
+    case 'none':
+    case 'off':
+    case 'false':
+      return QueryCacheInvalidationPolicy.none;
+    default:
+      return QueryCacheInvalidationPolicy.none;
   }
 }
 

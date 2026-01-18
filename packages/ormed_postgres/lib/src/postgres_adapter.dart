@@ -1335,11 +1335,26 @@ class PostgresDriverAdapter
         'Query deletes on ${plan.definition.modelName} require a primary key.',
       );
     }
-    final compilation = _grammar.compileSelect(queryPlan);
+    final pkAlias = _quote(primaryKey);
+    final projectionPlan = plan.definition.primaryKeyField == null
+        ? queryPlan.copyWith(
+            selects: const [],
+            rawSelects: [
+              RawSelectExpression(
+                sql: '${_baseTableReference(queryPlan)}.$pkAlias',
+                alias: primaryKey,
+              ),
+            ],
+            customSelects: const [],
+            projectionOrder: const [],
+            aggregates: const [],
+          )
+        : queryPlan;
+    final compilation = _grammar.compileSelect(projectionPlan);
     final table = _tableIdentifier(plan.definition);
     final targetAlias = _quote('__orm_delete_target');
     final sourceAlias = _quote('__orm_delete_source');
-    final pkIdentifier = _quote(primaryKey);
+    final pkIdentifier = pkAlias;
     final returning = plan.returning
         ? ' RETURNING ${_returningColumnsWithAlias(plan.definition, targetAlias)}'
         : '';
@@ -1385,6 +1400,8 @@ class PostgresDriverAdapter
             rawSelects: [
               RawSelectExpression(sql: '$baseReference.$keyAlias', alias: key),
             ],
+            customSelects: const [],
+            projectionOrder: const [],
             aggregates: const [],
           )
         : queryPlan;
@@ -1890,16 +1907,32 @@ class PostgresDriverAdapter
   String _formatPreviewSql(String sql, int parameterCount) {
     final buffer = StringBuffer();
     var index = 0;
+    var inLiteral = false;
     for (var i = 0; i < sql.length; i++) {
       final char = sql[i];
-      if (char == '?') {
-        index++;
-        buffer
-          ..write('\$')
-          ..write(index.toString());
-      } else {
+      final next = i + 1 < sql.length ? sql[i + 1] : null;
+      if (char == "'") {
+        if (next == "'") {
+          buffer.write("''");
+          i++;
+          continue;
+        }
+        inLiteral = !inLiteral;
         buffer.write(char);
+        continue;
       }
+      if (char == '?' && !inLiteral) {
+        if (index < parameterCount) {
+          index++;
+          buffer
+            ..write('\$')
+            ..write(index.toString());
+        } else {
+          buffer.write(char);
+        }
+        continue;
+      }
+      buffer.write(char);
     }
     if (index != parameterCount) {
       throw StateError(

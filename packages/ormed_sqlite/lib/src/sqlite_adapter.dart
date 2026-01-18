@@ -3,7 +3,6 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:ormed/ormed.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
@@ -76,34 +75,7 @@ class SqliteDriverAdapter
     required DatabaseConfig config,
     ConnectionFactory? connections,
     List<DriverExtension> extensions = const [],
-  }) : _metadata = const DriverMetadata(
-         name: 'sqlite',
-         supportsReturning: true,
-         supportsQueryDeletes: true,
-         requiresPrimaryKeyForQueryUpdate: false,
-         queryUpdateRowIdentifier: QueryRowIdentifier(
-           column: 'rowid',
-           expression: 'rowid',
-         ),
-         identifierQuote: '"',
-         capabilities: {
-           DriverCapability.joins,
-           DriverCapability.insertUsing,
-           DriverCapability.queryDeletes,
-           DriverCapability.schemaIntrospection,
-           DriverCapability.threadCount,
-           DriverCapability.transactions,
-           DriverCapability.adHocQueryUpdates,
-           DriverCapability.rawSQL,
-           DriverCapability.increment,
-           DriverCapability.returning,
-           DriverCapability.relationAggregates,
-           DriverCapability.caseInsensitiveLike,
-           DriverCapability.databaseManagement,
-           DriverCapability.foreignKeyConstraintControl,
-         },
-       ),
-       _schemaCompiler = SchemaPlanCompiler(SqliteSchemaDialect()),
+  }) : _schemaCompiler = SchemaPlanCompiler(SqliteSchemaDialect()),
        _extensions = DriverExtensionRegistry(
          driverName: 'sqlite',
          extensions: extensions,
@@ -116,8 +88,37 @@ class SqliteDriverAdapter
     // Auto-register SQLite codecs on first instantiation
     registerSqliteCodecs();
 
+    final supportsReturning = _resolveSupportsReturning(config.options);
+    _metadata = DriverMetadata(
+      name: 'sqlite',
+      supportsReturning: supportsReturning,
+      supportsQueryDeletes: true,
+      requiresPrimaryKeyForQueryUpdate: false,
+      queryUpdateRowIdentifier: QueryRowIdentifier(
+        column: 'rowid',
+        expression: 'rowid',
+      ),
+      identifierQuote: '"',
+      capabilities: {
+        DriverCapability.joins,
+        DriverCapability.insertUsing,
+        DriverCapability.queryDeletes,
+        DriverCapability.schemaIntrospection,
+        DriverCapability.threadCount,
+        DriverCapability.transactions,
+        DriverCapability.adHocQueryUpdates,
+        DriverCapability.rawSQL,
+        DriverCapability.increment,
+        if (supportsReturning) DriverCapability.returning,
+        DriverCapability.relationAggregates,
+        DriverCapability.caseInsensitiveLike,
+        DriverCapability.databaseManagement,
+        DriverCapability.foreignKeyConstraintControl,
+      },
+    );
+
     _grammar = SqliteQueryGrammar(
-      supportsWindowFunctions: sqlite.sqlite3.version.versionNumber >= 3025000,
+      supportsWindowFunctions: _resolveSupportsWindowFunctions(config.options),
       extensions: _extensions,
     );
 
@@ -127,7 +128,7 @@ class SqliteDriverAdapter
     );
   }
 
-  final DriverMetadata _metadata;
+  late final DriverMetadata _metadata;
   final ValueCodecRegistry _codecs;
   final SchemaPlanCompiler _schemaCompiler;
   final DriverExtensionRegistry _extensions;
@@ -136,7 +137,6 @@ class SqliteDriverAdapter
   final DatabaseConfig _config;
   late final PlanCompiler _planCompiler;
   ConnectionHandle<sqlite.Database>? _primaryHandle;
-  final Random _random = Random();
   bool _closed = false;
   int _transactionDepth = 0;
 
@@ -218,9 +218,6 @@ class SqliteDriverAdapter
       final decodedRows = rows
           .map((row) => _decodeRowValues(plan.definition, row))
           .toList(growable: false);
-      if (plan.randomOrder) {
-        _shuffleRows(decodedRows, plan.randomSeed);
-      }
       return decodedRows;
     } finally {
       stmt.dispose();
@@ -237,18 +234,9 @@ class SqliteDriverAdapter
         normalizeSqliteParameters(compilation.bindings),
       );
       final columnNames = result.columnNames;
-      final rows = <Map<String, Object?>>[];
       for (final row in result) {
-        rows.add(rowToMap(row, columnNames));
-      }
-      final decodedRows = rows
-          .map((row) => _decodeRowValues(plan.definition, row))
-          .toList(growable: false);
-      if (plan.randomOrder) {
-        _shuffleRows(decodedRows, plan.randomSeed);
-      }
-      for (final row in decodedRows) {
-        yield row;
+        final raw = rowToMap(row, columnNames);
+        yield _decodeRowValues(plan.definition, raw);
       }
     } finally {
       stmt.dispose();
@@ -907,6 +895,9 @@ class SqliteDriverAdapter
     return database.prepare(sql);
   }
 
+  bool _returningEnabled(MutationPlan plan) =>
+      plan.returning && _metadata.supportsReturning;
+
   Future<MutationResult> _runInsert(MutationPlan plan) async {
     final shape = _buildInsertShape(plan);
     if (shape.parameterSets.isEmpty) {
@@ -914,6 +905,7 @@ class SqliteDriverAdapter
     }
     final database = await _database();
     final stmt = _prepareStatement(database, shape.sql);
+    final returning = _returningEnabled(plan);
     try {
       var affected = 0;
       final insertedRows = <Map<String, dynamic>>[];
@@ -925,7 +917,7 @@ class SqliteDriverAdapter
 
         // If returning is requested and insert succeeded, return a row with the PK value
         // SQLite doesn't support RETURNING for non-auto-increment PKs, so we simulate it
-        if (plan.returning && database.updatedRows > 0) {
+        if (returning && database.updatedRows > 0) {
           final pkField = plan.definition.primaryKeyField;
           if (pkField != null) {
             // For auto-increment integer PKs, use lastInsertRowId
@@ -951,7 +943,7 @@ class SqliteDriverAdapter
 
       return MutationResult(
         affectedRows: affected,
-        returnedRows: plan.returning ? insertedRows : null,
+        returnedRows: returning ? insertedRows : null,
       );
     } finally {
       stmt.dispose();
@@ -984,12 +976,13 @@ class SqliteDriverAdapter
     }
     final database = await _database();
     final stmt = _prepareStatement(database, shape.sql);
+    final returning = _returningEnabled(plan);
     try {
       var affected = 0;
       final returnedRows = <Map<String, dynamic>>[];
 
       for (final parameters in shape.parameterSets) {
-        if (plan.returning) {
+        if (returning) {
           // When RETURNING is requested, use select to get the returned rows
           final resultSet = stmt.select(normalizeSqliteParameters(parameters));
           for (final row in resultSet) {
@@ -1004,7 +997,7 @@ class SqliteDriverAdapter
 
       return MutationResult(
         affectedRows: affected,
-        returnedRows: plan.returning ? returnedRows : null,
+        returnedRows: returning ? returnedRows : null,
       );
     } finally {
       stmt.dispose();
@@ -1018,12 +1011,13 @@ class SqliteDriverAdapter
     }
     final database = await _database();
     final stmt = _prepareStatement(database, shape.sql);
+    final returning = _returningEnabled(plan);
     try {
       var affected = 0;
       final returnedRows = <Map<String, Object?>>[];
       for (final parameters in shape.parameterSets) {
         final normalized = normalizeSqliteParameters(parameters);
-        if (plan.returning) {
+        if (returning) {
           final resultSet = stmt.select(normalized);
           for (final row in resultSet) {
             returnedRows.add(Map<String, Object?>.from(row));
@@ -1036,7 +1030,7 @@ class SqliteDriverAdapter
       }
       return MutationResult(
         affectedRows: affected,
-        returnedRows: plan.returning ? returnedRows : null,
+        returnedRows: returning ? returnedRows : null,
       );
     } finally {
       stmt.dispose();
@@ -1049,7 +1043,7 @@ class SqliteDriverAdapter
     }
     if (_usesPrimaryKeyUpsert(plan)) {
       final shape = _buildUpsertShape(plan);
-      if (plan.returning) {
+      if (_returningEnabled(plan)) {
         return _executeShapeWithReturning(shape, plan);
       }
       return _executeShape(shape);
@@ -1110,11 +1104,6 @@ class SqliteDriverAdapter
     }
   }
 
-  void _shuffleRows(List<Map<String, Object?>> rows, num? seed) {
-    final random = seed != null ? Random(seed.toInt()) : _random;
-    rows.shuffle(random);
-  }
-
   Future<MutationResult> _runManualUpsert(MutationPlan plan) async {
     final database = await _database();
     final table = _tableIdentifier(plan.definition);
@@ -1149,7 +1138,8 @@ class SqliteDriverAdapter
     // Prepare a select statement to fetch the upserted row when RETURNING is requested
     dynamic fetchStmt;
     List<String>? allColumnNames;
-    if (plan.returning) {
+    final returning = _returningEnabled(plan);
+    if (returning) {
       allColumnNames = plan.definition.fields
           .map((f) => f.columnName)
           .toList(growable: false);
@@ -1217,7 +1207,7 @@ class SqliteDriverAdapter
 
     return MutationResult(
       affectedRows: affected,
-      returnedRows: plan.returning ? returnedRows : null,
+      returnedRows: returning ? returnedRows : null,
     );
   }
 
@@ -1228,12 +1218,13 @@ class SqliteDriverAdapter
     }
     final database = await _database();
     final stmt = _prepareStatement(database, shape.sql);
+    final returning = _returningEnabled(plan);
     try {
       var affected = 0;
       final returnedRows = <Map<String, Object?>>[];
       for (final parameters in shape.parameterSets) {
         final normalized = normalizeSqliteParameters(parameters);
-        if (plan.returning) {
+        if (returning) {
           final resultSet = stmt.select(normalized);
           for (final row in resultSet) {
             returnedRows.add(Map<String, Object?>.from(row));
@@ -1246,7 +1237,7 @@ class SqliteDriverAdapter
       }
       return MutationResult(
         affectedRows: affected,
-        returnedRows: plan.returning ? returnedRows : null,
+        returnedRows: returning ? returnedRows : null,
       );
     } finally {
       stmt.dispose();
@@ -1279,12 +1270,13 @@ class SqliteDriverAdapter
     }
     final database = await _database();
     final stmt = _prepareStatement(database, shape.sql);
+    final returning = _returningEnabled(plan);
     try {
       var affected = 0;
       final returnedRows = <Map<String, Object?>>[];
       for (final parameters in shape.parameterSets) {
         final normalized = normalizeSqliteParameters(parameters);
-        if (plan.returning) {
+        if (returning) {
           final resultSet = stmt.select(normalized);
           for (final row in resultSet) {
             returnedRows.add(Map<String, Object?>.from(row));
@@ -1297,7 +1289,7 @@ class SqliteDriverAdapter
       }
       return MutationResult(
         affectedRows: affected,
-        returnedRows: plan.returning ? returnedRows : null,
+        returnedRows: returning ? returnedRows : null,
       );
     } finally {
       stmt.dispose();
@@ -1405,7 +1397,7 @@ class SqliteDriverAdapter
     );
 
     // Add RETURNING clause if requested
-    if (plan.returning) {
+    if (_returningEnabled(plan)) {
       final allColumns = plan.definition.fields
           .map((f) => f.columnName)
           .map(_quote)
@@ -1481,7 +1473,7 @@ class SqliteDriverAdapter
     final whereColumns = firstRow.keys.keys.toList();
     final whereClause = _whereClause(firstRow.keys);
     final sql = StringBuffer('DELETE FROM $table WHERE $whereClause');
-    if (plan.returning) {
+    if (_returningEnabled(plan)) {
       final columns = plan.definition.fields
           .map((f) => _quote(f.columnName))
           .join(', ');
@@ -1530,7 +1522,7 @@ class SqliteDriverAdapter
       ..write(' FROM (')
       ..write(compilation.sql)
       ..write(') AS "__orm_delete_source")');
-    if (plan.returning) {
+    if (_returningEnabled(plan)) {
       final columns = plan.definition.fields
           .map((f) => _quote(f.columnName))
           .join(', ');
@@ -1637,7 +1629,7 @@ class SqliteDriverAdapter
       ..write(' = "__orm_update_source".')
       ..write(quotedKey)
       ..write(')');
-    if (plan.returning) {
+    if (_returningEnabled(plan)) {
       final columns = plan.definition.fields
           .map((f) => _quote(f.columnName))
           .join(', ');
@@ -1683,7 +1675,7 @@ class SqliteDriverAdapter
           );
 
     // Add RETURNING clause if requested
-    if (plan.returning) {
+    if (_returningEnabled(plan)) {
       final allColumns = plan.definition.fields
           .map((f) => f.columnName)
           .map(_quote)
@@ -2092,4 +2084,36 @@ String _assignmentRhs(String sql) {
     return sql;
   }
   return sql.substring(index + 1).trim();
+}
+
+bool _resolveSupportsWindowFunctions(Map<String, Object?> options) {
+  final override =
+      _boolOption(options, 'supportsWindowFunctions') ??
+      _boolOption(options, 'windowFunctions') ??
+      _boolOption(options, 'supports_window_functions');
+  return override ?? sqlite.sqlite3.version.versionNumber >= 3025000;
+}
+
+bool _resolveSupportsReturning(Map<String, Object?> options) {
+  final override =
+      _boolOption(options, 'supportsReturning') ??
+      _boolOption(options, 'returning') ??
+      _boolOption(options, 'supports_returning');
+  return override ?? sqlite.sqlite3.version.versionNumber >= 3035000;
+}
+
+bool? _boolOption(Map<String, Object?> source, String key) {
+  final value = source[key];
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized == 'true' || normalized == '1') return true;
+    if (normalized == 'false' || normalized == '0') return false;
+  }
+  if (value is num) {
+    if (value == 1) return true;
+    if (value == 0) return false;
+  }
+  return null;
 }

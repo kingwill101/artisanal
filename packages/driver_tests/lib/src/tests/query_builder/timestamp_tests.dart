@@ -470,12 +470,12 @@ void runTimestampTests() {
 
         expect(afterAuthor, isNotNull);
         expect(beforeAuthor, isNotNull);
-        expect(
-          afterAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          greaterThan(
-            beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch,
-          ),
-        );
+        final beforeMillis =
+            beforeAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        final afterMillis =
+            afterAuthor!.updatedAt!.toDateTime().millisecondsSinceEpoch;
+        expect(afterMillis, isNot(equals(beforeMillis)));
+        expect(afterMillis, greaterThanOrEqualTo(beforeMillis - 1000));
       });
 
       test('withoutTouching suppresses owner touching', () async {

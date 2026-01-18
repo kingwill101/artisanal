@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-dev+10
+
+- **Added**: Capability flags (`supportsWindowFunctions`, `supportsLateralJoins`) to align behavior with legacy MySQL/MariaDB deployments.
+- **Added**: Session option allowlist and validation for `session` keys.
+- **Fixed**: Preview SQL formatting now ignores placeholder characters inside string literals.
+
 ## 0.1.0-dev+9
 
 - **Refactor**: Relocated dialect-specific integration tests and grammar tests from core into the driver package.

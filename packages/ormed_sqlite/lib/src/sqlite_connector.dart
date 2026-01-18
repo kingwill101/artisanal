@@ -22,9 +22,17 @@ class SqliteConnector extends Connector<sqlite.Database> {
     }
 
     final sessionOptions = _sessionOptions(options);
+    final sessionAllowlist = _sessionAllowlist(options);
     for (final entry in sessionOptions.entries) {
       final key = entry.key.toString().trim();
-      if (key.isEmpty) continue;
+      if (key.isEmpty) {
+        throw ArgumentError.value(
+          key,
+          'session',
+          'SQLite session option keys cannot be empty.',
+        );
+      }
+      _validateSessionKey(key, sessionAllowlist, driverName: 'sqlite');
       database.execute('PRAGMA $key = ${_pragmaValue(entry.value)}');
     }
 
@@ -52,6 +60,15 @@ Map<String, Object?> _sessionOptions(Map<String, Object?> options) {
   return _mapFrom(options['session']);
 }
 
+Set<String> _sessionAllowlist(Map<String, Object?> options) {
+  final raw =
+      options['sessionAllowlist'] ?? options['session_allowlist'] ?? options['sessionAllowList'];
+  return _stringListFrom(raw)
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty)
+      .toSet();
+}
+
 List<String> _initStatements(Map<String, Object?> options) {
   return _stringListFrom(options['init']);
 }
@@ -77,6 +94,31 @@ List<String> _stringListFrom(Object? value) {
     return [value];
   }
   return const [];
+}
+
+final RegExp _sessionKeyPattern = RegExp(
+  r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+);
+
+void _validateSessionKey(
+  String key,
+  Set<String> allowlist, {
+  required String driverName,
+}) {
+  if (!_sessionKeyPattern.hasMatch(key)) {
+    throw ArgumentError.value(
+      key,
+      'session',
+      'Invalid $driverName session option key.',
+    );
+  }
+  if (allowlist.isNotEmpty && !allowlist.contains(key)) {
+    throw ArgumentError.value(
+      key,
+      'session',
+      'Session option "$key" is not allowlisted for $driverName.',
+    );
+  }
 }
 
 String _pragmaValue(Object? value) {

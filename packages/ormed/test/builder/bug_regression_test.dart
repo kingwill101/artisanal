@@ -58,6 +58,10 @@ void main() {
     final output = ModelCodecEmitter(context).emit();
 
     expect(
+      RegExp("value\\.name == 'active'").allMatches(output).length,
+      2,
+    );
+    expect(
       output,
       contains(
         "?? TestStatus.values.firstWhere((value) => value.name == 'active'",

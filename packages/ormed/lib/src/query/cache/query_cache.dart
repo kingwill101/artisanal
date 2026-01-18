@@ -1,5 +1,14 @@
 import '../query.dart';
 
+/// Policies for invalidating cached query results after mutations.
+enum QueryCacheInvalidationPolicy {
+  /// Leave cached results untouched (manual invalidation).
+  none,
+
+  /// Flush the cache after any successful mutation.
+  flushOnWrite,
+}
+
 /// Portable query result cache with TTL support and event emission.
 ///
 /// Stores query results keyed by SQL + bindings hash, with optional

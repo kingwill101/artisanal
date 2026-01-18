@@ -83,7 +83,20 @@ class MySqlConnector extends Connector<MySQLConnection> {
     if (settings.sessionVariables.isNotEmpty) {
       final assignments = settings.sessionVariables.entries
           .map((entry) {
-            return '@@${entry.key} = ${_literal(entry.value)}';
+            final key = entry.key.toString().trim();
+            if (key.isEmpty) {
+              throw ArgumentError.value(
+                key,
+                'session',
+                'MySQL session option keys cannot be empty.',
+              );
+            }
+            _validateSessionKey(
+              key,
+              settings.sessionAllowlist,
+              driverName: 'mysql',
+            );
+            return '@@$key = ${_literal(entry.value)}';
           })
           .join(', ');
       await connection.execute('SET $assignments');
@@ -111,8 +124,10 @@ class MySqlConnectionSettings {
     this.timezone,
     this.sqlMode,
     Map<String, Object?>? sessionVariables,
+    Set<String>? sessionAllowlist,
     List<String>? initStatements,
   }) : sessionVariables = sessionVariables ?? const {},
+       sessionAllowlist = sessionAllowlist ?? const {},
        initStatements = initStatements ?? const [];
 
   factory MySqlConnectionSettings.fromEndpoint(DatabaseEndpoint endpoint) {
@@ -181,6 +196,13 @@ class MySqlConnectionSettings {
 
     final sessionVariables =
         _mapOption(options, 'session') ?? const <String, Object?>{};
+    final sessionAllowlist = _stringListOption(
+      options,
+      'sessionAllowlist',
+    )
+        .followedBy(_stringListOption(options, 'sessionAllowList'))
+        .followedBy(_stringListOption(options, 'session_allowlist'))
+        .toSet();
     final initStatements = _stringListOption(options, 'init');
 
     return MySqlConnectionSettings(
@@ -196,6 +218,7 @@ class MySqlConnectionSettings {
       timezone: timezone,
       sqlMode: sqlMode,
       sessionVariables: sessionVariables,
+      sessionAllowlist: sessionAllowlist,
       initStatements: initStatements,
     );
   }
@@ -212,6 +235,7 @@ class MySqlConnectionSettings {
   final String? timezone;
   final String? sqlMode;
   final Map<String, Object?> sessionVariables;
+  final Set<String> sessionAllowlist;
   final List<String> initStatements;
 
   String get description => '$host:$port/$database';
@@ -290,4 +314,29 @@ List<String> _stringListOption(Map<String, Object?> source, String key) {
     return [value];
   }
   return const [];
+}
+
+final RegExp _sessionKeyPattern = RegExp(
+  r'^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$',
+);
+
+void _validateSessionKey(
+  String key,
+  Set<String> allowlist, {
+  required String driverName,
+}) {
+  if (!_sessionKeyPattern.hasMatch(key)) {
+    throw ArgumentError.value(
+      key,
+      'session',
+      'Invalid $driverName session option key.',
+    );
+  }
+  if (allowlist.isNotEmpty && !allowlist.contains(key)) {
+    throw ArgumentError.value(
+      key,
+      'session',
+      'Session option "$key" is not allowlisted for $driverName.',
+    );
+  }
 }

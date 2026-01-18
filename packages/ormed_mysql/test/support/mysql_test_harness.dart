@@ -21,6 +21,7 @@ class MySqlTestHarness {
     required this.customCodecs,
     required this.logging,
     required this.enableNamedTimezones,
+    required this.adapterOptions,
   });
 
   final MySqlDriverAdapter adapter;
@@ -31,6 +32,7 @@ class MySqlTestHarness {
   final Map<String, ValueCodec<dynamic>> customCodecs;
   final bool logging;
   final bool enableNamedTimezones;
+  final Map<String, Object?> adapterOptions;
 
   /// Create a new adapter for test isolation (parallel mode)
   ///
@@ -45,7 +47,11 @@ class MySqlTestHarness {
     return MySqlDriverAdapter.custom(
       config: DatabaseConfig(
         driver: 'mysql',
-        options: {'url': connectionUrl, 'ssl': connectionInfo.secure},
+        options: {
+          'url': connectionUrl,
+          'ssl': connectionInfo.secure,
+          ...adapterOptions,
+        },
       ),
     );
   }
@@ -81,6 +87,8 @@ Future<MySqlTestHarness> createMySqlTestHarness({
   String? url,
   bool logging = true,
   bool enableNamedTimezones = true,
+  Map<String, Object?> adapterOptions = const {},
+  String dataSourceName = 'driver_tests_mysql_base',
 }) async {
   registerOrmFactories();
   MySqlDriverAdapter.registerCodecs();
@@ -96,11 +104,14 @@ Future<MySqlTestHarness> createMySqlTestHarness({
     secureByDefault: true,
   );
 
+  final resolvedOptions = <String, Object?>{
+    'url': resolvedUrl,
+    'ssl': connectionInfo.secure,
+    ...adapterOptions,
+  };
+
   final adapter = MySqlDriverAdapter.custom(
-    config: DatabaseConfig(
-      driver: 'mysql',
-      options: {'url': resolvedUrl, 'ssl': connectionInfo.secure},
-    ),
+    config: DatabaseConfig(driver: 'mysql', options: resolvedOptions),
   );
 
   final registry = bootstrapOrm();
@@ -126,7 +137,7 @@ Future<MySqlTestHarness> createMySqlTestHarness({
 
   final dataSource = DataSource(
     DataSourceOptions(
-      name: 'driver_tests_mysql_base',
+      name: dataSourceName,
       driver: adapter,
       entities: registry.allDefinitions,
       registry: registry,
@@ -160,10 +171,7 @@ Future<MySqlTestHarness> createMySqlTestHarness({
       // The TestDatabaseManager will call setCurrentSchema(dbName) to
       // switch to the test group's database.
       return MySqlDriverAdapter.custom(
-        config: DatabaseConfig(
-          driver: 'mysql',
-          options: {'url': resolvedUrl, 'ssl': connectionInfo.secure},
-        ),
+        config: DatabaseConfig(driver: 'mysql', options: resolvedOptions),
       );
     },
   );
@@ -177,5 +185,6 @@ Future<MySqlTestHarness> createMySqlTestHarness({
     customCodecs: customCodecs,
     logging: logging,
     enableNamedTimezones: enableNamedTimezones,
+    adapterOptions: adapterOptions,
   );
 }

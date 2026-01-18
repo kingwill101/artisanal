@@ -50,12 +50,14 @@ class QueryContext implements ConnectionResolver {
     this.connectionName,
     this.connectionDatabase,
     this.connectionTablePrefix,
+    this.cacheInvalidationPolicy = QueryCacheInvalidationPolicy.none,
     QueryHook? beforeQueryHook,
     MutationHook? beforeMutationHook,
     TransactionHook? beforeTransactionHook,
     TransactionHook? afterTransactionHook,
     TransactionOutcomeHook? afterTransactionOutcomeHook,
     QueryLogHook? queryLogHook,
+    void Function(QueryWarning warning)? warningHook,
     bool Function()? pretendResolver,
   }) : codecRegistry = (codecRegistry ?? ValueCodecRegistry.instance).forDriver(
          driver.metadata.name,
@@ -69,6 +71,7 @@ class QueryContext implements ConnectionResolver {
        _afterTransactionHook = afterTransactionHook,
        _afterTransactionOutcomeHook = afterTransactionOutcomeHook,
        _queryLogHook = queryLogHook,
+       _warningHook = warningHook,
        _pretendResolver = pretendResolver {
     _registerSoftDeleteScopes();
     registry.addOnRegisteredCallback(_handleLateRegistration);
@@ -95,6 +98,9 @@ class QueryContext implements ConnectionResolver {
   /// The query result cache.
   final QueryCache queryCache;
 
+  /// Policy for invalidating cached results after mutations.
+  final QueryCacheInvalidationPolicy cacheInvalidationPolicy;
+
   /// The name of the database connection.
   final String? connectionName;
 
@@ -110,9 +116,11 @@ class QueryContext implements ConnectionResolver {
   final TransactionHook? _afterTransactionHook;
   final TransactionOutcomeHook? _afterTransactionOutcomeHook;
   final QueryLogHook? _queryLogHook;
+  final void Function(QueryWarning warning)? _warningHook;
   final bool Function()? _pretendResolver;
   final List<void Function(QueryEvent)> _queryListeners = [];
   final List<void Function(MutationEvent)> _mutationListeners = [];
+  final List<void Function(QueryWarning)> _warningListeners = [];
   final List<ExecutingStatementCallback> _beforeExecutingCallbacks = [];
   final List<_LongQuerySubscription> _longQuerySubscriptions = [];
   int _transactionDepth = 0;
@@ -402,6 +410,16 @@ class QueryContext implements ConnectionResolver {
   /// whenever a mutation is executed.
   void onMutation(void Function(MutationEvent event) listener) =>
       _mutationListeners.add(listener);
+
+  /// Registers a listener that receives [QueryWarning] payloads.
+  ///
+  /// [listener] is a callback function that will be invoked when a query-layer
+  /// warning is emitted.
+  void onWarning(void Function(QueryWarning warning) listener) =>
+      _warningListeners.add(listener);
+
+  /// Emits a [QueryWarning] to registered listeners.
+  void emitWarning(QueryWarning warning) => _emitWarning(warning);
 
   /// Registers a callback that is invoked before any statement is executed.
   ///
@@ -806,6 +824,9 @@ class QueryContext implements ConnectionResolver {
         rowCount: result.affectedRows,
         error: null,
       );
+      if (cacheInvalidationPolicy == QueryCacheInvalidationPolicy.flushOnWrite) {
+        queryCache.flush();
+      }
       return result;
     } catch (error, stackTrace) {
       timer.stop();
@@ -957,6 +978,13 @@ class QueryContext implements ConnectionResolver {
   void _emitMutation(MutationEvent event) {
     for (final listener in _mutationListeners) {
       listener(event);
+    }
+  }
+
+  void _emitWarning(QueryWarning warning) {
+    _warningHook?.call(warning);
+    for (final listener in _warningListeners) {
+      listener(warning);
     }
   }
 
@@ -1180,6 +1208,28 @@ class MutationEvent {
 
   /// Whether the mutation completed successfully.
   bool get succeeded => error == null;
+}
+
+/// Warning payload emitted when the query layer detects a risky condition.
+class QueryWarning {
+  QueryWarning({
+    required this.message,
+    this.definition,
+    this.feature,
+    this.driverName,
+  });
+
+  /// Human-friendly warning message.
+  final String message;
+
+  /// Model definition related to the warning, if applicable.
+  final ModelDefinition<OrmEntity>? definition;
+
+  /// Feature that triggered the warning (e.g. `queryUpdate`).
+  final String? feature;
+
+  /// Driver name associated with the warning.
+  final String? driverName;
 }
 
 class _LongQuerySubscription {
