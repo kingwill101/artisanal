@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.3
+
+### Bug Fixes
+
+- **Fixed**: LF (0x0A) incorrectly decoded as Ctrl+J instead of Enter in UV decoder.
+- **Fixed**: key_table LF inconsistency - added `lfKey` variable respecting legacy flag.
+- **Fixed**: Meta/Hyper/Super modifiers dropped when converting UV keys to TUI keys.
+- **Fixed**: 0x08 (Backspace/Ctrl+H) inconsistency between TUI parser and UV decoder.
+- **Fixed**: Race condition in `Program.send()` - added message queue for sequential processing.
+- **Fixed**: Type cast without validation when model returns wrong type from `update()`.
+- **Fixed**: `init()` called after first render causing visual flash.
+- **Fixed**: `wrapAnsiPreserving` didn't preserve truecolor (38;2;r;g;b) and 256-color (38;5;n) sequences.
+- **Fixed**: StreamCmd/EveryCmd continued sending after quit.
+- **Fixed**: BatchMsg could cause stack overflow with deeply nested batches.
+- **Fixed**: Double cleanup possible - added guard flag.
+- **Fixed**: Frame timing drift - changed renderers to use `Stopwatch` instead of `DateTime.now()`.
+
+### Improvements
+
+- **Improved**: Cleanup errors are now collected and accessible via `program.cleanupErrors` for debugging.
+- **Added**: `meta`, `hyper`, `superKey` fields to TUI Key class for extended modifier support.
+
+### Tests
+
+- Added comprehensive tests for C0 code handling, modifier preservation, wide character cloning,
+  ANSI color preservation through wrap, and program lifecycle edge cases.
+
 ## 0.1.2
 
 - **Fixed**: CI deadlocks when reading `stdin` multiple times by introducing `SharedInputStream`.

@@ -326,8 +326,13 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
   final params = rawParams.isEmpty ? const ['0'] : rawParams.split(';');
   var out = style;
 
-  for (final part in params) {
-    if (part.isEmpty) continue;
+  var i = 0;
+  while (i < params.length) {
+    final part = params[i];
+    if (part.isEmpty) {
+      i++;
+      continue;
+    }
     final sub = part.split(':');
     final p = int.tryParse(sub[0]) ?? 0;
     switch (p) {
@@ -356,12 +361,30 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
         } else {
           out = out.copyWith(underline: UnderlineStyle.single);
         }
+      case 5:
+        out = out.copyWith(attrs: out.attrs | Attr.blink);
+      case 6:
+        out = out.copyWith(attrs: out.attrs | Attr.rapidBlink);
+      case 7:
+        out = out.copyWith(attrs: out.attrs | Attr.reverse);
+      case 8:
+        out = out.copyWith(attrs: out.attrs | Attr.conceal);
+      case 9:
+        out = out.copyWith(attrs: out.attrs | Attr.strikethrough);
       case 22:
         out = out.copyWith(attrs: out.attrs & ~(Attr.bold | Attr.faint));
       case 23:
         out = out.copyWith(attrs: out.attrs & ~Attr.italic);
       case 24:
         out = out.copyWith(underline: UnderlineStyle.none);
+      case 25:
+        out = out.copyWith(attrs: out.attrs & ~(Attr.blink | Attr.rapidBlink));
+      case 27:
+        out = out.copyWith(attrs: out.attrs & ~Attr.reverse);
+      case 28:
+        out = out.copyWith(attrs: out.attrs & ~Attr.conceal);
+      case 29:
+        out = out.copyWith(attrs: out.attrs & ~Attr.strikethrough);
       case >= 30 && <= 37:
         out = out.copyWith(fg: UvColor.basic16(p - 30));
       case >= 90 && <= 97:
@@ -374,14 +397,55 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
         out = out.copyWith(clearFg: true);
       case 49:
         out = out.copyWith(clearBg: true);
-      case 38 || 48:
-        // Minimal semicolon form only: 38;5;n, 38;2;r;g;b, 48;...
-        // This wrap helper is primarily for preserving state, not full parsing.
-        break;
+      case 38:
+        // Extended foreground color: 38;5;n (256-color) or 38;2;r;g;b (truecolor)
+        final (color, consumed) = _parseExtendedColor(params, i + 1);
+        if (color != null) {
+          out = out.copyWith(fg: color);
+        }
+        i += consumed;
+      case 48:
+        // Extended background color: 48;5;n (256-color) or 48;2;r;g;b (truecolor)
+        final (color, consumed) = _parseExtendedColor(params, i + 1);
+        if (color != null) {
+          out = out.copyWith(bg: color);
+        }
+        i += consumed;
     }
+    i++;
   }
 
   return out;
+}
+
+/// Parses extended color parameters (256-color or truecolor).
+/// Returns the color and the number of additional parameters consumed.
+(UvColor?, int) _parseExtendedColor(List<String> params, int start) {
+  if (start >= params.length) return (null, 0);
+
+  final mode = int.tryParse(params[start]);
+  if (mode == 5) {
+    // 256-color: 38;5;n or 48;5;n
+    if (start + 1 < params.length) {
+      final index = int.tryParse(params[start + 1]);
+      if (index != null && index >= 0 && index <= 255) {
+        return (UvColor.indexed256(index), 2);
+      }
+    }
+    return (null, 1);
+  } else if (mode == 2) {
+    // Truecolor: 38;2;r;g;b or 48;2;r;g;b
+    if (start + 3 < params.length) {
+      final r = int.tryParse(params[start + 1]);
+      final g = int.tryParse(params[start + 2]);
+      final b = int.tryParse(params[start + 3]);
+      if (r != null && g != null && b != null) {
+        return (UvColor.rgb(r, g, b), 4);
+      }
+    }
+    return (null, 1);
+  }
+  return (null, 0);
 }
 
 Link _applyOsc8(String data) {

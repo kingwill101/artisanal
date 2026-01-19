@@ -137,6 +137,26 @@ class ImmediateQuitModel implements Model {
   String view() => 'Quitting...';
 }
 
+/// A model that returns a different model type from update() - for testing type checking.
+class WrongTypeModel implements Model {
+  const WrongTypeModel();
+
+  @override
+  Cmd? init() => null;
+
+  @override
+  (Model, Cmd?) update(Msg msg) {
+    if (msg is TriggerPanicMsg) {
+      // Returns a CounterModel instead of WrongTypeModel - this is the bug we're testing
+      return (const CounterModel(), null);
+    }
+    return (this, null);
+  }
+
+  @override
+  String view() => 'Wrong type test';
+}
+
 // =============================================================================
 // Mock Terminal
 // =============================================================================
@@ -781,6 +801,87 @@ void main() {
 
       // Dispose should still have been attempted
       expect(fragileTerminal.disposeAttempted, isTrue);
+    });
+
+    test('Model returning wrong type gives clear error', () async {
+      final program = Program<WrongTypeModel>(
+        const WrongTypeModel(),
+        options: const ProgramOptions(altScreen: false, catchPanics: false),
+        terminal: terminal,
+      );
+
+      // Start program
+      final runFuture = program.run();
+
+      // Give time for init to complete
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Send message that triggers the wrong type return
+      // The error is thrown synchronously from send()
+      expect(
+        () => program.send(const TriggerPanicMsg()),
+        throwsA(
+          allOf(
+            isA<StateError>(),
+            predicate<StateError>(
+              (e) =>
+                  e.message.contains('Model.update()') &&
+                  e.message.contains('CounterModel') &&
+                  e.message.contains('WrongTypeModel'),
+              'error message mentions Model.update(), actual type, and expected type',
+            ),
+          ),
+        ),
+      );
+
+      // Clean up - kill the program since it didn't quit normally
+      program.kill();
+      await runFuture;
+    });
+
+    test('double cleanup does not cause errors', () async {
+      // Use a terminal that tracks dispose calls
+      var disposeCount = 0;
+      final trackingTerminal = _DisposeTrackingTerminal(
+        onDispose: () => disposeCount++,
+      );
+
+      final program = Program(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(altScreen: false),
+        terminal: trackingTerminal,
+      );
+
+      await program.run();
+
+      // Dispose should have been called exactly once
+      expect(disposeCount, 1, reason: 'Cleanup should only happen once');
+    });
+
+    test('cleanup errors are collected', () async {
+      // Use the fragile terminal that throws during cleanup
+      final fragileTerminal = _FragileTerminal();
+
+      final program = Program(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(altScreen: true, catchPanics: true),
+        terminal: fragileTerminal,
+      );
+
+      // Should complete without throwing (errors are caught)
+      await program.run();
+
+      // Cleanup errors should be collected
+      expect(
+        program.cleanupErrors,
+        isNotEmpty,
+        reason: 'Cleanup errors should be collected',
+      );
+      expect(
+        program.cleanupErrors.whereType<StateError>(),
+        isNotEmpty,
+        reason: 'Should contain the StateError from _FragileTerminal',
+      );
     });
   });
 
@@ -1566,6 +1667,201 @@ void main() {
       expect(terminal.output.join(), contains('\x1b]0;My Test App\x07'));
     });
   });
+
+  group('StreamCmd and EveryCmd after quit', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('StreamCmd stops sending after quit', () async {
+      final messagesReceived = <Msg>[];
+      final streamController = StreamController<int>();
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.listen<int>(
+          streamController.stream,
+          onData: (data) => _StreamDataMsg(data),
+        ),
+        onUpdate: (msg) {
+          messagesReceived.add(msg);
+          // Quit after first stream message
+          if (msg is _StreamDataMsg && msg.value == 1) {
+            return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      // Start the program
+      final runFuture = program.run();
+
+      // Send first value - this will trigger quit
+      streamController.add(1);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Wait for program to quit
+      await runFuture;
+
+      // Record message count after quit
+      final countAfterQuit = messagesReceived
+          .whereType<_StreamDataMsg>()
+          .length;
+
+      // Send more values after quit
+      streamController.add(2);
+      streamController.add(3);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Should not have received messages after quit
+      final countAfterMoreData = messagesReceived
+          .whereType<_StreamDataMsg>()
+          .length;
+      expect(
+        countAfterMoreData,
+        countAfterQuit,
+        reason: 'StreamCmd should stop sending after quit',
+      );
+
+      await streamController.close();
+    });
+
+    test('EveryCmd stops sending after quit', () async {
+      var tickCount = 0;
+
+      final model = _CallbackModel(
+        onInit: () =>
+            every(const Duration(milliseconds: 20), (time) => const _TickMsg()),
+        onUpdate: (msg) {
+          if (msg is _TickMsg) {
+            tickCount++;
+            // Quit after 2 ticks
+            if (tickCount >= 2) {
+              return Cmd.quit();
+            }
+          }
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      // Record tick count after quit
+      final ticksAtQuit = tickCount;
+
+      // Wait to see if more ticks arrive
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      // Should not have received more ticks after quit
+      expect(
+        tickCount,
+        ticksAtQuit,
+        reason: 'EveryCmd should stop sending after quit',
+      );
+    });
+
+    test('send() is ignored after program quit', () async {
+      late Program<_SimpleQuitModel> program;
+
+      final model = _SimpleQuitModel();
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      // Program has quit, now try to send a message
+      // This should be silently ignored, not throw or process
+      expect(() => program.send(const IncrementMsg()), returnsNormally);
+    });
+
+    test('send() is ignored after program kill', () async {
+      late Program<CounterModel> program;
+
+      program = Program(
+        const CounterModel(),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      // Start program but don't wait
+      final runFuture = program.run();
+
+      // Give it time to start
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Kill it
+      program.kill();
+      await runFuture;
+
+      // Try to send after kill - should be ignored
+      expect(() => program.send(const IncrementMsg()), returnsNormally);
+    });
+
+    test('deeply nested BatchMsg does not cause stack overflow', () async {
+      var messageCount = 0;
+
+      final model = _CallbackModel(
+        onInit: () =>
+            Cmd.tick(const Duration(milliseconds: 100), (_) => const QuitMsg()),
+        onUpdate: (msg) {
+          if (msg is IncrementMsg) {
+            messageCount++;
+          }
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      // Start the program
+      final runFuture = program.run();
+
+      // Give it time to start
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      // Create a deeply nested BatchMsg structure (1000 levels deep)
+      // This would cause stack overflow with recursive implementation
+      Msg nested = const IncrementMsg();
+      for (var i = 0; i < 1000; i++) {
+        nested = BatchMsg([nested, const IncrementMsg()]);
+      }
+
+      // Send the deeply nested batch - should not cause stack overflow
+      program.send(nested);
+
+      await runFuture;
+
+      // Should have received all the increment messages
+      // Each level of nesting adds 2 IncrementMsg (one nested, one direct)
+      // Total = 1001 from nesting + 1 original = 2001 messages
+      expect(
+        messageCount,
+        greaterThan(1000),
+        reason: 'Should process all messages from deeply nested batch',
+      );
+    });
+  });
 }
 
 // =============================================================================
@@ -1643,6 +1939,29 @@ class _InterruptHandlerModel implements Model {
 
   @override
   String view() => 'Interrupted: $interrupted';
+}
+
+/// Message for stream data in tests.
+class _StreamDataMsg extends Msg {
+  const _StreamDataMsg(this.value);
+  final int value;
+}
+
+/// Message for tick events in tests.
+class _TickMsg extends Msg {
+  const _TickMsg();
+}
+
+/// A model that immediately quits (simpler than ImmediateQuitModel).
+class _SimpleQuitModel implements Model {
+  @override
+  Cmd? init() => Cmd.quit();
+
+  @override
+  (Model, Cmd?) update(Msg msg) => (this, null);
+
+  @override
+  String view() => 'Simple quit model';
 }
 
 class _FragileTerminal implements TuiTerminal {
@@ -1855,6 +2174,190 @@ class _FragileTerminal implements TuiTerminal {
   @override
   void dispose() {
     disposeAttempted = true;
+    _inputController.close();
+  }
+}
+
+/// A terminal that tracks dispose calls for testing double-cleanup prevention.
+class _DisposeTrackingTerminal implements TuiTerminal {
+  _DisposeTrackingTerminal({this.onDispose});
+
+  final void Function()? onDispose;
+  final StreamController<List<int>> _inputController =
+      StreamController<List<int>>.broadcast();
+
+  @override
+  bool get isAltScreen => false;
+
+  @override
+  Stream<List<int>> get input => _inputController.stream;
+
+  @override
+  int get width => 80;
+
+  @override
+  int get height => 24;
+
+  @override
+  bool get supportsAnsi => true;
+
+  @override
+  bool get isTerminal => true;
+
+  @override
+  ColorProfile get colorProfile => ColorProfile.trueColor;
+
+  @override
+  ({int width, int height}) get size => (width: width, height: height);
+
+  @override
+  RawModeGuard enableRawMode() {
+    return RawModeGuard(
+      wasEchoMode: true,
+      wasLineMode: true,
+      restore: disableRawMode,
+    );
+  }
+
+  @override
+  void disableRawMode() {}
+
+  @override
+  bool get isRawMode => false;
+
+  @override
+  void write(String data) {}
+
+  @override
+  void writeln([String data = '']) {}
+
+  @override
+  Future<String?> query(
+    String query, {
+    Duration timeout = const Duration(seconds: 2),
+  }) async => null;
+
+  @override
+  Future<void> flush() async {}
+
+  @override
+  void enterAltScreen() {}
+
+  @override
+  void exitAltScreen() {}
+
+  @override
+  void hideCursor() {}
+
+  @override
+  void showCursor() {}
+
+  @override
+  void enableMouse() {}
+
+  @override
+  void enableMouseCellMotion() {}
+
+  @override
+  void enableMouseAllMotion() {}
+
+  @override
+  void disableMouse() {}
+
+  @override
+  bool get isMouseEnabled => false;
+
+  @override
+  void enableBracketedPaste() {}
+
+  @override
+  void disableBracketedPaste() {}
+
+  @override
+  bool get isBracketedPasteEnabled => false;
+
+  @override
+  void clearScreen() {}
+
+  @override
+  void clearToEnd() {}
+
+  @override
+  void clearToStart() {}
+
+  @override
+  void clearLine() {}
+
+  @override
+  void clearLineToEnd() {}
+
+  @override
+  void clearLineToStart() {}
+
+  @override
+  void clearPreviousLines(int lines) {}
+
+  @override
+  void scrollUp([int lines = 1]) {}
+
+  @override
+  void scrollDown([int lines = 1]) {}
+
+  @override
+  void moveCursor(int row, int col) {}
+
+  @override
+  void cursorHome() {}
+
+  @override
+  void cursorUp([int lines = 1]) {}
+
+  @override
+  void cursorDown([int lines = 1]) {}
+
+  @override
+  void cursorRight([int cols = 1]) {}
+
+  @override
+  void cursorLeft([int cols = 1]) {}
+
+  @override
+  void cursorToColumn(int col) {}
+
+  @override
+  void saveCursor() {}
+
+  @override
+  void restoreCursor() {}
+
+  @override
+  void enableFocusReporting() {}
+
+  @override
+  void disableFocusReporting() {}
+
+  @override
+  void setTitle(String title) {}
+
+  @override
+  void setProgressBar(int state, int value) {}
+
+  @override
+  void bell() {}
+
+  @override
+  ({bool useTabs, bool useBackspace}) optimizeMovements() =>
+      (useTabs: false, useBackspace: true);
+
+  @override
+  int readByte() => -1;
+
+  @override
+  String? readLine() => null;
+
+  @override
+  void dispose() {
+    onDispose?.call();
     _inputController.close();
   }
 }

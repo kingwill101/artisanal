@@ -59,6 +59,27 @@ void main() {
 
       expect(const LegacyKeyEncoding().fKeys(true).has(1 << 7), true);
       expect(all.fKeys(false).has(1 << 7), false);
+
+      expect(const LegacyKeyEncoding().ctrlJ(true).has(1 << 8), true);
+      expect(all.ctrlJ(false).has(1 << 8), false);
+    });
+
+    test('LF (0x0A) decodes to Enter by default', () {
+      final dec = EventDecoder();
+      final ev = dec.parseControl(0x0a);
+      _expectKeyPress(ev, code: keyEnter);
+    });
+
+    test('LF (0x0A) decodes to Ctrl+J when legacy flag is set', () {
+      final dec = EventDecoder(legacy: const LegacyKeyEncoding().ctrlJ(true));
+      final ev = dec.parseControl(0x0a);
+      _expectKeyPress(ev, code: 0x6a /* j */, mod: KeyMod.ctrl);
+    });
+
+    test('CR (0x0D) decodes to Enter by default', () {
+      final dec = EventDecoder();
+      final ev = dec.parseControl(0x0d);
+      _expectKeyPress(ev, code: keyEnter);
     });
 
     test('Device attributes parsing', () {

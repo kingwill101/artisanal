@@ -35,6 +35,11 @@ Map<String, Key> buildKeysTable(
       ? Key(code: 'm'.codeUnitAt(0), mod: KeyMod.ctrl)
       : enter;
 
+  // LF (0x0A) - ctrl+j or enter (newline)
+  final lfKey = flags.bits & 0x100 != 0
+      ? Key(code: 'j'.codeUnitAt(0), mod: KeyMod.ctrl)
+      : enter;
+
   final esc = Key(code: keyEscape); // ctrl+[ or escape
   final escKey = flags.bits & 0x08 != 0
       ? Key(code: '['.codeUnitAt(0), mod: KeyMod.ctrl)
@@ -70,7 +75,7 @@ Map<String, Key> buildKeysTable(
     '\x07': Key(code: 'g'.codeUnitAt(0), mod: KeyMod.ctrl),
     '\x08': Key(code: 'h'.codeUnitAt(0), mod: KeyMod.ctrl),
     '\x09': tabKey,
-    '\x0a': Key(code: 'j'.codeUnitAt(0), mod: KeyMod.ctrl),
+    '\x0a': lfKey,
     '\x0b': Key(code: 'k'.codeUnitAt(0), mod: KeyMod.ctrl),
     '\x0c': Key(code: 'l'.codeUnitAt(0), mod: KeyMod.ctrl),
     '\x0d': enterKey,

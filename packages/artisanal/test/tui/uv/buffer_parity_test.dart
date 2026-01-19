@@ -219,6 +219,121 @@ void main() {
       expect(dst.cellAt(0, 0)!.content, ' ');
     });
 
+    test('cloneArea preserves wide characters', () {
+      // Test that wide characters (CJK, emoji) survive cloneArea
+      final b = Buffer.create(10, 3);
+
+      // Place wide characters at various positions
+      b.setCell(0, 0, Cell(content: '你', width: 2)); // x=0,1
+      b.setCell(2, 0, Cell(content: '好', width: 2)); // x=2,3
+      b.setCell(4, 0, Cell(content: '!', width: 1)); // x=4
+
+      // Verify original buffer structure
+      expect(b.cellAt(0, 0)!.content, '你');
+      expect(b.cellAt(0, 0)!.width, 2);
+      expect(b.cellAt(1, 0)!.isZero, isTrue, reason: 'placeholder for 你');
+      expect(b.cellAt(2, 0)!.content, '好');
+      expect(b.cellAt(2, 0)!.width, 2);
+      expect(b.cellAt(3, 0)!.isZero, isTrue, reason: 'placeholder for 好');
+      expect(b.cellAt(4, 0)!.content, '!');
+
+      // Clone full area - wide chars should be preserved
+      final fullClone = b.cloneArea(rect(0, 0, 5, 1))!;
+      expect(fullClone.width(), 5);
+      expect(fullClone.cellAt(0, 0)!.content, '你');
+      expect(fullClone.cellAt(0, 0)!.width, 2);
+      expect(
+        fullClone.cellAt(1, 0)!.isZero,
+        isTrue,
+        reason: 'placeholder preserved',
+      );
+      expect(fullClone.cellAt(2, 0)!.content, '好');
+      expect(fullClone.cellAt(4, 0)!.content, '!');
+
+      // Clone starting at wide char origin - should work
+      final originClone = b.cloneArea(rect(2, 0, 3, 1))!;
+      expect(originClone.cellAt(0, 0)!.content, '好');
+      expect(originClone.cellAt(0, 0)!.width, 2);
+      expect(originClone.cellAt(1, 0)!.isZero, isTrue);
+      expect(originClone.cellAt(2, 0)!.content, '!');
+
+      // Clone starting at placeholder (middle of wide char) - should clear to space
+      // since we can't preserve a partial wide character
+      final placeholderClone = b.cloneArea(rect(1, 0, 4, 1))!;
+      // Position 0 in clone corresponds to position 1 in original (placeholder)
+      // This should either be a space (cleared) or the placeholder handling should
+      // recognize it can't be rendered standalone
+      expect(
+        placeholderClone.cellAt(0, 0)!.content,
+        ' ',
+        reason: 'partial wide char at boundary becomes space',
+      );
+      // Position 1 in clone = position 2 in original = '好'
+      expect(placeholderClone.cellAt(1, 0)!.content, '好');
+      expect(placeholderClone.cellAt(1, 0)!.width, 2);
+    });
+
+    test('cloneArea handles wide characters at boundaries', () {
+      final b = Buffer.create(6, 1);
+      b.setCell(0, 0, Cell(content: 'A', width: 1));
+      b.setCell(1, 0, Cell(content: '中', width: 2)); // x=1,2
+      b.setCell(3, 0, Cell(content: 'B', width: 1));
+
+      // Clone that ends in middle of wide char - the wide char can't fit
+      // because its placeholder (position 2) is outside the clone area
+      final endClone = b.cloneArea(rect(0, 0, 2, 1))!;
+      expect(endClone.cellAt(0, 0)!.content, 'A');
+      // Wide char at position 1 needs positions 1,2 but clone only has width 2 (positions 0,1)
+      // So when setCell tries to place it at position 1 with width 2, it overflows and becomes space
+      expect(
+        endClone.cellAt(1, 0)!.content,
+        ' ',
+        reason: 'wide char at boundary that would overflow becomes space',
+      );
+
+      // Clone that properly includes the wide char
+      final goodClone = b.cloneArea(rect(0, 0, 3, 1))!;
+      expect(goodClone.cellAt(0, 0)!.content, 'A');
+      expect(goodClone.cellAt(1, 0)!.content, '中');
+      expect(goodClone.cellAt(1, 0)!.width, 2);
+      expect(
+        goodClone.cellAt(2, 0)!.isZero,
+        isTrue,
+        reason: 'placeholder preserved',
+      );
+
+      // Clone starting at a placeholder (x=2 is placeholder for '中')
+      final startAtPlaceholder = b.cloneArea(rect(2, 0, 2, 1))!;
+      // Position 0 in clone = position 2 in original = placeholder for '中'
+      // Placeholders are skipped in cloneArea (c.isZero continue), so nothing is copied
+      // and the cell remains the default space from Buffer.create
+      expect(
+        startAtPlaceholder.cellAt(0, 0)!.content,
+        ' ',
+        reason: 'placeholder at start of clone area becomes space',
+      );
+      expect(startAtPlaceholder.cellAt(1, 0)!.content, 'B');
+    });
+
+    test('cloned wide characters render correctly', () {
+      // Verify that cloned buffers with wide characters produce correct string output
+      final b = Buffer.create(8, 1);
+      b.setCell(0, 0, Cell(content: '你', width: 2));
+      b.setCell(2, 0, Cell(content: '好', width: 2));
+      b.setCell(4, 0, Cell(content: '!', width: 1));
+
+      // Verify original renders correctly
+      expect(b.toString(), '你好!');
+
+      // Clone and verify render
+      final cloned = b.clone();
+      expect(cloned.toString(), '你好!');
+
+      // Clone area and verify render
+      final partial = b.cloneArea(rect(2, 0, 3, 1))!;
+      expect(partial.toString(), '好!');
+    });
+
     test('insertLine / deleteLine', () {
       final b = Buffer.create(5, 3);
       b.setCell(0, 0, Cell(content: 'A', width: 1));

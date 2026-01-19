@@ -586,6 +586,18 @@ class Program<M extends Model> {
   bool _running = false;
   bool _cancelled = false;
 
+  /// Message queue for sequential processing.
+  final List<Msg> _messageQueue = [];
+
+  /// Whether we're currently processing a message (prevents reentrant calls).
+  bool _processingMessage = false;
+
+  /// Whether we're in the initialization phase (suppresses renders until init completes).
+  bool _initializing = false;
+
+  /// Whether cleanup has already been performed (prevents double cleanup).
+  bool _cleanedUp = false;
+
   /// Completer for the run() method.
   Completer<void>? _runCompleter;
 
@@ -599,6 +611,16 @@ class Program<M extends Model> {
   /// Stored panic for re-throwing after cleanup.
   Object? _panic;
   StackTrace? _panicStackTrace;
+
+  /// Errors that occurred during cleanup (for debugging).
+  final List<Object> _cleanupErrors = [];
+
+  /// Returns any errors that occurred during cleanup.
+  ///
+  /// This is useful for debugging cleanup issues. Cleanup errors are
+  /// normally swallowed to ensure terminal restoration always completes,
+  /// but they are collected here for inspection.
+  List<Object> get cleanupErrors => List.unmodifiable(_cleanupErrors);
 
   /// Returns the current model (for testing).
   M? get currentModel => _model;
@@ -629,6 +651,8 @@ class Program<M extends Model> {
 
     _running = true;
     _cancelled = false;
+    _cleanedUp = false;
+    _cleanupErrors.clear();
     _runCompleter = Completer<void>();
     _panic = null;
     _panicStackTrace = null;
@@ -858,34 +882,38 @@ class Program<M extends Model> {
   Future<void> _initialize() async {
     _model = _initialModel;
 
+    // Suppress renders during initialization to avoid visual flash of pre-init state
+    _initializing = true;
+
     // If we're using UV input decoding, probe terminal emoji width before we
     // render anything. The UV renderer relies on correct cell widths to avoid
     // overwriting graphemes during incremental updates.
     await _runStartupProbesIfNeeded();
 
-    // Send initial window size
+    // Send initial window size (model receives this before init runs)
     final size = _terminal!.size;
     _processMessage(WindowSizeMsg(size.width, size.height));
 
-    // Send initial color profile
+    // Send initial color profile (model receives this before init runs)
     _processMessage(ColorProfileMsg(_terminal!.colorProfile));
 
-    // Render initial view
-    _render();
-
     _startupProbes?.drain(_processMessage);
+
+    // Execute init command before first render so user sees initialized state
+    final initCmd = _model!.init();
+    if (initCmd != null) {
+      await _executeCommand(initCmd);
+    }
+
+    // Initialization complete - now render the initialized state
+    _initializing = false;
+    _render();
 
     // Start metrics timer
     _startMetricsTimer();
 
     // Start frame tick timer for automatic animation updates
     _startFrameTickTimer();
-
-    // Execute init command
-    final initCmd = _model!.init();
-    if (initCmd != null) {
-      await _executeCommand(initCmd);
-    }
   }
 
   /// Starts a periodic timer to send render metrics to the model.
@@ -1068,9 +1096,30 @@ class Program<M extends Model> {
   /// the view will be re-rendered.
   ///
   /// This can be called from outside the program to inject messages.
+  /// Messages are queued and processed sequentially to prevent race
+  /// conditions and ensure consistent state updates.
   void send(Msg msg) {
     if (!_running) return;
-    _processMessage(msg);
+    _messageQueue.add(msg);
+    _drainMessageQueue();
+  }
+
+  /// Drains the message queue, processing messages sequentially.
+  ///
+  /// This prevents reentrant message processing - if a message handler
+  /// calls [send], the new message is queued and processed after the
+  /// current message completes.
+  void _drainMessageQueue() {
+    if (_processingMessage) return;
+    _processingMessage = true;
+    try {
+      while (_messageQueue.isNotEmpty && _running) {
+        final msg = _messageQueue.removeAt(0);
+        _processMessage(msg);
+      }
+    } finally {
+      _processingMessage = false;
+    }
   }
 
   /// Processes a message through the model.
@@ -1113,10 +1162,18 @@ class Program<M extends Model> {
       return;
     }
 
-    // Handle batch message
+    // Handle batch message - flatten nested batches to avoid stack overflow
     if (msg is BatchMsg) {
-      for (final m in msg.messages) {
-        _processMessage(m);
+      // Use a queue to process messages iteratively instead of recursively
+      final queue = <Msg>[...msg.messages];
+      while (queue.isNotEmpty) {
+        final m = queue.removeAt(0);
+        if (m is BatchMsg) {
+          // Flatten nested batch by adding its messages to the front of the queue
+          queue.insertAll(0, m.messages);
+        } else {
+          _processMessage(m);
+        }
       }
       return;
     }
@@ -1128,7 +1185,13 @@ class Program<M extends Model> {
 
     // Update model
     final (newModel, cmd) = _model!.update(msg);
-    _model = newModel as M;
+    if (newModel is! M) {
+      throw StateError(
+        'Model.update() returned ${newModel.runtimeType}, expected $M. '
+        'Ensure your update() method returns the same model type.',
+      );
+    }
+    _model = newModel;
 
     // Re-render
     _render();
@@ -1498,6 +1561,8 @@ class Program<M extends Model> {
   /// Renders the current view.
   void _render() {
     if (_model == null || _renderer == null) return;
+    // Skip rendering during initialization phase to avoid visual flash
+    if (_initializing) return;
 
     final view = _model!.view();
 
@@ -1654,6 +1719,8 @@ class Program<M extends Model> {
   /// Triggers program quit.
   void _quit() {
     if (!_running) return;
+    _running = false; // Stop accepting new messages immediately
+    _messageQueue.clear(); // Clear any pending messages
     final completer = _runCompleter;
     if (completer == null || completer.isCompleted) return;
     completer.complete();
@@ -1688,6 +1755,8 @@ class Program<M extends Model> {
   void kill() {
     if (!_running) return;
     _killed = true;
+    _running = false; // Stop accepting new messages immediately
+    _messageQueue.clear(); // Clear any pending messages
     final completer = _runCompleter;
     if (completer == null || completer.isCompleted) return;
     completer.complete();
@@ -1767,98 +1836,102 @@ class Program<M extends Model> {
   /// Cleans up resources and restores terminal state.
   ///
   /// This method is designed to be robust and always restore the terminal,
-  /// even if some cleanup operations fail.
+  /// even if some cleanup operations fail. It is idempotent - calling it
+  /// multiple times is safe and has no additional effect.
+  ///
+  /// Any errors that occur during cleanup are collected in [cleanupErrors]
+  /// for debugging purposes, but do not prevent other cleanup operations
+  /// from running.
   Future<void> _cleanup() async {
+    // Guard against double cleanup
+    if (_cleanedUp) return;
+    _cleanedUp = true;
+
+    // Helper to run cleanup operations and collect errors
+    void trySync(void Function() operation) {
+      try {
+        operation();
+      } catch (e) {
+        _cleanupErrors.add(e);
+      }
+    }
+
+    Future<void> tryAsync(Future<void> Function() operation) async {
+      try {
+        await operation();
+      } catch (e) {
+        _cleanupErrors.add(e);
+      }
+    }
+
     // Snapshot final model before clearing references
     _finalModel = _model;
 
-    _uvInputTimeoutTimer?.cancel();
+    trySync(() => _uvInputTimeoutTimer?.cancel());
     _uvInputTimeoutTimer = null;
-    _metricsTimer?.cancel();
+    trySync(() => _metricsTimer?.cancel());
     _metricsTimer = null;
-    _frameTickTimer?.cancel();
+    trySync(() => _frameTickTimer?.cancel());
     _frameTickTimer = null;
     _frameNumber = 0;
     _lastFrameTime = null;
 
     // Cancel input subscription
-    try {
-      await _inputSubscription?.cancel();
-    } catch (_) {}
+    await tryAsync(() async => _inputSubscription?.cancel());
     _inputSubscription = null;
-    try {
-      await _cancelSubscription?.cancel();
-    } catch (_) {}
+    await tryAsync(() async => _cancelSubscription?.cancel());
     _cancelSubscription = null;
 
     // Cancel signal subscriptions
-    try {
-      await _sigintSubscription?.cancel();
-    } catch (_) {}
+    await tryAsync(() async => _sigintSubscription?.cancel());
     _sigintSubscription = null;
 
-    try {
-      await _sigwinchSubscription?.cancel();
-    } catch (_) {}
+    await tryAsync(() async => _sigwinchSubscription?.cancel());
     _sigwinchSubscription = null;
 
     // Stop stream commands
     for (final cmd in _streamCommands) {
-      try {
-        await cmd.cancel();
-      } catch (_) {}
+      await tryAsync(() async => cmd.cancel());
     }
     _streamCommands.clear();
 
     // Stop repeating commands
     for (final cmd in _everyCommands) {
-      try {
-        cmd.stop();
-      } catch (_) {}
+      trySync(() => cmd.stop());
     }
     _everyCommands.clear();
 
     // Clear key parser buffer
-    try {
-      _keyParser.clear();
-    } catch (_) {}
-    try {
-      _uvInputParser.clear();
-    } catch (_) {}
+    trySync(() => _keyParser.clear());
+    trySync(() => _uvInputParser.clear());
     _startupProbes = null;
     _startupProbeContext = null;
 
     // Dispose renderer (this should restore cursor/alt screen)
-    try {
-      _renderer?.dispose();
-    } catch (_) {}
+    trySync(() => _renderer?.dispose());
     _renderer = null;
 
     // Restore terminal state (belt and suspenders approach)
     // Even if renderer.dispose() failed, try to restore these
-    try {
+    trySync(() {
       if (_options.bracketedPaste) {
         _terminal?.disableBracketedPaste();
       }
-    } catch (_) {}
+    });
 
-    try {
+    trySync(() {
       if (_options.mouse) {
         _terminal?.disableMouse();
       }
-    } catch (_) {}
+    });
 
     // Final terminal cleanup
-    try {
-      _terminal?.dispose();
-    } catch (_) {}
+    trySync(() => _terminal?.dispose());
     _terminal = null;
     _model = null;
 
     if (_options.shutdownSharedStdinOnExit && isSharedStdinStreamStarted) {
-      try {
-        await shutdownSharedStdinStream();
-      } catch (_) {}
+      await tryAsync(() async => shutdownSharedStdinStream());
     }
   }
 }

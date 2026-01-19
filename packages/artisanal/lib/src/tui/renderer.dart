@@ -86,8 +86,8 @@ class FullScreenTuiRenderer implements TuiRenderer {
   /// The last rendered view (for skip-if-unchanged optimization).
   String? _lastView;
 
-  /// The last render time (for frame limiting).
-  DateTime? _lastRenderTime;
+  /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
+  final Stopwatch _frameStopwatch = Stopwatch();
 
   /// Whether the renderer has been initialized.
   bool _initialized = false;
@@ -127,10 +127,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
       _ => view.toString(),
     };
 
-    // Frame rate limiting
-    if (_lastRenderTime != null) {
-      final elapsed = DateTime.now().difference(_lastRenderTime!);
-      if (elapsed < _options.frameTime) {
+    // Frame rate limiting using Stopwatch (immune to clock adjustments)
+    if (_frameStopwatch.isRunning) {
+      if (_frameStopwatch.elapsed < _options.frameTime) {
         // Skip this frame
         _metrics.endFrame(skipped: true);
         return;
@@ -152,7 +151,9 @@ class FullScreenTuiRenderer implements TuiRenderer {
     _clearToEndOfScreen(content);
 
     _lastView = content;
-    _lastRenderTime = DateTime.now();
+    // Reset and start the stopwatch for next frame timing
+    _frameStopwatch.reset();
+    _frameStopwatch.start();
     _metrics.endFrame();
   }
 
@@ -222,8 +223,8 @@ class InlineTuiRenderer implements TuiRenderer {
   /// Number of lines in the last render.
   int _lastLineCount = 0;
 
-  /// The last render time (for frame limiting).
-  DateTime? _lastRenderTime;
+  /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
+  final Stopwatch _frameStopwatch = Stopwatch();
 
   /// Whether we've rendered at least once.
   bool _hasRendered = false;
@@ -243,10 +244,9 @@ class InlineTuiRenderer implements TuiRenderer {
       _ => view.toString(),
     };
 
-    // Frame rate limiting
-    if (_lastRenderTime != null) {
-      final elapsed = DateTime.now().difference(_lastRenderTime!);
-      if (elapsed < _options.frameTime) {
+    // Frame rate limiting using Stopwatch (immune to clock adjustments)
+    if (_frameStopwatch.isRunning) {
+      if (_frameStopwatch.elapsed < _options.frameTime) {
         _metrics.endFrame(skipped: true);
         return;
       }
@@ -275,7 +275,9 @@ class InlineTuiRenderer implements TuiRenderer {
     }
 
     _lastLineCount = content.split('\n').length;
-    _lastRenderTime = DateTime.now();
+    // Reset and start the stopwatch for next frame timing
+    _frameStopwatch.reset();
+    _frameStopwatch.start();
     _hasRendered = true;
     _metrics.endFrame();
   }
@@ -388,7 +390,8 @@ class UltravioletTuiRenderer implements TuiRenderer {
   uv_buffer.ScreenBuffer? _screen;
   uv_term.UvTerminalRenderer? _renderer;
 
-  DateTime? _lastRenderTime;
+  /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
+  final Stopwatch _frameStopwatch = Stopwatch();
 
   /// Returns the render metrics from the underlying UV renderer.
   @override
@@ -418,7 +421,8 @@ class UltravioletTuiRenderer implements TuiRenderer {
     _initialize();
     _pendingView = _composeView(view);
     _dirty = true;
-    _lastRenderTime = null;
+    // Stop the stopwatch to force next render to proceed
+    _frameStopwatch.stop();
     _flushInternal();
     unawaited(terminal.flush());
   }
@@ -498,18 +502,21 @@ class UltravioletTuiRenderer implements TuiRenderer {
       _ => view.toString(),
     };
 
-    if (_lastRenderTime != null) {
-      final elapsed = DateTime.now().difference(_lastRenderTime!);
+    // Frame rate limiting using Stopwatch (immune to clock adjustments)
+    if (_frameStopwatch.isRunning) {
       // Only skip if the view hasn't changed; otherwise we must render or the
       // terminal can get stuck with stale overlay content.
-      if (elapsed < _options.frameTime && content == _pendingView) {
+      if (_frameStopwatch.elapsed < _options.frameTime &&
+          content == _pendingView) {
         return;
       }
     }
 
     _pendingView = _composeView(content);
     _dirty = true;
-    _lastRenderTime = DateTime.now();
+    // Reset and start the stopwatch for next frame timing
+    _frameStopwatch.reset();
+    _frameStopwatch.start();
 
     // Unlike the other renderers, the UV renderer buffers terminal output in
     // its own writer and needs a flush step to emit bytes. Do it immediately
@@ -527,7 +534,8 @@ class UltravioletTuiRenderer implements TuiRenderer {
     _initialize();
     _renderer?.erase();
     _dirty = true;
-    _lastRenderTime = null;
+    // Stop the stopwatch to force next render to proceed
+    _frameStopwatch.stop();
     _pendingView = '';
     unawaited(terminal.flush());
   }

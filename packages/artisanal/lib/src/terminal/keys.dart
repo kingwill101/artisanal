@@ -194,6 +194,9 @@ class Key {
     this.ctrl = false,
     this.alt = false,
     this.shift = false,
+    this.meta = false,
+    this.hyper = false,
+    this.superKey = false,
     this.isRelease = false,
     this.isRepeat = false,
   });
@@ -215,6 +218,22 @@ class Key {
   /// Whether the Shift key was held.
   final bool shift;
 
+  /// Whether the Meta key was held (Command on macOS, Windows key on Windows).
+  ///
+  /// Only available with Kitty keyboard protocol or similar enhancements.
+  final bool meta;
+
+  /// Whether the Hyper key was held.
+  ///
+  /// Only available with Kitty keyboard protocol or similar enhancements.
+  final bool hyper;
+
+  /// Whether the Super key was held.
+  ///
+  /// Only available with Kitty keyboard protocol or similar enhancements.
+  /// Named `superKey` to avoid conflict with Dart's `super` keyword.
+  final bool superKey;
+
   /// Whether this is a key release event.
   ///
   /// Requires terminal support and keyboard enhancements to be enabled.
@@ -230,7 +249,7 @@ class Key {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Whether any modifier key is held.
-  bool get hasModifier => ctrl || alt || shift;
+  bool get hasModifier => ctrl || alt || shift || meta || hyper || superKey;
 
   /// Whether this is a control character (Ctrl+letter).
   bool get isCtrlChar => ctrl && type == KeyType.runes && runes.isNotEmpty;
@@ -249,6 +268,9 @@ class Key {
     bool? ctrl,
     bool? alt,
     bool? shift,
+    bool? meta,
+    bool? hyper,
+    bool? superKey,
     bool? isRelease,
     bool? isRepeat,
   }) {
@@ -258,6 +280,9 @@ class Key {
       ctrl: ctrl ?? this.ctrl,
       alt: alt ?? this.alt,
       shift: shift ?? this.shift,
+      meta: meta ?? this.meta,
+      hyper: hyper ?? this.hyper,
+      superKey: superKey ?? this.superKey,
       isRelease: isRelease ?? this.isRelease,
       isRepeat: isRepeat ?? this.isRepeat,
     );
@@ -445,6 +470,9 @@ class Key {
     if (ctrl != other.ctrl) return false;
     if (alt != other.alt) return false;
     if (shift != other.shift) return false;
+    if (meta != other.meta) return false;
+    if (hyper != other.hyper) return false;
+    if (superKey != other.superKey) return false;
     if (runes.length != other.runes.length) return false;
 
     for (var i = 0; i < runes.length; i++) {
@@ -455,12 +483,27 @@ class Key {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(type, ctrl, alt, shift, Object.hashAll(runes));
+  int get hashCode => Object.hash(
+    type,
+    ctrl,
+    alt,
+    shift,
+    meta,
+    hyper,
+    superKey,
+    Object.hashAll(runes),
+  );
 
   @override
   String toString() {
-    final mods = [if (ctrl) 'Ctrl', if (alt) 'Alt', if (shift) 'Shift'];
+    final mods = [
+      if (ctrl) 'Ctrl',
+      if (alt) 'Alt',
+      if (shift) 'Shift',
+      if (meta) 'Meta',
+      if (hyper) 'Hyper',
+      if (superKey) 'Super',
+    ];
     final modStr = mods.isEmpty ? '' : '${mods.join('+')}+';
 
     if (type == KeyType.runes && runes.isNotEmpty) {

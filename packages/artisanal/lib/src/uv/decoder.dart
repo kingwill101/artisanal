@@ -39,6 +39,7 @@ const int _flagBackspace = 1 << 4;
 const int _flagFind = 1 << 5;
 const int _flagSelect = 1 << 6;
 const int _flagFKeys = 1 << 7;
+const int _flagCtrlJ = 1 << 8;
 
 /// Legacy key encoding behavior flags.
 ///
@@ -59,6 +60,13 @@ final class LegacyKeyEncoding {
   /// Toggles `Ctrl+M` mapping (enter) when [v] is true.
   LegacyKeyEncoding ctrlM(bool v) =>
       LegacyKeyEncoding(v ? (bits | _flagCtrlM) : (bits & ~_flagCtrlM));
+
+  /// Toggles `Ctrl+J` mapping (newline/enter) when [v] is true.
+  ///
+  /// When false (default), LF (0x0A) is reported as Enter.
+  /// When true, LF is reported as Ctrl+J.
+  LegacyKeyEncoding ctrlJ(bool v) =>
+      LegacyKeyEncoding(v ? (bits | _flagCtrlJ) : (bits & ~_flagCtrlJ));
 
   /// Toggles `Ctrl+[` mapping (escape) when [v] is true.
   LegacyKeyEncoding ctrlOpenBracket(bool v) => LegacyKeyEncoding(
@@ -303,6 +311,11 @@ final class EventDecoder {
           return KeyPressEvent(Key(code: 0x69 /* i */, mod: KeyMod.ctrl));
         }
         return KeyPressEvent(Key(code: keyTab));
+      case 0x0a: // LF
+        if (legacy.has(_flagCtrlJ)) {
+          return KeyPressEvent(Key(code: 0x6a /* j */, mod: KeyMod.ctrl));
+        }
+        return KeyPressEvent(Key(code: keyEnter));
       case 0x0d: // CR
         if (legacy.has(_flagCtrlM)) {
           return KeyPressEvent(Key(code: 0x6d /* m */, mod: KeyMod.ctrl));

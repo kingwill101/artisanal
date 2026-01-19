@@ -155,6 +155,9 @@ term.Key _toTermKey(uvk.Key key) {
   final alt = uvk.KeyMod.contains(key.mod, uvk.KeyMod.alt);
   final ctrl = uvk.KeyMod.contains(key.mod, uvk.KeyMod.ctrl);
   final shift = uvk.KeyMod.contains(key.mod, uvk.KeyMod.shift);
+  final meta = uvk.KeyMod.contains(key.mod, uvk.KeyMod.meta);
+  final hyper = uvk.KeyMod.contains(key.mod, uvk.KeyMod.hyper);
+  final superKey = uvk.KeyMod.contains(key.mod, uvk.KeyMod.superKey);
 
   // Printable keys (including multi-codepoint grapheme clusters).
   if (key.text.isNotEmpty) {
@@ -163,32 +166,73 @@ term.Key _toTermKey(uvk.Key key) {
       runes: uni.codePoints(key.text),
       alt: alt,
       ctrl: ctrl,
+      meta: meta,
+      hyper: hyper,
+      superKey: superKey,
     );
   }
 
   // Common control/special keys (represented as ASCII codes in UV).
   switch (key.code) {
     case uvk.keyEnter: // 0x0D (CR)
-      return term.Key(term.KeyType.enter, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.enter,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case 0x0A: // 0x0A (LF)
-      return term.Key(term.KeyType.enter, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.enter,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyTab: // 0x09 (HT)
-      return term.Key(term.KeyType.tab, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.tab,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyBackspace: // 0x7F (DEL)
       return term.Key(
         term.KeyType.backspace,
         alt: alt,
         ctrl: ctrl,
         shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
       );
     case uvk.keyEscape: // 0x1B (ESC)
-      return term.Key(term.KeyType.escape, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.escape,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case 0x08: // 0x08 (BS / Ctrl+H)
       return term.Key(
         term.KeyType.backspace,
         alt: alt,
         ctrl: ctrl,
         shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
       );
   }
 
@@ -197,51 +241,190 @@ term.Key _toTermKey(uvk.Key key) {
   // existing TUI key model so components can use them without bespoke mapping.
   switch (key.code) {
     case uvk.keyKpEnter:
-      return term.Key(term.KeyType.enter, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.enter,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
 
     // Keypad arrows/navigation (Kitty keypad keys).
     case uvk.keyKpUp:
-      return term.Key(term.KeyType.up, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.up,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpDown:
-      return term.Key(term.KeyType.down, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.down,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpLeft:
-      return term.Key(term.KeyType.left, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.left,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpRight:
-      return term.Key(term.KeyType.right, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.right,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpHome:
-      return term.Key(term.KeyType.home, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.home,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpEnd:
-      return term.Key(term.KeyType.end, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.end,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpPgUp:
-      return term.Key(term.KeyType.pageUp, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.pageUp,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpPgDown:
       return term.Key(
         term.KeyType.pageDown,
         alt: alt,
         ctrl: ctrl,
         shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
       );
     case uvk.keyKpInsert:
-      return term.Key(term.KeyType.insert, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.insert,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpDelete:
-      return term.Key(term.KeyType.delete, alt: alt, ctrl: ctrl, shift: shift);
+      return term.Key(
+        term.KeyType.delete,
+        alt: alt,
+        ctrl: ctrl,
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
 
     // Keypad operators/digits: map to printable runes.
     case uvk.keyKpPlus:
-      return term.Key(term.KeyType.runes, runes: [0x2b], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2b],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpMinus:
-      return term.Key(term.KeyType.runes, runes: [0x2d], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2d],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpMultiply:
-      return term.Key(term.KeyType.runes, runes: [0x2a], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2a],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpDivide:
-      return term.Key(term.KeyType.runes, runes: [0x2f], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2f],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpEqual:
-      return term.Key(term.KeyType.runes, runes: [0x3d], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x3d],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpComma:
     case uvk.keyKpSep:
-      return term.Key(term.KeyType.runes, runes: [0x2c], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2c],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
     case uvk.keyKpDecimal:
-      return term.Key(term.KeyType.runes, runes: [0x2e], alt: alt, ctrl: ctrl);
+      return term.Key(
+        term.KeyType.runes,
+        runes: [0x2e],
+        alt: alt,
+        ctrl: ctrl,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
   }
 
   if (key.code >= uvk.keyKp0 && key.code <= uvk.keyKp9) {
@@ -251,13 +434,40 @@ term.Key _toTermKey(uvk.Key key) {
       runes: [0x30 + digit],
       alt: alt,
       ctrl: ctrl,
+      meta: meta,
+      hyper: hyper,
+      superKey: superKey,
     );
   }
 
   // C0/C1 mapped to ctrl+<letter> in UV (code points in ASCII range).
+  // UV decoder transforms control codes into Ctrl+<letter> form, so we need
+  // to recognize these patterns and map them to the appropriate key types.
   if (key.code < uvk.keyExtended) {
     var code = key.code;
     var finalCtrl = ctrl;
+
+    // Handle Ctrl+<letter> combinations that map to special keys.
+    // The UV decoder transforms:
+    //   0x08 (BS) -> Ctrl+H (code=0x68)
+    //   0x09 (HT) -> Tab or Ctrl+I (code=0x69)
+    //   0x0A (LF) -> Enter or Ctrl+J (code=0x6A)
+    //   0x0D (CR) -> Enter or Ctrl+M (code=0x6D)
+    // Note: Tab/Enter cases are handled earlier via keyTab/keyEnter/0x0A
+    // but Ctrl+H for backspace needs to be detected here.
+    if (ctrl && code == 0x68) {
+      // Ctrl+H -> Backspace (matches TUI parser behavior)
+      return term.Key(
+        term.KeyType.backspace,
+        alt: alt,
+        ctrl: false, // Don't mark as ctrl, it's just backspace
+        shift: shift,
+        meta: meta,
+        hyper: hyper,
+        superKey: superKey,
+      );
+    }
+
     if (code == 0) {
       code = 0x20; // Space
       finalCtrl = true;
@@ -270,12 +480,23 @@ term.Key _toTermKey(uvk.Key key) {
       runes: [code],
       alt: alt,
       ctrl: finalCtrl,
+      meta: meta,
+      hyper: hyper,
+      superKey: superKey,
     );
   }
 
   // Special keys.
   final (type, keepShift) = _toKeyType(key.code);
-  return term.Key(type, alt: alt, ctrl: ctrl, shift: keepShift ? shift : false);
+  return term.Key(
+    type,
+    alt: alt,
+    ctrl: ctrl,
+    shift: keepShift ? shift : false,
+    meta: meta,
+    hyper: hyper,
+    superKey: superKey,
+  );
 }
 
 (term.KeyType, bool keepShift) _toKeyType(int code) {
