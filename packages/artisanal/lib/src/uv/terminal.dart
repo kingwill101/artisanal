@@ -257,6 +257,11 @@ class Terminal
     _sigintSubscription = null;
     await _winch.stop();
     await _reader.close();
+
+    // Close the event controller to release any listeners.
+    if (!_eventController.isClosed) {
+      await _eventController.close();
+    }
   }
 
   /// Returns the current size of the terminal.

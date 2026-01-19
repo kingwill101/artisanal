@@ -40,6 +40,9 @@ class SizeNotifier {
   Future<void> stop() async {
     await _subscription?.cancel();
     _subscription = null;
+    if (!_controller.isClosed) {
+      await _controller.close();
+    }
   }
 
   /// Returns the current cell size of the terminal window.
