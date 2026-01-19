@@ -521,10 +521,14 @@ final class SplitTerminal implements Terminal {
     // Best-effort: restore output and control independently.
     try {
       _output.dispose();
-    } catch (_) {}
+    } catch (_) {
+      // Output may already be closed.
+    }
     try {
       _control.dispose();
-    } catch (_) {}
+    } catch (_) {
+      // Control may already be closed.
+    }
   }
 }
 
@@ -600,6 +604,7 @@ class StdioTerminal implements Terminal {
     try {
       return _stdout.hasTerminal ? _stdout.terminalColumns : 80;
     } catch (_) {
+      // Fallback when stdout is not available (e.g., piped output).
       return 80;
     }
   }
@@ -609,6 +614,7 @@ class StdioTerminal implements Terminal {
     try {
       return _stdout.hasTerminal ? _stdout.terminalLines : 24;
     } catch (_) {
+      // Fallback when stdout is not available.
       return 24;
     }
   }
@@ -621,6 +627,7 @@ class StdioTerminal implements Terminal {
     try {
       return _stdout.supportsAnsiEscapes;
     } catch (_) {
+      // Assume no ANSI support when stdout is not available.
       return false;
     }
   }
@@ -630,6 +637,7 @@ class StdioTerminal implements Terminal {
     try {
       return _stdout.hasTerminal;
     } catch (_) {
+      // Not a terminal when stdout is not available.
       return false;
     }
   }
@@ -1717,12 +1725,16 @@ final class TtyTerminal implements Terminal {
 
     try {
       _raf?.closeSync();
-    } catch (_) {}
+    } catch (_) {
+      // File handle may already be closed.
+    }
     _raf = null;
 
     try {
       _out.close();
-    } catch (_) {}
+    } catch (_) {
+      // Output sink may already be closed.
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

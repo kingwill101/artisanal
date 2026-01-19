@@ -251,6 +251,10 @@ class FileEntry {
 // Global ID Counter
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Global counter for unique file picker IDs.
+///
+/// This is safe in Dart's single-threaded execution model. Each file picker
+/// gets a unique ID to identify its messages (e.g., [FilePickerReadDirDone]).
 int _lastFilePickerId = 0;
 
 int _nextFilePickerId() {
@@ -1031,7 +1035,9 @@ class FilePickerModel extends ViewComponent {
       try {
         final target = Link(file.entity.path).targetSync();
         buffer.write(' → $target');
-      } catch (_) {}
+      } catch (_) {
+        // Symlink may be broken or inaccessible.
+      }
     }
   }
 

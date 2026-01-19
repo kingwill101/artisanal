@@ -59,6 +59,7 @@ import 'terminal_reader.dart';
 import 'terminal_renderer.dart';
 import '../unicode/width.dart';
 import 'winch.dart';
+import '../style/ranges.dart' as ranges;
 
 export 'buffer.dart';
 export 'capabilities.dart';
@@ -157,7 +158,11 @@ class Terminal
           stdin.echoMode = false;
           stdin.lineMode = false;
         }
-      } catch (_) {}
+      } catch (_) {
+        // Terminal mode changes may fail if stdin is not a TTY or has been
+        // closed. This is expected when running in non-interactive contexts
+        // (e.g., piped input, CI environments).
+      }
     }
 
     // Handle SIGINT to ensure terminal state is restored.
@@ -238,7 +243,10 @@ class Terminal
           stdin.echoMode = true;
           stdin.lineMode = true;
         }
-      } catch (_) {}
+      } catch (_) {
+        // Best-effort cleanup: terminal may already be closed or in an
+        // inconsistent state during shutdown.
+      }
     }
 
     await _readerSubscription?.cancel();
@@ -378,10 +386,12 @@ class Terminal
     final lines = line.split('\n');
     final width = _buf.width();
     for (var i = 0; i < lines.length; i++) {
-      // Simple truncation for now.
-      // TODO: use a proper ANSI-aware truncate if needed.
-      if (lines[i].length > width && width > 0) {
-        lines[i] = lines[i].substring(0, width);
+      // Use ANSI-aware truncation to preserve escape sequences and handle
+      // wide characters correctly. cutAnsiByCells measures by visible cell
+      // width (not byte length) and properly terminates any open SGR/OSC 8
+      // sequences.
+      if (width > 0) {
+        lines[i] = ranges.cutAnsiByCells(lines[i], 0, width);
       }
     }
     _renderer.prependString(_buf, lines.join('\n'));

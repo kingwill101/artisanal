@@ -1394,7 +1394,9 @@ class Program<M extends Model> {
 
     try {
       await _inputSubscription?.cancel();
-    } catch (_) {}
+    } catch (_) {
+      // Input subscription may already be closed during shutdown.
+    }
     _inputSubscription = null;
 
     // Dispose renderer (restores cursor, exits alt screen if needed)

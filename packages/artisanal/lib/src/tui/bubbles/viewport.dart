@@ -11,6 +11,10 @@ import '../component.dart';
 import '../msg.dart';
 import 'key_binding.dart';
 
+/// Sentinel value to distinguish "not provided" from "explicitly set to null"
+/// in [ViewportModel.copyWith]. This allows callers to set nullable fields to
+/// null (e.g., `copyWith(selectionStart: null)`) rather than keeping the
+/// existing value (the default when the parameter is omitted).
 const undefined = Object();
 
 /// Key bindings for viewport navigation.

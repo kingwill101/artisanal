@@ -70,12 +70,16 @@ class SharedInputStream {
 
     try {
       await _subscription?.cancel();
-    } catch (_) {}
+    } catch (_) {
+      // Subscription may already be closed or in error state.
+    }
     _subscription = null;
 
     try {
       await _controller?.close();
-    } catch (_) {}
+    } catch (_) {
+      // Controller may already be closed.
+    }
     _controller = null;
   }
 }

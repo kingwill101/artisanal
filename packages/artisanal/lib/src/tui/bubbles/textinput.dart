@@ -433,7 +433,10 @@ class TextInputModel extends ViewComponent {
     _setValueInternal(graphemes, err);
   }
 
-  /// Sets the value of the text input (parity with bubbles).
+  /// Sets the value of the text input (method form for API compatibility).
+  ///
+  /// This is equivalent to using the [value] setter and exists for parity with
+  /// the upstream bubbletea Go library. Prefer using `model.value = s` in Dart.
   void setValue(String s) {
     value = s;
   }
@@ -1129,8 +1132,19 @@ class TextInputModel extends ViewComponent {
     return '';
   }
 
+  /// Handles the paste key binding (Ctrl+V).
+  ///
+  /// Returns `null` because clipboard paste is handled via bracketed paste mode
+  /// at the terminal level. When bracketed paste is enabled (the default in
+  /// TUI programs with `ProgramOptions.bracketedPaste = true`), the terminal
+  /// intercepts Ctrl+V and sends the clipboard content as a [PasteMsg], which
+  /// is handled in `update()`.
+  ///
+  /// If bracketed paste is not enabled, pressing Ctrl+V will do nothing.
+  /// To support paste without bracketed paste mode, the caller would need to
+  /// implement platform-specific clipboard access (e.g., via OSC 52 or native
+  /// clipboard APIs) and send a [PasteMsg] to the model.
   Cmd? _pasteCmd() {
-    // This is a placeholder - actual clipboard access would be platform-specific
     return null;
   }
 }

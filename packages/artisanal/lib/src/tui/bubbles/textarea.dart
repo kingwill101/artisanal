@@ -474,7 +474,10 @@ class TextAreaModel extends ViewComponent {
     _col = _lines.isNotEmpty ? _lines.last.length : 0;
   }
 
-  /// Sets the value of the textarea (parity with bubbles).
+  /// Sets the value of the textarea (method form for API compatibility).
+  ///
+  /// This is equivalent to using the [value] setter and exists for parity with
+  /// the upstream bubbletea Go library. Prefer using `model.value = v` in Dart.
   void setValue(String v) {
     value = v;
   }
