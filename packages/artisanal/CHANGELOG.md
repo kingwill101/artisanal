@@ -25,13 +25,22 @@
 
 - **Improved**: Cleanup errors are now collected and accessible via `program.cleanupErrors` for debugging.
 - **Added**: `meta`, `hyper`, `superKey` fields to TUI Key class for extended modifier support.
-- **Documented**: Extended keys (F21-F63, media keys) map to `KeyType.unknown` - use `UvEventMsg` for full access.
+- **Added**: Full extended key support in TUI `KeyType` enum:
+  - Function keys F21-F63
+  - Lock keys: `capsLock`, `scrollLock`, `numLock`, `printScreen`, `pause`, `menu`
+  - Media keys: `mediaPlay`, `mediaPause`, `mediaPlayPause`, `mediaReverse`, `mediaStop`,
+    `mediaFastForward`, `mediaRewind`, `mediaNext`, `mediaPrev`, `mediaRecord`
+  - Volume keys: `volumeDown`, `volumeUp`, `mute`
+  - Modifier keys as standalone presses: `leftShift`, `leftAlt`, `leftCtrl`, `leftSuper`,
+    `leftHyper`, `leftMeta`, `rightShift`, `rightAlt`, `rightCtrl`, `rightSuper`,
+    `rightHyper`, `rightMeta`, `isoLevel3Shift`, `isoLevel5Shift`
 
 ### Tests
 
 - Added comprehensive tests for C0 code handling, modifier preservation, wide character cloning,
   ANSI color preservation through wrap, and program lifecycle edge cases.
-- Added tests for extended function keys (F21+) and media keys mapping behavior.
+- Added tests for extended function keys (F21-F35) and media keys mapping.
+- Added tests for lock keys, volume keys, and modifier keys as standalone presses.
 - Added comprehensive Unicode width edge case tests (ZWJ emoji, flags, variation selectors, CJK).
 - Added tests for `EveryCmd.isActive` behavior during initial delay period.
 - **Documented**: key_table C0 entries purpose (consistency/documentation, not actively used).

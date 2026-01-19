@@ -29,26 +29,18 @@ import '../unicode/grapheme.dart' as uni;
 ///
 /// ## Extended Keys
 ///
-/// This enum supports function keys F1-F20 and common navigation keys.
-/// Extended function keys (F21-F63), media keys, and other specialized keys
-/// from the Kitty keyboard protocol are mapped to [unknown].
+/// This enum supports function keys F1-F63, media keys, lock keys, and
+/// modifier-only keys from the Kitty keyboard protocol.
 ///
-/// For applications that need access to extended keys, use the raw UV events
-/// directly via [UvEventMsg]. The UV layer provides full support for:
-/// - Function keys F21-F63
-/// - Media keys (play, pause, stop, etc.)
-/// - Lock keys (CapsLock, NumLock, ScrollLock)
-/// - Modifier-only keys (left/right Shift, Ctrl, Alt, etc.)
-///
-/// Example handling extended keys:
+/// Example:
 /// ```dart
-/// (Msg msg, Model model) update(Msg msg) {
-///   if (msg is UvEventMsg && msg.event is KeyPressEvent) {
-///     final key = (msg.event as KeyPressEvent).key();
-///     if (key.code == keyF21) {
-///       // Handle F21
-///     }
-///   }
+/// switch (key.type) {
+///   case KeyType.f21:
+///     // Handle F21
+///     break;
+///   case KeyType.mediaPlay:
+///     // Handle media play
+///     break;
 ///   // ...
 /// }
 /// ```
@@ -120,7 +112,7 @@ enum KeyType {
   insert,
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Function Keys
+  // Function Keys (F1-F20)
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// F1 function key.
@@ -184,13 +176,258 @@ enum KeyType {
   f20,
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Extended Function Keys (F21-F63) - Kitty keyboard protocol
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// F21 function key (Kitty protocol).
+  f21,
+
+  /// F22 function key (Kitty protocol).
+  f22,
+
+  /// F23 function key (Kitty protocol).
+  f23,
+
+  /// F24 function key (Kitty protocol).
+  f24,
+
+  /// F25 function key (Kitty protocol).
+  f25,
+
+  /// F26 function key (Kitty protocol).
+  f26,
+
+  /// F27 function key (Kitty protocol).
+  f27,
+
+  /// F28 function key (Kitty protocol).
+  f28,
+
+  /// F29 function key (Kitty protocol).
+  f29,
+
+  /// F30 function key (Kitty protocol).
+  f30,
+
+  /// F31 function key (Kitty protocol).
+  f31,
+
+  /// F32 function key (Kitty protocol).
+  f32,
+
+  /// F33 function key (Kitty protocol).
+  f33,
+
+  /// F34 function key (Kitty protocol).
+  f34,
+
+  /// F35 function key (Kitty protocol).
+  f35,
+
+  /// F36 function key (Kitty protocol).
+  f36,
+
+  /// F37 function key (Kitty protocol).
+  f37,
+
+  /// F38 function key (Kitty protocol).
+  f38,
+
+  /// F39 function key (Kitty protocol).
+  f39,
+
+  /// F40 function key (Kitty protocol).
+  f40,
+
+  /// F41 function key (Kitty protocol).
+  f41,
+
+  /// F42 function key (Kitty protocol).
+  f42,
+
+  /// F43 function key (Kitty protocol).
+  f43,
+
+  /// F44 function key (Kitty protocol).
+  f44,
+
+  /// F45 function key (Kitty protocol).
+  f45,
+
+  /// F46 function key (Kitty protocol).
+  f46,
+
+  /// F47 function key (Kitty protocol).
+  f47,
+
+  /// F48 function key (Kitty protocol).
+  f48,
+
+  /// F49 function key (Kitty protocol).
+  f49,
+
+  /// F50 function key (Kitty protocol).
+  f50,
+
+  /// F51 function key (Kitty protocol).
+  f51,
+
+  /// F52 function key (Kitty protocol).
+  f52,
+
+  /// F53 function key (Kitty protocol).
+  f53,
+
+  /// F54 function key (Kitty protocol).
+  f54,
+
+  /// F55 function key (Kitty protocol).
+  f55,
+
+  /// F56 function key (Kitty protocol).
+  f56,
+
+  /// F57 function key (Kitty protocol).
+  f57,
+
+  /// F58 function key (Kitty protocol).
+  f58,
+
+  /// F59 function key (Kitty protocol).
+  f59,
+
+  /// F60 function key (Kitty protocol).
+  f60,
+
+  /// F61 function key (Kitty protocol).
+  f61,
+
+  /// F62 function key (Kitty protocol).
+  f62,
+
+  /// F63 function key (Kitty protocol).
+  f63,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Lock Keys - Kitty keyboard protocol
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Caps Lock key.
+  capsLock,
+
+  /// Scroll Lock key.
+  scrollLock,
+
+  /// Num Lock key.
+  numLock,
+
+  /// Print Screen key.
+  printScreen,
+
+  /// Pause/Break key.
+  pause,
+
+  /// Menu/Application key.
+  menu,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Media Keys - Kitty keyboard protocol
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Media Play key.
+  mediaPlay,
+
+  /// Media Pause key.
+  mediaPause,
+
+  /// Media Play/Pause toggle key.
+  mediaPlayPause,
+
+  /// Media Reverse key.
+  mediaReverse,
+
+  /// Media Stop key.
+  mediaStop,
+
+  /// Media Fast Forward key.
+  mediaFastForward,
+
+  /// Media Rewind key.
+  mediaRewind,
+
+  /// Media Next Track key.
+  mediaNext,
+
+  /// Media Previous Track key.
+  mediaPrev,
+
+  /// Media Record key.
+  mediaRecord,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Volume Keys - Kitty keyboard protocol
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Volume Down key.
+  volumeDown,
+
+  /// Volume Up key.
+  volumeUp,
+
+  /// Mute key.
+  mute,
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Modifier Keys (as standalone key presses) - Kitty keyboard protocol
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Left Shift key (standalone press).
+  leftShift,
+
+  /// Left Alt key (standalone press).
+  leftAlt,
+
+  /// Left Control key (standalone press).
+  leftCtrl,
+
+  /// Left Super/Windows/Command key (standalone press).
+  leftSuper,
+
+  /// Left Hyper key (standalone press).
+  leftHyper,
+
+  /// Left Meta key (standalone press).
+  leftMeta,
+
+  /// Right Shift key (standalone press).
+  rightShift,
+
+  /// Right Alt key (standalone press).
+  rightAlt,
+
+  /// Right Control key (standalone press).
+  rightCtrl,
+
+  /// Right Super/Windows/Command key (standalone press).
+  rightSuper,
+
+  /// Right Hyper key (standalone press).
+  rightHyper,
+
+  /// Right Meta key (standalone press).
+  rightMeta,
+
+  /// ISO Level 3 Shift (AltGr on some keyboards).
+  isoLevel3Shift,
+
+  /// ISO Level 5 Shift.
+  isoLevel5Shift,
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Other
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Unknown or unrecognized key.
-  ///
-  /// This includes extended keys not in this enum (F21-F63, media keys, etc.).
-  /// For extended key support, use raw UV events via [UvEventMsg].
   unknown,
 }
 

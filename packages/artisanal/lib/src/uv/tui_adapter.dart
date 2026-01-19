@@ -531,11 +531,94 @@ term.Key _toTermKey(uvk.Key key) {
       return (term.KeyType.escape, true);
     case uvk.keySpace:
       return (term.KeyType.space, true);
+
+    // Lock keys (Kitty protocol)
+    case uvk.keyCapsLock:
+      return (term.KeyType.capsLock, true);
+    case uvk.keyScrollLock:
+      return (term.KeyType.scrollLock, true);
+    case uvk.keyNumLock:
+      return (term.KeyType.numLock, true);
+    case uvk.keyPrintScreen:
+      return (term.KeyType.printScreen, true);
+    case uvk.keyPause:
+      return (term.KeyType.pause, true);
+    case uvk.keyMenu:
+      return (term.KeyType.menu, true);
+
+    // Media keys (Kitty protocol)
+    case uvk.keyMediaPlay:
+      return (term.KeyType.mediaPlay, true);
+    case uvk.keyMediaPause:
+      return (term.KeyType.mediaPause, true);
+    case uvk.keyMediaPlayPause:
+      return (term.KeyType.mediaPlayPause, true);
+    case uvk.keyMediaReverse:
+      return (term.KeyType.mediaReverse, true);
+    case uvk.keyMediaStop:
+      return (term.KeyType.mediaStop, true);
+    case uvk.keyMediaFastForward:
+      return (term.KeyType.mediaFastForward, true);
+    case uvk.keyMediaRewind:
+      return (term.KeyType.mediaRewind, true);
+    case uvk.keyMediaNext:
+      return (term.KeyType.mediaNext, true);
+    case uvk.keyMediaPrev:
+      return (term.KeyType.mediaPrev, true);
+    case uvk.keyMediaRecord:
+      return (term.KeyType.mediaRecord, true);
+
+    // Volume keys (Kitty protocol)
+    case uvk.keyLowerVol:
+      return (term.KeyType.volumeDown, true);
+    case uvk.keyRaiseVol:
+      return (term.KeyType.volumeUp, true);
+    case uvk.keyMute:
+      return (term.KeyType.mute, true);
+
+    // Modifier keys as standalone presses (Kitty protocol)
+    case uvk.keyLeftShift:
+      return (term.KeyType.leftShift, true);
+    case uvk.keyLeftAlt:
+      return (term.KeyType.leftAlt, true);
+    case uvk.keyLeftCtrl:
+      return (term.KeyType.leftCtrl, true);
+    case uvk.keyLeftSuper:
+      return (term.KeyType.leftSuper, true);
+    case uvk.keyLeftHyper:
+      return (term.KeyType.leftHyper, true);
+    case uvk.keyLeftMeta:
+      return (term.KeyType.leftMeta, true);
+    case uvk.keyRightShift:
+      return (term.KeyType.rightShift, true);
+    case uvk.keyRightAlt:
+      return (term.KeyType.rightAlt, true);
+    case uvk.keyRightCtrl:
+      return (term.KeyType.rightCtrl, true);
+    case uvk.keyRightSuper:
+      return (term.KeyType.rightSuper, true);
+    case uvk.keyRightHyper:
+      return (term.KeyType.rightHyper, true);
+    case uvk.keyRightMeta:
+      return (term.KeyType.rightMeta, true);
+    case uvk.keyIsoLevel3Shift:
+      return (term.KeyType.isoLevel3Shift, true);
+    case uvk.keyIsoLevel5Shift:
+      return (term.KeyType.isoLevel5Shift, true);
   }
 
+  // Function keys F1-F20
   if (code >= uvk.keyF1 && code <= uvk.keyF20) {
     return (
       term.KeyType.values[term.KeyType.f1.index + (code - uvk.keyF1)],
+      true,
+    );
+  }
+
+  // Extended function keys F21-F63 (Kitty protocol)
+  if (code >= uvk.keyF21 && code <= uvk.keyF63) {
+    return (
+      term.KeyType.values[term.KeyType.f21.index + (code - uvk.keyF21)],
       true,
     );
   }

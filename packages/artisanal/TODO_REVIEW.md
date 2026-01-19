@@ -142,13 +142,21 @@ Check off items as they are fixed and tested.
 
 ### Input/Key Handling
 
-- [x] **KeyType missing extended keys** (Documented 2025-01-19)
-  - **File:** `lib/src/terminal/keys.dart:29-166`
+- [x] **KeyType missing extended keys** (Fixed 2025-01-19)
+  - **File:** `lib/src/terminal/keys.dart:29-380`
   - **Issue:** F21-F63, media keys, lock keys not in KeyType enum
-  - **Impact:** Extended keys become `KeyType.unknown` in TUI mode
-  - **Fix:** Documented the behavior in KeyType enum docs and unknown value docs.
-    Extended keys should use raw UV events via UvEventMsg.
-  - **Test:** `test/tui/uv/tui_adapter_test.dart` - tests for F21+ mapping to unknown
+  - **Impact:** Extended keys became `KeyType.unknown` in TUI mode
+  - **Fix:** Added all extended keys to KeyType enum:
+    - F21-F63 (43 function keys)
+    - Lock keys: capsLock, scrollLock, numLock, printScreen, pause, menu
+    - Media keys: mediaPlay, mediaPause, mediaPlayPause, mediaReverse, mediaStop,
+      mediaFastForward, mediaRewind, mediaNext, mediaPrev, mediaRecord
+    - Volume keys: volumeDown, volumeUp, mute
+    - Modifier keys: leftShift, leftAlt, leftCtrl, leftSuper, leftHyper, leftMeta,
+      rightShift, rightAlt, rightCtrl, rightSuper, rightHyper, rightMeta,
+      isoLevel3Shift, isoLevel5Shift
+  - Updated `tui_adapter.dart` to map all extended keys from UV to TUI
+  - **Test:** `test/tui/uv/tui_adapter_test.dart` - comprehensive tests for all key types
 
 - [x] **key_table C0 entries potentially dead code** (Documented 2025-01-19)
   - **File:** `lib/src/uv/key_table.dart:66-99`

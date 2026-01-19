@@ -137,37 +137,102 @@ void main() {
       expect(key, isNot(equals(key3)));
     });
 
-    test('extended function keys (F21+) map to unknown KeyType', () {
-      // Extended function keys F21-F63 are defined in UV but the TUI KeyType
-      // enum only has F1-F20. Keys beyond F20 should gracefully fall back
-      // to KeyType.unknown rather than crash.
-      //
-      // This is documented behavior: applications that need F21+ should use
-      // the raw UV events directly via UvEventMsg.
+    test('extended function keys F21-F35 map to proper KeyType', () {
+      // Extended function keys F21-F35 are now supported in the TUI KeyType enum.
+      // Note: F36-F63 are not in the standard Kitty CSI u table.
       final p = UvTuiInputParser();
 
-      // F21 via CSI escape sequence: ESC [ 1 ; modifier P  (21~)
-      // Actually F21 in xterm-style is ESC [ 21 ~
-      // But in CSI u format (Kitty protocol): ESC [ 57384 u
-      final msgs = p.parseAll('\x1b[57384u'.codeUnits); // F21 in CSI u format
-      expect(msgs, hasLength(1));
-      expect(msgs[0], isA<KeyMsg>());
-      final k = (msgs[0] as KeyMsg).key;
-      // F21 maps to unknown since KeyType only has F1-F20
-      expect(k.type, term.KeyType.unknown);
+      // F21 via CSI u format: ESC [ 57384 u
+      final msgsF21 = p.parseAll('\x1b[57384u'.codeUnits);
+      expect(msgsF21, hasLength(1));
+      expect(msgsF21[0], isA<KeyMsg>());
+      expect((msgsF21[0] as KeyMsg).key.type, term.KeyType.f21);
+
+      // F35 via CSI u format: ESC [ 57398 u
+      final msgsF35 = p.parseAll('\x1b[57398u'.codeUnits);
+      expect(msgsF35, hasLength(1));
+      expect((msgsF35[0] as KeyMsg).key.type, term.KeyType.f35);
     });
 
-    test('media keys map to unknown KeyType', () {
-      // Media keys (play, pause, etc.) are defined in UV but not in TUI KeyType.
-      // They should gracefully fall back to KeyType.unknown.
+    test('media keys map to proper KeyType', () {
+      // Media keys are now supported in the TUI KeyType enum.
       final p = UvTuiInputParser();
 
       // Media Play via CSI u format: ESC [ 57428 u
-      final msgs = p.parseAll('\x1b[57428u'.codeUnits);
-      expect(msgs, hasLength(1));
-      expect(msgs[0], isA<KeyMsg>());
-      final k = (msgs[0] as KeyMsg).key;
-      expect(k.type, term.KeyType.unknown);
+      final msgsPlay = p.parseAll('\x1b[57428u'.codeUnits);
+      expect(msgsPlay, hasLength(1));
+      expect(msgsPlay[0], isA<KeyMsg>());
+      expect((msgsPlay[0] as KeyMsg).key.type, term.KeyType.mediaPlay);
+
+      // Media Stop via CSI u format: ESC [ 57432 u
+      final msgsStop = p.parseAll('\x1b[57432u'.codeUnits);
+      expect(msgsStop, hasLength(1));
+      expect((msgsStop[0] as KeyMsg).key.type, term.KeyType.mediaStop);
+
+      // Media Next via CSI u format: ESC [ 57435 u
+      final msgsNext = p.parseAll('\x1b[57435u'.codeUnits);
+      expect(msgsNext, hasLength(1));
+      expect((msgsNext[0] as KeyMsg).key.type, term.KeyType.mediaNext);
+    });
+
+    test('lock keys map to proper KeyType', () {
+      // Lock keys are now supported in the TUI KeyType enum.
+      final p = UvTuiInputParser();
+
+      // CapsLock via CSI u format: ESC [ 57358 u
+      final msgsCaps = p.parseAll('\x1b[57358u'.codeUnits);
+      expect(msgsCaps, hasLength(1));
+      expect((msgsCaps[0] as KeyMsg).key.type, term.KeyType.capsLock);
+
+      // NumLock via CSI u format: ESC [ 57360 u
+      final msgsNum = p.parseAll('\x1b[57360u'.codeUnits);
+      expect(msgsNum, hasLength(1));
+      expect((msgsNum[0] as KeyMsg).key.type, term.KeyType.numLock);
+
+      // ScrollLock via CSI u format: ESC [ 57359 u
+      final msgsScroll = p.parseAll('\x1b[57359u'.codeUnits);
+      expect(msgsScroll, hasLength(1));
+      expect((msgsScroll[0] as KeyMsg).key.type, term.KeyType.scrollLock);
+    });
+
+    test('volume keys map to proper KeyType', () {
+      // Volume keys are now supported in the TUI KeyType enum.
+      final p = UvTuiInputParser();
+
+      // Volume Down via CSI u format: ESC [ 57438 u
+      final msgsDown = p.parseAll('\x1b[57438u'.codeUnits);
+      expect(msgsDown, hasLength(1));
+      expect((msgsDown[0] as KeyMsg).key.type, term.KeyType.volumeDown);
+
+      // Volume Up via CSI u format: ESC [ 57439 u
+      final msgsUp = p.parseAll('\x1b[57439u'.codeUnits);
+      expect(msgsUp, hasLength(1));
+      expect((msgsUp[0] as KeyMsg).key.type, term.KeyType.volumeUp);
+
+      // Mute via CSI u format: ESC [ 57440 u
+      final msgsMute = p.parseAll('\x1b[57440u'.codeUnits);
+      expect(msgsMute, hasLength(1));
+      expect((msgsMute[0] as KeyMsg).key.type, term.KeyType.mute);
+    });
+
+    test('modifier keys as standalone presses map to proper KeyType', () {
+      // Modifier keys are now supported in the TUI KeyType enum.
+      final p = UvTuiInputParser();
+
+      // Left Shift via CSI u format: ESC [ 57441 u
+      final msgsLShift = p.parseAll('\x1b[57441u'.codeUnits);
+      expect(msgsLShift, hasLength(1));
+      expect((msgsLShift[0] as KeyMsg).key.type, term.KeyType.leftShift);
+
+      // Right Ctrl via CSI u format: ESC [ 57448 u
+      final msgsRCtrl = p.parseAll('\x1b[57448u'.codeUnits);
+      expect(msgsRCtrl, hasLength(1));
+      expect((msgsRCtrl[0] as KeyMsg).key.type, term.KeyType.rightCtrl);
+
+      // Left Meta via CSI u format: ESC [ 57446 u
+      final msgsLMeta = p.parseAll('\x1b[57446u'.codeUnits);
+      expect(msgsLMeta, hasLength(1));
+      expect((msgsLMeta[0] as KeyMsg).key.type, term.KeyType.leftMeta);
     });
 
     test('F1-F20 map correctly through adapter', () {
