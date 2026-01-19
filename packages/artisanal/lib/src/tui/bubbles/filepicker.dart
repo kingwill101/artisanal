@@ -562,6 +562,7 @@ class FilePickerModel extends ViewComponent {
         final stat = e.statSync();
         return FileEntry(entity: e, stat: stat);
       } catch (_) {
+        // stat() may fail for inaccessible files; create entry without stat.
         return FileEntry(entity: e);
       }
     }).toList();
@@ -992,7 +993,9 @@ class FilePickerModel extends ViewComponent {
       try {
         final target = Link(file.entity.path).targetSync();
         content.write(' → $target');
-      } catch (_) {}
+      } catch (_) {
+        // Symlink target may be unreadable; just skip showing it.
+      }
     }
 
     if (disabled) {
