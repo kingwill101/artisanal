@@ -408,7 +408,33 @@ void main() {
       expect(cmd.isActive, isFalse);
 
       cmd.start((_) {});
-      // Note: Due to initial delay, might not be active immediately
+      // Should be active immediately during initial delay
+      expect(
+        cmd.isActive,
+        isTrue,
+        reason: 'should be active during initial delay',
+      );
+      cmd.stop();
+      expect(cmd.isActive, isFalse);
+    });
+
+    test('isActive is true during initial delay period', () async {
+      final cmd = EveryCmd(
+        interval: const Duration(milliseconds: 500),
+        callback: (time) => const TestMsg('tick'),
+      );
+
+      expect(cmd.isActive, isFalse);
+
+      cmd.start((_) {});
+
+      // Check immediately - should be active during delay
+      expect(cmd.isActive, isTrue);
+
+      // Wait less than the interval (still in delay)
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(cmd.isActive, isTrue);
+
       cmd.stop();
       expect(cmd.isActive, isFalse);
     });

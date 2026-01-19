@@ -150,12 +150,15 @@ Check off items as they are fixed and tested.
     Extended keys should use raw UV events via UvEventMsg.
   - **Test:** `test/tui/uv/tui_adapter_test.dart` - tests for F21+ mapping to unknown
 
-- [ ] **key_table C0 entries potentially dead code**
-  - **File:** `lib/src/uv/key_table.dart:62-94`
+- [x] **key_table C0 entries potentially dead code** (Documented 2025-01-19)
+  - **File:** `lib/src/uv/key_table.dart:66-99`
   - **Issue:** C0 entries never consulted since decoder handles them first
   - **Impact:** Maintenance burden, confusion
-  - **Fix:** Remove dead entries or document fallback purpose
-  - **Test:** Verify code path that uses key_table C0 entries
+  - **Fix:** Added documentation comment explaining entries are for consistency/documentation.
+    The decoder handles all C0 bytes directly in `parseControl()` and always returns
+    KeyPressEvent. The table is only consulted for UnknownEvents, so these entries
+    serve as documentation and fallback consistency.
+  - **Test:** N/A (documentation only)
 
 ---
 
@@ -163,12 +166,12 @@ Check off items as they are fixed and tested.
 
 ### Commands
 
-- [ ] **EveryCmd.isActive wrong during delay**
+- [x] **EveryCmd.isActive wrong during delay** (Fixed 2025-01-19)
   - **File:** `lib/src/tui/cmd.dart:859-860`
   - **Issue:** Returns false during initial delay when actually active
   - **Impact:** Incorrect state reporting
-  - **Fix:** Check `_starter?.isActive` as well
-  - **Test:** EveryCmd with delay reports isActive correctly
+  - **Fix:** Check `_starter?.isActive` as well: `(_starter?.isActive ?? false) || (_timer?.isActive ?? false)`
+  - **Test:** `test/tui/cmd_test.dart` - "isActive is true during initial delay period"
 
 ### Performance
 

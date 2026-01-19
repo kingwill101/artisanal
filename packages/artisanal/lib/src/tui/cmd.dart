@@ -857,7 +857,12 @@ class EveryCmd extends Cmd {
   }
 
   /// Whether the timer is active.
-  bool get isActive => _timer?.isActive ?? false;
+  ///
+  /// Returns `true` if either the initial delay timer or the repeating
+  /// timer is active. This correctly reports activity during the initial
+  /// delay period before the first tick.
+  bool get isActive =>
+      (_starter?.isActive ?? false) || (_timer?.isActive ?? false);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,87 @@
+Below is a detailed repo review of ormed, focusing on overall structure, driver risk areas, and SQL optimization opportunities. I only used repo source and local commands (listed at the end), with citations to the relevant files.
+High-level review (what’s strong)
+
+    Broad feature coverage and clear positioning. The top-level README enumerates a robust set of ORM features (codegen, query builder, relations, migrations, observability, etc.) and explicitly documents SQLite/Postgres/MySQL support, which is consistent with the driver packages present in the repo.
+
+    Shared SQL compilation pipeline with driver-specific grammars. The core QueryGrammar handles unions, group limits, and common SQL building logic before delegating to dialect-specific overrides, which is a solid architectural split for cross-db behavior.
+
+    Driver feature flags are centralized. Driver capabilities and query-update row identifiers are defined in DriverMetadata, offering a centralized policy layer for cross-db behavior decisions.
+
+    Safety/quality linting for raw SQL usage. There are analyzer rules to warn about unsafe raw SQL interpolation and missing aliases in selectRaw, which helps reduce common correctness and security errors in user code.
+
+Potential issues / risk areas (with evidence)
+1. MySQL “RETURNING” capability mismatch
+
+    The MySQL driver’s metadata advertises DriverCapability.returning, but the implementation explicitly states MySQL/MariaDB don’t support native RETURNING and that non-insert returns are ignored.
+
+    Why it matters: If higher-level logic relies on DriverCapability.returning as authoritative, there’s risk of feature mis-detection or misleading behavior.
+
+    Suggested improvement: Consider removing DriverCapability.returning from MySQL’s capability set or updating capability checks to reflect the “insert-only simulated return” limitation.
+
+2. MySQL query-update row identifier assumes id
+
+    MySQL’s queryUpdateRowIdentifier defaults to id, and requiresPrimaryKeyForQueryUpdate is false; this could be incorrect for tables without an id column or with different PK naming conventions.
+
+    Why it matters: Query-builder updates on tables without id could silently misbehave.
+
+    Suggested improvement: Document this strongly, or force PK requirement unless a row identifier override is provided per model.
+
+3. Postgres uses ctid as fallback row identifier
+
+    Postgres uses ctid as the row identifier for query updates without PKs.
+
+    Why it matters: ctid is physical and can change with updates/vacuum; it’s safe within a single statement but can surprise users if assumed stable.
+
+    Suggested improvement: Call this out in user docs and possibly warn when using query updates on tables without PKs.
+
+4. SQL preview substitution is best-effort
+
+    substituteBindingsIntoRawSql is intended for “best-effort” display and does manual placeholder substitution with simple escaping rules.
+
+    Why it matters: Logging/rendered SQL may not accurately represent binary or complex parameter values; users might misinterpret logs or copy/paste unsafe SQL.
+
+    Suggested improvement: Clearly label preview SQL as best-effort only (e.g., in logs) and avoid presenting it as an authoritative statement for execution.
+
+Driver-specific observations (quality & behavior)
+Postgres
+
+    The driver exposes rich capabilities (distinct-on, returning, transactions, etc.) and uses PostgresQueryGrammar for dialect-specific SQL like DISTINCT ON, JSON ops, and full-text search.
+
+    Observation: The driver is feature-complete and well-aligned with Postgres capabilities.
+
+MySQL/MariaDB
+
+    The driver defers to MySqlQueryGrammar, which includes MySQL-specific behavior like forced LIMIT for offsets and explicit index hints.
+
+    Observation: Query compilation is robust but includes performance-sensitive behaviors (see optimization suggestions below).
+
+SQL optimization opportunities
+
+    Avoid offset-only pagination in MySQL.
+    The MySQL grammar injects a huge LIMIT when OFFSET is used without a LIMIT (LIMIT 18446744073709551615 OFFSET ?). This can create full scans and poor plans on large tables.
+
+    Recommendation: Prefer keyset pagination or always specify LIMIT with OFFSET.
+
+    Leverage DISTINCT ON in Postgres where appropriate.
+    Postgres grammar supports DISTINCT ON, which can be more efficient than DISTINCT + subquery patterns in some cases, especially when combined with index ordering.
+
+    Recommendation: If query builder exposes a distinct-on API, encourage its use for “latest per group” patterns.
+
+    Use index hints for MySQL when query planners struggle.
+    MySQL grammar supports USE/FORCE/IGNORE index hints, which can be a practical performance tool for complex joins or skewed data distributions.
+
+    Recommendation: Make sure query builder surfaces index hint APIs in a discoverable way.
+
+    Query result caching exists but may be underutilized.
+    A built-in QueryCache exists with TTLs and cache hit/miss events, keyed by SQL+bindings hash.
+
+    Recommendation: Encourage users to use this cache for read-heavy paths, and consider an opt-in DSL hook if not already wired into the builder.
+
+    Group-limit wrapper queries may be heavy.
+    The base grammar implements group-limit via a subquery wrapper and row-number filter logic, which can be heavier than native window functions or dialect-specific optimizations.
+
+    Recommendation: Consider per-dialect group-limit optimization (e.g., ROW_NUMBER() over partitions in Postgres/MySQL 8+).
+
+Additional improvement suggestions (not strictly issues)
+
+    Elevate raw-SQL warnings in stricter environments. The analyzer rules are warnings; teams could consider making them errors or enabling them in CI for production services to reduce injection risk.

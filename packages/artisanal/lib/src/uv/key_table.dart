@@ -64,7 +64,19 @@ Map<String, Key> buildKeysTable(
   final sel = Key(code: selCode);
 
   final table = <String, Key>{
-    // C0 control characters
+    // C0 control characters (0x00-0x1F, 0x7F)
+    //
+    // NOTE: These entries are primarily for documentation and consistency.
+    // The decoder (`decoder.dart`) handles all C0 bytes directly in
+    // `parseControl()` and always returns a KeyPressEvent, never an
+    // UnknownEvent. Since this table is only consulted for UnknownEvents
+    // (see `tui_adapter.dart`), these C0 entries are not reached during
+    // normal operation.
+    //
+    // They are retained for:
+    // 1. Documentation of what each C0 byte represents
+    // 2. Reference for `buildKeysTable()` when building Alt-modified variants
+    // 3. Fallback consistency if decoder behavior ever changes
     '\x00': nulKey,
     '\x01': Key(code: 'a'.codeUnitAt(0), mod: KeyMod.ctrl),
     '\x02': Key(code: 'b'.codeUnitAt(0), mod: KeyMod.ctrl),

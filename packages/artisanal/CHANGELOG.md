@@ -19,6 +19,7 @@
 - **Fixed**: Unicode width for Variation Selectors (VS1-VS256) now correctly returns 0.
 - **Fixed**: Regional Indicator Symbols for flags now return correct emoji width.
 - **Fixed**: Expanded emoji width ranges to cover Miscellaneous Symbols, Dingbats, and Extended-A.
+- **Fixed**: `EveryCmd.isActive` now correctly returns `true` during initial delay period.
 
 ### Improvements
 
@@ -32,6 +33,8 @@
   ANSI color preservation through wrap, and program lifecycle edge cases.
 - Added tests for extended function keys (F21+) and media keys mapping behavior.
 - Added comprehensive Unicode width edge case tests (ZWJ emoji, flags, variation selectors, CJK).
+- Added tests for `EveryCmd.isActive` behavior during initial delay period.
+- **Documented**: key_table C0 entries purpose (consistency/documentation, not actively used).
 
 ## 0.1.2
 
