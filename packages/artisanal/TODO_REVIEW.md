@@ -110,12 +110,12 @@ Check off items as they are fixed and tested.
   - **Fix:** Changed all renderers to use `Stopwatch` for elapsed time measurement
   - **Test:** All existing tests pass
 
-- [ ] **Missing Unicode width ranges**
+- [x] **Missing Unicode width ranges** (Fixed 2025-01-19)
   - **File:** `lib/src/unicode/width.dart:91-101`
   - **Issue:** CJK Extension B+, Regional Indicators, Variation Selectors incomplete
   - **Impact:** Some wide characters measured as single-width
-  - **Fix:** Expand Unicode ranges per UAX #11
-  - **Test:** Measure width of characters from missing ranges
+  - **Fix:** Added Variation Selectors (VS1-VS256) as zero-width, added Regional Indicators and expanded emoji ranges
+  - **Test:** `test/unicode/width_edge_cases_test.dart` - comprehensive tests for emoji, ZWJ sequences, regional indicators
 
 ### Program Lifecycle
 
@@ -142,12 +142,13 @@ Check off items as they are fixed and tested.
 
 ### Input/Key Handling
 
-- [ ] **KeyType missing extended keys**
+- [x] **KeyType missing extended keys** (Documented 2025-01-19)
   - **File:** `lib/src/terminal/keys.dart:29-166`
   - **Issue:** F21-F63, media keys, lock keys not in KeyType enum
   - **Impact:** Extended keys become `KeyType.unknown` in TUI mode
-  - **Fix:** Add extended key types or document normalization
-  - **Test:** F21 key should have proper type or documented unknown
+  - **Fix:** Documented the behavior in KeyType enum docs and unknown value docs.
+    Extended keys should use raw UV events via UvEventMsg.
+  - **Test:** `test/tui/uv/tui_adapter_test.dart` - tests for F21+ mapping to unknown
 
 - [ ] **key_table C0 entries potentially dead code**
   - **File:** `lib/src/uv/key_table.dart:62-94`
@@ -203,13 +204,13 @@ Check off items as they are fixed and tested.
 - [x] Test: LF (0x0A) decoded as Enter by default (decoder)
 - [x] Test: LF (0x0A) decoded as Ctrl+J with legacy flag (decoder)
 - [x] Test: CR (0x0D) decoded as Enter by default (decoder)
-- [ ] Test: CR (0x0D) decoded as Ctrl+M with legacy flag (decoder)
+- [x] Test: CR (0x0D) decoded as Ctrl+M with legacy flag (decoder) - exists in decoder_parity_test.dart:219-223
 - [x] Test: key_table lookup for 0x0A returns Enter
 - [x] Test: key_table lookup for 0x0D returns Enter
 - [x] Test: Plain 'j' key distinct from Enter/Ctrl+J
 - [x] Test: TUI parser and UV decoder consistent for all C0 codes (LF, CR, Tab)
 - [x] Test: Modifier preservation through UV -> TUI adapter
-- [ ] Test: Extended keys (F21+, media) handled gracefully
+- [x] Test: Extended keys (F21+, media) handled gracefully - added in tui_adapter_test.dart
 
 ### Program Lifecycle Tests
 
@@ -227,7 +228,7 @@ Check off items as they are fixed and tested.
 
 - [x] Test: Wide characters (CJK) render correctly
 - [x] Test: Wide characters survive cloneArea
-- [ ] Test: Emoji with ZWJ sequences measure correctly
+- [x] Test: Emoji with ZWJ sequences measure correctly - added in width_edge_cases_test.dart
 - [x] Test: Truecolor preserved through wrap
 - [x] Test: 256-color preserved through wrap
 - [x] Test: Frame timing uses Stopwatch (immune to clock adjustments)

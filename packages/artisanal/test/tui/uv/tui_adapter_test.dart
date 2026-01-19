@@ -136,5 +136,57 @@ void main() {
       );
       expect(key, isNot(equals(key3)));
     });
+
+    test('extended function keys (F21+) map to unknown KeyType', () {
+      // Extended function keys F21-F63 are defined in UV but the TUI KeyType
+      // enum only has F1-F20. Keys beyond F20 should gracefully fall back
+      // to KeyType.unknown rather than crash.
+      //
+      // This is documented behavior: applications that need F21+ should use
+      // the raw UV events directly via UvEventMsg.
+      final p = UvTuiInputParser();
+
+      // F21 via CSI escape sequence: ESC [ 1 ; modifier P  (21~)
+      // Actually F21 in xterm-style is ESC [ 21 ~
+      // But in CSI u format (Kitty protocol): ESC [ 57384 u
+      final msgs = p.parseAll('\x1b[57384u'.codeUnits); // F21 in CSI u format
+      expect(msgs, hasLength(1));
+      expect(msgs[0], isA<KeyMsg>());
+      final k = (msgs[0] as KeyMsg).key;
+      // F21 maps to unknown since KeyType only has F1-F20
+      expect(k.type, term.KeyType.unknown);
+    });
+
+    test('media keys map to unknown KeyType', () {
+      // Media keys (play, pause, etc.) are defined in UV but not in TUI KeyType.
+      // They should gracefully fall back to KeyType.unknown.
+      final p = UvTuiInputParser();
+
+      // Media Play via CSI u format: ESC [ 57428 u
+      final msgs = p.parseAll('\x1b[57428u'.codeUnits);
+      expect(msgs, hasLength(1));
+      expect(msgs[0], isA<KeyMsg>());
+      final k = (msgs[0] as KeyMsg).key;
+      expect(k.type, term.KeyType.unknown);
+    });
+
+    test('F1-F20 map correctly through adapter', () {
+      final p = UvTuiInputParser();
+
+      // F1 via CSI u format: ESC [ 57364 u
+      final msgsF1 = p.parseAll('\x1b[57364u'.codeUnits);
+      expect(msgsF1, hasLength(1));
+      expect((msgsF1[0] as KeyMsg).key.type, term.KeyType.f1);
+
+      // F12 via CSI u format: ESC [ 57375 u
+      final msgsF12 = p.parseAll('\x1b[57375u'.codeUnits);
+      expect(msgsF12, hasLength(1));
+      expect((msgsF12[0] as KeyMsg).key.type, term.KeyType.f12);
+
+      // F20 via CSI u format: ESC [ 57383 u
+      final msgsF20 = p.parseAll('\x1b[57383u'.codeUnits);
+      expect(msgsF20, hasLength(1));
+      expect((msgsF20[0] as KeyMsg).key.type, term.KeyType.f20);
+    });
   });
 }

@@ -82,8 +82,10 @@ int runeWidth(int rune) {
   if (rune == 0x200B || // ZWSP
       rune == 0x200C || // ZWNJ
       rune == 0x200D || // ZWJ
-      rune == 0xFEFF) {
-    // BOM
+      rune == 0xFEFF || // BOM
+      (rune >= 0xFE00 && rune <= 0xFE0F) || // Variation Selectors (VS1-VS16)
+      (rune >= 0xE0100 && rune <= 0xE01EF)) {
+    // Variation Selectors Supplement (VS17-VS256)
     return 0;
   }
 
@@ -101,7 +103,15 @@ int runeWidth(int rune) {
   }
 
   // Emoji range subset. Terminal behavior varies (1 or 2).
-  if (rune >= 0x1F300 && rune <= 0x1F9FF) {
+  if ((rune >= 0x1F300 &&
+          rune <=
+              0x1F9FF) || // Miscellaneous Symbols and Pictographs, Emoticons, etc.
+      (rune >= 0x1F1E0 &&
+          rune <= 0x1F1FF) || // Regional Indicator Symbols (flags)
+      (rune >= 0x1FA00 && rune <= 0x1FAFF) || // Chess Symbols, Extended-A
+      (rune >= 0x2600 && rune <= 0x26FF) || // Miscellaneous Symbols
+      (rune >= 0x2700 && rune <= 0x27BF)) {
+    // Dingbats
     return emojiPresentationWidth;
   }
 

@@ -26,6 +26,32 @@ import '../unicode/grapheme.dart' as uni;
 /// Types of keyboard input events.
 ///
 /// Used to categorize parsed key events into semantic categories.
+///
+/// ## Extended Keys
+///
+/// This enum supports function keys F1-F20 and common navigation keys.
+/// Extended function keys (F21-F63), media keys, and other specialized keys
+/// from the Kitty keyboard protocol are mapped to [unknown].
+///
+/// For applications that need access to extended keys, use the raw UV events
+/// directly via [UvEventMsg]. The UV layer provides full support for:
+/// - Function keys F21-F63
+/// - Media keys (play, pause, stop, etc.)
+/// - Lock keys (CapsLock, NumLock, ScrollLock)
+/// - Modifier-only keys (left/right Shift, Ctrl, Alt, etc.)
+///
+/// Example handling extended keys:
+/// ```dart
+/// (Msg msg, Model model) update(Msg msg) {
+///   if (msg is UvEventMsg && msg.event is KeyPressEvent) {
+///     final key = (msg.event as KeyPressEvent).key();
+///     if (key.code == keyF21) {
+///       // Handle F21
+///     }
+///   }
+///   // ...
+/// }
+/// ```
 enum KeyType {
   // ─────────────────────────────────────────────────────────────────────────────
   // Character Input
@@ -162,6 +188,9 @@ enum KeyType {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Unknown or unrecognized key.
+  ///
+  /// This includes extended keys not in this enum (F21-F63, media keys, etc.).
+  /// For extended key support, use raw UV events via [UvEventMsg].
   unknown,
 }
 

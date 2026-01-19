@@ -16,16 +16,22 @@
 - **Fixed**: BatchMsg could cause stack overflow with deeply nested batches.
 - **Fixed**: Double cleanup possible - added guard flag.
 - **Fixed**: Frame timing drift - changed renderers to use `Stopwatch` instead of `DateTime.now()`.
+- **Fixed**: Unicode width for Variation Selectors (VS1-VS256) now correctly returns 0.
+- **Fixed**: Regional Indicator Symbols for flags now return correct emoji width.
+- **Fixed**: Expanded emoji width ranges to cover Miscellaneous Symbols, Dingbats, and Extended-A.
 
 ### Improvements
 
 - **Improved**: Cleanup errors are now collected and accessible via `program.cleanupErrors` for debugging.
 - **Added**: `meta`, `hyper`, `superKey` fields to TUI Key class for extended modifier support.
+- **Documented**: Extended keys (F21-F63, media keys) map to `KeyType.unknown` - use `UvEventMsg` for full access.
 
 ### Tests
 
 - Added comprehensive tests for C0 code handling, modifier preservation, wide character cloning,
   ANSI color preservation through wrap, and program lifecycle edge cases.
+- Added tests for extended function keys (F21+) and media keys mapping behavior.
+- Added comprehensive Unicode width edge case tests (ZWJ emoji, flags, variation selectors, CJK).
 
 ## 0.1.2
 
