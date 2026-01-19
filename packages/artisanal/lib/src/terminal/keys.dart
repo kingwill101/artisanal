@@ -987,10 +987,20 @@ abstract final class Keys {
   // Byte Aliases
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /// Enter key byte (line feed).
+  /// Enter key byte (line feed, 0x0A).
+  ///
+  /// On Unix-like systems, pressing Enter sends LF (line feed, 0x0A).
+  /// This is the default "enter" byte used by the TUI parser.
+  ///
+  /// See also [enterCR] for Windows-style carriage return.
   static const enterByte = lineFeed;
 
-  /// Enter key byte (carriage return variant).
+  /// Enter key byte (carriage return, 0x0D).
+  ///
+  /// On Windows and some terminals, pressing Enter sends CR (carriage return, 0x0D).
+  /// Most Unix terminals can be configured to send either LF or CR.
+  ///
+  /// See also [enterByte] for Unix-style line feed.
   static const enterCR = carriageReturn;
 
   /// Backspace key byte (DEL on most terminals).

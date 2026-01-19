@@ -175,28 +175,33 @@ Check off items as they are fixed and tested.
 
 ### Performance
 
-- [ ] **Unnecessary Cell cloning**
+- [x] **Unnecessary Cell cloning** (Analyzed 2025-01-19 - NOT A BUG)
   - **File:** `lib/src/uv/buffer.dart:118`
   - **Issue:** Every `set()` clones cell even when not needed
-  - **Impact:** Performance overhead in hot path
-  - **Fix:** Only clone when necessary
-  - **Test:** Benchmark buffer operations
+  - **Analysis:** The clone is necessary because `Cell` is mutable (fields are not `final`).
+    Without cloning, external code could mutate a Cell after passing it to `set()`,
+    corrupting the buffer state. This is correct defensive programming.
+  - **Future optimization:** Make `Cell` immutable with `copyWith` patterns,
+    but this would be a breaking API change requiring careful migration.
 
 ### Code Quality
 
-- [ ] **Magic numbers in Win32/SS3**
-  - **File:** `lib/src/uv/decoder.dart:2138, 431`
-  - **Issue:** Hardcoded VK codes and key ranges
-  - **Impact:** Code readability
-  - **Fix:** Extract to named constants
-  - **Test:** N/A (refactoring)
+- [x] **Magic numbers in Win32/SS3** (Analyzed 2025-01-19 - WON'T FIX)
+  - **File:** `lib/src/uv/decoder.dart` (219 hex literals throughout)
+  - **Issue:** Hardcoded VK codes, ASCII values, and key ranges
+  - **Analysis:** The decoder has inline comments explaining each magic number
+    (e.g., `0x08: // VK_BACK`, `0x41: // A`). Extracting 200+ constants would:
+    - Significantly increase code size
+    - Diverge from upstream Go implementation (harder to port fixes)
+    - Provide marginal readability improvement over existing comments
+  - **Recommendation:** Accept as technical debt; inline comments are sufficient.
 
-- [ ] **enterByte docs unclear**
-  - **File:** `lib/src/terminal/keys.dart:918-919`
+- [x] **enterByte docs unclear** (Fixed 2025-01-19)
+  - **File:** `lib/src/terminal/keys.dart:991-1005`
   - **Issue:** `enterByte = LF` vs `enterCR = CR` convention not documented
   - **Impact:** Developer confusion
-  - **Fix:** Add documentation explaining Unix (LF) vs Windows (CR) convention
-  - **Test:** N/A (documentation)
+  - **Fix:** Added comprehensive documentation explaining Unix (LF) vs Windows (CR) conventions
+    and cross-references between the two constants.
 
 ---
 
