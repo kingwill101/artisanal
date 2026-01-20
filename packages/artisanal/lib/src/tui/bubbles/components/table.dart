@@ -1,3 +1,44 @@
+/// Table display components for TUI applications.
+///
+/// Provides data tables with headers, rows, borders, and per-cell styling.
+///
+/// ## Basic Usage
+///
+/// ```dart
+/// // Simple table
+/// print(TableComponent(
+///   headers: ['ID', 'Name', 'Status'],
+///   rows: [
+///     ['1', 'Alice', 'Active'],
+///     ['2', 'Bob', 'Inactive'],
+///   ],
+/// ).render());
+///
+/// // Fluent builder API
+/// print(Table()
+///     .headers(['Name', 'Status'])
+///     .row(['Alice', 'Active'])
+///     .row(['Bob', 'Inactive'])
+///     .border(Border.rounded)
+///     .headerStyle(Style().bold())
+///     .render());
+/// ```
+///
+/// ## Conditional Styling
+///
+/// Use [Table.styleFunc] for per-cell conditional styling:
+/// ```dart
+/// table.styleFunc((row, col, data) {
+///   if (data == 'Active') return Style().foreground(Colors.green);
+///   if (data == 'Error') return Style().foreground(Colors.red);
+///   return null; // No special styling
+/// });
+/// ```
+///
+/// {@category TUI}
+/// {@category Components}
+library;
+
 import '../../../style/border.dart' as style_border;
 import '../../../style/color.dart';
 import '../../../style/style.dart';

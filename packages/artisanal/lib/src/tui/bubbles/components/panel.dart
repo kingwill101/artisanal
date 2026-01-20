@@ -1,3 +1,38 @@
+/// Panel display components for TUI applications.
+///
+/// Provides bordered panel containers similar to [BoxBuilder] but with
+/// additional features like content alignment and preset styles.
+///
+/// ## Basic Usage
+///
+/// ```dart
+/// // Simple panel
+/// print(PanelComponent(
+///   content: 'Welcome to the application!',
+///   title: 'Welcome',
+/// ).render());
+///
+/// // Fluent builder API
+/// print(Panel()
+///     .title('Server Status')
+///     .content('Running\nUptime: 24h')
+///     .titleAlign(PanelAlignment.center)
+///     .titleStyle(Style().bold())
+///     .render());
+/// ```
+///
+/// ## Presets
+///
+/// Use factory methods for common styles:
+/// ```dart
+/// print(PanelPresets.success('Done', 'Task completed').render());
+/// print(PanelPresets.error('Error', 'Connection failed').render());
+/// ```
+///
+/// {@category TUI}
+/// {@category Components}
+library;
+
 import '../../../style/border.dart' as style_border;
 import '../../../style/color.dart';
 import '../../../style/style.dart';

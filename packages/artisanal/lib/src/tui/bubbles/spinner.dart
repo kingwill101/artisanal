@@ -1,3 +1,47 @@
+/// Animated spinner widget for loading/activity states.
+///
+/// Provides [SpinnerModel] for animated spinners and [Spinners] with
+/// pre-defined animation presets.
+///
+/// ## Usage
+///
+/// ```dart
+/// // Create a spinner with default animation
+/// final spinner = SpinnerModel();
+///
+/// // Or use a specific animation
+/// final spinner = SpinnerModel(spinner: Spinners.dot);
+///
+/// // Start animation in init()
+/// @override
+/// Cmd? init() => spinner.tick();
+///
+/// // Update handles animation timing
+/// @override
+/// (Model, Cmd?) update(Msg msg) {
+///   final (newSpinner, cmd) = spinner.update(msg);
+///   return (MyModel(spinner: newSpinner), cmd);
+/// }
+///
+/// // View renders current frame
+/// @override
+/// String view() => '${spinner.view()} Loading...';
+/// ```
+///
+/// ## Available Spinners
+///
+/// - [Spinners.line] - Classic | / - \
+/// - [Spinners.dot] - Braille dots ⣾⣽⣻⢿⡿⣟⣯⣷
+/// - [Spinners.miniDot] - Small braille ⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏
+/// - [Spinners.pulse] - Block pulse █▓▒░
+/// - [Spinners.globe] - Globe emoji 🌍🌎🌏
+/// - [Spinners.moon] - Moon phases 🌑🌒🌓🌔🌕🌖🌗🌘
+/// - And many more...
+///
+/// {@category TUI}
+/// {@category Bubbles}
+library;
+
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';

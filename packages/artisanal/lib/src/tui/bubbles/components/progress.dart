@@ -1,3 +1,28 @@
+/// Progress indicator components for TUI applications.
+///
+/// Provides progress bars and spinner frames for displaying operation
+/// progress to users.
+///
+/// ## Progress Bar
+///
+/// ```dart
+/// print(ProgressBar(
+///   current: 75,
+///   total: 100,
+///   showPercentage: true,
+/// ).render());
+/// // Output: ██████████████████████████████░░░░░░░░░░ 75%
+/// ```
+///
+/// ## Spinner Frame
+///
+/// For animated spinners, use [SpinnerFrame] with a model that cycles
+/// through frames. See also [SpinnerModel] in the bubbles library.
+///
+/// {@category TUI}
+/// {@category Components}
+library;
+
 import '../../../style/color.dart';
 import '../../../style/style.dart';
 import 'base.dart';

@@ -1,3 +1,36 @@
+/// Alert display components for TUI applications.
+///
+/// Provides styled alert/notice blocks for displaying messages to users
+/// with semantic meaning (info, success, warning, error, note).
+///
+/// ## Basic Usage
+///
+/// ```dart
+/// // Simple inline alert
+/// print(AlertComponent(
+///   message: 'Operation completed!',
+///   type: AlertType.success,
+/// ).render());
+///
+/// // Fluent builder API
+/// print(Alert()
+///     .warning()
+///     .message('Disk space low')
+///     .block()
+///     .render());
+/// ```
+///
+/// ## Display Styles
+///
+/// Alerts support three display styles:
+/// - [AlertDisplayStyle.inline]: Simple `[PREFIX] message` format
+/// - [AlertDisplayStyle.block]: Message in a bordered box
+/// - [AlertDisplayStyle.large]: Padded box with extra spacing
+///
+/// {@category TUI}
+/// {@category Components}
+library;
+
 import '../../../style/border.dart' as style_border;
 import '../../../style/color.dart';
 import '../../../style/style.dart';

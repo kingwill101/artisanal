@@ -36,7 +36,14 @@ enum EchoMode {
 typedef ValidateFunc = String? Function(String value);
 
 /// Style state for focused and blurred states.
+///
+/// Contains [Style] configurations for each visual element of a [TextInputModel].
+/// Separate style states allow different appearances when the input is focused
+/// vs. blurred.
 class TextInputStyleState {
+  /// Creates a style state with optional styles for each element.
+  ///
+  /// All styles default to an empty [Style] if not provided.
   TextInputStyleState({
     Style? text,
     Style? placeholder,
@@ -47,14 +54,27 @@ class TextInputStyleState {
        suggestion = suggestion ?? Style(),
        prompt = prompt ?? Style();
 
+  /// Style for the entered text.
   Style text;
+
+  /// Style for placeholder text shown when input is empty.
   Style placeholder;
+
+  /// Style for autocomplete suggestion text.
   Style suggestion;
+
+  /// Style for the prompt prefix.
   Style prompt;
 }
 
 /// Style for the cursor.
+///
+/// Controls the visual appearance of the cursor in a [TextInputModel],
+/// including color, shape, and blinking behavior.
 class TextInputCursorStyle {
+  /// Creates a cursor style with the specified options.
+  ///
+  /// Defaults to a blinking block cursor.
   TextInputCursorStyle({
     this.color,
     this.shape = CursorShape.block,
@@ -62,14 +82,29 @@ class TextInputCursorStyle {
     this.blinkSpeed = const Duration(milliseconds: 500),
   });
 
+  /// Color of the cursor. If null, uses the terminal default.
   Color? color;
+
+  /// Shape of the cursor (block, underline, or bar).
   CursorShape shape;
+
+  /// Whether the cursor blinks.
   bool blink;
+
+  /// Duration between blink state changes.
   Duration blinkSpeed;
 }
 
 /// Styles for the text input.
+///
+/// Groups all style configuration for a [TextInputModel]:
+/// - [focused]: Styles applied when the input is focused
+/// - [blurred]: Styles applied when the input is not focused
+/// - [cursor]: Cursor appearance settings
 class TextInputStyles {
+  /// Creates a text input styles configuration.
+  ///
+  /// All style groups default to their respective defaults if not provided.
   TextInputStyles({
     TextInputStyleState? focused,
     TextInputStyleState? blurred,
@@ -78,12 +113,23 @@ class TextInputStyles {
        blurred = blurred ?? TextInputStyleState(),
        cursor = cursor ?? TextInputCursorStyle();
 
+  /// Styles used when the input is focused.
   TextInputStyleState focused;
+
+  /// Styles used when the input is blurred (not focused).
   TextInputStyleState blurred;
+
+  /// Cursor appearance settings.
   TextInputCursorStyle cursor;
 }
 
 /// Returns the default styles for the text input.
+///
+/// Creates sensible defaults for both dark and light terminal backgrounds.
+///
+/// - [isDark]: Set to `true` (default) for dark terminals, `false` for light.
+///
+/// Returns a [TextInputStyles] with appropriate colors for the background type.
 TextInputStyles defaultTextInputStyles({bool isDark = true}) {
   return TextInputStyles(
     focused: TextInputStyleState(
@@ -107,6 +153,21 @@ TextInputStyles defaultTextInputStyles({bool isDark = true}) {
 }
 
 /// Key map for text input navigation and editing.
+///
+/// Defines all keyboard shortcuts for cursor movement, text deletion,
+/// clipboard operations, and suggestion navigation. Each binding can be
+/// customized by providing a custom [KeyBinding].
+///
+/// Default bindings follow common terminal/editor conventions:
+/// - Arrow keys for navigation
+/// - Ctrl+A/E for line start/end (Emacs-style)
+/// - Alt+Arrow for word navigation
+/// - Ctrl+W for delete word backward
+/// - Ctrl+K/U for delete after/before cursor
+///
+/// See also:
+/// - [KeyBinding] for defining custom key bindings
+/// - [KeyMap] for the interface this implements
 class TextInputKeyMap implements KeyMap {
   /// Creates a text input key map with default bindings.
   TextInputKeyMap({

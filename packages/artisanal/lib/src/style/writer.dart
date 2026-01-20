@@ -1,4 +1,43 @@
 // ignore_for_file: non_constant_identifier_names
+/// Lipgloss-style writer utilities for styled terminal output.
+///
+/// Provides Go-like print functions ([Print], [Println], [Printf]) that
+/// automatically downsample ANSI colors based on terminal capabilities.
+///
+/// The global [Writer] controls output destination and color profile.
+/// Use [Sprint]/[Sprintln]/[Sprintf] for string-returning variants.
+///
+/// ## Usage
+///
+/// ```dart
+/// import 'package:artisanal/style.dart';
+///
+/// // Print styled text (auto-downsampled for terminal)
+/// final style = Style().foreground(Colors.red).bold();
+/// Println(style.render('Error: Something went wrong'));
+///
+/// // Printf-style formatting
+/// Printf('Hello, %s! You have %d messages.\n', 'Alice', 5);
+///
+/// // Get styled string without printing
+/// final msg = Sprint(style.render('Warning'));
+/// ```
+///
+/// ## Color Downsampling
+///
+/// Output is automatically adjusted for terminal capabilities:
+/// - [ColorProfile.trueColor]: Full 24-bit color (unchanged)
+/// - [ColorProfile.ansi256]: Downsample to 256 colors
+/// - [ColorProfile.ansi]: Downsample to 16 colors
+/// - [ColorProfile.noColor]: Strip color codes, keep text
+/// - [ColorProfile.ascii]: Strip all ANSI escape sequences
+///
+/// ## Note
+///
+/// These functions are for non-TUI output. Do not write directly to stdout
+/// while a `tui.Program` is running with the UV renderer.
+///
+/// {@category Style}
 library;
 
 import 'dart:io' as io;
@@ -39,6 +78,14 @@ String stringForProfile(String input, ColorProfile profile) {
   return cp_downsample.downsampleSgr(input, p);
 }
 
+/// Prints values to [Writer] without a trailing newline.
+///
+/// Concatenates all non-null values without separators.
+/// Returns the number of characters written.
+///
+/// ```dart
+/// Print('Hello, ', 'world'); // Outputs: Hello, world
+/// ```
 int Print(
   Object? v1, [
   Object? v2,
@@ -48,6 +95,14 @@ int Print(
   Object? v6,
 ]) => PrintAll([v1, v2, v3, v4, v5, v6].where((it) => it != null));
 
+/// Prints values to [Writer] with a trailing newline.
+///
+/// Concatenates all non-null values with space separators.
+/// Returns the number of characters written (including newline).
+///
+/// ```dart
+/// Println('Hello,', 'world'); // Outputs: Hello, world\n
+/// ```
 int Println([
   Object? v1,
   Object? v2,
@@ -57,6 +112,15 @@ int Println([
   Object? v6,
 ]) => PrintlnAll([v1, v2, v3, v4, v5, v6].where((it) => it != null));
 
+/// Prints formatted output to [Writer].
+///
+/// Supports common printf format specifiers: %s, %d, %i, %f, %x, %X, %o, %b,
+/// %e, %E, %g, %G, %a, %A, %c, %p. Use %% for a literal percent sign.
+/// Returns the number of characters written.
+///
+/// ```dart
+/// Printf('Name: %s, Age: %d\n', 'Alice', 30);
+/// ```
 int Printf(
   String format, [
   Object? v1,
@@ -70,6 +134,13 @@ int Printf(
   [v1, v2, v3, v4, v5, v6].where((it) => it != null).toList(),
 );
 
+/// Returns concatenated values as a string (no trailing newline).
+///
+/// Like [Print] but returns the string instead of printing.
+///
+/// ```dart
+/// final s = Sprint('Hello, ', 'world'); // 'Hello, world'
+/// ```
 String Sprint(
   Object? v1, [
   Object? v2,
@@ -79,6 +150,13 @@ String Sprint(
   Object? v6,
 ]) => SprintAll([v1, v2, v3, v4, v5, v6].where((it) => it != null));
 
+/// Returns concatenated values as a string with trailing newline.
+///
+/// Like [Println] but returns the string instead of printing.
+///
+/// ```dart
+/// final s = Sprintln('Hello,', 'world'); // 'Hello, world\n'
+/// ```
 String Sprintln([
   Object? v1,
   Object? v2,
@@ -88,6 +166,13 @@ String Sprintln([
   Object? v6,
 ]) => SprintlnAll([v1, v2, v3, v4, v5, v6].where((it) => it != null));
 
+/// Returns formatted string.
+///
+/// Like [Printf] but returns the string instead of printing.
+///
+/// ```dart
+/// final s = Sprintf('Name: %s, Age: %d', 'Alice', 30);
+/// ```
 String Sprintf(
   String format, [
   Object? v1,
@@ -101,33 +186,40 @@ String Sprintf(
   [v1, v2, v3, v4, v5, v6].where((it) => it != null).toList(),
 );
 
+/// Prints all values in [values] without separators or newline.
 int PrintAll(Iterable<Object?> values) {
   final out = _join(values, sep: '');
   Writer.write(stringForProfile(out, Writer.colorProfile));
   return out.length;
 }
 
+/// Prints all values in [values] with space separators and trailing newline.
 int PrintlnAll(Iterable<Object?> values) {
   final out = _join(values, sep: ' ');
   Writer.writeln(stringForProfile(out, Writer.colorProfile));
   return out.length + 1;
 }
 
+/// Prints formatted output using all [args].
 int PrintfAll(String format, List<Object?> args) {
   final out = _sprintf(format, args);
   Writer.write(stringForProfile(out, Writer.colorProfile));
   return out.length;
 }
 
+/// Returns all values in [values] concatenated without separators.
 String SprintAll(Iterable<Object?> values) =>
     stringForProfile(_join(values, sep: ''), Writer.colorProfile);
 
+/// Returns all values in [values] concatenated with spaces and newline.
 String SprintlnAll(Iterable<Object?> values) =>
     stringForProfile('${_join(values, sep: ' ')}\n', Writer.colorProfile);
 
+/// Returns formatted string using all [args].
 String SprintfAll(String format, List<Object?> args) =>
     stringForProfile(_sprintf(format, args), Writer.colorProfile);
 
+/// Prints values to a specific [sink] without trailing newline.
 int Fprint(io.IOSink sink, Iterable<Object?> values) {
   final out = _join(values, sep: '');
   final tr = r.TerminalRenderer(output: sink);
@@ -135,6 +227,7 @@ int Fprint(io.IOSink sink, Iterable<Object?> values) {
   return out.length;
 }
 
+/// Prints values to a specific [sink] with trailing newline.
 int Fprintln(io.IOSink sink, Iterable<Object?> values) {
   final out = _join(values, sep: ' ');
   final tr = r.TerminalRenderer(output: sink);
@@ -142,6 +235,7 @@ int Fprintln(io.IOSink sink, Iterable<Object?> values) {
   return out.length + 1;
 }
 
+/// Prints formatted output to a specific [sink].
 int Fprintf(io.IOSink sink, String format, List<Object?> args) {
   final out = _sprintf(format, args);
   final tr = r.TerminalRenderer(output: sink);

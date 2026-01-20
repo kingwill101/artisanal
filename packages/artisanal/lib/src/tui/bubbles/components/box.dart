@@ -1,3 +1,39 @@
+/// Box display components for TUI applications.
+///
+/// Provides bordered box containers for displaying content with optional
+/// titles, padding, and various border styles.
+///
+/// ## Basic Usage
+///
+/// ```dart
+/// // Simple box
+/// print(Box(
+///   content: 'Hello, World!',
+///   title: 'Greeting',
+/// ).render());
+///
+/// // Fluent builder API
+/// print(BoxBuilder()
+///     .title('Status')
+///     .content('All systems operational')
+///     .border(Border.rounded)
+///     .titleStyle(Style().bold().foreground(Colors.green))
+///     .render());
+/// ```
+///
+/// ## Border Styles
+///
+/// Available border styles via [BorderStyle]:
+/// - `rounded`: Rounded corners (╭╮╰╯)
+/// - `single`: Single-line box (┌┐└┘)
+/// - `double`: Double-line box (╔╗╚╝)
+/// - `heavy`: Heavy/thick lines (┏┓┗┛)
+/// - `ascii`: ASCII-only (+---+)
+///
+/// {@category TUI}
+/// {@category Components}
+library;
+
 import '../../../style/border.dart' as style_border;
 import '../../../style/color.dart';
 import '../../../style/style.dart';
