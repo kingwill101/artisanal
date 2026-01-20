@@ -671,8 +671,17 @@ class _SpinnerTaskModel<T> extends ViewComponent {
 
   @override
   Cmd? init() {
-    return Cmd.batch([
+    // Use ParallelCmd to run both commands through Program's command execution.
+    // This ensures both commands start independently rather than Cmd.batch
+    // waiting for all to complete before returning any messages.
+    //
+    // The spinner uses chained tick commands (each tick schedules the next)
+    // while the task runs in parallel. When the task completes and Cmd.quit()
+    // is returned, the program stops and pending tick commands are discarded.
+    return ParallelCmd([
+      // Start spinner animation - uses chained ticks internally
       _spinner.tick(),
+      // Task runs in parallel
       Cmd.perform<T>(
         task,
         onSuccess: (result) => _SpinnerTaskDoneMsg<T>(result),
@@ -695,6 +704,7 @@ class _SpinnerTaskModel<T> extends ViewComponent {
       return (this, Cmd.quit());
     }
 
+    // Update spinner - this returns the next tick command to continue animation
     final (newSpinner, cmd) = _spinner.update(msg);
     _spinner = newSpinner;
     return (this, cmd);

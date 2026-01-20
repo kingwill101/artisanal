@@ -141,6 +141,7 @@ export 'cmd.dart'
         Cmd,
         StreamCmd,
         EveryCmd,
+        ParallelCmd,
         CmdExtension,
         every,
         CmdFunc,

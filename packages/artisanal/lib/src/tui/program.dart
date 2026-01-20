@@ -1686,6 +1686,14 @@ class Program<M extends Model> {
 
   /// Executes a command.
   Future<void> _executeCommand(Cmd cmd) async {
+    // Handle parallel command - execute each command through proper dispatch
+    if (cmd is ParallelCmd) {
+      for (final c in cmd.commands) {
+        unawaited(_executeCommand(c));
+      }
+      return;
+    }
+
     // Handle special command types
     if (cmd is StreamCmd) {
       _streamCommands.add(cmd);

@@ -172,8 +172,11 @@ class InlineAnimation {
 
   void _renderSpinnerFrame(String frame, String message, Duration elapsed) {
     final elapsedStr = _formatDuration(elapsed);
-    terminal.clearLine();
+    // Move to start of line, write content, then clear any leftover chars.
+    // This avoids the flash caused by clearLine() which clears before writing.
+    terminal.cursorToColumn(1);
     terminal.write('$frame $message ${Style().dim().render(elapsedStr)}');
+    terminal.clearLineToEnd();
   }
 
   /// Runs a progress bar animation while executing a task.
@@ -266,10 +269,13 @@ class InlineAnimation {
     final bar = '[${Style().bold().render('=' * filled)}${' ' * empty}]';
     final elapsedStr = _formatDuration(elapsed);
 
-    terminal.clearLine();
+    // Move to start of line, write content, then clear any leftover chars.
+    // This avoids the flash caused by clearLine() which clears before writing.
+    terminal.cursorToColumn(1);
     terminal.write(
       '$message $bar $percent% ${Style().dim().render(elapsedStr)}',
     );
+    terminal.clearLineToEnd();
   }
 
   /// Iterates over items while showing a progress bar.

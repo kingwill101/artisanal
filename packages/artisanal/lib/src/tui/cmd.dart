@@ -865,6 +865,37 @@ class EveryCmd extends Cmd {
       (_starter?.isActive ?? false) || (_timer?.isActive ?? false);
 }
 
+/// A command that executes multiple commands in parallel through the Program's
+/// command execution system.
+///
+/// Unlike [Cmd.batch], which executes commands directly and waits for all to
+/// complete before returning messages, [ParallelCmd] delegates each command
+/// to [Program._executeCommand], allowing special commands like [EveryCmd]
+/// and [StreamCmd] to be properly started.
+///
+/// Use this when you need to start both regular commands and special commands
+/// (like timers or streams) in parallel:
+///
+/// ```dart
+/// @override
+/// Cmd? init() {
+///   return ParallelCmd([
+///     // This EveryCmd will be properly started by Program
+///     EveryCmd(interval: fps, callback: (t) => TickMsg(t)),
+///     // This regular command runs alongside
+///     Cmd.perform(fetchData, onSuccess: DataMsg.new, onError: ErrorMsg.new),
+///   ]);
+/// }
+/// ```
+class ParallelCmd extends Cmd {
+  ParallelCmd(this.commands) : super(_placeholder);
+
+  static Future<Msg?> _placeholder() async => null;
+
+  /// The commands to execute in parallel.
+  final List<Cmd> commands;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Extensions
 // ─────────────────────────────────────────────────────────────────────────────
