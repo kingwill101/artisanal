@@ -127,9 +127,23 @@ bool keyMatches(Key key, List<KeyBinding> bindings) {
           ? (keyName == k || keyStr == k)
           : (keyName.toLowerCase() == k.toLowerCase() || keyStr == k);
       if (matches) return true;
+
+      // Handle special key type aliases (e.g., ' ' for space, '\t' for tab)
+      if (_keyTypeMatchesAlias(key.type, k)) return true;
     }
   }
   return false;
+}
+
+/// Maps binding string aliases to their corresponding KeyType.
+bool _keyTypeMatchesAlias(KeyType type, String alias) {
+  return switch (type) {
+    KeyType.space => alias == ' ',
+    KeyType.tab => alias == '\t',
+    KeyType.enter => alias == '\n' || alias == '\r',
+    KeyType.escape => alias == '\x1b',
+    _ => false,
+  };
 }
 
 /// Checks if a key matches a single binding.

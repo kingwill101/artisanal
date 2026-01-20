@@ -181,6 +181,36 @@ void main() {
       final key = Key(KeyType.up);
       expect(keyMatches(key, []), isFalse);
     });
+
+    test('matches space key with literal space character', () {
+      final binding = KeyBinding(keys: [' ']);
+      final key = Key(KeyType.space);
+      expect(keyMatches(key, [binding]), isTrue);
+    });
+
+    test('matches space key with "space" string', () {
+      final binding = KeyBinding(keys: ['space']);
+      final key = Key(KeyType.space);
+      expect(keyMatches(key, [binding]), isTrue);
+    });
+
+    test('matches tab key with literal tab character', () {
+      final binding = KeyBinding(keys: ['\t']);
+      final key = Key(KeyType.tab);
+      expect(keyMatches(key, [binding]), isTrue);
+    });
+
+    test('matches enter key with newline character', () {
+      final binding = KeyBinding(keys: ['\n']);
+      final key = Key(KeyType.enter);
+      expect(keyMatches(key, [binding]), isTrue);
+    });
+
+    test('matches enter key with carriage return character', () {
+      final binding = KeyBinding(keys: ['\r']);
+      final key = Key(KeyType.enter);
+      expect(keyMatches(key, [binding]), isTrue);
+    });
   });
 
   group('keyMatchesSingle', () {
