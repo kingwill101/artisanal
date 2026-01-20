@@ -252,16 +252,6 @@ class InlineTuiRenderer implements TuiRenderer {
       }
     }
 
-    // Hide cursor during render if configured
-    if (_options.hideCursor) {
-      terminal.hideCursor();
-    }
-
-    // Move cursor back to start position if we've rendered before
-    if (_hasRendered && _lastLineCount > 0) {
-      _moveCursorToStart(_lastLineCount);
-    }
-
     // Count new lines
     int newLineCount;
     if (content.isEmpty) {
@@ -271,20 +261,50 @@ class InlineTuiRenderer implements TuiRenderer {
       newLineCount = segments.length - (content.endsWith('\n') ? 1 : 0);
     }
 
-    // Write the new view with clear-to-end-of-line after each line
-    // This overwrites old content without flashing
+    // Build the entire frame in a single buffer to prevent flashing.
+    // Multiple terminal.write() calls allow the terminal to flush between
+    // writes, causing visible cursor movement before content appears.
+    final frameBuffer = StringBuffer();
+
+    // Hide cursor during render to prevent cursor flicker
+    if (terminal.supportsAnsi) {
+      frameBuffer.write('\x1b[?25l'); // Hide cursor
+    }
+
+    // Move cursor back to start position if we've rendered before
+    if (_hasRendered && _lastLineCount > 0 && terminal.supportsAnsi) {
+      if (_lastLineCount > 0) {
+        frameBuffer.write('\x1b[${_lastLineCount}A'); // Move up N lines
+      }
+      frameBuffer.write('\r'); // Return to column 1
+    }
+
+    // Write content with clear-to-end-of-line after each line
     final output = _options.ansiCompress ? compressAnsi(content) : content;
-    _writeWithClearToEol(output);
+    _appendContentWithClearToEol(frameBuffer, output);
 
     // If new content has fewer lines, clear the extra old lines
-    if (_hasRendered && newLineCount < _lastLineCount) {
-      _clearExtraLines(_lastLineCount - newLineCount);
+    if (_hasRendered &&
+        newLineCount < _lastLineCount &&
+        terminal.supportsAnsi) {
+      final extraLines = _lastLineCount - newLineCount;
+      for (var i = 0; i < extraLines; i++) {
+        frameBuffer.write('\x1b[K'); // Clear line from cursor
+        frameBuffer.write('\n'); // Move to next line
+      }
+      // Move back up to where content ended
+      if (extraLines > 0) {
+        frameBuffer.write('\x1b[${extraLines}A');
+      }
     }
 
-    // Show cursor after render
-    if (_options.hideCursor) {
-      terminal.showCursor();
+    // Show cursor after render (unless hideCursor option is set)
+    if (terminal.supportsAnsi && !_options.hideCursor) {
+      frameBuffer.write('\x1b[?25h'); // Show cursor
     }
+
+    // Single atomic write to terminal - prevents flashing
+    terminal.write(frameBuffer.toString());
 
     _lastLineCount = newLineCount;
     // Reset and start the stopwatch for next frame timing
@@ -294,33 +314,22 @@ class InlineTuiRenderer implements TuiRenderer {
     _metrics.endFrame();
   }
 
-  /// Moves cursor to the start of the render area (up N lines, column 1).
-  void _moveCursorToStart(int lines) {
-    if (!terminal.supportsAnsi) return;
-
-    final buffer = StringBuffer();
-    if (lines > 0) {
-      buffer.write('\x1b[${lines}A'); // Move up N lines
-    }
-    buffer.write('\r'); // Return to column 1
-    terminal.write(buffer.toString());
-  }
-
-  /// Writes content, clearing to end of line after each line to overwrite old content.
-  void _writeWithClearToEol(String content) {
+  /// Appends content to buffer, clearing to end of line after each line.
+  /// This is used for atomic rendering - all content goes into a single buffer
+  /// that gets written in one terminal.write() call.
+  void _appendContentWithClearToEol(StringBuffer buffer, String content) {
     if (content.isEmpty) return;
 
     if (!terminal.supportsAnsi) {
-      terminal.write(content);
+      buffer.write(content);
       if (!content.endsWith('\n')) {
-        terminal.writeln();
+        buffer.write('\n');
       }
       return;
     }
 
     // Split into lines and write each with clear-to-EOL
     final lines = content.split('\n');
-    final buffer = StringBuffer();
 
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
@@ -329,12 +338,8 @@ class InlineTuiRenderer implements TuiRenderer {
       buffer.write(line);
       buffer.write('\x1b[K'); // Clear from cursor to end of line
 
-      if (!isLast || !content.endsWith('\n')) {
-        // Add newline unless this is the last segment of content ending with \n
-        // (in which case the split already consumed it)
-        if (!isLast) {
-          buffer.write('\n');
-        }
+      if (!isLast) {
+        buffer.write('\n');
       }
     }
 
@@ -342,24 +347,6 @@ class InlineTuiRenderer implements TuiRenderer {
     if (!content.endsWith('\n')) {
       buffer.write('\n');
     }
-
-    terminal.write(buffer.toString());
-  }
-
-  /// Clears extra lines that are no longer needed.
-  void _clearExtraLines(int count) {
-    if (!terminal.supportsAnsi || count <= 0) return;
-
-    final buffer = StringBuffer();
-    for (var i = 0; i < count; i++) {
-      buffer.write('\x1b[K'); // Clear line from cursor
-      buffer.write('\n'); // Move to next line
-    }
-    // Move back up to where content ended
-    if (count > 0) {
-      buffer.write('\x1b[${count}A');
-    }
-    terminal.write(buffer.toString());
   }
 
   /// Clears the previous output by moving up and clearing lines.
