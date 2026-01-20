@@ -18,8 +18,38 @@ import '../../layout/layout.dart';
 import '../../style/properties.dart';
 import '../../style/style.dart';
 import '../../style/color.dart';
+import '../../uv/canvas.dart';
+import '../../uv/cell.dart';
+import '../../uv/geometry.dart';
+import '../../uv/styled_string.dart';
 import 'widget.dart';
 import 'theme.dart' show currentTheme;
+
+/// Converts a style [Color] to a UV [UvColor].
+///
+/// Parses the hex representation of the color to extract RGB values.
+UvColor? _colorToUvColor(Color? color) {
+  if (color == null || color is NoColor) return null;
+
+  final hex = color.toHex();
+  if (hex.isEmpty) {
+    // For ANSI colors, try to get the ANSI code
+    if (color is AnsiColor) {
+      return UvColor.indexed256(color.code);
+    }
+    return null;
+  }
+
+  // Parse hex color (#rrggbb or rrggbb)
+  final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
+  if (normalized.length != 6) return null;
+
+  final r = int.tryParse(normalized.substring(0, 2), radix: 16) ?? 0;
+  final g = int.tryParse(normalized.substring(2, 4), radix: 16) ?? 0;
+  final b = int.tryParse(normalized.substring(4, 6), radix: 16) ?? 0;
+
+  return UvColor.rgb(r, g, b);
+}
 
 /// A widget that arranges children horizontally.
 ///
@@ -214,56 +244,167 @@ class Container extends Widget {
 
   @override
   Object view() {
-    var content = child != null ? _viewToString(child!.view()) : '';
+    final contentStr = child != null ? _viewToString(child!.view()) : '';
 
-    // Apply padding
-    if (padding != null) {
-      content = _applyPadding(content, padding!);
+    // Calculate content dimensions
+    final contentWidth = Layout.getWidth(contentStr);
+    final contentHeight = Layout.getHeight(contentStr);
+
+    // Calculate padding offsets
+    final padLeft = padding?.left ?? 0;
+    final padRight = padding?.right ?? 0;
+    final padTop = padding?.top ?? 0;
+    final padBottom = padding?.bottom ?? 0;
+
+    // Calculate target dimensions (with padding)
+    final paddedWidth = contentWidth + padLeft + padRight;
+    final paddedHeight = contentHeight + padTop + padBottom;
+
+    // Use explicit size if provided, otherwise use padded content size
+    final targetWidth = width ?? paddedWidth;
+    final targetHeight = height ?? paddedHeight;
+
+    // If no background/foreground, use the simpler string-based approach
+    // (which doesn't have the ANSI reset issue for plain text)
+    if (background == null && foreground == null) {
+      var content = contentStr;
+      if (padding != null) {
+        content = _applyPadding(content, padding!);
+      }
+      if (width != null || height != null) {
+        content = Layout.place(
+          width: targetWidth,
+          height: targetHeight,
+          horizontal: align,
+          vertical: verticalAlign,
+          content: content,
+        );
+      }
+      return content;
     }
 
-    // Apply size constraints and alignment
-    if (width != null || height != null) {
-      content = Layout.place(
-        width: width ?? Layout.getWidth(content),
-        height: height ?? Layout.getHeight(content),
-        horizontal: align,
-        vertical: verticalAlign,
-        content: content,
-      );
+    // Use Canvas-based rendering for proper nested ANSI handling
+    final canvas = Canvas(targetWidth, targetHeight);
+
+    // Create background style
+    final bgColor = _colorToUvColor(background);
+    final fgColor = _colorToUvColor(foreground);
+    final bgStyle = UvStyle(bg: bgColor, fg: fgColor);
+
+    // Fill entire canvas with background
+    for (var y = 0; y < targetHeight; y++) {
+      for (var x = 0; x < targetWidth; x++) {
+        canvas.setCell(x, y, Cell(content: ' ', width: 1, style: bgStyle));
+      }
     }
 
-    // Apply colors
-    if (background != null || foreground != null) {
-      var style = Style();
-      if (background != null) style = style.background(background!);
-      if (foreground != null) style = style.foreground(foreground!);
-      content = style.render(content);
+    // Calculate content offset based on alignment within target size
+    int offsetX;
+    int offsetY;
+
+    if (width != null) {
+      // Align content within explicit width
+      offsetX = switch (align) {
+        HorizontalAlign.left => padLeft,
+        HorizontalAlign.center => (targetWidth - contentWidth) ~/ 2,
+        HorizontalAlign.right => targetWidth - contentWidth - padRight,
+      };
+    } else {
+      offsetX = padLeft;
     }
 
-    return content;
+    if (height != null) {
+      // Align content within explicit height
+      offsetY = switch (verticalAlign) {
+        VerticalAlign.top => padTop,
+        VerticalAlign.center => (targetHeight - contentHeight) ~/ 2,
+        VerticalAlign.bottom => targetHeight - contentHeight - padBottom,
+      };
+    } else {
+      offsetY = padTop;
+    }
+
+    // Draw child content at the offset position
+    // Instead of using StyledString.draw() which clears the area,
+    // we parse and draw directly, preserving our background
+    if (contentStr.isNotEmpty) {
+      _drawStyledContent(canvas, contentStr, offsetX, offsetY, bgStyle);
+    }
+
+    return canvas.render();
   }
 
-  String _applyPadding(String content, EdgeInsets padding) {
+  /// Draws styled content onto canvas at the given offset, preserving background.
+  void _drawStyledContent(
+    Canvas canvas,
+    String content,
+    int startX,
+    int startY,
+    UvStyle bgStyle,
+  ) {
+    // Use StyledString to render into a temporary canvas, then merge
+    final styledBounds = StyledString(content).bounds();
+    final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
+
+    // Draw into temp canvas
+    StyledString(content).draw(tempCanvas, tempCanvas.bounds());
+
+    // Merge cells onto main canvas, preserving background for empty/space cells
+    for (var y = 0; y < styledBounds.height; y++) {
+      for (var x = 0; x < styledBounds.width; x++) {
+        final destX = startX + x;
+        final destY = startY + y;
+
+        if (destX >= canvas.width() || destY >= canvas.height()) continue;
+
+        final srcCell = tempCanvas.cellAt(x, y);
+        if (srcCell == null || srcCell.isZero) {
+          // Keep background cell
+          continue;
+        }
+
+        // Merge background into cell if cell has no background
+        var mergedStyle = srcCell.style;
+        if (mergedStyle.bg == null && bgStyle.bg != null) {
+          mergedStyle = mergedStyle.copyWith(bg: bgStyle.bg);
+        }
+
+        canvas.setCell(
+          destX,
+          destY,
+          Cell(
+            content: srcCell.content,
+            width: srcCell.width,
+            style: mergedStyle,
+            link: srcCell.link,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Applies padding around content (used when no colors are set).
+  String _applyPadding(String content, EdgeInsets pad) {
     final lines = content.split('\n');
     final contentWidth = Layout.getWidth(content);
-    final paddedWidth = contentWidth + padding.left + padding.right;
+    final paddedWidth = contentWidth + pad.left + pad.right;
 
     final result = <String>[];
 
     // Top padding
-    for (var i = 0; i < padding.top; i++) {
+    for (var i = 0; i < pad.top; i++) {
       result.add(' ' * paddedWidth);
     }
 
     // Content with left/right padding
     for (final line in lines) {
       final lineWidth = Layout.visibleLength(line);
-      final rightPad = contentWidth - lineWidth + padding.right;
-      result.add('${' ' * padding.left}$line${' ' * rightPad}');
+      final rightPad = contentWidth - lineWidth + pad.right;
+      result.add('${' ' * pad.left}$line${' ' * rightPad}');
     }
 
     // Bottom padding
-    for (var i = 0; i < padding.bottom; i++) {
+    for (var i = 0; i < pad.bottom; i++) {
       result.add(' ' * paddedWidth);
     }
 
