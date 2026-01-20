@@ -45,3 +45,6 @@ export 'link.dart';
 
 // Artisanal-style facade helpers
 export 'titled_block.dart';
+
+// Markdown components
+export 'markdown.dart';

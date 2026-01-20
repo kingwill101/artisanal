@@ -278,6 +278,251 @@ class ChromaTheme {
     genericStrong: Style().bold(),
     genericSubheading: Style().foreground(BasicColor('#005cc5')),
   );
+
+  /// Solarized Dark theme.
+  static ChromaTheme get solarizedDark => ChromaTheme(
+    text: Style().foreground(BasicColor('#839496')),
+    error: Style().foreground(BasicColor('#dc322f')),
+    comment: Style().foreground(BasicColor('#586e75')),
+    commentPreproc: Style().foreground(BasicColor('#cb4b16')),
+    keyword: Style().foreground(BasicColor('#859900')),
+    keywordReserved: Style().foreground(BasicColor('#cb4b16')),
+    keywordNamespace: Style().foreground(BasicColor('#cb4b16')),
+    keywordType: Style().foreground(BasicColor('#b58900')),
+    operator: Style().foreground(BasicColor('#859900')),
+    punctuation: Style().foreground(BasicColor('#839496')),
+    name: Style().foreground(BasicColor('#839496')),
+    nameBuiltin: Style().foreground(BasicColor('#268bd2')),
+    nameTag: Style().foreground(BasicColor('#268bd2')),
+    nameAttribute: Style().foreground(BasicColor('#839496')),
+    nameClass: Style().foreground(BasicColor('#268bd2')),
+    nameConstant: Style().foreground(BasicColor('#2aa198')),
+    nameDecorator: Style().foreground(BasicColor('#cb4b16')),
+    nameException: Style().foreground(BasicColor('#cb4b16')),
+    nameFunction: Style().foreground(BasicColor('#268bd2')),
+    nameOther: Style().foreground(BasicColor('#839496')),
+    literal: Style().foreground(BasicColor('#2aa198')),
+    literalNumber: Style().foreground(BasicColor('#2aa198')),
+    literalDate: Style().foreground(BasicColor('#2aa198')),
+    literalString: Style().foreground(BasicColor('#2aa198')),
+    literalStringEscape: Style().foreground(BasicColor('#cb4b16')),
+    genericDeleted: Style().foreground(BasicColor('#dc322f')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#859900')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#268bd2')),
+    background: Style().background(BasicColor('#002b36')),
+  );
+
+  /// Solarized Light theme.
+  static ChromaTheme get solarizedLight => ChromaTheme(
+    text: Style().foreground(BasicColor('#657b83')),
+    error: Style().foreground(BasicColor('#dc322f')),
+    comment: Style().foreground(BasicColor('#93a1a1')),
+    commentPreproc: Style().foreground(BasicColor('#cb4b16')),
+    keyword: Style().foreground(BasicColor('#859900')),
+    keywordReserved: Style().foreground(BasicColor('#cb4b16')),
+    keywordNamespace: Style().foreground(BasicColor('#cb4b16')),
+    keywordType: Style().foreground(BasicColor('#b58900')),
+    operator: Style().foreground(BasicColor('#859900')),
+    punctuation: Style().foreground(BasicColor('#657b83')),
+    name: Style().foreground(BasicColor('#657b83')),
+    nameBuiltin: Style().foreground(BasicColor('#268bd2')),
+    nameTag: Style().foreground(BasicColor('#268bd2')),
+    nameAttribute: Style().foreground(BasicColor('#657b83')),
+    nameClass: Style().foreground(BasicColor('#268bd2')),
+    nameConstant: Style().foreground(BasicColor('#2aa198')),
+    nameDecorator: Style().foreground(BasicColor('#cb4b16')),
+    nameException: Style().foreground(BasicColor('#cb4b16')),
+    nameFunction: Style().foreground(BasicColor('#268bd2')),
+    nameOther: Style().foreground(BasicColor('#657b83')),
+    literal: Style().foreground(BasicColor('#2aa198')),
+    literalNumber: Style().foreground(BasicColor('#2aa198')),
+    literalDate: Style().foreground(BasicColor('#2aa198')),
+    literalString: Style().foreground(BasicColor('#2aa198')),
+    literalStringEscape: Style().foreground(BasicColor('#cb4b16')),
+    genericDeleted: Style().foreground(BasicColor('#dc322f')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#859900')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#268bd2')),
+    background: Style().background(BasicColor('#fdf6e3')),
+  );
+
+  /// Nord theme (dark, inspired by arctic colors).
+  static ChromaTheme get nord => ChromaTheme(
+    text: Style().foreground(BasicColor('#D8DEE9')),
+    error: Style().foreground(BasicColor('#BF616A')),
+    comment: Style().foreground(BasicColor('#616E88')),
+    commentPreproc: Style().foreground(BasicColor('#5E81AC')),
+    keyword: Style().foreground(BasicColor('#81A1C1')),
+    keywordReserved: Style().foreground(BasicColor('#81A1C1')),
+    keywordNamespace: Style().foreground(BasicColor('#81A1C1')),
+    keywordType: Style().foreground(BasicColor('#8FBCBB')),
+    operator: Style().foreground(BasicColor('#81A1C1')),
+    punctuation: Style().foreground(BasicColor('#ECEFF4')),
+    name: Style().foreground(BasicColor('#D8DEE9')),
+    nameBuiltin: Style().foreground(BasicColor('#88C0D0')),
+    nameTag: Style().foreground(BasicColor('#81A1C1')),
+    nameAttribute: Style().foreground(BasicColor('#8FBCBB')),
+    nameClass: Style().foreground(BasicColor('#8FBCBB')),
+    nameConstant: Style().foreground(BasicColor('#D8DEE9')),
+    nameDecorator: Style().foreground(BasicColor('#D08770')),
+    nameException: Style().foreground(BasicColor('#BF616A')),
+    nameFunction: Style().foreground(BasicColor('#88C0D0')),
+    nameOther: Style().foreground(BasicColor('#D8DEE9')),
+    literal: Style().foreground(BasicColor('#B48EAD')),
+    literalNumber: Style().foreground(BasicColor('#B48EAD')),
+    literalDate: Style().foreground(BasicColor('#EBCB8B')),
+    literalString: Style().foreground(BasicColor('#A3BE8C')),
+    literalStringEscape: Style().foreground(BasicColor('#EBCB8B')),
+    genericDeleted: Style().foreground(BasicColor('#BF616A')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#A3BE8C')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#88C0D0')),
+    background: Style().background(BasicColor('#2E3440')),
+  );
+
+  /// Gruvbox Dark theme.
+  static ChromaTheme get gruvboxDark => ChromaTheme(
+    text: Style().foreground(BasicColor('#EBDBB2')),
+    error: Style().foreground(BasicColor('#FB4934')),
+    comment: Style().foreground(BasicColor('#928374')),
+    commentPreproc: Style().foreground(BasicColor('#8EC07C')),
+    keyword: Style().foreground(BasicColor('#FB4934')),
+    keywordReserved: Style().foreground(BasicColor('#FB4934')),
+    keywordNamespace: Style().foreground(BasicColor('#FB4934')),
+    keywordType: Style().foreground(BasicColor('#FABD2F')),
+    operator: Style().foreground(BasicColor('#FE8019')),
+    punctuation: Style().foreground(BasicColor('#EBDBB2')),
+    name: Style().foreground(BasicColor('#EBDBB2')),
+    nameBuiltin: Style().foreground(BasicColor('#FABD2F')),
+    nameTag: Style().foreground(BasicColor('#8EC07C')),
+    nameAttribute: Style().foreground(BasicColor('#B8BB26')),
+    nameClass: Style().foreground(BasicColor('#FABD2F')),
+    nameConstant: Style().foreground(BasicColor('#D3869B')),
+    nameDecorator: Style().foreground(BasicColor('#8EC07C')),
+    nameException: Style().foreground(BasicColor('#FB4934')),
+    nameFunction: Style().foreground(BasicColor('#B8BB26')),
+    nameOther: Style().foreground(BasicColor('#EBDBB2')),
+    literal: Style().foreground(BasicColor('#D3869B')),
+    literalNumber: Style().foreground(BasicColor('#D3869B')),
+    literalDate: Style().foreground(BasicColor('#FABD2F')),
+    literalString: Style().foreground(BasicColor('#B8BB26')),
+    literalStringEscape: Style().foreground(BasicColor('#FE8019')),
+    genericDeleted: Style().foreground(BasicColor('#FB4934')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#B8BB26')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#83A598')),
+    background: Style().background(BasicColor('#282828')),
+  );
+
+  /// Gruvbox Light theme.
+  static ChromaTheme get gruvboxLight => ChromaTheme(
+    text: Style().foreground(BasicColor('#3C3836')),
+    error: Style().foreground(BasicColor('#9D0006')),
+    comment: Style().foreground(BasicColor('#928374')),
+    commentPreproc: Style().foreground(BasicColor('#427B58')),
+    keyword: Style().foreground(BasicColor('#9D0006')),
+    keywordReserved: Style().foreground(BasicColor('#9D0006')),
+    keywordNamespace: Style().foreground(BasicColor('#9D0006')),
+    keywordType: Style().foreground(BasicColor('#B57614')),
+    operator: Style().foreground(BasicColor('#AF3A03')),
+    punctuation: Style().foreground(BasicColor('#3C3836')),
+    name: Style().foreground(BasicColor('#3C3836')),
+    nameBuiltin: Style().foreground(BasicColor('#B57614')),
+    nameTag: Style().foreground(BasicColor('#427B58')),
+    nameAttribute: Style().foreground(BasicColor('#79740E')),
+    nameClass: Style().foreground(BasicColor('#B57614')),
+    nameConstant: Style().foreground(BasicColor('#8F3F71')),
+    nameDecorator: Style().foreground(BasicColor('#427B58')),
+    nameException: Style().foreground(BasicColor('#9D0006')),
+    nameFunction: Style().foreground(BasicColor('#79740E')),
+    nameOther: Style().foreground(BasicColor('#3C3836')),
+    literal: Style().foreground(BasicColor('#8F3F71')),
+    literalNumber: Style().foreground(BasicColor('#8F3F71')),
+    literalDate: Style().foreground(BasicColor('#B57614')),
+    literalString: Style().foreground(BasicColor('#79740E')),
+    literalStringEscape: Style().foreground(BasicColor('#AF3A03')),
+    genericDeleted: Style().foreground(BasicColor('#9D0006')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#79740E')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#076678')),
+    background: Style().background(BasicColor('#FBF1C7')),
+  );
+
+  /// One Dark theme (Atom-inspired).
+  static ChromaTheme get oneDark => ChromaTheme(
+    text: Style().foreground(BasicColor('#ABB2BF')),
+    error: Style().foreground(BasicColor('#E06C75')),
+    comment: Style().foreground(BasicColor('#5C6370')),
+    commentPreproc: Style().foreground(BasicColor('#C678DD')),
+    keyword: Style().foreground(BasicColor('#C678DD')),
+    keywordReserved: Style().foreground(BasicColor('#C678DD')),
+    keywordNamespace: Style().foreground(BasicColor('#C678DD')),
+    keywordType: Style().foreground(BasicColor('#E5C07B')),
+    operator: Style().foreground(BasicColor('#56B6C2')),
+    punctuation: Style().foreground(BasicColor('#ABB2BF')),
+    name: Style().foreground(BasicColor('#ABB2BF')),
+    nameBuiltin: Style().foreground(BasicColor('#E5C07B')),
+    nameTag: Style().foreground(BasicColor('#E06C75')),
+    nameAttribute: Style().foreground(BasicColor('#D19A66')),
+    nameClass: Style().foreground(BasicColor('#E5C07B')),
+    nameConstant: Style().foreground(BasicColor('#D19A66')),
+    nameDecorator: Style().foreground(BasicColor('#61AFEF')),
+    nameException: Style().foreground(BasicColor('#E06C75')),
+    nameFunction: Style().foreground(BasicColor('#61AFEF')),
+    nameOther: Style().foreground(BasicColor('#ABB2BF')),
+    literal: Style().foreground(BasicColor('#D19A66')),
+    literalNumber: Style().foreground(BasicColor('#D19A66')),
+    literalDate: Style().foreground(BasicColor('#98C379')),
+    literalString: Style().foreground(BasicColor('#98C379')),
+    literalStringEscape: Style().foreground(BasicColor('#56B6C2')),
+    genericDeleted: Style().foreground(BasicColor('#E06C75')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#98C379')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#61AFEF')),
+    background: Style().background(BasicColor('#282C34')),
+  );
+
+  /// One Light theme (Atom-inspired).
+  static ChromaTheme get oneLight => ChromaTheme(
+    text: Style().foreground(BasicColor('#383A42')),
+    error: Style().foreground(BasicColor('#E45649')),
+    comment: Style().foreground(BasicColor('#A0A1A7')),
+    commentPreproc: Style().foreground(BasicColor('#A626A4')),
+    keyword: Style().foreground(BasicColor('#A626A4')),
+    keywordReserved: Style().foreground(BasicColor('#A626A4')),
+    keywordNamespace: Style().foreground(BasicColor('#A626A4')),
+    keywordType: Style().foreground(BasicColor('#C18401')),
+    operator: Style().foreground(BasicColor('#0184BC')),
+    punctuation: Style().foreground(BasicColor('#383A42')),
+    name: Style().foreground(BasicColor('#383A42')),
+    nameBuiltin: Style().foreground(BasicColor('#C18401')),
+    nameTag: Style().foreground(BasicColor('#E45649')),
+    nameAttribute: Style().foreground(BasicColor('#986801')),
+    nameClass: Style().foreground(BasicColor('#C18401')),
+    nameConstant: Style().foreground(BasicColor('#986801')),
+    nameDecorator: Style().foreground(BasicColor('#4078F2')),
+    nameException: Style().foreground(BasicColor('#E45649')),
+    nameFunction: Style().foreground(BasicColor('#4078F2')),
+    nameOther: Style().foreground(BasicColor('#383A42')),
+    literal: Style().foreground(BasicColor('#986801')),
+    literalNumber: Style().foreground(BasicColor('#986801')),
+    literalDate: Style().foreground(BasicColor('#50A14F')),
+    literalString: Style().foreground(BasicColor('#50A14F')),
+    literalStringEscape: Style().foreground(BasicColor('#0184BC')),
+    genericDeleted: Style().foreground(BasicColor('#E45649')),
+    genericEmph: Style().italic(),
+    genericInserted: Style().foreground(BasicColor('#50A14F')),
+    genericStrong: Style().bold(),
+    genericSubheading: Style().foreground(BasicColor('#4078F2')),
+    background: Style().background(BasicColor('#FAFAFA')),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +574,30 @@ class AdaptiveChromaTheme {
   /// Dracula (dark) / GitHub (light) pairing.
   static AdaptiveChromaTheme get draculaGithub =>
       AdaptiveChromaTheme(light: ChromaTheme.github, dark: ChromaTheme.dracula);
+
+  /// Solarized dark/light pairing.
+  static AdaptiveChromaTheme get solarized => AdaptiveChromaTheme(
+    light: ChromaTheme.solarizedLight,
+    dark: ChromaTheme.solarizedDark,
+  );
+
+  /// Nord (dark) / GitHub (light) pairing.
+  ///
+  /// Nord doesn't have an official light variant, so GitHub is a good match.
+  static AdaptiveChromaTheme get nordGithub =>
+      AdaptiveChromaTheme(light: ChromaTheme.github, dark: ChromaTheme.nord);
+
+  /// Gruvbox dark/light pairing.
+  static AdaptiveChromaTheme get gruvbox => AdaptiveChromaTheme(
+    light: ChromaTheme.gruvboxLight,
+    dark: ChromaTheme.gruvboxDark,
+  );
+
+  /// One Dark/Light pairing (Atom-inspired).
+  static AdaptiveChromaTheme get oneDarkLight => AdaptiveChromaTheme(
+    light: ChromaTheme.oneLight,
+    dark: ChromaTheme.oneDark,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
