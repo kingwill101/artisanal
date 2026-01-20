@@ -41,7 +41,32 @@
 ///
 /// print(markdownToAnsi(markdown, options: options));
 /// ```
+///
+/// ## Adaptive Themes
+///
+/// The renderer supports automatic theme selection based on terminal background:
+///
+/// ```dart
+/// final options = AnsiRendererOptions(
+///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
+/// );
+/// ```
+///
+/// For syntax highlighting, you can use [AdaptiveChromaTheme]:
+///
+/// ```dart
+/// final highlighter = SyntaxHighlighter.adaptive(
+///   adaptiveTheme: AdaptiveChromaTheme.draculaGithub,
+///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
+/// );
+/// ```
 library;
 
 export 'src/markdown/ansi_renderer.dart'
     show AnsiRenderer, AnsiRendererOptions, markdownToAnsi;
+export 'src/markdown/syntax_highlighter.dart'
+    show
+        AdaptiveChromaTheme,
+        ChromaTheme,
+        SyntaxHighlighter,
+        highlightCodeString;

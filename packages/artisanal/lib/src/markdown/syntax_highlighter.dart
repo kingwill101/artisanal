@@ -281,6 +281,57 @@ class ChromaTheme {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Adaptive Theme
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// An adaptive syntax highlighting theme that selects between light and dark
+/// variants based on terminal background.
+///
+/// Similar to [AdaptiveColor], this allows themes to automatically adapt to
+/// the terminal's color scheme.
+///
+/// ```dart
+/// // Create an adaptive theme
+/// final theme = AdaptiveChromaTheme(
+///   light: ChromaTheme.github,
+///   dark: ChromaTheme.dracula,
+/// );
+///
+/// // Use with SyntaxHighlighter
+/// final highlighter = SyntaxHighlighter.adaptive(
+///   theme: theme,
+///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
+/// );
+/// ```
+class AdaptiveChromaTheme {
+  /// Creates an adaptive theme with light and dark variants.
+  const AdaptiveChromaTheme({required this.light, required this.dark});
+
+  /// Theme to use on light terminal backgrounds.
+  final ChromaTheme light;
+
+  /// Theme to use on dark terminal backgrounds.
+  final ChromaTheme dark;
+
+  /// Selects the appropriate theme based on background.
+  ChromaTheme resolve({required bool hasDarkBackground}) {
+    return hasDarkBackground ? dark : light;
+  }
+
+  /// Default adaptive theme using dark/light presets.
+  static AdaptiveChromaTheme get defaultTheme =>
+      AdaptiveChromaTheme(light: ChromaTheme.light, dark: ChromaTheme.dark);
+
+  /// Monokai (dark) / GitHub (light) pairing.
+  static AdaptiveChromaTheme get monokaiGithub =>
+      AdaptiveChromaTheme(light: ChromaTheme.github, dark: ChromaTheme.monokai);
+
+  /// Dracula (dark) / GitHub (light) pairing.
+  static AdaptiveChromaTheme get draculaGithub =>
+      AdaptiveChromaTheme(light: ChromaTheme.github, dark: ChromaTheme.dracula);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Syntax Highlighter
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -300,6 +351,27 @@ class ChromaTheme {
 class SyntaxHighlighter {
   /// Creates a syntax highlighter with the given theme.
   SyntaxHighlighter({ChromaTheme? theme}) : theme = theme ?? ChromaTheme.dark;
+
+  /// Creates a syntax highlighter that adapts to terminal background.
+  ///
+  /// Uses [adaptiveTheme] to select between light and dark themes based on
+  /// [hasDarkBackground].
+  ///
+  /// ```dart
+  /// final highlighter = SyntaxHighlighter.adaptive(
+  ///   adaptiveTheme: AdaptiveChromaTheme.draculaGithub,
+  ///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
+  /// );
+  /// ```
+  factory SyntaxHighlighter.adaptive({
+    AdaptiveChromaTheme? adaptiveTheme,
+    bool hasDarkBackground = true,
+  }) {
+    final theme = (adaptiveTheme ?? AdaptiveChromaTheme.defaultTheme).resolve(
+      hasDarkBackground: hasDarkBackground,
+    );
+    return SyntaxHighlighter(theme: theme);
+  }
 
   /// The color theme to use for highlighting.
   final ChromaTheme theme;

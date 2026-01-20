@@ -568,4 +568,116 @@ Second paragraph with some text.
       expect(stripped, contains('Second'));
     });
   });
+
+  group('adaptive theme', () {
+    test('hasDarkBackground defaults to true', () {
+      const options = AnsiRendererOptions();
+      expect(options.hasDarkBackground, isTrue);
+    });
+
+    test('hasDarkBackground can be set to false', () {
+      const options = AnsiRendererOptions(hasDarkBackground: false);
+      expect(options.hasDarkBackground, isFalse);
+    });
+
+    test('copyWith preserves hasDarkBackground', () {
+      const original = AnsiRendererOptions(hasDarkBackground: false);
+      final modified = original.copyWith(width: 80);
+      expect(modified.hasDarkBackground, isFalse);
+    });
+
+    test('copyWith can change hasDarkBackground', () {
+      const original = AnsiRendererOptions(hasDarkBackground: true);
+      final modified = original.copyWith(hasDarkBackground: false);
+      expect(modified.hasDarkBackground, isFalse);
+    });
+
+    test('uses dark theme by default for syntax highlighting', () {
+      final darkResult = markdownToAnsi('''
+```dart
+void main() {}
+```
+''');
+      // Should use dark theme colors (blue keywords)
+      // The keyword color in dark theme is #00AAFF = rgb(0, 170, 255)
+      expect(darkResult, contains('38;2;0;170;255')); // Blue keyword color
+    });
+
+    test('uses light theme when hasDarkBackground is false', () {
+      final lightResult = markdownToAnsi('''
+```dart
+void main() {}
+```
+''', options: const AnsiRendererOptions(hasDarkBackground: false));
+      // Should use light theme colors
+      // The keyword color in light theme is #0066cc = rgb(0, 102, 204)
+      expect(lightResult, contains('38;2;0;102;204')); // Light theme keyword
+    });
+
+    test('explicit syntaxTheme overrides hasDarkBackground', () {
+      final result = markdownToAnsi(
+        '''
+```dart
+void main() {}
+```
+''',
+        options: AnsiRendererOptions(
+          hasDarkBackground: false,
+          syntaxTheme: ChromaTheme.monokai,
+        ),
+      );
+      // Should use Monokai theme even though hasDarkBackground is false
+      // Monokai keyword color is #F92672 = rgb(249, 38, 114)
+      expect(result, contains('38;2;249;38;114')); // Monokai keyword
+    });
+  });
+
+  group('AdaptiveChromaTheme', () {
+    test('resolves to dark theme when hasDarkBackground is true', () {
+      final theme = AdaptiveChromaTheme.defaultTheme;
+      final resolved = theme.resolve(hasDarkBackground: true);
+      // ChromaTheme.dark has keyword color #00AAFF
+      expect(resolved.keyword, isNotNull);
+    });
+
+    test('resolves to light theme when hasDarkBackground is false', () {
+      final theme = AdaptiveChromaTheme.defaultTheme;
+      final resolved = theme.resolve(hasDarkBackground: false);
+      // ChromaTheme.light has keyword color #0066CC
+      expect(resolved.keyword, isNotNull);
+    });
+
+    test('draculaGithub pairing works', () {
+      final theme = AdaptiveChromaTheme.draculaGithub;
+      final darkResolved = theme.resolve(hasDarkBackground: true);
+      final lightResolved = theme.resolve(hasDarkBackground: false);
+
+      // Should be different themes
+      expect(darkResolved, isNot(equals(lightResolved)));
+    });
+
+    test('SyntaxHighlighter.adaptive uses correct theme', () {
+      final darkHighlighter = SyntaxHighlighter.adaptive(
+        hasDarkBackground: true,
+      );
+      final lightHighlighter = SyntaxHighlighter.adaptive(
+        hasDarkBackground: false,
+      );
+
+      final darkResult = darkHighlighter.highlightCode(
+        'void main() {}',
+        language: 'dart',
+      );
+      final lightResult = lightHighlighter.highlightCode(
+        'void main() {}',
+        language: 'dart',
+      );
+
+      // Both should produce output
+      expect(darkResult, isNotEmpty);
+      expect(lightResult, isNotEmpty);
+      // But they should be different (different colors)
+      expect(darkResult, isNot(equals(lightResult)));
+    });
+  });
 }

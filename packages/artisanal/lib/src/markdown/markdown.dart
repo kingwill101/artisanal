@@ -18,4 +18,8 @@ library;
 
 export 'ansi_renderer.dart';
 export 'syntax_highlighter.dart'
-    show ChromaTheme, SyntaxHighlighter, highlightCodeString;
+    show
+        AdaptiveChromaTheme,
+        ChromaTheme,
+        SyntaxHighlighter,
+        highlightCodeString;

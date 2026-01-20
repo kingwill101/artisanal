@@ -39,6 +39,7 @@ class AnsiRendererOptions {
   /// Creates renderer options with the given settings.
   const AnsiRendererOptions({
     this.width,
+    this.hasDarkBackground = true,
     this.h1Style,
     this.h2Style,
     this.h3Style,
@@ -72,6 +73,23 @@ class AnsiRendererOptions {
 
   /// Terminal width for text wrapping. If null, no wrapping is applied.
   final int? width;
+
+  /// Whether the terminal has a dark background.
+  ///
+  /// When true (default), uses dark-optimized themes and colors.
+  /// When false, uses light-optimized themes and colors.
+  ///
+  /// This affects:
+  /// - Syntax highlighting theme selection (when using [AdaptiveChromaTheme])
+  /// - Adaptive colors in custom styles
+  ///
+  /// You can detect this automatically using [TerminalThemeState]:
+  /// ```dart
+  /// final options = AnsiRendererOptions(
+  ///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
+  /// );
+  /// ```
+  final bool hasDarkBackground;
 
   /// Style for H1 headings.
   final Style? h1Style;
@@ -180,6 +198,7 @@ class AnsiRendererOptions {
   /// Creates a copy with the given fields replaced.
   AnsiRendererOptions copyWith({
     int? width,
+    bool? hasDarkBackground,
     Style? h1Style,
     Style? h2Style,
     Style? h3Style,
@@ -212,6 +231,7 @@ class AnsiRendererOptions {
   }) {
     return AnsiRendererOptions(
       width: width ?? this.width,
+      hasDarkBackground: hasDarkBackground ?? this.hasDarkBackground,
       h1Style: h1Style ?? this.h1Style,
       h2Style: h2Style ?? this.h2Style,
       h3Style: h3Style ?? this.h3Style,
@@ -380,8 +400,25 @@ class AnsiRenderer implements NodeVisitor {
   final HtmlUnescape _htmlUnescape = HtmlUnescape();
 
   /// Gets or creates the syntax highlighter.
-  SyntaxHighlighter get _highlighter =>
-      _syntaxHighlighter ??= SyntaxHighlighter(theme: options.syntaxTheme);
+  ///
+  /// If [options.syntaxTheme] is provided, uses that theme directly.
+  /// Otherwise, uses [ChromaTheme.dark] for dark backgrounds or
+  /// [ChromaTheme.light] for light backgrounds based on
+  /// [options.hasDarkBackground].
+  SyntaxHighlighter get _highlighter {
+    if (_syntaxHighlighter != null) return _syntaxHighlighter!;
+
+    if (options.syntaxTheme != null) {
+      // Use explicitly provided theme
+      _syntaxHighlighter = SyntaxHighlighter(theme: options.syntaxTheme);
+    } else {
+      // Auto-select theme based on background
+      _syntaxHighlighter = SyntaxHighlighter.adaptive(
+        hasDarkBackground: options.hasDarkBackground,
+      );
+    }
+    return _syntaxHighlighter!;
+  }
 
   /// Renders a list of markdown nodes to ANSI-styled text.
   String render(List<Node> nodes) {
