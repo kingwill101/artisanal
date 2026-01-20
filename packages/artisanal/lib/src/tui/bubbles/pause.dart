@@ -32,6 +32,9 @@ class PauseModel extends ViewComponent {
 /// This is a convenience bubble for the legacy countdown behavior (previously
 /// exposed as `CountdownComponent`).
 class CountdownModel extends ViewComponent {
+  static const Object _startTickId = 'countdown:start';
+  static const Object _tickId = 'countdown:tick';
+
   CountdownModel({
     required this.duration,
     this.message = 'Continuing in',
@@ -56,17 +59,26 @@ class CountdownModel extends ViewComponent {
       return (this, Cmd.quit());
     }
 
-    if (msg is TickMsg && msg.id == 'countdown') {
-      final newRemaining = _remaining - interval;
-      if (newRemaining <= Duration.zero) {
-        _remaining = Duration.zero;
-        return (this, Cmd.quit());
+    if (msg is TickMsg) {
+      if (msg.id == _startTickId) {
+        return (
+          this,
+          Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)),
+        );
       }
-      _remaining = newRemaining;
-      return (
-        this,
-        Cmd.tick(interval, (time) => TickMsg(time, id: 'countdown')),
-      );
+
+      if (msg.id == _tickId) {
+        final newRemaining = _remaining - interval;
+        if (newRemaining <= Duration.zero) {
+          _remaining = Duration.zero;
+          return (this, Cmd.quit());
+        }
+        _remaining = newRemaining;
+        return (
+          this,
+          Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)),
+        );
+      }
     }
 
     return (this, null);
@@ -74,9 +86,9 @@ class CountdownModel extends ViewComponent {
 
   /// Creates a command to start the countdown timer.
   ///
-  /// This sends the first tick after one interval so the initial frame is visible.
+  /// This sends a start tick immediately so the first render shows full duration.
   Cmd _start() {
-    return Cmd.tick(interval, (time) => TickMsg(time, id: 'countdown'));
+    return Cmd(() async => TickMsg(DateTime.now(), id: _startTickId));
   }
 
   @override
