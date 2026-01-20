@@ -219,3 +219,13 @@ export 'harmonica.dart'
         terminalGravity,
         fpsDelta,
         newSpringFromFps;
+
+// Zone-based mouse click tracking (BubbleZone port)
+export 'zone/zone.dart'
+    show
+        ZoneManager,
+        ZoneInfo,
+        ZoneInBoundsMsg,
+        zone,
+        initGlobalZone,
+        closeGlobalZone;
