@@ -1,0 +1,47 @@
+/// Markdown to ANSI terminal rendering.
+///
+/// This library provides utilities to convert markdown text to ANSI-styled
+/// terminal output using artisanal's style system.
+///
+/// ## Usage
+///
+/// ```dart
+/// import 'package:artisanal/markdown.dart';
+///
+/// final styled = markdownToAnsi('''
+/// # Hello World
+///
+/// This is **bold** and *italic* text.
+///
+/// - Item 1
+/// - Item 2
+///
+/// > A blockquote
+///
+/// ```dart
+/// void main() {
+///   print('Hello!');
+/// }
+/// ```
+/// ''');
+///
+/// print(styled);
+/// ```
+///
+/// ## Customization
+///
+/// You can customize the rendering with [AnsiRendererOptions]:
+///
+/// ```dart
+/// final options = AnsiRendererOptions(
+///   h1Style: Style().bold().foreground(Colors.magenta),
+///   bulletChar: '-',
+///   hyperlinks: true,
+/// );
+///
+/// print(markdownToAnsi(markdown, options: options));
+/// ```
+library;
+
+export 'src/markdown/ansi_renderer.dart'
+    show AnsiRenderer, AnsiRendererOptions, markdownToAnsi;

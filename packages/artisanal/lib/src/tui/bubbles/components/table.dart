@@ -12,6 +12,18 @@ import 'base.dart';
 /// Return a [Style] to apply to the cell, or `null` for no styling.
 typedef TableStyleFunc = Style? Function(int row, int col, String data);
 
+/// Column alignment options for tables.
+enum TableAlign {
+  /// Align content to the left (default).
+  left,
+
+  /// Align content to the center.
+  center,
+
+  /// Align content to the right.
+  right,
+}
+
 /// A table component with headers and rows.
 ///
 /// ```dart
@@ -223,6 +235,7 @@ class Table extends DisplayComponent {
 
   final List<String> _headers = [];
   final List<List<String>> _rows = [];
+  final List<TableAlign> _alignments = [];
   TableStyleFunc? _styleFunc;
   style_border.Border _border = style_border.Border.normal;
   int _padding = 0;
@@ -294,6 +307,21 @@ class Table extends DisplayComponent {
   Table headers(List<String> headers) {
     _headers.clear();
     _headers.addAll(headers);
+    return this;
+  }
+
+  /// Sets column alignments.
+  ///
+  /// The list should contain one alignment per column. If fewer alignments
+  /// are provided than columns exist, remaining columns default to left.
+  ///
+  /// Example:
+  /// ```dart
+  /// table.alignments([TableAlign.left, TableAlign.center, TableAlign.right]);
+  /// ```
+  Table alignments(List<TableAlign> alignments) {
+    _alignments.clear();
+    _alignments.addAll(alignments);
     return this;
   }
 
@@ -555,7 +583,22 @@ class Table extends DisplayComponent {
           final visible = Style.visibleLength(line);
           final fill = widths[c] - visible;
           final fillCount = fill > 0 ? fill : 0;
-          final cellContent = '$pad$line${' ' * fillCount}$pad';
+
+          // Apply column alignment
+          final align = c < _alignments.length
+              ? _alignments[c]
+              : TableAlign.left;
+          final String cellContent;
+          switch (align) {
+            case TableAlign.left:
+              cellContent = '$pad$line${' ' * fillCount}$pad';
+            case TableAlign.center:
+              final leftPad = fillCount ~/ 2;
+              final rightPad = fillCount - leftPad;
+              cellContent = '$pad${' ' * leftPad}$line${' ' * rightPad}$pad';
+            case TableAlign.right:
+              cellContent = '$pad${' ' * fillCount}$line$pad';
+          }
           parts.add(cellContent);
         }
         final leftBorder = _borderLeft ? styleBorderText(b.left) : '';

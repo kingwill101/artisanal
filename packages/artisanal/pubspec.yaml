@@ -24,6 +24,8 @@ dependencies:
   characters: ^1.4.1
   image: ^4.7.1
   html: ^0.15.5
+  highlight: ^0.7.0
+  html_unescape: ^2.0.0
 
 dev_dependencies:
   lints: ^6.0.0
