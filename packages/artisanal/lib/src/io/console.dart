@@ -347,6 +347,8 @@ class Console {
     final terminal = promptTerminal;
     final supportsAnsi = (_stdout ?? io.stdout).hasTerminal;
     final animate = run != null && interactive && supportsAnsi;
+    // Use actual terminal width, not the configured terminalWidth which may be wrong
+    final actualWidth = terminal.width;
 
     if (!animate) {
       write(prefix);
@@ -368,10 +370,7 @@ class Console {
           final runtimeStyled = _style.dim().render(' $runtime');
           final baseUsed =
               Style.visibleLength(prefix) + Style.visibleLength(runtimeStyled);
-          final dotsLen = (terminalWidth - baseUsed - 2).clamp(
-            0,
-            terminalWidth,
-          );
+          final dotsLen = (actualWidth - baseUsed - 2).clamp(0, actualWidth);
           var dots = '.' * dotsLen;
           if (dotsLen > 0) {
             final idx = spinnerTick % dotsLen;
@@ -418,7 +417,7 @@ class Console {
             Style.visibleLength(runtime) +
             1 +
             4;
-        final dots = (terminalWidth - used).clamp(0, terminalWidth);
+        final dots = (actualWidth - used).clamp(0, actualWidth);
         final line =
             '$prefix${_style.dim().render('.' * dots)}${runtime.isNotEmpty ? _style.dim().render(runtime) : ''} $statusLabel';
         if (animate) {
