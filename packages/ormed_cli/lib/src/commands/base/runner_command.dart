@@ -1,6 +1,6 @@
 import 'dart:io' as system_io;
 
-import 'package:artisanal/args.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:ormed/ormed.dart';
 
 import 'event_reporter.dart';
@@ -87,7 +87,14 @@ abstract class RunnerCommand extends Command<void> {
       cliIO.warning('No migrations found in registry.');
       return;
     }
-    final connectionHandle = await createConnection(root, effectiveConfig);
+
+    // Connect to database with spinner animation
+    final connectionHandle = await cliIO.spin(
+      'Connecting to database',
+      run: () => createConnection(root, effectiveConfig),
+      spinner: Spinners.miniDot,
+    );
+
     final ledger = SqlMigrationLedger.managed(
       connectionName: connectionHandle.name,
       manager: connectionHandle.manager,

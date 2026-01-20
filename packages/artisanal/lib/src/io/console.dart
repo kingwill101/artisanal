@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
+import '../tui/bubbles/components/tree.dart' show TreeComponent, TreeEnumerator;
 import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
 import '../renderer/renderer.dart';
 import '../style/color.dart';
@@ -14,8 +15,16 @@ import 'inline_animation.dart';
 import '../tui/terminal.dart' show StdioTerminal;
 import '../tui/bubbles/password.dart' show PasswordModel;
 import '../tui/bubbles/select.dart' show MultiSelectModel, SelectModel;
+import '../tui/bubbles/search.dart' show SearchModel;
 import '../tui/bubbles/prompt.dart'
-    show runMultiSelectPrompt, runPasswordPrompt, runSelectPrompt;
+    show
+        runMultiSelectPrompt,
+        runPasswordPrompt,
+        runSelectPrompt,
+        runSearchPrompt,
+        promptProgramOptions;
+import '../tui/bubbles/pause.dart' show CountdownModel;
+import '../tui/program.dart' show Program;
 
 /// Callback for writing a complete line to output.
 typedef WriteLine = void Function(String line);
@@ -39,6 +48,82 @@ enum TaskResult {
 
   /// Task was skipped.
   skipped,
+}
+
+/// Style presets for tree rendering.
+enum TreeStyle {
+  /// Standard tree characters (├── └──).
+  normal,
+
+  /// Rounded tree with curved elbow (├── ╰──).
+  rounded,
+
+  /// ASCII-only characters for maximum compatibility.
+  ascii,
+
+  /// Bullet-style list (• for all items).
+  bullet,
+
+  /// Arrow-style list (→ for all items).
+  arrow,
+}
+
+/// Result of a task group operation.
+class TaskGroupResult {
+  /// Creates a task group result.
+  const TaskGroupResult({
+    required this.completed,
+    required this.failed,
+    required this.skipped,
+    this.duration,
+  });
+
+  /// Names of successfully completed tasks.
+  final List<String> completed;
+
+  /// List of (name, error) pairs for failed tasks.
+  final List<(String, Object)> failed;
+
+  /// Names of tasks that were skipped (due to prior failures).
+  final List<String> skipped;
+
+  /// Total duration of the task group execution.
+  final Duration? duration;
+
+  /// Whether all tasks completed successfully.
+  bool get success => failed.isEmpty && skipped.isEmpty;
+
+  /// Total number of tasks.
+  int get total => completed.length + failed.length + skipped.length;
+}
+
+/// Result of a steps workflow operation.
+class StepsResult {
+  /// Creates a steps result.
+  const StepsResult({
+    required this.completed,
+    required this.failed,
+    required this.skipped,
+    this.duration,
+  });
+
+  /// Names of successfully completed steps.
+  final List<String> completed;
+
+  /// List of (name, error) pairs for failed steps.
+  final List<(String, Object)> failed;
+
+  /// Names of steps that were skipped (due to prior failures).
+  final List<String> skipped;
+
+  /// Total duration of the workflow execution.
+  final Duration? duration;
+
+  /// Whether all steps completed successfully.
+  bool get success => failed.isEmpty && skipped.isEmpty;
+
+  /// Total number of steps.
+  int get total => completed.length + failed.length + skipped.length;
 }
 
 /// The main I/O helper for Artisanal-style console output.
@@ -615,6 +700,381 @@ class Console {
     );
   }
 
+  /// Runs a group of tasks with an overall progress indicator.
+  ///
+  /// Shows each task with a spinner/checkmark and an optional overall progress
+  /// bar at the top. Useful for batch operations like migrations or deployments.
+  ///
+  /// Parameters:
+  /// - [title]: Optional title for the task group
+  /// - [tasks]: List of (description, task function) pairs
+  /// - [showProgress]: If true, show an overall progress bar
+  /// - [continueOnError]: If true, continue with remaining tasks after a failure
+  /// - [spinner]: Spinner animation to use for each task
+  ///
+  /// Returns a [TaskGroupResult] with details about completed/failed tasks.
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = await console.taskGroup(
+  ///   title: 'Deploying application',
+  ///   tasks: [
+  ///     ('Building assets', () async { await build(); }),
+  ///     ('Running tests', () async { await test(); }),
+  ///     ('Deploying to server', () async { await deploy(); }),
+  ///   ],
+  /// );
+  /// ```
+  Future<TaskGroupResult> taskGroup({
+    String? title,
+    required List<(String description, FutureOr<void> Function() task)> tasks,
+    bool showProgress = true,
+    bool continueOnError = false,
+    Spinner spinner = Spinners.miniDot,
+  }) async {
+    if (tasks.isEmpty) {
+      return const TaskGroupResult(completed: [], failed: [], skipped: []);
+    }
+
+    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+    final watch = Stopwatch()..start();
+
+    if (title != null) {
+      writeln(_style.bold().render(title));
+    }
+
+    final completed = <String>[];
+    final failed = <(String, Object)>[];
+    final skipped = <String>[];
+    var hadError = false;
+
+    for (var i = 0; i < tasks.length; i++) {
+      final (description, taskFn) = tasks[i];
+
+      if (hadError && !continueOnError) {
+        skipped.add(description);
+        writeln(
+          '  ${_style.dim().render('○')} $description ${_style.dim().render('(skipped)')}',
+        );
+        continue;
+      }
+
+      if (supportsAnsi) {
+        try {
+          await components.spin(
+            description,
+            run: taskFn,
+            spinner: spinner,
+            showResult: true,
+          );
+          completed.add(description);
+        } catch (e) {
+          failed.add((description, e));
+          hadError = true;
+          if (!continueOnError) {
+            // Mark remaining as skipped
+            for (var j = i + 1; j < tasks.length; j++) {
+              skipped.add(tasks[j].$1);
+            }
+            break;
+          }
+        }
+      } else {
+        // Non-interactive fallback
+        write('  $description... ');
+        try {
+          await taskFn();
+          writeln(_style.foreground(Colors.success).render('done'));
+          completed.add(description);
+        } catch (e) {
+          writeln(_style.foreground(Colors.error).render('failed'));
+          failed.add((description, e));
+          hadError = true;
+          if (!continueOnError) break;
+        }
+      }
+    }
+
+    watch.stop();
+
+    // Summary
+    if (title != null) {
+      newLine();
+      if (failed.isEmpty) {
+        success(
+          'Completed ${completed.length} task(s) in ${_formatDuration(watch.elapsed)}',
+        );
+      } else {
+        warning(
+          'Completed ${completed.length}, failed ${failed.length}, skipped ${skipped.length} in ${_formatDuration(watch.elapsed)}',
+        );
+      }
+    }
+
+    return TaskGroupResult(
+      completed: completed,
+      failed: failed,
+      skipped: skipped,
+      duration: watch.elapsed,
+    );
+  }
+
+  /// Displays a multi-step workflow with sequential steps.
+  ///
+  /// Each step is numbered and shows its status (pending/running/done/failed).
+  /// Unlike [taskGroup], steps are displayed in a vertical list format with
+  /// clear step numbers, making it ideal for wizard-like workflows.
+  ///
+  /// Parameters:
+  /// - [title]: Optional title for the workflow
+  /// - [steps]: List of (step name, step function) pairs
+  /// - [continueOnError]: If true, continue with remaining steps after a failure
+  ///
+  /// Example:
+  /// ```dart
+  /// await console.steps(
+  ///   title: 'Project Setup',
+  ///   steps: [
+  ///     ('Create directory structure', () async => createDirs()),
+  ///     ('Initialize git repository', () async => gitInit()),
+  ///     ('Install dependencies', () async => installDeps()),
+  ///     ('Run initial build', () async => build()),
+  ///   ],
+  /// );
+  /// ```
+  Future<StepsResult> steps({
+    String? title,
+    required List<(String name, FutureOr<void> Function() action)> steps,
+    bool continueOnError = false,
+  }) async {
+    if (steps.isEmpty) {
+      return const StepsResult(completed: [], failed: [], skipped: []);
+    }
+
+    final terminal = promptTerminal;
+    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+    final watch = Stopwatch()..start();
+    final totalSteps = steps.length;
+    final stepWidth = totalSteps.toString().length;
+
+    if (title != null) {
+      writeln(_style.bold().render(title));
+      newLine();
+    }
+
+    final completed = <String>[];
+    final failed = <(String, Object)>[];
+    final skipped = <String>[];
+    var hadError = false;
+
+    for (var i = 0; i < steps.length; i++) {
+      final (name, action) = steps[i];
+      final stepNum = (i + 1).toString().padLeft(stepWidth);
+      final prefix = '[$stepNum/$totalSteps]';
+
+      if (hadError && !continueOnError) {
+        skipped.add(name);
+        writeln(
+          '  ${_style.dim().render(prefix)} ${_style.dim().render(name)} ${_style.dim().render('○ skipped')}',
+        );
+        continue;
+      }
+
+      if (supportsAnsi) {
+        terminal.hideCursor();
+        final stepWatch = Stopwatch()..start();
+
+        // Show running state
+        var spinnerTick = 0;
+        const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        Timer? spinnerTimer;
+
+        try {
+          spinnerTimer = Timer.periodic(const Duration(milliseconds: 83), (_) {
+            final frame = frames[spinnerTick % frames.length];
+            spinnerTick++;
+            terminal.clearLine();
+            terminal.write(
+              '  ${_style.foreground(Colors.info).render(prefix)} $name ${_style.foreground(Colors.info).render(frame)}',
+            );
+          });
+
+          // Show initial state
+          terminal.write(
+            '  ${_style.foreground(Colors.info).render(prefix)} $name ${_style.foreground(Colors.info).render(frames[0])}',
+          );
+
+          await action();
+
+          spinnerTimer.cancel();
+          stepWatch.stop();
+          terminal.clearLine();
+          terminal.writeln(
+            '  ${_style.foreground(Colors.success).render(prefix)} $name ${_style.foreground(Colors.success).render('✓')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+          );
+          completed.add(name);
+        } catch (e) {
+          spinnerTimer?.cancel();
+          stepWatch.stop();
+          terminal.clearLine();
+          terminal.writeln(
+            '  ${_style.foreground(Colors.error).render(prefix)} $name ${_style.foreground(Colors.error).render('✗')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+          );
+          failed.add((name, e));
+          hadError = true;
+          if (!continueOnError) {
+            // Mark remaining as skipped
+            for (var j = i + 1; j < steps.length; j++) {
+              skipped.add(steps[j].$1);
+              final skipNum = (j + 1).toString().padLeft(stepWidth);
+              writeln(
+                '  ${_style.dim().render('[$skipNum/$totalSteps]')} ${_style.dim().render(steps[j].$1)} ${_style.dim().render('○ skipped')}',
+              );
+            }
+            break;
+          }
+        } finally {
+          terminal.showCursor();
+        }
+      } else {
+        // Non-interactive fallback
+        write('  $prefix $name... ');
+        try {
+          await action();
+          writeln(_style.foreground(Colors.success).render('done'));
+          completed.add(name);
+        } catch (e) {
+          writeln(_style.foreground(Colors.error).render('failed'));
+          failed.add((name, e));
+          hadError = true;
+          if (!continueOnError) break;
+        }
+      }
+    }
+
+    watch.stop();
+
+    // Summary
+    newLine();
+    if (failed.isEmpty) {
+      success(
+        'All ${completed.length} step(s) completed in ${_formatDuration(watch.elapsed)}',
+      );
+    } else {
+      error(
+        'Steps: ${completed.length} completed, ${failed.length} failed, ${skipped.length} skipped',
+      );
+    }
+
+    return StepsResult(
+      completed: completed,
+      failed: failed,
+      skipped: skipped,
+      duration: watch.elapsed,
+    );
+  }
+
+  /// Displays a countdown timer.
+  ///
+  /// Shows a countdown from [seconds] to 0, then executes the optional [onComplete]
+  /// callback. Useful for warning users before destructive operations.
+  ///
+  /// Uses the TUI [CountdownModel] bubble which handles rendering properly
+  /// through the Program architecture, avoiding flicker.
+  ///
+  /// Parameters:
+  /// - [message]: Message to display with the countdown
+  /// - [seconds]: Number of seconds to count down
+  /// - [onComplete]: Optional callback when countdown reaches zero
+  ///
+  /// Returns true when countdown completes.
+  ///
+  /// Example:
+  /// ```dart
+  /// await console.countdown(
+  ///   'Deleting all data in',
+  ///   seconds: 5,
+  /// );
+  /// await deleteAllData();
+  /// }
+  /// ```
+  Future<bool> countdown(
+    String message, {
+    required int seconds,
+    FutureOr<void> Function()? onComplete,
+  }) async {
+    final terminal = promptTerminal;
+    final supportsAnsi = (_stdout ?? io.stdout).hasTerminal && interactive;
+
+    if (!supportsAnsi) {
+      // Non-interactive: just wait
+      writeln('$message $seconds seconds...');
+      await Future<void>.delayed(Duration(seconds: seconds));
+      if (onComplete != null) await onComplete();
+      return true;
+    }
+
+    // Use the TUI CountdownModel which handles rendering properly
+    await Program(
+      CountdownModel(
+        duration: Duration(seconds: seconds),
+        message: message,
+      ),
+      options: promptProgramOptions,
+      terminal: terminal,
+    ).run();
+
+    if (onComplete != null) await onComplete();
+    return true;
+  }
+
+  /// Displays a tree structure.
+  ///
+  /// Convenience method for rendering tree data. For more control,
+  /// use `TreeComponent` or `Tree` directly.
+  ///
+  /// Parameters:
+  /// - [data]: Nested map/list structure to display
+  /// - [root]: Optional root label
+  /// - [style]: Tree style preset (normal, rounded, ascii, etc.)
+  ///
+  /// Example:
+  /// ```dart
+  /// console.tree({
+  ///   'src': {
+  ///     'lib': ['main.dart', 'utils.dart'],
+  ///     'test': ['main_test.dart'],
+  ///   },
+  ///   'pubspec.yaml': null,
+  /// }, root: 'my_project');
+  /// ```
+  void tree(
+    Map<String, dynamic> data, {
+    String? root,
+    TreeStyle style = TreeStyle.normal,
+  }) {
+    final enumerator = switch (style) {
+      TreeStyle.normal => TreeEnumerator.normal,
+      TreeStyle.rounded => TreeEnumerator.rounded,
+      TreeStyle.ascii => TreeEnumerator.ascii,
+      TreeStyle.bullet => TreeEnumerator.bullet,
+      TreeStyle.arrow => TreeEnumerator.arrow,
+    };
+
+    final component = TreeComponent(
+      data: data,
+      showRoot: root != null,
+      rootLabel: root ?? '.',
+      enumerator: enumerator,
+      renderConfig: renderConfig,
+    );
+
+    for (final line in component.render().split('\n')) {
+      writeln(line);
+    }
+    newLine();
+  }
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Prompts
   // ─────────────────────────────────────────────────────────────────────────────
@@ -802,6 +1262,51 @@ class Console {
       defaultIndex: defaultIndex,
       display: display,
     );
+  }
+
+  /// Interactive search/filter prompt with fuzzy matching.
+  ///
+  /// Shows a search input that filters items in real-time as the user types.
+  /// Returns the selected item, or null if cancelled.
+  ///
+  /// Parameters:
+  /// - [question]: Title displayed above the search
+  /// - [items]: List of items to search through
+  /// - [display]: Optional function to convert items to display strings
+  /// - [placeholder]: Placeholder text for the search input
+  /// - [noResultsText]: Text shown when no items match
+  ///
+  /// Example:
+  /// ```dart
+  /// final file = await console.search(
+  ///   'Select a file:',
+  ///   items: ['main.dart', 'pubspec.yaml', 'README.md', 'lib/utils.dart'],
+  /// );
+  /// if (file != null) {
+  ///   print('Selected: $file');
+  /// }
+  /// ```
+  Future<T?> search<T>(
+    String question, {
+    required List<T> items,
+    String Function(T)? display,
+    String placeholder = 'Type to search...',
+    String noResultsText = 'No matches found',
+  }) async {
+    if (!interactive) {
+      if (items.isNotEmpty) return items.first;
+      return null;
+    }
+
+    final terminal = promptTerminal;
+    final model = SearchModel<T>(
+      items: items,
+      title: question,
+      display: display,
+      placeholder: placeholder,
+      noResultsText: noResultsText,
+    );
+    return await runSearchPrompt(model, terminal);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

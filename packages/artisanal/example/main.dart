@@ -30,6 +30,9 @@ Future<void> main(List<String> args) async {
   final runner = CommandRunner<void>('artisanal-demo', 'artisanal demo CLI')
     ..addCommand(DemoCommand())
     ..addCommand(UiTaskCommand())
+    ..addCommand(UiTaskGroupCommand())
+    ..addCommand(UiStepsCommand())
+    ..addCommand(UiCountdownCommand())
     ..addCommand(UiTableCommand())
     ..addCommand(UiPromptsCommand())
     ..addCommand(UiProgressCommand())
@@ -39,9 +42,12 @@ Future<void> main(List<String> args) async {
     ..addCommand(UiMultiSelectCommand())
     ..addCommand(UiSpinCommand())
     ..addCommand(UiSpinnerCommand())
+    ..addCommand(UiSpinnerStylesCommand())
     ..addCommand(UiPanelCommand())
     ..addCommand(UiTreeCommand())
+    ..addCommand(UiTreeConvenienceCommand())
     ..addCommand(UiSearchCommand())
+    ..addCommand(UiSearchConvenienceCommand())
     ..addCommand(UiPauseCommand())
     ..addCommand(UiChalkCommand())
     ..addCommand(UiValidatorsCommand())
@@ -134,6 +140,186 @@ class UiTaskCommand extends Command<void> {
         return TaskResult.success;
       },
     );
+  }
+}
+
+/// Demonstrate taskGroup - running multiple tasks with progress tracking.
+class UiTaskGroupCommand extends Command<void> {
+  UiTaskGroupCommand() {
+    argParser
+      ..addFlag('fail', negatable: false, help: 'Make one task fail.')
+      ..addFlag(
+        'parallel',
+        abbr: 'p',
+        negatable: false,
+        help: 'Run tasks in parallel (simulated).',
+      );
+  }
+
+  @override
+  String get name => 'ui:taskgroup';
+
+  @override
+  String get description =>
+      'Demonstrate taskGroup for running multiple tasks with progress.';
+
+  @override
+  Future<void> run() async {
+    final shouldFail = argResults?['fail'] == true;
+
+    io.title('Task Group Demo');
+    io.text('Running multiple tasks with progress tracking.');
+    io.newLine();
+
+    final result = await io.taskGroup(
+      title: 'Deployment Pipeline',
+      tasks: [
+        (
+          'Compile assets',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 400));
+          },
+        ),
+        (
+          'Run tests',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 600));
+            if (shouldFail) throw Exception('Test suite failed');
+          },
+        ),
+        (
+          'Build Docker image',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+          },
+        ),
+        (
+          'Push to registry',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+          },
+        ),
+        (
+          'Deploy to staging',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 400));
+          },
+        ),
+      ],
+      continueOnError: false,
+    );
+
+    io.newLine();
+    io.section('Result');
+    io.twoColumnDetail('Completed', result.completed.length.toString());
+    io.twoColumnDetail('Failed', result.failed.length.toString());
+    io.twoColumnDetail('Skipped', result.skipped.length.toString());
+    io.twoColumnDetail('Duration', '${result.duration?.inMilliseconds ?? 0}ms');
+  }
+}
+
+/// Demonstrate steps - multi-step workflows with numbered progress.
+class UiStepsCommand extends Command<void> {
+  UiStepsCommand() {
+    argParser.addFlag('fail', negatable: false, help: 'Make one step fail.');
+  }
+
+  @override
+  String get name => 'ui:steps';
+
+  @override
+  String get description =>
+      'Demonstrate steps for multi-step workflows with numbered progress.';
+
+  @override
+  Future<void> run() async {
+    final shouldFail = argResults?['fail'] == true;
+
+    io.title('Steps Demo');
+    io.text('Running a multi-step workflow with numbered progress.');
+    io.newLine();
+
+    final result = await io.steps(
+      title: 'Project Setup',
+      steps: [
+        (
+          'Create directory structure',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+          },
+        ),
+        (
+          'Initialize Git repository',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+          },
+        ),
+        (
+          'Install dependencies',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+            if (shouldFail) throw Exception('Failed to install dependencies');
+          },
+        ),
+        (
+          'Generate configuration files',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 250));
+          },
+        ),
+        (
+          'Run initial build',
+          () async {
+            await Future<void>.delayed(const Duration(milliseconds: 400));
+          },
+        ),
+      ],
+      continueOnError: false,
+    );
+
+    io.newLine();
+    io.section('Workflow Result');
+    io.twoColumnDetail('Steps completed', result.completed.length.toString());
+    io.twoColumnDetail('Steps failed', result.failed.length.toString());
+    io.twoColumnDetail('Steps skipped', result.skipped.length.toString());
+    io.twoColumnDetail(
+      'Total time',
+      '${result.duration?.inMilliseconds ?? 0}ms',
+    );
+  }
+}
+
+/// Demonstrate countdown timer for destructive operations.
+class UiCountdownCommand extends Command<void> {
+  UiCountdownCommand() {
+    argParser.addOption(
+      'seconds',
+      abbr: 's',
+      defaultsTo: '5',
+      help: 'Number of seconds to count down.',
+    );
+  }
+
+  @override
+  String get name => 'ui:countdown';
+
+  @override
+  String get description =>
+      'Demonstrate countdown timer (useful before destructive operations).';
+
+  @override
+  Future<void> run() async {
+    final seconds = int.tryParse(argResults?['seconds'] as String? ?? '5') ?? 5;
+
+    io.title('Countdown Demo');
+    io.text('This shows a countdown timer before an action.');
+    io.warning('Commonly used before destructive operations.');
+    io.newLine();
+
+    await io.countdown('Proceeding in', seconds: seconds);
+
+    io.newLine();
+    io.success('Action executed!');
   }
 }
 
@@ -543,6 +729,113 @@ class UiSpinnerCommand extends Command<void> {
   }
 }
 
+/// Demonstrate all the new spinner styles.
+class UiSpinnerStylesCommand extends Command<void> {
+  @override
+  String get name => 'ui:spinner-styles';
+
+  @override
+  String get description => 'Showcase all available spinner styles.';
+
+  @override
+  Future<void> run() async {
+    io.title('Spinner Styles Gallery');
+    io.text('Showcasing 25+ spinner animation styles.');
+    io.newLine();
+
+    final terminal = StdioTerminal(stdout: dartio.stdout, stdin: dartio.stdin);
+
+    // Classic spinners
+    io.section('Classic Spinners');
+
+    final classicSpinners = [
+      ('miniDot', Spinners.miniDot),
+      ('dot', Spinners.dot),
+      ('line', Spinners.line),
+      ('circle', Spinners.circle),
+      ('arc', Spinners.arc),
+      ('arrows', Spinners.arrows),
+      ('bounce', Spinners.bounce),
+    ];
+
+    for (final (name, spinner) in classicSpinners) {
+      await runSpinnerTask(
+        message: 'Spinner: $name',
+        spinner: spinner,
+        terminal: terminal,
+        task: () async {
+          await Future<void>.delayed(const Duration(milliseconds: 800));
+        },
+      );
+    }
+
+    io.newLine();
+    io.section('New Spinner Styles');
+
+    final newSpinners = [
+      ('boxBounce', Spinners.boxBounce),
+      ('boxBounce2', Spinners.boxBounce2),
+      ('triangle', Spinners.triangle),
+      ('binary', Spinners.binary),
+      ('flip', Spinners.flip),
+      ('toggle', Spinners.toggle),
+      ('toggle2', Spinners.toggle2),
+      ('toggle3', Spinners.toggle3),
+      ('toggle4', Spinners.toggle4),
+      ('star', Spinners.star),
+      ('star2', Spinners.star2),
+      ('layer', Spinners.layer),
+      ('point', Spinners.point),
+      ('noise', Spinners.noise),
+      ('simpleDots', Spinners.simpleDots),
+      ('simpleDotsScrolling', Spinners.simpleDotsScrolling),
+    ];
+
+    for (final (name, spinner) in newSpinners) {
+      await runSpinnerTask(
+        message: 'Spinner: $name',
+        spinner: spinner,
+        terminal: terminal,
+        task: () async {
+          await Future<void>.delayed(const Duration(milliseconds: 800));
+        },
+      );
+    }
+
+    io.newLine();
+    io.section('Fun & Expressive Spinners');
+
+    final funSpinners = [
+      ('aesthetic', Spinners.aesthetic),
+      ('weather', Spinners.weather),
+      ('christmas', Spinners.christmas),
+      ('grenade', Spinners.grenade),
+      ('fingerDance', Spinners.fingerDance),
+      ('fistBump', Spinners.fistBump),
+      ('mindblown', Spinners.mindblown),
+      ('speaker', Spinners.speaker),
+      ('orangePulse', Spinners.orangePulse),
+      ('bluePulse', Spinners.bluePulse),
+      ('betaWave', Spinners.betaWave),
+      ('sand', Spinners.sand),
+    ];
+
+    for (final (name, spinner) in funSpinners) {
+      await runSpinnerTask(
+        message: 'Spinner: $name',
+        spinner: spinner,
+        terminal: terminal,
+        task: () async {
+          await Future<void>.delayed(const Duration(milliseconds: 800));
+        },
+      );
+    }
+
+    io.newLine();
+    io.success('All spinner styles demonstrated!');
+  }
+}
+
 /// Demonstrate panels with box drawing.
 class UiPanelCommand extends Command<void> {
   UiPanelCommand() {
@@ -669,6 +962,64 @@ class UiTreeCommand extends Command<void> {
   }
 }
 
+/// Demonstrate the new Console.tree() convenience method.
+class UiTreeConvenienceCommand extends Command<void> {
+  UiTreeConvenienceCommand() {
+    argParser.addOption(
+      'style',
+      abbr: 's',
+      defaultsTo: 'normal',
+      help: 'Tree style (normal, rounded, ascii, bullet, arrow)',
+    );
+  }
+
+  @override
+  String get name => 'ui:tree-convenience';
+
+  @override
+  String get description =>
+      'Demonstrate the Console.tree() convenience method with different styles.';
+
+  @override
+  Future<void> run() async {
+    final styleArg = argResults?['style'] as String? ?? 'normal';
+    final style = switch (styleArg) {
+      'rounded' => TreeStyle.rounded,
+      'ascii' => TreeStyle.ascii,
+      'bullet' => TreeStyle.bullet,
+      'arrow' => TreeStyle.arrow,
+      _ => TreeStyle.normal,
+    };
+
+    io.title('Console.tree() Convenience Method');
+    io.text('Using TreeStyle.$styleArg');
+    io.newLine();
+
+    io.tree(
+      {
+        'src': {
+          'lib': ['main.dart', 'utils.dart', 'config.dart'],
+          'test': ['main_test.dart', 'utils_test.dart'],
+        },
+        'docs': ['README.md', 'API.md'],
+        'pubspec.yaml': null,
+        '.gitignore': null,
+      },
+      root: 'my_project',
+      style: style,
+    );
+
+    io.section('All Tree Styles');
+    for (final s in TreeStyle.values) {
+      io.writeln(io.style.bold().render('TreeStyle.${s.name}:'));
+      io.tree({
+        'folder': ['file1.txt', 'file2.txt'],
+        'other': null,
+      }, style: s);
+    }
+  }
+}
+
 /// Demonstrate search prompt.
 class UiSearchCommand extends Command<void> {
   UiSearchCommand() {
@@ -723,6 +1074,53 @@ class UiSearchCommand extends Command<void> {
       io.success('Selected: $selected');
     } else {
       io.warning('Selection cancelled');
+    }
+  }
+}
+
+/// Demonstrate the new Console.search() convenience method.
+class UiSearchConvenienceCommand extends Command<void> {
+  @override
+  String get name => 'ui:search-convenience';
+
+  @override
+  String get description =>
+      'Demonstrate the Console.search() convenience method.';
+
+  @override
+  Future<void> run() async {
+    io.title('Console.search() Convenience Method');
+    io.text('This uses the simplified console.search() API.');
+    io.newLine();
+
+    final files = [
+      'lib/src/main.dart',
+      'lib/src/utils/helpers.dart',
+      'lib/src/utils/validators.dart',
+      'lib/src/models/user.dart',
+      'lib/src/models/post.dart',
+      'lib/src/services/api_service.dart',
+      'lib/src/services/auth_service.dart',
+      'lib/src/widgets/button.dart',
+      'lib/src/widgets/card.dart',
+      'test/main_test.dart',
+      'test/utils_test.dart',
+      'pubspec.yaml',
+      'README.md',
+    ];
+
+    final selected = await io.search<String>(
+      'Select a file to open:',
+      items: files,
+      placeholder: 'Type to filter files...',
+      noResultsText: 'No matching files',
+    );
+
+    io.newLine();
+    if (selected != null) {
+      io.success('Opening: $selected');
+    } else {
+      io.warning('No file selected');
     }
   }
 }
@@ -1518,8 +1916,14 @@ class UiAllCommand extends Command<void> {
       'ui:select - arrow-key selection',
       'ui:multiselect - multi-select with checkboxes',
       'ui:search - searchable selection',
+      'ui:search-convenience - Console.search() API',
       'ui:spinner - animated spinner',
+      'ui:spinner-styles - 25+ spinner animation styles',
       'ui:pause - press any key / countdown',
+      'ui:countdown - countdown timer for destructive ops',
+      'ui:taskgroup - run multiple tasks with progress',
+      'ui:steps - multi-step workflow with numbered steps',
+      'ui:tree-convenience - Console.tree() with styles',
       'ui:validators - input validation',
       'ui:anticipate - autocomplete suggestions',
       'ui:textarea - multi-line editor input',

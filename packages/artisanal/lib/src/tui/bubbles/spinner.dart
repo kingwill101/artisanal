@@ -186,6 +186,290 @@ class Spinners {
     ],
     fps: Duration(milliseconds: 100),
   );
+
+  /// Box bounce spinner.
+  static const boxBounce = Spinner(
+    frames: ['▖', '▘', '▝', '▗'],
+    fps: Duration(milliseconds: 120),
+  );
+
+  /// Box bounce 2 spinner (larger).
+  static const boxBounce2 = Spinner(
+    frames: ['▌', '▀', '▐', '▄'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Triangle spinner.
+  static const triangle = Spinner(
+    frames: ['◢', '◣', '◤', '◥'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Binary spinner.
+  static const binary = Spinner(
+    frames: ['010010', '001100', '100101', '111010', '001011', '110001'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Aesthetic dots spinner.
+  static const aesthetic = Spinner(
+    frames: [
+      '▰▱▱▱▱▱▱',
+      '▰▰▱▱▱▱▱',
+      '▰▰▰▱▱▱▱',
+      '▰▰▰▰▱▱▱',
+      '▰▰▰▰▰▱▱',
+      '▰▰▰▰▰▰▱',
+      '▰▰▰▰▰▰▰',
+      '▱▰▰▰▰▰▰',
+      '▱▱▰▰▰▰▰',
+      '▱▱▱▰▰▰▰',
+      '▱▱▱▱▰▰▰',
+      '▱▱▱▱▱▰▰',
+      '▱▱▱▱▱▱▰',
+      '▱▱▱▱▱▱▱',
+    ],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Flip spinner.
+  static const flip = Spinner(
+    frames: ['_', '_', '_', '-', '`', '`', '\'', '´', '-', '_', '_', '_'],
+    fps: Duration(milliseconds: 70),
+  );
+
+  /// Weather spinner.
+  static const weather = Spinner(
+    frames: [
+      '☀️',
+      '☀️',
+      '☀️',
+      '🌤',
+      '⛅️',
+      '🌥',
+      '☁️',
+      '🌧',
+      '🌨',
+      '🌧',
+      '🌥',
+      '⛅️',
+      '🌤',
+      '☀️',
+      '☀️',
+    ],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Christmas spinner.
+  static const christmas = Spinner(
+    frames: ['🌲', '🎄'],
+    fps: Duration(milliseconds: 400),
+  );
+
+  /// Grenade spinner.
+  static const grenade = Spinner(
+    frames: [
+      '،  ',
+      '′  ',
+      ' ´ ',
+      ' ‾ ',
+      '  ⸌',
+      '  ⸊',
+      '  |',
+      '  ⁎',
+      '  ⁕',
+      ' ෴ ',
+      '  ⁂',
+      '   ',
+      '   ',
+      '   ',
+    ],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Point spinner.
+  static const point = Spinner(
+    frames: ['∙∙∙', '●∙∙', '∙●∙', '∙∙●', '∙∙∙'],
+    fps: Duration(milliseconds: 125),
+  );
+
+  /// Layer spinner.
+  static const layer = Spinner(
+    frames: ['-', '=', '≡'],
+    fps: Duration(milliseconds: 150),
+  );
+
+  /// Beta wave spinner.
+  static const betaWave = Spinner(
+    frames: [
+      'ρββββββ',
+      'βρβββββ',
+      'ββρββββ',
+      'βββρβββ',
+      'ββββρββ',
+      'βββββρβ',
+      'ββββββρ',
+    ],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Finger dance spinner.
+  static const fingerDance = Spinner(
+    frames: ['🤘', '🤟', '🖖', '✋', '🤚', '👆'],
+    fps: Duration(milliseconds: 160),
+  );
+
+  /// Fist bump spinner.
+  static const fistBump = Spinner(
+    frames: [
+      '🤜　　　　🤛',
+      '🤜　　　🤛',
+      '🤜　　🤛',
+      '🤜　🤛',
+      '👊🤛',
+      '🤜👊',
+      '🤜　🤛',
+      '🤜　　🤛',
+      '🤜　　　🤛',
+      '🤜　　　　🤛',
+    ],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Mind blown spinner.
+  static const mindblown = Spinner(
+    frames: [
+      '😐',
+      '😐',
+      '😮',
+      '😮',
+      '😦',
+      '😦',
+      '😧',
+      '😧',
+      '🤯',
+      '💥',
+      '✨',
+      '　',
+      '　',
+      '　',
+    ],
+    fps: Duration(milliseconds: 160),
+  );
+
+  /// Speaker spinner.
+  static const speaker = Spinner(
+    frames: ['🔈', '🔉', '🔊', '🔉'],
+    fps: Duration(milliseconds: 160),
+  );
+
+  /// Orange pulse spinner.
+  static const orangePulse = Spinner(
+    frames: ['🔸', '🔶', '🟠', '🟠', '🔶'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Blue pulse spinner.
+  static const bluePulse = Spinner(
+    frames: ['🔹', '🔷', '🔵', '🔵', '🔷'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Toggle spinner.
+  static const toggle = Spinner(
+    frames: ['⊶', '⊷'],
+    fps: Duration(milliseconds: 250),
+  );
+
+  /// Toggle 2 spinner.
+  static const toggle2 = Spinner(
+    frames: ['▫', '▪'],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Toggle 3 spinner.
+  static const toggle3 = Spinner(
+    frames: ['□', '■'],
+    fps: Duration(milliseconds: 120),
+  );
+
+  /// Toggle 4 spinner.
+  static const toggle4 = Spinner(
+    frames: ['■', '□', '▪', '▫'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Noise spinner.
+  static const noise = Spinner(
+    frames: ['▓', '▒', '░'],
+    fps: Duration(milliseconds: 100),
+  );
+
+  /// Simple dots spinner (compact).
+  static const simpleDots = Spinner(
+    frames: ['.  ', '.. ', '...', '   '],
+    fps: Duration(milliseconds: 400),
+  );
+
+  /// Simple dots scrolling.
+  static const simpleDotsScrolling = Spinner(
+    frames: ['.  ', '.. ', '...', ' ..', '  .', '   '],
+    fps: Duration(milliseconds: 200),
+  );
+
+  /// Star spinner.
+  static const star = Spinner(
+    frames: ['✶', '✸', '✹', '✺', '✹', '✷'],
+    fps: Duration(milliseconds: 70),
+  );
+
+  /// Star 2 spinner.
+  static const star2 = Spinner(
+    frames: ['+', 'x', '*'],
+    fps: Duration(milliseconds: 80),
+  );
+
+  /// Sand spinner.
+  static const sand = Spinner(
+    frames: [
+      '⠁',
+      '⠂',
+      '⠄',
+      '⡀',
+      '⡈',
+      '⡐',
+      '⡠',
+      '⣀',
+      '⣁',
+      '⣂',
+      '⣄',
+      '⣌',
+      '⣔',
+      '⣤',
+      '⣥',
+      '⣦',
+      '⣮',
+      '⣶',
+      '⣷',
+      '⣿',
+      '⡿',
+      '⠿',
+      '⢟',
+      '⠟',
+      '⡛',
+      '⠛',
+      '⠫',
+      '⢋',
+      '⠋',
+      '⠍',
+      '⡉',
+      '⠉',
+      '⠑',
+      '⠡',
+      '⢁',
+    ],
+    fps: Duration(milliseconds: 80),
+  );
 }
 
 /// Global ID counter for spinner instances.

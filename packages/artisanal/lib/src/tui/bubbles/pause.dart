@@ -2,7 +2,6 @@ import '../cmd.dart';
 import '../key.dart';
 import '../component.dart';
 import '../msg.dart';
-import 'timer.dart';
 
 /// A simple "press any key" pause model.
 ///
@@ -34,16 +33,18 @@ class PauseModel extends ViewComponent {
 /// exposed as `CountdownComponent`).
 class CountdownModel extends ViewComponent {
   CountdownModel({
-    required Duration duration,
+    required this.duration,
     this.message = 'Continuing in',
-    Duration interval = const Duration(seconds: 1),
-  }) : _timer = TimerModel(timeout: duration, interval: interval);
+    this.interval = const Duration(seconds: 1),
+  }) : _remaining = duration;
 
+  final Duration duration;
+  final Duration interval;
   final String message;
-  TimerModel _timer;
+  Duration _remaining;
 
   @override
-  Cmd? init() => _timer.start();
+  Cmd? init() => _start();
 
   @override
   (CountdownModel, Cmd?) update(Msg msg) {
@@ -55,16 +56,32 @@ class CountdownModel extends ViewComponent {
       return (this, Cmd.quit());
     }
 
-    final (newTimer, cmd) = _timer.update(msg);
-    _timer = newTimer;
-
-    if (_timer.timedOut) {
-      return (this, Cmd.quit());
+    if (msg is TickMsg && msg.id == 'countdown') {
+      final newRemaining = _remaining - interval;
+      if (newRemaining <= Duration.zero) {
+        _remaining = Duration.zero;
+        return (this, Cmd.quit());
+      }
+      _remaining = newRemaining;
+      return (
+        this,
+        Cmd.tick(interval, (time) => TickMsg(time, id: 'countdown')),
+      );
     }
 
-    return (this, cmd);
+    return (this, null);
+  }
+
+  /// Creates a command to start the countdown timer.
+  ///
+  /// This sends the first tick after one interval so the initial frame is visible.
+  Cmd _start() {
+    return Cmd.tick(interval, (time) => TickMsg(time, id: 'countdown'));
   }
 
   @override
-  String view() => '$message ${_timer.view()}';
+  String view() {
+    final seconds = _remaining.inSeconds;
+    return '$message ${seconds}s';
+  }
 }
