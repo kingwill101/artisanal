@@ -58,7 +58,12 @@ import 'src/io/console.dart' show Console;
 export 'src/io/console.dart';
 
 export 'src/io/components.dart' show Components;
+export 'src/io/inline_animation.dart'
+    show InlineAnimation, InlineAnimationResult;
 export 'src/io/validators.dart' show Validators;
+
+// Spinners (for inline animations)
+export 'src/tui/bubbles/spinner.dart' show Spinner, Spinners;
 
 // Terminal utilities
 export 'src/terminal/terminal.dart'

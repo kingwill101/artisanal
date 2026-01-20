@@ -15,6 +15,8 @@ import '../tui/bubbles/components/exception.dart' show ExceptionComponent;
 import '../tui/bubbles/components/text.dart' show Rule;
 import '../tui/bubbles/prompt.dart'
     show promptProgramOptions, runTextAreaPrompt;
+import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
+import 'inline_animation.dart';
 import '../tui/bubbles/textarea.dart' show TextAreaModel;
 import '../tui/program.dart' show ProgramOptions;
 import 'console.dart';
@@ -181,27 +183,92 @@ class Components {
     io.newLine();
   }
 
-  /// Runs a callback while displaying a processing indicator.
+  /// Runs a callback while displaying an animated spinner.
+  ///
+  /// Unlike [Console.task], this shows a spinner animation while the task
+  /// runs, then displays a success/failure indicator.
+  ///
+  /// Parameters:
+  /// - [message]: Text to display next to the spinner
+  /// - [run]: The async function to execute
+  /// - [spinner]: Spinner animation to use (default: miniDot)
+  /// - [clearOnDone]: If true, remove the spinner line after completion
+  /// - [showResult]: If true (default), show ✓/✗ after completion
+  ///
+  /// Example:
+  /// ```dart
+  /// final result = await io.components.spin(
+  ///   'Connecting to database',
+  ///   run: () => connectToDb(),
+  /// );
+  ///
+  /// // Spinner that disappears after task
+  /// await io.components.spin(
+  ///   'Processing...',
+  ///   run: () => process(),
+  ///   clearOnDone: true,
+  /// );
+  /// ```
   Future<R> spin<R>(
     String message, {
     required FutureOr<R> Function() run,
+    Spinner spinner = Spinners.miniDot,
+    bool clearOnDone = false,
+    bool showResult = true,
   }) async {
-    io.write('$message ');
+    // If not interactive, fall back to simple output
+    if (!io.interactive || !io.promptTerminal.supportsAnsi) {
+      io.write('$message ');
+      final watch = Stopwatch()..start();
+      try {
+        final result = await run();
+        watch.stop();
+        if (showResult && !clearOnDone) {
+          io.writeln(
+            style.foreground(Colors.success).render('✓') +
+                muted(' ${_formatDuration(watch.elapsed)}'),
+          );
+        } else if (!clearOnDone) {
+          io.writeln();
+        }
+        return result;
+      } catch (_) {
+        watch.stop();
+        if (showResult && !clearOnDone) {
+          io.writeln(
+            style.foreground(Colors.error).render('✗') +
+                muted(' ${_formatDuration(watch.elapsed)}'),
+          );
+        } else if (!clearOnDone) {
+          io.writeln();
+        }
+        rethrow;
+      }
+    }
+
+    // Use InlineAnimation for actual spinner animation
+    final animation = InlineAnimation(terminal: io.promptTerminal);
     final watch = Stopwatch()..start();
+
     try {
-      final result = await run();
-      watch.stop();
-      io.writeln(
-        style.foreground(Colors.success).render('✓') +
-            muted(' ${_formatDuration(watch.elapsed)}'),
+      final result = await animation.spin(
+        message: message,
+        task: run,
+        spinner: spinner,
+        clearOnDone: clearOnDone,
+        doneMessage: showResult && !clearOnDone
+            ? '${style.foreground(Colors.success).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
+            : null,
       );
       return result;
     } catch (_) {
-      watch.stop();
-      io.writeln(
-        style.foreground(Colors.error).render('✗') +
-            muted(' ${_formatDuration(watch.elapsed)}'),
-      );
+      // Animation already cleaned up, just show error if needed
+      if (showResult && !clearOnDone) {
+        io.promptTerminal.clearLine();
+        io.promptTerminal.writeln(
+          '${style.foreground(Colors.error).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
+        );
+      }
       rethrow;
     }
   }

@@ -4,11 +4,13 @@ import 'dart:io' as io;
 import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
+import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
 import '../renderer/renderer.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
+import 'inline_animation.dart';
 import '../tui/terminal.dart' show StdioTerminal;
 import '../tui/bubbles/password.dart' show PasswordModel;
 import '../tui/bubbles/select.dart' show MultiSelectModel, SelectModel;
@@ -313,9 +315,32 @@ class Console {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Displays a task with status indicator (DONE/FAIL/SKIPPED).
+  ///
+  /// Shows an animated progress indicator while the task runs, then displays
+  /// the final status. By default, the final status line remains visible.
+  ///
+  /// Parameters:
+  /// - [description]: Text describing the task
+  /// - [run]: The async function to execute
+  /// - [clearOnDone]: If true, remove the task line after completion
+  ///
+  /// Example:
+  /// ```dart
+  /// await console.task('Processing files', run: () async {
+  ///   await processFiles();
+  ///   return TaskResult.success;
+  /// });
+  ///
+  /// // Task that disappears after completion
+  /// await console.task('Loading...', run: () async {
+  ///   await loadData();
+  ///   return TaskResult.success;
+  /// }, clearOnDone: true);
+  /// ```
   Future<TaskResult> task(
     String description, {
     FutureOr<TaskResult> Function()? run,
+    bool clearOnDone = false,
   }) async {
     final desc = description.trimRight();
     final prefix = '  $desc ';
@@ -369,36 +394,44 @@ class Console {
       if (animate) {
         terminal.clearLine();
       }
-      final runtime = run == null ? '' : ' ${_formatDuration(watch.elapsed)}';
-      final statusLabel = switch (result) {
-        TaskResult.success =>
-          _style.bold().foreground(Colors.success).render('DONE'),
-        TaskResult.skipped =>
-          _style.bold().foreground(Colors.warning).render('SKIPPED'),
-        TaskResult.failure =>
-          _style.bold().foreground(Colors.error).render('FAIL'),
-      };
 
-      final used =
-          2 +
-          Style.visibleLength(desc) +
-          1 +
-          Style.visibleLength(runtime) +
-          1 +
-          4;
-      final dots = (terminalWidth - used).clamp(0, terminalWidth);
-      final line =
-          '$prefix${_style.dim().render('.' * dots)}${runtime.isNotEmpty ? _style.dim().render(runtime) : ''} $statusLabel';
-      if (animate) {
-        terminal.write(line);
-        terminal.writeln();
-        terminal.showCursor();
-      } else {
-        write(_style.dim().render('.' * dots));
-        if (runtime.isNotEmpty) {
-          write(_style.dim().render(runtime));
+      // If clearOnDone is set, just clear the line and restore cursor
+      if (clearOnDone) {
+        if (animate) {
+          terminal.showCursor();
         }
-        writeln(' $statusLabel');
+      } else {
+        final runtime = run == null ? '' : ' ${_formatDuration(watch.elapsed)}';
+        final statusLabel = switch (result) {
+          TaskResult.success =>
+            _style.bold().foreground(Colors.success).render('DONE'),
+          TaskResult.skipped =>
+            _style.bold().foreground(Colors.warning).render('SKIPPED'),
+          TaskResult.failure =>
+            _style.bold().foreground(Colors.error).render('FAIL'),
+        };
+
+        final used =
+            2 +
+            Style.visibleLength(desc) +
+            1 +
+            Style.visibleLength(runtime) +
+            1 +
+            4;
+        final dots = (terminalWidth - used).clamp(0, terminalWidth);
+        final line =
+            '$prefix${_style.dim().render('.' * dots)}${runtime.isNotEmpty ? _style.dim().render(runtime) : ''} $statusLabel';
+        if (animate) {
+          terminal.write(line);
+          terminal.writeln();
+          terminal.showCursor();
+        } else {
+          write(_style.dim().render('.' * dots));
+          if (runtime.isNotEmpty) {
+            write(_style.dim().render(runtime));
+          }
+          writeln(' $statusLabel');
+        }
       }
     }
   }
@@ -437,8 +470,32 @@ class Console {
     stdin: _stdin ?? io.stdin,
   );
 
-  /// Creates a new progress bar.
-  Iterable<T> progressIterate<T>(Iterable<T> iterable, {int? max}) sync* {
+  /// Iterates over items while showing a progress bar.
+  ///
+  /// Shows a progress bar that updates as items are yielded. By default,
+  /// the final progress bar remains visible after iteration completes.
+  ///
+  /// Parameters:
+  /// - [iterable]: Items to iterate over
+  /// - [max]: Total count (if iterable doesn't have a known length)
+  /// - [clearOnDone]: If true, remove the progress bar after completion
+  ///
+  /// Example:
+  /// ```dart
+  /// for (final item in console.progressIterate(items)) {
+  ///   await process(item);
+  /// }
+  ///
+  /// // Progress bar that disappears after completion
+  /// for (final item in console.progressIterate(items, clearOnDone: true)) {
+  ///   await process(item);
+  /// }
+  /// ```
+  Iterable<T> progressIterate<T>(
+    Iterable<T> iterable, {
+    int? max,
+    bool clearOnDone = false,
+  }) sync* {
     final total = max ?? (iterable is List<T> ? iterable.length : 0);
     final terminal = promptTerminal;
     final renderConfig = RenderConfig.fromRenderer(
@@ -471,11 +528,90 @@ class Console {
         );
       }
 
-      terminal.writeln();
+      if (clearOnDone) {
+        terminal.clearLine();
+      } else {
+        terminal.writeln();
+        newLine();
+      }
     } finally {
       terminal.showCursor();
     }
-    newLine();
+  }
+
+  /// Runs an async task while displaying an animated spinner.
+  ///
+  /// This is a lightweight alternative to [task] that shows a spinner
+  /// animation without the DONE/FAIL status line format.
+  ///
+  /// Parameters:
+  /// - [message]: Text to display next to the spinner
+  /// - [run]: The async function to execute
+  /// - [spinner]: Spinner animation to use (default: miniDot)
+  /// - [clearOnDone]: If true, remove the spinner line after completion
+  /// - [doneMessage]: Optional message to show after completion
+  ///
+  /// Example:
+  /// ```dart
+  /// // Spinner with default behavior (stays visible)
+  /// final data = await console.spin('Loading...', run: () => fetchData());
+  ///
+  /// // Spinner that disappears
+  /// await console.spin('Processing...', run: () => process(), clearOnDone: true);
+  ///
+  /// // Spinner with custom done message
+  /// await console.spin('Connecting...', run: () => connect(),
+  ///     doneMessage: '✓ Connected');
+  /// ```
+  Future<T> spin<T>(
+    String message, {
+    required FutureOr<T> Function() run,
+    Spinner spinner = Spinners.miniDot,
+    bool clearOnDone = false,
+    String? doneMessage,
+  }) async {
+    // Delegate to components.spin which has the full implementation
+    return components.spin(
+      message,
+      run: run,
+      spinner: spinner,
+      clearOnDone: clearOnDone,
+      showResult: doneMessage == null && !clearOnDone,
+    );
+  }
+
+  /// Runs an async task with a progress callback.
+  ///
+  /// The task receives a callback to update progress (0.0 to 1.0).
+  ///
+  /// Parameters:
+  /// - [message]: Text to display with the progress bar
+  /// - [run]: Async function that receives a progress updater
+  /// - [clearOnDone]: If true, clear the line after completion
+  /// - [doneMessage]: Optional message to show after completion
+  ///
+  /// Example:
+  /// ```dart
+  /// await console.progress('Downloading', run: (setProgress) async {
+  ///   for (var i = 0; i <= 100; i++) {
+  ///     await Future.delayed(Duration(milliseconds: 50));
+  ///     setProgress(i / 100);
+  ///   }
+  /// });
+  /// ```
+  Future<T> progress<T>(
+    String message, {
+    required FutureOr<T> Function(void Function(double) setProgress) run,
+    bool clearOnDone = false,
+    String? doneMessage,
+  }) async {
+    final animation = InlineAnimation(terminal: promptTerminal);
+    return animation.progress(
+      message: message,
+      task: run,
+      clearOnDone: clearOnDone,
+      doneMessage: doneMessage,
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
