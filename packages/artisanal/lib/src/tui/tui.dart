@@ -229,3 +229,6 @@ export 'zone/zone.dart'
         zone,
         initGlobalZone,
         closeGlobalZone;
+
+// Widget system for composable components
+export 'widgets/widgets.dart';

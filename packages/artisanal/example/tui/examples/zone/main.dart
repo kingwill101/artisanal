@@ -5,6 +5,7 @@
 //
 // Run with: dart run example/tui/examples/zone/main.dart
 
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 
 void main() async {
@@ -22,6 +23,30 @@ void main() async {
   // Clean up when done
   closeGlobalZone();
 }
+
+// Button styles
+final _titleStyle = Style().bold().foreground(Colors.cyan);
+final _buttonStyle = Style()
+    .foreground(Colors.white)
+    .background(Colors.gray700);
+final _buttonHoverStyle = Style()
+    .bold()
+    .foreground(Colors.black)
+    .background(Colors.cyan);
+final _buttonActiveStyle = Style()
+    .bold()
+    .foreground(Colors.black)
+    .background(Colors.success);
+final _quitButtonStyle = Style()
+    .foreground(Colors.white)
+    .background(Colors.error);
+final _quitButtonHoverStyle = Style()
+    .bold()
+    .foreground(Colors.white)
+    .background(Colors.brightRed);
+final _labelStyle = Style().dim();
+final _valueStyle = Style().foreground(Colors.yellow);
+final _helpStyle = Style().dim().italic();
 
 class ZoneExampleModel implements Model {
   ZoneExampleModel({
@@ -109,7 +134,9 @@ class ZoneExampleModel implements Model {
 
     // Title
     buffer.writeln();
-    buffer.writeln('  BubbleZone Demo - Click the buttons!');
+    buffer.writeln(
+      '  ${_titleStyle.render('BubbleZone Demo')} - Click the buttons!',
+    );
     buffer.writeln();
 
     // Buttons row
@@ -117,46 +144,55 @@ class ZoneExampleModel implements Model {
       _renderButton('btn-ok', '  OK  '),
       _renderButton('btn-cancel', 'Cancel'),
       _renderButton('btn-help', ' Help '),
-      _renderButton('btn-quit', ' Quit '),
+      _renderButton('btn-quit', ' Quit ', isQuit: true),
     ];
     buffer.writeln('  ${buttons.join('  ')}');
     buffer.writeln();
 
     // Status
-    buffer.writeln('  Total clicks: $clicks');
+    buffer.writeln(
+      '  ${_labelStyle.render('Total clicks:')} ${_valueStyle.render('$clicks')}',
+    );
     if (lastClicked.isNotEmpty) {
-      buffer.writeln('  Last clicked: $lastClicked');
+      final buttonName = lastClicked.replaceFirst('btn-', '').toUpperCase();
+      buffer.writeln(
+        '  ${_labelStyle.render('Last clicked:')} ${_valueStyle.render(buttonName)}',
+      );
     }
     if (hoveredButton.isNotEmpty) {
-      buffer.writeln('  Hovering: $hoveredButton');
+      final buttonName = hoveredButton.replaceFirst('btn-', '').toUpperCase();
+      buffer.writeln(
+        '  ${_labelStyle.render('Hovering:')} ${_valueStyle.render(buttonName)}',
+      );
     }
     buffer.writeln();
 
     // Instructions
-    buffer.writeln('  Press q to quit');
+    buffer.writeln('  ${_helpStyle.render('Press q to quit')}');
     buffer.writeln();
 
     // Scan the entire output to register zones
     return zone.scan(buffer.toString());
   }
 
-  String _renderButton(String id, String label) {
+  String _renderButton(String id, String label, {bool isQuit = false}) {
     final isHovered = hoveredButton == id;
     final isLastClicked = lastClicked == id;
 
-    // Build the button style
-    String rendered;
-    if (isHovered) {
-      // Highlighted when hovered
-      rendered = '[$label]';
-      rendered = '\x1B[1m$rendered\x1B[0m'; // Bold
+    // Select the appropriate style
+    Style style;
+    if (isQuit) {
+      style = isHovered ? _quitButtonHoverStyle : _quitButtonStyle;
+    } else if (isHovered) {
+      style = _buttonHoverStyle;
     } else if (isLastClicked) {
-      // Underlined when last clicked
-      rendered = '[$label]';
-      rendered = '\x1B[4m$rendered\x1B[0m'; // Underline
+      style = _buttonActiveStyle;
     } else {
-      rendered = '[$label]';
+      style = _buttonStyle;
     }
+
+    // Render the button with padding
+    final rendered = style.render(' $label ');
 
     // Wrap with zone marker
     return zone.mark(id, rendered);
