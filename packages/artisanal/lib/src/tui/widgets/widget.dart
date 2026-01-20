@@ -56,18 +56,22 @@ abstract class Widget implements Model {
 
   /// Called once when the widget is first mounted.
   ///
-  /// Override to perform initialization like starting timers or fetching data.
-  /// Default implementation collects init commands from children.
+  /// Default implementation queries terminal background color and collects
+  /// init commands from children. Override [handleInit] for widget-specific
+  /// initialization.
   @override
   Cmd? init() {
-    final cmds = <Cmd>[];
+    final cmds = <Cmd>[
+      // Query terminal background color for adaptive theming
+      Cmd.requestBackgroundColorReport(),
+    ];
     for (final child in children) {
       final cmd = child.init();
       if (cmd != null) cmds.add(cmd);
     }
     final selfCmd = handleInit();
     if (selfCmd != null) cmds.add(selfCmd);
-    return cmds.isEmpty ? null : Cmd.batch(cmds);
+    return Cmd.batch(cmds);
   }
 
   /// Override this instead of [init] for widget-specific initialization.
@@ -75,10 +79,16 @@ abstract class Widget implements Model {
 
   /// Handles messages by forwarding to children then calling [handleUpdate].
   ///
+  /// Automatically updates theme state when terminal background is detected.
   /// Do not override this method. Override [handleUpdate] instead.
   @override
   (Model, Cmd?) update(Msg msg) {
     final cmds = <Cmd>[];
+
+    // Auto-detect terminal background and update theme state
+    if (msg is BackgroundColorMsg) {
+      updateThemeFromBackground(msg.hex);
+    }
 
     // Forward to all children
     for (final child in children) {

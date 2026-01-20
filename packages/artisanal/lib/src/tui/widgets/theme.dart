@@ -265,18 +265,144 @@ class Theme {
       labelSmall: labelSmall ?? this.labelSmall,
     );
   }
+
+  /// Adaptive theme that auto-switches based on terminal background.
+  ///
+  /// This is the recommended default. Colors automatically adapt when the
+  /// terminal reports its background color via OSC 11.
+  ///
+  /// Uses [AdaptiveColor] for all color slots, which resolve based on
+  /// [hasDarkBackground] at render time.
+  static Theme adaptive() {
+    // Primary/accent colors - cyan for both, works well on light and dark
+    const primary = AdaptiveColor(
+      light: AnsiColor(33), // Blue
+      dark: AnsiColor(39), // Cyan
+    );
+    const secondary = AdaptiveColor(
+      light: AnsiColor(90), // Purple
+      dark: AnsiColor(99), // Purple
+    );
+
+    // Surface/background - these are the key adaptive colors
+    const surface = AdaptiveColor(
+      light: AnsiColor(254), // Light gray
+      dark: AnsiColor(236), // Dark gray
+    );
+    const background = AdaptiveColor(
+      light: AnsiColor(255), // White
+      dark: AnsiColor(233), // Very dark gray
+    );
+
+    // Status colors
+    const error = AdaptiveColor(
+      light: AnsiColor(160), // Dark red
+      dark: AnsiColor(196), // Bright red
+    );
+    const success = AdaptiveColor(
+      light: AnsiColor(28), // Dark green
+      dark: AnsiColor(42), // Bright green
+    );
+    const warning = AdaptiveColor(
+      light: AnsiColor(172), // Dark orange
+      dark: AnsiColor(214), // Bright orange
+    );
+
+    // Text colors - must contrast with background
+    const onPrimary = AdaptiveColor(
+      light: AnsiColor(255), // White on dark primary
+      dark: AnsiColor(232), // Black on light primary
+    );
+    const onSecondary = AnsiColor(255); // White
+    const onSurface = AdaptiveColor(
+      light: AnsiColor(235), // Dark gray on light surface
+      dark: AnsiColor(252), // Light gray on dark surface
+    );
+    const onBackground = AdaptiveColor(
+      light: AnsiColor(232), // Black on light background
+      dark: AnsiColor(250), // Light gray on dark background
+    );
+    const onError = AnsiColor(255); // White
+    const muted = AdaptiveColor(
+      light: AnsiColor(245), // Medium gray
+      dark: AnsiColor(242), // Medium gray
+    );
+    const border = AdaptiveColor(
+      light: AnsiColor(250), // Light gray border
+      dark: AnsiColor(238), // Dark gray border
+    );
+
+    return Theme(
+      primary: primary,
+      secondary: secondary,
+      surface: surface,
+      background: background,
+      error: error,
+      success: success,
+      warning: warning,
+      onPrimary: onPrimary,
+      onSecondary: onSecondary,
+      onSurface: onSurface,
+      onBackground: onBackground,
+      onError: onError,
+      muted: muted,
+      border: border,
+      titleLarge: Style().bold().foreground(onBackground),
+      titleMedium: Style().bold().foreground(onSurface),
+      titleSmall: Style().bold().foreground(muted),
+      bodyLarge: Style().foreground(onBackground),
+      bodyMedium: Style().foreground(onSurface),
+      bodySmall: Style().foreground(muted),
+      labelLarge: Style().foreground(onSurface),
+      labelMedium: Style().foreground(muted),
+      labelSmall: Style().dim().foreground(muted),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Global Theme
+// Global Theme State
 // ─────────────────────────────────────────────────────────────────────────────
 
-Theme _currentTheme = Theme.dark();
+Theme _currentTheme = Theme.adaptive();
+bool _hasDarkBackground = true;
 
 /// Returns the current global theme.
 Theme get currentTheme => _currentTheme;
 
+/// Whether the terminal has a dark background.
+///
+/// This affects how [AdaptiveColor] values resolve when rendering.
+bool get hasDarkBackground => _hasDarkBackground;
+
 /// Sets the global theme.
 void setTheme(Theme theme) {
   _currentTheme = theme;
+}
+
+/// Updates the dark background state.
+///
+/// Call this when the terminal reports its background color.
+/// This is typically done automatically by [Widget.update] when it
+/// receives a [BackgroundColorMsg].
+void setHasDarkBackground(bool value) {
+  _hasDarkBackground = value;
+}
+
+/// Updates theme based on background hex color (e.g., '#1a1a1a').
+///
+/// Automatically determines if the background is dark based on luminance.
+void updateThemeFromBackground(String? hex) {
+  if (hex == null || hex.isEmpty) return;
+  final h = hex.startsWith('#') ? hex.substring(1) : hex;
+  if (h.length != 6) return;
+
+  final r = int.tryParse(h.substring(0, 2), radix: 16);
+  final g = int.tryParse(h.substring(2, 4), radix: 16);
+  final b = int.tryParse(h.substring(4, 6), radix: 16);
+  if (r == null || g == null || b == null) return;
+
+  // Perceived luminance; threshold tuned for terminals
+  final lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
+  _hasDarkBackground = lum < 0.5;
 }

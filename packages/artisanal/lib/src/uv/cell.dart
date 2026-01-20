@@ -25,6 +25,11 @@ library;
 
 import '../unicode/width.dart';
 
+// Re-export UnderlineStyle from the canonical location (style/properties.dart)
+// to maintain backwards compatibility for UV consumers.
+export '../style/properties.dart' show UnderlineStyle;
+import '../style/properties.dart' show UnderlineStyle;
+
 /// Upstream: `third_party/ultraviolet/cell.go` (`Link`).
 /// Terminal hyperlink metadata (OSC 8).
 ///
@@ -112,11 +117,6 @@ final class UvRgb extends UvColor {
   @override
   int get hashCode => Object.hash(r, g, b, a);
 }
-
-/// Underline styles (subset).
-///
-/// Upstream: `third_party/ultraviolet/cell.go` uses `ansi.Underline`.
-enum UnderlineStyle { none, single, double, curly, dotted, dashed }
 
 /// Text attributes (bitmask).
 ///

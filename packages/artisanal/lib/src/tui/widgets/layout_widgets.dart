@@ -20,22 +20,27 @@ import '../../style/style.dart';
 import '../../style/color.dart';
 import '../../uv/canvas.dart';
 import '../../uv/cell.dart';
-import '../../uv/geometry.dart';
 import '../../uv/styled_string.dart';
 import 'widget.dart';
-import 'theme.dart' show currentTheme;
+import 'theme.dart' show currentTheme, hasDarkBackground;
 
 /// Converts a style [Color] to a UV [UvColor].
 ///
-/// Parses the hex representation of the color to extract RGB values.
+/// Resolves [AdaptiveColor] using the global [hasDarkBackground] state.
 UvColor? _colorToUvColor(Color? color) {
   if (color == null || color is NoColor) return null;
 
-  final hex = color.toHex();
+  // Resolve AdaptiveColor to the appropriate variant
+  Color resolved = color;
+  if (color is AdaptiveColor) {
+    resolved = hasDarkBackground ? color.dark : color.light;
+  }
+
+  final hex = resolved.toHex();
   if (hex.isEmpty) {
     // For ANSI colors, try to get the ANSI code
-    if (color is AnsiColor) {
-      return UvColor.indexed256(color.code);
+    if (resolved is AnsiColor) {
+      return UvColor.indexed256(resolved.code);
     }
     return null;
   }
@@ -180,7 +185,10 @@ class Label extends Widget {
   @override
   Object view() {
     if (style != null) {
-      return style!.render(content);
+      // Ensure style uses the correct dark background state for AdaptiveColors
+      final s = style!.copy();
+      s.hasDarkBackground = hasDarkBackground;
+      return s.render(content);
     }
     return content;
   }
