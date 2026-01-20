@@ -252,21 +252,33 @@ class InlineTuiRenderer implements TuiRenderer {
       }
     }
 
-    // Clear previous output
-    if (_hasRendered && _lastLineCount > 0) {
-      _clearPreviousLines(_lastLineCount);
-    }
-
     // Hide cursor during render if configured
     if (_options.hideCursor) {
       terminal.hideCursor();
     }
 
-    // Write the new view
+    // Move cursor back to start position if we've rendered before
+    if (_hasRendered && _lastLineCount > 0) {
+      _moveCursorToStart(_lastLineCount);
+    }
+
+    // Count new lines
+    int newLineCount;
+    if (content.isEmpty) {
+      newLineCount = 0;
+    } else {
+      final segments = content.split('\n');
+      newLineCount = segments.length - (content.endsWith('\n') ? 1 : 0);
+    }
+
+    // Write the new view with clear-to-end-of-line after each line
+    // This overwrites old content without flashing
     final output = _options.ansiCompress ? compressAnsi(content) : content;
-    terminal.write(output);
-    if (!output.endsWith('\n')) {
-      terminal.writeln();
+    _writeWithClearToEol(output);
+
+    // If new content has fewer lines, clear the extra old lines
+    if (_hasRendered && newLineCount < _lastLineCount) {
+      _clearExtraLines(_lastLineCount - newLineCount);
     }
 
     // Show cursor after render
@@ -274,21 +286,80 @@ class InlineTuiRenderer implements TuiRenderer {
       terminal.showCursor();
     }
 
-    // Count actual lines printed, accounting for trailing newline.
-    // "Hello\n" should count as 1 line, not 2.
-    // "\n" (single blank line) should count as 1 line.
-    // "" (empty) should count as 0 lines.
-    if (content.isEmpty) {
-      _lastLineCount = 0;
-    } else {
-      final segments = content.split('\n');
-      _lastLineCount = segments.length - (content.endsWith('\n') ? 1 : 0);
-    }
+    _lastLineCount = newLineCount;
     // Reset and start the stopwatch for next frame timing
     _frameStopwatch.reset();
     _frameStopwatch.start();
     _hasRendered = true;
     _metrics.endFrame();
+  }
+
+  /// Moves cursor to the start of the render area (up N lines, column 1).
+  void _moveCursorToStart(int lines) {
+    if (!terminal.supportsAnsi) return;
+
+    final buffer = StringBuffer();
+    if (lines > 0) {
+      buffer.write('\x1b[${lines}A'); // Move up N lines
+    }
+    buffer.write('\r'); // Return to column 1
+    terminal.write(buffer.toString());
+  }
+
+  /// Writes content, clearing to end of line after each line to overwrite old content.
+  void _writeWithClearToEol(String content) {
+    if (content.isEmpty) return;
+
+    if (!terminal.supportsAnsi) {
+      terminal.write(content);
+      if (!content.endsWith('\n')) {
+        terminal.writeln();
+      }
+      return;
+    }
+
+    // Split into lines and write each with clear-to-EOL
+    final lines = content.split('\n');
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      final isLast = i == lines.length - 1;
+
+      buffer.write(line);
+      buffer.write('\x1b[K'); // Clear from cursor to end of line
+
+      if (!isLast || !content.endsWith('\n')) {
+        // Add newline unless this is the last segment of content ending with \n
+        // (in which case the split already consumed it)
+        if (!isLast) {
+          buffer.write('\n');
+        }
+      }
+    }
+
+    // Ensure we end with a newline
+    if (!content.endsWith('\n')) {
+      buffer.write('\n');
+    }
+
+    terminal.write(buffer.toString());
+  }
+
+  /// Clears extra lines that are no longer needed.
+  void _clearExtraLines(int count) {
+    if (!terminal.supportsAnsi || count <= 0) return;
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < count; i++) {
+      buffer.write('\x1b[K'); // Clear line from cursor
+      buffer.write('\n'); // Move to next line
+    }
+    // Move back up to where content ended
+    if (count > 0) {
+      buffer.write('\x1b[${count}A');
+    }
+    terminal.write(buffer.toString());
   }
 
   /// Clears the previous output by moving up and clearing lines.
