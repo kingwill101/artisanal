@@ -1442,7 +1442,7 @@ final class TtyTerminal implements Terminal {
 
   @override
   void clearLine() {
-    if (supportsAnsi) write(Ansi.clearLine);
+    if (supportsAnsi) write('${Ansi.clearLine}\r');
   }
 
   @override
