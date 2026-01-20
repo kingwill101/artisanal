@@ -131,3 +131,5 @@ export 'src/style/writer.dart'
         Fprintf,
         stringForProfile;
 export 'src/style/theme.dart' show ThemePalette;
+export 'src/style/tag_parser.dart'
+    show ConsoleTagParser, TagSegment, TextSegment, StyledSegment;
