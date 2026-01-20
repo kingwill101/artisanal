@@ -3,6 +3,7 @@ import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/cmd.dart';
 import 'package:artisanal/src/style/style.dart';
 import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/src/layout/layout.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -161,9 +162,9 @@ void main() {
       final container = Container(width: 10, child: Label('Hi'));
 
       final output = container.view() as String;
-      // All lines should be 10 chars
+      // All lines should be 10 chars wide
       for (final line in output.split('\n')) {
-        expect(line.length, equals(10));
+        expect(Layout.getWidth(line), equals(10));
       }
     });
 

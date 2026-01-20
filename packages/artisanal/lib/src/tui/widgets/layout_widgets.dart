@@ -264,26 +264,10 @@ class Container extends Widget {
     final targetWidth = width ?? paddedWidth;
     final targetHeight = height ?? paddedHeight;
 
-    // If no background/foreground, use the simpler string-based approach
-    // (which doesn't have the ANSI reset issue for plain text)
-    if (background == null && foreground == null) {
-      var content = contentStr;
-      if (padding != null) {
-        content = _applyPadding(content, padding!);
-      }
-      if (width != null || height != null) {
-        content = Layout.place(
-          width: targetWidth,
-          height: targetHeight,
-          horizontal: align,
-          vertical: verticalAlign,
-          content: content,
-        );
-      }
-      return content;
-    }
+    // Empty container
+    if (targetWidth == 0 || targetHeight == 0) return '';
 
-    // Use Canvas-based rendering for proper nested ANSI handling
+    // Use Canvas-based rendering for consistent ANSI handling
     final canvas = Canvas(targetWidth, targetHeight);
 
     // Create background style
@@ -291,50 +275,66 @@ class Container extends Widget {
     final fgColor = _colorToUvColor(foreground);
     final bgStyle = UvStyle(bg: bgColor, fg: fgColor);
 
-    // Fill entire canvas with background
+    // Fill entire canvas with background (or spaces if no style)
+    final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
     for (var y = 0; y < targetHeight; y++) {
       for (var x = 0; x < targetWidth; x++) {
-        canvas.setCell(x, y, Cell(content: ' ', width: 1, style: bgStyle));
+        canvas.setCell(x, y, bgCell.clone());
       }
     }
 
     // Calculate content offset based on alignment within target size
-    int offsetX;
-    int offsetY;
+    final offsetX = width != null
+        ? switch (align) {
+            HorizontalAlign.left => padLeft,
+            HorizontalAlign.center => (targetWidth - contentWidth) ~/ 2,
+            HorizontalAlign.right => targetWidth - contentWidth - padRight,
+          }
+        : padLeft;
 
-    if (width != null) {
-      // Align content within explicit width
-      offsetX = switch (align) {
-        HorizontalAlign.left => padLeft,
-        HorizontalAlign.center => (targetWidth - contentWidth) ~/ 2,
-        HorizontalAlign.right => targetWidth - contentWidth - padRight,
-      };
-    } else {
-      offsetX = padLeft;
-    }
-
-    if (height != null) {
-      // Align content within explicit height
-      offsetY = switch (verticalAlign) {
-        VerticalAlign.top => padTop,
-        VerticalAlign.center => (targetHeight - contentHeight) ~/ 2,
-        VerticalAlign.bottom => targetHeight - contentHeight - padBottom,
-      };
-    } else {
-      offsetY = padTop;
-    }
+    final offsetY = height != null
+        ? switch (verticalAlign) {
+            VerticalAlign.top => padTop,
+            VerticalAlign.center => (targetHeight - contentHeight) ~/ 2,
+            VerticalAlign.bottom => targetHeight - contentHeight - padBottom,
+          }
+        : padTop;
 
     // Draw child content at the offset position
-    // Instead of using StyledString.draw() which clears the area,
-    // we parse and draw directly, preserving our background
     if (contentStr.isNotEmpty) {
       _drawStyledContent(canvas, contentStr, offsetX, offsetY, bgStyle);
     }
 
-    return canvas.render();
+    var result = canvas.render();
+
+    // Canvas.render() trims trailing spaces. If explicit width was set,
+    // pad lines to maintain the requested width for proper layout alignment.
+    if (width != null) {
+      result = _padToWidth(result, targetWidth, targetHeight);
+    }
+
+    return result;
   }
 
-  /// Draws styled content onto canvas at the given offset, preserving background.
+  /// Pads output lines to maintain explicit width (Canvas trims trailing spaces).
+  String _padToWidth(String content, int targetWidth, int targetHeight) {
+    final lines = content.split('\n');
+    final result = <String>[];
+
+    for (var i = 0; i < targetHeight; i++) {
+      final line = i < lines.length ? lines[i] : '';
+      final lineWidth = Layout.visibleLength(line);
+      if (lineWidth < targetWidth) {
+        result.add('$line${' ' * (targetWidth - lineWidth)}');
+      } else {
+        result.add(line);
+      }
+    }
+
+    return result.join('\n');
+  }
+
+  /// Draws styled content onto canvas, merging with background style.
   void _drawStyledContent(
     Canvas canvas,
     String content,
@@ -342,14 +342,10 @@ class Container extends Widget {
     int startY,
     UvStyle bgStyle,
   ) {
-    // Use StyledString to render into a temporary canvas, then merge
     final styledBounds = StyledString(content).bounds();
     final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
-
-    // Draw into temp canvas
     StyledString(content).draw(tempCanvas, tempCanvas.bounds());
 
-    // Merge cells onto main canvas, preserving background for empty/space cells
     for (var y = 0; y < styledBounds.height; y++) {
       for (var x = 0; x < styledBounds.width; x++) {
         final destX = startX + x;
@@ -358,16 +354,12 @@ class Container extends Widget {
         if (destX >= canvas.width() || destY >= canvas.height()) continue;
 
         final srcCell = tempCanvas.cellAt(x, y);
-        if (srcCell == null || srcCell.isZero) {
-          // Keep background cell
-          continue;
-        }
+        if (srcCell == null || srcCell.isZero) continue;
 
         // Merge background into cell if cell has no background
-        var mergedStyle = srcCell.style;
-        if (mergedStyle.bg == null && bgStyle.bg != null) {
-          mergedStyle = mergedStyle.copyWith(bg: bgStyle.bg);
-        }
+        final mergedStyle = srcCell.style.bg == null && bgStyle.bg != null
+            ? srcCell.style.copyWith(bg: bgStyle.bg)
+            : srcCell.style;
 
         canvas.setCell(
           destX,
@@ -381,34 +373,6 @@ class Container extends Widget {
         );
       }
     }
-  }
-
-  /// Applies padding around content (used when no colors are set).
-  String _applyPadding(String content, EdgeInsets pad) {
-    final lines = content.split('\n');
-    final contentWidth = Layout.getWidth(content);
-    final paddedWidth = contentWidth + pad.left + pad.right;
-
-    final result = <String>[];
-
-    // Top padding
-    for (var i = 0; i < pad.top; i++) {
-      result.add(' ' * paddedWidth);
-    }
-
-    // Content with left/right padding
-    for (final line in lines) {
-      final lineWidth = Layout.visibleLength(line);
-      final rightPad = contentWidth - lineWidth + pad.right;
-      result.add('${' ' * pad.left}$line${' ' * rightPad}');
-    }
-
-    // Bottom padding
-    for (var i = 0; i < pad.bottom; i++) {
-      result.add(' ' * paddedWidth);
-    }
-
-    return result.join('\n');
   }
 
   String _viewToString(Object v) => v is String ? v : v.toString();
