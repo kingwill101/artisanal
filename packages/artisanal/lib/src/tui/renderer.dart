@@ -274,7 +274,16 @@ class InlineTuiRenderer implements TuiRenderer {
       terminal.showCursor();
     }
 
-    _lastLineCount = content.split('\n').length;
+    // Count actual lines printed, accounting for trailing newline.
+    // "Hello\n" should count as 1 line, not 2.
+    // "\n" (single blank line) should count as 1 line.
+    // "" (empty) should count as 0 lines.
+    if (content.isEmpty) {
+      _lastLineCount = 0;
+    } else {
+      final segments = content.split('\n');
+      _lastLineCount = segments.length - (content.endsWith('\n') ? 1 : 0);
+    }
     // Reset and start the stopwatch for next frame timing
     _frameStopwatch.reset();
     _frameStopwatch.start();
