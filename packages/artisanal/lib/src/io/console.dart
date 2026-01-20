@@ -497,9 +497,11 @@ class Console {
   }) sync* {
     final total = max ?? (iterable is List<T> ? iterable.length : 0);
     final terminal = promptTerminal;
+    // Use actual terminal width for inline animations to prevent line wrapping
+    final actualWidth = terminal.width;
     final renderConfig = RenderConfig.fromRenderer(
       _renderer,
-      terminalWidth: terminalWidth,
+      terminalWidth: actualWidth,
     );
 
     terminal.hideCursor();

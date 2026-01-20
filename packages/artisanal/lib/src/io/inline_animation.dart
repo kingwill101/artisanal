@@ -185,7 +185,7 @@ class InlineAnimation {
   /// - [task]: Async function that receives a progress updater
   /// - [clearOnDone]: If true, clear the line after completion
   /// - [doneMessage]: Optional message to show after completion
-  /// - [width]: Width of the progress bar (default: 40)
+  /// - [width]: Width of the progress bar (default: auto-fit to terminal)
   ///
   /// Returns the result of [task].
   Future<T> progress<T>({
@@ -194,8 +194,15 @@ class InlineAnimation {
     task,
     bool clearOnDone = false,
     String? doneMessage,
-    int width = 40,
+    int? width,
   }) async {
+    // Calculate bar width to fit terminal
+    // Format: "message [====] 100% 1.2s"
+    // Reserve: message + space + brackets (2) + space + "100%" (4) + space + "999ms" (5) + buffer
+    final termWidth = terminal.width;
+    final reserved = message.length + 1 + 2 + 1 + 4 + 1 + 6;
+    final barWidth = width ?? (termWidth - reserved).clamp(10, 40);
+
     var currentProgress = 0.0;
     final watch = Stopwatch()..start();
 
@@ -203,12 +210,12 @@ class InlineAnimation {
 
     void updateProgress(double progress) {
       currentProgress = progress.clamp(0.0, 1.0);
-      _renderProgressFrame(message, currentProgress, watch.elapsed, width);
+      _renderProgressFrame(message, currentProgress, watch.elapsed, barWidth);
     }
 
     try {
       // Render initial state
-      _renderProgressFrame(message, 0.0, Duration.zero, width);
+      _renderProgressFrame(message, 0.0, Duration.zero, barWidth);
 
       // Execute task with progress callback
       final result = await task(updateProgress);
@@ -223,7 +230,7 @@ class InlineAnimation {
         terminal.writeln(doneMessage);
       } else {
         // Render final 100% state
-        _renderProgressFrame(message, 1.0, watch.elapsed, width);
+        _renderProgressFrame(message, 1.0, watch.elapsed, barWidth);
         terminal.writeln();
       }
 
@@ -276,7 +283,7 @@ class InlineAnimation {
   /// - [total]: Total count (if items doesn't have a length)
   /// - [clearOnDone]: If true, clear the progress bar after iteration
   /// - [doneMessage]: Optional message to show after completion
-  /// - [width]: Width of the progress bar (default: 40)
+  /// - [width]: Width of the progress bar (default: auto-fit to terminal)
   ///
   /// Yields each item from [items].
   Iterable<T> progressIterate<T>(
@@ -285,11 +292,17 @@ class InlineAnimation {
     int? total,
     bool clearOnDone = false,
     String? doneMessage,
-    int width = 40,
+    int? width,
   }) sync* {
     final itemList = items is List<T> ? items : items.toList();
     final count = total ?? itemList.length;
     if (count == 0) return;
+
+    // Calculate bar width to fit terminal
+    final msg = message ?? '';
+    final termWidth = terminal.width;
+    final reserved = msg.length + 1 + 2 + 1 + 4 + 1 + 6;
+    final barWidth = width ?? (termWidth - reserved).clamp(10, 40);
 
     final watch = Stopwatch()..start();
     var current = 0;
@@ -299,7 +312,7 @@ class InlineAnimation {
     try {
       for (final item in itemList) {
         final progress = count > 0 ? current / count : 0.0;
-        _renderProgressFrame(message ?? '', progress, watch.elapsed, width);
+        _renderProgressFrame(msg, progress, watch.elapsed, barWidth);
 
         yield item;
         current++;
@@ -315,7 +328,7 @@ class InlineAnimation {
         terminal.writeln(doneMessage);
       } else {
         // Render final 100% state
-        _renderProgressFrame(message ?? '', 1.0, watch.elapsed, width);
+        _renderProgressFrame(msg, 1.0, watch.elapsed, barWidth);
         terminal.writeln();
       }
     } finally {
