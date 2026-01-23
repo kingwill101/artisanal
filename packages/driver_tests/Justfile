@@ -1,7 +1,0 @@
-set shell := ["bash", "-lc"]
-
-default: test
-
-# Run the orm_driver_tests suite
-test:
-	dart test

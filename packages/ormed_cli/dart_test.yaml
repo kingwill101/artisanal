@@ -1,3 +1,0 @@
-# Limit concurrency due to sqlite FFI initialization issues
-# when multiple tests try to initialize sqlite3 concurrently
-concurrency: 1

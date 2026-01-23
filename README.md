@@ -1,358 +1,262 @@
-# Ormed
+ormed/README.md
+```
 
-[![Pub Version](https://img.shields.io/pub/v/ormed)](https://pub.dev/packages/ormed)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Documentation](https://img.shields.io/badge/docs-ormed.vercel.app-blue)](https://ormed.vercel.app/)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kingwill101)
-[![GitHub Stars](https://img.shields.io/github/stars/RoutedDart/ormed?style=social)](https://github.com/RoutedDart/ormed)
+# Artisanal
 
-A **strongly typed ORM for Dart** inspired by [Laravel Eloquent](https://laravel.com/docs/eloquent), bringing familiar patterns from Eloquent, GORM, SQLAlchemy, and ActiveRecord to Dart developers.
-
-Part of the [Routed](https://github.com/RoutedDart) ecosystem.
+A **full-stack terminal toolkit** for Dart, combining CLI I/O, Lip Gloss styling, Bubble Tea TUI, and Ultraviolet rendering.
 
 ---
 
 ## ✨ Features
 
-- **Annotation-based models** — Define tables, columns, and relationships with `@OrmModel`, `@OrmField`, `@OrmRelation`
-- **Code generation** — Auto-generate model definitions, codecs, DTOs, and factories via `build_runner`
-- **Fluent query builder** — Laravel-style API with `where`, `orderBy`, `join`, `limit`, and more
-- **Eager & lazy loading** — Load relations upfront or on-demand, with nested paths (`'comments.author'`)
-- **Lazy loading prevention** — Catch N+1 queries in development with `ModelRelations.preventsLazyLoading`
-- **Aggregate loaders** — Load counts, sums, averages without fetching full collections (`loadCount()`, `loadSum()`, etc.)
-- **Relation mutations** — `associate()`, `attach()`, `detach()`, `sync()` for managing relationships
-- **Schema migrations** — CLI tooling for creating, applying, and rolling back migrations
-- **Multi-database support** — SQLite, PostgreSQL, MySQL/MariaDB
-- **Driver capabilities** — Runtime feature detection for cross-database compatibility
-- **Multi-tenant connections** — Manage multiple database connections with role-based routing
-- **Observability** — Structured logging, query instrumentation, and tracing hooks
-- **Soft deletes** — Built-in `SoftDeletes` mixin with scoped queries
-- **Repository pattern** — Bulk inserts, upserts, and JSON updates
-- **Testing** — Robust database isolation with `ormedGroup` and `ormedTest`. See the [Testing Guide](packages/ormed/docs/testing.md).
+- **CLI Utilities** — Build powerful command-line tools with intuitive I/O handling
+- **TUI Framework** — Create rich terminal user interfaces with Bubble Tea
+- **Styling** — Design beautiful terminal output with Lip Gloss
+- **Markdown Rendering** — Render Markdown to the terminal with Ultraviolet
+- **Composable Components** — Reuse and combine components for complex UIs
+- **Cross-Platform** — Works seamlessly on macOS, Linux, and Windows
+- **Extensible** — Easily integrate with other Dart packages and libraries
 
 ---
 
-## 🗄️ Supported Databases
+## 🚀 Code Examples
 
-| Database        | Package                                   | Description                    |
-|-----------------|-------------------------------------------|--------------------------------|
-| SQLite          | [ormed_sqlite](packages/ormed_sqlite)     | Via `package:sqlite3`          |
-| PostgreSQL      | [ormed_postgres](packages/ormed_postgres) | Via `package:postgres` (v3)    |
-| MySQL / MariaDB | [ormed_mysql](packages/ormed_mysql)       | Via `package:mysql_client_plus`|
-
----
-
-## 🚀 Quick Start
-
-### 1. Install the CLI
-
-```bash
-dart pub global activate ormed_cli
-```
-
-### 2. Add dependencies
-
-```yaml
-dependencies:
-  ormed: any
-  ormed_sqlite: any  # or your preferred driver
-
-dev_dependencies:
-  build_runner: ^2.4.0
-```
-
-### 3. Define a model
+### 9. UV Renderer Example
 
 ```dart
-import 'package:ormed/ormed.dart';
+import 'dart:io';
+import 'package:artisanal/src/io/console.dart';
+import 'package:artisanal/src/uv/canvas.dart';
+import 'package:artisanal/src/uv/kitty_drawable.dart';
+import 'package:artisanal/src/uv/layer.dart';
+import 'package:artisanal/src/uv/styled_string.dart';
+import 'package:image/image.dart' as img;
 
-part 'user.orm.dart';
+void main() {
+  final io = Console(out: (s) => stdout.write(s), err: (s) => stderr.write(s));
 
-@OrmModel(table: 'users')
-class User {
-  const User({required this.id, required this.email, this.name});
+  // Create a simple gradient image
+  final image = img.Image(width: 100, height: 100);
+  for (var y = 0; y < 100; y++) {
+    for (var x = 0; x < 100; x++) {
+      image.setPixelRgba(x, y, x * 2, y * 2, 150, 255);
+    }
+  }
 
-  @OrmField(isPrimaryKey: true, autoIncrement: true)
-  final int id;
+  // Create layers
+  final imageLayer = newLayer(KittyImageDrawable(image, columns: 20, rows: 10))
+    ..setId('image')
+    ..setX(5)
+    ..setY(2);
 
-  @OrmField(isUnique: true)
-  final String email;
+  final textLayer =
+      newLayer(StyledString('\x1b[1;33mHello from Compositor!\x1b[0m'))
+        ..setId('text')
+        ..setX(2)
+        ..setY(1);
 
-  final String? name;
+  final compositor = Compositor([imageLayer, textLayer]);
+
+  // Render to a canvas
+  final canvas = Canvas(40, 15);
+  canvas.compose(compositor);
+
+  io.write(canvas.render());
+  io.write('\nDone.\n');
 }
 ```
 
-### 3. Generate code
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-### 4. Query your data
+### 1. Basic Console Output
 
 ```dart
-import 'package:ormed/ormed.dart';
-import 'lib/src/database/datasource.dart'; // Generated by 'ormed init'
+import 'package:artisanal/artisanal.dart';
+
+void main() {
+  final console = Console();
+
+  console.write('Hello');
+  console.writeln('World');
+}
+```
+
+---
+
+### 2. Styled Text
+
+```dart
+import 'package:artisanal/style.dart';
+
+void main() {
+  final style = Style().foreground(Colors.blue).bold();
+  print(style.render('Hello, Styled World!'));
+}
+```
+
+---
+
+### 3. Progress Bar
+
+```dart
+import 'package:artisanal/artisanal.dart';
 
 void main() async {
-  // Use the generated entrypoint
-  final ds = createDataSource();
-  await ds.init();
-
-  // Insert
-  await ds.repo<$User>().insert($UserInsertDto(
-    email: 'john@example.com',
-    name: 'John Doe',
-  ));
-
-  // Query with eager loading
-  final users = await ds.query<$User>()
-      .withRelation('posts')
-      .withCount('posts', alias: 'post_count')
-      .orderByDesc('created_at')
-      .limit(10)
-      .get();
-
-  // Update
-  await ds.query<$User>()
-      .whereEquals('id', 1)
-      .update({'name': 'Jane Doe'});
-
-  // Eager load relations
-  final posts = await ds.query<$Post>()
-      .withRelation('author')
-      .withRelation('tags')
-      .withCount('comments')
-      .get();
-
-  // Lazy load relations
-  final post = await ds.query<$Post>().firstOrFail();
-  await post.load('author');
-  await post.loadMissing(['tags', 'comments']);
-
-  // Transaction
-  await ds.transaction(() async {
-    await ds.repo<$User>().insert(user1);
-    await ds.repo<$User>().insert(user2);
-  });
-
-  // Cleanup
-  await ds.dispose();
+  final console = Console();
+  await console.task(
+    'Downloading data...',
+    run: () async {
+      await Future.delayed(Duration(seconds: 2));
+      return TaskResult.success;
+    },
+  );
 }
 ```
 
-<details>
-<summary>Alternative: Manual Setup (advanced)</summary>
+---
+
+### 4. Table Rendering
 
 ```dart
-import 'package:ormed_sqlite/ormed_sqlite.dart';
+import 'package:artisanal/tui.dart';
+
+void main() {
+  final table = Table()
+      .headers(['ID', 'Name', 'Status'])
+      .row(['1', 'Kasm', 'Running'])
+      .row(['2', 'Vault', 'Stopped'])
+      .border(Border.rounded)
+      .padding(1);
+
+  print(table.render());
+}
+```
+
+---
+
+### 5. Layouts
+
+#### Horizontal Layout
+
+```dart
+import 'package:artisanal/style.dart';
+import 'package:artisanal/tui.dart';
+
+void main() {
+  final style1 = Style().foreground(Colors.red);
+  final style2 = Style().foreground(Colors.blue);
+
+  print(Layout.joinHorizontal(VerticalAlign.top, [
+    style1.render('Left'),
+    style2.render('Right'),
+  ]));
+}
+```
+
+#### Vertical Layout
+
+```dart
+import 'package:artisanal/tui.dart';
+
+void main() {
+  print(Layout.joinVertical(HorizontalAlign.center, [
+    'Header',
+    'Content',
+    'Footer',
+  ]));
+}
+```
+
+---
+
+### 6. Custom Themes
+
+```dart
+import 'package:artisanal/style.dart';
+
+void main() {
+  final myTheme = ThemePalette(
+    accent: Colors.hex('#ff00ff'),
+    text: Colors.white,
+    background: Colors.black,
+  );
+
+  final titleStyle = Style()
+      .foreground(myTheme.accent)
+      .background(myTheme.background ?? Colors.none)
+      .bold();
+
+  print(titleStyle.render('Custom Themed Title'));
+}
+```
+
+---
+
+### 7. Interactive Prompts
+
+```dart
+import 'package:artisanal/artisanal.dart';
 
 void main() async {
-  final registry = ModelRegistry()..register(UserOrmDefinition.definition);
-  final adapter = SqliteDriverAdapter.file('app.sqlite');
-  final context = QueryContext(registry: registry, driver: adapter);
+  final console = Console();
 
-  final users = await context.query<$User>()
-      .whereEquals('active', true)
-      .get();
+  final name = await console.ask('What is your name?');
+  print('Hello, $name!');
 }
 ```
 
-</details>
-
-### Test helper
-
-`ormed init` also writes `lib/test/helpers/ormed_test_helper.dart`. The helper wires up two SQLite `DataSource`s via `setUpOrmed` (primary + analytics), runs the sample `_CreateTestUsersTable` migration, and exposes `primaryTestConfig`, `analyticsTestConfig`, and helpers such as `primaryTestConnection()`. Import it in your tests and pass the configs into `ormedGroup` or call `primaryTestConnection()` when you just need the default connection.
-
 ---
 
-## 📦 Packages
-
-### ORM Core & Drivers
-
-| Package | Description |
-|---------|-------------|
-| [ormed](packages/ormed) | Core ORM with annotations, query builder, migrations, codecs, and code generator |
-| [ormed_sqlite](packages/ormed_sqlite) | SQLite driver adapter with JSON1, FTS5, and R*Tree support |
-| [ormed_postgres](packages/ormed_postgres) | PostgreSQL driver with full type support (UUID, JSONB, arrays, ranges, FTS) |
-| [ormed_mysql](packages/ormed_mysql) | MySQL/MariaDB driver with JSON, spatial types, and SET support |
-| [ormed_cli](packages/ormed_cli) | CLI for migrations, seeding, schema operations, and project scaffolding |
-
-### Development & Testing
-
-| Package | Description |
-|---------|-------------|
-| [driver_tests](packages/driver_tests) | Shared driver-agnostic integration test suites |
-| [orm_playground](packages/orm_playground) | Demo application with end-to-end examples |
-
-### Terminal Toolkit
-
-| Package | Description |
-|---------|-------------|
-| [artisanal](packages/artisanal) | Full-stack terminal toolkit: CLI I/O, Lip Gloss styling, Bubble Tea TUI, and Ultraviolet renderer |
-
----
-
-## 🛠️ CLI Commands
-
-> **Note:** These examples assume you have globally activated the CLI via `dart pub global activate ormed_cli`. If not, use `dart run ormed_cli:ormed` instead of `ormed`.
-
-```bash
-# Initialize project structure
-ormed init
-
-# Create a new migration
-ormed make --name create_users_table
-
-# Run pending migrations
-ormed migrate
-
-# Preview migrations without executing
-ormed migrate --pretend
-
-# Rollback migrations
-ormed migrate:rollback --steps 1
-
-# Reset and re-run all migrations
-ormed migrate:fresh
-
-# Check migration status
-ormed migrate:status
-
-# Describe current schema
-ormed schema:describe
-
-# Run database seeders
-dart run ormed_cli:ormed seed
-dart run ormed_cli:ormed seed --class DemoContentSeeder
-
-# Multi-tenant: apply to specific connection
-dart run ormed_cli:ormed migrate --connection analytics
-```
-
-See [ormed_cli](packages/ormed_cli) for complete documentation of all commands and options.
-
----
-
-## 🔗 Relations
-
-Define relationships with `@OrmRelation`:
+### 10. TUI Components Example
 
 ```dart
-@OrmModel(table: 'posts')
-class Post {
-  final int id;
-  final int authorId;
-  final String title;
+import 'package:artisanal/tui.dart';
 
-  // Belongs to
-  @OrmRelation.belongsTo(related: User, foreignKey: 'author_id')
-  final User? author;
+class CounterModel extends Model {
+  int count = 0;
 
-  // Has many
-  @OrmRelation.hasMany(related: Comment, foreignKey: 'post_id')
-  final List<Comment> comments;
-
-  // Many to many
-  @OrmRelation.manyToMany(
-    related: Tag,
-    pivot: 'post_tags',
-    foreignPivotKey: 'post_id',
-    relatedPivotKey: 'tag_id',
-  )
-  final List<Tag> tags;
-}
-```
-
-Query with relations:
-
-```dart
-// Eager loading
-final posts = await ds.query<$Post>()
-    .with_(['author', 'tags', 'comments.author'])
-    .get();
-
-// Relation aggregates
-final posts = await ds.query<$Post>()
-    .withCount('comments')
-    .withExists('tags')
-    .get();
-
-// Filter by relation
-final publishedWithComments = await ds.query<$Post>()
-    .whereHas('comments', (q) => q.whereEquals('approved', true))
-    .get();
-```
-
----
-
-## 📐 Migrations
-
-```dart
-class CreatePostsTable extends Migration {
   @override
-  void up(SchemaBuilder schema) {
-    schema.create('posts', (table) {
-      table.id();
-      table.integer('author_id').references('users', 'id');
-      table.string('title');
-      table.text('body').nullable();
-      table.boolean('published').defaultValue(false);
-      table.timestamps();
-      table.softDeletes();
-      
-      table.index(['author_id']);
-    });
+  Cmd? init() => null;
+
+  @override
+  (Model, Cmd?) update(Msg msg) {
+    if (msg is KeyMsg && msg.key.isChar('i')) {
+      count++;
+    } else if (msg is KeyMsg && msg.key.isChar('d')) {
+      count--;
+    }
+    return (this, null);
   }
 
   @override
-  void down(SchemaBuilder schema) {
-    schema.drop('posts');
-  }
+  String view() => 'Count: $count\nPress "i" to increment, "d" to decrement.';
+}
+
+void main() async {
+  await runProgram(CounterModel(), options: ProgramOptions(altScreen: true));
+}
+```
+
+### 10. Markdown Rendering
+
+```dart
+import 'package:artisanal/glamour.dart';
+
+void main() {
+  const markdown = '''
+# Glamour Demo
+
+This is a **bold** statement.
+This is an *italic* statement.
+
+Visit [GitHub](https://github.com) for more info.
+''';
+
+  final renderer = GlamourRenderer();
+  print(renderer.render(markdown));
 }
 ```
 
 ---
 
-## 📚 Documentation
+## 🌟 Get Started
 
-Full documentation is available at **[ormed.vercel.app](https://ormed.vercel.app/)**.
-
-### Topics Covered
-- **CLI Reference** — Complete CLI commands and options
-- **Query Builder** — Full query API reference  
-- **Relations & Lazy Loading** — Eager/lazy loading and relation mutations
-- **Migrations** — Schema migrations and schema builder API
-- **Data Source** — Runtime database access patterns
-- **Code Generation** — Model annotations and generated code
-- **Model Factories** — Test data generation and seeding
-- **Connectors** — Connection management and multi-tenancy
-- **Observability** — Logging, instrumentation, and tracing
-- **Driver Capabilities** — Cross-database compatibility and feature detection
-- **Best Practices** — Optimization strategies, patterns, and anti-patterns
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 💖 Support
-
-If you find this project helpful, consider supporting its development:
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kingwill101)
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+To explore more, check out the examples in the `example` directory or dive into the documentation. Build your next terminal application with Artisanal!

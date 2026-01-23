@@ -1,3 +1,0 @@
-# Postgres integration tests now use isolated schemas per test group,
-# allowing for parallel execution.
-concurrency: 4

@@ -1,25 +1,10 @@
-name: ormed_workspace
+name: artisanal_workspace
 publish_to: none
 workspace:
-  - packages/ormed
-  - packages/driver_tests
-  - packages/ormed_sqlite
-  - packages/ormed_postgres
-  - packages/ormed_mysql
-  - packages/ormed_postgres_extensions
-  - packages/ormed_cli
-  - packages/artisanal
-  - .site/examples
+  - pkgs/artisanal
 
 funding:
   - https://www.buymeacoffee.com/kingwill101
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
-dependencies:
-  contextual: ^2.1.0
-  liquify: ^1.4.1
-  path: ^1.9.1
-  uuid: ^4.5.2
-dev_dependencies:
-  build_runner: ^2.10.5
