@@ -1,8 +1,4 @@
-import 'package:artisanal/src/tui/program.dart';
-import 'package:artisanal/src/tui/model.dart';
-import 'package:artisanal/src/tui/msg.dart';
-import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/key.dart';
+import 'package:artisanal/tui.dart';
 
 class DemoModel implements Model {
   @override

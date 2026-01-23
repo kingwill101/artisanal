@@ -1,7 +1,6 @@
 /// Glamour + viewport example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/src/tui/markdown/ansi_renderer.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
@@ -60,7 +59,7 @@ class GlamourExample implements tui.Model {
 
   factory GlamourExample.initial() {
     const width = 78;
-    final rendered = markdownToAnsi(_content);
+    final rendered = tui.markdownToAnsi(_content);
     final vp = tui.ViewportModel(width: width, height: 20)
       ..setContent(rendered);
     return GlamourExample(viewport: vp, width: width, height: 20);
@@ -84,7 +83,7 @@ class GlamourExample implements tui.Model {
           return (this, tui.Cmd.quit());
         }
       case tui.WindowSizeMsg(width: final w, height: final h):
-        final rendered = markdownToAnsi(_content);
+        final rendered = tui.markdownToAnsi(_content);
         final vp = viewport.copyWith(width: w, height: h - 2)
           ..setContent(rendered);
         return (copyWith(viewport: vp, width: w, height: h), null);

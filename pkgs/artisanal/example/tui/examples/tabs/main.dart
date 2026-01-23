@@ -4,7 +4,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart';
-import 'package:artisanal/src/tui/bubbles/runeutil.dart' show stringWidth;
+import 'package:artisanal/tui.dart' show stringWidth;
 import 'package:artisanal/tui.dart' as tui;
 
 class TabsModel implements tui.Model {

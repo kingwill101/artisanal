@@ -129,6 +129,7 @@ export 'src/uv/cell.dart'
 export 'src/uv/event.dart';
 export 'src/uv/mouse.dart' show MouseMode, MouseButton, Mouse;
 export 'src/uv/border.dart';
+export 'src/uv/cursor.dart';
 export 'src/uv/decoder.dart' show EventDecoder, LegacyKeyEncoding;
 export 'src/uv/terminal_renderer.dart';
 export 'src/uv/geometry.dart' show Position, Rectangle, rect;
@@ -146,3 +147,6 @@ export 'src/uv/layer.dart' show Layer, Compositor, newLayer, LayerHit;
 export 'src/uv/canvas.dart' show Canvas;
 export 'src/uv/layout.dart';
 export 'src/uv/screen.dart';
+export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
+export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
+export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;

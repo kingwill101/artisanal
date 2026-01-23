@@ -6,7 +6,7 @@ import 'dart:math';
 
 import 'package:artisanal/artisanal.dart' show AnsiColor, Style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:artisanal/terminal.dart' as term;
 
 final _helpStyle = Style().foreground(const AnsiColor(241)).render;
 final _mainStyle = Style().margin(0, 1, 0, 1);
@@ -117,7 +117,7 @@ tui.Cmd _runPretendProcess() {
 
 String _randomEmoji() {
   const emojis = '🍦🧋🍡🤠👾😭🦊🐯🦆🥨🎏🍔🍒🍥🎮📦🦁🐶🐸🍕🥐🧲🚒🥇🏆🌽';
-  final clusters = uni.graphemes(emojis).toList();
+  final clusters = term.graphemes(emojis).toList();
   final r = Random().nextInt(clusters.length);
   return clusters[r];
 }

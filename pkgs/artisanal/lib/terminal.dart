@@ -76,3 +76,4 @@ export 'src/terminal/terminal.dart';
 export 'src/terminal/ansi.dart';
 export 'src/terminal/keys.dart';
 export 'src/terminal/stdin_stream.dart';
+export 'src/unicode/grapheme.dart';

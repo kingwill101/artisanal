@@ -10,8 +10,7 @@ library;
 
 import 'package:artisanal/artisanal.dart' show Style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/src/terminal/ansi.dart' as term_ansi;
-import 'package:artisanal/src/unicode/grapheme.dart' as uni;
+import 'package:artisanal/terminal.dart' as term;
 
 class _LogModel implements tui.Model {
   _LogModel({required this.useUvInput, required this.useUvRenderer});
@@ -86,7 +85,7 @@ class _LogModel implements tui.Model {
             case 0x64: // d
               return (
                 this,
-                tui.Cmd.writeRaw(term_ansi.Ansi.requestPrimaryDeviceAttributes),
+                tui.Cmd.writeRaw(term.Ansi.requestPrimaryDeviceAttributes),
               );
             case 0x62: // b
               return (this, tui.Cmd.requestBackgroundColorReport());
@@ -159,7 +158,7 @@ String _clipToWidth(String s, int maxWidth) {
 
   var w = 0;
   final out = StringBuffer();
-  for (final g in uni.graphemes(s)) {
+  for (final g in term.graphemes(s)) {
     final gw = Style.visibleLength(g);
     if (w + gw > maxWidth) break;
     out.write(g);

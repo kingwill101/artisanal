@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:artisanal/src/uv/terminal.dart';
+import 'package:artisanal/uv.dart';
 
 void main() async {
   final terminal = Terminal();

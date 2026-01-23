@@ -5,8 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart' show AnsiColor, Style;
-import 'package:artisanal/src/tui/bubbles/textinput.dart'
-    show defaultTextInputStyles;
+import 'package:artisanal/tui.dart' show defaultTextInputStyles;
 import 'package:artisanal/tui.dart' as tui;
 
 const _reposUrl = 'https://api.github.com/orgs/charmbracelet/repos';

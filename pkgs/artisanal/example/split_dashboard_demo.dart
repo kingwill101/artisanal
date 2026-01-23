@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/src/tui/harmonica.dart' as hz;
 
 /// Helper class to read real system info from /proc/ (Linux)
 class SystemInfo {
@@ -222,7 +221,7 @@ class DashboardModel implements tui.Model {
       memProgress = tui.ProgressModel(width: 20, fullColor: '#5F87FF'),
       netProgress = tui.ProgressModel(width: 20, fullColor: '#00AFFF'),
       dskProgress = tui.ProgressModel(width: 20, fullColor: '#FFAF00'),
-      blockSpring = hz.newSpringFromFps(60, 5.0, 0.5),
+      blockSpring = tui.newSpringFromFps(60, 5.0, 0.5),
       debugOverlay = tui.DebugOverlayModel.initial(rendererLabel: 'UV'),
       sysInfo = SystemInfo();
 
@@ -248,7 +247,7 @@ class DashboardModel implements tui.Model {
   List<double> verticalBars = List.generate(10, (_) => 0.0);
 
   // Spring state for blocks
-  final hz.Spring blockSpring;
+  final tui.Spring blockSpring;
   List<double> blockSpringPos = List.generate(4, (_) => 0.0);
   List<double> blockSpringVel = List.generate(4, (_) => 0.0);
   List<double> blockTargets = List.generate(4, (_) => 0.0);

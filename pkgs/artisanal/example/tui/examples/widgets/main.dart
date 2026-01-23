@@ -5,7 +5,7 @@
 // Run with: dart run example/tui/examples/widgets/main.dart
 
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/src/style/style.dart';
+import 'package:artisanal/style.dart';
 
 void main() async {
   // Optionally set a theme

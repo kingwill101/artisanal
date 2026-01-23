@@ -9,10 +9,10 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart'
     show Colors, Style, ThemePalette, Color, NoColor;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/src/style/ranges.dart' as ranges;
-import 'package:artisanal/src/tui/view.dart' show View;
-import 'package:artisanal/src/tui/bubbles/debug_overlay.dart';
-import 'package:artisanal/src/uv/uv.dart' as uv;
+import 'package:artisanal/style.dart' as ranges show cutAnsiByCells;
+import 'package:artisanal/tui.dart' show View;
+import 'package:artisanal/tui.dart' show DebugOverlayModel;
+import 'package:artisanal/uv.dart' as uv;
 
 const _colWidth = 26;
 const _colGap = 2;

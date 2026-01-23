@@ -1,8 +1,5 @@
 import 'dart:io';
 import 'package:artisanal/uv.dart';
-import 'package:artisanal/src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
-import 'package:artisanal/src/uv/kitty_drawable.dart' show KittyImageDrawable;
-import 'package:artisanal/src/uv/sixel_drawable.dart' show SixelImageDrawable;
 import 'package:image/image.dart' as img;
 
 void main() async {

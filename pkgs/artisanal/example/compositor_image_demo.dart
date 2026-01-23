@@ -1,9 +1,6 @@
 import 'dart:io';
-import 'package:artisanal/src/io/console.dart';
-import 'package:artisanal/src/uv/canvas.dart';
-import 'package:artisanal/src/uv/kitty_drawable.dart';
-import 'package:artisanal/src/uv/layer.dart';
-import 'package:artisanal/src/uv/styled_string.dart';
+import 'package:artisanal/artisanal.dart' show Console;
+import 'package:artisanal/uv.dart';
 import 'package:image/image.dart' as img;
 
 // #region compositor_usage
