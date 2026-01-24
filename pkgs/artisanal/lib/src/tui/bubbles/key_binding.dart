@@ -117,15 +117,25 @@ bool keyMatches(Key key, List<KeyBinding> bindings) {
   final keyName = keyStr.startsWith('Key(') && keyStr.endsWith(')')
       ? keyStr.substring(4, keyStr.length - 1)
       : keyStr;
+  final caseSensitiveRunes =
+      key.type == KeyType.runes &&
+      !key.ctrl &&
+      !key.alt &&
+      !key.meta &&
+      !key.hyper &&
+      !key.superKey;
+  final keyNameCmp = caseSensitiveRunes ? keyName : keyName.toLowerCase();
+  final keyStrCmp = caseSensitiveRunes ? keyStr : keyStr.toLowerCase();
 
   for (final binding in bindings) {
     if (!binding.enabled) continue;
     for (final k in binding.keys) {
       // For character keys (runes), match case-sensitively
       // For other keys, match case-insensitively
-      final matches = key.type == KeyType.runes
-          ? (keyName == k || keyStr == k)
-          : (keyName.toLowerCase() == k.toLowerCase() || keyStr == k);
+      final kCmp = caseSensitiveRunes ? k : k.toLowerCase();
+      final matches = caseSensitiveRunes
+          ? (keyNameCmp == kCmp || keyStrCmp == kCmp)
+          : (keyNameCmp == kCmp || keyStrCmp == kCmp);
       if (matches) return true;
 
       // Handle special key type aliases (e.g., ' ' for space, '\t' for tab)
@@ -137,11 +147,13 @@ bool keyMatches(Key key, List<KeyBinding> bindings) {
 
 /// Maps binding string aliases to their corresponding KeyType.
 bool _keyTypeMatchesAlias(KeyType type, String alias) {
+  final aliasLower = alias.toLowerCase();
   return switch (type) {
     KeyType.space => alias == ' ',
     KeyType.tab => alias == '\t',
     KeyType.enter => alias == '\n' || alias == '\r',
-    KeyType.escape => alias == '\x1b',
+    KeyType.escape =>
+      alias == '\x1b' || aliasLower == 'esc' || aliasLower == 'escape',
     _ => false,
   };
 }
