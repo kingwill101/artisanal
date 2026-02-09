@@ -46,6 +46,10 @@ import 'cell.dart';
 
 /// Terminal capabilities discovered via ANSI queries.
 final class TerminalCapabilities {
+  /// Creates a new terminal capabilities instance.
+  ///
+  /// If [env] is provided, seeds initial capability hints from environment
+  /// variables (e.g. `TERM`, `TERM_PROGRAM`, `LC_TERMINAL`).
   TerminalCapabilities({List<String>? env}) {
     if (env != null) {
       final environ = Environ(env);
@@ -132,5 +136,28 @@ final class TerminalCapabilities {
       // We also check environment in Terminal.
     }
     return false;
+  }
+
+  @override
+  String toString() {
+    final buf = StringBuffer();
+    buf.writeln('TerminalCapabilities(');
+    buf.writeln('  hasKittyGraphics: $hasKittyGraphics,');
+    buf.writeln('  hasSixel: $hasSixel,');
+    buf.writeln('  hasITerm2: $hasITerm2,');
+    buf.writeln('  hasKeyboardEnhancements: $hasKeyboardEnhancements,');
+    buf.writeln('  primaryAttributes: $primaryAttributes,');
+    buf.writeln('  backgroundColor: ${backgroundColor ?? "null"},');
+    if (palette.isEmpty) {
+      buf.writeln('  palette: {}');
+    } else {
+      buf.writeln('  palette: {');
+      palette.forEach((index, color) {
+        buf.writeln('    $index: $color,');
+      });
+      buf.writeln('  }');
+    }
+    buf.writeln(')');
+    return buf.toString();
   }
 }

@@ -17,43 +17,70 @@ library;
 ///
 /// Upstream: `github.com/charmbracelet/x/ansi` (used by `third_party/ultraviolet/*`).
 abstract final class UvAnsi {
-  // Upstream: `github.com/charmbracelet/x/ansi` (`ResetStyle`).
+  /// Upstream: `github.com/charmbracelet/x/ansi` (`ResetStyle`).
   static const resetStyle = '\x1b[m';
 
+  /// Moves the cursor to the home position (top-left corner).
   static const cursorHomePosition = '\x1b[H';
+
+  /// Erases the entire screen.
   static const eraseEntireScreen = '\x1b[2J';
+
+  /// Erases the screen below the cursor.
   static const eraseScreenBelow = '\x1b[J';
 
+  /// Erases from the cursor to the end of the line.
   static const eraseLineRight = '\x1b[K';
+
+  /// Erases from the beginning of the line to the cursor.
   static const eraseLineLeft = '\x1b[1K';
+
+  /// Erases the entire current line.
   static const eraseEntireLine = '\x1b[2K';
 
+  /// Reverse index — moves the cursor up one line, scrolling if needed.
   static const reverseIndex = '\x1bM';
 
-  // Auto wrap mode (DECAWM).
+  /// Resets auto wrap mode (DECAWM).
   static const resetModeAutoWrap = '\x1b[?7l';
+
+  /// Sets auto wrap mode (DECAWM).
   static const setModeAutoWrap = '\x1b[?7h';
 
-  // Alternate screen buffer (DECSET/DECRST 1049).
+  /// Alternate screen buffer with saved cursor (DECSET 1049).
   static const setModeAltScreenSaveCursor = '\x1b[?1049h';
+
+  /// Resets alternate screen buffer and restores cursor (DECRST 1049).
   static const resetModeAltScreenSaveCursor = '\x1b[?1049l';
 
-  // Cursor visibility (DECTCEM).
+  /// Hides the cursor (DECTCEM).
   static const hideCursor = '\x1b[?25l';
+
+  /// Shows the cursor (DECTCEM).
   static const showCursor = '\x1b[?25h';
 
-  // Mouse tracking.
+  /// Enables mouse tracking for all events.
   static const enableMouseAllEvents = '\x1b[?1003h';
+
+  /// Disables mouse tracking for all events.
   static const disableMouseAllEvents = '\x1b[?1003l';
+
+  /// Enables mouse SGR extended coordinates.
   static const enableMouseSgr = '\x1b[?1006h';
+
+  /// Disables mouse SGR extended coordinates.
   static const disableMouseSgr = '\x1b[?1006l';
 
-  // Bracketed paste.
+  /// Enables bracketed paste mode.
   static const enableBracketedPaste = '\x1b[?2004h';
+
+  /// Disables bracketed paste mode.
   static const disableBracketedPaste = '\x1b[?2004l';
 
-  // Focus reporting.
+  /// Enables focus reporting.
   static const enableFocusReporting = '\x1b[?1004h';
+
+  /// Disables focus reporting.
   static const disableFocusReporting = '\x1b[?1004l';
 
   /// Returns an ANSI sequence that moves the cursor up by [n] rows.
@@ -127,4 +154,19 @@ abstract final class UvAnsi {
 
   /// Returns the OSC 8 sequence that clears the current hyperlink.
   static String resetHyperlink() => setHyperlink('', '');
+
+  // Synchronized output (DEC private mode 2026).
+  //
+  // Wrapping a frame's output in BSU/ESU tells the terminal to buffer all
+  // changes and render them atomically, preventing visible tearing or flashes
+  // (e.g. when scroll optimization issues DL/IL before writing replacement
+  // content).
+  //
+  // Terminals that don't recognize mode 2026 silently ignore these sequences.
+
+  /// Begin Synchronized Update — tells the terminal to start buffering output.
+  static const beginSynchronizedUpdate = '\x1b[?2026h';
+
+  /// End Synchronized Update — tells the terminal to flush buffered output.
+  static const endSynchronizedUpdate = '\x1b[?2026l';
 }

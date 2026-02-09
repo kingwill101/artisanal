@@ -35,10 +35,16 @@ import '../unicode/grapheme.dart' as uni;
 ///
 /// Upstream: `third_party/ultraviolet/styled.go` (`StyledString`).
 final class StyledString implements Drawable {
+  /// Creates a styled string from [text] with optional [wrap] and [tail].
   StyledString(this.text, {this.wrap = false, this.tail = ''});
 
+  /// The raw text content, which may include ANSI escape sequences.
   final String text;
+
+  /// Whether long lines should wrap to the next row.
   bool wrap;
+
+  /// Trailing content appended after the main text when truncating.
   String tail;
 
   @override
@@ -79,14 +85,23 @@ final class StyledString implements Drawable {
   }
 }
 
+/// Factory function to create a [StyledString] from [str].
 StyledString newStyledString(String str) => StyledString(str);
 
 // --- ANSI parsing helpers ----------------------------------------------------
 
+/// Represents a parsed SGR (Select Graphic Rendition) parameter.
 final class SgrParam {
+  /// Creates an SGR parameter with [value] and optional [sub]-parameters.
   const SgrParam(this.value, this.sub);
+
+  /// The main parameter value.
   final int value;
+
+  /// The sub-parameter values, or empty if none.
   final List<int> sub;
+
+  /// Whether this parameter has a sub-parameter.
   bool get hasSub => sub.isNotEmpty;
 }
 
@@ -111,6 +126,7 @@ List<SgrParam> _parseSgrParams(String raw) {
   return out;
 }
 
+/// Parses an OSC 8 hyperlink sequence from [data] into [out].
 void readLink(String data, LinkState out) {
   // Upstream: `third_party/ultraviolet/styled.go` (`ReadLink`).
   // OSC 8 format: ESC ] 8 ; params ; url ST
@@ -122,11 +138,16 @@ void readLink(String data, LinkState out) {
   out.link = Link(url: url, params: params);
 }
 
+/// Holds the parsed hyperlink URL from an OSC 8 sequence.
 final class LinkState {
+  /// Creates a link state with the given [link].
   LinkState(this.link);
+
+  /// The hyperlink URL and parameters.
   Link link;
 }
 
+/// Parses SGR [params] and applies them to the style in [out].
 void readStyle(List<SgrParam> params, StyleState out) {
   // Upstream: `third_party/ultraviolet/styled.go` (`ReadStyle`).
   if (params.isEmpty) {
@@ -311,8 +332,12 @@ void readStyle(List<SgrParam> params, StyleState out) {
   out.style = style;
 }
 
+/// Holds the result of parsing an SGR sequence.
 final class StyleState {
+  /// Creates a style state with the given [style].
   StyleState(this.style);
+
+  /// The parsed [UvStyle] value.
   UvStyle style;
 }
 
@@ -337,6 +362,21 @@ void _printString(
   var y = startY;
   final pen = StyleState(const UvStyle());
   final link = LinkState(const Link());
+  final pendingEscapes = StringBuffer();
+  int? lastCellX;
+  int? lastCellY;
+
+  void flushPendingToLastCell() {
+    if (pendingEscapes.isEmpty) return;
+    final cellX = lastCellX;
+    final cellY = lastCellY;
+    if (cellX == null || cellY == null) return;
+    final cell = screen.cellAt(cellX, cellY);
+    if (cell == null || cell.isZero) return;
+    cell.content = '${cell.content}${pendingEscapes.toString()}';
+    screen.setCell(cellX, cellY, cell);
+    pendingEscapes.clear();
+  }
 
   var i = 0;
   while (i < input.length) {
@@ -353,6 +393,8 @@ void _printString(
           final paramsRaw = input.substring(i + 2, finalIndex);
           if (finalByte == 0x6D /* 'm' */ ) {
             readStyle(_parseSgrParams(paramsRaw), pen);
+          } else if (_isPrivateCsiFinal(finalByte)) {
+            pendingEscapes.write(input.substring(i, finalIndex + 1));
           }
           i = finalIndex + 1;
           continue;
@@ -373,12 +415,14 @@ void _printString(
 
     // Newline / carriage return.
     if (codeUnit == 0x0A /* \n */ ) {
+      flushPendingToLastCell();
       y++;
       x = bounds.minX;
       i++;
       continue;
     }
     if (codeUnit == 0x0D /* \r */ ) {
+      flushPendingToLastCell();
       x = bounds.minX;
       i++;
       continue;
@@ -386,6 +430,10 @@ void _printString(
 
     final (:grapheme, :nextIndex) = uni.readGraphemeAt(input, i);
     var cell = Cell.newCell(method, grapheme);
+    if (pendingEscapes.isNotEmpty) {
+      cell.content = '${pendingEscapes.toString()}${cell.content}';
+      pendingEscapes.clear();
+    }
     cell.style = pen.style;
     cell.link = link.link;
 
@@ -405,11 +453,15 @@ void _printString(
         t.style = pen.style;
         t.link = link.link;
         screen.setCell(x, y, t);
+        lastCellX = x;
+        lastCellY = y;
         x += t.width;
         // Stop drawing further content on this line.
         x = bounds.maxX;
       } else {
         screen.setCell(x, y, cell);
+        lastCellX = x;
+        lastCellY = y;
         x += cell.width;
       }
     } else {
@@ -418,6 +470,8 @@ void _printString(
 
     i = nextIndex;
   }
+
+  flushPendingToLastCell();
 }
 
 int _findCsiFinal(String s, int start) {
@@ -427,6 +481,10 @@ int _findCsiFinal(String s, int start) {
     if (c >= 0x40 && c <= 0x7E) return i;
   }
   return -1;
+}
+
+bool _isPrivateCsiFinal(int byte) {
+  return byte >= 0x70 && byte <= 0x7E; // 'p'..'~'
 }
 
 final class _Osc {

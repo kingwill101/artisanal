@@ -63,6 +63,22 @@ final class RenderMetrics {
   Stopwatch? _renderStopwatch;
   Duration _lastRenderDuration = Duration.zero;
 
+  /// When true, the next [beginFrame]/[endFrame] cycle is treated as a
+  /// bookkeeping render (e.g. triggered by the metrics timer) and will **not**
+  /// record inter-frame timing or increment the frame count.  The flag is
+  /// automatically reset at the end of [endFrame].
+  bool metricsOnlyFrame = false;
+
+  /// Duration after the last real frame beyond which FPS is reported as 0.
+  static const _idleTimeout = Duration(seconds: 2);
+
+  /// Whether there has been any real (non-metrics-only) rendering activity
+  /// within the idle timeout window.
+  bool get _isIdle {
+    if (_lastFrameTime == null) return true;
+    return DateTime.now().difference(_lastFrameTime!) > _idleTimeout;
+  }
+
   /// Total number of frames rendered since creation or last reset.
   int get frameCount => _frameCount;
 
@@ -91,14 +107,20 @@ final class RenderMetrics {
   }
 
   /// Current FPS based on the last frame time.
+  /// Returns 0.0 when the application is idle (no real frames within the
+  /// timeout window).
   double get currentFps {
+    if (_isIdle) return 0.0;
     final ft = lastFrameTime;
     if (ft.inMicroseconds == 0) return 0.0;
     return 1000000.0 / ft.inMicroseconds;
   }
 
   /// Average FPS over the sample window.
+  /// Returns 0.0 when the application is idle (no real frames within the
+  /// timeout window).
   double get averageFps {
+    if (_isIdle) return 0.0;
     final avg = averageFrameTime;
     if (avg.inMicroseconds == 0) return 0.0;
     return 1000000.0 / avg.inMicroseconds;
@@ -134,33 +156,45 @@ final class RenderMetrics {
   /// Call this at the start of each frame (before render).
   void beginFrame() {
     final now = DateTime.now();
-    if (_lastFrameTime != null) {
+    if (!metricsOnlyFrame && _lastFrameTime != null) {
       final frameTime = now.difference(_lastFrameTime!);
       _frameTimes.add(frameTime);
       if (_frameTimes.length > _sampleSize) {
         _frameTimes.removeAt(0);
       }
     }
-    _lastFrameTime = now;
+    // Only update the baseline timestamp for real frames so that the next
+    // real frame measures the gap from the previous real frame, not from
+    // the metrics-only render.
+    if (!metricsOnlyFrame) {
+      _lastFrameTime = now;
+    }
 
     _renderStopwatch = Stopwatch()..start();
   }
 
   /// Call this at the end of render().
   void endFrame({bool skipped = false}) {
-    _frameCount++;
-    if (skipped) {
-      _skippedFrames++;
+    if (!metricsOnlyFrame) {
+      _frameCount++;
+      if (skipped) {
+        _skippedFrames++;
+      }
     }
 
     if (_renderStopwatch != null) {
       _renderStopwatch!.stop();
       _lastRenderDuration = _renderStopwatch!.elapsed;
-      _renderTimes.add(_lastRenderDuration);
-      if (_renderTimes.length > _sampleSize) {
-        _renderTimes.removeAt(0);
+      if (!metricsOnlyFrame) {
+        _renderTimes.add(_lastRenderDuration);
+        if (_renderTimes.length > _sampleSize) {
+          _renderTimes.removeAt(0);
+        }
       }
     }
+
+    // Auto-reset so callers don't need to remember to clear it.
+    metricsOnlyFrame = false;
   }
 
   /// Resets all metrics to initial state.
@@ -244,20 +278,50 @@ final class _Cursor {
 /// This renderer is responsible for efficiently updating the terminal screen
 /// by diffing buffers and sending minimal ANSI escape sequences.
 final class UvTerminalRenderer {
-  // Capability bits (public for parity tests).
+  /// Capability bit for Vertical Position Absolute (VPA).
   static const int capVpa = _Cap.vpa;
+
+  /// Capability bit for Horizontal Position Absolute (HPA).
   static const int capHpa = _Cap.hpa;
+
+  /// Capability bit for Cursor Horizontal Absolute (CHA).
   static const int capCha = _Cap.cha;
+
+  /// Capability bit for Cursor Horizontal Tab (CHT).
   static const int capCht = _Cap.cht;
+
+  /// Capability bit for Cursor Backward Tab (CBT).
   static const int capCbt = _Cap.cbt;
+
+  /// Capability bit for Repeat Character (REP).
   static const int capRep = _Cap.rep;
+
+  /// Capability bit for Erase Character (ECH).
   static const int capEch = _Cap.ech;
+
+  /// Capability bit for Insert Character (ICH).
   static const int capIch = _Cap.ich;
+
+  /// Capability bit for Scroll Down (SD).
   static const int capSd = _Cap.sd;
+
+  /// Capability bit for Scroll Up (SU).
   static const int capSu = _Cap.su;
+
+  /// Capability bit for Horizontal Tab (HT).
+  ///
+  /// Depends on terminal settings and is not enabled by default.
   static const int capHt = _Cap.ht;
+
+  /// Capability bit for Backspace (BS).
+  ///
+  /// Depends on terminal settings and is not enabled by default.
   static const int capBs = _Cap.bs;
 
+  /// Creates a terminal renderer writing to [_writer].
+  ///
+  /// Optional [env] provides environment variables for capability detection.
+  /// Set [isTty] to force TTY mode when the sink is not a real terminal.
   UvTerminalRenderer(this._writer, {List<String>? env, bool? isTty})
     : _env = env ?? const [],
       _term = Environ(env ?? const []).getenv('TERM'),
@@ -285,7 +349,10 @@ final class UvTerminalRenderer {
   /// ```
   final RenderMetrics metrics = RenderMetrics();
 
+  /// Returns the current terminal width in columns.
   int width() => _curbuf?.width() ?? 0;
+
+  /// Returns the current terminal height in rows.
   int height() => _curbuf?.height() ?? 0;
 
   int _flags = 0;
@@ -307,6 +374,10 @@ final class UvTerminalRenderer {
   List<_HashEntry> _hashtab = const [];
   List<int> _oldnum = const [];
 
+  /// Enables or disables scroll region optimization.
+  ///
+  /// When enabled, the renderer uses hash-based line matching to minimize
+  /// redraws during scrolling in fullscreen mode.
   void setScrollOptim(bool v) {
     if (v) {
       _flags |= _Flag.scrollOptim;
@@ -315,6 +386,7 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Enables or disables fullscreen (alternate screen) mode.
   void setFullscreen(bool v) {
     if (v) {
       _flags |= _Flag.fullscreen;
@@ -323,8 +395,13 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Whether fullscreen mode is enabled.
   bool fullscreen() => (_flags & _Flag.fullscreen) != 0;
 
+  /// Enables or disables relative cursor positioning.
+  ///
+  /// When enabled, the renderer uses relative movement sequences instead of
+  /// absolute cursor positioning.
   void setRelativeCursor(bool v) {
     if (v) {
       _flags |= _Flag.relativeCursor;
@@ -333,6 +410,7 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Enables or disables LF to CR+LF newline mapping.
   void setMapNewline(bool v) {
     if (v) {
       _flags |= _Flag.mapNewline;
@@ -341,14 +419,19 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Saves the current cursor position.
   void saveCursor() {
     _saved = _cur.clone();
   }
 
+  /// Restores the previously saved cursor position.
   void restoreCursor() {
     _cur = _saved.clone();
   }
 
+  /// Enters the alternate screen buffer.
+  ///
+  /// Saves the cursor, enables fullscreen mode, and erases the screen.
   void enterAltScreen() {
     saveCursor();
     _buf.write(UvAnsi.setModeAltScreenSaveCursor);
@@ -357,6 +440,9 @@ final class UvTerminalRenderer {
     erase();
   }
 
+  /// Exits the alternate screen buffer.
+  ///
+  /// Restores the previous screen content and cursor position.
   void exitAltScreen() {
     erase();
     setRelativeCursor(true);
@@ -365,36 +451,49 @@ final class UvTerminalRenderer {
     restoreCursor();
   }
 
+  /// Hides the cursor.
   void hideCursor() {
     _buf.write(UvAnsi.hideCursor);
   }
 
+  /// Shows the cursor.
   void showCursor() {
     _buf.write(UvAnsi.showCursor);
   }
 
+  /// Enables mouse event reporting for all events (motion, buttons, scroll).
   void enableMouseAllEvents() {
     _buf.write(UvAnsi.enableMouseAllEvents);
     _buf.write(UvAnsi.enableMouseSgr);
   }
 
+  /// Disables mouse event reporting.
   void disableMouseAllEvents() {
     _buf.write(UvAnsi.disableMouseAllEvents);
     _buf.write(UvAnsi.disableMouseSgr);
   }
 
+  /// Enables bracketed paste mode.
+  ///
+  /// Pasted text is wrapped in escape sequences so it can be distinguished
+  /// from typed input.
   void enableBracketedPaste() {
     _buf.write(UvAnsi.enableBracketedPaste);
   }
 
+  /// Disables bracketed paste mode.
   void disableBracketedPaste() {
     _buf.write(UvAnsi.disableBracketedPaste);
   }
 
+  /// Enables focus event reporting.
+  ///
+  /// The terminal sends escape sequences when the window gains or loses focus.
   void enableFocusReporting() {
     _buf.write(UvAnsi.enableFocusReporting);
   }
 
+  /// Disables focus event reporting.
   void disableFocusReporting() {
     _buf.write(UvAnsi.disableFocusReporting);
   }
@@ -435,17 +534,29 @@ final class UvTerminalRenderer {
     _buf.write('\x1b]4;$index;?\x1b\\');
   }
 
+  /// Marks the screen as needing a full erase on the next render.
   void erase() {
     _clear = true;
   }
 
+  /// Returns the number of bytes currently buffered for output.
   int buffered() => _buf.length;
 
+  /// The current color profile used for output.
   cp.Profile get profile => _profile;
+
+  /// The detected terminal capabilities as a bitmask.
   int get capabilities => _caps;
+
+  /// Whether relative cursor positioning mode is active.
   bool get isRelativeCursorEnabled => (_flags & _Flag.relativeCursor) != 0;
+
+  /// Whether fullscreen mode is active.
   bool get isFullscreenEnabled => (_flags & _Flag.fullscreen) != 0;
 
+  /// Flushes buffered output to the terminal sink.
+  ///
+  /// Writes all pending escape sequences and content, then clears the buffer.
   void flush() {
     final out = _buf.toString();
     if (out.isNotEmpty) {
@@ -458,10 +569,16 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Sets the debug logger callback.
+  ///
+  /// When set, all output sequences are logged via [logger] before writing.
   void setLogger(void Function(String message)? logger) {
     _logger = logger;
   }
 
+  /// Sets the color profile for output.
+  ///
+  /// Controls how colors are downsampled (e.g. true color, 256-color, ANSI).
   void setColorProfile(cp.Profile profile) {
     _profile = profile;
   }
@@ -475,8 +592,13 @@ final class UvTerminalRenderer {
     return n;
   }
 
+  /// Returns the number of touched (dirty) lines in [buf].
   int touched(Buffer buf) => _touched(buf);
 
+  /// Updates the terminal dimensions.
+  ///
+  /// Resizes internal tab stops and resets the scroll height.
+  /// Does not implicitly clear the screen; call [erase] separately if needed.
   void resize(int width, int height) {
     _tabs?.resize(width);
     _scrollHeight = 0;
@@ -485,32 +607,39 @@ final class UvTerminalRenderer {
     // they want a full clear (parity tests depend on this).
   }
 
+  /// Returns the current cursor position as `(x, y)`.
   ({int x, int y}) position() => (x: _cur.x, y: _cur.y);
 
+  /// Sets the cursor position to ([x], [y]).
   void setPosition(int x, int y) {
     _cur.x = x;
     _cur.y = y;
   }
 
+  /// Writes a raw string to the output buffer and returns its length.
   int writeString(String s) {
     _buf.write(s);
     return s.length;
   }
 
+  /// Writes raw bytes to the output buffer and returns the byte count.
   int write(List<int> bytes) {
     _buf.write(String.fromCharCodes(bytes));
     return bytes.length;
   }
 
+  /// Moves the cursor to column [x], row [y].
   void moveTo(int x, int y) {
     _move(null, x, y);
   }
 
+  /// Forces a complete screen redraw by erasing and re-rendering [newbuf].
   void redraw(Buffer newbuf) {
     erase();
     render(newbuf);
   }
 
+  /// Configures whether backspace can be used for cursor movement.
   void setBackspace(bool v) {
     if (v) {
       _caps |= _Cap.bs;
@@ -519,6 +648,7 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Configures whether horizontal tab can be used for cursor movement.
   void setHasTab(bool v) {
     if (v) {
       _caps |= _Cap.ht;
@@ -527,6 +657,10 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Sets tab stop positions based on the given terminal [width].
+  ///
+  /// Pass a negative value to disable tab stops. On Linux consoles,
+  /// tab stops are always disabled.
   void setTabStops(int width) {
     if (width < 0 || _term.startsWith('linux')) {
       _caps &= ~_Cap.ht;
@@ -537,6 +671,10 @@ final class UvTerminalRenderer {
     _tabs = TabStops.defaults(width);
   }
 
+  /// Prepends raw escape sequences to the output buffer.
+  ///
+  /// Scrolls the screen content in [newbuf] to make room for [str], which is
+  /// inserted at the top of the visible area.
   void prependString(Buffer newbuf, String str) {
     // Upstream: `third_party/ultraviolet/terminal_renderer.go` (`PrependString`).
     if (str.isEmpty) return;
@@ -571,6 +709,12 @@ final class UvTerminalRenderer {
     }
   }
 
+  /// Renders the screen buffer to the terminal.
+  ///
+  /// Diffs [newbuf] against the previously rendered buffer and emits the
+  /// minimal ANSI escape sequences needed to update the terminal. Skipped
+  /// frames (no dirty lines and no pending clear) are recorded as such in
+  /// [metrics].
   void render(Buffer newbuf) {
     metrics.beginFrame();
 
