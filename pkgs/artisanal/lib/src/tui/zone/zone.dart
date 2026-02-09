@@ -72,4 +72,11 @@ library;
 
 export 'zone_info.dart' show ZoneInfo;
 export 'zone_manager.dart'
-    show ZoneManager, ZoneInBoundsMsg, zone, initGlobalZone, closeGlobalZone;
+    show
+        ZoneManager,
+        ZoneInBoundsMsg,
+        zone,
+        globalZone,
+        hasGlobalZone,
+        initGlobalZone,
+        closeGlobalZone;

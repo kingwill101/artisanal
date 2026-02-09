@@ -12,12 +12,16 @@ import '../uv/event.dart' as uvev;
 /// Some terminals render emoji as 1 cell wide, others as 2. The UV renderer
 /// needs to match the terminal's behavior to avoid overwriting graphemes.
 final class EmojiWidthProbe implements StartupProbe {
+  /// Creates an emoji width probe.
   EmojiWidthProbe({
     this.timeout = const Duration(milliseconds: 180),
     this.probeEmoji = '🍕',
   });
 
+  /// Maximum time to wait for terminal response.
   final Duration timeout;
+
+  /// The emoji character used for width probing.
   final String probeEmoji;
 
   final Completer<void> _done = Completer<void>();
@@ -26,12 +30,15 @@ final class EmojiWidthProbe implements StartupProbe {
   int _stage = 0;
   bool _active = false;
 
+  /// Whether the probe is currently running.
   @override
   bool get isActive => _active;
 
+  /// Whether non-critical messages should be gated during probing.
   @override
   bool get gateNonCriticalMessages => true;
 
+  /// Starts the width probe by querying the terminal.
   @override
   Future<void> start(StartupProbeContext ctx) async {
     if (_active) return;
@@ -39,14 +46,18 @@ final class EmojiWidthProbe implements StartupProbe {
 
     final term = ctx.terminal;
 
-    // Enter alt screen early so probing doesn't flash content on the normal
-    // screen before the renderer initializes.
-    term.enterAltScreen();
-    term.hideCursor();
-    term.clearScreen();
+    // Save cursor position and move to the last row so probing happens in an
+    // area the user won't notice (the content is already rendered above).
+    // We do NOT enter alt screen — the renderer has already done that.
+    term.saveCursor();
 
-    // Home cursor and request extended cursor position report (DECXCPR).
-    term.write(Ansi.cursorHome);
+    // Move to the bottom-left of the screen and clear that line so the probe
+    // emoji doesn't visually collide with rendered content.
+    final (width: _, height: h) = term.size;
+    term.write('\x1b[$h;1H'); // Move to last row, col 1
+    term.write(Ansi.clearLine);
+
+    // Request cursor position to establish the baseline column.
     term.write(Ansi.requestExtendedCursorPosition);
     await term.flush();
 
@@ -56,12 +67,15 @@ final class EmojiWidthProbe implements StartupProbe {
       // Best-effort: leave defaults.
     } finally {
       _active = false;
-      // Clear any probe artifacts before rendering.
-      term.clearScreen();
+      // Erase probe artifacts on the last row and restore cursor.
+      term.write('\x1b[$h;1H');
+      term.write(Ansi.clearLine);
+      term.restoreCursor();
       await term.flush();
     }
   }
 
+  /// Handles terminal response messages during probing.
   @override
   bool handleMsg(Msg msg, StartupProbeContext ctx) {
     if (!_active) return false;

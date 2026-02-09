@@ -15,6 +15,12 @@ import 'zone_scanner.dart';
 /// Initialize with [initGlobalZone] before using [zone].
 ZoneManager? _globalZone;
 
+/// Returns the global zone manager if initialized.
+ZoneManager? get globalZone => _globalZone;
+
+/// Whether the global zone manager has been initialized.
+bool get hasGlobalZone => _globalZone != null;
+
 /// Gets the global zone manager.
 ///
 /// Must call [initGlobalZone] first, otherwise throws a [StateError].
@@ -145,7 +151,7 @@ class ZoneManager {
   /// Whether the manager has been closed.
   bool _closed = false;
 
-  /// Closes the manager and cleans up resources.
+  /// Closes the zone manager and releases resources.
   void close() {
     _closed = true;
     _zones.clear();
@@ -238,7 +244,7 @@ class ZoneManager {
     return '$gid$content$gid';
   }
 
-  /// Clears the stored zone for the given ID.
+  /// Clears all registered zones.
   void clear(String id) {
     _zones.remove(id);
   }

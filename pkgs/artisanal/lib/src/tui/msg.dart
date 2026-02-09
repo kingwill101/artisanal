@@ -272,15 +272,17 @@ class BatchMsg extends Msg {
 /// The payload is intentionally typed as [Object] to avoid hard-coupling the
 /// core TUI message module to the UV event types.
 final class UvEventMsg extends Msg {
+  /// Creates a UV event message wrapping a raw terminal event.
   const UvEventMsg(this.event);
 
+  /// The raw terminal event object.
   final Object event;
 
   @override
   String toString() => 'UvEventMsg($event)';
 }
 
-/// Clipboard selection for OSC 52 operations.
+/// Clipboard selection targets for OSC 52 operations.
 enum ClipboardSelection { system, primary, unknown }
 
 /// Clipboard content message.
@@ -288,9 +290,13 @@ enum ClipboardSelection { system, primary, unknown }
 /// Only emitted when UV input decoding is enabled and the terminal reports a
 /// clipboard payload (OSC 52 response).
 final class ClipboardMsg extends Msg {
+  /// Creates a clipboard message with the given [selection] target and [content].
   const ClipboardMsg({required this.selection, required this.content});
 
+  /// The clipboard selection target (system, primary, or unknown).
   final ClipboardSelection selection;
+
+  /// The clipboard content string.
   final String content;
 
   @override
@@ -298,7 +304,7 @@ final class ClipboardMsg extends Msg {
       'ClipboardMsg(selection: $selection, ${content.length} bytes)';
 }
 
-/// Terminal-reported color kinds.
+/// Types of terminal colors reported via OSC sequences.
 enum TerminalColorKind { foreground, background, cursor }
 
 /// Message containing the terminal's background color.
@@ -306,12 +312,13 @@ enum TerminalColorKind { foreground, background, cursor }
 /// Only emitted when UV input decoding is enabled and the terminal reports a
 /// background color (OSC 11).
 final class BackgroundColorMsg extends Msg {
+  /// Creates a background color detection message from a hex color string.
   const BackgroundColorMsg({required this.hex});
 
   /// The background color reported by the terminal (hex string).
   final String hex;
 
-  /// Whether the background color is dark.
+  /// Whether the terminal background is dark (luminance < 0.5).
   bool get isDark {
     final rgb = _parseHexRgb(hex);
     if (rgb == null) return true;
@@ -334,6 +341,7 @@ final class BackgroundColorMsg extends Msg {
 /// Only emitted when UV input decoding is enabled and the terminal reports a
 /// foreground color (OSC 10).
 final class ForegroundColorMsg extends Msg {
+  /// Creates a foreground color detection message from a hex color string.
   const ForegroundColorMsg({required this.hex});
 
   /// The foreground color reported by the terminal (hex string).
@@ -348,6 +356,7 @@ final class ForegroundColorMsg extends Msg {
 /// Only emitted when UV input decoding is enabled and the terminal reports a
 /// cursor color (OSC 12).
 final class CursorColorMsg extends Msg {
+  /// Creates a cursor color detection message from a hex color string.
   const CursorColorMsg({required this.hex});
 
   /// The cursor color reported by the terminal (hex string).
@@ -359,7 +368,10 @@ final class CursorColorMsg extends Msg {
 
 /// Message sent when a terminal capability is reported.
 class CapabilityMsg extends Msg {
+  /// Creates a terminal capability response message.
   const CapabilityMsg(this.content);
+
+  /// The raw capability response content.
   final String content;
 
   @override
@@ -368,7 +380,10 @@ class CapabilityMsg extends Msg {
 
 /// Message sent when the terminal version is reported.
 class TerminalVersionMsg extends Msg {
+  /// Creates a terminal version response message.
   const TerminalVersionMsg(this.version);
+
+  /// The terminal version string.
   final String version;
 
   @override
@@ -377,7 +392,10 @@ class TerminalVersionMsg extends Msg {
 
 /// Message sent when keyboard enhancements are reported.
 class KeyboardEnhancementsMsg extends Msg {
+  /// Creates a keyboard enhancements capability message.
   const KeyboardEnhancementsMsg({this.reportEventTypes = false});
+
+  /// Whether the terminal supports reporting event types.
   final bool reportEventTypes;
 
   @override
@@ -387,7 +405,10 @@ class KeyboardEnhancementsMsg extends Msg {
 
 /// Message sent when the terminal color profile is detected or changed.
 class ColorProfileMsg extends Msg {
+  /// Creates a color profile detection message.
   const ColorProfileMsg(this.profile);
+
+  /// The detected terminal color profile.
   final ColorProfile profile;
 
   @override
@@ -404,8 +425,17 @@ class ColorProfileMsg extends Msg {
   return (r: r, g: g, b: b);
 }
 
-/// Mouse tracking modes.
-enum MouseMode { none, cellMotion, allMotion }
+/// Mouse tracking modes for the terminal.
+enum MouseMode {
+  /// No mouse tracking.
+  none,
+
+  /// Track mouse button press, release, and motion while a button is pressed.
+  cellMotion,
+
+  /// Track all mouse motion events, including movement without buttons pressed.
+  allMotion,
+}
 
 /// Mouse button identifiers.
 enum MouseButton {
@@ -557,6 +587,33 @@ class MouseMsg extends Msg {
 
   @override
   int get hashCode => Object.hash(action, button, x, y, ctrl, alt, shift);
+}
+
+/// Message dispatched to an element when render-tree hit-testing determines
+/// that a [MouseMsg] landed within its render object's bounds.
+///
+/// This replaces zone-based dispatch for widget apps. The [localX] and
+/// [localY] fields contain the mouse position in the hit element's local
+/// coordinate space.
+class HitTestMouseMsg extends Msg {
+  /// Creates a mouse message that has passed hit-testing against a render object.
+  const HitTestMouseMsg({
+    required this.event,
+    required this.localX,
+    required this.localY,
+  });
+
+  /// The original mouse event.
+  final MouseMsg event;
+
+  /// X coordinate in the hit element's local coordinate space.
+  final double localX;
+
+  /// Y coordinate in the hit element's local coordinate space.
+  final double localY;
+
+  @override
+  String toString() => 'HitTestMouseMsg(local=($localX,$localY) event=$event)';
 }
 
 /// Message sent when focus is gained or lost.

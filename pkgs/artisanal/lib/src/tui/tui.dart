@@ -115,6 +115,7 @@ export 'msg.dart'
         MouseButton,
         MouseAction,
         MouseMode,
+        HitTestMouseMsg,
         WindowSizeMsg,
         TickMsg,
         FrameTickMsg,
@@ -170,7 +171,15 @@ export 'cmd.dart'
 
 // Model interface
 export 'model.dart'
-    show Model, CopyWithModel, CompositeModel, UpdateResult, noCmd, quit;
+    show
+        Model,
+        CopyWithModel,
+        CompositeModel,
+        UpdateResult,
+        FrameTickModel,
+        RenderMetricsModel,
+        noCmd,
+        quit;
 export 'view.dart'
     show
         View,
@@ -192,6 +201,7 @@ export 'renderer.dart'
         NullTuiRenderer,
         StringSinkTuiRenderer,
         TuiTerminalRendererExtension,
+        RenderMetrics,
         compressAnsi;
 
 // Program runtime
@@ -224,8 +234,14 @@ export 'zone/zone.dart'
         ZoneInfo,
         ZoneInBoundsMsg,
         zone,
+        globalZone,
+        hasGlobalZone,
         initGlobalZone,
         closeGlobalZone;
 
+// Trace / debug logging
+export 'trace.dart' show TuiTrace;
+
 // Widget system for composable components
-export 'widgets/widgets.dart';
+export 'package:artisanal_widgets/artisanal_widgets.dart'
+    hide Key, LocalKey, UniqueKey, ValueKey;

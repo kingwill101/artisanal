@@ -12,6 +12,7 @@ import 'msg.dart';
 import 'renderer.dart';
 import 'startup_probe.dart';
 import 'terminal.dart';
+import 'trace.dart';
 import 'view.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
@@ -96,6 +97,7 @@ typedef MessageFilter = Msg? Function(Model model, Msg msg);
 
 /// Options for configuring the TUI program.
 class ProgramOptions {
+  /// Creates program configuration options.
   const ProgramOptions({
     this.altScreen = true,
     this.mouse = false,
@@ -307,6 +309,7 @@ class ProgramOptions {
   /// so the process can exit cleanly on real TTYs.
   final bool shutdownSharedStdinOnExit;
 
+  /// The interval at which render metrics are reported to the model.
   final Duration metricsInterval;
 
   /// Creates a copy with the given fields replaced.
@@ -592,6 +595,9 @@ class Program<M extends Model> {
   /// Whether we're currently processing a message (prevents reentrant calls).
   bool _processingMessage = false;
 
+  int _traceMsgId = 0;
+  int _traceRenderId = 0;
+
   /// Whether we're in the initialization phase (suppresses renders until init completes).
   bool _initializing = false;
 
@@ -825,6 +831,11 @@ class Program<M extends Model> {
 
     // Enable raw mode for character-by-character input
     _terminal!.enableRawMode();
+    if (TuiTrace.enabled) {
+      _trace(
+        'setup terminal=${_terminal.runtimeType} raw=${_terminal?.isRawMode}',
+      );
+    }
 
     // Set startup title if provided
     if (_options.startupTitle != null) {
@@ -863,6 +874,9 @@ class Program<M extends Model> {
 
     // Enable mouse tracking if requested
     _applyMouseMode();
+    if (TuiTrace.enabled) {
+      _trace('setup mouse mode=${_effectiveMouseMode()}');
+    }
 
     // Enable bracketed paste if requested
     if (_options.bracketedPaste) {
@@ -885,11 +899,6 @@ class Program<M extends Model> {
     // Suppress renders during initialization to avoid visual flash of pre-init state
     _initializing = true;
 
-    // If we're using UV input decoding, probe terminal emoji width before we
-    // render anything. The UV renderer relies on correct cell widths to avoid
-    // overwriting graphemes during incremental updates.
-    await _runStartupProbesIfNeeded();
-
     // Send initial window size (model receives this before init runs)
     final size = _terminal!.size;
     _processMessage(WindowSizeMsg(size.width, size.height));
@@ -897,17 +906,27 @@ class Program<M extends Model> {
     // Send initial color profile (model receives this before init runs)
     _processMessage(ColorProfileMsg(_terminal!.colorProfile));
 
-    _startupProbes?.drain(_processMessage);
-
     // Execute init command before first render so user sees initialized state
     final initCmd = _model!.init();
     if (initCmd != null) {
       await _executeCommand(initCmd);
     }
 
-    // Initialization complete - now render the initialized state
+    // Initialization complete - render the initialized state immediately so the
+    // user sees content without waiting for startup probes.
     _initializing = false;
     _render();
+
+    // Run startup probes (e.g. emoji width detection) AFTER the first frame is
+    // painted.  The probe uses cursor save/restore on the already-active alt
+    // screen so the user never sees a blank flash.  If the probe changes the
+    // emoji presentation width we trigger a full re-render.
+    final prevEmojiWidth = uni_width.emojiPresentationWidth;
+    await _runStartupProbesIfNeeded();
+    _startupProbes?.drain(_processMessage);
+    if (uni_width.emojiPresentationWidth != prevEmojiWidth) {
+      _render();
+    }
 
     // Start metrics timer
     _startMetricsTimer();
@@ -919,6 +938,11 @@ class Program<M extends Model> {
   /// Starts a periodic timer to send render metrics to the model.
   void _startMetricsTimer() {
     if (_options.metricsInterval <= Duration.zero) return;
+    if (_model case RenderMetricsModel(
+      :final wantsRenderMetrics,
+    ) when !wantsRenderMetrics) {
+      return;
+    }
 
     _metricsTimer = Timer.periodic(_options.metricsInterval, (_) {
       final metrics = _renderer?.metrics;
@@ -934,6 +958,11 @@ class Program<M extends Model> {
   /// at regular intervals based on the configured [ProgramOptions.fps].
   void _startFrameTickTimer() {
     if (!_options.frameTick) return;
+    if (_model case FrameTickModel(
+      :final wantsFrameTicks,
+    ) when !wantsFrameTicks) {
+      return;
+    }
 
     // Calculate interval from fps
     final intervalMs = (1000 / _options.fps).round();
@@ -1007,6 +1036,11 @@ class Program<M extends Model> {
           send(PrintLineMsg('Input error: $error'));
         });
       },
+      onDone: () {
+        if (TuiTrace.enabled) {
+          _trace('input stream closed');
+        }
+      },
     );
   }
 
@@ -1023,13 +1057,57 @@ class Program<M extends Model> {
     return null;
   }
 
+  void _trace(String message) {
+    if (!TuiTrace.enabled) return;
+    TuiTrace.log(message);
+  }
+
+  String _traceMsgSummary(Msg msg) {
+    return switch (msg) {
+      KeyMsg(:final key) => 'KeyMsg(${key.toString()})',
+      MouseMsg(:final action, :final button, :final x, :final y) =>
+        'MouseMsg($action $button @ $x,$y)',
+      WindowSizeMsg(:final width, :final height) =>
+        'WindowSizeMsg($width,$height)',
+      UvEventMsg(:final event) => 'UvEventMsg(${event.runtimeType})',
+      _ => msg.runtimeType.toString(),
+    };
+  }
+
+  String _traceBytes(List<int> bytes, {int limit = 32}) {
+    final take = bytes.length > limit ? limit : bytes.length;
+    final parts = <String>[];
+    for (var i = 0; i < take; i++) {
+      final b = bytes[i];
+      parts.add(b.toRadixString(16).padLeft(2, '0'));
+    }
+    final suffix = bytes.length > limit ? '…' : '';
+    return '${parts.join(' ')}$suffix';
+  }
+
   /// Handles raw input bytes from the terminal.
   void _handleInput(List<int> bytes) {
+    if (TuiTrace.enabled) {
+      _trace(
+        'input bytes=${bytes.length} pending=${_uvInputParser.hasPending} '
+        'hex=${_traceBytes(bytes)} raw=${_terminal?.isRawMode ?? false}',
+      );
+    }
     if (_options.useUltravioletInputDecoder) {
       _uvInputTimeoutTimer?.cancel();
 
       final msgs = _uvInputParser.parseAll(bytes, expired: false);
-      for (final msg in msgs) {
+      final coalesced = _coalesceInputMsgs(msgs);
+      if (TuiTrace.enabled) {
+        final summary = coalesced.isEmpty
+            ? '(none)'
+            : coalesced.map(_traceMsgSummary).join(', ');
+        final dropped = msgs.length - coalesced.length;
+        _trace(
+          'parsed uv: $summary${dropped > 0 ? ' (dropped $dropped)' : ''}',
+        );
+      }
+      for (final msg in coalesced) {
         send(msg);
       }
 
@@ -1037,7 +1115,18 @@ class Program<M extends Model> {
         _uvInputTimeoutTimer = Timer(_options.inputTimeout, () {
           if (!_running) return;
           final flushed = _uvInputParser.parseAll(const [], expired: true);
-          for (final msg in flushed) {
+          final coalesced = _coalesceInputMsgs(flushed);
+          if (TuiTrace.enabled) {
+            final summary = coalesced.isEmpty
+                ? '(none)'
+                : coalesced.map(_traceMsgSummary).join(', ');
+            final dropped = flushed.length - coalesced.length;
+            _trace(
+              'parsed uv flush: $summary'
+              '${dropped > 0 ? ' (dropped $dropped)' : ''}',
+            );
+          }
+          for (final msg in coalesced) {
             send(msg);
           }
         });
@@ -1047,6 +1136,19 @@ class Program<M extends Model> {
 
     // Parse bytes into keys and other messages (mouse, focus, paste)
     final results = _keyParser.parseAll(bytes);
+    if (TuiTrace.enabled && results.isNotEmpty) {
+      final summaries = <String>[];
+      for (final result in results) {
+        if (result is KeyResult) {
+          summaries.add('KeyMsg(${result.key})');
+        } else if (result is MsgResult) {
+          summaries.add(_traceMsgSummary(result.msg));
+        }
+      }
+      if (summaries.isNotEmpty) {
+        _trace('parsed key: ${summaries.join(', ')}');
+      }
+    }
 
     // Send each result as a message
     for (final result in results) {
@@ -1057,6 +1159,40 @@ class Program<M extends Model> {
           send(msg);
       }
     }
+  }
+
+  List<Msg> _coalesceInputMsgs(List<Msg> msgs) {
+    if (msgs.isEmpty) return msgs;
+    final hasKey = msgs.any((m) => m is KeyMsg);
+    if (hasKey) {
+      return msgs.where((m) => m is! MouseMsg).toList(growable: false);
+    }
+
+    final lastByAction = <MouseAction, (int index, MouseMsg msg)>{};
+    for (var i = 0; i < msgs.length; i++) {
+      final msg = msgs[i];
+      if (msg is! MouseMsg) continue;
+      lastByAction[msg.action] = (i, msg);
+    }
+
+    if (lastByAction.isEmpty) return msgs;
+
+    final keep = <int>{};
+    for (final entry in lastByAction.values) {
+      keep.add(entry.$1);
+    }
+
+    final result = <Msg>[];
+    for (var i = 0; i < msgs.length; i++) {
+      final msg = msgs[i];
+      if (msg is MouseMsg) {
+        if (keep.contains(i)) result.add(msg);
+      } else {
+        result.add(msg);
+      }
+    }
+
+    return result;
   }
 
   Future<void> _runStartupProbesIfNeeded() async {
@@ -1100,7 +1236,29 @@ class Program<M extends Model> {
   /// conditions and ensure consistent state updates.
   void send(Msg msg) {
     if (!_running) return;
+    if (msg is KeyMsg) {
+      _messageQueue.removeWhere((m) => m is MouseMsg);
+    }
+    if (msg is MouseMsg && msg.action == MouseAction.motion) {
+      _messageQueue.removeWhere(
+        (m) => m is MouseMsg && m.action == MouseAction.motion,
+      );
+    }
+    if (msg is MouseMsg && msg.action == MouseAction.wheel) {
+      _messageQueue.removeWhere(
+        (m) => m is MouseMsg && m.action == MouseAction.wheel,
+      );
+    }
+    if (TuiTrace.enabled && msg is KeyMsg) {
+      _trace(
+        'queue before key len=${_messageQueue.length} '
+        'msg=${_traceMsgSummary(msg)}',
+      );
+    }
     _messageQueue.add(msg);
+    if (TuiTrace.enabled && msg is KeyMsg) {
+      _trace('queue after key len=${_messageQueue.length}');
+    }
     _drainMessageQueue();
   }
 
@@ -1126,79 +1284,101 @@ class Program<M extends Model> {
   void _processMessage(Msg msg) {
     if (_model == null) return;
 
-    final probes = _startupProbes;
-    final probeCtx = _startupProbeContext;
-    if (probes != null && probeCtx != null) {
-      if (probes.intercept(msg, probeCtx)) return;
+    final traceId = TuiTrace.enabled ? ++_traceMsgId : null;
+    final Stopwatch? sw = traceId == null ? null : Stopwatch();
+    sw?.start();
+    if (traceId != null) {
+      _trace('msg#$traceId start ${msg.runtimeType}');
     }
 
-    // Handle View-specific mouse interception
-    if (msg is MouseMsg && _lastView?.onMouse != null) {
-      final cmd = _lastView!.onMouse!(msg);
+    try {
+      final probes = _startupProbes;
+      final probeCtx = _startupProbeContext;
+      if (probes != null && probeCtx != null) {
+        if (probes.intercept(msg, probeCtx)) return;
+      }
+
+      // Handle View-specific mouse interception
+      if (msg is MouseMsg && _lastView?.onMouse != null) {
+        final cmd = _lastView!.onMouse!(msg);
+        if (cmd != null) {
+          _executeCommand(cmd);
+        }
+      }
+
+      // Apply message filter if configured
+      if (_options.filter != null) {
+        final filteredMsg = _options.filter!(_model!, msg);
+        if (filteredMsg == null) {
+          // Message was filtered out
+          return;
+        }
+        msg = filteredMsg;
+      }
+
+      // Handle quit message
+      if (msg is QuitMsg) {
+        _quit();
+        return;
+      }
+
+      // Handle repaint message
+      if (msg is RepaintMsg) {
+        _forceRender();
+        return;
+      }
+
+      // Handle batch message - flatten nested batches to avoid stack overflow
+      if (msg is BatchMsg) {
+        // Use a queue to process messages iteratively instead of recursively
+        final queue = <Msg>[...msg.messages];
+        while (queue.isNotEmpty) {
+          final m = queue.removeAt(0);
+          if (m is BatchMsg) {
+            // Flatten nested batch by adding its messages to the front of the queue
+            queue.insertAll(0, m.messages);
+          } else {
+            _processMessage(m);
+          }
+        }
+        return;
+      }
+
+      // Handle internal control messages
+      if (_handleControlMessage(msg)) {
+        return;
+      }
+
+      // Update model
+      final (newModel, cmd) = _model!.update(msg);
+      if (newModel is! M) {
+        throw StateError(
+          'Model.update() returned ${newModel.runtimeType}, expected $M. '
+          'Ensure your update() method returns the same model type.',
+        );
+      }
+      _model = newModel;
+
+      // Re-render
+      // Mark metrics-only frames so the renderer doesn't count them toward
+      // FPS.  The metrics timer fires every ~1s which would otherwise produce
+      // a steady 1.0 FPS when idle.
+      if (msg is RenderMetricsMsg) {
+        _renderer?.metrics?.metricsOnlyFrame = true;
+      }
+      _render();
+
+      // Execute command
       if (cmd != null) {
         _executeCommand(cmd);
       }
-    }
-
-    // Apply message filter if configured
-    if (_options.filter != null) {
-      final filteredMsg = _options.filter!(_model!, msg);
-      if (filteredMsg == null) {
-        // Message was filtered out
-        return;
+    } finally {
+      if (traceId != null && sw != null) {
+        sw.stop();
+        _trace(
+          'msg#$traceId end ${msg.runtimeType} ${sw.elapsedMicroseconds}us',
+        );
       }
-      msg = filteredMsg;
-    }
-
-    // Handle quit message
-    if (msg is QuitMsg) {
-      _quit();
-      return;
-    }
-
-    // Handle repaint message
-    if (msg is RepaintMsg) {
-      _forceRender();
-      return;
-    }
-
-    // Handle batch message - flatten nested batches to avoid stack overflow
-    if (msg is BatchMsg) {
-      // Use a queue to process messages iteratively instead of recursively
-      final queue = <Msg>[...msg.messages];
-      while (queue.isNotEmpty) {
-        final m = queue.removeAt(0);
-        if (m is BatchMsg) {
-          // Flatten nested batch by adding its messages to the front of the queue
-          queue.insertAll(0, m.messages);
-        } else {
-          _processMessage(m);
-        }
-      }
-      return;
-    }
-
-    // Handle internal control messages
-    if (_handleControlMessage(msg)) {
-      return;
-    }
-
-    // Update model
-    final (newModel, cmd) = _model!.update(msg);
-    if (newModel is! M) {
-      throw StateError(
-        'Model.update() returned ${newModel.runtimeType}, expected $M. '
-        'Ensure your update() method returns the same model type.',
-      );
-    }
-    _model = newModel;
-
-    // Re-render
-    _render();
-
-    // Execute command
-    if (cmd != null) {
-      _executeCommand(cmd);
     }
   }
 
@@ -1566,7 +1746,16 @@ class Program<M extends Model> {
     // Skip rendering during initialization phase to avoid visual flash
     if (_initializing) return;
 
+    final renderId = TuiTrace.enabled ? ++_traceRenderId : null;
+    final Stopwatch? viewSw = renderId == null ? null : Stopwatch();
+    viewSw?.start();
     final view = _model!.view();
+    viewSw?.stop();
+    if (renderId != null && viewSw != null) {
+      _trace(
+        'render#$renderId view ${view.runtimeType} ${viewSw.elapsedMicroseconds}us',
+      );
+    }
 
     if (view is View) {
       _lastView = view;
@@ -1575,7 +1764,13 @@ class Program<M extends Model> {
       _lastView = null;
     }
 
+    final Stopwatch? renderSw = renderId == null ? null : Stopwatch();
+    renderSw?.start();
     _renderer!.render(view);
+    renderSw?.stop();
+    if (renderId != null && renderSw != null) {
+      _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
+    }
     // Ensure the underlying sink paints promptly. Some terminals (and Dart IO
     // implementations) may buffer output until an explicit flush, and the UV
     // renderer in particular emits bytes through an intermediate writer.
@@ -1630,6 +1825,9 @@ class Program<M extends Model> {
     }
 
     if (view.mouseMode != null) {
+      if (TuiTrace.enabled) {
+        _trace('view mouseMode=${view.mouseMode}');
+      }
       switch (view.mouseMode!) {
         case MouseMode.none:
           _terminal?.disableMouse();
@@ -1934,6 +2132,15 @@ class Program<M extends Model> {
         _terminal?.disableMouse();
       }
     });
+
+    // Flush all buffered escape sequences (alt-screen exit, cursor restore,
+    // mouse disable) to stdout before disposing the terminal. Without this,
+    // the sequences remain in the terminal's write buffer and are lost when
+    // the process exits, leaving the terminal in a broken state (e.g. mouse
+    // tracking still enabled, still in alt screen).
+    await tryAsync(() async => _terminal?.flush());
+
+    trySync(() => TuiTrace.close());
 
     // Final terminal cleanup
     trySync(() => _terminal?.dispose());

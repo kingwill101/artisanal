@@ -290,6 +290,7 @@ abstract class Terminal {
 /// available for interactive input, while keeping output on the configured
 /// output stream.
 final class SplitTerminal implements Terminal {
+  /// Creates a split terminal with separate [control] and [output] streams.
   SplitTerminal({required Terminal control, required Terminal output})
     : _control = control,
       _output = output;
@@ -297,7 +298,10 @@ final class SplitTerminal implements Terminal {
   final Terminal _control;
   final Terminal _output;
 
+  /// The terminal used for control sequences (cursor, mode switching, size).
   Terminal get control => _control;
+
+  /// The terminal used for content output (screen drawing, writes).
   Terminal get output => _output;
 
   // ─────────────────────────────────────────────────────────────────────────────

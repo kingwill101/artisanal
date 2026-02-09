@@ -85,6 +85,7 @@ import 'msg.dart';
 /// }
 /// ```
 abstract class Model {
+  /// Creates a base model instance.
   const Model();
 
   /// Returns an optional command to execute on program startup.
@@ -208,6 +209,24 @@ abstract class Model {
   /// }
   /// ```
   Object view();
+}
+
+/// Optional interface for models that want to control frame ticks.
+///
+/// When implemented, the runtime will only start the frame tick timer if
+/// [wantsFrameTicks] is true.
+abstract class FrameTickModel {
+  /// Whether the model wants to receive frame tick messages.
+  bool get wantsFrameTicks;
+}
+
+/// Optional interface for models that want render metrics updates.
+///
+/// When implemented, the runtime only starts the metrics timer if
+/// [wantsRenderMetrics] is true.
+abstract class RenderMetricsModel {
+  /// Whether the model wants to receive render metrics updates.
+  bool get wantsRenderMetrics;
 }
 
 /// Mixin that documents the copyWith pattern for models.
