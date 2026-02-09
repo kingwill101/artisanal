@@ -34,7 +34,8 @@ import '../style/properties.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../unicode/grapheme.dart' as uni;
-import '../unicode/width.dart' show maxLineWidth;
+import '../unicode/width.dart' show maxLineWidth, runeWidth;
+import '../tui/trace.dart';
 
 /// Options for rendering whitespace in layout functions.
 ///
@@ -49,6 +50,10 @@ class WhitespaceOptions {
   /// Background color for the whitespace.
   final Color? background;
 
+  /// Creates whitespace processing options.
+  ///
+  /// [chars] specifies characters to cycle through when filling space.
+  /// [foreground] and [background] apply optional styling.
   const WhitespaceOptions({this.chars = ' ', this.foreground, this.background});
 
   /// Renders whitespace of the given width using these options.
@@ -214,6 +219,8 @@ class Layout {
     int gap = 0,
     String gapChar = ' ',
   }) {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     if (blocks.isEmpty) return '';
     if (blocks.length == 1) return blocks.first;
 
@@ -261,7 +268,19 @@ class Layout {
       result.add(rowParts.join(gapStr));
     }
 
-    return result.join('\n');
+    final output = result.join('\n');
+    sw?.stop();
+    if (sw != null) {
+      final maxWidth = widths.isEmpty
+          ? 0
+          : widths.reduce((a, b) => a > b ? a : b);
+      TuiTrace.log(
+        'layout.joinHorizontal blocks=${blocks.length} '
+        'maxWidth=$maxWidth maxHeight=$maxHeight '
+        '${sw.elapsedMicroseconds}us',
+      );
+    }
+    return output;
   }
 
   /// Joins multiple blocks vertically with horizontal alignment.
@@ -281,6 +300,8 @@ class Layout {
     List<String> blocks, {
     int gap = 0,
   }) {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     if (blocks.isEmpty) return '';
     if (blocks.length == 1) return blocks.first;
 
@@ -315,7 +336,16 @@ class Layout {
       }
     }
 
-    return result.join('\n');
+    final output = result.join('\n');
+    sw?.stop();
+    if (sw != null) {
+      TuiTrace.log(
+        'layout.joinVertical blocks=${blocks.length} '
+        'maxWidth=$maxWidth height=${result.length} '
+        '${sw.elapsedMicroseconds}us',
+      );
+    }
+    return output;
   }
 
   /// Pads a block to a given height with vertical alignment.
@@ -381,10 +411,20 @@ class Layout {
     required String content,
     WhitespaceOptions? whitespace,
   }) {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     final ws = whitespace ?? WhitespaceOptions(chars: ' ');
     // First place horizontally, then vertically (like Go)
     final horizontalPlaced = _placeHorizontal(width, horizontal, content, ws);
-    return _placeVertical(height, vertical, horizontalPlaced, ws);
+    final output = _placeVertical(height, vertical, horizontalPlaced, ws);
+    sw?.stop();
+    if (sw != null) {
+      TuiTrace.log(
+        'layout.place width=$width height=$height '
+        '${sw.elapsedMicroseconds}us',
+      );
+    }
+    return output;
   }
 
   /// Places content horizontally within a given width.
@@ -599,26 +639,31 @@ class Layout {
 
   /// Truncates text to a maximum width, adding an ellipsis if needed.
   ///
-  /// Handles ANSI codes properly (though imperfectly for mid-sequence truncation).
+  /// Handles ANSI codes properly (though imperfectly for mid-sequence
+  /// truncation). Uses grapheme-cluster iteration and proper display-width
+  /// accounting so that CJK, emoji, and variation-selector characters are
+  /// measured correctly.
   static String truncate(String text, int maxWidth, {String ellipsis = '…'}) {
     final visible = visibleLength(text);
     if (visible <= maxWidth) return text;
 
-    final ellipsisLen = ellipsis.length;
-    final targetLen = maxWidth - ellipsisLen;
+    final ellipsisWidth = visibleLength(ellipsis);
+    final targetLen = maxWidth - ellipsisWidth;
     if (targetLen <= 0) {
+      // Even the ellipsis doesn't fit — return as much of it as we can.
       return ellipsis.substring(0, maxWidth);
     }
 
-    // Simple truncation - doesn't perfectly handle mid-ANSI truncation
-    // For proper handling, we'd need to track ANSI state
+    // Walk through the text by UTF-16 index, but measure grapheme clusters
+    // for display-width. ANSI escape sequences are passed through without
+    // consuming any display budget.
     var currentLen = 0;
     var result = StringBuffer();
     var i = 0;
 
     while (i < text.length && currentLen < targetLen) {
+      // Pass through ANSI escape sequences without consuming width.
       if (text[i] == '\x1B') {
-        // Find end of ANSI sequence
         final end = text.indexOf('m', i);
         if (end != -1) {
           result.write(text.substring(i, end + 1));
@@ -626,12 +671,22 @@ class Layout {
           continue;
         }
       }
-      result.write(text[i]);
-      currentLen++;
-      i++;
+
+      // Read the next grapheme cluster starting at position i.
+      final (:grapheme, :nextIndex) = uni.readGraphemeAt(text, i);
+      if (grapheme.isEmpty) break;
+
+      final w = runeWidth(uni.firstCodePoint(grapheme));
+
+      // Don't exceed the target width.
+      if (currentLen + w > targetLen) break;
+
+      result.write(grapheme);
+      currentLen += w;
+      i = nextIndex;
     }
 
-    // Add reset and ellipsis
+    // Add reset and ellipsis.
     result.write('\x1B[0m$ellipsis');
     return result.toString();
   }

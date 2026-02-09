@@ -25,15 +25,29 @@ void setEmojiPresentationWidth(int width) {
   emojiPresentationWidth = width;
 }
 
+/// Specifies the method used to calculate character display width.
 enum WidthMethod { grapheme, wcwidth }
 
+/// Extension on [WidthMethod] providing string width calculation.
 extension WidthMethodX on WidthMethod {
+  /// Calculates the display width of [s] using grapheme cluster iteration.
+  ///
+  /// Each grapheme cluster is measured individually. Clusters containing
+  /// U+FE0F (emoji presentation selector) are widened to
+  /// [emojiPresentationWidth] when the base rune would otherwise be narrow.
   int stringWidth(String s) {
     var width = 0;
     // Count display width per grapheme cluster to avoid double-counting
     // multi-codepoint clusters (e.g. ZWJ emoji sequences).
     for (final g in uni.graphemes(s)) {
-      width += runeWidth(uni.firstCodePoint(g));
+      var w = runeWidth(uni.firstCodePoint(g));
+      // If the grapheme contains U+FE0F (variation selector 16 — emoji
+      // presentation), terminals render the base character at emoji width
+      // even if runeWidth() returned 1.
+      if (w == 1 && g.length > 1 && g.contains('\uFE0F')) {
+        w = emojiPresentationWidth;
+      }
+      width += w;
     }
     return width;
   }
@@ -59,6 +73,10 @@ int maxLineWidth(String s) {
   return maxWidth;
 }
 
+/// Returns the display width of a single Unicode code point.
+///
+/// Control characters, combining marks, and zero-width characters return 0.
+/// CJK, fullwidth, and emoji characters return 2. All others return 1.
 int runeWidth(int rune) {
   // Control characters and null
   if (rune < 32 || (rune >= 0x7F && rune < 0xA0)) {
@@ -102,17 +120,85 @@ int runeWidth(int rune) {
     return 2;
   }
 
-  // Emoji range subset. Terminal behavior varies (1 or 2).
-  if ((rune >= 0x1F300 &&
-          rune <=
-              0x1F9FF) || // Miscellaneous Symbols and Pictographs, Emoticons, etc.
-      (rune >= 0x1F1E0 &&
-          rune <= 0x1F1FF) || // Regional Indicator Symbols (flags)
-      (rune >= 0x1FA00 && rune <= 0x1FAFF)) {
-    // Chess Symbols, Extended-A
-    // Dingbats
+  // Emoji / symbol characters that terminals render as wide (2 cells).
+  // These are below U+2E80 (the CJK range start) but have emoji presentation
+  // in most terminals.
+  if (_isEmojiPresentation(rune)) {
+    return emojiPresentationWidth;
+  }
+
+  // Emoji ranges in Supplementary Multilingual Plane (U+1Fxxx).
+  // Covers all Emoji_Presentation=Yes code points above U+FFFF.
+  // Source: Unicode Emoji Data 15.1 — emoji-data.txt
+  if ((rune >= 0x1F000 && rune <= 0x1F02F) || // Mahjong Tiles, Dominos
+      (rune >= 0x1F0A0 && rune <= 0x1F0FF) || // Playing Cards
+      (rune >= 0x1F100 &&
+          rune <= 0x1F1FF) || // Enclosed Alphanumerics + Regional Indicators
+      (rune >= 0x1F200 && rune <= 0x1F2FF) || // Enclosed Ideographic Supplement
+      (rune >= 0x1F300 &&
+          rune <= 0x1F9FF) || // Misc Symbols/Pictographs, Emoticons, etc.
+      (rune >= 0x1FA00 &&
+          rune <= 0x1FAFF) || // Symbols and Pictographs Extended-A
+      (rune >= 0x1F7E0 && rune <= 0x1F7FF)) {
+    // Geometric Shapes Extended (colored circles/squares)
     return emojiPresentationWidth;
   }
 
   return 1;
+}
+
+/// Returns true if [rune] has the Unicode `Emoji_Presentation=Yes` property,
+/// meaning terminals render it as 2 cells wide by default (without needing
+/// U+FE0F variation selector).
+///
+/// Characters with `Emoji_Presentation=No` are text-default and rendered at
+/// width 1. They only become width 2 when followed by U+FE0F, which is
+/// handled separately in [WidthMethodX.stringWidth].
+///
+/// Source: Unicode Emoji Data 15.1 — emoji-data.txt
+bool _isEmojiPresentation(int r) {
+  // Miscellaneous Technical
+  if (r == 0x231A || r == 0x231B) return true; // ⌚⌛
+  if (r >= 0x23E9 && r <= 0x23EC) return true; // ⏩⏪⏫⏬
+  if (r == 0x23F0) return true; // ⏰
+  if (r == 0x23F3) return true; // ⏳
+
+  // Geometric Shapes
+  if (r >= 0x25FD && r <= 0x25FE) return true; // ◽◾
+
+  // Miscellaneous Symbols (U+2600..U+26FF) — ONLY Emoji_Presentation=Yes
+  if (r == 0x2614 || r == 0x2615) return true; // ☔☕
+  if (r >= 0x2648 && r <= 0x2653) return true; // ♈♉♊♋♌♍♎♏♐♑♒♓
+  if (r == 0x267F) return true; // ♿
+  if (r == 0x2693) return true; // ⚓
+  if (r == 0x26A1) return true; // ⚡
+  if (r == 0x26AA || r == 0x26AB) return true; // ⚪⚫
+  if (r == 0x26BD || r == 0x26BE) return true; // ⚽⚾
+  if (r == 0x26C4 || r == 0x26C5) return true; // ⛄⛅
+  if (r == 0x26CE) return true; // ⛎
+  if (r == 0x26D4) return true; // ⛔
+  if (r == 0x26EA) return true; // ⛪
+  if (r == 0x26F2 || r == 0x26F3) return true; // ⛲⛳
+  if (r == 0x26F5) return true; // ⛵
+  if (r == 0x26FA) return true; // ⛺
+  if (r == 0x26FD) return true; // ⛽
+
+  // Dingbats (U+2700..U+27BF) — ONLY Emoji_Presentation=Yes
+  if (r == 0x2705) return true; // ✅
+  if (r == 0x270A || r == 0x270B) return true; // ✊✋
+  if (r == 0x2728) return true; // ✨
+  if (r == 0x274C) return true; // ❌
+  if (r == 0x274E) return true; // ❎
+  if (r >= 0x2753 && r <= 0x2755) return true; // ❓❔❕
+  if (r == 0x2757) return true; // ❗
+  if (r >= 0x2795 && r <= 0x2797) return true; // ➕➖➗
+  if (r == 0x27B0) return true; // ➰
+  if (r == 0x27BF) return true; // ➿
+
+  // Misc Symbols and Arrows
+  if (r == 0x2B1B || r == 0x2B1C) return true; // ⬛⬜
+  if (r == 0x2B50) return true; // ⭐
+  if (r == 0x2B55) return true; // ⭕
+
+  return false;
 }

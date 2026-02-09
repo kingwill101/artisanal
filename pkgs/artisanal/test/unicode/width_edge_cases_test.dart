@@ -58,29 +58,65 @@ void main() {
       expect(w.runeWidth(0x1F1F8), w.emojiPresentationWidth); // S (regional)
     });
 
-    test('Dingbats are narrow (width 1)', () {
-      // Checkmark: ✓ (U+2713)
-      // This was previously being counted as width 2 (emoji) but should be 1
+    test('Dingbats: non-emoji are narrow, emoji-presentation are wide', () {
+      // Checkmark: ✓ (U+2713) — text presentation, width 1
       expect(w.runeWidth(0x2713), 1);
       expect(w.stringWidth('✓'), 1);
 
-      // Other Dingbats
-      expect(w.runeWidth(0x2700), 1); // First Dingbat
-      expect(w.runeWidth(0x27BF), 1); // Last Dingbat
+      // First Dingbat (U+2700) — not in emoji presentation list, width 1
+      expect(w.runeWidth(0x2700), 1);
+
+      // Scissors: ✂ (U+2702) — text-default (Emoji_Presentation=No), width 1
+      // Becomes width 2 only when followed by FE0F: ✂️
+      expect(w.runeWidth(0x2702), 1);
+      expect(w.stringWidth('\u2702\uFE0F'), w.emojiPresentationWidth);
+
+      // Check mark: ✅ (U+2705) — emoji presentation, width 2
+      expect(w.runeWidth(0x2705), w.emojiPresentationWidth);
+
+      // Cross mark: ❌ (U+274C) — emoji presentation, width 2
+      expect(w.runeWidth(0x274C), w.emojiPresentationWidth);
+
+      // Double curly loop: ➿ (U+27BF) — emoji presentation, width 2
+      expect(w.runeWidth(0x27BF), w.emojiPresentationWidth);
     });
 
-    test('Miscellaneous Symbols are narrow (width 1)', () {
-      // Chess pieces: ♔ (U+2654)
+    test('Miscellaneous Symbols: emoji-presentation are wide', () {
+      // Chess pieces: ♔ (U+2654) — text presentation, width 1
       expect(w.runeWidth(0x2654), 1);
       expect(w.stringWidth('♔'), 1);
 
-      // Other Misc Symbols
-      expect(w.runeWidth(0x2600), 1); // ☀ (Black Sun)
-      expect(
-        w.runeWidth(0x26FF),
-        1,
-      ); // ⛿ (White Flag with Horizontal Middle Line)
-      expect(w.runeWidth(0x260E), 1); // ☎ (Telephone)
+      // Sun: ☀ (U+2600) — text-default (Emoji_Presentation=No), width 1
+      // Becomes width 2 only with FE0F: ☀️
+      expect(w.runeWidth(0x2600), 1);
+      expect(w.stringWidth('\u2600\uFE0F'), w.emojiPresentationWidth);
+
+      // U+26FF — not in emoji presentation list, width 1
+      expect(w.runeWidth(0x26FF), 1);
+
+      // Telephone: ☎ (U+260E) — text-default, width 1
+      expect(w.runeWidth(0x260E), 1);
+      expect(w.stringWidth('\u260E\uFE0F'), w.emojiPresentationWidth);
+
+      // Hot beverage: ☕ (U+2615) — Emoji_Presentation=Yes, width 2
+      expect(w.runeWidth(0x2615), w.emojiPresentationWidth);
+
+      // Warning: ⚠ (U+26A0) — text-default, width 1
+      expect(w.runeWidth(0x26A0), 1);
+      expect(w.stringWidth('\u26A0\uFE0F'), w.emojiPresentationWidth);
+
+      // Snowman: ⛄ (U+26C4) — Emoji_Presentation=Yes, width 2
+      expect(w.runeWidth(0x26C4), w.emojiPresentationWidth);
+
+      // Recycling: ♻ (U+267B) — text-default, width 1
+      expect(w.runeWidth(0x267B), 1);
+      expect(w.stringWidth('\u267B\uFE0F'), w.emojiPresentationWidth);
+
+      // Star: ⭐ (U+2B50) — Emoji_Presentation=Yes, width 2
+      expect(w.runeWidth(0x2B50), w.emojiPresentationWidth);
+
+      // Circle: ⭕ (U+2B55) — Emoji_Presentation=Yes, width 2
+      expect(w.runeWidth(0x2B55), w.emojiPresentationWidth);
     });
 
     test('skin tone modifiers', () {
@@ -99,6 +135,26 @@ void main() {
       // Variation Selectors Supplement (VS17-VS256)
       expect(w.runeWidth(0xE0100), 0, reason: 'VS17 should be zero-width');
       expect(w.runeWidth(0xE01EF), 0, reason: 'VS256 should be zero-width');
+    });
+
+    test('FE0F variation selector upgrades grapheme width to emoji', () {
+      // Characters that are width 1 by default, but width 2 when followed
+      // by U+FE0F (emoji presentation selector).
+
+      // ❤️ (U+2764 + U+FE0F) — heart with VS16
+      // U+2764 is already in emoji presentation list, so width is 2 either way
+      expect(w.stringWidth('❤️'), w.emojiPresentationWidth);
+
+      // Characters that are NOT in the emoji presentation list should be
+      // upgraded to width 2 when followed by FE0F.
+      // Example: ✓️ (U+2713 + U+FE0F) — checkmark with VS16
+      final checkWithVs16 = '\u2713\uFE0F';
+      expect(
+        w.stringWidth(checkWithVs16),
+        w.emojiPresentationWidth,
+        reason:
+            'FE0F should upgrade non-emoji-presentation char to emoji width',
+      );
     });
 
     test('combining characters are zero-width', () {
@@ -164,6 +220,55 @@ void main() {
       // "Hello " = 6 chars, 🌍 = emojiPresentationWidth, "!" = 1
       expect(w.stringWidth(mixed), 6 + w.emojiPresentationWidth + 1);
     });
+
+    test('Kitchen Sink emoji: characters that caused scroll corruption', () {
+      // These are the specific characters from the markdown Kitchen Sink tab
+      // that previously returned width 1 but terminals render at width 2,
+      // causing the cell buffer to get out of sync with the terminal.
+      //
+      // After correcting _isEmojiPresentation() to only include
+      // Emoji_Presentation=Yes code points, text-default chars are width 1
+      // and only become width 2 via FE0F in stringWidth().
+      final ew = w.emojiPresentationWidth;
+
+      // Emoji_Presentation=Yes — always width 2
+      expect(w.runeWidth(0x2615), ew, reason: '☕ hot beverage');
+      expect(w.runeWidth(0x26A1), ew, reason: '⚡ lightning');
+      expect(w.runeWidth(0x26C5), ew, reason: '⛅ sun behind cloud');
+      expect(w.runeWidth(0x26C4), ew, reason: '⛄ snowman');
+      expect(w.runeWidth(0x2614), ew, reason: '☔ umbrella');
+      expect(w.runeWidth(0x2705), ew, reason: '✅ check mark');
+      expect(w.runeWidth(0x274C), ew, reason: '❌ cross mark');
+      expect(w.runeWidth(0x2728), ew, reason: '✨ sparkles');
+      expect(w.runeWidth(0x2B50), ew, reason: '⭐ star');
+
+      // Text-default (Emoji_Presentation=No) — width 1 without FE0F
+      expect(w.runeWidth(0x26A0), 1, reason: '⚠ warning (text-default)');
+      expect(w.runeWidth(0x26C8), 1, reason: '⛈ thunder cloud (text-default)');
+      expect(w.runeWidth(0x267B), 1, reason: '♻ recycling (text-default)');
+      expect(w.runeWidth(0x270C), 1, reason: '✌ victory hand (text-default)');
+      expect(
+        w.runeWidth(0x261D),
+        1,
+        reason: '☝ index pointing up (text-default)',
+      );
+      expect(w.runeWidth(0x2600), 1, reason: '☀ sun (text-default)');
+
+      // Text-default chars become width 2 via FE0F in stringWidth()
+      expect(w.stringWidth('\u26A0\uFE0F'), ew, reason: '⚠️ warning + FE0F');
+      expect(w.stringWidth('\u26C8\uFE0F'), ew, reason: '⛈️ thunder + FE0F');
+      expect(w.stringWidth('\u270C\uFE0F'), ew, reason: '✌️ victory + FE0F');
+      expect(w.stringWidth('\u261D\uFE0F'), ew, reason: '☝️ index + FE0F');
+      expect(w.stringWidth('\u2600\uFE0F'), ew, reason: '☀️ sun + FE0F');
+
+      // String width for lines containing Emoji_Presentation=Yes characters
+      // "Food: ☕🍕🍔" — "Food: " (6) + ☕ (2) + 🍕 (2) + 🍔 (2) = 12
+      expect(w.stringWidth('Food: ☕🍕🍔'), 6 + ew * 3);
+
+      // "Weather: ☀⛅⛈" — ☀ and ⛈ are text-default (width 1), ⛅ is emoji (width 2)
+      // "Weather: " (9) + ☀(1) + ⛅(2) + ⛈(1) = 13
+      expect(w.stringWidth('Weather: ☀⛅⛈'), 9 + 1 + ew + 1);
+    });
   });
 
   group('CJK Extension ranges (known limitations)', () {
@@ -183,6 +288,40 @@ void main() {
       // These should be covered by the 0x20000-0x3FFFF range
       expect(w.runeWidth(0x20000), 2);
       expect(w.runeWidth(0x2A6DF), 2);
+    });
+  });
+
+  group('Supplementary emoji ranges', () {
+    test('Mahjong and Playing Cards (U+1F000..U+1F0FF)', () {
+      final ew = w.emojiPresentationWidth;
+      expect(w.runeWidth(0x1F004), ew, reason: '🀄 mahjong red dragon');
+      expect(w.runeWidth(0x1F0CF), ew, reason: '🃏 joker');
+    });
+
+    test('Enclosed Alphanumerics (U+1F100..U+1F1FF)', () {
+      final ew = w.emojiPresentationWidth;
+      expect(w.runeWidth(0x1F18E), ew, reason: '🆎 AB button');
+      expect(w.runeWidth(0x1F191), ew, reason: '🆑 CL button');
+      expect(w.runeWidth(0x1F19A), ew, reason: '🆚 VS button');
+      // Regional indicators (flags)
+      expect(w.runeWidth(0x1F1E6), ew, reason: '🇦 regional indicator A');
+      expect(w.runeWidth(0x1F1FF), ew, reason: '🇿 regional indicator Z');
+    });
+
+    test('Enclosed Ideographic Supplement (U+1F200..U+1F2FF)', () {
+      final ew = w.emojiPresentationWidth;
+      expect(w.runeWidth(0x1F201), ew, reason: '🈁 Japanese "here"');
+      expect(w.runeWidth(0x1F21A), ew, reason: '🈚 Japanese "free"');
+      expect(w.runeWidth(0x1F22F), ew, reason: '🈯 Japanese "reserved"');
+      expect(w.runeWidth(0x1F232), ew, reason: '🈲 Japanese "prohibited"');
+      expect(w.runeWidth(0x1F251), ew, reason: '🉑 Japanese "acceptable"');
+    });
+
+    test('Geometric Shapes Extended (U+1F7E0..U+1F7FF)', () {
+      final ew = w.emojiPresentationWidth;
+      expect(w.runeWidth(0x1F7E0), ew, reason: '🟠 orange circle');
+      expect(w.runeWidth(0x1F7EB), ew, reason: '🟫 brown square');
+      expect(w.runeWidth(0x1F7F0), ew, reason: '🟰 heavy equals sign');
     });
   });
 }
