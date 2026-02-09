@@ -85,9 +85,9 @@ final class _WidgetsPage extends _KitchenSinkPage {
         width: 72,
         height: 8,
         columns: [
-          tui.Column(title: 'Widget', width: 16),
-          tui.Column(title: 'Status', width: 10),
-          tui.Column(title: 'Notes', width: 42),
+          bubbles.Column(title: 'Widget', width: 16),
+          bubbles.Column(title: 'Status', width: 10),
+          bubbles.Column(title: 'Notes', width: 42),
         ],
         rows: const [
           ['Viewport', 'OK', 'scroll + wheel + drag'],

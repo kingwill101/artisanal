@@ -1,0 +1,389 @@
+---
+title: Scrolling
+description: Scrollable content components
+icon: arrows-up-down
+---
+
+Scrolling components display content larger than the available space. This guide covers `ListView` and scrolling patterns.
+
+## ListView
+
+`ListView` displays a scrollable list of children:
+
+```dart
+ListView(
+  children: [
+    Text('Item 1'),
+    Text('Item 2'),
+    Text('Item 3'),
+    Text('Item 4'),
+    Text('Item 5'),
+  ],
+)
+```
+
+### ListView.builder
+
+For large or infinite lists, use `ListView.builder`:
+
+```dart
+ListView.builder(
+  itemCount: 100,
+  itemBuilder: (context, index) {
+    return Text('Item $index');
+  },
+)
+```
+
+Only visible items are built, making this efficient for long lists.
+
+### ListView.separated
+
+Add separators between items:
+
+```dart
+ListView.separated(
+  itemCount: 10,
+  itemBuilder: (context, index) {
+    return Text('Item $index');
+  },
+  separatorBuilder: (context, index) {
+    return Divider();
+  },
+)
+```
+
+### Scroll direction
+
+Scroll horizontally or vertically:
+
+```dart
+// Vertical (default)
+ListView(
+  scrollDirection: Axis.vertical,
+  children: [...],
+)
+
+// Horizontal
+ListView(
+  scrollDirection: Axis.horizontal,
+  children: [...],
+)
+```
+
+### Reverse scrolling
+
+Scroll from bottom to top (useful for chat apps):
+
+```dart
+ListView(
+  reverse: true,  // Start at bottom
+  children: [
+    Text('Message 1'),
+    Text('Message 2'),
+    Text('Message 3'),
+  ],
+)
+```
+
+### Padding
+
+Add padding around the list:
+
+```dart
+ListView(
+  padding: EdgeInsets.all(2),
+  children: [...],
+)
+```
+
+## Mouse wheel scrolling
+
+`ListView` supports mouse wheel scrolling automatically when the terminal supports it.
+
+Users can:
+- Scroll with the mouse wheel
+- Use arrow keys with `keyboardScrollable: true` (see [Keyboard scrolling](#keyboard-scrolling))
+
+## ScrollController
+
+Control scrolling programmatically:
+
+```dart
+class ScrollExample extends StatefulComponent {
+  const ScrollExample({super.key});
+
+  @override
+  State<ScrollExample> createState() => _ScrollExampleState();
+}
+
+class _ScrollExampleState extends State<ScrollExample> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToTop() {
+    _scrollController.jumpTo(0);
+  }
+
+  void _scrollToBottom() {
+    _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Button(
+              onPressed: _scrollToTop,
+              child: Text('Top'),
+            ),
+            Button(
+              onPressed: _scrollToBottom,
+              child: Text('Bottom'),
+            ),
+          ],
+        ),
+        Expanded(
+          child: ListView(
+            controller: _scrollController,
+            children: List.generate(
+              50,
+              (i) => Text('Item $i'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+```
+
+### ScrollController methods
+
+```dart
+// Jump to position
+controller.jumpTo(offset);
+
+// Get current position
+double position = controller.offset;
+
+// Get scroll extent
+double max = controller.position.maxScrollExtent;
+```
+
+## Keyboard scrolling
+
+Use `keyboardScrollable` for built-in keyboard navigation:
+
+```dart
+ListView(
+  keyboardScrollable: true,
+  children: [
+    Text('Item 1'),
+    Text('Item 2'),
+    Text('Item 3'),
+  ],
+)
+```
+
+When `keyboardScrollable` is `true`, the list handles these keys automatically:
+- **Arrow Up/Down** (or Left/Right for horizontal): scroll by 1 line
+- **Page Up/Down**: scroll by viewport height
+- **Home/End**: scroll to start/end
+
+This also works with `SingleChildScrollView`:
+
+```dart
+SingleChildScrollView(
+  keyboardScrollable: true,
+  child: Column(
+    children: [...],
+  ),
+)
+```
+
+### Before and after comparison
+
+```dart
+// Before: Manual keyboard scrolling (still works if you need custom behavior)
+Focusable(
+  onKeyEvent: (event) {
+    if (event.logicalKey == LogicalKey.arrowDown) {
+      scrollController.jumpTo(scrollController.offset + 1);
+      return true;
+    }
+    return false;
+  },
+  child: ListView(
+    controller: scrollController,
+    children: [...],
+  ),
+)
+
+// After: Built-in keyboard scrolling
+ListView(
+  keyboardScrollable: true,
+  children: [...],
+)
+```
+
+> **Note**: The manual `Focusable` approach is still available for custom scrolling behavior.
+
+## Performance tips
+
+### Use ListView.builder for long lists
+
+```dart
+// Good - builds only visible items
+ListView.builder(
+  itemCount: 10000,
+  itemBuilder: (context, index) => Text('Item $index'),
+)
+
+// Bad - builds all items upfront
+ListView(
+  children: List.generate(10000, (i) => Text('Item $i')),
+)
+```
+
+### Set fixed item extent
+
+If all items have the same height, set `itemExtent`:
+
+```dart
+ListView(
+  itemExtent: 1,  // Each item is 1 row tall
+  children: [...],
+)
+```
+
+This improves scroll performance.
+
+### Use cacheExtent for smoother scrolling
+
+The `cacheExtent` property controls how many rows are pre-rendered outside the visible area. This makes scrolling feel smoother because content is ready before it becomes visible:
+
+```dart
+ListView(
+  cacheExtent: 10,  // Pre-render 10 rows outside visible area
+  children: [...],
+)
+```
+
+The default is `5.0` (appropriate for TUI where 1 unit = 1 row). Higher values provide smoother scrolling but use more memory.
+
+```dart
+// For very smooth scrolling in a long list
+ListView.builder(
+  cacheExtent: 20,  // Pre-render more items
+  itemCount: 1000,
+  itemBuilder: (context, index) => Text('Item $index'),
+)
+
+// For memory-constrained situations
+ListView.builder(
+  cacheExtent: 2,  // Minimal pre-rendering
+  itemCount: 1000,
+  itemBuilder: (context, index) => ExpensiveWidget(index),
+)
+```
+
+## Common patterns
+
+### Chat interface
+
+```dart
+ListView(
+  reverse: true,  // Latest at bottom
+  children: messages.reversed.map((msg) {
+    return Text('${msg.author}: ${msg.text}');
+  }).toList(),
+)
+```
+
+### Infinite scroll
+
+```dart
+ListView.builder(
+  itemBuilder: (context, index) {
+    if (index >= items.length) {
+      loadMoreItems();  // Load more when reaching end
+      return Text('Loading...');
+    }
+    return Text(items[index]);
+  },
+)
+```
+
+### Grouped lists
+
+```dart
+ListView.builder(
+  itemCount: groups.length,
+  itemBuilder: (context, index) {
+    final group = groups[index];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(group.title, style: TextStyle(bold: true)),
+        ...group.items.map((item) => Text('  $item')),
+      ],
+    );
+  },
+)
+```
+
+## Best practices
+
+### Always dispose controllers
+
+```dart
+@override
+void dispose() {
+  _scrollController.dispose();
+  super.dispose();
+}
+```
+
+### Provide scroll indicators
+
+Show users that content is scrollable:
+
+```dart
+Column(
+  children: [
+    Text('↑ More above'),
+    Expanded(
+      child: ListView(children: [...]),
+    ),
+    Text('↓ More below'),
+  ],
+)
+```
+
+### Handle empty lists
+
+```dart
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (context, index) {
+    if (items.isEmpty) {
+      return Text('No items to display');
+    }
+    return Text(items[index]);
+  },
+)
+```
+
+## Next steps
+
+- [Overlays](/docs/components/overlays) - Display content on top
+- [Mouse Support](/docs/interactivity/mouse) - Handle mouse events
+- [Layout](/docs/components/layout) - Layout components

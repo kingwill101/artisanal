@@ -1,0 +1,146 @@
+---
+title: Debug Overlay
+description: Real-time performance debugging and repaint visualization
+icon: bug
+---
+
+The debug overlay is a built-in developer tool that shows real-time performance metrics and helps you identify rendering issues. It's automatically available in every Nocterm app—no setup required.
+
+## Quick start
+
+Press **Ctrl+G** to toggle the debug overlay. That's it.
+
+The overlay appears in the top-right corner showing performance metrics. Press Ctrl+G again to hide it.
+
+## What the overlay shows
+
+When enabled, you'll see real-time stats:
+
+- **FPS** - Frames per second (higher is better)
+- **Build** - Time spent building component trees
+- **Layout** - Time spent calculating sizes and positions
+- **Paint** - Time spent rendering to the terminal
+- **Memory** - Current memory usage
+- **CPU** - CPU utilization
+
+These metrics help identify performance bottlenecks. If build time is high, you might be doing expensive work in `build()`. If paint time is high, you might be rendering too many components.
+
+## Repaint rainbow
+
+When debug mode is active, Nocterm enables the "repaint rainbow" effect. Components that repaint are briefly colored, showing you exactly which parts of your UI are updating.
+
+This is invaluable for debugging unnecessary repaints:
+- If a component keeps changing color when it shouldn't, something is triggering unneeded rebuilds
+- If everything flashes when you expect only one component to update, state might be too high in the tree
+
+## Extended logging with nocterm logs
+
+Debug mode enables detailed logging that you can view in a separate terminal:
+
+```bash
+nocterm logs
+```
+
+This streams logs over WebSocket, so you can see what's happening in your app without cluttering the UI. Logs include:
+- Component lifecycle events
+- Render timing details
+- Frame statistics
+
+Keep `nocterm logs` open in a second terminal while developing to monitor your app's behavior.
+
+## Programmatic access
+
+You can check and react to debug mode changes in your code:
+
+### Check if debug mode is active
+
+```dart
+if (debugMode) {
+  // Debug mode is on
+}
+```
+
+### Listen for debug mode changes
+
+```dart
+class _MyState extends State<MyComponent> {
+  late DebugModeCallback _debugCallback;
+
+  @override
+  void initState() {
+    super.initState();
+    _debugCallback = (isActive) {
+      setState(() {});  // Rebuild when debug mode changes
+    };
+    addDebugModeListener(_debugCallback);
+  }
+
+  @override
+  void dispose() {
+    removeDebugModeListener(_debugCallback);
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return Text(debugMode ? 'Debug ON' : 'Debug OFF');
+  }
+}
+```
+
+### API reference
+
+| API | Description |
+|-----|-------------|
+| `debugMode` | `bool` - Whether debug mode is currently active |
+| `addDebugModeListener(callback)` | Register a callback for debug mode changes |
+| `removeDebugModeListener(callback)` | Remove a previously registered callback |
+
+## Example: Debug-aware component
+
+Here's a complete example showing a component that reacts to debug mode:
+
+```dart
+import 'package:nocterm/nocterm.dart';
+
+class DebugStatus extends StatefulComponent {
+  const DebugStatus({super.key});
+
+  @override
+  State<DebugStatus> createState() => _DebugStatusState();
+}
+
+class _DebugStatusState extends State<DebugStatus> {
+  late DebugModeCallback _callback;
+
+  @override
+  void initState() {
+    super.initState();
+    _callback = (_) => setState(() {});
+    addDebugModeListener(_callback);
+  }
+
+  @override
+  void dispose() {
+    removeDebugModeListener(_callback);
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(1),
+      color: debugMode ? Colors.green : Colors.red,
+      child: Text(
+        debugMode ? 'Debug: ON' : 'Debug: OFF',
+        style: const TextStyle(color: Colors.white),
+      ),
+    );
+  }
+}
+```
+
+## Next steps
+
+- [Hot Reload](/docs/fundamentals/hot-reload) - Fast development iteration
+- [Testing](/docs/testing/basics) - Write tests for your components

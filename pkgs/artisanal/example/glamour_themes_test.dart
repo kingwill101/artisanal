@@ -76,7 +76,7 @@ End of test.
       final stylePath = 'example/glamour_styles/$theme.json';
       final styleFile = File(stylePath);
       if (styleFile.existsSync()) {
-        final styleContent = styleFile.readAsStringSync();
+        styleFile.readAsStringSync();
         // Note: Currently GlamourTheme.fromJson is used in renderer
         // In a full implementation, we'd pass the JSON content
       }

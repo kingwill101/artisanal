@@ -80,7 +80,6 @@ class MarkdownExample implements tui.Model {
           return (this, tui.Cmd.quit());
         }
       case tui.WindowSizeMsg(width: final w, height: final h):
-        final renderWidth = (w - 4).clamp(20, 160);
         final content = markdown.markdownToAnsi(_md);
         final vp = viewport.copyWith(width: w, height: h - 2)
           ..setContent(content);

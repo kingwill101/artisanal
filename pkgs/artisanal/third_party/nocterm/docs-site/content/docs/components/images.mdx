@@ -1,0 +1,241 @@
+---
+title: Images
+description: Display images in the terminal
+icon: image
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+<Callout type="warn" title="Experimental">
+  Image support is experimental and requires a terminal that supports one of the image protocols.
+  See the [terminal compatibility table](#terminal-compatibility) below.
+</Callout>
+
+The `Image` component displays images directly in the terminal using various image protocols.
+
+## Basic usage
+
+```dart
+// From a file
+Image.file('/path/to/image.png')
+
+// From a URL
+Image.network('https://example.com/image.png')
+
+// From memory
+Image.memory(imageBytes)
+```
+
+## Sizing images
+
+Specify dimensions in terminal cells:
+
+```dart
+Image.file(
+  '/path/to/image.png',
+  width: 40,   // 40 cells wide
+  height: 20,  // 20 cells tall
+  fit: BoxFit.contain,
+)
+```
+
+### BoxFit options
+
+Control how the image fits within its bounds:
+
+| Value | Description |
+|-------|-------------|
+| `BoxFit.contain` | Scale to fit while maintaining aspect ratio (default) |
+| `BoxFit.cover` | Scale to cover the entire area, may crop |
+| `BoxFit.fill` | Stretch to fill, may distort |
+| `BoxFit.fitWidth` | Scale to fit the width |
+| `BoxFit.fitHeight` | Scale to fit the height |
+| `BoxFit.none` | No scaling, center the image |
+
+## Placeholder and error handling
+
+Show widgets while loading or on error:
+
+```dart
+Image.network(
+  'https://example.com/large-image.png',
+  placeholder: Center(child: Text('Loading...')),
+  errorWidget: Center(
+    child: Text('Failed to load', style: TextStyle(color: Colors.red)),
+  ),
+)
+```
+
+## Image protocols
+
+Terminals use different protocols to display images. Nocterm supports four protocols:
+
+### Kitty Graphics Protocol
+
+The most capable protocol, supporting transparency and animations. Used by Kitty, WezTerm, and Ghostty.
+
+```dart
+Image.file(
+  '/path/to/image.png',
+  protocol: ImageProtocol.kitty,
+)
+```
+
+### iTerm2 Inline Images
+
+Proprietary protocol used by iTerm2 and WezTerm.
+
+```dart
+Image.file(
+  '/path/to/image.png',
+  protocol: ImageProtocol.iterm2,
+)
+```
+
+### Sixel Graphics
+
+An older but widely supported protocol. Works with xterm (when compiled with sixel support), mlterm, Mintty, foot, and WezTerm.
+
+```dart
+Image.file(
+  '/path/to/image.png',
+  protocol: ImageProtocol.sixel,
+)
+```
+
+### Unicode Block Characters
+
+A universal fallback that works in any terminal. Uses Unicode half-block characters (`▀`, `▄`) to approximate pixels. Lower resolution but guaranteed to work everywhere.
+
+```dart
+Image.file(
+  '/path/to/image.png',
+  protocol: ImageProtocol.unicodeBlocks,
+)
+```
+
+## Auto-detection
+
+By default, Nocterm auto-detects the best available protocol:
+
+```dart
+// Protocol is auto-detected based on terminal capabilities
+Image.file('/path/to/image.png')
+```
+
+The detection priority is: Kitty > iTerm2 > Sixel > Unicode Blocks.
+
+## Terminal compatibility
+
+Not all terminals support image display. Here's what works where:
+
+| Terminal | Kitty | iTerm2 | Sixel | Unicode Blocks |
+|----------|:-----:|:------:|:-----:|:--------------:|
+| **Kitty** | Yes | - | - | Fallback |
+| **iTerm2** | - | Yes | - | Fallback |
+| **WezTerm** | Yes | Yes | Yes | Fallback |
+| **Ghostty** | Yes | - | - | Fallback |
+| **foot** | - | - | Yes | Fallback |
+| **Mintty** | - | - | Yes | Fallback |
+| **mlterm** | - | - | Yes | Fallback |
+| **xterm** (sixel build) | - | - | Yes | Fallback |
+| **VS Code Terminal** | - | - | - | Fallback only |
+| **macOS Terminal.app** | - | - | - | Fallback only |
+| **GNOME Terminal** | - | - | - | Fallback only |
+| **Windows Terminal** | - | - | - | Fallback only |
+| **Alacritty** | - | - | - | Fallback only |
+
+<Callout type="info">
+  The Unicode blocks fallback works everywhere but at lower resolution (2 vertical pixels per character cell).
+</Callout>
+
+## Image providers
+
+The `Image` widget uses image providers to load images:
+
+### FileImage
+
+Loads an image from the local filesystem:
+
+```dart
+Image(image: FileImage('/path/to/image.png'))
+
+// Or use the convenience constructor
+Image.file('/path/to/image.png')
+```
+
+### NetworkImage
+
+Loads an image from a URL:
+
+```dart
+Image(image: NetworkImage('https://example.com/image.png'))
+
+// Or use the convenience constructor
+Image.network('https://example.com/image.png')
+```
+
+### MemoryImage
+
+Loads an image from bytes in memory:
+
+```dart
+final bytes = await loadImageBytes();
+Image(image: MemoryImage(bytes))
+
+// Or use the convenience constructor
+Image.memory(bytes)
+```
+
+## Supported formats
+
+The Image widget supports common image formats:
+
+- PNG
+- JPEG
+- GIF (first frame only)
+- BMP
+- WebP
+
+## Example: Image gallery
+
+Here's a more complete example showing images in a list:
+
+```dart
+class ImageGallery extends StatelessComponent {
+  final List<String> imagePaths;
+
+  const ImageGallery({required this.imagePaths});
+
+  @override
+  Component build(BuildContext context) {
+    return ListView.builder(
+      itemCount: imagePaths.length,
+      itemBuilder: (context, index) {
+        return Container(
+          padding: EdgeInsets.all(1),
+          child: Column(
+            children: [
+              Image.file(
+                imagePaths[index],
+                height: 10,
+                fit: BoxFit.contain,
+                placeholder: Text('Loading...'),
+              ),
+              Text(
+                imagePaths[index].split('/').last,
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+```
+
+## Next steps
+
+- [Layout Components](/docs/components/layout) - Position and size components
+- [Scrolling](/docs/components/scrolling) - Scroll through content

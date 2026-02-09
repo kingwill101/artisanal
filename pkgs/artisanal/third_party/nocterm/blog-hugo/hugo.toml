@@ -1,0 +1,25 @@
+baseURL = "https://nocterm.dev/blog/"
+languageCode = "en-us"
+title = "Nocterm Blog"
+publishDir = "../landing/blog"
+
+# Disable features we don't need
+disableKinds = ["taxonomy", "term", "RSS", "sitemap", "robotsTXT", "404"]
+
+[params]
+  description = "Updates, releases, and tutorials from the Nocterm project"
+  githubURL = "https://github.com/Norbert515/nocterm"
+  docsURL = "https://docs.nocterm.dev"
+  pubdevURL = "https://pub.dev/packages/nocterm"
+  version = "v0.4.3"
+
+[markup]
+  [markup.highlight]
+    noClasses = false
+    codeFences = true
+    guessSyntax = false
+    lineNos = false
+    style = "monokai"
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true

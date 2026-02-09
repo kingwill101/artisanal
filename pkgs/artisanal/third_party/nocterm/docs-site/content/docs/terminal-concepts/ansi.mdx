@@ -1,0 +1,127 @@
+---
+title: ANSI Escape Codes
+description: How terminals display colors and styles
+icon: code
+---
+
+ANSI escape codes are special character sequences that control how terminals display text. This guide explains what they are and how Nocterm uses them behind the scenes.
+
+## What are ANSI codes?
+
+ANSI codes are sequences that start with the escape character (`\x1b` or `ESC`) followed by commands in brackets.
+
+For example:
+- `\x1b[31m` makes text red
+- `\x1b[1m` makes text bold
+- `\x1b[2J` clears the screen
+- `\x1b[10;5H` moves the cursor to row 10, column 5
+
+When you write `print('\x1b[31mHello\x1b[0m')`, the terminal sees the code, changes the text color to red, prints "Hello", then resets the color.
+
+Most terminals support ANSI codes, making them the standard way to add colors and formatting to terminal output.
+
+## Colors
+
+Terminals support different levels of color:
+
+### 16 basic colors
+
+The original ANSI standard defines 16 colors:
+- 8 normal colors: black, red, green, yellow, blue, magenta, cyan, white
+- 8 bright variants of those colors
+
+These work on almost every terminal.
+
+### 256-color mode
+
+Extended color palettes with 256 colors. This includes:
+- The 16 basic colors
+- A 216-color RGB cube
+- 24 grayscale shades
+
+Most modern terminals support this.
+
+### True color (24-bit RGB)
+
+Full RGB color with 16 million colors. You can specify any RGB value like `rgb(123, 45, 67)`.
+
+Many modern terminals support this, but not all.
+
+### What Nocterm does
+
+Nocterm provides color constants like `Colors.red`, `Colors.blue`, etc. You use them like this:
+
+```dart
+Text('Hello', style: TextStyle(color: Colors.red))
+```
+
+Nocterm handles the ANSI codes for you. You never write `\x1b[31m` directly.
+
+## Text styling
+
+ANSI codes support various text styles:
+- **Bold**: Makes text stand out
+- **Italic**: Slanted text (not all terminals support this)
+- **Underline**: Underlined text
+- **Dim**: Faded text
+- **Strikethrough**: Text with a line through it
+
+Support varies by terminal. Bold and underline work almost everywhere. Italic is less common.
+
+In Nocterm, you apply styles through `TextStyle`:
+
+```dart
+TextStyle(
+  color: Colors.green,
+  bold: true,
+  underline: true,
+)
+```
+
+## Cursor control
+
+TUIs need to position the cursor precisely to draw UI elements. ANSI codes control cursor movement:
+- Move to a specific position
+- Move up, down, left, right
+- Hide or show the cursor
+
+For example, to draw a box, you move the cursor to each corner and print the border characters.
+
+Nocterm handles all cursor positioning. When you use `Column`, `Row`, or other layouts, Nocterm calculates where each component goes and moves the cursor automatically.
+
+## Screen manipulation
+
+ANSI codes can also:
+- Clear the screen or parts of it
+- Scroll regions up or down
+- Save and restore cursor position
+
+Nocterm uses these to optimize rendering. When your UI changes, Nocterm updates only the parts that changed instead of redrawing everything.
+
+## Why you don't write ANSI codes
+
+Without a framework, building a TUI means writing lots of ANSI codes:
+
+```dart
+// Without Nocterm
+print('\x1b[2J'); // Clear screen
+print('\x1b[1;1H'); // Move to top-left
+print('\x1b[31;1m'); // Red, bold
+print('Hello');
+print('\x1b[0m'); // Reset
+```
+
+With Nocterm, you write declarative UI code:
+
+```dart
+// With Nocterm
+Text('Hello', style: TextStyle(color: Colors.red, bold: true))
+```
+
+Nocterm generates the correct ANSI codes and handles terminal differences for you.
+
+## Next steps
+
+- [Terminal Limitations](/docs/terminal-concepts/limitations) - Important compatibility considerations
+- [Text & Styling](/docs/components/text) - Learn about text components and styling
+- [Components](/docs/fundamentals/components) - Start building your UI

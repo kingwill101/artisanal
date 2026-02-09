@@ -1,0 +1,389 @@
+---
+title: Text & Styling
+description: Text display and styling
+icon: font
+---
+
+Text components display styled text in your terminal UI. This guide covers text rendering, styling, and colors.
+
+## Text component
+
+`Text` displays a string:
+
+```dart
+Text('Hello, Nocterm!')
+```
+
+### Styling text
+
+Use `TextStyle` to style text:
+
+```dart
+Text(
+  'Styled text',
+  style: TextStyle(
+    color: Colors.blue,
+    bold: true,
+  ),
+)
+```
+
+### TextStyle properties
+
+Available style properties:
+
+```dart
+TextStyle(
+  color: Colors.green,              // Foreground color
+  backgroundColor: Colors.black,     // Background color
+  fontWeight: FontWeight.bold,       // Bold, normal, or dim
+  fontStyle: FontStyle.italic,       // Italic or normal
+  decoration: TextDecoration.underline,  // Underline, lineThrough, or none
+  reverse: false,                    // Swap foreground/background
+)
+```
+
+**Shorthand properties:**
+- `bold`: Set to `true` for bold text (equivalent to `fontWeight: FontWeight.bold`)
+- `italic`: Set to `true` for italic text (equivalent to `fontStyle: FontStyle.italic`)
+- `underline`: Set to `true` for underlined text (equivalent to `decoration: TextDecoration.underline`)
+
+```dart
+// These are equivalent:
+TextStyle(color: Colors.red, bold: true)
+TextStyle(color: Colors.red, fontWeight: FontWeight.bold)
+```
+
+## Colors
+
+Nocterm provides predefined terminal colors:
+
+### Standard colors
+
+```dart
+Colors.black
+Colors.red
+Colors.green
+Colors.yellow
+Colors.blue
+Colors.magenta
+Colors.cyan
+Colors.white
+Colors.gray  // or Colors.grey
+```
+
+### Bright colors
+
+```dart
+Colors.brightBlack
+Colors.brightRed
+Colors.brightGreen
+Colors.brightYellow
+Colors.brightBlue
+Colors.brightMagenta
+Colors.brightCyan
+Colors.brightWhite
+```
+
+### Custom colors
+
+Create custom RGB colors:
+
+```dart
+// From hex value (0xRRGGBB)
+Color(0xFF5733)
+
+// From RGB components (0-255)
+Color.fromRGB(255, 87, 51)
+
+// With alpha/opacity (0-255)
+Color.fromARGB(200, 255, 87, 51)
+```
+
+### Terminal default color
+
+Use the terminal's default color:
+
+```dart
+Color.defaultColor
+```
+
+This resets to whatever the user's terminal default is.
+
+## Text wrapping
+
+Text wraps automatically by default:
+
+```dart
+Text(
+  'This is a long line of text that will wrap to fit the available space',
+  softWrap: true,  // Default: true
+)
+```
+
+### Overflow handling
+
+Control what happens when text doesn't fit:
+
+```dart
+Text(
+  'Long text...',
+  overflow: TextOverflow.clip,    // Cut off (default)
+  // or
+  overflow: TextOverflow.ellipsis,  // Add ... at end
+  // or
+  overflow: TextOverflow.fade,      // Fade out
+)
+```
+
+### Max lines
+
+Limit the number of lines:
+
+```dart
+Text(
+  'Multi-line text...',
+  maxLines: 3,  // Limit to 3 lines
+)
+```
+
+## Text alignment
+
+Align text within its container:
+
+```dart
+Text(
+  'Centered',
+  textAlign: TextAlign.center,
+)
+```
+
+**TextAlign** options:
+- `left`: Left-aligned (default)
+- `center`: Center-aligned
+- `right`: Right-aligned
+
+## Markdown
+
+`MarkdownText` renders markdown:
+
+```dart
+MarkdownText('''
+# Heading
+
+**Bold** and *italic* text.
+
+- List item 1
+- List item 2
+
+```code
+Code block
+```
+''')
+```
+
+### Supported markdown
+
+- **Headers**: `# H1`, `## H2`, etc.
+- **Bold**: `**text**` or `__text__`
+- **Italic**: `*text*` or `_text_`
+- **Lists**: `- item` or `1. item`
+- **Code**: `` `inline` `` or ` ```block``` `
+- **Links**: `[text](url)` (shown as text)
+- **Blockquotes**: `> quote`
+
+### Terminal limitations
+
+- Images show as `[Image: alt text]`
+- Tables use basic ASCII formatting
+- No font size changes (headers use bold/colors)
+
+## Text styling examples
+
+### Basic styling
+
+```dart
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text('Normal text'),
+    Text('Bold text', style: TextStyle(bold: true)),
+    Text('Italic text', style: TextStyle(italic: true)),
+    Text('Underlined', style: TextStyle(underline: true)),
+    Text('Colored', style: TextStyle(color: Colors.green)),
+  ],
+)
+```
+
+### Combined styles
+
+```dart
+Text(
+  'Bold, underlined, colored',
+  style: TextStyle(
+    color: Colors.blue,
+    bold: true,
+    underline: true,
+  ),
+)
+```
+
+### Background colors
+
+```dart
+Text(
+  'Highlighted',
+  style: TextStyle(
+    color: Colors.white,
+    backgroundColor: Colors.blue,
+  ),
+)
+```
+
+### Reverse colors
+
+Swap foreground and background:
+
+```dart
+Text(
+  'Reversed',
+  style: TextStyle(
+    reverse: true,
+  ),
+)
+```
+
+## Best practices
+
+### Use terminal-safe colors
+
+Stick to the predefined `Colors` constants for maximum compatibility:
+
+```dart
+// Good - works everywhere
+Text('Hello', style: TextStyle(color: Colors.blue))
+
+// Risky - custom colors may not display consistently
+Text('Hello', style: TextStyle(color: Color.fromRGB(123, 45, 67)))
+```
+
+### Test italic support
+
+Italic doesn't work in all terminals. Provide alternatives:
+
+```dart
+// Fallback for terminals without italic
+Text(
+  'Emphasis',
+  style: TextStyle(
+    italic: true,
+    color: Colors.yellow,  // Color as visual alternative
+  ),
+)
+```
+
+### Mind terminal width
+
+Long text wraps. Design for 80-column terminals:
+
+```dart
+// Keep important text under 80 characters when possible
+Text('Short lines read better in terminals')
+```
+
+## AsciiText
+
+`AsciiText` renders text as large ASCII art using customizable fonts:
+
+```dart
+AsciiText('HELLO')
+```
+
+### Available fonts
+
+Four built-in fonts are available:
+
+```dart
+// Standard (default) - 5 lines high, block style
+AsciiText('HELLO', font: AsciiFont.standard)
+
+// Banner - 7 lines high, large characters
+AsciiText('HELLO', font: AsciiFont.banner)
+
+// Block - 6 lines high, bold appearance
+AsciiText('HELLO', font: AsciiFont.block)
+
+// Slim - 5 lines high, minimalist style
+AsciiText('HELLO', font: AsciiFont.slim)
+```
+
+### Styling
+
+Apply styles like regular text:
+
+```dart
+AsciiText(
+  'WELCOME',
+  font: AsciiFont.block,
+  style: TextStyle(color: Colors.cyan),
+)
+```
+
+### Text alignment
+
+```dart
+AsciiText(
+  'TITLE',
+  font: AsciiFont.standard,
+  textAlign: TextAlign.center,
+)
+```
+
+### Supported characters
+
+Built-in fonts support:
+- Letters A-Z (case-insensitive)
+- Numbers 0-9
+- Common punctuation: `!?.,;:-_()[]{}/<>+=*#@&%$^~`\`'"`
+- Space
+
+Unsupported characters display as fallbacks.
+
+### Custom fonts
+
+Create custom fonts by extending `AsciiFont`:
+
+```dart
+class MyFont extends AsciiFont {
+  const MyFont();
+
+  @override
+  int get height => 3;
+
+  @override
+  int get letterSpacing => 1;  // Optional, defaults to 1
+
+  @override
+  Map<String, AsciiGlyph> get glyphs => {
+    'A': AsciiGlyph([' /\\ ', '/  \\', '----']),
+    'B': AsciiGlyph(['|--\\', '|--/', '|__\\']),
+    // ... more characters
+  };
+}
+
+// Use your custom font
+AsciiText('AB', font: MyFont())
+```
+
+### Best practices
+
+- Use ASCII text for headers, logos, and splash screens
+- Keep text short—ASCII art is wide
+- Test at your target terminal width (fonts can be 6-10 chars per letter)
+- Prefer `standard` or `slim` for space-constrained layouts
+
+## Next steps
+
+- [Input](/docs/components/input) - Add user input
+- [Layout](/docs/components/layout) - Arrange text with layout components
+- [Scrolling](/docs/components/scrolling) - Display long text with scrolling

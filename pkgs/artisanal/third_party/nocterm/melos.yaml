@@ -1,0 +1,85 @@
+name: nocterm
+repository: https://github.com/norbert515/nocterm
+
+packages:
+  - .
+  - packages/*
+
+# Exclude third_party packages from Melos management
+ignore:
+  - third_party/**
+
+# Include the root package as part of the workspace
+useRootAsPackage: true
+
+ide:
+  intellij: false
+
+command:
+  bootstrap:
+    # Run pub get in parallel for faster bootstrapping
+    runPubGetInParallel: true
+
+  version:
+    # Commit message template for version bumps
+    message: "chore: release {new_package_versions}"
+    # Include commit scopes in changelog
+    includeScopes: true
+    # Link commits in changelog
+    linkToCommits: true
+    # Generate workspace-level changelog
+    workspaceChangelog: true
+
+scripts:
+  # Run tests across all packages
+  test:
+    description: Run tests in all packages
+    run: dart test
+    exec:
+      concurrency: 1
+    packageFilters:
+      dirExists: test
+
+  # Run analysis across all packages
+  analyze:
+    description: Run dart analyze in all packages
+    run: dart analyze --fatal-infos
+    exec:
+      concurrency: 5
+
+  # Format all packages
+  format:
+    description: Format all packages
+    run: dart format .
+    exec:
+      concurrency: 5
+
+  # Check formatting without modifying
+  format:check:
+    description: Check formatting in all packages
+    run: dart format --set-exit-if-changed .
+    exec:
+      concurrency: 5
+
+  # Run pub get in all packages
+  get:
+    description: Run pub get in all packages
+    run: dart pub get
+    exec:
+      concurrency: 5
+
+  # Clean all packages
+  clean:
+    description: Clean all packages
+    run: |
+      rm -rf .dart_tool
+      rm -rf pubspec.lock
+    exec:
+      concurrency: 5
+
+  # Run the main nocterm examples
+  example:
+    description: Run an example (pass example name as argument)
+    run: dart run example/$MELOS_ARGS.dart
+    packageFilters:
+      scope: nocterm

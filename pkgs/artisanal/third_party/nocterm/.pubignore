@@ -1,0 +1,7 @@
+docs-site/
+/third_party/
+packages/
+melos.yaml
+pubspec_overrides.yaml
+CLAUDE.md
+.claude/

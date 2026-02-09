@@ -1,0 +1,239 @@
+---
+title: Visual Testing
+description: Debug tests with visual output
+icon: eye
+---
+
+Visual testing lets you see what your component looks like during tests. This helps debug layout and rendering issues.
+
+## debugPrintAfterPump
+
+Enable visual output with `debugPrintAfterPump`:
+
+```dart
+test('visual check', () async {
+  await testNocterm(
+    'see component',
+    (tester) async {
+      await tester.pumpComponent(MyComponent());
+
+      // Terminal output printed to console
+    },
+    debugPrintAfterPump: true,  // Enable visual output
+  );
+});
+```
+
+When enabled, the terminal state prints after each `pumpComponent()` call.
+
+## Development workflow
+
+Use visual testing during development:
+
+### Step 1: Create component with visual test
+
+```dart
+test('new component visual', () async {
+  await testNocterm(
+    'see layout',
+    (tester) async {
+      await tester.pumpComponent(
+        Container(
+          decoration: BoxDecoration(
+            border: BoxBorder.all(color: Colors.blue),
+          ),
+          padding: EdgeInsets.all(2),
+          child: Text('Hello'),
+        ),
+      );
+    },
+    debugPrintAfterPump: true,
+  );
+});
+```
+
+Run the test and see the output in your terminal.
+
+### Step 2: Verify layout visually
+
+Check:
+- Text alignment
+- Border rendering
+- Spacing and padding
+- Colors (if your test runner supports them)
+
+### Step 3: Write assertions
+
+Once you know what the output looks like, write assertions:
+
+```dart
+test('component layout', () async {
+  await testNocterm(
+    'correct layout',
+    (tester) async {
+      await tester.pumpComponent(MyComponent());
+
+      expect(tester.terminalState, containsText('Hello'));
+      expect(tester.terminalState, hasTextAt(3, 3, 'Hello'));
+    },
+    debugPrintAfterPump: false,  // Turn off for CI
+  );
+});
+```
+
+## When to use visual testing
+
+### During development
+
+```dart
+test('develop new feature', () async {
+  await testNocterm(
+    'feature visual',
+    (tester) async {
+      await tester.pumpComponent(NewFeature());
+
+      // See what it looks like
+    },
+    debugPrintAfterPump: true,
+  );
+});
+```
+
+### Debugging test failures
+
+```dart
+test('debug failing test', () async {
+  await testNocterm(
+    'why is this failing?',
+    (tester) async {
+      await tester.pumpComponent(BrokenComponent());
+
+      // Enable to see what's actually rendered
+    },
+    debugPrintAfterPump: true,  // Temporarily enable
+  );
+});
+```
+
+### Testing complex layouts
+
+```dart
+test('complex layout', () async {
+  await testNocterm(
+    'verify alignment',
+    (tester) async {
+      await tester.pumpComponent(
+        Column(
+          children: [
+            Row(children: [/* ... */]),
+            Stack(children: [/* ... */]),
+          ],
+        ),
+      );
+    },
+    debugPrintAfterPump: true,
+  );
+});
+```
+
+## Example output
+
+With `debugPrintAfterPump: true`, you'll see output like:
+
+```
+Terminal State (80x24):
+┌──────────────────────────────────────────────────────────────┐
+│  Hello, Nocterm!                                             │
+│                                                              │
+│  Count: 0                                                    │
+│  Press SPACE to increment                                    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+This shows exactly what your component renders.
+
+## Testing at different sizes
+
+Test how components look at different terminal sizes:
+
+```dart
+test('small terminal', () async {
+  await testNocterm(
+    'fits in 40x10',
+    (tester) async {
+      await tester.pumpComponent(ResponsiveComponent());
+    },
+    size: Size(40, 10),
+    debugPrintAfterPump: true,
+  );
+});
+
+test('large terminal', () async {
+  await testNocterm(
+    'uses space in 120x40',
+    (tester) async {
+      await tester.pumpComponent(ResponsiveComponent());
+    },
+    size: Size(120, 40),
+    debugPrintAfterPump: true,
+  );
+});
+```
+
+## Best practices
+
+### Use during development only
+
+```dart
+// Development - visual check
+debugPrintAfterPump: true
+
+// CI/Production - no output
+debugPrintAfterPump: false
+```
+
+### Combine with assertions
+
+Visual output + assertions = robust tests:
+
+```dart
+test('complete test', () async {
+  await testNocterm(
+    'layout and assertions',
+    (tester) async {
+      await tester.pumpComponent(Component());
+
+      // Assertions verify behavior
+      expect(tester.terminalState, containsText('Expected'));
+    },
+    debugPrintAfterPump: true,  // Visual verification during dev
+  );
+});
+```
+
+### Document expected output
+
+Add comments describing expected layout:
+
+```dart
+test('visual spec', () async {
+  // Expected layout:
+  //   ┌─────────┐
+  //   │ Title   │
+  //   │ Content │
+  //   └─────────┘
+  await testNocterm(
+    'matches spec',
+    (tester) async {
+      await tester.pumpComponent(Card()),
+    },
+    debugPrintAfterPump: true,
+  );
+});
+```
+
+## Next steps
+
+- [Test Matchers](/docs/testing/matchers) - Learn all matchers
+- [Writing Tests](/docs/testing/basics) - Test basics
+- [Components](/docs/fundamentals/components) - Build components

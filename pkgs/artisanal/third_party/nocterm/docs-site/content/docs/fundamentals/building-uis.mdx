@@ -1,0 +1,311 @@
+---
+title: Building UIs
+description: Learn how to compose components to build interfaces
+icon: paint-brush
+---
+
+In Nocterm, you build UIs by composing components together. This guide shows you how to combine components to create complex interfaces.
+
+## The build method
+
+Every component has a `build()` method that returns a component tree:
+
+```dart
+@override
+Component build(BuildContext context) {
+  return Text('Hello, Nocterm!');
+}
+```
+
+The `build()` method describes what to display. Nocterm calls it when the component needs to render.
+
+### Build is called frequently
+
+Nocterm calls `build()` whenever:
+- The component first appears
+- Its parent rebuilds
+- `setState()` is called (for stateful components)
+- Dependencies change (inherited components)
+
+Keep `build()` fast. Don't do expensive work like network requests or complex calculations inside `build()`.
+
+## Composing components
+
+Build complex UIs by nesting components. Each component can contain other components as children.
+
+### Single child components
+
+Some components have one child:
+
+```dart
+Container(
+  decoration: BoxDecoration(
+    border: BoxBorder.all(color: Colors.blue),
+  ),
+  child: Text('Bordered text'),
+)
+```
+
+The `child` parameter takes a single component.
+
+### Multiple children components
+
+Other components have multiple children:
+
+```dart
+Column(
+  children: [
+    Text('First item'),
+    Text('Second item'),
+    Text('Third item'),
+  ],
+)
+```
+
+The `children` parameter takes a list of components.
+
+### Nesting components deeply
+
+Components can nest as deeply as needed:
+
+```dart
+Container(
+  margin: EdgeInsets.all(2),
+  child: Column(
+    children: [
+      Text('Title'),
+      SizedBox(height: 1),
+      Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: BoxBorder.all(color: Colors.gray),
+              ),
+              child: Text('Left panel'),
+            ),
+          ),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                border: BoxBorder.all(color: Colors.gray),
+              ),
+              child: Text('Right panel'),
+            ),
+          ),
+        ],
+      ),
+    ],
+  ),
+)
+```
+
+This creates a bordered box with a title and two side-by-side panels.
+
+## Passing data down
+
+Components pass data to their children through constructor parameters:
+
+```dart
+class UserCard extends StatelessComponent {
+  const UserCard({
+    required this.name,
+    required this.email,
+    super.key,
+  });
+
+  final String name;
+  final String email;
+
+  @override
+  Component build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: TextStyle(bold: true)),
+        Text(email, style: TextStyle(color: Colors.gray)),
+      ],
+    );
+  }
+}
+
+// Usage:
+UserCard(name: 'Alice', email: 'alice@example.com')
+```
+
+Data flows down from parent to child. Children can't directly modify parent data.
+
+## BuildContext
+
+The `build()` method receives a `BuildContext` parameter:
+
+```dart
+Component build(BuildContext context) {
+  // ...
+}
+```
+
+`BuildContext` provides access to:
+- The component tree location
+- Ancestor components
+- Inherited components (for state management)
+
+### Finding ancestor components
+
+Use `context` to access components higher in the tree:
+
+```dart
+// Find the nearest ancestor of a specific type
+final ancestor = context.findAncestorComponentOfExactType<MyComponent>();
+
+// Find ancestor state
+final state = context.findAncestorStateOfType<MyState>();
+```
+
+This is rarely needed in most apps. You typically use it for advanced patterns or framework-level code.
+
+### Accessing constraints
+
+Get the available space from the parent:
+
+```dart
+final constraints = context.constraints;
+final maxWidth = constraints.maxWidth;
+final maxHeight = constraints.maxHeight;
+```
+
+Layout components like `Column` and `Row` handle constraints automatically. You rarely need to access them directly.
+
+## Common patterns
+
+### Conditional rendering
+
+Show different UI based on conditions:
+
+```dart
+Component build(BuildContext context) {
+  return Column(
+    children: [
+      if (isLoggedIn)
+        Text('Welcome back!')
+      else
+        Text('Please log in'),
+    ],
+  );
+}
+```
+
+Or use ternary operators:
+
+```dart
+Component build(BuildContext context) {
+  return isLoggedIn
+    ? Text('Welcome back!')
+    : Text('Please log in');
+}
+```
+
+### Lists and loops
+
+Build components from collections:
+
+```dart
+Component build(BuildContext context) {
+  return Column(
+    children: [
+      for (var item in items)
+        Text(item.name),
+    ],
+  );
+}
+```
+
+Or use `map()`:
+
+```dart
+Component build(BuildContext context) {
+  return Column(
+    children: items.map((item) => Text(item.name)).toList(),
+  );
+}
+```
+
+### Extracting components
+
+Keep `build()` readable by extracting reusable pieces:
+
+```dart
+// Instead of this:
+Component build(BuildContext context) {
+  return Column(
+    children: [
+      Container(
+        decoration: BoxDecoration(border: BoxBorder.all()),
+        child: Row(
+          children: [
+            Text('Label:'),
+            Text(value),
+          ],
+        ),
+      ),
+      // ... more complex UI
+    ],
+  );
+}
+
+// Do this:
+Component build(BuildContext context) {
+  return Column(
+    children: [
+      _buildLabeledValue('Label:', value),
+      // ... more complex UI
+    ],
+  );
+}
+
+Component _buildLabeledValue(String label, String value) {
+  return Container(
+    decoration: BoxDecoration(border: BoxBorder.all()),
+    child: Row(
+      children: [
+        Text(label),
+        Text(value),
+      ],
+    ),
+  );
+}
+```
+
+Or better yet, create a reusable component:
+
+```dart
+class LabeledValue extends StatelessComponent {
+  const LabeledValue({
+    required this.label,
+    required this.value,
+    super.key,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Component build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(border: BoxBorder.all()),
+      child: Row(
+        children: [
+          Text(label),
+          Text(value),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## Next steps
+
+- [State Management](/docs/fundamentals/state) - Handle changing data
+- [Layout](/docs/components/layout) - Learn layout components
+- [Components](/docs/fundamentals/components) - Review component basics

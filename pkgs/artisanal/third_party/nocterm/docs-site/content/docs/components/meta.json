@@ -1,0 +1,12 @@
+{
+  "title": "UI Components",
+  "pages": [
+    "layout",
+    "text",
+    "input",
+    "scrolling",
+    "overlays",
+    "images",
+    "terminal"
+  ]
+}

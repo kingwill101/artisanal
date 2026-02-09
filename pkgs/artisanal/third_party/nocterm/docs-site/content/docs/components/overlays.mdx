@@ -1,0 +1,351 @@
+---
+title: Overlays
+description: Overlay and dialog system
+icon: layer-group
+---
+
+Overlays display content on top of your main UI. This guide covers the overlay system and navigation.
+
+## Overlay system
+
+The `Overlay` component stacks entries on top of your main content:
+
+```dart
+class App extends StatefulComponent {
+  const App({super.key});
+
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
+  OverlayEntry? _overlayEntry;
+
+  void _showOverlay() {
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Center(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: BoxBorder.all(color: Colors.white),
+          ),
+          padding: EdgeInsets.all(2),
+          child: Text('Overlay content'),
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _hideOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return Focusable(
+      focused: true,
+      onKeyEvent: (event) {
+        if (event.logicalKey == LogicalKey.keyO) {
+          _showOverlay();
+          return true;
+        }
+        if (event.logicalKey == LogicalKey.escape) {
+          _hideOverlay();
+          return true;
+        }
+        return false;
+      },
+      child: Text('Press O for overlay, ESC to close'),
+    );
+  }
+}
+```
+
+### OverlayEntry
+
+Create an overlay entry with a builder function:
+
+```dart
+final entry = OverlayEntry(
+  builder: (context) {
+    return YourComponent();
+  },
+  opaque: false,  // Whether this blocks lower content
+  maintainState: false,  // Keep state when obscured
+);
+```
+
+### Inserting and removing
+
+```dart
+// Insert
+Overlay.of(context).insert(entry);
+
+// Remove
+entry.remove();
+```
+
+Always remove overlays when done to avoid memory leaks.
+
+## Modal dialogs
+
+Create modal dialogs using overlays:
+
+```dart
+void _showDialog(BuildContext context) {
+  final entry = OverlayEntry(
+    opaque: true,  // Block interaction with content below
+    builder: (context) {
+      return Stack(
+        children: [
+          // Semi-transparent background
+          Container(color: Color.fromARGB(200, 0, 0, 0)),
+
+          // Dialog
+          Center(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black,
+                border: BoxBorder.all(color: Colors.blue),
+              ),
+              padding: EdgeInsets.all(2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Dialog Title', style: TextStyle(bold: true)),
+                  SizedBox(height: 1),
+                  Text('Dialog content here'),
+                  SizedBox(height: 1),
+                  Focusable(
+                    focused: true,
+                    onKeyEvent: (event) {
+                      if (event.logicalKey == LogicalKey.escape) {
+                        entry.remove();
+                        return true;
+                      }
+                      return false;
+                    },
+                    child: Text('[Press ESC to close]'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  Overlay.of(context).insert(entry);
+}
+```
+
+## Navigation
+
+Use `Navigator` for page-based navigation:
+
+```dart
+// Push a new page
+Navigator.of(context).push(
+  Route(
+    builder: (context) => NewPage(),
+  ),
+);
+
+// Pop current page
+Navigator.of(context).pop();
+```
+
+### Navigator widget
+
+Wrap your app with `Navigator`:
+
+```dart
+void main() {
+  runApp(
+    Navigator(
+      initialRoute: HomePage(),
+    ),
+  );
+}
+```
+
+### Routes
+
+Define routes for your pages:
+
+```dart
+class HomePage extends StatelessComponent {
+  const HomePage({super.key});
+
+  @override
+  Component build(BuildContext context) {
+    return Focusable(
+      focused: true,
+      onKeyEvent: (event) {
+        if (event.logicalKey == LogicalKey.enter) {
+          Navigator.of(context).push(
+            Route(builder: (context) => DetailPage()),
+          );
+          return true;
+        }
+        return false;
+      },
+      child: Text('Home - Press ENTER for details'),
+    );
+  }
+}
+
+class DetailPage extends StatelessComponent {
+  const DetailPage({super.key});
+
+  @override
+  Component build(BuildContext context) {
+    return Focusable(
+      focused: true,
+      onKeyEvent: (event) {
+        if (event.logicalKey == LogicalKey.escape) {
+          Navigator.of(context).pop();
+          return true;
+        }
+        return false;
+      },
+      child: Text('Details - Press ESC to go back'),
+    );
+  }
+}
+```
+
+## Common patterns
+
+### Confirmation dialog
+
+```dart
+Future<bool> showConfirmDialog(BuildContext context, String message) {
+  final completer = Completer<bool>();
+
+  final entry = OverlayEntry(
+    opaque: true,
+    builder: (context) {
+      return Center(
+        child: Container(
+          decoration: BoxDecoration(
+            border: BoxBorder.all(color: Colors.yellow),
+          ),
+          padding: EdgeInsets.all(2),
+          child: Focusable(
+            focused: true,
+            onKeyEvent: (event) {
+              if (event.logicalKey == LogicalKey.keyY) {
+                completer.complete(true);
+                entry.remove();
+                return true;
+              }
+              if (event.logicalKey == LogicalKey.keyN) {
+                completer.complete(false);
+                entry.remove();
+                return true;
+              }
+              return false;
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(message),
+                Text('Y/N?'),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+
+  Overlay.of(context).insert(entry);
+  return completer.future;
+}
+```
+
+### Loading overlay
+
+```dart
+OverlayEntry showLoading(BuildContext context) {
+  final entry = OverlayEntry(
+    builder: (context) {
+      return Center(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black,
+            border: BoxBorder.all(color: Colors.blue),
+          ),
+          padding: EdgeInsets.all(2),
+          child: Text('Loading...'),
+        ),
+      );
+    },
+  );
+
+  Overlay.of(context).insert(entry);
+  return entry;
+}
+
+// Usage:
+final loading = showLoading(context);
+await doAsyncWork();
+loading.remove();
+```
+
+## Best practices
+
+### Always remove overlays
+
+```dart
+OverlayEntry? _entry;
+
+void _show() {
+  _entry = OverlayEntry(builder: (_) => ...);
+  Overlay.of(context).insert(_entry!);
+}
+
+void _hide() {
+  _entry?.remove();
+  _entry = null;
+}
+
+@override
+void dispose() {
+  _entry?.remove();  // Clean up on dispose
+  super.dispose();
+}
+```
+
+### Handle escape key
+
+Make overlays dismissible with ESC:
+
+```dart
+Focusable(
+  focused: true,
+  onKeyEvent: (event) {
+    if (event.logicalKey == LogicalKey.escape) {
+      entry.remove();
+      return true;
+    }
+    return false;
+  },
+  child: ...,
+)
+```
+
+### Use opaque for modals
+
+Set `opaque: true` for modal dialogs to block interaction with content below.
+
+## Next steps
+
+- [Terminal](/docs/components/terminal) - Embed terminal emulator
+- [Keyboard Events](/docs/interactivity/keyboard) - Handle keyboard input
+- [Navigation](/docs/fundamentals/navigation) - Learn navigation patterns

@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Nocterm - Flutter-like TUI Framework for Dart | Build Terminal UIs
+    </title>
+    <meta
+      name="description"
+      content="Nocterm is a modern TUI (Terminal User Interface) framework for Dart. Build rich, interactive terminal applications with Flutter-like APIs: StatefulComponent, setState(), Row, Column, and hot reload. The best ncurses alternative for Dart developers."
+    />
+    <meta
+      name="keywords"
+      content="TUI framework, Dart TUI, terminal UI, Flutter terminal, ncurses alternative, terminal user interface, CLI framework, declarative TUI, hot reload terminal, terminal application, command line interface, Dart CLI, terminal components"
+    />
+
+    <!-- Open Graph -->
+    <meta
+      property="og:title"
+      content="Nocterm - Modern TUI Framework for Dart"
+    />
+    <meta
+      property="og:description"
+      content="Build rich terminal user interfaces with Flutter-like APIs. StatefulComponent, setState(), Row, Column, hot reload, and 45+ components. The modern alternative to ncurses."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nocterm.dev" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Nocterm - Modern TUI Framework for Dart"
+    />
+    <meta
+      name="twitter:description"
+      content="Build rich terminal user interfaces with Flutter-like APIs. StatefulComponent, setState(), hot reload, and 45+ components."
+    />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://nocterm.dev" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- xterm.js for embedded demos -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css"
+    />
+
+    <link rel="stylesheet" href="style.css" />
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script
+      async
+      src="https://plausible.io/js/pa-JMBWpdJBiTr2a3L7-GwOZ.js"
+    ></script>
+    <script>
+      (window.plausible =
+        window.plausible ||
+        function () {
+          (plausible.q = plausible.q || []).push(arguments);
+        }),
+        (plausible.init =
+          plausible.init ||
+          function (i) {
+            plausible.o = i || {};
+          });
+      plausible.init();
+    </script>
+  </head>
+  <body>
+    <main class="terminal-container">
+      <!-- Top Navbar -->
+      <header class="site-header">
+        <a href="/" class="site-brand">
+          <span class="site-brand-icon">✦</span>
+          <span class="site-brand-name">Nocterm</span>
+        </a>
+        <nav class="site-nav">
+          <a href="/" class="active">Home</a>
+          <a href="https://docs.nocterm.dev">Docs</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/Norbert515/nocterm">GitHub</a>
+        </nav>
+      </header>
+
+      <!-- Row 1: Hero + Sidebar -->
+      <div class="top-row">
+        <!-- Hero Panel -->
+        <section class="hero-panel" data-nav>
+          <canvas
+            id="plasma-bg"
+            class="plasma-background"
+            aria-hidden="true"
+          ></canvas>
+          <div class="hero-content">
+            <h1 class="sr-only">Nocterm</h1>
+            <pre class="ascii-title" aria-hidden="true">
+███╗   ██╗ ██████╗  ██████╗████████╗███████╗██████╗ ███╗   ███╗
+████╗  ██║██╔═══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗████╗ ████║
+██╔██╗ ██║██║   ██║██║        ██║   █████╗  ██████╔╝██╔████╔██║
+██║╚██╗██║██║   ██║██║        ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║
+██║ ╚████║╚██████╔╝╚██████╗   ██║   ███████╗██║  ██║██║ ╚═╝ ██║
+╚═╝  ╚═══╝ ╚═════╝  ╚═════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝</pre
+            >
+            <div class="hero-divider">
+              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            </div>
+            <p class="hero-tagline">Build terminal UIs the Flutter way</p>
+            <p class="hero-features">
+              StatefulComponent • setState() • Row • Column •
+              <strong>hot reload</strong>
+            </p>
+            <div class="hero-cta">
+              <a
+                href="https://pub.dev/packages/nocterm"
+                class="hero-cta-button primary"
+                data-nav
+                >Get Started</a
+              >
+              <a
+                href="https://docs.nocterm.dev"
+                class="hero-cta-button secondary"
+                data-nav
+                >Documentation</a
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <!-- Stats Panel -->
+          <div class="panel stats-panel" data-nav>
+            <h2 class="panel-title"><span class="emoji">📊</span> Stats</h2>
+            <div class="panel-divider"></div>
+            <dl class="stats-list">
+              <div class="stat-row">
+                <dt>Components</dt>
+                <dd class="stat-value">45+</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Themes</dt>
+                <dd class="stat-value">6</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Examples</dt>
+                <dd class="stat-value">65+</dd>
+              </div>
+              <div class="stat-row">
+                <dt>Hot Reload</dt>
+                <dd class="stat-value">🔥</dd>
+              </div>
+            </dl>
+          </div>
+
+          <!-- Code Panel -->
+          <div class="panel code-panel" data-nav>
+            <h2 class="panel-title"><span class="emoji">📝</span> Code</h2>
+            <div class="panel-divider"></div>
+            <pre
+              class="code-block"
+            ><code><span class="keyword">class</span> <span class="class-name">Counter</span> <span class="keyword">extends</span> <span class="type">StatefulComponent</span> <span class="punctuation">{</span>
+  <span class="keyword">int</span> <span class="variable">count</span> <span class="operator">=</span> <span class="number">0</span>;
+
+  <span class="type">Component</span> <span class="function">build</span><span class="punctuation">(</span><span class="type">BuildContext</span> <span class="variable">ctx</span><span class="punctuation">)</span> <span class="punctuation">{</span>
+    <span class="keyword">return</span> <span class="type">Column</span><span class="punctuation">(</span>
+      <span class="variable">children</span><span class="punctuation">:</span> <span class="punctuation">[</span>
+        <span class="type">Text</span><span class="punctuation">(</span><span class="string">'Count: $count'</span><span class="punctuation">),</span>
+        <span class="type">Button</span><span class="punctuation">(</span>
+          <span class="variable">onPressed</span><span class="punctuation">:</span> <span class="punctuation">()</span> <span class="operator">=></span> <span class="function">setState</span><span class="punctuation">(()</span> <span class="operator">=></span> <span class="variable">count</span><span class="operator">++</span><span class="punctuation">),</span>
+          <span class="variable">child</span><span class="punctuation">:</span> <span class="type">Text</span><span class="punctuation">(</span><span class="string">'+'</span><span class="punctuation">),</span>
+        <span class="punctuation">),</span>
+      <span class="punctuation">],</span>
+    <span class="punctuation">);</span>
+  <span class="punctuation">}</span>
+<span class="punctuation">}</span></code></pre>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Row 2: Feature Cards -->
+      <div class="features-row">
+        <article
+          class="feature-card"
+          data-nav
+          style="--card-index: 0; --accent-color: 255, 107, 157"
+        >
+          <h3><span class="feature-icon">⚡</span> Declarative UI</h3>
+          <div class="feature-divider"></div>
+          <p>setState() reactive updates</p>
+        </article>
+
+        <article
+          class="feature-card"
+          data-nav
+          style="--card-index: 1; --accent-color: 254, 202, 87"
+        >
+          <h3><span class="feature-icon">📦</span> 45+ Components</h3>
+          <div class="feature-divider"></div>
+          <p>Row, Column, ListView...</p>
+        </article>
+
+        <article
+          class="feature-card"
+          data-nav
+          style="--card-index: 2; --accent-color: 72, 219, 251"
+        >
+          <h3><span class="feature-icon">🎨</span> 6 Themes</h3>
+          <div class="feature-divider"></div>
+          <p>Nord, Dracula, Gruvbox...</p>
+        </article>
+
+        <article
+          class="feature-card"
+          data-nav
+          style="--card-index: 3; --accent-color: 255, 159, 67"
+        >
+          <h3><span class="feature-icon">🔥</span> Hot Reload</h3>
+          <div class="feature-divider"></div>
+          <p>Instant code updates</p>
+        </article>
+
+        <article
+          class="feature-card"
+          data-nav
+          style="--card-index: 4; --accent-color: 29, 209, 161"
+        >
+          <h3><span class="feature-icon">✓</span> Testing</h3>
+          <div class="feature-divider"></div>
+          <p>testNocterm() built-in</p>
+        </article>
+      </div>
+
+      <!-- Row 3: Why nocterm -->
+      <section class="why-section">
+        <div class="why-grid">
+          <div class="why-item" data-nav>
+            <span class="why-icon">≡</span>
+            <div class="why-content">
+              <h3>Flutter Patterns</h3>
+              <p>
+                StatefulComponent, setState(), Column, Row, Expanded, ListView —
+                the same APIs you already know.
+              </p>
+            </div>
+          </div>
+          <div class="why-item" data-nav>
+            <span class="why-icon">◊</span>
+            <div class="why-content">
+              <h3>Declarative</h3>
+              <p>
+                Component-based design with a virtual terminal. Code that's easy
+                to read, test, and maintain.
+              </p>
+            </div>
+          </div>
+          <div class="why-item" data-nav>
+            <span class="why-icon">▸</span>
+            <div class="why-content">
+              <h3>Complete</h3>
+              <p>
+                Animations, mouse support, markdown, differential rendering, and
+                testing — all built-in.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 4: Interactive Code + TUI Demo -->
+      <section class="components-section">
+        <h2 class="section-title">Try It Live</h2>
+        <p class="section-subtitle">
+          Real nocterm apps compiled to JavaScript, running in your browser
+        </p>
+        <!-- Widget tabs -->
+        <div class="demo-tabs">
+          <button class="demo-tab demo-active" data-demo="0" data-nav>
+            TextField
+          </button>
+          <button class="demo-tab" data-demo="1" data-nav>ListView</button>
+          <button class="demo-tab" data-demo="2" data-nav>Counter</button>
+          <button class="demo-tab" data-demo="3" data-nav>Layout</button>
+        </div>
+        <!-- VS Code style split view -->
+        <div class="vscode-layout">
+          <!-- Left: Code Editor (read-only) -->
+          <div class="code-editor-panel">
+            <div class="editor-header">
+              <span class="editor-tab active">
+                <span class="file-icon">📄</span>
+                <span class="file-name" id="editor-filename"
+                  >text_field_demo.dart</span
+                >
+              </span>
+            </div>
+            <div class="editor-content">
+              <pre
+                class="editor-code"
+                id="editor-code"
+              ><code><!-- Code will be injected by JS --></code></pre>
+            </div>
+          </div>
+          <!-- Right: Live Terminal -->
+          <div class="terminal-panel" id="demo-panel">
+            <div class="terminal-header">
+              <span class="terminal-icon">▶</span>
+              <span class="terminal-title">Terminal</span>
+              <span class="demo-badge">LIVE</span>
+            </div>
+            <div
+              id="embedded-demo"
+              class="embedded-terminal-large"
+              data-nav
+              data-nav-terminal
+            >
+              <div class="demo-loading">Loading demo...</div>
+            </div>
+            <div class="demo-hint" id="demo-hint">
+              <span class="hint-click"
+                ><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> navigate ·
+                <kbd>Enter</kbd> select</span
+              >
+              <span class="hint-active" style="display: none"
+                ><kbd>Esc</kbd> exit</span
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 5: Use Cases -->
+      <section class="usecases-section">
+        <h2 class="section-title">What Can You Build?</h2>
+        <div class="usecase-grid">
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">📊</div>
+            <h3>Dashboards</h3>
+            <p>
+              System monitors, server dashboards, DevOps tools with real-time
+              metrics
+            </p>
+          </div>
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">💬</div>
+            <h3>Chat Apps</h3>
+            <p>IRC clients, messaging tools with auto-scroll and rich text</p>
+          </div>
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">📝</div>
+            <h3>Productivity</h3>
+            <p>
+              Todo apps, note takers, project managers with keyboard navigation
+            </p>
+          </div>
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">🛠️</div>
+            <h3>Dev Tools</h3>
+            <p>Code generators, API testers, database CLIs with rich UIs</p>
+          </div>
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">🏠</div>
+            <h3>Smart Home</h3>
+            <p>Home automation dashboards, IoT controllers, climate monitors</p>
+          </div>
+          <div class="usecase-card" data-nav>
+            <div class="usecase-icon">🎮</div>
+            <h3>Games</h3>
+            <p>Roguelikes, text adventures, puzzle games with animations</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 6: Built With -->
+      <section class="builtwith-section">
+        <div class="marquee-container">
+          <div class="marquee-inner">
+            <div class="marquee-track">
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                data-nav
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                data-nav
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                data-nav
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                data-nav
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+            </div>
+            <div class="marquee-track" aria-hidden="true">
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+              <span class="marquee-label">Built with Nocterm</span>
+              <span class="marquee-sep">—</span>
+              <a
+                href="https://github.com/Norbert515/vide_cli"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >vide</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/snake"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >snake</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/mrgnhnt96/minesweeper"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >minesweeper</a
+              >
+              <span class="marquee-sep">·</span>
+              <a
+                href="https://github.com/Norbert515/nocterm_3d"
+                class="marquee-item"
+                tabindex="-1"
+                target="_blank"
+                rel="noopener"
+                >nocterm_3d</a
+              >
+              <span class="marquee-sep">·</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Row 7: Comparison -->
+      <section class="comparison-section">
+        <h2 class="section-title">TUI Framework Landscape</h2>
+        <div class="comparison-table-wrapper">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th class="highlight">nocterm</th>
+                <th>Bubble Tea</th>
+                <th>Ratatui</th>
+                <th>Textual</th>
+                <th>Ink</th>
+                <th>ncurses</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-nav>
+                <td>Language</td>
+                <td class="highlight">Dart</td>
+                <td>Go</td>
+                <td>Rust</td>
+                <td>Python</td>
+                <td>Node.js</td>
+                <td>C</td>
+              </tr>
+              <tr data-nav>
+                <td>Hot Reload</td>
+                <td class="highlight"><span class="yes">✓</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="no">✗</span></td>
+              </tr>
+              <tr data-nav>
+                <td>Declarative</td>
+                <td class="highlight"><span class="yes">✓</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="no">✗</span></td>
+              </tr>
+              <tr data-nav>
+                <td>Flutter-like API</td>
+                <td class="highlight"><span class="yes">✓</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="no">✗</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="no">✗</span></td>
+              </tr>
+              <tr data-nav>
+                <td>Testing</td>
+                <td class="highlight"><span class="yes">✓</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="no">✗</span></td>
+              </tr>
+              <tr data-nav>
+                <td>Animations</td>
+                <td class="highlight"><span class="yes">✓</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="yes">✓</span></td>
+                <td><span class="partial">~</span></td>
+                <td><span class="no">✗</span></td>
+              </tr>
+              <tr data-nav>
+                <td>Learning Curve</td>
+                <td class="highlight">Low*</td>
+                <td>Medium</td>
+                <td>High</td>
+                <td>Medium</td>
+                <td>Low**</td>
+                <td>High</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="comparison-note">
+            * Zero learning curve for Flutter/Dart developers &nbsp;&nbsp; ** If
+            you know React
+          </p>
+        </div>
+      </section>
+
+      <!-- Row 8: Get Started -->
+      <section class="cta-section">
+        <div class="cta-content">
+          <h2>Ready to Build?</h2>
+          <p>Get started with nocterm in seconds</p>
+        </div>
+        <div class="cta-code">
+          <code><span class="prompt">$</span> dart pub add nocterm</code>
+        </div>
+        <div class="cta-links">
+          <a
+            href="https://pub.dev/packages/nocterm"
+            class="cta-button primary"
+            data-nav
+            >Get Started</a
+          >
+          <a
+            href="https://docs.nocterm.dev"
+            class="cta-button secondary"
+            data-nav
+            >Read the Docs</a
+          >
+          <a
+            href="https://github.com/Norbert515/nocterm"
+            class="cta-button secondary"
+            data-nav
+            >View on GitHub</a
+          >
+        </div>
+      </section>
+
+      <!-- Row 9: Bottom Bar -->
+      <footer class="bottom-bar">
+        <div class="brand">
+          <span class="brand-icon">✦</span>
+          <span class="brand-name">Nocterm</span>
+          <span class="brand-version">v0.4.2</span>
+        </div>
+        <div class="wave-container" id="wave" aria-hidden="true"></div>
+        <nav class="bottom-links">
+          <a href="https://docs.nocterm.dev" class="link" data-nav>Docs</a>
+          <a href="https://github.com/Norbert515/nocterm" class="link" data-nav
+            >GitHub</a
+          >
+          <a href="https://pub.dev/packages/nocterm" class="link" data-nav
+            >pub.dev</a
+          >
+          <a href="/blog/" class="link" data-nav>Blog</a>
+        </nav>
+      </footer>
+    </main>
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Nocterm",
+        "alternateName": "Nocterm TUI Framework",
+        "description": "Nocterm is a modern TUI (Terminal User Interface) framework for Dart. Build rich, interactive terminal applications using Flutter-like APIs including StatefulComponent, setState(), Row, Column, ListView, and more. Features hot reload, 45+ components, 6 themes, and comprehensive testing support. The best alternative to ncurses for Dart developers.",
+        "applicationCategory": "DeveloperApplication",
+        "applicationSubCategory": "Terminal User Interface Framework",
+        "operatingSystem": "Cross-platform (macOS, Linux, Windows)",
+        "programmingLanguage": "Dart",
+        "url": "https://nocterm.dev",
+        "downloadUrl": "https://pub.dev/packages/nocterm",
+        "softwareVersion": "0.4.2",
+        "author": {
+          "@type": "Organization",
+          "name": "Nocterm"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Flutter-like declarative API",
+          "Hot reload support",
+          "45+ built-in components",
+          "6 color themes",
+          "Mouse support",
+          "Animations",
+          "Built-in testing framework",
+          "Markdown rendering",
+          "Differential rendering"
+        ],
+        "keywords": "TUI framework, Dart, Flutter, terminal UI, ncurses alternative, CLI, terminal user interface, command line interface, StatefulComponent, setState, hot reload"
+      }
+    </script>
+
+    <script src="effects.js"></script>
+
+    <!-- xterm.js for embedded terminal demo -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <script src="embed-terminal.js"></script>
+
+    <script>
+      // Initialize embedded demo when page loads
+      let demoTerminal = null;
+      let terminalFocused = false;
+      window.currentDemoIndex = 0;
+
+      // Code snippets for each demo (simplified, highlighted)
+      const demoCode = {
+        0: {
+          filename: "text_field_demo.dart",
+          code: `<span class="kw">class</span> <span class="type">TextFieldDemo</span> <span class="kw">extends</span> <span class="type">StatefulComponent</span> {
+  <span class="kw">final</span> _controller = <span class="type">TextEditingController</span>();
+  <span class="kw">final</span> <span class="type">List</span>&lt;<span class="type">String</span>&gt; _messages = [];
+
+  <span class="type">Component</span> <span class="fn">build</span>(<span class="type">BuildContext</span> context) {
+    <span class="kw">return</span> <span class="type">Column</span>(children: [
+      <span class="type">TextField</span>(
+        controller: _controller,
+        onSubmitted: (value) {
+          <span class="fn">setState</span>(() => _messages.add(value));
+          _controller.<span class="fn">clear</span>();
+        },
+        placeholder: <span class="str">'Type here...'</span>,
+      ),
+      <span class="kw">for</span> (<span class="kw">var</span> msg <span class="kw">in</span> _messages)
+        <span class="type">Text</span>(msg),
+    ]);
+  }
+}`,
+        },
+        1: {
+          filename: "list_view_demo.dart",
+          code: `<span class="kw">class</span> <span class="type">ListViewDemo</span> <span class="kw">extends</span> <span class="type">StatefulComponent</span> {
+  <span class="kw">int</span> _selectedIndex = <span class="num">0</span>;
+  <span class="kw">final</span> _items = [<span class="str">'Row'</span>, <span class="str">'Column'</span>, <span class="str">'Stack'</span>, ...];
+
+  <span class="type">Component</span> <span class="fn">build</span>(<span class="type">BuildContext</span> context) {
+    <span class="kw">return</span> <span class="type">ListView</span>.<span class="fn">builder</span>(
+      itemCount: _items.length,
+      itemBuilder: (context, index) {
+        <span class="kw">final</span> isSelected = index == _selectedIndex;
+        <span class="kw">return</span> <span class="type">Container</span>(
+          decoration: <span class="type">BoxDecoration</span>(
+            color: isSelected ? <span class="type">Colors</span>.blue : <span class="kw">null</span>,
+          ),
+          child: <span class="type">Text</span>(_items[index]),
+        );
+      },
+    );
+  }
+}`,
+        },
+        2: {
+          filename: "counter_demo.dart",
+          code: `<span class="kw">class</span> <span class="type">CounterDemo</span> <span class="kw">extends</span> <span class="type">StatefulComponent</span> {
+  <span class="kw">int</span> _count = <span class="num">0</span>;
+
+  <span class="type">Component</span> <span class="fn">build</span>(<span class="type">BuildContext</span> context) {
+    <span class="kw">return</span> <span class="type">Focusable</span>(
+      onKeyEvent: (event) {
+        <span class="kw">if</span> (event.logicalKey == <span class="type">LogicalKey</span>.space) {
+          <span class="fn">setState</span>(() => _count++);
+          <span class="kw">return true</span>;
+        }
+        <span class="kw">return false</span>;
+      },
+      child: <span class="type">Column</span>(children: [
+        <span class="type">Text</span>(<span class="str">'Count: \$_count'</span>),
+        <span class="type">ProgressBar</span>(value: _count % <span class="num">20</span>),
+      ]),
+    );
+  }
+}`,
+        },
+        3: {
+          filename: "layout_demo.dart",
+          code: `<span class="kw">class</span> <span class="type">LayoutDemo</span> <span class="kw">extends</span> <span class="type">StatelessComponent</span> {
+  <span class="type">Component</span> <span class="fn">build</span>(<span class="type">BuildContext</span> context) {
+    <span class="kw">return</span> <span class="type">Row</span>(children: [
+      <span class="type">Expanded</span>(
+        child: <span class="type">Container</span>(
+          decoration: <span class="type">BoxDecoration</span>(
+            border: <span class="type">BoxBorder</span>.<span class="fn">all</span>(color: <span class="type">Colors</span>.red),
+          ),
+          child: <span class="type">Center</span>(child: <span class="type">Text</span>(<span class="str">'Left'</span>)),
+        ),
+      ),
+      <span class="type">Expanded</span>(
+        child: <span class="type">Column</span>(children: [
+          <span class="type">Expanded</span>(child: <span class="type">Text</span>(<span class="str">'Top'</span>)),
+          <span class="type">Expanded</span>(child: <span class="type">Text</span>(<span class="str">'Bottom'</span>)),
+        ]),
+      ),
+    ]);
+  }
+}`,
+        },
+      };
+
+      function setTerminalFocus(focused) {
+        terminalFocused = focused;
+        const panel = document.getElementById("demo-panel");
+        const hintClick = document.querySelector(".hint-click");
+        const hintActive = document.querySelector(".hint-active");
+
+        if (focused) {
+          panel.classList.add("terminal-focused");
+          hintClick.style.display = "none";
+          hintActive.style.display = "inline";
+          demoTerminal.focus();
+        } else {
+          panel.classList.remove("terminal-focused");
+          hintClick.style.display = "inline";
+          hintActive.style.display = "none";
+          if (demoTerminal && demoTerminal.terminal) {
+            demoTerminal.terminal.blur();
+          }
+        }
+      }
+
+      // Demo JS files
+      const demoFiles = {
+        0: "demos/text_field_demo.js",
+        1: "demos/list_view_demo.js",
+        2: "demos/counter_demo.js",
+        3: "demos/layout_demo.js",
+      };
+
+      async function switchDemo(index) {
+        // Update tabs
+        document
+          .querySelectorAll(".demo-tab")
+          .forEach((el) => el.classList.remove("demo-active"));
+        document
+          .querySelector(`.demo-tab[data-demo="${index}"]`)
+          .classList.add("demo-active");
+
+        // Update code editor
+        const demo = demoCode[index];
+        document.getElementById("editor-filename").textContent = demo.filename;
+        document.getElementById(
+          "editor-code",
+        ).innerHTML = `<code>${demo.code}</code>`;
+
+        // Dispose old terminal and load new demo
+        if (demoTerminal) {
+          demoTerminal.dispose();
+        }
+
+        document.getElementById("embedded-demo").innerHTML =
+          '<div class="demo-loading">Loading...</div>';
+
+        try {
+          demoTerminal = await createEmbeddedTerminal(
+            "embedded-demo",
+            demoFiles[index],
+            {
+              cols: 50,
+              rows: 14,
+              fontSize: 13,
+              background: "#0c0c14",
+            },
+          );
+
+          // Don't auto-focus
+          if (demoTerminal.terminal) {
+            demoTerminal.terminal.blur();
+          }
+
+          // Handle Escape key from terminal to release focus
+          demoTerminal.onEscapeKey = () => {
+            if (terminalFocused) {
+              setTerminalFocus(false);
+            }
+          };
+
+          setTerminalFocus(false);
+        } catch (error) {
+          console.error("Failed to load demo:", error);
+          document.getElementById("embedded-demo").innerHTML =
+            '<div class="demo-error">Demo unavailable</div>';
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          demoTerminal = await createEmbeddedTerminal(
+            "embedded-demo",
+            demoFiles[0],
+            {
+              cols: 50,
+              rows: 14,
+              fontSize: 13,
+              background: "#0c0c14",
+            },
+          );
+          console.log("Embedded demo loaded");
+
+          // Don't auto-focus on load
+          if (demoTerminal.terminal) {
+            demoTerminal.terminal.blur();
+          }
+
+          // Handle Escape key from terminal to release focus
+          demoTerminal.onEscapeKey = () => {
+            if (terminalFocused) {
+              setTerminalFocus(false);
+            }
+          };
+
+          // Click on terminal area to focus
+          document
+            .getElementById("embedded-demo")
+            .addEventListener("click", () => {
+              setTerminalFocus(true);
+            });
+
+          // Click outside terminal releases focus
+          document.addEventListener("click", (e) => {
+            const panel = document.getElementById("demo-panel");
+            if (terminalFocused && !panel.contains(e.target)) {
+              setTerminalFocus(false);
+            }
+          });
+
+          // Set up click handlers for demo tabs
+          document.querySelectorAll(".demo-tab[data-demo]").forEach((tab) => {
+            tab.addEventListener("click", () => {
+              const demoIndex = parseInt(tab.dataset.demo);
+              if (!isNaN(demoIndex)) {
+                switchDemo(demoIndex);
+              }
+            });
+          });
+
+          // Unified spatial keyboard navigation system
+          const nav = {
+            selected: null,
+
+            getElements() {
+              return Array.from(document.querySelectorAll("[data-nav]")).filter(
+                (el) => {
+                  const rect = el.getBoundingClientRect();
+                  return rect.width > 0 && rect.height > 0;
+                },
+              );
+            },
+
+            getCenter(el) {
+              const rect = el.getBoundingClientRect();
+              return {
+                x: rect.left + rect.width / 2,
+                y: rect.top + rect.height / 2,
+              };
+            },
+
+            select(el) {
+              if (!el) return;
+              // Remove previous selection
+              if (this.selected) {
+                this.selected.classList.remove("nav-selected");
+              }
+              // Add new selection
+              this.selected = el;
+              el.classList.add("nav-selected");
+              el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            },
+
+            clear() {
+              if (this.selected) {
+                this.selected.classList.remove("nav-selected");
+                this.selected = null;
+              }
+            },
+
+            findBest(direction) {
+              const elements = this.getElements();
+              if (!this.selected) {
+                // Select first element
+                if (elements.length > 0) this.select(elements[0]);
+                return;
+              }
+
+              const currentRect = this.selected.getBoundingClientRect();
+              const currentCenter = this.getCenter(this.selected);
+              let best = null;
+              let bestScore = Infinity;
+
+              for (const el of elements) {
+                if (el === this.selected) continue;
+
+                const rect = el.getBoundingClientRect();
+                const center = this.getCenter(el);
+                const dx = center.x - currentCenter.x;
+                const dy = center.y - currentCenter.y;
+
+                // Check if elements overlap on the perpendicular axis
+                // This helps prioritize elements that are "in line" with current
+                let overlapsOnAxis = false;
+                if (direction === "left" || direction === "right") {
+                  // Check vertical overlap
+                  overlapsOnAxis = !(
+                    rect.bottom < currentRect.top ||
+                    rect.top > currentRect.bottom
+                  );
+                } else {
+                  // Check horizontal overlap
+                  overlapsOnAxis = !(
+                    rect.right < currentRect.left ||
+                    rect.left > currentRect.right
+                  );
+                }
+
+                let valid = false;
+                let primaryDist = 0;
+                let secondaryDist = 0;
+
+                switch (direction) {
+                  case "up":
+                    valid = dy < -10;
+                    primaryDist = Math.abs(dy);
+                    secondaryDist = Math.abs(dx);
+                    break;
+                  case "down":
+                    valid = dy > 10;
+                    primaryDist = Math.abs(dy);
+                    secondaryDist = Math.abs(dx);
+                    break;
+                  case "left":
+                    valid = dx < -10;
+                    primaryDist = Math.abs(dx);
+                    secondaryDist = Math.abs(dy);
+                    break;
+                  case "right":
+                    valid = dx > 10;
+                    primaryDist = Math.abs(dx);
+                    secondaryDist = Math.abs(dy);
+                    break;
+                }
+
+                if (!valid) continue;
+
+                // Strongly prefer elements that overlap on the perpendicular axis
+                // This ensures left/right stays in the same "row" and up/down in same "column"
+                const overlapBonus = overlapsOnAxis ? 0 : 10000;
+
+                // When moving to a NEW row (no overlap), ALWAYS go to leftmost element
+                // This creates reading-direction behavior: down goes to start of next row
+                let secondaryBias = 0;
+                if (
+                  !overlapsOnAxis &&
+                  (direction === "up" || direction === "down")
+                ) {
+                  // Very strong preference for leftmost element when changing rows
+                  // Use rect.left directly as the main factor (overrides distance)
+                  secondaryBias = rect.left * 10;
+                }
+
+                const score = overlapBonus + primaryDist + secondaryBias;
+
+                if (score < bestScore) {
+                  bestScore = score;
+                  best = el;
+                }
+              }
+
+              if (best) this.select(best);
+            },
+
+            activate() {
+              if (!this.selected) return;
+
+              const el = this.selected;
+
+              // Terminal - enter interactive mode
+              if (el.hasAttribute("data-nav-terminal")) {
+                setTerminalFocus(true);
+                this.clear();
+              }
+              // Demo tab - switch demo
+              else if (el.hasAttribute("data-demo")) {
+                const idx = parseInt(el.dataset.demo);
+                if (!isNaN(idx)) {
+                  window.currentDemoIndex = idx;
+                  switchDemo(idx);
+                }
+              }
+              // Link - navigate
+              else if (el.tagName === "A") {
+                window.location.href = el.href;
+              }
+            },
+          };
+
+          // Click to select
+          document.querySelectorAll("[data-nav]").forEach((el) => {
+            el.addEventListener("click", (e) => {
+              // Don't interfere with links
+              if (el.tagName === "A") return;
+              nav.select(el);
+            });
+          });
+
+          // Create keyboard hint bar (always visible)
+          const hintBar = document.createElement("div");
+          hintBar.className = "keyboard-hint-bar visible";
+          hintBar.innerHTML = `
+          <span class="hint-key">↑</span><span class="hint-key">↓</span><span class="hint-key">←</span><span class="hint-key">→</span> navigate
+          <span class="hint-sep">│</span>
+          <span class="hint-key">Enter</span> select
+          <span class="hint-sep">│</span>
+          <span class="hint-key">1-4</span> demos
+        `;
+          document.body.appendChild(hintBar);
+
+          // Keyboard navigation
+          document.addEventListener("keydown", (e) => {
+            // Don't handle if terminal is focused
+            if (terminalFocused) return;
+
+            // Don't handle if typing in an input
+            if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+              return;
+
+            switch (e.key) {
+              case "ArrowUp":
+              case "ArrowDown":
+              case "ArrowLeft":
+              case "ArrowRight":
+                e.preventDefault();
+                nav.findBest(e.key.replace("Arrow", "").toLowerCase());
+                break;
+
+              case "Enter":
+              case " ":
+                if (nav.selected) {
+                  e.preventDefault();
+                  nav.activate();
+                }
+                break;
+
+              case "Escape":
+                nav.clear();
+                break;
+
+              case "1":
+              case "2":
+              case "3":
+              case "4":
+                const idx = parseInt(e.key) - 1;
+                const totalDemos = Object.keys(demoFiles).length;
+                if (idx < totalDemos) {
+                  e.preventDefault();
+                  window.currentDemoIndex = idx;
+                  switchDemo(idx);
+                  const tab = document.querySelector(
+                    `.demo-tab[data-demo="${idx}"]`,
+                  );
+                  if (tab) nav.select(tab);
+                }
+                break;
+            }
+          });
+
+          // When exiting terminal, restore nav selection
+          const originalSetTerminalFocus = setTerminalFocus;
+          setTerminalFocus = (focused) => {
+            originalSetTerminalFocus(focused);
+            if (!focused) {
+              // Re-select terminal element
+              const termEl = document.querySelector("[data-nav-terminal]");
+              if (termEl) nav.select(termEl);
+            }
+          };
+
+          // Initialize code editor with TextField demo
+          const demo = demoCode[0];
+          document.getElementById("editor-filename").textContent =
+            demo.filename;
+          document.getElementById(
+            "editor-code",
+          ).innerHTML = `<code>${demo.code}</code>`;
+        } catch (error) {
+          console.error("Failed to load demo:", error);
+          document.getElementById("embedded-demo").innerHTML =
+            '<div class="demo-error">Demo unavailable</div>';
+        }
+      });
+    </script>
+  </body>
+</html>

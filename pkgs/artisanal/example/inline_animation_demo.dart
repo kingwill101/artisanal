@@ -4,6 +4,8 @@
 ///
 /// Run this directly: dart run example/inline_animation_demo.dart
 
+library;
+
 import 'dart:io';
 import 'package:artisanal/artisanal.dart';
 

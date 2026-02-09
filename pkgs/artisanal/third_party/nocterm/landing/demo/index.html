@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>nocterm Demo</title>
+
+  <!-- xterm.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1rem 2rem;
+      background: #252526;
+      border-bottom: 1px solid #3e3e42;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #569cd6;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #858585;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      overflow: hidden;
+    }
+
+    .terminal-container {
+      flex: 1;
+      border: 1px solid #3e3e42;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #1e1e1e;
+      min-height: 0; /* Important for flex child with overflow */
+    }
+
+    #terminal {
+      height: 100%;
+      padding: 8px;
+    }
+
+    .info {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #252526;
+      border: 1px solid #3e3e42;
+      border-radius: 4px;
+      font-size: 0.875rem;
+    }
+
+    .info strong {
+      color: #569cd6;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 1.25rem;
+      color: #858585;
+    }
+
+    .error {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      flex-direction: column;
+      color: #f48771;
+    }
+
+    .error-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .error-message {
+      font-size: 0.875rem;
+      color: #858585;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>nocterm Demo</h1>
+    <p class="subtitle">
+      Flutter-inspired TUI framework for Dart - running in your browser via xterm.js
+    </p>
+  </header>
+
+  <main>
+    <div class="terminal-container">
+      <div id="terminal">
+        <div class="loading">Loading terminal...</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <strong>Controls:</strong>
+      Use <kbd>j</kbd>/<kbd>k</kbd> or arrow keys to navigate,
+      <kbd>Enter</kbd>/<kbd>Space</kbd> to select,
+      <kbd>r</kbd> to reset counter
+    </div>
+  </main>
+
+  <!-- xterm.js -->
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+  <!-- nocterm terminal host -->
+  <script src="../terminal-host.js"></script>
+
+  <script>
+    // Initialize and run the demo
+    async function main() {
+      try {
+        console.log('Initializing nocterm demo...');
+
+        // Create the terminal host
+        const host = new NoctermTerminalHost('terminal');
+
+        // Initialize (creates xterm.js terminal and nocterm bridge)
+        await host.initialize();
+
+        // Load the nocterm demo app
+        console.log('Loading demo app...');
+        await host.loadApp('./bento_app.js');
+
+        console.log('Demo app loaded successfully!');
+
+        // Make host available globally for debugging
+        window.noctermHost = host;
+
+      } catch (error) {
+        console.error('Failed to initialize nocterm demo:', error);
+
+        // Show error in UI
+        const terminalEl = document.getElementById('terminal');
+        terminalEl.innerHTML = `
+          <div class="error">
+            <div class="error-title">Failed to Load Demo</div>
+            <div class="error-message">${error.message}</div>
+          </div>
+        `;
+      }
+    }
+
+    // Run when page loads
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', main);
+    } else {
+      main();
+    }
+  </script>
+</body>
+</html>

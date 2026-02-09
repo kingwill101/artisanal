@@ -1,0 +1,668 @@
+---
+title: Layout
+description: Layout components for building TUI interfaces
+icon: table-columns
+---
+
+Layout components arrange UI elements in your terminal app. This guide covers the main layout components and how to use them.
+
+## Column
+
+`Column` arranges children vertically:
+
+```dart
+Column(
+  children: [
+    Text('First'),
+    Text('Second'),
+    Text('Third'),
+  ],
+)
+```
+
+### Alignment
+
+Control how children align:
+
+```dart
+Column(
+  mainAxisAlignment: MainAxisAlignment.center,  // Vertical alignment
+  crossAxisAlignment: CrossAxisAlignment.start,  // Horizontal alignment
+  children: [
+    Text('Centered vertically'),
+    Text('Aligned to start horizontally'),
+  ],
+)
+```
+
+**mainAxisAlignment** options:
+- `start`: Align to top
+- `center`: Center vertically
+- `end`: Align to bottom
+- `spaceBetween`: Space items evenly with no space at edges
+- `spaceAround`: Space items evenly with half-space at edges
+- `spaceEvenly`: Space items evenly with full space at edges
+
+**crossAxisAlignment** options:
+- `start`: Align to left
+- `center`: Center horizontally
+- `end`: Align to right
+- `stretch`: Stretch children to fill width
+
+## Row
+
+`Row` arranges children horizontally:
+
+```dart
+Row(
+  children: [
+    Text('Left'),
+    Text('Middle'),
+    Text('Right'),
+  ],
+)
+```
+
+### Alignment
+
+Same as Column, but axes are swapped:
+
+```dart
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceBetween,  // Horizontal spacing
+  crossAxisAlignment: CrossAxisAlignment.center,      // Vertical alignment
+  children: [
+    Text('Left'),
+    Text('Right'),
+  ],
+)
+```
+
+**mainAxisAlignment** controls horizontal spacing.
+**crossAxisAlignment** controls vertical alignment.
+
+## Expanded
+
+`Expanded` fills available space in `Row` or `Column`:
+
+```dart
+Row(
+  children: [
+    Text('Fixed'),
+    Expanded(
+      child: Text('Takes remaining space'),
+    ),
+    Text('Fixed'),
+  ],
+)
+```
+
+### Flex factor
+
+Control how space is divided:
+
+```dart
+Row(
+  children: [
+    Expanded(
+      flex: 2,
+      child: Text('Gets 2/3 of space'),
+    ),
+    Expanded(
+      flex: 1,
+      child: Text('Gets 1/3 of space'),
+    ),
+  ],
+)
+```
+
+The `flex` value determines the ratio of space each child gets.
+
+## Stack
+
+`Stack` layers children on top of each other:
+
+```dart
+Stack(
+  children: [
+    Container(
+      width: 20,
+      height: 10,
+      decoration: BoxDecoration(color: Colors.blue),
+    ),
+    Positioned(
+      top: 2,
+      left: 5,
+      child: Text('Overlay'),
+    ),
+  ],
+)
+```
+
+### Positioned
+
+Use `Positioned` to place children at specific locations:
+
+```dart
+Stack(
+  children: [
+    // Background (takes full size)
+    Container(color: Colors.gray),
+
+    // Top-left
+    Positioned(
+      top: 0,
+      left: 0,
+      child: Text('TL'),
+    ),
+
+    // Bottom-right
+    Positioned(
+      bottom: 0,
+      right: 0,
+      child: Text('BR'),
+    ),
+  ],
+)
+```
+
+Children without `Positioned` are placed normally and determine the stack size.
+
+## Container
+
+`Container` is a versatile box that combines decoration, padding, and margin:
+
+```dart
+Container(
+  decoration: BoxDecoration(
+    color: Colors.blue,
+    border: BoxBorder.all(color: Colors.white),
+  ),
+  padding: EdgeInsets.all(2),
+  margin: EdgeInsets.all(1),
+  child: Text('Content'),
+)
+```
+
+### Properties
+
+- **decoration**: Background color, borders
+- **padding**: Space inside the border
+- **margin**: Space outside the border
+- **child**: Single child component
+
+### Decoration
+
+Style the container:
+
+```dart
+BoxDecoration(
+  color: Colors.blue,
+  border: BoxBorder.all(color: Colors.white),
+)
+```
+
+## SizedBox
+
+`SizedBox` creates a fixed-size box:
+
+```dart
+SizedBox(
+  width: 20,
+  height: 5,
+  child: Text('Fixed size'),
+)
+```
+
+### Spacing
+
+Use `SizedBox` to add spacing:
+
+```dart
+Column(
+  children: [
+    Text('Top'),
+    SizedBox(height: 2),  // 2 rows of space
+    Text('Bottom'),
+  ],
+)
+```
+
+## Align
+
+`Align` positions a child within itself:
+
+```dart
+Align(
+  alignment: Alignment.topLeft,
+  child: Text('Top-left'),
+)
+```
+
+**Alignment** options:
+- `topLeft`, `topCenter`, `topRight`
+- `centerLeft`, `center`, `centerRight`
+- `bottomLeft`, `bottomCenter`, `bottomRight`
+
+## Center
+
+`Center` centers a child:
+
+```dart
+Center(
+  child: Text('Centered'),
+)
+```
+
+This is equivalent to `Align(alignment: Alignment.center)`.
+
+## Padding
+
+`Padding` adds space around a child:
+
+```dart
+Padding(
+  padding: EdgeInsets.all(2),
+  child: Text('Padded text'),
+)
+```
+
+### EdgeInsets
+
+Specify padding:
+
+```dart
+// Same on all sides
+EdgeInsets.all(2)
+
+// Horizontal and vertical
+EdgeInsets.symmetric(horizontal: 3, vertical: 1)
+
+// Individual sides
+EdgeInsets.only(left: 2, top: 1)
+
+// All sides different
+EdgeInsets.fromLTRB(left: 1, top: 2, right: 3, bottom: 4)
+```
+
+## ConstrainedBox
+
+`ConstrainedBox` constrains child size:
+
+```dart
+ConstrainedBox(
+  constraints: BoxConstraints(
+    minWidth: 10,
+    maxWidth: 30,
+    minHeight: 5,
+    maxHeight: 15,
+  ),
+  child: Text('Constrained'),
+)
+```
+
+Use this to set minimum or maximum sizes.
+
+## Layout tips
+
+### Combine layouts
+
+Nest layout components to build complex UIs:
+
+```dart
+Column(
+  children: [
+    Container(
+      padding: EdgeInsets.all(1),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text('Left'),
+          Text('Right'),
+        ],
+      ),
+    ),
+    Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          border: BoxBorder.all(),
+        ),
+        child: Center(
+          child: Text('Content area'),
+        ),
+      ),
+    ),
+  ],
+)
+```
+
+### Use Expanded wisely
+
+`Expanded` only works inside `Row` or `Column`:
+
+```dart
+// Good
+Column(
+  children: [
+    Expanded(child: Text('Works')),
+  ],
+)
+
+// Bad - won't work
+Container(
+  child: Expanded(child: Text('Error')),
+)
+```
+
+### Mind terminal size
+
+Design for small terminals (80×24). Test your layouts at different sizes.
+
+## Divider
+
+`Divider` draws a horizontal line:
+
+```dart
+Column(
+  children: [
+    Text('Section 1'),
+    Divider(),
+    Text('Section 2'),
+  ],
+)
+```
+
+### Divider styles
+
+```dart
+Divider(style: DividerStyle.single)   // ─ (default)
+Divider(style: DividerStyle.double)   // ═
+Divider(style: DividerStyle.dashed)   // ╌
+Divider(style: DividerStyle.dotted)   // ┈
+Divider(style: DividerStyle.bold)     // ━
+Divider(style: DividerStyle.ascii)    // -
+```
+
+### Divider properties
+
+```dart
+Divider(
+  height: 1,        // Total height including spacing
+  thickness: 1,     // Line thickness
+  indent: 2,        // Space before the line
+  endIndent: 2,     // Space after the line
+  color: Colors.gray,
+  style: DividerStyle.single,
+)
+```
+
+### VerticalDivider
+
+For vertical lines in rows:
+
+```dart
+Row(
+  children: [
+    Text('Left'),
+    VerticalDivider(),
+    Text('Right'),
+  ],
+)
+```
+
+## ProgressBar
+
+`ProgressBar` shows progress:
+
+```dart
+ProgressBar(value: 0.5)  // 50% complete
+```
+
+### Progress bar properties
+
+```dart
+ProgressBar(
+  value: 0.75,                           // 0.0 to 1.0
+  valueColor: Colors.green,              // Fill color
+  backgroundColor: Colors.grey,          // Empty area color
+  showPercentage: true,                  // Show "75%" in center
+  label: 'Loading...',                   // Custom label text
+  fillCharacter: '█',                    // Character for filled area
+  emptyCharacter: '░',                   // Character for empty area
+)
+```
+
+### Border styles
+
+Wrap with a border:
+
+```dart
+SizedBox(
+  width: 40,
+  height: 3,
+  child: ProgressBar(
+    value: 0.6,
+    borderStyle: ProgressBarBorderStyle.rounded,
+    valueColor: Colors.cyan,
+  ),
+)
+```
+
+**Border styles**: `single`, `rounded`, `double`, `ascii`, `bold`
+
+### Indeterminate progress
+
+For unknown progress:
+
+```dart
+ProgressBar(
+  indeterminate: true,
+  valueColor: Colors.yellow,
+)
+```
+
+### Custom characters
+
+```dart
+// Block style
+ProgressBar(value: 0.5, fillCharacter: '▓', emptyCharacter: '░')
+
+// Dot style
+ProgressBar(value: 0.5, fillCharacter: '●', emptyCharacter: '○')
+
+// Simple ASCII
+ProgressBar(value: 0.5, fillCharacter: '=', emptyCharacter: '-')
+```
+
+## Tint
+
+`Tint` applies a color overlay to its child:
+
+```dart
+Tint(
+  color: Colors.blue.withOpacity(0.3),
+  child: MyContent(),
+)
+```
+
+### Use cases
+
+Dim background content:
+
+```dart
+Stack(
+  children: [
+    BackgroundContent(),
+    Tint(
+      color: Colors.black.withOpacity(0.5),
+      child: Dialog(),
+    ),
+  ],
+)
+```
+
+The alpha value controls intensity:
+- `alpha = 0`: No effect
+- `alpha = 128`: 50% blend
+- `alpha = 255`: Fully opaque
+
+### Animated tint
+
+For fade effects:
+
+```dart
+FadeTint(
+  color: Colors.black.withOpacity(0.5),
+  duration: Duration(milliseconds: 200),
+  child: MyContent(),
+)
+```
+
+## LayoutBuilder
+
+`LayoutBuilder` builds content based on available constraints:
+
+```dart
+LayoutBuilder(
+  builder: (context, constraints) {
+    if (constraints.maxWidth > 80) {
+      return WideLayout();
+    } else {
+      return NarrowLayout();
+    }
+  },
+)
+```
+
+### Responsive layouts
+
+```dart
+LayoutBuilder(
+  builder: (context, constraints) {
+    // Use constraint values to decide layout
+    final isWide = constraints.maxWidth > 60;
+    final isTall = constraints.maxHeight > 20;
+
+    if (isWide && isTall) {
+      return FullDashboard();
+    } else if (isWide) {
+      return CompactDashboard();
+    } else {
+      return MobileLayout();
+    }
+  },
+)
+```
+
+### When to use
+
+- Adapting UI to terminal size
+- Different layouts for wide vs narrow terminals
+- Conditional component selection based on space
+
+## ClipRect
+
+`ClipRect` clips its child to a rectangle:
+
+```dart
+ClipRect(
+  child: LargeContent(),  // Content beyond bounds is hidden
+)
+```
+
+### Clip behavior
+
+```dart
+ClipRect(
+  clipBehavior: Clip.hardEdge,  // Default - clip at bounds
+  child: Content(),
+)
+
+ClipRect(
+  clipBehavior: Clip.none,  // No clipping
+  child: Content(),
+)
+```
+
+## OverflowBox
+
+`OverflowBox` lets a child overflow its parent:
+
+```dart
+OverflowBox(
+  maxWidth: 100,   // Child can be up to 100 wide
+  maxHeight: 50,   // Child can be up to 50 tall
+  child: LargeContent(),
+)
+```
+
+### Properties
+
+```dart
+OverflowBox(
+  alignment: Alignment.center,  // Position within parent
+  minWidth: 20,
+  maxWidth: 100,
+  minHeight: 10,
+  maxHeight: 50,
+  child: Content(),
+)
+```
+
+## SizedOverflowBox
+
+`SizedOverflowBox` is a specific size but passes original constraints to child:
+
+```dart
+SizedOverflowBox(
+  size: Size(40, 10),         // This widget is 40x10
+  alignment: Alignment.center,
+  child: Content(),           // Child uses parent's constraints
+)
+```
+
+## ValueListenableBuilder
+
+`ValueListenableBuilder` rebuilds when a value changes:
+
+```dart
+final counter = ValueNotifier<int>(0);
+
+ValueListenableBuilder<int>(
+  valueListenable: counter,
+  builder: (context, value, child) {
+    return Text('Count: $value');
+  },
+)
+```
+
+### With static child
+
+Optimize by passing unchanged parts as `child`:
+
+```dart
+ValueListenableBuilder<int>(
+  valueListenable: counter,
+  builder: (context, value, child) {
+    return Row(
+      children: [
+        child!,  // Static part - not rebuilt
+        Text('$value'),  // Dynamic part - rebuilt
+      ],
+    );
+  },
+  child: Text('Count: '),  // Passed to builder as child
+)
+```
+
+### When to use
+
+- Reactive updates without full setState
+- Sharing state between components
+- Fine-grained rebuilds for performance
+
+## Next steps
+
+- [Text & Styling](/docs/components/text) - Style text in your layouts
+- [Input](/docs/components/input) - Add interactive components
+- [Building UIs](/docs/fundamentals/building-uis) - Composition patterns

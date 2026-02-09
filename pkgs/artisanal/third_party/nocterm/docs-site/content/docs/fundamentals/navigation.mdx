@@ -1,0 +1,538 @@
+---
+title: Navigation
+description: Managing screens and navigation in your Nocterm apps
+icon: compass
+---
+
+Navigation in Nocterm uses a stack-based system. You push routes onto the stack to navigate forward and pop them to go back. This works similarly to Flutter's navigation.
+
+## Quick start
+
+Use the `Navigator` component to manage screens in your app:
+
+```dart
+import 'package:nocterm/nocterm.dart';
+
+void main() {
+  runApp(
+    Navigator(
+      home: const HomePage(),
+      routes: {
+        '/settings': (context) => const SettingsPage(),
+        '/about': (context) => const AboutPage(),
+      },
+    ),
+  );
+}
+```
+
+The `Navigator` component:
+- Manages a stack of routes
+- Handles keyboard navigation (ESC to go back)
+- Supports named routes and direct component pushing
+- Provides modal dialogs
+
+## Navigator properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `home` | `Component?` | Initial screen to display |
+| `routes` | `Map<String, Component Function(BuildContext)>?` | Named routes map |
+| `initialRoute` | `String?` | Route path for deep linking |
+| `onGenerateRoute` | `RouteFactory?` | Factory for dynamic routes |
+| `onUnknownRoute` | `RouteFactory?` | Fallback for unknown routes |
+| `popBehavior` | `PopBehavior` | Configure pop keys and behavior |
+| `observers` | `List<NavigatorObserver>` | Navigation event listeners |
+
+## Getting the Navigator
+
+Access the navigator from anywhere using `Navigator.of(context)`:
+
+```dart
+// Get navigator (throws if not found)
+final navigator = Navigator.of(context);
+
+// Get navigator (returns null if not found)
+final navigator = Navigator.maybeOf(context);
+```
+
+## Navigation methods
+
+### push
+
+Push a route onto the stack:
+
+```dart
+// Push a route
+Navigator.of(context).push(PageRoute(
+  builder: (context) => const DetailsPage(),
+  settings: const RouteSettings(name: '/details'),
+));
+```
+
+### pushComponent
+
+Push a component directly (creates a route for you):
+
+```dart
+Navigator.of(context).pushComponent(
+  const DetailsPage(),
+  name: '/details',
+);
+```
+
+### pushNamed
+
+Push a route by name:
+
+```dart
+Navigator.of(context).pushNamed('/settings');
+
+// With arguments
+Navigator.of(context).pushNamed('/user', arguments: userId);
+```
+
+### pushReplacement
+
+Replace the current route instead of stacking:
+
+```dart
+Navigator.of(context).pushReplacement(PageRoute(
+  builder: (context) => const NewPage(),
+  settings: const RouteSettings(name: '/new'),
+));
+
+// Or by name
+Navigator.of(context).pushReplacementNamed('/new');
+
+// Or with a component
+Navigator.of(context).pushReplacementComponent(const NewPage());
+```
+
+### pop
+
+Remove the current route from the stack:
+
+```dart
+Navigator.of(context).pop();
+
+// With a result
+Navigator.of(context).pop('selected value');
+```
+
+### canPop
+
+Check if popping is possible:
+
+```dart
+if (Navigator.of(context).canPop()) {
+  Navigator.of(context).pop();
+}
+```
+
+## Named routes
+
+Define routes in your Navigator:
+
+```dart
+Navigator(
+  home: const HomePage(),
+  routes: {
+    '/': (context) => const HomePage(),
+    '/settings': (context) => const SettingsPage(),
+    '/settings/profile': (context) => const ProfilePage(),
+    '/about': (context) => const AboutPage(),
+  },
+)
+```
+
+Navigate using route names:
+
+```dart
+Navigator.of(context).pushNamed('/settings');
+Navigator.of(context).pushNamed('/settings/profile');
+```
+
+## Returning values from routes
+
+Routes can return values when popped. Use `await` to get the result:
+
+```dart
+// Push a page that will return a value
+final result = await Navigator.of(context).pushComponent<String>(
+  const InputPage(),
+);
+
+if (result != null) {
+  print('User entered: $result');
+}
+```
+
+In the pushed page, pass the result to `pop()`:
+
+```dart
+class InputPage extends StatefulComponent {
+  const InputPage({super.key});
+
+  @override
+  State<InputPage> createState() => _InputPageState();
+}
+
+class _InputPageState extends State<InputPage> {
+  String _input = '';
+
+  @override
+  Component build(BuildContext context) {
+    return Column(
+      children: [
+        const Text('Enter text:'),
+        TextField(
+          onChanged: (value) => setState(() => _input = value),
+          onSubmitted: (value) {
+            Navigator.of(context).pop(value);  // Return the value
+          },
+        ),
+      ],
+    );
+  }
+}
+```
+
+## Modal dialogs
+
+Use `showDialog()` to display modal overlays:
+
+```dart
+final result = await Navigator.of(context).showDialog<bool>(
+  builder: (context) => ConfirmDialog(
+    message: 'Are you sure?',
+  ),
+  width: 50,
+  height: 12,
+);
+
+if (result == true) {
+  // User confirmed
+}
+```
+
+### showDialog parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `builder` | `Component Function(BuildContext)` | required | Dialog content |
+| `barrierDismissible` | `bool` | `true` | ESC dismisses dialog |
+| `decoration` | `BoxDecoration?` | double border | Dialog border style |
+| `alignment` | `Alignment` | `center` | Position on screen |
+| `width` | `double?` | auto | Fixed width |
+| `height` | `double?` | auto | Fixed height |
+
+Example dialog component:
+
+```dart
+class ConfirmDialog extends StatelessComponent {
+  final String message;
+
+  const ConfirmDialog({required this.message, super.key});
+
+  @override
+  Component build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message),
+          const SizedBox(height: 2),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('[Yes]'),
+              ),
+              const SizedBox(width: 2),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('[No]'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## PopBehavior
+
+Configure how users can navigate back:
+
+```dart
+Navigator(
+  home: const HomePage(),
+  popBehavior: const PopBehavior(
+    escapeEnabled: true,      // ESC key pops (default: true)
+    backspaceEnabled: false,  // Backspace pops (default: false)
+    customPopKey: 'q',        // Additional pop key
+  ),
+)
+```
+
+### PopBehavior properties
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `escapeEnabled` | `bool` | `true` | ESC key triggers pop |
+| `backspaceEnabled` | `bool` | `false` | Backspace triggers pop |
+| `customPopKey` | `String?` | `null` | Custom key for pop (e.g., 'q') |
+| `canPop` | `bool Function(Route)?` | `null` | Custom pop logic |
+| `onPopInvoked` | `Future<bool> Function(Route)?` | `null` | Async pop confirmation |
+
+### Preventing accidental navigation
+
+Use `canPop` to conditionally prevent navigation:
+
+```dart
+Navigator(
+  popBehavior: PopBehavior(
+    canPop: (route) {
+      // Prevent popping from specific routes
+      if (route.settings.name == '/checkout') {
+        return false;
+      }
+      return true;
+    },
+  ),
+)
+```
+
+### Async confirmation
+
+Use `onPopInvoked` for confirmation dialogs:
+
+```dart
+Navigator(
+  popBehavior: PopBehavior(
+    onPopInvoked: (route) async {
+      // Show confirmation for unsaved changes
+      if (hasUnsavedChanges) {
+        return await showConfirmDialog();
+      }
+      return true;
+    },
+  ),
+)
+```
+
+### Preset behaviors
+
+```dart
+// Default - ESC enabled
+PopBehavior.defaultBehavior
+
+// Strict - no keyboard navigation
+PopBehavior.strict
+```
+
+## Deep linking
+
+Use `initialRoute` to start at a specific route:
+
+```dart
+Navigator(
+  home: const HomePage(),
+  routes: {
+    '/': (context) => const HomePage(),
+    '/settings': (context) => const SettingsPage(),
+    '/settings/profile': (context) => const ProfilePage(),
+  },
+  initialRoute: '/settings/profile',
+)
+```
+
+The Navigator builds a route stack from the path:
+1. `/` (HomePage)
+2. `/settings` (SettingsPage)
+3. `/settings/profile` (ProfilePage)
+
+Pressing ESC navigates back through the stack.
+
+## NavigatorObserver
+
+Listen to navigation events for analytics or logging:
+
+```dart
+class MyNavigatorObserver extends NavigatorObserver {
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    print('Navigated to: ${route.settings.name}');
+  }
+
+  @override
+  void didPop(Route route, Route? previousRoute) {
+    print('Returned from: ${route.settings.name}');
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    print('Replaced ${oldRoute?.settings.name} with ${newRoute?.settings.name}');
+  }
+
+  @override
+  void didRemove(Route route, Route? previousRoute) {
+    print('Removed: ${route.settings.name}');
+  }
+}
+```
+
+Add observers to Navigator:
+
+```dart
+Navigator(
+  home: const HomePage(),
+  observers: [
+    MyNavigatorObserver(),
+    LoggingNavigatorObserver(),  // Built-in logging observer
+  ],
+)
+```
+
+### LoggingNavigatorObserver
+
+Nocterm includes a built-in logging observer for debugging:
+
+```dart
+Navigator(
+  observers: [LoggingNavigatorObserver()],
+)
+```
+
+This prints navigation events:
+```
+Navigator: Pushed /settings
+Navigator: Pushed /settings/profile
+Navigator: Popped /settings/profile
+```
+
+## Route types
+
+### PageRoute
+
+Standard full-screen route:
+
+```dart
+final route = PageRoute(
+  builder: (context) => const MyPage(),
+  settings: const RouteSettings(name: '/my-page'),
+);
+Navigator.of(context).push(route);
+```
+
+### ModalRoute
+
+Overlay route for dialogs:
+
+```dart
+final route = ModalRoute(
+  builder: (context) => const MyDialog(),
+  settings: const RouteSettings(name: '<dialog>'),
+  barrierDismissible: true,
+  decoration: BoxDecoration(
+    border: BoxBorder.all(style: BoxBorderStyle.double),
+  ),
+  alignment: Alignment.center,
+  width: 40,
+  height: 10,
+);
+Navigator.of(context).push(route);
+```
+
+Prefer using `showDialog()` instead of creating `ModalRoute` directly.
+
+## Route arguments
+
+Pass data to routes using arguments:
+
+```dart
+// Push with arguments
+Navigator.of(context).pushNamed('/user', arguments: userId);
+
+// Access in the target page
+class UserPage extends StatelessComponent {
+  const UserPage({super.key});
+
+  @override
+  Component build(BuildContext context) {
+    // Get arguments from route settings
+    final route = ModalRoute.of(context);
+    final userId = route?.settings.arguments as String?;
+
+    return Text('User: $userId');
+  }
+}
+```
+
+## Best practices
+
+### Keep navigation logic in one place
+
+Define all routes in your Navigator configuration:
+
+```dart
+Navigator(
+  routes: {
+    '/': (context) => const HomePage(),
+    '/settings': (context) => const SettingsPage(),
+    '/profile': (context) => const ProfilePage(),
+  },
+)
+```
+
+### Use named routes for clarity
+
+Named routes make navigation intent clear:
+
+```dart
+// Clear intent
+Navigator.of(context).pushNamed('/settings');
+
+// Less clear
+Navigator.of(context).pushComponent(const SettingsPage());
+```
+
+### Handle back navigation
+
+Always consider what happens when users press ESC:
+
+```dart
+// For forms with unsaved changes
+PopBehavior(
+  onPopInvoked: (route) async {
+    if (hasUnsavedChanges) {
+      return await confirmDiscard();
+    }
+    return true;
+  },
+)
+```
+
+### Use observers for analytics
+
+Track navigation for analytics:
+
+```dart
+class AnalyticsObserver extends NavigatorObserver {
+  @override
+  void didPush(Route route, Route? previousRoute) {
+    analytics.trackScreenView(route.settings.name ?? 'unknown');
+  }
+}
+```
+
+## Next steps
+
+- [Focus Management](/docs/interactivity/focus) - Control focus in multi-screen apps
+- [Keyboard Input](/docs/interactivity/keyboard) - Handle keyboard events
+- [Components](/docs/fundamentals/components) - Build reusable components

@@ -2,7 +2,7 @@
 ///
 /// This example showcases all the capabilities of the [ConsoleTagParser],
 /// including:
-/// - Named styles (Symfony/Laravel compatible)
+/// - Named styles
 /// - Inline styles with colors and options
 /// - Proper nested tag inheritance
 /// - Escape sequences
@@ -24,10 +24,7 @@ void main() {
   // Create a parser instance
   final parser = ConsoleTagParser();
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 1. NAMED STYLES (Symfony/Laravel Compatible)
-  // ─────────────────────────────────────────────────────────────────────────
-  section('1. Named Styles (Symfony/Laravel Compatible)');
+  section('1. Named Styles');
 
   print(parser.render('<info>Info: This is an informational message</info>'));
   print(parser.render('<comment>Comment: This is a comment or note</comment>'));
@@ -56,9 +53,7 @@ void main() {
   print(parser.render('<underline>Underlined text</underline>'));
   print(parser.render('<strikethrough>Strikethrough text</strikethrough>'));
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 2. INLINE STYLES - FOREGROUND COLORS
-  // ─────────────────────────────────────────────────────────────────────────
   section('2. Foreground Colors');
 
   // Basic named colors
@@ -107,9 +102,7 @@ void main() {
   }
   print(parser.render(ansi256.toString()));
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 3. INLINE STYLES - BACKGROUND COLORS
-  // ─────────────────────────────────────────────────────────────────────────
   section('3. Background Colors');
 
   print(
@@ -128,9 +121,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 4. TEXT OPTIONS
-  // ─────────────────────────────────────────────────────────────────────────
   section('4. Text Options');
 
   print(parser.render('<options=bold>Bold text</>'));
@@ -155,9 +146,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 5. COMBINED STYLES
-  // ─────────────────────────────────────────────────────────────────────────
   section('5. Combined Styles');
 
   print(parser.render('<fg=white;bg=blue> White on Blue </>'));
@@ -191,9 +180,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
   // 6. NESTED TAGS (Key Feature!)
-  // ─────────────────────────────────────────────────────────────────────────
   section('6. Nested Tags with Style Inheritance');
 
   print('The key improvement over the old parser - proper nesting:');
@@ -238,9 +225,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 7. ESCAPE SEQUENCES
-  // ─────────────────────────────────────────────────────────────────────────
+  // 7. Escape Sequences
   section('7. Escape Sequences');
 
   print(r'Use \< to output literal < characters:');
@@ -249,9 +234,7 @@ void main() {
   print(parser.render(r'  Example: \<info>This is info\</info>'));
   print(parser.render(r'  Mixed: \<escaped> but <info>this is styled</info>'));
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 8. HYPERLINKS
-  // ─────────────────────────────────────────────────────────────────────────
+  // 8. Hyperlinks (OSC 8)
   section('8. Hyperlinks (OSC 8)');
 
   print('Clickable links (terminal support required):');
@@ -273,9 +256,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 9. CUSTOM STYLES
-  // ─────────────────────────────────────────────────────────────────────────
+  // 9. Custom Registered Styles
   section('9. Custom Registered Styles');
 
   // Register custom styles
@@ -306,9 +287,7 @@ void main() {
   print(parser.render('  <highlight> IMPORTANT </highlight>'));
   print(parser.render('  <link>Click here for more</link>'));
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 10. PRACTICAL EXAMPLES
-  // ─────────────────────────────────────────────────────────────────────────
+  // 10. Practical Examples
   section('10. Practical Examples');
 
   // Git status output
@@ -367,9 +346,7 @@ void main() {
     ),
   );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 11. COLOR PROFILES
-  // ─────────────────────────────────────────────────────────────────────────
+  // 11. Color Profiles
   section('11. Color Profiles');
 
   final text = '<fg=#ff5500;options=bold>Colored Text</>';
@@ -391,9 +368,7 @@ void main() {
   final asciiParser = ConsoleTagParser(colorProfile: ColorProfile.ascii);
   print('  ASCII:     ${asciiParser.render(text)}');
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // 12. PARSER API
-  // ─────────────────────────────────────────────────────────────────────────
+  // 12. Parser API
   section('12. Parser API');
 
   print('Available named styles:');

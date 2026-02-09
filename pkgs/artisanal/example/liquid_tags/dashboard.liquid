@@ -1,0 +1,49 @@
+{% assign termCols = '' | term_width %}
+{% assign termRows = '' | term_height %}
+{% assign accent = "#4cc9f0" %}
+{% assign accentStrong = "#00f5d4" %}
+{% assign accentWarm = "#f72585" %}
+{% assign borderColor = "#a3cef1" %}
+{% assign titleColor = "#4cc9f0" %}
+{% frame title: "ARTISANAL LIQUID NEXUS" border: "double" width: frameWidth height: frameHeight padding: 0 %}
+  {% vstack gap: rowGap align: "left" %}
+    {% hstack gap: colGap align: "top" %}
+      {% panel title: "Telemetry" border: "rounded" width: teleWidth height: topHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+        {% vstack gap: 0 %}
+          {% vstack gap: 0 items: metrics %}
+          {% endvstack %}
+          |
+          {% text color: accentStrong bold: true %}status: LIVE{% endtext %}
+          |
+          {% text color: borderColor %}viewport: {{ termCols }}x{{ termRows }}{% endtext %}
+          |
+          {% rule width: teleInnerWidth color: accent %}
+          {% progress width: teleInnerWidth value: progress color: "#9b5de5" emptyColor: "#2b2d42" %}
+        {% endvstack %}
+      {% endpanel %}
+      |
+      {% panel title: "Signal Line" border: "rounded" width: linePanelWidth height: topHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+        {% line width: lineInnerWidth height: lineInnerHeight data: lineSeries color: accent grid: true gridColor: "#495057" %}
+      {% endpanel %}
+    {% endhstack %}
+    |
+    {% hstack gap: colGap align: "top" %}
+      {% panel title: "Histogram" border: "rounded" width: histoWidth height: midHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+        {% histogram width: histoInnerWidth height: histoInnerHeight data: histoValues color: accentWarm grid: true gridColor: "#3a0ca3" %}
+      {% endpanel %}
+      |
+      {% panel title: "Resource Pie" border: "rounded" width: piePanelWidth height: midHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+        {% pie width: pieSize height: pieSize data: pieValues colors: pieColors donut: true useBackground: false glyph: "█" innerRatio: 0.38 %}
+      {% endpanel %}
+      |
+      {% panel title: "Node Grid" border: "rounded" width: nodePanelWidth height: midHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+        {% grid columns: nodeColumns gap: nodeGap items: nodes %}
+        {% endgrid %}
+      {% endpanel %}
+    {% endhstack %}
+    |
+    {% panel title: "Node Table" border: "rounded" width: tablePanelWidth height: bottomHeight padding: panelPadding borderColor: borderColor titleColor: titleColor %}
+      {% table headers: tableHeaders rows: tableRows border: "hidden" align: tableAlign width: tableWidth headerColor: accent cellColor: borderColor %}
+    {% endpanel %}
+  {% endvstack %}
+{% endframe %}

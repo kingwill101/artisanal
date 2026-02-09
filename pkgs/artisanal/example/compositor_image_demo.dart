@@ -6,6 +6,20 @@ import 'package:image/image.dart' as img;
 // #region compositor_usage
 void main() {
   final io = Console(out: (s) => stdout.write(s), err: (s) => stderr.write(s));
+  final caps = TerminalCapabilities(
+    env: Platform.environment.entries
+        .map((e) => '${e.key}=${e.value}')
+        .toList(),
+  );
+  io.write('Detected capabilities (env hints only):\n');
+  io.write('  TERM=${Platform.environment['TERM'] ?? ''}\n');
+  io.write('  TERM_PROGRAM=${Platform.environment['TERM_PROGRAM'] ?? ''}\n');
+  io.write('  LC_TERMINAL=${Platform.environment['LC_TERMINAL'] ?? ''}\n');
+  io.write('  kitty=${caps.hasKittyGraphics}\n');
+  io.write('  sixel=${caps.hasSixel}\n');
+  io.write('  iterm2=${caps.hasITerm2}\n');
+  io.write('  keyboard=${caps.hasKeyboardEnhancements}\n');
+  io.write('\n');
 
   // Create a simple gradient image
   final image = img.Image(width: 100, height: 100);
@@ -15,8 +29,15 @@ void main() {
     }
   }
 
+  final imageDrawable = Terminal.bestImageDrawable(
+    image,
+    capabilities: caps,
+    columns: 20,
+    rows: 10,
+  );
+
   // Create layers
-  final imageLayer = newLayer(KittyImageDrawable(image, columns: 20, rows: 10))
+  final imageLayer = newLayer(imageDrawable)
     ..setId('image')
     ..setX(5)
     ..setY(2);
@@ -29,8 +50,9 @@ void main() {
 
   final compositor = Compositor([imageLayer, textLayer]);
 
+  final bounds = compositor.bounds();
   // Render to a canvas
-  final canvas = Canvas(40, 15);
+  final canvas = Canvas(bounds.width, bounds.height);
   canvas.compose(compositor);
 
   io.write(canvas.render());

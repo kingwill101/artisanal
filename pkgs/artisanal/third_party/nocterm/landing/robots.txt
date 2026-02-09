@@ -1,0 +1,37 @@
+# Nocterm - TUI Framework for Dart
+# https://nocterm.dev
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://nocterm.dev/sitemap.xml
+
+# Block demo JS files (not useful for indexing)
+Disallow: /demos/*.js
+
+# Allow all crawlers to index the main content
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+# AI crawlers - we want them to index us
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /

@@ -1,0 +1,38 @@
+{{ define "main" }}
+<!-- Post Header -->
+<div class="post-header">
+  <a href="/blog/" class="post-back-link">← Back to Blog</a>
+  <h1>{{ .Title }}</h1>
+  <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-icon">📅</span> {{ .Date.Format "Jan 2, 2006" }}
+    </span>
+    {{ with .Params.author }}
+    <span class="post-meta-item">
+      <span class="post-meta-icon">✍️</span> {{ . }}
+    </span>
+    {{ end }}
+    <span class="post-meta-item">
+      <span class="post-meta-icon">⏱️</span> {{ .ReadingTime }} min read
+    </span>
+    {{ with .Params.tags }}
+    <div class="post-card-tags">
+      {{ range . }}
+      <span class="tag tag-{{ . }}">{{ . }}</span>
+      {{ end }}
+    </div>
+    {{ end }}
+  </div>
+</div>
+
+<!-- Post Content -->
+<article class="post-content">
+  {{ .Content }}
+</article>
+
+<!-- Post Footer -->
+<div class="post-footer">
+  <a href="/blog/">← Back to Blog</a>
+  <span></span>
+</div>
+{{ end }}

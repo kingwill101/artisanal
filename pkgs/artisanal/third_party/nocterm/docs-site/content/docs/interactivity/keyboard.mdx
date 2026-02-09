@@ -1,0 +1,258 @@
+---
+title: Keyboard Events
+description: Handle keyboard input in your TUI
+icon: keyboard
+---
+
+Keyboard events let your app respond to user input. This guide covers keyboard handling in detail.
+
+## Focusable component
+
+Use `Focusable` to receive keyboard events:
+
+```dart
+Focusable(
+  focused: true,
+  onKeyEvent: (event) {
+    // Handle key event
+    return true;  // Event handled
+  },
+  child: Text('Focused component'),
+)
+```
+
+Only components with `focused: true` receive keyboard events.
+
+## KeyboardEvent
+
+The `onKeyEvent` callback receives a `KeyboardEvent`:
+
+```dart
+onKeyEvent: (event) {
+  // Logical key
+  if (event.logicalKey == LogicalKey.enter) {
+    print('Enter pressed');
+  }
+
+  // Character
+  if (event.character != null) {
+    print('Typed: ${event.character}');
+  }
+
+  // Modifiers
+  if (event.isControlPressed) {
+    print('Ctrl is held');
+  }
+  if (event.isShiftPressed) {
+    print('Shift is held');
+  }
+  if (event.isAltPressed) {
+    print('Alt is held');
+  }
+
+  return false;
+}
+```
+
+## Logical keys
+
+Use `LogicalKey` to check which key was pressed:
+
+### Navigation keys
+
+```dart
+LogicalKey.arrowUp
+LogicalKey.arrowDown
+LogicalKey.arrowLeft
+LogicalKey.arrowRight
+LogicalKey.home
+LogicalKey.end
+LogicalKey.pageUp
+LogicalKey.pageDown
+```
+
+### Editing keys
+
+```dart
+LogicalKey.backspace
+LogicalKey.delete
+LogicalKey.insert
+LogicalKey.tab
+LogicalKey.enter
+LogicalKey.escape
+```
+
+### Letter keys
+
+```dart
+LogicalKey.keyA
+LogicalKey.keyB
+LogicalKey.keyC
+// ... through Z
+```
+
+### Number keys
+
+```dart
+LogicalKey.digit0
+LogicalKey.digit1
+LogicalKey.digit2
+// ... through 9
+```
+
+### Function keys
+
+```dart
+LogicalKey.f1
+LogicalKey.f2
+LogicalKey.f3
+// ... through F12
+```
+
+### Other keys
+
+```dart
+LogicalKey.space
+LogicalKey.minus
+LogicalKey.equal
+LogicalKey.bracketLeft
+LogicalKey.bracketRight
+// ... and many more
+```
+
+## Keyboard shortcuts
+
+Handle common keyboard shortcuts:
+
+```dart
+onKeyEvent: (event) {
+  // Ctrl+S - Save
+  if (event.isControlPressed && event.logicalKey == LogicalKey.keyS) {
+    save();
+    return true;
+  }
+
+  // Ctrl+Q - Quit
+  if (event.isControlPressed && event.logicalKey == LogicalKey.keyQ) {
+    quit();
+    return true;
+  }
+
+  // Ctrl+C - Copy
+  if (event.isControlPressed && event.logicalKey == LogicalKey.keyC) {
+    copy();
+    return true;
+  }
+
+  return false;
+}
+```
+
+## Event bubbling
+
+Events bubble up the component tree until handled:
+
+```dart
+// Parent
+Focusable(
+  focused: true,
+  onKeyEvent: (event) {
+    print('Parent received: ${event.logicalKey}');
+    return false;  // Not handled, pass to parent
+  },
+  child: Focusable(
+    focused: true,
+    onKeyEvent: (event) {
+      if (event.logicalKey == LogicalKey.enter) {
+        print('Child handled Enter');
+        return true;  // Handled, stop bubbling
+      }
+      return false;  // Not handled, bubble to parent
+    },
+    child: Text('Child'),
+  ),
+)
+```
+
+If the child doesn't handle an event (`return false`), it bubbles to the parent.
+
+## Best practices
+
+### Return true when handled
+
+Always return `true` when you handle an event:
+
+```dart
+onKeyEvent: (event) {
+  if (event.logicalKey == LogicalKey.space) {
+    doSomething();
+    return true;  // Event handled
+  }
+  return false;  // Not handled
+}
+```
+
+### Use standard shortcuts
+
+Follow platform conventions:
+- `Ctrl+C`: Copy
+- `Ctrl+V`: Paste
+- `Ctrl+X`: Cut
+- `Ctrl+S`: Save
+- `Ctrl+Q`: Quit
+- `Ctrl+Z`: Undo
+
+### Provide keyboard alternatives
+
+Every mouse action should have a keyboard shortcut:
+
+```dart
+// Both mouse and keyboard work
+GestureDetector(
+  onTap: () => select(),
+  child: Focusable(
+    focused: isFocused,
+    onKeyEvent: (event) {
+      if (event.logicalKey == LogicalKey.enter) {
+        select();
+        return true;
+      }
+      return false;
+    },
+    child: Text('Item'),
+  ),
+)
+```
+
+### Handle Escape consistently
+
+Use ESC to close dialogs, cancel actions, or go back:
+
+```dart
+if (event.logicalKey == LogicalKey.escape) {
+  close();
+  return true;
+}
+```
+
+### Check modifiers
+
+Check modifiers to distinguish shortcuts:
+
+```dart
+// Plain S
+if (!event.isControlPressed && event.logicalKey == LogicalKey.keyS) {
+  typeCharacter('s');
+}
+
+// Ctrl+S
+if (event.isControlPressed && event.logicalKey == LogicalKey.keyS) {
+  save();
+}
+```
+
+## Next steps
+
+- [Mouse Support](/docs/interactivity/mouse) - Handle mouse events
+- [Focus Management](/docs/interactivity/focus) - Manage focus
+- [Input](/docs/components/input) - Input components

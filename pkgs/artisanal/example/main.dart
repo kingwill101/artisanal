@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' as dartio;
 import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/tui.dart';
 
 // #region verbosity_usage
@@ -84,7 +85,7 @@ class DemoCommand extends Command<void> {
     io.section('Messages');
     io.info('Info message');
     io.success('Success message');
-    io.warning('Warning message');
+    io.warn('Warning message');
     io.error('Error message');
     io.note('Note message');
     io.caution('Caution message');
@@ -124,7 +125,7 @@ class UiTaskCommand extends Command<void> {
   String get name => 'ui:task';
 
   @override
-  String get description => 'Render a Laravel-like task line.';
+  String get description => 'Render a task line.';
 
   @override
   Future<void> run() async {
@@ -313,7 +314,7 @@ class UiCountdownCommand extends Command<void> {
 
     io.title('Countdown Demo');
     io.text('This shows a countdown timer before an action.');
-    io.warning('Commonly used before destructive operations.');
+    io.warn('Commonly used before destructive operations.');
     io.newLine();
 
     await io.countdown('Proceeding in', seconds: seconds);
@@ -420,7 +421,7 @@ class UiProgressCommand extends Command<void> {
   }
 }
 
-/// Demonstrate the components facade (Laravel-style higher-level components).
+/// Demonstrate the components facade
 class UiComponentsCommand extends Command<void> {
   @override
   String get name => 'ui:components';
@@ -558,7 +559,7 @@ class UiSelectCommand extends Command<void> {
     if (selected != null) {
       io.success('Selected: $selected');
     } else {
-      io.warning('Selection cancelled');
+      io.warn('Selection cancelled');
     }
   }
 }
@@ -607,7 +608,7 @@ class UiMultiSelectCommand extends Command<void> {
 
     io.newLine();
     if (selected.isEmpty) {
-      io.warning('No features selected');
+      io.warn('No features selected');
     } else {
       io.success('Selected ${selected.length} feature(s):');
       io.components.bulletList(selected);
@@ -1073,7 +1074,7 @@ class UiSearchCommand extends Command<void> {
     if (selected != null) {
       io.success('Selected: $selected');
     } else {
-      io.warning('Selection cancelled');
+      io.warn('Selection cancelled');
     }
   }
 }
@@ -1120,7 +1121,7 @@ class UiSearchConvenienceCommand extends Command<void> {
     if (selected != null) {
       io.success('Opening: $selected');
     } else {
-      io.warning('No file selected');
+      io.warn('No file selected');
     }
   }
 }
@@ -1500,7 +1501,7 @@ class UiPasswordCommand extends Command<void> {
             );
 
       if (password == null) {
-        io.warning('Password prompt cancelled');
+        io.warn('Password prompt cancelled');
         return;
       }
       io.newLine();
@@ -1760,7 +1761,7 @@ class UiAllCommand extends Command<void> {
     io.section('1. Basic Output');
     io.info('Info message');
     io.success('Success message');
-    io.warning('Warning message');
+    io.warn('Warning message');
     io.error('Error message');
     io.note('Note message');
     io.caution('Caution message');
@@ -1986,7 +1987,7 @@ class UiAnticipateCommand extends Command<void> {
     if (country != null) {
       io.success('Selected: $country');
     } else {
-      io.warning('Selection cancelled');
+      io.warn('Selection cancelled');
     }
 
     io.newLine();
@@ -2019,7 +2020,7 @@ class UiAnticipateCommand extends Command<void> {
     if (package != null) {
       io.success('Selected: $package');
     } else {
-      io.warning('Selection cancelled');
+      io.warn('Selection cancelled');
     }
   }
 }
@@ -2052,7 +2053,7 @@ class UiTextareaCommand extends Command<void> {
           io.writeln('  $line');
         }
       } else {
-        io.warning('No content entered');
+        io.warn('No content entered');
       }
     } catch (e) {
       io.error('Editor not available: $e');
@@ -2147,7 +2148,7 @@ class UiWizardCommand extends Command<void> {
     );
 
     if (results == null) {
-      io.warning('Wizard cancelled');
+      io.warn('Wizard cancelled');
       return;
     }
 
@@ -2281,7 +2282,7 @@ class UiComponentSystemCommand extends Command<void> {
 
     // Text components
     io.writeln('Text components:');
-    Text('  Plain text').writelnTo(io);
+    bubbles.Text('  Plain text').writelnTo(io);
     StyledText.info(
       '  Info styled text',
       renderConfig: renderConfig,
@@ -2383,9 +2384,9 @@ class UiComponentSystemCommand extends Command<void> {
     RowComponent(
       children: [
         StyledText.success('✓ Pass', renderConfig: renderConfig),
-        Text(' | '),
+        bubbles.Text(' | '),
         StyledText.error('✗ Fail', renderConfig: renderConfig),
-        Text(' | '),
+        bubbles.Text(' | '),
         StyledText.warning('⚠ Warn', renderConfig: renderConfig),
       ],
     ).writelnTo(io);

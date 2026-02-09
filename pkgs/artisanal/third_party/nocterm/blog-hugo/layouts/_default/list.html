@@ -1,0 +1,29 @@
+{{ define "title" }}Blog - Nocterm | TUI Framework for Dart{{ end }}
+
+{{ define "main" }}
+<!-- Title -->
+<div class="blog-title-section">
+  <h1>Blog</h1>
+  <p>{{ .Site.Params.description }}</p>
+</div>
+
+<!-- Post Grid -->
+<div class="blog-grid">
+  {{ range where site.RegularPages.ByDate.Reverse "Section" "posts" }}
+  <a href="{{ .RelPermalink }}" class="post-card">
+    <div class="post-card-meta">
+      <span class="post-card-date">{{ .Date.Format "Jan 2, 2006" }}</span>
+      <span class="post-card-meta-sep">/</span>
+      <span class="post-card-reading-time">{{ .ReadingTime }} min read</span>
+    </div>
+    <h2>{{ .Title }}</h2>
+    <p>{{ .Description }}</p>
+    <div class="post-card-tags">
+      {{ range .Params.tags }}
+      <span class="tag tag-{{ . }}">{{ . }}</span>
+      {{ end }}
+    </div>
+  </a>
+  {{ end }}
+</div>
+{{ end }}

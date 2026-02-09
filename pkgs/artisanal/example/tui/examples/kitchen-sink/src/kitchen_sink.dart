@@ -1,5 +1,6 @@
 import 'dart:io' as io;
 import 'dart:math' as math;
+import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' as uv;

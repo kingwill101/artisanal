@@ -1,0 +1,266 @@
+---
+title: Terminal
+description: Embed terminal emulator for subprocesses
+icon: terminal
+---
+
+The `TerminalXterm` component embeds a full terminal emulator to display subprocess output. This guide shows you how to use it.
+
+## Terminal widget
+
+`TerminalXterm` runs subprocesses and displays their output:
+
+```dart
+import 'package:nocterm/nocterm.dart';
+import 'package:nocterm/src/process/pty_controller.dart';
+
+class TerminalDemo extends StatefulComponent {
+  const TerminalDemo({super.key});
+
+  @override
+  State<TerminalDemo> createState() => _TerminalDemoState();
+}
+
+class _TerminalDemoState extends State<TerminalDemo> {
+  late final PtyController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PtyController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return TerminalXterm(
+      controller: _controller,
+      focused: true,
+    );
+  }
+}
+```
+
+### PtyController
+
+`PtyController` manages the subprocess:
+
+```dart
+final controller = PtyController();
+
+// Start a process
+await controller.start(
+  executable: 'bash',
+  arguments: ['-c', 'ls -la'],
+);
+
+// Write to the process
+controller.write('echo hello\n');
+
+// Stop the process
+controller.stop();
+
+// Always dispose
+controller.dispose();
+```
+
+### Terminal properties
+
+Configure the terminal:
+
+```dart
+TerminalXterm(
+  controller: controller,
+  focused: true,         // Whether terminal receives keyboard input
+  autoStart: true,       // Auto-start process if not running
+  maxLines: 10000,       // Maximum scrollback lines
+  onKeyEvent: (event) {  // Custom key handling
+    // Handle special keys
+    return false;
+  },
+)
+```
+
+## Use cases
+
+### Running shell commands
+
+Display command output:
+
+```dart
+class CommandRunner extends StatefulComponent {
+  const CommandRunner({super.key});
+
+  @override
+  State<CommandRunner> createState() => _CommandRunnerState();
+}
+
+class _CommandRunnerState extends State<CommandRunner> {
+  late final PtyController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PtyController();
+    _runCommand();
+  }
+
+  Future<void> _runCommand() async {
+    await _controller.start(
+      executable: 'dart',
+      arguments: ['--version'],
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return TerminalXterm(
+      controller: _controller,
+      focused: false,
+    );
+  }
+}
+```
+
+### Interactive shell
+
+Run an interactive bash session:
+
+```dart
+Future<void> _startShell() async {
+  await _controller.start(
+    executable: 'bash',
+    workingDirectory: '/home/user',
+    environment: {'TERM': 'xterm-256color'},
+  );
+}
+```
+
+### Build output
+
+Display build logs:
+
+```dart
+Future<void> _runBuild() async {
+  await _controller.start(
+    executable: 'dart',
+    arguments: ['run', 'build_runner', 'build'],
+  );
+}
+```
+
+## Advanced usage
+
+### Custom environment
+
+Pass environment variables:
+
+```dart
+await controller.start(
+  executable: 'node',
+  arguments: ['app.js'],
+  environment: {
+    'NODE_ENV': 'production',
+    'PORT': '3000',
+  },
+);
+```
+
+### Working directory
+
+Set the working directory:
+
+```dart
+await controller.start(
+  executable: 'git',
+  arguments: ['status'],
+  workingDirectory: '/path/to/repo',
+);
+```
+
+### Process completion
+
+Listen for process exit:
+
+```dart
+controller.onExit.listen((exitCode) {
+  print('Process exited with code: $exitCode');
+});
+```
+
+## Terminal emulation
+
+`TerminalXterm` uses the xterm.dart library for full VT100/ANSI terminal emulation. This means:
+- ANSI escape codes work correctly
+- Colors, cursor movement, and screen clearing all work
+- Interactive programs like `vim`, `htop`, and `less` work
+- Terminal resizing is handled automatically
+
+## Best practices
+
+### Always dispose controllers
+
+```dart
+@override
+void dispose() {
+  _controller.dispose();
+  super.dispose();
+}
+```
+
+### Handle process errors
+
+```dart
+try {
+  await controller.start(executable: 'command');
+} catch (e) {
+  print('Failed to start process: $e');
+}
+```
+
+### Set appropriate maxLines
+
+Limit scrollback to avoid memory issues:
+
+```dart
+TerminalXterm(
+  controller: controller,
+  maxLines: 1000,  // Limit to 1000 lines
+)
+```
+
+### Clean up on exit
+
+Stop processes before disposing:
+
+```dart
+@override
+void dispose() {
+  _controller.stop();
+  _controller.dispose();
+  super.dispose();
+}
+```
+
+## Limitations
+
+- The terminal emulator requires terminal features like ANSI support
+- Very complex TUI applications may have rendering issues
+- Performance depends on subprocess output rate
+
+## Next steps
+
+- [Keyboard Events](/docs/interactivity/keyboard) - Handle keyboard input
+- [Testing](/docs/testing/basics) - Test your components
+- [Scrolling](/docs/components/scrolling) - Scrollable content

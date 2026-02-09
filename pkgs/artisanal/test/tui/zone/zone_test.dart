@@ -500,8 +500,7 @@ void main() {
 
       // Now mark a subset
       manager = ZoneManager();
-      final content =
-          '${manager.mark('outer', '${manager.mark('inner', 'BBB')}')}';
+      final content = manager.mark('outer', manager.mark('inner', 'BBB'));
       manager.scan('AAA${content}CCC');
 
       // The inner zone should be found when clicking on 'BBB'

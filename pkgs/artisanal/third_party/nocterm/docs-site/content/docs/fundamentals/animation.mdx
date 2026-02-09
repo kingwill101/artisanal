@@ -1,0 +1,536 @@
+---
+title: Animation
+description: Flutter-like animation system for smooth, declarative animations in Nocterm
+icon: play
+---
+
+Nocterm includes a complete animation system modeled after Flutter's. You can create smooth animations using `AnimationController`, `Tween`s, and `Curve`s to bring your terminal UIs to life.
+
+## Quick start
+
+Here's a simple fade-in animation:
+
+```dart
+class FadeIn extends StatefulComponent {
+  const FadeIn({required this.child, super.key});
+
+  final Component child;
+
+  @override
+  State<FadeIn> createState() => _FadeInState();
+}
+
+class _FadeInState extends State<FadeIn>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        // Use _controller.value (0.0 to 1.0) to drive your animation
+        return Opacity(
+          opacity: _controller.value,
+          child: child,
+        );
+      },
+      child: component.child,
+    );
+  }
+}
+```
+
+This creates a component that fades in over 500ms when added to the tree.
+
+## AnimationController
+
+`AnimationController` is the core class for driving animations. It produces values from `lowerBound` (default 0.0) to `upperBound` (default 1.0) over a specified duration.
+
+### Creating a controller
+
+Always create controllers in `initState()` and dispose them in `dispose()`:
+
+```dart
+class _MyState extends State<MyComponent>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,  // Required: the TickerProvider
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+```
+
+The `vsync` parameter requires a `TickerProvider`. Use `SingleTickerProviderStateMixin` for a single animation or `TickerProviderStateMixin` for multiple animations.
+
+### Controller properties
+
+| Property | Description |
+|----------|-------------|
+| `value` | Current animation value (usually 0.0 to 1.0) |
+| `status` | Current status: `dismissed`, `forward`, `reverse`, or `completed` |
+| `duration` | Time to animate forward |
+| `reverseDuration` | Time to animate in reverse (defaults to `duration`) |
+| `lowerBound` | Starting value (default 0.0) |
+| `upperBound` | Ending value (default 1.0) |
+| `isAnimating` | Whether the animation is currently running |
+| `isCompleted` | Whether the animation is at `upperBound` |
+| `isDismissed` | Whether the animation is at `lowerBound` |
+
+### Controller methods
+
+#### forward()
+
+Plays the animation forward from current value to `upperBound`:
+
+```dart
+_controller.forward();
+
+// Start from a specific value
+_controller.forward(from: 0.0);
+```
+
+Returns a `TickerFuture` that completes when the animation finishes.
+
+#### reverse()
+
+Plays the animation backward to `lowerBound`:
+
+```dart
+_controller.reverse();
+
+// Start from a specific value
+_controller.reverse(from: 1.0);
+```
+
+#### animateTo()
+
+Animates to a specific value with optional custom duration and curve:
+
+```dart
+_controller.animateTo(0.5);
+
+// With custom duration and curve
+_controller.animateTo(
+  0.75,
+  duration: const Duration(milliseconds: 300),
+  curve: Curves.easeOut,
+);
+```
+
+#### repeat()
+
+Repeats the animation indefinitely:
+
+```dart
+// Repeat forward only (jumps back to start)
+_controller.repeat();
+
+// Repeat with reverse (ping-pong)
+_controller.repeat(reverse: true);
+
+// Custom range and period
+_controller.repeat(
+  min: 0.2,
+  max: 0.8,
+  period: const Duration(seconds: 2),
+);
+```
+
+#### stop()
+
+Stops the animation at its current value:
+
+```dart
+_controller.stop();
+```
+
+#### reset()
+
+Resets the animation to `lowerBound`:
+
+```dart
+_controller.reset();
+```
+
+### Unbounded animations
+
+For animations that need values outside 0.0-1.0 (like scroll positions):
+
+```dart
+final controller = AnimationController.unbounded(
+  value: 0.0,
+  duration: const Duration(seconds: 1),
+  vsync: this,
+);
+```
+
+## Tweens
+
+A `Tween` interpolates between two values. Use tweens to convert the controller's 0.0-1.0 range into other types like colors, integers, or custom values.
+
+### Basic usage
+
+```dart
+final colorTween = ColorTween(
+  begin: Color.red,
+  end: Color.blue,
+);
+
+// Get the interpolated value at the current animation position
+final currentColor = colorTween.evaluate(_controller);
+```
+
+### Using drive()
+
+Chain a tween with an animation using `drive()`:
+
+```dart
+late Animation<Color?> _colorAnimation;
+
+@override
+void initState() {
+  super.initState();
+  _controller = AnimationController(
+    duration: const Duration(seconds: 1),
+    vsync: this,
+  );
+
+  _colorAnimation = _controller.drive(
+    ColorTween(begin: Color.red, end: Color.blue),
+  );
+}
+```
+
+### Available tweens
+
+| Tween | Description |
+|-------|-------------|
+| `Tween<T>` | Generic tween for numeric types |
+| `IntTween` | Interpolates integers (rounds to nearest) |
+| `DoubleTween` | Interpolates doubles |
+| `ColorTween` | Interpolates colors (ARGB channels) |
+| `CurveTween` | Applies a curve to a double value |
+| `ConstantTween<T>` | Always returns the same value |
+| `ReverseTween<T>` | Reverses another tween |
+| `StepTween` | Interpolates integers (floors to nearest) |
+
+### TweenSequence
+
+Combine multiple tweens into a single sequence:
+
+```dart
+final sequence = TweenSequence<double>([
+  TweenSequenceItem(
+    tween: Tween(begin: 0.0, end: 1.0),
+    weight: 1,
+  ),
+  TweenSequenceItem(
+    tween: ConstantTween(1.0),
+    weight: 1,
+  ),
+  TweenSequenceItem(
+    tween: Tween(begin: 1.0, end: 0.0),
+    weight: 1,
+  ),
+]);
+```
+
+This creates an animation that fades in, holds, then fades out.
+
+## Curves
+
+Curves control the rate of change over time. Instead of linear motion, curves create more natural-feeling animations.
+
+### Using curves
+
+Apply a curve with `CurveTween`:
+
+```dart
+final curved = _controller.drive(
+  CurveTween(curve: Curves.easeInOut),
+);
+```
+
+Or chain curves with other tweens:
+
+```dart
+final animation = _controller.drive(
+  CurveTween(curve: Curves.easeOut).chain(
+    Tween(begin: 0.0, end: 100.0),
+  ),
+);
+```
+
+### Available curves
+
+**Standard curves:**
+- `Curves.linear` - Constant rate of change
+- `Curves.ease` - Slow start, fast middle, slow end (most common)
+- `Curves.easeIn` - Slow start, speeds up
+- `Curves.easeOut` - Fast start, slows down
+- `Curves.easeInOut` - Slow start and end
+
+**Sine-based:**
+- `Curves.easeInSine`, `Curves.easeOutSine`, `Curves.easeInOutSine`
+
+**Quadratic:**
+- `Curves.easeInQuad`, `Curves.easeOutQuad`, `Curves.easeInOutQuad`
+
+**Cubic:**
+- `Curves.easeInCubic`, `Curves.easeOutCubic`, `Curves.easeInOutCubic`
+
+**Exponential:**
+- `Curves.easeInExpo`, `Curves.easeOutExpo`, `Curves.easeInOutExpo`
+
+**Circular:**
+- `Curves.easeInCirc`, `Curves.easeOutCirc`, `Curves.easeInOutCirc`
+
+**Back (overshoot):**
+- `Curves.easeInBack`, `Curves.easeOutBack`, `Curves.easeInOutBack`
+
+**Elastic (spring):**
+- `Curves.elasticIn`, `Curves.elasticOut`, `Curves.elasticInOut`
+
+**Bounce:**
+- `Curves.bounceIn`, `Curves.bounceOut`, `Curves.bounceInOut`
+
+**Other:**
+- `Curves.decelerate` - Starts fast, decelerates
+- `Curves.fastOutSlowIn` - Material Design standard curve
+
+### Custom curves
+
+Create custom curves using `Cubic`:
+
+```dart
+const myCustomCurve = Cubic(0.25, 0.1, 0.25, 1.0);
+```
+
+The four values define two control points for a cubic Bezier curve.
+
+### Interval
+
+Use `Interval` to make an animation active only during part of the timeline:
+
+```dart
+// Only animate during 0.0-0.5 of the parent animation
+final fadeIn = CurveTween(
+  curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+);
+
+// Animate during 0.5-1.0
+final fadeOut = CurveTween(
+  curve: const Interval(0.5, 1.0, curve: Curves.easeOut),
+);
+```
+
+## AnimatedBuilder
+
+`AnimatedBuilder` rebuilds its child whenever an animation changes. It's the recommended way to use animations in your UI.
+
+### Basic usage
+
+```dart
+AnimatedBuilder(
+  animation: _controller,
+  builder: (context, child) {
+    return Container(
+      color: Color.lerp(Color.red, Color.blue, _controller.value),
+      child: child,
+    );
+  },
+  child: Text('Hello'),  // Optimization: won't rebuild
+)
+```
+
+### Child optimization
+
+Pass static content as `child` to avoid rebuilding it on every frame:
+
+```dart
+AnimatedBuilder(
+  animation: _controller,
+  builder: (context, child) {
+    // Only the opacity changes each frame
+    return Opacity(
+      opacity: _controller.value,
+      child: child,  // This subtree won't rebuild
+    );
+  },
+  child: ExpensiveComponent(),  // Built once
+)
+```
+
+### ListenableBuilder
+
+For non-animation `Listenable`s like `ChangeNotifier`:
+
+```dart
+ListenableBuilder(
+  listenable: myNotifier,
+  builder: (context, child) {
+    return Text('Value: ${myNotifier.value}');
+  },
+)
+```
+
+## Complete example
+
+Here's a loading indicator that pulses:
+
+```dart
+class PulsingIndicator extends StatefulComponent {
+  const PulsingIndicator({super.key});
+
+  @override
+  State<PulsingIndicator> createState() => _PulsingIndicatorState();
+}
+
+class _PulsingIndicatorState extends State<PulsingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Color?> _colorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _colorAnimation = _controller.drive(
+      ColorTween(
+        begin: Color.fromRGB(100, 100, 100),
+        end: Color.fromRGB(200, 200, 200),
+      ).chain(CurveTween(curve: Curves.easeInOut)),
+    );
+
+    // Start repeating animation
+    _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Component build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _colorAnimation,
+      builder: (context, child) {
+        return Text(
+          'Loading...',
+          style: TextStyle(foreground: _colorAnimation.value),
+        );
+      },
+    );
+  }
+}
+```
+
+## Listening to status changes
+
+React to animation lifecycle events:
+
+```dart
+@override
+void initState() {
+  super.initState();
+  _controller = AnimationController(
+    duration: const Duration(seconds: 1),
+    vsync: this,
+  );
+
+  _controller.addStatusListener((status) {
+    if (status == AnimationStatus.completed) {
+      // Animation finished going forward
+      _controller.reverse();
+    } else if (status == AnimationStatus.dismissed) {
+      // Animation finished going backward
+      _controller.forward();
+    }
+  });
+
+  _controller.forward();
+}
+```
+
+## Best practices
+
+### Always dispose controllers
+
+```dart
+@override
+void dispose() {
+  _controller.dispose();
+  super.dispose();
+}
+```
+
+Failing to dispose controllers causes memory leaks and can lead to errors.
+
+### Use the right mixin
+
+- `SingleTickerProviderStateMixin` - For one animation controller (slightly more efficient)
+- `TickerProviderStateMixin` - For multiple animation controllers
+
+### Optimize with child parameter
+
+Always use `AnimatedBuilder`'s `child` parameter for content that doesn't depend on the animation value.
+
+### Keep animations short
+
+Terminal UIs run at lower frame rates than graphical UIs. Keep animations under 500ms for the best experience.
+
+### Check mounted before setState
+
+When using animation callbacks with async operations:
+
+```dart
+_controller.addStatusListener((status) async {
+  await someAsyncWork();
+  if (mounted) {
+    setState(() {
+      // Safe to update state
+    });
+  }
+});
+```
+
+## Next steps
+
+- [State Management](/docs/fundamentals/state) - Learn about state and setState
+- [Components](/docs/fundamentals/components) - Review component types
+- [Theming](/docs/fundamentals/theming) - Style your animated components

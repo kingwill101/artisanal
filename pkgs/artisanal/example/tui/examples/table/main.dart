@@ -1,5 +1,6 @@
 library;
 
+import 'package:artisanal/bubbles.dart' as bubbles;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
@@ -52,10 +53,10 @@ class TableDemoModel implements tui.Model {
 
 Future<void> main() async {
   final columns = [
-    tui.Column(title: 'Rank', width: 4),
-    tui.Column(title: 'City', width: 10),
-    tui.Column(title: 'Country', width: 10),
-    tui.Column(title: 'Population', width: 10),
+    bubbles.Column(title: 'Rank', width: 4),
+    bubbles.Column(title: 'City', width: 10),
+    bubbles.Column(title: 'Country', width: 10),
+    bubbles.Column(title: 'Population', width: 10),
   ];
 
   final rows = [
