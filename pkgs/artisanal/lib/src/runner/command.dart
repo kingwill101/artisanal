@@ -6,6 +6,7 @@ import '../io/console.dart';
 import '../renderer/renderer.dart';
 import '../style/color.dart';
 import '../style/style.dart';
+import '../style/verbosity.dart';
 import 'command_listing.dart';
 import 'command_runner.dart';
 
@@ -39,6 +40,7 @@ abstract class Command<T> extends args.Command<T> {
 
   final List<String> _aliases;
 
+  /// Alternative names for this command.
   @override
   List<String> get aliases => _aliases;
 
@@ -57,6 +59,34 @@ abstract class Command<T> extends args.Command<T> {
     );
   }
 
+  /// Writes a plain line to output (Laravel-style).
+  void line(Object message, {String? style, Verbosity? verbosity}) =>
+      io.line(message, style: style, verbosity: verbosity);
+
+  /// Writes an info message (Laravel-style).
+  void info(Object message, {Verbosity? verbosity}) =>
+      io.info(message, verbosity: verbosity);
+
+  /// Writes a comment message (Laravel-style).
+  void comment(Object message, {Verbosity? verbosity}) =>
+      io.comment(message, verbosity: verbosity);
+
+  /// Writes a question message (Laravel-style).
+  void question(Object message, {Verbosity? verbosity}) =>
+      io.question(message, verbosity: verbosity);
+
+  /// Writes a warning message (Laravel-style).
+  void warn(Object message, {Verbosity? verbosity}) =>
+      io.warn(message, verbosity: verbosity);
+
+  /// Writes an error message (Laravel-style).
+  void error(Object message, {Verbosity? verbosity}) =>
+      io.error(message, verbosity: verbosity);
+
+  /// Writes an alert box (Laravel-style).
+  void alert(Object message, {Verbosity? verbosity}) =>
+      io.alert(message, verbosity: verbosity);
+
   /// Separator used to group subcommands for display.
   ///
   /// Defaults to `:` (matching Artisanal-style namespaces).
@@ -68,6 +98,7 @@ abstract class Command<T> extends args.Command<T> {
     return ':';
   }
 
+  /// Prints the command usage information.
   @override
   void printUsage() {
     final r = runner;
@@ -78,6 +109,7 @@ abstract class Command<T> extends args.Command<T> {
     dartio.stdout.writeln(formatUsage());
   }
 
+  /// Throws a usage error with the given message.
   @override
   Never usageException(String message) =>
       throw args.UsageException(message, formatUsage(includeDescription: true));

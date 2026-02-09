@@ -3,7 +3,6 @@ import 'package:markdown/markdown.dart' as md;
 
 import 'theme.dart';
 import '../style/style.dart';
-import '../tui/markdown/syntax_highlighter.dart';
 import '../uv/wrap.dart' as uv_wrap;
 
 /// Renders markdown to ANSI using the Glamour theme system.
@@ -13,9 +12,13 @@ import '../uv/wrap.dart' as uv_wrap;
 /// so `renderStyle` normalizes the AST to merge adjacent blockquotes and
 /// promote nested `>` markers into nested blockquote nodes before rendering.
 class GlamourRenderer implements md.NodeVisitor {
+  /// Creates a renderer with a theme and optional line width.
   GlamourRenderer({required this.theme, this.width = 80});
 
+  /// The style theme used for rendering.
   final GlamourTheme theme;
+
+  /// The maximum line width for word wrapping.
   final int width;
 
   final StringBuffer _outputBuffer = StringBuffer();
@@ -30,16 +33,15 @@ class GlamourRenderer implements md.NodeVisitor {
   int _lastChar = 0;
 
   // Syntax Highlighting
-  SyntaxHighlighter? _syntaxHighlighter;
 
   // Table state
   final List<String> _tableHeaders = [];
   final List<List<String>> _tableRows = [];
   final List<String> _currentRow = [];
   bool _inTableHead = false;
-  bool _inTable = false;
   bool _inTableCell = false;
 
+  /// Renders a markdown string to styled ANSI output.
   String render(List<md.Node> nodes) {
     _outputBuffer.clear();
     _blockStack.clear();
@@ -394,7 +396,6 @@ class GlamourRenderer implements md.NodeVisitor {
         return true;
 
       case 'table':
-        _inTable = true;
         _tableHeaders.clear();
         _tableRows.clear();
         _currentRow.clear();
@@ -480,7 +481,6 @@ class GlamourRenderer implements md.NodeVisitor {
         break;
 
       case 'table':
-        _inTable = false;
         _inTableCell = false;
         _renderTable();
         _tableHeaders.clear();
@@ -516,7 +516,7 @@ class GlamourRenderer implements md.NodeVisitor {
       if (node is md.Text) {
         buffer.write(_htmlUnescape.convert(node.text));
       } else if (node is md.Element) {
-        for (final child in (node as md.Element).children ?? []) {
+        for (final child in node.children ?? []) {
           visitNode(child);
         }
       }
@@ -727,11 +727,19 @@ class GlamourRenderer implements md.NodeVisitor {
   }
 }
 
+/// Tracks rendering state for a block-level markdown element.
+///
 /// Context for a nested block rendering context.
 class GlamourBlockContext {
+  /// Creates a block context with style, width, and buffer.
   GlamourBlockContext({required this.style, required this.maxWidth});
 
+  /// The [Style] applied to this block.
   final GlamourBlockStyle style;
+
+  /// The maximum width available for this block.
   final int maxWidth;
+
+  /// The string buffer accumulating this block's output.
   final StringBuffer buffer = StringBuffer();
 }

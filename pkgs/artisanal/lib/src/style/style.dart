@@ -29,6 +29,7 @@ import 'properties.dart';
 import '../layout/layout.dart';
 import '../renderer/renderer.dart';
 import '../terminal/ansi.dart';
+import '../tui/trace.dart';
 import '../unicode/grapheme.dart' as uni;
 import '../uv/wrap.dart' as uv_wrap;
 
@@ -1927,6 +1928,8 @@ class Style {
   }
 
   String _renderComposed(String text) {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     text = _applyConsoleTags(text);
 
     // Potentially convert tabs to spaces
@@ -1937,6 +1940,12 @@ class Style {
     // If this style has no active properties, return the string unchanged.
     // This matches lipgloss' early return when a style is effectively empty.
     if (_props == 0 && _props2 == 0) {
+      sw?.stop();
+      if (sw != null) {
+        TuiTrace.log(
+          'style.render noop len=${text.length} ${sw.elapsedMicroseconds}us',
+        );
+      }
       return text;
     }
 
@@ -1954,6 +1963,12 @@ class Style {
     if (colorProfile == ColorProfile.ascii &&
         !hasTextAttributes &&
         !hasLayout) {
+      sw?.stop();
+      if (sw != null) {
+        TuiTrace.log(
+          'style.render ascii len=${text.length} ${sw.elapsedMicroseconds}us',
+        );
+      }
       return text;
     }
 
@@ -1966,7 +1981,15 @@ class Style {
 
     // If inline, skip layout processing
     if (_inline) {
-      return _applyTextStyles(result);
+      final inlineResult = _applyTextStyles(result);
+      sw?.stop();
+      if (sw != null) {
+        TuiTrace.log(
+          'style.render inline len=${text.length} props=$_props props2=$_props2 '
+          '${sw.elapsedMicroseconds}us',
+        );
+      }
+      return inlineResult;
     }
 
     // Process lines for layout
@@ -2041,7 +2064,13 @@ class Style {
     }
 
     result = lines.join('\n');
-
+    sw?.stop();
+    if (sw != null) {
+      TuiTrace.log(
+        'style.render len=${text.length} props=$_props props2=$_props2 '
+        '${sw.elapsedMicroseconds}us',
+      );
+    }
     return result;
   }
 

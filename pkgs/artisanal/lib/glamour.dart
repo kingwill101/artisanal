@@ -5,7 +5,7 @@
 ///
 /// Note: This is separate from [markdown.dart] which provides a lighter-weight
 /// ANSI renderer.
-library glamour;
+library;
 
 import 'package:markdown/markdown.dart' as md;
 import 'src/glamour/renderer.dart';
