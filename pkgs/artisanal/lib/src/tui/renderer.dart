@@ -3,6 +3,7 @@ import 'dart:io' as io;
 
 import 'terminal.dart';
 import 'view.dart';
+import '../uv/ansi.dart' show UvAnsi;
 import '../uv/buffer.dart' as uv_buffer;
 import '../uv/styled_string.dart' as uv_styled;
 import '../uv/terminal_renderer.dart' as uv_term;
@@ -39,6 +40,9 @@ abstract class TuiRenderer {
 
 /// Options for configuring the renderer.
 class TuiRendererOptions {
+  /// Creates renderer options.
+  ///
+  /// All parameters have sensible defaults for fullscreen rendering.
   const TuiRendererOptions({
     this.fps = 60,
     this.altScreen = true,
@@ -68,11 +72,29 @@ class TuiRendererOptions {
   Duration get frameTime => Duration(milliseconds: 1000 ~/ fps);
 }
 
+/// Converts bare LF to CR+LF for terminals that require explicit carriage returns.
+String _mapNewlines(String input) {
+  if (input.isEmpty) return input;
+  final buffer = StringBuffer();
+  for (var i = 0; i < input.length; i++) {
+    final code = input.codeUnitAt(i);
+    if (code == 0x0A) {
+      final prevIsCr = i > 0 && input.codeUnitAt(i - 1) == 0x0D;
+      if (!prevIsCr) buffer.write('\r');
+      buffer.write('\n');
+      continue;
+    }
+    buffer.writeCharCode(code);
+  }
+  return buffer.toString();
+}
+
 /// Full-screen renderer using the alternate screen buffer.
 ///
-/// This renderer clears the entire screen and redraws from
-/// position (0,0) on each render. Best for fullscreen applications.
+/// Clears the entire screen and redraws from position (0,0) on each frame.
+/// Best for fullscreen applications that own the entire terminal.
 class FullScreenTuiRenderer implements TuiRenderer {
+  /// Creates a fullscreen renderer targeting the given [terminal].
   FullScreenTuiRenderer({
     required this.terminal,
     TuiRendererOptions options = const TuiRendererOptions(),
@@ -145,7 +167,8 @@ class FullScreenTuiRenderer implements TuiRenderer {
     // Full redraw (future: diff with _lastView and update only changed lines)
     terminal.cursorHome();
     final output = _options.ansiCompress ? compressAnsi(content) : content;
-    terminal.write(output);
+    final mapped = _options.altScreen ? _mapNewlines(output) : output;
+    terminal.write(mapped);
 
     // Clear any remaining content from previous render
     _clearToEndOfScreen(content);
@@ -172,7 +195,10 @@ class FullScreenTuiRenderer implements TuiRenderer {
       for (var i = viewLines; i < termHeight; i++) {
         buffer.write('$clearLine\n');
       }
-      terminal.write(buffer.toString());
+      final clearOutput = _options.altScreen
+          ? _mapNewlines(buffer.toString())
+          : buffer.toString();
+      terminal.write(clearOutput);
     }
   }
 
@@ -207,6 +233,7 @@ class FullScreenTuiRenderer implements TuiRenderer {
 /// output accumulates in the terminal history. Best for
 /// tools that should leave output visible after exit.
 class InlineTuiRenderer implements TuiRenderer {
+  /// Creates an inline renderer targeting the given [terminal].
   InlineTuiRenderer({
     required this.terminal,
     TuiRendererOptions options = const TuiRendererOptions(
@@ -386,6 +413,7 @@ class InlineTuiRenderer implements TuiRenderer {
 /// Collects all output in a buffer and writes it in a single
 /// operation to reduce flickering.
 class BufferedTuiRenderer implements TuiRenderer {
+  /// Creates a buffered renderer wrapping [inner].
   BufferedTuiRenderer({required this.inner});
 
   /// The underlying renderer.
@@ -438,14 +466,24 @@ class BufferedTuiRenderer implements TuiRenderer {
 /// - `third_party/ultraviolet/styled.go` (`StyledString.Draw`)
 /// - `third_party/ultraviolet/terminal_renderer.go` (`UvTerminalRenderer.Render`)
 class UltravioletTuiRenderer implements TuiRenderer {
+  /// Creates a UV renderer targeting the given [terminal].
+  ///
+  /// If [movementCapsOverride] is provided, it replaces the auto-detected
+  /// terminal movement capabilities (tab stops and backspace support).
   UltravioletTuiRenderer({
     required this.terminal,
     TuiRendererOptions options = const TuiRendererOptions(),
     this.movementCapsOverride,
   }) : _options = options;
 
+  /// The terminal to render to.
   final TuiTerminal terminal;
   final TuiRendererOptions _options;
+
+  /// Optional override for terminal movement capabilities.
+  ///
+  /// When non-null, bypasses auto-detection of tab-stop and backspace
+  /// support, which is useful for testing or non-standard terminals.
   final ({bool useTabs, bool useBackspace})? movementCapsOverride;
 
   bool _initialized = false;
@@ -464,6 +502,10 @@ class UltravioletTuiRenderer implements TuiRenderer {
   @override
   uv_term.RenderMetrics? get metrics => _renderer?.metrics;
 
+  /// Appends [text] as persistent log line(s) above the rendered view.
+  ///
+  /// Lines are stored in a bounded buffer and composited with the view
+  /// content on each render.
   void printLine(String text) {
     _initialize();
     if (text.isEmpty) return;
@@ -484,6 +526,10 @@ class UltravioletTuiRenderer implements TuiRenderer {
     return '${_printLines.join('\n')}\n$view';
   }
 
+  /// Renders [view] immediately, bypassing frame-rate limiting.
+  ///
+  /// Use this for urgent updates that must be visible before the next
+  /// regular render cycle (e.g. fatal-error screens).
   void renderImmediate(String view) {
     _initialize();
     _pendingView = _composeView(view);
@@ -529,8 +575,10 @@ class UltravioletTuiRenderer implements TuiRenderer {
     _renderer = uv_term.UvTerminalRenderer(sink, env: env);
     _renderer!.setFullscreen(_options.altScreen);
     _renderer!.setRelativeCursor(!_options.altScreen);
-    _renderer!.setMapNewline(!io.Platform.isWindows && terminal.isTerminal);
-    _renderer!.setScrollOptim(!io.Platform.isWindows);
+    final mapNewline =
+        !io.Platform.isWindows && (terminal.isTerminal || _options.altScreen);
+    _renderer!.setMapNewline(mapNewline);
+    _renderer!.setScrollOptim(_options.altScreen);
 
     // Apply terminal movement optimizations. Allow a compatibility override so
     // callers can provide capability bits without probing the terminal.
@@ -629,7 +677,14 @@ class UltravioletTuiRenderer implements TuiRenderer {
     ss.draw(scr, scr.bounds());
 
     r.render(scr.buffer);
+    // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
+    // terminal buffers all changes and paints them atomically.  This prevents
+    // visible flashes when scroll optimization emits DL/IL before the
+    // replacement content arrives.  Terminals that don't support mode 2026
+    // silently ignore the sequences.
+    terminal.write(UvAnsi.beginSynchronizedUpdate);
     r.flush();
+    terminal.write(UvAnsi.endSynchronizedUpdate);
     _dirty = false;
   }
 
@@ -697,11 +752,13 @@ class NullTuiRenderer implements TuiRenderer {
 
 /// TuiRenderer that writes output without diffing or clearing (nil renderer mode).
 class SimpleTuiRenderer implements TuiRenderer {
+  /// Creates a simple renderer targeting the given [terminal].
   SimpleTuiRenderer({
     required this.terminal,
     TuiRendererOptions options = const TuiRendererOptions(),
   }) : _options = options;
 
+  /// The terminal to render to.
   final TuiTerminal terminal;
   final TuiRendererOptions _options;
 
@@ -762,6 +819,7 @@ String compressAnsi(String input) {
 
 /// A renderer that writes to a StringSink (for testing).
 class StringSinkTuiRenderer implements TuiRenderer {
+  /// Creates a renderer that writes all output to [sink].
   StringSinkTuiRenderer(this.sink);
 
   /// The sink to write to.
