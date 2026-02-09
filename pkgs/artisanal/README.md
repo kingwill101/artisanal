@@ -1,4 +1,14 @@
-# artisanal
+# Artisanal
+
+> **About this project:**
+>
+> This library is a faithful port of Charm's TUI libraries (Lip Gloss, Bubble Tea, Bubbles) to Dart. We aim to port as much functionality as possible. In some scenarios, things may not work as expected—please report any issues you discover so we can adjust where necessary.
+>
+> Many of the included examples were generated and may contain issues or not reflect the latest API. If you find a broken or outdated example, please let us know!
+
+> **⚠️ Work in Progress:**
+>
+> This library is under active development and its API may change. Some examples may be broken or require updates to match the latest state of the package. If you discover any broken or outdated examples, please report them or open an issue. Thank you for your understanding!
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-ormed.vercel.app-blue)](https://ormed.vercel.app/)
@@ -17,6 +27,9 @@ Build everything from rich command-line tools to complex interactive TUI applica
 | **TUI Runtime** | Elm Architecture (`Model`/`Msg`/`Cmd`) with a full-featured `Program` event loop |
 | **Bubbles** | 20+ reusable widgets: inputs, lists, tables, spinners, progress bars, file pickers, etc. |
 | **Ultraviolet (UV)** | High-performance cell-buffer renderer with diff-based updates and graphics support |
+| **Terminal + Renderer** | Unified terminal abstraction, ANSI helpers, and renderer backends |
+| **Markdown** | ANSI Markdown renderer plus Glamour high-fidelity output |
+| **Charting** | Sparklines, line/ribbon charts, histograms, heatmaps, and pie charts |
 
 ## Installation
 
@@ -38,6 +51,17 @@ dependencies:
 | `package:artisanal/bubbles.dart` | Reusable interactive widgets |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI codes, Keys |
 | `package:artisanal/uv.dart` | Low-level cell-buffer renderer |
+| `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
+| `package:artisanal/glamour.dart` | High-fidelity Markdown renderer |
+| `package:artisanal/charting.dart` | Charting primitives |
+| `package:artisanal/liquid.dart` | Liquid template adapters (experimental) |
+| `package:artisanal/physics.dart` | Forge2D helpers (experimental) |
+
+## Documentation
+
+See the in-repo docs for full coverage:
+
+- `docs/DOCS_INDEX.md`
 
 ## Quick Start: CLI Output
 
@@ -204,10 +228,10 @@ await runProgram(
 | Category | Methods |
 |----------|---------|
 | **Output** | `writeln()`, `write()`, `title()`, `section()` |
-| **Messages** | `info()`, `success()`, `warning()`, `error()`, `note()`, `caution()` |
-| **Layout** | `table()`, `tree()`, `listing()`, `twoColumnDetail()` |
-| **Interactive** | `ask()`, `confirm()`, `choice()`, `secret()`, `selectChoice()`, `multiSelectChoice()` |
-| **Progress** | `task()`, `progressBar()` |
+| **Messages** | `line()`, `info()`, `comment()`, `question()`, `warn()`, `error()`, `note()`, `caution()`, `alert()`, `verbose()`, `debug()` |
+| **Layout** | `table()`, `tree()`, `listing()`, `twoColumnDetail()`, `text()` |
+| **Interactive** | `ask()`, `confirm()`, `choice()`, `secret()`, `selectChoice()`, `multiSelectChoice()`, `menu()`, `search()` |
+| **Progress** | `task()`, `spin()`, `progress()`, `progressIterate()` |
 
 ## Examples
 

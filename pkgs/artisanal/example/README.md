@@ -122,7 +122,6 @@ dart run main.dart ui:validators --ansi -n
 ### UI Components
 
 ```bash
-# Laravel-style components facade
 dart run main.dart ui:components --ansi
 
 # Boxed panels
