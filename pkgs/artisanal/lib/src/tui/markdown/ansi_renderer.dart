@@ -372,9 +372,6 @@ class AnsiRenderer implements NodeVisitor {
   /// Buffer for current cell content (to handle inline formatting).
   final StringBuffer _currentCellBuffer = StringBuffer();
 
-  /// Whether we're inside a table.
-  bool _inTable = false;
-
   /// Whether we're inside the table header section.
   bool _inTableHeader = false;
 
@@ -437,7 +434,6 @@ class AnsiRenderer implements NodeVisitor {
     _tableAlignments.clear();
     _currentTableRow.clear();
     _currentCellBuffer.clear();
-    _inTable = false;
     _inTableHeader = false;
     _inTableCell = false;
     _inCodeBlock = false;
@@ -488,14 +484,7 @@ class AnsiRenderer implements NodeVisitor {
     }
 
     // If inside a table cell, write to cell buffer instead
-    if (_inTableCell) {
-      _currentCellBuffer.write(content);
-    } else if (_inParagraph && options.width != null && !_inCodeBlock) {
-      // Buffer paragraph content for wrapping
-      _paragraphBuffer.write(content);
-    } else {
-      _buffer.write(content);
-    }
+    _activeBuffer.write(content);
   }
 
   @override
@@ -538,12 +527,22 @@ class AnsiRenderer implements NodeVisitor {
         return true;
 
       case 'ul':
-        if (_listDepth == 0) _ensureNewline();
+        if (_listDepth == 0) {
+          _ensureNewline();
+        } else {
+          // Nested list: add newline after parent item text
+          _buffer.write('\n');
+        }
         _listDepth++;
         return true;
 
       case 'ol':
-        if (_listDepth == 0) _ensureNewline();
+        if (_listDepth == 0) {
+          _ensureNewline();
+        } else {
+          // Nested list: add newline after parent item text
+          _buffer.write('\n');
+        }
         _listDepth++;
         _listCounters.add(
           int.tryParse(element.attributes['start'] ?? '1') ?? 1,
@@ -561,7 +560,6 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'table':
         _ensureNewline();
-        _inTable = true;
         _tableHeaders.clear();
         _tableRows.clear();
         _tableAlignments.clear();
@@ -717,7 +715,11 @@ class AnsiRenderer implements NodeVisitor {
         break;
 
       case 'li':
-        _buffer.write('\n');
+        // Only add newline if the li didn't end with a nested list
+        // (nested lists already handle their own newlines)
+        if (!_hasNestedList(element)) {
+          _buffer.write('\n');
+        }
         break;
 
       case 'em':
@@ -745,7 +747,6 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'table':
         _renderTable();
-        _inTable = false;
         _lastWasBlock = true;
         break;
 
@@ -807,6 +808,11 @@ class AnsiRenderer implements NodeVisitor {
   // ─────────────────────────────────────────────────────────────────────────────
 
   void _startListItem(Element element) {
+    // Add blockquote prefix if inside a blockquote
+    if (_inBlockquote) {
+      _writeBlockquotePrefix();
+    }
+
     // Add indentation based on nesting level
     final indent = ' ' * ((_listDepth - 1) * options.listIndent);
     _buffer.write(indent);
@@ -833,6 +839,17 @@ class AnsiRenderer implements NodeVisitor {
       }
     }
     return null;
+  }
+
+  /// Checks whether a list item contains a nested list (ul or ol).
+  bool _hasNestedList(Element element) {
+    if (element.children == null) return false;
+    for (final child in element.children!) {
+      if (child is Element && (child.tag == 'ul' || child.tag == 'ol')) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1064,21 +1081,21 @@ class AnsiRenderer implements NodeVisitor {
 
   void _startLink() {
     final style = options.linkStyle ?? _defaultLinkStyle();
-    _buffer.write(_styleToAnsiOpen(style));
+    _activeBuffer.write(_styleToAnsiOpen(style));
 
     // Add OSC 8 hyperlink if enabled and URL is available
     if (options.hyperlinks && _pendingLinkUrl != null) {
-      _buffer.write('\x1b]8;;${_pendingLinkUrl!}\x1b\\');
+      _activeBuffer.write('\x1b]8;;${_pendingLinkUrl!}\x1b\\');
     }
   }
 
   void _endLink() {
     // Close OSC 8 hyperlink if enabled
     if (options.hyperlinks && _pendingLinkUrl != null) {
-      _buffer.write('\x1b]8;;\x1b\\');
+      _activeBuffer.write('\x1b]8;;\x1b\\');
     }
 
-    _buffer.write(_ansiReset);
+    _activeBuffer.write(_ansiReset);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1086,11 +1103,11 @@ class AnsiRenderer implements NodeVisitor {
   // ─────────────────────────────────────────────────────────────────────────────
 
   void _startInlineStyle(Style style) {
-    _buffer.write(_styleToAnsiOpen(style));
+    _activeBuffer.write(_styleToAnsiOpen(style));
   }
 
   void _endInlineStyle() {
-    _buffer.write(_ansiReset);
+    _activeBuffer.write(_ansiReset);
   }
 
   Style _getEmphasisStyle() => options.emphasisStyle ?? _defaultEmphasisStyle();
@@ -1105,6 +1122,19 @@ class AnsiRenderer implements NodeVisitor {
 
   bool _isInsidePreBlock() {
     return _elementStack.any((e) => e.tag == 'pre');
+  }
+
+  /// Returns the currently active output buffer.
+  ///
+  /// When inside a table cell, returns [_currentCellBuffer].
+  /// When inside a paragraph with width wrapping, returns [_paragraphBuffer].
+  /// Otherwise, returns the main [_buffer].
+  StringBuffer get _activeBuffer {
+    if (_inTableCell) return _currentCellBuffer;
+    if (_inParagraph && options.width != null && !_inCodeBlock) {
+      return _paragraphBuffer;
+    }
+    return _buffer;
   }
 
   void _ensureNewline() {

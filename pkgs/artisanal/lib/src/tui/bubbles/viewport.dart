@@ -9,6 +9,7 @@ import '../../unicode/grapheme.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
+import '../trace.dart';
 import 'key_binding.dart';
 
 /// Sentinel value to distinguish "not provided" from "explicitly set to null"
@@ -19,6 +20,7 @@ const undefined = Object();
 
 /// Key bindings for viewport navigation.
 class ViewportKeyMap implements KeyMap {
+  /// Creates a key mapping configuration for viewport navigation.
   ViewportKeyMap({
     KeyBinding? pageDown,
     KeyBinding? pageUp,
@@ -45,14 +47,31 @@ class ViewportKeyMap implements KeyMap {
        right = right ?? KeyBinding.withHelp(['right', 'l'], '→/l', 'right'),
        copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy');
 
+  /// Key binding for scrolling one page down.
   final KeyBinding pageDown;
+
+  /// Key binding for scrolling one page up.
   final KeyBinding pageUp;
+
+  /// Key binding for scrolling half a page up.
   final KeyBinding halfPageUp;
+
+  /// Key binding for scrolling half a page down.
   final KeyBinding halfPageDown;
+
+  /// Key binding for scrolling one line down.
   final KeyBinding down;
+
+  /// Key binding for scrolling one line up.
   final KeyBinding up;
+
+  /// Key binding for scrolling left.
   final KeyBinding left;
+
+  /// Key binding for scrolling right.
   final KeyBinding right;
+
+  /// Key binding for copying selected text.
   final KeyBinding copy;
 
   @override
@@ -76,6 +95,7 @@ class GutterContext {
   /// Soft is whether or not the line is soft wrapped.
   final bool soft;
 
+  /// Creates a gutter rendering context.
   GutterContext({
     required this.index,
     required this.totalLines,
@@ -950,40 +970,60 @@ class ViewportModel extends ViewComponent {
 
   @override
   (ViewportModel, Cmd?) update(Msg msg) {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     switch (msg) {
       case KeyMsg(:final key):
         if (key.matchesSingle(keyMap.pageDown)) {
-          return (pageDown(), null);
+          final next = pageDown();
+          _traceUpdate('pageDown', next, sw);
+          return (next, null);
         }
         if (key.matchesSingle(keyMap.pageUp)) {
-          return (pageUp(), null);
+          final next = pageUp();
+          _traceUpdate('pageUp', next, sw);
+          return (next, null);
         }
         if (key.matchesSingle(keyMap.halfPageDown)) {
-          return (halfPageDown(), null);
+          final next = halfPageDown();
+          _traceUpdate('halfPageDown', next, sw);
+          return (next, null);
         }
         if (key.matchesSingle(keyMap.halfPageUp)) {
-          return (halfPageUp(), null);
+          final next = halfPageUp();
+          _traceUpdate('halfPageUp', next, sw);
+          return (next, null);
         }
         if (key.matchesSingle(keyMap.down)) {
-          return (scrollDown(1), null);
+          final next = scrollDown(1);
+          _traceUpdate('down', next, sw);
+          return (next, null);
         }
         if (key.matchesSingle(keyMap.up)) {
-          return (scrollUp(1), null);
+          final next = scrollUp(1);
+          _traceUpdate('up', next, sw);
+          return (next, null);
         }
         if (horizontalStep > 0) {
           if (!softWrap && key.matchesSingle(keyMap.left)) {
-            return (scrollLeft(horizontalStep), null);
+            final next = scrollLeft(horizontalStep);
+            _traceUpdate('left', next, sw);
+            return (next, null);
           }
           if (!softWrap && key.matchesSingle(keyMap.right)) {
-            return (scrollRight(horizontalStep), null);
+            final next = scrollRight(horizontalStep);
+            _traceUpdate('right', next, sw);
+            return (next, null);
           }
         }
         if (key.matchesSingle(keyMap.copy)) {
           final text = getSelectedText();
           if (text.isNotEmpty) {
+            _traceUpdate('copy', this, sw);
             return (this, Cmd.setClipboard(text));
           }
         }
+        _traceUpdate('key', this, sw);
         return (this, null);
 
       case MouseMsg(
@@ -998,8 +1038,11 @@ class ViewportModel extends ViewComponent {
               y < 0 || (height != null ? y >= height! : y >= lines.length);
           if (isOutside) {
             if (action == MouseAction.press) {
-              return (clearSelection(), null);
+              final next = clearSelection();
+              _traceUpdate('mouse-clear', next, sw);
+              return (next, null);
             }
+            _traceUpdate('mouse-outside', this, sw);
             return (this, null);
           }
 
@@ -1014,83 +1057,115 @@ class ViewportModel extends ViewComponent {
                     const Duration(milliseconds: 500) &&
                 lastClickPos == (contentX, contentY)) {
               final (start, end) = _findWordAt(contentX, contentY);
-              return (
-                copyWith(
-                  selectionStart: (start, contentY),
-                  selectionEnd: (end, contentY),
-                  lastClickTime: now,
-                  lastClickPos: (contentX, contentY),
-                ),
-                null,
+              final next = copyWith(
+                selectionStart: (start, contentY),
+                selectionEnd: (end, contentY),
+                lastClickTime: now,
+                lastClickPos: (contentX, contentY),
               );
+              _traceUpdate('mouse-double', next, sw);
+              return (next, null);
             }
 
             // Start selection
-            return (
-              copyWith(
-                selectionStart: (contentX, contentY),
-                selectionEnd: (contentX, contentY),
-                lastClickTime: now,
-                lastClickPos: (contentX, contentY),
-              ),
-              null,
+            final next = copyWith(
+              selectionStart: (contentX, contentY),
+              selectionEnd: (contentX, contentY),
+              lastClickTime: now,
+              lastClickPos: (contentX, contentY),
             );
+            _traceUpdate('mouse-press', next, sw);
+            return (next, null);
           }
 
           if (action == MouseAction.motion && selectionStart != null) {
             // Update selection
             final contentX = x - gutter + xOffset;
             final contentY = y + yOffset;
-            return (copyWith(selectionEnd: (contentX, contentY)), null);
+            final next = copyWith(selectionEnd: (contentX, contentY));
+            _traceUpdate('mouse-drag', next, sw);
+            return (next, null);
           }
 
           if (action == MouseAction.release && button == MouseButton.left) {
             // Finalize selection (keep it for copying)
+            _traceUpdate('mouse-release', this, sw);
             return (this, null);
           }
         }
 
         if (!mouseWheelEnabled ||
             (action != MouseAction.press && action != MouseAction.wheel)) {
+          _traceUpdate('mouse-ignore', this, sw);
           return (this, null);
         }
 
         switch (button) {
           case MouseButton.wheelUp:
             if (!softWrap && shift && horizontalStep > 0) {
-              return (scrollLeft(horizontalStep), null);
+              final next = scrollLeft(horizontalStep);
+              _traceUpdate('wheel-left', next, sw);
+              return (next, null);
             }
-            return (scrollUp(mouseWheelDelta), null);
+            final next = scrollUp(mouseWheelDelta);
+            _traceUpdate('wheel-up', next, sw);
+            return (next, null);
 
           case MouseButton.wheelDown:
             if (!softWrap && shift && horizontalStep > 0) {
-              return (scrollRight(horizontalStep), null);
+              final next = scrollRight(horizontalStep);
+              _traceUpdate('wheel-right', next, sw);
+              return (next, null);
             }
-            return (scrollDown(mouseWheelDelta), null);
+            final next = scrollDown(mouseWheelDelta);
+            _traceUpdate('wheel-down', next, sw);
+            return (next, null);
 
           case MouseButton.wheelLeft:
             if (!softWrap && horizontalStep > 0) {
-              return (scrollLeft(horizontalStep), null);
+              final next = scrollLeft(horizontalStep);
+              _traceUpdate('wheel-left', next, sw);
+              return (next, null);
             }
+            _traceUpdate('wheel-left', this, sw);
             return (this, null);
 
           case MouseButton.wheelRight:
             if (!softWrap && horizontalStep > 0) {
-              return (scrollRight(horizontalStep), null);
+              final next = scrollRight(horizontalStep);
+              _traceUpdate('wheel-right', next, sw);
+              return (next, null);
             }
+            _traceUpdate('wheel-right', this, sw);
             return (this, null);
 
           default:
+            _traceUpdate('mouse-default', this, sw);
             return (this, null);
         }
 
       default:
+        _traceUpdate('msg', this, sw);
         return (this, null);
     }
   }
 
+  void _traceUpdate(String label, ViewportModel next, Stopwatch? sw) {
+    if (!TuiTrace.enabled) return;
+    sw?.stop();
+    final elapsed = sw?.elapsedMicroseconds;
+    final sel = next.selectionStart != null || next.selectionEnd != null;
+    TuiTrace.log(
+      'viewport.update $label y=$yOffset->${next.yOffset} '
+      'x=$xOffset->${next.xOffset} sel=$sel '
+      'dt=${elapsed ?? -1}us',
+    );
+  }
+
   @override
   String view() {
+    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+    sw?.start();
     final w = width;
     final h = height ?? _visibleLines().length;
 
@@ -1117,6 +1192,13 @@ class ViewportModel extends ViewComponent {
     if (rendered.contains(Ansi.escape)) {
       rendered = '$rendered${Ansi.reset}';
     }
+    if (sw != null) {
+      sw.stop();
+      TuiTrace.log(
+        'viewport.view y=$yOffset w=$w h=$h lines=${lines.length} '
+        'softWrap=$softWrap ${sw.elapsedMicroseconds}us',
+      );
+    }
     return rendered;
   }
 
@@ -1132,20 +1214,28 @@ class ViewportModel extends ViewComponent {
   }
 }
 
+/// Describes a text highlight region within the viewport.
 class HighlightInfo {
+  /// The starting line index of the highlight.
   /// in which line this highlight starts and ends
   final int lineStart;
+
+  /// The ending line index of the highlight.
   final int lineEnd;
 
+  /// The highlighted content lines.
   /// the grapheme highlight ranges for each of these lines
   final Map<int, (int, int)> lines;
 
+  /// Creates a highlight info with start/end lines and content.
   HighlightInfo({
     required this.lineStart,
     required this.lineEnd,
     required this.lines,
   });
 
+  /// Returns the character coordinates of the highlight region.
+  ///
   /// coords returns the line x column of this highlight.
   (int, int, int) coords() {
     for (var i = lineStart; i <= lineEnd; i++) {

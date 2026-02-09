@@ -1,0 +1,1357 @@
+/// Git diff viewer bubble for displaying unified diffs in the terminal.
+///
+/// Provides [GitDiffModel] for parsing and rendering git unified diffs with
+/// syntax-highlighted additions (green), deletions (red), file headers (bold),
+/// and hunk headers (cyan). Scrolling is handled by an embedded
+/// [ViewportModel].
+///
+/// ## Usage
+///
+/// ```dart
+/// class DiffViewer implements Model {
+///   final GitDiffModel diff;
+///
+///   DiffViewer({GitDiffModel? diff, String rawDiff = ''})
+///       : diff = diff ?? GitDiffModel(width: 80, height: 24)
+///             ..setDiff(rawDiff);
+///
+///   @override
+///   Cmd? init() => null;
+///
+///   @override
+///   (Model, Cmd?) update(Msg msg) {
+///     if (msg is WindowSizeMsg) {
+///       return (
+///         DiffViewer(
+///           diff: diff.copyWith(width: msg.width, height: msg.height),
+///         ),
+///         null,
+///       );
+///     }
+///     final (newDiff, cmd) = diff.update(msg);
+///     return (DiffViewer(diff: newDiff as GitDiffModel), cmd);
+///   }
+///
+///   @override
+///   String view() => diff.view();
+/// }
+/// ```
+///
+/// {@category TUI}
+/// {@category Bubbles}
+library;
+
+import '../../style/color.dart';
+import '../../style/style.dart';
+import '../cmd.dart';
+import '../component.dart';
+import '../msg.dart';
+import 'key_binding.dart';
+import 'viewport.dart';
+
+/// The display mode for the diff viewer.
+enum DiffViewMode {
+  /// Unified diff — additions and deletions shown inline.
+  unified,
+
+  /// Side-by-side diff — old file on the left, new file on the right.
+  sideBySide,
+
+  /// Pretty diff — clean file headers, colored line backgrounds, single
+  /// line-number column.
+  pretty,
+}
+
+/// Key bindings for the git diff viewer.
+///
+/// Provides a [cycleViewMode] binding (default: `v`) to cycle between
+/// [DiffViewMode] values (unified → sideBySide → pretty → unified…).
+class GitDiffKeyMap implements KeyMap {
+  /// Creates a git diff key map with optional overrides.
+  GitDiffKeyMap({KeyBinding? cycleViewMode})
+    : cycleViewMode =
+          cycleViewMode ?? KeyBinding.withHelp(['v'], 'v', 'cycle view mode');
+
+  /// Key to cycle through view modes.
+  final KeyBinding cycleViewMode;
+
+  @override
+  List<KeyBinding> shortHelp() => [cycleViewMode];
+
+  @override
+  List<List<KeyBinding>> fullHelp() => [
+    [cycleViewMode],
+  ];
+}
+
+/// Configuration for diff styling.
+class DiffStyles {
+  /// Creates diff styles with the given or default color settings.
+  DiffStyles({
+    Style? addedLine,
+    Style? removedLine,
+    Style? contextLine,
+    Style? fileHeader,
+    Style? hunkHeader,
+    Style? addedGutter,
+    Style? removedGutter,
+    Style? contextGutter,
+    Style? lineNumber,
+    Style? prettyAddedLine,
+    Style? prettyRemovedLine,
+    Style? prettyContextLine,
+    Style? prettyFileHeader,
+    Style? prettyAddedLineNumber,
+    Style? prettyRemovedLineNumber,
+    Style? prettyContextLineNumber,
+    Style? sideBySideSeparator,
+    Style? sideBySideAddedLine,
+    Style? sideBySideRemovedLine,
+    Style? sideBySideContextLine,
+    Style? sideBySideLineNumber,
+    Style? sideBySideEmptyCell,
+  }) : addedLine = addedLine ?? Style().foreground(const BasicColor('#22c55e')),
+       removedLine =
+           removedLine ?? Style().foreground(const BasicColor('#ef4444')),
+       contextLine = contextLine ?? Style(),
+       fileHeader =
+           fileHeader ?? Style().bold().foreground(const BasicColor('#ffffff')),
+       hunkHeader =
+           hunkHeader ?? Style().foreground(const BasicColor('#06b6d4')),
+       addedGutter =
+           addedGutter ??
+           Style().foreground(const BasicColor('#22c55e')).bold(),
+       removedGutter =
+           removedGutter ??
+           Style().foreground(const BasicColor('#ef4444')).bold(),
+       contextGutter =
+           contextGutter ?? Style().foreground(const BasicColor('#6b7280')),
+       lineNumber =
+           lineNumber ?? Style().foreground(const BasicColor('#6b7280')),
+       prettyAddedLine =
+           prettyAddedLine ??
+           Style()
+               .foreground(const BasicColor('#22c55e'))
+               .background(const BasicColor('#1a2e1a')),
+       prettyRemovedLine =
+           prettyRemovedLine ??
+           Style()
+               .foreground(const BasicColor('#ef4444'))
+               .background(const BasicColor('#2e1a1a')),
+       prettyContextLine = prettyContextLine ?? Style(),
+       prettyFileHeader =
+           prettyFileHeader ?? Style().foreground(const BasicColor('#6b7280')),
+       prettyAddedLineNumber =
+           prettyAddedLineNumber ??
+           Style()
+               .foreground(const BasicColor('#22c55e'))
+               .background(const BasicColor('#1a2e1a')),
+       prettyRemovedLineNumber =
+           prettyRemovedLineNumber ??
+           Style()
+               .foreground(const BasicColor('#ef4444'))
+               .background(const BasicColor('#2e1a1a')),
+       prettyContextLineNumber =
+           prettyContextLineNumber ??
+           Style().foreground(const BasicColor('#6b7280')),
+       sideBySideSeparator =
+           sideBySideSeparator ??
+           Style().foreground(const BasicColor('#6b7280')),
+       sideBySideAddedLine =
+           sideBySideAddedLine ??
+           Style()
+               .foreground(const BasicColor('#22c55e'))
+               .background(const BasicColor('#1a2e1a')),
+       sideBySideRemovedLine =
+           sideBySideRemovedLine ??
+           Style()
+               .foreground(const BasicColor('#ef4444'))
+               .background(const BasicColor('#2e1a1a')),
+       sideBySideContextLine = sideBySideContextLine ?? Style(),
+       sideBySideLineNumber =
+           sideBySideLineNumber ??
+           Style().foreground(const BasicColor('#6b7280')),
+       sideBySideEmptyCell =
+           sideBySideEmptyCell ??
+           Style().foreground(const BasicColor('#3a3a3a'));
+
+  /// Creates diff styles from semantic colors.
+  ///
+  /// Maps semantic color slots (success/error/muted/surface/onSurface/border)
+  /// to the appropriate diff styles. This enables theme-driven styling
+  /// without coupling to a specific theme class.
+  ///
+  /// - [success] — color for added lines (foreground).
+  /// - [error] — color for removed lines (foreground).
+  /// - [muted] — color for line numbers, context gutter, separators.
+  /// - [surface] — background for panels (used for empty cells in
+  ///   side-by-side mode).
+  /// - [onSurface] — text color on surface backgrounds (file headers).
+  /// - [onBackground] — text color on main background (context lines).
+  /// - [border] — border/separator color.
+  /// - [successBg] — subtle background for added lines (optional).
+  /// - [errorBg] — subtle background for removed lines (optional).
+  factory DiffStyles.fromColors({
+    required Color success,
+    required Color error,
+    required Color muted,
+    required Color surface,
+    required Color onSurface,
+    required Color onBackground,
+    required Color border,
+    Color? successBg,
+    Color? errorBg,
+  }) {
+    final addedBg = successBg ?? const BasicColor('#1a2e1a');
+    final removedBg = errorBg ?? const BasicColor('#2e1a1a');
+
+    return DiffStyles(
+      // Unified mode
+      addedLine: Style().foreground(success),
+      removedLine: Style().foreground(error),
+      contextLine: Style().foreground(onBackground),
+      fileHeader: Style().bold().foreground(onSurface),
+      hunkHeader: Style().foreground(muted),
+      addedGutter: Style().foreground(success).bold(),
+      removedGutter: Style().foreground(error).bold(),
+      contextGutter: Style().foreground(muted),
+      lineNumber: Style().foreground(muted),
+      // Pretty mode
+      prettyAddedLine: Style().foreground(success).background(addedBg),
+      prettyRemovedLine: Style().foreground(error).background(removedBg),
+      prettyContextLine: Style().foreground(onBackground),
+      prettyFileHeader: Style().foreground(muted),
+      prettyAddedLineNumber: Style().foreground(success).background(addedBg),
+      prettyRemovedLineNumber: Style().foreground(error).background(removedBg),
+      prettyContextLineNumber: Style().foreground(muted),
+      // Side-by-side mode
+      sideBySideSeparator: Style().foreground(border),
+      sideBySideAddedLine: Style().foreground(success).background(addedBg),
+      sideBySideRemovedLine: Style().foreground(error).background(removedBg),
+      sideBySideContextLine: Style().foreground(onBackground),
+      sideBySideLineNumber: Style().foreground(muted),
+      sideBySideEmptyCell: Style().foreground(surface),
+    );
+  }
+
+  /// Style for added (+) lines.
+  final Style addedLine;
+
+  /// Style for removed (-) lines.
+  final Style removedLine;
+
+  /// Style for context (unchanged) lines.
+  final Style contextLine;
+
+  /// Style for file header lines (diff --git, ---/+++ lines).
+  final Style fileHeader;
+
+  /// Style for hunk headers (@@ ... @@).
+  final Style hunkHeader;
+
+  /// Style for the gutter indicator on added lines.
+  final Style addedGutter;
+
+  /// Style for the gutter indicator on removed lines.
+  final Style removedGutter;
+
+  /// Style for the gutter indicator on context lines.
+  final Style contextGutter;
+
+  /// Style for line numbers.
+  final Style lineNumber;
+
+  // ── Pretty mode styles ──────────────────────────────────────────────────
+
+  /// Pretty mode: style for added lines (foreground + background).
+  final Style prettyAddedLine;
+
+  /// Pretty mode: style for removed lines (foreground + background).
+  final Style prettyRemovedLine;
+
+  /// Pretty mode: style for context lines.
+  final Style prettyContextLine;
+
+  /// Pretty mode: style for file header lines.
+  final Style prettyFileHeader;
+
+  /// Pretty mode: style for line numbers on added lines.
+  final Style prettyAddedLineNumber;
+
+  /// Pretty mode: style for line numbers on removed lines.
+  final Style prettyRemovedLineNumber;
+
+  /// Pretty mode: style for line numbers on context lines.
+  final Style prettyContextLineNumber;
+
+  // ── Side-by-side mode styles ────────────────────────────────────────────
+
+  /// Side-by-side mode: style for the center separator column (│).
+  final Style sideBySideSeparator;
+
+  /// Side-by-side mode: style for added lines (right panel).
+  final Style sideBySideAddedLine;
+
+  /// Side-by-side mode: style for removed lines (left panel).
+  final Style sideBySideRemovedLine;
+
+  /// Side-by-side mode: style for context lines (both panels).
+  final Style sideBySideContextLine;
+
+  /// Side-by-side mode: style for line numbers.
+  final Style sideBySideLineNumber;
+
+  /// Side-by-side mode: style for empty cells (no content on that side).
+  final Style sideBySideEmptyCell;
+
+  /// Creates a copy with the given fields replaced.
+  DiffStyles copyWith({
+    Style? addedLine,
+    Style? removedLine,
+    Style? contextLine,
+    Style? fileHeader,
+    Style? hunkHeader,
+    Style? addedGutter,
+    Style? removedGutter,
+    Style? contextGutter,
+    Style? lineNumber,
+    Style? prettyAddedLine,
+    Style? prettyRemovedLine,
+    Style? prettyContextLine,
+    Style? prettyFileHeader,
+    Style? prettyAddedLineNumber,
+    Style? prettyRemovedLineNumber,
+    Style? prettyContextLineNumber,
+    Style? sideBySideSeparator,
+    Style? sideBySideAddedLine,
+    Style? sideBySideRemovedLine,
+    Style? sideBySideContextLine,
+    Style? sideBySideLineNumber,
+    Style? sideBySideEmptyCell,
+  }) {
+    return DiffStyles(
+      addedLine: addedLine ?? this.addedLine,
+      removedLine: removedLine ?? this.removedLine,
+      contextLine: contextLine ?? this.contextLine,
+      fileHeader: fileHeader ?? this.fileHeader,
+      hunkHeader: hunkHeader ?? this.hunkHeader,
+      addedGutter: addedGutter ?? this.addedGutter,
+      removedGutter: removedGutter ?? this.removedGutter,
+      contextGutter: contextGutter ?? this.contextGutter,
+      lineNumber: lineNumber ?? this.lineNumber,
+      prettyAddedLine: prettyAddedLine ?? this.prettyAddedLine,
+      prettyRemovedLine: prettyRemovedLine ?? this.prettyRemovedLine,
+      prettyContextLine: prettyContextLine ?? this.prettyContextLine,
+      prettyFileHeader: prettyFileHeader ?? this.prettyFileHeader,
+      prettyAddedLineNumber:
+          prettyAddedLineNumber ?? this.prettyAddedLineNumber,
+      prettyRemovedLineNumber:
+          prettyRemovedLineNumber ?? this.prettyRemovedLineNumber,
+      prettyContextLineNumber:
+          prettyContextLineNumber ?? this.prettyContextLineNumber,
+      sideBySideSeparator: sideBySideSeparator ?? this.sideBySideSeparator,
+      sideBySideAddedLine: sideBySideAddedLine ?? this.sideBySideAddedLine,
+      sideBySideRemovedLine:
+          sideBySideRemovedLine ?? this.sideBySideRemovedLine,
+      sideBySideContextLine:
+          sideBySideContextLine ?? this.sideBySideContextLine,
+      sideBySideLineNumber: sideBySideLineNumber ?? this.sideBySideLineNumber,
+      sideBySideEmptyCell: sideBySideEmptyCell ?? this.sideBySideEmptyCell,
+    );
+  }
+}
+
+/// The type of a parsed diff line.
+enum DiffLineType {
+  /// File header line (diff --git, index, ---/+++).
+  fileHeader,
+
+  /// Hunk header line (@@ ... @@).
+  hunkHeader,
+
+  /// Added line (+).
+  added,
+
+  /// Removed line (-).
+  removed,
+
+  /// Context (unchanged) line.
+  context,
+
+  /// Empty/separator line.
+  empty,
+}
+
+/// A single parsed line from a unified diff.
+class DiffLine {
+  /// Creates a new diff line.
+  const DiffLine({
+    required this.type,
+    required this.content,
+    this.oldLineNumber,
+    this.newLineNumber,
+  });
+
+  /// The type of this diff line.
+  final DiffLineType type;
+
+  /// The raw content of this line.
+  final String content;
+
+  /// The line number in the old file (null for added lines / headers).
+  final int? oldLineNumber;
+
+  /// The line number in the new file (null for removed lines / headers).
+  final int? newLineNumber;
+}
+
+/// A file entry in a parsed diff.
+class DiffFile {
+  /// Creates a new diff file entry.
+  DiffFile({required this.oldPath, required this.newPath, required this.lines});
+
+  /// Path of the old file (before changes).
+  final String oldPath;
+
+  /// Path of the new file (after changes).
+  final String newPath;
+
+  /// All parsed diff lines for this file.
+  final List<DiffLine> lines;
+
+  /// Number of added lines.
+  late final int additions = lines
+      .where((l) => l.type == DiffLineType.added)
+      .length;
+
+  /// Number of removed lines.
+  late final int deletions = lines
+      .where((l) => l.type == DiffLineType.removed)
+      .length;
+}
+
+/// A git diff viewer bubble.
+///
+/// Parses unified diff text and renders it with syntax highlighting, line
+/// numbers, and scrollable navigation via an embedded [ViewportModel].
+///
+/// ## Example
+///
+/// ```dart
+/// final diff = GitDiffModel(width: 80, height: 24);
+/// final loaded = diff.setDiff(rawDiffString);
+///
+/// // In update:
+/// final (newDiff, cmd) = loaded.update(msg);
+///
+/// // In view:
+/// print(loaded.view());
+/// ```
+class GitDiffModel extends ViewComponent {
+  /// Creates a new git diff model.
+  GitDiffModel({
+    this.width = 80,
+    this.height = 24,
+    this.showLineNumbers = true,
+    this.wrapLines = true,
+    this.viewMode = DiffViewMode.unified,
+    DiffStyles? styles,
+    GitDiffKeyMap? keyMap,
+    ViewportModel? viewport,
+    List<DiffFile>? files,
+    List<String>? renderedLines,
+  }) : styles = styles ?? DiffStyles(),
+       keyMap = keyMap ?? GitDiffKeyMap(),
+       _files = files ?? const [],
+       _renderedLines = renderedLines ?? const [],
+       _viewport = viewport ?? ViewportModel(width: width, height: height);
+
+  /// Width of the diff viewer in columns.
+  final int width;
+
+  /// Height of the diff viewer in rows.
+  final int height;
+
+  /// Whether to display line numbers in the gutter.
+  final bool showLineNumbers;
+
+  /// Whether to wrap long lines that exceed the viewport width.
+  ///
+  /// When enabled, lines that are wider than the available content area are
+  /// split into multiple display lines. Continuation lines are indented to
+  /// align past the gutter (line number + marker columns).
+  final bool wrapLines;
+
+  /// Unified or side-by-side display mode.
+  final DiffViewMode viewMode;
+
+  /// The styles used for rendering.
+  final DiffStyles styles;
+
+  /// Key bindings for diff viewer actions.
+  final GitDiffKeyMap keyMap;
+
+  /// The parsed file entries.
+  final List<DiffFile> _files;
+
+  /// Pre-rendered styled lines fed into the viewport.
+  final List<String> _renderedLines;
+
+  /// The underlying viewport for scrolling.
+  final ViewportModel _viewport;
+
+  /// The parsed diff files.
+  List<DiffFile> get files => _files;
+
+  /// The embedded viewport model (exposed for widget wrapping).
+  ViewportModel get viewport => _viewport;
+
+  /// Total number of additions across all files.
+  late final int totalAdditions = _files.fold(0, (sum, f) => sum + f.additions);
+
+  /// Total number of deletions across all files.
+  late final int totalDeletions = _files.fold(0, (sum, f) => sum + f.deletions);
+
+  /// Creates a copy with the given fields replaced.
+  GitDiffModel copyWith({
+    int? width,
+    int? height,
+    bool? showLineNumbers,
+    bool? wrapLines,
+    DiffViewMode? viewMode,
+    DiffStyles? styles,
+    GitDiffKeyMap? keyMap,
+    ViewportModel? viewport,
+    List<DiffFile>? files,
+    List<String>? renderedLines,
+  }) {
+    return GitDiffModel(
+      width: width ?? this.width,
+      height: height ?? this.height,
+      showLineNumbers: showLineNumbers ?? this.showLineNumbers,
+      wrapLines: wrapLines ?? this.wrapLines,
+      viewMode: viewMode ?? this.viewMode,
+      styles: styles ?? this.styles,
+      keyMap: keyMap ?? this.keyMap,
+      viewport: viewport ?? _viewport,
+      files: files ?? _files,
+      renderedLines: renderedLines ?? _renderedLines,
+    );
+  }
+
+  /// Sets the raw unified diff content and parses it.
+  ///
+  /// Returns a new model with parsed and rendered diff content loaded into
+  /// the viewport.
+  GitDiffModel setDiff(String rawDiff) {
+    final parsedFiles = _parseDiff(rawDiff);
+    final rendered = _renderLines(parsedFiles);
+    final newViewport = _viewport.copyWith(
+      width: width,
+      height: height,
+      lines: rendered,
+    );
+    return copyWith(
+      files: parsedFiles,
+      renderedLines: rendered,
+      viewport: newViewport,
+    );
+  }
+
+  /// Re-renders the existing parsed files with the current configuration.
+  ///
+  /// Use this after changing display options (viewMode, showLineNumbers,
+  /// wrapLines, styles) via [copyWith] to rebuild the rendered lines and
+  /// viewport without re-parsing the diff.
+  GitDiffModel rerender() {
+    if (_files.isEmpty) return this;
+    final rendered = _renderLines(_files);
+    final newViewport = _viewport.copyWith(
+      width: width,
+      height: height,
+      lines: rendered,
+    );
+    return copyWith(renderedLines: rendered, viewport: newViewport);
+  }
+
+  @override
+  Cmd? init() => null;
+
+  @override
+  (GitDiffModel, Cmd?) update(Msg msg) {
+    // Intercept view-mode cycling key before delegating to the viewport.
+    if (msg is KeyMsg && keyMatches(msg.key, [keyMap.cycleViewMode])) {
+      final modes = DiffViewMode.values;
+      final nextMode = modes[(viewMode.index + 1) % modes.length];
+      final rendered = _renderLines(_files, overrideViewMode: nextMode);
+      final newViewport = _viewport.copyWith(
+        width: width,
+        height: height,
+        lines: rendered,
+      );
+      return (
+        copyWith(
+          viewMode: nextMode,
+          renderedLines: rendered,
+          viewport: newViewport,
+        ),
+        null,
+      );
+    }
+
+    final (newViewport, cmd) = _viewport.update(msg);
+    if (identical(newViewport, _viewport)) {
+      return (this, cmd);
+    }
+    return (copyWith(viewport: newViewport), cmd);
+  }
+
+  @override
+  String view() => _viewport.view();
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Parsing
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Parses a unified diff string into a list of [DiffFile] entries.
+  List<DiffFile> _parseDiff(String raw) {
+    if (raw.trim().isEmpty) return [];
+
+    final lines = raw.split('\n');
+    final files = <DiffFile>[];
+
+    var currentOldPath = '';
+    var currentNewPath = '';
+    var currentLines = <DiffLine>[];
+    var inFile = false;
+
+    var oldLineNum = 0;
+    var newLineNum = 0;
+
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+
+      // New file header
+      if (line.startsWith('diff --git')) {
+        // Save previous file if any
+        if (inFile && currentLines.isNotEmpty) {
+          files.add(
+            DiffFile(
+              oldPath: currentOldPath,
+              newPath: currentNewPath,
+              lines: List.unmodifiable(currentLines),
+            ),
+          );
+        }
+        currentLines = [];
+        inFile = true;
+
+        // Extract paths from "diff --git a/path b/path"
+        final parts = line.split(' ');
+        if (parts.length >= 4) {
+          currentOldPath = parts[2].startsWith('a/')
+              ? parts[2].substring(2)
+              : parts[2];
+          currentNewPath = parts[3].startsWith('b/')
+              ? parts[3].substring(2)
+              : parts[3];
+        }
+        currentLines.add(
+          DiffLine(type: DiffLineType.fileHeader, content: line),
+        );
+        continue;
+      }
+
+      // File metadata lines (index, mode, etc.)
+      if (inFile &&
+          (line.startsWith('index ') ||
+              line.startsWith('old mode') ||
+              line.startsWith('new mode') ||
+              line.startsWith('new file mode') ||
+              line.startsWith('deleted file mode') ||
+              line.startsWith('similarity index') ||
+              line.startsWith('rename from') ||
+              line.startsWith('rename to') ||
+              line.startsWith('copy from') ||
+              line.startsWith('copy to') ||
+              line.startsWith('Binary files'))) {
+        currentLines.add(
+          DiffLine(type: DiffLineType.fileHeader, content: line),
+        );
+        continue;
+      }
+
+      // Old file path
+      if (line.startsWith('--- ')) {
+        currentLines.add(
+          DiffLine(type: DiffLineType.fileHeader, content: line),
+        );
+        continue;
+      }
+
+      // New file path
+      if (line.startsWith('+++ ')) {
+        currentLines.add(
+          DiffLine(type: DiffLineType.fileHeader, content: line),
+        );
+        continue;
+      }
+
+      // Hunk header
+      if (line.startsWith('@@ ')) {
+        final hunkMatch = RegExp(
+          r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$',
+        ).firstMatch(line);
+        if (hunkMatch != null) {
+          oldLineNum = int.parse(hunkMatch.group(1)!);
+          newLineNum = int.parse(hunkMatch.group(2)!);
+        }
+        currentLines.add(
+          DiffLine(type: DiffLineType.hunkHeader, content: line),
+        );
+        continue;
+      }
+
+      // Diff content lines
+      if (inFile) {
+        if (line.startsWith('+')) {
+          currentLines.add(
+            DiffLine(
+              type: DiffLineType.added,
+              content: line.length > 1 ? line.substring(1) : '',
+              newLineNumber: newLineNum,
+            ),
+          );
+          newLineNum++;
+        } else if (line.startsWith('-')) {
+          currentLines.add(
+            DiffLine(
+              type: DiffLineType.removed,
+              content: line.length > 1 ? line.substring(1) : '',
+              oldLineNumber: oldLineNum,
+            ),
+          );
+          oldLineNum++;
+        } else if (line.startsWith(' ')) {
+          currentLines.add(
+            DiffLine(
+              type: DiffLineType.context,
+              content: line.length > 1 ? line.substring(1) : '',
+              oldLineNumber: oldLineNum,
+              newLineNumber: newLineNum,
+            ),
+          );
+          oldLineNum++;
+          newLineNum++;
+        } else if (line.startsWith('\\')) {
+          // "\ No newline at end of file" — treat as context
+          currentLines.add(DiffLine(type: DiffLineType.context, content: line));
+        } else if (line.isEmpty) {
+          currentLines.add(
+            const DiffLine(type: DiffLineType.empty, content: ''),
+          );
+        }
+      }
+    }
+
+    // Save last file
+    if (inFile && currentLines.isNotEmpty) {
+      files.add(
+        DiffFile(
+          oldPath: currentOldPath,
+          newPath: currentNewPath,
+          lines: List.unmodifiable(currentLines),
+        ),
+      );
+    }
+
+    return files;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Rendering
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Computes the maximum line number across all files for consistent padding.
+  int _computeMaxLineNumber(List<DiffFile> files) {
+    var max = 0;
+    for (final file in files) {
+      for (final line in file.lines) {
+        if (line.oldLineNumber != null && line.oldLineNumber! > max) {
+          max = line.oldLineNumber!;
+        }
+        if (line.newLineNumber != null && line.newLineNumber! > max) {
+          max = line.newLineNumber!;
+        }
+      }
+    }
+    return max;
+  }
+
+  /// Renders all parsed diff files into styled string lines.
+  List<String> _renderLines(
+    List<DiffFile> files, {
+    DiffViewMode? overrideViewMode,
+  }) {
+    final mode = overrideViewMode ?? viewMode;
+    if (mode == DiffViewMode.pretty) {
+      return _renderLinesPretty(files);
+    }
+    if (mode == DiffViewMode.sideBySide) {
+      return _renderLinesSideBySide(files);
+    }
+
+    final numWidth = '${_computeMaxLineNumber(files)}'.length;
+    final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
+    final result = <String>[];
+
+    for (var fi = 0; fi < files.length; fi++) {
+      final file = files[fi];
+
+      // Separator between files
+      if (fi > 0) {
+        result.add('');
+      }
+
+      for (final line in file.lines) {
+        result.addAll(_renderLine(line, effectiveNumWidth));
+      }
+    }
+
+    return result;
+  }
+
+  /// Renders a single diff line with appropriate styling and gutter.
+  ///
+  /// Returns a list of rendered strings. When [wrapLines] is enabled and the
+  /// content exceeds the available width, continuation lines are generated
+  /// with blank padding in the gutter area.
+  List<String> _renderLine(DiffLine line, int numWidth) {
+    switch (line.type) {
+      case DiffLineType.fileHeader:
+        return [styles.fileHeader.render(line.content)];
+
+      case DiffLineType.hunkHeader:
+        return [styles.hunkHeader.render(line.content)];
+
+      case DiffLineType.added:
+        final gutter = styles.addedGutter.render('+');
+        final lineNums = _formatLineNumbers(null, line.newLineNumber, numWidth);
+        return _wrapUnifiedLine(
+          line.content,
+          lineNums,
+          gutter,
+          styles.addedLine,
+          numWidth,
+        );
+
+      case DiffLineType.removed:
+        final gutter = styles.removedGutter.render('-');
+        final lineNums = _formatLineNumbers(line.oldLineNumber, null, numWidth);
+        return _wrapUnifiedLine(
+          line.content,
+          lineNums,
+          gutter,
+          styles.removedLine,
+          numWidth,
+        );
+
+      case DiffLineType.context:
+        if (line.content.startsWith('\\')) {
+          return [styles.contextLine.render(line.content)];
+        }
+        final gutter = styles.contextGutter.render(' ');
+        final lineNums = _formatLineNumbers(
+          line.oldLineNumber,
+          line.newLineNumber,
+          numWidth,
+        );
+        return _wrapUnifiedLine(
+          line.content,
+          lineNums,
+          gutter,
+          styles.contextLine,
+          numWidth,
+        );
+
+      case DiffLineType.empty:
+        return [''];
+    }
+  }
+
+  /// Wraps a unified-mode line, producing continuation lines if needed.
+  List<String> _wrapUnifiedLine(
+    String text,
+    String lineNums,
+    String gutter,
+    Style contentStyle,
+    int numWidth,
+  ) {
+    // Compute prefix width:
+    // line numbers = (numWidth + space) when shown, else 0
+    // gutter = marker + space = 2
+    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
+    const gutterCharWidth = 2; // marker char + trailing space
+    final prefixWidth = lineNumWidth + gutterCharWidth;
+    final contentWidth = width - prefixWidth;
+
+    if (!wrapLines || contentWidth <= 0 || text.length <= contentWidth) {
+      final content = contentStyle.render(text);
+      return ['$lineNums$gutter $content'];
+    }
+
+    final result = <String>[];
+    var offset = 0;
+
+    while (offset < text.length) {
+      final end = (offset + contentWidth).clamp(0, text.length);
+      final chunk = text.substring(offset, end);
+
+      if (offset == 0) {
+        result.add('$lineNums$gutter ${contentStyle.render(chunk)}');
+      } else {
+        // Blank line number area + blank gutter
+        final blankNums = showLineNumbers
+            ? styles.lineNumber.render('${' ' * numWidth} ')
+            : '';
+        final blankGutter = '  '; // 2 spaces matching "marker + space"
+        result.add('$blankNums$blankGutter${contentStyle.render(chunk)}');
+      }
+
+      offset = end;
+    }
+
+    return result;
+  }
+
+  /// Formats the line number for the gutter (single column).
+  ///
+  /// Shows one line number per row: for added lines the new number, for
+  /// removed lines the old number, and for context lines whichever is
+  /// available (preferring new). Uses [numWidth] for consistent zero-padded
+  /// alignment based on the maximum line number across all files.
+  String _formatLineNumbers(int? oldNum, int? newNum, int numWidth) {
+    if (!showLineNumbers) return '';
+
+    final num = newNum ?? oldNum;
+    final formatted = num != null
+        ? '$num'.padLeft(numWidth, '0')
+        : ' ' * numWidth;
+
+    return styles.lineNumber.render('$formatted ');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Pretty mode rendering
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Renders all parsed diff files in pretty mode.
+  ///
+  /// Pretty mode shows clean file headers (← Edit path), hides raw diff
+  /// metadata and hunk headers, uses single-column line numbers, and applies
+  /// full-width background highlighting.
+  List<String> _renderLinesPretty(List<DiffFile> files) {
+    final maxLineNum = _computeMaxLineNumber(files);
+    final numWidth = '$maxLineNum'.length;
+    final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
+    final result = <String>[];
+
+    for (var fi = 0; fi < files.length; fi++) {
+      final file = files[fi];
+
+      // Separator between files
+      if (fi > 0) {
+        result.add('');
+      }
+
+      // Pretty file header: "← Edit path/to/file.dart"
+      final displayPath = file.newPath.isNotEmpty ? file.newPath : file.oldPath;
+      result.add(styles.prettyFileHeader.render('\u2190 Edit $displayPath'));
+
+      var previousWasHunk = false;
+      for (final line in file.lines) {
+        // Skip raw file headers — we already rendered a pretty header.
+        if (line.type == DiffLineType.fileHeader) continue;
+
+        // Replace hunk headers with blank separator lines.
+        if (line.type == DiffLineType.hunkHeader) {
+          // Only add separator if there's content before this hunk
+          // (i.e. not the very first hunk).
+          if (result.isNotEmpty && !previousWasHunk) {
+            result.add('');
+          }
+          previousWasHunk = true;
+          continue;
+        }
+        previousWasHunk = false;
+
+        if (line.type == DiffLineType.empty) {
+          result.add('');
+          continue;
+        }
+
+        result.addAll(_renderLinePretty(line, effectiveNumWidth));
+      }
+    }
+
+    return result;
+  }
+
+  /// Renders a single diff line in pretty mode.
+  ///
+  /// Uses a single line-number column, +/- gutter markers, and full-width
+  /// background highlighting for added and removed lines.
+  ///
+  /// Returns a list of rendered strings. When [wrapLines] is enabled and the
+  /// content exceeds the available width, continuation lines are generated
+  /// with blank padding in the gutter area.
+  List<String> _renderLinePretty(DiffLine line, int numWidth) {
+    // Determine the line number to show (single column).
+    final int? lineNum;
+    final Style lineNumStyle;
+    final Style lineStyle;
+    final String marker;
+
+    switch (line.type) {
+      case DiffLineType.added:
+        lineNum = line.newLineNumber;
+        lineNumStyle = styles.prettyAddedLineNumber;
+        lineStyle = styles.prettyAddedLine;
+        marker = '+';
+      case DiffLineType.removed:
+        lineNum = line.oldLineNumber;
+        lineNumStyle = styles.prettyRemovedLineNumber;
+        lineStyle = styles.prettyRemovedLine;
+        marker = '-';
+      case DiffLineType.context:
+        if (line.content.startsWith('\\')) {
+          return [styles.prettyContextLine.render(line.content)];
+        }
+        lineNum = line.newLineNumber ?? line.oldLineNumber;
+        lineNumStyle = styles.prettyContextLineNumber;
+        lineStyle = styles.prettyContextLine;
+        marker = ' ';
+      default:
+        return [''];
+    }
+
+    // Format single-column line number with zero-padding for alignment.
+    final numStr = showLineNumbers
+        ? lineNumStyle.render(
+            '${lineNum != null ? '$lineNum'.padLeft(numWidth, '0') : ' ' * numWidth} ',
+          )
+        : '';
+
+    // Gutter marker.
+    final gutter = lineStyle.render(' $marker ');
+
+    // Content padded to fill available width for full-width background.
+    // Account for line number width + gutter width (3 chars: space+marker+space).
+    final gutterWidth = showLineNumbers ? numWidth + 1 : 0; // numWidth + space
+    final markerWidth = 3; // space + marker + space
+    final contentWidth = width - gutterWidth - markerWidth;
+
+    if (!wrapLines ||
+        contentWidth <= 0 ||
+        line.content.length <= contentWidth) {
+      // No wrapping needed — single line.
+      final paddedContent = contentWidth > 0
+          ? line.content.padRight(contentWidth)
+          : line.content;
+      final content = lineStyle.render(paddedContent);
+      return ['$numStr$gutter$content'];
+    }
+
+    // Wrap the content into chunks of contentWidth characters.
+    final result = <String>[];
+    final text = line.content;
+    var offset = 0;
+
+    while (offset < text.length) {
+      final end = (offset + contentWidth).clamp(0, text.length);
+      final chunk = text.substring(offset, end);
+
+      if (offset == 0) {
+        // First line: line number + gutter + content.
+        final paddedChunk = chunk.padRight(contentWidth);
+        result.add('$numStr$gutter${lineStyle.render(paddedChunk)}');
+      } else {
+        // Continuation line: blank padding for line number + blank gutter.
+        final blankNum = showLineNumbers
+            ? lineNumStyle.render('${' ' * numWidth} ')
+            : '';
+        final blankGutter = lineStyle.render('   '); // 3 spaces matching marker
+        final paddedChunk = chunk.padRight(contentWidth);
+        result.add('$blankNum$blankGutter${lineStyle.render(paddedChunk)}');
+      }
+
+      offset = end;
+    }
+
+    return result;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Side-by-side mode rendering
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /// Renders all parsed diff files in side-by-side mode.
+  ///
+  /// Splits the viewport into two panels: old file on the left, new file on
+  /// the right, separated by a │ character. Added/removed lines are paired
+  /// so that a removed line on the left appears next to the corresponding
+  /// added line on the right.
+  List<String> _renderLinesSideBySide(List<DiffFile> files) {
+    final maxLineNum = _computeMaxLineNumber(files);
+    final numWidth = '$maxLineNum'.length;
+    final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
+    final result = <String>[];
+
+    // Layout: [lineNum space] content │ [lineNum space] content
+    // separator = 3 chars: " │ "
+    const separatorWidth = 3;
+    final gutterWidth = showLineNumbers ? effectiveNumWidth + 1 : 0;
+    final availableWidth = width - separatorWidth;
+    final leftPanelWidth = availableWidth ~/ 2;
+    final rightPanelWidth = availableWidth - leftPanelWidth;
+    final leftContentWidth = leftPanelWidth - gutterWidth;
+    final rightContentWidth = rightPanelWidth - gutterWidth;
+
+    if (leftContentWidth <= 0 || rightContentWidth <= 0) {
+      // Too narrow for side-by-side — fall back to unified.
+      return _renderLines(files, overrideViewMode: DiffViewMode.unified);
+    }
+
+    final separator = styles.sideBySideSeparator.render(' \u2502 ');
+
+    for (var fi = 0; fi < files.length; fi++) {
+      final file = files[fi];
+
+      if (fi > 0) {
+        result.add('');
+      }
+
+      // File header — use pretty-style "← Edit path" spanning full width.
+      final displayPath = file.newPath.isNotEmpty ? file.newPath : file.oldPath;
+      result.add(styles.prettyFileHeader.render('\u2190 Edit $displayPath'));
+
+      // Process hunks — pair removed and added lines.
+      final lines = file.lines;
+      var i = 0;
+
+      while (i < lines.length) {
+        final line = lines[i];
+
+        // Skip file headers — we already rendered one.
+        if (line.type == DiffLineType.fileHeader) {
+          i++;
+          continue;
+        }
+
+        // Hunk header — render split across both panels.
+        if (line.type == DiffLineType.hunkHeader) {
+          final hunkMatch = RegExp(
+            r'^@@ -(\d+(?:,\d+)?) \+(\d+(?:,\d+)?) @@(.*)$',
+          ).firstMatch(line.content);
+          if (hunkMatch != null) {
+            final oldRange = '-${hunkMatch.group(1)!}';
+            final newRange = '+${hunkMatch.group(2)!}';
+            final ctx = hunkMatch.group(3)!.trim();
+            final leftHunk = ctx.isEmpty ? '@@ $oldRange' : '@@ $oldRange $ctx';
+            final rightHunk = '@@ $newRange';
+            final leftCell = styles.hunkHeader.render(
+              leftHunk.padRight(leftPanelWidth),
+            );
+            final rightCell = styles.hunkHeader.render(
+              rightHunk.padRight(rightPanelWidth),
+            );
+            result.add('$leftCell$separator$rightCell');
+          } else {
+            // Fallback: raw hunk header spanning full width.
+            result.add(styles.hunkHeader.render(line.content.padRight(width)));
+          }
+          i++;
+          continue;
+        }
+
+        // Empty line.
+        if (line.type == DiffLineType.empty) {
+          result.add('');
+          i++;
+          continue;
+        }
+
+        // Context line — same content on both sides.
+        if (line.type == DiffLineType.context) {
+          final leftRows = _sbsCell(
+            lineNum: line.oldLineNumber,
+            content: line.content,
+            style: styles.sideBySideContextLine,
+            numStyle: styles.sideBySideLineNumber,
+            numWidth: effectiveNumWidth,
+            cellWidth: leftPanelWidth,
+            contentWidth: leftContentWidth,
+          );
+          final rightRows = _sbsCell(
+            lineNum: line.newLineNumber,
+            content: line.content,
+            style: styles.sideBySideContextLine,
+            numStyle: styles.sideBySideLineNumber,
+            numWidth: effectiveNumWidth,
+            cellWidth: rightPanelWidth,
+            contentWidth: rightContentWidth,
+          );
+          _sbsJoinRows(
+            result,
+            leftRows,
+            rightRows,
+            separator,
+            leftPanelWidth,
+            rightPanelWidth,
+          );
+          i++;
+          continue;
+        }
+
+        // Collect consecutive removed and added lines for pairing.
+        final removedLines = <DiffLine>[];
+        final addedLines = <DiffLine>[];
+
+        // Gather removed lines.
+        while (i < lines.length && lines[i].type == DiffLineType.removed) {
+          removedLines.add(lines[i]);
+          i++;
+        }
+        // Gather added lines immediately after.
+        while (i < lines.length && lines[i].type == DiffLineType.added) {
+          addedLines.add(lines[i]);
+          i++;
+        }
+
+        // Pair them: zip removed with added, then fill remainder.
+        final pairCount = removedLines.length > addedLines.length
+            ? removedLines.length
+            : addedLines.length;
+
+        for (var p = 0; p < pairCount; p++) {
+          final hasLeft = p < removedLines.length;
+          final hasRight = p < addedLines.length;
+
+          final leftRows = hasLeft
+              ? _sbsCell(
+                  lineNum: removedLines[p].oldLineNumber,
+                  content: removedLines[p].content,
+                  style: styles.sideBySideRemovedLine,
+                  numStyle: styles.sideBySideLineNumber,
+                  numWidth: effectiveNumWidth,
+                  cellWidth: leftPanelWidth,
+                  contentWidth: leftContentWidth,
+                )
+              : [_sbsEmptyCell(leftPanelWidth)];
+
+          final rightRows = hasRight
+              ? _sbsCell(
+                  lineNum: addedLines[p].newLineNumber,
+                  content: addedLines[p].content,
+                  style: styles.sideBySideAddedLine,
+                  numStyle: styles.sideBySideLineNumber,
+                  numWidth: effectiveNumWidth,
+                  cellWidth: rightPanelWidth,
+                  contentWidth: rightContentWidth,
+                )
+              : [_sbsEmptyCell(rightPanelWidth)];
+
+          _sbsJoinRows(
+            result,
+            leftRows,
+            rightRows,
+            separator,
+            leftPanelWidth,
+            rightPanelWidth,
+          );
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /// Renders a single cell for side-by-side mode.
+  ///
+  /// Each cell contains an optional line number and content, padded to
+  /// [cellWidth] visible characters. When [wrapLines] is enabled and the
+  /// content exceeds [contentWidth], continuation rows are produced with
+  /// blank line-number gutters.
+  List<String> _sbsCell({
+    required int? lineNum,
+    required String content,
+    required Style style,
+    required Style numStyle,
+    required int numWidth,
+    required int cellWidth,
+    required int contentWidth,
+  }) {
+    final numStr = showLineNumbers
+        ? numStyle.render(
+            '${lineNum != null ? '$lineNum'.padLeft(numWidth, '0') : ' ' * numWidth} ',
+          )
+        : '';
+
+    if (!wrapLines || contentWidth <= 0 || content.length <= contentWidth) {
+      // Truncate or pad content to fit contentWidth.
+      final displayContent = content.length > contentWidth
+          ? content.substring(0, contentWidth)
+          : content.padRight(contentWidth);
+      return ['$numStr${style.render(displayContent)}'];
+    }
+
+    // Wrap: split content into chunks of contentWidth.
+    final rows = <String>[];
+    var offset = 0;
+    while (offset < content.length) {
+      final end = (offset + contentWidth).clamp(0, content.length);
+      final chunk = content.substring(offset, end).padRight(contentWidth);
+      if (offset == 0) {
+        rows.add('$numStr${style.render(chunk)}');
+      } else {
+        final blankNum = showLineNumbers
+            ? numStyle.render('${' ' * numWidth} ')
+            : '';
+        rows.add('$blankNum${style.render(chunk)}');
+      }
+      offset = end;
+    }
+    return rows;
+  }
+
+  /// Renders an empty cell for side-by-side mode.
+  String _sbsEmptyCell(int cellWidth) {
+    return styles.sideBySideEmptyCell.render(' ' * cellWidth);
+  }
+
+  /// Joins left and right cell row lists into combined side-by-side rows.
+  ///
+  /// If one side has more rows than the other, the shorter side is padded
+  /// with empty cells.
+  void _sbsJoinRows(
+    List<String> result,
+    List<String> leftRows,
+    List<String> rightRows,
+    String separator,
+    int leftPanelWidth,
+    int rightPanelWidth,
+  ) {
+    final rowCount = leftRows.length > rightRows.length
+        ? leftRows.length
+        : rightRows.length;
+    for (var r = 0; r < rowCount; r++) {
+      final left = r < leftRows.length
+          ? leftRows[r]
+          : _sbsEmptyCell(leftPanelWidth);
+      final right = r < rightRows.length
+          ? rightRows[r]
+          : _sbsEmptyCell(rightPanelWidth);
+      result.add('$left$separator$right');
+    }
+  }
+}

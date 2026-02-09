@@ -87,5 +87,8 @@ export 'confirm.dart';
 export 'anticipate.dart';
 export 'wizard.dart' hide ValidateFunc;
 
+// Git
+export 'git_diff.dart';
+
 // Utilities
-export 'runeutil.dart' ;
+export 'runeutil.dart';

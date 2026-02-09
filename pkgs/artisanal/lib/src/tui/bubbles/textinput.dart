@@ -49,10 +49,14 @@ class TextInputStyleState {
     Style? placeholder,
     Style? suggestion,
     Style? prompt,
+    Style? selection,
   }) : text = text ?? Style(),
        placeholder = placeholder ?? Style(),
        suggestion = suggestion ?? Style(),
-       prompt = prompt ?? Style();
+       prompt = prompt ?? Style(),
+       selection =
+           selection ??
+           Style().background(AnsiColor(7)).foreground(AnsiColor(0));
 
   /// Style for the entered text.
   Style text;
@@ -65,6 +69,9 @@ class TextInputStyleState {
 
   /// Style for the prompt prefix.
   Style prompt;
+
+  /// Style for selected text.
+  Style selection;
 }
 
 /// Style for the cursor.
@@ -183,8 +190,16 @@ class TextInputKeyMap implements KeyMap {
     KeyBinding? deleteCharacterForward,
     KeyBinding? lineStart,
     KeyBinding? lineEnd,
+    KeyBinding? selectCharacterForward,
+    KeyBinding? selectCharacterBackward,
+    KeyBinding? selectWordForward,
+    KeyBinding? selectWordBackward,
+    KeyBinding? selectLineStart,
+    KeyBinding? selectLineEnd,
+    KeyBinding? selectAll,
     KeyBinding? paste,
     KeyBinding? copy,
+    KeyBinding? cut,
     KeyBinding? acceptSuggestion,
     KeyBinding? nextSuggestion,
     KeyBinding? prevSuggestion,
@@ -251,7 +266,7 @@ class TextInputKeyMap implements KeyMap {
        lineStart =
            lineStart ??
            KeyBinding(
-             keys: ['home', 'ctrl+a'],
+             keys: ['home'],
              help: Help(key: 'home', desc: 'Go to start'),
            ),
        lineEnd =
@@ -259,6 +274,49 @@ class TextInputKeyMap implements KeyMap {
            KeyBinding(
              keys: ['end', 'ctrl+e'],
              help: Help(key: 'end', desc: 'Go to end'),
+           ),
+
+       selectCharacterForward =
+           selectCharacterForward ??
+           KeyBinding(
+             keys: ['shift+right'],
+             help: Help(key: 'shift+→', desc: 'Select forward'),
+           ),
+       selectCharacterBackward =
+           selectCharacterBackward ??
+           KeyBinding(
+             keys: ['shift+left'],
+             help: Help(key: 'shift+←', desc: 'Select backward'),
+           ),
+       selectWordForward =
+           selectWordForward ??
+           KeyBinding(
+             keys: ['ctrl+shift+right', 'alt+shift+right'],
+             help: Help(key: 'ctrl+shift+→', desc: 'Select word forward'),
+           ),
+       selectWordBackward =
+           selectWordBackward ??
+           KeyBinding(
+             keys: ['ctrl+shift+left', 'alt+shift+left'],
+             help: Help(key: 'ctrl+shift+←', desc: 'Select word backward'),
+           ),
+       selectLineStart =
+           selectLineStart ??
+           KeyBinding(
+             keys: ['shift+home'],
+             help: Help(key: 'shift+home', desc: 'Select to start'),
+           ),
+       selectLineEnd =
+           selectLineEnd ??
+           KeyBinding(
+             keys: ['shift+end'],
+             help: Help(key: 'shift+end', desc: 'Select to end'),
+           ),
+       selectAll =
+           selectAll ??
+           KeyBinding(
+             keys: ['ctrl+a'],
+             help: Help(key: 'ctrl+a', desc: 'Select all'),
            ),
        paste =
            paste ??
@@ -272,6 +330,13 @@ class TextInputKeyMap implements KeyMap {
              keys: ['ctrl+c'],
              help: Help(key: '^c', desc: 'Copy'),
            ),
+       cut =
+           cut ??
+           KeyBinding(
+             keys: ['ctrl+x'],
+             help: Help(key: '^x', desc: 'Cut'),
+           ),
+
        acceptSuggestion =
            acceptSuggestion ??
            KeyBinding(
@@ -327,11 +392,35 @@ class TextInputKeyMap implements KeyMap {
   /// Move cursor to end of line.
   final KeyBinding lineEnd;
 
+  /// Select one character forward.
+  final KeyBinding selectCharacterForward;
+
+  /// Select one character backward.
+  final KeyBinding selectCharacterBackward;
+
+  /// Select one word forward.
+  final KeyBinding selectWordForward;
+
+  /// Select one word backward.
+  final KeyBinding selectWordBackward;
+
+  /// Select to start of line.
+  final KeyBinding selectLineStart;
+
+  /// Select to end of line.
+  final KeyBinding selectLineEnd;
+
+  /// Select all text.
+  final KeyBinding selectAll;
+
   /// Paste from clipboard.
   final KeyBinding paste;
 
   /// Copy to clipboard.
   final KeyBinding copy;
+
+  /// Cut to clipboard.
+  final KeyBinding cut;
 
   /// Accept current suggestion.
   final KeyBinding acceptSuggestion;
@@ -360,7 +449,15 @@ class TextInputKeyMap implements KeyMap {
       deleteWordForward,
     ],
     [deleteBeforeCursor, deleteAfterCursor],
-    [paste, copy, acceptSuggestion, nextSuggestion, prevSuggestion],
+    [
+      selectAll,
+      paste,
+      copy,
+      cut,
+      acceptSuggestion,
+      nextSuggestion,
+      prevSuggestion,
+    ],
   ];
 }
 
@@ -539,6 +636,22 @@ class TextInputModel extends ViewComponent {
     return _matchedSuggestions[_currentSuggestionIndex].join();
   }
 
+  /// Gets the selection start position.
+  int? get selectionStart => _selectionStart;
+
+  /// Sets the selection start position.
+  set selectionStart(int? value) {
+    _selectionStart = value;
+  }
+
+  /// Gets the selection end position.
+  int? get selectionEnd => _selectionEnd;
+
+  /// Sets the selection end position.
+  set selectionEnd(int? value) {
+    _selectionEnd = value;
+  }
+
   /// Focus the input.
   Cmd? focus() {
     _focused = true;
@@ -546,6 +659,13 @@ class TextInputModel extends ViewComponent {
     cursor = newCursor;
     _updateVirtualCursorStyle();
     return cmd;
+  }
+
+  /// Selects all text in the input.
+  void selectAll() {
+    _selectionStart = 0;
+    _selectionEnd = _value.length;
+    position = _value.length;
   }
 
   /// Returns the currently selected text.
@@ -714,6 +834,23 @@ class TextInputModel extends ViewComponent {
 
       _offset = _offsetRight - (gs.length - 1 - i);
     }
+  }
+
+  bool _deleteSelection() {
+    if (_selectionStart == null || _selectionEnd == null) return false;
+    final start = math.min(_selectionStart!, _selectionEnd!);
+    final end = math.max(_selectionStart!, _selectionEnd!);
+    if (start == end) {
+      _selectionStart = null;
+      _selectionEnd = null;
+      return false;
+    }
+    _value.removeRange(start, end);
+    position = start;
+    _selectionStart = null;
+    _selectionEnd = null;
+    error = _validate(_value);
+    return true;
   }
 
   void _deleteBeforeCursor() {
@@ -987,55 +1124,120 @@ class TextInputModel extends ViewComponent {
         }
       }
 
+      if (keyMatches(msg.key, [keyMap.cut])) {
+        final selected = getSelectedText();
+        if (selected.isNotEmpty) {
+          _deleteSelection();
+          return (this, Cmd.setClipboard(selected));
+        }
+      }
+
+      if (keyMatches(msg.key, [keyMap.selectAll])) {
+        _selectionStart = 0;
+        _selectionEnd = _value.length;
+        position = _value.length;
+        return (this, null);
+      }
+
       if (msg.key.type == KeyType.space) {
         _insertRunes([0x20]);
         return (this, null);
       }
 
       if (keyMatches(msg.key, [keyMap.deleteWordBackward])) {
-        _deleteWordBackward();
+        if (!_deleteSelection()) {
+          _deleteWordBackward();
+        }
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterBackward])) {
-        error = null;
-        if (_value.isNotEmpty && _pos > 0) {
-          _value = [
-            ..._value.sublist(0, math.max(0, _pos - 1)),
-            ..._value.sublist(_pos),
-          ];
-          error = _validate(_value);
-          if (_pos > 0) position = _pos - 1;
+        if (!_deleteSelection()) {
+          error = null;
+          if (_value.isNotEmpty && _pos > 0) {
+            _value = [
+              ..._value.sublist(0, math.max(0, _pos - 1)),
+              ..._value.sublist(_pos),
+            ];
+            error = _validate(_value);
+            if (_pos > 0) position = _pos - 1;
+          }
         }
       } else if (keyMatches(msg.key, [keyMap.wordBackward])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         _wordBackward();
+      } else if (keyMatches(msg.key, [keyMap.selectWordBackward])) {
+        _selectionStart ??= _pos;
+        _wordBackward();
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterBackward])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         if (_pos > 0) position = _pos - 1;
+      } else if (keyMatches(msg.key, [keyMap.selectCharacterBackward])) {
+        _selectionStart ??= _pos;
+        if (_pos > 0) position = _pos - 1;
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.wordForward])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         _wordForward();
+      } else if (keyMatches(msg.key, [keyMap.selectWordForward])) {
+        _selectionStart ??= _pos;
+        _wordForward();
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterForward])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         if (_pos < _value.length) position = _pos + 1;
+      } else if (keyMatches(msg.key, [keyMap.selectCharacterForward])) {
+        _selectionStart ??= _pos;
+        if (_pos < _value.length) position = _pos + 1;
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.lineStart])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         cursorStart();
+      } else if (keyMatches(msg.key, [keyMap.selectLineStart])) {
+        _selectionStart ??= _pos;
+        cursorStart();
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
-        if (_value.isNotEmpty && _pos < _value.length) {
-          _value = [..._value.sublist(0, _pos), ..._value.sublist(_pos + 1)];
-          error = _validate(_value);
+        if (!_deleteSelection()) {
+          if (_value.isNotEmpty && _pos < _value.length) {
+            _value = [..._value.sublist(0, _pos), ..._value.sublist(_pos + 1)];
+            error = _validate(_value);
+          }
         }
       } else if (keyMatches(msg.key, [keyMap.lineEnd])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         cursorEnd();
+      } else if (keyMatches(msg.key, [keyMap.selectLineEnd])) {
+        _selectionStart ??= _pos;
+        cursorEnd();
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         _deleteAfterCursor();
       } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
+        _selectionStart = null;
+        _selectionEnd = null;
         _deleteBeforeCursor();
       } else if (keyMatches(msg.key, [keyMap.paste])) {
+        _deleteSelection();
         // Return paste command - caller handles clipboard
         return (this, _pasteCmd());
       } else if (keyMatches(msg.key, [keyMap.deleteWordForward])) {
-        _deleteWordForward();
+        if (!_deleteSelection()) {
+          _deleteWordForward();
+        }
       } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
         _nextSuggestion();
       } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
         _previousSuggestion();
       } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
         // Regular character input
+        _deleteSelection();
         _insertRunes(msg.key.runes);
       }
 
@@ -1091,9 +1293,7 @@ class TextInputModel extends ViewComponent {
     }
 
     var v = '';
-    final selectionStyle = Style()
-        .background(const AnsiColor(7))
-        .foreground(const AnsiColor(0));
+    final selectionStyle = styles.selection;
 
     for (var i = 0; i < visibleValue.length; i++) {
       final char = _echoTransform(visibleValue[i]);
@@ -1136,7 +1336,7 @@ class TextInputModel extends ViewComponent {
       if (valWidth + padding <= width && pos < visibleValue.length) {
         padding++;
       }
-      v += styleText(' ' * padding);
+      v += _renderPadding(styles.text, styles.prompt, padding);
     }
 
     final styledPrompt = styles.prompt.render(prompt);
@@ -1169,7 +1369,9 @@ class TextInputModel extends ViewComponent {
       final placeholderRest = truncate(result.rest, availWidth, '…');
       final restWidth = stringWidth(placeholderRest);
       final paddingWidth = math.max(0, availWidth - restWidth);
-      v += styles.placeholder.render(placeholderRest) + (' ' * paddingWidth);
+      v +=
+          styles.placeholder.render(placeholderRest) +
+          _renderPadding(styles.placeholder, styles.prompt, paddingWidth);
     } else {
       v += styles.placeholder.render(result.rest);
     }
@@ -1191,6 +1393,17 @@ class TextInputModel extends ViewComponent {
       }
     }
     return '';
+  }
+
+  String _renderPadding(Style primary, Style fallback, int count) {
+    if (count <= 0) return '';
+    final primaryInline = primary.inline(true);
+    final sample = primaryInline.render(' ');
+    if (sample.contains('\x1b')) {
+      return primaryInline.render(' ' * count);
+    }
+    final fallbackInline = fallback.inline(true);
+    return fallbackInline.render(' ' * count);
   }
 
   /// Handles the paste key binding (Ctrl+V).
