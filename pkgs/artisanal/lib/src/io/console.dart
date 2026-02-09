@@ -9,6 +9,7 @@ import '../tui/bubbles/spinner.dart' show Spinner, Spinners;
 import '../renderer/renderer.dart';
 import '../style/color.dart';
 import '../style/style.dart';
+import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
 import 'inline_animation.dart';
@@ -138,7 +139,7 @@ class StepsResult {
 ///
 /// ## Features
 ///
-/// - **Output**: [writeln], [write], [title], [section], [info], [success], [error].
+/// - **Output**: [writeln], [write], [title], [section], [line], [info], [comment], [question], [warn], [success], [error], [alert].
 /// - **Components**: [table], [progressBar], [tree].
 /// - **Prompts**: [ask], [confirm], [choice], [secret].
 /// - **Tasks**: [task] for running operations with a status indicator.
@@ -180,10 +181,26 @@ class Console {
        _readLine = readLine ?? (stdin ?? io.stdin).readLineSync,
        _secretReader = secretReader,
        terminalWidth = terminalWidth ?? 120,
-       _renderer = renderer ?? defaultRenderer;
+       _renderer = renderer ?? defaultRenderer,
+       _tagParser =
+           ConsoleTagParser(
+               colorProfile: (renderer ?? defaultRenderer).colorProfile,
+               hasDarkBackground:
+                   (renderer ?? defaultRenderer).hasDarkBackground,
+             )
+             ..registerStyle('info', Style().foreground(Colors.info))
+             ..registerStyle('comment', Style().foreground(Colors.warning))
+             ..registerStyle('question', Style().foreground(Colors.cyan))
+             ..registerStyle('warning', Style().foreground(Colors.warning))
+             ..registerStyle('error', Style().foreground(Colors.error))
+             ..registerStyle('success', Style().foreground(Colors.success))
+             ..registerStyle('muted', Style().foreground(Colors.muted));
 
   /// The renderer for output.
   final Renderer _renderer;
+
+  /// Console tag parser for inline styling.
+  final ConsoleTagParser _tagParser;
 
   /// The ANSI style configuration.
   Style get style => Style()
@@ -192,6 +209,22 @@ class Console {
 
   /// Private getter for internal use (backwards compatibility).
   Style get _style => style;
+
+  /// Registers a custom named style for console tags.
+  void registerStyle(String name, Style style) {
+    _tagParser.registerStyle(name, style);
+  }
+
+  /// Removes a registered custom style.
+  void unregisterStyle(String name) {
+    _tagParser.unregisterStyle(name);
+  }
+
+  /// Gets a registered style by name, or null if not found.
+  Style? getStyle(String name) => _tagParser.getStyle(name);
+
+  /// Returns all registered style names.
+  Iterable<String> get styleNames => _tagParser.styleNames;
 
   /// Rendering configuration for bubble-style display components.
   RenderConfig get renderConfig =>
@@ -222,6 +255,12 @@ class Console {
   /// Whether output is suppressed (quiet mode).
   bool get quiet => verbosity == Verbosity.quiet;
 
+  bool _shouldOutput(Verbosity? minVerbosity) {
+    if (quiet) return false;
+    if (minVerbosity == null) return true;
+    return verbosity.index >= minVerbosity.index;
+  }
+
   /// Access to higher-level console components (Laravel-style).
   ///
   /// ```dart
@@ -244,23 +283,23 @@ class Console {
   /// Writes a line to stdout.
   void writeln([String line = '']) {
     if (quiet) return;
-    _out(line);
+    _out(_tagParser.render(line));
   }
 
   /// Writes raw text to stdout (no newline).
   void write(String text) {
     if (quiet) return;
-    _outRaw(text);
+    _outRaw(_tagParser.render(text));
   }
 
   /// Writes raw text to stderr.
   void writeErr(String text) {
-    _errRaw(text);
+    _errRaw(_tagParser.render(text));
   }
 
   /// Writes a line to stderr.
   void writelnErr([String line = '']) {
-    _err(line);
+    _err(_tagParser.render(line));
   }
 
   /// Outputs one or more blank lines.
@@ -318,70 +357,66 @@ class Console {
   // Message Blocks
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /// Outputs an info message.
-  void info(Object message) =>
-      _labeledBlock('INFO', message, _style.bold().foreground(Colors.info));
+  /// Outputs a plain line (Laravel-style).
+  ///
+  /// Supports console tags in the message content. If [style] is provided,
+  /// it will be wrapped in a tag (e.g., style "info" -> `<info>message</info>`).
+  void line(Object message, {String? style, Verbosity? verbosity}) {
+    if (!_shouldOutput(verbosity)) return;
+    final text = message.toString();
+    if (style == null || style.isEmpty) {
+      writeln(text);
+      return;
+    }
+    writeln('<$style>$text</$style>');
+  }
 
-  /// Outputs a success message.
-  void success(Object message) =>
-      _labeledBlock('OK', message, _style.bold().foreground(Colors.success));
+  /// Outputs an info message (Laravel-style).
+  void info(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'info', verbosity: verbosity);
 
-  /// Outputs a warning message.
-  void warning(Object message) => _labeledBlock(
-    'WARNING',
-    message,
-    _style.bold().foreground(Colors.warning),
-  );
+  /// Outputs a success message (Laravel-style extension).
+  void success(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'success', verbosity: verbosity);
 
-  /// Outputs an error message.
-  void error(Object message) =>
-      _labeledBlock('ERROR', message, _style.bold().foreground(Colors.error));
+  /// Outputs a comment message (Laravel-style).
+  void comment(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'comment', verbosity: verbosity);
+
+  /// Outputs a question message (Laravel-style).
+  void question(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'question', verbosity: verbosity);
+
+  /// Outputs a warning message (Laravel-style).
+  void warn(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'warning', verbosity: verbosity);
+
+  /// Outputs an error message (Laravel-style).
+  void error(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'error', verbosity: verbosity);
 
   /// Outputs a note message.
-  void note(Object message) =>
-      _labeledBlock('NOTE', message, _style.bold().foreground(Colors.warning));
+  void note(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'warning', verbosity: verbosity);
 
   /// Outputs a caution message.
-  void caution(Object message) =>
-      _labeledBlock('CAUTION', message, _style.bold().foreground(Colors.error));
+  void caution(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'error', verbosity: verbosity);
 
   /// Outputs a verbose message (only if verbosity >= verbose).
-  void verbose(Object message) {
-    if (verbosity.index >= Verbosity.verbose.index) {
-      _labeledBlock('VERBOSE', message, _style.bold().foreground(Colors.muted));
-    }
-  }
+  void verbose(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'muted', verbosity: verbosity ?? Verbosity.verbose);
 
   /// Outputs a debug message (only if verbosity >= debug).
-  void debug(Object message) {
-    if (verbosity.index >= Verbosity.debug.index) {
-      _labeledBlock('DEBUG', message, _style.bold().foreground(Colors.muted));
-    }
-  }
+  void debug(Object message, {Verbosity? verbosity}) =>
+      line(message, style: 'muted', verbosity: verbosity ?? Verbosity.debug);
 
   /// Outputs an alert box.
-  void alert(Object message) {
-    final warningStyle = _style.bold().foreground(Colors.warning);
-    final lines = _normalizeLines(message);
-    final contentWidth = lines
-        .map((line) => Style.visibleLength(line))
-        .fold<int>(0, (m, v) => v > m ? v : m);
-    final width = (contentWidth + 4).clamp(0, terminalWidth);
-
-    final top = '+${'-' * (width - 2)}+';
-    writeln(warningStyle.render(top));
-    for (final line in lines) {
-      final visible = Style.visibleLength(line);
-      final fill = width - 4 - visible;
-      writeln(
-        warningStyle.render('| ') +
-            line +
-            (' ' * (fill > 0 ? fill : 0)) +
-            warningStyle.render(' |'),
-      );
-    }
-    writeln(warningStyle.render(top));
-    newLine();
+  ///
+  /// Uses Artisanal GUI components for rendering.
+  void alert(Object message, {Verbosity? verbosity}) {
+    if (!_shouldOutput(verbosity)) return;
+    components.alert(message);
   }
 
   /// Outputs a two-column detail line.
@@ -805,7 +840,7 @@ class Console {
           'Completed ${completed.length} task(s) in ${_formatDuration(watch.elapsed)}',
         );
       } else {
-        warning(
+        warn(
           'Completed ${completed.length}, failed ${failed.length}, skipped ${skipped.length} in ${_formatDuration(watch.elapsed)}',
         );
       }
@@ -1318,13 +1353,6 @@ class Console {
       return message.map((e) => e.toString()).toList();
     }
     return message.toString().split('\n');
-  }
-
-  void _labeledBlock(String label, Object message, Style labelStyle) {
-    final lines = _normalizeLines(message);
-    for (final line in lines) {
-      writeln('${labelStyle.render('[$label]')} $line');
-    }
   }
 }
 
