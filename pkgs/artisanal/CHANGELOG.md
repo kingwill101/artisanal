@@ -1,5 +1,43 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- **Charting library** (`package:artisanal/charting.dart`): terminal-native chart renderers — sparkline, histogram, heatmap, line chart, pie/donut chart, and stacked ribbon/area chart, all rendering into UV buffers.
+- **Liquid template library** (`package:artisanal/liquid.dart`): custom Liquid tag adapters (`panel`, `frame`, `hstack`, `vstack`, `grid`, `spark`, `rule`, `text`, `table`, `progress`, `line`, `histogram`, `pie`) for building terminal UIs from templates. Includes `UvBufferTarget` and `StringRenderTarget`.
+- **Physics library** (`package:artisanal/physics.dart`): lightweight forge2d wrappers (`PhysicsWorld`, `PhysicsSettings`) and convenience type aliases for integrating physics into UV/TUI demos.
+- **Terminal image protocol rewrite**: iTerm2 (`encodePng()`), Kitty (PNG-format payloads, auto-IDs, quiet mode), and Sixel (octree color quantization, auto-resize) encoders rewritten for correctness and performance.
+- **UV renderer improvements**: render metrics with idle timeout, `metricsOnlyFrame()`, overlay filters, drawable exports, and width utilities re-exported from `uv.dart` barrel.
+- **TUI core enhancements**: `TuiTrace` debug tracing system, input event coalescing, startup probe reorder, `FrameTickModel` and `RenderMetricsModel` additions.
+- **ConsoleTagParser**: style-tagged output methods for `Console` (e.g. `<red>text</red>`), with delegating output methods on `Command`.
+- **Text selection in bubble components**: click-drag text selection with highlighting and Ctrl+C copy support in `TextInput` and `Viewport` bubbles.
+- **Barrel export updates**: new top-level exports for charting, liquid, physics, and widgets; `tui.dart` now hides `Row`/`Column`/`Text` from bubbles to avoid widget-system collisions.
+
+### Bug Fixes
+
+- **Fixed**: scroll flicker eliminated via synchronized output (DEC mode 2026) — terminal buffers output atomically during `flush()`.
+- **Fixed**: Unicode width calculations — corrected `_isEmojiPresentation()` to match Unicode 15.1 `Emoji_Presentation=Yes` only; expanded supplementary emoji ranges (Mahjong/Playing Cards, Enclosed Alphanumerics, Enclosed Ideographic Supplement, Geometric Shapes Extended).
+- **Fixed**: `Layout.truncate()` now uses grapheme-cluster iteration instead of code-unit counting, preventing CJK and emoji characters from being split mid-character.
+- **Fixed**: `Layout.truncate()` accounts for U+FE0F variation selector — emoji like `☀️` are now correctly measured as width 2 during truncation.
+- **Fixed**: mouse sequence parsing in `SplitTerminal`.
+- **Fixed**: CR+LF newline mapping for alt-screen rendering.
+
+### Refactoring
+
+- Cleaned up style/glamour modules (`GlamourRenderer`, `GlamourBlockContext` dartdoc).
+- Runner command delegation for output methods.
+- Migrated widget system files (`layout_widgets.dart`, `theme.dart`, `widget.dart`, `widgets.dart`) to the `artisanal_widgets` package; added `package:artisanal/widgets.dart` shim that re-exports `artisanal_widgets`.
+
+### Documentation
+
+- Removed legacy docs directory; updated README.
+- Full `///` dartdoc coverage on all new and changed public API across ~25 source files.
+
+### Tests
+
+- Added comprehensive tests for charting, text selection, Unicode width edge cases, grapheme-based truncation, variation selector handling, and image encoder correctness.
+
 ## 0.1.3
 
 ### Bug Fixes
