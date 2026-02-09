@@ -676,7 +676,12 @@ class Layout {
       final (:grapheme, :nextIndex) = uni.readGraphemeAt(text, i);
       if (grapheme.isEmpty) break;
 
-      final w = runeWidth(uni.firstCodePoint(grapheme));
+      var w = runeWidth(uni.firstCodePoint(grapheme));
+      // FE0F (emoji presentation selector) upgrades a narrow base to width 2,
+      // matching the logic in stringWidth().
+      if (w == 1 && grapheme.length > 1 && grapheme.contains('\uFE0F')) {
+        w = 2;
+      }
 
       // Don't exceed the target width.
       if (currentLen + w > targetLen) break;
