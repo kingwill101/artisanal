@@ -977,22 +977,24 @@ class StdioTerminal implements Terminal {
     if (_mouseEnabled || !supportsAnsi) return;
     // Enable normal mouse tracking + button events + SGR extended mode
     write(Ansi.mouseEnableNormal);
-    write(Ansi.mouseEnableButton);
     write(Ansi.mouseEnableSgr);
     _mouseEnabled = true;
   }
 
   @override
   void enableMouseCellMotion() {
+    if (!supportsAnsi) return;
     enableMouse();
+    write(Ansi.mouseEnableButton);
   }
 
   @override
   void enableMouseAllMotion() {
     if (!supportsAnsi) return;
     // All motion includes hover events
-    write(Ansi.mouseEnableAny);
     enableMouse();
+    write(Ansi.mouseEnableButton);
+    write(Ansi.mouseEnableAny);
   }
 
   @override
