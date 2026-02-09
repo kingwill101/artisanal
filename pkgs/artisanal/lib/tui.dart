@@ -125,6 +125,7 @@
 library;
 
 export 'src/tui/tui.dart';
-export 'src/tui/bubbles/bubbles.dart' hide ValidateFunc, PasteMsg;
+export 'src/tui/bubbles/bubbles.dart'
+    hide ValidateFunc, PasteMsg, Row, Column, Text;
 export 'src/tui/markdown/markdown.dart';
 export 'src/tui/markdown/ansi_renderer.dart';

@@ -147,6 +147,18 @@ export 'src/uv/layer.dart' show Layer, Compositor, newLayer, LayerHit;
 export 'src/uv/canvas.dart' show Canvas;
 export 'src/uv/layout.dart';
 export 'src/uv/screen.dart';
+export 'src/uv/filters.dart' show BufferFilter, BufferRenderSink, LiquifyFilter;
+export 'src/uv/drawable.dart' show Drawable, EmptyDrawable;
+export 'src/unicode/width.dart'
+    show
+        runeWidth,
+        stringWidth,
+        maxLineWidth,
+        WidthMethod,
+        WidthMethodX,
+        emojiPresentationWidth,
+        setEmojiPresentationWidth;
+export 'src/uv/halfblock_drawable.dart' show HalfBlockImageDrawable;
 export 'src/uv/iterm2_drawable.dart' show ITerm2ImageDrawable;
 export 'src/uv/kitty_drawable.dart' show KittyImageDrawable;
 export 'src/uv/sixel_drawable.dart' show SixelImageDrawable;

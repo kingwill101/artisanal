@@ -32,6 +32,8 @@
 /// - `package:artisanal/tui.dart`: Interactive TUI framework (Elm Architecture).
 /// - `package:artisanal/bubbles.dart`: Reusable interactive TUI components.
 /// - `package:artisanal/uv.dart`: Low-level cell-buffer rendering engine.
+/// - `package:artisanal/charting.dart`: Terminal-native charting primitives.
+/// - `package:artisanal/liquid.dart`: Liquify template adapters.
 ///
 /// {@template artisanal_io_overview}
 /// The [Console] class is the primary entry point for high-level CLI output.
@@ -99,3 +101,9 @@ export 'src/layout/layout.dart' show Layout;
 
 // Args Aliases
 export 'args.dart' show Command, CommandRunner;
+
+// Charting
+export 'charting.dart';
+
+// Liquify adapters
+export 'liquid.dart';
