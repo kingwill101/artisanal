@@ -74,6 +74,9 @@ class RenderContainer extends RenderBox {
   VerticalAlign verticalAlign;
 
   String? _lastPaint;
+  Object? _lastPaintKey;
+  num? _resolvedWidth;
+  num? _resolvedHeight;
 
   RenderObject? get _child => children.isEmpty ? null : children.first;
 
@@ -147,14 +150,12 @@ class RenderContainer extends RenderBox {
       );
     }
     _child?.layout(childConstraints);
-    final content = _child?.paint() ?? '';
+    final contentW = _child?.size.width.toInt() ?? 0;
+    final contentH = _child?.size.height.toInt() ?? 0;
 
     // Compute the natural total size that _renderContainerContent would
     // produce when width/height are null, accounting for padding, border,
     // and margin — mirroring the same arithmetic in _renderContainerContent.
-    final contentW = Layout.getWidth(content);
-    final contentH = Layout.getHeight(content);
-
     final naturalInnerW = (width != null)
         ? _resolveDimension(width)!
         : (contentW + padH + bdrH);
@@ -181,26 +182,18 @@ class RenderContainer extends RenderBox {
       renderHeight = constrained.height - mrgV;
     }
 
-    final rendered = _renderContainerContent(
-      contentStr: content,
-      padding: padding,
-      margin: margin,
-      width: renderWidth,
-      height: renderHeight,
-      background: background,
-      foreground: foreground,
-      color: color,
-      decoration: decoration,
-      foregroundDecoration: foregroundDecoration,
-      alignment: alignment,
-      align: align,
-      verticalAlign: verticalAlign,
-    );
-    _lastPaint = rendered;
+    _resolvedWidth = renderWidth;
+    _resolvedHeight = renderHeight;
     size = constraints.constrain(
       Size(
-        Layout.getWidth(rendered).toDouble(),
-        Layout.getHeight(rendered).toDouble(),
+        (renderWidth != null
+                ? _resolveDimension(renderWidth) ?? 0
+                : naturalInnerW) +
+            mrgH.toDouble(),
+        (renderHeight != null
+                ? _resolveDimension(renderHeight) ?? 0
+                : naturalInnerH) +
+            mrgV.toDouble(),
       ),
     );
 
@@ -241,15 +234,34 @@ class RenderContainer extends RenderBox {
 
   @override
   String paint() {
-    final cached = _lastPaint;
-    if (cached != null) return cached;
     final content = _child?.paint() ?? '';
-    return _renderContainerContent(
+    final widthForPaint = _resolvedWidth ?? width;
+    final heightForPaint = _resolvedHeight ?? height;
+    final key = (
+      content,
+      padding,
+      margin,
+      widthForPaint,
+      heightForPaint,
+      background,
+      foreground,
+      color,
+      decoration,
+      foregroundDecoration,
+      alignment,
+      align,
+      verticalAlign,
+    );
+
+    final cached = _lastPaint;
+    if (cached != null && _lastPaintKey == key) return cached;
+
+    final rendered = _renderContainerContent(
       contentStr: content,
       padding: padding,
       margin: margin,
-      width: width,
-      height: height,
+      width: widthForPaint,
+      height: heightForPaint,
       background: background,
       foreground: foreground,
       color: color,
@@ -259,6 +271,9 @@ class RenderContainer extends RenderBox {
       align: align,
       verticalAlign: verticalAlign,
     );
+    _lastPaint = rendered;
+    _lastPaintKey = key;
+    return rendered;
   }
 }
 

@@ -326,16 +326,80 @@ class RenderRow extends RenderBox {
       tag: TraceTag.paint,
       extra: 'children=${children.length}',
     );
-    final blocks = children.map((c) => c.paint()).toList();
-    final flexData = children.map(_flexDataFor).toList();
+    final blocks = children.map((c) => c.paint()).toList(growable: false);
+    final flexData = children.map(_flexDataFor).toList(growable: false);
     final maxMain = size.width.toInt();
-    final adjusted = _applyFlexRow(blocks, flexData, maxMain, gap);
-    final aligned = _applyCrossAlignment(
-      adjusted,
-      crossAxisAlignment,
-      size.height.toInt(),
-    );
-    final totalMain = _sumMain(aligned) + gap * (children.length - 1);
+    final maxCross = size.height.toInt();
+    final childWidths = children
+        .map((c) => c.size.width.toInt())
+        .toList(growable: false);
+    final childHeights = children
+        .map((c) => c.size.height.toInt())
+        .toList(growable: false);
+
+    final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
+    final adjusted = List<String>.of(blocks, growable: false);
+    final adjustedWidths = List<int>.of(childWidths, growable: false);
+
+    if (totalFlex > 0) {
+      var nonFlexWidth = 0;
+      for (var i = 0; i < adjusted.length; i++) {
+        if (flexData[i].flex <= 0) nonFlexWidth += adjustedWidths[i];
+      }
+      final gapTotal = gap * (adjusted.length - 1);
+      final available = math.max(0, maxMain - nonFlexWidth - gapTotal);
+
+      for (var i = 0; i < adjusted.length; i++) {
+        final data = flexData[i];
+        if (data.flex <= 0 || data.fit == RenderFlexFit.loose) continue;
+
+        final target = (available * data.flex) ~/ totalFlex;
+        var block = adjusted[i];
+        final currentWidth = adjustedWidths[i];
+        if (currentWidth > target) {
+          block = Layout.truncateLines(block, target, ellipsis: '');
+        }
+        adjusted[i] = Layout.place(
+          width: target,
+          height: childHeights[i],
+          horizontal: HorizontalAlign.left,
+          vertical: VerticalAlign.top,
+          content: block,
+        );
+        adjustedWidths[i] = target;
+      }
+    }
+
+    final aligned = <String>[];
+    final vAlign = switch (crossAxisAlignment) {
+      RenderCrossAxisAlignment.start => VerticalAlign.top,
+      RenderCrossAxisAlignment.center => VerticalAlign.center,
+      RenderCrossAxisAlignment.end => VerticalAlign.bottom,
+      RenderCrossAxisAlignment.stretch => VerticalAlign.top,
+    };
+
+    for (var i = 0; i < adjusted.length; i++) {
+      final block = adjusted[i];
+      final childWidth = adjustedWidths[i];
+      final childHeight = childHeights[i];
+      if (vAlign == VerticalAlign.top && childHeight == maxCross) {
+        aligned.add(block);
+      } else {
+        aligned.add(
+          Layout.place(
+            width: childWidth,
+            height: maxCross,
+            horizontal: HorizontalAlign.left,
+            vertical: vAlign,
+            content: block,
+          ),
+        );
+      }
+    }
+
+    final totalMain =
+        adjustedWidths.fold<int>(0, (sum, w) => sum + w) +
+        gap * (children.length - 1);
     final extra = math.max(0, maxMain - totalMain);
     final spacing = _computeSpacing(
       children.length,
@@ -586,16 +650,80 @@ class RenderColumn extends RenderBox {
       tag: TraceTag.paint,
       extra: 'children=${children.length}',
     );
-    final blocks = children.map((c) => c.paint()).toList();
-    final flexData = children.map(_flexDataFor).toList();
+    final blocks = children.map((c) => c.paint()).toList(growable: false);
+    final flexData = children.map(_flexDataFor).toList(growable: false);
     final maxMain = size.height.toInt();
-    final adjusted = _applyFlexColumn(blocks, flexData, maxMain, gap);
-    final aligned = _applyCrossAlignmentHorizontal(
-      adjusted,
-      crossAxisAlignment,
-      size.width.toInt(),
-    );
-    final totalMain = _sumMainVertical(aligned) + gap * (children.length - 1);
+    final maxCross = size.width.toInt();
+    final childHeights = children
+        .map((c) => c.size.height.toInt())
+        .toList(growable: false);
+    final childWidths = children
+        .map((c) => c.size.width.toInt())
+        .toList(growable: false);
+
+    final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
+    final adjusted = List<String>.of(blocks, growable: false);
+    final adjustedHeights = List<int>.of(childHeights, growable: false);
+
+    if (totalFlex > 0) {
+      var nonFlexHeight = 0;
+      for (var i = 0; i < adjusted.length; i++) {
+        if (flexData[i].flex <= 0) nonFlexHeight += adjustedHeights[i];
+      }
+      final gapTotal = gap * (adjusted.length - 1);
+      final available = math.max(0, maxMain - nonFlexHeight - gapTotal);
+
+      for (var i = 0; i < adjusted.length; i++) {
+        final data = flexData[i];
+        if (data.flex <= 0 || data.fit == RenderFlexFit.loose) continue;
+
+        final target = (available * data.flex) ~/ totalFlex;
+        var block = adjusted[i];
+        final currentHeight = adjustedHeights[i];
+        if (currentHeight > target) {
+          block = Layout.truncateHeight(block, target);
+        }
+        adjusted[i] = Layout.place(
+          width: childWidths[i],
+          height: target,
+          horizontal: HorizontalAlign.left,
+          vertical: VerticalAlign.top,
+          content: block,
+        );
+        adjustedHeights[i] = target;
+      }
+    }
+
+    final aligned = <String>[];
+    final hAlign = switch (crossAxisAlignment) {
+      RenderCrossAxisAlignment.start => HorizontalAlign.left,
+      RenderCrossAxisAlignment.center => HorizontalAlign.center,
+      RenderCrossAxisAlignment.end => HorizontalAlign.right,
+      RenderCrossAxisAlignment.stretch => HorizontalAlign.left,
+    };
+
+    for (var i = 0; i < adjusted.length; i++) {
+      final block = adjusted[i];
+      final childWidth = childWidths[i];
+      final childHeight = adjustedHeights[i];
+      if (hAlign == HorizontalAlign.left && childWidth == maxCross) {
+        aligned.add(block);
+      } else {
+        aligned.add(
+          Layout.place(
+            width: maxCross,
+            height: childHeight,
+            horizontal: hAlign,
+            vertical: VerticalAlign.top,
+            content: block,
+          ),
+        );
+      }
+    }
+
+    final totalMain =
+        adjustedHeights.fold<int>(0, (sum, h) => sum + h) +
+        gap * (children.length - 1);
     final extra = math.max(0, maxMain - totalMain);
     final spacing = _computeSpacing(
       children.length,
@@ -626,14 +754,6 @@ FlexParentData _flexDataFor(RenderObject child) {
   final data = child.parentData;
   if (data is FlexParentData) return data;
   return const FlexParentData(flex: 0, fit: RenderFlexFit.loose);
-}
-
-int _sumMain(List<String> blocks) {
-  return blocks.fold<int>(0, (sum, block) => sum + Layout.getWidth(block));
-}
-
-int _sumMainVertical(List<String> blocks) {
-  return blocks.fold<int>(0, (sum, block) => sum + Layout.getHeight(block));
 }
 
 class _FlexSpacing {
@@ -694,150 +814,6 @@ _FlexSpacing _computeSpacing(
       final trailing = base + (leftover > count ? 1 : 0);
       return _FlexSpacing(leading, gaps, trailing);
   }
-}
-
-List<String> _applyCrossAlignment(
-  List<String> blocks,
-  RenderCrossAxisAlignment alignment,
-  int height,
-) {
-  final vAlign = switch (alignment) {
-    RenderCrossAxisAlignment.start => VerticalAlign.top,
-    RenderCrossAxisAlignment.center => VerticalAlign.center,
-    RenderCrossAxisAlignment.end => VerticalAlign.bottom,
-    RenderCrossAxisAlignment.stretch => VerticalAlign.top,
-  };
-
-  return blocks.map((block) {
-    final width = Layout.getWidth(block);
-    return Layout.place(
-      width: width,
-      height: height,
-      horizontal: HorizontalAlign.left,
-      vertical: vAlign,
-      content: block,
-    );
-  }).toList();
-}
-
-List<String> _applyCrossAlignmentHorizontal(
-  List<String> blocks,
-  RenderCrossAxisAlignment alignment,
-  int width,
-) {
-  final hAlign = switch (alignment) {
-    RenderCrossAxisAlignment.start => HorizontalAlign.left,
-    RenderCrossAxisAlignment.center => HorizontalAlign.center,
-    RenderCrossAxisAlignment.end => HorizontalAlign.right,
-    RenderCrossAxisAlignment.stretch => HorizontalAlign.left,
-  };
-
-  return blocks.map((block) {
-    final height = Layout.getHeight(block);
-    return Layout.place(
-      width: width,
-      height: height,
-      horizontal: hAlign,
-      vertical: VerticalAlign.top,
-      content: block,
-    );
-  }).toList();
-}
-
-List<String> _applyFlexRow(
-  List<String> blocks,
-  List<FlexParentData> flexData,
-  int? maxMain,
-  int gap,
-) {
-  if (maxMain == null) return blocks;
-
-  final sizes = blocks.map(Layout.getWidth).toList();
-  final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
-  if (totalFlex <= 0) return blocks;
-
-  // Compute space consumed by non-flex children.
-  var nonFlexWidth = 0;
-  for (var i = 0; i < blocks.length; i++) {
-    if (flexData[i].flex <= 0) nonFlexWidth += sizes[i];
-  }
-  final gapTotal = gap * (blocks.length - 1);
-  final available = math.max(0, maxMain - nonFlexWidth - gapTotal);
-
-  final adjusted = <String>[];
-  for (var i = 0; i < blocks.length; i++) {
-    final data = flexData[i];
-    final width = sizes[i];
-    if (data.flex <= 0 || data.fit == RenderFlexFit.loose) {
-      adjusted.add(blocks[i]);
-      continue;
-    }
-
-    final target = (available * data.flex) ~/ totalFlex;
-    var block = blocks[i];
-    // Clip if wider than target, pad if narrower.
-    if (width > target) {
-      block = Layout.truncateLines(block, target, ellipsis: '');
-    }
-    adjusted.add(
-      Layout.place(
-        width: target,
-        height: Layout.getHeight(block),
-        horizontal: HorizontalAlign.left,
-        vertical: VerticalAlign.top,
-        content: block,
-      ),
-    );
-  }
-  return adjusted;
-}
-
-List<String> _applyFlexColumn(
-  List<String> blocks,
-  List<FlexParentData> flexData,
-  int? maxMain,
-  int gap,
-) {
-  if (maxMain == null) return blocks;
-
-  final sizes = blocks.map(Layout.getHeight).toList();
-  final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
-  if (totalFlex <= 0) return blocks;
-
-  // Compute space consumed by non-flex children.
-  var nonFlexHeight = 0;
-  for (var i = 0; i < blocks.length; i++) {
-    if (flexData[i].flex <= 0) nonFlexHeight += sizes[i];
-  }
-  final gapTotal = gap * (blocks.length - 1);
-  final available = math.max(0, maxMain - nonFlexHeight - gapTotal);
-
-  final adjusted = <String>[];
-  for (var i = 0; i < blocks.length; i++) {
-    final data = flexData[i];
-    final height = sizes[i];
-    if (data.flex <= 0 || data.fit == RenderFlexFit.loose) {
-      adjusted.add(blocks[i]);
-      continue;
-    }
-
-    final target = (available * data.flex) ~/ totalFlex;
-    var block = blocks[i];
-    // Clip if taller than target, pad if shorter.
-    if (height > target) {
-      block = Layout.truncateHeight(block, target);
-    }
-    adjusted.add(
-      Layout.place(
-        width: Layout.getWidth(block),
-        height: target,
-        horizontal: HorizontalAlign.left,
-        vertical: VerticalAlign.top,
-        content: block,
-      ),
-    );
-  }
-  return adjusted;
 }
 
 String _joinHorizontalWithSpacing(List<String> blocks, _FlexSpacing spacing) {

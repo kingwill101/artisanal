@@ -118,6 +118,63 @@ void main() {
 
       expect(tester.locateText('nonexistent'), isNull);
     });
+
+    test('find.byType returns mounted elements by widget type', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Column(
+          children: [
+            w.Text('one'),
+            w.Container(child: w.Text('two')),
+            w.Text('three'),
+          ],
+        ),
+      );
+
+      final textElements = tester.find.byType<w.Text>();
+      expect(textElements.length, equals(3));
+      expect(textElements.first.widget.runtimeType, equals(w.Text));
+    });
+
+    test('find.byKey returns mounted elements by key', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      const targetKey = w.ValueKey<String>('target-button');
+
+      await tester.pumpWidget(
+        w.Column(
+          children: [
+            w.Text('before'),
+            w.GestureDetector(
+              key: targetKey,
+              onTap: () => null,
+              child: w.Text('tap me'),
+            ),
+            w.Text('after'),
+          ],
+        ),
+      );
+
+      final keyed = tester.find.byKey(targetKey);
+      expect(keyed.length, equals(1));
+      expect(keyed.single.widget.key, equals(targetKey));
+    });
+
+    test('find.byKeyLocation can tap by widget key', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      const tapKey = w.ValueKey<String>('keyed-tap-target');
+
+      await tester.pumpWidget(_KeyedTapCounter(key: tapKey));
+      expect(tester.find.text('keyed clicks: 0'), isTrue);
+
+      tester.tap(tester.find.byKeyLocation(tapKey));
+      expect(tester.find.text('keyed clicks: 1'), isTrue);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -928,6 +985,29 @@ class _ClickableCounterState extends w.State<_ClickableCounter> {
         return null;
       },
       child: w.Text('clicks: $_clicks'),
+    );
+  }
+}
+
+class _KeyedTapCounter extends w.StatefulWidget {
+  _KeyedTapCounter({super.key});
+
+  @override
+  w.State createState() => _KeyedTapCounterState();
+}
+
+class _KeyedTapCounterState extends w.State<_KeyedTapCounter> {
+  int _clicks = 0;
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.GestureDetector(
+      key: widget.key,
+      onTap: () {
+        setState(() => _clicks++);
+        return null;
+      },
+      child: w.Text('keyed clicks: $_clicks'),
     );
   }
 }

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import math
 import re
 from dataclasses import dataclass
@@ -45,6 +46,13 @@ class TextInputViewEvent:
     duration_us: int
 
 
+@dataclass(frozen=True)
+class GenericTimingEvent:
+    line: int
+    symbol: str
+    duration_us: int
+
+
 DISPATCH_RE = re.compile(r"\[dispatch\] msg#(\d+) (\w+) (\d+)us")
 RENDER_RE = re.compile(r"element_tree\.render .* (\d+)us")
 COUNTERS_RE = re.compile(
@@ -55,6 +63,9 @@ COUNTERS_RE = re.compile(
     r"pad=(\d+)/(\d+)us"
 )
 TEXT_VIEW_RE = re.compile(r"TextInputModel\.view len=(\d+) .* (\d+)us")
+GENERIC_TIMING_RE = re.compile(
+    r"\[[^\]]+\]\s+\[[^\]]+\]\s+([A-Za-z0-9_.]+).* (\d+)us$"
+)
 
 
 def percentile(sorted_values: list[int], p: float) -> float:
@@ -139,11 +150,13 @@ def parse_trace(trace_path: Path) -> tuple[
     list[RenderEvent],
     list[LayoutCounterEvent],
     list[TextInputViewEvent],
+    list[GenericTimingEvent],
 ]:
     dispatch: list[DispatchEvent] = []
     renders: list[RenderEvent] = []
     counters: list[LayoutCounterEvent] = []
     text_views: list[TextInputViewEvent] = []
+    generic_timings: list[GenericTimingEvent] = []
 
     for line_num, line in enumerate(trace_path.read_text().splitlines(), start=1):
         match = DISPATCH_RE.search(line)
@@ -187,7 +200,17 @@ def parse_trace(trace_path: Path) -> tuple[
                 )
             )
 
-    return dispatch, renders, counters, text_views
+        match = GENERIC_TIMING_RE.search(line)
+        if match:
+            generic_timings.append(
+                GenericTimingEvent(
+                    line=line_num,
+                    symbol=match.group(1),
+                    duration_us=int(match.group(2)),
+                )
+            )
+
+    return dispatch, renders, counters, text_views, generic_timings
 
 
 def print_stats_row(label: str, metrics: dict[str, float]) -> None:
@@ -209,11 +232,49 @@ def format_delta_us(delta_us: float) -> str:
     return f"{sign}{abs(delta_us) / 1000:.2f}ms"
 
 
+def is_actionable_symbol(symbol: str) -> bool:
+    if "." in symbol:
+        return True
+    if symbol.startswith("Render"):
+        return True
+    if symbol.startswith("_render"):
+        return True
+    return symbol in {"widget_view"}
+
+
+def generic_symbol_stats(
+    generic_timings: list[GenericTimingEvent],
+    *,
+    top_n: int,
+) -> list[dict[str, float | str]]:
+    grouped: dict[str, list[int]] = {}
+    for event in generic_timings:
+        if is_actionable_symbol(event.symbol):
+            grouped.setdefault(event.symbol, []).append(event.duration_us)
+
+    ranked = sorted(grouped.items(), key=lambda item: sum(item[1]), reverse=True)
+    rows: list[dict[str, float | str]] = []
+    for symbol, values in ranked[: max(1, top_n)]:
+        stats = summarize(values)
+        rows.append(
+            {
+                "symbol": symbol,
+                "count": stats["count"],
+                "total_us": float(sum(values)),
+                "avg_us": stats["avg"],
+                "p95_us": stats["p95"],
+                "max_us": stats["max"],
+            }
+        )
+    return rows
+
+
 def collect_summary_metrics(
     dispatch: list[DispatchEvent],
     renders: list[RenderEvent],
     counters: list[LayoutCounterEvent],
     text_views: list[TextInputViewEvent],
+    generic_timings: list[GenericTimingEvent],
 ) -> dict[str, float]:
     by_type: dict[str, list[int]] = {}
     for event in dispatch:
@@ -228,10 +289,30 @@ def collect_summary_metrics(
     mouse_stats = summarize(mouse_values)
     wheel_stats = summarize(wheel_values)
 
-    render_stats = summarize([event.duration_us for event in renders])
-    width_stats = summarize([event.get_width_us for event in counters])
-    visible_stats = summarize([event.visible_length_us for event in counters])
-    text_stats = summarize([event.duration_us for event in text_views])
+    generic_by_symbol: dict[str, list[int]] = {}
+    for event in generic_timings:
+        generic_by_symbol.setdefault(event.symbol, []).append(event.duration_us)
+
+    render_values = [event.duration_us for event in renders]
+    if not render_values:
+        render_values = generic_by_symbol.get("element_tree.render", [])
+
+    width_values = [event.get_width_us for event in counters]
+    if not width_values:
+        width_values = generic_by_symbol.get("layout.getWidth", [])
+
+    visible_values = [event.visible_length_us for event in counters]
+    if not visible_values:
+        visible_values = generic_by_symbol.get("layout.visibleLength", [])
+
+    text_values = [event.duration_us for event in text_views]
+    if not text_values:
+        text_values = generic_by_symbol.get("TextInputModel.view", [])
+
+    render_stats = summarize(render_values)
+    width_stats = summarize(width_values)
+    visible_stats = summarize(visible_values)
+    text_stats = summarize(text_values)
 
     return {
         "key_avg": key_stats["avg"],
@@ -256,12 +337,12 @@ def collect_summary_metrics(
 
 
 def load_summary_metrics(trace_path: Path) -> dict[str, float]:
-    dispatch, renders, counters, text_views = parse_trace(trace_path)
-    return collect_summary_metrics(dispatch, renders, counters, text_views)
+    dispatch, renders, counters, text_views, generic_timings = parse_trace(trace_path)
+    return collect_summary_metrics(dispatch, renders, counters, text_views, generic_timings)
 
 
 def analyze_trace(trace_path: Path, top_n: int) -> None:
-    dispatch, renders, counters, text_views = parse_trace(trace_path)
+    dispatch, renders, counters, text_views, generic_timings = parse_trace(trace_path)
 
     print(f"Trace: {trace_path}")
     print()
@@ -367,6 +448,95 @@ def analyze_trace(trace_path: Path, top_n: int) -> None:
         print()
         print("TextInputModel.view stats")
         print_stats_row("TextInputModel.view", summarize([event.duration_us for event in text_views]))
+
+    if generic_timings:
+        generic_by_symbol: dict[str, list[int]] = {}
+        for event in generic_timings:
+            if is_actionable_symbol(event.symbol):
+                generic_by_symbol.setdefault(event.symbol, []).append(event.duration_us)
+
+        if not dispatch:
+            print()
+            print("Note: no dispatch events found; showing generic timing summary.")
+
+        if generic_by_symbol:
+            print()
+            print(f"Top {top_n} generic timings (by total time)")
+            ranked = sorted(
+                generic_by_symbol.items(),
+                key=lambda item: sum(item[1]),
+                reverse=True,
+            )
+            for symbol, values in ranked[:top_n]:
+                stats = summarize(values)
+                total_ms = sum(values) / 1000.0
+                print(
+                    f"{symbol:<22} "
+                    f"n={int(stats['count']):>4} "
+                    f"total={total_ms:>9.2f}ms "
+                    f"avg={stats['avg'] / 1000:>8.2f}ms "
+                    f"p95={stats['p95'] / 1000:>8.2f}ms "
+                    f"max={stats['max'] / 1000:>8.2f}ms"
+                )
+
+
+def build_trace_report(trace_path: Path, top_n: int) -> dict[str, object]:
+    dispatch, renders, counters, text_views, generic_timings = parse_trace(trace_path)
+    metrics = collect_summary_metrics(dispatch, renders, counters, text_views, generic_timings)
+
+    return {
+        "trace": str(trace_path),
+        "counts": {
+            "dispatch": len(dispatch),
+            "renders": len(renders),
+            "layout_counters": len(counters),
+            "text_input_views": len(text_views),
+            "generic_timings": len(generic_timings),
+        },
+        "summary_metrics_us": metrics,
+        "generic_top": generic_symbol_stats(generic_timings, top_n=top_n),
+    }
+
+
+def export_json_report(
+    output_path: Path,
+    target_trace: Path,
+    *,
+    top_n: int,
+    compare_base: Path | None,
+) -> None:
+    target_report = build_trace_report(target_trace, top_n=top_n)
+
+    if compare_base is None:
+        payload: dict[str, object] = {
+            "mode": "single",
+            "target": target_report,
+        }
+    else:
+        base_report = build_trace_report(compare_base, top_n=top_n)
+        base_metrics = base_report["summary_metrics_us"]
+        target_metrics = target_report["summary_metrics_us"]
+        if not isinstance(base_metrics, dict) or not isinstance(target_metrics, dict):
+            raise TypeError("Invalid summary metrics payload")
+
+        delta: dict[str, float] = {}
+        for key, target_value in target_metrics.items():
+            if key not in base_metrics:
+                continue
+            base_value = base_metrics[key]
+            if isinstance(target_value, float) and isinstance(base_value, float):
+                delta[key] = target_value - base_value
+
+        payload = {
+            "mode": "compare",
+            "base": base_report,
+            "target": target_report,
+            "delta_us": delta,
+        }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    print(f"Wrote JSON report to {output_path}")
 
 
 def compare_traces(base_trace: Path, target_trace: Path) -> None:
@@ -544,7 +714,20 @@ def main() -> int:
         default="*.log",
         help="Glob pattern for selecting traces when using --csv (default: *.log).",
     )
+    parser.add_argument(
+        "--json",
+        metavar="OUTPUT_JSON",
+        help=(
+            "Write analysis output as JSON. Supports both single-trace and "
+            "--compare modes."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.csv and args.json:
+        parser.error("--csv and --json cannot be used together")
+    if args.list and args.json:
+        parser.error("--list and --json cannot be used together")
 
     default_traces_dir = Path(__file__).parent / "traces"
 
@@ -561,6 +744,15 @@ def main() -> int:
         return 0
 
     target_trace = Path(args.trace) if args.trace else find_latest_trace(default_traces_dir)
+    if args.json:
+        export_json_report(
+            output_path=Path(args.json),
+            target_trace=target_trace,
+            top_n=max(1, args.top),
+            compare_base=Path(args.compare) if args.compare else None,
+        )
+        return 0
+
     if args.compare:
         compare_traces(base_trace=Path(args.compare), target_trace=target_trace)
         return 0

@@ -3591,7 +3591,7 @@ class RenderListViewport extends RenderBox {
             ),
           );
           final text = child.paint();
-          final measured = Layout.getHeight(text).toInt();
+          final measured = math.max(1, child.size.height.round());
           if (_measuredHeights[i] != measured) {
             _measuredHeights[i] = measured;
             measuredHeightsChanged = true;
@@ -3615,13 +3615,9 @@ class RenderListViewport extends RenderBox {
           }
         }
 
-        final lines = buffer.toString().split('\n');
-        final startLine = math.min(offsetInItem, lines.length).toInt();
-        final endLine = math
-            .min(lines.length, startLine + viewportHeight)
-            .toInt();
+        final content = buffer.toString();
         return (
-          visible: lines.sublist(startLine, endLine).join('\n'),
+          visible: _sliceLines(content, offsetInItem, viewportHeight),
           heightsChanged: measuredHeightsChanged,
         );
       }
@@ -3692,10 +3688,11 @@ class RenderListViewport extends RenderBox {
       }
     }
 
-    final lines = buffer.toString().split('\n');
-    final startLine = math.min(offsetInStride, lines.length).toInt();
-    final endLine = math.min(lines.length, startLine + viewportHeight).toInt();
-    final visible = lines.sublist(startLine, endLine).join('\n');
+    final visible = _sliceLines(
+      buffer.toString(),
+      offsetInStride,
+      viewportHeight,
+    );
     _storeVisiblePaintCache(
       visible: visible,
       offset: offset,
@@ -3729,6 +3726,39 @@ int _separatorBreaks(String separator) {
     if (separator.codeUnitAt(i) == 0x0A) count++;
   }
   return count;
+}
+
+String _sliceLines(String text, int startLine, int maxLines) {
+  if (text.isEmpty || maxLines <= 0) return '';
+
+  var start = 0;
+  var line = 0;
+  while (line < startLine && start < text.length) {
+    final nl = text.indexOf('\n', start);
+    if (nl == -1) return '';
+    start = nl + 1;
+    line++;
+  }
+
+  var end = start;
+  var taken = 0;
+  while (taken < maxLines && end < text.length) {
+    final nl = text.indexOf('\n', end);
+    if (nl == -1) {
+      end = text.length;
+      taken++;
+      break;
+    }
+    end = nl + 1;
+    taken++;
+  }
+
+  if (taken <= 0) return '';
+  var out = text.substring(start, end);
+  if (out.endsWith('\n')) {
+    out = out.substring(0, out.length - 1);
+  }
+  return out;
 }
 
 bool _isWheelEvent(MouseMsg msg) {

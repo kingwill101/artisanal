@@ -27,6 +27,7 @@
 /// ```
 library;
 
+import 'dart:collection';
 import 'dart:math' as math;
 
 import '../terminal/ansi.dart';
@@ -108,6 +109,14 @@ class WhitespaceOptions {
 class Layout {
   Layout._();
 
+  static const int _maxCacheEntries = 4096;
+  static final LinkedHashMap<String, int> _visibleLengthCache =
+      LinkedHashMap<String, int>();
+  static final LinkedHashMap<String, int> _getWidthCache =
+      LinkedHashMap<String, int>();
+  static final LinkedHashMap<String, int> _getHeightCache =
+      LinkedHashMap<String, int>();
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Per-frame counters for high-frequency operations
   // ─────────────────────────────────────────────────────────────────────────────
@@ -176,8 +185,18 @@ class Layout {
   ///
   /// Accounts for double-width characters (CJK, emoji, etc.).
   static int visibleLength(String text) {
+    final cached = _visibleLengthCache[text];
+    if (cached != null) return cached;
+
+    final asciiFast = _asciiVisibleLengthOrNull(text);
+    if (asciiFast != null) {
+      _cachePut(_visibleLengthCache, text, asciiFast);
+      return asciiFast;
+    }
+
     final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
     final result = maxLineWidth(Ansi.stripAnsi(text));
+    _cachePut(_visibleLengthCache, text, result);
     if (sw != null) {
       sw.stop();
       _visibleLengthCount++;
@@ -700,11 +719,11 @@ class Layout {
 
   /// Gets the width of a block of text (maximum line width).
   static int getWidth(String content) {
+    final cached = _getWidthCache[content];
+    if (cached != null) return cached;
     final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
-    final lines = content.split('\n');
-    final result = lines.isEmpty
-        ? 0
-        : lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
+    final result = visibleLength(content);
+    _cachePut(_getWidthCache, content, result);
     if (sw != null) {
       sw.stop();
       _getWidthCount++;
@@ -715,8 +734,16 @@ class Layout {
 
   /// Gets the height of a block of text (number of lines).
   static int getHeight(String content) {
+    final cached = _getHeightCache[content];
+    if (cached != null) return cached;
     final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
-    final result = content.split('\n').length;
+    var result = 1;
+    for (var i = 0; i < content.length; i++) {
+      if (content.codeUnitAt(i) == 10) {
+        result++;
+      }
+    }
+    _cachePut(_getHeightCache, content, result);
     if (sw != null) {
       sw.stop();
       _getHeightCount++;
@@ -963,5 +990,40 @@ class Layout {
     }
 
     return result.join('');
+  }
+
+  static void _cachePut(
+    LinkedHashMap<String, int> cache,
+    String key,
+    int value,
+  ) {
+    if (cache.length >= _maxCacheEntries) {
+      cache.remove(cache.keys.first);
+    }
+    cache[key] = value;
+  }
+
+  static int? _asciiVisibleLengthOrNull(String text) {
+    var lineWidth = 0;
+    var maxWidth = 0;
+
+    for (var i = 0; i < text.length; i++) {
+      final cu = text.codeUnitAt(i);
+
+      if (cu == 10) {
+        if (lineWidth > maxWidth) maxWidth = lineWidth;
+        lineWidth = 0;
+        continue;
+      }
+
+      if (cu == 0x1B || cu > 0x7F) {
+        return null;
+      }
+
+      lineWidth++;
+    }
+
+    if (lineWidth > maxWidth) maxWidth = lineWidth;
+    return maxWidth;
   }
 }

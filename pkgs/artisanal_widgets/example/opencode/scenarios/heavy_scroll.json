@@ -1,0 +1,28 @@
+{
+  "name": "heavy_scroll",
+  "description": "High-pressure replay with long wheel bursts, rapid navigation, prompt edits, and pointer motion.",
+  "screen": {
+    "width": 120,
+    "height": 40
+  },
+  "actions": [
+    {"type": "sleep", "ms": 200},
+    {"type": "wheel", "x": 75, "y": 11, "direction": "down", "repeat": 120},
+    {"type": "wheel", "x": 75, "y": 11, "direction": "up", "repeat": 80},
+    {"type": "wheel", "x": 111, "y": 24, "direction": "down", "repeat": 90},
+    {"type": "wheel", "x": 111, "y": 24, "direction": "up", "repeat": 60},
+    {"type": "special", "key": "pageDown", "repeat": 18},
+    {"type": "special", "key": "pageUp", "repeat": 12},
+    {"type": "special", "key": "down", "repeat": 40},
+    {"type": "special", "key": "up", "repeat": 34},
+    {"type": "tap", "x": 6, "y": 38, "repeat": 2},
+    {"type": "text", "value": "heavy replay profile stress case for opencode widgets ", "repeat": 3},
+    {"type": "special", "key": "backspace", "repeat": 50},
+    {"type": "text", "value": "trimmed input", "repeat": 2},
+    {"type": "move", "x": 86, "y": 17, "repeat": 24},
+    {"type": "move", "x": 94, "y": 18, "repeat": 24},
+    {"type": "move", "x": 103, "y": 19, "repeat": 24},
+    {"type": "special", "key": "home", "repeat": 8},
+    {"type": "special", "key": "end", "repeat": 8}
+  ]
+}

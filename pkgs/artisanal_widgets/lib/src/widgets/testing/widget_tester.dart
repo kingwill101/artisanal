@@ -57,7 +57,9 @@ import 'package:artisanal/tui.dart'
 import '../app/widget_app.dart';
 import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
-import '../core/element.dart' show HitTestElementEntry;
+import '../core/key.dart' show Key;
+import '../core/element.dart' show HitTestElementEntry, Element;
+import '../rendering/render_object.dart' show RenderObject;
 
 // ---------------------------------------------------------------------------
 // testWidgets — top-level convenience
@@ -368,6 +370,20 @@ class WidgetTester {
 
   /// The [Program] driving this tester, or `null` before [pumpWidget].
   Program<WidgetApp>? get program => _program;
+
+  /// Returns mounted elements that satisfy [predicate].
+  ///
+  /// Useful for advanced tree-level assertions in tests.
+  List<Element> elementsWhere(bool Function(Element element) predicate) {
+    _ensureRunning();
+    return _app!.debugElementsWhere(predicate);
+  }
+
+  /// Returns all mounted elements in depth-first order.
+  List<Element> get elements {
+    _ensureRunning();
+    return _app!.debugElements();
+  }
 
   // -------------------------------------------------------------------------
   // Lifecycle
@@ -758,6 +774,28 @@ class Finder {
   /// Returns `true` if the latest rendered view contains [text].
   bool text(String text) => _tester._lastView.contains(text);
 
+  /// Returns mounted elements whose widget type is [T].
+  List<Element> byType<T extends Widget>() {
+    return _tester.elementsWhere((e) => e.widget is T);
+  }
+
+  /// Returns the first mounted element whose widget type is [T], or `null`.
+  Element? firstByType<T extends Widget>() {
+    final matches = byType<T>();
+    return matches.isEmpty ? null : matches.first;
+  }
+
+  /// Returns mounted elements whose widget key equals [key].
+  List<Element> byKey(Key key) {
+    return _tester.elementsWhere((e) => e.widget.key == key);
+  }
+
+  /// Returns the first mounted element whose widget key equals [key], or `null`.
+  Element? firstByKey(Key key) {
+    final matches = byKey(key);
+    return matches.isEmpty ? null : matches.first;
+  }
+
   /// Returns `true` if the latest rendered view contains a line matching
   /// the regular expression [pattern].
   bool textMatching(Pattern pattern) =>
@@ -778,6 +816,27 @@ class Finder {
   /// tester.tap(tester.find.textLocation('Submit'));
   /// ```
   TapTarget textLocation(String text) => _TextTapTarget(text);
+
+  /// Returns a [TapTarget] centered on [element]'s render bounds.
+  TapTarget element(Element element) => _ElementTapTarget(element);
+
+  /// Returns a [TapTarget] centered on the first match for widget type [T].
+  TapTarget byTypeLocation<T extends Widget>() {
+    final match = firstByType<T>();
+    if (match == null) {
+      throw StateError('No mounted element found for type $T');
+    }
+    return _ElementTapTarget(match);
+  }
+
+  /// Returns a [TapTarget] centered on the first match for [key].
+  TapTarget byKeyLocation(Key key) {
+    final match = firstByKey(key);
+    if (match == null) {
+      throw StateError('No mounted element found for key $key');
+    }
+    return _ElementTapTarget(match);
+  }
 
   /// Returns the Nth gesture zone (0-indexed).
   ///
@@ -853,4 +912,49 @@ class _TextTapTarget extends TapTarget {
     // Tap in the middle of the text horizontally.
     return (x: loc.x + text.length ~/ 2, y: loc.y);
   }
+}
+
+/// Resolves an [Element] to the center of its render bounds.
+class _ElementTapTarget extends TapTarget {
+  _ElementTapTarget(this.element);
+
+  final Element element;
+
+  @override
+  ({int x, int y}) _resolve(WidgetTester tester) {
+    final ro = element.renderObject ?? _firstRenderObject(element);
+    if (ro == null) {
+      throw StateError(
+        'Element ${element.widget.runtimeType} has no render object; '
+        'use textLocation() or query a render-object-backed widget.',
+      );
+    }
+
+    final pos = _globalOffset(ro);
+    final x = (pos.x + (ro.size.width / 2)).floor();
+    final y = (pos.y + (ro.size.height / 2)).floor();
+    return (x: x, y: y);
+  }
+}
+
+RenderObject? _firstRenderObject(Element element) {
+  final direct = element.renderObject;
+  if (direct != null) return direct;
+  for (final child in element.children) {
+    final nested = _firstRenderObject(child);
+    if (nested != null) return nested;
+  }
+  return null;
+}
+
+({double x, double y}) _globalOffset(RenderObject ro) {
+  var x = 0.0;
+  var y = 0.0;
+  RenderObject? current = ro;
+  while (current != null) {
+    x += current.offset.dx;
+    y += current.offset.dy;
+    current = current.parent;
+  }
+  return (x: x, y: y);
 }

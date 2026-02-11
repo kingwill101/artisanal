@@ -111,6 +111,127 @@ class _AssistantMessage extends w.StatefulWidget {
 class _AssistantMessageState extends w.State<_AssistantMessage> {
   /// Tracks which block tools are expanded (by index in the parts list).
   final Set<int> _expandedBlocks = {};
+  final Map<int, _DiffPartMeta> _diffPartMetaCache = {};
+  final Map<int, _ToolDiffMetrics> _toolDiffMetricsCache = {};
+  w.DiffStyles? _cachedDiffStyles;
+  bool? _cachedDiffStylesContextBg;
+  markdown.AnsiRendererOptions? _cachedMarkdownOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _seedExpandedFromMessage();
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant _AssistantMessage oldWidget) {
+    final cmd = super.didUpdateWidget(oldWidget);
+    if (oldWidget.message.id != widget.message.id ||
+        !identical(oldWidget.message.parts, widget.message.parts)) {
+      _expandedBlocks
+        ..clear()
+        ..addAll(_expandedIndicesFromMessage(widget.message));
+      _diffPartMetaCache.clear();
+      _toolDiffMetricsCache.clear();
+    }
+    if (oldWidget.showDiffContextBackground !=
+        widget.showDiffContextBackground) {
+      _cachedDiffStyles = null;
+      _cachedDiffStylesContextBg = null;
+    }
+    if (oldWidget.message.id != widget.message.id) {
+      _cachedMarkdownOptions = null;
+    }
+    return cmd;
+  }
+
+  void _seedExpandedFromMessage() {
+    _expandedBlocks.addAll(_expandedIndicesFromMessage(widget.message));
+  }
+
+  _DiffPartMeta _diffPartMeta(DiffPart part, int index) {
+    final cached = _diffPartMetaCache[index];
+    if (cached != null &&
+        cached.diff == part.diff &&
+        cached.filePath == part.filePath) {
+      return cached;
+    }
+
+    final slash = part.filePath.lastIndexOf('/');
+    final fileName = slash >= 0
+        ? part.filePath.substring(slash + 1)
+        : part.filePath;
+    final dirPath = slash >= 0 ? part.filePath.substring(0, slash + 1) : '';
+    final meta = _DiffPartMeta(
+      diff: part.diff,
+      filePath: part.filePath,
+      fileName: fileName,
+      dirPath: dirPath,
+      lineCount: _lineCount(part.diff),
+    );
+    _diffPartMetaCache[index] = meta;
+    return meta;
+  }
+
+  _ToolDiffMetrics _toolDiffMetrics(ToolPart part, int index) {
+    final diff = part.diff ?? '';
+    final filePath = part.filePath ?? '';
+    final cached = _toolDiffMetricsCache[index];
+    if (cached != null && cached.diff == diff && cached.filePath == filePath) {
+      return cached;
+    }
+
+    final slash = filePath.lastIndexOf('/');
+    final fileName = slash >= 0 ? filePath.substring(slash + 1) : filePath;
+    final dirPath = slash >= 0 ? filePath.substring(0, slash + 1) : '';
+    final (addCount, delCount) = _countDiffAddDel(diff);
+    final metrics = _ToolDiffMetrics(
+      diff: diff,
+      filePath: filePath,
+      fileName: fileName,
+      dirPath: dirPath,
+      addCount: addCount,
+      delCount: delCount,
+      lineCount: _lineCount(diff),
+    );
+    _toolDiffMetricsCache[index] = metrics;
+    return metrics;
+  }
+
+  (int, int) _countDiffAddDel(String diff) {
+    var addCount = 0;
+    var delCount = 0;
+    for (final line in diff.split('\n')) {
+      if (line.isEmpty) continue;
+      final first = line.codeUnitAt(0);
+      if (first == 43) {
+        if (!line.startsWith('+++')) addCount++;
+      } else if (first == 45) {
+        if (!line.startsWith('---')) delCount++;
+      }
+    }
+    return (addCount, delCount);
+  }
+
+  int _lineCount(String text) {
+    if (text.isEmpty) return 1;
+    var count = 1;
+    for (var i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) == 10) count++;
+    }
+    return count;
+  }
+
+  Set<int> _expandedIndicesFromMessage(ChatMessage message) {
+    final out = <int>{};
+    for (var i = 0; i < message.parts.length; i++) {
+      final part = message.parts[i];
+      if (part is DiffPart && part.expanded) {
+        out.add(i);
+      }
+    }
+    return out;
+  }
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -160,6 +281,9 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
   }
 
   markdown.AnsiRendererOptions _markdownOptions() {
+    final cached = _cachedMarkdownOptions;
+    if (cached != null) return cached;
+
     final text = _themeColor('markdownText', OC.text);
     final heading = _themeColor('markdownHeading', OC.accent);
     final linkText = _themeColor(
@@ -183,7 +307,7 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     final syntaxOperator = _themeColor('syntaxOperator', OC.accent);
     final syntaxPunctuation = _themeColor('syntaxPunctuation', text);
 
-    return markdown.AnsiRendererOptions(
+    final options = markdown.AnsiRendererOptions(
       textStyle: style.Style().foreground(text),
       h1Style: style.Style().bold().foreground(heading),
       h2Style: style.Style().bold().foreground(heading),
@@ -220,6 +344,8 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
         nameOther: style.Style().foreground(syntaxVariable),
       ),
     );
+    _cachedMarkdownOptions = options;
+    return options;
   }
 
   style.Color _themeColor(String key, style.Color fallback) {
@@ -227,6 +353,11 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
   }
 
   w.DiffStyles _diffStyles() {
+    if (_cachedDiffStyles != null &&
+        _cachedDiffStylesContextBg == widget.showDiffContextBackground) {
+      return _cachedDiffStyles!;
+    }
+
     final added = _themeColor('diffAdded', OC.diffAdded);
     final removed = _themeColor('diffRemoved', OC.diffRemoved);
     final context = _themeColor('diffContext', OC.textMuted);
@@ -247,7 +378,7 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     final highlightAdded = _themeColor('diffHighlightAdded', added);
     final highlightRemoved = _themeColor('diffHighlightRemoved', removed);
 
-    return w.DiffStyles(
+    final styles = w.DiffStyles(
       addedLine: style.Style().foreground(text),
       removedLine: style.Style().foreground(text),
       contextLine: style.Style().foreground(text),
@@ -286,6 +417,9 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
       inlineAddedHighlight: style.Style().background(highlightAdded),
       inlineRemovedHighlight: style.Style().background(highlightRemoved),
     );
+    _cachedDiffStyles = styles;
+    _cachedDiffStylesContextBg = widget.showDiffContextBackground;
+    return styles;
   }
 
   /// Reasoning part: left ┃ border, muted text, "Thinking: " prefix.
@@ -467,29 +601,8 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     int index,
     bool expanded,
   ) {
-    final fileName = part.filePath?.split('/').last ?? '';
-    final dirPath = part.filePath != null && part.filePath!.contains('/')
-        ? part.filePath!.substring(0, part.filePath!.lastIndexOf('/') + 1)
-        : '';
-    final diffHeight = _expandedDiffHeight(part.diff ?? '');
-
-    // Parse additions/deletions from the diff string
-    final addCount = '+'
-        .allMatches(
-          part.diff!
-              .split('\n')
-              .where((l) => l.startsWith('+') && !l.startsWith('+++'))
-              .join(),
-        )
-        .length;
-    final delCount = '-'
-        .allMatches(
-          part.diff!
-              .split('\n')
-              .where((l) => l.startsWith('-') && !l.startsWith('---'))
-              .join(),
-        )
-        .length;
+    final metrics = _toolDiffMetrics(part, index);
+    final diffHeight = metrics.lineCount;
 
     return w.Padding(
       padding: const w.EdgeInsets.only(top: 1),
@@ -502,6 +615,9 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
           children: [
             // Trigger row
             w.GestureDetector(
+              key: w.ValueKey<String>(
+                'diff-toggle-${widget.message.id}-$index',
+              ),
               onTap: () {
                 var becameExpanded = false;
                 setState(() {
@@ -540,27 +656,27 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                     w.SizedBox(width: 1),
                     // Filename (bright)
                     w.Text(
-                      fileName,
+                      metrics.fileName,
                       style: style.Style()..foreground(OC.text),
                       softWrap: false,
                     ),
                     w.SizedBox(width: 1),
                     // Directory (muted)
-                    if (dirPath.isNotEmpty)
+                    if (metrics.dirPath.isNotEmpty)
                       w.Text(
-                        dirPath,
+                        metrics.dirPath,
                         style: style.Style()..foreground(OC.textMuted),
                         softWrap: false,
                       ),
                     w.Spacer(),
                     // +N -M counts
                     w.Text(
-                      '+$addCount',
+                      '+${metrics.addCount}',
                       style: style.Style()..foreground(OC.diffAdded),
                     ),
                     w.SizedBox(width: 1),
                     w.Text(
-                      '-$delCount',
+                      '-${metrics.delCount}',
                       style: style.Style()..foreground(OC.diffRemoved),
                     ),
                     w.SizedBox(width: 1),
@@ -595,23 +711,14 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     );
   }
 
-  /// Compute expanded diff height that fills more of the chat body.
-  int _expandedDiffHeight(String diff) {
-    final lines = diff.split('\n').length;
-    return lines < 1 ? 1 : lines;
-  }
-
   /// Standalone diff part — collapsible file diff viewer.
   ///
   /// Renders a file header row (icon + filename + dir + +N/-M + chevron)
   /// that expands to show a [w.GitDiffViewer].
   w.Widget _buildDiffPart(w.BuildContext context, DiffPart part, int index) {
     final expanded = _expandedBlocks.contains(index);
-    final fileName = part.filePath.split('/').last;
-    final dirPath = part.filePath.contains('/')
-        ? part.filePath.substring(0, part.filePath.lastIndexOf('/') + 1)
-        : '';
-    final diffHeight = _expandedDiffHeight(part.diff);
+    final meta = _diffPartMeta(part, index);
+    final diffHeight = meta.lineCount;
 
     return w.Padding(
       padding: const w.EdgeInsets.only(top: 1),
@@ -624,6 +731,9 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
           children: [
             // Header row — clickable trigger
             w.GestureDetector(
+              key: w.ValueKey<String>(
+                'diff-toggle-${widget.message.id}-$index',
+              ),
               onTap: () {
                 var becameExpanded = false;
                 setState(() {
@@ -656,7 +766,7 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                     w.SizedBox(width: 1),
                     // Filename (bright)
                     w.Text(
-                      fileName,
+                      meta.fileName,
                       style: style.Style()
                         ..foreground(OC.text)
                         ..bold(),
@@ -664,9 +774,9 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                     ),
                     w.SizedBox(width: 1),
                     // Directory (muted)
-                    if (dirPath.isNotEmpty)
+                    if (meta.dirPath.isNotEmpty)
                       w.Text(
-                        dirPath,
+                        meta.dirPath,
                         style: style.Style()..foreground(OC.textMuted),
                         softWrap: false,
                       ),
@@ -773,4 +883,40 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
       ),
     );
   }
+}
+
+class _DiffPartMeta {
+  const _DiffPartMeta({
+    required this.diff,
+    required this.filePath,
+    required this.fileName,
+    required this.dirPath,
+    required this.lineCount,
+  });
+
+  final String diff;
+  final String filePath;
+  final String fileName;
+  final String dirPath;
+  final int lineCount;
+}
+
+class _ToolDiffMetrics {
+  const _ToolDiffMetrics({
+    required this.diff,
+    required this.filePath,
+    required this.fileName,
+    required this.dirPath,
+    required this.addCount,
+    required this.delCount,
+    required this.lineCount,
+  });
+
+  final String diff;
+  final String filePath;
+  final String fileName;
+  final String dirPath;
+  final int addCount;
+  final int delCount;
+  final int lineCount;
 }

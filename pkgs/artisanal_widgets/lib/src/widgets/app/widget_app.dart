@@ -433,6 +433,29 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     return _tree.hitTestAt(x, y);
   }
 
+  /// Returns all mounted elements in depth-first order.
+  ///
+  /// Intended for test/debug tooling.
+  List<Element> debugElements() {
+    final out = <Element>[];
+    void visit(Element e) {
+      out.add(e);
+      for (final child in e.children) {
+        visit(child);
+      }
+    }
+
+    visit(_tree.root);
+    return out;
+  }
+
+  /// Returns mounted elements that satisfy [predicate].
+  ///
+  /// Intended for test/debug tooling.
+  List<Element> debugElementsWhere(bool Function(Element element) predicate) {
+    return debugElements().where(predicate).toList(growable: false);
+  }
+
   Widget _currentRoot() {
     final widget = _tree.root.widget;
     if (widget is _MediaQueryHost) {

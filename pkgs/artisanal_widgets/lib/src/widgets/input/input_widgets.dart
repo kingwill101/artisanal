@@ -705,6 +705,15 @@ class _RenderTextField extends RenderBox {
   /// Cached content produced during [layout], returned by [paint].
   String _cachedContent = '';
 
+  int _lineCount(String value) {
+    if (value.isEmpty) return 1;
+    var lines = 1;
+    for (var i = 0; i < value.length; i++) {
+      if (value.codeUnitAt(i) == 10) lines++;
+    }
+    return lines;
+  }
+
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
@@ -728,8 +737,10 @@ class _RenderTextField extends RenderBox {
     _cachedContent = content;
 
     // Measure the rendered content to determine our size.
-    final width = Layout.getWidth(content).toDouble();
-    final height = Layout.getHeight(content).toDouble();
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : Layout.getWidth(content).toDouble();
+    final height = _lineCount(content).toDouble();
     size = constraints.constrain(Size(width, height));
   }
 

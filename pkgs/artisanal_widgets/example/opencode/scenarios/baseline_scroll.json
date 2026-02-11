@@ -1,0 +1,25 @@
+{
+  "name": "baseline_scroll",
+  "description": "Deterministic OpenCode replay: wheel bursts, navigation keys, and prompt typing.",
+  "screen": {
+    "width": 120,
+    "height": 40
+  },
+  "actions": [
+    {"type": "sleep", "ms": 120},
+    {"type": "wheel", "x": 75, "y": 11, "direction": "down", "repeat": 24},
+    {"type": "wheel", "x": 75, "y": 11, "direction": "up", "repeat": 10},
+    {"type": "special", "key": "pageDown", "repeat": 4},
+    {"type": "special", "key": "pageUp", "repeat": 2},
+    {"type": "special", "key": "down", "repeat": 8},
+    {"type": "special", "key": "up", "repeat": 6},
+    {"type": "tap", "x": 6, "y": 38},
+    {"type": "text", "value": "perf replay sample"},
+    {"type": "special", "key": "backspace", "repeat": 6},
+    {"type": "text", "value": "case"},
+    {"type": "special", "key": "home"},
+    {"type": "special", "key": "end"},
+    {"type": "wheel", "x": 111, "y": 24, "direction": "down", "repeat": 12},
+    {"type": "wheel", "x": 111, "y": 24, "direction": "up", "repeat": 6}
+  ]
+}

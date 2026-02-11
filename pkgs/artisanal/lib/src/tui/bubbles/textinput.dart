@@ -1760,7 +1760,8 @@ class TextInputModel extends ViewComponent {
     }
 
     final styles = activeStyle();
-    String styleText(String s) => styles.text.inline(true).render(s);
+    final textInlineStyle = styles.text.inline(true);
+    String styleText(String s) => textInlineStyle.render(s);
 
     final visibleValue = _value.sublist(_offset, _offsetRight);
     final pos = math.max(0, _pos - _offset);
@@ -1780,7 +1781,7 @@ class TextInputModel extends ViewComponent {
       }
     }
 
-    var v = '';
+    final v = StringBuffer();
     final selectionStyle = styles.selection;
 
     for (var i = 0; i < visibleValue.length; i++) {
@@ -1793,10 +1794,10 @@ class TextInputModel extends ViewComponent {
         if (isSelected) {
           cv = selectionStyle.render(cv);
         }
-        v += cv;
+        v.write(cv);
       } else {
         final rendered = styleText(char);
-        v += isSelected ? selectionStyle.render(rendered) : rendered;
+        v.write(isSelected ? selectionStyle.render(rendered) : rendered);
       }
     }
 
@@ -1805,15 +1806,15 @@ class TextInputModel extends ViewComponent {
         final suggestion = _matchedSuggestions[_currentSuggestionIndex];
         if (_value.length < suggestion.length) {
           cursor = cursor.setChar(_echoTransform(suggestion[_value.length]));
-          v += cursor.view();
-          v += _completionView(1);
+          v.write(cursor.view());
+          v.write(_completionView(1));
         } else {
           cursor = cursor.setChar(' ');
-          v += cursor.view();
+          v.write(cursor.view());
         }
       } else {
         cursor = cursor.setChar(' ');
-        v += cursor.view();
+        v.write(cursor.view());
       }
     }
 
@@ -1824,11 +1825,11 @@ class TextInputModel extends ViewComponent {
       if (valWidth + padding <= width && pos < visibleValue.length) {
         padding++;
       }
-      v += _renderPadding(styles.text, styles.prompt, padding);
+      v.write(_renderPadding(styles.text, styles.prompt, padding));
     }
 
     final styledPrompt = styles.prompt.render(prompt);
-    final content = '$styledPrompt$v';
+    final content = '$styledPrompt${v.toString()}';
 
     if (useVirtualCursor || !_focused) {
       span.end(extra: 'chars=${visibleValue.length}');
@@ -1922,7 +1923,8 @@ class TextInputModel extends ViewComponent {
   /// and joins them with newlines.
   Object _multilineView() {
     final styles = activeStyle();
-    String styleText(String s) => styles.text.inline(true).render(s);
+    final textInlineStyle = styles.text.inline(true);
+    String styleText(String s) => textInlineStyle.render(s);
     final selectionStyle = styles.selection;
     final lines = _getWrappedLines();
     final (cursorRow, cursorCol) = _cursorRowCol();
@@ -1954,7 +1956,7 @@ class TextInputModel extends ViewComponent {
     for (var row = firstVisible; row < lastVisible; row++) {
       final line = lines[row];
       final linePrompt = (row == 0) ? prompt : ' ' * stringWidth(prompt);
-      var rowStr = '';
+      final rowStr = StringBuffer();
 
       for (var i = line.start; i < line.end; i++) {
         // Skip newline characters — they are line boundaries, not displayed.
@@ -1971,10 +1973,10 @@ class TextInputModel extends ViewComponent {
           if (isSelected) {
             cv = selectionStyle.render(cv);
           }
-          rowStr += cv;
+          rowStr.write(cv);
         } else {
           final rendered = styleText(char);
-          rowStr += isSelected ? selectionStyle.render(rendered) : rendered;
+          rowStr.write(isSelected ? selectionStyle.render(rendered) : rendered);
         }
       }
 
@@ -1983,7 +1985,7 @@ class TextInputModel extends ViewComponent {
           row == cursorRow && cursorCol == line.end - line.start;
       if (cursorAtLineEnd) {
         cursor = cursor.setChar(' ');
-        rowStr += cursor.view();
+        rowStr.write(cursor.view());
       }
 
       // Pad line to width.
@@ -1992,11 +1994,11 @@ class TextInputModel extends ViewComponent {
         final cursorExtra = cursorAtLineEnd ? 1 : 0;
         final padAmount = math.max(0, width - lineContentWidth - cursorExtra);
         if (padAmount > 0) {
-          rowStr += _renderPadding(styles.text, styles.prompt, padAmount);
+          rowStr.write(_renderPadding(styles.text, styles.prompt, padAmount));
         }
       }
 
-      rowStrings.add(styles.prompt.render(linePrompt) + rowStr);
+      rowStrings.add(styles.prompt.render(linePrompt) + rowStr.toString());
     }
 
     final content = rowStrings.join('\n');
