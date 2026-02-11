@@ -2,7 +2,7 @@ import 'package:artisanal/src/tui/bubbles/git_diff.dart';
 import 'package:artisanal/src/tui/bubbles/key_binding.dart' show KeyBinding;
 import 'package:artisanal/src/tui/component.dart';
 import 'package:artisanal/src/tui/msg.dart' show KeyMsg, Msg;
-import 'package:artisanal/src/terminal/keys.dart' show Key;
+import 'package:artisanal/src/terminal/keys.dart' show Key, KeyType;
 import 'package:artisanal/src/style/color.dart' show BasicColor;
 import 'package:artisanal/src/style/style.dart' show Style;
 import 'package:test/test.dart';
@@ -441,8 +441,8 @@ void main() {
           viewMode: DiffViewMode.unified,
         ).setDiff(_singleFileDiff);
         final output = model.view();
-        // Line 1 in unified mode should be zero-padded to 4 chars: "0001"
-        expect(output, contains('0001'));
+        // Line 1 in unified mode should be space-padded to 4 chars: "   1"
+        expect(output, contains('   1'));
       });
 
       test('enforces minimum 4-char line number width in pretty mode', () {
@@ -454,8 +454,59 @@ void main() {
           viewMode: DiffViewMode.pretty,
         ).setDiff(_singleFileDiff);
         final output = model.view();
-        // Line 1 in pretty mode uses zero-padded 4-char numbers: "0001"
+        // Line 1 in pretty mode uses space-padded 4-char numbers: "   1"
+        expect(output, contains('   1'));
+      });
+
+      test('zero-pads line numbers in unified mode when configured', () {
+        final model = GitDiffModel(
+          width: 80,
+          height: 40,
+          showLineNumbers: true,
+          zeroPadLineNumbers: true,
+          viewMode: DiffViewMode.unified,
+        ).setDiff(_singleFileDiff);
+        final output = model.view();
         expect(output, contains('0001'));
+      });
+
+      test('zero-pads line numbers in pretty mode when configured', () {
+        final model = GitDiffModel(
+          width: 80,
+          height: 40,
+          showLineNumbers: true,
+          zeroPadLineNumbers: true,
+          viewMode: DiffViewMode.pretty,
+        ).setDiff(_singleFileDiff);
+        final output = model.view();
+        expect(output, contains('0001'));
+      });
+
+      test('zero-pads line numbers in side-by-side mode when configured', () {
+        final model = GitDiffModel(
+          width: 120,
+          height: 40,
+          showLineNumbers: true,
+          zeroPadLineNumbers: true,
+          viewMode: DiffViewMode.sideBySide,
+        ).setDiff(_singleFileDiff);
+        final output = model.view();
+        expect(output, contains('0001'));
+      });
+
+      test('zeroPadLineNumbers defaults to false', () {
+        final model = GitDiffModel(width: 80, height: 24);
+        expect(model.zeroPadLineNumbers, isFalse);
+      });
+
+      test('zeroPadLineNumbers is preserved through copyWith', () {
+        final model = GitDiffModel(
+          width: 80,
+          height: 24,
+          zeroPadLineNumbers: true,
+        );
+        final copy = model.copyWith(width: 120);
+        expect(copy.zeroPadLineNumbers, isTrue);
       });
 
       test('adapts gutter width for large line numbers', () {
@@ -950,8 +1001,12 @@ index aaa..bbb 100644
       ).setDiff(_singleFileDiff);
 
       final output = model.view();
-      // Should contain the box-drawing vertical separator
-      expect(output, contains('\u2502'));
+      // Side-by-side should contain +/- markers for added/removed lines
+      final ansiEscape = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
+      final clean = output.replaceAll(ansiEscape, '');
+      // Markers should be present: '+' for added lines, '-' for removed lines
+      expect(clean, contains('+ '));
+      expect(clean, contains('- '));
     });
 
     test('handles files with only additions', () {
@@ -1107,10 +1162,14 @@ index aaa..bbb 100644
       // With wrapping enabled, the output should differ (more rows)
       expect(model.view(), isNot(equals(noWrap.view())));
 
-      // The wrapped output should contain all the original text
+      // The wrapped output should contain all the original text when rows are
+      // concatenated (text may be split across wrapped rows).
       final ansiEscape = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
       final clean = model.view().replaceAll(ansiEscape, '');
-      expect(clean, contains('this is a very long line that'));
+      // Check that multi-word chunks of the long line appear in the output.
+      // Because the text wraps mid-word across fixed-width cells, we check
+      // for substrings that fit within a single cell rather than cross-line.
+      expect(clean, contains('this is a very long line'));
       expect(clean, contains('should be wrapped'));
     });
   });
@@ -1251,6 +1310,158 @@ index aaa..bbb 100644
         final output = model.view();
         expect(output, isNotEmpty, reason: 'mode $mode should produce output');
       }
+    });
+  });
+
+  group('Inline diff highlighting', () {
+    test('DiffStyles has inline highlight and marker fields', () {
+      final styles = DiffStyles();
+      expect(styles.sideBySideAddedMarker, isNotNull);
+      expect(styles.sideBySideRemovedMarker, isNotNull);
+      expect(styles.sideBySideContextMarker, isNotNull);
+      expect(styles.inlineAddedHighlight, isNotNull);
+      expect(styles.inlineRemovedHighlight, isNotNull);
+    });
+
+    test('copyWith replaces inline highlight fields', () {
+      final styles = DiffStyles();
+      final customStyle = Style().bold();
+      final copy = styles.copyWith(
+        inlineAddedHighlight: customStyle,
+        inlineRemovedHighlight: customStyle,
+        sideBySideAddedMarker: customStyle,
+        sideBySideRemovedMarker: customStyle,
+        sideBySideContextMarker: customStyle,
+      );
+      expect(copy.inlineAddedHighlight, customStyle);
+      expect(copy.inlineRemovedHighlight, customStyle);
+      expect(copy.sideBySideAddedMarker, customStyle);
+      expect(copy.sideBySideRemovedMarker, customStyle);
+      expect(copy.sideBySideContextMarker, customStyle);
+    });
+
+    test('fromColors includes inline highlight fields', () {
+      final styles = DiffStyles.fromColors(
+        success: const BasicColor('#22c55e'),
+        error: const BasicColor('#ef4444'),
+        muted: const BasicColor('#6b7280'),
+        surface: const BasicColor('#1e1e1e'),
+        onSurface: const BasicColor('#ffffff'),
+        onBackground: const BasicColor('#d4d4d4'),
+        border: const BasicColor('#444444'),
+      );
+      expect(styles.inlineAddedHighlight, isNotNull);
+      expect(styles.inlineRemovedHighlight, isNotNull);
+      expect(styles.sideBySideAddedMarker, isNotNull);
+      expect(styles.sideBySideRemovedMarker, isNotNull);
+      expect(styles.sideBySideContextMarker, isNotNull);
+    });
+
+    test('fromColors accepts inlineAddedBg and inlineRemovedBg', () {
+      final styles = DiffStyles.fromColors(
+        success: const BasicColor('#22c55e'),
+        error: const BasicColor('#ef4444'),
+        muted: const BasicColor('#6b7280'),
+        surface: const BasicColor('#1e1e1e'),
+        onSurface: const BasicColor('#ffffff'),
+        onBackground: const BasicColor('#d4d4d4'),
+        border: const BasicColor('#444444'),
+        inlineAddedBg: const BasicColor('#2a4a2a'),
+        inlineRemovedBg: const BasicColor('#4a2a2a'),
+      );
+      expect(styles.inlineAddedHighlight, isNotNull);
+      expect(styles.inlineRemovedHighlight, isNotNull);
+    });
+
+    test('side-by-side renders markers for added/removed lines', () {
+      final model = GitDiffModel(
+        width: 80,
+        height: 40,
+        viewMode: DiffViewMode.sideBySide,
+        showLineNumbers: true,
+      ).setDiff(_singleFileDiff);
+
+      final output = model.view();
+      final ansiEscape = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
+      final clean = output.replaceAll(ansiEscape, '');
+
+      // Should contain + marker for added lines and - marker for removed lines
+      expect(clean, contains('+ '));
+      expect(clean, contains('- '));
+      // Context lines should have a space marker (linenum + space + space-marker + space + content)
+      expect(clean, contains("import 'dart:io'"));
+    });
+
+    test('inline diff applies different ANSI codes to changed tokens', () {
+      // Create a diff where one word changes
+      const wordChangeDiff = '''
+diff --git a/lib/f.dart b/lib/f.dart
+index aaa..bbb 100644
+--- a/lib/f.dart
++++ b/lib/f.dart
+@@ -1,1 +1,1 @@
+-void main() {}
++void main(List args) {}''';
+
+      final model = GitDiffModel(
+        width: 120,
+        height: 40,
+        viewMode: DiffViewMode.sideBySide,
+        showLineNumbers: true,
+      ).setDiff(wordChangeDiff);
+
+      final output = model.view();
+      // The output should not be empty and should render without errors
+      expect(output, isNotEmpty);
+
+      // The raw output should contain ANSI escape sequences (indicating styling)
+      expect(output, contains('\x1B['));
+    });
+
+    test('inline diff does not crash with empty lines', () {
+      const emptyChangeDiff = '''
+diff --git a/lib/f.dart b/lib/f.dart
+index aaa..bbb 100644
+--- a/lib/f.dart
++++ b/lib/f.dart
+@@ -1,1 +1,1 @@
+-
++new content''';
+
+      final model = GitDiffModel(
+        width: 80,
+        height: 40,
+        viewMode: DiffViewMode.sideBySide,
+        showLineNumbers: true,
+      ).setDiff(emptyChangeDiff);
+
+      // Should render without throwing
+      final output = model.view();
+      expect(output, isNotEmpty);
+    });
+
+    test('inline diff handles identical paired lines', () {
+      // When old and new lines are identical (shouldn't happen in practice
+      // but tests robustness), no highlighting should be applied.
+      const identicalDiff = '''
+diff --git a/lib/f.dart b/lib/f.dart
+index aaa..bbb 100644
+--- a/lib/f.dart
++++ b/lib/f.dart
+@@ -1,1 +1,1 @@
+-same text here
++same text here''';
+
+      final model = GitDiffModel(
+        width: 120,
+        height: 40,
+        viewMode: DiffViewMode.sideBySide,
+        showLineNumbers: true,
+      ).setDiff(identicalDiff);
+
+      // Should render without throwing
+      final output = model.view();
+      expect(output, isNotEmpty);
     });
   });
 
@@ -1411,13 +1622,13 @@ index aaa..bbb 100644
       final output = model.view();
       final lines = output.split('\n');
 
-      // Collect lines that contain the separator (│) — these are data rows
-      // and should all have visible width == 80
+      // In side-by-side mode, all non-empty lines should have visible width
+      // == 80 (file headers, hunk headers, data rows, and padding rows).
       final dataLines = <String>[];
       final widths = <int>[];
       for (final line in lines) {
         final stripped = Style.stripAnsi(line);
-        if (stripped.contains('│')) {
+        if (stripped.trim().isNotEmpty) {
           dataLines.add(stripped);
           widths.add(stripped.length);
         }
@@ -1450,7 +1661,7 @@ index aaa..bbb 100644
       final widths = <int>[];
       for (final line in lines) {
         final stripped = Style.stripAnsi(line);
-        if (stripped.contains('│')) {
+        if (stripped.trim().isNotEmpty) {
           dataLines.add(stripped);
           widths.add(stripped.length);
         }
@@ -1483,7 +1694,7 @@ index aaa..bbb 100644
       final widths = <int>[];
       for (final line in lines) {
         final stripped = Style.stripAnsi(line);
-        if (stripped.contains('│')) {
+        if (stripped.trim().isNotEmpty) {
           dataLines.add(stripped);
           widths.add(stripped.length);
         }
@@ -1528,7 +1739,7 @@ index aaa..bbb 100644
       final widths = <int>[];
       for (final line in lines) {
         final stripped = Style.stripAnsi(line);
-        if (stripped.contains('│')) {
+        if (stripped.trim().isNotEmpty) {
           dataLines.add(stripped);
           widths.add(stripped.length);
         }
@@ -1544,6 +1755,247 @@ index aaa..bbb 100644
               'Row $i visible width is ${widths[i]} (expected 80): "${dataLines[i]}"',
         );
       }
+    });
+  });
+
+  group('Horizontal scrolling', () {
+    /// A diff with a very long added line to test horizontal scrolling.
+    const longLineDiff = '''
+diff --git a/lib/long.dart b/lib/long.dart
+index aaa..bbb 100644
+--- a/lib/long.dart
++++ b/lib/long.dart
+@@ -1,2 +1,2 @@
+-short
++ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789_abcdefghijklmnopqrstuvwxyz_LONG_END''';
+
+    group('side-by-side mode', () {
+      test('right arrow shifts content in side-by-side cells', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        expect(model.horizontalOffset, 0);
+
+        // Press right arrow
+        final (scrolled, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(scrolled.horizontalOffset, greaterThan(0));
+
+        // The view should differ because the content window shifted.
+        expect(scrolled.view(), isNot(equals(model.view())));
+      });
+
+      test('left arrow scrolls back and clamps at 0', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Scroll right twice
+        final (r1, _) = model.update(KeyMsg(Key(KeyType.right)));
+        final (r2, _) = r1.update(KeyMsg(Key(KeyType.right)));
+        expect(r2.horizontalOffset, greaterThan(0));
+
+        // Scroll left enough to reach 0
+        var current = r2;
+        for (var i = 0; i < 20; i++) {
+          final (next, _) = current.update(KeyMsg(Key(KeyType.left)));
+          current = next;
+          if (current.horizontalOffset == 0) break;
+        }
+        expect(current.horizontalOffset, 0);
+
+        // Further left should not go negative.
+        final (clamped, _) = current.update(KeyMsg(Key(KeyType.left)));
+        expect(clamped.horizontalOffset, 0);
+      });
+
+      test('scrolled content reveals text beyond initial viewport', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        final ansiEscape = RegExp(r'\x1B\[[0-9;]*[a-zA-Z]');
+        final initialClean = model.view().replaceAll(ansiEscape, '');
+
+        // "LONG_END" is at the end of the long line and shouldn't be visible
+        // initially in a narrow 60-column side-by-side view.
+        expect(initialClean, isNot(contains('LONG_END')));
+
+        // Scroll right incrementally until LONG_END appears.
+        var current = model;
+        var found = false;
+        for (var i = 0; i < 30; i++) {
+          final (next, _) = current.update(KeyMsg(Key(KeyType.right)));
+          current = next;
+          final clean = current.view().replaceAll(ansiEscape, '');
+          if (clean.contains('LONG_END')) {
+            found = true;
+            break;
+          }
+        }
+
+        expect(
+          found,
+          isTrue,
+          reason: 'LONG_END should become visible after scrolling right',
+        );
+      });
+
+      test('h and l keys also scroll side-by-side', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // 'l' should scroll right
+        final (scrolledRight, _) = model.update(KeyMsg(Key.char('l')));
+        expect(scrolledRight.horizontalOffset, greaterThan(0));
+
+        // 'h' should scroll left
+        final (scrolledBack, _) = scrolledRight.update(KeyMsg(Key.char('h')));
+        expect(
+          scrolledBack.horizontalOffset,
+          lessThan(scrolledRight.horizontalOffset),
+        );
+      });
+
+      test('side-by-side rows maintain consistent width while scrolled', () {
+        final model = GitDiffModel(
+          width: 80,
+          height: 100,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Scroll right
+        final (scrolled, _) = model.update(KeyMsg(Key(KeyType.right)));
+
+        final output = scrolled.view();
+        final lines = output.split('\n');
+
+        final dataLines = <String>[];
+        final widths = <int>[];
+        for (final line in lines) {
+          final stripped = Style.stripAnsi(line);
+          if (stripped.trim().isNotEmpty) {
+            dataLines.add(stripped);
+            widths.add(stripped.length);
+          }
+        }
+
+        expect(dataLines, isNotEmpty, reason: 'should have data rows');
+
+        for (var i = 0; i < dataLines.length; i++) {
+          expect(
+            widths[i],
+            equals(80),
+            reason:
+                'Row $i visible width is ${widths[i]} (expected 80): "${dataLines[i]}"',
+          );
+        }
+      });
+
+      test('does not scroll when wrapLines is true', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: true,
+        ).setDiff(longLineDiff);
+
+        // Right arrow should be delegated to viewport, not change horizontalOffset
+        final (next, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(next.horizontalOffset, 0);
+      });
+
+      test('view mode cycling resets horizontalOffset', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Scroll right
+        final (scrolled, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(scrolled.horizontalOffset, greaterThan(0));
+
+        // Cycle view mode (v key)
+        final (cycled, _) = scrolled.update(KeyMsg(Key.char('v')));
+        expect(cycled.horizontalOffset, 0);
+        expect(cycled.viewMode, DiffViewMode.pretty);
+      });
+
+      test('setDiff resets horizontalOffset', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Scroll right
+        final (scrolled, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(scrolled.horizontalOffset, greaterThan(0));
+
+        // Load new diff
+        final reloaded = scrolled.setDiff(longLineDiff);
+        expect(reloaded.horizontalOffset, 0);
+      });
+
+      test('horizontalOffset is preserved through copyWith', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.sideBySide,
+          horizontalOffset: 12,
+        );
+
+        final copy = model.copyWith(width: 80);
+        expect(copy.horizontalOffset, 12);
+      });
+    });
+
+    group('unified and pretty modes', () {
+      test('left/right keys delegate to viewport in unified mode', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.unified,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Right arrow should go to viewport (not intercepted by GitDiffModel)
+        final (next, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(next.horizontalOffset, 0);
+        // The viewport should have scrolled (xOffset changed)
+        expect(next.viewport.xOffset, greaterThan(0));
+      });
+
+      test('left/right keys delegate to viewport in pretty mode', () {
+        final model = GitDiffModel(
+          width: 60,
+          height: 40,
+          viewMode: DiffViewMode.pretty,
+          wrapLines: false,
+        ).setDiff(longLineDiff);
+
+        // Right arrow should go to viewport
+        final (next, _) = model.update(KeyMsg(Key(KeyType.right)));
+        expect(next.horizontalOffset, 0);
+        expect(next.viewport.xOffset, greaterThan(0));
+      });
     });
   });
 }

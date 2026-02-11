@@ -2,6 +2,7 @@ name: artisanal_workspace
 publish_to: none
 workspace:
   - pkgs/artisanal
+  - pkgs/artisanal_widgets
 
 funding:
   - https://www.buymeacoffee.com/kingwill101

@@ -48,14 +48,26 @@ final class RenderMetrics {
   /// Creates a new [RenderMetrics] instance.
   ///
   /// [sampleSize] determines how many frames are kept for averaging (default: 60).
-  RenderMetrics({int sampleSize = 60}) : _sampleSize = sampleSize;
+  RenderMetrics({int sampleSize = 60}) : _sampleSize = sampleSize {
+    _frameTimes = List<Duration>.filled(sampleSize, Duration.zero);
+    _renderTimes = List<Duration>.filled(sampleSize, Duration.zero);
+    _clock.start();
+  }
 
   final int _sampleSize;
 
-  // Frame timing
-  final List<Duration> _frameTimes = [];
-  final List<Duration> _renderTimes = [];
-  DateTime? _lastFrameTime;
+  // Circular buffers for frame/render timing — O(1) insert, no allocations.
+  late final List<Duration> _frameTimes;
+  late final List<Duration> _renderTimes;
+  int _frameTimeCount = 0; // total items written to _frameTimes
+  int _renderTimeCount = 0; // total items written to _renderTimes
+  int _frameTimeIndex = 0; // next write position in _frameTimes
+  int _renderTimeIndex = 0; // next write position in _renderTimes
+
+  // Monotonic clock — immune to wall-clock adjustments / NTP jumps.
+  final Stopwatch _clock = Stopwatch();
+  Duration? _lastFrameElapsed;
+
   int _frameCount = 0;
   int _skippedFrames = 0;
 
@@ -75,8 +87,8 @@ final class RenderMetrics {
   /// Whether there has been any real (non-metrics-only) rendering activity
   /// within the idle timeout window.
   bool get _isIdle {
-    if (_lastFrameTime == null) return true;
-    return DateTime.now().difference(_lastFrameTime!) > _idleTimeout;
+    if (_lastFrameElapsed == null) return true;
+    return (_clock.elapsed - _lastFrameElapsed!) > _idleTimeout;
   }
 
   /// Total number of frames rendered since creation or last reset.
@@ -86,24 +98,44 @@ final class RenderMetrics {
   int get skippedFrames => _skippedFrames;
 
   /// Duration of the last frame (time between renders).
-  Duration get lastFrameTime =>
-      _frameTimes.isEmpty ? Duration.zero : _frameTimes.last;
+  Duration get lastFrameTime {
+    if (_frameTimeCount == 0) return Duration.zero;
+    // Last written entry is at (_frameTimeIndex - 1) wrapped.
+    final idx = (_frameTimeIndex - 1 + _sampleSize) % _sampleSize;
+    return _frameTimes[idx];
+  }
+
+  /// Number of valid entries in the frame-time circular buffer.
+  int get _frameTimeLength =>
+      _frameTimeCount < _sampleSize ? _frameTimeCount : _sampleSize;
+
+  /// Number of valid entries in the render-time circular buffer.
+  int get _renderTimeLength =>
+      _renderTimeCount < _sampleSize ? _renderTimeCount : _sampleSize;
 
   /// Duration of the last render() call.
   Duration get lastRenderDuration => _lastRenderDuration;
 
   /// Average frame time over the sample window.
   Duration get averageFrameTime {
-    if (_frameTimes.isEmpty) return Duration.zero;
-    final total = _frameTimes.fold<int>(0, (sum, d) => sum + d.inMicroseconds);
-    return Duration(microseconds: total ~/ _frameTimes.length);
+    final n = _frameTimeLength;
+    if (n == 0) return Duration.zero;
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+      total += _frameTimes[i].inMicroseconds;
+    }
+    return Duration(microseconds: total ~/ n);
   }
 
   /// Average render duration over the sample window.
   Duration get averageRenderDuration {
-    if (_renderTimes.isEmpty) return Duration.zero;
-    final total = _renderTimes.fold<int>(0, (sum, d) => sum + d.inMicroseconds);
-    return Duration(microseconds: total ~/ _renderTimes.length);
+    final n = _renderTimeLength;
+    if (n == 0) return Duration.zero;
+    int total = 0;
+    for (int i = 0; i < n; i++) {
+      total += _renderTimes[i].inMicroseconds;
+    }
+    return Duration(microseconds: total ~/ n);
   }
 
   /// Current FPS based on the last frame time.
@@ -128,22 +160,28 @@ final class RenderMetrics {
 
   /// Minimum FPS in the sample window (slowest frame).
   double get minFps {
-    if (_frameTimes.isEmpty) return 0.0;
-    final maxTime = _frameTimes.reduce(
-      (a, b) => a.inMicroseconds > b.inMicroseconds ? a : b,
-    );
-    if (maxTime.inMicroseconds == 0) return 0.0;
-    return 1000000.0 / maxTime.inMicroseconds;
+    final n = _frameTimeLength;
+    if (n == 0) return 0.0;
+    int maxUs = 0;
+    for (int i = 0; i < n; i++) {
+      final us = _frameTimes[i].inMicroseconds;
+      if (us > maxUs) maxUs = us;
+    }
+    if (maxUs == 0) return 0.0;
+    return 1000000.0 / maxUs;
   }
 
   /// Maximum FPS in the sample window (fastest frame).
   double get maxFps {
-    if (_frameTimes.isEmpty) return 0.0;
-    final minTime = _frameTimes.reduce(
-      (a, b) => a.inMicroseconds < b.inMicroseconds ? a : b,
-    );
-    if (minTime.inMicroseconds == 0) return double.infinity;
-    return 1000000.0 / minTime.inMicroseconds;
+    final n = _frameTimeLength;
+    if (n == 0) return 0.0;
+    int minUs = _frameTimes[0].inMicroseconds;
+    for (int i = 1; i < n; i++) {
+      final us = _frameTimes[i].inMicroseconds;
+      if (us < minUs) minUs = us;
+    }
+    if (minUs == 0) return double.infinity;
+    return 1000000.0 / minUs;
   }
 
   /// Percentage of time spent in render() vs total frame time.
@@ -155,19 +193,18 @@ final class RenderMetrics {
 
   /// Call this at the start of each frame (before render).
   void beginFrame() {
-    final now = DateTime.now();
-    if (!metricsOnlyFrame && _lastFrameTime != null) {
-      final frameTime = now.difference(_lastFrameTime!);
-      _frameTimes.add(frameTime);
-      if (_frameTimes.length > _sampleSize) {
-        _frameTimes.removeAt(0);
-      }
+    final now = _clock.elapsed;
+    if (!metricsOnlyFrame && _lastFrameElapsed != null) {
+      final frameTime = now - _lastFrameElapsed!;
+      _frameTimes[_frameTimeIndex] = frameTime;
+      _frameTimeIndex = (_frameTimeIndex + 1) % _sampleSize;
+      _frameTimeCount++;
     }
     // Only update the baseline timestamp for real frames so that the next
     // real frame measures the gap from the previous real frame, not from
     // the metrics-only render.
     if (!metricsOnlyFrame) {
-      _lastFrameTime = now;
+      _lastFrameElapsed = now;
     }
 
     _renderStopwatch = Stopwatch()..start();
@@ -186,10 +223,9 @@ final class RenderMetrics {
       _renderStopwatch!.stop();
       _lastRenderDuration = _renderStopwatch!.elapsed;
       if (!metricsOnlyFrame) {
-        _renderTimes.add(_lastRenderDuration);
-        if (_renderTimes.length > _sampleSize) {
-          _renderTimes.removeAt(0);
-        }
+        _renderTimes[_renderTimeIndex] = _lastRenderDuration;
+        _renderTimeIndex = (_renderTimeIndex + 1) % _sampleSize;
+        _renderTimeCount++;
       }
     }
 
@@ -199,9 +235,13 @@ final class RenderMetrics {
 
   /// Resets all metrics to initial state.
   void reset() {
-    _frameTimes.clear();
-    _renderTimes.clear();
-    _lastFrameTime = null;
+    _frameTimes.fillRange(0, _sampleSize, Duration.zero);
+    _renderTimes.fillRange(0, _sampleSize, Duration.zero);
+    _frameTimeIndex = 0;
+    _renderTimeIndex = 0;
+    _frameTimeCount = 0;
+    _renderTimeCount = 0;
+    _lastFrameElapsed = null;
     _frameCount = 0;
     _skippedFrames = 0;
     _lastRenderDuration = Duration.zero;
@@ -983,6 +1023,10 @@ final class UvTerminalRenderer {
     if (c == null) return true;
     if (c.width != 1 || c.content != ' ') return false;
     final style = c.style;
+    // Cells with an explicit foreground or background color must be written
+    // individually — EL (erase line) would replace them with the terminal's
+    // default colors, losing the intended bg/fg fill.
+    if (style.fg != null || style.bg != null) return false;
     final okAttrs =
         style.attrs &
             ~(Attr.bold |

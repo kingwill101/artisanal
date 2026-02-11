@@ -1,0 +1,29 @@
+/// Text selection widgets: [SelectableText] and [SelectionArea].
+///
+/// [SelectableText] is a drop-in replacement for [Text] that supports
+/// click-drag text selection and Ctrl+C copy.
+///
+/// [SelectionArea] wraps a subtree and enables cross-widget text selection
+/// for all [SelectableText] descendants.
+@experimental
+library;
+
+import 'package:meta/meta.dart' show experimental;
+
+import 'dart:math' as math;
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart'
+    show Cmd, Msg, KeyMsg, MouseMsg, MouseAction, MouseButton, HitTestMouseMsg;
+import '../core/element.dart' show elementOf;
+import '../core/framework.dart'
+    show BuildContext, StatefulWidget, State, InheritedWidget;
+import '../core/widget.dart';
+import '../rendering/render_object.dart';
+import '../layout/geometry.dart';
+import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
+
+part 'selection_controller.dart';
+part 'selectable_text.dart';
+part 'selection_area.dart';
+part '_selection_utils.dart';

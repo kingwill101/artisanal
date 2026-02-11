@@ -236,19 +236,33 @@ void drawLegend(
 }
 
 /// Down-samples or up-samples [values] to fit the given [width].
+///
+/// When up-sampling (fewer data points than [width]), linear interpolation
+/// is used so that transitions between data points are smooth rather than
+/// producing a blocky nearest-neighbor staircase.
+///
+/// When down-sampling (more data points than [width]), bucket averaging is
+/// used to preserve the overall shape of the data.
 List<double> sampleSeries(List<double> values, int width) {
   if (width <= 0) return const <double>[];
   if (values.isEmpty) return List<double>.filled(width, 0);
+  if (values.length == 1) return List<double>.filled(width, values[0]);
 
   final step = values.length / width;
   if (step <= 1) {
-    return List<double>.generate(
-      width,
-      (i) => values[(i * step).floor().clamp(0, values.length - 1)],
-      growable: false,
-    );
+    // UP-SAMPLING: linear interpolation between adjacent source values.
+    final lastIdx = values.length - 1;
+    return List<double>.generate(width, (i) {
+      // Map output index to a fractional position in the source array.
+      final t = width <= 1 ? 0.0 : i * lastIdx / (width - 1);
+      final lo = t.floor().clamp(0, lastIdx);
+      final hi = (lo + 1).clamp(0, lastIdx);
+      final frac = t - lo;
+      return values[lo] + (values[hi] - values[lo]) * frac;
+    }, growable: false);
   }
 
+  // DOWN-SAMPLING: bucket averaging.
   return List<double>.generate(width, (i) {
     final start = (i * step).floor();
     final end = ((i + 1) * step).floor().clamp(start + 1, values.length);
@@ -272,4 +286,96 @@ double clamp01(double value) {
 double normalize(double value, double min, double max) {
   if (max <= min) return 0;
   return clamp01((value - min) / (max - min));
+}
+
+/// Draws a crosshair overlay at ([x], [y]) within [area].
+///
+/// The crosshair is **non-destructive**: cells that already contain chart
+/// content (block characters, braille dots, etc.) keep their existing
+/// glyph and receive only a foreground-colour tint from [style]. Empty
+/// or space cells are replaced with the line-drawing characters [hChar],
+/// [vChar], and [intersectionChar].
+///
+/// The crosshair is clipped to the chart [area] bounds. Characters that
+/// fall outside [area] are silently skipped.
+///
+/// [x] and [y] are in screen-space (absolute coordinates, not relative
+/// to [area]).
+///
+/// The optional [style] controls the foreground/background colours of the
+/// crosshair lines.
+void drawCrosshair(
+  Screen screen,
+  Rectangle area,
+  int x,
+  int y, {
+  UvStyle style = const UvStyle(),
+  String hChar = '─',
+  String vChar = '│',
+  String intersectionChar = '┼',
+}) {
+  // Vertical line at column x.
+  if (x >= area.minX && x < area.maxX) {
+    for (var row = area.minY; row < area.maxY; row++) {
+      if (row == y) continue; // intersection handled below
+      _putCrosshairCell(screen, x, row, vChar, style);
+    }
+  }
+
+  // Horizontal line at row y.
+  if (y >= area.minY && y < area.maxY) {
+    for (var col = area.minX; col < area.maxX; col++) {
+      if (col == x) continue; // intersection handled below
+      _putCrosshairCell(screen, col, y, hChar, style);
+    }
+  }
+
+  // Intersection.
+  if (x >= area.minX && x < area.maxX && y >= area.minY && y < area.maxY) {
+    _putCrosshairCell(screen, x, y, intersectionChar, style);
+  }
+}
+
+/// Writes a crosshair cell, preserving existing chart content.
+///
+/// If the cell at ([cx], [cy]) already has a visible glyph (anything
+/// other than empty/space), the existing character and foreground are
+/// kept and the crosshair colour is applied as a **background** tint.
+/// This makes the crosshair visible as a coloured strip behind block
+/// characters (`█`, `▄`, `▀`, braille dots, etc.) without destroying
+/// the chart content.
+///
+/// Empty cells are replaced with the line-drawing [glyph] using the
+/// crosshair style directly.
+void _putCrosshairCell(
+  Screen screen,
+  int cx,
+  int cy,
+  String glyph,
+  UvStyle style,
+) {
+  final existing = screen.cellAt(cx, cy);
+  if (existing != null && _hasContent(existing)) {
+    // Preserve the existing character and fg; set bg to crosshair colour
+    // so the crosshair line is visible behind block glyphs.
+    final crosshairBg = style.fg ?? style.bg;
+    final merged = UvStyle(
+      fg: existing.style.fg,
+      bg: crosshairBg ?? existing.style.bg,
+    );
+    putCell(screen, cx, cy, existing.content, merged);
+  } else {
+    // Empty cell — draw the crosshair line character.
+    final merged = existing != null && existing.style.bg != null
+        ? style.copyWith(bg: existing.style.bg)
+        : style;
+    putCell(screen, cx, cy, glyph, merged);
+  }
+}
+
+/// Returns `true` if [cell] contains a visible (non-space) glyph.
+bool _hasContent(Cell cell) {
+  if (cell.content.isEmpty) return false;
+  if (cell.content == ' ') return false;
+  return true;
 }

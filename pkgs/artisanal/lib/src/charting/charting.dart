@@ -10,7 +10,8 @@ export 'core.dart'
         drawGrid,
         drawLegend,
         renderChartLines;
-export 'core.dart' show clamp01, normalize, putText, sampleSeries;
+export 'core.dart'
+    show clamp01, drawCrosshair, normalize, putText, sampleSeries;
 export 'palette.dart' show ChartRamp, uvColorFromHex, uvStyleFromHex;
 export 'sparkline.dart' show drawSparkline;
 export 'histogram.dart' show drawHistogram;

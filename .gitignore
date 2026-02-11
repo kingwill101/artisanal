@@ -3,7 +3,7 @@ pubspec.lock
 .idea/
 .agent/
 .gemini/
-third_party/
+#third_party/
 build/
 orm_bootstrap_test/
 .github/prompts/

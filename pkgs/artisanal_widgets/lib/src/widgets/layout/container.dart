@@ -1,0 +1,353 @@
+part of 'layout_widgets.dart';
+
+class Decoration {
+  const Decoration({this.color});
+
+  final Color? color;
+}
+
+class BoxDecoration extends Decoration {
+  const BoxDecoration({
+    super.color,
+    this.border,
+    this.borderRadius,
+    this.gradient,
+  });
+
+  final Border? border;
+  final BorderRadius? borderRadius;
+  final Gradient? gradient;
+}
+
+class BorderRadius {
+  const BorderRadius.all(int radius)
+    : topLeft = radius,
+      topRight = radius,
+      bottomLeft = radius,
+      bottomRight = radius;
+
+  const BorderRadius.only({
+    this.topLeft = 0,
+    this.topRight = 0,
+    this.bottomLeft = 0,
+    this.bottomRight = 0,
+  });
+  final int topLeft;
+  final int topRight;
+  final int bottomLeft;
+  final int bottomRight;
+}
+
+class Gradient {
+  const Gradient(this.colors);
+
+  final List<Color> colors;
+}
+
+class RenderContainer extends RenderBox {
+  RenderContainer({
+    this.padding,
+    this.margin,
+    this.width,
+    this.height,
+    this.background,
+    this.foreground,
+    this.color,
+    this.decoration,
+    this.foregroundDecoration,
+    this.alignment,
+    this.align = HorizontalAlign.left,
+    this.verticalAlign = VerticalAlign.top,
+  });
+
+  EdgeInsets? padding;
+  EdgeInsets? margin;
+  num? width;
+  num? height;
+  Color? background;
+  Color? foreground;
+  Color? color;
+  Decoration? decoration;
+  Decoration? foregroundDecoration;
+  Alignment? alignment;
+  HorizontalAlign align;
+  VerticalAlign verticalAlign;
+
+  String? _lastPaint;
+
+  RenderObject? get _child => children.isEmpty ? null : children.first;
+
+  @override
+  void layout(BoxConstraints constraints) {
+    final span = TuiTrace.begin(
+      'RenderContainer.layout',
+      tag: TraceTag.layout,
+      extra: 'w=$width h=$height',
+    );
+    super.layout(constraints);
+
+    // Compute the decoration overhead (padding + border + margin) so we can
+    // deflate child constraints — matching Flutter's RenderPadding behaviour.
+    final boxDec = decoration is BoxDecoration
+        ? decoration as BoxDecoration
+        : null;
+    final bdr = boxDec?.border;
+    final bdrLeft = (bdr != null && bdr.isVisible) ? bdr.getLeftSize() : 0;
+    final bdrRight = (bdr != null && bdr.isVisible) ? bdr.getRightSize() : 0;
+    final bdrTop = (bdr != null && bdr.isVisible) ? bdr.getTopSize() : 0;
+    final bdrBottom = (bdr != null && bdr.isVisible) ? bdr.getBottomSize() : 0;
+    final bdrH = bdrLeft + bdrRight;
+    final bdrV = bdrTop + bdrBottom;
+    final padLeft = _roundClamp(padding?.left ?? 0);
+    final padRight = _roundClamp(padding?.right ?? 0);
+    final padTop = _roundClamp(padding?.top ?? 0);
+    final padBottom = _roundClamp(padding?.bottom ?? 0);
+    final padH = padLeft + padRight;
+    final padV = padTop + padBottom;
+    final mrgLeft = _roundClamp(margin?.left ?? 0);
+    final mrgRight = _roundClamp(margin?.right ?? 0);
+    final mrgTop = _roundClamp(margin?.top ?? 0);
+    final mrgBottom = _roundClamp(margin?.bottom ?? 0);
+    final mrgH = mrgLeft + mrgRight;
+    final mrgV = mrgTop + mrgBottom;
+
+    // Total horizontal/vertical overhead the container itself consumes.
+    final overheadH = padH + bdrH + mrgH;
+    final overheadV = padV + bdrV + mrgV;
+
+    var childConstraints = constraints;
+    if (width != null || height != null) {
+      childConstraints = BoxConstraints(
+        minWidth: width?.toDouble() ?? constraints.minWidth,
+        maxWidth: width?.toDouble() ?? constraints.maxWidth,
+        minHeight: height?.toDouble() ?? constraints.minHeight,
+        maxHeight: height?.toDouble() ?? constraints.maxHeight,
+      );
+    } else if (alignment != null) {
+      // Alignment is set — loosen min constraints so the child can size
+      // naturally and then be positioned within the container.  This
+      // matches Flutter's Container behaviour with alignment.
+      childConstraints = BoxConstraints(
+        minWidth: 0,
+        maxWidth: math.max(0, constraints.maxWidth - overheadH),
+        minHeight: 0,
+        maxHeight: math.max(0, constraints.maxHeight - overheadV),
+      );
+    } else {
+      // No explicit size, no alignment — propagate parent constraints
+      // through (deflated by padding/border/margin overhead) so that
+      // children see the same tightness the parent intended.  This
+      // matches Flutter behaviour where a Container with only `color`
+      // (or padding) is constraint-transparent.
+      childConstraints = BoxConstraints(
+        minWidth: math.max(0, constraints.minWidth - overheadH),
+        maxWidth: math.max(0, constraints.maxWidth - overheadH),
+        minHeight: math.max(0, constraints.minHeight - overheadV),
+        maxHeight: math.max(0, constraints.maxHeight - overheadV),
+      );
+    }
+    _child?.layout(childConstraints);
+    final content = _child?.paint() ?? '';
+
+    // Compute the natural total size that _renderContainerContent would
+    // produce when width/height are null, accounting for padding, border,
+    // and margin — mirroring the same arithmetic in _renderContainerContent.
+    final contentW = Layout.getWidth(content);
+    final contentH = Layout.getHeight(content);
+
+    final naturalInnerW = (width != null)
+        ? _resolveDimension(width)!
+        : (contentW + padH + bdrH);
+    final naturalInnerH = (height != null)
+        ? _resolveDimension(height)!
+        : (contentH + padV + bdrV);
+    final naturalTotalW = naturalInnerW + mrgH;
+    final naturalTotalH = naturalInnerH + mrgV;
+
+    final constrained = constraints.constrain(
+      Size(naturalTotalW.toDouble(), naturalTotalH.toDouble()),
+    );
+
+    // Ensure the render dimensions match the constrained size so the
+    // Canvas output never exceeds the constraints.  This handles both
+    // when constraints force a *larger* size (expansion) and when they
+    // force a *smaller* size (clamping) than the natural dimensions.
+    num? renderWidth = width;
+    num? renderHeight = height;
+    if (width == null && constrained.width != naturalTotalW) {
+      renderWidth = constrained.width - mrgH;
+    }
+    if (height == null && constrained.height != naturalTotalH) {
+      renderHeight = constrained.height - mrgV;
+    }
+
+    final rendered = _renderContainerContent(
+      contentStr: content,
+      padding: padding,
+      margin: margin,
+      width: renderWidth,
+      height: renderHeight,
+      background: background,
+      foreground: foreground,
+      color: color,
+      decoration: decoration,
+      foregroundDecoration: foregroundDecoration,
+      alignment: alignment,
+      align: align,
+      verticalAlign: verticalAlign,
+    );
+    _lastPaint = rendered;
+    size = constraints.constrain(
+      Size(
+        Layout.getWidth(rendered).toDouble(),
+        Layout.getHeight(rendered).toDouble(),
+      ),
+    );
+
+    // Set child offset to match where _renderContainerContent places the
+    // content on the canvas: margin + border + padding + alignment.
+    if (_child != null) {
+      final resolvedW = _resolveDimension(renderWidth);
+      final resolvedH = _resolveDimension(renderHeight);
+
+      final resolvedAlign = alignment == null
+          ? align
+          : _horizontalFromAlignment(alignment!);
+      final resolvedVertical = alignment == null
+          ? verticalAlign
+          : _verticalFromAlignment(alignment!);
+
+      final availW = resolvedW != null
+          ? math.max(0, resolvedW - padLeft - padRight - bdrH)
+          : 0;
+      final availH = resolvedH != null
+          ? math.max(0, resolvedH - padTop - padBottom - bdrV)
+          : 0;
+
+      final alignedX = resolvedW != null
+          ? _offsetForHorizontal(resolvedAlign, availW, contentW)
+          : 0;
+      final alignedY = resolvedH != null
+          ? _offsetForVertical(resolvedVertical, availH, contentH)
+          : 0;
+
+      _child!.offset = Offset(
+        (mrgLeft + bdrLeft + padLeft + alignedX).toDouble(),
+        (mrgTop + bdrTop + padTop + alignedY).toDouble(),
+      );
+    }
+    span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+  }
+
+  @override
+  String paint() {
+    final cached = _lastPaint;
+    if (cached != null) return cached;
+    final content = _child?.paint() ?? '';
+    return _renderContainerContent(
+      contentStr: content,
+      padding: padding,
+      margin: margin,
+      width: width,
+      height: height,
+      background: background,
+      foreground: foreground,
+      color: color,
+      decoration: decoration,
+      foregroundDecoration: foregroundDecoration,
+      alignment: alignment,
+      align: align,
+      verticalAlign: verticalAlign,
+    );
+  }
+}
+
+class Container extends SingleChildRenderObjectWidget {
+  Container({
+    super.key,
+    super.child,
+    this.padding,
+    this.margin,
+    this.width,
+    this.height,
+    this.background,
+    this.foreground,
+    this.color,
+    this.decoration,
+    this.foregroundDecoration,
+    this.alignment,
+    this.align = HorizontalAlign.left,
+    this.verticalAlign = VerticalAlign.top,
+  });
+
+  final EdgeInsets? padding;
+  final EdgeInsets? margin;
+  final num? width;
+  final num? height;
+  final Color? background;
+  final Color? foreground;
+  final Color? color;
+  final Decoration? decoration;
+  final Decoration? foregroundDecoration;
+  final Alignment? alignment;
+  final HorizontalAlign align;
+  final VerticalAlign verticalAlign;
+
+  @override
+  RenderObject createRenderObject() {
+    return RenderContainer(
+      padding: padding,
+      margin: margin,
+      width: width,
+      height: height,
+      background: background,
+      foreground: foreground,
+      color: color,
+      decoration: decoration,
+      foregroundDecoration: foregroundDecoration,
+      alignment: alignment,
+      align: align,
+      verticalAlign: verticalAlign,
+    );
+  }
+
+  @override
+  void updateRenderObject(RenderObject renderObject) {
+    final box = renderObject as RenderContainer;
+    box
+      ..padding = padding
+      ..margin = margin
+      ..width = width
+      ..height = height
+      ..background = background
+      ..foreground = foreground
+      ..color = color
+      ..decoration = decoration
+      ..foregroundDecoration = foregroundDecoration
+      ..alignment = alignment
+      ..align = align
+      ..verticalAlign = verticalAlign;
+  }
+
+  @override
+  Object view() => _render();
+
+  String _render() {
+    final contentStr = child != null ? _renderWidget(child!) : '';
+    return _renderContainerContent(
+      contentStr: contentStr,
+      padding: padding,
+      margin: margin,
+      width: width,
+      height: height,
+      background: background,
+      foreground: foreground,
+      color: color,
+      decoration: decoration,
+      foregroundDecoration: foregroundDecoration,
+      alignment: alignment,
+      align: align,
+      verticalAlign: verticalAlign,
+    );
+  }
+}

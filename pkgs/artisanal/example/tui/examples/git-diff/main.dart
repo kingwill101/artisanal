@@ -6,7 +6,13 @@
 /// Run with: dart run example/tui/examples/git-diff/main.dart
 library;
 
+import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;
+
+/// Status bar style matching the light theme.
+final _statusBarStyle = style.Style()
+    .foreground(const style.BasicColor('#57606a'))
+    .background(const style.BasicColor('#ece7e1'));
 
 /// Sample unified diff for demonstration.
 const _sampleDiff = '''
@@ -64,7 +70,12 @@ class DiffViewerModel implements tui.Model {
     tui.GitDiffModel? diff,
     this.quitting = false,
     this.ready = false,
-  }) : diff = diff ?? tui.GitDiffModel(viewMode: tui.DiffViewMode.pretty);
+  }) : diff =
+           diff ??
+           tui.GitDiffModel(
+             viewMode: tui.DiffViewMode.pretty,
+             styles: tui.DiffStyles.light(),
+           );
 
   final tui.GitDiffModel diff;
   final bool quitting;
@@ -78,9 +89,11 @@ class DiffViewerModel implements tui.Model {
     switch (msg) {
       case tui.WindowSizeMsg(width: final w, height: final h):
         // Use full terminal width, reserve 1 row for status bar
-        final resized = diff
-            .copyWith(width: w, height: h - 1)
-            .setDiff(_sampleDiff);
+        final updated = diff.copyWith(width: w, height: h - 1);
+        // First time: parse the diff; subsequent resizes: just re-render
+        final resized = diff.files.isEmpty
+            ? updated.setDiff(_sampleDiff)
+            : updated.rerender();
         return (DiffViewerModel(diff: resized, ready: true), null);
 
       case tui.KeyMsg(key: final key):
@@ -127,8 +140,9 @@ class DiffViewerModel implements tui.Model {
     };
     final status =
         ' $fileCount file(s)  +$adds  -$dels  |  $pct%  |  $modeName (v)  j/k scroll  q quit';
+    final styledStatus = _statusBarStyle.render(status.padRight(diff.width));
 
-    return '${diff.view()}\n$status';
+    return '${diff.view()}\n$styledStatus';
   }
 }
 

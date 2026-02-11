@@ -240,7 +240,7 @@ export 'zone/zone.dart'
         closeGlobalZone;
 
 // Trace / debug logging
-export 'trace.dart' show TuiTrace;
+export 'trace.dart' show TuiTrace, TraceTag, TraceSpan;
 
 // Widget system for composable components
 export 'package:artisanal_widgets/artisanal_widgets.dart'

@@ -1,0 +1,451 @@
+library;
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:artisanal_widgets/testing.dart';
+import 'package:test/test.dart';
+
+void main() {
+  // ---------------------------------------------------------------------------
+  // Theme — construction and factories
+  // ---------------------------------------------------------------------------
+  group('Theme construction', () {
+    test('Theme.dark() creates a dark theme with AnsiColor values', () {
+      final theme = Theme.dark();
+      expect(theme.primary, isA<AnsiColor>());
+      expect(theme.secondary, isA<AnsiColor>());
+      expect(theme.surface, isA<AnsiColor>());
+      expect(theme.background, isA<AnsiColor>());
+      expect(theme.error, isA<AnsiColor>());
+      expect(theme.success, isA<AnsiColor>());
+      expect(theme.warning, isA<AnsiColor>());
+      expect(theme.onPrimary, isA<AnsiColor>());
+      expect(theme.onSecondary, isA<AnsiColor>());
+      expect(theme.onSurface, isA<AnsiColor>());
+      expect(theme.onBackground, isA<AnsiColor>());
+      expect(theme.onError, isA<AnsiColor>());
+      expect(theme.muted, isA<AnsiColor>());
+      expect(theme.border, isA<AnsiColor>());
+    });
+
+    test('Theme.light() creates a light theme with AnsiColor values', () {
+      final theme = Theme.light();
+      expect(theme.primary, isA<AnsiColor>());
+      expect(theme.surface, isA<AnsiColor>());
+      expect(theme.background, isA<AnsiColor>());
+    });
+
+    test('Theme.adaptive() creates theme with AdaptiveColor values', () {
+      final theme = Theme.adaptive();
+      expect(theme.primary, isA<AdaptiveColor>());
+      expect(theme.secondary, isA<AdaptiveColor>());
+      expect(theme.surface, isA<AdaptiveColor>());
+      expect(theme.background, isA<AdaptiveColor>());
+      expect(theme.error, isA<AdaptiveColor>());
+      expect(theme.success, isA<AdaptiveColor>());
+      expect(theme.warning, isA<AdaptiveColor>());
+      expect(theme.onPrimary, isA<AdaptiveColor>());
+      expect(theme.onSurface, isA<AdaptiveColor>());
+      expect(theme.onBackground, isA<AdaptiveColor>());
+      expect(theme.muted, isA<AdaptiveColor>());
+      expect(theme.border, isA<AdaptiveColor>());
+    });
+
+    test('Theme.adaptive() has some non-adaptive colors', () {
+      // onSecondary and onError are plain AnsiColor(255) in adaptive
+      final theme = Theme.adaptive();
+      expect(theme.onSecondary, isA<AnsiColor>());
+      expect(theme.onError, isA<AnsiColor>());
+    });
+
+    test('Theme has 9 text style fields', () {
+      final theme = Theme.dark();
+      expect(theme.titleLarge, isA<Style>());
+      expect(theme.titleMedium, isA<Style>());
+      expect(theme.titleSmall, isA<Style>());
+      expect(theme.bodyLarge, isA<Style>());
+      expect(theme.bodyMedium, isA<Style>());
+      expect(theme.bodySmall, isA<Style>());
+      expect(theme.labelLarge, isA<Style>());
+      expect(theme.labelMedium, isA<Style>());
+      expect(theme.labelSmall, isA<Style>());
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Theme — copyWith
+  // ---------------------------------------------------------------------------
+  group('Theme copyWith', () {
+    test('copyWith returns new theme with overridden colors', () {
+      final original = Theme.dark();
+      final customColor = AnsiColor(100);
+      final modified = original.copyWith(primary: customColor);
+
+      expect(modified.primary, same(customColor));
+      // Other fields should remain unchanged
+      expect(modified.secondary, same(original.secondary));
+      expect(modified.surface, same(original.surface));
+      expect(modified.background, same(original.background));
+    });
+
+    test('copyWith with no args returns equivalent theme', () {
+      final original = Theme.dark();
+      final copy = original.copyWith();
+
+      expect(copy.primary, same(original.primary));
+      expect(copy.secondary, same(original.secondary));
+      expect(copy.surface, same(original.surface));
+      expect(copy.background, same(original.background));
+      expect(copy.error, same(original.error));
+      expect(copy.success, same(original.success));
+      expect(copy.warning, same(original.warning));
+      expect(copy.onPrimary, same(original.onPrimary));
+      expect(copy.onSecondary, same(original.onSecondary));
+      expect(copy.onSurface, same(original.onSurface));
+      expect(copy.onBackground, same(original.onBackground));
+      expect(copy.onError, same(original.onError));
+      expect(copy.muted, same(original.muted));
+      expect(copy.border, same(original.border));
+    });
+
+    test('copyWith overrides text styles', () {
+      final original = Theme.dark();
+      final customStyle = Style().bold().italic();
+      final modified = original.copyWith(titleLarge: customStyle);
+
+      expect(modified.titleLarge, same(customStyle));
+      expect(modified.titleMedium, same(original.titleMedium));
+    });
+
+    test('copyWith can override all 14 colors at once', () {
+      final original = Theme.dark();
+      final c = AnsiColor(42);
+      final modified = original.copyWith(
+        primary: c,
+        secondary: c,
+        surface: c,
+        background: c,
+        error: c,
+        success: c,
+        warning: c,
+        onPrimary: c,
+        onSecondary: c,
+        onSurface: c,
+        onBackground: c,
+        onError: c,
+        muted: c,
+        border: c,
+      );
+
+      expect(modified.primary, same(c));
+      expect(modified.secondary, same(c));
+      expect(modified.surface, same(c));
+      expect(modified.background, same(c));
+      expect(modified.error, same(c));
+      expect(modified.success, same(c));
+      expect(modified.warning, same(c));
+      expect(modified.onPrimary, same(c));
+      expect(modified.onSecondary, same(c));
+      expect(modified.onSurface, same(c));
+      expect(modified.onBackground, same(c));
+      expect(modified.onError, same(c));
+      expect(modified.muted, same(c));
+      expect(modified.border, same(c));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Global theme state
+  // ---------------------------------------------------------------------------
+  group('Global theme state', () {
+    late Theme originalTheme;
+    late bool originalDarkBg;
+
+    setUp(() {
+      originalTheme = currentTheme;
+      originalDarkBg = hasDarkBackground;
+    });
+
+    tearDown(() {
+      setTheme(originalTheme);
+      setHasDarkBackground(originalDarkBg);
+    });
+
+    test('currentTheme defaults to Theme.adaptive()', () {
+      // The default is Theme.adaptive() — it should have AdaptiveColor fields
+      expect(currentTheme.primary, isA<AdaptiveColor>());
+    });
+
+    test('setTheme replaces global theme', () {
+      final custom = Theme.light();
+      setTheme(custom);
+      expect(currentTheme, same(custom));
+    });
+
+    test('hasDarkBackground defaults to true', () {
+      // Reset to default state
+      setHasDarkBackground(true);
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('setHasDarkBackground changes the flag', () {
+      setHasDarkBackground(false);
+      expect(hasDarkBackground, isFalse);
+      setHasDarkBackground(true);
+      expect(hasDarkBackground, isTrue);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // updateThemeFromBackground
+  // ---------------------------------------------------------------------------
+  group('updateThemeFromBackground', () {
+    late bool originalDarkBg;
+
+    setUp(() {
+      originalDarkBg = hasDarkBackground;
+    });
+
+    tearDown(() {
+      setHasDarkBackground(originalDarkBg);
+    });
+
+    test('dark background hex sets hasDarkBackground to true', () {
+      // Very dark color: #0a0a0a → luminance ~0.04 < 0.5 → dark
+      updateThemeFromBackground('#0a0a0a');
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('light background hex sets hasDarkBackground to false', () {
+      // Very light color: #fafafa → luminance ~0.98 > 0.5 → not dark
+      updateThemeFromBackground('#fafafa');
+      expect(hasDarkBackground, isFalse);
+    });
+
+    test('works without hash prefix', () {
+      updateThemeFromBackground('ffffff');
+      expect(hasDarkBackground, isFalse);
+    });
+
+    test('null input is ignored', () {
+      setHasDarkBackground(true);
+      updateThemeFromBackground(null);
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('empty string is ignored', () {
+      setHasDarkBackground(true);
+      updateThemeFromBackground('');
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('invalid hex length is ignored', () {
+      setHasDarkBackground(true);
+      updateThemeFromBackground('#abc'); // 3 chars, not 6
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('invalid hex chars are ignored', () {
+      setHasDarkBackground(true);
+      updateThemeFromBackground('#zzzzzz');
+      // parseInt returns null for invalid hex; function returns early
+      expect(hasDarkBackground, isTrue);
+    });
+
+    test('mid-gray is classified as light (luminance >= 0.5)', () {
+      // Pure 128 gray: luminance = 128/255 ≈ 0.502 → not dark
+      updateThemeFromBackground('#808080');
+      expect(hasDarkBackground, isFalse);
+    });
+
+    test('slightly below mid-gray is classified as dark', () {
+      // #707070: luminance ≈ 0.44 < 0.5 → dark
+      updateThemeFromBackground('#707070');
+      expect(hasDarkBackground, isTrue);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // ThemeScope — InheritedWidget behavior
+  // ---------------------------------------------------------------------------
+  group('ThemeScope', () {
+    test('ThemeScope.of returns theme from nearest ancestor', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        final customTheme = Theme.dark();
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: customTheme,
+            child: _ThemeReaderWidget(label: 'dark-test'),
+          ),
+        );
+        // The _ThemeReaderWidget renders 'dark-test' which proves it built
+        expect(tester.find.text('dark-test'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('ThemeScope.of falls back to currentTheme without ancestor', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        // No ThemeScope wrapper — ThemeScope.of falls back to currentTheme
+        await tester.pumpWidget(_ThemeReaderWidget(label: 'fallback-test'));
+        expect(tester.find.text('fallback-test'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('nested ThemeScope uses inner theme', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.dark(),
+            child: ThemeScope(theme: Theme.light(), child: Text('nested')),
+          ),
+        );
+        expect(tester.find.text('nested'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('updateShouldNotify returns true for different theme', () {
+      final scope1 = ThemeScope(theme: Theme.dark(), child: Text('a'));
+      final scope2 = ThemeScope(theme: Theme.light(), child: Text('b'));
+      expect(scope1.updateShouldNotify(scope2), isTrue);
+    });
+
+    test('updateShouldNotify returns false for same theme object', () {
+      final theme = Theme.dark();
+      final scope1 = ThemeScope(theme: theme, child: Text('a'));
+      final scope2 = ThemeScope(theme: theme, child: Text('b'));
+      expect(scope1.updateShouldNotify(scope2), isFalse);
+    });
+
+    test('ThemeScope wraps child correctly', () {
+      final theme = Theme.dark();
+      final child = Text('x');
+      final scope = ThemeScope(theme: theme, child: child);
+      expect(scope.theme, same(theme));
+      expect(scope.children.length, equals(1));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // ThemeScope — context extensions
+  // ---------------------------------------------------------------------------
+  group('ThemeScope context extension', () {
+    test('context.theme works inside ThemeScope', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          ThemeScope(theme: Theme.light(), child: _ContextThemeWidget()),
+        );
+        expect(tester.find.text('has-theme'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Theme — dark vs light color differences
+  // ---------------------------------------------------------------------------
+  group('Theme dark vs light differences', () {
+    test('dark and light themes have different primary colors', () {
+      final dark = Theme.dark();
+      final light = Theme.light();
+      // They should differ (dark uses cyan AnsiColor(39), light uses blue AnsiColor(33))
+      expect(identical(dark.primary, light.primary), isFalse);
+    });
+
+    test('dark and light themes have different surface colors', () {
+      final dark = Theme.dark();
+      final light = Theme.light();
+      expect(identical(dark.surface, light.surface), isFalse);
+    });
+
+    test('dark and light themes have different background colors', () {
+      final dark = Theme.dark();
+      final light = Theme.light();
+      expect(identical(dark.background, light.background), isFalse);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Theme — integration with widgets
+  // ---------------------------------------------------------------------------
+  group('Theme widget integration', () {
+    test('Button uses theme colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.dark(),
+            child: Button(label: 'Click Me', onPressed: () => null),
+          ),
+        );
+        expect(tester.find.text('Click Me'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SpinnerIndicator uses theme colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.light(),
+            child: SpinnerIndicator(frames: const ['*']),
+          ),
+        );
+        expect(tester.find.text('*'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('Card uses theme border color', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.dark(),
+            child: Card(child: Text('Card Content')),
+          ),
+        );
+        expect(tester.find.text('Card Content'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
+}
+
+/// A test widget that reads the theme via ThemeScope.of and renders a label.
+class _ThemeReaderWidget extends StatelessWidget {
+  _ThemeReaderWidget({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    // Access theme to verify it doesn't throw
+    final theme = ThemeScope.of(context);
+    // Use the theme's primary color to style text, proving theme access works
+    return Text(label, style: Style().foreground(theme.primary));
+  }
+}
+
+/// A test widget that uses the context.theme extension.
+class _ContextThemeWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.theme;
+    // Prove it works by rendering with theme
+    return Text('has-theme', style: theme.bodyMedium);
+  }
+}

@@ -1,0 +1,205 @@
+// ClipRect Widget Example
+//
+// Demonstrates using ClipRect to clip child content to a specified
+// width and/or height without ellipsis.
+//
+// Run with: dart run example/clip_rect/main.dart
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+
+void main() async {
+  final app = tui.WidgetApp(ClipRectExample());
+  await tui.runProgram(
+    app,
+    options: const tui.ProgramOptions(
+      altScreen: true,
+      mouseMode: tui.MouseMode.allMotion,
+    ),
+  );
+}
+
+class ClipRectExample extends w.StatefulWidget {
+  ClipRectExample({super.key});
+
+  @override
+  w.State createState() => _ClipRectExampleState();
+}
+
+class _ClipRectExampleState extends w.State<ClipRectExample> {
+  final w.WidgetScrollController _scrollController = w.WidgetScrollController();
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    final theme = widget.theme;
+    final label = theme.labelSmall.copy()..foreground(theme.onBackground);
+
+    return w.Container(
+      child: w.Scrollbar(
+        controller: _scrollController,
+        thickness: 1,
+        gap: 1,
+        enableHover: true,
+        trackChar: ' ',
+        thumbChar: ' ',
+        trackUsesBackground: true,
+        thumbUsesBackground: true,
+        trackGradient: w.ScrollbarGradient.background(
+          start: w.hasDarkBackground
+              ? const BasicColor('#2f363d')
+              : const BasicColor('#e3e7eb'),
+          end: w.hasDarkBackground
+              ? const BasicColor('#1f252a')
+              : const BasicColor('#d3d9e0'),
+        ),
+        thumbGradient: w.ScrollbarGradient.background(
+          start: w.hasDarkBackground
+              ? const BasicColor('#3fb2ff')
+              : const BasicColor('#2f7df6'),
+          end: w.hasDarkBackground
+              ? const BasicColor('#7c5cff')
+              : const BasicColor('#6e55f5'),
+        ),
+        hoverThumbGradient: w.ScrollbarGradient.background(
+          start: w.hasDarkBackground
+              ? const BasicColor('#79ddff')
+              : const BasicColor('#4f93ff'),
+          end: w.hasDarkBackground
+              ? const BasicColor('#b18bff')
+              : const BasicColor('#836bff'),
+        ),
+        hoverThumbChar: ' ',
+        child: w.ScrollView(
+          controller: _scrollController,
+          handleKeys: true,
+          child: w.Column(
+            gap: 1,
+            children: [
+              w.Text('ClipRect Widget', style: theme.titleLarge),
+              w.Text('q: quit', style: label),
+              w.Divider(width: 50),
+
+              // Width clipping
+              w.Text('Width clipping:', style: theme.titleMedium),
+              w.Row(
+                gap: 2,
+                children: [
+                  w.Column(
+                    children: [
+                      w.Text('Original:', style: label),
+                      w.Text('Hello, World! This is a long string.'),
+                    ],
+                  ),
+                  w.Column(
+                    children: [
+                      w.Text('Clipped to 15:', style: label),
+                      w.ClipRect(
+                        width: 15,
+                        child: w.Text('Hello, World! This is a long string.'),
+                      ),
+                    ],
+                  ),
+                  w.Column(
+                    children: [
+                      w.Text('Clipped to 5:', style: label),
+                      w.ClipRect(
+                        width: 5,
+                        child: w.Text('Hello, World! This is a long string.'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              w.Divider(width: 50),
+
+              // Height clipping
+              w.Text(
+                'Height clipping (5 lines to 3):',
+                style: theme.titleMedium,
+              ),
+              w.Row(
+                gap: 4,
+                children: [
+                  w.Column(
+                    children: [
+                      w.Text('Original:', style: label),
+                      w.Column(
+                        children: [
+                          w.Text('Line 1'),
+                          w.Text('Line 2'),
+                          w.Text('Line 3'),
+                          w.Text('Line 4'),
+                          w.Text('Line 5'),
+                        ],
+                      ),
+                    ],
+                  ),
+                  w.Column(
+                    children: [
+                      w.Text('Clipped:', style: label),
+                      w.ClipRect(
+                        height: 3,
+                        child: w.Column(
+                          children: [
+                            w.Text('Line 1'),
+                            w.Text('Line 2'),
+                            w.Text('Line 3'),
+                            w.Text('Line 4'),
+                            w.Text('Line 5'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              w.Divider(width: 50),
+
+              // Both width and height
+              w.Text(
+                'Both width (10) and height (2):',
+                style: theme.titleMedium,
+              ),
+              w.ClipRect(
+                width: 10,
+                height: 2,
+                child: w.Column(
+                  children: [
+                    w.Text('A very long first line of text'),
+                    w.Text('A very long second line of text'),
+                    w.Text('Third line — clipped away'),
+                  ],
+                ),
+              ),
+
+              w.Divider(width: 50),
+
+              // ClipRect inside a DecoratedBox
+              w.Text('Inside a DecoratedBox:', style: theme.titleMedium),
+              w.DecoratedBox(
+                decoration: w.BoxDecoration(border: Border.rounded),
+                child: w.ClipRect(
+                  width: 20,
+                  child: w.Text(
+                    'This text is clipped to 20 columns inside a border',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.char == 'q') {
+      return tui.Cmd.quit();
+    }
+    return null;
+  }
+}

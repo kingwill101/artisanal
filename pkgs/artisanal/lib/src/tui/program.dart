@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io' as io;
 
 import 'package:artisanal/terminal.dart';
@@ -14,6 +15,7 @@ import 'startup_probe.dart';
 import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
+import '../layout/layout.dart' show Layout;
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 
@@ -558,6 +560,11 @@ class Program<M extends Model> {
   /// The last view object returned by the model.
   View? _lastView;
 
+  /// The last view object returned by model.view(), used for identity-based
+  /// skip in _render() to avoid the full ANSI-parse/draw/diff pipeline
+  /// when the model returned the exact same cached object.
+  Object? _lastRenderedView;
+
   /// The renderer for output.
   TuiRenderer? _renderer;
 
@@ -590,7 +597,7 @@ class Program<M extends Model> {
   bool _cancelled = false;
 
   /// Message queue for sequential processing.
-  final List<Msg> _messageQueue = [];
+  final Queue<Msg> _messageQueue = Queue<Msg>();
 
   /// Whether we're currently processing a message (prevents reentrant calls).
   bool _processingMessage = false;
@@ -603,6 +610,12 @@ class Program<M extends Model> {
 
   /// Whether cleanup has already been performed (prevents double cleanup).
   bool _cleanedUp = false;
+
+  /// Whether the terminal background color was overridden via OSC 11.
+  bool _bgColorOverridden = false;
+
+  /// Whether the terminal foreground color was overridden via OSC 10.
+  bool _fgColorOverridden = false;
 
   /// Completer for the run() method.
   Completer<void>? _runCompleter;
@@ -919,13 +932,17 @@ class Program<M extends Model> {
 
     // Run startup probes (e.g. emoji width detection) AFTER the first frame is
     // painted.  The probe uses cursor save/restore on the already-active alt
-    // screen so the user never sees a blank flash.  If the probe changes the
-    // emoji presentation width we trigger a full re-render.
-    final prevEmojiWidth = uni_width.emojiPresentationWidth;
+    // screen so the user never sees a blank flash.
+    //
+    // Always force a full re-render after probes complete: the emoji width
+    // probe clears the last terminal line (where status bars, etc. live) to
+    // avoid visual artifacts during probing.  Even if the emoji presentation
+    // width didn't change, the terminal display was disturbed and must be
+    // repainted.
     await _runStartupProbesIfNeeded();
     _startupProbes?.drain(_processMessage);
-    if (uni_width.emojiPresentationWidth != prevEmojiWidth) {
-      _render();
+    if (_startupProbes != null) {
+      _forceRender();
     }
 
     // Start metrics timer
@@ -1057,9 +1074,9 @@ class Program<M extends Model> {
     return null;
   }
 
-  void _trace(String message) {
+  void _trace(String message, {TraceTag tag = TraceTag.general}) {
     if (!TuiTrace.enabled) return;
-    TuiTrace.log(message);
+    TuiTrace.log(message, tag: tag);
   }
 
   String _traceMsgSummary(Msg msg) {
@@ -1236,30 +1253,46 @@ class Program<M extends Model> {
   /// conditions and ensure consistent state updates.
   void send(Msg msg) {
     if (!_running) return;
+    // Coalesce: when a key arrives, drop all pending mouse messages.
+    // When a motion/wheel arrives, drop prior events of the same action.
+    // Use _coalesceQueue to avoid O(n) removeWhere on each send.
     if (msg is KeyMsg) {
-      _messageQueue.removeWhere((m) => m is MouseMsg);
-    }
-    if (msg is MouseMsg && msg.action == MouseAction.motion) {
-      _messageQueue.removeWhere(
-        (m) => m is MouseMsg && m.action == MouseAction.motion,
-      );
-    }
-    if (msg is MouseMsg && msg.action == MouseAction.wheel) {
-      _messageQueue.removeWhere(
-        (m) => m is MouseMsg && m.action == MouseAction.wheel,
-      );
+      _coalesceQueue((m) => m is! MouseMsg);
+    } else if (msg is MouseMsg && msg.action == MouseAction.motion) {
+      _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.motion);
+    } else if (msg is MouseMsg && msg.action == MouseAction.wheel) {
+      _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.wheel);
     }
     if (TuiTrace.enabled && msg is KeyMsg) {
-      _trace(
+      TuiTrace.log(
         'queue before key len=${_messageQueue.length} '
         'msg=${_traceMsgSummary(msg)}',
+        tag: TraceTag.queue,
       );
     }
     _messageQueue.add(msg);
     if (TuiTrace.enabled && msg is KeyMsg) {
-      _trace('queue after key len=${_messageQueue.length}');
+      TuiTrace.log(
+        'queue after key len=${_messageQueue.length}',
+        tag: TraceTag.queue,
+      );
     }
     _drainMessageQueue();
+  }
+
+  /// Removes messages from the queue that don't pass [keep].
+  ///
+  /// Rebuilds the queue in-place, retaining only matching messages.
+  /// O(n) but only called when coalescing is needed.
+  void _coalesceQueue(bool Function(Msg) keep) {
+    if (_messageQueue.isEmpty) return;
+    final len = _messageQueue.length;
+    for (var i = 0; i < len; i++) {
+      final m = _messageQueue.removeFirst();
+      if (keep(m)) {
+        _messageQueue.add(m);
+      }
+    }
   }
 
   /// Drains the message queue, processing messages sequentially.
@@ -1272,7 +1305,7 @@ class Program<M extends Model> {
     _processingMessage = true;
     try {
       while (_messageQueue.isNotEmpty && _running) {
-        final msg = _messageQueue.removeAt(0);
+        final msg = _messageQueue.removeFirst();
         _processMessage(msg);
       }
     } finally {
@@ -1284,12 +1317,11 @@ class Program<M extends Model> {
   void _processMessage(Msg msg) {
     if (_model == null) return;
 
-    final traceId = TuiTrace.enabled ? ++_traceMsgId : null;
-    final Stopwatch? sw = traceId == null ? null : Stopwatch();
-    sw?.start();
-    if (traceId != null) {
-      _trace('msg#$traceId start ${msg.runtimeType}');
-    }
+    final span = TuiTrace.begin(
+      'msg#${++_traceMsgId}',
+      tag: TraceTag.dispatch,
+      extra: msg.runtimeType.toString(),
+    );
 
     try {
       final probes = _startupProbes;
@@ -1370,15 +1402,16 @@ class Program<M extends Model> {
 
       // Execute command
       if (cmd != null) {
+        final cmdSpan = TuiTrace.begin(
+          'cmd',
+          tag: TraceTag.cmd,
+          extra: cmd.runtimeType.toString(),
+        );
         _executeCommand(cmd);
+        cmdSpan.end();
       }
     } finally {
-      if (traceId != null && sw != null) {
-        sw.stop();
-        _trace(
-          'msg#$traceId end ${msg.runtimeType} ${sw.elapsedMicroseconds}us',
-        );
-      }
+      span.end();
     }
   }
 
@@ -1582,6 +1615,14 @@ class Program<M extends Model> {
     // Dispose renderer (restores cursor, exits alt screen if needed)
     _renderer?.dispose();
 
+    // Reset terminal colors if overridden via OSC 11/10
+    if (_bgColorOverridden) {
+      _terminal?.write('\x1b]111\x07');
+    }
+    if (_fgColorOverridden) {
+      _terminal?.write('\x1b]110\x07');
+    }
+
     // Restore terminal to normal mode
     _terminal?.disableRawMode();
     _terminal?.showCursor();
@@ -1685,6 +1726,14 @@ class Program<M extends Model> {
       _terminal?.exitAltScreen();
     }
 
+    // Reset terminal colors if overridden via OSC 11/10
+    if (_bgColorOverridden) {
+      _terminal?.write('\x1b]111\x07');
+    }
+    if (_fgColorOverridden) {
+      _terminal?.write('\x1b]110\x07');
+    }
+
     // Send SIGTSTP to suspend (Unix only)
     try {
       io.Process.killPid(io.pid, io.ProcessSignal.sigtstp);
@@ -1757,6 +1806,18 @@ class Program<M extends Model> {
       );
     }
 
+    // Identity-based skip: if the model returned the exact same object
+    // (e.g. WidgetApp returning its _cachedView when !_dirty), skip the
+    // entire renderer pipeline.  This avoids ANSI parsing, buffer drawing,
+    // and diffing for no-op frames (e.g. RenderMetricsMsg with overlay off).
+    if (identical(view, _lastRenderedView)) {
+      if (renderId != null) {
+        _trace('render#$renderId skip (identical view)', tag: TraceTag.render);
+      }
+      return;
+    }
+    _lastRenderedView = view;
+
     if (view is View) {
       _lastView = view;
       _applyViewMetadata(view);
@@ -1771,6 +1832,8 @@ class Program<M extends Model> {
     if (renderId != null && renderSw != null) {
       _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
     }
+    // Emit per-frame Layout operation counters before flushing.
+    Layout.emitFrameCounters();
     // Ensure the underlying sink paints promptly. Some terminals (and Dart IO
     // implementations) may buffer output until an explicit flush, and the UV
     // renderer in particular emits bytes through an intermediate writer.
@@ -1786,11 +1849,13 @@ class Program<M extends Model> {
     if (view.backgroundColor != null) {
       // OSC 11
       _terminal?.write('\x1b]11;${view.backgroundColor!.toHex()}\x07');
+      _bgColorOverridden = true;
     }
 
     if (view.foregroundColor != null) {
       // OSC 10
       _terminal?.write('\x1b]10;${view.foregroundColor!.toHex()}\x07');
+      _fgColorOverridden = true;
     }
 
     if (view.progressBar != null) {
@@ -2118,6 +2183,18 @@ class Program<M extends Model> {
     // Dispose renderer (this should restore cursor/alt screen)
     trySync(() => _renderer?.dispose());
     _renderer = null;
+
+    // Reset terminal colors if they were overridden via View metadata.
+    // OSC 11 sets the terminal-wide background color; OSC 111 resets it.
+    // Without this, the terminal background stays tinted after program exit.
+    trySync(() {
+      if (_bgColorOverridden) {
+        _terminal?.write('\x1b]111\x07');
+      }
+      if (_fgColorOverridden) {
+        _terminal?.write('\x1b]110\x07');
+      }
+    });
 
     // Restore terminal state (belt and suspenders approach)
     // Even if renderer.dispose() failed, try to restore these

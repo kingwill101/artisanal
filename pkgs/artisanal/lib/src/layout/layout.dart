@@ -109,6 +109,62 @@ class Layout {
   Layout._();
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Per-frame counters for high-frequency operations
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Call count and total microseconds for [getWidth] in the current frame.
+  static int _getWidthCount = 0;
+  static int _getWidthUs = 0;
+
+  /// Call count and total microseconds for [getHeight] in the current frame.
+  static int _getHeightCount = 0;
+  static int _getHeightUs = 0;
+
+  /// Call count and total microseconds for [visibleLength] in the current frame.
+  static int _visibleLengthCount = 0;
+  static int _visibleLengthUs = 0;
+
+  /// Call count and total microseconds for [pad] in the current frame.
+  static int _padCount = 0;
+  static int _padUs = 0;
+
+  /// Emits per-frame counter summary to [TuiTrace] and resets all counters.
+  ///
+  /// Call this at frame boundaries (e.g. after render completes) to get
+  /// aggregate stats for high-frequency Layout operations without the
+  /// overhead of per-call tracing.
+  static void emitFrameCounters() {
+    if (!TuiTrace.enabled) {
+      _resetCounters();
+      return;
+    }
+    if (_getWidthCount + _getHeightCount + _visibleLengthCount + _padCount ==
+        0) {
+      return;
+    }
+    TuiTrace.log(
+      'layout.counters '
+      'getWidth=$_getWidthCount/${_getWidthUs}us '
+      'getHeight=$_getHeightCount/${_getHeightUs}us '
+      'visibleLength=$_visibleLengthCount/${_visibleLengthUs}us '
+      'pad=$_padCount/${_padUs}us',
+      tag: TraceTag.layout,
+    );
+    _resetCounters();
+  }
+
+  static void _resetCounters() {
+    _getWidthCount = 0;
+    _getWidthUs = 0;
+    _getHeightCount = 0;
+    _getHeightUs = 0;
+    _visibleLengthCount = 0;
+    _visibleLengthUs = 0;
+    _padCount = 0;
+    _padUs = 0;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Constants
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -120,7 +176,14 @@ class Layout {
   ///
   /// Accounts for double-width characters (CJK, emoji, etc.).
   static int visibleLength(String text) {
-    return maxLineWidth(Ansi.stripAnsi(text));
+    final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
+    final result = maxLineWidth(Ansi.stripAnsi(text));
+    if (sw != null) {
+      sw.stop();
+      _visibleLengthCount++;
+      _visibleLengthUs += sw.elapsedMicroseconds;
+    }
+    return result;
   }
 
   /// Returns the cell width of characters in the string.
@@ -150,9 +213,23 @@ class Layout {
   ///
   /// The padding is added to the right by default.
   static String pad(String text, int width, [String char = ' ']) {
+    final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
     final visible = visibleLength(text);
-    if (visible >= width) return text;
-    return '$text${char * (width - visible)}';
+    if (visible >= width) {
+      sw?.stop();
+      if (sw != null) {
+        _padCount++;
+        _padUs += sw.elapsedMicroseconds;
+      }
+      return text;
+    }
+    final result = '$text${char * (width - visible)}';
+    if (sw != null) {
+      sw.stop();
+      _padCount++;
+      _padUs += sw.elapsedMicroseconds;
+    }
+    return result;
   }
 
   /// Pads a string to a given width on the left.
@@ -623,14 +700,29 @@ class Layout {
 
   /// Gets the width of a block of text (maximum line width).
   static int getWidth(String content) {
+    final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
     final lines = content.split('\n');
-    if (lines.isEmpty) return 0;
-    return lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
+    final result = lines.isEmpty
+        ? 0
+        : lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
+    if (sw != null) {
+      sw.stop();
+      _getWidthCount++;
+      _getWidthUs += sw.elapsedMicroseconds;
+    }
+    return result;
   }
 
   /// Gets the height of a block of text (number of lines).
   static int getHeight(String content) {
-    return content.split('\n').length;
+    final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
+    final result = content.split('\n').length;
+    if (sw != null) {
+      sw.stop();
+      _getHeightCount++;
+      _getHeightUs += sw.elapsedMicroseconds;
+    }
+    return result;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -662,10 +754,10 @@ class Layout {
     var i = 0;
 
     while (i < text.length && currentLen < targetLen) {
-      // Pass through ANSI escape sequences without consuming width.
+      // Pass through ANSI escape/control sequences without consuming width.
       if (text[i] == '\x1B') {
-        final end = text.indexOf('m', i);
-        if (end != -1) {
+        final end = _ansiSequenceEnd(text, i);
+        if (end >= i) {
           result.write(text.substring(i, end + 1));
           i = end + 1;
           continue;
@@ -694,6 +786,40 @@ class Layout {
     // Add reset and ellipsis.
     result.write('\x1B[0m$ellipsis');
     return result.toString();
+  }
+
+  static int _ansiSequenceEnd(String text, int start) {
+    if (start < 0 || start >= text.length) return -1;
+    if (text.codeUnitAt(start) != 0x1B) return -1;
+    if (start + 1 >= text.length) return start;
+
+    final next = text.codeUnitAt(start + 1);
+
+    // CSI: ESC [ ... final-byte(@-~)
+    if (next == 0x5B) {
+      for (var i = start + 2; i < text.length; i++) {
+        final c = text.codeUnitAt(i);
+        if (c >= 0x40 && c <= 0x7E) return i;
+      }
+      return text.length - 1;
+    }
+
+    // OSC: ESC ] ... BEL or ST(ESC \)
+    if (next == 0x5D) {
+      for (var i = start + 2; i < text.length; i++) {
+        final c = text.codeUnitAt(i);
+        if (c == 0x07) return i;
+        if (c == 0x1B &&
+            i + 1 < text.length &&
+            text.codeUnitAt(i + 1) == 0x5C) {
+          return i + 1;
+        }
+      }
+      return text.length - 1;
+    }
+
+    // Simple 2-byte escape sequence fallback.
+    return start + 1;
   }
 
   /// Truncates each line of text to a maximum width.

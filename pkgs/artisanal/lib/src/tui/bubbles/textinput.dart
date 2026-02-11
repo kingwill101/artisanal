@@ -203,6 +203,11 @@ class TextInputKeyMap implements KeyMap {
     KeyBinding? acceptSuggestion,
     KeyBinding? nextSuggestion,
     KeyBinding? prevSuggestion,
+    KeyBinding? newline,
+    KeyBinding? lineUp,
+    KeyBinding? lineDown,
+    KeyBinding? documentStart,
+    KeyBinding? documentEnd,
   }) : characterForward =
            characterForward ??
            KeyBinding(
@@ -354,6 +359,38 @@ class TextInputKeyMap implements KeyMap {
            KeyBinding(
              keys: ['up', 'ctrl+p'],
              help: Help(key: '↑', desc: 'Previous suggestion'),
+           ),
+
+       // Multi-line bindings
+       newline =
+           newline ??
+           KeyBinding(
+             keys: ['enter', 'shift+enter'],
+             help: Help(key: '↵', desc: 'New line'),
+           ),
+       lineUp =
+           lineUp ??
+           KeyBinding(
+             keys: ['up'],
+             help: Help(key: '↑', desc: 'Line up'),
+           ),
+       lineDown =
+           lineDown ??
+           KeyBinding(
+             keys: ['down'],
+             help: Help(key: '↓', desc: 'Line down'),
+           ),
+       documentStart =
+           documentStart ??
+           KeyBinding(
+             keys: ['ctrl+home'],
+             help: Help(key: 'ctrl+home', desc: 'Go to document start'),
+           ),
+       documentEnd =
+           documentEnd ??
+           KeyBinding(
+             keys: ['ctrl+end'],
+             help: Help(key: 'ctrl+end', desc: 'Go to document end'),
            );
 
   /// Move cursor forward one character.
@@ -431,6 +468,21 @@ class TextInputKeyMap implements KeyMap {
   /// Move to previous suggestion.
   final KeyBinding prevSuggestion;
 
+  /// Insert a newline (multi-line mode only).
+  final KeyBinding newline;
+
+  /// Move cursor up one line (multi-line mode only).
+  final KeyBinding lineUp;
+
+  /// Move cursor down one line (multi-line mode only).
+  final KeyBinding lineDown;
+
+  /// Move cursor to start of document (multi-line mode only).
+  final KeyBinding documentStart;
+
+  /// Move cursor to end of document (multi-line mode only).
+  final KeyBinding documentEnd;
+
   @override
   List<KeyBinding> shortHelp() => [
     characterForward,
@@ -441,7 +493,7 @@ class TextInputKeyMap implements KeyMap {
   @override
   List<List<KeyBinding>> fullHelp() => [
     [characterForward, characterBackward, wordForward, wordBackward],
-    [lineStart, lineEnd],
+    [lineStart, lineEnd, documentStart, documentEnd],
     [
       deleteCharacterBackward,
       deleteCharacterForward,
@@ -458,6 +510,7 @@ class TextInputKeyMap implements KeyMap {
       nextSuggestion,
       prevSuggestion,
     ],
+    [newline, lineUp, lineDown],
   ];
 }
 
@@ -479,14 +532,31 @@ class PasteErrorMsg implements Msg {
   final Object error;
 }
 
-/// Text input model for single-line text entry.
+/// A wrapped visual line, referencing a [start, end) range in the flat value list.
+class _WrappedLine {
+  const _WrappedLine(this.start, this.end);
+
+  /// Start index (inclusive) into the flat value list.
+  final int start;
+
+  /// End index (exclusive) into the flat value list.
+  final int end;
+
+  /// Number of graphemes in this visual line.
+  int get length => end - start;
+}
+
+/// Text input model for single-line or multi-line text entry.
 ///
 /// Features:
 /// - Character and word navigation
 /// - Delete operations (character, word, line)
 /// - Echo modes (normal, password, none)
 /// - Suggestions/autocomplete
-/// - Horizontal scrolling for long text
+/// - Horizontal scrolling for long text (single-line mode)
+/// - Soft-wrap with vertical scrolling (multi-line mode)
+/// - Line navigation with up/down arrows (multi-line mode)
+/// - Click-to-position cursor in multi-line mode
 /// - Validation
 ///
 /// Example:
@@ -494,6 +564,14 @@ class PasteErrorMsg implements Msg {
 /// final input = TextInputModel(
 ///   prompt: 'Name: ',
 ///   placeholder: 'Enter your name',
+/// );
+///
+/// // Multi-line input
+/// final editor = TextInputModel(
+///   multiline: true,
+///   width: 60,
+///   maxHeight: 10,
+///   prompt: '',
 /// );
 /// ```
 class TextInputModel extends ViewComponent {
@@ -505,6 +583,8 @@ class TextInputModel extends ViewComponent {
     this.echoCharacter = '*',
     this.charLimit = 0,
     this.width = 0,
+    this.multiline = false,
+    this.maxHeight = 0,
     this.showSuggestions = false,
     this.useVirtualCursor = true,
     TextInputKeyMap? keyMap,
@@ -533,7 +613,30 @@ class TextInputModel extends ViewComponent {
   int charLimit;
 
   /// Display width for horizontal scrolling (0 = unlimited).
+  ///
+  /// In multi-line mode, this controls the wrap width. Lines that exceed this
+  /// width are soft-wrapped to the next visual line.
   int width;
+
+  /// Whether to enable multi-line editing.
+  ///
+  /// When `true`:
+  /// - Enter/Shift+Enter inserts a newline character
+  /// - Text soft-wraps at [width] columns
+  /// - Up/Down arrows navigate between lines instead of suggestions
+  /// - Home/End move to start/end of current line (Ctrl+Home/Ctrl+End for document)
+  /// - Vertical scrolling is used when content exceeds [maxHeight]
+  /// - Suggestions are disabled
+  ///
+  /// When `false` (default), preserves existing single-line behavior.
+  bool multiline;
+
+  /// Maximum visible height in rows (0 = unlimited growth).
+  ///
+  /// Only used in multi-line mode. When the number of wrapped lines exceeds
+  /// this value, vertical scrolling is enabled. If 0, the view grows to fit
+  /// all content.
+  int maxHeight;
 
   /// Whether to show suggestions.
   bool showSuggestions;
@@ -564,6 +667,14 @@ class TextInputModel extends ViewComponent {
   int _offset = 0;
   int _offsetRight = 0;
 
+  // Multi-line state
+  int _scrollRow = 0; // First visible row (for vertical scrolling)
+  int _desiredCol = -1; // Sticky column for up/down navigation (-1 = unset)
+  List<_WrappedLine>? _wrappedLinesCache; // Cached wrapped line computation
+  int _wrappedLinesCacheVersion = 0; // Invalidation counter
+  int _wrappedLinesCacheWidth = -1; // Width used for last cache computation
+  int _valueVersion = 0; // Bumped on every value mutation
+
   // Selection
   int? _selectionStart;
   int? _selectionEnd;
@@ -579,6 +690,7 @@ class TextInputModel extends ViewComponent {
 
   // Rune sanitizer
   RuneSanitizer? _sanitizer;
+  bool? _sanitizerMultiline;
 
   /// Gets the current value as a string.
   String get value => _value.join();
@@ -694,6 +806,32 @@ class TextInputModel extends ViewComponent {
     if (useVirtualCursor || !_focused) return null;
 
     final promptWidth = stringWidth(prompt);
+
+    if (multiline) {
+      final (cursorRow, cursorCol) = _cursorRowCol();
+      // Compute display x: count cell widths of chars before cursor on this line.
+      final lines = _getWrappedLines();
+      final line = lines[cursorRow.clamp(0, lines.length - 1)];
+      var xOffset = promptWidth;
+      for (
+        var i = line.start;
+        i < line.start + cursorCol && i < line.end;
+        i++
+      ) {
+        if (_value[i] != '\n') {
+          xOffset += runeWidth(uni.firstCodePoint(_value[i]));
+        }
+      }
+      final yOffset = cursorRow - _scrollRow;
+
+      return Cursor(
+        position: Position(xOffset, yOffset),
+        color: styles.cursor.color,
+        shape: styles.cursor.shape,
+        blink: styles.cursor.blink,
+      );
+    }
+
     var xOffset = _pos - _offset + promptWidth;
     if (width > 0) {
       xOffset = math.min(xOffset, width + promptWidth);
@@ -728,6 +866,7 @@ class TextInputModel extends ViewComponent {
   /// Reset the input to empty.
   void reset() {
     _value = <String>[];
+    _invalidateWrappedLines();
     position = 0;
   }
 
@@ -742,10 +881,237 @@ class TextInputModel extends ViewComponent {
   }
 
   List<int> _san(List<int> runes) {
-    _sanitizer ??= createSanitizer(
-      SanitizerOptions(tabReplacement: ' ', newlineReplacement: ' '),
-    );
+    // Recreate sanitizer if multiline mode changed.
+    if (_sanitizer == null || _sanitizerMultiline != multiline) {
+      _sanitizerMultiline = multiline;
+      if (multiline) {
+        _sanitizer = createSanitizer(
+          SanitizerOptions(tabReplacement: '    ', newlineReplacement: '\n'),
+        );
+      } else {
+        _sanitizer = createSanitizer(
+          SanitizerOptions(tabReplacement: ' ', newlineReplacement: ' '),
+        );
+      }
+    }
     return _sanitizer!(runes);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Multi-line: Wrapped line computation
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Invalidates the wrapped-lines cache. Call after any mutation to _value.
+  void _invalidateWrappedLines() {
+    _valueVersion++;
+  }
+
+  /// Returns the current wrapped lines, computing them if needed.
+  ///
+  /// Each [_WrappedLine] describes a visual line: the start/end indices into
+  /// the flat `_value` list. Explicit `\n` characters cause a line break.
+  /// Lines wider than [width] are soft-wrapped.
+  List<_WrappedLine> _getWrappedLines() {
+    if (_wrappedLinesCache != null &&
+        _wrappedLinesCacheVersion == _valueVersion &&
+        _wrappedLinesCacheWidth == width) {
+      return _wrappedLinesCache!;
+    }
+    _wrappedLinesCache = _computeWrappedLines();
+    _wrappedLinesCacheVersion = _valueVersion;
+    _wrappedLinesCacheWidth = width;
+    return _wrappedLinesCache!;
+  }
+
+  List<_WrappedLine> _computeWrappedLines() {
+    final lines = <_WrappedLine>[];
+    final wrapWidth = width > 0 ? width : 0; // 0 = no wrapping
+
+    var lineStart = 0;
+    for (var i = 0; i <= _value.length; i++) {
+      final atEnd = i == _value.length;
+      final isNewline = !atEnd && _value[i] == '\n';
+
+      if (atEnd || isNewline) {
+        // We have a logical line from lineStart to i (exclusive).
+        // Soft-wrap it if needed.
+        _wrapSegment(lines, lineStart, i, wrapWidth);
+        lineStart = i + 1; // skip the \n
+      }
+    }
+
+    // If _value is empty or ends with \n, we need at least one line.
+    if (lines.isEmpty) {
+      lines.add(_WrappedLine(0, 0));
+    }
+
+    return lines;
+  }
+
+  /// Soft-wraps a segment of `_value[start..end]` into visual lines.
+  void _wrapSegment(List<_WrappedLine> out, int start, int end, int wrapWidth) {
+    if (start >= end) {
+      // Empty logical line — still produces one visual line.
+      out.add(_WrappedLine(start, start));
+      return;
+    }
+
+    if (wrapWidth <= 0) {
+      // No wrapping — the entire segment is one visual line.
+      out.add(_WrappedLine(start, end));
+      return;
+    }
+
+    var segStart = start;
+    while (segStart < end) {
+      var w = 0;
+      var segEnd = segStart;
+      while (segEnd < end) {
+        final rw = runeWidth(uni.firstCodePoint(_value[segEnd]));
+        if (w + rw > wrapWidth) break;
+        w += rw;
+        segEnd++;
+      }
+      // Avoid infinite loop if a single grapheme is wider than wrapWidth.
+      if (segEnd == segStart) segEnd = segStart + 1;
+      out.add(_WrappedLine(segStart, segEnd));
+      segStart = segEnd;
+    }
+  }
+
+  /// Returns (row, col) of `_pos` within the wrapped lines.
+  ///
+  /// `row` is the wrapped-line index, `col` is the offset within that line.
+  (int row, int col) _cursorRowCol() {
+    final lines = _getWrappedLines();
+    for (var i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (_pos >= line.start && _pos <= line.end) {
+        // If this is not the last line and _pos == line.end, the cursor
+        // belongs to the *start* of the next line (unless this line ends
+        // at an explicit newline boundary, in which case it stays here).
+        if (_pos == line.end && i + 1 < lines.length) {
+          // Check if the next line continues from the same position
+          // (soft wrap) vs starts after a newline.
+          final next = lines[i + 1];
+          if (next.start == line.end) {
+            // Soft-wrap continuation — cursor is at start of next line.
+            continue;
+          }
+        }
+        return (i, _pos - line.start);
+      }
+    }
+    // Fallback: cursor at end of last line.
+    final last = lines.last;
+    return (lines.length - 1, _pos - last.start);
+  }
+
+  /// Converts a (row, col) position to a flat index into `_value`.
+  int _rowColToPos(int row, int col) {
+    final lines = _getWrappedLines();
+    final r = row.clamp(0, lines.length - 1);
+    final line = lines[r];
+    final lineLen = line.end - line.start;
+    final c = col.clamp(0, lineLen);
+    return line.start + c;
+  }
+
+  /// Returns the total number of wrapped lines.
+  int get lineCount => multiline ? _getWrappedLines().length : 1;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Multi-line: Navigation helpers
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Inserts a newline character at the cursor position.
+  void _insertNewline() {
+    _deleteSelection();
+    final head = _value.sublist(0, _pos);
+    final tail = _value.sublist(_pos);
+    _value = [...head, '\n', ...tail];
+    _pos++;
+    _invalidateWrappedLines();
+    error = _validate(_value);
+    _handleOverflow();
+  }
+
+  /// Computes the display column (in cells) of the cursor within a wrapped line.
+  int _cursorDisplayCol() {
+    final (_, col) = _cursorRowCol();
+    final lines = _getWrappedLines();
+    final (row, _) = _cursorRowCol();
+    final line = lines[row];
+    // Count display width of characters before cursor on this line.
+    var displayCol = 0;
+    for (var i = line.start; i < line.start + col; i++) {
+      displayCol += runeWidth(uni.firstCodePoint(_value[i]));
+    }
+    return displayCol;
+  }
+
+  /// Converts a display column (cells) to a character offset within a wrapped line.
+  int _displayColToCharOffset(int targetRow, int displayCol) {
+    final lines = _getWrappedLines();
+    final r = targetRow.clamp(0, lines.length - 1);
+    final line = lines[r];
+    var cellCount = 0;
+    var charOffset = 0;
+    for (var i = line.start; i < line.end; i++) {
+      final w = runeWidth(uni.firstCodePoint(_value[i]));
+      if (cellCount + w > displayCol) break;
+      cellCount += w;
+      charOffset++;
+    }
+    return charOffset;
+  }
+
+  /// Moves cursor up one wrapped line, preserving the display column.
+  void _lineUp() {
+    final (row, _) = _cursorRowCol();
+    if (row == 0) return; // Already at top.
+
+    // Compute or use sticky display column.
+    if (_desiredCol < 0) {
+      _desiredCol = _cursorDisplayCol();
+    }
+
+    final targetCol = _displayColToCharOffset(row - 1, _desiredCol);
+    position = _rowColToPos(row - 1, targetCol);
+  }
+
+  /// Moves cursor down one wrapped line, preserving the display column.
+  void _lineDown() {
+    final lines = _getWrappedLines();
+    final (row, _) = _cursorRowCol();
+    if (row >= lines.length - 1) return; // Already at bottom.
+
+    // Compute or use sticky display column.
+    if (_desiredCol < 0) {
+      _desiredCol = _cursorDisplayCol();
+    }
+
+    final targetCol = _displayColToCharOffset(row + 1, _desiredCol);
+    position = _rowColToPos(row + 1, targetCol);
+  }
+
+  /// Moves cursor to start of current wrapped line.
+  void _cursorLineStart() {
+    final (row, _) = _cursorRowCol();
+    final lines = _getWrappedLines();
+    position = lines[row].start;
+  }
+
+  /// Moves cursor to end of current wrapped line.
+  void _cursorLineEnd() {
+    final (row, _) = _cursorRowCol();
+    final lines = _getWrappedLines();
+    position = lines[row].end;
+  }
+
+  /// Resets the sticky column for up/down navigation.
+  void _resetDesiredCol() {
+    _desiredCol = -1;
   }
 
   String? _validate(List<String> graphemes) {
@@ -764,6 +1130,7 @@ class TextInputModel extends ViewComponent {
     } else {
       _value = graphemes;
     }
+    _invalidateWrappedLines();
 
     if ((position == 0 && empty) || position > _value.length) {
       position = _value.length;
@@ -801,6 +1168,34 @@ class TextInputModel extends ViewComponent {
   }
 
   void _handleOverflow() {
+    if (multiline) {
+      // In multiline mode, handle vertical scrolling instead of horizontal.
+      // Horizontal overflow is handled by line wrapping.
+      _offset = 0;
+      _offsetRight = _value.length;
+
+      if (maxHeight <= 0) {
+        // Unlimited height — no vertical scrolling needed.
+        _scrollRow = 0;
+        return;
+      }
+
+      final (cursorRow, _) = _cursorRowCol();
+
+      // Ensure cursor row is visible within the scroll window.
+      if (cursorRow < _scrollRow) {
+        _scrollRow = cursorRow;
+      } else if (cursorRow >= _scrollRow + maxHeight) {
+        _scrollRow = cursorRow - maxHeight + 1;
+      }
+
+      // Clamp scrollRow to valid range.
+      final totalLines = _getWrappedLines().length;
+      final maxScroll = math.max(0, totalLines - maxHeight);
+      _scrollRow = _scrollRow.clamp(0, maxScroll);
+      return;
+    }
+
     if (width <= 0 || stringWidth(_value.join()) <= width) {
       _offset = 0;
       _offsetRight = _value.length;
@@ -846,6 +1241,7 @@ class TextInputModel extends ViewComponent {
       return false;
     }
     _value.removeRange(start, end);
+    _invalidateWrappedLines();
     position = start;
     _selectionStart = null;
     _selectionEnd = null;
@@ -855,6 +1251,7 @@ class TextInputModel extends ViewComponent {
 
   void _deleteBeforeCursor() {
     _value = _value.sublist(_pos);
+    _invalidateWrappedLines();
     error = _validate(_value);
     _offset = 0;
     position = 0;
@@ -862,6 +1259,7 @@ class TextInputModel extends ViewComponent {
 
   void _deleteAfterCursor() {
     _value = _value.sublist(0, _pos);
+    _invalidateWrappedLines();
     error = _validate(_value);
     position = _value.length;
   }
@@ -884,6 +1282,7 @@ class TextInputModel extends ViewComponent {
     final start = (i + 1).clamp(0, _pos);
 
     _value = [..._value.sublist(0, start), ..._value.sublist(_pos)];
+    _invalidateWrappedLines();
     error = _validate(_value);
     position = start;
   }
@@ -905,6 +1304,7 @@ class TextInputModel extends ViewComponent {
     }
 
     _value = [..._value.sublist(0, _pos), ..._value.sublist(i)];
+    _invalidateWrappedLines();
     error = _validate(_value);
     _handleOverflow();
   }
@@ -1052,6 +1452,9 @@ class TextInputModel extends ViewComponent {
     final cmds = <Cmd>[];
 
     if (msg is MouseMsg) {
+      if (multiline) {
+        return _handleMultilineMouse(msg);
+      }
       if (msg.y != 0) {
         if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
           _selectionStart = null;
@@ -1112,6 +1515,7 @@ class TextInputModel extends ViewComponent {
       if (_canAcceptSuggestion()) {
         final suggestion = _matchedSuggestions[_currentSuggestionIndex];
         _value = [..._value, ...suggestion.sublist(_value.length)];
+        _invalidateWrappedLines();
         cursorEnd();
       }
     }
@@ -1139,16 +1543,29 @@ class TextInputModel extends ViewComponent {
         return (this, null);
       }
 
+      // Multi-line: newline insertion (Enter / Shift+Enter)
+      if (multiline && keyMatches(msg.key, [keyMap.newline])) {
+        _deleteSelection();
+        _resetDesiredCol();
+        _insertNewline();
+        _updateSuggestions();
+        _handleOverflow();
+        return (this, null);
+      }
+
       if (msg.key.type == KeyType.space) {
+        _resetDesiredCol();
         _insertRunes([0x20]);
         return (this, null);
       }
 
       if (keyMatches(msg.key, [keyMap.deleteWordBackward])) {
+        _resetDesiredCol();
         if (!_deleteSelection()) {
           _deleteWordBackward();
         }
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterBackward])) {
+        _resetDesiredCol();
         if (!_deleteSelection()) {
           error = null;
           if (_value.isNotEmpty && _pos > 0) {
@@ -1156,87 +1573,145 @@ class TextInputModel extends ViewComponent {
               ..._value.sublist(0, math.max(0, _pos - 1)),
               ..._value.sublist(_pos),
             ];
+            _invalidateWrappedLines();
             error = _validate(_value);
             if (_pos > 0) position = _pos - 1;
           }
         }
       } else if (keyMatches(msg.key, [keyMap.wordBackward])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         _wordBackward();
       } else if (keyMatches(msg.key, [keyMap.selectWordBackward])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
         _wordBackward();
         _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterBackward])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         if (_pos > 0) position = _pos - 1;
       } else if (keyMatches(msg.key, [keyMap.selectCharacterBackward])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
         if (_pos > 0) position = _pos - 1;
         _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.wordForward])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         _wordForward();
       } else if (keyMatches(msg.key, [keyMap.selectWordForward])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
         _wordForward();
         _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterForward])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         if (_pos < _value.length) position = _pos + 1;
       } else if (keyMatches(msg.key, [keyMap.selectCharacterForward])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
         if (_pos < _value.length) position = _pos + 1;
         _selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.lineStart])) {
+      } else if (multiline && keyMatches(msg.key, [keyMap.documentStart])) {
+        // Multi-line: Ctrl+Home — go to document start
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         cursorStart();
+      } else if (multiline && keyMatches(msg.key, [keyMap.documentEnd])) {
+        // Multi-line: Ctrl+End — go to document end
+        _resetDesiredCol();
+        _selectionStart = null;
+        _selectionEnd = null;
+        cursorEnd();
+      } else if (keyMatches(msg.key, [keyMap.lineStart])) {
+        _resetDesiredCol();
+        _selectionStart = null;
+        _selectionEnd = null;
+        if (multiline) {
+          _cursorLineStart();
+        } else {
+          cursorStart();
+        }
       } else if (keyMatches(msg.key, [keyMap.selectLineStart])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
-        cursorStart();
+        if (multiline) {
+          _cursorLineStart();
+        } else {
+          cursorStart();
+        }
         _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
+        _resetDesiredCol();
         if (!_deleteSelection()) {
           if (_value.isNotEmpty && _pos < _value.length) {
             _value = [..._value.sublist(0, _pos), ..._value.sublist(_pos + 1)];
+            _invalidateWrappedLines();
             error = _validate(_value);
           }
         }
       } else if (keyMatches(msg.key, [keyMap.lineEnd])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
-        cursorEnd();
+        if (multiline) {
+          _cursorLineEnd();
+        } else {
+          cursorEnd();
+        }
       } else if (keyMatches(msg.key, [keyMap.selectLineEnd])) {
+        _resetDesiredCol();
         _selectionStart ??= _pos;
-        cursorEnd();
+        if (multiline) {
+          _cursorLineEnd();
+        } else {
+          cursorEnd();
+        }
         _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         _deleteAfterCursor();
       } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
+        _resetDesiredCol();
         _selectionStart = null;
         _selectionEnd = null;
         _deleteBeforeCursor();
       } else if (keyMatches(msg.key, [keyMap.paste])) {
+        _resetDesiredCol();
         _deleteSelection();
         // Return paste command - caller handles clipboard
         return (this, _pasteCmd());
       } else if (keyMatches(msg.key, [keyMap.deleteWordForward])) {
+        _resetDesiredCol();
         if (!_deleteSelection()) {
           _deleteWordForward();
         }
+      } else if (multiline && keyMatches(msg.key, [keyMap.lineUp])) {
+        // Multi-line: Up arrow — move cursor up one line
+        _selectionStart = null;
+        _selectionEnd = null;
+        _lineUp();
+      } else if (multiline && keyMatches(msg.key, [keyMap.lineDown])) {
+        // Multi-line: Down arrow — move cursor down one line
+        _selectionStart = null;
+        _selectionEnd = null;
+        _lineDown();
       } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
         _nextSuggestion();
       } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
         _previousSuggestion();
       } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
         // Regular character input
+        _resetDesiredCol();
         _deleteSelection();
         _insertRunes(msg.key.runes);
       }
@@ -1266,9 +1741,22 @@ class TextInputModel extends ViewComponent {
 
   @override
   Object view() {
+    final span = TuiTrace.begin(
+      'TextInputModel.view',
+      tag: TraceTag.render,
+      extra: 'len=${_value.length} offset=$_offset offsetR=$_offsetRight',
+    );
     // Placeholder text
     if (_value.isEmpty && placeholder.isNotEmpty) {
+      span.end(extra: 'placeholder');
       return _placeholderView();
+    }
+
+    // Multi-line rendering path.
+    if (multiline) {
+      final result = _multilineView();
+      span.end(extra: 'multiline lines=$lineCount');
+      return result;
     }
 
     final styles = activeStyle();
@@ -1343,10 +1831,191 @@ class TextInputModel extends ViewComponent {
     final content = '$styledPrompt$v';
 
     if (useVirtualCursor || !_focused) {
+      span.end(extra: 'chars=${visibleValue.length}');
       return content;
     }
 
+    span.end(extra: 'chars=${visibleValue.length}');
     return View(content: content, cursor: terminalCursor);
+  }
+
+  /// Handles mouse events in multi-line mode.
+  ///
+  /// Maps `(msg.x, msg.y)` to a flat position in `_value` using the wrapped
+  /// line layout and scroll offset.
+  (TextInputModel, Cmd?) _handleMultilineMouse(MouseMsg msg) {
+    final lines = _getWrappedLines();
+    final visibleHeight = maxHeight > 0 ? maxHeight : lines.length;
+    final row = msg.y + _scrollRow;
+    final promptWidth = stringWidth(prompt);
+    final localX = msg.x - promptWidth;
+
+    // Click outside visible area — unfocus.
+    if (msg.y < 0 || msg.y >= visibleHeight) {
+      if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
+        _selectionStart = null;
+        _selectionEnd = null;
+        _focused = false;
+      }
+      return (this, null);
+    }
+
+    // Clamp row to valid range.
+    final clampedRow = row.clamp(0, lines.length - 1);
+    final line = lines[clampedRow];
+
+    // Convert cell x to character offset within this line.
+    final lineText = _value
+        .sublist(line.start, line.end)
+        .join()
+        .replaceAll('\n', '');
+    final charOffset = layout.localCellXToGraphemeIndex(lineText, localX);
+    // Map back to flat position.
+    // Count non-newline chars to find actual position.
+    var flatPos = line.start;
+    var counted = 0;
+    for (var i = line.start; i < line.end && counted < charOffset; i++) {
+      if (_value[i] != '\n') counted++;
+      flatPos = i + 1;
+    }
+    flatPos = flatPos.clamp(0, _value.length);
+
+    if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
+      _focused = true;
+      _resetDesiredCol();
+      final now = DateTime.now();
+      if (_lastClickTime != null &&
+          now.difference(_lastClickTime!) < const Duration(milliseconds: 500) &&
+          _lastClickPos == flatPos) {
+        // Double click: select word
+        final (start, end) = _findWordAt(flatPos);
+        _selectionStart = start;
+        _selectionEnd = end;
+        _pos = end;
+        _lastClickTime = now;
+        _lastClickPos = flatPos;
+      } else {
+        position = flatPos;
+        _selectionStart = _pos;
+        _selectionEnd = _pos;
+        _lastClickTime = now;
+        _lastClickPos = flatPos;
+      }
+    } else if (msg.action == MouseAction.motion &&
+        msg.button == MouseButton.left) {
+      _resetDesiredCol();
+      position = flatPos;
+      _selectionEnd = _pos;
+    } else if (msg.action == MouseAction.release) {
+      if (_selectionStart == _selectionEnd) {
+        _selectionStart = null;
+        _selectionEnd = null;
+      }
+    }
+    return (this, null);
+  }
+
+  /// Renders the multi-line view.
+  ///
+  /// Computes wrapped lines, determines visible rows (via [_scrollRow] and
+  /// [maxHeight]), renders each row with cursor/selection highlighting,
+  /// and joins them with newlines.
+  Object _multilineView() {
+    final styles = activeStyle();
+    String styleText(String s) => styles.text.inline(true).render(s);
+    final selectionStyle = styles.selection;
+    final lines = _getWrappedLines();
+    final (cursorRow, cursorCol) = _cursorRowCol();
+
+    // Determine visible row range.
+    final totalLines = lines.length;
+    int firstVisible = _scrollRow;
+    int lastVisible; // exclusive
+    if (maxHeight > 0) {
+      lastVisible = math.min(firstVisible + maxHeight, totalLines);
+    } else {
+      firstVisible = 0;
+      lastVisible = totalLines;
+    }
+
+    // Compute absolute selection range.
+    int? absSelStart, absSelEnd;
+    if (_selectionStart != null && _selectionEnd != null) {
+      absSelStart = math.min(_selectionStart!, _selectionEnd!);
+      absSelEnd = math.max(_selectionStart!, _selectionEnd!);
+      if (absSelStart == absSelEnd) {
+        absSelStart = null;
+        absSelEnd = null;
+      }
+    }
+
+    final rowStrings = <String>[];
+
+    for (var row = firstVisible; row < lastVisible; row++) {
+      final line = lines[row];
+      final linePrompt = (row == 0) ? prompt : ' ' * stringWidth(prompt);
+      var rowStr = '';
+
+      for (var i = line.start; i < line.end; i++) {
+        // Skip newline characters — they are line boundaries, not displayed.
+        if (_value[i] == '\n') continue;
+
+        final char = _echoTransform(_value[i]);
+        final isSelected =
+            absSelStart != null && i >= absSelStart && i < absSelEnd!;
+        final isCursorPos = row == cursorRow && (i - line.start) == cursorCol;
+
+        if (isCursorPos) {
+          cursor = cursor.setChar(char);
+          var cv = cursor.view();
+          if (isSelected) {
+            cv = selectionStyle.render(cv);
+          }
+          rowStr += cv;
+        } else {
+          final rendered = styleText(char);
+          rowStr += isSelected ? selectionStyle.render(rendered) : rendered;
+        }
+      }
+
+      // If cursor is at end of this line (past last char).
+      final cursorAtLineEnd =
+          row == cursorRow && cursorCol == line.end - line.start;
+      if (cursorAtLineEnd) {
+        cursor = cursor.setChar(' ');
+        rowStr += cursor.view();
+      }
+
+      // Pad line to width.
+      if (width > 0) {
+        final lineContentWidth = _lineDisplayWidth(line);
+        final cursorExtra = cursorAtLineEnd ? 1 : 0;
+        final padAmount = math.max(0, width - lineContentWidth - cursorExtra);
+        if (padAmount > 0) {
+          rowStr += _renderPadding(styles.text, styles.prompt, padAmount);
+        }
+      }
+
+      rowStrings.add(styles.prompt.render(linePrompt) + rowStr);
+    }
+
+    final content = rowStrings.join('\n');
+
+    if (useVirtualCursor || !_focused) {
+      return content;
+    }
+    return View(content: content, cursor: terminalCursor);
+  }
+
+  /// Returns the display width (cells) of a wrapped line's content,
+  /// excluding newline characters.
+  int _lineDisplayWidth(_WrappedLine line) {
+    var w = 0;
+    for (var i = line.start; i < line.end; i++) {
+      if (_value[i] == '\n') continue;
+      w += runeWidth(uni.firstCodePoint(_value[i]));
+    }
+    return w;
   }
 
   Object _placeholderView() {

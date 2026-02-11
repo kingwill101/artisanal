@@ -40,6 +40,7 @@ class AnsiRendererOptions {
   const AnsiRendererOptions({
     this.width,
     this.hasDarkBackground = true,
+    this.textStyle,
     this.h1Style,
     this.h2Style,
     this.h3Style,
@@ -90,6 +91,17 @@ class AnsiRendererOptions {
   /// );
   /// ```
   final bool hasDarkBackground;
+
+  /// Style for normal body/paragraph text.
+  ///
+  /// When set, this style is applied to all regular paragraph text, list item
+  /// text, and other non-heading, non-code content. This is useful for
+  /// ensuring readable foreground colors when the terminal background differs
+  /// from the default.
+  ///
+  /// If null, no styling is applied to body text (it uses the terminal's
+  /// default foreground color).
+  final Style? textStyle;
 
   /// Style for H1 headings.
   final Style? h1Style;
@@ -199,6 +211,7 @@ class AnsiRendererOptions {
   AnsiRendererOptions copyWith({
     int? width,
     bool? hasDarkBackground,
+    Style? textStyle,
     Style? h1Style,
     Style? h2Style,
     Style? h3Style,
@@ -232,6 +245,7 @@ class AnsiRendererOptions {
     return AnsiRendererOptions(
       width: width ?? this.width,
       hasDarkBackground: hasDarkBackground ?? this.hasDarkBackground,
+      textStyle: textStyle ?? this.textStyle,
       h1Style: h1Style ?? this.h1Style,
       h2Style: h2Style ?? this.h2Style,
       h3Style: h3Style ?? this.h3Style,
@@ -390,6 +404,9 @@ class AnsiRenderer implements NodeVisitor {
   /// Buffer for collecting paragraph content (for text wrapping).
   final StringBuffer _paragraphBuffer = StringBuffer();
 
+  /// Whether body text styling is currently active.
+  bool _textStyleActive = false;
+
   /// Lazy-initialized syntax highlighter.
   SyntaxHighlighter? _syntaxHighlighter;
 
@@ -440,6 +457,7 @@ class AnsiRenderer implements NodeVisitor {
     _codeBlockLanguage = null;
     _inParagraph = false;
     _paragraphBuffer.clear();
+    _textStyleActive = false;
 
     for (final node in nodes) {
       node.accept(this);
@@ -513,6 +531,7 @@ class AnsiRenderer implements NodeVisitor {
           _inParagraph = true;
           _paragraphBuffer.clear();
         }
+        _startTextStyle();
         return true;
 
       case 'blockquote':
@@ -551,6 +570,7 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'li':
         _startListItem(element);
+        _startTextStyle();
         return true;
 
       case 'hr':
@@ -660,6 +680,7 @@ class AnsiRenderer implements NodeVisitor {
         break;
 
       case 'p':
+        _endTextStyle();
         // Apply text wrapping if width is set
         if (_inParagraph && options.width != null) {
           final content = _paragraphBuffer.toString();
@@ -715,6 +736,7 @@ class AnsiRenderer implements NodeVisitor {
         break;
 
       case 'li':
+        _endTextStyle();
         // Only add newline if the li didn't end with a nested list
         // (nested lists already handle their own newlines)
         if (!_hasNestedList(element)) {
@@ -1095,7 +1117,7 @@ class AnsiRenderer implements NodeVisitor {
       _activeBuffer.write('\x1b]8;;\x1b\\');
     }
 
-    _activeBuffer.write(_ansiReset);
+    _activeBuffer.write(_contextualReset);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1107,7 +1129,7 @@ class AnsiRenderer implements NodeVisitor {
   }
 
   void _endInlineStyle() {
-    _activeBuffer.write(_ansiReset);
+    _activeBuffer.write(_contextualReset);
   }
 
   Style _getEmphasisStyle() => options.emphasisStyle ?? _defaultEmphasisStyle();
@@ -1115,6 +1137,34 @@ class AnsiRenderer implements NodeVisitor {
   Style _getCodeStyle() => options.codeStyle ?? _defaultCodeStyle();
   Style _getStrikethroughStyle() =>
       options.strikethroughStyle ?? _defaultStrikethroughStyle();
+
+  /// Starts applying the body text style if one is configured.
+  void _startTextStyle() {
+    if (options.textStyle != null) {
+      _activeBuffer.write(_styleToAnsiOpen(options.textStyle!));
+      _textStyleActive = true;
+    }
+  }
+
+  /// Ends the body text style if one is active.
+  void _endTextStyle() {
+    if (_textStyleActive) {
+      _activeBuffer.write(_ansiReset);
+      _textStyleActive = false;
+    }
+  }
+
+  /// Returns the appropriate reset sequence.
+  ///
+  /// When a [textStyle] is active (i.e., we're inside a paragraph or list
+  /// item with body text styling), the reset restores the text style so that
+  /// subsequent text continues with the correct foreground color.
+  String get _contextualReset {
+    if (_textStyleActive && options.textStyle != null) {
+      return '$_ansiReset${_styleToAnsiOpen(options.textStyle!)}';
+    }
+    return _ansiReset;
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Utility Helpers

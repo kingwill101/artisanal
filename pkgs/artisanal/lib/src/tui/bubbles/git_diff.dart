@@ -110,6 +110,11 @@ class DiffStyles {
     Style? sideBySideContextLine,
     Style? sideBySideLineNumber,
     Style? sideBySideEmptyCell,
+    Style? sideBySideAddedMarker,
+    Style? sideBySideRemovedMarker,
+    Style? sideBySideContextMarker,
+    Style? inlineAddedHighlight,
+    Style? inlineRemovedHighlight,
   }) : addedLine = addedLine ?? Style().foreground(const BasicColor('#22c55e')),
        removedLine =
            removedLine ?? Style().foreground(const BasicColor('#ef4444')),
@@ -173,7 +178,98 @@ class DiffStyles {
            Style().foreground(const BasicColor('#6b7280')),
        sideBySideEmptyCell =
            sideBySideEmptyCell ??
-           Style().foreground(const BasicColor('#3a3a3a'));
+           Style().foreground(const BasicColor('#3a3a3a')),
+       sideBySideAddedMarker =
+           sideBySideAddedMarker ??
+           Style().foreground(const BasicColor('#22c55e')),
+       sideBySideRemovedMarker =
+           sideBySideRemovedMarker ??
+           Style().foreground(const BasicColor('#ef4444')),
+       sideBySideContextMarker =
+           sideBySideContextMarker ??
+           Style().foreground(const BasicColor('#6b7280')),
+       inlineAddedHighlight =
+           inlineAddedHighlight ??
+           Style().background(const BasicColor('#2a4a2a')),
+       inlineRemovedHighlight =
+           inlineRemovedHighlight ??
+           Style().background(const BasicColor('#4a2a2a'));
+
+  /// Creates a dark-theme diff style preset (identical to the defaults).
+  ///
+  /// Provided for symmetry with [DiffStyles.light].
+  factory DiffStyles.dark() => DiffStyles();
+
+  /// Creates a light-theme diff style preset.
+  ///
+  /// Uses a warm cream background with pastel green/pink highlights for
+  /// added/removed lines. Code text is dark; only `+`/`-` markers use
+  /// colored foregrounds. Suitable for terminals with a light background
+  /// or when explicitly filling the screen with a light color scheme.
+  factory DiffStyles.light() {
+    // ── Palette ──────────────────────────────────────────────────────────────
+    const cream = BasicColor('#faf6f1'); // overall warm cream background
+    const darkText = BasicColor('#24292f'); // near-black code text
+    const mutedText = BasicColor('#6e7781'); // muted gray for line numbers
+    const fileHeaderText = BasicColor('#57606a'); // slightly darker muted
+    const greenMarker = BasicColor('#1a7f37'); // deep green for + markers
+    const redMarker = BasicColor('#cf222e'); // deep red for - markers
+    const hunkText = BasicColor('#8b949e'); // subtle gray for hunk headers
+
+    const addedBg = BasicColor('#dafbe1'); // pastel green background
+    const removedBg = BasicColor('#ffebe9'); // pastel pink background
+    const inlineAddedBg = BasicColor('#abf2bc'); // stronger green highlight
+    const inlineRemovedBg = BasicColor('#ffc1ba'); // stronger pink highlight
+    const emptyCellBg = BasicColor('#f0ebe6'); // slightly darker cream
+
+    return DiffStyles(
+      // ── Unified mode ────────────────────────────────────────────────────
+      addedLine: Style().foreground(darkText).background(addedBg),
+      removedLine: Style().foreground(darkText).background(removedBg),
+      contextLine: Style().foreground(darkText).background(cream),
+      fileHeader: Style().bold().foreground(fileHeaderText).background(cream),
+      hunkHeader: Style().foreground(hunkText).background(cream),
+      addedGutter: Style().foreground(greenMarker).background(addedBg).bold(),
+      removedGutter: Style().foreground(redMarker).background(removedBg).bold(),
+      contextGutter: Style().foreground(mutedText).background(cream),
+      lineNumber: Style().foreground(mutedText).background(cream),
+      // ── Pretty mode ─────────────────────────────────────────────────────
+      prettyAddedLine: Style().foreground(darkText).background(addedBg),
+      prettyRemovedLine: Style().foreground(darkText).background(removedBg),
+      prettyContextLine: Style().foreground(darkText).background(cream),
+      prettyFileHeader: Style().foreground(fileHeaderText).background(cream),
+      prettyAddedLineNumber: Style()
+          .foreground(greenMarker)
+          .background(addedBg),
+      prettyRemovedLineNumber: Style()
+          .foreground(redMarker)
+          .background(removedBg),
+      prettyContextLineNumber: Style().foreground(mutedText).background(cream),
+      // ── Side-by-side mode ───────────────────────────────────────────────
+      sideBySideSeparator: Style().foreground(mutedText).background(cream),
+      sideBySideAddedLine: Style().foreground(darkText).background(addedBg),
+      sideBySideRemovedLine: Style().foreground(darkText).background(removedBg),
+      sideBySideContextLine: Style().foreground(darkText).background(cream),
+      sideBySideLineNumber: Style().foreground(mutedText).background(cream),
+      sideBySideEmptyCell: Style()
+          .foreground(mutedText)
+          .background(emptyCellBg),
+      sideBySideAddedMarker: Style()
+          .foreground(greenMarker)
+          .background(addedBg),
+      sideBySideRemovedMarker: Style()
+          .foreground(redMarker)
+          .background(removedBg),
+      sideBySideContextMarker: Style().foreground(mutedText).background(cream),
+      // ── Inline diff highlighting ────────────────────────────────────────
+      inlineAddedHighlight: Style()
+          .foreground(darkText)
+          .background(inlineAddedBg),
+      inlineRemovedHighlight: Style()
+          .foreground(darkText)
+          .background(inlineRemovedBg),
+    );
+  }
 
   /// Creates diff styles from semantic colors.
   ///
@@ -201,6 +297,8 @@ class DiffStyles {
     required Color border,
     Color? successBg,
     Color? errorBg,
+    Color? inlineAddedBg,
+    Color? inlineRemovedBg,
   }) {
     final addedBg = successBg ?? const BasicColor('#1a2e1a');
     final removedBg = errorBg ?? const BasicColor('#2e1a1a');
@@ -231,6 +329,16 @@ class DiffStyles {
       sideBySideContextLine: Style().foreground(onBackground),
       sideBySideLineNumber: Style().foreground(muted),
       sideBySideEmptyCell: Style().foreground(surface),
+      sideBySideAddedMarker: Style().foreground(success),
+      sideBySideRemovedMarker: Style().foreground(error),
+      sideBySideContextMarker: Style().foreground(muted),
+      // Inline diff highlighting
+      inlineAddedHighlight: Style().background(
+        inlineAddedBg ?? const BasicColor('#2a4a2a'),
+      ),
+      inlineRemovedHighlight: Style().background(
+        inlineRemovedBg ?? const BasicColor('#4a2a2a'),
+      ),
     );
   }
 
@@ -304,6 +412,25 @@ class DiffStyles {
   /// Side-by-side mode: style for empty cells (no content on that side).
   final Style sideBySideEmptyCell;
 
+  /// Side-by-side mode: style for the `+` marker on added lines.
+  final Style sideBySideAddedMarker;
+
+  /// Side-by-side mode: style for the `-` marker on removed lines.
+  final Style sideBySideRemovedMarker;
+
+  /// Side-by-side mode: style for the space marker on context lines.
+  final Style sideBySideContextMarker;
+
+  // ── Inline diff highlighting ─────────────────────────────────────────────
+
+  /// Inline diff: stronger highlight for added (new) tokens within a
+  /// changed line. Applied on top of the line's base style.
+  final Style inlineAddedHighlight;
+
+  /// Inline diff: stronger highlight for removed (old) tokens within a
+  /// changed line. Applied on top of the line's base style.
+  final Style inlineRemovedHighlight;
+
   /// Creates a copy with the given fields replaced.
   DiffStyles copyWith({
     Style? addedLine,
@@ -328,6 +455,11 @@ class DiffStyles {
     Style? sideBySideContextLine,
     Style? sideBySideLineNumber,
     Style? sideBySideEmptyCell,
+    Style? sideBySideAddedMarker,
+    Style? sideBySideRemovedMarker,
+    Style? sideBySideContextMarker,
+    Style? inlineAddedHighlight,
+    Style? inlineRemovedHighlight,
   }) {
     return DiffStyles(
       addedLine: addedLine ?? this.addedLine,
@@ -357,6 +489,15 @@ class DiffStyles {
           sideBySideContextLine ?? this.sideBySideContextLine,
       sideBySideLineNumber: sideBySideLineNumber ?? this.sideBySideLineNumber,
       sideBySideEmptyCell: sideBySideEmptyCell ?? this.sideBySideEmptyCell,
+      sideBySideAddedMarker:
+          sideBySideAddedMarker ?? this.sideBySideAddedMarker,
+      sideBySideRemovedMarker:
+          sideBySideRemovedMarker ?? this.sideBySideRemovedMarker,
+      sideBySideContextMarker:
+          sideBySideContextMarker ?? this.sideBySideContextMarker,
+      inlineAddedHighlight: inlineAddedHighlight ?? this.inlineAddedHighlight,
+      inlineRemovedHighlight:
+          inlineRemovedHighlight ?? this.inlineRemovedHighlight,
     );
   }
 }
@@ -454,7 +595,9 @@ class GitDiffModel extends ViewComponent {
     this.height = 24,
     this.showLineNumbers = true,
     this.wrapLines = true,
+    this.zeroPadLineNumbers = false,
     this.viewMode = DiffViewMode.unified,
+    this.horizontalOffset = 0,
     DiffStyles? styles,
     GitDiffKeyMap? keyMap,
     ViewportModel? viewport,
@@ -482,8 +625,22 @@ class GitDiffModel extends ViewComponent {
   /// align past the gutter (line number + marker columns).
   final bool wrapLines;
 
+  /// Whether to zero-pad line numbers (e.g. `0001`) instead of space-padding
+  /// (e.g. `   1`).
+  ///
+  /// Defaults to `false` (space-padded, right-aligned).
+  final bool zeroPadLineNumbers;
+
   /// Unified or side-by-side display mode.
   final DiffViewMode viewMode;
+
+  /// Horizontal scroll offset for side-by-side mode content.
+  ///
+  /// When [wrapLines] is false and [viewMode] is [DiffViewMode.sideBySide],
+  /// this offset shifts the visible content window within each panel. For
+  /// unified and pretty modes, the viewport's own xOffset handles horizontal
+  /// scrolling instead.
+  final int horizontalOffset;
 
   /// The styles used for rendering.
   final DiffStyles styles;
@@ -518,7 +675,9 @@ class GitDiffModel extends ViewComponent {
     int? height,
     bool? showLineNumbers,
     bool? wrapLines,
+    bool? zeroPadLineNumbers,
     DiffViewMode? viewMode,
+    int? horizontalOffset,
     DiffStyles? styles,
     GitDiffKeyMap? keyMap,
     ViewportModel? viewport,
@@ -530,7 +689,9 @@ class GitDiffModel extends ViewComponent {
       height: height ?? this.height,
       showLineNumbers: showLineNumbers ?? this.showLineNumbers,
       wrapLines: wrapLines ?? this.wrapLines,
+      zeroPadLineNumbers: zeroPadLineNumbers ?? this.zeroPadLineNumbers,
       viewMode: viewMode ?? this.viewMode,
+      horizontalOffset: horizontalOffset ?? this.horizontalOffset,
       styles: styles ?? this.styles,
       keyMap: keyMap ?? this.keyMap,
       viewport: viewport ?? _viewport,
@@ -553,6 +714,7 @@ class GitDiffModel extends ViewComponent {
     );
     return copyWith(
       files: parsedFiles,
+      horizontalOffset: 0,
       renderedLines: rendered,
       viewport: newViewport,
     );
@@ -583,6 +745,7 @@ class GitDiffModel extends ViewComponent {
     if (msg is KeyMsg && keyMatches(msg.key, [keyMap.cycleViewMode])) {
       final modes = DiffViewMode.values;
       final nextMode = modes[(viewMode.index + 1) % modes.length];
+      // Reset horizontal offset when switching view modes.
       final rendered = _renderLines(_files, overrideViewMode: nextMode);
       final newViewport = _viewport.copyWith(
         width: width,
@@ -592,11 +755,47 @@ class GitDiffModel extends ViewComponent {
       return (
         copyWith(
           viewMode: nextMode,
+          horizontalOffset: 0,
           renderedLines: rendered,
           viewport: newViewport,
         ),
         null,
       );
+    }
+
+    // In side-by-side mode with wrapping disabled, intercept left/right keys
+    // to apply horizontal scrolling within each panel.  The viewport's own
+    // xOffset can't help here because each composed line contains two fixed-
+    // width panels separated by │ — scrolling the whole line would eat into
+    // the gutter rather than scrolling panel content.
+    if (!wrapLines && viewMode == DiffViewMode.sideBySide && msg is KeyMsg) {
+      final vkm = _viewport.keyMap;
+      final step = _viewport.horizontalStep;
+      if (step > 0) {
+        int? newOffset;
+        if (keyMatches(msg.key, [vkm.left])) {
+          newOffset = (horizontalOffset - step).clamp(0, horizontalOffset);
+        } else if (keyMatches(msg.key, [vkm.right])) {
+          newOffset = horizontalOffset + step;
+        }
+        if (newOffset != null && newOffset != horizontalOffset) {
+          // Create model with new offset so _renderLines reads the right value.
+          final updated = copyWith(horizontalOffset: newOffset);
+          final rendered = updated._renderLines(_files);
+          final newViewport = _viewport.copyWith(
+            width: width,
+            height: height,
+            lines: rendered,
+          );
+          return (
+            updated.copyWith(renderedLines: rendered, viewport: newViewport),
+            null,
+          );
+        }
+        // If we matched left/right but offset didn't change (clamped at 0),
+        // consume the key to avoid the viewport scrolling the whole line.
+        if (newOffset != null) return (this, null);
+      }
     }
 
     final (newViewport, cmd) = _viewport.update(msg);
@@ -928,14 +1127,16 @@ class GitDiffModel extends ViewComponent {
   ///
   /// Shows one line number per row: for added lines the new number, for
   /// removed lines the old number, and for context lines whichever is
-  /// available (preferring new). Uses [numWidth] for consistent zero-padded
-  /// alignment based on the maximum line number across all files.
+  /// available (preferring new). Uses [numWidth] for consistent
+  /// right-aligned layout based on the maximum line number across all files.
+  /// Padding uses '0' when [zeroPadLineNumbers] is true, spaces otherwise.
   String _formatLineNumbers(int? oldNum, int? newNum, int numWidth) {
     if (!showLineNumbers) return '';
 
     final num = newNum ?? oldNum;
+    final padChar = zeroPadLineNumbers ? '0' : ' ';
     final formatted = num != null
-        ? '$num'.padLeft(numWidth, '0')
+        ? '$num'.padLeft(numWidth, padChar)
         : ' ' * numWidth;
 
     return styles.lineNumber.render('$formatted ');
@@ -1035,10 +1236,11 @@ class GitDiffModel extends ViewComponent {
         return [''];
     }
 
-    // Format single-column line number with zero-padding for alignment.
+    // Format single-column line number, zero-padded or space-padded.
+    final padChar = zeroPadLineNumbers ? '0' : ' ';
     final numStr = showLineNumbers
         ? lineNumStyle.render(
-            '${lineNum != null ? '$lineNum'.padLeft(numWidth, '0') : ' ' * numWidth} ',
+            '${lineNum != null ? '$lineNum'.padLeft(numWidth, padChar) : ' ' * numWidth} ',
           )
         : '';
 
@@ -1098,19 +1300,22 @@ class GitDiffModel extends ViewComponent {
   /// Renders all parsed diff files in side-by-side mode.
   ///
   /// Splits the viewport into two panels: old file on the left, new file on
-  /// the right, separated by a │ character. Added/removed lines are paired
+  /// the right, separated by a thin gap. Added/removed lines are paired
   /// so that a removed line on the left appears next to the corresponding
-  /// added line on the right.
+  /// added line on the right. Each line shows a colored `+`/`-` marker.
   List<String> _renderLinesSideBySide(List<DiffFile> files) {
     final maxLineNum = _computeMaxLineNumber(files);
     final numWidth = '$maxLineNum'.length;
     final effectiveNumWidth = numWidth < 4 ? 4 : numWidth;
     final result = <String>[];
 
-    // Layout: [lineNum space] content │ [lineNum space] content
-    // separator = 3 chars: " │ "
-    const separatorWidth = 3;
-    final gutterWidth = showLineNumbers ? effectiveNumWidth + 1 : 0;
+    // Layout: [lineNum space] [marker space] content │ [lineNum space] [marker space] content
+    // separator = 1 char: " " (thin gap, no box-drawing character)
+    const separatorWidth = 1;
+    // marker = 2 chars: marker + space
+    const markerWidth = 2;
+    final lineNumWidth = showLineNumbers ? effectiveNumWidth + 1 : 0;
+    final gutterWidth = lineNumWidth + markerWidth;
     final availableWidth = width - separatorWidth;
     final leftPanelWidth = availableWidth ~/ 2;
     final rightPanelWidth = availableWidth - leftPanelWidth;
@@ -1122,7 +1327,7 @@ class GitDiffModel extends ViewComponent {
       return _renderLines(files, overrideViewMode: DiffViewMode.unified);
     }
 
-    final separator = styles.sideBySideSeparator.render(' \u2502 ');
+    final separator = styles.sideBySideSeparator.render(' ');
 
     for (var fi = 0; fi < files.length; fi++) {
       final file = files[fi];
@@ -1188,6 +1393,8 @@ class GitDiffModel extends ViewComponent {
             content: line.content,
             style: styles.sideBySideContextLine,
             numStyle: styles.sideBySideLineNumber,
+            markerStyle: styles.sideBySideContextMarker,
+            marker: ' ',
             numWidth: effectiveNumWidth,
             cellWidth: leftPanelWidth,
             contentWidth: leftContentWidth,
@@ -1197,6 +1404,8 @@ class GitDiffModel extends ViewComponent {
             content: line.content,
             style: styles.sideBySideContextLine,
             numStyle: styles.sideBySideLineNumber,
+            markerStyle: styles.sideBySideContextMarker,
+            marker: ' ',
             numWidth: effectiveNumWidth,
             cellWidth: rightPanelWidth,
             contentWidth: rightContentWidth,
@@ -1228,11 +1437,25 @@ class GitDiffModel extends ViewComponent {
           i++;
         }
 
-        // Pair them: zip removed with added, then fill remainder.
+        // Compute inline diffs for paired removed/added lines.
         final pairCount = removedLines.length > addedLines.length
             ? removedLines.length
             : addedLines.length;
+        final inlinePairs = <(List<_InlineSpan>, List<_InlineSpan>)>[];
+        for (var p = 0; p < pairCount; p++) {
+          if (p < removedLines.length && p < addedLines.length) {
+            inlinePairs.add(
+              _computeInlineDiff(
+                removedLines[p].content,
+                addedLines[p].content,
+              ),
+            );
+          } else {
+            inlinePairs.add((const [], const []));
+          }
+        }
 
+        // Pair them: zip removed with added, then fill remainder.
         for (var p = 0; p < pairCount; p++) {
           final hasLeft = p < removedLines.length;
           final hasRight = p < addedLines.length;
@@ -1243,9 +1466,13 @@ class GitDiffModel extends ViewComponent {
                   content: removedLines[p].content,
                   style: styles.sideBySideRemovedLine,
                   numStyle: styles.sideBySideLineNumber,
+                  markerStyle: styles.sideBySideRemovedMarker,
+                  marker: '-',
                   numWidth: effectiveNumWidth,
                   cellWidth: leftPanelWidth,
                   contentWidth: leftContentWidth,
+                  inlineSpans: inlinePairs[p].$1,
+                  inlineHighlight: styles.inlineRemovedHighlight,
                 )
               : [_sbsEmptyCell(leftPanelWidth)];
 
@@ -1255,9 +1482,13 @@ class GitDiffModel extends ViewComponent {
                   content: addedLines[p].content,
                   style: styles.sideBySideAddedLine,
                   numStyle: styles.sideBySideLineNumber,
+                  markerStyle: styles.sideBySideAddedMarker,
+                  marker: '+',
                   numWidth: effectiveNumWidth,
                   cellWidth: rightPanelWidth,
                   contentWidth: rightContentWidth,
+                  inlineSpans: inlinePairs[p].$2,
+                  inlineHighlight: styles.inlineAddedHighlight,
                 )
               : [_sbsEmptyCell(rightPanelWidth)];
 
@@ -1278,31 +1509,65 @@ class GitDiffModel extends ViewComponent {
 
   /// Renders a single cell for side-by-side mode.
   ///
-  /// Each cell contains an optional line number and content, padded to
-  /// [cellWidth] visible characters. When [wrapLines] is enabled and the
-  /// content exceeds [contentWidth], continuation rows are produced with
-  /// blank line-number gutters.
+  /// Each cell contains an optional line number, a colored marker (`+`, `-`,
+  /// or space), and content, padded to [cellWidth] visible characters. When
+  /// [wrapLines] is enabled and the content exceeds [contentWidth],
+  /// continuation rows are produced with blank line-number gutters.
+  ///
+  /// If [inlineSpans] is non-empty, word-level diff highlighting is applied
+  /// to the content using [inlineHighlight].
   List<String> _sbsCell({
     required int? lineNum,
     required String content,
     required Style style,
     required Style numStyle,
+    required Style markerStyle,
+    required String marker,
     required int numWidth,
     required int cellWidth,
     required int contentWidth,
+    List<_InlineSpan> inlineSpans = const [],
+    Style? inlineHighlight,
   }) {
+    final padChar = zeroPadLineNumbers ? '0' : ' ';
     final numStr = showLineNumbers
         ? numStyle.render(
-            '${lineNum != null ? '$lineNum'.padLeft(numWidth, '0') : ' ' * numWidth} ',
+            '${lineNum != null ? '$lineNum'.padLeft(numWidth, padChar) : ' ' * numWidth} ',
           )
         : '';
 
+    // Render the marker with its dedicated style.
+    final markerStr = markerStyle.render('$marker ');
+
     if (!wrapLines || contentWidth <= 0 || content.length <= contentWidth) {
-      // Truncate or pad content to fit contentWidth.
-      final displayContent = content.length > contentWidth
-          ? content.substring(0, contentWidth)
-          : content.padRight(contentWidth);
-      return ['$numStr${style.render(displayContent)}'];
+      // Side-by-side cells must have fixed width to maintain panel alignment.
+      // When horizontalOffset > 0, shift the visible content window so that
+      // left/right scrolling reveals content that would otherwise be truncated.
+      final String displayContent;
+      int displayOffset = 0;
+      if (content.length <= contentWidth) {
+        displayContent = content.padRight(contentWidth);
+      } else {
+        displayOffset = horizontalOffset.clamp(0, content.length);
+        final end = (displayOffset + contentWidth).clamp(
+          displayOffset,
+          content.length,
+        );
+        displayContent = content
+            .substring(displayOffset, end)
+            .padRight(contentWidth);
+      }
+
+      // Apply inline highlighting if spans are provided.
+      final styledContent = _renderInlineContent(
+        displayContent,
+        displayOffset,
+        contentWidth,
+        style,
+        inlineSpans,
+        inlineHighlight,
+      );
+      return ['$numStr$markerStr$styledContent'];
     }
 
     // Wrap: split content into chunks of contentWidth.
@@ -1311,13 +1576,24 @@ class GitDiffModel extends ViewComponent {
     while (offset < content.length) {
       final end = (offset + contentWidth).clamp(0, content.length);
       final chunk = content.substring(offset, end).padRight(contentWidth);
+      final styledChunk = _renderInlineContent(
+        chunk,
+        offset,
+        contentWidth,
+        style,
+        inlineSpans,
+        inlineHighlight,
+      );
       if (offset == 0) {
-        rows.add('$numStr${style.render(chunk)}');
+        rows.add('$numStr$markerStr$styledChunk');
       } else {
         final blankNum = showLineNumbers
             ? numStyle.render('${' ' * numWidth} ')
             : '';
-        rows.add('$blankNum${style.render(chunk)}');
+        final blankMarker = markerStyle.render(
+          '  ',
+        ); // 2 spaces matching marker
+        rows.add('$blankNum$blankMarker$styledChunk');
       }
       offset = end;
     }
@@ -1354,4 +1630,237 @@ class GitDiffModel extends ViewComponent {
       result.add('$left$separator$right');
     }
   }
+
+  /// Computes word-level inline diff between [oldContent] and [newContent].
+  ///
+  /// Returns a pair of span lists: the first for the old (removed) line and the
+  /// second for the new (added) line. Highlighted spans mark tokens that differ
+  /// between the two lines.
+  (List<_InlineSpan>, List<_InlineSpan>) _computeInlineDiff(
+    String oldContent,
+    String newContent,
+  ) {
+    if (oldContent.isEmpty && newContent.isEmpty) {
+      return (const [], const []);
+    }
+    if (oldContent.isEmpty) {
+      return (const [], [_InlineSpan(0, newContent.length, true)]);
+    }
+    if (newContent.isEmpty) {
+      return ([_InlineSpan(0, oldContent.length, true)], const []);
+    }
+
+    // Tokenize into words, preserving exact character positions.
+    final oldTokens = _tokenize(oldContent);
+    final newTokens = _tokenize(newContent);
+
+    // Compute LCS of token strings.
+    final lcs = _lcsTokens(oldTokens, newTokens);
+
+    // Mark tokens not in LCS as highlighted.
+    final oldSpans = <_InlineSpan>[];
+    final newSpans = <_InlineSpan>[];
+
+    var li = 0; // index into lcs
+    for (final t in oldTokens) {
+      if (li < lcs.length && t.text == lcs[li]) {
+        // Token matches LCS — not highlighted, advance LCS pointer.
+        li++;
+      } else {
+        // Token differs — mark as highlighted (skip whitespace-only tokens).
+        if (t.text.trim().isNotEmpty) {
+          oldSpans.add(_InlineSpan(t.start, t.end, true));
+        }
+      }
+    }
+
+    li = 0;
+    for (final t in newTokens) {
+      if (li < lcs.length && t.text == lcs[li]) {
+        li++;
+      } else {
+        if (t.text.trim().isNotEmpty) {
+          newSpans.add(_InlineSpan(t.start, t.end, true));
+        }
+      }
+    }
+
+    // Merge adjacent highlighted spans.
+    return (_mergeSpans(oldSpans), _mergeSpans(newSpans));
+  }
+
+  /// Tokenizes [input] into a list of tokens split at word boundaries.
+  ///
+  /// Each token preserves its start/end character position. Whitespace runs and
+  /// punctuation characters are individual tokens.
+  static List<_Token> _tokenize(String input) {
+    final tokens = <_Token>[];
+    final len = input.length;
+    var i = 0;
+    while (i < len) {
+      final ch = input[i];
+      if (ch == ' ' || ch == '\t') {
+        // Whitespace run.
+        final start = i;
+        while (i < len && (input[i] == ' ' || input[i] == '\t')) {
+          i++;
+        }
+        tokens.add(_Token(start, i, input.substring(start, i)));
+      } else if (_isPunctuation(ch)) {
+        tokens.add(_Token(i, i + 1, ch));
+        i++;
+      } else {
+        // Word characters.
+        final start = i;
+        while (i < len &&
+            input[i] != ' ' &&
+            input[i] != '\t' &&
+            !_isPunctuation(input[i])) {
+          i++;
+        }
+        tokens.add(_Token(start, i, input.substring(start, i)));
+      }
+    }
+    return tokens;
+  }
+
+  static bool _isPunctuation(String ch) {
+    const puncts = '(){}[]<>.,;:!?@#\$%^&*+-=/\\|~`\'"';
+    return puncts.contains(ch);
+  }
+
+  /// Computes the longest common subsequence of token strings.
+  static List<String> _lcsTokens(List<_Token> a, List<_Token> b) {
+    final m = a.length;
+    final n = b.length;
+
+    // For very long token lists, fall back to highlighting everything
+    // to avoid O(m*n) memory/time.
+    if (m * n > 100000) {
+      return const [];
+    }
+
+    // Build DP table.
+    final dp = List.generate(m + 1, (_) => List.filled(n + 1, 0));
+    for (var i = 1; i <= m; i++) {
+      for (var j = 1; j <= n; j++) {
+        if (a[i - 1].text == b[j - 1].text) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = dp[i - 1][j] > dp[i][j - 1] ? dp[i - 1][j] : dp[i][j - 1];
+        }
+      }
+    }
+
+    // Backtrack to find LCS.
+    final lcs = <String>[];
+    var i = m;
+    var j = n;
+    while (i > 0 && j > 0) {
+      if (a[i - 1].text == b[j - 1].text) {
+        lcs.add(a[i - 1].text);
+        i--;
+        j--;
+      } else if (dp[i - 1][j] > dp[i][j - 1]) {
+        i--;
+      } else {
+        j--;
+      }
+    }
+    return lcs.reversed.toList();
+  }
+
+  /// Merges adjacent highlighted spans into single spans.
+  static List<_InlineSpan> _mergeSpans(List<_InlineSpan> spans) {
+    if (spans.length <= 1) return spans;
+    final merged = <_InlineSpan>[spans.first];
+    for (var i = 1; i < spans.length; i++) {
+      final prev = merged.last;
+      final curr = spans[i];
+      if (prev.end == curr.start) {
+        merged[merged.length - 1] = _InlineSpan(prev.start, curr.end, true);
+      } else {
+        merged.add(curr);
+      }
+    }
+    return merged;
+  }
+
+  /// Renders [displayContent] with optional inline highlighting.
+  ///
+  /// When [inlineSpans] is empty or [inlineHighlight] is null, applies
+  /// [baseStyle] to the entire string. Otherwise, segments that overlap with
+  /// highlighted spans get [inlineHighlight] and the rest get [baseStyle].
+  ///
+  /// [displayOffset] is the character offset into the original content (for
+  /// horizontal scrolling), used to map spans to display coordinates.
+  String _renderInlineContent(
+    String displayContent,
+    int displayOffset,
+    int contentWidth,
+    Style baseStyle,
+    List<_InlineSpan> inlineSpans,
+    Style? inlineHighlight,
+  ) {
+    if (inlineSpans.isEmpty || inlineHighlight == null) {
+      return baseStyle.render(displayContent);
+    }
+
+    // Map spans from original content coordinates to display coordinates.
+    // Display window: [displayOffset, displayOffset + contentWidth)
+    final displayEnd = displayOffset + contentWidth;
+    final buf = StringBuffer();
+    var pos = 0; // position in displayContent
+
+    for (final span in inlineSpans) {
+      // Clip span to display window.
+      final spanStart = span.start < displayOffset ? displayOffset : span.start;
+      final spanEnd = span.end > displayEnd ? displayEnd : span.end;
+      if (spanStart >= spanEnd) continue;
+
+      // Convert to display-local coordinates.
+      final localStart = spanStart - displayOffset;
+      final localEnd = spanEnd - displayOffset;
+
+      // Render non-highlighted segment before this span.
+      if (localStart > pos) {
+        buf.write(baseStyle.render(displayContent.substring(pos, localStart)));
+      }
+
+      // Render highlighted segment.
+      buf.write(
+        inlineHighlight.render(displayContent.substring(localStart, localEnd)),
+      );
+      pos = localEnd;
+    }
+
+    // Render remaining non-highlighted content.
+    if (pos < displayContent.length) {
+      buf.write(baseStyle.render(displayContent.substring(pos)));
+    }
+
+    return buf.toString();
+  }
+}
+
+/// A span within a diff line marking a character range.
+class _InlineSpan {
+  const _InlineSpan(this.start, this.end, this.highlighted);
+
+  /// Start character index (inclusive).
+  final int start;
+
+  /// End character index (exclusive).
+  final int end;
+
+  /// Whether this span represents a changed (highlighted) region.
+  final bool highlighted;
+}
+
+/// A token with its position in the original string.
+class _Token {
+  const _Token(this.start, this.end, this.text);
+  final int start;
+  final int end;
+  final String text;
 }

@@ -2,6 +2,7 @@ import 'dart:async' show unawaited;
 import 'dart:io' as io;
 
 import 'terminal.dart';
+import 'trace.dart';
 import 'view.dart';
 import '../uv/ansi.dart' show UvAnsi;
 import '../uv/buffer.dart' as uv_buffer;
@@ -666,17 +667,38 @@ class UltravioletTuiRenderer implements TuiRenderer {
     if (!_initialized) return;
     if (!_dirty) return;
 
+    final tracing = TuiTrace.enabled;
+    final TraceSpan? flushSpan = tracing
+        ? TuiTrace.begin('uv_flush', tag: TraceTag.render)
+        : null;
+
     _ensureSize();
     final scr = _screen;
     final r = _renderer;
-    if (scr == null || r == null) return;
+    if (scr == null || r == null) {
+      flushSpan?.end();
+      return;
+    }
 
+    // Phase 1: ANSI parse → StyledString
+    final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
     final ss = uv_styled.newStyledString(
       _options.ansiCompress ? compressAnsi(_pendingView) : _pendingView,
     )..wrap = true;
-    ss.draw(scr, scr.bounds());
+    parseSw?.stop();
 
+    // Phase 2: Draw styled string into screen buffer
+    final Stopwatch? drawSw = tracing ? (Stopwatch()..start()) : null;
+    ss.draw(scr, scr.bounds());
+    drawSw?.stop();
+
+    // Phase 3: Diff buffers and compute update sequence
+    final Stopwatch? diffSw = tracing ? (Stopwatch()..start()) : null;
     r.render(scr.buffer);
+    diffSw?.stop();
+
+    // Phase 4: Flush to terminal
+    final Stopwatch? writeSw = tracing ? (Stopwatch()..start()) : null;
     // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
     // terminal buffers all changes and paints them atomically.  This prevents
     // visible flashes when scroll optimization emits DL/IL before the
@@ -685,7 +707,19 @@ class UltravioletTuiRenderer implements TuiRenderer {
     terminal.write(UvAnsi.beginSynchronizedUpdate);
     r.flush();
     terminal.write(UvAnsi.endSynchronizedUpdate);
+    writeSw?.stop();
     _dirty = false;
+
+    if (tracing) {
+      TuiTrace.log(
+        'uv_flush parse=${parseSw!.elapsedMicroseconds}us '
+        'draw=${drawSw!.elapsedMicroseconds}us '
+        'diff=${diffSw!.elapsedMicroseconds}us '
+        'write=${writeSw!.elapsedMicroseconds}us',
+        tag: TraceTag.render,
+      );
+      flushSpan?.end();
+    }
   }
 
   @override
