@@ -1,6 +1,7 @@
-///
 /// Higher-level widgets built from layout primitives.
 ///
+/// This library groups reusable UI components such as cards, buttons,
+/// overlays, command palette utilities, and the git diff viewer.
 @experimental
 library;
 

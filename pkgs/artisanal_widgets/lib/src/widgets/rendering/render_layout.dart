@@ -12,6 +12,7 @@ import 'package:artisanal/style.dart'
     show Layout, HorizontalAlign, VerticalAlign;
 import 'package:artisanal/tui.dart' show TuiTrace, TraceTag;
 
+/// Horizontal/vertical alignment policy along the main axis for flex layouts.
 enum RenderMainAxisAlignment {
   start,
   end,
@@ -21,10 +22,13 @@ enum RenderMainAxisAlignment {
   spaceEvenly,
 }
 
+/// Alignment policy along the cross axis for flex layouts.
 enum RenderCrossAxisAlignment { start, end, center, stretch }
 
+/// Fit behavior for flex children.
 enum RenderFlexFit { tight, loose }
 
+/// How much space a flex layout should consume on its main axis.
 enum RenderMainAxisSize { min, max }
 
 /// Renders a text string with constraints.
@@ -87,6 +91,7 @@ class RenderText extends RenderBox {
 
 /// A horizontal row layout.
 class RenderRow extends RenderBox {
+  /// Creates a horizontal flex render object.
   RenderRow({
     this.gap = 0,
     this.mainAxisAlignment = RenderMainAxisAlignment.start,
@@ -96,11 +101,22 @@ class RenderRow extends RenderBox {
     this.crossAxisExtent,
   });
 
+  /// Fixed spacing inserted between adjacent children.
   int gap;
+
+  /// Main-axis alignment used when there is remaining space.
   RenderMainAxisAlignment mainAxisAlignment;
+
+  /// Cross-axis alignment for child placement.
   RenderCrossAxisAlignment crossAxisAlignment;
+
+  /// Whether to use intrinsic width or fill available width.
   RenderMainAxisSize mainAxisSize;
+
+  /// Optional explicit width override on the main axis.
   int? mainAxisExtent;
+
+  /// Optional explicit height override on the cross axis.
   int? crossAxisExtent;
 
   @override
@@ -336,6 +352,7 @@ class RenderRow extends RenderBox {
 
 /// A vertical column layout.
 class RenderColumn extends RenderBox {
+  /// Creates a vertical flex render object.
   RenderColumn({
     this.gap = 0,
     this.mainAxisAlignment = RenderMainAxisAlignment.start,
@@ -345,11 +362,22 @@ class RenderColumn extends RenderBox {
     this.crossAxisExtent,
   });
 
+  /// Fixed spacing inserted between adjacent children.
   int gap;
+
+  /// Main-axis alignment used when there is remaining space.
   RenderMainAxisAlignment mainAxisAlignment;
+
+  /// Cross-axis alignment for child placement.
   RenderCrossAxisAlignment crossAxisAlignment;
+
+  /// Whether to use intrinsic height or fill available height.
   RenderMainAxisSize mainAxisSize;
+
+  /// Optional explicit height override on the main axis.
   int? mainAxisExtent;
+
+  /// Optional explicit width override on the cross axis.
   int? crossAxisExtent;
 
   @override
@@ -582,10 +610,15 @@ class RenderColumn extends RenderBox {
   }
 }
 
+/// Parent-data used by flex containers for each child render object.
 class FlexParentData {
+  /// Creates flex parent data.
   const FlexParentData({required this.flex, required this.fit});
 
+  /// Flex factor used to divide remaining main-axis space.
   final int flex;
+
+  /// Fit behavior when a positive [flex] is provided.
   final RenderFlexFit fit;
 }
 

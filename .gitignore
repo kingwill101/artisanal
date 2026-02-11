@@ -8,3 +8,5 @@ build/
 orm_bootstrap_test/
 .github/prompts/
 .ck
+pkgs/artisanal_widgets/example/opencode/traces/*.log
+pkgs/artisanal_widgets/example/opencode/traces/metrics.csv

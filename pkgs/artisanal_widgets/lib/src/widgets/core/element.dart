@@ -35,6 +35,7 @@ import '../app/performance.dart';
 
 final Expando<Element> _elementForWidget = Expando<Element>('widgetElement');
 
+/// Returns the mounted [Element] associated with [widget], if any.
 Element? elementOf(Widget widget) => _elementForWidget[widget];
 
 void _bindElement(Widget widget, Element element) {
@@ -73,19 +74,23 @@ abstract class Element {
   bool _dirty = false;
   bool _isRebuilding = false;
 
+  /// The child elements for this node, in paint order.
   List<Element> get children => List.unmodifiable(_children);
 
+  /// Mounts this element under [parent] and performs its initial build.
   void mount(Element? parent) {
     this.parent = parent;
     markNeedsBuild();
     rebuild();
   }
 
+  /// Updates this element with a new widget configuration.
   void update(Widget newWidget) {
     widget = newWidget;
     _bindElement(widget, this);
   }
 
+  /// Rebuilds this element if it is currently dirty.
   void rebuild() {
     if (!_dirty) return;
     _isRebuilding = true;
@@ -111,10 +116,12 @@ abstract class Element {
     }
   }
 
+  /// Ensures the element is built before it is rendered.
   void ensureBuilt() {
     if (_dirty) rebuild();
   }
 
+  /// Marks this element dirty so it participates in the next build scope.
   void markNeedsBuild() {
     _markDirty();
   }
@@ -126,6 +133,7 @@ abstract class Element {
   /// might be stale because a descendant was rebuilt.
   bool get hadBuildThisFrame => _owner?.hadBuildThisFrame ?? false;
 
+  /// Schedules a repaint and invalidates ancestor render caches.
   void markNeedsPaint() {
     _owner?.schedulePaint();
     // Notify ancestor render objects (e.g., scroll viewports) that a
@@ -149,10 +157,12 @@ abstract class Element {
     _owner?.schedulePaint();
   }
 
+  /// Captures mouse events for this element subtree.
   void captureMouse() {
     _owner?.captureMouse(this);
   }
 
+  /// Releases mouse capture for this element subtree.
   void releaseMouse() {
     _owner?.releaseMouse(this);
   }
@@ -172,6 +182,7 @@ abstract class Element {
     _owner?.scheduleBuildFor(this);
   }
 
+  /// Current depth from the tree root.
   int get depth {
     var depth = 0;
     var current = parent;
@@ -182,8 +193,10 @@ abstract class Element {
     return depth;
   }
 
+  /// The render object hosted by this element, or `null`.
   RenderObject? get renderObject => null;
 
+  /// Builds this element's child widget list.
   List<Widget> build() => widget.children;
 
   /// Reconcile old children with new widgets using Flutter's algorithm.
@@ -313,6 +326,7 @@ abstract class Element {
     }
   }
 
+  /// Renders this element subtree to a terminal string.
   String render({BoxConstraints? constraints}) {
     if (_dirty) {
       _owner?.buildScopeFor(_rootOfTree(this), this);
@@ -320,6 +334,7 @@ abstract class Element {
     return _viewToString(widget.view());
   }
 
+  /// Dispatches a message through interception, children, then self handlers.
   Cmd? dispatch(Msg msg) {
     rebuild();
 
@@ -374,6 +389,7 @@ abstract class Element {
     return cmds.isEmpty ? null : Cmd.batch(cmds);
   }
 
+  /// Unmounts this element and all descendants.
   void unmount() {
     // Avoid retaining unmounted elements in the dirty set.
     _owner?.unscheduleBuildFor(this);
@@ -395,8 +411,10 @@ abstract class Element {
 
 /// Schedules and rebuilds dirty elements.
 class BuildOwner {
+  /// Creates a build owner.
   BuildOwner({this.debugRebuilds = false});
 
+  /// Enables per-element rebuild logging to stdout.
   final bool debugRebuilds;
   final Set<Element> _dirty = <Element>{};
   bool _needsPaint = false;
@@ -414,7 +432,10 @@ class BuildOwner {
   Duration _currentLayoutDuration = Duration.zero;
   Duration _currentPaintDuration = Duration.zero;
 
+  /// Whether there are dirty elements waiting to rebuild.
   bool get hasDirty => _dirty.isNotEmpty;
+
+  /// Whether a repaint has been requested for the current frame.
   bool get hasPaintDirty => _needsPaint;
 
   /// Whether any elements were rebuilt during the current frame's build phase.
@@ -423,6 +444,8 @@ class BuildOwner {
   /// then cleared in [endFrame]. Render objects can check this to decide
   /// whether cached paint output is still valid.
   bool get hadBuildThisFrame => _hadBuildThisFrame;
+
+  /// The element currently holding mouse capture, if any.
   Element? get mouseCapture => _mouseCapture;
 
   /// Recent widget frame timings (up to [_maxRecentTimings]).
@@ -464,28 +487,34 @@ class BuildOwner {
     );
   }
 
+  /// Schedules [element] to rebuild in the next build scope.
   void scheduleBuildFor(Element element) {
     _dirty.add(element);
   }
 
+  /// Removes [element] from the dirty queue if present.
   void unscheduleBuildFor(Element element) {
     _dirty.remove(element);
   }
 
+  /// Marks the frame as needing a paint pass.
   void schedulePaint() {
     _needsPaint = true;
   }
 
+  /// Routes subsequent mouse messages to [element].
   void captureMouse(Element element) {
     _mouseCapture = element;
   }
 
+  /// Clears mouse capture when [element] currently owns it.
   void releaseMouse(Element element) {
     if (identical(_mouseCapture, element)) {
       _mouseCapture = null;
     }
   }
 
+  /// Notifies the owner that [element] finished rebuilding.
   void didRebuild(Element element) {
     _dirty.remove(element);
     // Track that a rebuild occurred even outside beginFrame's buildScope
@@ -495,6 +524,7 @@ class BuildOwner {
     _hadBuildThisFrame = true;
   }
 
+  /// Starts a frame by resetting accumulators and running the build phase.
   void beginFrame(Element root) {
     // Reset per-frame phase accumulators.
     _currentBuildDuration = Duration.zero;
@@ -509,6 +539,7 @@ class BuildOwner {
     buildScope(root);
   }
 
+  /// Ends a frame and publishes collected timing information.
   void endFrame({Duration? totalDuration, Duration? buildDuration}) {
     _needsPaint = false;
     _hadBuildThisFrame = false;
@@ -534,6 +565,7 @@ class BuildOwner {
     }
   }
 
+  /// Rebuilds all dirty elements that are descendants of [root].
   void buildScope(Element root) {
     if (_dirty.isEmpty) return;
 
@@ -562,6 +594,7 @@ class BuildOwner {
     }
   }
 
+  /// Rebuilds [element] when it is dirty and under [root].
   void buildScopeFor(Element root, Element element) {
     if (!_dirty.remove(element)) return;
     if (!_isDescendantOf(element, root)) return;
@@ -611,6 +644,7 @@ class WidgetElement extends Element {
   }
 }
 
+/// Element implementation for [StatelessWidget] nodes.
 class StatelessElement extends Element {
   StatelessElement(super.widget);
 
@@ -636,11 +670,13 @@ class StatelessElement extends Element {
   }
 }
 
+/// Element implementation for [InheritedWidget] nodes.
 class InheritedElement extends Element {
   InheritedElement(InheritedWidget super.widget);
 
   final Set<Element> _dependents = <Element>{};
 
+  /// Registers [element] as dependent on this inherited widget.
   void registerDependent(Element element) {
     _dependents.add(element);
   }
@@ -666,6 +702,7 @@ class InheritedElement extends Element {
   }
 }
 
+/// Element implementation for [StatefulWidget] nodes.
 class StatefulElement extends Element implements StateSetter {
   StatefulElement(StatefulWidget widget)
     : state = widget.createState(),
@@ -932,6 +969,7 @@ class RenderObjectElement extends Element {
 
 /// Owns an element tree and provides rendering.
 class ElementTree {
+  /// Creates and mounts an element tree for [rootWidget].
   ElementTree(this.rootWidget, {BuildOwner? owner})
     : _owner = owner ?? BuildOwner() {
     _root = createElement(rootWidget);
@@ -939,20 +977,28 @@ class ElementTree {
     _root.mount(null);
   }
 
+  /// Root widget used to configure this tree.
   Widget rootWidget;
   late final Element _root;
   BoxConstraints? _rootConstraints;
   final BuildOwner _owner;
 
+  /// The mounted root element.
   Element get root => _root;
 
   /// The [BuildOwner] managing this tree's build lifecycle and frame timing.
   BuildOwner get owner => _owner;
 
+  /// Whether the tree has pending build work.
   bool get hasDirty => _owner.hasDirty;
+
+  /// Whether the tree has pending paint work.
   bool get hasPaintDirty => _owner.hasPaintDirty;
+
+  /// The element currently capturing mouse input.
   Element? get mouseCapture => _owner.mouseCapture;
 
+  /// Dispatches [msg] directly to [element].
   Cmd? dispatchTo(Element element, Msg msg) => element.dispatch(msg);
 
   /// Dispatches [msg] by walking UP the element tree from [startElement] to
@@ -994,17 +1040,21 @@ class ElementTree {
     return null;
   }
 
+  /// Overrides constraints used when rendering the root.
   void setRootConstraints(BoxConstraints? constraints) {
     _rootConstraints = constraints;
   }
 
+  /// Updates the tree with a new root widget configuration.
   void update(Widget widget) {
     rootWidget = widget;
     _root.update(widget);
   }
 
+  /// Dispatches [msg] to the root element.
   Cmd? dispatch(Msg msg) => _root.dispatch(msg);
 
+  /// Collects initialization commands from widgets and state objects.
   Cmd? collectHandleInit() {
     final cmds = <Cmd>[];
     void visit(Element element) {
@@ -1024,6 +1074,7 @@ class ElementTree {
     return cmds.isEmpty ? null : Cmd.batch(cmds);
   }
 
+  /// Renders one widget frame and returns terminal output.
   String render() {
     final totalSw = Stopwatch()..start();
     final buildSw = Stopwatch()..start();
@@ -1088,6 +1139,7 @@ class ElementTree {
     return null;
   }
 
+  /// Unmounts the entire element tree.
   void unmount() => _root.unmount();
 }
 
@@ -1100,8 +1152,13 @@ class HitTestElementEntry {
     required this.localY,
   });
 
+  /// The hit element.
   final Element element;
+
+  /// Local X coordinate relative to the hit render object.
   final double localX;
+
+  /// Local Y coordinate relative to the hit render object.
   final double localY;
 }
 

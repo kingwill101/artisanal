@@ -22,8 +22,7 @@ import 'package:artisanal/bubbles.dart'
 import 'package:artisanal/style.dart' hide Padding;
 import '../core/element.dart' show elementOf, Element, RenderObjectElement;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
-import '../layout/geometry.dart'
-    show BoxConstraints, Size, HitTestResult, HitTestEntry;
+import '../layout/geometry.dart' show BoxConstraints, Size, HitTestResult;
 import '../rendering/render_object.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
@@ -245,6 +244,7 @@ class WidgetScrollController implements ScrollController {
 
 /// Controller for [Viewport].
 class ViewportController implements ScrollController {
+  /// Creates a viewport controller.
   ViewportController({ViewportModel? initial})
     : _model = initial ?? ViewportModel(width: 80, height: 24);
 
@@ -255,11 +255,13 @@ class ViewportController implements ScrollController {
   String? _scrollbarSeparator;
   final Set<void Function()> _listeners = <void Function()>{};
 
+  /// Current immutable viewport model.
   ViewportModel get model => _model;
 
   @override
   double get scrollPercent => _model.scrollPercent;
 
+  /// Vertical scroll offset in rows.
   int get yOffset => _model.yOffset;
 
   @override
@@ -274,12 +276,14 @@ class ViewportController implements ScrollController {
   @override
   int get maxOffset => math.max(0, contentExtent - viewportExtent);
 
+  /// Replaces viewport content text.
   void setContent(String content) {
     if (content == _content) return;
     _content = content;
     _model = _model.setContent(content);
   }
 
+  /// Applies viewport configuration values.
   void configure({
     int? width,
     int? height,
@@ -308,6 +312,7 @@ class ViewportController implements ScrollController {
     );
   }
 
+  /// Updates viewport dimensions.
   void setSize(int width, int? height) {
     if (_model.width == width && _model.height == height) return;
     _model = _model.copyWith(width: width, height: height);
@@ -348,6 +353,7 @@ class ViewportController implements ScrollController {
     }
   }
 
+  /// Forwards a message to the underlying [ViewportModel].
   (ViewportModel, Cmd?) update(Msg msg) {
     final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
     sw?.start();
@@ -363,6 +369,7 @@ class ViewportController implements ScrollController {
     return (vp, cmd);
   }
 
+  /// Returns a reusable scroll-pane helper for scrollbar rendering/interaction.
   ViewportScrollPane scrollPane({
     required String separator,
     required ScrollbarChars chars,
@@ -383,7 +390,13 @@ class ViewportController implements ScrollController {
   }
 }
 
+/// A string-backed scrollable viewport powered by [ViewportModel].
+///
+/// Use this when content already exists as rendered text and you want line
+/// wrapping, line numbers, key handling, and optional integrated scrollbar
+/// behavior.
 class Viewport extends StatefulWidget {
+  /// Creates a viewport widget.
   Viewport({
     required this.content,
     this.width,
@@ -407,24 +420,61 @@ class Viewport extends StatefulWidget {
     super.key,
   });
 
+  /// Source content rendered by the viewport.
   final String content;
+
+  /// Optional explicit viewport width in columns.
   final int? width;
+
+  /// Optional explicit viewport height in rows.
   final int? height;
+
+  /// Gutter width before content.
   final int gutter;
+
+  /// Whether long lines should soft-wrap.
   final bool softWrap;
+
+  /// Whether to pad output to the configured height.
   final bool fillHeight;
+
+  /// Whether to show line numbers.
   final bool showLineNumbers;
+
+  /// Whether mouse wheel messages should scroll content.
   final bool mouseWheelEnabled;
+
+  /// Rows to scroll per wheel tick.
   final int mouseWheelDelta;
+
+  /// Horizontal scroll amount for applicable keybindings.
   final int horizontalStep;
+
+  /// Optional keybinding overrides.
   final ViewportKeyMap? keyMap;
+
+  /// Optional style overrides.
   final Style? style;
+
+  /// Optional external controller.
   final ViewportController? controller;
+
+  /// Whether to render an integrated scrollbar.
   final bool showScrollbar;
+
+  /// Separator inserted between content and scrollbar.
   final String scrollbarSeparator;
+
+  /// Characters used for scrollbar rendering.
   final ScrollbarChars scrollbarChars;
+
+  /// Whether text selection support is enabled.
   final bool enableSelection;
+
+  /// Whether key messages are forwarded to the viewport model.
   final bool handleKeys;
+
+  /// Optional mouse zone id override.
   final String? zoneId;
 
   @override
@@ -1086,6 +1136,7 @@ class RenderSingleChildViewport extends RenderBox {
 /// widgets are interchangeable; [ScrollView] is kept for backward
 /// compatibility.
 class ScrollView extends StatefulWidget {
+  /// Creates a scroll view.
   ScrollView({
     required this.child,
     this.controller,
@@ -1095,9 +1146,16 @@ class ScrollView extends StatefulWidget {
     super.key,
   });
 
+  /// Child widget rendered inside the viewport.
   final Widget child;
+
+  /// Optional external controller for reading/updating offset.
   final ScrollController? controller;
+
+  /// Whether keyboard keys trigger scrolling.
   final bool handleKeys;
+
+  /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
 
   /// Whether in-app text selection is enabled.
@@ -1984,6 +2042,7 @@ class _ScrollbarRender extends SingleChildRenderObjectWidget {
   Object view() => child?.view() ?? '';
 }
 
+/// Render object that draws a vertical scrollbar next to or over child content.
 class RenderScrollbar extends RenderBox {
   RenderScrollbar({
     required this.controller,
@@ -2425,6 +2484,7 @@ void _drawStyledContent(
 ///
 /// Provide a [ScrollController] to share scroll state with a [Scrollbar].
 class ListView extends StatefulWidget {
+  /// Creates a list view that keeps child widgets mounted.
   ListView({
     required this.children,
     this.separator = '\n',
@@ -2434,11 +2494,20 @@ class ListView extends StatefulWidget {
     super.key,
   });
 
+  /// Child widgets rendered in order.
   @override
   final List<Widget> children;
+
+  /// Text inserted between rendered children.
   final String separator;
+
+  /// Optional external scroll controller.
   final ScrollController? controller;
+
+  /// Whether keyboard keys trigger scrolling.
   final bool handleKeys;
+
+  /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
 
   @override
@@ -2741,7 +2810,10 @@ class ListViewController implements ScrollController {
   @override
   int get contentExtent => _contentHeight;
 
+  /// Current viewport height in rows.
   int get viewportHeight => _viewportHeight;
+
+  /// Current content height in rows.
   int get contentHeight => _contentHeight;
 
   @override
@@ -2750,6 +2822,7 @@ class ListViewController implements ScrollController {
   @override
   double get scrollPercent => maxOffset == 0 ? 0 : _offset / maxOffset;
 
+  /// Updates the viewport height and clamps offset if needed.
   bool setViewportHeight(int height) {
     if (height < 0) height = 0;
     if (_viewportHeight == height) return false;
@@ -2757,6 +2830,7 @@ class ListViewController implements ScrollController {
     return _clampOffset();
   }
 
+  /// Updates the content height and clamps offset if needed.
   bool setContentHeight(int height) {
     if (height < 0) height = 0;
     if (_contentHeight == height) return false;
@@ -2815,6 +2889,7 @@ class ListViewController implements ScrollController {
 /// on demand and the list uses [estimatedItemExtent] for items that have not
 /// been measured yet.
 class VirtualListView extends StatefulWidget {
+  /// Creates a virtualized list view.
   VirtualListView({
     required this.children,
     this.width,
@@ -2831,10 +2906,17 @@ class VirtualListView extends StatefulWidget {
     super.key,
   });
 
+  /// Child widgets rendered by index.
   @override
   final List<Widget> children;
+
+  /// Optional explicit width in columns.
   final int? width;
+
+  /// Optional explicit height in rows.
   final int? height;
+
+  /// Fixed item height used when [variableHeight] is false.
   final int itemExtent;
 
   /// Estimated height in rows for items when [variableHeight] is true.
@@ -2844,11 +2926,23 @@ class VirtualListView extends StatefulWidget {
 
   /// Whether to measure children dynamically instead of using [itemExtent].
   final bool variableHeight;
+
+  /// Text inserted between items.
   final String separator;
+
+  /// Whether keyboard keys trigger scrolling.
   final bool handleKeys;
+
+  /// Whether mouse wheel messages trigger scrolling.
   final bool mouseWheelEnabled;
+
+  /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
+
+  /// Optional external list controller.
   final ListViewController? controller;
+
+  /// Optional mouse zone id override.
   final String? zoneId;
 
   @override
@@ -3121,6 +3215,10 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
   }
 }
 
+/// Render object backing [VirtualListView].
+///
+/// It virtualizes painting to only include visible items and supports both
+/// fixed-height and variable-height modes.
 class RenderListViewport extends RenderBox {
   RenderListViewport({
     required this.controller,
@@ -3832,6 +3930,7 @@ class _ViewportRender extends LeafRenderObjectWidget {
   }
 }
 
+/// Render object backing [Viewport].
 class RenderViewport extends RenderBox {
   RenderViewport({
     required this.controller,

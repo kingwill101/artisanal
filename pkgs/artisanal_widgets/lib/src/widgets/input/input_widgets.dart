@@ -36,23 +36,35 @@ import 'package:artisanal/bubbles.dart'
         CursorMode;
 import 'package:artisanal/uv.dart' show CursorShape;
 
+/// Signature for text change notifications from [TextField].
 typedef TextChangedCallback = void Function(String value);
 
 /// Range of text that is selected.
 class TextSelection {
+  /// Creates a selection between [baseOffset] and [extentOffset].
   const TextSelection({required this.baseOffset, required this.extentOffset});
 
+  /// Creates a collapsed selection at [offset].
   const TextSelection.collapsed({required int offset})
     : baseOffset = offset,
       extentOffset = offset;
 
+  /// Anchor position for this selection.
   final int baseOffset;
+
+  /// Active edge position for this selection.
   final int extentOffset;
 
+  /// Whether this selection has no selected range.
   bool get isCollapsed => baseOffset == extentOffset;
+
+  /// The smaller of [baseOffset] and [extentOffset].
   int get start => baseOffset < extentOffset ? baseOffset : extentOffset;
+
+  /// The larger of [baseOffset] and [extentOffset].
   int get end => baseOffset < extentOffset ? extentOffset : baseOffset;
 
+  /// Returns a copy with optional overrides.
   TextSelection copyWith({int? baseOffset, int? extentOffset}) {
     return TextSelection(
       baseOffset: baseOffset ?? this.baseOffset,
@@ -74,14 +86,19 @@ class TextSelection {
 
 /// The current state of a text field.
 class TextEditingValue {
+  /// Creates a text editing value.
   const TextEditingValue({
     this.text = '',
     this.selection = const TextSelection.collapsed(offset: 0),
   });
 
+  /// Current plain-text value.
   final String text;
+
+  /// Current selection range.
   final TextSelection selection;
 
+  /// Empty value with collapsed selection at offset 0.
   static const empty = TextEditingValue();
 
   @override
