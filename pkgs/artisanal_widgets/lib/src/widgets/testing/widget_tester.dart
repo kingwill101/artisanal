@@ -772,7 +772,7 @@ class Finder {
   final WidgetTester _tester;
 
   /// Returns `true` if the latest rendered view contains [text].
-  bool text(String text) => _tester._lastView.contains(text);
+  bool text(String text) => Layout.stripAnsi(_tester._lastView).contains(text);
 
   /// Returns mounted elements whose widget type is [T].
   List<Element> byType<T extends Widget>() {
@@ -799,7 +799,7 @@ class Finder {
   /// Returns `true` if the latest rendered view contains a line matching
   /// the regular expression [pattern].
   bool textMatching(Pattern pattern) =>
-      pattern.allMatches(_tester._lastView).isNotEmpty;
+      pattern.allMatches(Layout.stripAnsi(_tester._lastView)).isNotEmpty;
 
   /// Returns a [TapTarget] for a zone with [zoneId].
   ///

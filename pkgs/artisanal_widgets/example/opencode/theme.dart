@@ -325,11 +325,12 @@ w.Theme _buildTheme(OpenCodePalette palette) {
     ),
     commandPaletteTheme: w.CommandPaletteThemeData(
       background: palette.backgroundPanel,
-      selectedBackground: palette.backgroundElement,
-      selectedForeground: palette.text,
-      headerForeground: palette.textMuted,
+      selectedBackground: palette.primary,
+      selectedForeground: palette.background,
+      headerForeground: palette.secondary,
+      searchBackground: palette.backgroundElement,
+      searchForeground: palette.textMuted,
       shortcutForeground: palette.textMuted,
-      borderColor: palette.border,
     ),
   );
 }

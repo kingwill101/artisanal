@@ -1,4 +1,3 @@
-import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/tui.dart' show MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal/style.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
@@ -446,7 +445,11 @@ void main() {
         await tester.pumpWidget(_buildExampleTree(ctrl, _kitchenSinkMarkdown));
 
         // Collect the full content
-        final fullContent = _collectFullContent(tester, ctrl);
+        final fullContent = _collectFullContent(
+          tester,
+          ctrl,
+          stripScrollbarCols: 2,
+        );
         expect(
           fullContent.length,
           greaterThan(24),
@@ -460,7 +463,11 @@ void main() {
           ctrl.jumpTo(offset);
           tester.pump();
 
-          final viewLines = tester.view.split('\n').map(_stripAnsi).toList();
+          final viewLines = tester.view
+              .split('\n')
+              .map(_stripAnsi)
+              .map((l) => _trimScrollbar(l, 2))
+              .toList();
           expect(
             viewLines.length,
             equals(24),
@@ -623,14 +630,22 @@ void main() {
           _buildExampleTree(ctrl, largeDoc, withScrollbar: true),
         );
 
-        final fullContent = _collectFullContent(tester, ctrl);
+        final fullContent = _collectFullContent(
+          tester,
+          ctrl,
+          stripScrollbarCols: 2,
+        );
         final maxOffset = ctrl.maxOffset;
 
         for (var offset = 0; offset <= maxOffset; offset++) {
           ctrl.jumpTo(offset);
           tester.pump();
 
-          final viewLines = tester.view.split('\n').map(_stripAnsi).toList();
+          final viewLines = tester.view
+              .split('\n')
+              .map(_stripAnsi)
+              .map((l) => _trimScrollbar(l, 2))
+              .toList();
 
           for (var i = 0; i < viewLines.length; i++) {
             final fullIdx = offset + i;
@@ -694,7 +709,11 @@ void main() {
         );
 
         // Collect full content first
-        final fullContent = _collectFullContent(tester, ctrl);
+        final fullContent = _collectFullContent(
+          tester,
+          ctrl,
+          stripScrollbarCols: 2,
+        );
 
         // Reset to 0 and scroll with mouse wheel
         ctrl.jumpTo(0);
@@ -719,7 +738,10 @@ void main() {
 
           // Verify the current offset matches expected slice
           final offset = ctrl.offset;
-          final viewLines = lines.map(_stripAnsi).toList();
+          final viewLines = lines
+              .map(_stripAnsi)
+              .map((l) => _trimScrollbar(l, 2))
+              .toList();
           for (var i = 0; i < viewLines.length; i++) {
             final fullIdx = offset + i;
             if (fullIdx >= fullContent.length) break;
@@ -847,14 +869,22 @@ void main() {
           _buildExampleTree(ctrl, buf.toString(), withScrollbar: true),
         );
 
-        final fullContent = _collectFullContent(tester, ctrl);
+        final fullContent = _collectFullContent(
+          tester,
+          ctrl,
+          stripScrollbarCols: 2,
+        );
         final maxOffset = ctrl.maxOffset;
 
         for (var offset = 0; offset <= maxOffset; offset++) {
           ctrl.jumpTo(offset);
           tester.pump();
 
-          final viewLines = tester.view.split('\n').map(_stripAnsi).toList();
+          final viewLines = tester.view
+              .split('\n')
+              .map(_stripAnsi)
+              .map((l) => _trimScrollbar(l, 2))
+              .toList();
           expect(
             viewLines.length,
             equals(24),
@@ -889,14 +919,22 @@ void main() {
           _buildExampleTree(ctrl, _kitchenSinkMarkdown, withScrollbar: true),
         );
 
-        final fullContent = _collectFullContent(tester, ctrl);
+        final fullContent = _collectFullContent(
+          tester,
+          ctrl,
+          stripScrollbarCols: 2,
+        );
         final maxOffset = ctrl.maxOffset;
 
         for (var offset = 0; offset <= maxOffset; offset++) {
           ctrl.jumpTo(offset);
           tester.pump();
 
-          final viewLines = tester.view.split('\n').map(_stripAnsi).toList();
+          final viewLines = tester.view
+              .split('\n')
+              .map(_stripAnsi)
+              .map((l) => _trimScrollbar(l, 2))
+              .toList();
 
           for (var i = 0; i < viewLines.length; i++) {
             final fullIdx = offset + i;

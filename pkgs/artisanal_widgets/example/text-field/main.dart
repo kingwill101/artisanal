@@ -1,5 +1,5 @@
 //
-// Run with: dart run example/tui/examples/widgets/text-field/main.dart
+// Run with: dart run example/text-field/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;

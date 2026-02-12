@@ -23,23 +23,25 @@ These tests are deterministic and include thresholds so regressions fail in CI.
 From repository root:
 
 ```bash
-dart test pkgs/artisanal_widgets/test/perf/
+dart test -j 1 pkgs/artisanal_widgets/test/perf/
 dart test pkgs/artisanal_widgets/test/perf/opencode_replay_test.dart -n "heavy replay"
 dart test pkgs/artisanal_widgets/test/perf/opencode_diff_markdown_regression_test.dart -n "OpenCode diff-heavy"
 dart test pkgs/artisanal_widgets/test/perf/opencode_extended_regression_test.dart
 ```
 
+Use `-j 1` for the full perf directory to avoid parallel-suite contention.
+
 ## Baseline snapshot
 
-Baseline from full suite run on 2026-02-11 (`dart test pkgs/artisanal_widgets/test/perf/`):
+Baseline from full suite run on 2026-02-11 (`dart test -j 1 pkgs/artisanal_widgets/test/perf/`):
 
-- baseline replay: avg `9.23ms`, p95 `39.08ms`, max `44.44ms`
-- heavy replay: avg `8.24ms`, p95 `29.69ms`, max `43.48ms`
-- diff-heavy: avg `39.05ms`, p95 `61.89ms`, max `76.94ms`
-- markdown-heavy: avg `1.34ms`, p95 `6.28ms`, max `19.75ms`
-- soak: avg `4.31ms`, p95 `32.83ms`, max `77.04ms`
-- resize stress: avg `12.52ms`, p95 `38.70ms`, max `53.32ms`
-- style churn: avg `54.62ms`, p95 `131.22ms`, max `810.91ms`
+- baseline replay: avg `6.85ms`, p95 `23.23ms`, max `27.71ms`
+- heavy replay: avg `8.14ms`, p95 `27.83ms`, max `43.75ms`
+- diff-heavy: avg `22.35ms`, p95 `29.01ms`, max `63.60ms`
+- markdown-heavy: avg `1.66ms`, p95 `10.85ms`, max `28.54ms`
+- soak: avg `3.67ms`, p95 `28.47ms`, p99 `33.62ms`, max `75.53ms`
+- resize stress: avg `10.97ms`, p95 `32.17ms`, max `38.90ms`
+- style churn: avg `12.82ms`, p95 `21.71ms`, max `34.91ms`
 
 Use this as a comparison point before tightening budgets further.
 

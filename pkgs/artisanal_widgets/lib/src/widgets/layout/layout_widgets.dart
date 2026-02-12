@@ -16,13 +16,21 @@ library;
 
 import 'package:meta/meta.dart' show experimental;
 
+import 'dart:collection';
 import 'dart:io' show File;
 import 'dart:math' as math;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/uv.dart'
-    show Canvas, Cell, StyledString, UvStyle, UvColor, HalfBlockImageDrawable;
+    show
+        Canvas,
+        Cell,
+        StyledString,
+        UvStyle,
+        UvColor,
+        UnderlineStyle,
+        HalfBlockImageDrawable;
 import 'package:artisanal/tui.dart'
     show
         Cmd,
@@ -47,7 +55,7 @@ import '../core/key.dart';
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';
-import '../theme/theme.dart' show hasDarkBackground;
+import '../theme/theme.dart' show hasDarkBackground, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../gestures/gestures.dart';
 import '../media/media_query.dart' show MediaQuery;

@@ -684,8 +684,6 @@ void main() {
             },
           ),
         );
-        final viewBefore = tester.view;
-
         // Mutate the model — listener calls setState which marks for rebuild
         model.values = [20, 30, 40];
         // Re-pump the widget tree so the rebuild picks up new values

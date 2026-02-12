@@ -186,6 +186,20 @@ void main() {
       expect(tester.locateText('Status:'), isNotNull);
       expect(tester.locateText('Active'), isNotNull);
     });
+
+    test('badge in Row renders its own background fill', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(Row(children: [Badge('NEW')]));
+
+      final line = tester.view
+          .split('\n')
+          .firstWhere((entry) => entry.contains('NEW'));
+      final before = line.substring(0, line.indexOf('NEW'));
+      final bgCodeCount = RegExp(r'48;').allMatches(before).length;
+      expect(bgCodeCount, greaterThanOrEqualTo(1), reason: line);
+    });
   });
 
   // ---------------------------------------------------------------------------

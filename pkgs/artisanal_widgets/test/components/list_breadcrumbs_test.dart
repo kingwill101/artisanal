@@ -103,6 +103,65 @@ void main() {
       expect(titleLoc, isNotNull);
       expect(leadingLoc!.x, lessThan(titleLoc!.x));
     });
+
+    test('accepts widget title and subtitle content', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        ListTile(
+          title: Row(children: [Text('Widget'), Text('Title')]),
+          subtitle: Text('Widget subtitle'),
+        ),
+      );
+
+      expect(tester.find.text('Widget'), isTrue);
+      expect(tester.find.text('Title'), isTrue);
+      expect(tester.find.text('Widget subtitle'), isTrue);
+    });
+
+    test('onTap fires when tile is clicked', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      var tapped = 0;
+      await tester.pumpWidget(
+        ListTile(
+          title: 'Clickable tile',
+          onTap: () {
+            tapped++;
+            return null;
+          },
+        ),
+      );
+
+      final loc = tester.locateText('Clickable tile');
+      expect(loc, isNotNull);
+      tester.tapAt(loc!.x, loc.y);
+      expect(tapped, equals(1));
+    });
+
+    test('disabled tile does not fire onTap', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      var tapped = 0;
+      await tester.pumpWidget(
+        ListTile(
+          title: 'Disabled tile',
+          enabled: false,
+          onTap: () {
+            tapped++;
+            return null;
+          },
+        ),
+      );
+
+      final loc = tester.locateText('Disabled tile');
+      expect(loc, isNotNull);
+      tester.tapAt(loc!.x, loc.y);
+      expect(tapped, equals(0));
+    });
   });
 
   group('ListTile selected', () {
@@ -190,6 +249,11 @@ void main() {
       expect(tile.dense, isFalse);
     });
 
+    test('defaults enabled to true', () {
+      final tile = ListTile(title: 'test');
+      expect(tile.enabled, isTrue);
+    });
+
     test('subtitle defaults to null', () {
       final tile = ListTile(title: 'test');
       expect(tile.subtitle, isNull);
@@ -213,6 +277,11 @@ void main() {
     test('background defaults to null', () {
       final tile = ListTile(title: 'test');
       expect(tile.background, isNull);
+    });
+
+    test('onTap defaults to null', () {
+      final tile = ListTile(title: 'test');
+      expect(tile.onTap, isNull);
     });
   });
 

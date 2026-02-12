@@ -67,7 +67,7 @@ void main() {
               w.Text('v Modified Files (6)'),
               ...List.generate(
                 6,
-                (i) => w.Text('  file_$i.dart +${10 + i} -${i}'),
+                (i) => w.Text('  file_$i.dart +${10 + i} -$i'),
               ),
             ],
           ),
@@ -117,7 +117,7 @@ void main() {
         final output = tester.view;
         final height = style.Layout.getHeight(output);
         final width = style.Layout.getWidth(output);
-        print('Output size: ${width}x${height} (expected 120x40)');
+        print('Output size: ${width}x$height (expected 120x40)');
 
         final lines = output.split('\n');
         print('Total lines: ${lines.length}');
@@ -192,14 +192,14 @@ void main() {
       final output = tester.view;
       final height = style.Layout.getHeight(output);
       print(
-        'Frame test - Output size: ${style.Layout.getWidth(output)}x${height}',
+        'Frame test - Output size: ${style.Layout.getWidth(output)}x$height',
       );
 
       final lines = output.split('\n');
       for (var i = lines.length - 6; i < lines.length; i++) {
         if (i >= 0) {
           final stripped = lines[i].replaceAll(RegExp(r'\x1b\[[^m]*m'), '');
-          print('  [$i]: "${stripped}"');
+          print('  [$i]: "$stripped"');
         }
       }
 

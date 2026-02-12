@@ -20,16 +20,22 @@ class SpinnerIndicator extends StatefulWidget {
 
   @override
   State createState() => _SpinnerIndicatorState();
-
-  @override
-  Cmd? handleInit() {
-    if (!active || frames.isEmpty) return null;
-    return every(interval, (_) => _SpinnerTickMsg(id), id: id);
-  }
 }
 
 class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   int _index = 0;
+  final Object _tickToken = Object();
+  late final String _tickCmdId = 'spinner:${identityHashCode(this)}';
+
+  @override
+  Cmd? handleInit() {
+    if (!widget.active || widget.frames.isEmpty) return null;
+    return every(
+      widget.interval,
+      (_) => _SpinnerTickMsg(_tickToken),
+      id: _tickCmdId,
+    );
+  }
 
   @override
   void initState() {
@@ -45,12 +51,22 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
     if (widget.frames.isNotEmpty && _index >= widget.frames.length) {
       _index = 0;
     }
+    if (!widget.active || widget.frames.isEmpty) return null;
+    if (!oldWidget.active ||
+        oldWidget.frames.isEmpty ||
+        oldWidget.interval != widget.interval) {
+      return every(
+        widget.interval,
+        (_) => _SpinnerTickMsg(_tickToken),
+        id: _tickCmdId,
+      );
+    }
     return null;
   }
 
   @override
   Cmd? handleUpdate(Msg msg) {
-    if (msg is _SpinnerTickMsg && msg.id == widget.id) {
+    if (msg is _SpinnerTickMsg && identical(msg.token, _tickToken)) {
       if (!widget.active || widget.frames.isEmpty) return null;
       setState(() {
         _index = (_index + 1) % widget.frames.length;
@@ -71,8 +87,48 @@ class _SpinnerIndicatorState extends State<SpinnerIndicator> {
   }
 }
 
-class _SpinnerTickMsg extends Msg {
-  const _SpinnerTickMsg(this.id);
+/// Flutter-style circular progress indicator.
+///
+/// When [value] is non-null, renders a determinate glyph.
+/// When [value] is null, renders an animated spinner.
+class CircularProgressIndicator extends StatelessWidget {
+  CircularProgressIndicator({
+    this.value,
+    this.color,
+    this.interval = const Duration(milliseconds: 90),
+    this.active = true,
+    super.key,
+  });
 
-  final String id;
+  final double? value;
+  final Color? color;
+  final Duration interval;
+  final bool active;
+
+  static const List<String> _spinnerFrames = ['◜', '◠', '◝', '◞', '◡', '◟'];
+  static const List<String> _determinateGlyphs = ['○', '◔', '◑', '◕', '●'];
+
+  @override
+  Widget build(BuildContext context) {
+    if (value == null) {
+      return SpinnerIndicator(
+        frames: _spinnerFrames,
+        interval: interval,
+        active: active,
+        color: color,
+      );
+    }
+
+    final theme = ThemeScope.of(context);
+    final clamped = value!.clamp(0.0, 1.0);
+    final index = (clamped * (_determinateGlyphs.length - 1)).round();
+    final style = _copyStyle(Style())..foreground(color ?? theme.primary);
+    return Text(_determinateGlyphs[index], style: style);
+  }
+}
+
+class _SpinnerTickMsg extends Msg {
+  const _SpinnerTickMsg(this.token);
+
+  final Object token;
 }

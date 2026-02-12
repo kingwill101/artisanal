@@ -366,7 +366,7 @@ void main() {
         expect(output, isNot(contains('FPS: ~')));
       });
 
-      test('overlay shows Avg frame and Avg render labels', () {
+      test('overlay shows frame and render timing labels', () {
         final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
         app.update(tui.WindowSizeMsg(80, 24));
         app.view();
@@ -378,8 +378,28 @@ void main() {
         app.update(tui.RenderMetricsMsg(metrics));
         final output = app.view();
 
-        expect(output, contains('Avg frame:'));
-        expect(output, contains('Avg render:'));
+        expect(output, contains('Frame Time:'));
+        expect(output, contains('Render Time:'));
+      });
+
+      test('built-in overlay updates without rebuilding child subtree', () {
+        final counter = _BuildCounter();
+        final app = tui.WidgetApp(counter, debugOverlay: true);
+        app.update(tui.WindowSizeMsg(80, 24));
+        app.view();
+
+        final buildsBefore = counter.buildCount;
+        expect(buildsBefore, greaterThan(0));
+
+        final metrics = tui.RenderMetrics();
+        metrics.beginFrame();
+        metrics.endFrame();
+
+        app.update(tui.RenderMetricsMsg(metrics));
+        final output = app.view();
+
+        expect(output, contains('FPS:'));
+        expect(counter.buildCount, equals(buildsBefore));
       });
     });
 
@@ -552,7 +572,7 @@ void main() {
 
 /// A widget that tracks whether it received an F12 key event or any other key.
 class _F12Tracker extends w.StatefulWidget {
-  _F12Tracker({super.key});
+  _F12Tracker();
 
   @override
   w.State<_F12Tracker> createState() => _F12TrackerState();
@@ -576,5 +596,22 @@ class _F12TrackerState extends w.State<_F12Tracker> {
   @override
   w.Widget build(w.BuildContext context) {
     return w.Text(_status);
+  }
+}
+
+class _BuildCounter extends w.StatefulWidget {
+  _BuildCounter();
+
+  int buildCount = 0;
+
+  @override
+  w.State<_BuildCounter> createState() => _BuildCounterState();
+}
+
+class _BuildCounterState extends w.State<_BuildCounter> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    widget.buildCount += 1;
+    return w.Text('BUILD_COUNT:${widget.buildCount}');
   }
 }

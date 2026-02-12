@@ -1437,8 +1437,8 @@ void main() {
       controller.processTick(start);
 
       // 10 seconds later — well past the end
-      final way_past = start.add(const Duration(seconds: 10));
-      controller.processTick(way_past);
+      final wayPast = start.add(const Duration(seconds: 10));
+      controller.processTick(wayPast);
 
       expect(controller.value, 1.0);
       expect(controller.isCompleted, isTrue);

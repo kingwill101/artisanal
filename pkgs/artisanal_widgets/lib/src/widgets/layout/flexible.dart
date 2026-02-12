@@ -13,6 +13,9 @@ class Flexible extends Widget {
   final FlexFit fit;
 
   @override
+  bool get debugRenderObjectPassthrough => true;
+
+  @override
   List<Widget> get children => [child];
 
   @override

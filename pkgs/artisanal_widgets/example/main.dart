@@ -1,7 +1,7 @@
 //
 // Demonstrates widgets, layout, theming, and hit-test-driven mouse events.
 //
-// Run with: dart run example/tui/examples/widgets/main.dart
+// Run with: dart run example/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;

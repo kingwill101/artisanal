@@ -1,9 +1,6 @@
 /// Message widget for the OpenCode chat UI.
 ///
-/// Renders chat messages matching the real OpenCode style:
-/// - User messages: left ┃ border colored by agent, backgroundPanel bg
-/// - Assistant messages: text parts with paddingLeft:3, tool parts inline/block
-/// - Footer: ▣ agent · model · duration
+/// Renders chat messages matching the real OpenCode style.
 library;
 
 import 'package:artisanal/style.dart' as style;
@@ -36,26 +33,27 @@ class MessageWidget extends w.StatelessWidget {
     required this.message,
     this.index = 0,
     this.showDiffContextBackground = false,
-    this.onExpandDelta,
     super.key,
   });
 
   final ChatMessage message;
   final int index;
   final bool showDiffContextBackground;
-  final void Function(int delta)? onExpandDelta;
 
   @override
   w.Widget build(w.BuildContext context) {
-    if (message.role == MessageRole.user) {
-      return _UserMessage(message: message, index: index);
+    switch (message.role) {
+      case MessageRole.user:
+        return _UserMessage(message: message, index: index);
+      case MessageRole.system:
+        return _SystemMessage(message: message, index: index);
+      case MessageRole.assistant:
+        return _AssistantMessage(
+          key: w.ValueKey('assistant-${message.id}'),
+          message: message,
+          showDiffContextBackground: showDiffContextBackground,
+        );
     }
-    return _AssistantMessage(
-      key: w.ValueKey('assistant-${message.id}'),
-      message: message,
-      showDiffContextBackground: showDiffContextBackground,
-      onExpandDelta: onExpandDelta,
-    );
   }
 }
 
@@ -72,16 +70,150 @@ class _UserMessage extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
     final color = agentColor(message.agent);
+    final content = <w.Widget>[
+      w.Text(message.text ?? '', style: style.Style()..foreground(OC.text)),
+    ];
+    if (message.files.isNotEmpty) {
+      content.add(
+        w.Wrap(
+          spacing: 1,
+          runSpacing: 1,
+          children: [for (final file in message.files) _buildFileChip(file)],
+        ),
+      );
+    }
+
+    final metadata = _buildMetadata();
+    if (metadata != null) {
+      content.add(metadata);
+    }
+
+    final children = <w.Widget>[
+      LeftAccentPane(
+        accentColor: color,
+        backgroundColor: OC.backgroundPanel,
+        padding: const w.EdgeInsets.only(left: 2, top: 1, bottom: 1),
+        child: w.Column(
+          gap: 1,
+          crossAxisAlignment: w.CrossAxisAlignment.stretch,
+          children: content,
+        ),
+      ),
+    ];
+    if (message.showCompaction) {
+      children.add(_buildCompactionMarker());
+    }
 
     return w.Padding(
       padding: w.EdgeInsets.only(top: index == 0 ? 0 : 1),
+      child: w.Column(gap: 0, children: children),
+    );
+  }
+
+  w.Widget _buildFileChip(UserFilePart file) {
+    final badgeColor = switch (file.mime) {
+      'application/pdf' => OC.primary,
+      _ when file.mime.startsWith('image/') => OC.accent,
+      _ => OC.secondary,
+    };
+    final badge = _mimeBadge(file.mime);
+
+    return w.Row(
+      gap: 1,
+      children: [
+        w.Text(
+          ' $badge ',
+          style: style.Style()
+            ..foreground(OC.background)
+            ..background(badgeColor)
+            ..bold(),
+        ),
+        w.Text(
+          ' ${file.filename} ',
+          style: style.Style()
+            ..foreground(OC.textMuted)
+            ..background(OC.backgroundElement),
+        ),
+      ],
+    );
+  }
+
+  w.Widget? _buildMetadata() {
+    if (message.queued) {
+      return w.Text(
+        ' QUEUED ',
+        style: style.Style()
+          ..foreground(OC.background)
+          ..background(agentColor(message.agent))
+          ..bold(),
+      );
+    }
+    final timestamp = message.timestamp;
+    if (timestamp == null) return null;
+    return w.Text(
+      _formatTimestamp(timestamp),
+      style: style.Style()..foreground(OC.textMuted),
+    );
+  }
+
+  w.Widget _buildCompactionMarker() {
+    return w.Padding(
+      padding: const w.EdgeInsets.only(top: 1),
+      child: w.Row(
+        children: [
+          w.Expanded(child: w.Container(color: OC.borderActive, height: 1)),
+          w.Text(
+            ' Compaction ',
+            style: style.Style()..foreground(OC.textMuted),
+          ),
+          w.Expanded(child: w.Container(color: OC.borderActive, height: 1)),
+        ],
+      ),
+    );
+  }
+
+  String _mimeBadge(String mime) {
+    return switch (mime) {
+      'text/plain' => 'txt',
+      'application/pdf' => 'pdf',
+      _ when mime.startsWith('image/') => 'img',
+      _ when mime == 'application/x-directory' => 'dir',
+      _ => mime,
+    };
+  }
+
+  String _formatTimestamp(DateTime value) {
+    final now = DateTime.now();
+    final sameDay =
+        now.year == value.year &&
+        now.month == value.month &&
+        now.day == value.day;
+    if (sameDay) {
+      final hh = value.hour.toString().padLeft(2, '0');
+      final mm = value.minute.toString().padLeft(2, '0');
+      return '$hh:$mm';
+    }
+    return '${value.month}/${value.day}';
+  }
+}
+
+class _SystemMessage extends w.StatelessWidget {
+  _SystemMessage({required this.message, this.index = 0});
+
+  final ChatMessage message;
+  final int index;
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Padding(
+      padding: w.EdgeInsets.only(top: index == 0 ? 0 : 1),
       child: LeftAccentPane(
-        accentColor: color,
+        accentColor: OC.borderSubtle,
         backgroundColor: OC.backgroundPanel,
         padding: const w.EdgeInsets.only(left: 2, top: 1, bottom: 1),
         child: w.Text(
           message.text ?? '',
-          style: style.Style()..foreground(OC.text),
+          style: style.Style()..foreground(OC.textMuted),
         ),
       ),
     );
@@ -96,44 +228,24 @@ class _AssistantMessage extends w.StatefulWidget {
   _AssistantMessage({
     required this.message,
     required this.showDiffContextBackground,
-    this.onExpandDelta,
     super.key,
   });
 
   final ChatMessage message;
   final bool showDiffContextBackground;
-  final void Function(int delta)? onExpandDelta;
 
   @override
   w.State createState() => _AssistantMessageState();
 }
 
 class _AssistantMessageState extends w.State<_AssistantMessage> {
-  /// Tracks which block tools are expanded (by index in the parts list).
-  final Set<int> _expandedBlocks = {};
-  final Map<int, _DiffPartMeta> _diffPartMetaCache = {};
-  final Map<int, _ToolDiffMetrics> _toolDiffMetricsCache = {};
   w.DiffStyles? _cachedDiffStyles;
   bool? _cachedDiffStylesContextBg;
   markdown.AnsiRendererOptions? _cachedMarkdownOptions;
 
   @override
-  void initState() {
-    super.initState();
-    _seedExpandedFromMessage();
-  }
-
-  @override
   Cmd? didUpdateWidget(covariant _AssistantMessage oldWidget) {
     final cmd = super.didUpdateWidget(oldWidget);
-    if (oldWidget.message.id != widget.message.id ||
-        !identical(oldWidget.message.parts, widget.message.parts)) {
-      _expandedBlocks
-        ..clear()
-        ..addAll(_expandedIndicesFromMessage(widget.message));
-      _diffPartMetaCache.clear();
-      _toolDiffMetricsCache.clear();
-    }
     if (oldWidget.showDiffContextBackground !=
         widget.showDiffContextBackground) {
       _cachedDiffStyles = null;
@@ -143,94 +255,6 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
       _cachedMarkdownOptions = null;
     }
     return cmd;
-  }
-
-  void _seedExpandedFromMessage() {
-    _expandedBlocks.addAll(_expandedIndicesFromMessage(widget.message));
-  }
-
-  _DiffPartMeta _diffPartMeta(DiffPart part, int index) {
-    final cached = _diffPartMetaCache[index];
-    if (cached != null &&
-        cached.diff == part.diff &&
-        cached.filePath == part.filePath) {
-      return cached;
-    }
-
-    final slash = part.filePath.lastIndexOf('/');
-    final fileName = slash >= 0
-        ? part.filePath.substring(slash + 1)
-        : part.filePath;
-    final dirPath = slash >= 0 ? part.filePath.substring(0, slash + 1) : '';
-    final meta = _DiffPartMeta(
-      diff: part.diff,
-      filePath: part.filePath,
-      fileName: fileName,
-      dirPath: dirPath,
-      lineCount: _lineCount(part.diff),
-    );
-    _diffPartMetaCache[index] = meta;
-    return meta;
-  }
-
-  _ToolDiffMetrics _toolDiffMetrics(ToolPart part, int index) {
-    final diff = part.diff ?? '';
-    final filePath = part.filePath ?? '';
-    final cached = _toolDiffMetricsCache[index];
-    if (cached != null && cached.diff == diff && cached.filePath == filePath) {
-      return cached;
-    }
-
-    final slash = filePath.lastIndexOf('/');
-    final fileName = slash >= 0 ? filePath.substring(slash + 1) : filePath;
-    final dirPath = slash >= 0 ? filePath.substring(0, slash + 1) : '';
-    final (addCount, delCount) = _countDiffAddDel(diff);
-    final metrics = _ToolDiffMetrics(
-      diff: diff,
-      filePath: filePath,
-      fileName: fileName,
-      dirPath: dirPath,
-      addCount: addCount,
-      delCount: delCount,
-      lineCount: _lineCount(diff),
-    );
-    _toolDiffMetricsCache[index] = metrics;
-    return metrics;
-  }
-
-  (int, int) _countDiffAddDel(String diff) {
-    var addCount = 0;
-    var delCount = 0;
-    for (final line in diff.split('\n')) {
-      if (line.isEmpty) continue;
-      final first = line.codeUnitAt(0);
-      if (first == 43) {
-        if (!line.startsWith('+++')) addCount++;
-      } else if (first == 45) {
-        if (!line.startsWith('---')) delCount++;
-      }
-    }
-    return (addCount, delCount);
-  }
-
-  int _lineCount(String text) {
-    if (text.isEmpty) return 1;
-    var count = 1;
-    for (var i = 0; i < text.length; i++) {
-      if (text.codeUnitAt(i) == 10) count++;
-    }
-    return count;
-  }
-
-  Set<int> _expandedIndicesFromMessage(ChatMessage message) {
-    final out = <int>{};
-    for (var i = 0; i < message.parts.length; i++) {
-      final part = message.parts[i];
-      if (part is DiffPart && part.expanded) {
-        out.add(i);
-      }
-    }
-    return out;
   }
 
   @override
@@ -250,17 +274,23 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
           }
         case ToolPart():
           if (part.isBlock) {
-            parts.add(_buildBlockTool(context, part, i));
+            parts.add(_buildBlockTool(context, part));
           } else {
             parts.add(_buildInlineTool(context, part));
           }
         case DiffPart():
-          parts.add(_buildDiffPart(context, part, i));
+          parts.add(_buildDiffPart(context, part));
       }
     }
 
-    // Footer: ▣ Agent · model · duration
-    if (widget.message.isLast || widget.message.duration != null) {
+    if (widget.message.errorMessage != null && !widget.message.interrupted) {
+      parts.add(_buildAssistantError(context, widget.message.errorMessage!));
+    }
+
+    if (widget.message.isLast ||
+        widget.message.duration != null ||
+        widget.message.errorMessage != null ||
+        widget.message.interrupted) {
       parts.add(_buildFooter(context));
     }
 
@@ -363,14 +393,8 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     final context = _themeColor('diffContext', OC.textMuted);
     final text = _themeColor('text', OC.text);
     final hunk = _themeColor('diffHunkHeader', context);
-    final addedBg = _themeColor(
-      'diffAddedBg',
-      const style.BasicColor('#17361f'),
-    );
-    final removedBg = _themeColor(
-      'diffRemovedBg',
-      const style.BasicColor('#3f1a1f'),
-    );
+    final addedBg = _themeColor('diffAddedBg', OC.backgroundElement);
+    final removedBg = _themeColor('diffRemovedBg', OC.backgroundElement);
     final contextBg = _themeColor('diffContextBg', OC.backgroundPanel);
     final lineNumber = _themeColor('diffLineNumber', OC.textMuted);
     final addedNumberBg = _themeColor('diffAddedLineNumberBg', addedBg);
@@ -507,35 +531,22 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     return part.title.isNotEmpty ? part.title : part.toolName;
   }
 
-  /// Block tool: bordered panel with title + content.
-  ///
-  /// When the tool has a [ToolPart.diff], renders a collapsible trigger row
-  /// (icon + toolName + filePath + +N/-M) that expands to reveal a
-  /// [w.GitDiffViewer] — matching the real OpenCode "Collapsible" pattern.
-  w.Widget _buildBlockTool(w.BuildContext context, ToolPart part, int index) {
+  w.Widget _buildBlockTool(w.BuildContext context, ToolPart part) {
     final hasDiff = part.diff != null && part.diff!.isNotEmpty;
-    final expanded = _expandedBlocks.contains(index);
-
-    // Collapsible trigger row for diff tools
-    if (hasDiff) {
-      return _buildDiffCollapsible(context, part, index, expanded);
-    }
-
-    // Non-diff block: bordered panel with title + content/spinner
     final isRunning = part.status == ToolStatus.running;
     final isPending = part.status == ToolStatus.pending;
-    final borderColor = isRunning ? OC.primary : OC.borderSubtle;
+    final title = part.title.isNotEmpty ? part.title : '# ${part.toolName}';
 
     return w.Padding(
       padding: const w.EdgeInsets.only(top: 1),
       child: LeftAccentPane(
-        accentColor: borderColor,
+        accentColor: isRunning ? OC.primary : OC.backgroundElement,
         backgroundColor: OC.backgroundPanel,
         padding: const w.EdgeInsets.only(left: 2, top: 1, bottom: 1),
         child: w.Column(
           gap: 1,
+          crossAxisAlignment: w.CrossAxisAlignment.stretch,
           children: [
-            // Title row with spinner
             w.Padding(
               padding: const w.EdgeInsets.only(left: 3),
               child: w.Row(
@@ -553,7 +564,7 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                       style: style.Style()..foreground(OC.textMuted),
                     ),
                   w.Text(
-                    part.title.isNotEmpty ? part.title : '# ${part.toolName}',
+                    title,
                     style: style.Style()
                       ..foreground(
                         isRunning || isPending ? OC.text : OC.textMuted,
@@ -562,300 +573,60 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                 ],
               ),
             ),
-            // Output (only when completed)
-            if (part.output.isNotEmpty && !isRunning && !isPending)
+            if (hasDiff)
               w.Padding(
-                padding: const w.EdgeInsets.only(left: 3),
-                child: w.Text(
-                  part.output,
-                  style: style.Style()..foreground(OC.text),
-                ),
-              ),
-            // Error
+                padding: const w.EdgeInsets.only(left: 1),
+                child: _buildDiffViewer(part.diff!),
+              )
+            else if (part.output.isNotEmpty && !isRunning && !isPending)
+              w.Text(part.output, style: style.Style()..foreground(OC.text)),
             if (part.error != null)
-              w.Padding(
-                padding: const w.EdgeInsets.only(left: 3),
-                child: w.Text(
-                  part.error!,
-                  style: style.Style()..foreground(OC.error),
-                ),
-              ),
+              w.Text(part.error!, style: style.Style()..foreground(OC.error)),
           ],
         ),
       ),
     );
   }
 
-  /// Collapsible diff panel — matches real OpenCode Collapsible component.
-  ///
-  /// ```
-  /// ┌───────────────────────────────────────────────┐
-  /// │  [Icon] Edit  filename.dart  dir/  +5 -3  ▾  │  ← trigger
-  /// ├───────────────────────────────────────────────┤
-  /// │  (GitDiffViewer — pretty mode)                │  ← content
-  /// └───────────────────────────────────────────────┘
-  /// ```
-  w.Widget _buildDiffCollapsible(
-    w.BuildContext context,
-    ToolPart part,
-    int index,
-    bool expanded,
-  ) {
-    final metrics = _toolDiffMetrics(part, index);
-    final diffHeight = metrics.lineCount;
+  w.Widget _buildDiffViewer(String diff) {
+    return w.GitDiffViewer(
+      diff: diff,
+      viewMode: w.DiffViewMode.pretty,
+      showLineNumbers: true,
+      wrapLines: true,
+      handleKeys: false,
+      scrollable: false,
+      fitContentHeight: true,
+      styles: _diffStyles(),
+    );
+  }
 
+  w.Widget _buildDiffPart(w.BuildContext context, DiffPart part) {
+    return w.Padding(
+      padding: const w.EdgeInsets.only(top: 1, left: 3),
+      child: _buildDiffViewer(part.diff),
+    );
+  }
+
+  w.Widget _buildAssistantError(w.BuildContext context, String errorMessage) {
     return w.Padding(
       padding: const w.EdgeInsets.only(top: 1),
       child: LeftAccentPane(
-        accentColor: OC.borderSubtle,
+        accentColor: OC.error,
         backgroundColor: OC.backgroundPanel,
-        child: w.Column(
-          gap: 0,
-          crossAxisAlignment: w.CrossAxisAlignment.stretch,
-          children: [
-            // Trigger row
-            w.GestureDetector(
-              key: w.ValueKey<String>(
-                'diff-toggle-${widget.message.id}-$index',
-              ),
-              onTap: () {
-                var becameExpanded = false;
-                setState(() {
-                  if (expanded) {
-                    _expandedBlocks.remove(index);
-                  } else {
-                    _expandedBlocks.add(index);
-                    becameExpanded = true;
-                  }
-                });
-                if (becameExpanded) {
-                  widget.onExpandDelta?.call((diffHeight ~/ 3).clamp(3, 10));
-                }
-                return Cmd.repaint();
-              },
-              child: w.Container(
-                padding: const w.EdgeInsets.only(
-                  left: 2,
-                  right: 2,
-                  top: 1,
-                  bottom: 1,
-                ),
-                child: w.Row(
-                  children: [
-                    // Icon
-                    w.Text(
-                      part.icon,
-                      style: style.Style()..foreground(OC.textMuted),
-                    ),
-                    w.SizedBox(width: 1),
-                    // Tool name
-                    w.Text(
-                      part.title.isNotEmpty ? part.title : part.toolName,
-                      style: style.Style()..foreground(OC.text),
-                    ),
-                    w.SizedBox(width: 1),
-                    // Filename (bright)
-                    w.Text(
-                      metrics.fileName,
-                      style: style.Style()..foreground(OC.text),
-                      softWrap: false,
-                    ),
-                    w.SizedBox(width: 1),
-                    // Directory (muted)
-                    if (metrics.dirPath.isNotEmpty)
-                      w.Text(
-                        metrics.dirPath,
-                        style: style.Style()..foreground(OC.textMuted),
-                        softWrap: false,
-                      ),
-                    w.Spacer(),
-                    // +N -M counts
-                    w.Text(
-                      '+${metrics.addCount}',
-                      style: style.Style()..foreground(OC.diffAdded),
-                    ),
-                    w.SizedBox(width: 1),
-                    w.Text(
-                      '-${metrics.delCount}',
-                      style: style.Style()..foreground(OC.diffRemoved),
-                    ),
-                    w.SizedBox(width: 1),
-                    // Expand/collapse indicator
-                    w.Text(
-                      expanded ? '\u25bc' : '\u25b6',
-                      style: style.Style()..foreground(OC.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Diff content (visible when expanded)
-            if (expanded) ...[
-              // Separator
-              w.Container(color: OC.borderSubtle, height: 1),
-              // Diff viewer
-              w.GitDiffViewer(
-                diff: part.diff!,
-                viewMode: w.DiffViewMode.pretty,
-                showLineNumbers: true,
-                wrapLines: true,
-                handleKeys: false,
-                scrollable: false,
-                fitContentHeight: true,
-                styles: _diffStyles(),
-              ),
-            ],
-          ],
+        padding: const w.EdgeInsets.only(left: 2, top: 1, bottom: 1),
+        child: w.Text(
+          errorMessage,
+          style: style.Style()..foreground(OC.textMuted),
         ),
       ),
     );
-  }
-
-  /// Standalone diff part — collapsible file diff viewer.
-  ///
-  /// Renders a file header row (icon + filename + dir + +N/-M + chevron)
-  /// that expands to show a [w.GitDiffViewer].
-  w.Widget _buildDiffPart(w.BuildContext context, DiffPart part, int index) {
-    final expanded = _expandedBlocks.contains(index);
-    final meta = _diffPartMeta(part, index);
-    final diffHeight = meta.lineCount;
-
-    return w.Padding(
-      padding: const w.EdgeInsets.only(top: 1),
-      child: LeftAccentPane(
-        accentColor: OC.borderSubtle,
-        backgroundColor: OC.backgroundPanel,
-        child: w.Column(
-          gap: 0,
-          crossAxisAlignment: w.CrossAxisAlignment.stretch,
-          children: [
-            // Header row — clickable trigger
-            w.GestureDetector(
-              key: w.ValueKey<String>(
-                'diff-toggle-${widget.message.id}-$index',
-              ),
-              onTap: () {
-                var becameExpanded = false;
-                setState(() {
-                  if (expanded) {
-                    _expandedBlocks.remove(index);
-                  } else {
-                    _expandedBlocks.add(index);
-                    becameExpanded = true;
-                  }
-                });
-                if (becameExpanded) {
-                  widget.onExpandDelta?.call((diffHeight ~/ 3).clamp(3, 10));
-                }
-                return Cmd.repaint();
-              },
-              child: w.Container(
-                padding: const w.EdgeInsets.only(
-                  left: 2,
-                  right: 2,
-                  top: 1,
-                  bottom: 1,
-                ),
-                child: w.Row(
-                  children: [
-                    // File icon
-                    w.Text(
-                      '\u{1F4C4}',
-                      style: style.Style()..foreground(OC.textMuted),
-                    ),
-                    w.SizedBox(width: 1),
-                    // Filename (bright)
-                    w.Text(
-                      meta.fileName,
-                      style: style.Style()
-                        ..foreground(OC.text)
-                        ..bold(),
-                      softWrap: false,
-                    ),
-                    w.SizedBox(width: 1),
-                    // Directory (muted)
-                    if (meta.dirPath.isNotEmpty)
-                      w.Text(
-                        meta.dirPath,
-                        style: style.Style()..foreground(OC.textMuted),
-                        softWrap: false,
-                      ),
-                    w.Spacer(),
-                    // +N -M counts
-                    w.Text(
-                      '+${part.additions}',
-                      style: style.Style()..foreground(OC.diffAdded),
-                    ),
-                    w.SizedBox(width: 1),
-                    w.Text(
-                      '-${part.deletions}',
-                      style: style.Style()..foreground(OC.diffRemoved),
-                    ),
-                    w.SizedBox(width: 1),
-                    // Change bar visualization (up to 5 blocks)
-                    _buildChangeBar(part.additions, part.deletions),
-                    w.SizedBox(width: 1),
-                    // Expand/collapse indicator
-                    w.Text(
-                      expanded ? '\u25bc' : '\u25b6',
-                      style: style.Style()..foreground(OC.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            // Diff content (visible when expanded)
-            if (expanded) ...[
-              // Separator
-              w.Container(color: OC.borderSubtle, height: 1),
-              // Diff viewer
-              w.GitDiffViewer(
-                diff: part.diff,
-                viewMode: w.DiffViewMode.pretty,
-                showLineNumbers: true,
-                wrapLines: true,
-                handleKeys: false,
-                scrollable: false,
-                fitContentHeight: true,
-                styles: _diffStyles(),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build a small colored bar showing change proportions (like GitHub).
-  /// Up to 5 blocks: green for additions, red for deletions.
-  w.Widget _buildChangeBar(int additions, int deletions) {
-    final total = additions + deletions;
-    if (total == 0) return w.SizedBox(width: 5);
-
-    const maxBlocks = 5;
-    final addBlocks = (additions / total * maxBlocks).round().clamp(
-      0,
-      maxBlocks,
-    );
-    final delBlocks = maxBlocks - addBlocks;
-
-    final blocks = <w.Widget>[];
-    for (var i = 0; i < addBlocks; i++) {
-      blocks.add(
-        w.Text('\u2588', style: style.Style()..foreground(OC.diffAdded)),
-      );
-    }
-    for (var i = 0; i < delBlocks; i++) {
-      blocks.add(
-        w.Text('\u2588', style: style.Style()..foreground(OC.diffRemoved)),
-      );
-    }
-    return w.Row(gap: 0, children: blocks);
   }
 
   /// Footer: `▣ Agent · model · duration`
   w.Widget _buildFooter(w.BuildContext context) {
-    final color = agentColor(widget.message.agent);
+    final interrupted = widget.message.interrupted;
+    final color = interrupted ? OC.textMuted : agentColor(widget.message.agent);
     final agentLabel =
         '${widget.message.agent[0].toUpperCase()}${widget.message.agent.substring(1)}';
     final modelId = widget.message.modelId ?? '';
@@ -879,44 +650,13 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
               ' \u00b7 $durStr',
               style: style.Style()..foreground(OC.textMuted),
             ),
+          if (interrupted)
+            w.Text(
+              ' \u00b7 interrupted',
+              style: style.Style()..foreground(OC.textMuted),
+            ),
         ],
       ),
     );
   }
-}
-
-class _DiffPartMeta {
-  const _DiffPartMeta({
-    required this.diff,
-    required this.filePath,
-    required this.fileName,
-    required this.dirPath,
-    required this.lineCount,
-  });
-
-  final String diff;
-  final String filePath;
-  final String fileName;
-  final String dirPath;
-  final int lineCount;
-}
-
-class _ToolDiffMetrics {
-  const _ToolDiffMetrics({
-    required this.diff,
-    required this.filePath,
-    required this.fileName,
-    required this.dirPath,
-    required this.addCount,
-    required this.delCount,
-    required this.lineCount,
-  });
-
-  final String diff;
-  final String filePath;
-  final String fileName;
-  final String dirPath;
-  final int addCount;
-  final int delCount;
-  final int lineCount;
 }

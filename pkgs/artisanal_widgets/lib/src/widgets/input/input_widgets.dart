@@ -9,6 +9,7 @@ import 'package:artisanal/tui.dart'
         Msg,
         KeyMsg,
         MouseMsg,
+        MouseAction,
         MouseButton,
         HitTestMouseMsg,
         View,
@@ -17,6 +18,7 @@ import 'package:artisanal/style.dart' show Layout, Style;
 import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
+import '../core/element.dart' show Element, RenderObjectElement, elementOf;
 import '../layout/layout_widgets.dart' show Text, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
@@ -271,6 +273,9 @@ class TextField extends StatefulWidget {
     this.charLimit,
     this.showSuggestions,
     this.suggestions,
+    this.collapseLargePaste,
+    this.collapsedPasteMinChars,
+    this.collapsedPasteMinLines,
     this.useVirtualCursor,
     this.styles,
     this.keyMap,
@@ -282,6 +287,7 @@ class TextField extends StatefulWidget {
     this.enabled = true,
     this.multiline = false,
     this.maxLines = 0,
+    this.mouseXOffset = 0,
     this.zoneId,
     super.key,
   });
@@ -315,6 +321,15 @@ class TextField extends StatefulWidget {
 
   /// Suggestions for autocomplete.
   final List<String>? suggestions;
+
+  /// Whether to collapse large pasted content into a compact reference token.
+  final bool? collapseLargePaste;
+
+  /// Minimum paste size in characters to collapse.
+  final int? collapsedPasteMinChars;
+
+  /// Minimum paste size in lines to collapse.
+  final int? collapsedPasteMinLines;
 
   /// Whether to render a virtual cursor.
   final bool? useVirtualCursor;
@@ -355,6 +370,13 @@ class TextField extends StatefulWidget {
   /// exceeds this value, vertical scrolling is enabled.
   final int maxLines;
 
+  /// Optional horizontal offset correction (in cells) applied to mouse hit
+  /// coordinates before they are forwarded to [TextInputModel].
+  ///
+  /// Useful when embedding the field in composite panes that add visual left
+  /// chrome around the editable content.
+  final int mouseXOffset;
+
   /// Optional zone id for mouse interactions.
   final String? zoneId;
 
@@ -374,6 +396,8 @@ class _TextFieldState extends State<TextField> {
   FocusController? _focusController;
   FocusController? _localController;
   bool _focused = false;
+  bool _mouseSelectionActive = false;
+  MouseMsg? _lastHitMouseEvent;
   bool _autofocusSent = false;
   Theme? _themeFromContext;
   bool _themeResolved = false;
@@ -532,6 +556,15 @@ class _TextFieldState extends State<TextField> {
     if (widget.showSuggestions != null) {
       model.showSuggestions = widget.showSuggestions!;
     }
+    if (widget.collapseLargePaste != null) {
+      model.collapseLargePaste = widget.collapseLargePaste!;
+    }
+    if (widget.collapsedPasteMinChars != null) {
+      model.collapsedPasteMinChars = widget.collapsedPasteMinChars!;
+    }
+    if (widget.collapsedPasteMinLines != null) {
+      model.collapsedPasteMinLines = widget.collapsedPasteMinLines!;
+    }
     if (widget.useVirtualCursor != null) {
       model.useVirtualCursor = widget.useVirtualCursor!;
     }
@@ -572,6 +605,8 @@ class _TextFieldState extends State<TextField> {
     final beforeValue = _model.value;
     final beforePos = _model.position;
     final beforeFocused = _model.focused;
+    final beforeSelStart = _model.selectionStart;
+    final beforeSelEnd = _model.selectionEnd;
     final cmd = _controller.update(msg);
 
     _ensureStaticCursor();
@@ -586,6 +621,8 @@ class _TextFieldState extends State<TextField> {
         beforeValue != _model.value ||
         beforePos != _model.position ||
         beforeFocused != _model.focused ||
+        beforeSelStart != _model.selectionStart ||
+        beforeSelEnd != _model.selectionEnd ||
         (focusCmd != null);
     if (changed) {
       setState(() {});
@@ -602,7 +639,87 @@ class _TextFieldState extends State<TextField> {
   Cmd? _handleKey(KeyMsg msg) {
     if (!widget.enabled) return null;
     if (!_isFocused) return null;
-    return _applyUpdate(msg);
+    final beforeValue = _model.value;
+    final beforePos = _model.position;
+    final beforeSelStart = _model.selectionStart;
+    final beforeSelEnd = _model.selectionEnd;
+    final beforeFocused = _model.focused;
+
+    final cmd = _applyUpdate(msg);
+    if (cmd != null) return cmd;
+
+    final handledByModel =
+        beforeValue != _model.value ||
+        beforePos != _model.position ||
+        beforeSelStart != _model.selectionStart ||
+        beforeSelEnd != _model.selectionEnd ||
+        beforeFocused != _model.focused;
+
+    // Key events use one-winner bubbling in Element.dispatch. If the focused
+    // text model handled a key but produced no command, return Cmd.none() so
+    // the event is still considered consumed and does not traverse the rest
+    // of large sibling subtrees (which is expensive while typing).
+    if (handledByModel) {
+      return Cmd.none();
+    }
+
+    return null;
+  }
+
+  Cmd? _finalizeMouseSelectionOutsideHit() {
+    if (!_mouseSelectionActive) return null;
+    _mouseSelectionActive = false;
+    final syntheticRelease = const MouseMsg(
+      action: MouseAction.release,
+      button: MouseButton.left,
+      x: 0,
+      y: 0,
+    );
+    if (TuiTrace.enabled) {
+      TuiTrace.log('tf.mouseSelection finalizeOutside id=$_focusId');
+    }
+    return _applyUpdate(syntheticRelease);
+  }
+
+  _RenderTextField? _findRenderTextField() {
+    final root = elementOf(widget);
+    if (root == null) return null;
+
+    _RenderTextField? result;
+    void visit(Element e) {
+      if (result != null) return;
+      if (e is RenderObjectElement && e.renderObject is _RenderTextField) {
+        result = e.renderObject as _RenderTextField;
+        return;
+      }
+      for (final child in e.children) {
+        visit(child);
+        if (result != null) return;
+      }
+    }
+
+    visit(root);
+    return result;
+  }
+
+  static double _globalX(RenderObject ro) {
+    var x = 0.0;
+    RenderObject? current = ro;
+    while (current != null) {
+      x += current.offset.dx;
+      current = current.parent;
+    }
+    return x;
+  }
+
+  static double _globalY(RenderObject ro) {
+    var y = 0.0;
+    RenderObject? current = ro;
+    while (current != null) {
+      y += current.offset.dy;
+      current = current.parent;
+    }
+    return y;
   }
 
   @override
@@ -612,13 +729,54 @@ class _TextFieldState extends State<TextField> {
       // Request focus when left button is clicked.
       if (msg.event.button == MouseButton.left) {
         _focusController?.requestFocus(_focusId);
+        _syncFocusFromController();
+        if (msg.event.action == MouseAction.press) {
+          _mouseSelectionActive = true;
+        } else if (msg.event.action == MouseAction.release) {
+          _mouseSelectionActive = false;
+        }
       }
-      return null;
+      if (!widget.enabled) return null;
+
+      _lastHitMouseEvent = msg.event;
+
+      final ro = _findRenderTextField();
+      final roLocalX = ro != null
+          ? (msg.event.x.toDouble() - _globalX(ro)).floor()
+          : null;
+      final roLocalY = ro != null
+          ? (msg.event.y.toDouble() - _globalY(ro)).floor()
+          : null;
+      final localX = roLocalX ?? msg.localX.floor();
+      final localY = roLocalY ?? msg.localY.floor();
+
+      final adjustedX = localX - widget.mouseXOffset;
+      final local = msg.event.copyWith(x: adjustedX, y: localY);
+      if (TuiTrace.enabled) {
+        TuiTrace.log(
+          'tf.hitMouse id=$_focusId event=(${msg.event.x},${msg.event.y}) '
+          'hitLocal=(${msg.localX.floor()},${msg.localY.floor()}) '
+          'roLocal=(${roLocalX ?? -1},${roLocalY ?? -1}) '
+          'local=(${local.x},${local.y}) xOffset=${widget.mouseXOffset} '
+          'action=${msg.event.action} '
+          'button=${msg.event.button} pos=${_model.position}',
+        );
+      }
+      return _applyUpdate(local);
     }
     if (msg is KeyMsg) {
       return _handleKey(msg);
     }
     if (msg is MouseMsg) {
+      if (!widget.enabled) return null;
+      final sameAsLastHit =
+          _lastHitMouseEvent != null && msg == _lastHitMouseEvent;
+      if (sameAsLastHit) {
+        return null;
+      }
+      if (_mouseSelectionActive) {
+        return _finalizeMouseSelectionOutsideHit();
+      }
       return null;
     }
     return _applyUpdate(msg);

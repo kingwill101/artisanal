@@ -140,18 +140,6 @@ class RenderRow extends RenderBox {
 
     final flexData = children.map(_flexDataFor).toList();
     final totalFlex = flexData.fold<int>(0, (sum, f) => sum + f.flex);
-    assert(() {
-      final hasTightFlex = flexData.any(
-        (f) => f.flex > 0 && f.fit == RenderFlexFit.tight,
-      );
-      if (hasTightFlex && !constraints.hasBoundedWidth) {
-        throw AssertionError(
-          'RenderRow has non-zero flex children with unbounded width constraints. '
-          'Use MainAxisSize.min, wrap in a bounded parent, or switch flex children to loose fit.',
-        );
-      }
-      return true;
-    }());
     final gapTotal = children.length > 1
         ? gap * (children.length - 1).toDouble()
         : 0.0;
@@ -408,7 +396,13 @@ class RenderRow extends RenderBox {
       mainAxisAlignment,
     );
 
-    final result = _joinHorizontalWithSpacing(aligned, spacing);
+    final result = Layout.place(
+      width: maxMain,
+      height: maxCross,
+      horizontal: HorizontalAlign.left,
+      vertical: VerticalAlign.top,
+      content: _joinHorizontalWithSpacing(aligned, spacing),
+    );
     span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
     return result;
   }
@@ -732,7 +726,13 @@ class RenderColumn extends RenderBox {
       mainAxisAlignment,
     );
 
-    final result = _joinVerticalWithSpacing(aligned, spacing);
+    final result = Layout.place(
+      width: maxCross,
+      height: maxMain,
+      horizontal: HorizontalAlign.left,
+      vertical: VerticalAlign.top,
+      content: _joinVerticalWithSpacing(aligned, spacing),
+    );
     span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
     return result;
   }

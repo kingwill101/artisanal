@@ -1,5 +1,6 @@
 import 'package:artisanal/bubbles.dart' show EchoMode, TextInputModel;
 import 'package:artisanal/terminal.dart' show KeyType;
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
@@ -206,6 +207,50 @@ void main() {
       tester.sendKey('l');
       tester.sendKey('o');
       expect(ctrl.model.value, equals('hello'));
+    });
+
+    test(
+      'focused field consumes editing keys before sibling traversal',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _KeyProbe(),
+              TextField(prompt: '> ', autofocus: true),
+            ],
+          ),
+        );
+
+        tester.sendKey('a');
+
+        expect(tester.locateText('a'), isNotNull);
+        expect(tester.locateText('PROBE:none'), isNotNull);
+      },
+    );
+
+    test('unhandled shortcuts still bubble past focused field', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _KeyProbe(),
+            TextField(prompt: '> ', autofocus: true),
+          ],
+        ),
+      );
+
+      tester.sendMsg(
+        const tui.KeyMsg(tui.Key(tui.KeyType.runes, ctrl: true, runes: [0x70])),
+      );
+
+      expect(tester.locateText('PROBE:ctrl+p'), isNotNull);
     });
   });
 
@@ -486,4 +531,36 @@ void main() {
       expect(ctrl.model.value, equals('z'));
     });
   });
+}
+
+class _KeyProbe extends StatefulWidget {
+  _KeyProbe();
+
+  @override
+  State<_KeyProbe> createState() => _KeyProbeState();
+}
+
+class _KeyProbeState extends State<_KeyProbe> {
+  String _status = 'none';
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is! tui.KeyMsg) return null;
+
+    var label = msg.key.char ?? '';
+    if (msg.key.ctrl && msg.key.runes.isNotEmpty) {
+      label = 'ctrl+${String.fromCharCode(msg.key.runes.first)}';
+    }
+    if (label.isEmpty) {
+      label = msg.key.type.name;
+    }
+
+    setState(() => _status = label);
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('PROBE:$_status');
+  }
 }

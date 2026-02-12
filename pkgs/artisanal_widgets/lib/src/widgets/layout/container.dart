@@ -114,17 +114,30 @@ class RenderContainer extends RenderBox {
     final mrgH = mrgLeft + mrgRight;
     final mrgV = mrgTop + mrgBottom;
 
-    // Total horizontal/vertical overhead the container itself consumes.
-    final overheadH = padH + bdrH + mrgH;
-    final overheadV = padV + bdrV + mrgV;
+    // Overhead inside the container box that reduces space available to child.
+    // Margin is outside the container and must not constrain the child.
+    final innerOverheadH = padH + bdrH;
+    final innerOverheadV = padV + bdrV;
 
     var childConstraints = constraints;
     if (width != null || height != null) {
       childConstraints = BoxConstraints(
-        minWidth: width?.toDouble() ?? constraints.minWidth,
-        maxWidth: width?.toDouble() ?? constraints.maxWidth,
-        minHeight: height?.toDouble() ?? constraints.minHeight,
-        maxHeight: height?.toDouble() ?? constraints.maxHeight,
+        minWidth: math.max(
+          0,
+          (width?.toDouble() ?? constraints.minWidth) - innerOverheadH,
+        ),
+        maxWidth: math.max(
+          0,
+          (width?.toDouble() ?? constraints.maxWidth) - innerOverheadH,
+        ),
+        minHeight: math.max(
+          0,
+          (height?.toDouble() ?? constraints.minHeight) - innerOverheadV,
+        ),
+        maxHeight: math.max(
+          0,
+          (height?.toDouble() ?? constraints.maxHeight) - innerOverheadV,
+        ),
       );
     } else if (alignment != null) {
       // Alignment is set — loosen min constraints so the child can size
@@ -132,9 +145,9 @@ class RenderContainer extends RenderBox {
       // matches Flutter's Container behaviour with alignment.
       childConstraints = BoxConstraints(
         minWidth: 0,
-        maxWidth: math.max(0, constraints.maxWidth - overheadH),
+        maxWidth: math.max(0, constraints.maxWidth - innerOverheadH),
         minHeight: 0,
-        maxHeight: math.max(0, constraints.maxHeight - overheadV),
+        maxHeight: math.max(0, constraints.maxHeight - innerOverheadV),
       );
     } else {
       // No explicit size, no alignment — propagate parent constraints
@@ -143,10 +156,10 @@ class RenderContainer extends RenderBox {
       // matches Flutter behaviour where a Container with only `color`
       // (or padding) is constraint-transparent.
       childConstraints = BoxConstraints(
-        minWidth: math.max(0, constraints.minWidth - overheadH),
-        maxWidth: math.max(0, constraints.maxWidth - overheadH),
-        minHeight: math.max(0, constraints.minHeight - overheadV),
-        maxHeight: math.max(0, constraints.maxHeight - overheadV),
+        minWidth: math.max(0, constraints.minWidth - innerOverheadH),
+        maxWidth: math.max(0, constraints.maxWidth - innerOverheadH),
+        minHeight: math.max(0, constraints.minHeight - innerOverheadV),
+        maxHeight: math.max(0, constraints.maxHeight - innerOverheadV),
       );
     }
     _child?.layout(childConstraints);
@@ -235,8 +248,8 @@ class RenderContainer extends RenderBox {
   @override
   String paint() {
     final content = _child?.paint() ?? '';
-    final widthForPaint = _resolvedWidth ?? width;
-    final heightForPaint = _resolvedHeight ?? height;
+    final widthForPaint = (_resolvedWidth ?? width) ?? size.width.toInt();
+    final heightForPaint = (_resolvedHeight ?? height) ?? size.height.toInt();
     final key = (
       content,
       padding,

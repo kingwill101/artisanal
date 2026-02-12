@@ -100,6 +100,16 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
   w.Widget build(w.BuildContext context) {
     if (!widget.open) return widget.child;
 
+    final theme = w.ThemeScope.of(context);
+    final cpTheme = theme.commandPaletteTheme;
+    final dialogBg = cpTheme?.background ?? OC.backgroundPanel;
+    final dialogFg = cpTheme?.foreground ?? OC.text;
+    final selectedBg = cpTheme?.selectedBackground ?? OC.backgroundElement;
+    final selectedFg = cpTheme?.selectedForeground ?? OC.text;
+    final headerFg = cpTheme?.headerForeground ?? OC.secondary;
+    final shortcutFg = cpTheme?.shortcutForeground ?? OC.textMuted;
+    final searchBg = cpTheme?.searchBackground ?? OC.backgroundElement;
+
     final filtered = _filteredSessions;
 
     // Clamp selection
@@ -120,11 +130,11 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
       // Group header
       listItems.add(
         w.Padding(
-          padding: const w.EdgeInsets.only(left: 2, top: 1, bottom: 0),
+          padding: const w.EdgeInsets.only(left: 3, right: 3, top: 1),
           child: w.Text(
             entry.key,
             style: style.Style()
-              ..foreground(OC.textMuted)
+              ..foreground(headerFg)
               ..bold(),
           ),
         ),
@@ -134,6 +144,9 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
       for (final idx in entry.value) {
         final session = filtered[idx];
         final isSelected = idx == _selectedIndex;
+        final rowFg = isSelected ? selectedFg : dialogFg;
+        final rowHintFg = isSelected ? selectedFg : shortcutFg;
+        final markerColor = isSelected ? selectedFg : OC.primary;
 
         listItems.add(
           w.GestureDetector(
@@ -142,8 +155,8 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
               return null;
             },
             child: w.Container(
-              color: isSelected ? OC.backgroundElement : null,
-              padding: const w.EdgeInsets.only(left: 2, right: 2),
+              color: isSelected ? selectedBg : null,
+              padding: const w.EdgeInsets.only(left: 3, right: 3),
               child: w.Row(
                 children: [
                   // Busy indicator or bullet
@@ -151,22 +164,21 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
                     w.SpinnerIndicator(
                       frames: _brailleFrames,
                       interval: const Duration(milliseconds: 80),
-                      color: OC.primary,
+                      color: markerColor,
                     )
                   else if (session.isCurrent)
                     w.Text(
-                      '\u25cf',
-                      style: style.Style()..foreground(OC.primary),
+                      '\u00b7',
+                      style: style.Style()..foreground(markerColor),
                     )
                   else
-                    w.Text(' ', style: style.Style()..foreground(OC.textMuted)),
+                    w.Text(' ', style: style.Style()..foreground(rowHintFg)),
                   w.SizedBox(width: 1),
                   // Title
                   w.Expanded(
                     child: w.Text(
                       session.title,
-                      style: style.Style()
-                        ..foreground(isSelected ? OC.text : OC.textMuted),
+                      style: style.Style()..foreground(rowFg),
                       softWrap: false,
                     ),
                   ),
@@ -174,7 +186,7 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
                   w.Text(
                     session.timeAgo,
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(rowHintFg)
                       ..dim(),
                   ),
                 ],
@@ -187,108 +199,100 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
 
     // Search input with icon
     final searchRow = w.Container(
-      padding: const w.EdgeInsets.only(left: 2, right: 2),
-      child: w.Row(
-        children: [
-          w.Text('\u{1F50D} ', style: style.Style()..foreground(OC.textMuted)),
-          w.Expanded(
-            child: w.TextField(
-              controller: _searchController,
-              focusId: 'session-list-search',
-              prompt: ' ',
-              placeholder: 'Search sessions...',
-              autofocus: true,
-              onChanged: (text) {
-                setState(() {
-                  _searchQuery = text;
-                  _selectedIndex = 0;
-                });
-              },
+      padding: const w.EdgeInsets.only(left: 4, right: 4),
+      child: w.Container(
+        color: searchBg,
+        padding: const w.EdgeInsets.only(left: 1, right: 1),
+        child: w.Row(
+          children: [
+            w.Text('\u{1F50D}', style: style.Style()..foreground(shortcutFg)),
+            w.SizedBox(width: 1),
+            w.Expanded(
+              child: w.TextField(
+                controller: _searchController,
+                focusId: 'session-list-search',
+                prompt: '',
+                placeholder: 'Search sessions...',
+                autofocus: true,
+                onChanged: (text) {
+                  setState(() {
+                    _searchQuery = text;
+                    _selectedIndex = 0;
+                  });
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
 
     // The dialog content
     final dialog = w.SizedBox(
-      width: 60,
-      height: 20,
+      width: 64,
+      height: 22,
       child: w.Container(
-        color: OC.backgroundPanel,
+        color: dialogBg,
         child: w.Column(
           crossAxisAlignment: w.CrossAxisAlignment.stretch,
           children: [
             // Title bar
             w.Container(
-              padding: const w.EdgeInsets.only(
-                left: 2,
-                right: 2,
-                top: 1,
-                bottom: 0,
-              ),
+              padding: const w.EdgeInsets.only(left: 4, right: 4, top: 1),
               child: w.Row(
                 children: [
                   w.Text(
                     'Sessions',
                     style: style.Style()
-                      ..foreground(OC.text)
+                      ..foreground(dialogFg)
                       ..bold(),
                   ),
                   w.Spacer(),
                   w.Text(
                     'esc',
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(shortcutFg)
                       ..dim(),
                   ),
                 ],
               ),
             ),
-            // Separator
-            w.Container(
-              padding: const w.EdgeInsets.only(left: 1, right: 1),
-              child: w.Container(color: OC.borderSubtle, height: 1),
-            ),
+            w.SizedBox(height: 1),
             // Search input
             searchRow,
-            // Separator
-            w.Container(
-              padding: const w.EdgeInsets.only(left: 1, right: 1),
-              child: w.Container(color: OC.borderSubtle, height: 1),
-            ),
+            w.SizedBox(height: 1),
             // Session list
             w.Expanded(
-              child: w.SingleChildScrollView(
-                child: w.Column(
-                  crossAxisAlignment: w.CrossAxisAlignment.stretch,
-                  children: listItems.isEmpty
-                      ? [
-                          w.Padding(
-                            padding: const w.EdgeInsets.all(2),
-                            child: w.Center(
+              child: w.Container(
+                color: dialogBg,
+                padding: const w.EdgeInsets.only(left: 1, right: 1),
+                child: w.SingleChildScrollView(
+                  child: w.Column(
+                    crossAxisAlignment: w.CrossAxisAlignment.stretch,
+                    children: listItems.isEmpty
+                        ? [
+                            w.Padding(
+                              padding: const w.EdgeInsets.only(
+                                left: 3,
+                                right: 3,
+                              ),
                               child: w.Text(
                                 _searchQuery.isEmpty
                                     ? 'No sessions'
                                     : 'No sessions matching "$_searchQuery"',
-                                style: style.Style()..foreground(OC.textMuted),
+                                style: style.Style()..foreground(shortcutFg),
                               ),
                             ),
-                          ),
-                        ]
-                      : listItems,
+                          ]
+                        : listItems,
+                  ),
                 ),
               ),
             ),
             // Footer hint
             w.Container(
-              padding: const w.EdgeInsets.only(
-                left: 2,
-                right: 2,
-                top: 0,
-                bottom: 0,
-              ),
-              color: OC.backgroundPanel,
+              padding: const w.EdgeInsets.only(left: 4, right: 4, bottom: 1),
+              color: dialogBg,
               child: w.Row(
                 children: [
                   _hintKey('\u2191\u2193'),
@@ -306,7 +310,7 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
                   w.Text(
                     '${filtered.length} session${filtered.length == 1 ? '' : 's'}',
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(shortcutFg)
                       ..dim(),
                   ),
                 ],
@@ -320,6 +324,7 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
     return w.Modal(
       open: true,
       onDismiss: widget.onDismiss,
+      backdropOpacity: 0.72,
       child: widget.child,
       dialog: dialog,
     );

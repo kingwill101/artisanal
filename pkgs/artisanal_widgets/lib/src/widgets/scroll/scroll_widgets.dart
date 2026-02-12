@@ -15,6 +15,7 @@ import 'package:artisanal/tui.dart'
         MouseButton,
         HitTestMouseMsg,
         ZoneInBoundsMsg,
+        TraceTag,
         TuiTrace,
         globalZone;
 import 'package:artisanal/bubbles.dart'
@@ -22,7 +23,8 @@ import 'package:artisanal/bubbles.dart'
 import 'package:artisanal/style.dart' hide Padding;
 import '../core/element.dart' show elementOf, Element, RenderObjectElement;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
-import '../layout/geometry.dart' show BoxConstraints, Size, HitTestResult;
+import '../layout/geometry.dart'
+    show BoxConstraints, Size, HitTestResult, Offset;
 import '../rendering/render_object.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
@@ -30,6 +32,11 @@ import '../theme/theme_scope.dart' show ThemeScope;
 import '../layout/layout_widgets.dart' show EdgeInsets, Padding;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart' show Canvas, StyledString;
+
+void _traceScroll(String message) {
+  if (!TuiTrace.enabled) return;
+  TuiTrace.log(message, tag: TraceTag.scroll);
+}
 
 /// Scroll controller interface for scrollable widgets.
 abstract class ScrollController {
@@ -73,6 +80,15 @@ class WidgetScrollController implements ScrollController {
   int _contentExtent = 0;
   final Set<void Function()> _listeners = <void Function()>{};
 
+  // True while the user is actively dragging a linked scrollbar thumb.
+  // Used by variable-height viewports to avoid anchor corrections that can
+  // fight direct drag intent and feel like compensation jumps.
+  bool _thumbDragActive = false;
+
+  // Latest measured content extent while thumb drag is active.
+  // Shrinks are deferred until drag ends to avoid mid-drag remapping/clamping.
+  int? _deferredContentExtent;
+
   // ---- Selection state ----
 
   /// Start of selection in content coordinates (x, y) where Y includes
@@ -103,6 +119,31 @@ class WidgetScrollController implements ScrollController {
 
   /// Whether a drag-selection is in progress.
   bool get selecting => _selecting;
+
+  /// Whether an attached scrollbar thumb drag is currently active.
+  bool get thumbDragActive => _thumbDragActive;
+
+  /// Marks whether an attached scrollbar thumb drag is active.
+  void setThumbDragActive(bool active) {
+    if (_thumbDragActive == active) return;
+    _thumbDragActive = active;
+    if (!active && _deferredContentExtent != null) {
+      final target = _deferredContentExtent!;
+      _deferredContentExtent = null;
+      if (target != _contentExtent) {
+        final beforeContent = _contentExtent;
+        final beforeOffset = _offset;
+        _contentExtent = target;
+        final clamped = _clampOffset();
+        _traceScroll(
+          'widget_scroll.metrics.deferred '
+          'content=$beforeContent->$_contentExtent '
+          'offset=$beforeOffset->$_offset max=$maxOffset '
+          'clamped=$clamped',
+        );
+      }
+    }
+  }
 
   /// Sets the selection start and end, and notifies listeners.
   void setSelection({
@@ -193,27 +234,77 @@ class WidgetScrollController implements ScrollController {
     required int viewportExtent,
     required int contentExtent,
   }) {
-    _viewportExtent = math.max(0, viewportExtent);
-    _contentExtent = math.max(0, contentExtent);
-    return _clampOffset();
+    final prevViewport = _viewportExtent;
+    final prevContent = _contentExtent;
+    final prevOffset = _offset;
+    final nextViewport = math.max(0, viewportExtent);
+    final incomingContent = math.max(0, contentExtent);
+
+    _viewportExtent = nextViewport;
+    if (_thumbDragActive) {
+      _deferredContentExtent = incomingContent;
+      // Keep content extent fixed while thumb drag is active so the
+      // thumb-to-offset mapping remains stable and does not remap as
+      // variable-height measurements fluctuate.
+    } else {
+      _deferredContentExtent = null;
+      _contentExtent = incomingContent;
+    }
+
+    final clamped = _clampOffset();
+    if (prevViewport != _viewportExtent ||
+        prevContent != _contentExtent ||
+        clamped) {
+      _traceScroll(
+        'widget_scroll.metrics '
+        'view=$prevViewport->$_viewportExtent '
+        'content=$prevContent->$_contentExtent '
+        'incoming=$incomingContent drag=$_thumbDragActive '
+        'offset=$prevOffset->$_offset '
+        'max=$maxOffset clamped=$clamped',
+      );
+    }
+    return clamped;
   }
 
   @override
   bool scrollBy(int delta) {
     if (delta == 0) return false;
+    final before = _offset;
     final next = (_offset + delta).clamp(0, maxOffset);
-    if (next == _offset) return false;
+    if (next == _offset) {
+      _traceScroll(
+        'widget_scroll.scrollBy noop '
+        'delta=$delta offset=$before max=$maxOffset',
+      );
+      return false;
+    }
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'widget_scroll.scrollBy '
+      'delta=$delta from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 
   @override
   bool jumpTo(int offset) {
+    final before = _offset;
     final next = offset.clamp(0, maxOffset);
-    if (next == _offset) return false;
+    if (next == _offset) {
+      _traceScroll(
+        'widget_scroll.jumpTo noop '
+        'target=$offset offset=$before max=$maxOffset',
+      );
+      return false;
+    }
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'widget_scroll.jumpTo '
+      'target=$offset from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 
@@ -234,10 +325,15 @@ class WidgetScrollController implements ScrollController {
   }
 
   bool _clampOffset() {
+    final before = _offset;
     final next = _offset.clamp(0, maxOffset);
     if (next == _offset) return false;
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'widget_scroll.clamp '
+      'from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 }
@@ -571,6 +667,13 @@ class _ViewportState extends State<Viewport> {
       final prev = pane.viewport;
       final (newPane, cmd) = pane.update(local);
       _controller._model = newPane.viewport;
+      _traceScroll(
+        'viewport.mouse '
+        'id=${widget.id} scrollbar=true action=${local.action} '
+        'button=${local.button} local=(${local.x},${local.y}) '
+        'offset=${prev.yOffset}->${newPane.viewport.yOffset} '
+        'max=${_controller.maxOffset} cmd=${cmd != null}',
+      );
       if (!identical(prev, newPane.viewport) || cmd != null) {
         _markNeedsPaint();
       }
@@ -581,6 +684,13 @@ class _ViewportState extends State<Viewport> {
     }
     final prev = _controller.model;
     final (next, cmd) = _controller.update(local);
+    _traceScroll(
+      'viewport.mouse '
+      'id=${widget.id} scrollbar=false action=${local.action} '
+      'button=${local.button} local=(${local.x},${local.y}) '
+      'offset=${prev.yOffset}->${next.yOffset} '
+      'max=${_controller.maxOffset} cmd=${cmd != null}',
+    );
     if (!identical(prev, next) || cmd != null) {
       _markNeedsPaint();
     }
@@ -596,7 +706,9 @@ class _ViewportState extends State<Viewport> {
         y: msg.localY.toInt(),
       );
       if (local.x >= 0 && local.y >= 0) {
-        return _handleLocalMouse(local);
+        final cmd = _handleLocalMouse(local);
+        if (_isWheelEvent(local)) return cmd ?? Cmd.none();
+        return cmd;
       }
     }
 
@@ -605,7 +717,9 @@ class _ViewportState extends State<Viewport> {
       final pos = msg.zone.pos(msg.event);
       if (pos.x >= 0 && pos.y >= 0) {
         final local = msg.event.copyWith(x: pos.x, y: pos.y);
-        return _handleLocalMouse(local);
+        final cmd = _handleLocalMouse(local);
+        if (_isWheelEvent(local)) return cmd ?? Cmd.none();
+        return cmd;
       }
     }
 
@@ -737,8 +851,15 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
   }
 
   bool _scrollBy(int delta) {
+    final before = _effectiveController.offset;
     final changed = _effectiveController.scrollBy(delta);
+    final after = _effectiveController.offset;
     if (changed) _markNeedsPaint();
+    _traceScroll(
+      'single_child_scroll.scrollBy '
+      'id=${widget.id} delta=$delta from=$before to=$after '
+      'max=${_effectiveController.maxOffset} changed=$changed',
+    );
     return changed;
   }
 
@@ -786,8 +907,15 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
           MouseButton.wheelDown => widget.mouseWheelDelta,
           _ => 0,
         };
+        _traceScroll(
+          'single_child_scroll.wheel '
+          'id=${widget.id} local=(${local.x},${local.y}) '
+          'button=${local.button} delta=$delta '
+          'offset=${_effectiveController.offset} '
+          'max=${_effectiveController.maxOffset}',
+        );
         if (delta != 0) _scrollBy(delta);
-        return null;
+        return Cmd.none();
       }
       // Handle selection via mouse press/drag/release.
       if (widget.enableSelection) {
@@ -998,6 +1126,7 @@ class RenderSingleChildViewport extends RenderBox {
 
   @override
   void markDescendantNeedsPaint() {
+    super.markDescendantNeedsPaint();
     invalidateChildPaintCache();
   }
 
@@ -1032,13 +1161,8 @@ class RenderSingleChildViewport extends RenderBox {
     );
     child.layout(childConstraints);
 
-    // Invalidate paint cache if child constraints or size changed, or if
-    // any element was rebuilt this frame (descendant content may have changed
-    // even if the child's size stayed the same).
-    final el = element;
-    final hadBuild = el is Element && el.hadBuildThisFrame;
-    if (hadBuild ||
-        _cachedChildConstraints != childConstraints ||
+    // Invalidate paint cache if child constraints or size changed.
+    if (_cachedChildConstraints != childConstraints ||
         _cachedChildSize != child.size) {
       _cachedChildPaintLines = null;
       _cachedChildConstraints = childConstraints;
@@ -1143,6 +1267,9 @@ class ScrollView extends StatefulWidget {
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
     this.enableSelection = false,
+    this.autoCopySelectionOnMouseUp = false,
+    this.autoCopySelectionOnExit = false,
+    this.clearSelectionAfterAutoCopy = true,
     super.key,
   });
 
@@ -1164,12 +1291,23 @@ class ScrollView extends StatefulWidget {
   /// Double-click selects a word. Ctrl+C copies the selection to clipboard.
   final bool enableSelection;
 
+  /// Whether to auto-copy selected text when mouse button is released.
+  final bool autoCopySelectionOnMouseUp;
+
+  /// Whether to auto-copy selected text immediately when drag leaves the
+  /// scroll view's hit-test area.
+  final bool autoCopySelectionOnExit;
+
+  /// Whether to clear selection after auto-copy.
+  final bool clearSelectionAfterAutoCopy;
+
   @override
   State createState() => _ScrollViewState();
 }
 
 class _ScrollViewState extends State<ScrollView> {
   WidgetScrollController? _ownController;
+  MouseMsg? _lastSelectionHitMouse;
 
   ScrollController get _effectiveController =>
       widget.controller ?? (_ownController ??= WidgetScrollController());
@@ -1214,8 +1352,15 @@ class _ScrollViewState extends State<ScrollView> {
   }
 
   bool _scrollBy(int delta) {
+    final before = _effectiveController.offset;
     final changed = _effectiveController.scrollBy(delta);
+    final after = _effectiveController.offset;
     if (changed) _markNeedsPaint();
+    _traceScroll(
+      'scroll_view.scrollBy '
+      'id=${widget.id} delta=$delta from=$before to=$after '
+      'max=${_effectiveController.maxOffset} changed=$changed',
+    );
     return changed;
   }
 
@@ -1252,6 +1397,9 @@ class _ScrollViewState extends State<ScrollView> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
+      if (widget.enableSelection) {
+        _lastSelectionHitMouse = msg.event;
+      }
       final local = msg.event.copyWith(
         x: msg.localX.toInt(),
         y: msg.localY.toInt(),
@@ -1262,13 +1410,37 @@ class _ScrollViewState extends State<ScrollView> {
           MouseButton.wheelDown => widget.mouseWheelDelta,
           _ => 0,
         };
+        _traceScroll(
+          'scroll_view.wheel '
+          'id=${widget.id} local=(${local.x},${local.y}) '
+          'button=${local.button} delta=$delta '
+          'offset=${_effectiveController.offset} '
+          'max=${_effectiveController.maxOffset}',
+        );
         if (delta != 0) _scrollBy(delta);
-        return null;
+        return Cmd.none();
       }
       // Handle selection via mouse press/drag/release.
       if (widget.enableSelection) {
         final cmd = _handleSelectionMouse(msg);
         if (cmd != null) return cmd;
+      }
+    }
+    if (msg is MouseMsg &&
+        widget.enableSelection &&
+        widget.autoCopySelectionOnExit) {
+      final ctrl = _effectiveController;
+      if (ctrl is WidgetScrollController && ctrl._selecting) {
+        final sameAsHit =
+            _lastSelectionHitMouse != null && msg == _lastSelectionHitMouse;
+        if (!sameAsHit &&
+            (msg.action == MouseAction.motion ||
+                msg.action == MouseAction.release)) {
+          ctrl._selecting = false;
+          return _copyCurrentSelection(
+            clearAfterCopy: widget.clearSelectionAfterAutoCopy,
+          );
+        }
       }
     }
     if (msg is KeyMsg) {
@@ -1308,6 +1480,11 @@ class _ScrollViewState extends State<ScrollView> {
     }
     if (event.action == MouseAction.release && ctrl._selecting) {
       ctrl._selecting = false;
+      if (widget.autoCopySelectionOnMouseUp) {
+        return _copyCurrentSelection(
+          clearAfterCopy: widget.clearSelectionAfterAutoCopy,
+        );
+      }
       return null;
     }
 
@@ -1353,17 +1530,38 @@ class _ScrollViewState extends State<ScrollView> {
 
     if (msg.key.char == 'c' && msg.key.ctrl) {
       if (ctrl.hasSelection) {
-        final ro = _findRenderViewport();
-        if (ro != null) {
-          final lines = _getPaintedContentLines(ro);
-          final text = ctrl.getSelectedText(lines);
-          if (text.isNotEmpty) {
-            return Cmd.setClipboard(text);
-          }
-        }
+        return _copyCurrentSelection(clearAfterCopy: false);
       }
     }
     return null;
+  }
+
+  Cmd? _copyCurrentSelection({required bool clearAfterCopy}) {
+    final ctrl = _effectiveController;
+    if (ctrl is! WidgetScrollController) return null;
+    if (!ctrl.hasSelection) return null;
+
+    final ro = _findRenderViewport();
+    if (ro == null) {
+      if (clearAfterCopy) {
+        ctrl.clearSelection();
+      }
+      return null;
+    }
+
+    final lines = _getPaintedContentLines(ro);
+    final text = ctrl.getSelectedText(lines);
+    if (text.isEmpty) {
+      if (clearAfterCopy) {
+        ctrl.clearSelection();
+      }
+      return null;
+    }
+
+    if (clearAfterCopy) {
+      ctrl.clearSelection();
+    }
+    return Cmd.setClipboard(text);
   }
 
   /// Finds the [RenderSingleChildViewport] owned by this widget.
@@ -1597,6 +1795,7 @@ class _ScrollbarState extends State<Scrollbar> {
 
   @override
   void dispose() {
+    _setThumbDragActive(false);
     widget.controller.removeListener(_markNeedsPaint);
     super.dispose();
   }
@@ -1625,6 +1824,13 @@ class _ScrollbarState extends State<Scrollbar> {
   void _markNeedsPaint() {
     final element = elementOf(widget);
     element?.markNeedsPaint();
+  }
+
+  void _setThumbDragActive(bool active) {
+    final c = widget.controller;
+    if (c is WidgetScrollController) {
+      c.setThumbDragActive(active);
+    }
   }
 
   /// Returns the [RenderScrollbar] owned by this scrollbar widget, or null.
@@ -1725,12 +1931,14 @@ class _ScrollbarState extends State<Scrollbar> {
     if (metrics.thumbExtent <= 0) return;
     if (y >= metrics.thumbTop && y < metrics.thumbTop + metrics.thumbExtent) {
       _dragging = true;
+      _setThumbDragActive(true);
       _dragOffset = y - metrics.thumbTop;
       _captureMouse();
       return;
     }
 
     _dragging = true;
+    _setThumbDragActive(true);
     _dragOffset = metrics.thumbExtent ~/ 2;
     _captureMouse();
     final targetTop = (y - _dragOffset).clamp(0, metrics.maxThumbTop);
@@ -1748,9 +1956,15 @@ class _ScrollbarState extends State<Scrollbar> {
     if (metrics.maxThumbTop <= 0) return;
     final maxOffset = widget.controller.maxOffset;
     final nextOffset = ((thumbTop / metrics.maxThumbTop) * maxOffset).round();
+    final before = widget.controller.offset;
     if (widget.controller.jumpTo(nextOffset)) {
       _markNeedsPaint();
     }
+    _traceScroll(
+      'scrollbar.jump '
+      'id=${widget.id} thumbTop=$thumbTop '
+      'offset=$before->${widget.controller.offset} max=$maxOffset',
+    );
   }
 
   @override
@@ -1762,7 +1976,8 @@ class _ScrollbarState extends State<Scrollbar> {
       // Always handle wheel events regardless of X position (scroll should
       // work anywhere within the scrollbar+content area).
       if (_isWheelEvent(msg.event)) {
-        return _handleLocalScrollbarMouse(msg.event);
+        final cmd = _handleLocalScrollbarMouse(msg.event);
+        return cmd ?? Cmd.none();
       }
       // For press/drag/release, only handle if the click is on the scrollbar
       // track area.  Without this guard, clicks on content would be
@@ -1794,6 +2009,7 @@ class _ScrollbarState extends State<Scrollbar> {
           if (msg.button == MouseButton.left ||
               msg.button == MouseButton.none) {
             _dragging = false;
+            _setThumbDragActive(false);
             _dragOriginY = null;
             _releaseMouse();
             return null;
@@ -1807,6 +2023,7 @@ class _ScrollbarState extends State<Scrollbar> {
         msg.button == MouseButton.left &&
         msg.action == MouseAction.release) {
       _dragging = false;
+      _setThumbDragActive(false);
       _dragOriginY = null;
       _releaseMouse();
     }
@@ -1837,9 +2054,16 @@ class _ScrollbarState extends State<Scrollbar> {
         _ => 0,
       };
       if (delta == 0) return null;
+      final before = widget.controller.offset;
       if (widget.controller.scrollBy(delta)) {
         _markNeedsPaint();
       }
+      _traceScroll(
+        'scrollbar.wheel '
+        'id=${widget.id} button=${local.button} delta=$delta '
+        'offset=$before->${widget.controller.offset} '
+        'max=${widget.controller.maxOffset}',
+      );
       return null;
     }
 
@@ -1856,6 +2080,7 @@ class _ScrollbarState extends State<Scrollbar> {
           break;
         case MouseAction.release:
           _dragging = false;
+          _setThumbDragActive(false);
           _dragOriginY = null;
           break;
         default:
@@ -2483,26 +2708,82 @@ void _drawStyledContent(
 /// rendered children to strings). Stateful children are fully supported.
 ///
 /// Provide a [ScrollController] to share scroll state with a [Scrollbar].
+///
+/// Flutter-like constructors are available:
+/// - [ListView] for an explicit [children] list
+/// - [ListView.builder] for index-based item generation
+/// - [ListView.separated] for generated separators between items
+typedef IndexedWidgetBuilder = Widget Function(BuildContext context, int index);
+
+typedef IndexedSeparatorBuilder =
+    Widget Function(BuildContext context, int index);
+
 class ListView extends StatefulWidget {
   /// Creates a list view that keeps child widgets mounted.
   ListView({
-    required this.children,
+    List<Widget> children = const <Widget>[],
     this.separator = '\n',
     this.controller,
+    this.padding,
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
     super.key,
-  });
+  }) : _children = children,
+       itemBuilder = null,
+       separatorBuilder = null,
+       itemCount = children.length;
 
-  /// Child widgets rendered in order.
+  /// Creates a list view that lazily builds items by index.
+  ListView.builder({
+    required this.itemBuilder,
+    required this.itemCount,
+    this.separator = '\n',
+    this.controller,
+    this.padding,
+    this.handleKeys = true,
+    this.mouseWheelDelta = 3,
+    super.key,
+  }) : assert(itemCount >= 0),
+       _children = null,
+       separatorBuilder = null;
+
+  /// Creates a list view with explicit separators between generated items.
+  ListView.separated({
+    required this.itemBuilder,
+    required this.separatorBuilder,
+    required this.itemCount,
+    this.separator = '\n',
+    this.controller,
+    this.padding,
+    this.handleKeys = true,
+    this.mouseWheelDelta = 3,
+    super.key,
+  }) : assert(itemCount >= 0),
+       _children = null;
+
+  final List<Widget>? _children;
+
+  /// Item builder for [ListView.builder] and [ListView.separated].
+  final IndexedWidgetBuilder? itemBuilder;
+
+  /// Separator builder for [ListView.separated].
+  final IndexedSeparatorBuilder? separatorBuilder;
+
+  /// Number of items produced by [itemBuilder].
+  final int itemCount;
+
+  /// Child widgets rendered in order (explicit list constructor only).
   @override
-  final List<Widget> children;
+  List<Widget> get children => _children ?? const <Widget>[];
 
   /// Text inserted between rendered children.
   final String separator;
 
   /// Optional external scroll controller.
   final ScrollController? controller;
+
+  /// Optional padding around the scrollable content.
+  final EdgeInsets? padding;
 
   /// Whether keyboard keys trigger scrolling.
   final bool handleKeys;
@@ -2609,7 +2890,7 @@ class _ListViewState extends State<ListView> {
           _ => 0,
         };
         if (delta != 0) _scrollBy(delta);
-        return null;
+        return Cmd.none();
       }
     }
     if (widget.handleKeys && msg is KeyMsg) {
@@ -2620,11 +2901,49 @@ class _ListViewState extends State<ListView> {
 
   @override
   Widget build(BuildContext context) {
-    return _ListViewViewport(
+    final builtChildren = _buildChildren(context);
+
+    Widget body = _ListViewViewport(
       controller: _effectiveController,
       separator: widget.separator,
-      children: widget.children,
+      children: builtChildren,
     );
+
+    final padding = widget.padding;
+    if (padding != null) {
+      body = Padding(padding: padding, child: body);
+    }
+
+    return body;
+  }
+
+  List<Widget> _buildChildren(BuildContext context) {
+    final staticChildren = widget._children;
+    if (staticChildren != null) {
+      return staticChildren;
+    }
+
+    final itemBuilder = widget.itemBuilder;
+    if (itemBuilder == null || widget.itemCount <= 0) {
+      return const <Widget>[];
+    }
+
+    final separatorBuilder = widget.separatorBuilder;
+    if (separatorBuilder == null) {
+      return List<Widget>.generate(
+        widget.itemCount,
+        (index) => itemBuilder(context, index),
+      );
+    }
+
+    final result = <Widget>[];
+    for (var i = 0; i < widget.itemCount; i++) {
+      result.add(itemBuilder(context, i));
+      if (i < widget.itemCount - 1) {
+        result.add(separatorBuilder(context, i));
+      }
+    }
+    return result;
   }
 }
 
@@ -2676,15 +2995,11 @@ class _ListViewViewport extends MultiChildRenderObjectWidget {
 /// scroll offset.
 class RenderListViewScrollViewport extends RenderBox {
   RenderListViewScrollViewport({
-    required ScrollController controller,
+    required this.controller,
     required this.separator,
-  }) : _controller = controller;
+  });
 
-  ScrollController _controller;
-  ScrollController get controller => _controller;
-  set controller(ScrollController value) {
-    _controller = value;
-  }
+  ScrollController controller;
 
   String separator;
 
@@ -2701,6 +3016,7 @@ class RenderListViewScrollViewport extends RenderBox {
 
   @override
   void markDescendantNeedsPaint() {
+    super.markDescendantNeedsPaint();
     invalidateChildPaintCache();
   }
 
@@ -2715,22 +3031,26 @@ class RenderListViewScrollViewport extends RenderBox {
     );
     var maxChildWidth = 0.0;
     var totalHeight = 0.0;
+    var y = 0.0;
     final separatorBreaks = _separatorBreaks(separator);
     for (var i = 0; i < children.length; i++) {
-      children[i].layout(childConstraints);
-      maxChildWidth = math.max(maxChildWidth, children[i].size.width);
-      totalHeight += children[i].size.height;
+      final child = children[i];
+      child.layout(childConstraints);
+      child.offset = Offset(0, y);
+
+      maxChildWidth = math.max(maxChildWidth, child.size.width);
+      totalHeight += child.size.height;
+      y += child.size.height;
+
       if (i < children.length - 1) {
         totalHeight += separatorBreaks;
+        y += separatorBreaks;
       }
     }
 
     // Invalidate paint cache if constraints, total height, or child count
-    // changed, or if any element was rebuilt this frame.
-    final el = element;
-    final hadBuild = el is Element && el.hadBuildThisFrame;
-    if (hadBuild ||
-        _cachedChildConstraints != childConstraints ||
+    // changed.
+    if (_cachedChildConstraints != childConstraints ||
         _cachedTotalHeight != totalHeight ||
         _cachedChildCount != children.length) {
       _cachedChildPaintLines = null;
@@ -2743,13 +3063,13 @@ class RenderListViewScrollViewport extends RenderBox {
 
     final viewportHeight = size.height.round();
     final contentHeight = totalHeight.round();
-    if (_controller is WidgetScrollController) {
-      (_controller as WidgetScrollController).updateMetrics(
+    if (controller is WidgetScrollController) {
+      (controller as WidgetScrollController).updateMetrics(
         viewportExtent: viewportHeight,
         contentExtent: contentHeight,
       );
-    } else if (_controller is ListViewController) {
-      final lvc = _controller as ListViewController;
+    } else if (controller is ListViewController) {
+      final lvc = controller as ListViewController;
       lvc.setViewportHeight(viewportHeight);
       lvc.setContentHeight(contentHeight);
     }
@@ -2765,7 +3085,7 @@ class RenderListViewScrollViewport extends RenderBox {
     if (lines.isEmpty) return '';
 
     final viewportHeight = size.height.round();
-    final scrollOffset = _controller.offset.clamp(0, _controller.maxOffset);
+    final scrollOffset = controller.offset.clamp(0, controller.maxOffset);
 
     if (scrollOffset >= lines.length) return '';
     final endLine = math.min(lines.length, scrollOffset + viewportHeight);
@@ -2776,6 +3096,47 @@ class RenderListViewScrollViewport extends RenderBox {
     }
 
     return visible.join('\n');
+  }
+
+  @override
+  bool hitTest(
+    HitTestResult result, {
+    required double localX,
+    required double localY,
+  }) {
+    if (localX < 0 ||
+        localY < 0 ||
+        localX >= size.width ||
+        localY >= size.height) {
+      return false;
+    }
+
+    if (children.isEmpty) return true;
+
+    final offset = controller.offset.clamp(0, controller.maxOffset).toDouble();
+    final contentY = localY + offset;
+    final separatorBreaks = _separatorBreaks(separator).toDouble();
+    var top = 0.0;
+
+    for (var i = 0; i < children.length; i++) {
+      final child = children[i];
+      final bottom = top + child.size.height;
+
+      if (contentY >= top && contentY < bottom) {
+        final childX = localX - child.offset.dx;
+        final childY = contentY - child.offset.dy;
+        child.hitTest(result, localX: childX, localY: childY);
+        break;
+      }
+
+      top = bottom;
+      if (i < children.length - 1) {
+        top += separatorBreaks;
+      }
+    }
+
+    // Capture the hit for wheel/key scrolling even when no child is hit.
+    return true;
   }
 
   List<String> _paintAndCacheChildren() {
@@ -2826,34 +3187,72 @@ class ListViewController implements ScrollController {
   bool setViewportHeight(int height) {
     if (height < 0) height = 0;
     if (_viewportHeight == height) return false;
+    final beforeHeight = _viewportHeight;
+    final beforeOffset = _offset;
     _viewportHeight = height;
-    return _clampOffset();
+    final clamped = _clampOffset();
+    _traceScroll(
+      'list_view.metrics.viewport '
+      'view=$beforeHeight->$_viewportHeight '
+      'offset=$beforeOffset->$_offset max=$maxOffset clamped=$clamped',
+    );
+    return clamped;
   }
 
   /// Updates the content height and clamps offset if needed.
   bool setContentHeight(int height) {
     if (height < 0) height = 0;
     if (_contentHeight == height) return false;
+    final beforeHeight = _contentHeight;
+    final beforeOffset = _offset;
     _contentHeight = height;
-    return _clampOffset();
+    final clamped = _clampOffset();
+    _traceScroll(
+      'list_view.metrics.content '
+      'content=$beforeHeight->$_contentHeight '
+      'offset=$beforeOffset->$_offset max=$maxOffset clamped=$clamped',
+    );
+    return clamped;
   }
 
   @override
   bool scrollBy(int delta) {
     if (delta == 0) return false;
+    final before = _offset;
     final next = (_offset + delta).clamp(0, maxOffset);
-    if (next == _offset) return false;
+    if (next == _offset) {
+      _traceScroll(
+        'list_view.scrollBy noop '
+        'delta=$delta offset=$before max=$maxOffset',
+      );
+      return false;
+    }
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'list_view.scrollBy '
+      'delta=$delta from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 
   @override
   bool jumpTo(int offset) {
+    final before = _offset;
     final next = offset.clamp(0, maxOffset);
-    if (next == _offset) return false;
+    if (next == _offset) {
+      _traceScroll(
+        'list_view.jumpTo noop '
+        'target=$offset offset=$before max=$maxOffset',
+      );
+      return false;
+    }
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'list_view.jumpTo '
+      'target=$offset from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 
@@ -2874,10 +3273,15 @@ class ListViewController implements ScrollController {
   }
 
   bool _clampOffset() {
+    final before = _offset;
     final next = _offset.clamp(0, maxOffset);
     if (next == _offset) return false;
     _offset = next;
     _notifyListeners();
+    _traceScroll(
+      'list_view.clamp '
+      'from=$before to=$_offset max=$maxOffset',
+    );
     return true;
   }
 }
@@ -2901,6 +3305,10 @@ class VirtualListView extends StatefulWidget {
     this.handleKeys = true,
     this.mouseWheelEnabled = true,
     this.mouseWheelDelta = 3,
+    this.enableSelection = false,
+    this.autoCopySelectionOnMouseUp = false,
+    this.autoCopySelectionOnExit = false,
+    this.clearSelectionAfterAutoCopy = true,
     this.controller,
     this.zoneId,
     super.key,
@@ -2939,8 +3347,20 @@ class VirtualListView extends StatefulWidget {
   /// Number of rows scrolled per mouse wheel tick.
   final int mouseWheelDelta;
 
-  /// Optional external list controller.
-  final ListViewController? controller;
+  /// Whether in-app text selection is enabled.
+  final bool enableSelection;
+
+  /// Whether to auto-copy selected text when mouse button is released.
+  final bool autoCopySelectionOnMouseUp;
+
+  /// Whether to auto-copy selected text immediately when drag leaves bounds.
+  final bool autoCopySelectionOnExit;
+
+  /// Whether to clear selection after auto-copy.
+  final bool clearSelectionAfterAutoCopy;
+
+  /// Optional external scroll controller.
+  final ScrollController? controller;
 
   /// Optional mouse zone id override.
   final String? zoneId;
@@ -2950,16 +3370,14 @@ class VirtualListView extends StatefulWidget {
 }
 
 class _VirtualListViewState extends State<VirtualListView> {
-  static const _wheelTickInterval = Duration(milliseconds: 16);
-  static const _wheelBurstWindow = Duration(milliseconds: 120);
-  static const _maxWheelStepPerTick = 12;
+  static const _wheelMinTickInterval = Duration(milliseconds: 6);
 
-  late ListViewController _controller;
+  late ScrollController _controller;
   bool _controllerAttached = false;
-  int _pendingWheelDelta = 0;
-  bool _wheelTickScheduled = false;
+  MouseMsg? _lastSelectionHitMouse;
+  double _wheelAccumulator = 0;
   DateTime? _lastWheelEventAt;
-  int _wheelBurstCount = 0;
+  int _lastWheelDirection = 0;
 
   String get _zoneId => widget.zoneId ?? 'listview-${widget.id}';
 
@@ -2978,7 +3396,7 @@ class _VirtualListViewState extends State<VirtualListView> {
     return null;
   }
 
-  void _attachController(ListViewController? controller) {
+  void _attachController(ScrollController? controller) {
     if (_controllerAttached) {
       _controller.removeListener(_markNeedsPaint);
     }
@@ -3001,60 +3419,61 @@ class _VirtualListViewState extends State<VirtualListView> {
   }
 
   bool _scrollBy(int delta) {
+    final before = _controller.offset;
     final changed = _controller.scrollBy(delta);
+    final after = _controller.offset;
     if (changed) {
       _markNeedsPaint();
     }
+    _traceScroll(
+      'virtual_list.scrollBy '
+      'id=${widget.id} delta=$delta from=$before to=$after '
+      'max=${_controller.maxOffset} changed=$changed',
+    );
     return changed;
   }
 
-  Cmd? _enqueueWheelDelta(int delta) {
+  Cmd? _applyWheelDelta(int delta) {
     if (delta == 0) return null;
+
+    final direction = delta > 0 ? 1 : -1;
+    final beforeAccumulator = _wheelAccumulator;
     final now = DateTime.now();
     final last = _lastWheelEventAt;
-    if (last != null && now.difference(last) <= _wheelBurstWindow) {
-      _wheelBurstCount = (_wheelBurstCount + 1).clamp(0, 8);
-    } else {
-      _wheelBurstCount = 0;
-    }
+    final duplicatePulse =
+        last != null &&
+        now.difference(last) < _wheelMinTickInterval &&
+        _lastWheelDirection == direction;
     _lastWheelEventAt = now;
+    _lastWheelDirection = direction;
 
-    final multiplier = 1 + ((_wheelBurstCount / 2).floor());
-    _pendingWheelDelta += delta * multiplier;
-
-    if (_wheelTickScheduled) return null;
-    _wheelTickScheduled = true;
-    return Cmd.tick(
-      _wheelTickInterval,
-      (_) => _VirtualListWheelTickMsg(widget.id),
-    );
-  }
-
-  Cmd? _handleWheelTick() {
-    _wheelTickScheduled = false;
-    if (_pendingWheelDelta == 0) return null;
-
-    final step = _pendingWheelDelta.clamp(
-      -_maxWheelStepPerTick,
-      _maxWheelStepPerTick,
-    );
-    _pendingWheelDelta -= step;
-    _scrollBy(step);
-
-    if (_pendingWheelDelta == 0) {
-      return null;
+    if (beforeAccumulator != 0 && beforeAccumulator.sign != delta.sign) {
+      _traceScroll(
+        'virtual_list.wheel.flip '
+        'id=${widget.id} accumulator=$beforeAccumulator delta=$delta '
+        'offset=${_controller.offset} max=${_controller.maxOffset}',
+      );
+      _wheelAccumulator = 0;
     }
 
-    _wheelTickScheduled = true;
-    return Cmd.tick(
-      _wheelTickInterval,
-      (_) => _VirtualListWheelTickMsg(widget.id),
+    _wheelAccumulator += delta;
+    final step = _wheelAccumulator.truncate();
+    _wheelAccumulator -= step;
+    final changed = step != 0 && _scrollBy(step);
+
+    _traceScroll(
+      'virtual_list.wheel.apply '
+      'id=${widget.id} delta=$delta step=$step '
+      'accumulator=$beforeAccumulator->$_wheelAccumulator '
+      'duplicate=$duplicatePulse changed=$changed '
+      'offset=${_controller.offset} max=${_controller.maxOffset}',
     );
+    return null;
   }
 
   bool _handleKey(terminal_keys.Key key) {
-    final viewportHeight = _controller.viewportHeight > 0
-        ? _controller.viewportHeight
+    final viewportHeight = _controller.viewportExtent > 0
+        ? _controller.viewportExtent
         : null;
     switch (key.type) {
       case terminal_keys.KeyType.up:
@@ -3101,14 +3520,13 @@ class _VirtualListViewState extends State<VirtualListView> {
 
   @override
   Cmd? handleUpdate(Msg msg) {
-    if (msg is _VirtualListWheelTickMsg && msg.widgetId == widget.id) {
-      return _handleWheelTick();
-    }
-
     Cmd? cmd;
 
     // ---- New: render-tree hit-test dispatch ----
     if (msg is HitTestMouseMsg) {
+      if (widget.enableSelection) {
+        _lastSelectionHitMouse = msg.event;
+      }
       if (widget.mouseWheelEnabled) {
         final local = msg.event.copyWith(
           x: msg.localX.toInt(),
@@ -3118,8 +3536,18 @@ class _VirtualListViewState extends State<VirtualListView> {
           final delta = local.button == MouseButton.wheelUp
               ? -widget.mouseWheelDelta
               : widget.mouseWheelDelta;
-          cmd = _enqueueWheelDelta(delta) ?? cmd;
+          _traceScroll(
+            'virtual_list.wheel.hit '
+            'id=${widget.id} local=(${local.x},${local.y}) '
+            'button=${local.button} delta=$delta '
+            'offset=${_controller.offset} max=${_controller.maxOffset}',
+          );
+          cmd = _applyWheelDelta(delta) ?? cmd;
+          return cmd ?? Cmd.none();
         }
+      }
+      if (widget.enableSelection) {
+        cmd = _handleSelectionMouse(msg) ?? cmd;
       }
     }
 
@@ -3134,23 +3562,161 @@ class _VirtualListViewState extends State<VirtualListView> {
           final delta = local.button == MouseButton.wheelUp
               ? -widget.mouseWheelDelta
               : widget.mouseWheelDelta;
-          cmd = _enqueueWheelDelta(delta) ?? cmd;
+          _traceScroll(
+            'virtual_list.wheel.zone '
+            'id=${widget.id} local=(${local.x},${local.y}) '
+            'button=${local.button} delta=$delta '
+            'offset=${_controller.offset} max=${_controller.maxOffset}',
+          );
+          cmd = _applyWheelDelta(delta) ?? cmd;
+          return cmd ?? Cmd.none();
         }
       }
     }
 
-    if (widget.handleKeys && msg is KeyMsg) {
-      if (_handleKey(msg.key)) return null;
+    if (msg is MouseMsg &&
+        widget.enableSelection &&
+        widget.autoCopySelectionOnExit) {
+      final ctrl = _controller;
+      if (ctrl is WidgetScrollController && ctrl._selecting) {
+        final sameAsHit =
+            _lastSelectionHitMouse != null && msg == _lastSelectionHitMouse;
+        if (!sameAsHit &&
+            (msg.action == MouseAction.motion ||
+                msg.action == MouseAction.release)) {
+          ctrl._selecting = false;
+          return _copyCurrentSelection(
+            clearAfterCopy: widget.clearSelectionAfterAutoCopy,
+          );
+        }
+      }
+    }
+
+    if (msg is KeyMsg) {
+      if (widget.enableSelection) {
+        final selectionCmd = _handleSelectionKey(msg);
+        if (selectionCmd != null) return selectionCmd;
+      }
+      if (widget.handleKeys && _handleKey(msg.key)) {
+        return null;
+      }
     }
 
     return cmd;
   }
-}
 
-class _VirtualListWheelTickMsg extends Msg {
-  const _VirtualListWheelTickMsg(this.widgetId);
+  Cmd? _handleSelectionMouse(HitTestMouseMsg msg) {
+    final ctrl = _controller;
+    if (ctrl is! WidgetScrollController) return null;
 
-  final String widgetId;
+    final event = msg.event;
+    final ro = _findRenderViewport();
+    final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
+    final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
+    final contentX = (event.x - vpGlobalX).toInt();
+    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+
+    if (event.action == MouseAction.motion && ctrl._selecting) {
+      ctrl._selectionEnd = (x: contentX, y: contentY);
+      _markNeedsPaint();
+      return null;
+    }
+    if (event.action == MouseAction.release && ctrl._selecting) {
+      ctrl._selecting = false;
+      if (widget.autoCopySelectionOnMouseUp) {
+        return _copyCurrentSelection(
+          clearAfterCopy: widget.clearSelectionAfterAutoCopy,
+        );
+      }
+      return null;
+    }
+
+    if (event.button == MouseButton.left && event.action == MouseAction.press) {
+      final now = DateTime.now();
+      final pos = (x: contentX, y: contentY);
+
+      if (ctrl._lastClickTime != null &&
+          now.difference(ctrl._lastClickTime!) <
+              const Duration(milliseconds: 500) &&
+          ctrl._lastClickPos == pos) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = ro.allContentLinesForSelection();
+          final (wordStart, wordEnd) = _findWordAt(lines, contentX, contentY);
+          ctrl._selectionStart = (x: wordStart, y: contentY);
+          ctrl._selectionEnd = (x: wordEnd, y: contentY);
+          ctrl._selecting = false;
+          ctrl._lastClickTime = now;
+          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+
+      ctrl._selectionStart = pos;
+      ctrl._selectionEnd = pos;
+      ctrl._selecting = true;
+      ctrl._lastClickTime = now;
+      ctrl._lastClickPos = pos;
+      _markNeedsPaint();
+      return null;
+    }
+
+    return null;
+  }
+
+  Cmd? _handleSelectionKey(KeyMsg msg) {
+    final ctrl = _controller;
+    if (ctrl is! WidgetScrollController) return null;
+    if (msg.key.char == 'c' && msg.key.ctrl && ctrl.hasSelection) {
+      return _copyCurrentSelection(clearAfterCopy: false);
+    }
+    return null;
+  }
+
+  Cmd? _copyCurrentSelection({required bool clearAfterCopy}) {
+    final ctrl = _controller;
+    if (ctrl is! WidgetScrollController) return null;
+    if (!ctrl.hasSelection) return null;
+
+    final ro = _findRenderViewport();
+    if (ro == null) {
+      if (clearAfterCopy) ctrl.clearSelection();
+      return null;
+    }
+
+    final lines = ro.allContentLinesForSelection();
+    final text = ctrl.getSelectedText(lines);
+    if (text.isEmpty) {
+      if (clearAfterCopy) ctrl.clearSelection();
+      return null;
+    }
+
+    if (clearAfterCopy) {
+      ctrl.clearSelection();
+    }
+    return Cmd.setClipboard(text);
+  }
+
+  RenderListViewport? _findRenderViewport() {
+    final el = elementOf(widget);
+    if (el == null) return null;
+    RenderListViewport? result;
+    void visit(Element e) {
+      if (result != null) return;
+      if (e is RenderObjectElement && e.renderObject is RenderListViewport) {
+        result = e.renderObject as RenderListViewport;
+        return;
+      }
+      for (final child in e.children) {
+        visit(child);
+        if (result != null) return;
+      }
+    }
+
+    visit(el);
+    return result;
+  }
 }
 
 class _VirtualListViewport extends MultiChildRenderObjectWidget {
@@ -3166,7 +3732,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     required super.children,
   });
 
-  final ListViewController controller;
+  final ScrollController controller;
   final String zoneId;
   final int? width;
   final int? height;
@@ -3231,7 +3797,7 @@ class RenderListViewport extends RenderBox {
     required this.separator,
   });
 
-  ListViewController controller;
+  ScrollController controller;
   String zoneId;
   int? width;
   int? height;
@@ -3241,6 +3807,8 @@ class RenderListViewport extends RenderBox {
   String separator;
 
   final Map<int, int> _measuredHeights = <int, int>{};
+  final Map<int, _ChildPaintSnapshot> _childPaintCache =
+      <int, _ChildPaintSnapshot>{};
   List<int>? _cachedPrefix;
   int _cachedItemCount = -1;
   int _cachedSeparatorBreaks = -1;
@@ -3260,6 +3828,36 @@ class RenderListViewport extends RenderBox {
   int _cachedVisibleSeparatorBreaks = -1;
   bool _cachedVisibleVariableHeight = false;
 
+  bool _setMetrics({required int viewportExtent, required int contentExtent}) {
+    final c = controller;
+    if (c is WidgetScrollController) {
+      return c.updateMetrics(
+        viewportExtent: viewportExtent,
+        contentExtent: contentExtent,
+      );
+    }
+    if (c is ListViewController) {
+      final changedViewport = c.setViewportHeight(viewportExtent);
+      final changedContent = c.setContentHeight(contentExtent);
+      return changedViewport || changedContent;
+    }
+    return false;
+  }
+
+  bool _setContentExtent(int contentExtent) {
+    final c = controller;
+    if (c is WidgetScrollController) {
+      return c.updateMetrics(
+        viewportExtent: c.viewportExtent,
+        contentExtent: contentExtent,
+      );
+    }
+    if (c is ListViewController) {
+      return c.setContentHeight(contentExtent);
+    }
+    return false;
+  }
+
   void _invalidateVisiblePaintCache() {
     _cachedVisibleContent = null;
     _cachedVisibleOffset = -1;
@@ -3277,11 +3875,13 @@ class RenderListViewport extends RenderBox {
   void _clearMeasurements() {
     _invalidateMeasurements();
     _measuredHeights.clear();
+    _childPaintCache.clear();
     _invalidateVisiblePaintCache();
   }
 
   @override
   void markDescendantNeedsPaint() {
+    super.markDescendantNeedsPaint();
     _needsRepaint = true;
     _invalidateVisiblePaintCache();
   }
@@ -3342,7 +3942,46 @@ class RenderListViewport extends RenderBox {
       _cachedPrefix = null;
       _cachedContentHeight = null;
       _measuredHeights.removeWhere((index, _) => index >= itemCount);
+      _childPaintCache.removeWhere((index, _) => index >= itemCount);
     }
+  }
+
+  ({String text, int measured}) _resolveChildPaint({
+    required int index,
+    required int maxWidth,
+  }) {
+    final child = children[index];
+    final cached = _childPaintCache[index];
+    if (cached != null && cached.maxWidth == maxWidth && !child.paintDirty) {
+      return (text: cached.text, measured: cached.measured);
+    }
+
+    child.layout(
+      BoxConstraints(
+        minWidth: maxWidth.toDouble(),
+        maxWidth: maxWidth.toDouble(),
+      ),
+    );
+    final text = child.paint();
+    final measured = math.max(1, child.size.height.round());
+    _childPaintCache[index] = _ChildPaintSnapshot(
+      text: text,
+      measured: measured,
+      maxWidth: maxWidth,
+    );
+    child.clearPaintDirty();
+    return (text: text, measured: measured);
+  }
+
+  int _resolveAdaptiveEstimate(int baseEstimate) {
+    if (_measuredHeights.isEmpty) return baseEstimate;
+    var measuredTotal = 0;
+    for (final height in _measuredHeights.values) {
+      measuredTotal += height;
+    }
+    final measuredAvg = (measuredTotal / _measuredHeights.length).round();
+    final blended = ((baseEstimate * 2) + (measuredAvg * 3)) ~/ 5;
+    return math.max(1, blended);
   }
 
   int _estimateHeight(int index, int estimate) {
@@ -3396,6 +4035,24 @@ class RenderListViewport extends RenderBox {
       }
     }
     return low.clamp(0, prefix.length - 1);
+  }
+
+  int _offsetForAnchor({
+    required int itemCount,
+    required int separatorBreaks,
+    required int estimate,
+    required int anchorIndex,
+    required int anchorOffsetInItem,
+  }) {
+    if (itemCount <= 0) return 0;
+    final idx = anchorIndex.clamp(0, itemCount - 1);
+    final prefix = _prefixHeights(itemCount, separatorBreaks, estimate);
+    final itemHeight = _estimateHeight(idx, estimate);
+    final stride = itemHeight + (idx < itemCount - 1 ? separatorBreaks : 0);
+    final clampedInItem = stride <= 0
+        ? 0
+        : anchorOffsetInItem.clamp(0, stride - 1);
+    return prefix[idx] + clampedInItem;
   }
 
   @override
@@ -3487,23 +4144,24 @@ class RenderListViewport extends RenderBox {
         _lastMaxWidth = maxWidth;
         _clearMeasurements();
       }
-      final estimate = math.max(1, estimatedItemExtent ?? itemExtent).toInt();
+      final baseEstimate = math
+          .max(1, estimatedItemExtent ?? itemExtent)
+          .toInt();
+      final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
-      if (_needsRepaint) {
-        _invalidateMeasurements();
-      }
       final contentHeight = _estimatedContentHeight(
         itemCount,
         separatorBreaks,
         estimate,
       );
       final layoutHeight = viewportHeight ?? contentHeight;
-      controller.setViewportHeight(layoutHeight.toInt());
-      controller.setContentHeight(contentHeight.toInt());
+      _setMetrics(
+        viewportExtent: layoutHeight.toInt(),
+        contentExtent: contentHeight.toInt(),
+      );
       size = constraints.constrain(
         Size(maxWidth.toDouble(), layoutHeight.toDouble()),
       );
-      _resetRepaintFlag();
       return;
     }
 
@@ -3513,13 +4171,14 @@ class RenderListViewport extends RenderBox {
         : itemCount * itemHeight + (itemCount - 1) * separatorBreaks;
     final layoutHeight = viewportHeight ?? contentHeight;
 
-    controller.setViewportHeight(layoutHeight.toInt());
-    controller.setContentHeight(contentHeight.toInt());
+    _setMetrics(
+      viewportExtent: layoutHeight.toInt(),
+      contentExtent: contentHeight.toInt(),
+    );
 
     size = constraints.constrain(
       Size(maxWidth.toDouble(), layoutHeight.toDouble()),
     );
-    _resetRepaintFlag();
   }
 
   @override
@@ -3528,38 +4187,47 @@ class RenderListViewport extends RenderBox {
     final viewportHeight = size.height.round();
     final separatorBreaks = _separatorBreaks(separator);
     final itemCount = children.length;
-    final el = element;
-    final hadBuild = el is Element && el.hadBuildThisFrame;
+    final hasSelection =
+        controller is WidgetScrollController &&
+        (controller as WidgetScrollController).hasSelection;
     if (itemCount == 0 || viewportHeight <= 0) {
       _invalidateVisiblePaintCache();
       _resetVisibleHitCache();
+      _resetRepaintFlag();
       final manager = globalZone;
       final empty = '';
       return manager == null ? empty : manager.mark(zoneId, empty);
     }
 
     final offset = controller.offset.clamp(0, controller.maxOffset);
-    if (hadBuild) {
-      _invalidateVisiblePaintCache();
-    } else if (_canUseVisiblePaintCache(
-      offset: offset,
-      viewportHeight: viewportHeight,
-      maxWidth: maxWidth,
-      itemCount: itemCount,
-      separatorBreaks: separatorBreaks,
-      isVariableHeight: variableHeight,
-    )) {
+    if (!hasSelection &&
+        _canUseVisiblePaintCache(
+          offset: offset,
+          viewportHeight: viewportHeight,
+          maxWidth: maxWidth,
+          itemCount: itemCount,
+          separatorBreaks: separatorBreaks,
+          isVariableHeight: variableHeight,
+        )) {
       final cached = _cachedVisibleContent!;
+      _resetRepaintFlag();
       final manager = globalZone;
       return manager == null ? cached : manager.mark(zoneId, cached);
     }
 
     if (variableHeight) {
-      final estimate = math.max(1, estimatedItemExtent ?? itemExtent).toInt();
+      final baseEstimate = math
+          .max(1, estimatedItemExtent ?? itemExtent)
+          .toInt();
+      final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
-      ({String visible, bool heightsChanged}) buildVisibleForOffset(
-        int target,
-      ) {
+      ({
+        String visible,
+        bool heightsChanged,
+        int anchorIndex,
+        int anchorOffsetInItem,
+      })
+      buildVisibleForOffset(int target) {
         _resetVisibleHitCache();
         final prefix = _prefixHeights(itemCount, separatorBreaks, estimate);
         var startIndex = _findStartIndex(prefix, target).clamp(0, itemCount);
@@ -3583,15 +4251,9 @@ class RenderListViewport extends RenderBox {
           i++
         ) {
           final itemStart = lineCount;
-          final child = children[i];
-          child.layout(
-            BoxConstraints(
-              minWidth: maxWidth.toDouble(),
-              maxWidth: maxWidth.toDouble(),
-            ),
-          );
-          final text = child.paint();
-          final measured = math.max(1, child.size.height.round());
+          final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+          final text = resolved.text;
+          final measured = resolved.measured;
           if (_measuredHeights[i] != measured) {
             _measuredHeights[i] = measured;
             measuredHeightsChanged = true;
@@ -3619,6 +4281,8 @@ class RenderListViewport extends RenderBox {
         return (
           visible: _sliceLines(content, offsetInItem, viewportHeight),
           heightsChanged: measuredHeightsChanged,
+          anchorIndex: startIndex,
+          anchorOffsetInItem: offsetInItem,
         );
       }
 
@@ -3626,27 +4290,66 @@ class RenderListViewport extends RenderBox {
       var rendered = buildVisibleForOffset(workingOffset);
 
       if (rendered.heightsChanged) {
+        _traceScroll(
+          'virtual_list.measurements_changed '
+          'zone=$zoneId items=$itemCount estimate=$estimate '
+          'offset=$workingOffset max=${controller.maxOffset}',
+        );
         final contentHeight = _estimatedContentHeight(
           itemCount,
           separatorBreaks,
           estimate,
         );
-        final clamped = controller.setContentHeight(contentHeight);
-        if (clamped) {
-          _resetRepaintFlag();
-          final clampedOffset = controller.offset.clamp(
-            0,
-            controller.maxOffset,
+        _setContentExtent(contentHeight);
+
+        // Stabilize viewport anchor when measured heights change: keep the
+        // same first visible item and intra-item line, and move absolute
+        // offset to match the new prefix sum. This prevents apparent jumps
+        // backward/forward while estimates converge during scrolling.
+        final anchorOffset = _offsetForAnchor(
+          itemCount: itemCount,
+          separatorBreaks: separatorBreaks,
+          estimate: estimate,
+          anchorIndex: rendered.anchorIndex,
+          anchorOffsetInItem: rendered.anchorOffsetInItem,
+        ).clamp(0, controller.maxOffset);
+        final currentOffset = controller.offset.clamp(0, controller.maxOffset);
+        final suppressAnchorAdjust =
+            controller is WidgetScrollController &&
+            (controller as WidgetScrollController).thumbDragActive;
+        if (anchorOffset != currentOffset && !suppressAnchorAdjust) {
+          _traceScroll(
+            'virtual_list.anchor_adjust '
+            'zone=$zoneId from=$currentOffset to=$anchorOffset '
+            'anchorIndex=${rendered.anchorIndex} '
+            'anchorInItem=${rendered.anchorOffsetInItem} '
+            'contentHeight=$contentHeight max=${controller.maxOffset}',
           );
-          if (clampedOffset != workingOffset) {
-            workingOffset = clampedOffset;
-            rendered = buildVisibleForOffset(workingOffset);
-          }
+          controller.jumpTo(anchorOffset);
+        } else if (anchorOffset != currentOffset && suppressAnchorAdjust) {
+          _traceScroll(
+            'virtual_list.anchor_skip '
+            'zone=$zoneId from=$currentOffset target=$anchorOffset '
+            'anchorIndex=${rendered.anchorIndex} '
+            'anchorInItem=${rendered.anchorOffsetInItem} '
+            'contentHeight=$contentHeight max=${controller.maxOffset}',
+          );
+        }
+
+        final nextOffset = controller.offset.clamp(0, controller.maxOffset);
+        if (nextOffset != workingOffset) {
+          _traceScroll(
+            'virtual_list.offset_resolved '
+            'zone=$zoneId $workingOffset->$nextOffset max=${controller.maxOffset}',
+          );
+          _resetRepaintFlag();
+          workingOffset = nextOffset;
+          rendered = buildVisibleForOffset(workingOffset);
         }
       }
 
       _storeVisiblePaintCache(
-        visible: rendered.visible,
+        visible: _applySelectionIfNeeded(rendered.visible, workingOffset),
         offset: workingOffset,
         viewportHeight: viewportHeight,
         maxWidth: maxWidth,
@@ -3655,10 +4358,11 @@ class RenderListViewport extends RenderBox {
         isVariableHeight: true,
       );
 
+      _resetRepaintFlag();
       final manager = globalZone;
       return manager == null
-          ? rendered.visible
-          : manager.mark(zoneId, rendered.visible);
+          ? _cachedVisibleContent!
+          : manager.mark(zoneId, _cachedVisibleContent!);
     }
 
     _resetVisibleHitCache();
@@ -3672,26 +4376,19 @@ class RenderListViewport extends RenderBox {
     final buffer = StringBuffer();
     var lineCount = 0;
     for (var i = startIndex; i < itemCount && lineCount < requiredLines; i++) {
-      final child = children[i];
-      child.layout(
-        BoxConstraints(
-          minWidth: maxWidth.toDouble(),
-          maxWidth: maxWidth.toDouble(),
-        ),
-      );
-      final text = child.paint();
+      final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+      final text = resolved.text;
       buffer.write(text);
-      lineCount += Layout.getHeight(text);
+      lineCount += resolved.measured;
       if (i < itemCount - 1 && separator.isNotEmpty) {
         buffer.write(separator);
         lineCount += separatorBreaks;
       }
     }
 
-    final visible = _sliceLines(
-      buffer.toString(),
-      offsetInStride,
-      viewportHeight,
+    final visible = _applySelectionIfNeeded(
+      _sliceLines(buffer.toString(), offsetInStride, viewportHeight),
+      offset,
     );
     _storeVisiblePaintCache(
       visible: visible,
@@ -3702,8 +4399,31 @@ class RenderListViewport extends RenderBox {
       separatorBreaks: separatorBreaks,
       isVariableHeight: false,
     );
+    _resetRepaintFlag();
     final manager = globalZone;
     return manager == null ? visible : manager.mark(zoneId, visible);
+  }
+
+  List<String> allContentLinesForSelection() {
+    if (children.isEmpty) return const <String>[];
+    final maxWidth = size.width.round();
+    final buffer = StringBuffer();
+    for (var i = 0; i < children.length; i++) {
+      final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+      buffer.write(resolved.text);
+      if (i < children.length - 1 && separator.isNotEmpty) {
+        buffer.write(separator);
+      }
+    }
+    return buffer.toString().split('\n');
+  }
+
+  String _applySelectionIfNeeded(String visible, int offset) {
+    final c = controller;
+    if (c is! WidgetScrollController || !c.hasSelection) return visible;
+    final lines = visible.split('\n');
+    final highlighted = _applySelectionHighlighting(lines, offset, c);
+    return highlighted.join('\n');
   }
 }
 
@@ -3717,6 +4437,18 @@ class _VisibleItemHit {
   final int index;
   final int bufferStart;
   final int bufferEnd;
+}
+
+class _ChildPaintSnapshot {
+  const _ChildPaintSnapshot({
+    required this.text,
+    required this.measured,
+    required this.maxWidth,
+  });
+
+  final String text;
+  final int measured;
+  final int maxWidth;
 }
 
 int _separatorBreaks(String separator) {

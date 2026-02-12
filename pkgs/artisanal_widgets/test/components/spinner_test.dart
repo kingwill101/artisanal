@@ -1,9 +1,86 @@
 library;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
+
+class _DelayedSpinnerMountHost extends StatefulWidget {
+  _DelayedSpinnerMountHost();
+
+  @override
+  State createState() => _DelayedSpinnerMountHostState();
+}
+
+class _SpinnerParentRebuildHost extends StatefulWidget {
+  _SpinnerParentRebuildHost();
+
+  @override
+  State createState() => _SpinnerParentRebuildHostState();
+}
+
+class _SpinnerParentRebuildHostState extends State<_SpinnerParentRebuildHost> {
+  var _count = 0;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'r') {
+      setState(() {
+        _count++;
+      });
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('count=$_count'),
+        SpinnerIndicator(
+          frames: const ['a', 'b', 'c', 'd'],
+          interval: const Duration(milliseconds: 80),
+        ),
+      ],
+    );
+  }
+}
+
+String _visibleSpinnerFrame(WidgetTester tester, List<String> frames) {
+  for (final frame in frames) {
+    if (tester.find.text(frame)) return frame;
+  }
+  return '';
+}
+
+class _DelayedSpinnerMountHostState extends State<_DelayedSpinnerMountHost> {
+  var _showSpinner = false;
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 't') {
+      setState(() {
+        _showSpinner = true;
+      });
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('press t'),
+        if (_showSpinner)
+          SpinnerIndicator(
+            frames: const ['1', '2', '3'],
+            interval: const Duration(milliseconds: 100),
+          ),
+      ],
+    );
+  }
+}
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -61,7 +138,7 @@ void main() {
     test('renders first frame by default', () async {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
       try {
-        await tester.pumpWidget(SpinnerIndicator());
+        await tester.pumpWidget(SpinnerIndicator(active: false));
         // Default frames: ['|', '/', '-', '\\']
         // startIndex 0 → first frame is '|'
         expect(tester.find.text('|'), isTrue);
@@ -74,7 +151,11 @@ void main() {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
       try {
         await tester.pumpWidget(
-          SpinnerIndicator(frames: const ['A', 'B', 'C', 'D'], startIndex: 2),
+          SpinnerIndicator(
+            frames: const ['A', 'B', 'C', 'D'],
+            startIndex: 2,
+            active: false,
+          ),
         );
         expect(tester.find.text('C'), isTrue);
       } finally {
@@ -89,6 +170,7 @@ void main() {
           SpinnerIndicator(
             frames: const ['X', 'Y', 'Z'],
             startIndex: 5, // 5 % 3 = 2 → 'Z'
+            active: false,
           ),
         );
         expect(tester.find.text('Z'), isTrue);
@@ -100,7 +182,9 @@ void main() {
     test('custom frames render correctly', () async {
       final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
       try {
-        await tester.pumpWidget(SpinnerIndicator(frames: const ['***']));
+        await tester.pumpWidget(
+          SpinnerIndicator(frames: const ['***'], active: false),
+        );
         expect(tester.find.text('***'), isTrue);
       } finally {
         await tester.dispose();
@@ -130,17 +214,78 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test('active spinner advances frames over time', () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(
+          SpinnerIndicator(
+            frames: const ['1', '2', '3'],
+            interval: const Duration(milliseconds: 40),
+          ),
+        );
+        expect(tester.find.text('1'), isTrue);
+
+        await Future<void>.delayed(const Duration(milliseconds: 65));
+        tester.pump();
+
+        final advanced = tester.find.text('2') || tester.find.text('3');
+        expect(advanced, isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('spinner mounted after startup still starts ticking', () async {
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(_DelayedSpinnerMountHost());
+        expect(tester.find.text('1'), isFalse);
+
+        tester.sendKey('t');
+        tester.pump();
+        expect(tester.find.text('1'), isTrue);
+
+        await Future<void>.delayed(const Duration(milliseconds: 170));
+        tester.pump();
+        final advanced = tester.find.text('2') || tester.find.text('3');
+        expect(advanced, isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('spinner keeps ticking after parent rebuild', () async {
+      const frames = ['a', 'b', 'c', 'd'];
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(_SpinnerParentRebuildHost());
+
+        tester.sendKey('r');
+        tester.pump();
+        final before = _visibleSpinnerFrame(tester, frames);
+        expect(before, isNotEmpty);
+
+        await Future<void>.delayed(const Duration(milliseconds: 220));
+        tester.pump();
+
+        final after = _visibleSpinnerFrame(tester, frames);
+        expect(after, isNotEmpty);
+        expect(after, isNot(equals(before)));
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 
   // ---------------------------------------------------------------------------
   // SpinnerIndicator — handleInit
   // ---------------------------------------------------------------------------
   group('SpinnerIndicator handleInit', () {
-    test('active spinner returns a Cmd from handleInit', () {
+    test('widget-level handleInit returns null', () {
       final spinner = SpinnerIndicator(active: true);
       final cmd = spinner.handleInit();
-      // When active with non-empty frames, handleInit returns an EveryCmd
-      expect(cmd, isNotNull);
+      expect(cmd, isNull);
     });
 
     test('inactive spinner returns null from handleInit', () {
@@ -280,16 +425,24 @@ void main() {
   // SpinnerIndicator — animation tick (deterministic)
   // ---------------------------------------------------------------------------
   group('SpinnerIndicator animation', () {
-    test('active true with non-empty frames produces init cmd', () {
-      // Verifies the timer command would be created.
-      // Actual timer behavior cannot be tested deterministically without
-      // a fake timer mechanism.
+    test('active true with non-empty frames animates when mounted', () async {
       final spinner = SpinnerIndicator(
         frames: const ['A', 'B', 'C'],
         interval: const Duration(milliseconds: 50),
         active: true,
       );
-      expect(spinner.handleInit(), isNotNull);
+      final tester = WidgetTester(screenWidth: 20, screenHeight: 5);
+      try {
+        await tester.pumpWidget(spinner);
+        expect(tester.find.text('A'), isTrue);
+
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        tester.pump();
+
+        expect(tester.find.text('B') || tester.find.text('C'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
     });
 
     test('active false produces no init cmd', () {

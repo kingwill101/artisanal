@@ -171,3 +171,114 @@ class ProgressIndicator extends StatelessWidget {
     return Row(gap: 1, children: [Text(bar), labelWidget]);
   }
 }
+
+/// Flutter-style linear progress indicator.
+///
+/// When [value] is non-null, renders a determinate bar.
+/// When [value] is null, animates an indeterminate segment.
+class LinearProgressIndicator extends StatefulWidget {
+  LinearProgressIndicator({
+    this.value,
+    this.width = 20,
+    this.color,
+    this.backgroundColor,
+    this.interval = const Duration(milliseconds: 90),
+    this.indeterminateChunkSize = 4,
+    super.key,
+  });
+
+  final double? value;
+  final int width;
+  final Color? color;
+  final Color? backgroundColor;
+  final Duration interval;
+  final int indeterminateChunkSize;
+
+  @override
+  State createState() => _LinearProgressIndicatorState();
+}
+
+class _LinearProgressIndicatorState extends State<LinearProgressIndicator>
+    with AnimationMixin {
+  late AnimationController _controller;
+
+  bool get _isIndeterminate => widget.value == null && widget.width > 0;
+
+  Duration get _cycleDuration {
+    final width = math.max(1, widget.width);
+    return widget.interval * width;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = createAnimationController(
+      duration: _cycleDuration,
+      value: 0.0,
+    );
+    _controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  Cmd? handleInit() {
+    if (!_isIndeterminate) return null;
+    return _startIndeterminateAnimation();
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant LinearProgressIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final wasIndeterminate = oldWidget.value == null && oldWidget.width > 0;
+    if (_isIndeterminate) {
+      final needsRestart =
+          !wasIndeterminate ||
+          oldWidget.width != widget.width ||
+          oldWidget.interval != widget.interval;
+      if (needsRestart) {
+        return _startIndeterminateAnimation();
+      }
+    } else if (wasIndeterminate) {
+      _controller.stop();
+      _controller.reset();
+    }
+    return null;
+  }
+
+  Cmd? _startIndeterminateAnimation() {
+    return _controller.repeat(period: _cycleDuration);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.value != null) {
+      return ProgressIndicator(
+        value: widget.value!,
+        width: widget.width,
+        color: widget.color,
+        trackColor: widget.backgroundColor,
+        progressStyle: ProgressStyle.block,
+        showBorder: false,
+      );
+    }
+
+    final width = math.max(1, widget.width);
+    final chunk = widget.indeterminateChunkSize.clamp(1, width);
+    final theme = ThemeScope.of(context);
+    final fill = _copyStyle(Style())..foreground(widget.color ?? theme.primary);
+    final track = _copyStyle(Style())
+      ..foreground(widget.backgroundColor ?? theme.border);
+
+    final activeCells = List<bool>.filled(width, false);
+    final offset = (_controller.value * width).floor() % width;
+    for (var i = 0; i < chunk; i++) {
+      activeCells[(offset + i) % width] = true;
+    }
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < width; i++) {
+      buffer.write(activeCells[i] ? fill.render('█') : track.render('░'));
+    }
+
+    return Text(buffer.toString());
+  }
+}

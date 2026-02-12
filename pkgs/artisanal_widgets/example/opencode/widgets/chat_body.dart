@@ -21,7 +21,7 @@ class ChatBody extends w.StatelessWidget {
   });
 
   final List<ChatMessage> messages;
-  final w.ListViewController? scrollController;
+  final w.WidgetScrollController? scrollController;
   final bool showDiffContextBackground;
 
   @override
@@ -30,7 +30,8 @@ class ChatBody extends w.StatelessWidget {
       return _buildEmptyState(context);
     }
 
-    final controller = scrollController ?? w.ListViewController();
+    final controller = scrollController ?? w.WidgetScrollController();
+    final estimatedItemExtent = _estimatedItemExtent(messages);
     final messageWidgets = <w.Widget>[
       for (var i = 0; i < messages.length; i++)
         MessageWidget(
@@ -38,21 +39,52 @@ class ChatBody extends w.StatelessWidget {
           message: messages[i],
           index: i,
           showDiffContextBackground: showDiffContextBackground,
-          onExpandDelta: (delta) {
-            controller.scrollBy(delta);
-          },
         ),
     ];
 
     return w.Scrollbar(
       controller: controller,
+      gap: 1,
+      trackStyle: style.Style()..foreground(OC.border),
+      thumbStyle: style.Style()..foreground(OC.textMuted),
       child: w.VirtualListView(
         controller: controller,
         variableHeight: true,
-        estimatedItemExtent: 6,
+        estimatedItemExtent: estimatedItemExtent,
+        mouseWheelDelta: 3,
+        enableSelection: true,
+        autoCopySelectionOnMouseUp: true,
+        autoCopySelectionOnExit: true,
+        clearSelectionAfterAutoCopy: true,
         children: messageWidgets,
       ),
     );
+  }
+
+  int _estimatedItemExtent(List<ChatMessage> messages) {
+    if (messages.isEmpty) return 6;
+
+    var diffBlocks = 0;
+    for (final message in messages) {
+      if (message.role != MessageRole.assistant) continue;
+      for (final part in message.parts) {
+        switch (part) {
+          case DiffPart():
+            diffBlocks++;
+          case ToolPart():
+            final hasDiff = part.diff != null && part.diff!.isNotEmpty;
+            if (hasDiff) diffBlocks++;
+          default:
+            break;
+        }
+      }
+    }
+
+    if (diffBlocks == 0) return 6;
+    final diffDensity = diffBlocks / messages.length;
+    if (diffDensity >= 1.0) return 14;
+    if (diffDensity >= 0.5) return 11;
+    return 9;
   }
 
   w.Widget _buildEmptyState(w.BuildContext context) {

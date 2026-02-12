@@ -174,7 +174,13 @@ class _SelectableTextState extends State<SelectableText> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
-      _hitTestedThisFrame = true;
+      final isWheelLike =
+          msg.event.action == MouseAction.wheel ||
+          msg.event.button == MouseButton.wheelUp ||
+          msg.event.button == MouseButton.wheelDown ||
+          msg.event.button == MouseButton.wheelLeft ||
+          msg.event.button == MouseButton.wheelRight;
+      _hitTestedThisFrame = !isWheelLike;
       final cmd = _handleSelectionMouse(msg);
       if (cmd != null) return cmd;
     }

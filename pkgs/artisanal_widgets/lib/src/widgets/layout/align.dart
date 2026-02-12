@@ -22,7 +22,49 @@ class RenderAlign extends RenderBox {
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
     _child?.layout(constraints.loosen());
-    final content = _child?.paint() ?? '';
+
+    final child = _child;
+    final content = child?.paint() ?? '';
+    final contentWidth = Layout.getWidth(content);
+    final contentHeight = Layout.getHeight(content);
+
+    // Match Flutter Align/Center semantics: when width/height factors are not
+    // provided, expand to fill bounded constraints; otherwise shrink-wrap.
+    final resolvedWidth =
+        _resolveDimension(width) ??
+        (constraints.hasBoundedWidth
+            ? constraints.maxWidth.toInt()
+            : contentWidth);
+    final resolvedHeight =
+        _resolveDimension(height) ??
+        (constraints.hasBoundedHeight
+            ? constraints.maxHeight.toInt()
+            : contentHeight);
+
+    if (child != null) {
+      final resolvedAlign = alignment == null
+          ? align
+          : _horizontalFromAlignment(alignment!);
+      final resolvedVertical = alignment == null
+          ? verticalAlign
+          : _verticalFromAlignment(alignment!);
+
+      final maxDx = math.max(0, resolvedWidth - contentWidth);
+      final maxDy = math.max(0, resolvedHeight - contentHeight);
+      final dx = switch (resolvedAlign) {
+        HorizontalAlign.left => 0,
+        HorizontalAlign.center => maxDx ~/ 2,
+        HorizontalAlign.right => maxDx,
+      };
+      final dy = switch (resolvedVertical) {
+        VerticalAlign.top => 0,
+        VerticalAlign.center => maxDy ~/ 2,
+        VerticalAlign.bottom => maxDy,
+      };
+
+      child.offset = Offset(dx.toDouble(), dy.toDouble());
+    }
+
     final rendered = _renderAligned(content);
     _lastPaint = rendered;
     size = constraints.constrain(

@@ -1,7 +1,8 @@
-// ListTile, Accordion & Tooltip Showcase
+// ListTile, Accordion, ExpansionTile & Tooltip Showcase
 //
-// Demonstrates ListTile (with leading/trailing/subtitle), Accordion
-// (expand/collapse), and Tooltip (hover to preview).
+// Demonstrates ListTile variants, Accordion (controlled expand/collapse),
+// ExpansionTile with CheckboxListTile/SwitchListTile/RadioListTile, and
+// Tooltip (hover to preview).
 //
 // Run with: dart run example/list_accordion/main.dart
 
@@ -31,6 +32,11 @@ class _ListAccordionShowcaseState extends w.State<ListAccordionShowcase> {
   final w.WidgetScrollController _scrollController = w.WidgetScrollController();
   bool _acc1 = true;
   bool _acc2 = false;
+  bool _expSettingsOpen = true;
+  bool _expIntegrationsOpen = false;
+  bool _emailAlerts = true;
+  bool _autoDeploy = false;
+  String _buildChannel = 'stable';
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -80,9 +86,12 @@ class _ListAccordionShowcaseState extends w.State<ListAccordionShowcase> {
           child: w.Column(
             gap: 1,
             children: [
-              w.Text('ListTile, Accordion & Tooltip', style: theme.titleLarge),
               w.Text(
-                'Click accordions. Hover tooltip. q to quit.',
+                'ListTile, Accordion, ExpansionTile & Tooltip',
+                style: theme.titleLarge,
+              ),
+              w.Text(
+                'Try accordions, expansion tiles, and tooltips. q to quit.',
                 style: label,
               ),
               w.Divider(width: 55),
@@ -156,6 +165,85 @@ class _ListAccordionShowcaseState extends w.State<ListAccordionShowcase> {
                 expanded: false,
                 enabled: false,
                 child: w.Text('Hidden', style: theme.bodySmall),
+              ),
+              w.Divider(width: 55),
+
+              // -- ExpansionTile + control list tiles --
+              w.Text(
+                'ExpansionTile + Control ListTiles',
+                style: theme.titleMedium,
+              ),
+              w.ExpansionTile(
+                initiallyExpanded: true,
+                title: 'Workspace Preferences',
+                subtitle: _expSettingsOpen ? 'Open' : 'Closed',
+                onExpansionChanged: (value) {
+                  setState(() => _expSettingsOpen = value);
+                  return null;
+                },
+                children: [
+                  w.CheckboxListTile(
+                    value: _emailAlerts,
+                    title: 'Email alerts',
+                    subtitle: 'Notify me when builds fail',
+                    onChanged: (value) {
+                      setState(() => _emailAlerts = value);
+                      return null;
+                    },
+                  ),
+                  w.SwitchListTile(
+                    value: _autoDeploy,
+                    title: 'Auto deploy',
+                    subtitle: 'Deploy automatically after green CI',
+                    onChanged: (value) {
+                      setState(() => _autoDeploy = value);
+                      return null;
+                    },
+                  ),
+                  w.RadioListTile<String>(
+                    value: 'stable',
+                    groupValue: _buildChannel,
+                    title: 'Stable channel',
+                    onChanged: (value) {
+                      setState(() => _buildChannel = value);
+                      return null;
+                    },
+                  ),
+                  w.RadioListTile<String>(
+                    value: 'beta',
+                    groupValue: _buildChannel,
+                    title: 'Beta channel',
+                    onChanged: (value) {
+                      setState(() => _buildChannel = value);
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+              w.ExpansionTile(
+                title: 'Integrations',
+                subtitle: _expIntegrationsOpen
+                    ? '2 connected services'
+                    : 'Click to expand',
+                trailing: w.Badge(_expIntegrationsOpen ? 'Open' : 'Closed'),
+                onExpansionChanged: (value) {
+                  setState(() => _expIntegrationsOpen = value);
+                  return null;
+                },
+                children: [
+                  w.ListTile(
+                    title: 'GitHub',
+                    subtitle: 'Connected',
+                    leading: w.Icon(w.Icons.check, color: theme.success),
+                    dense: true,
+                  ),
+                  w.ListTile(
+                    title: 'Slack',
+                    subtitle: 'Connected',
+                    leading: w.Icon(w.Icons.check, color: theme.success),
+                    dense: true,
+                  ),
+                ],
               ),
               w.Divider(width: 55),
 

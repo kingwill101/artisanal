@@ -2,7 +2,6 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:artisanal/style.dart' as style hide Padding, Align;
-import 'package:artisanal/tui.dart' as tui;
 import 'package:test/test.dart';
 
 // Minimal inline version of the OpenCode layout
@@ -161,7 +160,7 @@ void main() {
       final height = style.Layout.getHeight(output);
       final width = style.Layout.getWidth(output);
       print(
-        'OpenCode layout - Output size: ${width}x${height} (expected 120x40)',
+        'OpenCode layout - Output size: ${width}x$height (expected 120x40)',
       );
 
       final lines = output.split('\n');

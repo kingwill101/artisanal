@@ -3,7 +3,7 @@ import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 class _StatefulBuilder extends w.StatefulWidget {
-  _StatefulBuilder({required this.builder, super.key});
+  _StatefulBuilder({required this.builder});
   final w.Widget Function(
     w.BuildContext context,
     void Function(void Function()) setState,

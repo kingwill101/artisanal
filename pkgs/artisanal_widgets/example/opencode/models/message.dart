@@ -17,6 +17,14 @@ enum PartType { text, tool, reasoning, diff }
 /// Tool status for tool-use parts.
 enum ToolStatus { pending, running, completed, error }
 
+/// File attachment shown on user messages.
+class UserFilePart {
+  const UserFilePart({required this.mime, required this.filename});
+
+  final String mime;
+  final String filename;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Message parts (for assistant messages)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,11 +78,11 @@ class ToolPart extends MessagePart {
   final String? error;
 
   /// Optional unified diff string (for Edit, Write, apply_patch).
-  /// When set, the block tool renders a collapsible diff viewer.
+  /// When set, the block tool renders an inline diff viewer.
   final String? diff;
 }
 
-/// A standalone file diff part — renders a collapsible diff viewer inline
+/// A standalone file diff part — renders an inline diff viewer
 /// in the chat, independent of a tool call.
 class DiffPart extends MessagePart {
   const DiffPart({
@@ -97,7 +105,7 @@ class DiffPart extends MessagePart {
   /// Number of deleted lines.
   final int deletions;
 
-  /// Whether the diff starts expanded.
+  /// Legacy flag kept for sample-data compatibility.
   final bool expanded;
 }
 
@@ -112,20 +120,46 @@ class ChatMessage {
     required this.role,
     this.text,
     this.parts = const [],
+    this.files = const [],
     this.agent = 'code',
     this.modelId,
     this.duration,
     this.timestamp,
+    this.queued = false,
+    this.showCompaction = false,
+    this.errorMessage,
+    this.interrupted = false,
     this.isLast = false,
   });
 
   /// Convenience: user message with plain text.
-  factory ChatMessage.user(String text, {String? id, DateTime? timestamp}) =>
+  factory ChatMessage.user(
+    String text, {
+    String? id,
+    DateTime? timestamp,
+    List<UserFilePart> files = const [],
+    bool queued = false,
+    bool showCompaction = false,
+    String agent = 'code',
+  }) => ChatMessage(
+    id: id ?? 'user-${text.hashCode}',
+    role: MessageRole.user,
+    text: text,
+    files: files,
+    timestamp: timestamp,
+    queued: queued,
+    showCompaction: showCompaction,
+    agent: agent,
+  );
+
+  /// Convenience: system message with plain text.
+  factory ChatMessage.system(String text, {String? id, DateTime? timestamp}) =>
       ChatMessage(
-        id: id ?? 'user-${text.hashCode}',
-        role: MessageRole.user,
+        id: id ?? 'system-${text.hashCode}',
+        role: MessageRole.system,
         text: text,
         timestamp: timestamp,
+        agent: 'system',
       );
 
   /// Convenience: assistant message from parts.
@@ -135,6 +169,8 @@ class ChatMessage {
     String agent = 'code',
     String? modelId,
     Duration? duration,
+    String? errorMessage,
+    bool interrupted = false,
     bool isLast = false,
   }) => ChatMessage(
     id: id ?? 'asst-${parts.hashCode}',
@@ -143,6 +179,8 @@ class ChatMessage {
     agent: agent,
     modelId: modelId,
     duration: duration,
+    errorMessage: errorMessage,
+    interrupted: interrupted,
     isLast: isLast,
   );
 
@@ -155,6 +193,9 @@ class ChatMessage {
   /// For assistant messages: the response parts.
   final List<MessagePart> parts;
 
+  /// For user messages: uploaded/attached files.
+  final List<UserFilePart> files;
+
   /// Agent name (e.g., 'code', 'task').
   final String agent;
 
@@ -165,6 +206,18 @@ class ChatMessage {
   final Duration? duration;
 
   final DateTime? timestamp;
+
+  /// For user messages: indicates queued state badge.
+  final bool queued;
+
+  /// For user messages: show compaction separator after this item.
+  final bool showCompaction;
+
+  /// For assistant messages: top-level model error shown in an error panel.
+  final String? errorMessage;
+
+  /// For assistant messages: message was interrupted/aborted.
+  final bool interrupted;
 
   /// Whether this is the last message in the conversation.
   final bool isLast;

@@ -1,5 +1,5 @@
 //
-// Run with: dart run example/tui/examples/widgets/scroll/main.dart
+// Run with: dart run example/scroll/main.dart
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/style.dart';
@@ -28,10 +28,6 @@ class _ScrollDemoState extends w.State<ScrollDemo> {
   final w.WidgetScrollController _outerScrollController =
       w.WidgetScrollController();
   final w.WidgetScrollController _controller = w.WidgetScrollController();
-  late final List<w.Widget> _items = List<w.Widget>.generate(
-    60,
-    (index) => w.Text('Item ${index + 1}'),
-  );
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -126,10 +122,20 @@ class _ScrollDemoState extends w.State<ScrollDemo> {
                         : const BasicColor('#836bff'),
                   ),
                   hoverThumbChar: ' ',
-                  child: w.ListView(
-                    children: _items,
-                    handleKeys: true,
+                  child: w.ListView.builder(
                     controller: _controller,
+                    handleKeys: true,
+                    itemCount: 60,
+                    itemBuilder: (context, index) {
+                      final item = index + 1;
+                      return w.ListTile(
+                        title: 'Item $item',
+                        subtitle: item.isEven ? 'Even row with subtitle' : null,
+                        leading: w.Text(item.isEven ? '\u2022' : ' '),
+                        trailing: w.Text('#$item'),
+                        dense: true,
+                      );
+                    },
                   ),
                 ),
               ),

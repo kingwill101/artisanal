@@ -13,6 +13,9 @@ class Visibility extends Widget {
   final Widget? replacement;
 
   @override
+  bool get debugRenderObjectPassthrough => true;
+
+  @override
   List<Widget> get children {
     if (visible) return [child];
     if (replacement != null) return [replacement!];

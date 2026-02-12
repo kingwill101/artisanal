@@ -13,6 +13,10 @@ part of 'layout_widgets.dart';
 /// )
 /// ```
 class MarkdownText extends LeafRenderObjectWidget {
+  static const int _globalCacheLimit = 512;
+  static final LinkedHashMap<Object, String> _globalRenderCache =
+      LinkedHashMap<Object, String>();
+
   MarkdownText({
     required this.data,
     this.options,
@@ -70,6 +74,12 @@ class MarkdownText extends LeafRenderObjectWidget {
   Object view() => _render();
 
   String _render() {
+    final cacheKey = _cacheKey();
+    final globalCached = _globalRenderCache[cacheKey];
+    if (globalCached != null) {
+      return buildCachedView<String>(() => globalCached, cacheKey);
+    }
+
     return buildCachedView<String>(() {
       final baseOptions = options ?? const AnsiRendererOptions();
       final effectiveOptions = baseOptions.copyWith(
@@ -83,8 +93,17 @@ class MarkdownText extends LeafRenderObjectWidget {
         content = Layout.truncateLines(content, maxWidth!);
       }
 
+      _cacheRender(cacheKey, content);
+
       return content;
-    }, _cacheKey());
+    }, cacheKey);
+  }
+
+  static void _cacheRender(Object key, String value) {
+    if (_globalRenderCache.length >= _globalCacheLimit) {
+      _globalRenderCache.remove(_globalRenderCache.keys.first);
+    }
+    _globalRenderCache[key] = value;
   }
 
   Object _cacheKey() =>

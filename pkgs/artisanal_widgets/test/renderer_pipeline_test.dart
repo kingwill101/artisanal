@@ -151,9 +151,7 @@ void main() {
       final viewLines = viewOutput.split('\n');
       final viewHeight = style.Layout.getHeight(viewOutput);
       final viewWidth = style.Layout.getWidth(viewOutput);
-      print(
-        'Widget view: ${viewWidth}x${viewHeight} lines=${viewLines.length}',
-      );
+      print('Widget view: ${viewWidth}x$viewHeight lines=${viewLines.length}');
 
       // Now simulate what the renderer does: draw into a ScreenBuffer
       final screen = uv.ScreenBuffer(termWidth, termHeight);
@@ -527,10 +525,7 @@ void main() {
       );
 
       // Extract content the same way the renderer does
-      final String content = switch (view) {
-        View v => v.content,
-        _ => view.toString(),
-      };
+      final String content = view.content;
 
       // Full renderer pipeline
       final screen = uv.ScreenBuffer(termWidth, termHeight);

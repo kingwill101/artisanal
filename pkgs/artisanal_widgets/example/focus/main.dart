@@ -1,5 +1,5 @@
 //
-// Run with: dart run example/tui/examples/widgets/focus/main.dart
+// Run with: dart run example/focus/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/terminal.dart' as term;

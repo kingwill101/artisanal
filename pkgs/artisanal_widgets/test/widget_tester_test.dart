@@ -267,9 +267,11 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      // Wrap in Container so the _ClickableCounter receives loose constraints
-      // and does not fill the entire terminal.
-      await tester.pumpWidget(w.Container(child: _ClickableCounter()));
+      // Constrain the tappable area so a far-corner tap is definitively
+      // outside the widget's render bounds.
+      await tester.pumpWidget(
+        w.Container(width: 20, height: 3, child: _ClickableCounter()),
+      );
       expect(tester.find.text('clicks: 0'), isTrue);
 
       // Tap way outside the content area.

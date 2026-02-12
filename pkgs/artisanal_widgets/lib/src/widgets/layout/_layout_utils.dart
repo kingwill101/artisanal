@@ -168,6 +168,7 @@ void _drawStyledContent(
   final styledBounds = StyledString(content).bounds();
   final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
   StyledString(content).draw(tempCanvas, tempCanvas.bounds());
+  final terminalBg = _colorToUvColor(currentTheme.background);
 
   for (var y = 0; y < styledBounds.height; y++) {
     for (var x = 0; x < styledBounds.width; x++) {
@@ -185,6 +186,23 @@ void _drawStyledContent(
       // because Layout.place() padding produces isEmpty cells that would
       // otherwise overwrite the bg-filled canvas.
       if (srcCell.isEmpty && (transparent || bgStyle.bg != null)) continue;
+
+      // Styled text often ends with a reset that reverts to terminal default
+      // background. When those reset-derived spaces are parsed back into cells,
+      // they look like explicitly colored spaces and would incorrectly punch
+      // holes through container backgrounds. Treat this specific shape as
+      // transparent so the container's prefilled background remains visible.
+      if (bgStyle.bg != null &&
+          terminalBg != null &&
+          srcCell.content == ' ' &&
+          srcCell.width == 1 &&
+          srcCell.style.fg == null &&
+          srcCell.style.bg == terminalBg &&
+          srcCell.style.underlineColor == null &&
+          srcCell.style.underline == UnderlineStyle.none &&
+          srcCell.style.attrs == 0) {
+        continue;
+      }
 
       final mergedStyle = srcCell.style.bg == null && bgStyle.bg != null
           ? srcCell.style.copyWith(bg: bgStyle.bg)

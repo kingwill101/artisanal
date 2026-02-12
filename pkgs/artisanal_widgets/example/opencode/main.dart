@@ -15,6 +15,7 @@ import 'models/chat_model.dart';
 import 'models/message.dart';
 import 'theme.dart';
 import 'widgets/chat_body.dart';
+import 'widgets/copy_toast.dart';
 import 'widgets/footer_bar.dart';
 import 'widgets/home_view.dart';
 import 'widgets/prompt_input.dart';
@@ -397,6 +398,7 @@ List<w.CommandPaletteItem> _sampleCommands() {
       group: 'Session',
     ),
     w.CommandPaletteItem(label: 'Clear Messages', group: 'Session'),
+    w.CommandPaletteItem(label: 'Exit', shortcut: 'ctrl+c', group: 'Session'),
     w.CommandPaletteItem(
       label: 'Toggle Sidebar',
       shortcut: 'ctrl+b',
@@ -709,21 +711,38 @@ class OpenCodeApp extends w.StatefulWidget {
   w.State createState() => _OpenCodeAppState();
 }
 
+class _HideCopyToastMsg extends tui.Msg {
+  const _HideCopyToastMsg(this.token);
+  final int token;
+}
+
 class _OpenCodeAppState extends w.State<OpenCodeApp> {
   late ChatModel _model;
-  final _scrollController = w.ListViewController();
+  final _scrollController = w.WidgetScrollController();
+  final _promptController = w.TextFieldController();
   bool _commandPaletteOpen = false;
   bool _sessionListOpen = false;
   bool _themeListOpen = false;
   String _currentThemeName = openCodeDefaultThemeName;
   List<String> _themeOptions = const [openCodeDefaultThemeName];
+  String? _copyToastMessage;
+  int _copyToastToken = 0;
 
   @override
   void initState() {
     super.initState();
     _model = _initialModel();
+    if (_model.inputText.isNotEmpty) {
+      _promptController.text = _model.inputText;
+    }
     _currentThemeName = currentOpenCodeThemeName();
     _loadThemeOptions();
+  }
+
+  @override
+  void dispose() {
+    _promptController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadThemeOptions() async {
@@ -749,6 +768,29 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     });
   }
 
+  bool _isCtrlCShortcut(tui.Key key) {
+    if (!key.ctrl || key.alt || key.meta || key.hyper || key.superKey) {
+      return false;
+    }
+    if (key.runes.isEmpty) return false;
+    if (key.runes.length == 1 && key.runes.first == 0x03) {
+      return true;
+    }
+    final char = key.char;
+    return char != null && char.toLowerCase() == 'c';
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.InterruptMsg) {
+      return tui.Cmd.quit();
+    }
+    if (msg is tui.KeyMsg && _isCtrlCShortcut(msg.key)) {
+      return tui.Cmd.quit();
+    }
+    return null;
+  }
+
   @override
   w.Widget build(w.BuildContext context) {
     final theme = openCodeTheme();
@@ -758,7 +800,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
     // Helper to wrap content with theme list + session list + command palette
     w.Widget wrapWithOverlays(w.Widget content) {
-      return ThemeListDialog(
+      final overlays = ThemeListDialog(
         open: _themeListOpen,
         themes: _themeOptions,
         currentTheme: _currentThemeName,
@@ -784,7 +826,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
                 _model = ChatModel(
                   route: AppRoute.session,
                   messages: _model.messages,
-                  inputText: _model.inputText,
+                  inputText: _promptController.text,
                   modelName: _model.modelName,
                   providerName: _model.providerName,
                   agentName: _model.agentName,
@@ -804,7 +846,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
                 _model = ChatModel(
                   route: AppRoute.session,
                   messages: _model.messages,
-                  inputText: _model.inputText,
+                  inputText: _promptController.text,
                   modelName: _model.modelName,
                   providerName: _model.providerName,
                   agentName: _model.agentName,
@@ -826,7 +868,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           child: w.CommandPalette(
             open: _commandPaletteOpen,
             title: 'Commands',
-            hint: 'Type to search commands...',
+            hint: 'Search',
             backdropOpacity: 0.7,
             items: _sampleCommands(),
             onDismiss: () {
@@ -834,6 +876,12 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
               return null;
             },
             onSelect: (item) {
+              if (item.label == 'Exit') {
+                setState(() {
+                  _commandPaletteOpen = false;
+                });
+                return tui.Cmd.quit();
+              }
               setState(() {
                 _commandPaletteOpen = false;
                 if (item.label == 'Session List') {
@@ -849,6 +897,27 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           ),
         ),
       );
+
+      return w.Stack(
+        fit: w.StackFit.expand,
+        children: [
+          overlays,
+          if (_copyToastMessage != null)
+            w.Positioned(
+              top: 1,
+              left: 0,
+              right: 0,
+              child: w.IgnorePointer(
+                child: w.Center(
+                  child: w.ConstrainedBox(
+                    constraints: w.BoxConstraints(maxWidth: 38),
+                    child: CopyToast(message: _copyToastMessage!),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
     }
 
     // Home view — landing screen
@@ -860,6 +929,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
             color: OC.background,
             child: HomeView(
               model: _model,
+              promptController: _promptController,
               onSubmit: (text) {
                 setState(() {
                   _model = ChatModel(
@@ -892,6 +962,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     final mainLayout = SessionShell(
       model: _model,
       scrollController: _scrollController,
+      promptController: _promptController,
     );
 
     // Wrap with theme + session list + command palette
@@ -905,43 +976,28 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.ClipboardSetMsg) {
+      final token = ++_copyToastToken;
+      setState(() {
+        _copyToastMessage = 'Copied to clipboard';
+      });
+      return tui.Cmd.delayed(
+        const Duration(milliseconds: 1600),
+        () => _HideCopyToastMsg(token),
+      );
+    }
+
+    if (msg is _HideCopyToastMsg) {
+      if (msg.token == _copyToastToken && _copyToastMessage != null) {
+        setState(() {
+          _copyToastMessage = null;
+        });
+      }
+      return null;
+    }
+
     if (msg is tui.KeyMsg) {
       final key = msg.key;
-
-      // q to quit (only when overlays are closed and no modifiers)
-      if (key.char == 'q' &&
-          !key.ctrl &&
-          !key.alt &&
-          !_commandPaletteOpen &&
-          !_sessionListOpen &&
-          !_themeListOpen) {
-        // On home view, quit. On session view, go back to home.
-        if (_model.route == AppRoute.session) {
-          setState(() {
-            _model = ChatModel(
-              route: AppRoute.home,
-              messages: _model.messages,
-              inputText: _model.inputText,
-              modelName: _model.modelName,
-              providerName: _model.providerName,
-              agentName: _model.agentName,
-              sessionTitle: _model.sessionTitle,
-              contextTokens: _model.contextTokens,
-              contextPercentage: _model.contextPercentage,
-              cost: _model.cost,
-              sidebar: _model.sidebar,
-              sidebarOpen: _model.sidebarOpen,
-              todos: _model.todos,
-              modifiedFiles: _model.modifiedFiles,
-              mcpServers: _model.mcpServers,
-              lspServers: _model.lspServers,
-              workingDirectory: _model.workingDirectory,
-            );
-          });
-          return tui.Cmd.none();
-        }
-        return tui.Cmd.quit();
-      }
 
       // ctrl+p to toggle command palette
       if (key == tui.Keys.ctrl('p')) {
@@ -967,7 +1023,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           _model = ChatModel(
             route: _model.route,
             messages: _model.messages,
-            inputText: _model.inputText,
+            inputText: _promptController.text,
             modelName: _model.modelName,
             providerName: _model.providerName,
             agentName: _model.agentName,
@@ -995,17 +1051,20 @@ class SessionShell extends w.StatelessWidget {
   SessionShell({
     required this.model,
     required this.scrollController,
+    required this.promptController,
     super.key,
   });
 
   final ChatModel model;
-  final w.ListViewController scrollController;
+  final w.WidgetScrollController scrollController;
+  final w.TextFieldController promptController;
 
   @override
   w.Widget build(w.BuildContext context) {
     final content = SessionContentPane(
       model: model,
       scrollController: scrollController,
+      promptController: promptController,
     );
     if (!model.sidebarOpen) return content;
     return w.Row(
@@ -1022,47 +1081,55 @@ class SessionContentPane extends w.StatelessWidget {
   SessionContentPane({
     required this.model,
     required this.scrollController,
+    required this.promptController,
     super.key,
   });
 
   final ChatModel model;
-  final w.ListViewController scrollController;
+  final w.WidgetScrollController scrollController;
+  final w.TextFieldController promptController;
 
   @override
   w.Widget build(w.BuildContext context) {
     return w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
-        SessionHeader(
-          title: model.sessionTitle.isNotEmpty
-              ? model.sessionTitle
-              : 'New Session',
-          contextTokens: model.contextTokens,
-          contextPercentage: model.contextPercentage,
-          cost: model.cost,
-        ),
         w.Expanded(
           child: w.Container(
             color: OC.background,
-            padding: const w.EdgeInsets.only(left: 2, right: 2),
-            child: ChatBody(
-              messages: model.messages,
-              scrollController: scrollController,
+            padding: const w.EdgeInsets.only(
+              left: 2,
+              right: 2,
+              top: 1,
+              bottom: 1,
             ),
-          ),
-        ),
-        w.Padding(
-          padding: const w.EdgeInsets.only(left: 2, right: 2),
-          child: w.Row(
-            children: [
-              w.Expanded(
-                child: PromptInput(
+            child: w.Column(
+              crossAxisAlignment: w.CrossAxisAlignment.stretch,
+              children: [
+                SessionHeader(
+                  title: model.sessionTitle.isNotEmpty
+                      ? model.sessionTitle
+                      : 'New Session',
+                  contextTokens: model.contextTokens,
+                  contextPercentage: model.contextPercentage,
+                  cost: model.cost,
+                ),
+                w.SizedBox(height: 1),
+                w.Expanded(
+                  child: ChatBody(
+                    messages: model.messages,
+                    scrollController: scrollController,
+                  ),
+                ),
+                w.SizedBox(height: 1),
+                PromptInput(
+                  controller: promptController,
                   agentName: model.agentName,
                   modelName: model.modelName,
                   providerName: model.providerName,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         FooterBar(

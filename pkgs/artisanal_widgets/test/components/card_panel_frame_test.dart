@@ -60,6 +60,32 @@ void main() {
       expect(view, contains('╯'));
     });
 
+    test('keeps frame visuals inside Row render layout', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Row(
+          gap: 1,
+          children: [
+            Text('before'),
+            Frame(
+              border: Border.normal,
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: Text('framed'),
+            ),
+            Text('after'),
+          ],
+        ),
+      );
+
+      expect(tester.view, contains('┌'));
+      expect(tester.view, contains('┐'));
+      expect(tester.view, contains('└'));
+      expect(tester.view, contains('┘'));
+      expect(tester.locateText('framed'), isNotNull);
+    });
+
     test('child is accessible via children getter', () {
       final child = Text('inner');
       final frame = Frame(child: child);
@@ -149,6 +175,36 @@ void main() {
       // so text should not be at (0,0).
       expect(location!.x, greaterThan(0));
       expect(location.y, greaterThan(0));
+    });
+
+    test('styled title line keeps card surface background', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final previousTheme = currentTheme;
+      addTearDown(() => setTheme(previousTheme));
+      setTheme(Theme.dark());
+
+      await tester.pumpWidget(
+        Card(
+          padding: const EdgeInsets.all(1),
+          child: Column(
+            gap: 1,
+            children: [
+              Text('Card Title', style: currentTheme.titleSmall),
+              Text(
+                'A longer detail line that widens the card body.',
+                style: currentTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      final line = tester.view
+          .split('\n')
+          .firstWhere((entry) => entry.contains('Card Title'));
+      expect(line, contains('48;5;236'));
+      expect(line, isNot(contains('39;48;5;233;22m')), reason: line);
     });
 
     test('has unique id', () {

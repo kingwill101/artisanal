@@ -221,6 +221,7 @@ class _CommandPaletteState extends State<CommandPalette> {
     final media = MediaQuery.of(context);
 
     final bg = widget.background ?? cpTheme?.background ?? theme.surface;
+    final fg = cpTheme?.foreground ?? theme.onSurface;
     final selBg =
         widget.selectedBackground ??
         cpTheme?.selectedBackground ??
@@ -231,7 +232,8 @@ class _CommandPaletteState extends State<CommandPalette> {
         theme.resolvedOnHighlight;
     final headerFg = cpTheme?.headerForeground ?? theme.muted;
     final shortcutFg = cpTheme?.shortcutForeground ?? theme.muted;
-    final bdr = widget.border ?? cpTheme?.border ?? Border.rounded;
+    final searchBg = cpTheme?.searchBackground ?? theme.background;
+    final bdr = widget.border ?? cpTheme?.border;
     final bdrColor = widget.borderColor ?? cpTheme?.borderColor ?? theme.border;
     final paletteWidth =
         widget.width ??
@@ -244,10 +246,13 @@ class _CommandPaletteState extends State<CommandPalette> {
     final headerStyle = _copyStyle(theme.labelSmall)
       ..foreground(headerFg)
       ..bold();
-    final normalStyle = _copyStyle(theme.bodyMedium)
-      ..foreground(theme.onSurface);
-    final selectedStyle = _copyStyle(theme.bodyMedium)..foreground(selFg);
+    final normalStyle = _copyStyle(theme.bodyMedium)..foreground(fg);
+    final selectedStyle = _copyStyle(theme.bodyMedium)
+      ..foreground(selFg)
+      ..bold();
     final shortcutStyle = _copyStyle(theme.labelSmall)..foreground(shortcutFg);
+    final selectedShortcutStyle = _copyStyle(theme.labelSmall)
+      ..foreground(selFg);
 
     // Build grouped item list
     final rows = <Widget>[];
@@ -264,7 +269,7 @@ class _CommandPaletteState extends State<CommandPalette> {
         }
         rows.add(
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 1),
+            padding: const EdgeInsets.only(left: 3, right: 3),
             child: Text(item.group!, style: headerStyle),
           ),
         );
@@ -273,16 +278,28 @@ class _CommandPaletteState extends State<CommandPalette> {
       // Item row
       final isSelected = i == _selectedIndex;
       final itemStyle = isSelected ? selectedStyle : normalStyle;
+      final itemShortcutStyle = isSelected
+          ? selectedShortcutStyle
+          : shortcutStyle;
 
       Widget row = Row(
         children: [
           Expanded(child: Text(item.label, style: itemStyle, softWrap: false)),
+          if (item.description != null && item.description!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 1),
+              child: Text(
+                item.description!,
+                style: itemShortcutStyle,
+                softWrap: false,
+              ),
+            ),
           if (item.shortcut != null)
             Padding(
               padding: const EdgeInsets.only(left: 2),
               child: Text(
                 item.shortcut!,
-                style: shortcutStyle,
+                style: itemShortcutStyle,
                 softWrap: false,
               ),
             ),
@@ -294,9 +311,9 @@ class _CommandPaletteState extends State<CommandPalette> {
           setState(() => _selectedIndex = i);
           return _selectCurrent();
         },
-        child: Frame(
-          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 0),
-          background: isSelected ? selBg : bg,
+        child: Container(
+          color: isSelected ? selBg : null,
+          padding: const EdgeInsets.only(left: 3, right: 3),
           child: row,
         ),
       );
@@ -312,7 +329,7 @@ class _CommandPaletteState extends State<CommandPalette> {
                 child: Text(
                   widget.title!,
                   style: _copyStyle(theme.titleSmall)
-                    ..foreground(theme.onSurface)
+                    ..foreground(fg)
                     ..bold(),
                 ),
               ),
@@ -324,42 +341,71 @@ class _CommandPaletteState extends State<CommandPalette> {
           )
         : null;
 
-    final listHeight = math.min(rows.length + 1, maxH - 4);
+    final reservedRows = (titleRow != null ? 5 : 3);
+    final availableListRows = math.max(3, maxH - reservedRows);
+    final listHeight = math.max(
+      3,
+      math.min(rows.length + 1, availableListRows),
+    );
+
+    final listBody = rows.isEmpty
+        ? Padding(
+            padding: const EdgeInsets.only(left: 3, right: 3),
+            child: Text(
+              'No results found',
+              style: _copyStyle(theme.bodySmall)..foreground(theme.muted),
+            ),
+          )
+        : SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: rows,
+            ),
+          );
 
     final dialog = ClipRect(
       child: SizedBox(
         width: paletteWidth,
-        child: Frame(
-          background: bg,
-          border: bdr,
-          borderColor: bdrColor,
-          padding: const EdgeInsets.all(1),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (titleRow != null) titleRow,
-              if (titleRow != null)
-                Divider(style: Style()..foreground(theme.border)),
-              TextField(
-                focusId: 'command-palette-search',
-                placeholder: widget.hint ?? 'Type to search...',
-                onChanged: _onSearchChanged,
-                autofocus: true,
-              ),
-              Divider(style: Style()..foreground(theme.border)),
-              SizedBox(
-                height: listHeight,
-                child: Container(
-                  color: bg,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: rows,
+        child: Container(
+          color: bg,
+          child: Frame(
+            border: bdr,
+            borderColor: bdrColor,
+            padding: const EdgeInsets.only(top: 1, bottom: 1),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (titleRow != null)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 4),
+                    child: titleRow,
+                  ),
+                SizedBox(height: 1),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4, right: 4),
+                  child: Container(
+                    color: searchBg,
+                    padding: const EdgeInsets.only(left: 1, right: 1),
+                    child: TextField(
+                      focusId: 'command-palette-search',
+                      prompt: '',
+                      placeholder: widget.hint ?? 'Search',
+                      onChanged: _onSearchChanged,
+                      autofocus: true,
                     ),
                   ),
                 ),
-              ),
-            ],
+                SizedBox(height: 1),
+                SizedBox(
+                  height: listHeight,
+                  child: Container(
+                    color: bg,
+                    padding: const EdgeInsets.only(left: 1, right: 1),
+                    child: listBody,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

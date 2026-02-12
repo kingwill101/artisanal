@@ -8,18 +8,25 @@ import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
         Cmd,
+        DebugOverlayModel,
+        EveryCmd,
         FrameTickModel,
         FrameTickMsg,
         HitTestMouseMsg,
         KeyMsg,
         Model,
+        MouseAction,
+        MouseButton,
         MouseMsg,
         Msg,
+        ParallelCmd,
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
+        StreamCmd,
         TuiTrace,
         View,
+        globalZone,
         WindowSizeMsg;
 import 'package:artisanal/style.dart'
     show Color, AdaptiveColor, CompleteAdaptiveColor;
@@ -33,7 +40,7 @@ import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
 import '../components/components_widgets.dart'
-    show DebugOverlay, DebugOverlayPosition;
+    show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
 import '../theme/theme.dart' show hasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
@@ -69,16 +76,16 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         key: _mediaQueryKey,
         data: MediaQueryData.zero,
         metricsHolder: _metricsHolder,
-        child: debugOverlay
-            ? DebugOverlay(
-                key: _debugOverlayKey,
-                position: debugOverlayPosition,
-                child: root,
-              )
-            : root,
+        child: root,
       ),
       owner: BuildOwner(debugRebuilds: debugRebuilds),
     );
+
+    _runtimeDebugOverlay = DebugOverlayModel.initial(
+      enabled: debugOverlay,
+      rendererLabel: 'UV',
+    );
+    _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
   }
 
   Widget root;
@@ -125,7 +132,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
   late final ElementTree _tree;
   static const Key _mediaQueryKey = ValueKey<String>('_media_query_host');
-  static const Key _debugOverlayKey = ValueKey<String>('_debug_overlay');
+  static const int _runtimeOverlayHeight = 8;
   MediaQueryData _mediaQueryData;
   String? _cachedView;
 
@@ -139,6 +146,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// Current state of the debug overlay (mutable, toggled by F12).
   bool _debugOverlayEnabled;
 
+  /// Runtime-composed debug overlay (split-dashboard style).
+  late DebugOverlayModel _runtimeDebugOverlay;
+
+  /// Whether overlay composition must be refreshed even if base tree is cached.
+  bool _overlayDirty = false;
+
   /// Whether the debug overlay is currently visible.
   bool get debugOverlayEnabled => _debugOverlayEnabled;
 
@@ -149,7 +162,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   RenderMetrics? _latestRenderMetrics;
 
   @override
-  bool get wantsFrameTicks => handleFrameTick;
+  bool get wantsFrameTicks => handleFrameTick || _debugOverlayEnabled;
 
   @override
   bool get wantsRenderMetrics => enableRenderMetrics;
@@ -178,7 +191,16 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     final cmds = <Cmd>[Cmd.requestBackgroundColorReport()];
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
-    return Cmd.batch(cmds);
+    return ParallelCmd(cmds);
+  }
+
+  Cmd? _coalesceCommands(List<Cmd> cmds) {
+    if (cmds.isEmpty) return null;
+    if (cmds.length == 1) return cmds.first;
+    final hasRuntimeManaged = cmds.any(
+      (cmd) => cmd is ParallelCmd || cmd is EveryCmd || cmd is StreamCmd,
+    );
+    return hasRuntimeManaged ? ParallelCmd(cmds) : Cmd.batch(cmds);
   }
 
   @override
@@ -189,41 +211,55 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       TuiTrace.log('widget_app.update start ${msg.runtimeType}');
     }
 
-    if (msg is FrameTickMsg && !handleFrameTick) {
-      return (this, null);
+    if (msg is FrameTickMsg) {
+      if (_debugOverlayEnabled) {
+        _overlayDirty = true;
+      }
+      if (!handleFrameTick) {
+        return (this, null);
+      }
     }
 
     // --- F12 toggles the built-in debug overlay ---
     if (msg is KeyMsg && msg.key.type == KeyType.f12) {
       _debugOverlayEnabled = !_debugOverlayEnabled;
-      _tree.update(
-        _MediaQueryHost(
-          key: _mediaQueryKey,
-          data: _mediaQueryData,
-          metricsHolder: _metricsHolder,
-          child: _effectiveRoot(),
-        ),
+      _runtimeDebugOverlay = _runtimeDebugOverlay.setEnabled(
+        _debugOverlayEnabled,
       );
-      _dirty = true;
+      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+      _overlayDirty = true;
       return (this, null);
     }
 
-    // Store runtime render metrics but do NOT dispatch to the element tree.
-    // This mirrors the pattern in split_dashboard_demo where
-    // `case RenderMetricsMsg(): return (this, null);` short-circuits.
-    // Dispatching metrics through the tree would trigger rebuilds (and mark
-    // _dirty) on every metrics tick, causing pointless full-tree re-renders
-    // that tank FPS from ~93 to ~24.
-    //
-    // When the debug overlay is visible we mark dirty so it picks up the
-    // latest metrics on the next repaint (metrics interval is typically
-    // 250ms–1s so this is 1–4 extra repaints/sec — acceptable).
+    // Store runtime render metrics but avoid forcing full-tree rebuilds for
+    // WidgetApp's built-in overlay. We compose that overlay outside the tree
+    // from a cached base view (split-dashboard style).
     if (msg is RenderMetricsMsg) {
       _latestRenderMetrics = msg.metrics;
-      // Update the mutable holder so RenderMetricsProvider descendants
-      // (e.g. DebugOverlay) see the latest data on their next build.
+      // Update the mutable holder so RenderMetricsProvider descendants can read
+      // fresh metrics when they rebuild.
       _metricsHolder.metrics = msg.metrics;
+
+      _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
+        metrics: msg.metrics,
+      );
       if (_debugOverlayEnabled) {
+        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+        _overlayDirty = true;
+      }
+
+      // Legacy/manual overlays rendered inside the widget tree still need
+      // a tree update to repaint with the new holder value.
+      final rootWidget = _currentRoot();
+      if (rootWidget is DebugOverlay || rootWidget is PerformanceOverlay) {
+        _tree.update(
+          _MediaQueryHost(
+            key: _mediaQueryKey,
+            data: _mediaQueryData,
+            metricsHolder: _metricsHolder,
+            child: _currentRoot(),
+          ),
+        );
         _dirty = true;
       }
       return (this, null);
@@ -241,9 +277,17 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           key: _mediaQueryKey,
           data: _mediaQueryData,
           metricsHolder: _metricsHolder,
-          child: _effectiveRoot(),
+          child: _currentRoot(),
         ),
       );
+      _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
+        terminalWidth: msg.width,
+        terminalHeight: msg.height,
+      );
+      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+      if (_debugOverlayEnabled) {
+        _overlayDirty = true;
+      }
       _dirty = true;
     }
 
@@ -268,7 +312,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         if (TuiTrace.enabled) {
           TuiTrace.log('widget_app.update end (capture) dirty=$_dirty');
         }
-        return (this, cmds.isEmpty ? null : Cmd.batch(cmds));
+        return (this, _coalesceCommands(cmds));
       }
 
       // --- Render-tree hit-testing (default for widget apps) ---
@@ -319,11 +363,21 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           root = _currentRoot();
           _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
 
-          // Broadcast the raw MouseMsg so that GestureDetectors NOT in the
-          // hit list can detect hover exit (they see a MouseMsg motion event
-          // without a preceding HitTestMouseMsg and call _setHovering(false)).
-          final broadcastCmd = _tree.dispatch(msg);
-          if (broadcastCmd != null) cmds.add(broadcastCmd);
+          // Broadcast raw mouse only when needed for out-of-hit housekeeping
+          // (hover-exit and selection-finalize outside bounds). Avoid doing
+          // this for wheel/press to prevent whole-tree traversals during
+          // scroll bursts.
+          final isWheelLike =
+              msg.action == MouseAction.wheel ||
+              msg.button == MouseButton.wheelUp ||
+              msg.button == MouseButton.wheelDown ||
+              msg.button == MouseButton.wheelLeft ||
+              msg.button == MouseButton.wheelRight;
+          final shouldBroadcastRawMouse = !isWheelLike;
+          if (shouldBroadcastRawMouse) {
+            final broadcastCmd = _tree.dispatch(msg);
+            if (broadcastCmd != null) cmds.add(broadcastCmd);
+          }
 
           // Pick up any additional dirty flags from the broadcast.
           root = _currentRoot();
@@ -331,7 +385,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           if (TuiTrace.enabled) {
             TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
           }
-          return (this, cmds.isEmpty ? null : Cmd.batch(cmds));
+          return (this, _coalesceCommands(cmds));
         }
       }
     }
@@ -369,7 +423,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       TuiTrace.log('widget_app.update end dirty=$_dirty');
     }
 
-    return (this, cmds.isEmpty ? null : Cmd.batch(cmds));
+    return (this, _coalesceCommands(cmds));
   }
 
   @override
@@ -380,8 +434,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     final backgroundChanged =
         preRenderBackgroundColor != _cachedBackgroundColor;
 
+    final canReuseCachedBase =
+        !_dirty && !_tree.hasPaintDirty && _cachedView != null;
+
     if (!_dirty &&
         !backgroundChanged &&
+        !_overlayDirty &&
         _cachedViewObject != null &&
         !_tree.hasPaintDirty) {
       if (TuiTrace.enabled) {
@@ -389,29 +447,50 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       }
       return _cachedViewObject!;
     }
-    final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
-    sw?.start();
-    final content = _tree.render();
-    sw?.stop();
-    if (sw != null) {
-      TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');
+
+    late String baseContent;
+    if (canReuseCachedBase) {
+      baseContent = _cachedView!;
+    } else {
+      final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
+      sw?.start();
+      baseContent = _tree.render();
+      if (scanZones) {
+        final manager = globalZone;
+        if (manager != null) {
+          baseContent = manager.scan(baseContent);
+        }
+      }
+      sw?.stop();
+      if (sw != null) {
+        TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');
+      }
+
+      _cachedView = baseContent;
+      _dirty = false;
     }
-    _cachedView = content;
-    _dirty = false;
+
+    var composedContent = baseContent;
+    if (_debugOverlayEnabled) {
+      composedContent = _runtimeDebugOverlay.compose(baseContent);
+    }
+
     final resolvedBackgroundColor = _resolveTerminalBackgroundColor(
       backgroundColorBuilder?.call() ?? backgroundColor,
     );
     _cachedBackgroundColor = resolvedBackgroundColor;
+    _overlayDirty = false;
+
     if (resolvedBackgroundColor != null) {
       final viewObj = View(
-        content: _cachedView!,
+        content: composedContent,
         backgroundColor: resolvedBackgroundColor,
       );
       _cachedViewObject = viewObj;
       return viewObj;
     }
-    _cachedViewObject = _cachedView;
-    return _cachedView!;
+    _cachedViewObject = composedContent;
+    return composedContent;
   }
 
   Color? _resolveTerminalBackgroundColor(Color? color) {
@@ -459,29 +538,34 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   Widget _currentRoot() {
     final widget = _tree.root.widget;
     if (widget is _MediaQueryHost) {
-      final child = widget.child;
-      // Only unwrap DebugOverlay instances managed by WidgetApp (identified by key).
-      // User-provided DebugOverlay (without _debugOverlayKey) passes through untouched.
-      if (child is DebugOverlay && child.key == _debugOverlayKey) {
-        return child.child;
-      }
-      return child;
+      return widget.child;
     }
     return widget;
   }
 
-  /// Returns the user root widget, optionally wrapped in [DebugOverlay]
-  /// based on the current toggle state.
-  Widget _effectiveRoot() {
-    final userRoot = _currentRoot();
-    if (_debugOverlayEnabled) {
-      return DebugOverlay(
-        key: _debugOverlayKey,
-        position: debugOverlayPosition,
-        child: userRoot,
-      );
-    }
-    return userRoot;
+  DebugOverlayModel _positionRuntimeOverlay(DebugOverlayModel overlay) {
+    final width = _mediaQueryData.size.width.toInt();
+    final height = _mediaQueryData.size.height.toInt();
+    if (width <= 0 || height <= 0) return overlay;
+
+    final panelWidth = overlay.panelWidth;
+    final maxX = (width - panelWidth).clamp(0, width);
+    final maxY = (height - _runtimeOverlayHeight).clamp(0, height);
+
+    final (x, y) = switch (debugOverlayPosition) {
+      DebugOverlayPosition.topLeft => (0, 0),
+      DebugOverlayPosition.topRight => (maxX, 0),
+      DebugOverlayPosition.bottomLeft => (0, maxY),
+      DebugOverlayPosition.bottomRight => (maxX, maxY),
+    };
+
+    return overlay.copyWith(
+      terminalWidth: width,
+      terminalHeight: height,
+      panelX: x,
+      panelY: y,
+      dragging: false,
+    );
   }
 }
 

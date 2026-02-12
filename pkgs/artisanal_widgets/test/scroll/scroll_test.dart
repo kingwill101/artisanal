@@ -5,6 +5,52 @@ import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
+class _PaintCounter {
+  int count = 0;
+}
+
+class _CountingLeaf extends LeafRenderObjectWidget {
+  _CountingLeaf({required this.label, required this.counter});
+
+  final String label;
+  final _PaintCounter counter;
+
+  @override
+  RenderObject createRenderObject() {
+    return _CountingRenderBox(label: label, counter: counter);
+  }
+
+  @override
+  Object view() => label;
+
+  @override
+  void updateRenderObject(RenderObject renderObject) {
+    final ro = renderObject as _CountingRenderBox;
+    ro
+      ..label = label
+      ..counter = counter;
+  }
+}
+
+class _CountingRenderBox extends RenderBox {
+  _CountingRenderBox({required this.label, required this.counter});
+
+  String label;
+  _PaintCounter counter;
+
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    size = constraints.constrain(Size(label.length.toDouble(), 1));
+  }
+
+  @override
+  String paint() {
+    counter.count++;
+    return label;
+  }
+}
+
 void main() {
   // ---------------------------------------------------------------------------
   // ViewportController
@@ -466,6 +512,49 @@ void main() {
       expect(tester.locateText('Item 3'), isNotNull);
     });
 
+    test('builder constructor renders generated items', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 30,
+          height: 8,
+          child: ListView.builder(
+            itemCount: 4,
+            itemBuilder: (context, index) => Text('Built $index'),
+          ),
+        ),
+      );
+
+      expect(tester.locateText('Built 0'), isNotNull);
+      expect(tester.locateText('Built 1'), isNotNull);
+      expect(tester.locateText('Built 2'), isNotNull);
+      expect(tester.locateText('Built 3'), isNotNull);
+    });
+
+    test('separated constructor inserts separator widgets', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 30,
+          height: 8,
+          child: ListView.separated(
+            itemCount: 3,
+            itemBuilder: (context, index) => Text('Row $index'),
+            separatorBuilder: (context, index) => Text('Sep $index'),
+          ),
+        ),
+      );
+
+      expect(tester.locateText('Row 0'), isNotNull);
+      expect(tester.locateText('Sep 0'), isNotNull);
+      expect(tester.locateText('Sep 1'), isNotNull);
+      expect(tester.locateText('Row 2'), isNotNull);
+    });
+
     test('limits visible items by height', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -596,6 +685,49 @@ void main() {
       expect(tester.locateText('Item 1'), isNotNull);
       expect(tester.locateText('Item 2'), isNotNull);
     });
+
+    test(
+      'spinner repaint does not repaint unchanged visible siblings',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 8);
+        addTearDown(() => tester.dispose());
+
+        final counter = _PaintCounter();
+        await tester.pumpWidget(
+          Container(
+            child: VirtualListView(
+              width: 40,
+              height: 5,
+              variableHeight: true,
+              estimatedItemExtent: 2,
+              children: [
+                Row(
+                  children: [
+                    SpinnerIndicator(
+                      frames: const ['1', '2', '3'],
+                      interval: const Duration(milliseconds: 40),
+                    ),
+                    Text(' spinning'),
+                  ],
+                ),
+                _CountingLeaf(label: 'HEAVY-ROW', counter: counter),
+              ],
+            ),
+          ),
+        );
+
+        tester.pump();
+        final baselinePaintCount = counter.count;
+        expect(baselinePaintCount, greaterThan(0));
+
+        await Future<void>.delayed(const Duration(milliseconds: 180));
+        tester.pump();
+
+        final advanced = tester.find.text('2') || tester.find.text('3');
+        expect(advanced, isTrue);
+        expect(counter.count, lessThanOrEqualTo(baselinePaintCount + 1));
+      },
+    );
 
     test('variable height hit testing dispatches taps after scroll', () async {
       final tester = WidgetTester();
@@ -1541,6 +1673,36 @@ void main() {
       expect(tester.locateText('Shared-3'), isNotNull);
       expect(tester.locateText('Shared-0'), isNull);
       // The scrollbar should be visible (view has content).
+      expect(tester.view.isNotEmpty, isTrue);
+    });
+
+    test('ListView.builder and Scrollbar share controller', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = WidgetScrollController();
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 5,
+          child: Scrollbar(
+            controller: ctrl,
+            child: ListView.builder(
+              controller: ctrl,
+              itemCount: 30,
+              itemBuilder: (context, index) => Text('Builder-$index'),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.locateText('Builder-0'), isNotNull);
+
+      ctrl.scrollBy(8);
+      tester.pump();
+
+      expect(tester.locateText('Builder-8'), isNotNull);
+      expect(tester.locateText('Builder-0'), isNull);
       expect(tester.view.isNotEmpty, isTrue);
     });
 

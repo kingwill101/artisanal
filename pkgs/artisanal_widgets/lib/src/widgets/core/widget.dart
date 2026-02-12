@@ -73,6 +73,18 @@ abstract class Widget implements Model {
   /// Whether this widget can receive keyboard focus.
   bool get focusable => false;
 
+  /// Whether this widget is intentionally transparent to render-object layouts.
+  ///
+  /// Render-object parents (for example [Row], [Column], and [Stack]) flatten
+  /// non-render descendants to collect concrete render objects. Widgets that
+  /// extend [Widget] directly and rely on [view] for visual output are dropped
+  /// during that flattening step. Such visual wrappers should instead extend
+  /// [StatelessWidget], [StatefulWidget], or [RenderObjectWidget].
+  ///
+  /// Set this to `true` only for wrappers that deliberately pass through all
+  /// rendering to descendants (for example flex/stack parent-data wrappers).
+  bool get debugRenderObjectPassthrough => false;
+
   /// Access the current theme.
   ///
   /// Returns the global theme instance.

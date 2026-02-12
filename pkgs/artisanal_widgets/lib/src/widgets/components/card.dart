@@ -25,15 +25,17 @@ class Card extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final style = _copyStyle(textStyle ?? theme.bodyMedium)
-      ..foreground(foreground ?? theme.onSurface);
+    final resolvedStyle = (textStyle != null || foreground != null)
+        ? (_copyStyle(textStyle ?? theme.bodyMedium)
+            ..foreground(foreground ?? theme.onSurface))
+        : null;
     return Frame(
       padding: padding ?? const EdgeInsets.all(1),
       margin: margin,
       background: background ?? theme.surface,
       border: border ?? Border.rounded,
       borderColor: borderColor ?? theme.border,
-      style: style,
+      style: resolvedStyle,
       child: child,
     );
   }

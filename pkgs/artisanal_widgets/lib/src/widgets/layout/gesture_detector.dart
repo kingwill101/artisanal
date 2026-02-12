@@ -367,7 +367,13 @@ class _GestureDetectorState extends State<GestureDetector> {
     if (msg is HitTestMouseMsg) {
       // Mark that we received a hit-test this update cycle so the
       // subsequent broadcast MouseMsg doesn't incorrectly fire onExit.
-      _hitTestedThisFrame = true;
+      final isWheelLike =
+          msg.event.action == MouseAction.wheel ||
+          msg.event.button == MouseButton.wheelUp ||
+          msg.event.button == MouseButton.wheelDown ||
+          msg.event.button == MouseButton.wheelLeft ||
+          msg.event.button == MouseButton.wheelRight;
+      _hitTestedThisFrame = !isWheelLike;
       return _handleInBounds(
         msg.event,
         localX: msg.localX.toInt(),
@@ -402,6 +408,9 @@ class _GestureDetectorState extends State<GestureDetector> {
         }
       } else {
         _hitTestedThisFrame = false;
+      }
+      if (!widget.captureMouse) {
+        return null;
       }
       return _handleCapturedMouse(msg);
     }

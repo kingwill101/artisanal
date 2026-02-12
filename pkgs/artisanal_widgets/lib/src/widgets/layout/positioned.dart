@@ -21,6 +21,9 @@ class Positioned extends Widget {
   final num? height;
 
   @override
+  bool get debugRenderObjectPassthrough => true;
+
+  @override
   List<Widget> get children => [child];
 
   @override

@@ -1,6 +1,6 @@
 // WidgetApp Example
 //
-// Run with: dart run example/tui/examples/widgets/widget-app/main.dart
+// Run with: dart run example/widget-app/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;

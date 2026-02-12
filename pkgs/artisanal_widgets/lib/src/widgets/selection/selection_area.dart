@@ -54,7 +54,13 @@ class _SelectionAreaState extends State<SelectionArea> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
-      _childHitTestedThisFrame = true;
+      final isWheelLike =
+          msg.event.action == MouseAction.wheel ||
+          msg.event.button == MouseButton.wheelUp ||
+          msg.event.button == MouseButton.wheelDown ||
+          msg.event.button == MouseButton.wheelLeft ||
+          msg.event.button == MouseButton.wheelRight;
+      _childHitTestedThisFrame = !isWheelLike;
     }
 
     if (msg is MouseMsg) {

@@ -1,8 +1,9 @@
 // Buttons & Badge Showcase
 //
 // Demonstrates Button with all variants (primary, secondary, outline,
-// ghost, danger), all sizes (small, medium, large), disabled state,
-// and Badge with custom colors.
+// ghost, danger), Flutter-style wrappers (ElevatedButton, FilledButton,
+// TextButton, OutlinedButton, IconButton), all sizes (small, medium,
+// large), disabled state, and Badge with custom colors.
 //
 // Run with: dart run example/buttons/main.dart
 
@@ -11,6 +12,16 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
 void main() async {
+  // Keep primary text high-contrast regardless of terminal background report.
+  w.setTheme(
+    w.Theme.adaptive().copyWith(
+      onPrimary: const AdaptiveColor(
+        light: AnsiColor(255),
+        dark: AnsiColor(255),
+      ),
+    ),
+  );
+
   final app = tui.WidgetApp(ButtonShowcase());
   await tui.runProgram(
     app,
@@ -120,6 +131,48 @@ class _ButtonShowcaseState extends w.State<ButtonShowcase> {
               ),
               w.Divider(width: 60),
 
+              // -- Flutter-style wrappers --
+              w.Text('Flutter-style Buttons', style: theme.titleMedium),
+              w.Row(
+                gap: 1,
+                children: [
+                  w.ElevatedButton(
+                    child: w.Text('Elevated'),
+                    onPressed: () => _press('ElevatedButton'),
+                  ),
+                  w.FilledButton(
+                    child: w.Text('Filled'),
+                    onPressed: () => _press('FilledButton'),
+                  ),
+                  w.FilledButton.tonal(
+                    child: w.Text('Tonal'),
+                    onPressed: () => _press('FilledButton.tonal'),
+                  ),
+                ],
+              ),
+              w.Row(
+                gap: 1,
+                children: [
+                  w.TextButton(
+                    child: w.Text('Text'),
+                    onPressed: () => _press('TextButton'),
+                  ),
+                  w.OutlinedButton(
+                    child: w.Text('Outlined'),
+                    onPressed: () => _press('OutlinedButton'),
+                  ),
+                  w.IconButton(
+                    icon: w.Text('*'),
+                    onPressed: () => _press('IconButton'),
+                  ),
+                ],
+              ),
+              w.Text(
+                'Wrappers use child widgets (Flutter-style API).',
+                style: label,
+              ),
+              w.Divider(width: 60),
+
               // -- Button sizes --
               w.Text('Button Sizes', style: theme.titleMedium),
               w.Row(
@@ -147,7 +200,26 @@ class _ButtonShowcaseState extends w.State<ButtonShowcase> {
 
               // -- Disabled button --
               w.Text('Disabled', style: theme.titleMedium),
-              w.Button(label: 'Disabled', enabled: false),
+              w.Row(
+                gap: 1,
+                children: [
+                  w.Button(
+                    label: 'Disabled',
+                    enabled: false,
+                    onPressed: () => _press('Disabled'),
+                  ),
+                  w.FilledButton(
+                    child: w.Text('Filled off'),
+                    enabled: false,
+                    onPressed: () => _press('Filled off'),
+                  ),
+                  w.IconButton(
+                    icon: w.Text('*'),
+                    enabled: false,
+                    onPressed: () => _press('Icon off'),
+                  ),
+                ],
+              ),
               w.Divider(width: 60),
 
               // -- Badge --
@@ -159,17 +231,17 @@ class _ButtonShowcaseState extends w.State<ButtonShowcase> {
                   w.Badge(
                     'Warning',
                     background: theme.warning,
-                    foreground: theme.onPrimary,
+                    foreground: theme.onSurface,
                   ),
                   w.Badge(
                     'Error',
                     background: theme.error,
-                    foreground: theme.onPrimary,
+                    foreground: theme.onError,
                   ),
                   w.Badge(
                     'Success',
                     background: theme.success,
-                    foreground: theme.onPrimary,
+                    foreground: theme.onSurface,
                   ),
                   w.Badge(
                     'Muted',

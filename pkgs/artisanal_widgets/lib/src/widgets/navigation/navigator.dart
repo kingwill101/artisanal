@@ -509,11 +509,13 @@ class NavigatorState extends State<Navigator> {
     }
 
     // Build children list using _RouteEntry wrappers with stable keys.
-    // Active entries come first so they receive key messages first in
-    // the Stack's child dispatch (one-winner policy). Offstage entries
-    // come last — they render as zero-size (SizedBox 0×0) so they don't
-    // affect painting, and their handleIntercept returns Cmd.none() to
-    // suppress message delivery to their children.
+    // Offstage entries come first and active entries come last.
+    // Element.dispatch walks children in reverse order for KeyMsg (one-winner
+    // policy), so placing active entries last ensures they receive keyboard
+    // input before offstage entries.
+    // Offstage entries render as zero-size (SizedBox 0x0) and their
+    // handleIntercept returns Cmd.none() to suppress message delivery to
+    // their children.
     //
     // Using a single _RouteEntry type with a stable Key for each entry
     // ensures Widget.canUpdate returns true when an entry transitions
@@ -523,13 +525,7 @@ class NavigatorState extends State<Navigator> {
     // State objects and pending Futures.
     final children = <Widget>[];
 
-    // Active entries first (from opaqueIndex onward).
-    for (var i = opaqueIndex; i < entries.length; i++) {
-      final key = _entryKeys[entries[i]];
-      children.add(_RouteEntry(key: key, child: entries[i].builder(context)));
-    }
-
-    // Offstage entries last (below opaqueIndex, maintainState only).
+    // Offstage entries first (below opaqueIndex, maintainState only).
     for (var i = 0; i < opaqueIndex; i++) {
       if (entries[i].maintainState) {
         final key = _entryKeys[entries[i]];
@@ -541,6 +537,12 @@ class NavigatorState extends State<Navigator> {
           ),
         );
       }
+    }
+
+    // Active entries last (from opaqueIndex onward).
+    for (var i = opaqueIndex; i < entries.length; i++) {
+      final key = _entryKeys[entries[i]];
+      children.add(_RouteEntry(key: key, child: entries[i].builder(context)));
     }
 
     // Always use a Stack — even for a single child — so the element tree

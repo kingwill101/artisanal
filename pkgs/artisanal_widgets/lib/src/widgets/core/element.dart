@@ -8,8 +8,11 @@ import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
         Cmd,
+        EveryCmd,
+        ParallelCmd,
         Msg,
         RenderMetrics,
+        StreamCmd,
         TraceTag,
         TuiTrace,
         View,
@@ -80,6 +83,7 @@ abstract class Element {
   /// Mounts this element under [parent] and performs its initial build.
   void mount(Element? parent) {
     this.parent = parent;
+    _owner?.queueMountInitCmd(widget.handleInit());
     markNeedsBuild();
     rebuild();
   }
@@ -386,7 +390,7 @@ abstract class Element {
       cmds.add(selfCmd);
     }
 
-    return cmds.isEmpty ? null : Cmd.batch(cmds);
+    return _coalesceCommands(cmds);
   }
 
   /// Unmounts this element and all descendants.
@@ -421,6 +425,10 @@ class BuildOwner {
   Element? _mouseCapture;
   bool _hadBuildThisFrame = false;
 
+  // Init commands from elements mounted after initial app startup.
+  bool _captureMountInitCmds = false;
+  final List<Cmd> _pendingMountInitCmds = <Cmd>[];
+
   // --- Frame timing instrumentation ---
   final List<WidgetFrameTimingCallback> _frameTimingCallbacks = [];
   final List<WidgetFrameTiming> _recentTimings = [];
@@ -447,6 +455,30 @@ class BuildOwner {
 
   /// The element currently holding mouse capture, if any.
   Element? get mouseCapture => _mouseCapture;
+
+  /// Starts collecting init commands from newly mounted elements.
+  void enableMountInitCmdCapture() {
+    _captureMountInitCmds = true;
+  }
+
+  /// Queues an init command produced by a newly mounted element.
+  void queueMountInitCmd(Cmd? cmd) {
+    if (!_captureMountInitCmds || cmd == null) return;
+    _pendingMountInitCmds.add(cmd);
+  }
+
+  /// Drains queued mount-init commands.
+  Cmd? drainMountInitCmds() {
+    if (_pendingMountInitCmds.isEmpty) return null;
+    final drained = _pendingMountInitCmds.toList();
+    _pendingMountInitCmds.clear();
+    return _coalesceCommands(drained);
+  }
+
+  /// Drops queued mount-init commands without returning them.
+  void clearPendingMountInitCmds() {
+    _pendingMountInitCmds.clear();
+  }
 
   /// Recent widget frame timings (up to [_maxRecentTimings]).
   List<WidgetFrameTiming> get recentTimings =>
@@ -522,6 +554,21 @@ class BuildOwner {
     // scroll viewport's) are invalidated when a child widget was rebuilt
     // during message dispatch before the render pass begins.
     _hadBuildThisFrame = true;
+
+    // Mark render-object ancestors as paint-dirty so viewport/list caches can
+    // invalidate only along the changed subtree path instead of relying on a
+    // frame-global "some build happened" signal.
+    Element? current = element;
+    while (current != null) {
+      if (current is RenderObjectElement) {
+        current.renderObject.markDescendantNeedsPaint();
+      }
+      current = current.parent;
+    }
+
+    // Ensure a paint pass is scheduled even when this rebuild happened during
+    // message dispatch (outside the normal build phase).
+    _needsPaint = true;
   }
 
   /// Starts a frame by resetting accumulators and running the build phase.
@@ -714,6 +761,8 @@ class StatefulElement extends Element implements StateSetter {
   void mount(Element? parent) {
     this.parent = parent;
     state.initState();
+    _owner?.queueMountInitCmd(widget.handleInit());
+    _owner?.queueMountInitCmd(state.handleInit());
     markNeedsBuild();
     rebuild();
   }
@@ -757,9 +806,10 @@ class StatefulElement extends Element implements StateSetter {
     // Drain any pending commands from didUpdateWidget before normal dispatch.
     final pending = _drainPendingCmds();
     final baseCmd = super.dispatch(msg);
-    if (pending == null) return baseCmd;
-    if (baseCmd == null) return pending;
-    return Cmd.batch([pending, baseCmd]);
+    return _coalesceCommands([
+      if (pending != null) pending,
+      if (baseCmd != null) baseCmd,
+    ]);
   }
 
   /// Drains and returns any pending commands accumulated by [didUpdateWidget],
@@ -921,6 +971,21 @@ class RenderObjectElement extends Element {
       yield element.renderObject;
       return;
     }
+
+    if (!const bool.fromEnvironment('dart.vm.product') &&
+        element is WidgetElement &&
+        !element.widget.debugRenderObjectPassthrough) {
+      throw AssertionError(
+        'Non-render widget `${element.widget.runtimeType}` was placed under '
+        'render-object parent `${widget.runtimeType}`.\n'
+        'Widgets that render visual output must extend StatelessWidget, '
+        'StatefulWidget, or RenderObjectWidget so they are preserved during '
+        'render-child flattening.\n'
+        'If this widget is an intentional pass-through wrapper, override '
+        '`debugRenderObjectPassthrough => true`.',
+      );
+    }
+
     for (final child in element.children) {
       yield* _collectRenderChildren(child);
     }
@@ -975,6 +1040,7 @@ class ElementTree {
     _root = createElement(rootWidget);
     _root._attachOwner(_owner);
     _root.mount(null);
+    _owner.enableMountInitCmdCapture();
   }
 
   /// Root widget used to configure this tree.
@@ -999,7 +1065,15 @@ class ElementTree {
   Element? get mouseCapture => _owner.mouseCapture;
 
   /// Dispatches [msg] directly to [element].
-  Cmd? dispatchTo(Element element, Msg msg) => element.dispatch(msg);
+  Cmd? dispatchTo(Element element, Msg msg) {
+    final cmd = element.dispatch(msg);
+    _flushDirtyBuilds();
+    final mountInit = _owner.drainMountInitCmds();
+    return _coalesceCommands([
+      if (cmd != null) cmd,
+      if (mountInit != null) mountInit,
+    ]);
+  }
 
   /// Dispatches [msg] by walking UP the element tree from [startElement] to
   /// the root, calling `handleUpdate` on each [StatefulElement]'s state.
@@ -1022,6 +1096,7 @@ class ElementTree {
     Set<Element>? visited,
   }) {
     Element? current = startElement;
+    Cmd? bubbleCmd;
     while (current != null) {
       if (current is StatefulElement) {
         if (visited != null) {
@@ -1033,11 +1108,19 @@ class ElementTree {
         }
         current.rebuild();
         final cmd = current.state.handleUpdate(msg);
-        if (cmd != null) return cmd;
+        if (cmd != null) {
+          bubbleCmd = cmd;
+          break;
+        }
       }
       current = current.parent;
     }
-    return null;
+    _flushDirtyBuilds();
+    final mountInit = _owner.drainMountInitCmds();
+    return _coalesceCommands([
+      if (bubbleCmd != null) bubbleCmd,
+      if (mountInit != null) mountInit,
+    ]);
   }
 
   /// Overrides constraints used when rendering the root.
@@ -1052,7 +1135,23 @@ class ElementTree {
   }
 
   /// Dispatches [msg] to the root element.
-  Cmd? dispatch(Msg msg) => _root.dispatch(msg);
+  Cmd? dispatch(Msg msg) {
+    final cmd = _root.dispatch(msg);
+    _flushDirtyBuilds();
+    final mountInit = _owner.drainMountInitCmds();
+    return _coalesceCommands([
+      if (cmd != null) cmd,
+      if (mountInit != null) mountInit,
+    ]);
+  }
+
+  void _flushDirtyBuilds() {
+    if (!_owner.hasDirty) return;
+    _owner.buildScope(_root);
+    if (_owner.hadBuildThisFrame) {
+      _owner.schedulePaint();
+    }
+  }
 
   /// Collects initialization commands from widgets and state objects.
   Cmd? collectHandleInit() {
@@ -1071,7 +1170,10 @@ class ElementTree {
     }
 
     visit(_root);
-    return cmds.isEmpty ? null : Cmd.batch(cmds);
+    // Drop any mount-init queue collected during startup traversal to avoid
+    // duplicate initialization when startup init commands are executed.
+    _owner.clearPendingMountInitCmds();
+    return cmds.isEmpty ? null : ParallelCmd(cmds);
   }
 
   /// Renders one widget frame and returns terminal output.
@@ -1166,6 +1268,15 @@ String _viewToString(Object v) {
   if (v is String) return v;
   if (v is View) return v.content;
   return v.toString();
+}
+
+Cmd? _coalesceCommands(List<Cmd> cmds) {
+  if (cmds.isEmpty) return null;
+  if (cmds.length == 1) return cmds.first;
+  final hasRuntimeManaged = cmds.any(
+    (cmd) => cmd is ParallelCmd || cmd is EveryCmd || cmd is StreamCmd,
+  );
+  return hasRuntimeManaged ? ParallelCmd(cmds) : Cmd.batch(cmds);
 }
 
 class _ElementBuildContext implements BuildContext {

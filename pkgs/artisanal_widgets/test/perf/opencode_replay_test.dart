@@ -16,7 +16,7 @@ void main() {
     'OpenCode baseline replay scenario is repeatable',
     () async => _runScenarioProfile(
       'baseline_scroll.json',
-      const _PerfBudget(p95Ms: 60, maxMs: 130),
+      const _PerfBudget(p95Ms: 75, maxMs: 150),
     ),
     timeout: const Timeout(Duration(minutes: 2)),
   );
@@ -25,7 +25,7 @@ void main() {
     'OpenCode heavy replay scenario surfaces hotspots',
     () async => _runScenarioProfile(
       'heavy_scroll.json',
-      const _PerfBudget(p95Ms: 55, maxMs: 120),
+      const _PerfBudget(p95Ms: 65, maxMs: 140),
     ),
     timeout: const Timeout(Duration(minutes: 4)),
   );

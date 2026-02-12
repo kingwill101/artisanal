@@ -1,6 +1,6 @@
 // InheritedWidget Example
 //
-// Run with: dart run example/tui/examples/widgets/inherited-widget/main.dart
+// Run with: dart run example/inherited-widget/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;

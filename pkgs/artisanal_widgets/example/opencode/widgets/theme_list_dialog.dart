@@ -86,6 +86,15 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
   w.Widget build(w.BuildContext context) {
     if (!widget.open) return widget.child;
 
+    final theme = w.ThemeScope.of(context);
+    final cpTheme = theme.commandPaletteTheme;
+    final dialogBg = cpTheme?.background ?? OC.backgroundPanel;
+    final dialogFg = cpTheme?.foreground ?? OC.text;
+    final selectedBg = cpTheme?.selectedBackground ?? OC.backgroundElement;
+    final selectedFg = cpTheme?.selectedForeground ?? OC.text;
+    final shortcutFg = cpTheme?.shortcutForeground ?? OC.textMuted;
+    final searchBg = cpTheme?.searchBackground ?? OC.backgroundElement;
+
     final filtered = _filteredThemes;
     if (_selectedIndex >= filtered.length) {
       _selectedIndex = filtered.isEmpty ? 0 : filtered.length - 1;
@@ -96,6 +105,9 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
       final themeName = filtered[i];
       final selected = i == _selectedIndex;
       final active = themeName == widget.currentTheme;
+      final rowFg = selected ? selectedFg : dialogFg;
+      final rowHintFg = selected ? selectedFg : shortcutFg;
+      final markerFg = selected ? selectedFg : OC.primary;
 
       rows.add(
         w.GestureDetector(
@@ -104,21 +116,20 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
             return null;
           },
           child: w.Container(
-            color: selected ? OC.backgroundElement : null,
-            padding: const w.EdgeInsets.only(left: 2, right: 2),
+            color: selected ? selectedBg : null,
+            padding: const w.EdgeInsets.only(left: 3, right: 3),
             child: w.Row(
               children: [
                 w.Text(
-                  active ? '*' : ' ',
+                  active ? '\u00b7' : ' ',
                   style: style.Style()
-                    ..foreground(active ? OC.primary : OC.textMuted),
+                    ..foreground(active ? markerFg : rowHintFg),
                 ),
                 w.SizedBox(width: 1),
                 w.Expanded(
                   child: w.Text(
                     _labelForTheme(themeName),
-                    style: style.Style()
-                      ..foreground(selected ? OC.text : OC.textMuted),
+                    style: style.Style()..foreground(rowFg),
                     softWrap: false,
                   ),
                 ),
@@ -126,7 +137,7 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
                   w.Text(
                     themeName,
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(rowHintFg)
                       ..dim(),
                   ),
               ],
@@ -138,85 +149,89 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
 
     final dialog = w.SizedBox(
       width: 64,
-      height: 20,
+      height: 22,
       child: w.Container(
-        color: OC.backgroundPanel,
+        color: dialogBg,
         child: w.Column(
           crossAxisAlignment: w.CrossAxisAlignment.stretch,
           children: [
             w.Container(
-              padding: const w.EdgeInsets.only(left: 2, right: 2, top: 1),
+              padding: const w.EdgeInsets.only(left: 4, right: 4, top: 1),
               child: w.Row(
                 children: [
                   w.Text(
                     'Themes',
                     style: style.Style()
-                      ..foreground(OC.text)
+                      ..foreground(dialogFg)
                       ..bold(),
                   ),
                   w.Spacer(),
                   w.Text(
                     'esc',
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(shortcutFg)
                       ..dim(),
                   ),
                 ],
               ),
             ),
+            w.SizedBox(height: 1),
             w.Container(
-              padding: const w.EdgeInsets.only(left: 1, right: 1),
-              child: w.Container(color: OC.borderSubtle, height: 1),
-            ),
-            w.Container(
-              padding: const w.EdgeInsets.only(left: 2, right: 2),
-              child: w.Row(
-                children: [
-                  w.Text('/ ', style: style.Style()..foreground(OC.textMuted)),
-                  w.Expanded(
-                    child: w.TextField(
-                      controller: _searchController,
-                      focusId: 'theme-list-search',
-                      prompt: ' ',
-                      placeholder: 'Search themes...',
-                      autofocus: true,
-                      onChanged: (text) {
-                        setState(() {
-                          _searchQuery = text;
-                          _selectedIndex = 0;
-                        });
-                      },
+              padding: const w.EdgeInsets.only(left: 4, right: 4),
+              child: w.Container(
+                color: searchBg,
+                padding: const w.EdgeInsets.only(left: 1, right: 1),
+                child: w.Row(
+                  children: [
+                    w.Text('/', style: style.Style()..foreground(shortcutFg)),
+                    w.SizedBox(width: 1),
+                    w.Expanded(
+                      child: w.TextField(
+                        controller: _searchController,
+                        focusId: 'theme-list-search',
+                        prompt: '',
+                        placeholder: 'Search themes...',
+                        autofocus: true,
+                        onChanged: (text) {
+                          setState(() {
+                            _searchQuery = text;
+                            _selectedIndex = 0;
+                          });
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            w.Container(
-              padding: const w.EdgeInsets.only(left: 1, right: 1),
-              child: w.Container(color: OC.borderSubtle, height: 1),
-            ),
+            w.SizedBox(height: 1),
             w.Expanded(
-              child: w.SingleChildScrollView(
-                child: w.Column(
-                  crossAxisAlignment: w.CrossAxisAlignment.stretch,
-                  children: rows.isEmpty
-                      ? [
-                          w.Padding(
-                            padding: const w.EdgeInsets.all(2),
-                            child: w.Center(
+              child: w.Container(
+                color: dialogBg,
+                padding: const w.EdgeInsets.only(left: 1, right: 1),
+                child: w.SingleChildScrollView(
+                  child: w.Column(
+                    crossAxisAlignment: w.CrossAxisAlignment.stretch,
+                    children: rows.isEmpty
+                        ? [
+                            w.Padding(
+                              padding: const w.EdgeInsets.only(
+                                left: 3,
+                                right: 3,
+                              ),
                               child: w.Text(
                                 'No themes matching "$_searchQuery"',
-                                style: style.Style()..foreground(OC.textMuted),
+                                style: style.Style()..foreground(shortcutFg),
                               ),
                             ),
-                          ),
-                        ]
-                      : rows,
+                          ]
+                        : rows,
+                  ),
                 ),
               ),
             ),
             w.Container(
-              padding: const w.EdgeInsets.only(left: 2, right: 2),
+              padding: const w.EdgeInsets.only(left: 4, right: 4, bottom: 1),
               child: w.Row(
                 children: [
                   _hintKey('up/down'),
@@ -230,7 +245,7 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
                   w.Text(
                     '${filtered.length} theme${filtered.length == 1 ? '' : 's'}',
                     style: style.Style()
-                      ..foreground(OC.textMuted)
+                      ..foreground(shortcutFg)
                       ..dim(),
                   ),
                 ],
@@ -244,6 +259,7 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
     return w.Modal(
       open: true,
       onDismiss: widget.onDismiss,
+      backdropOpacity: 0.72,
       child: widget.child,
       dialog: dialog,
     );

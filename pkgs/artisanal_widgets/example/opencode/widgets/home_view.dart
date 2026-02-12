@@ -9,7 +9,7 @@
 library;
 
 import 'package:artisanal/style.dart' as style;
-import 'package:artisanal/tui.dart' as tui show Cmd, KeyMsg, Keys, Msg;
+import 'package:artisanal/tui.dart' as tui show Cmd, KeyMsg, Msg;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
 import '../models/chat_model.dart';
@@ -21,9 +21,17 @@ import 'tips_widget.dart';
 
 /// The home / landing view before a chat session starts.
 class HomeView extends w.StatefulWidget {
-  HomeView({required this.model, this.onSubmit, super.key});
+  HomeView({
+    required this.model,
+    this.promptController,
+    this.onInputChanged,
+    this.onSubmit,
+    super.key,
+  });
 
   final ChatModel model;
+  final w.TextFieldController? promptController;
+  final w.TextChangedCallback? onInputChanged;
 
   /// Called when the user submits text from the prompt.
   final void Function(String text)? onSubmit;
@@ -33,6 +41,23 @@ class HomeView extends w.StatefulWidget {
 }
 
 class _HomeViewState extends w.State<HomeView> {
+  bool _isSubmitEnter(tui.KeyMsg msg) {
+    final key = msg.key;
+    if (key.shift || key.alt || key.meta || key.hyper || key.superKey) {
+      return false;
+    }
+    return key.isEnterLike;
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && _isSubmitEnter(msg)) {
+      widget.onSubmit?.call(widget.promptController?.text ?? '');
+      return tui.Cmd.none();
+    }
+    return null;
+  }
+
   @override
   w.Widget build(w.BuildContext context) {
     final model = widget.model;
@@ -60,9 +85,11 @@ class _HomeViewState extends w.State<HomeView> {
                           w.Center(child: LogoWidget()),
                           w.SizedBox(height: 1),
                           PromptInput(
+                            controller: widget.promptController,
                             agentName: model.agentName,
                             modelName: model.modelName,
                             providerName: model.providerName,
+                            onChanged: widget.onInputChanged,
                           ),
                           w.SizedBox(height: 1),
                           _buildPromptHints(),
@@ -85,18 +112,6 @@ class _HomeViewState extends w.State<HomeView> {
         ),
       ],
     );
-  }
-
-  @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
-      // Enter key navigates to session
-      if (msg.key == tui.Keys.enter) {
-        widget.onSubmit?.call('');
-        return tui.Cmd.none();
-      }
-    }
-    return null;
   }
 
   w.Widget _buildPromptHints() {

@@ -226,6 +226,139 @@ void main() {
     });
   });
 
+  group('Flutter-style button wrappers', () {
+    test('ElevatedButton renders and handles tap', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      var pressed = false;
+
+      await tester.pumpWidget(
+        ElevatedButton(
+          child: Text('Save'),
+          onPressed: () {
+            pressed = true;
+            return null;
+          },
+        ),
+      );
+
+      expect(tester.find.text('Save'), isTrue);
+      final location = tester.locateText('Save');
+      expect(location, isNotNull);
+      tester.tapAt(location!.x, location.y);
+      expect(pressed, isTrue);
+    });
+
+    test(
+      'TextButton and ElevatedButton produce different output styles',
+      () async {
+        final textTester = WidgetTester();
+        addTearDown(() => textTester.dispose());
+        final elevatedTester = WidgetTester();
+        addTearDown(() => elevatedTester.dispose());
+
+        await textTester.pumpWidget(
+          TextButton(child: Text('Action'), onPressed: () => null),
+        );
+        await elevatedTester.pumpWidget(
+          ElevatedButton(child: Text('Action'), onPressed: () => null),
+        );
+
+        expect(textTester.view, isNot(equals(elevatedTester.view)));
+      },
+    );
+
+    test('FilledButton renders and handles tap', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      var pressed = false;
+
+      await tester.pumpWidget(
+        FilledButton(
+          child: Text('Confirm'),
+          onPressed: () {
+            pressed = true;
+            return null;
+          },
+        ),
+      );
+
+      expect(tester.find.text('Confirm'), isTrue);
+      final location = tester.locateText('Confirm');
+      expect(location, isNotNull);
+      tester.tapAt(location!.x, location.y);
+      expect(pressed, isTrue);
+    });
+
+    test('FilledButton tonal produces different output from default', () async {
+      final defaultTester = WidgetTester();
+      addTearDown(() => defaultTester.dispose());
+      final tonalTester = WidgetTester();
+      addTearDown(() => tonalTester.dispose());
+
+      await defaultTester.pumpWidget(
+        FilledButton(child: Text('Action'), onPressed: () => null),
+      );
+      await tonalTester.pumpWidget(
+        FilledButton.tonal(child: Text('Action'), onPressed: () => null),
+      );
+
+      expect(defaultTester.view, isNot(equals(tonalTester.view)));
+    });
+
+    test('OutlinedButton renders with label', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        OutlinedButton(child: Text('Outline'), onPressed: () => null),
+      );
+
+      expect(tester.find.text('Outline'), isTrue);
+    });
+
+    test('IconButton renders icon and handles tap', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      var pressed = false;
+
+      await tester.pumpWidget(
+        IconButton(
+          key: ValueKey('icon-btn'),
+          icon: Text('*'),
+          onPressed: () {
+            pressed = true;
+            return null;
+          },
+        ),
+      );
+
+      tester.tap(tester.find.byKeyLocation(ValueKey('icon-btn')));
+      expect(pressed, isTrue);
+    });
+
+    test('disabled IconButton does not fire tap callback', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      var pressed = false;
+
+      await tester.pumpWidget(
+        IconButton(
+          key: ValueKey('icon-btn-disabled'),
+          icon: Text('*'),
+          enabled: false,
+          onPressed: () {
+            pressed = true;
+            return null;
+          },
+        ),
+      );
+
+      tester.tap(tester.find.byKeyLocation(ValueKey('icon-btn-disabled')));
+      expect(pressed, isFalse);
+    });
+  });
+
   group('Button sizes', () {
     test('ButtonSize.small exists', () {
       expect(ButtonSize.small, isNotNull);
@@ -271,6 +404,59 @@ void main() {
       );
       expect(tester.find.text('Left'), isTrue);
       expect(tester.find.text('Right'), isTrue);
+    });
+
+    test('outline button stays inline with filled variants in Row', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Row(
+          gap: 1,
+          children: [
+            Button(
+              label: 'Primary',
+              variant: ButtonVariant.primary,
+              onPressed: () => null,
+            ),
+            Button(
+              label: 'Outline',
+              variant: ButtonVariant.outline,
+              onPressed: () => null,
+            ),
+          ],
+        ),
+      );
+
+      final primaryLoc = tester.locateText('Primary');
+      final outlineLoc = tester.locateText('Outline');
+      expect(primaryLoc, isNotNull);
+      expect(outlineLoc, isNotNull);
+      expect(outlineLoc!.y, equals(primaryLoc!.y));
+    });
+
+    test('primary button in Row renders its own background fill', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Row(
+          children: [
+            Button(
+              label: 'Primary',
+              variant: ButtonVariant.primary,
+              onPressed: () => null,
+            ),
+          ],
+        ),
+      );
+
+      final line = tester.view
+          .split('\n')
+          .firstWhere((entry) => entry.contains('Primary'));
+      final before = line.substring(0, line.indexOf('Primary'));
+      final bgCodeCount = RegExp(r'48;').allMatches(before).length;
+      expect(bgCodeCount, greaterThanOrEqualTo(1), reason: line);
     });
 
     test('Multiple buttons in Card', () async {

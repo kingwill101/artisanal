@@ -102,12 +102,31 @@ class _ButtonState extends State<Button> {
     }
 
     final label = widget.child ?? Text(widget.label ?? '', style: labelStyle);
+    var frameBorder = colors.border;
+    var frameBorderColor = colors.borderColor;
+    Style? frameStyle;
+
+    if (widget.variant == ButtonVariant.outline) {
+      frameBorder = null;
+      frameBorderColor = null;
+      frameStyle = _copyStyle(null)
+        ..border(
+          Border.normal,
+          top: false,
+          right: true,
+          bottom: false,
+          left: true,
+        )
+        ..borderForeground(colors.borderColor ?? theme.border);
+    }
+
     final content = Frame(
+      style: frameStyle,
       padding: padding,
       background: colors.background,
-      border: colors.border,
-      borderColor: colors.borderColor,
-      child: Align(alignment: Alignment.center, child: label),
+      border: frameBorder,
+      borderColor: frameBorderColor,
+      child: label,
     );
 
     Widget result = content;
@@ -167,6 +186,225 @@ class _ButtonState extends State<Button> {
         vertical: 1,
       ),
     };
+  }
+}
+
+/// Flutter-style elevated button wrapper.
+///
+/// This maps to [ButtonVariant.primary].
+class ElevatedButton extends StatelessWidget {
+  ElevatedButton({
+    required this.child,
+    this.onPressed,
+    this.size = ButtonSize.medium,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  });
+
+  final Widget child;
+  final CmdCallback? onPressed;
+  final ButtonSize size;
+  final EdgeInsets? padding;
+  final bool enabled;
+  final bool autofocus;
+  final String? focusId;
+  final FocusController? focusController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Button(
+      child: child,
+      onPressed: onPressed,
+      variant: ButtonVariant.primary,
+      size: size,
+      padding: padding,
+      enabled: enabled,
+      autofocus: autofocus,
+      focusId: focusId,
+      focusController: focusController,
+    );
+  }
+}
+
+/// Flutter-style filled button wrapper.
+///
+/// The default constructor maps to [ButtonVariant.primary].
+/// [FilledButton.tonal] maps to [ButtonVariant.secondary].
+class FilledButton extends StatelessWidget {
+  FilledButton({
+    required this.child,
+    this.onPressed,
+    this.size = ButtonSize.medium,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  }) : _tonal = false;
+
+  FilledButton.tonal({
+    required this.child,
+    this.onPressed,
+    this.size = ButtonSize.medium,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  }) : _tonal = true;
+
+  final Widget child;
+  final CmdCallback? onPressed;
+  final ButtonSize size;
+  final EdgeInsets? padding;
+  final bool enabled;
+  final bool autofocus;
+  final String? focusId;
+  final FocusController? focusController;
+  final bool _tonal;
+
+  @override
+  Widget build(BuildContext context) {
+    return Button(
+      child: child,
+      onPressed: onPressed,
+      variant: _tonal ? ButtonVariant.secondary : ButtonVariant.primary,
+      size: size,
+      padding: padding,
+      enabled: enabled,
+      autofocus: autofocus,
+      focusId: focusId,
+      focusController: focusController,
+    );
+  }
+}
+
+/// Flutter-style text button wrapper.
+///
+/// This maps to [ButtonVariant.ghost].
+class TextButton extends StatelessWidget {
+  TextButton({
+    required this.child,
+    this.onPressed,
+    this.size = ButtonSize.medium,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  });
+
+  final Widget child;
+  final CmdCallback? onPressed;
+  final ButtonSize size;
+  final EdgeInsets? padding;
+  final bool enabled;
+  final bool autofocus;
+  final String? focusId;
+  final FocusController? focusController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Button(
+      child: child,
+      onPressed: onPressed,
+      variant: ButtonVariant.ghost,
+      size: size,
+      padding: padding,
+      enabled: enabled,
+      autofocus: autofocus,
+      focusId: focusId,
+      focusController: focusController,
+    );
+  }
+}
+
+/// Flutter-style outlined button wrapper.
+///
+/// This maps to [ButtonVariant.outline].
+class OutlinedButton extends StatelessWidget {
+  OutlinedButton({
+    required this.child,
+    this.onPressed,
+    this.size = ButtonSize.medium,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  });
+
+  final Widget child;
+  final CmdCallback? onPressed;
+  final ButtonSize size;
+  final EdgeInsets? padding;
+  final bool enabled;
+  final bool autofocus;
+  final String? focusId;
+  final FocusController? focusController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Button(
+      child: child,
+      onPressed: onPressed,
+      variant: ButtonVariant.outline,
+      size: size,
+      padding: padding,
+      enabled: enabled,
+      autofocus: autofocus,
+      focusId: focusId,
+      focusController: focusController,
+    );
+  }
+}
+
+/// Flutter-style icon button wrapper.
+///
+/// This maps to [ButtonVariant.ghost] with a compact default size.
+class IconButton extends StatelessWidget {
+  IconButton({
+    required this.icon,
+    this.onPressed,
+    this.size = ButtonSize.small,
+    this.padding,
+    this.enabled = true,
+    this.autofocus = false,
+    this.focusId,
+    this.focusController,
+    super.key,
+  });
+
+  final Widget icon;
+  final CmdCallback? onPressed;
+  final ButtonSize size;
+  final EdgeInsets? padding;
+  final bool enabled;
+  final bool autofocus;
+  final String? focusId;
+  final FocusController? focusController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Button(
+      child: icon,
+      onPressed: onPressed,
+      variant: ButtonVariant.ghost,
+      size: size,
+      padding: padding,
+      enabled: enabled,
+      autofocus: autofocus,
+      focusId: focusId,
+      focusController: focusController,
+    );
   }
 }
 

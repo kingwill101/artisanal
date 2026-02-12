@@ -22,6 +22,10 @@ abstract class RenderObject {
   BoxConstraints constraints = BoxConstraints();
   Object? element;
   Object? parentData;
+  bool _paintDirty = true;
+
+  /// Whether this render object (or a descendant in its subtree) needs paint.
+  bool get paintDirty => _paintDirty;
 
   void attach(RenderObject child) {
     children.add(child);
@@ -75,9 +79,16 @@ abstract class RenderObject {
   ///
   /// Viewport render objects override this to invalidate their paint cache
   /// so the next [paint] call re-renders the child subtree.
+  void markDescendantNeedsPaint() {
+    _paintDirty = true;
+  }
+
+  /// Marks this render object's paint state as clean.
   ///
-  /// The default implementation is a no-op.
-  void markDescendantNeedsPaint() {}
+  /// Call this after consuming the latest [paint] output.
+  void clearPaintDirty() {
+    _paintDirty = false;
+  }
 
   void dispose() {
     children.clear();

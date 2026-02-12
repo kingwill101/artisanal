@@ -208,8 +208,10 @@ class OverlayState extends State<Overlay> {
     }
 
     if (children.isEmpty) return SizedBox.shrink();
-    if (children.length == 1) return children.first;
 
+    // Keep the render shape stable as entries are inserted/removed so
+    // descendants (for example PopupMenuButton triggers) are not remounted
+    // when overlay entry count changes.
     return Stack(fit: StackFit.expand, children: children);
   }
 }

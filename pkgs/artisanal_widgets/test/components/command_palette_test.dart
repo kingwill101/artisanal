@@ -370,8 +370,8 @@ void main() {
           ),
         ),
       );
-      // Placeholder is split across styled spans, check for a substring
-      expect(tester.find.text('ype to search'), isTrue);
+      // Focused TextField renders a cursor cell at the first character.
+      expect(tester.find.text('Search') || tester.find.text('earch'), isTrue);
     });
 
     test('shortcut property is stored on item', () {

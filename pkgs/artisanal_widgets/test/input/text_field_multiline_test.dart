@@ -1,6 +1,7 @@
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/terminal.dart' as terminal show Key;
-import 'package:artisanal/tui.dart' show KeyMsg;
+import 'package:artisanal/tui.dart'
+    show KeyMsg, MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
@@ -77,6 +78,246 @@ void main() {
       final ctrl = TextFieldController();
       await tester.pumpWidget(TextField(controller: ctrl, autofocus: true));
       expect(ctrl.model.multiline, isFalse);
+    });
+  });
+
+  group('TextField mouse selection', () {
+    test('mouse drag messages are handled without mutating text', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextFieldController();
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 8,
+          child: TextField(controller: ctrl, multiline: true, autofocus: true),
+        ),
+      );
+
+      for (final c in 'Hello World'.split('')) {
+        tester.sendKey(c);
+      }
+
+      tester.sendMsg(
+        const MouseMsg(
+          action: MouseAction.press,
+          button: MouseButton.left,
+          x: 3,
+          y: 1,
+        ),
+      );
+      tester.sendMsg(
+        const MouseMsg(
+          action: MouseAction.motion,
+          button: MouseButton.left,
+          x: 8,
+          y: 1,
+        ),
+      );
+
+      expect(ctrl.text, equals('Hello World'));
+    });
+
+    test(
+      'selection copies immediately when mouse leaves input hit-test',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        final ctrl = TextFieldController();
+        await tester.pumpWidget(
+          Container(
+            width: 40,
+            height: 8,
+            child: TextField(
+              controller: ctrl,
+              multiline: true,
+              autofocus: true,
+            ),
+          ),
+        );
+
+        for (final c in 'Hello World'.split('')) {
+          tester.sendKey(c);
+        }
+
+        final pos = tester.locateText('Hello World');
+        expect(pos, isNotNull);
+        final clickPos = pos!;
+
+        tester.sendMsg(
+          MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: clickPos.x + 1,
+            y: clickPos.y,
+          ),
+        );
+        tester.sendMsg(
+          MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: clickPos.x + 6,
+            y: clickPos.y,
+          ),
+        );
+
+        expect(ctrl.selection.isCollapsed, isFalse);
+
+        // Move outside the text field while still dragging.
+        tester.sendMsg(
+          MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: clickPos.x + 50,
+            y: clickPos.y + 8,
+          ),
+        );
+
+        expect(ctrl.selection.isCollapsed, isTrue);
+        expect(ctrl.text, equals('Hello World'));
+      },
+    );
+
+    test('click after moving cursor to start does not jump to end', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextFieldController();
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 6,
+          child: TextField(
+            controller: ctrl,
+            multiline: true,
+            prompt: '',
+            autofocus: true,
+          ),
+        ),
+      );
+
+      for (final c in 'hello world'.split('')) {
+        tester.sendKey(c);
+      }
+      expect(ctrl.model.position, equals(ctrl.text.length));
+
+      tester.sendSpecialKey(KeyType.home);
+      expect(ctrl.model.position, equals(0));
+
+      tester.tapAt(3, 0);
+
+      expect(ctrl.model.position, greaterThan(0));
+      expect(ctrl.model.position, lessThan(ctrl.text.length));
+    });
+
+    test(
+      'nested layout click maps to local cursor position (regression)',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        final ctrl = TextFieldController();
+        await tester.pumpWidget(
+          Container(
+            width: 120,
+            height: 30,
+            child: Row(
+              children: [
+                SizedBox(width: 60, child: Text('sidebar')),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.only(
+                      left: 2,
+                      right: 2,
+                      top: 1,
+                      bottom: 1,
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: ctrl,
+                          multiline: true,
+                          prompt: ' ',
+                          autofocus: true,
+                          maxLines: 6,
+                        ),
+                        SizedBox(height: 1),
+                        Text('metadata'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+        for (final c in 'hello world hello world hello world'.split('')) {
+          tester.sendKey(c);
+        }
+        final len = ctrl.text.length;
+        expect(ctrl.model.position, equals(len));
+
+        tester.sendSpecialKey(KeyType.home);
+        expect(ctrl.model.position, equals(0));
+
+        // Approximate absolute click inside the text line near the beginning:
+        // sidebar(60) + container left padding(2) + prompt(1) + 3 chars.
+        tester.tapAt(66, 1);
+
+        expect(ctrl.model.position, greaterThan(0));
+        expect(ctrl.model.position, lessThan(len));
+      },
+    );
+
+    test('deeply offset layout click maps to local cursor position', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextFieldController();
+      await tester.pumpWidget(
+        Container(
+          width: 130,
+          height: 35,
+          child: Column(
+            children: [
+              SizedBox(height: 19, child: Text('header area')),
+              Row(
+                children: [
+                  SizedBox(width: 60, child: Text('sidebar')),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 2, right: 2, top: 1),
+                      child: TextField(
+                        controller: ctrl,
+                        multiline: true,
+                        prompt: ' ',
+                        autofocus: true,
+                        maxLines: 6,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+      for (final c in 'hello world hello world hello world'.split('')) {
+        tester.sendKey(c);
+      }
+      final len = ctrl.text.length;
+
+      tester.sendSpecialKey(KeyType.home);
+      expect(ctrl.model.position, equals(0));
+
+      tester.tapAt(66, 20);
+
+      expect(ctrl.model.position, greaterThan(0));
+      expect(ctrl.model.position, lessThan(len));
     });
   });
 

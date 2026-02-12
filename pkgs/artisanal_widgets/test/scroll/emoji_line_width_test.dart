@@ -1,4 +1,3 @@
-import 'package:artisanal/style.dart';
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/uv.dart' show stringWidth;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
