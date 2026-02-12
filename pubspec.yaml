@@ -3,6 +3,16 @@ publish_to: none
 workspace:
   - pkgs/artisanal
   - pkgs/artisanal_widgets
+  - pkgs/dash_ai
+  - pkgs/dash_agent
+  - pkgs/dash
+  - pkgs/dash_acp
+  - pkgs/dash_cli
+  - pkgs/dash_lsp
+  - pkgs/dash_mcp
+  - pkgs/dash_memory
+  - pkgs/dash_web
+  - pkgs/dash_tui
 
 funding:
   - https://www.buymeacoffee.com/kingwill101
