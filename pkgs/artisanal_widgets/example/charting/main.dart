@@ -11,7 +11,7 @@
 
 import 'dart:math' as math;
 
-import 'package:artisanal/charting.dart' show ChartRamp;
+import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor;
@@ -239,6 +239,13 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
             values: [10, 20, 15, 30, 25, 18, 35, 28, 40, 22, 33, 12, 27, 19],
             height: 1,
             style: UvStyle(fg: UvColor.rgb(80, 200, 120)),
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'CPU',
+                style: UvStyle(fg: UvColor.rgb(80, 200, 120)),
+              ),
+            ],
+            legendPosition: w.ChartLegendPosition.topRight,
             crosshairX: hx,
             crosshairY: hy,
             crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -253,6 +260,13 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
             style: UvStyle(fg: UvColor.rgb(255, 180, 50)),
             showGrid: true,
             gridStyle: UvStyle(fg: UvColor.rgb(60, 60, 60)),
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Load',
+                style: UvStyle(fg: UvColor.rgb(255, 180, 50)),
+              ),
+            ],
+            legendPosition: w.ChartLegendPosition.topRight,
             crosshairX: hx,
             crosshairY: hy,
             crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -285,6 +299,13 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
               gridStyle: UvStyle(fg: UvColor.rgb(50, 50, 60)),
               xLabels: ['0', '5', '10', '15', '20'],
               yLabels: ['0', '25', '50'],
+              legendEntries: [
+                ChartLegendEntry(
+                  label: 'Latency',
+                  style: UvStyle(fg: UvColor.rgb(80, 180, 255)),
+                ),
+              ],
+              legendPosition: w.ChartLegendPosition.topRight,
               crosshairX: hx,
               crosshairY: hy,
               crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -312,6 +333,13 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
             axisStyle: UvStyle(fg: UvColor.rgb(120, 120, 120)),
             gridStyle: UvStyle(fg: UvColor.rgb(50, 50, 60)),
             xLabels: ['Q1', 'Q2', 'Q3', 'Q4'],
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Revenue',
+                style: UvStyle(fg: UvColor.rgb(100, 200, 50)),
+              ),
+            ],
+            legendPosition: w.ChartLegendPosition.topRight,
             crosshairX: hx,
             crosshairY: hy,
             crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -342,6 +370,22 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
             gridRows: 2,
             gridCols: 2,
             gridStyle: UvStyle(fg: UvColor.rgb(180, 180, 180)),
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Cool',
+                style: UvStyle(bg: UvColor.rgb(35, 65, 170)),
+              ),
+              ChartLegendEntry(
+                label: 'Warm',
+                style: UvStyle(bg: UvColor.rgb(240, 145, 40)),
+              ),
+              ChartLegendEntry(
+                label: 'Hot',
+                style: UvStyle(bg: UvColor.rgb(210, 55, 45)),
+              ),
+            ],
+            legendColumns: 3,
+            legendPosition: w.ChartLegendPosition.bottomLeft,
             crosshairX: hx,
             crosshairY: hy,
             crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -372,6 +416,21 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
                         UvStyle(bg: UvColor.rgb(42, 157, 143)),
                         UvStyle(bg: UvColor.rgb(233, 196, 106)),
                       ],
+                      legendEntries: [
+                        ChartLegendEntry(
+                          label: 'Added',
+                          style: UvStyle(bg: UvColor.rgb(230, 57, 70)),
+                        ),
+                        ChartLegendEntry(
+                          label: 'Removed',
+                          style: UvStyle(bg: UvColor.rgb(42, 157, 143)),
+                        ),
+                        ChartLegendEntry(
+                          label: 'Changed',
+                          style: UvStyle(bg: UvColor.rgb(233, 196, 106)),
+                        ),
+                      ],
+                      legendPosition: w.ChartLegendPosition.bottomLeft,
                       crosshairX: hx,
                       crosshairY: hy,
                       crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -395,6 +454,21 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
                         UvStyle(bg: UvColor.rgb(255, 120, 80)),
                         UvStyle(bg: UvColor.rgb(160, 120, 255)),
                       ],
+                      legendEntries: [
+                        ChartLegendEntry(
+                          label: 'Core',
+                          style: UvStyle(bg: UvColor.rgb(80, 180, 255)),
+                        ),
+                        ChartLegendEntry(
+                          label: 'IO',
+                          style: UvStyle(bg: UvColor.rgb(255, 120, 80)),
+                        ),
+                        ChartLegendEntry(
+                          label: 'UI',
+                          style: UvStyle(bg: UvColor.rgb(160, 120, 255)),
+                        ),
+                      ],
+                      legendPosition: w.ChartLegendPosition.bottomLeft,
                       crosshairX: hx,
                       crosshairY: hy,
                       crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),
@@ -432,6 +506,22 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
               UvStyle(fg: UvColor.rgb(255, 120, 80)),
               UvStyle(fg: UvColor.rgb(100, 220, 100)),
             ],
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Network',
+                style: UvStyle(fg: UvColor.rgb(80, 180, 255)),
+              ),
+              ChartLegendEntry(
+                label: 'Compute',
+                style: UvStyle(fg: UvColor.rgb(255, 120, 80)),
+              ),
+              ChartLegendEntry(
+                label: 'Storage',
+                style: UvStyle(fg: UvColor.rgb(100, 220, 100)),
+              ),
+            ],
+            legendColumns: 2,
+            legendPosition: w.ChartLegendPosition.topLeft,
             crosshairX: hx,
             crosshairY: hy,
             crosshairStyle: UvStyle(fg: UvColor.rgb(255, 255, 100)),

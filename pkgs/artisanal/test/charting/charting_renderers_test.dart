@@ -1012,6 +1012,35 @@ void main() {
       );
     });
 
+    test('pie chart uses quarter-block glyphs for smoother circles', () {
+      final output = _render(32, 16, (s, a) {
+        drawPieChart(
+          s,
+          a,
+          [35, 25, 40],
+          styles: [
+            const UvStyle(fg: UvColor.basic16(1)),
+            const UvStyle(fg: UvColor.basic16(2)),
+            const UvStyle(fg: UvColor.basic16(3)),
+          ],
+        );
+      });
+      final hasQuarterBlock =
+          output.contains('▘') ||
+          output.contains('▝') ||
+          output.contains('▖') ||
+          output.contains('▗') ||
+          output.contains('▙') ||
+          output.contains('▛') ||
+          output.contains('▜') ||
+          output.contains('▟');
+      expect(
+        hasQuarterBlock,
+        isTrue,
+        reason: 'pie edges should include quarter-block smoothing glyphs',
+      );
+    });
+
     test('ribbon chart with interpolated samples produces smooth output', () {
       // 3 data points → 20 columns should interpolate smoothly via
       // sampleSeries, producing gradual band-height transitions.
@@ -1149,7 +1178,7 @@ void main() {
       expect(_cellAt(canvas, 2, 1)?.content, '+');
     });
 
-    test('preserves existing cell content and applies crosshair bg tint', () {
+    test('preserves existing cell content and applies crosshair fg tint', () {
       final canvas = Canvas(5, 3);
       final area = Rectangle(minX: 0, minY: 0, maxX: 5, maxY: 3);
       // Pre-fill a cell with content and a foreground color (like a chart bar)
@@ -1164,13 +1193,47 @@ void main() {
         style: const UvStyle(fg: UvColor.rgb(255, 255, 0)),
       );
 
-      // The cell at (2,0) should keep its original character and fg,
-      // with the crosshair fg applied as the background tint.
+      // The cell at (2,0) should keep its original character, with the
+      // crosshair color applied as a foreground tint.
       final cell = _cellAt(canvas, 2, 0);
       expect(cell, isNotNull);
       expect(cell!.content, '█'); // character preserved
-      expect(cell.style.fg, fillStyle.fg); // original fg preserved
-      expect(cell.style.bg, const UvColor.rgb(255, 255, 0)); // crosshair as bg
+      expect(cell.style.fg, const UvColor.rgb(255, 255, 0)); // crosshair as fg
+      expect(cell.style.bg, isNull);
+    });
+
+    test('drawOnEmpty=false tints only existing chart content', () {
+      final canvas = Canvas(5, 5);
+      final area = Rectangle(minX: 0, minY: 0, maxX: 5, maxY: 5);
+      canvas.setCell(
+        2,
+        2,
+        Cell(
+          content: '█',
+          style: const UvStyle(fg: UvColor.rgb(0, 200, 0)),
+        ),
+      );
+
+      drawCrosshair(
+        canvas,
+        area,
+        2,
+        2,
+        style: const UvStyle(fg: UvColor.rgb(255, 255, 0)),
+        drawOnEmpty: false,
+      );
+
+      final center = _cellAt(canvas, 2, 2);
+      expect(center, isNotNull);
+      expect(center!.content, '█');
+      expect(center.style.fg, const UvColor.rgb(255, 255, 0));
+
+      // Neighbor cells on crosshair axes remain untouched because they are
+      // empty and drawOnEmpty=false.
+      expect(_cellAt(canvas, 2, 1)?.content, ' ');
+      expect(_cellAt(canvas, 2, 3)?.content, ' ');
+      expect(_cellAt(canvas, 1, 2)?.content, ' ');
+      expect(_cellAt(canvas, 3, 2)?.content, ' ');
     });
 
     test('x only within area draws vertical line only', () {

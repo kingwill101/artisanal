@@ -218,7 +218,52 @@ void main() {
 }
 ```
 
+Notes:
+
+- Pie/donut rendering uses sub-cell sampling with quarter/half block glyphs,
+  which gives smoother circular edges than full-cell fill alone.
+
+## Crosshair Overlay
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+
+void main() {
+  final lines = chart.renderChartLines(40, 12, (screen, area) {
+    chart.drawLineChart(screen, area, [12, 20, 18, 30, 22]);
+
+    // Standard mode: draw line glyphs on empty cells and tint chart cells.
+    chart.drawCrosshair(
+      screen,
+      area,
+      18,
+      5,
+      style: chart.uvStyleFromHex('#ffff66'),
+    );
+  });
+
+  print(lines.join('\n'));
+}
+```
+
+Use `drawOnEmpty: false` when you only want to tint existing chart cells
+(useful for compact pie/donut overlays):
+
+```dart
+chart.drawCrosshair(
+  screen,
+  area,
+  x,
+  y,
+  style: chart.uvStyleFromHex('#ffff66'),
+  drawOnEmpty: false,
+);
+```
+
 ## Legend and Palette
+
+Legend entries are typically shown in a framed panel so labels stay readable
+over dense chart regions.
 
 ```dart
 import 'package:artisanal/charting.dart' as chart;

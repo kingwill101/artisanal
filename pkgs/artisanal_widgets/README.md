@@ -52,6 +52,8 @@ void main() async {
   `PopupMenuItem`, `CheckedPopupMenuItem`, `PopupMenuDivider`
 - Sliders: `Slider`, `RangeSlider`, `RangeValues`
 - Indicators: `LinearProgressIndicator`, `CircularProgressIndicator`
+- Charts: `SparklineChart`, `LineChart`, `BarChart`, `HeatmapChart`,
+  `PieChart`, `RibbonChart` with optional in-chart legends
 
 ## Widget-specific examples
 
@@ -69,6 +71,7 @@ dart run pkgs/artisanal_widgets/example/range_slider/main.dart
 dart run pkgs/artisanal_widgets/example/linear_progress_indicator/main.dart
 dart run pkgs/artisanal_widgets/example/circular_progress_indicator/main.dart
 dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+dart run pkgs/artisanal_widgets/example/charting/main.dart
 ```
 
 ## Tests

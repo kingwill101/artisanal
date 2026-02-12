@@ -39,6 +39,11 @@ class HeatmapChart extends LeafRenderObjectWidget {
     this.xLabels,
     this.yLabels,
     this.labelStyle,
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
@@ -86,6 +91,21 @@ class HeatmapChart extends LeafRenderObjectWidget {
   /// Style for axis labels.
   final UvStyle? labelStyle;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
 
@@ -111,6 +131,11 @@ class HeatmapChart extends LeafRenderObjectWidget {
       xLabels: xLabels,
       yLabels: yLabels,
       labelStyle: labelStyle ?? const UvStyle(),
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -134,6 +159,11 @@ class HeatmapChart extends LeafRenderObjectWidget {
       ..xLabels = xLabels
       ..yLabels = yLabels
       ..labelStyle = labelStyle ?? const UvStyle()
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -154,6 +184,11 @@ class HeatmapChart extends LeafRenderObjectWidget {
     xLabels,
     yLabels,
     labelStyle ?? const UvStyle(),
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
   );
 }
 
@@ -172,6 +207,11 @@ class _RenderHeatmapChart extends RenderBox {
     required this.xLabels,
     required this.yLabels,
     required this.labelStyle,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
@@ -190,6 +230,11 @@ class _RenderHeatmapChart extends RenderBox {
   List<String>? xLabels;
   List<String>? yLabels;
   UvStyle labelStyle;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -224,6 +269,11 @@ class _RenderHeatmapChart extends RenderBox {
       xLabels,
       yLabels,
       labelStyle,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -248,6 +298,11 @@ class _RenderHeatmapChart extends RenderBox {
           xLabels,
           yLabels,
           labelStyle,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -268,7 +323,12 @@ String _renderHeatmapChartString(
   UvStyle gridStyle,
   List<String>? xLabels,
   List<String>? yLabels,
-  UvStyle labelStyle, {
+  UvStyle labelStyle,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding, {
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -300,5 +360,14 @@ String _renderHeatmapChartString(
       style: crosshairStyle ?? const UvStyle(),
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }

@@ -28,6 +28,11 @@ class SparklineChart extends LeafRenderObjectWidget {
     this.style,
     this.showGrid = false,
     this.gridStyle,
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
@@ -52,6 +57,21 @@ class SparklineChart extends LeafRenderObjectWidget {
   /// Style for the baseline grid.
   final UvStyle? gridStyle;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
 
@@ -70,6 +90,11 @@ class SparklineChart extends LeafRenderObjectWidget {
       style: style ?? const UvStyle(),
       showGrid: showGrid,
       gridStyle: gridStyle ?? const UvStyle(),
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -86,6 +111,11 @@ class SparklineChart extends LeafRenderObjectWidget {
       ..style = style ?? const UvStyle()
       ..showGrid = showGrid
       ..gridStyle = gridStyle ?? const UvStyle()
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -99,6 +129,11 @@ class SparklineChart extends LeafRenderObjectWidget {
     style ?? const UvStyle(),
     showGrid,
     gridStyle ?? const UvStyle(),
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
   );
 }
 
@@ -110,6 +145,11 @@ class _RenderSparklineChart extends RenderBox {
     required this.style,
     required this.showGrid,
     required this.gridStyle,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
@@ -121,6 +161,11 @@ class _RenderSparklineChart extends RenderBox {
   UvStyle style;
   bool showGrid;
   UvStyle gridStyle;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -148,6 +193,11 @@ class _RenderSparklineChart extends RenderBox {
       style,
       showGrid,
       gridStyle,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -165,6 +215,11 @@ class _RenderSparklineChart extends RenderBox {
           style,
           showGrid,
           gridStyle,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -178,7 +233,12 @@ String _renderSparkline(
   int height,
   UvStyle style,
   bool showGrid,
-  UvStyle gridStyle, {
+  UvStyle gridStyle,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding, {
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -203,5 +263,14 @@ String _renderSparkline(
       style: crosshairStyle ?? const UvStyle(),
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }

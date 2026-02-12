@@ -1469,6 +1469,23 @@ Charting widgets use UV canvas-backed render objects:
   `RibbonChart`
 - `ChartModel`, `ChartSeries`, and `ChartBuilder` for reactive data-driven
   chart updates
+- Optional in-chart legends via `legendEntries`, `legendColumns`,
+  `legendPosition`, and `legendPadding`
+
+Legend API details:
+
+- `legendEntries`: `List<ChartLegendEntry>` from `package:artisanal/charting.dart`
+- `legendColumns`: number of legend columns (default `1`)
+- `legendRowGap`: extra blank rows between legend rows (default `0`)
+- `legendPosition`: `topLeft`, `topRight`, `bottomLeft`, `bottomRight`
+- `legendPadding`: inset from chart edges (default `1`)
+- Legends render in an opaque framed panel so chart colors do not bleed through
+  labels
+
+Crosshair note:
+
+- Pie and donut charts tint only chart pixels by default for hover crosshair,
+  instead of drawing full-width/full-height guide lines through empty space.
 
 ```dart
 LineChart(
@@ -1476,6 +1493,12 @@ LineChart(
   width: 60,
   height: 12,
   showGrid: true,
+  legendEntries: [
+    ChartLegendEntry(label: 'Requests', style: UvStyle(fg: UvColor.rgb(80, 180, 255))),
+  ],
+  legendColumns: 1,
+  legendPadding: 1,
+  legendPosition: ChartLegendPosition.topRight,
 )
 ```
 

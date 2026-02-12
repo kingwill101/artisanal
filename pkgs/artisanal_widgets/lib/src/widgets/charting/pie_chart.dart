@@ -37,6 +37,11 @@ class PieChart extends LeafRenderObjectWidget {
     this.innerRadiusRatio = 0.45,
     this.cellAspect = 2.0,
     this.glyph = ' ',
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
@@ -70,6 +75,21 @@ class PieChart extends LeafRenderObjectWidget {
   /// Character rendered in background mode.
   final String glyph;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
 
@@ -91,6 +111,11 @@ class PieChart extends LeafRenderObjectWidget {
       innerRadiusRatio: innerRadiusRatio,
       cellAspect: cellAspect,
       glyph: glyph,
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -110,6 +135,11 @@ class PieChart extends LeafRenderObjectWidget {
       ..innerRadiusRatio = innerRadiusRatio
       ..cellAspect = cellAspect
       ..glyph = glyph
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -126,6 +156,11 @@ class PieChart extends LeafRenderObjectWidget {
     innerRadiusRatio,
     cellAspect,
     glyph,
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
   );
 }
 
@@ -140,6 +175,11 @@ class _RenderPieChart extends RenderBox {
     required this.innerRadiusRatio,
     required this.cellAspect,
     required this.glyph,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
@@ -154,6 +194,11 @@ class _RenderPieChart extends RenderBox {
   double innerRadiusRatio;
   double cellAspect;
   String glyph;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -184,6 +229,11 @@ class _RenderPieChart extends RenderBox {
       innerRadiusRatio,
       cellAspect,
       glyph,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -204,6 +254,11 @@ class _RenderPieChart extends RenderBox {
           innerRadiusRatio,
           cellAspect,
           glyph,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -220,7 +275,12 @@ String _renderPieChartString(
   bool donut,
   double innerRadiusRatio,
   double cellAspect,
-  String glyph, {
+  String glyph,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding, {
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -246,7 +306,17 @@ String _renderPieChartString(
       crosshairX,
       crosshairY,
       style: crosshairStyle ?? const UvStyle(),
+      drawOnEmpty: false,
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }

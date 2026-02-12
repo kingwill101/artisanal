@@ -29,9 +29,10 @@ int _sliceIndex(
 
 /// Draws a pie (or donut) chart of [values] into [area] on [screen].
 ///
-/// Each cell is tested at two vertical sub-positions (upper and lower half)
-/// to produce half-block anti-aliasing at the circle boundary.  This gives
-/// 2× vertical resolution, significantly reducing jagged staircase edges.
+/// Each cell is sampled at 2x2 sub-cell resolution (upper/lower x left/right)
+/// and rendered with quarter/half block glyphs where possible. This improves
+/// circular edges (less staircase aliasing) and allows top-bottom or
+/// left-right slice blending at boundaries.
 void drawPieChart(
   Screen screen,
   Rectangle area,
@@ -69,40 +70,70 @@ void drawPieChart(
 
   for (var y = area.minY; y < area.maxY; y++) {
     for (var x = area.minX; x < area.maxX; x++) {
-      // Test upper half of cell (y - 0.25) and lower half (y + 0.25).
-      final dxRaw = (x - cx) / cellAspect;
-
-      final dyUpper = (y - 0.25) - cy;
-      final distUpper = math.sqrt(dxRaw * dxRaw + dyUpper * dyUpper);
-      var angleUpper = math.atan2(dyUpper, dxRaw);
-      if (angleUpper < 0) angleUpper += math.pi * 2;
-      final upperIdx = _sliceIndex(
-        distUpper,
-        angleUpper,
+      final ul = _sampleSlice(
+        x,
+        y,
+        cx,
+        cy,
+        cellAspect,
         radius,
         innerRadius,
         angles,
         palette.length,
+        dxOffset: -0.25,
+        dyOffset: -0.25,
       );
-
-      final dyLower = (y + 0.25) - cy;
-      final distLower = math.sqrt(dxRaw * dxRaw + dyLower * dyLower);
-      var angleLower = math.atan2(dyLower, dxRaw);
-      if (angleLower < 0) angleLower += math.pi * 2;
-      final lowerIdx = _sliceIndex(
-        distLower,
-        angleLower,
+      final ur = _sampleSlice(
+        x,
+        y,
+        cx,
+        cy,
+        cellAspect,
         radius,
         innerRadius,
         angles,
         palette.length,
+        dxOffset: 0.25,
+        dyOffset: -0.25,
+      );
+      final ll = _sampleSlice(
+        x,
+        y,
+        cx,
+        cy,
+        cellAspect,
+        radius,
+        innerRadius,
+        angles,
+        palette.length,
+        dxOffset: -0.25,
+        dyOffset: 0.25,
+      );
+      final lr = _sampleSlice(
+        x,
+        y,
+        cx,
+        cy,
+        cellAspect,
+        radius,
+        innerRadius,
+        angles,
+        palette.length,
+        dxOffset: 0.25,
+        dyOffset: 0.25,
       );
 
-      if (upperIdx == -1 && lowerIdx == -1) continue;
+      var mask = 0;
+      if (ul >= 0) mask |= 0x1;
+      if (ur >= 0) mask |= 0x2;
+      if (ll >= 0) mask |= 0x4;
+      if (lr >= 0) mask |= 0x8;
+      if (mask == 0) continue;
 
-      if (upperIdx == lowerIdx) {
-        // Both halves same slice — full cell.
-        final baseStyle = palette[upperIdx];
+      // Fully covered cell. If all quadrants belong to the same slice,
+      // preserve the original background-fill path for solid interior output.
+      if (mask == 0xF && ul == ur && ul == ll && ul == lr) {
+        final baseStyle = palette[ul];
         final useBg =
             useBackground && (baseStyle.bg != null || baseStyle.fg != null);
         final cellStyle = useBg
@@ -110,26 +141,94 @@ void drawPieChart(
                   ? baseStyle
                   : baseStyle.copyWith(bg: baseStyle.fg, clearFg: true))
             : baseStyle.copyWith(clearBg: true);
-        final drawGlyph = useBg ? glyph : '●';
+        final drawGlyph = useBg ? glyph : '█';
         putCell(screen, x, y, drawGlyph, cellStyle);
-      } else if (upperIdx == -1) {
-        // Only lower half is inside the pie — draw ▄.
-        final baseStyle = palette[lowerIdx];
-        final fgColor = baseStyle.bg ?? baseStyle.fg;
-        putCell(screen, x, y, '▄', UvStyle(fg: fgColor));
-      } else if (lowerIdx == -1) {
-        // Only upper half is inside the pie — draw ▀.
-        final baseStyle = palette[upperIdx];
-        final fgColor = baseStyle.bg ?? baseStyle.fg;
-        putCell(screen, x, y, '▀', UvStyle(fg: fgColor));
-      } else {
-        // Two different slices — upper half ▀ with fg=upper, bg=lower.
-        final upperSty = palette[upperIdx];
-        final lowerSty = palette[lowerIdx];
-        final fg = upperSty.bg ?? upperSty.fg;
-        final bg = lowerSty.bg ?? lowerSty.fg;
-        putCell(screen, x, y, '▀', UvStyle(fg: fg, bg: bg));
+        continue;
       }
+
+      // Full cell but split by slice boundary: encode top/bottom or left/right
+      // slice pairs when possible using fg/bg block blending.
+      if (mask == 0xF && ul == ur && ll == lr && ul != ll) {
+        final fg = _sliceColor(palette[ul]);
+        final bg = _sliceColor(palette[ll]);
+        putCell(screen, x, y, '▀', UvStyle(fg: fg, bg: bg));
+        continue;
+      }
+      if (mask == 0xF && ul == ll && ur == lr && ul != ur) {
+        final fg = _sliceColor(palette[ul]);
+        final bg = _sliceColor(palette[ur]);
+        putCell(screen, x, y, '▌', UvStyle(fg: fg, bg: bg));
+        continue;
+      }
+
+      final dominant = _dominantSlice(ul, ur, ll, lr);
+      if (dominant < 0) continue;
+      final color = _sliceColor(palette[dominant]);
+      final edgeGlyph = _maskToBlockGlyph(mask);
+      if (edgeGlyph.isEmpty) continue;
+      putCell(screen, x, y, edgeGlyph, UvStyle(fg: color));
     }
   }
+}
+
+int _sampleSlice(
+  int x,
+  int y,
+  double cx,
+  double cy,
+  double cellAspect,
+  double radius,
+  double innerRadius,
+  List<double> angles,
+  int paletteLength, {
+  required double dxOffset,
+  required double dyOffset,
+}) {
+  final dx = ((x + dxOffset) - cx) / cellAspect;
+  final dy = (y + dyOffset) - cy;
+  final dist = math.sqrt(dx * dx + dy * dy);
+  var angle = math.atan2(dy, dx);
+  if (angle < 0) angle += math.pi * 2;
+  return _sliceIndex(dist, angle, radius, innerRadius, angles, paletteLength);
+}
+
+UvColor? _sliceColor(UvStyle style) => style.bg ?? style.fg;
+
+int _dominantSlice(int ul, int ur, int ll, int lr) {
+  final counts = <int, int>{};
+  for (final idx in [ul, ur, ll, lr]) {
+    if (idx < 0) continue;
+    counts[idx] = (counts[idx] ?? 0) + 1;
+  }
+  if (counts.isEmpty) return -1;
+  var bestIdx = -1;
+  var bestCount = -1;
+  counts.forEach((idx, count) {
+    if (count > bestCount) {
+      bestIdx = idx;
+      bestCount = count;
+    }
+  });
+  return bestIdx;
+}
+
+String _maskToBlockGlyph(int mask) {
+  return switch (mask) {
+    0x1 => '▘', // upper-left
+    0x2 => '▝', // upper-right
+    0x3 => '▀', // top half
+    0x4 => '▖', // lower-left
+    0x5 => '▌', // left half
+    0x6 => '▞', // upper-right + lower-left
+    0x7 => '▛', // all but lower-right
+    0x8 => '▗', // lower-right
+    0x9 => '▚', // upper-left + lower-right
+    0xA => '▐', // right half
+    0xB => '▜', // all but lower-left
+    0xC => '▄', // bottom half
+    0xD => '▙', // all but upper-right
+    0xE => '▟', // all but upper-left
+    0xF => '█', // full
+    _ => '',
+  };
 }

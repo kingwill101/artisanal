@@ -36,6 +36,11 @@ class BarChart extends LeafRenderObjectWidget {
     this.gridCols = 0,
     this.xLabels,
     this.yLabels,
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.barChar = '█',
     this.barGap = 1,
     this.crosshairX,
@@ -83,6 +88,21 @@ class BarChart extends LeafRenderObjectWidget {
   /// Labels along the left (Y) axis.
   final List<String>? yLabels;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// Character used to fill bar columns.
   final String barChar;
 
@@ -114,6 +134,11 @@ class BarChart extends LeafRenderObjectWidget {
       gridCols: gridCols,
       xLabels: xLabels,
       yLabels: yLabels,
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       barChar: barChar,
       barGap: barGap,
       crosshairX: crosshairX,
@@ -139,6 +164,11 @@ class BarChart extends LeafRenderObjectWidget {
       ..gridCols = gridCols
       ..xLabels = xLabels
       ..yLabels = yLabels
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..barChar = barChar
       ..barGap = barGap
       ..crosshairX = crosshairX
@@ -161,6 +191,11 @@ class BarChart extends LeafRenderObjectWidget {
     gridCols,
     xLabels,
     yLabels,
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
     barChar,
     barGap,
   );
@@ -181,6 +216,11 @@ class _RenderBarChart extends RenderBox {
     required this.gridCols,
     required this.xLabels,
     required this.yLabels,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.barChar,
     required this.barGap,
     required this.crosshairX,
@@ -201,6 +241,11 @@ class _RenderBarChart extends RenderBox {
   int gridCols;
   List<String>? xLabels;
   List<String>? yLabels;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   String barChar;
   int barGap;
   int? crosshairX;
@@ -237,6 +282,11 @@ class _RenderBarChart extends RenderBox {
       gridCols,
       xLabels,
       yLabels,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       barChar,
       barGap,
       crosshairX: crosshairX,
@@ -263,6 +313,11 @@ class _RenderBarChart extends RenderBox {
           gridCols,
           xLabels,
           yLabels,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           barChar,
           barGap,
           crosshairX: crosshairX,
@@ -286,6 +341,11 @@ String _renderBarChartString(
   int gridCols,
   List<String>? xLabels,
   List<String>? yLabels,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding,
   String barChar,
   int barGap, {
   int? crosshairX,
@@ -321,5 +381,14 @@ String _renderBarChartString(
       style: crosshairStyle ?? const UvStyle(),
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }

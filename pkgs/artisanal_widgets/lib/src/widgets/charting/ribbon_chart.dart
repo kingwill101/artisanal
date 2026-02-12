@@ -39,6 +39,11 @@ class RibbonChart extends LeafRenderObjectWidget {
     this.gridRows = 3,
     this.gridCols = 0,
     this.gridStyle,
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
@@ -75,6 +80,21 @@ class RibbonChart extends LeafRenderObjectWidget {
   /// Style for grid lines.
   final UvStyle? gridStyle;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
 
@@ -97,6 +117,11 @@ class RibbonChart extends LeafRenderObjectWidget {
       gridRows: gridRows,
       gridCols: gridCols,
       gridStyle: gridStyle ?? const UvStyle(),
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -117,6 +142,11 @@ class RibbonChart extends LeafRenderObjectWidget {
       ..gridRows = gridRows
       ..gridCols = gridCols
       ..gridStyle = gridStyle ?? const UvStyle()
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -134,6 +164,11 @@ class RibbonChart extends LeafRenderObjectWidget {
     gridRows,
     gridCols,
     gridStyle ?? const UvStyle(),
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
   );
 }
 
@@ -149,6 +184,11 @@ class _RenderRibbonChart extends RenderBox {
     required this.gridRows,
     required this.gridCols,
     required this.gridStyle,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
@@ -164,6 +204,11 @@ class _RenderRibbonChart extends RenderBox {
   int gridRows;
   int gridCols;
   UvStyle gridStyle;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -195,6 +240,11 @@ class _RenderRibbonChart extends RenderBox {
       gridRows,
       gridCols,
       gridStyle,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -216,6 +266,11 @@ class _RenderRibbonChart extends RenderBox {
           gridRows,
           gridCols,
           gridStyle,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -233,7 +288,12 @@ String _renderRibbonChartString(
   bool showGrid,
   int gridRows,
   int gridCols,
-  UvStyle gridStyle, {
+  UvStyle gridStyle,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding, {
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -262,5 +322,14 @@ String _renderRibbonChartString(
       style: crosshairStyle ?? const UvStyle(),
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }

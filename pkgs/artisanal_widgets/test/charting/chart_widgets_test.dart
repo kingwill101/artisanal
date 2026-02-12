@@ -1,6 +1,6 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal/charting.dart' show ChartRamp;
+import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor;
 import 'package:test/test.dart';
 
@@ -386,6 +386,35 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test('renders legend entries inside chart', () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+      try {
+        await tester.pumpWidget(
+          LineChart(
+            values: [10, 20, 15, 30],
+            width: 50,
+            height: 10,
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Series A',
+                style: UvStyle(fg: UvColor.rgb(80, 180, 255)),
+              ),
+              ChartLegendEntry(
+                label: 'Series B',
+                style: UvStyle(fg: UvColor.rgb(255, 120, 80)),
+              ),
+            ],
+            legendColumns: 2,
+            legendPosition: ChartLegendPosition.bottomRight,
+          ),
+        );
+        expect(tester.view, contains('Series A'));
+        expect(tester.view, contains('Series B'));
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -568,6 +597,39 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test('renders legend entries for slices', () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+      try {
+        await tester.pumpWidget(
+          PieChart(
+            values: [35, 25, 40],
+            width: 30,
+            height: 12,
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Added',
+                style: UvStyle(bg: UvColor.rgb(80, 180, 255)),
+              ),
+              ChartLegendEntry(
+                label: 'Removed',
+                style: UvStyle(bg: UvColor.rgb(255, 120, 80)),
+              ),
+              ChartLegendEntry(
+                label: 'Modified',
+                style: UvStyle(bg: UvColor.rgb(160, 120, 255)),
+              ),
+            ],
+            legendPosition: ChartLegendPosition.topLeft,
+          ),
+        );
+        expect(tester.view, contains('Added'));
+        expect(tester.view, contains('Removed'));
+        expect(tester.view, contains('Modified'));
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -641,6 +703,44 @@ void main() {
       try {
         await tester.pumpWidget(RibbonChart(series: []));
         expect(tester.view, isNotNull);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('renders legend entries for stacked series', () async {
+      final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
+      try {
+        await tester.pumpWidget(
+          RibbonChart(
+            series: [
+              [10, 20, 30, 25],
+              [15, 10, 20, 30],
+              [8, 12, 10, 16],
+            ],
+            width: 50,
+            height: 12,
+            legendEntries: [
+              ChartLegendEntry(
+                label: 'Alpha',
+                style: UvStyle(fg: UvColor.rgb(80, 180, 255)),
+              ),
+              ChartLegendEntry(
+                label: 'Beta',
+                style: UvStyle(fg: UvColor.rgb(255, 120, 80)),
+              ),
+              ChartLegendEntry(
+                label: 'Gamma',
+                style: UvStyle(fg: UvColor.rgb(100, 220, 100)),
+              ),
+            ],
+            legendColumns: 2,
+            legendPosition: ChartLegendPosition.topLeft,
+          ),
+        );
+        expect(tester.view, contains('Alpha'));
+        expect(tester.view, contains('Beta'));
+        expect(tester.view, contains('Gamma'));
       } finally {
         await tester.dispose();
       }

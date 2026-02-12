@@ -291,8 +291,8 @@ double normalize(double value, double min, double max) {
 /// Draws a crosshair overlay at ([x], [y]) within [area].
 ///
 /// The crosshair is **non-destructive**: cells that already contain chart
-/// content (block characters, braille dots, etc.) keep their existing
-/// glyph and receive only a foreground-colour tint from [style]. Empty
+/// content (block characters, braille dots, etc.) keep their existing glyph
+/// and receive only a foreground-colour tint from [style]. Empty
 /// or space cells are replaced with the line-drawing characters [hChar],
 /// [vChar], and [intersectionChar].
 ///
@@ -304,6 +304,9 @@ double normalize(double value, double min, double max) {
 ///
 /// The optional [style] controls the foreground/background colours of the
 /// crosshair lines.
+///
+/// When [drawOnEmpty] is false, the crosshair only tints existing chart
+/// content and does not draw line glyphs into empty cells.
 void drawCrosshair(
   Screen screen,
   Rectangle area,
@@ -313,12 +316,13 @@ void drawCrosshair(
   String hChar = '─',
   String vChar = '│',
   String intersectionChar = '┼',
+  bool drawOnEmpty = true,
 }) {
   // Vertical line at column x.
   if (x >= area.minX && x < area.maxX) {
     for (var row = area.minY; row < area.maxY; row++) {
       if (row == y) continue; // intersection handled below
-      _putCrosshairCell(screen, x, row, vChar, style);
+      _putCrosshairCell(screen, x, row, vChar, style, drawOnEmpty: drawOnEmpty);
     }
   }
 
@@ -326,24 +330,29 @@ void drawCrosshair(
   if (y >= area.minY && y < area.maxY) {
     for (var col = area.minX; col < area.maxX; col++) {
       if (col == x) continue; // intersection handled below
-      _putCrosshairCell(screen, col, y, hChar, style);
+      _putCrosshairCell(screen, col, y, hChar, style, drawOnEmpty: drawOnEmpty);
     }
   }
 
   // Intersection.
   if (x >= area.minX && x < area.maxX && y >= area.minY && y < area.maxY) {
-    _putCrosshairCell(screen, x, y, intersectionChar, style);
+    _putCrosshairCell(
+      screen,
+      x,
+      y,
+      intersectionChar,
+      style,
+      drawOnEmpty: drawOnEmpty,
+    );
   }
 }
 
 /// Writes a crosshair cell, preserving existing chart content.
 ///
 /// If the cell at ([cx], [cy]) already has a visible glyph (anything
-/// other than empty/space), the existing character and foreground are
-/// kept and the crosshair colour is applied as a **background** tint.
-/// This makes the crosshair visible as a coloured strip behind block
-/// characters (`█`, `▄`, `▀`, braille dots, etc.) without destroying
-/// the chart content.
+/// other than empty/space), the existing character is kept and the crosshair
+/// colour is applied as a **foreground** tint. This avoids background bleed
+/// artifacts across dense charts while preserving the underlying geometry.
 ///
 /// Empty cells are replaced with the line-drawing [glyph] using the
 /// crosshair style directly.
@@ -352,19 +361,16 @@ void _putCrosshairCell(
   int cx,
   int cy,
   String glyph,
-  UvStyle style,
-) {
+  UvStyle style, {
+  required bool drawOnEmpty,
+}) {
   final existing = screen.cellAt(cx, cy);
   if (existing != null && _hasContent(existing)) {
-    // Preserve the existing character and fg; set bg to crosshair colour
-    // so the crosshair line is visible behind block glyphs.
-    final crosshairBg = style.fg ?? style.bg;
-    final merged = UvStyle(
-      fg: existing.style.fg,
-      bg: crosshairBg ?? existing.style.bg,
-    );
+    final crosshairFg = style.fg ?? style.bg;
+    final merged = existing.style.copyWith(fg: crosshairFg);
     putCell(screen, cx, cy, existing.content, merged);
   } else {
+    if (!drawOnEmpty) return;
     // Empty cell — draw the crosshair line character.
     final merged = existing != null && existing.style.bg != null
         ? style.copyWith(bg: existing.style.bg)

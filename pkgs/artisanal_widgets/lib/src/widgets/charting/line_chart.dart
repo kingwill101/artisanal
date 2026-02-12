@@ -38,6 +38,11 @@ class LineChart extends LeafRenderObjectWidget {
     this.lineChar = '•',
     this.xLabels,
     this.yLabels,
+    this.legendEntries,
+    this.legendColumns = 1,
+    this.legendRowGap = 0,
+    this.legendPosition = ChartLegendPosition.topRight,
+    this.legendPadding = 1,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
@@ -86,6 +91,21 @@ class LineChart extends LeafRenderObjectWidget {
   /// Labels along the left (Y) axis.
   final List<String>? yLabels;
 
+  /// Optional legend entries rendered inside chart bounds.
+  final List<ChartLegendEntry>? legendEntries;
+
+  /// Number of legend columns.
+  final int legendColumns;
+
+  /// Empty rows inserted between legend rows.
+  final int legendRowGap;
+
+  /// Legend placement within chart bounds.
+  final ChartLegendPosition legendPosition;
+
+  /// Inner padding from chart edges to legend area.
+  final int legendPadding;
+
   /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
 
@@ -112,6 +132,11 @@ class LineChart extends LeafRenderObjectWidget {
       lineChar: lineChar,
       xLabels: xLabels,
       yLabels: yLabels,
+      legendEntries: legendEntries,
+      legendColumns: legendColumns,
+      legendRowGap: legendRowGap,
+      legendPosition: legendPosition,
+      legendPadding: legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -136,6 +161,11 @@ class LineChart extends LeafRenderObjectWidget {
       ..lineChar = lineChar
       ..xLabels = xLabels
       ..yLabels = yLabels
+      ..legendEntries = legendEntries
+      ..legendColumns = legendColumns
+      ..legendRowGap = legendRowGap
+      ..legendPosition = legendPosition
+      ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -157,6 +187,11 @@ class LineChart extends LeafRenderObjectWidget {
     lineChar,
     xLabels,
     yLabels,
+    legendEntries,
+    legendColumns,
+    legendRowGap,
+    legendPosition,
+    legendPadding,
   );
 }
 
@@ -176,6 +211,11 @@ class _RenderLineChart extends RenderBox {
     required this.lineChar,
     required this.xLabels,
     required this.yLabels,
+    required this.legendEntries,
+    required this.legendColumns,
+    required this.legendRowGap,
+    required this.legendPosition,
+    required this.legendPadding,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
@@ -195,6 +235,11 @@ class _RenderLineChart extends RenderBox {
   String lineChar;
   List<String>? xLabels;
   List<String>? yLabels;
+  List<ChartLegendEntry>? legendEntries;
+  int legendColumns;
+  int legendRowGap;
+  ChartLegendPosition legendPosition;
+  int legendPadding;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -230,6 +275,11 @@ class _RenderLineChart extends RenderBox {
       lineChar,
       xLabels,
       yLabels,
+      legendEntries,
+      legendColumns,
+      legendRowGap,
+      legendPosition,
+      legendPadding,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -255,6 +305,11 @@ class _RenderLineChart extends RenderBox {
           lineChar,
           xLabels,
           yLabels,
+          legendEntries,
+          legendColumns,
+          legendRowGap,
+          legendPosition,
+          legendPadding,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -276,7 +331,12 @@ String _renderLineChartString(
   String markerChar,
   String lineChar,
   List<String>? xLabels,
-  List<String>? yLabels, {
+  List<String>? yLabels,
+  List<ChartLegendEntry>? legendEntries,
+  int legendColumns,
+  int legendRowGap,
+  ChartLegendPosition legendPosition,
+  int legendPadding, {
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -309,5 +369,14 @@ String _renderLineChartString(
       style: crosshairStyle ?? const UvStyle(),
     );
   }
+  _drawLegendOverlay(
+    canvas,
+    area,
+    legendEntries,
+    columns: legendColumns,
+    rowGap: legendRowGap,
+    position: legendPosition,
+    padding: legendPadding,
+  );
   return canvas.render();
 }
