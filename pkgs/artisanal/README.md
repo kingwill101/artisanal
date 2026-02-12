@@ -210,7 +210,7 @@ await runProgram(
     useUltravioletRenderer: true,
     useUltravioletInputDecoder: true,
     altScreen: true,
-    mouseTracking: true,
+    mouse: true,
   ),
 );
 ```

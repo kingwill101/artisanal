@@ -102,7 +102,7 @@ class MyModel implements Model {
 
 ### 3. Widget System
 
-**Location:** `lib/src/tui/widgets/`  
+**Location:** `pkgs/artisanal_widgets/lib/src/widgets/`  
 **Documentation:** [WIDGETS.md](WIDGETS.md)
 
 Declarative widget composition for building complex layouts:
@@ -126,6 +126,7 @@ Container(
 - `HBox`, `VBox` - Horizontal/vertical layouts
 - `GestureDetector` - Typed gesture recognition (tap, double-tap, long-press, drag)
 - `Theme` - Color theming with adaptive support
+- Flutter-style ports - `Chip`, `DropdownButton`, `PopupMenuButton`, `Slider`, `RangeSlider`, `LinearProgressIndicator`, `CircularProgressIndicator`
 
 ### 4. UV System (Ultraviolet)
 

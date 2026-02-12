@@ -21,6 +21,7 @@ This index links the primary documentation files. Each doc includes runnable, co
 
 - TUI runtime: [TUI.md](TUI.md)
 - Widgets: [WIDGETS.md](WIDGETS.md)
+- artisanal_widgets package guide: [../pkgs/artisanal_widgets/README.md](../pkgs/artisanal_widgets/README.md)
 - Bubbles components: [BUBBLES.md](BUBBLES.md)
 - Console components helper: [IO_COMPONENTS.md](IO_COMPONENTS.md)
 

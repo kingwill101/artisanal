@@ -4,19 +4,31 @@ Artisanal's Widget system provides a composable, hierarchical approach to buildi
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Widget Base Class](#widget-base-class)
-3. [Widget Lifecycle](#widget-lifecycle)
-4. [Theme System](#theme-system)
-5. [Layout Widgets](#layout-widgets)
-6. [Components Widgets](#components-widgets)
-7. [Gesture System](#gesture-system)
-8. [Creating Custom Widgets](#creating-custom-widgets)
-9. [Widget Composition](#widget-composition)
-10. [Message Propagation](#message-propagation)
-11. [Focus Management](#focus-management)
-12. [Integration with TUI Program](#integration-with-tui-program)
-13. [Integration with UV Canvas](#integration-with-uv-canvas)
+- [Overview](#overview)
+- [Widget Base Class](#widget-base-class)
+- [Keys and Debugging](#keys-and-debugging)
+- [Widget Lifecycle](#widget-lifecycle)
+- [Theme System](#theme-system)
+- [Layout Widgets](#layout-widgets)
+- [Focus Widgets](#focus-widgets)
+- [Input Widgets](#input-widgets)
+- [Scroll Widgets](#scroll-widgets)
+- [Components Widgets](#components-widgets)
+  - [Flutter-style ports](#flutter-style-ports)
+- [Navigation Widgets](#navigation-widgets)
+- [Selection Widgets](#selection-widgets)
+- [Chart Widgets](#chart-widgets)
+- [Media Widgets](#media-widgets)
+- [Animation Widgets](#animation-widgets)
+- [Creating Custom Widgets](#creating-custom-widgets)
+  - [RenderObject widgets](#renderobject-widgets)
+- [Widget Composition](#widget-composition)
+- [Message Propagation](#message-propagation)
+- [Focus Management](#focus-management)
+- [Integration with TUI Program](#integration-with-tui-program)
+- [Integration with UV Canvas](#integration-with-uv-canvas)
+- [Quick Reference](#quick-reference)
+- [Related Docs](#related-docs)
 
 ---
 
@@ -92,14 +104,13 @@ abstract class Widget implements Model {
 Use widget keys to preserve identity (and to derive zone IDs automatically):
 
 ```dart
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
-tui.Text('Title', key: w.Key('title'))
+w.Text('Title', key: const w.Key('title'))
 ```
 
-Widgets get a default `UniqueKey` if you don't provide one. Pass a stable key
-when you need identity across rebuilds.
+When no key is provided, widgets are matched by `runtimeType` and tree position.
+Pass a stable key only when you need identity preserved across reordering.
 
 ### WidgetApp
 
@@ -113,6 +124,10 @@ runProgram(app, options: const ProgramOptions(mouse: true));
 
 Set `scanZones: true` when you want automatic zone scanning at the root.
 Use `debugRebuilds: true` to log dirty element rebuilds.
+
+`WidgetApp` runs collected widget/state `handleInit()` commands via
+`ParallelCmd`, which ensures runtime-managed commands (for example
+`EveryCmd`/`StreamCmd`) are started correctly.
 
 ### Build Owner and Dirty Elements
 
@@ -232,7 +247,11 @@ When a widget is first mounted, `init()` is called. The default implementation:
 1. Requests the terminal background color (for adaptive theming)
 2. Calls `init()` on all children
 3. Calls `handleInit()` for widget-specific initialization
-4. Batches all commands together
+4. Returns a combined command
+
+When mounted through `WidgetApp`, collected `handleInit()` commands are executed
+via `ParallelCmd` so runtime-managed commands (for example timers/streams) are
+started by `Program`.
 
 ```dart
 class MyWidget extends Widget {
@@ -462,6 +481,21 @@ setTheme(customTheme);
 ---
 
 ## Layout Widgets
+
+Implemented layout widgets are grouped as follows:
+
+- **Core text/display:** `Text`, `Text.rich`, `RichText`, `Label`, `Icon`,
+  `MarkdownText`, `AsciiText`, `StyledAsciiText`, `Image`
+- **Flex/layout primitives:** `Flex`, `Row`, `Column`, `HBox`, `VBox`, `Wrap`,
+  `Spacer`, `Flexible`, `Expanded`, `Divider`, `VerticalDivider`
+- **Sizing/alignment:** `Container`, `Padding`, `Align`, `Center`, `SizedBox`,
+  `ConstrainedBox`, `LimitedBox`, `OverflowBox`, `SizedOverflowBox`,
+  `ShrinkWrap`, `Positioned`, `Stack`
+- **Decorators/effects:** `Opacity`, `Tint`, `AnimatedTint`, `FadeTint`,
+  `ColoredBox`, `DecoratedBox`, `ClipRect`, `Transform`, `Visibility`
+- **Event wrappers/utilities:** `GestureDetector`, `MouseRegion`, `Zone`,
+  `KeyboardListener`, `BlockFocus`, `IgnorePointer`, `Builder`,
+  `LayoutBuilder`, `TUIErrorWidget`, `ErrorThrowingWidget`
 
 ### Container
 
@@ -1037,6 +1071,12 @@ or `MouseMode.allMotion` for interactive focus with the mouse.
 
 ## Input Widgets
 
+The input module includes:
+
+- `TextField` for interactive editing
+- `TextEditingController` for external model/control access
+- `TextEditingValue` and `TextSelection` for value + selection state
+
 ### TextField
 
 Single-line text input powered by the bubbles textinput model:
@@ -1061,15 +1101,25 @@ blinking behavior.
 
 ## Scroll Widgets
 
+Scroll controllers:
+
+- `WidgetScrollController` for widget-native scrolling (recommended)
+- `ListViewController` for list-style offset/extent tracking
+- `ViewportController` for viewport-model backed content
+
 ### ScrollView
 
 Renders a single child into a scrollable viewport:
 
 ```dart
-ScrollView(
-  child: content,
+final controller = WidgetScrollController();
+
+Container(
   height: 20,
-  showScrollbar: true,
+  child: ScrollView(
+    controller: controller,
+    child: content,
+  ),
 )
 ```
 
@@ -1078,10 +1128,12 @@ ScrollView(
 Adds optional padding around the child before scrolling:
 
 ```dart
-SingleChildScrollView(
-  padding: EdgeInsets.all(1),
-  child: content,
+Container(
   height: 20,
+  child: SingleChildScrollView(
+    padding: EdgeInsets.all(1),
+    child: content,
+  ),
 )
 ```
 
@@ -1090,10 +1142,12 @@ SingleChildScrollView(
 Renders a list of children into a scrollable viewport:
 
 ```dart
-ListView(
-  children: items,
+Container(
   height: 12,
-  showScrollbar: true,
+  child: ListView.builder(
+    itemCount: items.length,
+    itemBuilder: (context, index) => Text(items[index]),
+  ),
 )
 ```
 
@@ -1105,7 +1159,11 @@ with fixed-height rows:
 ```dart
 VirtualListView(
   itemExtent: 1,
+  variableHeight: true,
+  estimatedItemExtent: 3,
   children: items,
+  // width/height can be set directly when desired.
+  width: 80,
   height: 12,
 )
 ```
@@ -1116,14 +1174,16 @@ Overlays a scrollbar on top of a scrollable child. Provide the same controller
 used by the scrollable:
 
 ```dart
-final controller = ViewportController();
+final controller = WidgetScrollController();
 
-Scrollbar(
-  controller: controller,
-  child: ScrollView(
+Container(
+  height: 12,
+  child: Scrollbar(
     controller: controller,
-    child: content,
-    height: 12,
+    child: ScrollView(
+      controller: controller,
+      child: content,
+    ),
   ),
 )
 ```
@@ -1142,38 +1202,40 @@ to add a rounded top/bottom glyph when using non-space thumb characters.
 Fancy styling example:
 
 ```dart
-final controller = ViewportController();
+final controller = WidgetScrollController();
 
-Scrollbar(
-  controller: controller,
-  thickness: 1,
-  gutterWidth: 3,
-  roundedCaps: true,
-  enableHover: true,
-  trackChar: ' ',
-  thumbChar: ' ',
-  trackUsesBackground: true,
-  thumbUsesBackground: true,
-  trackGradient: ScrollbarGradient.background(
-    start: theme.surface,
-    end: theme.background,
-  ),
-  thumbGradient: ScrollbarGradient.background(
-    start: theme.primary,
-    end: theme.secondary,
-  ),
-  hoverTrackGradient: ScrollbarGradient.background(
-    start: theme.surface,
-    end: theme.onBackground,
-  ),
-  hoverThumbGradient: ScrollbarGradient.background(
-    start: theme.primary,
-    end: theme.secondary,
-  ),
-  child: ScrollView(
+Container(
+  height: 12,
+  child: Scrollbar(
     controller: controller,
-    child: content,
-    height: 12,
+    thickness: 1,
+    gutterWidth: 3,
+    roundedCaps: true,
+    enableHover: true,
+    trackChar: ' ',
+    thumbChar: ' ',
+    trackUsesBackground: true,
+    thumbUsesBackground: true,
+    trackGradient: ScrollbarGradient.background(
+      start: theme.surface,
+      end: theme.background,
+    ),
+    thumbGradient: ScrollbarGradient.background(
+      start: theme.primary,
+      end: theme.secondary,
+    ),
+    hoverTrackGradient: ScrollbarGradient.background(
+      start: theme.surface,
+      end: theme.onBackground,
+    ),
+    hoverThumbGradient: ScrollbarGradient.background(
+      start: theme.primary,
+      end: theme.secondary,
+    ),
+    child: ScrollView(
+      controller: controller,
+      child: content,
+    ),
   ),
 )
 ```
@@ -1183,10 +1245,48 @@ Scrollbar(
 ## Components Widgets
 
 Higher-level widgets built from layout primitives. These are exported from
-`package:artisanal/tui.dart`.
+`package:artisanal_widgets/artisanal_widgets.dart` (and re-exported by
+`package:artisanal/tui.dart`).
 
 **Naming note:** `AlertBox`, `PanelBox`, and `ListTile` are used to avoid
 collisions with bubbles components that expose `Alert`, `Panel`, and `ListItem`.
+
+### Flutter-style ports
+
+`artisanal_widgets` also includes Flutter-style component ports:
+
+- Chips: `Chip`, `ActionChip`, `ChoiceChip`, `FilterChip`, `InputChip`
+- Menus: `DropdownButton`, `DropdownMenuItem`, `PopupMenuButton`,
+  `PopupMenuItem`, `CheckedPopupMenuItem`, `PopupMenuDivider`
+- Sliders: `Slider`, `RangeSlider`, `RangeValues`
+- Indicators: `LinearProgressIndicator`, `CircularProgressIndicator`
+
+Each port has a focused example under `pkgs/artisanal_widgets/example/` and a
+dedicated component test file under `pkgs/artisanal_widgets/test/components/`.
+
+### Component catalog
+
+Implemented component widgets and companion types include:
+
+- **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
+  `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`,
+  `CommandPalette`, `CommandPaletteItem`
+- **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
+  `StatusBar`, `AlertBox`, `Toast`, `Badge`
+- **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,
+  `Drawer`, `Sidebar`, `SplitView`, `ScrollArea`
+- **Selection/form rows:** `ListTile`, `CheckboxListTile`, `SwitchListTile`,
+  `RadioListTile`, `ExpansionTile`, `Accordion`, `Select`, `SelectOption`,
+  `DropdownButton`, `DropdownMenuItem`, `Pagination`, `Breadcrumbs`,
+  `BreadcrumbItem`
+- **Menus/chips/sliders/progress:** `PopupMenuButton`, `PopupMenuItem`,
+  `CheckedPopupMenuItem`, `PopupMenuDivider`, `Chip`, `ActionChip`,
+  `ChoiceChip`, `FilterChip`, `InputChip`, `Slider`, `RangeSlider`,
+  `RangeValues`, `ProgressIndicator`, `LinearProgressIndicator`,
+  `SpinnerIndicator`, `CircularProgressIndicator`, `Checkbox`, `Radio`,
+  `Switch`
+- **Overlay/debug helpers:** `Overlay`, `OverlayEntry`, `FadeModalBarrier`,
+  `DebugOverlay`, `PerformanceOverlay`, `GitDiffViewer`, `GitDiffController`
 
 ### Button
 
@@ -1317,6 +1417,122 @@ ScrollArea(height: 6, showScrollbar: true, child: longContent)
 
 ---
 
+## Navigation Widgets
+
+Navigation is provided by a Flutter-like route stack API:
+
+- `Navigator` and `NavigatorState`
+- `Route`, `PageRoute`, `ModalRoute`, `RouteSettings`
+- `NavigatorObserver`, `LoggingNavigatorObserver`
+- `PopBehavior` for keyboard-driven pop behavior
+
+```dart
+Navigator(
+  home: HomeScreen(),
+  routes: {
+    '/settings': (_) => SettingsScreen(),
+  },
+)
+
+// Later in a child widget:
+Navigator.of(context).push(PageRoute(builder: (_) => DetailsScreen()));
+```
+
+---
+
+## Selection Widgets
+
+Text selection widgets for copyable terminal content:
+
+- `SelectableText` for per-widget selection
+- `SelectionArea` for cross-widget shared selection
+- `SelectionController` for programmatic access
+
+```dart
+SelectionArea(
+  child: Column(
+    children: [
+      SelectableText('First paragraph'),
+      SelectableText('Second paragraph'),
+    ],
+  ),
+)
+```
+
+---
+
+## Chart Widgets
+
+Charting widgets use UV canvas-backed render objects:
+
+- `SparklineChart`, `LineChart`, `BarChart`, `HeatmapChart`, `PieChart`,
+  `RibbonChart`
+- `ChartModel`, `ChartSeries`, and `ChartBuilder` for reactive data-driven
+  chart updates
+
+```dart
+LineChart(
+  values: [10, 20, 15, 30, 25],
+  width: 60,
+  height: 12,
+  showGrid: true,
+)
+```
+
+---
+
+## Media Widgets
+
+The media module currently includes:
+
+- `MediaQuery` and `MediaQueryData`
+
+```dart
+final mq = MediaQuery.of(context);
+Text('Terminal size: ${mq.width}x${mq.height}');
+```
+
+---
+
+## Animation Widgets
+
+Animation support in `artisanal_widgets` includes both controller primitives and
+rebuild helpers:
+
+- `AnimationController`, `AnimationMixin`, `AnimationTickMsg`
+- `AnimatedBuilder`, `ListenableBuilder`, `ValueListenableBuilder`
+- `ImplicitlyAnimatedWidget`, `AnimatedWidgetBaseState`
+- `Tween`, `CurveTween`, `TweenSequence`, and standard `Curves`
+
+```dart
+class PulseLabel extends StatefulWidget {
+  PulseLabel({super.key});
+
+  @override
+  State createState() => _PulseLabelState();
+}
+
+class _PulseLabelState extends State<PulseLabel> with AnimationMixin {
+  late final AnimationController _controller = createAnimationController(
+    duration: const Duration(milliseconds: 600),
+  )..repeat(reverse: true);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final value = 0.3 + (_controller.value * 0.7);
+        return Opacity(opacity: value, child: child ?? SizedBox.shrink());
+      },
+      child: Text('Working...'),
+    );
+  }
+}
+```
+
+---
+
 ## Creating Custom Widgets
 
 ### Basic Custom Widget
@@ -1394,6 +1610,63 @@ class MyWidget extends Widget {
   }
 }
 ```
+
+### RenderObject widgets
+
+Use a render-object widget when you need tight control over layout, hit testing,
+or paint performance.
+
+- `LeafRenderObjectWidget` for single-node drawing
+- `SingleChildRenderObjectWidget` for one child with custom layout/paint
+- `MultiChildRenderObjectWidget` for custom multi-child layout engines
+
+```dart
+class HorizontalRule extends LeafRenderObjectWidget {
+  HorizontalRule({this.char = '─', this.height = 1, super.key});
+
+  final String char;
+  final int height;
+
+  @override
+  RenderObject createRenderObject() {
+    return _RenderHorizontalRule(char: char, height: height);
+  }
+
+  @override
+  void updateRenderObject(RenderObject renderObject) {
+    final ro = renderObject as _RenderHorizontalRule;
+    ro
+      ..char = char
+      ..height = height;
+  }
+}
+
+class _RenderHorizontalRule extends RenderBox {
+  _RenderHorizontalRule({required this.char, required this.height});
+
+  String char;
+  int height;
+
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    final w = constraints.hasBoundedWidth ? constraints.maxWidth.toInt() : 0;
+    final h = height.clamp(1, 3);
+    size = constraints.constrain(Size(w.toDouble(), h.toDouble()));
+  }
+
+  @override
+  String paint() {
+    final w = size.width.round();
+    final h = size.height.round();
+    final line = List<String>.filled(w, char).join();
+    return List<String>.filled(h, line).join('\n');
+  }
+}
+```
+
+Most widgets should stay at `StatelessWidget`/`StatefulWidget` level; only
+drop to render objects when profiling shows a measurable need.
 
 ---
 

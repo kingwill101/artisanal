@@ -162,7 +162,7 @@ import 'package:artisanal/terminal.dart';
 
 Future<void> main() async {
   final terminal = StdioTerminal();
-  final wizard = WizardModel([
+  final wizard = WizardModel(steps: [
     WizardStep.textInput(key: 'name', prompt: 'Name: '),
     WizardStep.confirm(key: 'confirm', prompt: 'Continue?'),
   ]);
@@ -179,24 +179,35 @@ import 'package:artisanal/tui.dart';
 import 'package:artisanal/bubbles.dart';
 
 class DemoModel with ComponentHost implements Model {
-  final TextInputModel input;
-  final SpinnerModel spinner;
+  TextInputModel input;
+  SpinnerModel spinner;
 
   DemoModel({TextInputModel? input, SpinnerModel? spinner})
     : input = input ?? TextInputModel(prompt: 'Search: '),
       spinner = spinner ?? SpinnerModel();
 
   @override
-  Cmd? init() => spinner.init();
+  Cmd? init() => spinner.tick();
 
   @override
   (Model, Cmd?) update(Msg msg) {
-    final (newInput, inputCmd) = updateComponent(input, msg);
-    final (newSpinner, spinnerCmd) = updateComponent(spinner, msg);
-    final cmds = <Cmd>[];
-    if (inputCmd != null) cmds.add(inputCmd);
-    if (spinnerCmd != null) cmds.add(spinnerCmd);
-    return (DemoModel(input: newInput, spinner: newSpinner), Cmd.batch(cmds));
+    final (_, inputCmd) = updateComponent(
+      input,
+      msg,
+      (next) => input = next,
+    );
+    final (_, spinnerCmd) = updateComponent(
+      spinner,
+      msg,
+      (next) => spinner = next,
+    );
+    return (
+      this,
+      Cmd.batch([
+        if (inputCmd != null) inputCmd,
+        if (spinnerCmd != null) spinnerCmd,
+      ]),
+    );
   }
 
   @override

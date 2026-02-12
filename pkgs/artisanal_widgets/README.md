@@ -3,6 +3,15 @@
 Flutter-inspired widget framework for terminal UIs, built on top of
 `artisanal`.
 
+## Table of Contents
+
+- [Import](#import)
+- [Quick start](#quick-start)
+- [Flutter-style component ports](#flutter-style-component-ports)
+- [Widget-specific examples](#widget-specific-examples)
+- [Tests](#tests)
+- [Command execution note](#command-execution-note)
+
 ## Import
 
 ```dart

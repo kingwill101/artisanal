@@ -747,9 +747,8 @@ Controls mouse reporting:
 
 ```dart
 MouseMode.none    // No mouse reporting
-MouseMode.click   // Button press/release only
-MouseMode.drag    // Button events + drag motion
-MouseMode.motion  // All motion events
+MouseMode.cellMotion  // Button events + motion while a button is pressed
+MouseMode.allMotion   // All motion events
 ```
 
 ### MouseButton
@@ -765,10 +764,8 @@ MouseButton.wheelUp
 MouseButton.wheelDown
 MouseButton.wheelLeft
 MouseButton.wheelRight
-MouseButton.backward
-MouseButton.forward
-MouseButton.button10
-MouseButton.button11
+MouseButton.button4
+MouseButton.button5
 
 // Get name
 MouseButton.toName(MouseButton.left);  // "left"

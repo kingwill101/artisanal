@@ -2,6 +2,26 @@
 
 The TUI system provides an Elm Architecture-based framework for building interactive terminal user interfaces. It's inspired by [Charm's Bubble Tea](https://github.com/charmbracelet/bubbletea) for Go.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Model Interface](#model-interface)
+- [Program Class](#program-class)
+- [Command System (Cmd)](#command-system-cmd)
+- [Message Types (Msg)](#message-types-msg)
+- [View Rendering](#view-rendering)
+- [Markdown Rendering](#markdown-rendering)
+- [Built-in Bubbles (Components)](#built-in-bubbles-components)
+- [Creating Custom Components](#creating-custom-components)
+- [Composing Components](#composing-components)
+- [Message Filtering](#message-filtering)
+- [UV Renderer Integration](#uv-renderer-integration)
+- [Helper Functions](#helper-functions)
+- [Best Practices](#best-practices)
+- [Import](#import)
+- [Related Docs](#related-docs)
+
 ## Overview
 
 The Elm Architecture (TEA) is a pattern for building interactive applications with three core concepts:
@@ -137,7 +157,7 @@ await program.run();
 |--------|------|---------|-------------|
 | `altScreen` | `bool` | `true` | Use alternate screen buffer (fullscreen mode) |
 | `mouse` | `bool` | `false` | Enable mouse tracking |
-| `mouseMode` | `MouseMode` | `none` | Mouse tracking mode (none, click, drag, motion) |
+| `mouseMode` | `MouseMode` | `none` | Mouse tracking mode (`none`, `cellMotion`, `allMotion`) |
 | `fps` | `int` | `60` | Maximum frames per second (1-120) |
 | `frameTick` | `bool` | `true` | Auto-send FrameTickMsg at configured fps |
 | `hideCursor` | `bool` | `true` | Hide cursor during execution |
@@ -145,7 +165,7 @@ await program.run();
 | `inputTimeout` | `Duration` | `50ms` | Timeout for incomplete escape sequences |
 | `catchPanics` | `bool` | `true` | Catch exceptions and restore terminal |
 | `filter` | `MessageFilter?` | `null` | Filter messages before reaching model |
-| `signalHandlers` | `bool` | `true` | Install signal handlers (SIGINT, SIGTERM) |
+| `signalHandlers` | `bool` | `true` | Install signal handlers (SIGINT, SIGWINCH) |
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
 
@@ -190,8 +210,10 @@ await runProgram(MyModel());
 // With options
 await runProgram(
   MyModel(),
-  altScreen: true,
-  mouse: true,
+  options: const ProgramOptions(
+    altScreen: true,
+    mouse: true,
+  ),
 );
 ```
 
@@ -209,13 +231,16 @@ Cmd.none()
 Cmd.quit()
 
 // Send a message after delay
-Cmd.tick(Duration(seconds: 1), () => TimerMsg())
+Cmd.tick(Duration(seconds: 1), (_) => TimerMsg())
 
 // Repeating timer
-Cmd.every(Duration(milliseconds: 100), () => AnimateMsg())
+every(Duration(milliseconds: 100), (time) => AnimateMsg())
 
-// Run multiple commands concurrently
+// Run multiple finite commands concurrently
 Cmd.batch([cmd1, cmd2, cmd3])
+
+// Run commands through Program execution (required for EveryCmd/StreamCmd)
+ParallelCmd([cmd1, cmd2, cmd3])
 
 // Run commands in sequence
 Cmd.sequence([cmd1, cmd2, cmd3])
@@ -231,8 +256,8 @@ Cmd.setWindowTitle('My App')
 
 // Execute external process
 Cmd.exec(
-  executable: 'ls',
-  arguments: ['-la'],
+  'ls',
+  ['-la'],
   onComplete: (result) => ProcessCompleteMsg(result),
 )
 ```
@@ -254,9 +279,9 @@ Cmd? init() {
 ```dart
 // Subscribe to a stream
 StreamCmd(
-  myStream,
+  stream: myStream,
   onData: (data) => DataReceivedMsg(data),
-  onError: (error) => StreamErrorMsg(error),
+  onError: (error, stack) => StreamErrorMsg(error),
   onDone: () => StreamDoneMsg(),
 )
 ```
@@ -266,9 +291,34 @@ StreamCmd(
 ```dart
 // Animation tick every 100ms
 EveryCmd(
-  Duration(milliseconds: 100),
-  () => AnimationTickMsg(),
+  interval: const Duration(milliseconds: 100),
+  callback: (time) => AnimationTickMsg(),
 )
+```
+
+### Cmd.batch vs ParallelCmd
+
+`Cmd.batch()` executes child commands via `cmd.execute()` and combines the
+results into a `BatchMsg`. This is ideal for normal finite commands like
+`Cmd.perform`, `Cmd.tick`, and `Cmd.message`.
+
+`ParallelCmd()` dispatches each child command through `Program._executeCommand`.
+Use this when a command list may contain runtime-managed command types like
+`EveryCmd` and `StreamCmd` (including helpers like `every(...)`), since those
+must be started by the Program runtime.
+
+```dart
+// Good: finite commands
+Cmd.batch([
+  Cmd.perform(loadUser, onSuccess: UserLoadedMsg.new),
+  Cmd.perform(loadSettings, onSuccess: SettingsLoadedMsg.new),
+])
+
+// Good: includes repeating timer
+ParallelCmd([
+  every(const Duration(milliseconds: 120), (_) => SpinnerTickMsg()),
+  Cmd.perform(fetchData, onSuccess: DataLoadedMsg.new),
+])
 ```
 
 ## Message Types (Msg)
@@ -279,35 +329,40 @@ Messages are events that trigger state updates:
 
 ```dart
 // Keyboard input
-KeyMsg(key: Key(type: KeyType.enter))
-KeyMsg(key: Key(type: KeyType.runes, runes: [0x61])) // 'a'
-KeyMsg(key: Key(ctrl: true, runes: [0x63])) // Ctrl+C
+KeyMsg(key: Key(KeyType.enter))
+KeyMsg(key: Key(KeyType.runes, runes: [0x61])) // 'a'
+KeyMsg(key: Key(KeyType.runes, ctrl: true, runes: [0x63])) // Ctrl+C
 
 // Mouse input
-MouseMsg(mouse: Mouse(
-  type: MouseEventType.press,
+MouseMsg(
+  action: MouseAction.press,
   button: MouseButton.left,
-  x: 10, y: 5,
-))
+  x: 10,
+  y: 5,
+)
 
 // Window resize
-WindowSizeMsg(width: 80, height: 24)
+WindowSizeMsg(80, 24)
 
 // Focus change
-FocusMsg(focused: true)
+FocusMsg(true)
 
 // Pasted text (bracketed paste mode)
-PasteMsg(text: 'pasted content')
+PasteMsg('pasted content')
 ```
 
 ### Timer Messages
 
 ```dart
 // From Cmd.tick
-TickMsg(time: DateTime.now(), tag: 'myTimer')
+TickMsg(DateTime.now(), id: 'myTimer')
 
 // From frameTick option
-FrameTickMsg(time: DateTime.now(), frame: 42)
+FrameTickMsg(
+  time: DateTime.now(),
+  frameNumber: 42,
+  delta: Duration.zero,
+)
 ```
 
 ### Control Messages
@@ -330,10 +385,10 @@ BatchMsg([msg1, msg2, msg3])
 BackgroundColorMsg(hex: '#0f172a')
 
 // Clipboard response
-ClipboardMsg(content: 'copied text')
+ClipboardMsg(selection: ClipboardSelection.system, content: 'copied text')
 
 // Render metrics for profiling
-RenderMetricsMsg(metrics: RenderMetrics())
+RenderMetricsMsg(RenderMetrics())
 ```
 
 ### Custom Messages
@@ -385,7 +440,7 @@ View view() {
       state: TerminalProgressBarState.defaultState,
       value: progress,
     ),
-    mouseMode: MouseMode.motion,                     // Dynamic mouse mode
+    mouseMode: MouseMode.allMotion,                  // Dynamic mouse mode
   );
 }
 ```
@@ -430,12 +485,9 @@ final text = input.value;
 ### ListModel
 
 ```dart
-final list = ListModel<String>(
-  items: ['Apple', 'Banana', 'Cherry'],
-  itemDelegate: (item, index, isSelected) {
-    final prefix = isSelected ? '▸ ' : '  ';
-    return '$prefix$item';
-  },
+final list = ListModel(
+  items: ['Apple', 'Banana', 'Cherry'].map(StringItem.new).toList(),
+  delegate: DefaultItemDelegate(),
   height: 5,
   showFilter: true,
 );
@@ -452,12 +504,11 @@ final selected = list.selectedItem;
 ```dart
 final confirm = ConfirmModel(
   prompt: 'Delete all files?',
-  affirmative: 'Yes',
-  negative: 'No',
+  defaultValue: true,
 );
 
 // Check result:
-if (confirm.confirmed) {
+if (confirm.value) {
   // User confirmed
 }
 ```
@@ -466,12 +517,14 @@ if (confirm.confirmed) {
 
 ```dart
 final spinner = SpinnerModel(
-  spinner: Spinners.dots,  // or: line, pulse, globe, moon, etc.
-  title: 'Loading...',
+  spinner: Spinners.dot,  // or: line, pulse, globe, moon, etc.
 );
 
-// Update on each frame tick
-final (newSpinner, _) = spinner.update(FrameTickMsg(...));
+// In init:
+Cmd? init() => spinner.tick();
+
+// In update:
+final (newSpinner, cmd) = spinner.update(msg);
 ```
 
 Available spinner presets in `Spinners`:
@@ -483,10 +536,10 @@ Available spinner presets in `Spinners`:
 
 ```dart
 final picker = FilePickerModel(
-  initialPath: Directory.current.path,
-  allowFiles: true,
-  allowDirectories: false,
-  extensions: ['.dart', '.yaml'],
+  currentDirectory: Directory.current.path,
+  fileAllowed: true,
+  dirAllowed: false,
+  allowedTypes: ['.dart', '.yaml'],
 );
 
 // Get selected path:
@@ -498,18 +551,18 @@ final path = picker.selectedPath;
 ```dart
 final wizard = WizardModel(
   steps: [
-    WizardStep.text(
-      title: 'Name',
+    WizardStep.textInput(
+      key: 'name',
       prompt: 'Enter your name:',
       validate: (v) => v.isNotEmpty ? null : 'Name required',
     ),
     WizardStep.select(
-      title: 'Language',
+      key: 'language',
       prompt: 'Choose language:',
       options: ['Dart', 'Go', 'Rust'],
     ),
     WizardStep.confirm(
-      title: 'Confirm',
+      key: 'confirm',
       prompt: 'Proceed?',
     ),
   ],
@@ -574,8 +627,8 @@ Use the `ComponentHost` mixin to manage child components:
 
 ```dart
 class AppModel with ComponentHost implements Model {
-  final TextInputModel searchInput;
-  final ListModel<String> itemList;
+  TextInputModel searchInput;
+  ListModel itemList;
   
   AppModel({
     required this.searchInput,
@@ -583,26 +636,21 @@ class AppModel with ComponentHost implements Model {
   });
 
   @override
-  List<ViewComponent> get components => [searchInput, itemList];
-
-  @override
-  Cmd? init() {
-    // Initialize all components
-    return initComponents();
-  }
+  Cmd? init() => null;
 
   @override
   (Model, Cmd?) update(Msg msg) {
-    // Update all components
-    final (newComponents, cmd) = updateComponents(msg);
-    
-    return (
-      AppModel(
-        searchInput: newComponents[0] as TextInputModel,
-        itemList: newComponents[1] as ListModel<String>,
-      ),
-      cmd,
+    final (_, inputCmd) = updateComponent(
+      searchInput,
+      msg,
+      (next) => searchInput = next,
     );
+    final (_, listCmd) = updateComponent(
+      itemList,
+      msg,
+      (next) => itemList = next,
+    );
+    return (this, Cmd.batch([if (inputCmd != null) inputCmd, if (listCmd != null) listCmd]));
   }
 
   @override
@@ -672,7 +720,7 @@ UpdateResult quit(Model model) => (model, Cmd.quit());
 1. **Keep Models Immutable** - Use `copyWith` pattern
 2. **Pure View Functions** - No side effects in `view()`
 3. **Use Pattern Matching** - Dart's `switch` expressions are perfect for `update()`
-4. **Batch Related Commands** - Use `Cmd.batch()` for concurrent operations
+4. **Choose the Right Command Combiner** - Use `Cmd.batch()` for finite commands; use `ParallelCmd` when including `EveryCmd`/`StreamCmd`
 5. **Handle All Key Types** - Include a default case in your update function
 6. **Clean Up Resources** - Return cleanup commands when needed
 

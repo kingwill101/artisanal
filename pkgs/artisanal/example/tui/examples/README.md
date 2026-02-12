@@ -1,9 +1,6 @@
 # Examples
 
-This directory mirrors the Bubble Tea examples. Each folder still contains the
-original Go source (`main.go`) for reference, and we are adding Dart ports
-(`main.dart`) that run on `artisanal`' Bubble Tea-style runtime. To try a
-Dart port from the package root:
+This directory mirrors the Bubble Tea examples as Dart ports. Each folder contains a runnable Dart implementation (`main.dart`) for artisanal's Bubble Tea-style runtime. To try an example from the package root:
 
 ```bash
 dart run example/tui/examples/<example>/main.dart
@@ -14,7 +11,7 @@ dart run example/tui/examples/<example>/main.dart
 The `altscreen-toggle` example shows how to transition between the alternative
 screen buffer and the normal screen buffer using Bubble Tea.
 
-<a href="./altscreen-toggle/main.go">
+<a href="./altscreen-toggle/main.dart">
   <img width="750" src="./altscreen-toggle/altscreen-toggle.gif" />
 </a>
 
@@ -23,7 +20,7 @@ screen buffer and the normal screen buffer using Bubble Tea.
 The `chat` examples shows a basic chat application with a multi-line `textarea`
 input.
 
-<a href="./chat/main.go">
+<a href="./chat/main.dart">
   <img width="750" src="./chat/chat.gif" />
 </a>
 
@@ -32,7 +29,7 @@ input.
 The `composable-views` example shows how to compose two bubble models (spinner
 and timer) together in a single application and switch between them.
 
-<a href="./composable-views/main.go">
+<a href="./composable-views/main.dart">
   <img width="750" src="./composable-views/composable-views.gif" />
 </a>
 
@@ -41,7 +38,7 @@ and timer) together in a single application and switch between them.
 The `credit-card-form` example demonstrates how to build a multi-step form with
 `textinputs` bubbles and validation on the inputs.
 
-<a href="./credit-card-form/main.go">
+<a href="./credit-card-form/main.dart">
   <img width="750" src="./credit-card-form/credit-card-form.gif" />
 </a>
 
@@ -50,7 +47,7 @@ The `credit-card-form` example demonstrates how to build a multi-step form with
 The `debounce` example shows how to throttle key presses to avoid overloading
 your Bubble Tea application.
 
-<a href="./debounce/main.go">
+<a href="./debounce/main.dart">
   <img width="750" src="./debounce/debounce.gif" />
 </a>
 
@@ -59,7 +56,7 @@ your Bubble Tea application.
 The `exec` example shows how to execute a running command during the execution
 of a Bubble Tea application such as launching an `EDITOR`.
  
-<a href="./exec/main.go">
+<a href="./exec/main.dart">
   <img width="750" src="./exec/exec.gif" />
 </a>
 
@@ -67,7 +64,7 @@ of a Bubble Tea application such as launching an `EDITOR`.
 
 The `fullscreen` example shows how to make a Bubble Tea application fullscreen.
 
-<a href="./fullscreen/main.go">
+<a href="./fullscreen/main.dart">
   <img width="750" src="./fullscreen/fullscreen.gif" />
 </a>
 
@@ -75,7 +72,7 @@ The `fullscreen` example shows how to make a Bubble Tea application fullscreen.
 
 The `glamour` example shows how to use [Glamour](https://github.com/charmbracelet/glamour) inside a viewport bubble.
 
-<a href="./glamour/main.go">
+<a href="./glamour/main.dart">
   <img width="750" src="./glamour/glamour.gif" />
 </a>
 
@@ -93,7 +90,7 @@ with `renderMarkdown`, and displays it inside a viewport.
 The `help` example shows how to use the `help` bubble to display help to the
 user of your application.
 
-<a href="./help/main.go">
+<a href="./help/main.dart">
   <img width="750" src="./help/help.gif" />
 </a>
 
@@ -102,7 +99,7 @@ user of your application.
 The `http` example shows how to make an `http` call within your Bubble Tea
 application.
 
-<a href="./http/main.go">
+<a href="./http/main.dart">
   <img width="750" src="./http/http.gif" />
 </a>
 
@@ -110,7 +107,7 @@ application.
 
 The `list-default` example shows how to use the list bubble.
 
-<a href="./list-default/main.go">
+<a href="./list-default/main.dart">
   <img width="750" src="./list-default/list-default.gif" />
 </a>
 
@@ -118,7 +115,7 @@ The `list-default` example shows how to use the list bubble.
 
 The `list-fancy` example shows how to use the list bubble with extra customizations.
 
-<a href="./list-fancy/main.go">
+<a href="./list-fancy/main.dart">
   <img width="750" src="./list-fancy/list-fancy.gif" />
 </a>
 
@@ -126,7 +123,7 @@ The `list-fancy` example shows how to use the list bubble with extra customizati
 
 The `list-simple` example shows how to use the list and customize it to have a simpler, more compact, appearance.
 
-<a href="./list-simple/main.go">
+<a href="./list-simple/main.dart">
   <img width="750" src="./list-simple/list-simple.gif" />
 </a>
 
@@ -135,16 +132,16 @@ The `list-simple` example shows how to use the list and customize it to have a s
 The `mouse` example shows how to receive mouse events in a Bubble Tea
 application.
 
-<a href="./mouse/main.go">
+<a href="./mouse/main.dart">
   Code
 </a>
 
 ### Package Manager
 
 The `package-manager` example shows how to build an interface for a package
-manager using the `tea.Println` feature.
+manager using output commands such as `tui.Cmd.println` / `tui.Cmd.printf`.
 
-<a href="./package-manager/main.go">
+<a href="./package-manager/main.dart">
   <img width="750" src="./package-manager/package-manager.gif" />
 </a>
 
@@ -153,7 +150,7 @@ manager using the `tea.Println` feature.
 The `pager` example shows how to build a simple pager application similar to
 `less`.
 
-<a href="./pager/main.go">
+<a href="./pager/main.dart">
   <img width="750" src="./pager/pager.gif" />
 </a>
 
@@ -161,7 +158,7 @@ The `pager` example shows how to build a simple pager application similar to
 
 The `paginator` example shows how to build a simple paginated list.
 
-<a href="./paginator/main.go">
+<a href="./paginator/main.dart">
   <img width="750" src="./paginator/paginator.gif" />
 </a>
 
@@ -170,7 +167,7 @@ The `paginator` example shows how to build a simple paginated list.
 The `pipe` example demonstrates using shell pipes to communicate with Bubble
 Tea applications.
 
-<a href="./pipe/main.go">
+<a href="./pipe/main.dart">
   <img width="750" src="./pipe/pipe.gif" />
 </a>
 
@@ -179,7 +176,7 @@ Tea applications.
 The `progress-animated` example shows how to build a progress bar with an
 animated progression.
 
-<a href="./progress-animated/main.go">
+<a href="./progress-animated/main.dart">
   <img width="750" src="./progress-animated/progress-animated.gif" />
 </a>
 
@@ -188,7 +185,7 @@ animated progression.
 The `progress-download` example demonstrates how to download a file while
 indicating download progress through Bubble Tea.
 
-<a href="./progress-download/main.go">
+<a href="./progress-download/main.dart">
   Code
 </a>
 
@@ -197,7 +194,7 @@ indicating download progress through Bubble Tea.
 The `progress-static` example shows a progress bar with static incrementation
 of progress.
 
-<a href="./progress-static/main.go">
+<a href="./progress-static/main.dart">
   <img width="750" src="./progress-static/progress-static.gif" />
 </a>
 
@@ -206,7 +203,7 @@ of progress.
 The `realtime` example demonstrates the use of go channels to perform realtime
 communication with a Bubble Tea application.
 
-<a href="./realtime/main.go">
+<a href="./realtime/main.dart">
   <img width="750" src="./realtime/realtime.gif" />
 </a>
 
@@ -214,23 +211,23 @@ communication with a Bubble Tea application.
 
 The `result` example shows a choice menu with the ability to select an option.
 
-<a href="./result/main.go">
+<a href="./result/main.dart">
   <img width="750" src="./result/result.gif" />
 </a>
 
 ### Send Msg
 
-The `send-msg` example demonstrates the usage of custom `tea.Msg`s.
+The `send-msg` example demonstrates the usage of custom `tui.Msg`s.
 
-<a href="./send-msg/main.go">
+<a href="./send-msg/main.dart">
   <img width="750" src="./send-msg/send-msg.gif" />
 </a>
 
 ### Sequence
 
-The `sequence` example demonstrates the `tea.Sequence` command.
+The `sequence` example demonstrates the `tui.Cmd.sequence` command.
 
-<a href="./sequence/main.go">
+<a href="./sequence/main.dart">
   <img width="750" src="./sequence/sequence.gif" />
 </a>
 
@@ -238,7 +235,7 @@ The `sequence` example demonstrates the `tea.Sequence` command.
 
 The `simple` example shows a very simple Bubble Tea application.
 
-<a href="./simple/main.go">
+<a href="./simple/main.dart">
   <img width="750" src="./simple/simple.gif" />
 </a>
 
@@ -246,7 +243,7 @@ The `simple` example shows a very simple Bubble Tea application.
 
 The `spinner` example demonstrates a spinner bubble being used to indicate loading.
 
-<a href="./spinner/main.go">
+<a href="./spinner/main.dart">
   <img width="750" src="./spinner/spinner.gif" />
 </a>
 
@@ -254,7 +251,7 @@ The `spinner` example demonstrates a spinner bubble being used to indicate loadi
 
 The `spinner` example shows various spinner types that are available.
 
-<a href="./spinners/main.go">
+<a href="./spinners/main.dart">
   <img width="750" src="./spinners/spinners.gif" />
 </a>
 
@@ -263,7 +260,7 @@ The `spinner` example shows various spinner types that are available.
 The `split-editors` example shows multiple `textarea`s being used in a single
 application and being able to switch focus between them.
 
-<a href="./split-editors/main.go">
+<a href="./split-editors/main.dart">
   <img width="750" src="./split-editors/split-editors.gif" />
 </a>
 
@@ -271,7 +268,7 @@ application and being able to switch focus between them.
 
 The `stopwatch` example shows a sample stop watch built with Bubble Tea.
 
-<a href="./stopwatch/main.go">
+<a href="./stopwatch/main.dart">
   <img width="750" src="./stopwatch/stopwatch.gif" />
 </a>
 
@@ -280,7 +277,7 @@ The `stopwatch` example shows a sample stop watch built with Bubble Tea.
 The `table` example demonstrates the table bubble being used to display tabular
 data.
 
-<a href="./table/main.go">
+<a href="./table/main.dart">
   <img width="750" src="./table/table.gif" />
 </a>
 
@@ -288,7 +285,7 @@ data.
 
 The `tabs` example demonstrates tabbed navigation styled with [Lip Gloss](https://github.com/charmbracelet/lipgloss).
 
-<a href="./tabs/main.go">
+<a href="./tabs/main.dart">
   <img width="750" src="./tabs/tabs.gif" />
 </a>
 
@@ -297,7 +294,7 @@ The `tabs` example demonstrates tabbed navigation styled with [Lip Gloss](https:
 The `textarea` example demonstrates a simple Bubble Tea application using a
 `textarea` bubble.
 
-<a href="./textarea/main.go">
+<a href="./textarea/main.dart">
   <img width="750" src="./textarea/textarea.gif" />
 </a>
 
@@ -305,7 +302,7 @@ The `textarea` example demonstrates a simple Bubble Tea application using a
 
 The `textinput` example demonstrates a simple Bubble Tea application using a `textinput` bubble.
 
-<a href="./textinput/main.go">
+<a href="./textinput/main.dart">
   <img width="750" src="./textinput/textinput.gif" />
 </a>
 
@@ -314,7 +311,7 @@ The `textinput` example demonstrates a simple Bubble Tea application using a `te
 The `textinputs` example shows multiple `textinputs` and being able to switch
 focus between them as well as changing the cursor mode.
 
-<a href="./textinputs/main.go">
+<a href="./textinputs/main.dart">
   <img width="750" src="./textinputs/textinputs.gif" />
 </a>
 
@@ -322,7 +319,7 @@ focus between them as well as changing the cursor mode.
 
 The `timer` example shows a simple timer built with Bubble Tea.
 
-<a href="./timer/main.go">
+<a href="./timer/main.dart">
   <img width="750" src="./timer/timer.gif" />
 </a>
 
@@ -331,7 +328,7 @@ The `timer` example shows a simple timer built with Bubble Tea.
 The `tui-daemon-combo` demonstrates building a text-user interface along with a
 daemon mode using Bubble Tea.
 
-<a href="./tui-daemon-combo/main.go">
+<a href="./tui-daemon-combo/main.dart">
   <img width="750" src="./tui-daemon-combo/tui-daemon-combo.gif" />
 </a>
 
@@ -340,6 +337,6 @@ daemon mode using Bubble Tea.
 The `views` example demonstrates how to build a Bubble Tea application with
 multiple views and switch between them.
 
-<a href="./views/main.go">
+<a href="./views/main.dart">
   <img width="750" src="./views/views.gif" />
 </a>
