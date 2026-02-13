@@ -804,6 +804,10 @@ Notes:
 - Replay does not quit automatically; include `QuitMsg` (or call `program.quit()`) when needed.
 - Replay and real terminal input can run together for mixed-mode automation.
 - Set `blockInputWhileReplay: true` to ignore manual key/mouse input until replay completes.
+- Custom replay `event` actions are supported. Register `eventHook` in
+  `ReplayScenario.toProgramReplay(...)` / `replayScenarioStream(...)` to run
+  synchronous or asynchronous (`FutureOr`) handlers and decide replay behavior
+  (`proceed`, `stop`, or `quit`).
 
 ## Trace Logging
 
@@ -831,6 +835,8 @@ Structured trace events use a strict, versioned schema:
 - current `type` values:
   - `input.batch` with `parser`, `flush`, `dropped`, `messages`
   - `window.size` with `width`, `height`
+  - any additional custom type (for example `ui.sidebar.toggle`) is preserved
+    by trace conversion as replay `event` actions
 - message payload keys in `input.batch.messages` include:
   - key: `kind=key`, `keyType`, `runes`, modifier flags
   - mouse: `kind=mouse`, `action`, `button`, `x`, `y`
@@ -838,6 +844,22 @@ Structured trace events use a strict, versioned schema:
 Use `TuiTrace.tryParseEventLine(...)` to consume trace events without regex.
 This gives Dash/custom tooling a stable contract for type-specific replay and
 interceptor logic.
+
+### Extension Log Routing
+
+Dash config supports extension log routing under `tui.extensionLogMode`:
+
+- `ui` (default): route `dash.log.*` through the UI bridge (safe for TUI)
+- `stdout`: write logs to terminal stdout directly
+- `off`: suppress extension log output
+
+```json
+{
+  "tui": {
+    "extensionLogMode": "ui"
+  }
+}
+```
 
 ## Replay + Trace Workflow (Dash TUI Example)
 
