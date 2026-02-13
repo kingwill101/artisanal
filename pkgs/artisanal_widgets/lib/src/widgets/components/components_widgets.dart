@@ -80,3 +80,8 @@ part 'key_hint.dart';
 part 'status_bar.dart';
 part 'accent_panel.dart';
 part 'command_palette.dart';
+part 'data_table.dart';
+part 'tree_view.dart';
+part 'metric_display.dart';
+part 'step_indicator.dart';
+part 'hyperlink_text.dart';
