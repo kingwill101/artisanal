@@ -891,6 +891,22 @@ dart run pkgs/dash_tui/bin/dash_tui.dart \
   --replay-speed 8
 ```
 
+Compare scrollbar behavior between manual and replay traces:
+
+```bash
+dart run pkgs/dash_tui/bin/trace_compare.dart \
+  --left pkgs/dash_tui/traces/manual-a.log \
+  --right pkgs/dash_tui/traces/replay-b.log \
+  --left-label manual \
+  --right-label replay
+```
+
+The comparison utility summarizes:
+- `window.size` capture metadata
+- total `scrollbar.jump` counts
+- per-`x` press buckets (`presses_with_jump`, `presses_without_jump`)
+- side-by-side diff of per-`x` buckets
+
 ## UV Renderer Integration
 
 The TUI system can use the Ultraviolet cell-based renderer for optimized rendering:
