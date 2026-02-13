@@ -1167,6 +1167,12 @@ class Program<M extends Model> {
     _replaySubscription = replay.toStream().listen(
       (msg) {
         if (!_running) return;
+        _traceInputBatch(
+          parser: 'replay',
+          flush: false,
+          messages: <Msg>[msg],
+          dropped: 0,
+        );
         send(msg);
       },
       onError: (error, stackTrace) {
