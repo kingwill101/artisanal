@@ -1,8 +1,7 @@
-/// Tests for the Zone widget (legacy zone-based dispatch).
+/// Tests for the Zone widget compatibility surface.
 ///
-/// Zone wraps a child with a zone ID used by the legacy zone manager for
-/// mouse dispatch. These tests verify zone registration, rendering, and
-/// basic zone-based interaction.
+/// Zone now behaves as a transparent wrapper in artisanal_widgets. Legacy
+/// zone-manager integration was removed in favor of hit-testing.
 library;
 
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
@@ -10,10 +9,6 @@ import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
-  // ---------------------------------------------------------------------------
-  // Constructor
-  // ---------------------------------------------------------------------------
-
   group('constructor', () {
     test('creates with required child', () {
       final zone = w.Zone(child: w.Text('content'));
@@ -34,10 +29,6 @@ void main() {
       expect(zone.key, isA<w.ValueKey>());
     });
   });
-
-  // ---------------------------------------------------------------------------
-  // Rendering (without zone manager)
-  // ---------------------------------------------------------------------------
 
   group('rendering', () {
     test('renders child content', () async {
@@ -69,12 +60,8 @@ void main() {
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Zone registration (with zone manager enabled)
-  // ---------------------------------------------------------------------------
-
-  group('zone registration', () {
-    test('explicit zoneId is registered in zone manager', () async {
+  group('legacy API compatibility', () {
+    test('finder hasZone is always false', () async {
       final tester = WidgetTester(enableZones: true);
       addTearDown(() => tester.dispose());
 
@@ -84,50 +71,26 @@ void main() {
       );
 
       // ignore: deprecated_member_use_from_same_package
-      final info = tester.find.hasZone('tracked-zone');
-      expect(info, isTrue, reason: 'Zone "tracked-zone" should be registered');
+      expect(tester.find.hasZone('tracked-zone'), isFalse);
     });
 
-    test('zone renders child normally when registered', () async {
-      final tester = WidgetTester(enableZones: true);
+    test('legacy zone tap target throws unsupported error', () async {
+      final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Zone(child: w.Text('visible-zone'), zoneId: 'vis-zone'),
-        scanZones: true,
+        w.Zone(child: w.Text('tracked'), zoneId: 'tracked-zone'),
       );
 
-      expect(tester.find.text('visible-zone'), isTrue);
-    });
-
-    test('multiple zones can coexist', () async {
-      final tester = WidgetTester(enableZones: true);
-      addTearDown(() => tester.dispose());
-
-      await tester.pumpWidget(
-        w.Column(
-          children: [
-            w.Zone(child: w.Text('first'), zoneId: 'zone-a'),
-            w.Zone(child: w.Text('second'), zoneId: 'zone-b'),
-          ],
-        ),
-        scanZones: true,
+      expect(
+        // ignore: deprecated_member_use_from_same_package
+        () => tester.tap(tester.find.zone('tracked-zone')),
+        throwsA(isA<UnsupportedError>()),
       );
-
-      expect(tester.find.text('first'), isTrue);
-      expect(tester.find.text('second'), isTrue);
-      // ignore: deprecated_member_use_from_same_package
-      expect(tester.find.hasZone('zone-a'), isTrue);
-      // ignore: deprecated_member_use_from_same_package
-      expect(tester.find.hasZone('zone-b'), isTrue);
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // Zone ID resolution
-  // ---------------------------------------------------------------------------
-
-  group('zone ID resolution', () {
+  group('zone ID data', () {
     test('zoneId takes precedence over key', () {
       final zone = w.Zone(
         child: w.Text('test'),
@@ -136,26 +99,7 @@ void main() {
       );
       expect(zone.zoneId, equals('explicit-id'));
     });
-
-    test('null zoneId falls back to key-based resolution', () async {
-      final tester = WidgetTester(enableZones: true);
-      addTearDown(() => tester.dispose());
-
-      await tester.pumpWidget(
-        w.Zone(child: w.Text('keyed'), key: const w.ValueKey('auto-zone')),
-        scanZones: true,
-      );
-
-      // When zoneId is null, Zone resolves from key → child.key → child.id.
-      // With ValueKey('auto-zone'), the resolved zone ID should be 'auto-zone'.
-      // ignore: deprecated_member_use_from_same_package
-      expect(tester.find.hasZone('auto-zone'), isTrue);
-    });
   });
-
-  // ---------------------------------------------------------------------------
-  // Inside layout containers
-  // ---------------------------------------------------------------------------
 
   group('layout integration', () {
     test('Zone inside Container', () async {

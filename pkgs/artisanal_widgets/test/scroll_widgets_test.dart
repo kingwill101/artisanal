@@ -3,15 +3,7 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 
 void main() {
-  setUp(() {
-    tui.initGlobalZone();
-  });
-
-  tearDown(() {
-    tui.closeGlobalZone();
-  });
-
-  test('Viewport registers zone and handles wheel events', () {
+  test('Viewport handles wheel events via hit-testing', () {
     final controller = w.ViewportController();
     final app = tui.WidgetApp(
       w.Viewport(
@@ -22,20 +14,16 @@ void main() {
         controller: controller,
         zoneId: 'vp',
       ),
-      scanZones: true,
     );
 
     final output = app.view();
     expect(output, isNotEmpty);
 
-    final zoneInfo = tui.zone.get('vp');
-    expect(zoneInfo, isNotNull);
-
     final mouse = tui.MouseMsg(
       action: tui.MouseAction.wheel,
       button: tui.MouseButton.wheelDown,
-      x: zoneInfo!.startX,
-      y: zoneInfo.startY,
+      x: 0,
+      y: 0,
     );
 
     app.update(mouse);

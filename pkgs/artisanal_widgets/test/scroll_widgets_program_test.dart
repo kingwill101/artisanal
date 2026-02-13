@@ -7,17 +7,9 @@ import 'package:test/test.dart';
 import 'mock_terminal.dart' show MockTerminal;
 
 void main() {
-  setUp(() {
-    tui.initGlobalZone();
-  });
-
-  tearDown(() {
-    tui.closeGlobalZone();
-  });
-
   test('mouse interaction does not block key quit in viewport', () async {
     final terminal = MockTerminal();
-    final app = tui.WidgetApp(_QuitOnQ(), scanZones: true);
+    final app = tui.WidgetApp(_QuitOnQ());
     final program = tui.Program(
       app,
       options: const tui.ProgramOptions(
@@ -30,15 +22,11 @@ void main() {
 
     final runFuture = program.run();
 
-    // Allow initial render + zone scan.
+    // Allow initial render.
     await Future<void>.delayed(const Duration(milliseconds: 50));
-
-    final zoneInfo = tui.zone.get('vp');
-    expect(zoneInfo, isNotNull);
-
-    // Send a mouse press/release inside the viewport zone.
-    final x = zoneInfo!.startX + 1;
-    final y = zoneInfo.startY + 1;
+    // Send a mouse press/release inside the viewport region.
+    const x = 3;
+    const y = 4;
     terminal.sendInput(_sgrMouse(0, x, y, release: false));
     terminal.sendInput(_sgrMouse(0, x, y, release: true));
 
@@ -53,7 +41,7 @@ void main() {
 
   test('coalesces mouse bursts so keys are processed', () async {
     final terminal = MockTerminal();
-    final app = tui.WidgetApp(_QuitOnQ(), scanZones: true);
+    final app = tui.WidgetApp(_QuitOnQ());
     final program = tui.Program(
       app,
       options: const tui.ProgramOptions(
@@ -66,12 +54,8 @@ void main() {
 
     final runFuture = program.run();
     await Future<void>.delayed(const Duration(milliseconds: 50));
-
-    final zoneInfo = tui.zone.get('vp');
-    expect(zoneInfo, isNotNull);
-
-    final x = zoneInfo!.startX + 1;
-    final y = zoneInfo.startY + 1;
+    const x = 3;
+    const y = 4;
     final burst = <int>[];
     for (var i = 0; i < 50; i++) {
       burst.addAll(_sgrMouse(64, x, y, release: false));
