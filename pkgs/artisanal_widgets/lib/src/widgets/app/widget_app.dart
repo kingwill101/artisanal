@@ -28,7 +28,6 @@ import 'package:artisanal/tui.dart'
         StreamCmd,
         TuiTrace,
         View,
-        globalZone,
         WindowSizeMsg;
 import 'package:artisanal/style.dart'
     show Color, AdaptiveColor, CompleteAdaptiveColor;
@@ -108,8 +107,10 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// over [backgroundColor] and is applied to the returned [View] each frame.
   final Color? Function()? backgroundColorBuilder;
 
-  /// Whether to scan rendered output for zone markers. Only relevant when
-  /// zones are used outside of widget hit-testing (legacy/non-widget models).
+  /// Legacy no-op compatibility flag.
+  ///
+  /// Zone scanning was removed from `artisanal_widgets`; rendering now relies
+  /// exclusively on render-tree hit-testing.
   final bool scanZones;
 
   /// When `true` (the default), mouse events are dispatched via render-tree
@@ -469,12 +470,6 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
       sw?.start();
       baseContent = _tree.render();
-      if (scanZones) {
-        final manager = globalZone;
-        if (manager != null) {
-          baseContent = manager.scan(baseContent);
-        }
-      }
       sw?.stop();
       if (sw != null) {
         TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');

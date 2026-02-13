@@ -14,10 +14,8 @@ import 'package:artisanal/tui.dart'
         MouseAction,
         MouseButton,
         HitTestMouseMsg,
-        ZoneInBoundsMsg,
         TraceTag,
-        TuiTrace,
-        globalZone;
+        TuiTrace;
 import 'package:artisanal/bubbles.dart'
     show ViewportModel, ViewportKeyMap, ScrollbarChars, ViewportScrollPane;
 import 'package:artisanal/style.dart' hide Padding;
@@ -706,17 +704,6 @@ class _ViewportState extends State<Viewport> {
         y: msg.localY.toInt(),
       );
       if (local.x >= 0 && local.y >= 0) {
-        final cmd = _handleLocalMouse(local);
-        if (_isWheelEvent(local)) return cmd ?? Cmd.none();
-        return cmd;
-      }
-    }
-
-    // ---- Legacy: zone-based dispatch ----
-    if (msg is ZoneInBoundsMsg && msg.zone.id == _zoneId) {
-      final pos = msg.zone.pos(msg.event);
-      if (pos.x >= 0 && pos.y >= 0) {
-        final local = msg.event.copyWith(x: pos.x, y: pos.y);
         final cmd = _handleLocalMouse(local);
         if (_isWheelEvent(local)) return cmd ?? Cmd.none();
         return cmd;
@@ -1911,11 +1898,6 @@ class _ScrollbarState extends State<Scrollbar> {
 
   /// Returns true if hit-test local X falls within the scrollbar track area.
   bool _isOnScrollbarTrack(HitTestMouseMsg msg) {
-    final zoneInfo = globalZone?.get(_zoneId);
-    if (zoneInfo != null) {
-      return zoneInfo.inBounds(msg.event);
-    }
-
     final geometry = _scrollbarGeometry();
     if (geometry == null) {
       // If we cannot resolve the render object, be permissive: this message
@@ -1931,11 +1913,6 @@ class _ScrollbarState extends State<Scrollbar> {
   }
 
   bool _isMouseOverScrollbarTrack(MouseMsg msg) {
-    final zoneInfo = globalZone?.get(_zoneId);
-    if (zoneInfo != null) {
-      return zoneInfo.inBounds(msg);
-    }
-
     final geometry = _scrollbarGeometry();
     if (geometry == null) return false;
 
@@ -2058,7 +2035,7 @@ class _ScrollbarState extends State<Scrollbar> {
 
       // Pass the absolute scrollbar origin so subsequent raw MouseMsg motion
       // events (dispatched via mouse capture) can be converted back to local Y.
-      return _handleLocalScrollbarMouse(local, zoneStartY: originY);
+      return _handleLocalScrollbarMouse(local, originY: originY);
     }
 
     if (msg is MouseMsg && _dragging && _dragOriginY != null) {
@@ -2089,15 +2066,6 @@ class _ScrollbarState extends State<Scrollbar> {
       _dragOriginY = null;
       _releaseMouse();
     }
-    // ---- Legacy: zone-based dispatch ----
-    if (msg is ZoneInBoundsMsg && msg.zone.id == _zoneId) {
-      final local = msg.event.copyWith(
-        x: msg.zone.pos(msg.event).x,
-        y: msg.zone.pos(msg.event).y,
-      );
-      return _handleLocalScrollbarMouse(local, zoneStartY: msg.zone.startY);
-    }
-
     if (msg is MouseMsg && widget.enableHover) {
       if (msg.action == MouseAction.motion) {
         if (_hitTestedThisFrame) {
@@ -2112,8 +2080,8 @@ class _ScrollbarState extends State<Scrollbar> {
     return null;
   }
 
-  /// Handles a mouse event using local coordinates (from hit-testing or zone).
-  Cmd? _handleLocalScrollbarMouse(MouseMsg local, {int? zoneStartY}) {
+  /// Handles a mouse event using local coordinates.
+  Cmd? _handleLocalScrollbarMouse(MouseMsg local, {int? originY}) {
     if (widget.enableHover && local.action == MouseAction.motion) {
       _setHovering(true);
     }
@@ -2145,7 +2113,7 @@ class _ScrollbarState extends State<Scrollbar> {
     if (local.button == MouseButton.left) {
       switch (local.action) {
         case MouseAction.press:
-          _dragOriginY ??= zoneStartY ?? 0;
+          _dragOriginY ??= originY ?? 0;
           _handlePress(local.y);
           break;
         case MouseAction.release:
@@ -2616,8 +2584,7 @@ String _renderScrollbar({
   }
 
   final contentStr = lines.join('\n');
-  final manager = globalZone;
-  return manager == null ? contentStr : manager.mark(zoneId, contentStr);
+  return contentStr;
 }
 
 String _styleLine(
@@ -3609,29 +3576,6 @@ class _VirtualListViewState extends State<VirtualListView> {
       }
     }
 
-    // ---- Legacy: zone-based dispatch ----
-    if (msg is ZoneInBoundsMsg && msg.zone.id == _zoneId) {
-      if (widget.mouseWheelEnabled) {
-        final local = msg.event.copyWith(
-          x: msg.zone.pos(msg.event).x,
-          y: msg.zone.pos(msg.event).y,
-        );
-        if (_isWheelEvent(local)) {
-          final delta = local.button == MouseButton.wheelUp
-              ? -widget.mouseWheelDelta
-              : widget.mouseWheelDelta;
-          _traceScroll(
-            'virtual_list.wheel.zone '
-            'id=${widget.id} local=(${local.x},${local.y}) '
-            'button=${local.button} delta=$delta '
-            'offset=${_controller.offset} max=${_controller.maxOffset}',
-          );
-          cmd = _applyWheelDelta(delta) ?? cmd;
-          return cmd ?? Cmd.none();
-        }
-      }
-    }
-
     if (msg is MouseMsg &&
         widget.enableSelection &&
         widget.autoCopySelectionOnExit) {
@@ -4252,9 +4196,7 @@ class RenderListViewport extends RenderBox {
       _invalidateVisiblePaintCache();
       _resetVisibleHitCache();
       _resetRepaintFlag();
-      final manager = globalZone;
-      final empty = '';
-      return manager == null ? empty : manager.mark(zoneId, empty);
+      return '';
     }
 
     final offset = controller.offset.clamp(0, controller.maxOffset);
@@ -4269,8 +4211,7 @@ class RenderListViewport extends RenderBox {
         )) {
       final cached = _cachedVisibleContent!;
       _resetRepaintFlag();
-      final manager = globalZone;
-      return manager == null ? cached : manager.mark(zoneId, cached);
+      return cached;
     }
 
     if (variableHeight) {
@@ -4417,10 +4358,7 @@ class RenderListViewport extends RenderBox {
       );
 
       _resetRepaintFlag();
-      final manager = globalZone;
-      return manager == null
-          ? _cachedVisibleContent!
-          : manager.mark(zoneId, _cachedVisibleContent!);
+      return _cachedVisibleContent!;
     }
 
     _resetVisibleHitCache();
@@ -4458,8 +4396,7 @@ class RenderListViewport extends RenderBox {
       isVariableHeight: false,
     );
     _resetRepaintFlag();
-    final manager = globalZone;
-    return manager == null ? visible : manager.mark(zoneId, visible);
+    return visible;
   }
 
   List<String> allContentLinesForSelection() {
@@ -4840,8 +4777,7 @@ String _renderViewportString({
     content = controller.model.view();
   }
 
-  final manager = globalZone;
-  final result = manager == null ? content : manager.mark(zoneId, content);
+  final result = content;
   if (sw != null) {
     sw.stop();
     TuiTrace.log(

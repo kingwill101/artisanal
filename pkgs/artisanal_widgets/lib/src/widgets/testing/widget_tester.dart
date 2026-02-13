@@ -49,11 +49,7 @@ import 'package:artisanal/tui.dart'
         RepaintMsg,
         Program,
         ProgramOptions,
-        ZoneInfo,
-        globalZone,
-        hasGlobalZone,
-        initGlobalZone,
-        closeGlobalZone;
+        ZoneInfo;
 import '../app/widget_app.dart';
 import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
@@ -328,17 +324,14 @@ class _TestTerminal implements Terminal {
 class WidgetTester {
   /// Creates a new tester.
   ///
-  /// If [enableZones] is `true` (not the default), the global zone manager
-  /// will be initialised for legacy zone-based tests.
+  /// [enableZones] is a deprecated no-op kept for compatibility.
   WidgetTester({
     this.screenWidth = 80,
     this.screenHeight = 24,
     bool enableZones = false,
   }) {
-    if (enableZones && !hasGlobalZone) {
-      initGlobalZone();
-      _ownsZone = true;
-    }
+    // Legacy no-op retained for source compatibility.
+    if (enableZones) {}
   }
 
   /// Screen width used for [WindowSizeMsg] and MediaQueryData.
@@ -351,7 +344,6 @@ class WidgetTester {
   Program<WidgetApp>? _program;
   Future<dynamic>? _runFuture;
   WidgetApp? _app;
-  bool _ownsZone = false;
   String _lastView = '';
   int _pumpCount = 0;
 
@@ -494,10 +486,6 @@ class WidgetTester {
     _app = null;
     _terminal = null;
     _runFuture = null;
-    if (_ownsZone && hasGlobalZone) {
-      closeGlobalZone();
-      _ownsZone = false;
-    }
   }
 
   // -------------------------------------------------------------------------
@@ -602,15 +590,13 @@ class WidgetTester {
 
   /// Simulates a full tap on the zone with [zoneId].
   ///
-  /// **Deprecated** — use [tap] with [Finder.textLocation] or [tapAt]
-  /// instead.  Zone-based dispatch will be removed in a future release.
+  /// **Deprecated** — use [tap] with [Finder.textLocation] or [tapAt].
   @Deprecated('Use tap(find.textLocation(...)) or tapAt(x, y) instead')
   void tapZone(String zoneId) {
-    final info = globalZone?.get(zoneId);
-    if (info == null || info.isZero) {
-      throw StateError('Zone "$zoneId" not found or is zero');
-    }
-    tapAt(info.startX + 1, info.startY);
+    throw UnsupportedError(
+      'Zone-based interactions were removed from artisanal_widgets. '
+      'Use tap(find.textLocation(...)) or tapAt(x, y).',
+    );
   }
 
   /// Sends a mouse press at (x, y) without releasing.
@@ -665,29 +651,15 @@ class WidgetTester {
 
   /// Returns all gesture zone IDs currently registered.
   ///
-  /// **Deprecated** — zone-based dispatch is being replaced by hit-testing.
+  /// **Deprecated** — always empty.
   @Deprecated('Zone-based dispatch is deprecated; use hit-testing instead')
-  List<String> get gestureZoneIds {
-    final manager = globalZone;
-    if (manager == null) return const [];
-    final ids = <String>[];
-    for (var i = 0; i < 200; i++) {
-      final id = 'gesture-$i';
-      final info = manager.get(id);
-      if (info != null && !info.isZero) {
-        ids.add(id);
-      }
-    }
-    return ids;
-  }
+  List<String> get gestureZoneIds => const <String>[];
 
   /// Returns the [ZoneInfo] for [zoneId], or `null` if not registered.
   ///
-  /// **Deprecated** — zone-based dispatch is being replaced by hit-testing.
+  /// **Deprecated** — always returns `null`.
   @Deprecated('Zone-based dispatch is deprecated; use hit-testing instead')
-  ZoneInfo? getZone(String zoneId) {
-    return globalZone?.get(zoneId);
-  }
+  ZoneInfo? getZone(String zoneId) => null;
 
   // -------------------------------------------------------------------------
   // View assertions
@@ -846,12 +818,9 @@ class Finder {
 
   /// Returns `true` if a zone with [zoneId] exists and is non-zero.
   ///
-  /// **Deprecated** — zone-based dispatch is being replaced by hit-testing.
+  /// **Deprecated** — always returns `false`.
   @Deprecated('Zone-based dispatch is deprecated; use hit-testing instead')
-  bool hasZone(String zoneId) {
-    final info = globalZone?.get(zoneId);
-    return info != null && !info.isZero;
-  }
+  bool hasZone(String zoneId) => false;
 
   /// Returns all registered gesture zone IDs.
   ///
@@ -870,7 +839,7 @@ abstract class TapTarget {
   ({int x, int y}) _resolve(WidgetTester tester);
 }
 
-/// Resolves a zone ID to coordinates via the zone manager.
+/// Legacy zone tap target kept for API compatibility.
 class _ZoneTapTarget extends TapTarget {
   _ZoneTapTarget(this.zoneId);
 
@@ -878,16 +847,10 @@ class _ZoneTapTarget extends TapTarget {
 
   @override
   ({int x, int y}) _resolve(WidgetTester tester) {
-    final info = globalZone?.get(zoneId);
-    if (info == null || info.isZero) {
-      // ignore: deprecated_member_use_from_same_package
-      final available = tester.gestureZoneIds;
-      throw StateError(
-        'Zone "$zoneId" not found or has zero bounds.\n'
-        'Available gesture zones: $available',
-      );
-    }
-    return (x: info.startX + 1, y: info.startY);
+    throw UnsupportedError(
+      'Zone-based tap targets were removed from artisanal_widgets. '
+      'Use Finder.textLocation, Finder.byTypeLocation, or Finder.byKeyLocation.',
+    );
   }
 }
 

@@ -39,9 +39,7 @@ import 'package:artisanal/tui.dart'
         MouseAction,
         MouseButton,
         HitTestMouseMsg,
-        ZoneInBoundsMsg,
         View,
-        globalZone,
         TuiTrace,
         TraceTag;
 import 'package:artisanal/markdown.dart'
@@ -51,7 +49,6 @@ import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'
     show BuildContext, StatelessWidget, StatefulWidget, State;
-import '../core/key.dart';
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';

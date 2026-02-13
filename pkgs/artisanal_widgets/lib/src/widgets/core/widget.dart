@@ -26,8 +26,7 @@ library;
 
 import 'package:meta/meta.dart' show experimental, protected;
 
-import 'package:artisanal/tui.dart'
-    show Model, Msg, Cmd, MouseMsg, BackgroundColorMsg, globalZone;
+import 'package:artisanal/tui.dart' show Model, Msg, Cmd, BackgroundColorMsg;
 import 'key.dart';
 import '../theme/theme.dart';
 
@@ -120,16 +119,7 @@ abstract class Widget implements Model {
   @override
   (Model, Cmd?) update(Msg msg) {
     final cmds = <Cmd>[];
-    var current = this;
-
-    if (msg is MouseMsg) {
-      final zoneManager = globalZone;
-      if (zoneManager != null) {
-        final (updated, cmd) = zoneManager.anyInBoundsAndUpdate(current, msg);
-        current = updated as Widget;
-        if (cmd != null) cmds.add(cmd);
-      }
-    }
+    final current = this;
 
     // Auto-detect terminal background and update theme state
     if (msg is BackgroundColorMsg) {

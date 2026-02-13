@@ -6,14 +6,7 @@ class Zone extends SingleChildRenderObjectWidget {
   final String? zoneId;
 
   @override
-  Object view() {
-    final content = _renderWidget(child!);
-    final manager = globalZone;
-    if (manager == null) return content;
-    final resolvedId =
-        zoneId ?? _keyToZoneId(key) ?? _keyToZoneId(child!.key) ?? child!.id;
-    return manager.mark(resolvedId, content);
-  }
+  Object view() => _renderWidget(child!);
 
   @override
   RenderObject createRenderObject() {

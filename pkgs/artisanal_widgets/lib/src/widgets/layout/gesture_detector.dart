@@ -381,16 +381,6 @@ class _GestureDetectorState extends State<GestureDetector> {
       );
     }
 
-    // ---- Legacy: zone-based dispatch (kept for non-widget-app users) ----
-    if (msg is ZoneInBoundsMsg) {
-      final event = msg.event;
-      final local = event.copyWith(
-        x: msg.zone.pos(event).x,
-        y: msg.zone.pos(event).y,
-      );
-      return _handleInBounds(local);
-    }
-
     // ---- Global mouse events (for captured drags, hover exit, etc.) ----
     if (msg is MouseMsg) {
       // If the mouse moved but hit-testing didn't deliver to us (we got the

@@ -487,13 +487,3 @@ String _renderContainerContent({
   span.end(extra: 'size=${targetWidth}x$targetHeight');
   return result;
 }
-
-String? _keyToZoneId(Key? key) {
-  if (key == null) return null;
-  if (key is ValueKey<Object?>) {
-    final value = key.value;
-    if (value is String) return value;
-    return value?.toString();
-  }
-  return key.toString();
-}
