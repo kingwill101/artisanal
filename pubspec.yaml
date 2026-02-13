@@ -11,6 +11,7 @@ workspace:
   - pkgs/dash_lsp
   - pkgs/dash_mcp
   - pkgs/dash_memory
+  - pkgs/dash_ui
   - pkgs/dash_web
   - pkgs/dash_tui
 
