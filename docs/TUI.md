@@ -805,6 +805,70 @@ Notes:
 - Replay and real terminal input can run together for mixed-mode automation.
 - Set `blockInputWhileReplay: true` to ignore manual key/mouse input until replay completes.
 
+## Trace Logging
+
+The TUI runtime includes an opt-in file tracer (`TuiTrace`) for input, queue,
+dispatch, render, and command timing diagnostics.
+
+Environment variables:
+
+- `ARTISANAL_TUI_TRACE=1`: enable trace logging.
+- `ARTISANAL_TUI_TRACE_PATH=/path/to/file.log`: explicit trace file path.
+- `ARTISANAL_TUI_TRACE_CAPTURE=1`: include dispatch-capture diagnostics.
+- `ARTISANAL_TUI_TRACE_TAGS=input,queue,dispatch`: optional trace tag allow-list.
+
+When `ARTISANAL_TUI_TRACE_PATH` is unset, the tracer writes to
+`./traces/artisanal-YYYY-MM-DDTHH-MM-SS.log` relative to the current working
+directory.
+
+Trace headers include wall-clock start time, PID, CWD, executable/script info,
+capture flag state, and active trace-tag filter.
+
+Structured trace events use a strict, versioned schema:
+
+- marker: `@event`
+- protocol keys: `v`, `type`
+- current `type` values:
+  - `input.batch` with `parser`, `flush`, `dropped`, `messages`
+  - `window.size` with `width`, `height`
+- message payload keys in `input.batch.messages` include:
+  - key: `kind=key`, `keyType`, `runes`, modifier flags
+  - mouse: `kind=mouse`, `action`, `button`, `x`, `y`
+
+Use `TuiTrace.tryParseEventLine(...)` to consume trace events without regex.
+This gives Dash/custom tooling a stable contract for type-specific replay and
+interceptor logic.
+
+## Replay + Trace Workflow (Dash TUI Example)
+
+Record a manual run:
+
+```bash
+ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
+ARTISANAL_TUI_TRACE_PATH="pkgs/dash_tui/traces/manual-$(date +%Y-%m-%dT%H-%M-%S).log" \
+dart run pkgs/dash_tui/bin/dash_tui.dart
+```
+
+Convert trace to replay scenario:
+
+```bash
+LATEST_TRACE="$(ls -1t pkgs/dash_tui/traces/*.log | head -n1)"
+dart run pkgs/dash_tui/bin/dash_tui.dart \
+  --replay-trace "$LATEST_TRACE" \
+  --replay-trace-out pkgs/dash_tui/scenarios/manual_from_trace.json \
+  --replay-trace-name manual_from_trace \
+  --replay-convert-only
+```
+
+Replay deterministically (and block manual input):
+
+```bash
+dart run pkgs/dash_tui/bin/dash_tui.dart \
+  --replay-scenario pkgs/dash_tui/scenarios/manual_from_trace.json \
+  --replay-block-input \
+  --replay-speed 8
+```
+
 ## UV Renderer Integration
 
 The TUI system can use the Ultraviolet cell-based renderer for optimized rendering:
