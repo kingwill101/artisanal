@@ -1911,6 +1911,11 @@ class _ScrollbarState extends State<Scrollbar> {
 
   /// Returns true if hit-test local X falls within the scrollbar track area.
   bool _isOnScrollbarTrack(HitTestMouseMsg msg) {
+    final zoneInfo = globalZone?.get(_zoneId);
+    if (zoneInfo != null) {
+      return zoneInfo.inBounds(msg.event);
+    }
+
     final geometry = _scrollbarGeometry();
     if (geometry == null) {
       // If we cannot resolve the render object, be permissive: this message
@@ -1926,6 +1931,11 @@ class _ScrollbarState extends State<Scrollbar> {
   }
 
   bool _isMouseOverScrollbarTrack(MouseMsg msg) {
+    final zoneInfo = globalZone?.get(_zoneId);
+    if (zoneInfo != null) {
+      return zoneInfo.inBounds(msg);
+    }
+
     final geometry = _scrollbarGeometry();
     if (geometry == null) return false;
 
