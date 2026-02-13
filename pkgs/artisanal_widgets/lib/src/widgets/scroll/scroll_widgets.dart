@@ -1774,6 +1774,7 @@ class _ScrollbarState extends State<Scrollbar> {
   int _dragOffset = 0;
   int? _dragOriginY;
   bool _hovering = false;
+  bool _hitTestedThisFrame = false;
 
   String get _zoneId => widget.zoneId ?? 'scrollbar-${widget.id}';
 
@@ -1857,7 +1858,7 @@ class _ScrollbarState extends State<Scrollbar> {
   /// Computes the global X offset of a render object by summing offsets
   /// up the parent chain.
   static double _globalX(RenderObject ro) {
-    double x = 0;
+    var x = 0.0;
     RenderObject? current = ro;
     while (current != null) {
       x += current.offset.dx;
@@ -1869,7 +1870,7 @@ class _ScrollbarState extends State<Scrollbar> {
   /// Computes the global Y offset of a render object by summing offsets
   /// up the parent chain.
   static double _globalY(RenderObject ro) {
-    double y = 0;
+    var y = 0.0;
     RenderObject? current = ro;
     while (current != null) {
       y += current.offset.dy;
@@ -1878,17 +1879,46 @@ class _ScrollbarState extends State<Scrollbar> {
     return y;
   }
 
-  /// Returns true if the absolute screen X falls within the scrollbar track
-  /// area (to the right of content, in the gap+track columns).
-  bool _isOnScrollbarTrack(int absoluteX) {
+  ({int left, int top, int childWidth, int width, int height})?
+  _scrollbarGeometry() {
     final rsb = _findRenderScrollbar();
-    if (rsb == null) return false;
-    final globalLeft = _globalX(rsb);
+    if (rsb == null) return null;
     final childWidth = rsb.children.isNotEmpty
-        ? rsb.children.first.size.width
-        : 0.0;
-    final trackStartX = globalLeft + childWidth;
-    return absoluteX >= trackStartX;
+        ? rsb.children.first.size.width.round()
+        : 0;
+    return (
+      left: _globalX(rsb).round(),
+      top: _globalY(rsb).round(),
+      childWidth: childWidth,
+      width: rsb.size.width.round(),
+      height: rsb.size.height.round(),
+    );
+  }
+
+  /// Returns true if hit-test local X falls within the scrollbar track area.
+  bool _isOnScrollbarTrack(HitTestMouseMsg msg) {
+    final geometry = _scrollbarGeometry();
+    if (geometry == null) {
+      // If we cannot resolve the render object, be permissive: this message
+      // already passed render hit-testing and reached this Scrollbar state.
+      return true;
+    }
+
+    final trackStartX = geometry.left + geometry.childWidth;
+    return msg.event.x >= trackStartX;
+  }
+
+  bool _isMouseOverScrollbarTrack(MouseMsg msg) {
+    final geometry = _scrollbarGeometry();
+    if (geometry == null) return false;
+
+    final withinVertical =
+        msg.y >= geometry.top && msg.y < geometry.top + geometry.height;
+    if (!withinVertical) return false;
+
+    final trackStartX = geometry.left + geometry.childWidth;
+    final trackEndX = geometry.left + geometry.width;
+    return msg.x >= trackStartX && msg.x < trackEndX;
   }
 
   _ThumbMetrics _thumbMetrics() {
@@ -1973,6 +2003,9 @@ class _ScrollbarState extends State<Scrollbar> {
 
     // ---- New: render-tree hit-test dispatch ----
     if (msg is HitTestMouseMsg) {
+      if (!_isWheelEvent(msg.event)) {
+        _hitTestedThisFrame = true;
+      }
       // Always handle wheel events regardless of X position (scroll should
       // work anywhere within the scrollbar+content area).
       if (_isWheelEvent(msg.event)) {
@@ -1983,20 +2016,20 @@ class _ScrollbarState extends State<Scrollbar> {
       // track area.  Without this guard, clicks on content would be
       // misinterpreted as scrollbar interactions because HitTestMouseMsg
       // localX/localY are relative to the deepest hit child, not this widget.
-      if (!_isOnScrollbarTrack(msg.event.x)) return null;
-      // Compute Y relative to the RenderScrollbar's global position so that
-      // press/drag operations use the correct scrollbar-local coordinate.
-      final rsb = _findRenderScrollbar();
-      final globalY = rsb != null ? _globalY(rsb) : 0.0;
-      final local = msg.event.copyWith(
-        x: msg.event.x,
-        y: (msg.event.y - globalY).toInt(),
-      );
-      // Pass globalY as zoneStartY so that _dragOriginY is set to the
-      // scrollbar's absolute Y position.  Subsequent raw MouseMsg motion
-      // events (dispatched via mouse capture) carry absolute coordinates;
-      // _dragOriginY is subtracted to convert them to scrollbar-local Y.
-      return _handleLocalScrollbarMouse(local, zoneStartY: globalY.toInt());
+      if (!_isOnScrollbarTrack(msg)) return null;
+
+      final geometry = _scrollbarGeometry();
+      final localY = geometry == null
+          ? msg.localY.round()
+          : msg.event.y - geometry.top;
+      final originY = geometry == null
+          ? msg.event.y - msg.localY.round()
+          : geometry.top;
+      final local = msg.event.copyWith(x: msg.event.x, y: localY);
+
+      // Pass the absolute scrollbar origin so subsequent raw MouseMsg motion
+      // events (dispatched via mouse capture) can be converted back to local Y.
+      return _handleLocalScrollbarMouse(local, zoneStartY: originY);
     }
 
     if (msg is MouseMsg && _dragging && _dragOriginY != null) {
@@ -2037,7 +2070,15 @@ class _ScrollbarState extends State<Scrollbar> {
     }
 
     if (msg is MouseMsg && widget.enableHover) {
-      _handleHoverExit(msg);
+      if (msg.action == MouseAction.motion) {
+        if (_hitTestedThisFrame) {
+          _hitTestedThisFrame = false;
+        } else if (!_isMouseOverScrollbarTrack(msg)) {
+          _setHovering(false);
+        }
+      } else {
+        _hitTestedThisFrame = false;
+      }
     }
     return null;
   }
@@ -2088,18 +2129,6 @@ class _ScrollbarState extends State<Scrollbar> {
       }
     }
     return null;
-  }
-
-  void _handleHoverExit(MouseMsg msg) {
-    if (msg.action != MouseAction.motion) return;
-    if (!_hovering) return;
-    final manager = globalZone;
-    if (manager == null) return;
-    final zone = manager.get(_zoneId);
-    final inBounds = zone?.inBounds(msg) ?? false;
-    if (!inBounds) {
-      _setHovering(false);
-    }
   }
 
   @override

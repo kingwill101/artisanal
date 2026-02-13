@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('tui examples avoid direct stdout/stderr writes', () {
-    var root = Directory('packages/artisanal/example/tui');
+    var root = Directory('pkgs/artisanal/example/tui');
     if (!root.existsSync()) {
       root = Directory('example/tui');
     }

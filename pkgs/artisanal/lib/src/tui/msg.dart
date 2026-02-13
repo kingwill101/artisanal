@@ -77,6 +77,27 @@ class KeyMsg extends Msg {
   int get hashCode => key.hashCode;
 }
 
+/// Message used by the runtime to deliver collapsed large rune bursts as a
+/// single text payload (paste-like behavior).
+class PasteTextMsg extends Msg {
+  /// Creates a text-paste message.
+  const PasteTextMsg(this.content);
+
+  /// Full pasted/inserted text payload.
+  final String content;
+
+  @override
+  String toString() => 'PasteTextMsg(${content.length} chars)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PasteTextMsg && content == other.content);
+
+  @override
+  int get hashCode => content.hashCode;
+}
+
 /// Message sent when the terminal window is resized.
 ///
 /// Contains the new dimensions of the terminal in columns (width)

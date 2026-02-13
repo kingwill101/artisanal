@@ -80,4 +80,33 @@ void main() {
       expect(controller.hasSelection, isFalse);
     },
   );
+
+  test('chat body scrollbar thumb drag scrolls content', () async {
+    final tester = WidgetTester(screenWidth: 120, screenHeight: 30);
+    addTearDown(() => tester.dispose());
+
+    final controller = WidgetScrollController();
+    final messages = List<ChatMessage>.generate(
+      80,
+      (i) => ChatMessage.assistant([TextPart('Scrollable assistant line $i')]),
+    );
+
+    await tester.pumpWidget(
+      Container(
+        width: 110,
+        height: 20,
+        child: ChatBody(messages: messages, scrollController: controller),
+      ),
+    );
+
+    expect(controller.maxOffset, greaterThan(0));
+    expect(controller.offset, equals(0));
+
+    // width=110, gap=1, gutter=3 -> track columns 107..109
+    tester.mouseDown(109, 2);
+    tester.mouseMove(109, 16);
+    tester.mouseUp(109, 16);
+
+    expect(controller.offset, greaterThan(0));
+  });
 }

@@ -1676,6 +1676,86 @@ void main() {
       expect(tester.view.isNotEmpty, isTrue);
     });
 
+    test('Scrollbar thumb drag updates shared controller offset', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = WidgetScrollController();
+      await tester.pumpWidget(
+        Container(
+          width: 24,
+          height: 6,
+          child: Scrollbar(
+            controller: ctrl,
+            gap: 1,
+            child: SingleChildScrollView(
+              controller: ctrl,
+              child: Column(
+                children: List.generate(40, (i) => Text('Drag-$i')),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(ctrl.offset, equals(0));
+
+      // Container width=24, gap=1, track width=1 -> track column is x=23.
+      tester.mouseDown(23, 1);
+      tester.mouseMove(23, 5);
+      tester.mouseUp(23, 5);
+
+      expect(ctrl.offset, greaterThan(0));
+    });
+
+    test('raw mouse press does not steal scrollbar drag capture', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = WidgetScrollController();
+      await tester.pumpWidget(
+        Container(
+          width: 24,
+          height: 8,
+          child: Column(
+            children: [
+              Expanded(
+                child: Scrollbar(
+                  controller: ctrl,
+                  gap: 1,
+                  child: SingleChildScrollView(
+                    controller: ctrl,
+                    child: Column(
+                      children: List.generate(40, (i) => Text('Capture-$i')),
+                    ),
+                  ),
+                ),
+              ),
+              _GreedyCaptureWidget(),
+            ],
+          ),
+        ),
+      );
+
+      expect(ctrl.maxOffset, greaterThan(0));
+      expect(ctrl.offset, equals(0));
+
+      // Track column for width=24, gap=1, track=1 is x=23.
+      tester.mouseDown(23, 1);
+      tester.mouseMove(23, 5);
+      tester.mouseUp(23, 5);
+
+      expect(ctrl.offset, greaterThan(0));
+      final greedyState =
+          tester
+                  .elementsWhere((e) => e.widget is _GreedyCaptureWidget)
+                  .whereType<StatefulElement>()
+                  .first
+                  .state
+              as _GreedyCaptureWidgetState;
+      expect(greedyState.sawRawPress, isFalse);
+    });
+
     test('ListView.builder and Scrollbar share controller', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -1770,6 +1850,29 @@ class _CounterWidgetState extends State<_CounterWidget> {
       if (key.type == KeyType.runes && String.fromCharCodes(key.runes) == '+') {
         setState(() => _count++);
       }
+    }
+    return null;
+  }
+}
+
+class _GreedyCaptureWidget extends StatefulWidget {
+  @override
+  State createState() => _GreedyCaptureWidgetState();
+}
+
+class _GreedyCaptureWidgetState extends State<_GreedyCaptureWidget> {
+  bool sawRawPress = false;
+
+  @override
+  Widget build(BuildContext context) => Text('greedy');
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is MouseMsg &&
+        msg.action == MouseAction.press &&
+        msg.button == MouseButton.left) {
+      sawRawPress = true;
+      elementOf(widget)?.captureMouse();
     }
     return null;
   }

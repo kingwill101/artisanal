@@ -2,6 +2,8 @@
 @experimental
 library;
 
+import 'dart:collection';
+
 import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart'
@@ -65,6 +67,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     this.useHitTesting = true,
     this.handleFrameTick = false,
     this.enableRenderMetrics = true,
+    this.enableRenderMetricsInjection = true,
     this.debugOverlay = false,
     this.debugOverlayPosition = DebugOverlayPosition.topRight,
     bool debugRebuilds = false,
@@ -121,6 +124,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// sends real renderer metrics (FPS, frame times, render durations).
   final bool enableRenderMetrics;
 
+  /// Whether to listen to [RenderMetricsInjector] updates.
+  ///
+  /// When `true` (the default), custom metrics can be injected globally from
+  /// anywhere via [RenderMetricsInjector.instance].
+  final bool enableRenderMetricsInjection;
+
   /// Whether the built-in debug overlay is initially enabled.
   ///
   /// When `true`, the root widget is wrapped in a [DebugOverlay] that shows
@@ -132,7 +141,6 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
   late final ElementTree _tree;
   static const Key _mediaQueryKey = ValueKey<String>('_media_query_host');
-  static const int _runtimeOverlayHeight = 8;
   MediaQueryData _mediaQueryData;
   String? _cachedView;
 
@@ -160,6 +168,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
   /// Latest runtime-level render metrics received from [RenderMetricsMsg].
   RenderMetrics? _latestRenderMetrics;
+
+  final Stopwatch _latencyClock = Stopwatch()..start();
+  final ListQueue<int> _pendingKeyTimestampsUs = ListQueue<int>();
+  final List<int> _keyRenderLatencyUs = <int>[];
+  static const int _maxPendingKeySamples = 512;
+  static const int _maxKeyRenderSamples = 240;
 
   @override
   bool get wantsFrameTicks => handleFrameTick || _debugOverlayEnabled;
@@ -189,6 +203,16 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   @override
   Cmd? init() {
     final cmds = <Cmd>[Cmd.requestBackgroundColorReport()];
+
+    if (enableRenderMetricsInjection) {
+      cmds.add(
+        Cmd.listen<RenderMetricsInjection>(
+          RenderMetricsInjector.instance.stream,
+          onData: (injection) => _RenderMetricsInjectionMsg(injection),
+        ),
+      );
+    }
+
     final initCmd = _tree.collectHandleInit();
     if (initCmd != null) cmds.add(initCmd);
     return ParallelCmd(cmds);
@@ -211,6 +235,10 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       TuiTrace.log('widget_app.update start ${msg.runtimeType}');
     }
 
+    if (msg is KeyMsg) {
+      _recordKeyTimestamp();
+    }
+
     if (msg is FrameTickMsg) {
       if (_debugOverlayEnabled) {
         _overlayDirty = true;
@@ -231,37 +259,18 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       return (this, null);
     }
 
+    if (msg is _RenderMetricsInjectionMsg) {
+      _applyRenderMetricsInjection(msg.injection);
+      return (this, null);
+    }
+
     // Store runtime render metrics but avoid forcing full-tree rebuilds for
     // WidgetApp's built-in overlay. We compose that overlay outside the tree
     // from a cached base view (split-dashboard style).
     if (msg is RenderMetricsMsg) {
-      _latestRenderMetrics = msg.metrics;
-      // Update the mutable holder so RenderMetricsProvider descendants can read
-      // fresh metrics when they rebuild.
-      _metricsHolder.metrics = msg.metrics;
-
-      _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
-        metrics: msg.metrics,
+      _applyRenderMetricsInjection(
+        RenderMetricsInjection(metrics: msg.metrics),
       );
-      if (_debugOverlayEnabled) {
-        _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
-        _overlayDirty = true;
-      }
-
-      // Legacy/manual overlays rendered inside the widget tree still need
-      // a tree update to repaint with the new holder value.
-      final rootWidget = _currentRoot();
-      if (rootWidget is DebugOverlay || rootWidget is PerformanceOverlay) {
-        _tree.update(
-          _MediaQueryHost(
-            key: _mediaQueryKey,
-            data: _mediaQueryData,
-            metricsHolder: _metricsHolder,
-            child: _currentRoot(),
-          ),
-        );
-        _dirty = true;
-      }
       return (this, null);
     }
 
@@ -373,7 +382,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
               msg.button == MouseButton.wheelDown ||
               msg.button == MouseButton.wheelLeft ||
               msg.button == MouseButton.wheelRight;
-          final shouldBroadcastRawMouse = !isWheelLike;
+          // Press events are already delivered through hit-test bubbling.
+          // Re-broadcasting press globally can let unrelated widgets react to
+          // the same click (and potentially steal mouse capture), which breaks
+          // controls like draggable scroll thumbs.
+          final shouldBroadcastRawMouse =
+              !isWheelLike && msg.action != MouseAction.press;
           if (shouldBroadcastRawMouse) {
             final broadcastCmd = _tree.dispatch(msg);
             if (broadcastCmd != null) cmds.add(broadcastCmd);
@@ -470,6 +484,8 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       _dirty = false;
     }
 
+    _recordAndPublishKeyRenderLatency();
+
     var composedContent = baseContent;
     if (_debugOverlayEnabled) {
       composedContent = _runtimeDebugOverlay.compose(baseContent);
@@ -535,6 +551,96 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     return debugElements().where(predicate).toList(growable: false);
   }
 
+  void _recordKeyTimestamp() {
+    _pendingKeyTimestampsUs.addLast(_latencyClock.elapsedMicroseconds);
+    while (_pendingKeyTimestampsUs.length > _maxPendingKeySamples) {
+      _pendingKeyTimestampsUs.removeFirst();
+    }
+  }
+
+  void _recordAndPublishKeyRenderLatency() {
+    if (_pendingKeyTimestampsUs.isEmpty) return;
+
+    final renderedAtUs = _latencyClock.elapsedMicroseconds;
+    while (_pendingKeyTimestampsUs.isNotEmpty) {
+      final startedAtUs = _pendingKeyTimestampsUs.removeFirst();
+      final latencyUs = renderedAtUs - startedAtUs;
+      if (latencyUs >= 0) {
+        _keyRenderLatencyUs.add(latencyUs);
+      }
+    }
+
+    if (_keyRenderLatencyUs.isEmpty) return;
+
+    final overflow = _keyRenderLatencyUs.length - _maxKeyRenderSamples;
+    if (overflow > 0) {
+      _keyRenderLatencyUs.removeRange(0, overflow);
+    }
+
+    final p50Us = _percentileMicros(_keyRenderLatencyUs, 0.50);
+    final p95Us = _percentileMicros(_keyRenderLatencyUs, 0.95);
+    final changed = _metricsHolder.applyInjection(
+      RenderMetricsInjection(
+        upsertEntries: <String, String>{
+          'Key->Render p50': '${(p50Us / 1000.0).toStringAsFixed(2)}ms',
+          'Key->Render p95': '${(p95Us / 1000.0).toStringAsFixed(2)}ms',
+          'Key->Render n': '${_keyRenderLatencyUs.length}',
+        },
+      ),
+    );
+    if (!changed) return;
+
+    _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
+      customMetrics: _metricsHolder.customMetrics,
+    );
+    if (_debugOverlayEnabled) {
+      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+    }
+  }
+
+  int _percentileMicros(List<int> samplesUs, double percentile) {
+    if (samplesUs.isEmpty) return 0;
+
+    final clamped = percentile < 0
+        ? 0.0
+        : percentile > 1
+        ? 1.0
+        : percentile;
+    final sorted = List<int>.from(samplesUs)..sort();
+    final index = ((sorted.length - 1) * clamped).round();
+    return sorted[index];
+  }
+
+  void _applyRenderMetricsInjection(RenderMetricsInjection injection) {
+    final changed = _metricsHolder.applyInjection(injection);
+    if (!changed) return;
+
+    _latestRenderMetrics = _metricsHolder.metrics;
+    _runtimeDebugOverlay = _runtimeDebugOverlay.copyWith(
+      metrics: _latestRenderMetrics,
+      customMetrics: _metricsHolder.customMetrics,
+    );
+    if (_debugOverlayEnabled) {
+      _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+      _overlayDirty = true;
+    }
+
+    // Legacy/manual overlays rendered inside the widget tree still need
+    // a tree update to repaint with the new holder value.
+    final rootWidget = _currentRoot();
+    if (rootWidget is DebugOverlay || rootWidget is PerformanceOverlay) {
+      _tree.update(
+        _MediaQueryHost(
+          key: _mediaQueryKey,
+          data: _mediaQueryData,
+          metricsHolder: _metricsHolder,
+          child: _currentRoot(),
+        ),
+      );
+      _dirty = true;
+    }
+  }
+
   Widget _currentRoot() {
     final widget = _tree.root.widget;
     if (widget is _MediaQueryHost) {
@@ -549,8 +655,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     if (width <= 0 || height <= 0) return overlay;
 
     final panelWidth = overlay.panelWidth;
+    final panelHeight = overlay.panelHeight;
     final maxX = (width - panelWidth).clamp(0, width);
-    final maxY = (height - _runtimeOverlayHeight).clamp(0, height);
+    final maxY = (height - panelHeight).clamp(0, height);
 
     final (x, y) = switch (debugOverlayPosition) {
       DebugOverlayPosition.topLeft => (0, 0),
@@ -591,4 +698,10 @@ class _MediaQueryHost extends StatelessWidget {
       ),
     );
   }
+}
+
+final class _RenderMetricsInjectionMsg extends Msg {
+  const _RenderMetricsInjectionMsg(this.injection);
+
+  final RenderMetricsInjection injection;
 }

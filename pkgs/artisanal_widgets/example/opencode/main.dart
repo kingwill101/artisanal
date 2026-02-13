@@ -23,6 +23,7 @@ import 'widgets/session_header.dart';
 import 'widgets/session_list_dialog.dart';
 import 'widgets/sidebar_widget.dart';
 import 'widgets/theme_list_dialog.dart';
+import 'replay_driver.dart';
 
 // ---------------------------------------------------------------------------
 // Sample data
@@ -647,22 +648,78 @@ String? _themeOverrideFromArgs(List<String> args) {
   return null;
 }
 
+bool _hasArg(List<String> args, String flag) {
+  return args.any((arg) => arg == flag);
+}
+
+void _printUsage() {
+  stderr.writeln('OpenCode example usage:');
+  stderr.writeln('  --theme <name>');
+  stderr.writeln('  --replay-scenario <name|path>');
+  stderr.writeln('  --replay-speed <factor>     (default: 1.0)');
+  stderr.writeln('  --replay-loop               (repeat forever)');
+  stderr.writeln(
+    '  --replay-keep-open          (do not auto-quit after replay)',
+  );
+  stderr.writeln(
+    '  --replay-block-input        (ignore manual terminal input during replay)',
+  );
+  stderr.writeln('  --help');
+}
+
 void main(List<String> args) async {
+  if (_hasArg(args, '--help')) {
+    _printUsage();
+    return;
+  }
+
   final themeOverride = _themeOverrideFromArgs(args);
+  OpenCodeReplayPlan? replayPlan;
+  try {
+    replayPlan = await loadOpenCodeReplayPlanFromArgs(args);
+  } on FormatException catch (error) {
+    stderr.writeln('[opencode] $error');
+    _printUsage();
+    exitCode = 64;
+    return;
+  } on FileSystemException catch (error) {
+    stderr.writeln('[opencode] ${error.message}: ${error.path ?? ''}');
+    _printUsage();
+    exitCode = 66;
+    return;
+  }
+
   if (themeOverride != null) {
     await loadOpenCodeThemeAtLaunch(themeName: themeOverride);
   }
+
+  if (replayPlan != null) {
+    stdout.writeln(
+      '[opencode] replay=${replayPlan.name} '
+      'actions=${replayPlan.actionCount} '
+      'loop=${replayPlan.loop} '
+      'keepOpen=${replayPlan.keepOpen} '
+      'blockInput=${replayPlan.blockInput} '
+      'speed=${replayPlan.speed.toStringAsFixed(2)} '
+      'path=${replayPlan.path}',
+    );
+  }
+
   final app = w.WidgetApp(
     OpenCodeApp(),
     backgroundColorBuilder: currentOpenCodeRouteBackground,
   );
+
   try {
     await tui.runProgram(
       app,
-      options: const tui.ProgramOptions(
+      options: tui.ProgramOptions(
         altScreen: true,
         mouse: true,
         mouseMode: tui.MouseMode.allMotion,
+        replay: replayPlan?.replay,
+        interceptor: replayPlan?.interceptor,
+        blockInputWhileReplay: replayPlan?.blockInput ?? false,
       ),
     );
   } catch (error, stackTrace) {
@@ -925,35 +982,32 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       return w.ThemeScope(
         theme: theme,
         child: wrapWithOverlays(
-          w.Container(
-            color: OC.background,
-            child: HomeView(
-              model: _model,
-              promptController: _promptController,
-              onSubmit: (text) {
-                setState(() {
-                  _model = ChatModel(
-                    route: AppRoute.session,
-                    messages: _model.messages,
-                    inputText: text,
-                    modelName: _model.modelName,
-                    providerName: _model.providerName,
-                    agentName: _model.agentName,
-                    sessionTitle: _model.sessionTitle,
-                    contextTokens: _model.contextTokens,
-                    contextPercentage: _model.contextPercentage,
-                    cost: _model.cost,
-                    sidebar: _model.sidebar,
-                    sidebarOpen: _model.sidebarOpen,
-                    todos: _model.todos,
-                    modifiedFiles: _model.modifiedFiles,
-                    mcpServers: _model.mcpServers,
-                    lspServers: _model.lspServers,
-                    workingDirectory: _model.workingDirectory,
-                  );
-                });
-              },
-            ),
+          HomeView(
+            model: _model,
+            promptController: _promptController,
+            onSubmit: (text) {
+              setState(() {
+                _model = ChatModel(
+                  route: AppRoute.session,
+                  messages: _model.messages,
+                  inputText: text,
+                  modelName: _model.modelName,
+                  providerName: _model.providerName,
+                  agentName: _model.agentName,
+                  sessionTitle: _model.sessionTitle,
+                  contextTokens: _model.contextTokens,
+                  contextPercentage: _model.contextPercentage,
+                  cost: _model.cost,
+                  sidebar: _model.sidebar,
+                  sidebarOpen: _model.sidebarOpen,
+                  todos: _model.todos,
+                  modifiedFiles: _model.modifiedFiles,
+                  mcpServers: _model.mcpServers,
+                  lspServers: _model.lspServers,
+                  workingDirectory: _model.workingDirectory,
+                );
+              });
+            },
           ),
         ),
       );
@@ -966,12 +1020,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     );
 
     // Wrap with theme + session list + command palette
-    return w.ThemeScope(
-      theme: theme,
-      child: wrapWithOverlays(
-        w.Container(color: OC.background, child: mainLayout),
-      ),
-    );
+    return w.ThemeScope(theme: theme, child: wrapWithOverlays(mainLayout));
   }
 
   @override
@@ -1095,8 +1144,7 @@ class SessionContentPane extends w.StatelessWidget {
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
         w.Expanded(
-          child: w.Container(
-            color: OC.background,
+          child: w.Padding(
             padding: const w.EdgeInsets.only(
               left: 2,
               right: 2,

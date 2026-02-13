@@ -44,9 +44,30 @@ class ChatBody extends w.StatelessWidget {
 
     return w.Scrollbar(
       controller: controller,
+      thickness: 1,
+      gutterWidth: 3,
       gap: 1,
-      trackStyle: style.Style()..foreground(OC.border),
-      thumbStyle: style.Style()..foreground(OC.textMuted),
+      enableHover: true,
+      trackChar: ' ',
+      thumbChar: ' ',
+      trackUsesBackground: true,
+      thumbUsesBackground: true,
+      trackGradient: w.ScrollbarGradient.background(
+        start: OC.backgroundElement,
+        end: OC.backgroundPanel,
+      ),
+      thumbGradient: w.ScrollbarGradient.background(
+        start: OC.borderSubtle,
+        end: OC.borderActive,
+      ),
+      hoverTrackGradient: w.ScrollbarGradient.background(
+        start: OC.backgroundPanel,
+        end: OC.backgroundElement,
+      ),
+      hoverThumbGradient: w.ScrollbarGradient.background(
+        start: OC.primary,
+        end: OC.secondary,
+      ),
       child: w.VirtualListView(
         controller: controller,
         variableHeight: true,

@@ -14,6 +14,7 @@ import 'package:artisanal/src/style/color.dart';
 
 import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
+import '../msg.dart' show PasteTextMsg;
 import 'cursor.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
@@ -206,6 +207,8 @@ class TextInputKeyMap implements KeyMap {
     KeyBinding? newline,
     KeyBinding? lineUp,
     KeyBinding? lineDown,
+    KeyBinding? selectLineUp,
+    KeyBinding? selectLineDown,
     KeyBinding? documentStart,
     KeyBinding? documentEnd,
   }) : characterForward =
@@ -332,7 +335,7 @@ class TextInputKeyMap implements KeyMap {
        copy =
            copy ??
            KeyBinding(
-             keys: ['ctrl+c'],
+             keys: ['ctrl+c', 'ctrl+shift+c'],
              help: Help(key: '^c', desc: 'Copy'),
            ),
        cut =
@@ -379,6 +382,18 @@ class TextInputKeyMap implements KeyMap {
            KeyBinding(
              keys: ['down'],
              help: Help(key: '↓', desc: 'Line down'),
+           ),
+       selectLineUp =
+           selectLineUp ??
+           KeyBinding(
+             keys: ['shift+up'],
+             help: Help(key: 'shift+↑', desc: 'Select line up'),
+           ),
+       selectLineDown =
+           selectLineDown ??
+           KeyBinding(
+             keys: ['shift+down'],
+             help: Help(key: 'shift+↓', desc: 'Select line down'),
            ),
        documentStart =
            documentStart ??
@@ -477,6 +492,12 @@ class TextInputKeyMap implements KeyMap {
   /// Move cursor down one line (multi-line mode only).
   final KeyBinding lineDown;
 
+  /// Extend selection one line up (multi-line mode only).
+  final KeyBinding selectLineUp;
+
+  /// Extend selection one line down (multi-line mode only).
+  final KeyBinding selectLineDown;
+
   /// Move cursor to start of document (multi-line mode only).
   final KeyBinding documentStart;
 
@@ -510,7 +531,7 @@ class TextInputKeyMap implements KeyMap {
       nextSuggestion,
       prevSuggestion,
     ],
-    [newline, lineUp, lineDown],
+    [newline, lineUp, lineDown, selectLineUp, selectLineDown],
   ];
 }
 
@@ -530,6 +551,11 @@ class PasteErrorMsg implements Msg {
 
   /// The error that occurred.
   final Object error;
+}
+
+/// Internal message used to apply a large paste in chunks.
+class _PasteChunkMsg implements Msg {
+  const _PasteChunkMsg();
 }
 
 /// A wrapped visual line, referencing a [start, end) range in the flat value list.
@@ -587,6 +613,9 @@ class TextInputModel extends ViewComponent {
     this.maxHeight = 0,
     this.showSuggestions = false,
     this.useVirtualCursor = true,
+    this.collapseLargePaste = false,
+    this.collapsedPasteMinChars = 1200,
+    this.collapsedPasteMinLines = 20,
     TextInputKeyMap? keyMap,
     CursorModel? cursor,
     this.validate,
@@ -645,6 +674,16 @@ class TextInputModel extends ViewComponent {
   /// a real cursor for rendering.
   bool useVirtualCursor;
 
+  /// Whether very large paste payloads should be collapsed into a reference
+  /// token (e.g. `[Pasted ~37 lines]`) instead of inserting full text.
+  bool collapseLargePaste;
+
+  /// Minimum paste payload size in characters to trigger collapsing.
+  int collapsedPasteMinChars;
+
+  /// Minimum paste payload size in lines to trigger collapsing.
+  int collapsedPasteMinLines;
+
   /// Key bindings.
   TextInputKeyMap keyMap;
 
@@ -678,6 +717,7 @@ class TextInputModel extends ViewComponent {
   // Selection
   int? _selectionStart;
   int? _selectionEnd;
+  bool _mouseSelecting = false;
 
   // Double click tracking
   DateTime? _lastClickTime;
@@ -687,6 +727,23 @@ class TextInputModel extends ViewComponent {
   List<List<String>> _suggestions = <List<String>>[];
   List<List<String>> _matchedSuggestions = <List<String>>[];
   int _currentSuggestionIndex = 0;
+
+  // Collapsed paste buffer.
+  final Map<String, String> _pasteBuffer = <String, String>{};
+  int _pasteRefSeq = 0;
+  String? _lastPasteRef;
+
+  // Chunked paste state.
+  static const int _pasteChunkThresholdRunes = 1200;
+  static const int _pasteChunkSizeRunes = 300;
+  List<int>? _pendingPasteRunes;
+  int _pendingPasteOffset = 0;
+
+  /// Returns the most recent paste reference URI (e.g. `paste://12`).
+  String? get lastPasteRef => _lastPasteRef;
+
+  /// Returns an unmodifiable view of collapsed paste payloads by URI.
+  Map<String, String> get pasteBuffer => Map.unmodifiable(_pasteBuffer);
 
   // Rune sanitizer
   RuneSanitizer? _sanitizer;
@@ -787,6 +844,24 @@ class TextInputModel extends ViewComponent {
     final end = math.max(_selectionStart!, _selectionEnd!);
     if (start == end) return '';
     return _value.sublist(start, end).join();
+  }
+
+  Cmd? _copySelectionCmdIfAny() {
+    final selected = getSelectedText();
+    if (selected.isEmpty) return null;
+    return Cmd.setClipboardBestEffort(selected);
+  }
+
+  void _scrollMultilineRows(int delta) {
+    if (maxHeight <= 0) return;
+    final totalLines = _getWrappedLines().length;
+    final maxScroll = math.max(0, totalLines - maxHeight);
+    _scrollRow = (_scrollRow + delta).clamp(0, maxScroll);
+  }
+
+  void _scrollSingleLineBy(int delta) {
+    if (delta == 0) return;
+    position = (_pos + delta).clamp(0, _value.length);
   }
 
   /// Blur (unfocus) the input.
@@ -897,6 +972,45 @@ class TextInputModel extends ViewComponent {
     return _sanitizer!(runes);
   }
 
+  static bool _isControlRune(int rune) {
+    if (rune >= 0x00 && rune <= 0x1F) return true;
+    if (rune >= 0x7F && rune <= 0x9F) return true;
+    return false;
+  }
+
+  List<int> _sanitizeLimited(List<int> runes, int maxOutputCodepoints) {
+    if (maxOutputCodepoints <= 0) return const [];
+
+    final tabRunes = multiline
+        ? const <int>[0x20, 0x20, 0x20, 0x20]
+        : const <int>[0x20];
+    final newlineRunes = multiline ? const <int>[0x0A] : const <int>[0x20];
+
+    final out = <int>[];
+    for (final r in runes) {
+      if (out.length >= maxOutputCodepoints) break;
+
+      if (r == 0xFFFD) {
+        continue;
+      } else if (r == 0x0D || r == 0x0A) {
+        for (final cp in newlineRunes) {
+          if (out.length >= maxOutputCodepoints) break;
+          out.add(cp);
+        }
+      } else if (r == 0x09) {
+        for (final cp in tabRunes) {
+          if (out.length >= maxOutputCodepoints) break;
+          out.add(cp);
+        }
+      } else if (_isControlRune(r)) {
+        continue;
+      } else {
+        out.add(r);
+      }
+    }
+    return out;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Multi-line: Wrapped line computation
   // ─────────────────────────────────────────────────────────────────────────
@@ -984,6 +1098,14 @@ class TextInputModel extends ViewComponent {
   /// `row` is the wrapped-line index, `col` is the offset within that line.
   (int row, int col) _cursorRowCol() {
     final lines = _getWrappedLines();
+
+    // Hot-path while typing: cursor typically sits at document end.
+    // Avoid scanning every wrapped line in that common case.
+    if (_pos == _value.length && lines.isNotEmpty) {
+      final last = lines.last;
+      return (lines.length - 1, _pos - last.start);
+    }
+
     for (var i = 0; i < lines.length; i++) {
       final line = lines[i];
       if (_pos >= line.start && _pos <= line.end) {
@@ -1121,9 +1243,13 @@ class TextInputModel extends ViewComponent {
     return null;
   }
 
-  void _setValueInternal(List<String> graphemes, String? err) {
+  void _setValueInternal(
+    List<String> graphemes,
+    String? err, {
+    bool? wasEmpty,
+  }) {
     error = err;
-    final empty = _value.isEmpty;
+    final empty = wasEmpty ?? _value.isEmpty;
 
     if (charLimit > 0 && graphemes.length > charLimit) {
       _value = graphemes.sublist(0, charLimit);
@@ -1139,6 +1265,24 @@ class TextInputModel extends ViewComponent {
   }
 
   void _insertRunes(List<int> v) {
+    if (charLimit > 0) {
+      final availSpace = charLimit - _value.length;
+      if (availSpace <= 0) return;
+
+      // Large paste fast path: sanitize only enough codepoints to satisfy the
+      // remaining char limit, instead of processing the full payload.
+      if (v.length > availSpace * 4) {
+        final limitedRunes = _sanitizeLimited(v, availSpace);
+        if (limitedRunes.isEmpty) return;
+        final limited = uni
+            .graphemes(String.fromCharCodes(limitedRunes))
+            .take(availSpace)
+            .toList(growable: false);
+        _insertLimited(limited);
+        return;
+      }
+    }
+
     final pasteRunes = _san(v);
     final paste = uni.graphemes(String.fromCharCodes(pasteRunes)).toList();
 
@@ -1156,15 +1300,147 @@ class TextInputModel extends ViewComponent {
     _insertLimited(paste);
   }
 
-  void _insertLimited(List<String> paste) {
-    final head = _value.sublist(0, _pos);
-    final tail = _value.sublist(_pos);
+  Cmd? _startChunkedPaste(String content) {
+    final runes = uni.codePoints(content);
+    if (runes.length < _pasteChunkThresholdRunes) {
+      if (TuiTrace.enabled) {
+        TuiTrace.log(
+          'paste.inline chars=${content.length} runes=${runes.length}',
+          tag: TraceTag.input,
+        );
+      }
+      _insertRunes(runes);
+      return null;
+    }
 
-    final newValue = [...head, ...paste, ...tail];
+    _pendingPasteRunes = runes;
+    _pendingPasteOffset = 0;
+    if (TuiTrace.enabled) {
+      TuiTrace.log(
+        'paste.chunk.start chars=${content.length} runes=${runes.length} '
+        'chunk=$_pasteChunkSizeRunes',
+        tag: TraceTag.input,
+      );
+    }
+    _applyNextPasteChunk();
+    if (_pendingPasteRunes == null) return null;
+    return _schedulePasteChunk();
+  }
+
+  Cmd _schedulePasteChunk() {
+    return Cmd.tick(Duration.zero, (_) => const _PasteChunkMsg());
+  }
+
+  void _applyNextPasteChunk() {
+    final runes = _pendingPasteRunes;
+    if (runes == null) return;
+
+    if (_pendingPasteOffset >= runes.length) {
+      _pendingPasteRunes = null;
+      _pendingPasteOffset = 0;
+      if (TuiTrace.enabled) {
+        TuiTrace.log('paste.chunk.done', tag: TraceTag.input);
+      }
+      return;
+    }
+
+    final end = math.min(
+      runes.length,
+      _pendingPasteOffset + _pasteChunkSizeRunes,
+    );
+    if (TuiTrace.enabled) {
+      TuiTrace.log(
+        'paste.chunk.apply start=$_pendingPasteOffset end=$end total=${runes.length}',
+        tag: TraceTag.input,
+      );
+    }
+    _insertRunes(runes.sublist(_pendingPasteOffset, end));
+    _pendingPasteOffset = end;
+
+    if (_pendingPasteOffset >= runes.length) {
+      _pendingPasteRunes = null;
+      _pendingPasteOffset = 0;
+      if (TuiTrace.enabled) {
+        TuiTrace.log('paste.chunk.done', tag: TraceTag.input);
+      }
+    }
+  }
+
+  bool _tryFastAppendWrapCache(List<String> paste, int oldLen) {
+    if (!multiline) return false;
+    if (paste.isEmpty) return false;
+    if (_pos != oldLen) return false;
+    if (paste.any((g) => g == '\n')) return false;
+
+    final cache = _wrappedLinesCache;
+    if (cache == null) return false;
+    if (_wrappedLinesCacheVersion != _valueVersion) return false;
+    if (_wrappedLinesCacheWidth != width) return false;
+
+    final wrapWidth = width > 0 ? width : 0;
+    if (cache.isEmpty) {
+      cache.add(const _WrappedLine(0, 0));
+    }
+
+    var last = cache.last;
+    var lineStart = last.start;
+    var lineEnd = last.end;
+    var lineWidth = 0;
+
+    if (wrapWidth > 0) {
+      for (var i = lineStart; i < lineEnd; i++) {
+        lineWidth += runeWidth(uni.firstCodePoint(_value[i]));
+      }
+    }
+
+    for (final grapheme in paste) {
+      final rw = runeWidth(uni.firstCodePoint(grapheme));
+      if (wrapWidth <= 0 || lineWidth + rw <= wrapWidth) {
+        lineEnd++;
+        lineWidth += rw;
+      } else {
+        cache[cache.length - 1] = _WrappedLine(lineStart, lineEnd);
+        lineStart = lineEnd;
+        lineEnd = lineStart + 1;
+        lineWidth = rw;
+        cache.add(_WrappedLine(lineStart, lineEnd));
+      }
+    }
+
+    cache[cache.length - 1] = _WrappedLine(lineStart, lineEnd);
+    return true;
+  }
+
+  void _insertLimited(List<String> paste) {
+    if (paste.isEmpty) return;
+
+    final wasEmpty = _value.isEmpty;
+    final oldLen = _value.length;
+    final fastWrapAppend = _tryFastAppendWrapCache(paste, oldLen);
+
+    if (_pos >= _value.length) {
+      _value.addAll(paste);
+    } else if (_pos <= 0) {
+      _value.insertAll(0, paste);
+    } else {
+      _value.insertAll(_pos, paste);
+    }
     _pos += paste.length;
 
-    final err = _validate(newValue);
-    _setValueInternal(newValue, err);
+    final err = _validate(_value);
+    if (fastWrapAppend) {
+      error = err;
+      _valueVersion++;
+      _wrappedLinesCacheVersion = _valueVersion;
+      _wrappedLinesCacheWidth = width;
+      if ((position == 0 && wasEmpty) || position > _value.length) {
+        position = _value.length;
+      }
+      _handleOverflow();
+      return;
+    }
+
+    _setValueInternal(_value, err, wasEmpty: wasEmpty);
   }
 
   void _handleOverflow() {
@@ -1250,7 +1526,8 @@ class TextInputModel extends ViewComponent {
   }
 
   void _deleteBeforeCursor() {
-    _value = _value.sublist(_pos);
+    if (_pos <= 0) return;
+    _value.removeRange(0, _pos);
     _invalidateWrappedLines();
     error = _validate(_value);
     _offset = 0;
@@ -1258,7 +1535,8 @@ class TextInputModel extends ViewComponent {
   }
 
   void _deleteAfterCursor() {
-    _value = _value.sublist(0, _pos);
+    if (_pos >= _value.length) return;
+    _value.removeRange(_pos, _value.length);
     _invalidateWrappedLines();
     error = _validate(_value);
     position = _value.length;
@@ -1281,7 +1559,7 @@ class TextInputModel extends ViewComponent {
     }
     final start = (i + 1).clamp(0, _pos);
 
-    _value = [..._value.sublist(0, start), ..._value.sublist(_pos)];
+    _value.removeRange(start, _pos);
     _invalidateWrappedLines();
     error = _validate(_value);
     position = start;
@@ -1303,7 +1581,7 @@ class TextInputModel extends ViewComponent {
       i++;
     }
 
-    _value = [..._value.sublist(0, _pos), ..._value.sublist(i)];
+    _value.removeRange(_pos, i);
     _invalidateWrappedLines();
     error = _validate(_value);
     _handleOverflow();
@@ -1429,6 +1707,38 @@ class TextInputModel extends ViewComponent {
     return true;
   }
 
+  int _lineCount(String text) {
+    if (text.isEmpty) return 1;
+    var lines = 1;
+    for (var i = 0; i < text.length; i++) {
+      if (text.codeUnitAt(i) == 10) lines++;
+    }
+    return lines;
+  }
+
+  bool _shouldCollapsePaste(String content) {
+    if (!collapseLargePaste) return false;
+    if (content.length >= collapsedPasteMinChars) return true;
+    return _lineCount(content) >= collapsedPasteMinLines;
+  }
+
+  void _insertCollapsedPasteReference(String content) {
+    final lines = _lineCount(content);
+    final ref = 'paste://${++_pasteRefSeq}';
+    _pasteBuffer[ref] = content;
+    _lastPasteRef = ref;
+    if (TuiTrace.enabled) {
+      TuiTrace.log(
+        'paste.collapse ref=$ref chars=${content.length} lines=$lines',
+        tag: TraceTag.input,
+      );
+    }
+
+    final token = '[Pasted ~$lines lines]';
+    _deleteSelection();
+    _insertLimited(uni.graphemes(token).toList(growable: false));
+  }
+
   void _nextSuggestion() {
     _currentSuggestionIndex = (_currentSuggestionIndex + 1);
     if (_currentSuggestionIndex >= _matchedSuggestions.length) {
@@ -1448,17 +1758,32 @@ class TextInputModel extends ViewComponent {
 
   @override
   (TextInputModel, Cmd?) update(Msg msg) {
-    final oldPos = _pos;
     final cmds = <Cmd>[];
 
     if (msg is MouseMsg) {
       if (multiline) {
         return _handleMultilineMouse(msg);
       }
+      if (msg.action == MouseAction.wheel) {
+        switch (msg.button) {
+          case MouseButton.wheelUp:
+          case MouseButton.wheelLeft:
+            _scrollSingleLineBy(-1);
+            break;
+          case MouseButton.wheelDown:
+          case MouseButton.wheelRight:
+            _scrollSingleLineBy(1);
+            break;
+          default:
+            break;
+        }
+        return (this, null);
+      }
       if (msg.y != 0) {
         if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
           _selectionStart = null;
           _selectionEnd = null;
+          _mouseSelecting = false;
           _focused = false;
         }
         return (this, null);
@@ -1466,14 +1791,16 @@ class TextInputModel extends ViewComponent {
       final promptWidth = stringWidth(prompt);
       final localX = msg.x - promptWidth;
       final visibleValue = _value.sublist(_offset, _offsetRight);
+      final visibleText = visibleValue.join();
       final idxInVisible = layout.localCellXToGraphemeIndex(
-        visibleValue.join(),
+        visibleText,
         localX,
       );
       final x = _offset + idxInVisible;
 
       if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
         _focused = true;
+        _mouseSelecting = true;
         final now = DateTime.now();
         if (_lastClickTime != null &&
             now.difference(_lastClickTime!) <
@@ -1493,15 +1820,20 @@ class TextInputModel extends ViewComponent {
           _lastClickTime = now;
           _lastClickPos = x;
         }
-      } else if (msg.action == MouseAction.motion &&
-          msg.button == MouseButton.left) {
+      } else if (msg.action == MouseAction.motion && _mouseSelecting) {
         position = x;
         _selectionEnd = _pos;
-      } else if (msg.action == MouseAction.release) {
+      } else if (msg.action == MouseAction.release && _mouseSelecting) {
+        _mouseSelecting = false;
         if (_selectionStart == _selectionEnd) {
           _selectionStart = null;
           _selectionEnd = null;
+          return (this, null);
         }
+        final cmd = _copySelectionCmdIfAny();
+        _selectionStart = null;
+        _selectionEnd = null;
+        return (this, cmd);
       }
       return (this, null);
     }
@@ -1524,7 +1856,7 @@ class TextInputModel extends ViewComponent {
       if (keyMatches(msg.key, [keyMap.copy])) {
         final selected = getSelectedText();
         if (selected.isNotEmpty) {
-          return (this, Cmd.setClipboard(selected));
+          return (this, Cmd.setClipboardBestEffort(selected));
         }
       }
 
@@ -1532,7 +1864,7 @@ class TextInputModel extends ViewComponent {
         final selected = getSelectedText();
         if (selected.isNotEmpty) {
           _deleteSelection();
-          return (this, Cmd.setClipboard(selected));
+          return (this, Cmd.setClipboardBestEffort(selected));
         }
       }
 
@@ -1569,10 +1901,7 @@ class TextInputModel extends ViewComponent {
         if (!_deleteSelection()) {
           error = null;
           if (_value.isNotEmpty && _pos > 0) {
-            _value = [
-              ..._value.sublist(0, math.max(0, _pos - 1)),
-              ..._value.sublist(_pos),
-            ];
+            _value.removeAt(_pos - 1);
             _invalidateWrappedLines();
             error = _validate(_value);
             if (_pos > 0) position = _pos - 1;
@@ -1652,7 +1981,7 @@ class TextInputModel extends ViewComponent {
         _resetDesiredCol();
         if (!_deleteSelection()) {
           if (_value.isNotEmpty && _pos < _value.length) {
-            _value = [..._value.sublist(0, _pos), ..._value.sublist(_pos + 1)];
+            _value.removeAt(_pos);
             _invalidateWrappedLines();
             error = _validate(_value);
           }
@@ -1700,25 +2029,73 @@ class TextInputModel extends ViewComponent {
         _selectionStart = null;
         _selectionEnd = null;
         _lineUp();
+      } else if (multiline && keyMatches(msg.key, [keyMap.selectLineUp])) {
+        _selectionStart ??= _pos;
+        _lineUp();
+        _selectionEnd = _pos;
       } else if (multiline && keyMatches(msg.key, [keyMap.lineDown])) {
         // Multi-line: Down arrow — move cursor down one line
         _selectionStart = null;
         _selectionEnd = null;
         _lineDown();
+      } else if (multiline && keyMatches(msg.key, [keyMap.selectLineDown])) {
+        _selectionStart ??= _pos;
+        _lineDown();
+        _selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
         _nextSuggestion();
       } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
         _previousSuggestion();
+      } else if (!msg.key.alt &&
+          msg.key.type == KeyType.runes &&
+          msg.key.runes.length == 1 &&
+          msg.key.runes.first == 0x03) {
+        final selected = getSelectedText();
+        if (selected.isNotEmpty) {
+          return (this, Cmd.setClipboardBestEffort(selected));
+        }
       } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
         // Regular character input
+        final insertable = <int>[];
+        for (final r in msg.key.runes) {
+          if (r >= 0x20 && r != 0x7F) {
+            insertable.add(r);
+          }
+        }
+        if (insertable.isEmpty) {
+          _updateSuggestions();
+          return (this, null);
+        }
         _resetDesiredCol();
         _deleteSelection();
-        _insertRunes(msg.key.runes);
+        _insertRunes(insertable);
       }
 
       _updateSuggestions();
-    } else if (msg is PasteMsg) {
-      _insertRunes(uni.codePoints(msg.content));
+    } else if (msg is _PasteChunkMsg) {
+      _applyNextPasteChunk();
+      if (_pendingPasteRunes != null) {
+        cmds.add(_schedulePasteChunk());
+      }
+    } else if (msg is PasteMsg || msg is PasteTextMsg) {
+      final content = msg is PasteMsg
+          ? msg.content
+          : (msg as PasteTextMsg).content;
+      if (TuiTrace.enabled) {
+        final kind = msg is PasteMsg ? 'PasteMsg' : 'PasteTextMsg';
+        TuiTrace.log(
+          'paste.msg kind=$kind chars=${content.length} focused=$_focused',
+          tag: TraceTag.input,
+        );
+      }
+      if (_shouldCollapsePaste(content)) {
+        _insertCollapsedPasteReference(content);
+      } else {
+        final cmd = _startChunkedPaste(content);
+        if (cmd != null) {
+          cmds.add(cmd);
+        }
+      }
     } else if (msg is PasteErrorMsg) {
       error = msg.error.toString();
     }
@@ -1728,12 +2105,8 @@ class TextInputModel extends ViewComponent {
     cursor = newCursor;
     if (cursorCmd != null) cmds.add(cursorCmd);
 
-    // Reset blink if position changed - use focus() to restart blink
-    if (oldPos != _pos && cursor.mode == CursorMode.blink) {
-      final (refocusedCursor, blinkCmd) = cursor.focus();
-      cursor = refocusedCursor;
-      if (blinkCmd != null) cmds.add(blinkCmd);
-    }
+    // Avoid scheduling a blink command on every keypress. Cursor blinking is
+    // already driven by its own timer loop while focused.
 
     _handleOverflow();
     return (this, cmds.isNotEmpty ? Cmd.batch(cmds) : null);
@@ -1783,10 +2156,20 @@ class TextInputModel extends ViewComponent {
 
     final v = StringBuffer();
     final selectionStyle = styles.selection;
+    final normalEcho = echoMode == EchoMode.normal;
+    final hasSelection = selStart != null && selEnd != null;
+    final visibleSelStart = selStart ?? -1;
+    final visibleSelEnd = selEnd ?? -1;
+    var valWidth = 0;
 
     for (var i = 0; i < visibleValue.length; i++) {
-      final char = _echoTransform(visibleValue[i]);
-      final isSelected = selStart != null && i >= selStart && i < selEnd!;
+      final raw = visibleValue[i];
+      final char = normalEcho ? raw : _echoTransform(raw);
+      valWidth += normalEcho
+          ? runeWidth(uni.firstCodePoint(raw))
+          : stringWidth(char);
+      final isSelected =
+          hasSelection && i >= visibleSelStart && i < visibleSelEnd;
 
       if (i == pos) {
         cursor = cursor.setChar(char);
@@ -1819,7 +2202,6 @@ class TextInputModel extends ViewComponent {
     }
 
     // Padding for fixed width
-    final valWidth = stringWidth(visibleValue.join());
     if (width > 0 && valWidth <= width) {
       var padding = math.max(0, width - valWidth);
       if (valWidth + padding <= width && pos < visibleValue.length) {
@@ -1845,17 +2227,39 @@ class TextInputModel extends ViewComponent {
   /// Maps `(msg.x, msg.y)` to a flat position in `_value` using the wrapped
   /// line layout and scroll offset.
   (TextInputModel, Cmd?) _handleMultilineMouse(MouseMsg msg) {
+    if (msg.action == MouseAction.wheel) {
+      switch (msg.button) {
+        case MouseButton.wheelUp:
+          _scrollMultilineRows(-1);
+          break;
+        case MouseButton.wheelDown:
+          _scrollMultilineRows(1);
+          break;
+        case MouseButton.wheelLeft:
+          _scrollSingleLineBy(-1);
+          break;
+        case MouseButton.wheelRight:
+          _scrollSingleLineBy(1);
+          break;
+        default:
+          break;
+      }
+      return (this, null);
+    }
+
     final lines = _getWrappedLines();
     final visibleHeight = maxHeight > 0 ? maxHeight : lines.length;
     final row = msg.y + _scrollRow;
     final promptWidth = stringWidth(prompt);
     final localX = msg.x - promptWidth;
+    final beforePos = _pos;
 
     // Click outside visible area — unfocus.
     if (msg.y < 0 || msg.y >= visibleHeight) {
       if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
         _selectionStart = null;
         _selectionEnd = null;
+        _mouseSelecting = false;
         _focused = false;
       }
       return (this, null);
@@ -1883,35 +2287,62 @@ class TextInputModel extends ViewComponent {
 
     if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
       _focused = true;
+      _mouseSelecting = true;
       _resetDesiredCol();
+      final pressFlatPos = flatPos;
       final now = DateTime.now();
       if (_lastClickTime != null &&
           now.difference(_lastClickTime!) < const Duration(milliseconds: 500) &&
-          _lastClickPos == flatPos) {
+          _lastClickPos == pressFlatPos) {
         // Double click: select word
-        final (start, end) = _findWordAt(flatPos);
+        final (start, end) = _findWordAt(pressFlatPos);
         _selectionStart = start;
         _selectionEnd = end;
         _pos = end;
         _lastClickTime = now;
-        _lastClickPos = flatPos;
+        _lastClickPos = pressFlatPos;
       } else {
-        position = flatPos;
+        position = pressFlatPos;
         _selectionStart = _pos;
         _selectionEnd = _pos;
         _lastClickTime = now;
-        _lastClickPos = flatPos;
+        _lastClickPos = pressFlatPos;
       }
-    } else if (msg.action == MouseAction.motion &&
-        msg.button == MouseButton.left) {
+      if (TuiTrace.enabled) {
+        TuiTrace.log(
+          'mouse.multiline press x=${msg.x} y=${msg.y} localX=$localX '
+          'row=$row clampedRow=$clampedRow flat=$flatPos pressFlat=$pressFlatPos '
+          'before=$beforePos after=$_pos',
+        );
+      }
+    } else if (msg.action == MouseAction.motion && _mouseSelecting) {
       _resetDesiredCol();
       position = flatPos;
       _selectionEnd = _pos;
-    } else if (msg.action == MouseAction.release) {
+      if (TuiTrace.enabled) {
+        TuiTrace.log(
+          'mouse.multiline motion x=${msg.x} y=${msg.y} localX=$localX '
+          'row=$row clampedRow=$clampedRow flat=$flatPos before=$beforePos after=$_pos',
+        );
+      }
+    } else if (msg.action == MouseAction.release && _mouseSelecting) {
+      _mouseSelecting = false;
+      if (TuiTrace.enabled) {
+        TuiTrace.log(
+          'mouse.multiline release x=${msg.x} y=${msg.y} localX=$localX '
+          'row=$row clampedRow=$clampedRow flat=$flatPos before=$beforePos after=$_pos '
+          'sel=(${_selectionStart ?? -1},${_selectionEnd ?? -1})',
+        );
+      }
       if (_selectionStart == _selectionEnd) {
         _selectionStart = null;
         _selectionEnd = null;
+        return (this, null);
       }
+      final cmd = _copySelectionCmdIfAny();
+      _selectionStart = null;
+      _selectionEnd = null;
+      return (this, cmd);
     }
     return (this, null);
   }
@@ -1926,8 +2357,11 @@ class TextInputModel extends ViewComponent {
     final textInlineStyle = styles.text.inline(true);
     String styleText(String s) => textInlineStyle.render(s);
     final selectionStyle = styles.selection;
+    final normalEcho = echoMode == EchoMode.normal;
     final lines = _getWrappedLines();
     final (cursorRow, cursorCol) = _cursorRowCol();
+    final promptWidth = stringWidth(prompt);
+    final continuationPrompt = ' ' * promptWidth;
 
     // Determine visible row range.
     final totalLines = lines.length;
@@ -1955,14 +2389,19 @@ class TextInputModel extends ViewComponent {
 
     for (var row = firstVisible; row < lastVisible; row++) {
       final line = lines[row];
-      final linePrompt = (row == 0) ? prompt : ' ' * stringWidth(prompt);
+      final linePrompt = (row == 0) ? prompt : continuationPrompt;
       final rowStr = StringBuffer();
+      var rowContentWidth = 0;
 
       for (var i = line.start; i < line.end; i++) {
         // Skip newline characters — they are line boundaries, not displayed.
         if (_value[i] == '\n') continue;
 
-        final char = _echoTransform(_value[i]);
+        final raw = _value[i];
+        final char = normalEcho ? raw : _echoTransform(raw);
+        rowContentWidth += normalEcho
+            ? runeWidth(uni.firstCodePoint(raw))
+            : stringWidth(char);
         final isSelected =
             absSelStart != null && i >= absSelStart && i < absSelEnd!;
         final isCursorPos = row == cursorRow && (i - line.start) == cursorCol;
@@ -1990,9 +2429,8 @@ class TextInputModel extends ViewComponent {
 
       // Pad line to width.
       if (width > 0) {
-        final lineContentWidth = _lineDisplayWidth(line);
         final cursorExtra = cursorAtLineEnd ? 1 : 0;
-        final padAmount = math.max(0, width - lineContentWidth - cursorExtra);
+        final padAmount = math.max(0, width - rowContentWidth - cursorExtra);
         if (padAmount > 0) {
           rowStr.write(_renderPadding(styles.text, styles.prompt, padAmount));
         }
@@ -2007,17 +2445,6 @@ class TextInputModel extends ViewComponent {
       return content;
     }
     return View(content: content, cursor: terminalCursor);
-  }
-
-  /// Returns the display width (cells) of a wrapped line's content,
-  /// excluding newline characters.
-  int _lineDisplayWidth(_WrappedLine line) {
-    var w = 0;
-    for (var i = line.start; i < line.end; i++) {
-      if (_value[i] == '\n') continue;
-      w += runeWidth(uni.firstCodePoint(_value[i]));
-    }
-    return w;
   }
 
   Object _placeholderView() {

@@ -47,6 +47,21 @@ class SimpleModel implements Model {
   String view() => 'Hello UV';
 }
 
+Future<void> waitForRender(
+  bool Function() predicate, {
+  Duration timeout = const Duration(seconds: 2),
+  String? reason,
+}) async {
+  final stopwatch = Stopwatch()..start();
+  while (stopwatch.elapsed < timeout) {
+    if (predicate()) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail(reason ?? 'Timed out waiting for render');
+}
+
 void main() {
   test('UltravioletTuiRenderer emits output on first render', () async {
     final terminal = MockTerminal(width: 80, height: 24);
@@ -60,7 +75,10 @@ void main() {
     );
 
     final runFuture = program.run();
-    await Future.delayed(const Duration(milliseconds: 200));
+    await waitForRender(
+      () => terminal.output.contains('Hello UV'),
+      reason: 'Initial render did not contain Hello UV',
+    );
 
     expect(terminal.output, contains('Hello UV'));
     expect(terminal.operations, contains('flush'));
@@ -83,7 +101,10 @@ void main() {
       );
 
       final runFuture = program.run();
-      await Future.delayed(const Duration(milliseconds: 200));
+      await waitForRender(
+        () => terminal.output.contains('Hello UV'),
+        reason: 'Initial alt-screen render did not contain Hello UV',
+      );
 
       expect(terminal.output, contains('Hello UV'));
       expect(terminal.operations, contains('flush'));
@@ -105,7 +126,10 @@ void main() {
     );
 
     final runFuture = program.run();
-    await Future.delayed(const Duration(milliseconds: 200));
+    await waitForRender(
+      () => terminal.output.contains('Hello UV'),
+      reason: 'Initial render before resize did not contain Hello UV',
+    );
 
     expect(terminal.output, contains('Hello UV'));
     expect(terminal.operations, contains('flush'));
@@ -116,7 +140,10 @@ void main() {
     terminal.height = 10;
     program.send(WindowSizeMsg(40, 10));
 
-    await Future.delayed(const Duration(milliseconds: 200));
+    await waitForRender(
+      () => terminal.output.contains('Hello UV'),
+      reason: 'Render after resize did not contain Hello UV',
+    );
 
     // Should have re-rendered because _ensureSize detected size change
     expect(terminal.output, contains('Hello UV'));

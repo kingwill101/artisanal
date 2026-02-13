@@ -876,6 +876,11 @@ class RenderObjectElement extends Element {
     final result = renderObject.paint();
     paintSw.stop();
 
+    // A frame consumed the latest paint output for this subtree.
+    // Keep paint-dirty flags edge-triggered so unchanged branches can be
+    // skipped by parent render objects on subsequent frames.
+    renderObject.clearPaintDirtySubtree();
+
     // Report phase durations to BuildOwner for frame timing.
     _owner?.recordLayout(layoutSw.elapsed);
     _owner?.recordPaint(paintSw.elapsed);

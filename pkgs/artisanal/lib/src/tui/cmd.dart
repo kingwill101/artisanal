@@ -106,6 +106,23 @@ class WriteRawMsg extends Msg {
   final String data;
 }
 
+/// Clipboard write transport used by [ClipboardSetMsg].
+enum ClipboardSetMethod {
+  /// Clipboard was written via an external helper process.
+  external,
+
+  /// Clipboard was written via OSC 52 terminal sequence.
+  osc52,
+}
+
+/// Message emitted after a best-effort clipboard write is attempted.
+class ClipboardSetMsg extends Msg {
+  const ClipboardSetMsg({required this.method, required this.textLength});
+
+  final ClipboardSetMethod method;
+  final int textLength;
+}
+
 /// Internal message to request a repaint.
 class RepaintRequestMsg extends Msg {
   const RepaintRequestMsg({this.force = false});
@@ -286,6 +303,73 @@ class Cmd {
     final sel = selection.isEmpty ? 'c' : selection[0];
     final payload = base64.encode(utf8.encode(text));
     return writeRaw('\x1b]52;$sel;$payload\x07');
+  }
+
+  /// Set clipboard using external helpers when possible, with OSC 52 fallback.
+  ///
+  /// Preferred external tools by platform:
+  /// - Linux: `wl-copy`, then `xclip`, then `xsel`
+  /// - macOS: `pbcopy`
+  /// - Windows: `clip`
+  ///
+  /// If an external helper is unavailable or fails, falls back to [setClipboard]
+  /// (OSC 52) to preserve compatibility with terminals that support it.
+  static Cmd setClipboardBestEffort(String text, {String selection = 'c'}) {
+    return Cmd(() async {
+      final copied = await _trySetClipboardExternal(text);
+      if (copied) {
+        return ClipboardSetMsg(
+          method: ClipboardSetMethod.external,
+          textLength: text.length,
+        );
+      }
+      return await Cmd.sequence([
+        setClipboard(text, selection: selection),
+        Cmd.message(
+          ClipboardSetMsg(
+            method: ClipboardSetMethod.osc52,
+            textLength: text.length,
+          ),
+        ),
+      ]).execute();
+    });
+  }
+
+  static Future<bool> _trySetClipboardExternal(String text) async {
+    final commands = _clipboardWriteCommands();
+    for (final cmd in commands) {
+      try {
+        final process = await io.Process.start(
+          cmd.$1,
+          cmd.$2,
+          runInShell: false,
+        );
+        process.stdin.write(text);
+        await process.stdin.close();
+        final exitCode = await process.exitCode;
+        if (exitCode == 0) return true;
+      } on Object {
+        continue;
+      }
+    }
+    return false;
+  }
+
+  static List<(String, List<String>)> _clipboardWriteCommands() {
+    if (io.Platform.isLinux) {
+      return const <(String, List<String>)>[
+        ('wl-copy', <String>[]),
+        ('xclip', <String>['-selection', 'clipboard']),
+        ('xsel', <String>['--clipboard', '--input']),
+      ];
+    }
+    if (io.Platform.isMacOS) {
+      return const <(String, List<String>)>[('pbcopy', <String>[])];
+    }
+    if (io.Platform.isWindows) {
+      return const <(String, List<String>)>[('clip', <String>[])];
+    }
+    return const <(String, List<String>)>[];
   }
 
   /// Request clipboard content via OSC 52.

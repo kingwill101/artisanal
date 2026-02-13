@@ -75,6 +75,9 @@ class RenderContainer extends RenderBox {
 
   String? _lastPaint;
   Object? _lastPaintKey;
+  String? _lastChildPaint;
+  RenderObject? _lastChildPaintTarget;
+  Size? _lastChildPaintSize;
   num? _resolvedWidth;
   num? _resolvedHeight;
 
@@ -247,7 +250,25 @@ class RenderContainer extends RenderBox {
 
   @override
   String paint() {
-    final content = _child?.paint() ?? '';
+    final child = _child;
+    String content;
+    if (child == null) {
+      content = '';
+    } else {
+      final canReuseChild =
+          _lastChildPaint != null &&
+          identical(_lastChildPaintTarget, child) &&
+          _lastChildPaintSize == child.size &&
+          !child.paintDirty;
+      if (canReuseChild) {
+        content = _lastChildPaint!;
+      } else {
+        content = child.paint();
+        _lastChildPaint = content;
+        _lastChildPaintTarget = child;
+        _lastChildPaintSize = child.size;
+      }
+    }
     final widthForPaint = (_resolvedWidth ?? width) ?? size.width.toInt();
     final heightForPaint = (_resolvedHeight ?? height) ?? size.height.toInt();
     final key = (

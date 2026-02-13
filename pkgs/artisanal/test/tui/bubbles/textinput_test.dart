@@ -265,7 +265,52 @@ void main() {
     });
 
     group('Selection', () {
-      test('selects text via mouse drag', () {
+      test('shift+arrow selection highlights without auto copy', () {
+        var input = TextInputModel(prompt: '> ');
+        input.focus();
+        input.value = 'Hello World';
+        input.position = 0;
+
+        final (next, _) = input.update(
+          const KeyMsg(Key(KeyType.right, shift: true)),
+        );
+
+        expect(next.getSelectedText(), equals('H'));
+      });
+
+      test('copy shortcut does not delete selected text', () {
+        var input = TextInputModel(prompt: '> ');
+        input.focus();
+        input.value = 'Hello World';
+        input.selectionStart = 0;
+        input.selectionEnd = 5;
+
+        final (next, cmd) = input.update(
+          const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)),
+        );
+
+        expect(cmd, isNotNull);
+        expect(next.value, equals('Hello World'));
+        expect(next.getSelectedText(), equals('Hello'));
+      });
+
+      test('ctrl+shift+c control rune does not delete selection', () {
+        var input = TextInputModel(prompt: '> ');
+        input.focus();
+        input.value = 'Hello World';
+        input.selectionStart = 0;
+        input.selectionEnd = 5;
+
+        final (next, cmd) = input.update(
+          const KeyMsg(Key(KeyType.runes, runes: [0x03])),
+        );
+
+        expect(cmd, isNotNull);
+        expect(next.value, equals('Hello World'));
+        expect(next.getSelectedText(), equals('Hello'));
+      });
+
+      test('selects text via mouse drag (motion button can be none)', () {
         var input = TextInputModel(prompt: '> ');
         input.value = 'Hello World';
 
@@ -283,13 +328,25 @@ void main() {
         var (v2, _) = v1.update(
           const MouseMsg(
             action: MouseAction.motion,
-            button: MouseButton.left,
+            button: MouseButton.none,
             x: 7,
             y: 0,
           ),
         );
 
         expect(v2.getSelectedText(), equals('Hello'));
+
+        final (v3, cmd) = v2.update(
+          const MouseMsg(
+            action: MouseAction.release,
+            button: MouseButton.left,
+            x: 7,
+            y: 0,
+          ),
+        );
+        expect(cmd, isNotNull);
+        expect(v3.value, equals('Hello World'));
+        expect(v3.getSelectedText(), isEmpty);
       });
 
       test('double click selects word', () {
@@ -354,6 +411,123 @@ void main() {
         );
         expect(v3.getSelectedText(), equals(''));
         expect(v3.focused, isFalse);
+      });
+    });
+
+    group('Multiline input', () {
+      test('shift+enter inserts newline', () {
+        var input = TextInputModel(multiline: true);
+        input.focus();
+        input.value = 'abc';
+
+        final (next, _) = input.update(
+          const KeyMsg(Key(KeyType.enter, shift: true)),
+        );
+
+        expect(next.value, equals('abc\n'));
+      });
+
+      test('mouse wheel scrolls multiline viewport', () {
+        var input = TextInputModel(multiline: true, maxHeight: 2, width: 20);
+        input.focus();
+        input.value = 'line1\nline2\nline3';
+        input.position = 0;
+
+        final (next, _) = input.update(
+          const MouseMsg(
+            action: MouseAction.wheel,
+            button: MouseButton.wheelDown,
+            x: 0,
+            y: 0,
+          ),
+        );
+
+        final view = Ansi.stripAnsi(next.view() as String);
+        expect(view, contains('line2'));
+        expect(view, contains('line3'));
+      });
+
+      test('shift+up/down extends multiline selection', () {
+        var input = TextInputModel(multiline: true);
+        input.focus();
+        input.value = 'line1\nline2\nline3';
+        input.position = input.value.length;
+
+        final (upSelected, _) = input.update(
+          const KeyMsg(Key(KeyType.up, shift: true)),
+        );
+        expect(upSelected.getSelectedText(), isNotEmpty);
+
+        upSelected.position = 0;
+        final (downSelected, _) = upSelected.update(
+          const KeyMsg(Key(KeyType.down, shift: true)),
+        );
+        expect(downSelected.getSelectedText(), isNotEmpty);
+      });
+
+      test('clicking far past line end moves cursor to end', () {
+        var input = TextInputModel(multiline: true, prompt: ' ');
+        input.focus();
+        input.value = 'hello world';
+        input.position = 0;
+
+        final (next, _) = input.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 40,
+            y: 0,
+          ),
+        );
+
+        expect(next.position, equals(input.value.length));
+      });
+
+      test('clicking inside line positions cursor by mouse x', () {
+        var input = TextInputModel(multiline: true, prompt: ' ');
+        input.focus();
+        input.value = 'hello world';
+        input.position = 0;
+
+        final (next, _) = input.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        expect(next.position, greaterThan(0));
+        expect(next.position, lessThan(input.value.length));
+      });
+
+      test('dragging right-to-left selects from line end', () {
+        var input = TextInputModel(multiline: true, prompt: ' ');
+        input.focus();
+        input.value = 'hello world';
+        input.position = 0;
+
+        final (pressed, _) = input.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 40,
+            y: 0,
+          ),
+        );
+        expect(pressed.position, equals(input.value.length));
+
+        final (dragged, _) = pressed.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.left,
+            x: 2,
+            y: 0,
+          ),
+        );
+
+        expect(dragged.getSelectedText(), isNotEmpty);
       });
     });
   });

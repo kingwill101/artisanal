@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/tui/cmd.dart';
+import 'package:artisanal/src/tui/key.dart' show Key, KeyType;
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
@@ -601,6 +602,36 @@ void main() {
       expect(initCalled, isTrue);
     });
 
+    test('init command completion routes through send interceptor', () async {
+      var sawIncrementInOnSend = false;
+      final interceptor = _RecordingProgramInterceptor(
+        onSendHook: (msg) {
+          if (msg is IncrementMsg) {
+            sawIncrementInOnSend = true;
+          }
+          return msg;
+        },
+      );
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.message(const IncrementMsg()),
+        onUpdate: (msg) {
+          if (msg is IncrementMsg) return Cmd.quit();
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: ProgramOptions(altScreen: false, interceptor: interceptor),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(sawIncrementInOnSend, isTrue);
+    });
+
     test('renders initial view', () async {
       final program = Program(
         const CounterModel(42),
@@ -1031,6 +1062,326 @@ void main() {
       expect(terminal.operations, contains('enableBracketedPaste'));
       expect(terminal.operations, contains('disableBracketedPaste'));
     });
+
+    test(
+      'collapses large multiline key burst into PasteTextMsg (UV parser)',
+      () async {
+        final receivedMessages = <Msg>[];
+        final payload = List.generate(
+          700,
+          (i) => i % 37 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+        ).join();
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 200),
+            (_) => const QuitMsg(),
+          ),
+          onUpdate: (msg) {
+            receivedMessages.add(msg);
+            if (msg is PasteTextMsg) return Cmd.quit();
+            return null;
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        terminal.sendInput(payload.codeUnits);
+        await runFuture;
+
+        final pasted = receivedMessages.whereType<PasteTextMsg>().toList();
+        expect(pasted, hasLength(1));
+        expect(pasted.single.content, payload);
+      },
+    );
+
+    test(
+      'collapses large multiline key burst into PasteTextMsg (key parser)',
+      () async {
+        final receivedMessages = <Msg>[];
+        final payload = List.generate(
+          700,
+          (i) => i % 41 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+        ).join();
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 200),
+            (_) => const QuitMsg(),
+          ),
+          onUpdate: (msg) {
+            receivedMessages.add(msg);
+            if (msg is PasteTextMsg) return Cmd.quit();
+            return null;
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        terminal.sendInput(payload.codeUnits);
+        await runFuture;
+
+        final pasted = receivedMessages.whereType<PasteTextMsg>().toList();
+        expect(pasted, hasLength(1));
+        expect(pasted.single.content, payload);
+      },
+    );
+
+    test(
+      'collapses medium multiline key burst to avoid Enter side effects (UV parser)',
+      () async {
+        final receivedMessages = <Msg>[];
+        final payload = List.generate(
+          220,
+          (i) => i % 19 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+        ).join();
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 200),
+            (_) => const QuitMsg(),
+          ),
+          onUpdate: (msg) {
+            receivedMessages.add(msg);
+            if (msg is PasteTextMsg) return Cmd.quit();
+            return null;
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        terminal.sendInput(payload.codeUnits);
+        await runFuture;
+
+        expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
+      },
+    );
+
+    test(
+      'collapses medium multiline key burst to avoid Enter side effects (key parser)',
+      () async {
+        final receivedMessages = <Msg>[];
+        final payload = List.generate(
+          220,
+          (i) => i % 17 == 0 ? '\n' : String.fromCharCode(0x61 + (i % 26)),
+        ).join();
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 200),
+            (_) => const QuitMsg(),
+          ),
+          onUpdate: (msg) {
+            receivedMessages.add(msg);
+            if (msg is PasteTextMsg) return Cmd.quit();
+            return null;
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        terminal.sendInput(payload.codeUnits);
+        await runFuture;
+
+        expect(receivedMessages.whereType<PasteTextMsg>(), hasLength(1));
+      },
+    );
+
+    test('key send drops queued frame ticks in same drain cycle', () async {
+      final received = <Msg>[];
+      late Program program;
+      var queued = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+
+          if (msg is CustomMsg && msg.value == 'start' && !queued) {
+            queued = true;
+            final now = DateTime.now();
+            program.send(
+              FrameTickMsg(
+                time: now,
+                frameNumber: 1,
+                delta: const Duration(milliseconds: 16),
+              ),
+            );
+            program.send(
+              FrameTickMsg(
+                time: now,
+                frameNumber: 2,
+                delta: const Duration(milliseconds: 16),
+              ),
+            );
+            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+            program.send(
+              FrameTickMsg(
+                time: now,
+                frameNumber: 3,
+                delta: const Duration(milliseconds: 16),
+              ),
+            );
+            return null;
+          }
+
+          if (msg is FrameTickMsg && msg.frameNumber == 3) {
+            return Cmd.quit();
+          }
+
+          return null;
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      final frameNumbers = received
+          .whereType<FrameTickMsg>()
+          .map((m) => m.frameNumber)
+          .toList(growable: false);
+      expect(frameNumbers, [3]);
+      expect(received.whereType<KeyMsg>(), hasLength(1));
+      expect(received.whereType<KeyMsg>().single.key.char, equals('k'));
+    });
+
+    test('queued consecutive keys defer intermediate renders', () async {
+      var viewCalls = 0;
+      var keyUpdates = 0;
+      late Program program;
+
+      final model = _CallbackModel(
+        onView: () {
+          viewCalls++;
+          return 'keys=$keyUpdates';
+        },
+        onUpdate: (msg) {
+          if (msg is CustomMsg && msg.value == 'start') {
+            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x61])));
+            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x62])));
+            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x63])));
+            return null;
+          }
+
+          if (msg is KeyMsg) {
+            keyUpdates++;
+            if (keyUpdates >= 3) return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      final before = viewCalls;
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      expect(keyUpdates, 3);
+      // One render for the trigger message + one for the final key state.
+      expect(viewCalls - before, 2);
+    });
+
+    test('drag motion events are not coalesced away', () async {
+      final motionY = <int>[];
+      late Program program;
+      var queued = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is CustomMsg && msg.value == 'start' && !queued) {
+            queued = true;
+            program.send(
+              const MouseMsg(
+                action: MouseAction.motion,
+                button: MouseButton.left,
+                x: 8,
+                y: 5,
+              ),
+            );
+            program.send(
+              const MouseMsg(
+                action: MouseAction.motion,
+                button: MouseButton.left,
+                x: 8,
+                y: 7,
+              ),
+            );
+            return null;
+          }
+
+          if (msg is MouseMsg &&
+              msg.action == MouseAction.motion &&
+              msg.button == MouseButton.left) {
+            motionY.add(msg.y);
+            if (motionY.length >= 2) return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      expect(motionY, [5, 7]);
+    });
   });
 
   group('External process execution', () {
@@ -1327,6 +1678,141 @@ void main() {
     });
   });
 
+  group('Program interception and replay', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('replay script injects messages automatically', () async {
+      final received = <String>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is CustomMsg) {
+            received.add(msg.value);
+            if (msg.value == 'quit') return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final replay = ProgramReplay.script([
+        const ProgramReplayStep(
+          after: Duration(milliseconds: 10),
+          msg: CustomMsg('hello'),
+        ),
+        const ProgramReplayStep(
+          after: Duration(milliseconds: 10),
+          msg: CustomMsg('quit'),
+        ),
+      ]);
+
+      final program = Program(
+        model,
+        options: ProgramOptions(altScreen: false, replay: replay),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(received, containsAllInOrder(['hello', 'quit']));
+    });
+
+    test('interceptor can inject, transform, and drop messages', () async {
+      final received = <Msg>[];
+      final interceptor = _RecordingProgramInterceptor(
+        onStartSend: (send) => send(const CustomMsg('boot')),
+        onSendHook: (msg) {
+          if (msg is IncrementMsg) return null;
+          if (msg is CustomMsg && msg.value == 'raw') {
+            return const CustomMsg('transformed');
+          }
+          return msg;
+        },
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+          if (msg is CustomMsg && msg.value == 'quit') return Cmd.quit();
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: ProgramOptions(altScreen: false, interceptor: interceptor),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+
+      program.send(const IncrementMsg());
+      program.send(const CustomMsg('raw'));
+      program.send(const CustomMsg('quit'));
+      await runFuture;
+
+      expect(received.whereType<IncrementMsg>(), isEmpty);
+      expect(
+        received.whereType<CustomMsg>().any((m) => m.value == 'boot'),
+        isTrue,
+      );
+      expect(
+        received.whereType<CustomMsg>().any((m) => m.value == 'transformed'),
+        isTrue,
+      );
+      expect(interceptor.stopped, isTrue);
+      expect(interceptor.processedCount, greaterThan(0));
+    });
+
+    test(
+      'blockInputWhileReplay drops terminal input while replay active',
+      () async {
+        final received = <Msg>[];
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            received.add(msg);
+            if (msg is CustomMsg && msg.value == 'quit') return Cmd.quit();
+            return null;
+          },
+        );
+
+        final replay = ProgramReplay.script([
+          const ProgramReplayStep(
+            after: Duration(milliseconds: 120),
+            msg: CustomMsg('quit'),
+          ),
+        ]);
+
+        final program = Program(
+          model,
+          options: ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: false,
+            replay: replay,
+            blockInputWhileReplay: true,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 30));
+        terminal.sendInput(const [0x61]); // 'a'
+        await runFuture;
+
+        expect(received.whereType<KeyMsg>(), isEmpty);
+        expect(
+          received.whereType<CustomMsg>().any((m) => m.value == 'quit'),
+          isTrue,
+        );
+      },
+    );
+  });
+
   group('ProgramOptions new features', () {
     test('fps validates range with assert', () {
       // Test valid values work
@@ -1380,6 +1866,41 @@ void main() {
       void customOutput(String s) {}
       final options = ProgramOptions().withOutput(customOutput);
       expect(options.output, customOutput);
+    });
+
+    test('withInterceptor sets interceptor', () {
+      final interceptor = _RecordingProgramInterceptor();
+      final options = ProgramOptions().withInterceptor(interceptor);
+      expect(options.interceptor, same(interceptor));
+    });
+
+    test('withReplay sets replay script', () {
+      final replay = ProgramReplay.script(const [
+        ProgramReplayStep(after: Duration.zero, msg: CustomMsg('x')),
+      ]);
+      final options = ProgramOptions().withReplay(replay);
+      expect(options.replay, same(replay));
+    });
+
+    test('withoutReplay clears replay', () {
+      final replay = ProgramReplay.script(const [
+        ProgramReplayStep(after: Duration.zero, msg: CustomMsg('x')),
+      ]);
+      final options = ProgramOptions(replay: replay).withoutReplay();
+      expect(options.replay, isNull);
+    });
+
+    test('withoutInterceptor clears interceptor', () {
+      final interceptor = _RecordingProgramInterceptor();
+      final options = ProgramOptions(
+        interceptor: interceptor,
+      ).withoutInterceptor();
+      expect(options.interceptor, isNull);
+    });
+
+    test('withReplayInputBlocking toggles replay input blocking', () {
+      final options = ProgramOptions().withReplayInputBlocking(true);
+      expect(options.blockInputWhileReplay, isTrue);
     });
   });
 
@@ -1885,6 +2406,38 @@ class _TrackingModel implements Model {
 
   @override
   String view() => 'Tracking model';
+}
+
+class _RecordingProgramInterceptor extends ProgramInterceptor {
+  _RecordingProgramInterceptor({this.onStartSend, this.onSendHook});
+
+  final void Function(void Function(Msg msg) send)? onStartSend;
+  final Msg? Function(Msg msg)? onSendHook;
+
+  bool stopped = false;
+  int processedCount = 0;
+
+  @override
+  void onStart(void Function(Msg msg) send) {
+    onStartSend?.call(send);
+  }
+
+  @override
+  Msg? onSend(Msg msg) {
+    final hook = onSendHook;
+    if (hook == null) return msg;
+    return hook(msg);
+  }
+
+  @override
+  void onProcessed(Msg msg, Duration elapsed) {
+    processedCount++;
+  }
+
+  @override
+  void onStop() {
+    stopped = true;
+  }
 }
 
 /// A model that uses callbacks for testing.

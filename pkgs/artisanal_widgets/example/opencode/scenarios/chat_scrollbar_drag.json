@@ -1,0 +1,17 @@
+{
+  "name": "chat_scrollbar_drag",
+  "description": "OpenCode replay for chat scrollbar thumb drag interactions.",
+  "screen": {
+    "width": 176,
+    "height": 39,
+    "fixedRightWidth": 42
+  },
+  "actions": [
+    {"type": "sleep", "ms": 140},
+    {"type": "special", "key": "enter"},
+    {"type": "sleep", "ms": 120},
+    {"type": "drag", "x": 130, "y": 7, "x2": 130, "y2": 28, "steps": 21},
+    {"type": "sleep", "ms": 60},
+    {"type": "drag", "x": 130, "y": 28, "x2": 130, "y2": 14, "steps": 14}
+  ]
+}

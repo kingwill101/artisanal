@@ -97,6 +97,70 @@ export 'msg.dart' show InterruptMsg, RepaintMsg;
 /// ```
 typedef MessageFilter = Msg? Function(Model model, Msg msg);
 
+/// Intercepts program messages and lifecycle events.
+///
+/// Use this to observe/transform queued messages, inject automation events,
+/// and collect timing metrics for test harnesses.
+abstract class ProgramInterceptor {
+  /// Called once after program initialization.
+  ///
+  /// Use [send] to inject messages (for example, replay scripts).
+  void onStart(void Function(Msg msg) send) {}
+
+  /// Called for each message before it is queued.
+  ///
+  /// Return the same message to keep it, a modified message to transform it,
+  /// or `null` to drop it.
+  Msg? onSend(Msg msg) => msg;
+
+  /// Called after a message has been processed.
+  void onProcessed(Msg msg, Duration elapsed) {}
+
+  /// Called during program cleanup.
+  void onStop() {}
+}
+
+/// One replay step for [ProgramReplay.script].
+final class ProgramReplayStep {
+  const ProgramReplayStep({required this.after, required this.msg});
+
+  /// Delay before [msg] is emitted.
+  final Duration after;
+
+  /// Message emitted after [after].
+  final Msg msg;
+}
+
+/// Message replay source for [ProgramOptions.replay].
+///
+/// Use [ProgramReplay.stream] to reuse an existing stream or
+/// [ProgramReplay.script] to define timed steps.
+final class ProgramReplay {
+  ProgramReplay.stream(Stream<Msg> messages) : _messages = messages;
+
+  ProgramReplay.script(List<ProgramReplayStep> steps, {bool loop = false})
+    : _messages = _scriptStream(steps, loop: loop);
+
+  final Stream<Msg> _messages;
+
+  Stream<Msg> toStream() => _messages;
+
+  static Stream<Msg> _scriptStream(
+    List<ProgramReplayStep> steps, {
+    required bool loop,
+  }) async* {
+    if (steps.isEmpty) return;
+    do {
+      for (final step in steps) {
+        if (step.after > Duration.zero) {
+          await Future<void>.delayed(step.after);
+        }
+        yield step.msg;
+      }
+    } while (loop);
+  }
+}
+
 /// Options for configuring the TUI program.
 class ProgramOptions {
   /// Creates program configuration options.
@@ -112,6 +176,9 @@ class ProgramOptions {
     this.catchPanics = true,
     this.maxStackFrames = 10,
     this.filter,
+    this.interceptor,
+    this.replay,
+    this.blockInputWhileReplay = false,
     this.signalHandlers = true,
     this.sendInterrupt = true,
     this.startupTitle,
@@ -223,6 +290,18 @@ class ProgramOptions {
   /// ```
   final MessageFilter? filter;
 
+  /// Optional interceptor hook for message automation and observability.
+  final ProgramInterceptor? interceptor;
+
+  /// Optional replay source used to inject messages automatically.
+  final ProgramReplay? replay;
+
+  /// Whether terminal input should be ignored while replay is active.
+  ///
+  /// When true, stdin key/mouse/paste events are dropped while the replay
+  /// stream is emitting messages. Useful for deterministic profiling.
+  final bool blockInputWhileReplay;
+
   /// Whether to install signal handlers (SIGINT, SIGWINCH).
   ///
   /// When true (default), signal handlers are installed for graceful
@@ -327,6 +406,9 @@ class ProgramOptions {
     bool? catchPanics,
     int? maxStackFrames,
     MessageFilter? filter,
+    ProgramInterceptor? interceptor,
+    ProgramReplay? replay,
+    bool? blockInputWhileReplay,
     bool? signalHandlers,
     bool? sendInterrupt,
     String? startupTitle,
@@ -341,6 +423,7 @@ class ProgramOptions {
     bool? inputTTY,
     ({bool useTabs, bool useBackspace})? movementCapsOverride,
     bool? shutdownSharedStdinOnExit,
+    Duration? metricsInterval,
   }) {
     return ProgramOptions(
       altScreen: altScreen ?? this.altScreen,
@@ -354,6 +437,10 @@ class ProgramOptions {
       catchPanics: catchPanics ?? this.catchPanics,
       maxStackFrames: maxStackFrames ?? this.maxStackFrames,
       filter: filter ?? this.filter,
+      interceptor: interceptor ?? this.interceptor,
+      replay: replay ?? this.replay,
+      blockInputWhileReplay:
+          blockInputWhileReplay ?? this.blockInputWhileReplay,
       signalHandlers: signalHandlers ?? this.signalHandlers,
       sendInterrupt: sendInterrupt ?? this.sendInterrupt,
       startupTitle: startupTitle ?? this.startupTitle,
@@ -371,6 +458,7 @@ class ProgramOptions {
       movementCapsOverride: movementCapsOverride ?? this.movementCapsOverride,
       shutdownSharedStdinOnExit:
           shutdownSharedStdinOnExit ?? this.shutdownSharedStdinOnExit,
+      metricsInterval: metricsInterval ?? this.metricsInterval,
     );
   }
 
@@ -406,12 +494,24 @@ class ProgramOptions {
     catchPanics: catchPanics,
     maxStackFrames: maxStackFrames,
     filter: null,
+    interceptor: interceptor,
+    replay: replay,
+    blockInputWhileReplay: blockInputWhileReplay,
     signalHandlers: signalHandlers,
     sendInterrupt: sendInterrupt,
     startupTitle: startupTitle,
     input: input,
     output: output,
+    disableRenderer: disableRenderer,
+    ansiCompress: ansiCompress,
+    useUltravioletRenderer: useUltravioletRenderer,
+    useUltravioletInputDecoder: useUltravioletInputDecoder,
+    cancelSignal: cancelSignal,
+    environment: environment,
+    inputTTY: inputTTY,
+    movementCapsOverride: movementCapsOverride,
     shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
+    metricsInterval: metricsInterval,
   );
 
   /// Creates options with signal handlers disabled.
@@ -432,6 +532,17 @@ class ProgramOptions {
   /// Creates options with custom output function.
   ProgramOptions withOutput(void Function(String) output) =>
       copyWith(output: output);
+
+  /// Creates options with the given interceptor.
+  ProgramOptions withInterceptor(ProgramInterceptor interceptor) =>
+      copyWith(interceptor: interceptor);
+
+  /// Creates options with a replay source.
+  ProgramOptions withReplay(ProgramReplay replay) => copyWith(replay: replay);
+
+  /// Creates options with replay input blocking enabled/disabled.
+  ProgramOptions withReplayInputBlocking(bool enabled) =>
+      copyWith(blockInputWhileReplay: enabled);
 
   /// Creates options that disable rendering (nil renderer).
   ProgramOptions withoutRenderer() => copyWith(disableRenderer: true);
@@ -456,6 +567,72 @@ class ProgramOptions {
   /// );
   /// ```
   ProgramOptions withoutFrameTick() => copyWith(frameTick: false);
+
+  /// Creates options with replay disabled.
+  ProgramOptions withoutReplay() => ProgramOptions(
+    altScreen: altScreen,
+    mouse: mouse,
+    mouseMode: mouseMode,
+    fps: fps,
+    frameTick: frameTick,
+    hideCursor: hideCursor,
+    bracketedPaste: bracketedPaste,
+    inputTimeout: inputTimeout,
+    catchPanics: catchPanics,
+    maxStackFrames: maxStackFrames,
+    filter: filter,
+    interceptor: interceptor,
+    replay: null,
+    blockInputWhileReplay: blockInputWhileReplay,
+    signalHandlers: signalHandlers,
+    sendInterrupt: sendInterrupt,
+    startupTitle: startupTitle,
+    input: input,
+    output: output,
+    disableRenderer: disableRenderer,
+    ansiCompress: ansiCompress,
+    useUltravioletRenderer: useUltravioletRenderer,
+    useUltravioletInputDecoder: useUltravioletInputDecoder,
+    cancelSignal: cancelSignal,
+    environment: environment,
+    inputTTY: inputTTY,
+    movementCapsOverride: movementCapsOverride,
+    shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
+    metricsInterval: metricsInterval,
+  );
+
+  /// Creates options with interceptor disabled.
+  ProgramOptions withoutInterceptor() => ProgramOptions(
+    altScreen: altScreen,
+    mouse: mouse,
+    mouseMode: mouseMode,
+    fps: fps,
+    frameTick: frameTick,
+    hideCursor: hideCursor,
+    bracketedPaste: bracketedPaste,
+    inputTimeout: inputTimeout,
+    catchPanics: catchPanics,
+    maxStackFrames: maxStackFrames,
+    filter: filter,
+    interceptor: null,
+    replay: replay,
+    blockInputWhileReplay: blockInputWhileReplay,
+    signalHandlers: signalHandlers,
+    sendInterrupt: sendInterrupt,
+    startupTitle: startupTitle,
+    input: input,
+    output: output,
+    disableRenderer: disableRenderer,
+    ansiCompress: ansiCompress,
+    useUltravioletRenderer: useUltravioletRenderer,
+    useUltravioletInputDecoder: useUltravioletInputDecoder,
+    cancelSignal: cancelSignal,
+    environment: environment,
+    inputTTY: inputTTY,
+    movementCapsOverride: movementCapsOverride,
+    shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
+    metricsInterval: metricsInterval,
+  );
 }
 
 /// Error thrown when a program is cancelled via an external signal.
@@ -565,6 +742,13 @@ class Program<M extends Model> {
   /// when the model returned the exact same cached object.
   Object? _lastRenderedView;
 
+  /// Terminal size at the last successful render.
+  ///
+  /// Even when the model returns the same view object, a window resize must
+  /// still trigger rendering so the renderer can resize/reflow buffers.
+  int? _lastRenderWidth;
+  int? _lastRenderHeight;
+
   /// The renderer for output.
   TuiRenderer? _renderer;
 
@@ -584,6 +768,8 @@ class Program<M extends Model> {
 
   /// Stream subscription for input.
   StreamSubscription<List<int>>? _inputSubscription;
+  StreamSubscription<Msg>? _replaySubscription;
+  bool _replayActive = false;
   StreamSubscription<void>? _cancelSubscription;
 
   /// Active stream commands.
@@ -603,6 +789,8 @@ class Program<M extends Model> {
   bool _processingMessage = false;
 
   int _traceMsgId = 0;
+  DateTime? _lastQueuedKeyAt;
+  DateTime? _lastProcessedKeyAt;
   int _traceRenderId = 0;
 
   /// Whether we're in the initialization phase (suppresses renders until init completes).
@@ -907,6 +1095,7 @@ class Program<M extends Model> {
 
   /// Initializes the model and renders initial view.
   Future<void> _initialize() async {
+    _replayActive = false;
     _model = _initialModel;
 
     // Suppress renders during initialization to avoid visual flash of pre-init state
@@ -945,15 +1134,43 @@ class Program<M extends Model> {
       _forceRender();
     }
 
-    // Start metrics timer
-    _startMetricsTimer();
+    // Start optional runtime timers (metrics + frame ticks) based on current
+    // model capabilities/flags.
+    _syncModelOptionalTimers();
 
-    // Start frame tick timer for automatic animation updates
-    _startFrameTickTimer();
+    // Start automation hooks after the first stable frame is rendered.
+    _options.interceptor?.onStart(send);
+    _startReplay();
+  }
+
+  void _startReplay() {
+    final replay = _options.replay;
+    if (replay == null || _replaySubscription != null) return;
+
+    _replayActive = true;
+    _replaySubscription = replay.toStream().listen(
+      (msg) {
+        if (!_running) return;
+        send(msg);
+      },
+      onError: (error, stackTrace) {
+        _replayActive = false;
+        if (TuiTrace.enabled) {
+          _trace('replay stream error: $error');
+        }
+      },
+      onDone: () {
+        _replayActive = false;
+        if (TuiTrace.enabled) {
+          _trace('replay stream done');
+        }
+      },
+    );
   }
 
   /// Starts a periodic timer to send render metrics to the model.
   void _startMetricsTimer() {
+    if (_metricsTimer != null) return;
     if (_options.metricsInterval <= Duration.zero) return;
     if (_model case RenderMetricsModel(
       :final wantsRenderMetrics,
@@ -974,6 +1191,7 @@ class Program<M extends Model> {
   /// When [ProgramOptions.frameTick] is enabled, this sends [FrameTickMsg]
   /// at regular intervals based on the configured [ProgramOptions.fps].
   void _startFrameTickTimer() {
+    if (_frameTickTimer != null) return;
     if (!_options.frameTick) return;
     if (_model case FrameTickModel(
       :final wantsFrameTicks,
@@ -1002,6 +1220,52 @@ class Program<M extends Model> {
 
       send(FrameTickMsg(time: now, frameNumber: _frameNumber, delta: delta));
     });
+  }
+
+  void _stopMetricsTimer() {
+    try {
+      _metricsTimer?.cancel();
+    } catch (_) {}
+    _metricsTimer = null;
+  }
+
+  void _stopFrameTickTimer() {
+    try {
+      _frameTickTimer?.cancel();
+    } catch (_) {}
+    _frameTickTimer = null;
+  }
+
+  void _syncModelOptionalTimers() {
+    // Render metrics timer.
+    if (_options.metricsInterval <= Duration.zero) {
+      _stopMetricsTimer();
+    } else {
+      final wantsMetrics = switch (_model) {
+        RenderMetricsModel(:final wantsRenderMetrics) => wantsRenderMetrics,
+        _ => true,
+      };
+      if (wantsMetrics) {
+        _startMetricsTimer();
+      } else {
+        _stopMetricsTimer();
+      }
+    }
+
+    // Frame tick timer.
+    if (!_options.frameTick) {
+      _stopFrameTickTimer();
+    } else {
+      final wantsTicks = switch (_model) {
+        FrameTickModel(:final wantsFrameTicks) => wantsFrameTicks,
+        _ => true,
+      };
+      if (wantsTicks) {
+        _startFrameTickTimer();
+      } else {
+        _stopFrameTickTimer();
+      }
+    }
   }
 
   /// Sets up signal handlers for graceful shutdown and resize.
@@ -1110,10 +1374,20 @@ class Program<M extends Model> {
         'hex=${_traceBytes(bytes)} raw=${_terminal?.isRawMode ?? false}',
       );
     }
+
+    if (_options.blockInputWhileReplay && _replayActive) {
+      if (TuiTrace.enabled) {
+        _trace('input dropped while replay active bytes=${bytes.length}');
+      }
+      return;
+    }
+
     if (_options.useUltravioletInputDecoder) {
       _uvInputTimeoutTimer?.cancel();
 
-      final msgs = _uvInputParser.parseAll(bytes, expired: false);
+      final msgs = _collapseLikelyRunePaste(
+        _uvInputParser.parseAll(bytes, expired: false),
+      );
       final coalesced = _coalesceInputMsgs(msgs);
       if (TuiTrace.enabled) {
         final summary = coalesced.isEmpty
@@ -1131,7 +1405,9 @@ class Program<M extends Model> {
       if (_uvInputParser.hasPending) {
         _uvInputTimeoutTimer = Timer(_options.inputTimeout, () {
           if (!_running) return;
-          final flushed = _uvInputParser.parseAll(const [], expired: true);
+          final flushed = _collapseLikelyRunePaste(
+            _uvInputParser.parseAll(const [], expired: true),
+          );
           final coalesced = _coalesceInputMsgs(flushed);
           if (TuiTrace.enabled) {
             final summary = coalesced.isEmpty
@@ -1153,6 +1429,14 @@ class Program<M extends Model> {
 
     // Parse bytes into keys and other messages (mouse, focus, paste)
     final results = _keyParser.parseAll(bytes);
+    final collapsedPaste = _collapseLikelyRunePasteFromResults(results);
+    if (collapsedPaste != null) {
+      if (TuiTrace.enabled) {
+        _trace('collapsed key parse into ${_traceMsgSummary(collapsedPaste)}');
+      }
+      send(collapsedPaste);
+      return;
+    }
     if (TuiTrace.enabled && results.isNotEmpty) {
       final summaries = <String>[];
       for (final result in results) {
@@ -1212,6 +1496,105 @@ class Program<M extends Model> {
     return result;
   }
 
+  static const int _pasteCollapseMinMsgs = 64;
+  static const int _pasteCollapseMinRunes = 96;
+
+  List<int>? _pasteTextRunesFromKey(Key key) {
+    if (key.hasModifier || key.isRelease) return null;
+    if (key.type == KeyType.runes) return key.runes;
+    if (key.isEnterLike) return const <int>[0x0A];
+    if (key.isTab) return const <int>[0x09];
+    if (key.isSpaceLike) return const <int>[0x20];
+    return null;
+  }
+
+  List<Msg> _collapseLikelyRunePaste(List<Msg> msgs) {
+    if (msgs.length < _pasteCollapseMinMsgs) return msgs;
+
+    final runes = <int>[];
+    for (final msg in msgs) {
+      if (msg case KeyMsg(:final key)) {
+        final textRunes = _pasteTextRunesFromKey(key);
+        if (textRunes == null) {
+          if (TuiTrace.enabled) {
+            _trace(
+              'paste-collapse skipped(uv) non-text-key/modifier '
+              'msgs=${msgs.length}',
+            );
+          }
+          return msgs;
+        }
+        runes.addAll(textRunes);
+      } else {
+        if (TuiTrace.enabled) {
+          _trace('paste-collapse skipped(uv) non-key msgs=${msgs.length}');
+        }
+        return msgs;
+      }
+    }
+
+    if (runes.length < _pasteCollapseMinRunes) {
+      if (TuiTrace.enabled) {
+        _trace(
+          'paste-collapse skipped(uv) runes=${runes.length} '
+          'threshold=$_pasteCollapseMinRunes msgs=${msgs.length}',
+        );
+      }
+      return msgs;
+    }
+    final collapsed = PasteTextMsg(String.fromCharCodes(runes));
+    if (TuiTrace.enabled) {
+      _trace(
+        'collapsed ${msgs.length} key msgs into ${collapsed.content.length} chars',
+      );
+    }
+    return <Msg>[collapsed];
+  }
+
+  PasteTextMsg? _collapseLikelyRunePasteFromResults(List<Object> results) {
+    if (results.length < _pasteCollapseMinMsgs) return null;
+
+    final runes = <int>[];
+    for (final result in results) {
+      if (result case KeyResult(:final key)) {
+        final textRunes = _pasteTextRunesFromKey(key);
+        if (textRunes == null) {
+          if (TuiTrace.enabled) {
+            _trace(
+              'paste-collapse skipped(key) non-text-key/modifier '
+              'results=${results.length}',
+            );
+          }
+          return null;
+        }
+        runes.addAll(textRunes);
+      } else {
+        if (TuiTrace.enabled) {
+          _trace(
+            'paste-collapse skipped(key) non-key results=${results.length}',
+          );
+        }
+        return null;
+      }
+    }
+
+    if (runes.length < _pasteCollapseMinRunes) {
+      if (TuiTrace.enabled) {
+        _trace(
+          'paste-collapse skipped(key) runes=${runes.length} '
+          'threshold=$_pasteCollapseMinRunes results=${results.length}',
+        );
+      }
+      return null;
+    }
+    if (TuiTrace.enabled) {
+      _trace(
+        'collapsed key results=${results.length} into chars=${runes.length}',
+      );
+    }
+    return PasteTextMsg(String.fromCharCodes(runes));
+  }
+
   Future<void> _runStartupProbesIfNeeded() async {
     if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
@@ -1253,20 +1636,48 @@ class Program<M extends Model> {
   /// conditions and ensure consistent state updates.
   void send(Msg msg) {
     if (!_running) return;
+
+    final interceptor = _options.interceptor;
+    if (interceptor != null) {
+      final intercepted = interceptor.onSend(msg);
+      if (intercepted == null) {
+        if (TuiTrace.enabled) {
+          _trace(
+            'interceptor dropped ${msg.runtimeType}',
+            tag: TraceTag.dispatch,
+          );
+        }
+        return;
+      }
+      msg = intercepted;
+    }
+
     // Coalesce: when a key arrives, drop all pending mouse messages.
-    // When a motion/wheel arrives, drop prior events of the same action.
+    // Also drop pending frame ticks so input is not blocked by stale animation
+    // updates. When a motion/wheel arrives, drop prior events of the same
+    // action. Keep only the newest frame tick in the queue.
     // Use _coalesceQueue to avoid O(n) removeWhere on each send.
     if (msg is KeyMsg) {
-      _coalesceQueue((m) => m is! MouseMsg);
-    } else if (msg is MouseMsg && msg.action == MouseAction.motion) {
+      _coalesceQueue((m) => m is! MouseMsg && m is! FrameTickMsg);
+    } else if (msg is FrameTickMsg) {
+      _coalesceQueue((m) => m is! FrameTickMsg);
+    } else if (msg is MouseMsg &&
+        msg.action == MouseAction.motion &&
+        msg.button == MouseButton.none) {
       _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.motion);
     } else if (msg is MouseMsg && msg.action == MouseAction.wheel) {
       _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.wheel);
     }
     if (TuiTrace.enabled && msg is KeyMsg) {
+      final now = DateTime.now();
+      final dtMs = _lastQueuedKeyAt == null
+          ? -1
+          : now.difference(_lastQueuedKeyAt!).inMicroseconds / 1000.0;
+      _lastQueuedKeyAt = now;
       TuiTrace.log(
         'queue before key len=${_messageQueue.length} '
-        'msg=${_traceMsgSummary(msg)}',
+        'msg=${_traceMsgSummary(msg)} '
+        'input_dt_ms=${dtMs < 0 ? 'n/a' : dtMs.toStringAsFixed(2)}',
         tag: TraceTag.queue,
       );
     }
@@ -1306,7 +1717,11 @@ class Program<M extends Model> {
     try {
       while (_messageQueue.isNotEmpty && _running) {
         final msg = _messageQueue.removeFirst();
-        _processMessage(msg);
+        final deferRender =
+            msg is KeyMsg &&
+            _messageQueue.isNotEmpty &&
+            _messageQueue.first is KeyMsg;
+        _processMessage(msg, deferRender: deferRender);
       }
     } finally {
       _processingMessage = false;
@@ -1314,8 +1729,24 @@ class Program<M extends Model> {
   }
 
   /// Processes a message through the model.
-  void _processMessage(Msg msg) {
+  void _processMessage(Msg msg, {bool deferRender = false}) {
     if (_model == null) return;
+
+    final interceptor = _options.interceptor;
+    final processSw = interceptor == null ? null : (Stopwatch()..start());
+
+    if (TuiTrace.enabled && msg is KeyMsg) {
+      final now = DateTime.now();
+      final dtMs = _lastProcessedKeyAt == null
+          ? -1
+          : now.difference(_lastProcessedKeyAt!).inMicroseconds / 1000.0;
+      _lastProcessedKeyAt = now;
+      TuiTrace.log(
+        'key process_start queue_len=${_messageQueue.length} '
+        'process_dt_ms=${dtMs < 0 ? 'n/a' : dtMs.toStringAsFixed(2)}',
+        tag: TraceTag.queue,
+      );
+    }
 
     final span = TuiTrace.begin(
       'msg#${++_traceMsgId}',
@@ -1391,6 +1822,10 @@ class Program<M extends Model> {
       }
       _model = newModel;
 
+      // The model may have toggled optional runtime feeds (frame ticks /
+      // render metrics). Keep timers in sync with current model flags.
+      _syncModelOptionalTimers();
+
       // Re-render
       // Mark metrics-only frames so the renderer doesn't count them toward
       // FPS.  The metrics timer fires every ~1s which would otherwise produce
@@ -1398,7 +1833,16 @@ class Program<M extends Model> {
       if (msg is RenderMetricsMsg) {
         _renderer?.metrics?.metricsOnlyFrame = true;
       }
-      _render();
+      if (deferRender) {
+        if (TuiTrace.enabled && msg is KeyMsg) {
+          TuiTrace.log(
+            'render deferred for queued key; queue_len=${_messageQueue.length}',
+            tag: TraceTag.render,
+          );
+        }
+      } else {
+        _render();
+      }
 
       // Execute command
       if (cmd != null) {
@@ -1412,6 +1856,10 @@ class Program<M extends Model> {
       }
     } finally {
       span.end();
+      if (processSw != null) {
+        processSw.stop();
+        interceptor!.onProcessed(msg, processSw.elapsed);
+      }
     }
   }
 
@@ -1584,7 +2032,10 @@ class Program<M extends Model> {
         stderr: process.stderr.toString(),
       );
 
-      _processMessage(onComplete(result));
+      // Route completion through the normal send/queue path so interceptors,
+      // coalescing, and ordering semantics are consistent with all other
+      // runtime messages.
+      send(onComplete(result));
     } catch (e) {
       // Restore terminal even on error
       _restoreTerminal();
@@ -1592,7 +2043,10 @@ class Program<M extends Model> {
       // Send error result
       final result = ExecResult(exitCode: -1, stdout: '', stderr: e.toString());
 
-      _processMessage(onComplete(result));
+      // Route completion through the normal send/queue path so interceptors,
+      // coalescing, and ordering semantics are consistent with all other
+      // runtime messages.
+      send(onComplete(result));
     }
   }
 
@@ -1795,6 +2249,12 @@ class Program<M extends Model> {
     // Skip rendering during initialization phase to avoid visual flash
     if (_initializing) return;
 
+    final termSize = _terminal?.size;
+    final sizeChangedSinceLastRender =
+        termSize != null &&
+        (termSize.width != _lastRenderWidth ||
+            termSize.height != _lastRenderHeight);
+
     final renderId = TuiTrace.enabled ? ++_traceRenderId : null;
     final Stopwatch? viewSw = renderId == null ? null : Stopwatch();
     viewSw?.start();
@@ -1810,13 +2270,17 @@ class Program<M extends Model> {
     // (e.g. WidgetApp returning its _cachedView when !_dirty), skip the
     // entire renderer pipeline.  This avoids ANSI parsing, buffer drawing,
     // and diffing for no-op frames (e.g. RenderMetricsMsg with overlay off).
-    if (identical(view, _lastRenderedView)) {
+    if (!sizeChangedSinceLastRender && identical(view, _lastRenderedView)) {
       if (renderId != null) {
         _trace('render#$renderId skip (identical view)', tag: TraceTag.render);
       }
       return;
     }
     _lastRenderedView = view;
+    if (termSize != null) {
+      _lastRenderWidth = termSize.width;
+      _lastRenderHeight = termSize.height;
+    }
 
     if (view is View) {
       _lastView = view;
@@ -1944,6 +2408,12 @@ class Program<M extends Model> {
     }
 
     _renderer!.render(view);
+    _lastRenderedView = view;
+    final termSize = _terminal?.size;
+    if (termSize != null) {
+      _lastRenderWidth = termSize.width;
+      _lastRenderHeight = termSize.height;
+    }
     unawaited(_renderer!.flush());
   }
 
@@ -1973,8 +2443,10 @@ class Program<M extends Model> {
     // Execute regular command
     try {
       final msg = await cmd.execute();
-      if (msg != null && _running) {
-        _processMessage(msg);
+      if (msg != null) {
+        // Command completion should flow through send() so the queue/ordering
+        // invariants hold and interceptor hooks observe all messages.
+        send(msg);
       }
     } catch (e, st) {
       // If panic catching is enabled, store and quit
@@ -2152,6 +2624,9 @@ class Program<M extends Model> {
     // Cancel input subscription
     await tryAsync(() async => _inputSubscription?.cancel());
     _inputSubscription = null;
+    await tryAsync(() async => _replaySubscription?.cancel());
+    _replaySubscription = null;
+    _replayActive = false;
     await tryAsync(() async => _cancelSubscription?.cancel());
     _cancelSubscription = null;
 
@@ -2218,6 +2693,7 @@ class Program<M extends Model> {
     await tryAsync(() async => _terminal?.flush());
 
     trySync(() => TuiTrace.close());
+    trySync(() => _options.interceptor?.onStop());
 
     // Final terminal cleanup
     trySync(() => _terminal?.dispose());

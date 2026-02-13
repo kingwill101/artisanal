@@ -94,6 +94,7 @@ class SidebarWidget extends w.StatelessWidget {
     final cost = '\$${model.cost.toStringAsFixed(2)}';
 
     return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
       gap: 0,
       children: [
         w.Text(
@@ -122,6 +123,7 @@ class SidebarWidget extends w.StatelessWidget {
     final servers = model.mcpServers;
 
     return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
       gap: 0,
       children: [
         w.GestureDetector(
@@ -188,6 +190,7 @@ class SidebarWidget extends w.StatelessWidget {
     final servers = model.lspServers;
 
     return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
       gap: 0,
       children: [
         w.GestureDetector(
@@ -253,6 +256,7 @@ class SidebarWidget extends w.StatelessWidget {
     final todos = model.todos;
 
     return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
       gap: 0,
       children: [
         w.GestureDetector(

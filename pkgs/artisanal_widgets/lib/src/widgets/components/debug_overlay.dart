@@ -73,6 +73,7 @@ class _DebugOverlayState extends State<DebugOverlay> {
     // by WidgetApp without triggering tree rebuilds).
     final holder = RenderMetricsProvider.maybeOf(context);
     final RenderMetrics? m = holder?.metrics;
+    final customMetrics = holder?.customMetrics ?? const <String, String>{};
 
     final info = StringBuffer();
 
@@ -99,6 +100,10 @@ class _DebugOverlayState extends State<DebugOverlay> {
         info.writeln('FPS: 0.0');
       }
       info.writeln('Frames: $_widgetFrameCount');
+    }
+
+    for (final entry in customMetrics.entries) {
+      info.writeln('${entry.key}: ${entry.value}');
     }
 
     final overlay = Container(

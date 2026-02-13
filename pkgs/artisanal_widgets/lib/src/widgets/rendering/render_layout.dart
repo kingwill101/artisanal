@@ -31,6 +31,13 @@ enum RenderFlexFit { tight, loose }
 /// How much space a flex layout should consume on its main axis.
 enum RenderMainAxisSize { min, max }
 
+class _RenderChildPaintCache {
+  const _RenderChildPaintCache({required this.text, required this.size});
+
+  final String text;
+  final Size size;
+}
+
 /// Renders a text string with constraints.
 class RenderText extends RenderBox {
   RenderText({required this.text, this.softWrap = true});
@@ -119,6 +126,32 @@ class RenderRow extends RenderBox {
   /// Optional explicit height override on the cross axis.
   int? crossAxisExtent;
 
+  final Map<RenderObject, _RenderChildPaintCache> _childPaintCache =
+      <RenderObject, _RenderChildPaintCache>{};
+
+  bool _shouldLayoutChild(RenderObject child, BoxConstraints next) {
+    return child.paintDirty || child.constraints != next;
+  }
+
+  String _paintChild(RenderObject child) {
+    final cached = _childPaintCache[child];
+    if (cached != null && !child.paintDirty && cached.size == child.size) {
+      return cached.text;
+    }
+    final painted = child.paint();
+    _childPaintCache[child] = _RenderChildPaintCache(
+      text: painted,
+      size: child.size,
+    );
+    return painted;
+  }
+
+  void _pruneChildPaintCache() {
+    if (_childPaintCache.isEmpty) return;
+    final live = children.toSet();
+    _childPaintCache.removeWhere((child, _) => !live.contains(child));
+  }
+
   @override
   void layout(BoxConstraints constraints) {
     final span = TuiTrace.begin(
@@ -155,7 +188,9 @@ class RenderRow extends RenderBox {
         minHeight: 0,
         maxHeight: constraints.maxHeight,
       );
-      children[i].layout(childConstraints);
+      if (_shouldLayoutChild(children[i], childConstraints)) {
+        children[i].layout(childConstraints);
+      }
       nonFlexWidth += children[i].size.width;
       height = math.max(height, children[i].size.height);
     }
@@ -184,7 +219,9 @@ class RenderRow extends RenderBox {
                 minHeight: 0,
                 maxHeight: constraints.maxHeight,
               );
-        children[i].layout(childConstraints);
+        if (_shouldLayoutChild(children[i], childConstraints)) {
+          children[i].layout(childConstraints);
+        }
         height = math.max(height, children[i].size.height);
       }
     } else {
@@ -199,7 +236,9 @@ class RenderRow extends RenderBox {
           minHeight: 0,
           maxHeight: constraints.maxHeight,
         );
-        children[i].layout(childConstraints);
+        if (_shouldLayoutChild(children[i], childConstraints)) {
+          children[i].layout(childConstraints);
+        }
         height = math.max(height, children[i].size.height);
       }
     }
@@ -222,7 +261,9 @@ class RenderRow extends RenderBox {
           minHeight: crossSize,
           maxHeight: crossSize,
         );
-        child.layout(stretchConstraints);
+        if (_shouldLayoutChild(child, stretchConstraints)) {
+          child.layout(stretchConstraints);
+        }
       }
     }
 
@@ -314,7 +355,8 @@ class RenderRow extends RenderBox {
       tag: TraceTag.paint,
       extra: 'children=${children.length}',
     );
-    final blocks = children.map((c) => c.paint()).toList(growable: false);
+    _pruneChildPaintCache();
+    final blocks = children.map(_paintChild).toList(growable: false);
     final flexData = children.map(_flexDataFor).toList(growable: false);
     final maxMain = size.width.toInt();
     final maxCross = size.height.toInt();
@@ -438,6 +480,32 @@ class RenderColumn extends RenderBox {
   /// Optional explicit width override on the cross axis.
   int? crossAxisExtent;
 
+  final Map<RenderObject, _RenderChildPaintCache> _childPaintCache =
+      <RenderObject, _RenderChildPaintCache>{};
+
+  bool _shouldLayoutChild(RenderObject child, BoxConstraints next) {
+    return child.paintDirty || child.constraints != next;
+  }
+
+  String _paintChild(RenderObject child) {
+    final cached = _childPaintCache[child];
+    if (cached != null && !child.paintDirty && cached.size == child.size) {
+      return cached.text;
+    }
+    final painted = child.paint();
+    _childPaintCache[child] = _RenderChildPaintCache(
+      text: painted,
+      size: child.size,
+    );
+    return painted;
+  }
+
+  void _pruneChildPaintCache() {
+    if (_childPaintCache.isEmpty) return;
+    final live = children.toSet();
+    _childPaintCache.removeWhere((child, _) => !live.contains(child));
+  }
+
   @override
   void layout(BoxConstraints constraints) {
     final span = TuiTrace.begin(
@@ -485,7 +553,9 @@ class RenderColumn extends RenderBox {
             ? double.infinity
             : constraints.maxHeight,
       );
-      children[i].layout(childConstraints);
+      if (_shouldLayoutChild(children[i], childConstraints)) {
+        children[i].layout(childConstraints);
+      }
       nonFlexHeight += children[i].size.height;
       width = math.max(width, children[i].size.width);
     }
@@ -514,7 +584,9 @@ class RenderColumn extends RenderBox {
                 minHeight: 0,
                 maxHeight: allocInt,
               );
-        children[i].layout(childConstraints);
+        if (_shouldLayoutChild(children[i], childConstraints)) {
+          children[i].layout(childConstraints);
+        }
         width = math.max(width, children[i].size.width);
       }
     } else {
@@ -529,7 +601,9 @@ class RenderColumn extends RenderBox {
               ? double.infinity
               : constraints.maxHeight,
         );
-        children[i].layout(childConstraints);
+        if (_shouldLayoutChild(children[i], childConstraints)) {
+          children[i].layout(childConstraints);
+        }
         width = math.max(width, children[i].size.width);
       }
     }
@@ -551,7 +625,9 @@ class RenderColumn extends RenderBox {
           minHeight: prevConstraints.minHeight,
           maxHeight: prevConstraints.maxHeight,
         );
-        child.layout(stretchConstraints);
+        if (_shouldLayoutChild(child, stretchConstraints)) {
+          child.layout(stretchConstraints);
+        }
       }
     }
 
@@ -644,7 +720,8 @@ class RenderColumn extends RenderBox {
       tag: TraceTag.paint,
       extra: 'children=${children.length}',
     );
-    final blocks = children.map((c) => c.paint()).toList(growable: false);
+    _pruneChildPaintCache();
+    final blocks = children.map(_paintChild).toList(growable: false);
     final flexData = children.map(_flexDataFor).toList(growable: false);
     final maxMain = size.height.toInt();
     final maxCross = size.width.toInt();

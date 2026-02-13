@@ -291,6 +291,21 @@ abstract final class Ansi {
   static const altScreenExit = '\x1b[?1049l';
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // Synchronized Output (DEC private mode 2026)
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /// Begin Synchronized Update — tells the terminal to buffer all output.
+  ///
+  /// Wrapping a frame's output in [beginSynchronizedUpdate] /
+  /// [endSynchronizedUpdate] tells the terminal to render changes atomically,
+  /// preventing visible tearing or flashes. Terminals that don't recognise
+  /// mode 2026 silently ignore these sequences.
+  static const beginSynchronizedUpdate = '\x1b[?2026h';
+
+  /// End Synchronized Update — tells the terminal to flush buffered output.
+  static const endSynchronizedUpdate = '\x1b[?2026l';
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // Mouse Tracking
   // ─────────────────────────────────────────────────────────────────────────────
 

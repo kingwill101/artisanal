@@ -18,6 +18,7 @@ final class DebugOverlayModel {
     required this.terminalWidth,
     required this.terminalHeight,
     required this.metrics,
+    required this.customMetrics,
     required this.panelX,
     required this.panelY,
     required this.dragging,
@@ -36,6 +37,7 @@ final class DebugOverlayModel {
   int _cachedPanelWidth = 0;
   int _cachedPanelHeight = 0;
   int? _cachedMetricsFrame;
+  int _cachedCustomMetricsHash = 0;
 
   factory DebugOverlayModel.initial({
     bool enabled = false,
@@ -53,6 +55,7 @@ final class DebugOverlayModel {
       terminalWidth: terminalWidth,
       terminalHeight: terminalHeight,
       metrics: null,
+      customMetrics: const <String, String>{},
       panelX: null,
       panelY: null,
       dragging: false,
@@ -71,6 +74,7 @@ final class DebugOverlayModel {
   final int terminalWidth;
   final int terminalHeight;
   final uv.RenderMetrics? metrics;
+  final Map<String, String> customMetrics;
 
   /// Stored top-left position. When null, uses default placement.
   final int? panelX;
@@ -94,6 +98,7 @@ final class DebugOverlayModel {
     int? terminalWidth,
     int? terminalHeight,
     uv.RenderMetrics? metrics,
+    Map<String, String>? customMetrics,
     Object? panelX = _unset,
     Object? panelY = _unset,
     bool? dragging,
@@ -111,6 +116,7 @@ final class DebugOverlayModel {
       terminalWidth: terminalWidth ?? this.terminalWidth,
       terminalHeight: terminalHeight ?? this.terminalHeight,
       metrics: metrics ?? this.metrics,
+      customMetrics: customMetrics ?? this.customMetrics,
       panelX: panelX == _unset ? this.panelX : panelX as int?,
       panelY: panelY == _unset ? this.panelY : panelY as int?,
       dragging: dragging ?? this.dragging,
@@ -165,8 +171,9 @@ final class DebugOverlayModel {
             );
           }
           if (action == MouseAction.motion) {
-            // Use fixed panel dimensions to avoid expensive re-render during drag
-            const panelHeight = 8; // 6 content lines + 2 border lines
+            // Use cached panel dimensions to avoid expensive re-render during
+            // drag.
+            final panelHeight = this.panelHeight;
             final maxX = (terminalWidth - panelWidth).clamp(0, terminalWidth);
             final maxY = (terminalHeight - panelHeight).clamp(
               0,
@@ -185,8 +192,8 @@ final class DebugOverlayModel {
 
         // Start dragging when clicking inside the panel.
         if (action == MouseAction.press && button == MouseButton.left) {
-          // Use approximate bounds for hit testing (avoids rendering panel)
-          const panelHeight = 8;
+          // Use cached bounds for hit-testing (avoids rendering panel).
+          final panelHeight = this.panelHeight;
           final px = panelX ?? (terminalWidth - panelWidth - marginRight);
           final py = panelY ?? (terminalHeight - panelHeight - marginBottom);
           final inPanel =
@@ -215,11 +222,15 @@ final class DebugOverlayModel {
   String panel({int? terminalWidthOverride}) {
     final m = metrics;
     final currentFrame = m?.frameCount ?? 0;
+    final customHash = Object.hashAll(
+      customMetrics.entries.map((e) => Object.hash(e.key, e.value)),
+    );
 
     // Use cached panel if metrics haven't changed
     if (_cachedPanel != null &&
         _cachedMetricsFrame == currentFrame &&
-        _cachedPanelWidth == panelWidth) {
+        _cachedPanelWidth == panelWidth &&
+        _cachedCustomMetricsHash == customHash) {
       return _cachedPanel!;
     }
 
@@ -231,17 +242,31 @@ final class DebugOverlayModel {
     final skippedFrames = m?.skippedFrames ?? 0;
     final renderPct = m?.renderTimePercentage ?? 0.0;
 
-    final content =
-        '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} (${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})\n'
-        '${label.render('Frame Time:')} ${(avgFrameTimeUs / 1000).toStringAsFixed(2)}ms\n'
-        '${label.render('Render Time:')} $avgRenderTimeUsµs (${renderPct.toStringAsFixed(1)}%)\n'
-        '${label.render('Frames:')} $frameCount (skipped: $skippedFrames)\n'
-        '${label.render('Cells:')} ${terminalWidth * terminalHeight}\n'
-        '${label.render('Renderer:')} $rendererLabel';
+    final content = StringBuffer()
+      ..writeln(
+        '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} '
+        '(${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})',
+      )
+      ..writeln(
+        '${label.render('Frame Time:')} ${(avgFrameTimeUs / 1000).toStringAsFixed(2)}ms',
+      )
+      ..writeln(
+        '${label.render('Render Time:')} $avgRenderTimeUsµs '
+        '(${renderPct.toStringAsFixed(1)}%)',
+      )
+      ..writeln(
+        '${label.render('Frames:')} $frameCount (skipped: $skippedFrames)',
+      )
+      ..writeln('${label.render('Cells:')} ${terminalWidth * terminalHeight}')
+      ..writeln('${label.render('Renderer:')} $rendererLabel');
+
+    for (final entry in customMetrics.entries) {
+      content.writeln('${label.render('${entry.key}:')} ${entry.value}');
+    }
 
     final rendered = PanelComponent(
       title: title,
-      content: content,
+      content: content.toString().trimRight(),
       width: panelWidth,
       renderConfig: RenderConfig(
         terminalWidth: terminalWidthOverride ?? terminalWidth,
@@ -252,6 +277,7 @@ final class DebugOverlayModel {
     _cachedPanel = rendered;
     _cachedMetricsFrame = currentFrame;
     _cachedPanelWidth = panelWidth;
+    _cachedCustomMetricsHash = customHash;
     final lines = rendered.split('\n');
     _cachedPanelHeight = lines.length;
 
@@ -400,6 +426,11 @@ final class DebugOverlayModel {
     panel();
     return (w: panelWidth, h: _cachedPanelHeight);
   }
+
+  /// Current panel height based on cached render data.
+  ///
+  /// Falls back to 8 rows before the first render.
+  int get panelHeight => _cachedPanelHeight > 0 ? _cachedPanelHeight : 8;
 
   ({int x, int y, int w, int h}) _panelRect() {
     final (:w, :h) = _panelSize();

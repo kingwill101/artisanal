@@ -1,0 +1,15 @@
+{
+  "name": "chat_scrollbar_edge_disabled_probe",
+  "description": "Probe drag exactly on sidebar boundary column.",
+  "screen": {
+    "width": 176,
+    "height": 39,
+    "fixedRightWidth": 42
+  },
+  "actions": [
+    {"type": "sleep", "ms": 140},
+    {"type": "special", "key": "enter"},
+    {"type": "sleep", "ms": 120},
+    {"type": "drag", "x": 134, "y": 7, "x2": 134, "y2": 28, "steps": 21}
+  ]
+}

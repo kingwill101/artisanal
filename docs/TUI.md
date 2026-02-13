@@ -16,6 +16,8 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Creating Custom Components](#creating-custom-components)
 - [Composing Components](#composing-components)
 - [Message Filtering](#message-filtering)
+- [Program Interceptors](#program-interceptors)
+- [Replay Automation](#replay-automation)
 - [UV Renderer Integration](#uv-renderer-integration)
 - [Helper Functions](#helper-functions)
 - [Best Practices](#best-practices)
@@ -165,9 +167,19 @@ await program.run();
 | `inputTimeout` | `Duration` | `50ms` | Timeout for incomplete escape sequences |
 | `catchPanics` | `bool` | `true` | Catch exceptions and restore terminal |
 | `filter` | `MessageFilter?` | `null` | Filter messages before reaching model |
+| `interceptor` | `ProgramInterceptor?` | `null` | Hook for message interception, automation, and timing |
+| `replay` | `ProgramReplay?` | `null` | Stream/script source for automatic message injection |
+| `blockInputWhileReplay` | `bool` | `false` | Drop terminal input while replay stream is active |
 | `signalHandlers` | `bool` | `true` | Install signal handlers (SIGINT, SIGWINCH) |
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
+
+Convenience helpers are available on `ProgramOptions`:
+
+- `withFilter(...)` / `withoutFilter()`
+- `withInterceptor(...)` / `withoutInterceptor()`
+- `withReplay(...)` / `withoutReplay()`
+- `withReplayInputBlocking(...)`
 
 ### Renderers and Output Modes
 
@@ -685,6 +697,113 @@ final program = Program(
   options: ProgramOptions(filter: preventUnsavedQuit),
 );
 ```
+
+## Program Interceptors
+
+`ProgramInterceptor` lets you observe and control runtime message flow.
+It is a core `Program` feature and works with any TUI model/application.
+
+```dart
+class MetricsInterceptor extends ProgramInterceptor {
+  final List<Duration> keyDurations = [];
+
+  @override
+  Msg? onSend(Msg msg) {
+    // Drop noisy hover events in this run.
+    if (msg is MouseMsg &&
+        msg.action == MouseAction.motion &&
+        msg.button == MouseButton.none) {
+      return null;
+    }
+    return msg;
+  }
+
+  @override
+  void onProcessed(Msg msg, Duration elapsed) {
+    if (msg is KeyMsg) keyDurations.add(elapsed);
+  }
+}
+
+final program = Program(
+  MyModel(),
+  options: ProgramOptions(
+    interceptor: MetricsInterceptor(),
+  ),
+);
+```
+
+Lifecycle hooks:
+
+- `onStart(send)` fires once after initial render; use `send(...)` to inject messages.
+- `onSend(msg)` runs before queueing; return `null` to drop.
+- `onProcessed(msg, elapsed)` runs after each message is processed.
+- `onStop()` runs during cleanup.
+
+## Replay Automation
+
+`ProgramReplay` provides deterministic event playback for demos, tests, and perf runs.
+It is runtime-level automation, not tied to any specific example app.
+
+### Script Replay
+
+```dart
+final replay = ProgramReplay.script([
+  ProgramReplayStep(
+    after: Duration(milliseconds: 120),
+    msg: MouseMsg(
+      action: MouseAction.wheel,
+      button: MouseButton.wheelDown,
+      x: 82,
+      y: 14,
+    ),
+  ),
+  ProgramReplayStep(
+    after: Duration(milliseconds: 16),
+    msg: KeyMsg(Key(KeyType.runes, runes: [0x61])), // 'a'
+  ),
+  ProgramReplayStep(after: Duration(milliseconds: 10), msg: QuitMsg()),
+]);
+
+await runProgram(
+  MyModel(),
+  options: ProgramOptions(replay: replay),
+);
+```
+
+### Stream Replay
+
+```dart
+final controller = StreamController<Msg>();
+
+await runProgram(
+  MyModel(),
+  options: ProgramOptions(
+    replay: ProgramReplay.stream(controller.stream),
+  ),
+);
+
+controller.add(const CustomMsg('step-1'));
+controller.add(const QuitMsg());
+```
+
+### Deterministic Replay (Block Manual Input)
+
+```dart
+await runProgram(
+  MyModel(),
+  options: ProgramOptions(
+    replay: replay,
+    blockInputWhileReplay: true,
+  ),
+);
+```
+
+Notes:
+
+- Replay messages are injected through `Program.send(...)`, so filters/interceptors still apply.
+- Replay does not quit automatically; include `QuitMsg` (or call `program.quit()`) when needed.
+- Replay and real terminal input can run together for mixed-mode automation.
+- Set `blockInputWhileReplay: true` to ignore manual key/mouse input until replay completes.
 
 ## UV Renderer Integration
 

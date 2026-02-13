@@ -166,6 +166,8 @@ export 'cmd.dart'
         ResumeMsg,
         PrintLineMsg,
         RepaintRequestMsg,
+        ClipboardSetMethod,
+        ClipboardSetMsg,
         ExecProcessMsg,
         ExecResult;
 
@@ -207,6 +209,9 @@ export 'renderer.dart'
 // Program runtime
 export 'program.dart'
     show
+        ProgramInterceptor,
+        ProgramReplay,
+        ProgramReplayStep,
         Program,
         ProgramOptions,
         MessageFilter,

@@ -10,6 +10,7 @@ library;
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -516,6 +517,72 @@ void main() {
       // Should still be 1
       expect(timings, hasLength(1));
     });
+
+    test('RenderMetricsInjector stream updates latestRenderMetrics', () async {
+      final tester = WidgetTester();
+      try {
+        await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+
+        final metrics = tui.RenderMetrics();
+        metrics.beginFrame();
+        metrics.endFrame();
+
+        w.RenderMetricsInjector.instance.injectRuntime(metrics);
+        tester.pump();
+
+        expect(tester.app, isNotNull);
+        expect(tester.app!.latestRenderMetrics, same(metrics));
+      } finally {
+        w.RenderMetricsInjector.instance.clearMetrics();
+        await tester.dispose();
+      }
+    });
+
+    test(
+      'RenderMetricsInjector custom entries appear in built-in overlay',
+      () async {
+        final tester = WidgetTester();
+        try {
+          await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+
+          w.RenderMetricsInjector.instance.setMetric(
+            'Key->Render p50',
+            '4.8ms',
+          );
+          w.RenderMetricsInjector.instance.setMetric('Queue depth', 2);
+          tester.pump();
+
+          expect(tester.find.text('Key->Render p50: 4.8ms'), isTrue);
+          expect(tester.find.text('Queue depth: 2'), isTrue);
+        } finally {
+          w.RenderMetricsInjector.instance.clearMetrics();
+          await tester.dispose();
+        }
+      },
+    );
+
+    test('built-in overlay publishes live key->render percentiles', () async {
+      final tester = WidgetTester(screenWidth: 120, screenHeight: 30);
+      try {
+        await tester.pumpWidget(_KeyCounterWidget(), debugOverlay: true);
+
+        tester.sendKey('a');
+        tester.sendKey('b');
+        tester.sendKey('c');
+
+        expect(
+          tester.find.textMatching(RegExp(r'Key->Render p50: \d+\.\d+ms')),
+          isTrue,
+        );
+        expect(
+          tester.find.textMatching(RegExp(r'Key->Render p95: \d+\.\d+ms')),
+          isTrue,
+        );
+      } finally {
+        w.RenderMetricsInjector.instance.clearMetrics();
+        await tester.dispose();
+      }
+    });
   });
 
   group('DebugOverlay with performance metrics', () {
@@ -626,4 +693,30 @@ w.WidgetFrameTiming _makeTiming({
     totalDuration: Duration(microseconds: totalUs),
     timestamp: DateTime.now(),
   );
+}
+
+class _KeyCounterWidget extends w.StatefulWidget {
+  _KeyCounterWidget();
+
+  @override
+  w.State createState() => _KeyCounterWidgetState();
+}
+
+class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
+  int _count = 0;
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.char != null) {
+      setState(() {
+        _count++;
+      });
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text('count: $_count');
+  }
 }

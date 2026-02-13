@@ -1,4 +1,5 @@
 import 'package:artisanal/src/tui/cmd.dart';
+import 'package:artisanal/src/tui/msg.dart' show BatchMsg;
 import 'package:test/test.dart';
 
 void main() {
@@ -12,6 +13,15 @@ void main() {
       // base64("Hello") = SGVsbG8=
       expect(raw, contains('SGVsbG8='));
     });
+
+    test(
+      'Cmd.setClipboardBestEffort uses external or OSC 52 fallback',
+      () async {
+        final msg = await Cmd.setClipboardBestEffort('Hello').execute();
+        expect(msg, isNotNull);
+        expect(msg is ClipboardSetMsg || msg is BatchMsg, isTrue);
+      },
+    );
 
     test(
       'Cmd.requestClipboard creates WriteRawMsg with OSC 52 query',

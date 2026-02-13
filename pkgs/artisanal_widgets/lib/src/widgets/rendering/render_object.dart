@@ -90,6 +90,14 @@ abstract class RenderObject {
     _paintDirty = false;
   }
 
+  /// Marks this render object and all descendants as paint-clean.
+  void clearPaintDirtySubtree() {
+    _paintDirty = false;
+    for (final child in children) {
+      child.clearPaintDirtySubtree();
+    }
+  }
+
   void dispose() {
     children.clear();
     parent = null;
