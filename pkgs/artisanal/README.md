@@ -150,6 +150,21 @@ Future<void> main() async {
 }
 ```
 
+## Replay + Trace Debugging
+
+The TUI runtime supports deterministic replay (`ProgramReplay`) and built-in
+file tracing (`TuiTrace`) for debugging and profiling.
+
+Enable tracing for any TUI app:
+
+```bash
+ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
+ARTISANAL_TUI_TRACE_PATH=traces/my-run.log \
+dart run your_app.dart
+```
+
+Full replay and tracing documentation: `docs/TUI.md`.
+
 ## Bubbles (Reusable Widgets)
 
 | Widget | Description |

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -39,6 +40,94 @@ final class ReplayScreen {
   }
 }
 
+/// Structured custom event embedded in replay actions.
+final class ReplayCustomEvent {
+  const ReplayCustomEvent({
+    required this.type,
+    this.fields = const <String, Object?>{},
+  });
+
+  /// Event type, usually copied from `TuiTrace.event(type: ...)`.
+  final String type;
+
+  /// Event payload fields.
+  final Map<String, Object?> fields;
+}
+
+/// Replay control decision for a custom replay event.
+enum ReplayEventControl {
+  /// Keep replay running.
+  proceed,
+
+  /// Stop replay immediately without forcing quit.
+  stop,
+
+  /// Emit a quit message and stop replay.
+  quit,
+}
+
+/// Hook decision produced for [ReplayCustomEvent] actions.
+final class ReplayEventDirective {
+  const ReplayEventDirective._({
+    this.messages = const <Msg>[],
+    this.delay = Duration.zero,
+    this.control = ReplayEventControl.proceed,
+  });
+
+  /// Continue replay without changes.
+  static const ReplayEventDirective proceed = ReplayEventDirective._();
+
+  /// Optional messages to inject when this event is encountered.
+  final List<Msg> messages;
+
+  /// Optional delay to apply before [messages] are emitted.
+  final Duration delay;
+
+  /// Replay control after emitting [messages].
+  final ReplayEventControl control;
+
+  /// Continue replay and emit [messages].
+  factory ReplayEventDirective.emit(
+    Iterable<Msg> messages, {
+    Duration delay = Duration.zero,
+  }) {
+    return ReplayEventDirective._(
+      messages: messages.toList(growable: false),
+      delay: delay,
+    );
+  }
+
+  /// Stop replay after optionally emitting [messages].
+  factory ReplayEventDirective.stop({
+    Iterable<Msg> messages = const <Msg>[],
+    Duration delay = Duration.zero,
+  }) {
+    return ReplayEventDirective._(
+      messages: messages.toList(growable: false),
+      delay: delay,
+      control: ReplayEventControl.stop,
+    );
+  }
+
+  /// Emit [QuitMsg] and stop replay after optionally emitting [messages].
+  factory ReplayEventDirective.quit({
+    Iterable<Msg> messages = const <Msg>[],
+    Duration delay = Duration.zero,
+  }) {
+    return ReplayEventDirective._(
+      messages: messages.toList(growable: false),
+      delay: delay,
+      control: ReplayEventControl.quit,
+    );
+  }
+}
+
+/// Hook invoked when replay reaches an `event` action.
+///
+/// Return `null` to use default behavior (emit [ReplayEventMsg]).
+typedef ReplayEventHook =
+    FutureOr<ReplayEventDirective?> Function(ReplayCustomEvent event);
+
 /// Replay action schema used by TUI scenario JSON files.
 final class ReplayAction {
   const ReplayAction({
@@ -53,6 +142,8 @@ final class ReplayAction {
     this.x2 = 0,
     this.y2 = 0,
     this.steps = 8,
+    this.eventType = '',
+    this.eventFields = const <String, Object?>{},
   });
 
   final String type;
@@ -66,6 +157,15 @@ final class ReplayAction {
   final int x2;
   final int y2;
   final int steps;
+  final String eventType;
+  final Map<String, Object?> eventFields;
+
+  ReplayCustomEvent? get customEvent {
+    if (type != 'event') return null;
+    final normalizedType = eventType.trim();
+    if (normalizedType.isEmpty) return null;
+    return ReplayCustomEvent(type: normalizedType, fields: eventFields);
+  }
 
   factory ReplayAction.fromJson(Map<String, dynamic> json) {
     return ReplayAction(
@@ -80,6 +180,8 @@ final class ReplayAction {
       x2: (json['x2'] as int?) ?? (json['x'] as int?) ?? 0,
       y2: (json['y2'] as int?) ?? (json['y'] as int?) ?? 0,
       steps: (json['steps'] as int?) ?? 8,
+      eventType: (json['eventType'] as String? ?? '').trim(),
+      eventFields: _asJsonObject(json['eventFields']),
     );
   }
 
@@ -96,6 +198,8 @@ final class ReplayAction {
       if (x2 != 0) 'x2': x2,
       if (y2 != 0) 'y2': y2,
       if (steps != 8) 'steps': steps,
+      if (eventType.isNotEmpty) 'eventType': eventType,
+      if (eventFields.isNotEmpty) 'eventFields': eventFields,
     };
   }
 
@@ -194,6 +298,13 @@ final class ReplayAction {
           );
         }
         return output;
+      case 'event':
+        final event = customEvent;
+        if (event == null) return const <Msg>[];
+        for (var i = 0; i < times; i++) {
+          output.add(ReplayEventMsg(event));
+        }
+        return output;
       default:
         return const <Msg>[];
     }
@@ -266,6 +377,7 @@ final class ReplayScenario {
     bool loop = false,
     bool keepOpen = false,
     double speed = 1.0,
+    ReplayEventHook? eventHook,
   }) {
     return ProgramReplay.stream(
       replayScenarioStream(
@@ -273,6 +385,7 @@ final class ReplayScenario {
         loop: loop,
         keepOpen: keepOpen,
         speed: speed,
+        eventHook: eventHook,
       ),
     );
   }
@@ -293,6 +406,13 @@ final class ReplayMouseMsg extends MouseMsg {
     super.alt,
     super.shift,
   });
+}
+
+/// Replay message emitted for custom `event` actions.
+final class ReplayEventMsg extends Msg {
+  const ReplayEventMsg(this.event);
+
+  final ReplayCustomEvent event;
 }
 
 /// Coordinate interceptor that scales replay mouse coordinates to current
@@ -386,6 +506,7 @@ Stream<Msg> replayScenarioStream(
   required bool loop,
   required bool keepOpen,
   required double speed,
+  ReplayEventHook? eventHook,
 }) async* {
   if (actions.isEmpty) {
     if (!keepOpen && !loop) yield const QuitMsg();
@@ -403,6 +524,38 @@ Stream<Msg> replayScenarioStream(
     for (final action in actions) {
       if (action.type == 'sleep') {
         pendingDelay += scaled(Duration(milliseconds: action.ms));
+        continue;
+      }
+
+      if (action.type == 'event') {
+        if (pendingDelay > Duration.zero) {
+          await Future<void>.delayed(pendingDelay);
+          pendingDelay = Duration.zero;
+        }
+
+        final event = action.customEvent;
+        if (event == null) {
+          continue;
+        }
+
+        final directive =
+            await eventHook?.call(event) ??
+            ReplayEventDirective.emit(<Msg>[ReplayEventMsg(event)]);
+
+        final hookDelay = scaled(directive.delay);
+        if (hookDelay > Duration.zero) {
+          await Future<void>.delayed(hookDelay);
+        }
+        for (final msg in directive.messages) {
+          yield msg;
+        }
+        if (directive.control == ReplayEventControl.quit) {
+          yield const QuitMsg();
+          return;
+        }
+        if (directive.control == ReplayEventControl.stop) {
+          return;
+        }
         continue;
       }
 
@@ -439,6 +592,7 @@ final class ReplayTraceConversionOptions {
     this.toUs,
     this.minSleepUs = 30000,
     this.includeHoverMoves = false,
+    this.includeCustomEvents = true,
   });
 
   final String? name;
@@ -450,6 +604,7 @@ final class ReplayTraceConversionOptions {
   final int? toUs;
   final int minSleepUs;
   final bool includeHoverMoves;
+  final bool includeCustomEvents;
 }
 
 /// Conversion output returned by [ReplayTraceConverter.convertFile].
@@ -496,8 +651,11 @@ final class ReplayTraceConverter {
       throw FileSystemException('Trace file not found', tracePath);
     }
     final lines = await file.readAsLines();
-    final parsed = _parseTrace(lines);
-    if (!parsed.hasStructuredInput) {
+    final parsed = _parseTrace(
+      lines,
+      includeCustomEvents: options.includeCustomEvents,
+    );
+    if (!parsed.hasStructuredInput && !parsed.hasCustomEvents) {
       throw const FormatException(
         'Trace is missing structured input events. '
         'Capture a new trace with the updated TUI tracer.',
@@ -546,11 +704,15 @@ final class ReplayTraceConverter {
     );
   }
 
-  static _ParsedTrace _parseTrace(List<String> lines) {
+  static _ParsedTrace _parseTrace(
+    List<String> lines, {
+    required bool includeCustomEvents,
+  }) {
     final events = <_ParsedEvent>[];
     var inferredScreenWidth = 0;
     var inferredScreenHeight = 0;
     var hasStructuredInput = false;
+    var hasCustomEvents = false;
     for (final line in lines) {
       final eventLine = TuiTrace.tryParseEventLine(line);
       if (eventLine == null) continue;
@@ -565,25 +727,40 @@ final class ReplayTraceConverter {
         continue;
       }
 
-      if (eventLine.type != TraceEventType.inputBatch) continue;
-      hasStructuredInput = true;
-      final messages = _asMapList(eventLine.fields['messages']);
-      for (var i = 0; i < messages.length; i++) {
-        final payload = messages[i];
-        final tsUs = eventLine.timestampUs + i;
-        final parsedEvent = _parsedInputMessage(tsUs, payload);
-        if (parsedEvent == null) continue;
-        if (parsedEvent case _ParsedWindowSizeEvent(
-          :final width,
-          :final height,
-        )) {
-          if (width > 0 && height > 0) {
-            inferredScreenWidth = width;
-            inferredScreenHeight = height;
+      if (eventLine.type == TraceEventType.inputBatch) {
+        hasStructuredInput = true;
+        final messages = _asMapList(eventLine.fields['messages']);
+        for (var i = 0; i < messages.length; i++) {
+          final payload = messages[i];
+          final tsUs = eventLine.timestampUs + i;
+          final parsedEvent = _parsedInputMessage(tsUs, payload);
+          if (parsedEvent == null) continue;
+          if (parsedEvent case _ParsedWindowSizeEvent(
+            :final width,
+            :final height,
+          )) {
+            if (width > 0 && height > 0) {
+              inferredScreenWidth = width;
+              inferredScreenHeight = height;
+            }
+            continue;
           }
-          continue;
+          events.add(parsedEvent);
         }
-        events.add(parsedEvent);
+        continue;
+      }
+
+      if (includeCustomEvents) {
+        hasCustomEvents = true;
+        events.add(
+          _ParsedCustomTraceEvent(
+            tsUs: eventLine.timestampUs,
+            event: ReplayCustomEvent(
+              type: eventLine.type,
+              fields: eventLine.fields,
+            ),
+          ),
+        );
       }
     }
     return _ParsedTrace(
@@ -591,6 +768,7 @@ final class ReplayTraceConverter {
       inferredScreenWidth: inferredScreenWidth,
       inferredScreenHeight: inferredScreenHeight,
       hasStructuredInput: hasStructuredInput,
+      hasCustomEvents: hasCustomEvents,
     );
   }
 
@@ -624,6 +802,20 @@ final class ReplayTraceConverter {
         }
         maybeSleep(event.tsUs);
         actions.add(action);
+        prevKeptTs = event.tsUs;
+        i++;
+        continue;
+      }
+
+      if (event is _ParsedCustomTraceEvent) {
+        maybeSleep(event.tsUs);
+        actions.add(
+          ReplayAction(
+            type: 'event',
+            eventType: event.event.type,
+            eventFields: event.event.fields,
+          ),
+        );
         prevKeptTs = event.tsUs;
         i++;
         continue;
@@ -913,12 +1105,14 @@ final class _ParsedTrace {
     required this.inferredScreenWidth,
     required this.inferredScreenHeight,
     required this.hasStructuredInput,
+    required this.hasCustomEvents,
   });
 
   final List<_ParsedEvent> events;
   final int inferredScreenWidth;
   final int inferredScreenHeight;
   final bool hasStructuredInput;
+  final bool hasCustomEvents;
 }
 
 sealed class _ParsedEvent {
@@ -948,6 +1142,12 @@ final class _ParsedMouseEvent extends _ParsedEvent {
   final int y;
 }
 
+final class _ParsedCustomTraceEvent extends _ParsedEvent {
+  const _ParsedCustomTraceEvent({required super.tsUs, required this.event});
+
+  final ReplayCustomEvent event;
+}
+
 final class _ParsedWindowSizeEvent extends _ParsedEvent {
   const _ParsedWindowSizeEvent({
     required super.tsUs,
@@ -964,6 +1164,30 @@ final class _ActionConversion {
 
   final List<ReplayAction> actions;
   final int skippedCount;
+}
+
+Map<String, Object?> _asJsonObject(Object? raw) {
+  if (raw is! Map) return const <String, Object?>{};
+  final out = <String, Object?>{};
+  for (final entry in raw.entries) {
+    final key = entry.key?.toString().trim();
+    if (key == null || key.isEmpty) continue;
+    out[key] = _normalizeJsonValue(entry.value);
+  }
+  return out;
+}
+
+Object? _normalizeJsonValue(Object? value) {
+  if (value == null || value is String || value is num || value is bool) {
+    return value;
+  }
+  if (value is List) {
+    return value.map(_normalizeJsonValue).toList(growable: false);
+  }
+  if (value is Map) {
+    return _asJsonObject(value);
+  }
+  return value.toString();
 }
 
 KeyType _parseKeyType(String key) {

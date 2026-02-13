@@ -224,9 +224,14 @@ export 'program.dart'
 export 'replay_protocol.dart'
     show
         ReplayScreen,
+        ReplayCustomEvent,
+        ReplayEventControl,
+        ReplayEventDirective,
+        ReplayEventHook,
         ReplayAction,
         ReplayScenario,
         ReplayMouseMsg,
+        ReplayEventMsg,
         ReplayCoordinateInterceptor,
         ReplayTraceConversionOptions,
         ReplayTraceConversionResult,
