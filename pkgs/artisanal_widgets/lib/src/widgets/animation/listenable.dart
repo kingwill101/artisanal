@@ -49,29 +49,88 @@ abstract class ValueListenable<T> extends Listenable {
 ///
 /// Subclasses (or mixins) call [notifyListeners] whenever their state changes.
 mixin class ChangeNotifier implements Listenable {
-  final List<void Function()> _listeners = [];
+  final List<void Function()?> _listeners = <void Function()?>[];
+  int _listenerCount = 0;
+  int _notificationDepth = 0;
+  bool _needsCompaction = false;
+  bool _isDisposed = false;
 
   @override
-  void addListener(void Function() listener) => _listeners.add(listener);
+  void addListener(void Function() listener) {
+    throwIfDisposed();
+    _listeners.add(listener);
+    _listenerCount += 1;
+  }
 
   @override
-  void removeListener(void Function() listener) => _listeners.remove(listener);
+  void removeListener(void Function() listener) {
+    if (_isDisposed) {
+      return;
+    }
+    for (var i = 0; i < _listeners.length; i++) {
+      if (_listeners[i] != listener) {
+        continue;
+      }
+      if (_notificationDepth > 0) {
+        _listeners[i] = null;
+        _listenerCount -= 1;
+        _needsCompaction = true;
+      } else {
+        _listeners.removeAt(i);
+        _listenerCount -= 1;
+      }
+      return;
+    }
+  }
+
+  /// Throws [StateError] if this notifier has already been disposed.
+  void throwIfDisposed() {
+    if (_isDisposed) {
+      throw StateError(
+        'A $runtimeType was used after being disposed. '
+        'Once dispose() is called, it can no longer be used.',
+      );
+    }
+  }
 
   /// Notify all registered listeners.
   ///
-  /// Iterates over a *copy* of the listener list so that listeners may safely
-  /// add or remove other listeners during the notification.
   void notifyListeners() {
-    for (final listener in List<void Function()>.of(_listeners)) {
-      listener();
+    throwIfDisposed();
+    if (_listenerCount == 0) {
+      return;
+    }
+    _notificationDepth += 1;
+    final end = _listeners.length;
+    try {
+      for (var i = 0; i < end; i++) {
+        _listeners[i]?.call();
+      }
+    } finally {
+      _notificationDepth -= 1;
+      if (_notificationDepth == 0 && _needsCompaction) {
+        _listeners.removeWhere((listener) => listener == null);
+        _needsCompaction = false;
+      }
     }
   }
 
   /// Whether any listeners are currently registered.
-  bool get hasListeners => _listeners.isNotEmpty;
+  bool get hasListeners => _listenerCount > 0;
 
   /// Releases all listeners. After this call the notifier should not be used.
-  void dispose() => _listeners.clear();
+  void dispose() {
+    throwIfDisposed();
+    if (_notificationDepth > 0) {
+      throw StateError(
+        'dispose() cannot be called while notifyListeners() is running.',
+      );
+    }
+    _isDisposed = true;
+    _listeners.clear();
+    _listenerCount = 0;
+    _needsCompaction = false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -89,6 +148,7 @@ class ValueNotifier<T> extends ChangeNotifier implements ValueListenable<T> {
   T get value => _value;
 
   set value(T newValue) {
+    throwIfDisposed();
     if (_value == newValue) return;
     _value = newValue;
     notifyListeners();

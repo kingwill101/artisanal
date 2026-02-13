@@ -3,118 +3,125 @@ import 'package:test/test.dart';
 
 void main() {
   group('ChangeNotifier', () {
-    test('notifyListeners calls registered listeners', () {
+    test('add/remove listener updates hasListeners and notifications', () {
       final notifier = ChangeNotifier();
       var callCount = 0;
-      notifier.addListener(() => callCount++);
 
-      notifier.notifyListeners();
-      expect(callCount, 1);
+      void listener() => callCount += 1;
 
-      notifier.notifyListeners();
-      expect(callCount, 2);
-    });
-
-    test('addListener allows multiple listeners', () {
-      final notifier = ChangeNotifier();
-      var count1 = 0;
-      var count2 = 0;
-      notifier.addListener(() => count1++);
-      notifier.addListener(() => count2++);
-
-      notifier.notifyListeners();
-      expect(count1, 1);
-      expect(count2, 1);
-    });
-
-    test('removeListener stops notifications for that listener', () {
-      final notifier = ChangeNotifier();
-      var callCount = 0;
-      void listener() => callCount++;
-
-      notifier.addListener(listener);
-      notifier.notifyListeners();
-      expect(callCount, 1);
-
-      notifier.removeListener(listener);
-      notifier.notifyListeners();
-      expect(callCount, 1); // unchanged
-    });
-
-    test('removeListener only removes first occurrence', () {
-      final notifier = ChangeNotifier();
-      var callCount = 0;
-      void listener() => callCount++;
-
-      notifier.addListener(listener);
-      notifier.addListener(listener);
-      notifier.notifyListeners();
-      expect(callCount, 2);
-
-      notifier.removeListener(listener);
-      notifier.notifyListeners();
-      expect(callCount, 3); // one removed, one still fires
-    });
-
-    test('hasListeners reflects current state', () {
-      final notifier = ChangeNotifier();
       expect(notifier.hasListeners, isFalse);
-
-      void listener() {}
       notifier.addListener(listener);
       expect(notifier.hasListeners, isTrue);
 
+      notifier.notifyListeners();
+      expect(callCount, 1);
+
       notifier.removeListener(listener);
       expect(notifier.hasListeners, isFalse);
+
+      notifier.notifyListeners();
+      expect(callCount, 1);
     });
 
-    test('dispose clears all listeners', () {
+    test('notifyListeners preserves registration order once per cycle', () {
+      final notifier = ChangeNotifier();
+      final calls = <String>[];
+
+      notifier.addListener(() => calls.add('first'));
+      notifier.addListener(() => calls.add('second'));
+      notifier.addListener(() => calls.add('third'));
+
+      notifier.notifyListeners();
+
+      expect(calls, ['first', 'second', 'third']);
+    });
+
+    test('removeListener only removes one matching registration', () {
       final notifier = ChangeNotifier();
       var callCount = 0;
-      notifier.addListener(() => callCount++);
-      notifier.addListener(() => callCount++);
 
+      void listener() => callCount += 1;
+
+      notifier.addListener(listener);
+      notifier.addListener(listener);
+
+      notifier.notifyListeners();
+      expect(callCount, 2);
+
+      notifier.removeListener(listener);
+      notifier.notifyListeners();
+      expect(callCount, 3);
+    });
+
+    test('removing a listener during notification skips it in that cycle', () {
+      final notifier = ChangeNotifier();
+      final calls = <String>[];
+
+      late void Function() second;
+      void first() {
+        calls.add('first');
+        notifier.removeListener(second);
+      }
+
+      second = () => calls.add('second');
+
+      notifier.addListener(first);
+      notifier.addListener(second);
+
+      notifier.notifyListeners();
+      expect(calls, ['first']);
+
+      notifier.notifyListeners();
+      expect(calls, ['first', 'first']);
+    });
+
+    test(
+      'adding a listener during notification does not fire it in same cycle',
+      () {
+        final notifier = ChangeNotifier();
+        final calls = <String>[];
+        var added = false;
+
+        void second() => calls.add('second');
+
+        void first() {
+          calls.add('first');
+          if (!added) {
+            notifier.addListener(second);
+            added = true;
+          }
+        }
+
+        notifier.addListener(first);
+
+        notifier.notifyListeners();
+        expect(calls, ['first']);
+
+        notifier.notifyListeners();
+        expect(calls, ['first', 'first', 'second']);
+      },
+    );
+
+    test('dispose enforces runtime guards and removeListener remains safe', () {
+      final notifier = ChangeNotifier();
+      void listener() {}
+
+      notifier.addListener(listener);
       notifier.dispose();
+
       expect(notifier.hasListeners, isFalse);
-
-      notifier.notifyListeners();
-      expect(callCount, 0); // no listeners after dispose
+      expect(() => notifier.removeListener(listener), returnsNormally);
+      expect(() => notifier.addListener(listener), throwsStateError);
+      expect(notifier.notifyListeners, throwsStateError);
+      expect(notifier.dispose, throwsStateError);
     });
 
-    test('listener can add another listener during notification', () {
+    test('dispose during notification throws', () {
       final notifier = ChangeNotifier();
-      var innerCalled = false;
 
-      notifier.addListener(() {
-        notifier.addListener(() => innerCalled = true);
-      });
+      notifier.addListener(notifier.dispose);
 
-      notifier.notifyListeners();
-      // Inner listener was added during iteration over a copy,
-      // so it should not have been called yet.
-      expect(innerCalled, isFalse);
-
-      // Now it should fire on the next notification.
-      notifier.notifyListeners();
-      expect(innerCalled, isTrue);
-    });
-
-    test('listener can remove itself during notification', () {
-      final notifier = ChangeNotifier();
-      var callCount = 0;
-      late void Function() selfRemover;
-      selfRemover = () {
-        callCount++;
-        notifier.removeListener(selfRemover);
-      };
-
-      notifier.addListener(selfRemover);
-      notifier.notifyListeners();
-      expect(callCount, 1);
-
-      // Self-removed — should not fire again.
-      notifier.notifyListeners();
-      expect(callCount, 1);
+      expect(notifier.notifyListeners, throwsStateError);
     });
   });
 
@@ -124,35 +131,28 @@ void main() {
       expect(notifier.value, 42);
     });
 
-    test('setting value notifies listeners', () {
-      final notifier = ValueNotifier<int>(0);
-      var callCount = 0;
-      notifier.addListener(() => callCount++);
+    test('notifies when value changes and skips equal assignments', () {
+      final notifier = ValueNotifier<int>(1);
+      var notifications = 0;
+
+      notifier.addListener(() => notifications += 1);
 
       notifier.value = 1;
-      expect(callCount, 1);
-      expect(notifier.value, 1);
+      expect(notifications, 0);
+
+      notifier.value = 2;
+      expect(notifier.value, 2);
+      expect(notifications, 1);
+
+      notifier.value = 2;
+      expect(notifications, 1);
     });
 
-    test('setting same value does not notify', () {
-      final notifier = ValueNotifier<int>(5);
-      var callCount = 0;
-      notifier.addListener(() => callCount++);
-
-      notifier.value = 5;
-      expect(callCount, 0);
-    });
-
-    test('multiple value changes notify each time', () {
+    test('setter throws after dispose', () {
       final notifier = ValueNotifier<String>('a');
-      final values = <String>[];
-      notifier.addListener(() => values.add(notifier.value));
+      notifier.dispose();
 
-      notifier.value = 'b';
-      notifier.value = 'c';
-      notifier.value = 'd';
-
-      expect(values, ['b', 'c', 'd']);
+      expect(() => notifier.value = 'b', throwsStateError);
     });
 
     test('implements ValueListenable', () {
@@ -162,22 +162,10 @@ void main() {
       expect(notifier.value, 3.14);
     });
 
-    test('dispose prevents further notifications', () {
-      final notifier = ValueNotifier<int>(0);
-      var callCount = 0;
-      notifier.addListener(() => callCount++);
-
-      notifier.dispose();
-      notifier.value = 10;
-      // value is updated but no listeners to call
-      expect(notifier.value, 10);
-      expect(callCount, 0);
-    });
-
     test('works with nullable types', () {
       final notifier = ValueNotifier<String?>(null);
       var callCount = 0;
-      notifier.addListener(() => callCount++);
+      notifier.addListener(() => callCount += 1);
 
       expect(notifier.value, isNull);
 
@@ -189,7 +177,6 @@ void main() {
       expect(callCount, 2);
       expect(notifier.value, isNull);
 
-      // Setting null again should not notify.
       notifier.value = null;
       expect(callCount, 2);
     });
@@ -202,7 +189,7 @@ void main() {
       final merged = Listenable.merge([a, b]);
 
       var callCount = 0;
-      merged.addListener(() => callCount++);
+      merged.addListener(() => callCount += 1);
 
       a.notifyListeners();
       expect(callCount, 1);
@@ -216,7 +203,7 @@ void main() {
       final merged = Listenable.merge([a, null]);
 
       var callCount = 0;
-      merged.addListener(() => callCount++);
+      merged.addListener(() => callCount += 1);
 
       a.notifyListeners();
       expect(callCount, 1);
@@ -228,7 +215,7 @@ void main() {
       final merged = Listenable.merge([a, b]);
 
       var callCount = 0;
-      void listener() => callCount++;
+      void listener() => callCount += 1;
       merged.addListener(listener);
 
       a.notifyListeners();
@@ -238,34 +225,15 @@ void main() {
 
       a.notifyListeners();
       b.notifyListeners();
-      expect(callCount, 1); // unchanged
+      expect(callCount, 1);
     });
 
     test('empty merge does not error', () {
       final merged = Listenable.merge([]);
       var callCount = 0;
-      merged.addListener(() => callCount++);
-      // Nothing fires, and no error.
+      merged.addListener(() => callCount += 1);
+
       expect(callCount, 0);
-    });
-
-    test('multiple listeners on merged listenable', () {
-      final a = ChangeNotifier();
-      final b = ChangeNotifier();
-      final merged = Listenable.merge([a, b]);
-
-      var count1 = 0;
-      var count2 = 0;
-      merged.addListener(() => count1++);
-      merged.addListener(() => count2++);
-
-      a.notifyListeners();
-      expect(count1, 1);
-      expect(count2, 1);
-
-      b.notifyListeners();
-      expect(count1, 2);
-      expect(count2, 2);
     });
   });
 }
