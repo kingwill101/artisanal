@@ -140,25 +140,18 @@ abstract class Element {
   /// Schedules a repaint and invalidates ancestor render caches.
   void markNeedsPaint() {
     _owner?.schedulePaint();
-    // Notify ancestor render objects (e.g., scroll viewports) that a
-    // descendant's paint output has changed.  This allows viewport paint
-    // caches to be invalidated for content changes while remaining valid
-    // for scroll-only repaints.
-    Element? current = parent;
-    while (current != null) {
-      if (current is RenderObjectElement) {
-        current.renderObject.markDescendantNeedsPaint();
-      }
-      current = current.parent;
-    }
+    _markRenderSubtreeNeedsPaint(invalidateDescendantCaches: true);
+    _markRenderAncestorsNeedsPaint(invalidateDescendantCaches: true);
   }
 
-  /// Schedules a repaint without notifying ancestor render objects.
+  /// Schedules a repaint for scroll-only changes.
   ///
-  /// Use this for scroll-only changes where the child content hasn't changed
-  /// and any viewport paint cache should remain valid.
+  /// Marks the relevant render subtree and ancestors as paint-dirty without
+  /// forcing descendant cache invalidation.
   void markNeedsPaintScrollOnly() {
     _owner?.schedulePaint();
+    _markRenderSubtreeNeedsPaint(invalidateDescendantCaches: false);
+    _markRenderAncestorsNeedsPaint(invalidateDescendantCaches: false);
   }
 
   /// Captures mouse events for this element subtree.
@@ -178,6 +171,42 @@ abstract class Element {
       current = current.parent;
     }
     return null;
+  }
+
+  void _markRenderSubtreeNeedsPaint({
+    required bool invalidateDescendantCaches,
+  }) {
+    void visit(Element element) {
+      if (element is RenderObjectElement) {
+        if (invalidateDescendantCaches) {
+          element.renderObject.markDescendantNeedsPaint();
+        } else {
+          element.renderObject.markNeedsPaintOnly();
+        }
+        return;
+      }
+      for (final child in element.children) {
+        visit(child);
+      }
+    }
+
+    visit(this);
+  }
+
+  void _markRenderAncestorsNeedsPaint({
+    required bool invalidateDescendantCaches,
+  }) {
+    Element? current = parent;
+    while (current != null) {
+      if (current is RenderObjectElement) {
+        if (invalidateDescendantCaches) {
+          current.renderObject.markDescendantNeedsPaint();
+        } else {
+          current.renderObject.markNeedsPaintOnly();
+        }
+      }
+      current = current.parent;
+    }
   }
 
   void _markDirty() {

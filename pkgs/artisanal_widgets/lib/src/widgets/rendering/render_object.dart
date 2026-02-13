@@ -83,6 +83,15 @@ abstract class RenderObject {
     _paintDirty = true;
   }
 
+  /// Marks this render object as needing paint without invalidating
+  /// descendant-specific paint caches.
+  ///
+  /// Use this for scroll-offset-only updates where content is unchanged but
+  /// parent render caches must re-read this subtree's paint output.
+  void markNeedsPaintOnly() {
+    _paintDirty = true;
+  }
+
   /// Marks this render object's paint state as clean.
   ///
   /// Call this after consuming the latest [paint] output.
