@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:artisanal/tui.dart' as tui;
 
@@ -15,6 +13,8 @@ class OpenCodeReplayPlan {
     required this.speed,
     required this.replay,
     required this.interceptor,
+    required this.convertOnly,
+    this.traceConversion,
   });
 
   final String path;
@@ -26,37 +26,178 @@ class OpenCodeReplayPlan {
   final double speed;
   final tui.ProgramReplay replay;
   final tui.ProgramInterceptor interceptor;
+  final bool convertOnly;
+  final tui.ReplayTraceConversionResult? traceConversion;
 }
 
-Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(
-  List<String> args,
-) async {
+Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(List<String> args) async {
   String? scenarioArg;
+  String? traceArg;
+  String? traceOutArg;
+  String? traceName;
+  String? traceDescription;
+  int? traceFromUs;
+  int? traceToUs;
+  var traceMinSleepUs = 30000;
+  var traceScreenWidth = 0;
+  var traceScreenHeight = 0;
+  var traceFixedRightWidth = 0;
+  var traceIncludeHoverMoves = false;
   var loop = false;
   var keepOpen = false;
   var blockInput = false;
   var speed = 1.0;
+  var convertOnly = false;
 
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
 
     if (arg.startsWith('--replay-scenario=')) {
-      final value = arg.substring('--replay-scenario='.length).trim();
-      if (value.isEmpty) {
-        throw const FormatException('Missing value for --replay-scenario.');
-      }
-      scenarioArg = value;
+      scenarioArg = _requiredInlineValue(arg, '--replay-scenario=');
+      continue;
+    }
+    if (arg == '--replay-scenario') {
+      scenarioArg = _requiredNextValue(args, ++i, '--replay-scenario');
       continue;
     }
 
-    if (arg == '--replay-scenario') {
-      if (i + 1 >= args.length) {
-        throw const FormatException('Missing value for --replay-scenario.');
-      }
-      scenarioArg = args[++i].trim();
-      if (scenarioArg.isEmpty) {
-        throw const FormatException('Missing value for --replay-scenario.');
-      }
+    if (arg.startsWith('--replay-trace=')) {
+      traceArg = _requiredInlineValue(arg, '--replay-trace=');
+      continue;
+    }
+    if (arg == '--replay-trace') {
+      traceArg = _requiredNextValue(args, ++i, '--replay-trace');
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-out=')) {
+      traceOutArg = _requiredInlineValue(arg, '--replay-trace-out=');
+      continue;
+    }
+    if (arg == '--replay-trace-out') {
+      traceOutArg = _requiredNextValue(args, ++i, '--replay-trace-out');
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-name=')) {
+      traceName = _requiredInlineValue(arg, '--replay-trace-name=');
+      continue;
+    }
+    if (arg == '--replay-trace-name') {
+      traceName = _requiredNextValue(args, ++i, '--replay-trace-name');
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-description=')) {
+      traceDescription = _requiredInlineValue(arg, '--replay-trace-description=');
+      continue;
+    }
+    if (arg == '--replay-trace-description') {
+      traceDescription = _requiredNextValue(
+        args,
+        ++i,
+        '--replay-trace-description',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-from-us=')) {
+      traceFromUs = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-from-us='),
+        '--replay-trace-from-us',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-from-us') {
+      traceFromUs = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-from-us'),
+        '--replay-trace-from-us',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-to-us=')) {
+      traceToUs = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-to-us='),
+        '--replay-trace-to-us',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-to-us') {
+      traceToUs = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-to-us'),
+        '--replay-trace-to-us',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-min-sleep-us=')) {
+      traceMinSleepUs = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-min-sleep-us='),
+        '--replay-trace-min-sleep-us',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-min-sleep-us') {
+      traceMinSleepUs = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-min-sleep-us'),
+        '--replay-trace-min-sleep-us',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-screen-width=')) {
+      traceScreenWidth = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-screen-width='),
+        '--replay-trace-screen-width',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-screen-width') {
+      traceScreenWidth = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-screen-width'),
+        '--replay-trace-screen-width',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-screen-height=')) {
+      traceScreenHeight = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-screen-height='),
+        '--replay-trace-screen-height',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-screen-height') {
+      traceScreenHeight = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-screen-height'),
+        '--replay-trace-screen-height',
+      );
+      continue;
+    }
+
+    if (arg.startsWith('--replay-trace-fixed-right-width=')) {
+      traceFixedRightWidth = _parseRequiredInt(
+        _requiredInlineValue(arg, '--replay-trace-fixed-right-width='),
+        '--replay-trace-fixed-right-width',
+      );
+      continue;
+    }
+    if (arg == '--replay-trace-fixed-right-width') {
+      traceFixedRightWidth = _parseRequiredInt(
+        _requiredNextValue(args, ++i, '--replay-trace-fixed-right-width'),
+        '--replay-trace-fixed-right-width',
+      );
+      continue;
+    }
+
+    if (arg == '--replay-trace-include-hover') {
+      traceIncludeHoverMoves = true;
+      continue;
+    }
+
+    if (arg == '--replay-convert-only') {
+      convertOnly = true;
       continue;
     }
 
@@ -64,52 +205,90 @@ Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(
       loop = true;
       continue;
     }
-
     if (arg == '--replay-keep-open') {
       keepOpen = true;
       continue;
     }
-
     if (arg == '--replay-block-input') {
       blockInput = true;
       continue;
     }
-
     if (arg.startsWith('--replay-speed=')) {
-      final value = arg.substring('--replay-speed='.length).trim();
-      speed = _parseReplaySpeed(value);
+      speed = _parseReplaySpeed(_requiredInlineValue(arg, '--replay-speed='));
       continue;
     }
-
     if (arg == '--replay-speed') {
-      if (i + 1 >= args.length) {
-        throw const FormatException('Missing value for --replay-speed.');
-      }
-      speed = _parseReplaySpeed(args[++i].trim());
+      speed = _parseReplaySpeed(_requiredNextValue(args, ++i, '--replay-speed'));
       continue;
     }
   }
 
-  if (scenarioArg == null) return null;
+  if (scenarioArg != null && traceArg != null) {
+    throw const FormatException(
+      'Use only one replay source: --replay-scenario or --replay-trace.',
+    );
+  }
 
-  final scenarioPath = _resolveScenarioPath(scenarioArg);
-  final scenario = await _ReplayScenario.load(scenarioPath);
-  final interceptor = _ReplayCoordinateInterceptor(
-    sourceWidth: scenario.screenWidth,
-    sourceHeight: scenario.screenHeight,
-    sourceRightFixedWidth: scenario.screenFixedRightWidth,
+  if (scenarioArg == null && traceArg == null) {
+    return null;
+  }
+
+  if (convertOnly && traceArg == null) {
+    throw const FormatException(
+      '--replay-convert-only requires --replay-trace.',
+    );
+  }
+  if (convertOnly && (traceOutArg == null || traceOutArg.isEmpty)) {
+    throw const FormatException(
+      '--replay-convert-only requires --replay-trace-out <path>.',
+    );
+  }
+
+  tui.ReplayScenario scenario;
+  tui.ReplayTraceConversionResult? traceConversion;
+  String resolvedPath;
+
+  if (traceArg != null) {
+    final resolvedTrace = _resolveTracePath(traceArg);
+    traceConversion = await tui.ReplayTraceConverter.convertFile(
+      resolvedTrace,
+      options: tui.ReplayTraceConversionOptions(
+        name: traceName,
+        description: traceDescription ?? 'Generated from trace',
+        screenWidth: traceScreenWidth,
+        screenHeight: traceScreenHeight,
+        fixedRightWidth: traceFixedRightWidth,
+        fromUs: traceFromUs,
+        toUs: traceToUs,
+        minSleepUs: traceMinSleepUs,
+        includeHoverMoves: traceIncludeHoverMoves,
+      ),
+    );
+    scenario = traceConversion.scenario;
+    resolvedPath = resolvedTrace;
+    if (traceOutArg != null && traceOutArg.isNotEmpty) {
+      await scenario.save(traceOutArg);
+      resolvedPath = traceOutArg;
+    }
+  } else {
+    final scenarioPath = _resolveScenarioPath(scenarioArg!);
+    scenario = await tui.ReplayScenario.load(scenarioPath);
+    resolvedPath = scenarioPath;
+  }
+
+  final replay = scenario.toProgramReplay(
+    loop: loop,
+    keepOpen: keepOpen,
+    speed: speed,
   );
-  final replay = tui.ProgramReplay.stream(
-    _scenarioStream(
-      scenario.actions,
-      loop: loop,
-      keepOpen: keepOpen,
-      speed: speed,
-    ),
+  final interceptor = tui.ReplayCoordinateInterceptor(
+    sourceWidth: scenario.screen.width,
+    sourceHeight: scenario.screen.height,
+    sourceRightFixedWidth: scenario.screen.fixedRightWidth,
   );
 
   return OpenCodeReplayPlan(
-    path: scenarioPath,
+    path: resolvedPath,
     name: scenario.name,
     actionCount: scenario.actions.length,
     loop: loop,
@@ -118,15 +297,44 @@ Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(
     speed: speed,
     replay: replay,
     interceptor: interceptor,
+    convertOnly: convertOnly,
+    traceConversion: traceConversion,
   );
 }
 
 double _parseReplaySpeed(String value) {
-  final parsed = double.tryParse(value);
+  final parsed = double.tryParse(value.trim());
   if (parsed == null || !parsed.isFinite || parsed <= 0) {
     throw FormatException('Invalid --replay-speed value: $value');
   }
   return parsed;
+}
+
+int _parseRequiredInt(String rawValue, String optionName) {
+  final parsed = int.tryParse(rawValue.trim());
+  if (parsed == null) {
+    throw FormatException('Invalid $optionName value: $rawValue');
+  }
+  return parsed;
+}
+
+String _requiredInlineValue(String arg, String prefix) {
+  final value = arg.substring(prefix.length).trim();
+  if (value.isEmpty) {
+    throw FormatException('Missing value for ${prefix.substring(0, prefix.length - 1)}.');
+  }
+  return value;
+}
+
+String _requiredNextValue(List<String> args, int index, String optionName) {
+  if (index >= args.length) {
+    throw FormatException('Missing value for $optionName.');
+  }
+  final value = args[index].trim();
+  if (value.isEmpty) {
+    throw FormatException('Missing value for $optionName.');
+  }
+  return value;
 }
 
 String _resolveScenarioPath(String scenarioArg) {
@@ -157,363 +365,11 @@ String _resolveScenarioPath(String scenarioArg) {
   throw FileSystemException('Replay scenario file not found', scenarioArg);
 }
 
-Stream<tui.Msg> _scenarioStream(
-  List<_ReplayAction> actions, {
-  required bool loop,
-  required bool keepOpen,
-  required double speed,
-}) async* {
-  if (actions.isEmpty) {
-    if (!keepOpen && !loop) yield const tui.QuitMsg();
-    return;
+String _resolveTracePath(String traceArg) {
+  final trimmed = traceArg.trim();
+  if (trimmed.isEmpty) {
+    throw const FormatException('Missing value for --replay-trace.');
   }
-
-  Duration pendingDelay = Duration.zero;
-
-  Duration scaled(Duration input) {
-    final micros = (input.inMicroseconds / speed).round();
-    return Duration(microseconds: math.max(0, micros));
-  }
-
-  do {
-    for (final action in actions) {
-      if (action.type == 'sleep') {
-        pendingDelay += scaled(Duration(milliseconds: action.ms));
-        continue;
-      }
-
-      final events = action.toMessages();
-      for (final msg in events) {
-        if (pendingDelay > Duration.zero) {
-          await Future<void>.delayed(pendingDelay);
-          pendingDelay = Duration.zero;
-        }
-        yield msg;
-      }
-    }
-
-    if (pendingDelay > Duration.zero) {
-      await Future<void>.delayed(pendingDelay);
-      pendingDelay = Duration.zero;
-    }
-  } while (loop);
-
-  if (!keepOpen) {
-    yield const tui.QuitMsg();
-  }
-}
-
-class _ReplayScenario {
-  _ReplayScenario({
-    required this.name,
-    required this.actions,
-    required this.screenWidth,
-    required this.screenHeight,
-    required this.screenFixedRightWidth,
-  });
-
-  final String name;
-  final List<_ReplayAction> actions;
-  final int screenWidth;
-  final int screenHeight;
-  final int screenFixedRightWidth;
-
-  static Future<_ReplayScenario> load(String path) async {
-    final raw =
-        jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
-    final screenRaw = raw['screen'];
-    final screen = screenRaw is Map<String, dynamic>
-        ? screenRaw
-        : screenRaw is Map
-        ? Map<String, dynamic>.from(screenRaw.cast<String, dynamic>())
-        : const <String, dynamic>{};
-    final actionsRaw = (raw['actions'] as List<dynamic>? ?? const [])
-        .whereType<Map>()
-        .map(
-          (entry) => Map<String, dynamic>.from(entry.cast<String, dynamic>()),
-        )
-        .toList(growable: false);
-    final actions = actionsRaw
-        .map(_ReplayAction.fromJson)
-        .toList(growable: false);
-    return _ReplayScenario(
-      name: (raw['name'] as String?) ?? path,
-      actions: actions,
-      screenWidth: (screen['width'] as int?) ?? 0,
-      screenHeight: (screen['height'] as int?) ?? 0,
-      screenFixedRightWidth:
-          (screen['fixedRightWidth'] as int?) ??
-          (screen['rightFixedWidth'] as int?) ??
-          0,
-    );
-  }
-}
-
-class _ReplayAction {
-  _ReplayAction({
-    required this.type,
-    this.repeat = 1,
-    this.ms = 0,
-    this.value = '',
-    this.key = '',
-    this.direction = 'down',
-    this.x = 0,
-    this.y = 0,
-    this.x2 = 0,
-    this.y2 = 0,
-    this.steps = 8,
-  });
-
-  final String type;
-  final int repeat;
-  final int ms;
-  final String value;
-  final String key;
-  final String direction;
-  final int x;
-  final int y;
-  final int x2;
-  final int y2;
-  final int steps;
-
-  factory _ReplayAction.fromJson(Map<String, dynamic> json) {
-    return _ReplayAction(
-      type: (json['type'] as String? ?? '').trim(),
-      repeat: (json['repeat'] as int?) ?? 1,
-      ms: (json['ms'] as int?) ?? 0,
-      value: (json['value'] as String?) ?? '',
-      key: (json['key'] as String?) ?? '',
-      direction: (json['direction'] as String?) ?? 'down',
-      x: (json['x'] as int?) ?? 0,
-      y: (json['y'] as int?) ?? 0,
-      x2: (json['x2'] as int?) ?? (json['x'] as int?) ?? 0,
-      y2: (json['y2'] as int?) ?? (json['y'] as int?) ?? 0,
-      steps: (json['steps'] as int?) ?? 8,
-    );
-  }
-
-  List<tui.Msg> toMessages() {
-    final times = math.max(1, repeat);
-    final output = <tui.Msg>[];
-    switch (type) {
-      case 'text':
-        for (var r = 0; r < times; r++) {
-          for (final rune in value.runes) {
-            output.add(tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [rune])));
-          }
-        }
-        return output;
-      case 'special':
-        final parsed = _parseKeyType(key);
-        for (var i = 0; i < times; i++) {
-          output.add(tui.KeyMsg(tui.Key(parsed)));
-        }
-        return output;
-      case 'wheel':
-        final button = _parseWheelButton(direction);
-        for (var i = 0; i < times; i++) {
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.wheel,
-              button: button,
-              x: x,
-              y: y,
-            ),
-          );
-        }
-        return output;
-      case 'tap':
-        for (var i = 0; i < times; i++) {
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.press,
-              button: tui.MouseButton.left,
-              x: x,
-              y: y,
-            ),
-          );
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.release,
-              button: tui.MouseButton.left,
-              x: x,
-              y: y,
-            ),
-          );
-        }
-        return output;
-      case 'move':
-        for (var i = 0; i < times; i++) {
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.motion,
-              button: tui.MouseButton.none,
-              x: x,
-              y: y,
-            ),
-          );
-        }
-        return output;
-      case 'drag':
-        final dragSteps = math.max(1, steps);
-        for (var r = 0; r < times; r++) {
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.press,
-              button: tui.MouseButton.left,
-              x: x,
-              y: y,
-            ),
-          );
-          for (var i = 1; i <= dragSteps; i++) {
-            final t = i / dragSteps;
-            output.add(
-              _ReplayMouseMsg(
-                action: tui.MouseAction.motion,
-                button: tui.MouseButton.left,
-                x: x + ((x2 - x) * t).round(),
-                y: y + ((y2 - y) * t).round(),
-              ),
-            );
-          }
-          output.add(
-            _ReplayMouseMsg(
-              action: tui.MouseAction.release,
-              button: tui.MouseButton.left,
-              x: x2,
-              y: y2,
-            ),
-          );
-        }
-        return output;
-      default:
-        return const <tui.Msg>[];
-    }
-  }
-}
-
-final class _ReplayMouseMsg extends tui.Msg {
-  const _ReplayMouseMsg({
-    required this.action,
-    required this.button,
-    required this.x,
-    required this.y,
-  });
-
-  final tui.MouseAction action;
-  final tui.MouseButton button;
-  final int x;
-  final int y;
-}
-
-final class _ReplayCoordinateInterceptor extends tui.ProgramInterceptor {
-  _ReplayCoordinateInterceptor({
-    required this.sourceWidth,
-    required this.sourceHeight,
-    this.sourceRightFixedWidth = 0,
-  });
-
-  final int sourceWidth;
-  final int sourceHeight;
-  final int sourceRightFixedWidth;
-
-  int? _targetWidth;
-  int? _targetHeight;
-
-  @override
-  tui.Msg? onSend(tui.Msg msg) {
-    if (msg is! _ReplayMouseMsg) return msg;
-
-    final targetWidth = _targetWidth;
-    final targetHeight = _targetHeight;
-    final scaledX = sourceWidth > 0 && targetWidth != null && targetWidth > 0
-        ? _scaleXCoordinate(msg.x, sourceWidth, targetWidth)
-        : msg.x;
-    final scaledY = sourceHeight > 0 && targetHeight != null && targetHeight > 0
-        ? _scaleCoordinate(msg.y, sourceHeight, targetHeight)
-        : msg.y;
-
-    return tui.MouseMsg(
-      action: msg.action,
-      button: msg.button,
-      x: scaledX,
-      y: scaledY,
-    );
-  }
-
-  int _scaleXCoordinate(int value, int sourceExtent, int targetExtent) {
-    final fixedRight = sourceRightFixedWidth;
-    if (fixedRight <= 0 ||
-        fixedRight >= sourceExtent ||
-        fixedRight >= targetExtent) {
-      return _scaleCoordinate(value, sourceExtent, targetExtent);
-    }
-
-    final sourceFlexibleExtent = sourceExtent - fixedRight;
-    final targetFlexibleExtent = targetExtent - fixedRight;
-    if (sourceFlexibleExtent <= 0 || targetFlexibleExtent <= 0) {
-      return _scaleCoordinate(value, sourceExtent, targetExtent);
-    }
-
-    if (value < sourceFlexibleExtent) {
-      return _scaleCoordinate(
-        value,
-        sourceFlexibleExtent,
-        targetFlexibleExtent,
-      );
-    }
-
-    final rightOffset = value - sourceFlexibleExtent;
-    final anchored = targetFlexibleExtent + rightOffset;
-    return anchored.clamp(0, targetExtent - 1);
-  }
-
-  @override
-  void onProcessed(tui.Msg msg, Duration elapsed) {
-    if (msg is tui.WindowSizeMsg) {
-      _targetWidth = msg.width;
-      _targetHeight = msg.height;
-    }
-  }
-
-  int _scaleCoordinate(int value, int sourceExtent, int targetExtent) {
-    if (targetExtent <= 0 || sourceExtent <= 0) return value;
-    if (sourceExtent == targetExtent) return value.clamp(0, targetExtent - 1);
-    if (sourceExtent == 1) return 0;
-
-    final scaled = (value * (targetExtent - 1) / (sourceExtent - 1)).round();
-    return scaled.clamp(0, targetExtent - 1);
-  }
-}
-
-tui.KeyType _parseKeyType(String key) {
-  final normalized = key.trim();
-  return switch (normalized) {
-    'enter' => tui.KeyType.enter,
-    'tab' => tui.KeyType.tab,
-    'backspace' => tui.KeyType.backspace,
-    'delete' => tui.KeyType.delete,
-    'escape' => tui.KeyType.escape,
-    'space' => tui.KeyType.space,
-    'up' => tui.KeyType.up,
-    'down' => tui.KeyType.down,
-    'left' => tui.KeyType.left,
-    'right' => tui.KeyType.right,
-    'home' => tui.KeyType.home,
-    'end' => tui.KeyType.end,
-    'pageUp' => tui.KeyType.pageUp,
-    'pageDown' => tui.KeyType.pageDown,
-    _ => throw FormatException('Unsupported special key: $key'),
-  };
-}
-
-tui.MouseButton _parseWheelButton(String direction) {
-  final normalized = direction.trim();
-  return switch (normalized) {
-    'up' => tui.MouseButton.wheelUp,
-    'down' => tui.MouseButton.wheelDown,
-    'left' => tui.MouseButton.wheelLeft,
-    'right' => tui.MouseButton.wheelRight,
-    _ => throw FormatException('Unsupported wheel direction: $direction'),
-  };
+  if (File(trimmed).existsSync()) return trimmed;
+  throw FileSystemException('Replay trace file not found', traceArg);
 }

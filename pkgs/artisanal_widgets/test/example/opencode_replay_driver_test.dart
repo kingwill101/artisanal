@@ -210,6 +210,59 @@ void main() {
         throwsA(isA<FormatException>()),
       );
     });
+
+    test('converts structured trace via --replay-trace', () async {
+      final traceFile = await _writeTraceFile([
+        '# trace start: 2026-02-13T00:00:00.000000',
+        '[+10us] [input] @event {"v":1,"type":"window.size","width":120,"height":40}',
+        '[+20us] [input] @event {"v":1,"type":"input.batch","messages":[{"kind":"mouse","action":"press","button":"left","x":40,"y":10},{"kind":"mouse","action":"release","button":"left","x":40,"y":10}]}',
+      ]);
+      addTearDown(() async {
+        if (await traceFile.exists()) await traceFile.delete();
+      });
+
+      final plan = await loadOpenCodeReplayPlanFromArgs([
+        '--replay-trace',
+        traceFile.path,
+        '--replay-keep-open',
+      ]);
+
+      expect(plan, isNotNull);
+      expect(plan!.traceConversion, isNotNull);
+      expect(plan.actionCount, 1);
+      final first = await plan.replay.toStream().first;
+      final translated = plan.interceptor.onSend(first);
+      expect(translated, isA<tui.MouseMsg>());
+    });
+
+    test('writes converted scenario with --replay-trace-out', () async {
+      final traceFile = await _writeTraceFile([
+        '# trace start: 2026-02-13T00:00:00.000000',
+        '[+10us] [input] @event {"v":1,"type":"window.size","width":120,"height":40}',
+        '[+20us] [input] @event {"v":1,"type":"input.batch","messages":[{"kind":"key","keyType":"runes","runes":[120]}]}',
+      ]);
+      final outDir = await Directory.systemTemp.createTemp(
+        'opencode-replay-out-',
+      );
+      final outPath = '${outDir.path}/converted.json';
+      addTearDown(() async {
+        if (await traceFile.exists()) await traceFile.delete();
+        if (await File(outPath).exists()) await File(outPath).delete();
+        if (await outDir.exists()) await outDir.delete(recursive: true);
+      });
+
+      final plan = await loadOpenCodeReplayPlanFromArgs([
+        '--replay-trace',
+        traceFile.path,
+        '--replay-trace-out',
+        outPath,
+        '--replay-convert-only',
+      ]);
+
+      expect(plan, isNotNull);
+      expect(plan!.convertOnly, isTrue);
+      expect(await File(outPath).exists(), isTrue);
+    });
   });
 }
 
@@ -217,5 +270,14 @@ Future<File> _writeScenarioFile(Map<String, Object?> json) async {
   final dir = await Directory.systemTemp.createTemp('opencode-replay-test-');
   final file = File('${dir.path}/scenario.json');
   await file.writeAsString('${jsonEncode(json)}\n');
+  return file;
+}
+
+Future<File> _writeTraceFile(List<String> lines) async {
+  final dir = await Directory.systemTemp.createTemp(
+    'opencode-replay-trace-test-',
+  );
+  final file = File('${dir.path}/trace.log');
+  await file.writeAsString('${lines.join('\n')}\n');
   return file;
 }
