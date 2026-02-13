@@ -1879,20 +1879,34 @@ class _ScrollbarState extends State<Scrollbar> {
     return y;
   }
 
-  ({int left, int top, int childWidth, int width, int height})?
-  _scrollbarGeometry() {
+  ({int left, int top, int width, int height})? _scrollbarGeometry() {
     final rsb = _findRenderScrollbar();
     if (rsb == null) return null;
-    final childWidth = rsb.children.isNotEmpty
-        ? rsb.children.first.size.width.round()
-        : 0;
     return (
       left: _globalX(rsb).round(),
       top: _globalY(rsb).round(),
-      childWidth: childWidth,
       width: rsb.size.width.round(),
       height: rsb.size.height.round(),
     );
+  }
+
+  int _resolvedTrackWidth(int totalWidth) {
+    if (totalWidth <= 0) return 0;
+    final requested = math.max(
+      widget.thickness,
+      widget.gutterWidth ?? widget.thickness,
+    );
+    return requested.clamp(1, totalWidth);
+  }
+
+  ({int startX, int endX}) _globalTrackBounds({
+    required int left,
+    required int width,
+  }) {
+    final trackWidth = _resolvedTrackWidth(width);
+    final endX = left + width;
+    final startX = endX - trackWidth;
+    return (startX: startX, endX: endX);
   }
 
   /// Returns true if hit-test local X falls within the scrollbar track area.
@@ -1904,8 +1918,11 @@ class _ScrollbarState extends State<Scrollbar> {
       return true;
     }
 
-    final trackStartX = geometry.left + geometry.childWidth;
-    return msg.event.x >= trackStartX;
+    final bounds = _globalTrackBounds(
+      left: geometry.left,
+      width: geometry.width,
+    );
+    return msg.event.x >= bounds.startX && msg.event.x < bounds.endX;
   }
 
   bool _isMouseOverScrollbarTrack(MouseMsg msg) {
@@ -1916,9 +1933,11 @@ class _ScrollbarState extends State<Scrollbar> {
         msg.y >= geometry.top && msg.y < geometry.top + geometry.height;
     if (!withinVertical) return false;
 
-    final trackStartX = geometry.left + geometry.childWidth;
-    final trackEndX = geometry.left + geometry.width;
-    return msg.x >= trackStartX && msg.x < trackEndX;
+    final bounds = _globalTrackBounds(
+      left: geometry.left,
+      width: geometry.width,
+    );
+    return msg.x >= bounds.startX && msg.x < bounds.endX;
   }
 
   _ThumbMetrics _thumbMetrics() {

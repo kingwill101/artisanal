@@ -848,6 +848,48 @@ void main() {
     });
   });
 
+  group('Scrollbar track hit testing', () {
+    test('gap column is not treated as draggable track', () async {
+      final tester = WidgetTester(screenWidth: 30, screenHeight: 10);
+      try {
+        final ctrl = ListViewController();
+        ctrl.setViewportHeight(5);
+        ctrl.setContentHeight(100);
+
+        await tester.pumpWidget(
+          Container(
+            width: 24,
+            height: 5,
+            child: Scrollbar(
+              controller: ctrl,
+              gap: 1,
+              thickness: 1,
+              gutterWidth: 1,
+              child: Column(
+                children: List.generate(5, (i) => Text('Scrollable row $i')),
+              ),
+            ),
+          ),
+        );
+
+        expect(ctrl.offset, equals(0));
+
+        // width=24, gap=1, track=1 -> gap x=22, track x=23.
+        tester.mouseDown(22, 1);
+        tester.mouseMove(22, 4);
+        tester.mouseUp(22, 4);
+        expect(ctrl.offset, equals(0));
+
+        tester.mouseDown(23, 1);
+        tester.mouseMove(23, 4);
+        tester.mouseUp(23, 4);
+        expect(ctrl.offset, greaterThan(0));
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Scrollbar — controller scrollPercent and thumbMetrics consistency
   // ---------------------------------------------------------------------------
