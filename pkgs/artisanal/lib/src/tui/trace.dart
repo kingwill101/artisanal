@@ -9,6 +9,7 @@
 /// - `ARTISANAL_TUI_TRACE=1` — enable tracing (writes to `./traces/`)
 /// - `ARTISANAL_TUI_TRACE_PATH=/path/to/file.log` — explicit log path
 /// - `ARTISANAL_TUI_TRACE_CAPTURE=1` — enable dispatch capture logging
+/// - `ARTISANAL_TUI_TRACE_TAGS=input,dispatch` — optional tag allow-list
 ///
 /// ## Usage
 ///
@@ -29,6 +30,7 @@
 /// ```
 library;
 
+import 'dart:convert';
 import 'dart:io' as io;
 
 /// Trace categories for filtering and grouping trace output.
@@ -75,6 +77,51 @@ enum TraceTag {
   general,
 }
 
+/// Structured trace event names emitted by [TuiTrace.event].
+final class TraceEventType {
+  const TraceEventType._();
+
+  /// Batch of parsed input messages from either the UV or key parser.
+  static const String inputBatch = 'input.batch';
+
+  /// Terminal window size observed by the runtime.
+  static const String windowSize = 'window.size';
+}
+
+/// A structured event decoded from one trace log line.
+final class TraceEventRecord {
+  const TraceEventRecord({
+    required this.timestampUs,
+    required this.tag,
+    required this.type,
+    required this.fields,
+  });
+
+  /// Monotonic timestamp from trace start.
+  final int timestampUs;
+
+  /// Log tag for this event line.
+  final TraceTag tag;
+
+  /// Event type string (for example [TraceEventType.inputBatch]).
+  final String type;
+
+  /// Event payload fields excluding protocol metadata.
+  final Map<String, Object?> fields;
+}
+
+final class _ParsedTraceLine {
+  const _ParsedTraceLine({
+    required this.timestampUs,
+    required this.tag,
+    required this.message,
+  });
+
+  final int timestampUs;
+  final TraceTag tag;
+  final String message;
+}
+
 /// A timing span for hierarchical tracing.
 ///
 /// Created via [TuiTrace.begin]. Call [end] to log the elapsed duration.
@@ -113,7 +160,7 @@ final class TraceSpan {
     if (_ended) return;
     _ended = true;
     _sw.stop();
-    if (!TuiTrace.enabled) return;
+    if (!TuiTrace.enabled || !TuiTrace.isTagEnabled(_tag)) return;
     final parts = StringBuffer();
     parts.write('[${_tag.name}] ');
     parts.write(_label);
@@ -137,11 +184,19 @@ final class TuiTrace {
   static const _flagEnv = 'ARTISANAL_TUI_TRACE';
   static const _pathEnv = 'ARTISANAL_TUI_TRACE_PATH';
   static const _captureEnv = 'ARTISANAL_TUI_TRACE_CAPTURE';
+  static const _tagsEnv = 'ARTISANAL_TUI_TRACE_TAGS';
+  static const _eventMarker = '@event ';
+  static const _eventSchemaVersion = 1;
 
   static String? _path;
   static io.IOSink? _sink;
   static bool? _captureEnabled;
+  static String? _tagsRaw;
+  static Set<TraceTag>? _enabledTags;
   static bool _resolved = false;
+  static final Map<String, TraceTag> _traceTagByName = <String, TraceTag>{
+    for (final tag in TraceTag.values) tag.name: tag,
+  };
 
   /// A monotonic stopwatch started when tracing is first enabled.
   ///
@@ -157,6 +212,8 @@ final class TuiTrace {
       _path = _resolvePath();
       _resolved = true;
       if (_path != null) {
+        _tagsRaw = io.Platform.environment[_tagsEnv];
+        _enabledTags = _resolveTagFilter(_tagsRaw);
         _clock.start();
         _startWallTime = DateTime.now().toIso8601String();
       }
@@ -171,13 +228,76 @@ final class TuiTrace {
     return _captureEnabled ?? false;
   }
 
+  /// Whether logs for [tag] are currently enabled.
+  ///
+  /// When `ARTISANAL_TUI_TRACE_TAGS` is unset, all tags are enabled.
+  static bool isTagEnabled(TraceTag tag) {
+    if (!enabled) return false;
+    final enabledTags = _enabledTags;
+    if (enabledTags == null) return true;
+    return enabledTags.contains(tag);
+  }
+
   /// Writes a timestamped, tagged trace message to the log file.
   ///
   /// [tag] categorizes the message for filtering. Defaults to
   /// [TraceTag.general].
   static void log(String message, {TraceTag tag = TraceTag.general}) {
-    if (!enabled) return;
+    if (!enabled || !isTagEnabled(tag)) return;
     _writeRaw('[${tag.name}] $message');
+  }
+
+  /// Writes a structured trace event payload.
+  ///
+  /// The output line format is stable and machine-parseable:
+  /// `"[+123us] [input] @event {\"v\":1,\"type\":\"...\",...}"`.
+  static void event(
+    String type, {
+    TraceTag tag = TraceTag.general,
+    Map<String, Object?> fields = const <String, Object?>{},
+  }) {
+    if (!enabled || !isTagEnabled(tag)) return;
+    if (type.trim().isEmpty) return;
+    final payload = <String, Object?>{
+      'v': _eventSchemaVersion,
+      'type': type,
+      ...fields,
+    };
+    _writeRaw('[${tag.name}] $_eventMarker${jsonEncode(payload)}');
+  }
+
+  /// Parses one trace line into [TraceEventRecord] when it contains
+  /// a structured event emitted by [event].
+  ///
+  /// Returns `null` when the line is not an event line or is malformed.
+  static TraceEventRecord? tryParseEventLine(String line) {
+    final parsedLine = _parseLine(line);
+    if (parsedLine == null) return null;
+    final message = parsedLine.message;
+    if (!message.startsWith(_eventMarker)) return null;
+
+    final jsonPayload = message.substring(_eventMarker.length);
+    final decoded = _decodeJsonObject(jsonPayload);
+    if (decoded == null) return null;
+
+    final version = decoded['v'];
+    if (version is! num || version.toInt() != _eventSchemaVersion) {
+      return null;
+    }
+    final type = decoded['type'];
+    if (type is! String || type.trim().isEmpty) return null;
+
+    final fields = <String, Object?>{};
+    for (final entry in decoded.entries) {
+      if (entry.key == 'v' || entry.key == 'type') continue;
+      fields[entry.key] = entry.value;
+    }
+    return TraceEventRecord(
+      timestampUs: parsedLine.timestampUs,
+      tag: parsedLine.tag,
+      type: type,
+      fields: fields,
+    );
   }
 
   /// Begins a named timing span.
@@ -192,7 +312,7 @@ final class TuiTrace {
     TraceTag tag = TraceTag.general,
     String? extra,
   }) {
-    if (!enabled) return TraceSpan.noop;
+    if (!enabled || !isTagEnabled(tag)) return TraceSpan.noop;
     return TraceSpan._(label, tag, Stopwatch(), extra);
   }
 
@@ -203,11 +323,67 @@ final class TuiTrace {
     _sink!.writeln('[+${us}us] $message');
   }
 
+  static _ParsedTraceLine? _parseLine(String line) {
+    if (!line.startsWith('[+')) return null;
+    final tsEnd = line.indexOf('us]');
+    if (tsEnd <= 2) return null;
+    final timestampUs = int.tryParse(line.substring(2, tsEnd));
+    if (timestampUs == null) return null;
+
+    var index = tsEnd + 3; // position after "us]"
+    if (index >= line.length || line[index] != ' ') return null;
+    index++; // skip space before tag
+    if (line[index] != '[') return null;
+    final tagEnd = line.indexOf(']', index + 1);
+    if (tagEnd <= index + 1) return null;
+    final tagName = line.substring(index + 1, tagEnd);
+    final tag = _traceTagByName[tagName];
+    if (tag == null) return null;
+
+    if (tagEnd + 1 >= line.length || line[tagEnd + 1] != ' ') return null;
+    final messageStart = tagEnd + 2;
+    if (messageStart > line.length) return null;
+    final message = line.substring(messageStart);
+    return _ParsedTraceLine(
+      timestampUs: timestampUs,
+      tag: tag,
+      message: message,
+    );
+  }
+
+  static Map<String, dynamic>? _decodeJsonObject(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      return null;
+    }
+  }
+
   static io.IOSink _openSink() {
-    final sink = io.File(_path!).openWrite(mode: io.FileMode.append);
+    final file = io.File(_path!);
+    if (!file.parent.existsSync()) {
+      file.parent.createSync(recursive: true);
+    }
+    final sink = file.openWrite(mode: io.FileMode.append);
+    final scriptPath = _resolveScriptPath();
     // Write header with wall-clock correlation.
     sink.writeln('# trace start: $_startWallTime');
     sink.writeln('# timestamps are monotonic microseconds from start');
+    sink.writeln('# path: ${file.path}');
+    sink.writeln('# pid: ${io.pid}');
+    sink.writeln('# cwd: ${io.Directory.current.path}');
+    sink.writeln('# executable: ${io.Platform.executable}');
+    if (scriptPath != null) {
+      sink.writeln('# script: $scriptPath');
+    }
+    sink.writeln(
+      '# os: ${io.Platform.operatingSystem} ${io.Platform.operatingSystemVersion}',
+    );
+    sink.writeln('# dart: ${io.Platform.version}');
+    sink.writeln('# capture_dispatch: ${captureDispatchEnabled}');
+    sink.writeln('# trace_tags: ${_describeTagFilter()}');
     return sink;
   }
 
@@ -255,6 +431,53 @@ final class TuiTrace {
     final flag = io.Platform.environment[envKey];
     if (flag == null) return false;
     return _isEnabledFlag(flag);
+  }
+
+  static String _describeTagFilter() {
+    final raw = _tagsRaw?.trim();
+    if (raw == null || raw.isEmpty) {
+      return 'all';
+    }
+    final enabledTags = _enabledTags;
+    if (enabledTags == null) {
+      return 'all (raw="$raw")';
+    }
+    final names = enabledTags.map((tag) => tag.name).toList()..sort();
+    if (names.isEmpty) return 'all';
+    return names.join(',');
+  }
+
+  static Set<TraceTag>? _resolveTagFilter(String? raw) {
+    final value = raw?.trim();
+    if (value == null || value.isEmpty) return null;
+    final tokens = value
+        .split(RegExp(r'[,\s]+'))
+        .map((token) => token.trim().toLowerCase())
+        .where((token) => token.isNotEmpty)
+        .toSet();
+    if (tokens.isEmpty || tokens.contains('*') || tokens.contains('all')) {
+      return null;
+    }
+    final byName = <String, TraceTag>{
+      for (final tag in TraceTag.values) tag.name.toLowerCase(): tag,
+    };
+    final resolved = <TraceTag>{};
+    for (final token in tokens) {
+      final tag = byName[token];
+      if (tag != null) {
+        resolved.add(tag);
+      }
+    }
+    if (resolved.isEmpty) return null;
+    return resolved;
+  }
+
+  static String? _resolveScriptPath() {
+    try {
+      return io.Platform.script.toFilePath();
+    } catch (_) {
+      return null;
+    }
   }
 
   static bool _isEnabledFlag(String flag) {

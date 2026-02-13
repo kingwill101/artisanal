@@ -1036,6 +1036,16 @@ class Program<M extends Model> {
       _trace(
         'setup terminal=${_terminal.runtimeType} raw=${_terminal?.isRawMode}',
       );
+      _trace(
+        'setup options altScreen=${_options.altScreen} '
+        'mouse=${_effectiveMouseMode()} '
+        'fps=${_options.fps} '
+        'uvRenderer=${_options.useUltravioletRenderer} '
+        'uvInput=${_options.useUltravioletInputDecoder} '
+        'disableRenderer=${_options.disableRenderer} '
+        'replay=${_options.replay != null} '
+        'blockInputWhileReplay=${_options.blockInputWhileReplay}',
+      );
     }
 
     // Set startup title if provided
@@ -1148,6 +1158,12 @@ class Program<M extends Model> {
     if (replay == null || _replaySubscription != null) return;
 
     _replayActive = true;
+    if (TuiTrace.enabled) {
+      _trace(
+        'replay stream start blockInputWhileReplay=${_options.blockInputWhileReplay}',
+        tag: TraceTag.input,
+      );
+    }
     _replaySubscription = replay.toStream().listen(
       (msg) {
         if (!_running) return;
@@ -1156,13 +1172,13 @@ class Program<M extends Model> {
       onError: (error, stackTrace) {
         _replayActive = false;
         if (TuiTrace.enabled) {
-          _trace('replay stream error: $error');
+          _trace('replay stream error: $error', tag: TraceTag.input);
         }
       },
       onDone: () {
         _replayActive = false;
         if (TuiTrace.enabled) {
-          _trace('replay stream done');
+          _trace('replay stream done', tag: TraceTag.input);
         }
       },
     );
@@ -1355,6 +1371,73 @@ class Program<M extends Model> {
     };
   }
 
+  Map<String, Object?> _traceMsgPayload(Msg msg) {
+    return switch (msg) {
+      KeyMsg(:final key) => <String, Object?>{
+        'kind': 'key',
+        'keyType': key.type.name,
+        if (key.runes.isNotEmpty) 'runes': key.runes,
+        if (key.ctrl) 'ctrl': true,
+        if (key.alt) 'alt': true,
+        if (key.shift) 'shift': true,
+        if (key.meta) 'meta': true,
+        if (key.hyper) 'hyper': true,
+        if (key.superKey) 'superKey': true,
+        if (key.isRelease) 'isRelease': true,
+        if (key.isRepeat) 'isRepeat': true,
+      },
+      MouseMsg(:final action, :final button, :final x, :final y) =>
+        <String, Object?>{
+          'kind': 'mouse',
+          'action': action.name,
+          'button': button.name,
+          'x': x,
+          'y': y,
+          if (msg.ctrl) 'ctrl': true,
+          if (msg.alt) 'alt': true,
+          if (msg.shift) 'shift': true,
+        },
+      WindowSizeMsg(:final width, :final height) => <String, Object?>{
+        'kind': 'window_size',
+        'width': width,
+        'height': height,
+      },
+      PasteTextMsg(:final content) => <String, Object?>{
+        'kind': 'paste_text',
+        'length': content.length,
+      },
+      PasteMsg(:final content) => <String, Object?>{
+        'kind': 'paste',
+        'length': content.length,
+      },
+      _ => <String, Object?>{
+        'kind': 'other',
+        'runtimeType': msg.runtimeType.toString(),
+      },
+    };
+  }
+
+  void _traceInputBatch({
+    required String parser,
+    required bool flush,
+    required List<Msg> messages,
+    required int dropped,
+  }) {
+    if (!TuiTrace.enabled) return;
+    TuiTrace.event(
+      TraceEventType.inputBatch,
+      tag: TraceTag.input,
+      fields: <String, Object?>{
+        'parser': parser,
+        'flush': flush,
+        if (dropped > 0) 'dropped': dropped,
+        'messages': messages
+            .map<Map<String, Object?>>(_traceMsgPayload)
+            .toList(growable: false),
+      },
+    );
+  }
+
   String _traceBytes(List<int> bytes, {int limit = 32}) {
     final take = bytes.length > limit ? limit : bytes.length;
     final parts = <String>[];
@@ -1372,12 +1455,16 @@ class Program<M extends Model> {
       _trace(
         'input bytes=${bytes.length} pending=${_uvInputParser.hasPending} '
         'hex=${_traceBytes(bytes)} raw=${_terminal?.isRawMode ?? false}',
+        tag: TraceTag.input,
       );
     }
 
     if (_options.blockInputWhileReplay && _replayActive) {
       if (TuiTrace.enabled) {
-        _trace('input dropped while replay active bytes=${bytes.length}');
+        _trace(
+          'input dropped while replay active bytes=${bytes.length}',
+          tag: TraceTag.input,
+        );
       }
       return;
     }
@@ -1389,13 +1476,20 @@ class Program<M extends Model> {
         _uvInputParser.parseAll(bytes, expired: false),
       );
       final coalesced = _coalesceInputMsgs(msgs);
+      final dropped = msgs.length - coalesced.length;
+      _traceInputBatch(
+        parser: 'uv',
+        flush: false,
+        messages: coalesced,
+        dropped: dropped,
+      );
       if (TuiTrace.enabled) {
         final summary = coalesced.isEmpty
             ? '(none)'
             : coalesced.map(_traceMsgSummary).join(', ');
-        final dropped = msgs.length - coalesced.length;
         _trace(
           'parsed uv: $summary${dropped > 0 ? ' (dropped $dropped)' : ''}',
+          tag: TraceTag.input,
         );
       }
       for (final msg in coalesced) {
@@ -1409,14 +1503,21 @@ class Program<M extends Model> {
             _uvInputParser.parseAll(const [], expired: true),
           );
           final coalesced = _coalesceInputMsgs(flushed);
+          final dropped = flushed.length - coalesced.length;
+          _traceInputBatch(
+            parser: 'uv',
+            flush: true,
+            messages: coalesced,
+            dropped: dropped,
+          );
           if (TuiTrace.enabled) {
             final summary = coalesced.isEmpty
                 ? '(none)'
                 : coalesced.map(_traceMsgSummary).join(', ');
-            final dropped = flushed.length - coalesced.length;
             _trace(
               'parsed uv flush: $summary'
               '${dropped > 0 ? ' (dropped $dropped)' : ''}',
+              tag: TraceTag.input,
             );
           }
           for (final msg in coalesced) {
@@ -1431,8 +1532,17 @@ class Program<M extends Model> {
     final results = _keyParser.parseAll(bytes);
     final collapsedPaste = _collapseLikelyRunePasteFromResults(results);
     if (collapsedPaste != null) {
+      _traceInputBatch(
+        parser: 'key',
+        flush: false,
+        messages: <Msg>[collapsedPaste],
+        dropped: results.length - 1,
+      );
       if (TuiTrace.enabled) {
-        _trace('collapsed key parse into ${_traceMsgSummary(collapsedPaste)}');
+        _trace(
+          'collapsed key parse into ${_traceMsgSummary(collapsedPaste)}',
+          tag: TraceTag.input,
+        );
       }
       send(collapsedPaste);
       return;
@@ -1447,18 +1557,29 @@ class Program<M extends Model> {
         }
       }
       if (summaries.isNotEmpty) {
-        _trace('parsed key: ${summaries.join(', ')}');
+        _trace('parsed key: ${summaries.join(', ')}', tag: TraceTag.input);
       }
     }
 
-    // Send each result as a message
+    final parsedMessages = <Msg>[];
     for (final result in results) {
       switch (result) {
         case KeyResult(:final key):
-          send(KeyMsg(key));
+          parsedMessages.add(KeyMsg(key));
         case MsgResult(:final msg):
-          send(msg);
+          parsedMessages.add(msg);
       }
+    }
+    _traceInputBatch(
+      parser: 'key',
+      flush: false,
+      messages: parsedMessages,
+      dropped: 0,
+    );
+
+    // Send each result as a message
+    for (final msg in parsedMessages) {
+      send(msg);
     }
   }
 
@@ -1658,15 +1779,42 @@ class Program<M extends Model> {
     // action. Keep only the newest frame tick in the queue.
     // Use _coalesceQueue to avoid O(n) removeWhere on each send.
     if (msg is KeyMsg) {
-      _coalesceQueue((m) => m is! MouseMsg && m is! FrameTickMsg);
+      final dropped = _coalesceQueue(
+        (m) => m is! MouseMsg && m is! FrameTickMsg,
+      );
+      if (TuiTrace.enabled && dropped > 0) {
+        _trace('queue coalesce key dropped=$dropped', tag: TraceTag.queue);
+      }
     } else if (msg is FrameTickMsg) {
-      _coalesceQueue((m) => m is! FrameTickMsg);
+      final dropped = _coalesceQueue((m) => m is! FrameTickMsg);
+      if (TuiTrace.enabled && dropped > 0) {
+        _trace(
+          'queue coalesce frameTick dropped=$dropped',
+          tag: TraceTag.queue,
+        );
+      }
     } else if (msg is MouseMsg &&
         msg.action == MouseAction.motion &&
         msg.button == MouseButton.none) {
-      _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.motion);
+      final dropped = _coalesceQueue(
+        (m) => m is! MouseMsg || m.action != MouseAction.motion,
+      );
+      if (TuiTrace.enabled && dropped > 0) {
+        _trace(
+          'queue coalesce mouse-motion dropped=$dropped',
+          tag: TraceTag.queue,
+        );
+      }
     } else if (msg is MouseMsg && msg.action == MouseAction.wheel) {
-      _coalesceQueue((m) => m is! MouseMsg || m.action != MouseAction.wheel);
+      final dropped = _coalesceQueue(
+        (m) => m is! MouseMsg || m.action != MouseAction.wheel,
+      );
+      if (TuiTrace.enabled && dropped > 0) {
+        _trace(
+          'queue coalesce mouse-wheel dropped=$dropped',
+          tag: TraceTag.queue,
+        );
+      }
     }
     if (TuiTrace.enabled && msg is KeyMsg) {
       final now = DateTime.now();
@@ -1695,15 +1843,19 @@ class Program<M extends Model> {
   ///
   /// Rebuilds the queue in-place, retaining only matching messages.
   /// O(n) but only called when coalescing is needed.
-  void _coalesceQueue(bool Function(Msg) keep) {
-    if (_messageQueue.isEmpty) return;
+  int _coalesceQueue(bool Function(Msg) keep) {
+    if (_messageQueue.isEmpty) return 0;
+    var dropped = 0;
     final len = _messageQueue.length;
     for (var i = 0; i < len; i++) {
       final m = _messageQueue.removeFirst();
       if (keep(m)) {
         _messageQueue.add(m);
+      } else {
+        dropped++;
       }
     }
+    return dropped;
   }
 
   /// Drains the message queue, processing messages sequentially.
@@ -1755,6 +1907,14 @@ class Program<M extends Model> {
     );
 
     try {
+      if (msg case WindowSizeMsg(:final width, :final height)) {
+        TuiTrace.event(
+          TraceEventType.windowSize,
+          tag: TraceTag.input,
+          fields: <String, Object?>{'width': width, 'height': height},
+        );
+      }
+
       final probes = _startupProbes;
       final probeCtx = _startupProbeContext;
       if (probes != null && probeCtx != null) {
@@ -1930,6 +2090,11 @@ class Program<M extends Model> {
 
       case RequestWindowSizeMsg():
         final size = _terminal?.size ?? (width: 80, height: 24);
+        TuiTrace.event(
+          TraceEventType.windowSize,
+          tag: TraceTag.input,
+          fields: <String, Object?>{'width': size.width, 'height': size.height},
+        );
         // Send the window size message to the model
         final (newModel, cmd) = _model!.update(
           WindowSizeMsg(size.width, size.height),

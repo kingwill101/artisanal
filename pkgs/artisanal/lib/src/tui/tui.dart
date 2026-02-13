@@ -220,6 +220,19 @@ export 'program.dart'
         runProgramWithResult,
         runProgramDebug;
 
+// Replay scenario protocol + trace conversion.
+export 'replay_protocol.dart'
+    show
+        ReplayScreen,
+        ReplayAction,
+        ReplayScenario,
+        ReplayMouseMsg,
+        ReplayCoordinateInterceptor,
+        ReplayTraceConversionOptions,
+        ReplayTraceConversionResult,
+        ReplayTraceConverter,
+        replayScenarioStream;
+
 // Harmonica helpers (spring, projectile) used by progress and demos
 export 'harmonica.dart'
     show
@@ -245,7 +258,8 @@ export 'zone/zone.dart'
         closeGlobalZone;
 
 // Trace / debug logging
-export 'trace.dart' show TuiTrace, TraceTag, TraceSpan;
+export 'trace.dart'
+    show TuiTrace, TraceTag, TraceSpan, TraceEventType, TraceEventRecord;
 
 // Widget system for composable components
 export 'package:artisanal_widgets/artisanal_widgets.dart'
