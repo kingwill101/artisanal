@@ -189,7 +189,8 @@ final class TuiTrace {
   static const _eventSchemaVersion = 1;
 
   static String? _path;
-  static io.IOSink? _sink;
+  static io.File? _file;
+  static bool _headerWritten = false;
   static bool? _captureEnabled;
   static String? _tagsRaw;
   static Set<TraceTag>? _enabledTags;
@@ -318,9 +319,13 @@ final class TuiTrace {
 
   /// Writes a raw line with a monotonic microsecond timestamp.
   static void _writeRaw(String message) {
-    _sink ??= _openSink();
+    final file = _file ??= _openFile();
+    if (!_headerWritten) {
+      _writeHeader(file);
+      _headerWritten = true;
+    }
     final us = _clock.elapsedMicroseconds;
-    _sink!.writeln('[+${us}us] $message');
+    file.writeAsStringSync('[+${us}us] $message\n', mode: io.FileMode.append);
   }
 
   static _ParsedTraceLine? _parseLine(String line) {
@@ -361,38 +366,38 @@ final class TuiTrace {
     }
   }
 
-  static io.IOSink _openSink() {
+  static io.File _openFile() {
     final file = io.File(_path!);
     if (!file.parent.existsSync()) {
       file.parent.createSync(recursive: true);
     }
-    final sink = file.openWrite(mode: io.FileMode.append);
+    return file;
+  }
+
+  static void _writeHeader(io.File file) {
     final scriptPath = _resolveScriptPath();
-    // Write header with wall-clock correlation.
-    sink.writeln('# trace start: $_startWallTime');
-    sink.writeln('# timestamps are monotonic microseconds from start');
-    sink.writeln('# path: ${file.path}');
-    sink.writeln('# pid: ${io.pid}');
-    sink.writeln('# cwd: ${io.Directory.current.path}');
-    sink.writeln('# executable: ${io.Platform.executable}');
-    if (scriptPath != null) {
-      sink.writeln('# script: $scriptPath');
-    }
-    sink.writeln(
+    final lines = <String>[
+      '# trace start: $_startWallTime',
+      '# timestamps are monotonic microseconds from start',
+      '# path: ${file.path}',
+      '# pid: ${io.pid}',
+      '# cwd: ${io.Directory.current.path}',
+      '# executable: ${io.Platform.executable}',
+      if (scriptPath != null) '# script: $scriptPath',
       '# os: ${io.Platform.operatingSystem} ${io.Platform.operatingSystemVersion}',
-    );
-    sink.writeln('# dart: ${io.Platform.version}');
-    sink.writeln('# capture_dispatch: ${captureDispatchEnabled}');
-    sink.writeln('# trace_tags: ${_describeTagFilter()}');
-    return sink;
+      '# dart: ${io.Platform.version}',
+      '# capture_dispatch: ${captureDispatchEnabled}',
+      '# trace_tags: ${_describeTagFilter()}',
+    ];
+
+    // Write header with wall-clock correlation.
+    file.writeAsStringSync('${lines.join('\n')}\n', mode: io.FileMode.append);
   }
 
   /// Closes the trace log file.
   static void close() {
-    if (_sink == null) return;
-    _sink!.flush();
-    _sink!.close();
-    _sink = null;
+    _file = null;
+    _headerWritten = false;
   }
 
   static String? _resolvePath() {
