@@ -386,7 +386,7 @@ final class TuiTrace {
       if (scriptPath != null) '# script: $scriptPath',
       '# os: ${io.Platform.operatingSystem} ${io.Platform.operatingSystemVersion}',
       '# dart: ${io.Platform.version}',
-      '# capture_dispatch: ${captureDispatchEnabled}',
+      '# capture_dispatch: $captureDispatchEnabled',
       '# trace_tags: ${_describeTagFilter()}',
     ];
 
