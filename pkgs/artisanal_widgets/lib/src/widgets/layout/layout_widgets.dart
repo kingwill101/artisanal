@@ -16,6 +16,7 @@ library;
 
 import 'package:meta/meta.dart' show experimental;
 
+import 'dart:async';
 import 'dart:collection';
 import 'dart:io' show File;
 import 'dart:math' as math;
@@ -107,3 +108,4 @@ part 'transform.dart';
 part 'ascii_font.dart';
 part 'ascii_text.dart';
 part 'ignore_pointer.dart';
+part 'async_builder.dart';
