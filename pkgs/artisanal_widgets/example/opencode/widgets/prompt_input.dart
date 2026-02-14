@@ -75,7 +75,6 @@ class PromptInput extends w.StatelessWidget {
                   autofocus: true,
                   multiline: true,
                   maxLines: 6,
-                  mouseXOffset: 2,
                   charLimit: 4000,
                   collapseLargePaste: true,
                   collapsedPasteMinChars: 1200,

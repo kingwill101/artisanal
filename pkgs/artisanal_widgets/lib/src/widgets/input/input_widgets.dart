@@ -18,7 +18,6 @@ import 'package:artisanal/style.dart' show Layout, Style;
 import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;
-import '../core/element.dart' show Element, RenderObjectElement, elementOf;
 import '../layout/layout_widgets.dart' show Text, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
@@ -681,47 +680,6 @@ class _TextFieldState extends State<TextField> {
     return _applyUpdate(syntheticRelease);
   }
 
-  _RenderTextField? _findRenderTextField() {
-    final root = elementOf(widget);
-    if (root == null) return null;
-
-    _RenderTextField? result;
-    void visit(Element e) {
-      if (result != null) return;
-      if (e is RenderObjectElement && e.renderObject is _RenderTextField) {
-        result = e.renderObject as _RenderTextField;
-        return;
-      }
-      for (final child in e.children) {
-        visit(child);
-        if (result != null) return;
-      }
-    }
-
-    visit(root);
-    return result;
-  }
-
-  static double _globalX(RenderObject ro) {
-    var x = 0.0;
-    RenderObject? current = ro;
-    while (current != null) {
-      x += current.offset.dx;
-      current = current.parent;
-    }
-    return x;
-  }
-
-  static double _globalY(RenderObject ro) {
-    var y = 0.0;
-    RenderObject? current = ro;
-    while (current != null) {
-      y += current.offset.dy;
-      current = current.parent;
-    }
-    return y;
-  }
-
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
@@ -739,16 +697,8 @@ class _TextFieldState extends State<TextField> {
       if (!widget.enabled) return null;
 
       _lastHitMouseEvent = msg.event;
-
-      final ro = _findRenderTextField();
-      final roLocalX = ro != null
-          ? (msg.event.x.toDouble() - _globalX(ro)).floor()
-          : null;
-      final roLocalY = ro != null
-          ? (msg.event.y.toDouble() - _globalY(ro)).floor()
-          : null;
-      final localX = roLocalX ?? msg.localX.floor();
-      final localY = roLocalY ?? msg.localY.floor();
+      final localX = msg.localX.floor();
+      final localY = msg.localY.floor();
 
       final adjustedX = localX - widget.mouseXOffset;
       final local = msg.event.copyWith(x: adjustedX, y: localY);
@@ -756,7 +706,6 @@ class _TextFieldState extends State<TextField> {
         TuiTrace.log(
           'tf.hitMouse id=$_focusId event=(${msg.event.x},${msg.event.y}) '
           'hitLocal=(${msg.localX.floor()},${msg.localY.floor()}) '
-          'roLocal=(${roLocalX ?? -1},${roLocalY ?? -1}) '
           'local=(${local.x},${local.y}) xOffset=${widget.mouseXOffset} '
           'action=${msg.event.action} '
           'button=${msg.event.button} pos=${_model.position}',
