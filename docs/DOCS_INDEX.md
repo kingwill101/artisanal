@@ -25,6 +25,10 @@ This index links the primary documentation files. Each doc includes runnable, co
 - Bubbles components: [BUBBLES.md](BUBBLES.md)
 - Console components helper: [IO_COMPONENTS.md](IO_COMPONENTS.md)
 
+## IPC
+
+- IPC worker protocol and extension host contract: [IPC.md](IPC.md)
+
 ## UV (Ultraviolet)
 
 - UV system: [UV.md](UV.md)
