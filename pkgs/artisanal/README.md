@@ -163,6 +163,9 @@ ARTISANAL_TUI_TRACE_PATH=traces/my-run.log \
 dart run your_app.dart
 ```
 
+Structured app/domain events can be emitted via `TuiTrace.event(...)` and are
+preserved in replay conversion when they use stable typed `type` names.
+
 Full replay and tracing documentation: `docs/TUI.md`.
 
 ## Bubbles (Reusable Widgets)
