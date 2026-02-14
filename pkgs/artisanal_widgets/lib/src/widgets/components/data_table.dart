@@ -66,61 +66,184 @@ class DataTable extends StatelessWidget {
       }
     }
 
-    final (hChar, vChar, crossChar) = _borderChars();
+    final chars = _borderChars();
+    final hasOuterBorder = chars.topLeft != null;
 
-    // Build header row.
-    final headerCells = <Widget>[];
-    for (var i = 0; i < colCount; i++) {
-      headerCells.add(Text(columns[i].padRight(widths[i]), style: hStyle));
-      if (i < colCount - 1) {
-        headerCells.add(Text(' $vChar ', style: bStyle));
-      }
-    }
-
-    // Build separator.
-    final sepParts = <String>[];
-    for (var i = 0; i < colCount; i++) {
-      sepParts.add(hChar * widths[i]);
-      if (i < colCount - 1) {
-        sepParts.add('$hChar$crossChar$hChar');
-      }
-    }
-    final separator = Text(sepParts.join(), style: bStyle);
-
-    // Build data rows.
-    final dataRows = <Widget>[];
-    for (final row in rows) {
-      final cells = <Widget>[];
+    // Build a horizontal rule line.
+    String buildHRule(String h, String cross, String? left, String? right) {
+      final parts = <String>[];
+      if (left != null) parts.add(left);
       for (var i = 0; i < colCount; i++) {
-        final value = i < row.length ? row[i] : '';
-        cells.add(Text(value.padRight(widths[i]), style: cStyle));
+        parts.add(h * widths[i]);
         if (i < colCount - 1) {
-          cells.add(Text(' $vChar ', style: bStyle));
+          parts.add('$h$cross$h');
         }
       }
-      dataRows.add(Row(gap: 0, children: cells));
+      if (right != null) parts.add(right);
+      return parts.join();
     }
 
-    return Column(
-      gap: 0,
-      children: [
-        Row(gap: 0, children: headerCells),
-        separator,
-        ...dataRows,
-      ],
+    // Build a content row (header or data).
+    Widget buildRow(List<String> values, Style textStyle) {
+      final cells = <Widget>[];
+      if (hasOuterBorder) {
+        cells.add(Text('${chars.v} ', style: bStyle));
+      }
+      for (var i = 0; i < colCount; i++) {
+        final value = i < values.length ? values[i] : '';
+        cells.add(Text(value.padRight(widths[i]), style: textStyle));
+        if (i < colCount - 1) {
+          cells.add(Text(' ${chars.v} ', style: bStyle));
+        }
+      }
+      if (hasOuterBorder) {
+        cells.add(Text(' ${chars.v}', style: bStyle));
+      }
+      return Row(gap: 0, children: cells);
+    }
+
+    final children = <Widget>[];
+
+    // Top border (only for styles with outer borders).
+    if (hasOuterBorder) {
+      children.add(
+        Text(
+          buildHRule(chars.h, chars.topCross!, chars.topLeft, chars.topRight),
+          style: bStyle,
+        ),
+      );
+    }
+
+    // Header row.
+    children.add(buildRow(columns, hStyle));
+
+    // Header separator.
+    children.add(
+      Text(
+        buildHRule(
+          chars.h,
+          chars.cross,
+          hasOuterBorder ? chars.leftCross : null,
+          hasOuterBorder ? chars.rightCross : null,
+        ),
+        style: bStyle,
+      ),
     );
+
+    // Data rows.
+    for (final row in rows) {
+      children.add(buildRow(row, cStyle));
+    }
+
+    // Bottom border (only for styles with outer borders).
+    if (hasOuterBorder) {
+      children.add(
+        Text(
+          buildHRule(
+            chars.h,
+            chars.bottomCross!,
+            chars.bottomLeft,
+            chars.bottomRight,
+          ),
+          style: bStyle,
+        ),
+      );
+    }
+
+    return Column(gap: 0, children: children);
   }
 
-  (String, String, String) _borderChars() {
+  _TableBorderChars _borderChars() {
     return switch (borderStyle) {
-      DataTableBorderStyle.normal => ('─', '│', '┼'),
-      DataTableBorderStyle.rounded => ('─', '│', '┼'),
-      DataTableBorderStyle.heavy => ('━', '┃', '╋'),
-      DataTableBorderStyle.dashed => ('╌', '╎', '┼'),
-      DataTableBorderStyle.ascii => ('-', '|', '+'),
+      DataTableBorderStyle.normal => _TableBorderChars(
+        h: '─',
+        v: '│',
+        cross: '┼',
+      ),
+      DataTableBorderStyle.rounded => _TableBorderChars(
+        h: '─',
+        v: '│',
+        cross: '┼',
+        topLeft: '╭',
+        topRight: '╮',
+        bottomLeft: '╰',
+        bottomRight: '╯',
+        topCross: '┬',
+        bottomCross: '┴',
+        leftCross: '├',
+        rightCross: '┤',
+      ),
+      DataTableBorderStyle.heavy => _TableBorderChars(
+        h: '━',
+        v: '┃',
+        cross: '╋',
+      ),
+      DataTableBorderStyle.dashed => _TableBorderChars(
+        h: '╌',
+        v: '╎',
+        cross: '┼',
+      ),
+      DataTableBorderStyle.ascii => _TableBorderChars(
+        h: '-',
+        v: '|',
+        cross: '+',
+      ),
     };
   }
 }
 
 /// Border style for [DataTable].
 enum DataTableBorderStyle { normal, rounded, heavy, dashed, ascii }
+
+/// Internal border character set for [DataTable].
+///
+/// When [topLeft] is non-null, the table renders a full outer border
+/// (top, bottom, left, right edges with corner pieces).
+class _TableBorderChars {
+  const _TableBorderChars({
+    required this.h,
+    required this.v,
+    required this.cross,
+    this.topLeft,
+    this.topRight,
+    this.bottomLeft,
+    this.bottomRight,
+    this.topCross,
+    this.bottomCross,
+    this.leftCross,
+    this.rightCross,
+  });
+
+  /// Horizontal line character (e.g., '─').
+  final String h;
+
+  /// Vertical line character (e.g., '│').
+  final String v;
+
+  /// Cross/intersection character (e.g., '┼').
+  final String cross;
+
+  /// Top-left corner (e.g., '╭'). Null means no outer border.
+  final String? topLeft;
+
+  /// Top-right corner (e.g., '╮').
+  final String? topRight;
+
+  /// Bottom-left corner (e.g., '╰').
+  final String? bottomLeft;
+
+  /// Bottom-right corner (e.g., '╯').
+  final String? bottomRight;
+
+  /// Top edge T-piece (e.g., '┬').
+  final String? topCross;
+
+  /// Bottom edge T-piece (e.g., '┴').
+  final String? bottomCross;
+
+  /// Left edge T-piece (e.g., '├').
+  final String? leftCross;
+
+  /// Right edge T-piece (e.g., '┤').
+  final String? rightCross;
+}

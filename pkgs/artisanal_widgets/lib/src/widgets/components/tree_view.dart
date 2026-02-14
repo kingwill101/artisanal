@@ -87,7 +87,19 @@ class TreeView extends StatelessWidget {
   /// Style for connector lines (├, │, └, ─).
   final Style? connectorStyle;
 
-  /// Number of spaces per indent level (minimum 1).
+  /// Number of characters per indent level (minimum 2).
+  ///
+  /// Controls the width of tree connectors and continuation lines.
+  /// The default value of 2 produces compact output like:
+  /// ```
+  /// ├─ item
+  /// │ ├─ child
+  /// ```
+  /// A value of 4 produces wider output:
+  /// ```
+  /// ├─── item
+  /// │   ├─── child
+  /// ```
   final int indentSize;
 
   @override
@@ -98,8 +110,9 @@ class TreeView extends StatelessWidget {
     final cStyle = _copyStyle(connectorStyle ?? theme.bodySmall)
       ..foreground(theme.border);
 
+    final effectiveIndent = indentSize < 2 ? 2 : indentSize;
     final lines = <Widget>[];
-    _buildLines(nodes, '', true, lines, lStyle, cStyle, theme);
+    _buildLines(nodes, '', true, lines, lStyle, cStyle, theme, effectiveIndent);
     return Column(gap: 0, children: lines);
   }
 
@@ -111,12 +124,18 @@ class TreeView extends StatelessWidget {
     Style labelStyle,
     Style connectorStyle,
     Theme theme,
+    int indent,
   ) {
     for (var i = 0; i < nodes.length; i++) {
       final node = nodes[i];
       final isLast = i == nodes.length - 1;
-      final connector = isRoot ? '' : (isLast ? '└─ ' : '├─ ');
-      final childPrefix = isRoot ? '' : (isLast ? '   ' : '│  ');
+      // Build connector: branch char + (indent - 1) dashes + space
+      // e.g. indent=2 → '└─ ', indent=4 → '└─── '
+      final dashes = '─' * (indent - 1);
+      final connector = isRoot ? '' : (isLast ? '└$dashes ' : '├$dashes ');
+      // Build child prefix: pipe/space + (indent - 1) spaces + space
+      final padding = ' ' * (indent - 1);
+      final childPrefix = isRoot ? '' : (isLast ? ' $padding ' : '│$padding ');
 
       final resolvedLabelStyle = node.style != null
           ? _copyStyle(node.style!)
@@ -143,6 +162,7 @@ class TreeView extends StatelessWidget {
           labelStyle,
           connectorStyle,
           theme,
+          indent,
         );
       }
     }
