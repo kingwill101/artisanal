@@ -210,8 +210,9 @@ import 'package:artisanal/tui.dart';
 // Pre-built TUI components
 import 'package:artisanal/bubbles.dart';
 
-// Low-level cell renderer
-import 'package:artisanal/uv.dart';
+// Low-level cell renderer (prefer dedicated package in new code)
+import 'package:ultraviolet/ultraviolet.dart';
+// Compatibility: `package:artisanal/uv.dart` continues to re-export these UV types.
 
 // CLI command runner
 import 'package:artisanal/args.dart';
@@ -300,7 +301,7 @@ lib/
 ├── style.dart          # Style system exports
 ├── tui.dart            # TUI framework exports
 ├── bubbles.dart        # Bubble components exports
-├── uv.dart             # UV renderer exports
+├── uv.dart             # UV renderer compatibility re-export (artisanal)
 ├── args.dart           # CLI argument parser exports
 ├── terminal.dart       # Terminal abstraction exports
 ├── markdown.dart       # Markdown renderer exports
@@ -326,6 +327,9 @@ lib/
     ├── glamour/        # Glamour renderer
     └── liquid/         # Liquid adapters
 ```
+
+Standalone UV users should import `package:ultraviolet/ultraviolet.dart` directly;
+`package:artisanal/uv.dart` is retained as a compatibility shim.
 
 ## Related Documentation
 

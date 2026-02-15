@@ -2,6 +2,12 @@
 
 The **UV (Ultraviolet)** subsystem provides high-performance terminal rendering and input handling for building responsive, visually rich terminal UIs. It implements a cell-based rendering model with diffing, styled text, layered composition, and comprehensive input decoding.
 
+### Note
+
+Primary package path is now `package:ultraviolet/ultraviolet.dart` for direct UV
+usage. `package:artisanal/uv.dart` remains available as a compatibility barrel
+export during the transition.
+
 ## Table of Contents
 
 1. [Overview](#overview)
@@ -39,7 +45,7 @@ UV models the terminal as layers of drawable cells. The architecture consists of
 ```dart
 import 'dart:io';
 
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 void main() async {
   final terminal = Terminal();
@@ -947,7 +953,7 @@ renderer.setBackspace(true);
 ```dart
 import 'dart:io';
 
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 Future<void> main() async {
   const width = 40;
@@ -1030,7 +1036,7 @@ Use `bestImageDrawableForTerminal()` to automatically select the best protocol
 based on detected terminal capabilities:
 
 ```dart
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'package:image/image.dart' as img;
 
 final image = img.Image(width: 100, height: 60);
@@ -1237,7 +1243,7 @@ final diff = style_ops.styleDiff(oldStyle, newStyle);
 ### Basic Terminal Application
 
 ```dart
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 Future<void> main() async {
   final terminal = Terminal();
@@ -1278,7 +1284,7 @@ Future<void> main() async {
 ### Using Canvas and Layers
 
 ```dart
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 void main() {
   // Create a canvas
@@ -1310,7 +1316,7 @@ void main() {
 ### Image Rendering
 
 ```dart
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'package:image/image.dart' as img;
 
 Future<void> renderImage(Terminal terminal, img.Image image) async {
@@ -1331,9 +1337,11 @@ Future<void> renderImage(Terminal terminal, img.Image image) async {
 
 ## API Reference
 
-### Exports from `package:artisanal/uv.dart`
+### Exports from `package:ultraviolet/ultraviolet.dart`
 
 ```dart
+// `package:artisanal/uv.dart` (compatibility) re-exports the same API set.
+
 // Core types
 Terminal, Buffer, Line, LineData, Cell, Link, UvStyle
 UvColor, UvBasic16, UvIndexed256, UvRgb
