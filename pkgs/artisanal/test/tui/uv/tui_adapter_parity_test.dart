@@ -1,5 +1,5 @@
 import 'package:artisanal/src/tui/msg.dart';
-import 'package:artisanal/src/uv/uv.dart' hide ClipboardSelection;
+import 'package:artisanal/src/uv/tui_adapter.dart';
 import 'package:artisanal/terminal.dart';
 import 'package:test/test.dart';
 

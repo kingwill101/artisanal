@@ -1,6 +1,6 @@
 import 'package:artisanal/src/terminal/keys.dart' as term;
 import 'package:artisanal/src/tui/msg.dart';
-import 'package:artisanal/src/uv/uv.dart';
+import 'package:artisanal/src/uv/tui_adapter.dart';
 import 'package:test/test.dart';
 
 void main() {

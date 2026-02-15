@@ -1,7 +1,7 @@
 import 'package:artisanal/src/terminal/keys.dart';
 import 'package:artisanal/src/tui/msg.dart';
+import 'package:artisanal/src/uv/tui_adapter.dart';
 import 'package:test/test.dart';
-import 'package:artisanal/src/uv/uv.dart';
 
 List<int> _bytes(String s) => s.codeUnits;
 

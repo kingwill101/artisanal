@@ -67,8 +67,9 @@
 /// standard ANSI escape sequences for colors, styles, cursor movement, and
 /// screen control.
 ///
-/// For more advanced rendering, see the [Ultraviolet](package:artisanal/uv.dart)
-/// subsystem.
+/// For more advanced rendering, see the
+/// [Ultraviolet](package:ultraviolet/ultraviolet.dart) subsystem.
+/// `package:artisanal/uv.dart` remains a compatibility re-export.
 /// {@endtemplate}
 library;
 

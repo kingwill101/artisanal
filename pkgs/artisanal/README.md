@@ -50,7 +50,8 @@ dependencies:
 | `package:artisanal/tui.dart` | TUI runtime: Model, Msg, Cmd, Program |
 | `package:artisanal/bubbles.dart` | Reusable interactive widgets |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI codes, Keys |
-| `package:artisanal/uv.dart` | Low-level cell-buffer renderer |
+| `package:ultraviolet/ultraviolet.dart` | Low-level cell-buffer renderer |
+| `package:artisanal/uv.dart` | Compatibility re-export for UV (`package:ultraviolet/ultraviolet.dart`) |
 | `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
 | `package:artisanal/glamour.dart` | High-fidelity Markdown renderer |
 | `package:artisanal/charting.dart` | Charting primitives |

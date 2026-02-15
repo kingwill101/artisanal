@@ -31,7 +31,8 @@
 /// - `package:artisanal/style.dart`: Full Lip Gloss-style styling system.
 /// - `package:artisanal/tui.dart`: Interactive TUI framework (Elm Architecture).
 /// - `package:artisanal/bubbles.dart`: Reusable interactive TUI components.
-/// - `package:artisanal/uv.dart`: Low-level cell-buffer rendering engine.
+/// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
+/// - `package:artisanal/uv.dart`: Compatibility re-export for UV types.
 /// - `package:artisanal/charting.dart`: Terminal-native charting primitives.
 /// - `package:artisanal/liquid.dart`: Liquify template adapters.
 ///

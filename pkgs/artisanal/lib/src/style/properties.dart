@@ -4,12 +4,11 @@
 /// spacing and alignment in styled content.
 library;
 
-/// Underline style variants, inspired by lipgloss v2.
+/// Underline style variants — canonical definition lives in ultraviolet.
 ///
-/// Notes:
-/// - Not all terminals support all underline styles.
-/// - Unsupported styles may render as a standard underline or be ignored.
-enum UnderlineStyle { none, single, double, curly, dotted, dashed }
+/// Re-exported here so that `package:artisanal/style.dart` and
+/// `package:artisanal/uv.dart` both resolve to the same type.
+export 'package:ultraviolet/src/uv/cell.dart' show UnderlineStyle;
 
 /// Represents padding (internal spacing) for styled content.
 ///

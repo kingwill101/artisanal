@@ -16,6 +16,7 @@ import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
+import '../style/color.dart' show Color;
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 
@@ -2558,7 +2559,9 @@ class Program<M extends Model> {
       _terminal?.write('\x1b[$code q');
       // Set color if provided
       if (view.cursor!.color != null) {
-        _terminal?.write('\x1b]12;${view.cursor!.color!.toHex()}\x07');
+        _terminal?.write(
+          '\x1b]12;${(view.cursor!.color! as Color).toHex()}\x07',
+        );
       }
     }
   }
