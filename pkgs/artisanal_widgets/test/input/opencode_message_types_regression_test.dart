@@ -2,7 +2,7 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
-import '../../example/opencode/models/message.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../../example/opencode/widgets/chat_body.dart';
 
 void main() {

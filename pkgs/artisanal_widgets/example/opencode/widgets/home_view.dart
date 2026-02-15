@@ -12,7 +12,7 @@ import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui show Cmd, KeyMsg, Msg;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
-import '../models/chat_model.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../theme.dart';
 import 'footer_bar.dart';
 import 'logo_widget.dart';

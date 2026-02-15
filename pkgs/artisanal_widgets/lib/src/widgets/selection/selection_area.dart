@@ -34,14 +34,24 @@ class SelectionArea extends StatefulWidget {
 class _SelectionAreaState extends State<SelectionArea> {
   SelectionController? _ownController;
 
-  /// Tracks whether any child received a hit-test this frame.
-  /// Used to detect clicks outside all SelectableText children.
-  bool _childHitTestedThisFrame = false;
+  /// Tracks the action type of the last HitTestMouseMsg received.
+  /// Reset to `null` when the corresponding raw MouseMsg is consumed.
+  /// This prevents stale hit-test flags from blocking outside-click
+  /// detection when mouse capture interrupts the normal dispatch flow.
+  MouseAction? _lastHitTestAction;
 
   SelectionController get _effectiveController {
     if (widget.controller != null) return widget.controller!;
     _ownController ??= SelectionController();
     return _ownController!;
+  }
+
+  /// Clears the shared selection if one is active.
+  void _clearSharedSelection() {
+    final ctrl = _effectiveController;
+    if (ctrl.hasSelection) {
+      ctrl.clearSelection();
+    }
   }
 
   /// The SelectionArea clears the shared selection when a click lands
@@ -60,19 +70,27 @@ class _SelectionAreaState extends State<SelectionArea> {
           msg.event.button == MouseButton.wheelDown ||
           msg.event.button == MouseButton.wheelLeft ||
           msg.event.button == MouseButton.wheelRight;
-      _childHitTestedThisFrame = !isWheelLike;
+      if (!isWheelLike) {
+        _lastHitTestAction = msg.event.action;
+      }
     }
 
     if (msg is MouseMsg) {
-      if (_childHitTestedThisFrame) {
-        _childHitTestedThisFrame = false;
-      } else if (msg.action == MouseAction.press &&
+      // Check if this raw MouseMsg matches the action of the last
+      // HitTestMouseMsg we received. If so, the event was already
+      // dispatched through hit-testing to one of our children — consume
+      // the flag and don't treat it as an outside click.
+      if (_lastHitTestAction == msg.action) {
+        _lastHitTestAction = null;
+      } else if ((msg.action == MouseAction.press ||
+              msg.action == MouseAction.release) &&
           msg.button == MouseButton.left) {
-        // Click landed outside all children — clear shared selection.
-        final ctrl = _effectiveController;
-        if (ctrl.hasSelection) {
-          ctrl.clearSelection();
-        }
+        // Click (press or release) landed outside all children — clear
+        // shared selection. We check both press and release because
+        // press events may not be broadcast by WidgetApp, so the
+        // release serves as the fallback outside-click signal.
+        _lastHitTestAction = null;
+        _clearSharedSelection();
       }
     }
     return null;

@@ -7,7 +7,7 @@ library;
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
-import '../models/message.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../theme.dart';
 import 'message_widget.dart';
 

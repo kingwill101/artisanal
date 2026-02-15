@@ -8,7 +8,7 @@ library;
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
-import '../models/chat_model.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../theme.dart';
 
 class SidebarWidget extends w.StatelessWidget {

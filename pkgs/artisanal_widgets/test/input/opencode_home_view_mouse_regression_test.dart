@@ -3,7 +3,7 @@ import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
-import '../../example/opencode/models/chat_model.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../../example/opencode/widgets/home_view.dart';
 
 void main() {

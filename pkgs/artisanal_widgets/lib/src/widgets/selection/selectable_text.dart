@@ -98,6 +98,11 @@ class _SelectableTextState extends State<SelectableText> {
   /// events when they share a SelectionController via SelectionArea.
   bool _isDragging = false;
 
+  /// Set to `true` by [_handleRawMouse] when a release ends a drag.
+  /// Prevents the outside-click detection from misinterpreting a
+  /// legitimate drag-end release as a click outside.
+  bool _justFinishedDrag = false;
+
   /// Screen-to-local coordinate offsets, captured at press time.
   /// Used to convert raw [MouseMsg] screen coordinates to the render
   /// object's local coordinate space during drag. This correctly accounts
@@ -171,6 +176,17 @@ class _SelectableTextState extends State<SelectableText> {
     elementOf(widget)?.markNeedsPaint();
   }
 
+  /// Clears selection when a click completes outside this widget.
+  ///
+  /// Only acts on standalone controllers ([_ownController]). Shared
+  /// controllers from [SelectionArea] are cleared by the area itself.
+  void _clearSelectionOnOutsideClick() {
+    if (_ownController != null && _ownController!.hasSelection) {
+      _ownController!.clearSelection();
+      _markNeedsPaint();
+    }
+  }
+
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
@@ -187,21 +203,40 @@ class _SelectableTextState extends State<SelectableText> {
 
     // Handle raw mouse events (not dispatched via hit-test).
     if (msg is MouseMsg) {
-      if (_hitTestedThisFrame) {
+      if (_hitTestedThisFrame && !_isDragging) {
+        // Same event already processed via HitTestMouseMsg in this frame.
+        // Skip re-processing, but allow through when dragging — during
+        // mouse capture the raw MouseMsg is the ONLY delivery path for
+        // motion/release, so the guard must not block it.
         _hitTestedThisFrame = false;
       } else if (msg.action == MouseAction.motion ||
           msg.action == MouseAction.release) {
+        _hitTestedThisFrame = false;
         final cmd = _handleRawMouse(msg);
         if (cmd != null) return cmd;
+        // If we're not dragging and a release arrived via broadcast (not
+        // from capture), it means a click completed outside this widget.
+        // Clear selection for standalone controllers. Press events are not
+        // broadcast by WidgetApp (to avoid breaking scroll thumbs), so we
+        // detect outside clicks on release instead.
+        //
+        // Guard: _handleRawMouse handles releases during active drag
+        // (_isDragging was true on entry). If _handleRawMouse returned null
+        // but _isDragging was just cleared (drag finished), do NOT treat
+        // that as an outside click — track via _justFinishedDrag.
+        if (!_isDragging &&
+            !_justFinishedDrag &&
+            msg.action == MouseAction.release &&
+            msg.button == MouseButton.left) {
+          _clearSelectionOnOutsideClick();
+        }
+        _justFinishedDrag = false;
       } else if (msg.action == MouseAction.press &&
           msg.button == MouseButton.left) {
         // Click landed outside this widget. Only clear if we own the
         // controller (standalone mode). Shared controllers from
         // SelectionArea are cleared by the area itself.
-        if (_ownController != null && _ownController!.hasSelection) {
-          _ownController!.clearSelection();
-          _markNeedsPaint();
-        }
+        _clearSelectionOnOutsideClick();
       }
     }
 
@@ -234,6 +269,7 @@ class _SelectableTextState extends State<SelectableText> {
     if (event.action == MouseAction.release && _isDragging) {
       ctrl._selecting = false;
       _isDragging = false;
+      _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
       return null;
     }
@@ -302,6 +338,7 @@ class _SelectableTextState extends State<SelectableText> {
     if (msg.action == MouseAction.release) {
       ctrl._selecting = false;
       _isDragging = false;
+      _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
       return null;
     }

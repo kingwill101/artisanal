@@ -8,7 +8,7 @@ import 'package:artisanal/markdown.dart' as markdown;
 import 'package:artisanal/tui.dart' show Cmd;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
-import '../models/message.dart';
+import 'package:dash_ui/dash_ui.dart';
 import '../theme.dart';
 import 'left_accent_pane.dart';
 import 'prompt_input.dart' show agentColor;
@@ -280,6 +280,8 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
           }
         case DiffPart():
           parts.add(_buildDiffPart(context, part));
+        case WidgetPart():
+          break; // WidgetPart not rendered in this example
       }
     }
 
