@@ -314,13 +314,14 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       final theme = ThemeScope.of(context);
       if (!identical(theme, _cachedTheme)) {
         _cachedTheme = theme;
+        final gdTheme = theme.gitDiffTheme;
         _cachedThemeStyles = DiffStyles.fromColors(
-          success: theme.success,
-          error: theme.error,
-          muted: theme.muted,
+          success: gdTheme?.addedBackground ?? theme.success,
+          error: gdTheme?.removedBackground ?? theme.error,
+          muted: gdTheme?.contextForeground ?? theme.muted,
           surface: theme.surface,
-          onSurface: theme.onSurface,
-          onBackground: theme.onBackground,
+          onSurface: gdTheme?.addedForeground ?? theme.onSurface,
+          onBackground: gdTheme?.headerForeground ?? theme.onBackground,
           border: theme.border,
         );
         _controller.configure(styles: _cachedThemeStyles);

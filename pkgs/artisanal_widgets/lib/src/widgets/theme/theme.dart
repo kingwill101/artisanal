@@ -251,6 +251,165 @@ class CommandPaletteThemeData {
   }
 }
 
+/// Theme data for dialog widgets ([DialogConfirm], [DialogAlert],
+/// [DialogPrompt], [DialogSelect]).
+///
+/// Controls the visual appearance of modal dialogs and inline prompt panels.
+class DialogThemeData {
+  const DialogThemeData({
+    this.background,
+    this.foreground,
+    this.overlayColor,
+    this.overlayOpacity,
+    this.buttonBackground,
+    this.buttonSelectedBackground,
+    this.buttonForeground,
+    this.buttonSelectedForeground,
+    this.hintForeground,
+    this.footerBackground,
+    this.width,
+    this.maxHeight,
+  });
+
+  /// Background color of the dialog panel.
+  /// Defaults to [Theme.surface].
+  final Color? background;
+
+  /// Default text color in the dialog.
+  /// Defaults to [Theme.onSurface].
+  final Color? foreground;
+
+  /// Color of the modal overlay/backdrop.
+  /// Defaults to [Theme.background].
+  final Color? overlayColor;
+
+  /// Opacity of the modal overlay (0.0–1.0).
+  /// Defaults to 0.6.
+  final double? overlayOpacity;
+
+  /// Background color for action buttons in their default state.
+  /// Defaults to [Theme.resolvedSurfaceVariant].
+  final Color? buttonBackground;
+
+  /// Background color for the selected/active action button.
+  /// Defaults to [Theme.primary].
+  final Color? buttonSelectedBackground;
+
+  /// Text color for action buttons in their default state.
+  /// Defaults to [Theme.onSurface].
+  final Color? buttonForeground;
+
+  /// Text color for the selected/active action button.
+  /// Defaults to [Theme.onPrimary].
+  final Color? buttonSelectedForeground;
+
+  /// Text color for keyboard hint labels.
+  /// Defaults to [Theme.muted].
+  final Color? hintForeground;
+
+  /// Background color for the footer bar in inline prompt panels.
+  /// Defaults to [Theme.resolvedSurfaceVariant].
+  final Color? footerBackground;
+
+  /// Width of the dialog panel in columns.
+  /// Defaults to 60.
+  final int? width;
+
+  /// Maximum height of the dialog panel in rows.
+  /// Defaults to 20.
+  final int? maxHeight;
+
+  /// Copy with selective overrides.
+  DialogThemeData copyWith({
+    Color? background,
+    Color? foreground,
+    Color? overlayColor,
+    double? overlayOpacity,
+    Color? buttonBackground,
+    Color? buttonSelectedBackground,
+    Color? buttonForeground,
+    Color? buttonSelectedForeground,
+    Color? hintForeground,
+    Color? footerBackground,
+    int? width,
+    int? maxHeight,
+  }) {
+    return DialogThemeData(
+      background: background ?? this.background,
+      foreground: foreground ?? this.foreground,
+      overlayColor: overlayColor ?? this.overlayColor,
+      overlayOpacity: overlayOpacity ?? this.overlayOpacity,
+      buttonBackground: buttonBackground ?? this.buttonBackground,
+      buttonSelectedBackground:
+          buttonSelectedBackground ?? this.buttonSelectedBackground,
+      buttonForeground: buttonForeground ?? this.buttonForeground,
+      buttonSelectedForeground:
+          buttonSelectedForeground ?? this.buttonSelectedForeground,
+      hintForeground: hintForeground ?? this.hintForeground,
+      footerBackground: footerBackground ?? this.footerBackground,
+      width: width ?? this.width,
+      maxHeight: maxHeight ?? this.maxHeight,
+    );
+  }
+}
+
+/// Theme data for [GitDiffViewer] widgets.
+///
+/// Controls the colors used for diff added/removed lines and context.
+class GitDiffThemeData {
+  const GitDiffThemeData({
+    this.addedBackground,
+    this.addedForeground,
+    this.removedBackground,
+    this.removedForeground,
+    this.contextForeground,
+    this.headerForeground,
+  });
+
+  /// Background color for added lines.
+  /// Defaults to [Theme.success] with reduced intensity.
+  final Color? addedBackground;
+
+  /// Text color for added lines.
+  /// Defaults to [Theme.resolvedOnSuccess].
+  final Color? addedForeground;
+
+  /// Background color for removed lines.
+  /// Defaults to [Theme.error] with reduced intensity.
+  final Color? removedBackground;
+
+  /// Text color for removed lines.
+  /// Defaults to [Theme.onError].
+  final Color? removedForeground;
+
+  /// Text color for context (unchanged) lines.
+  /// Defaults to [Theme.muted].
+  final Color? contextForeground;
+
+  /// Text color for diff headers (@@ ... @@).
+  /// Defaults to [Theme.primary].
+  final Color? headerForeground;
+
+  /// Copy with selective overrides.
+  GitDiffThemeData copyWith({
+    Color? addedBackground,
+    Color? addedForeground,
+    Color? removedBackground,
+    Color? removedForeground,
+    Color? contextForeground,
+    Color? headerForeground,
+  }) {
+    return GitDiffThemeData(
+      addedBackground: addedBackground ?? this.addedBackground,
+      addedForeground: addedForeground ?? this.addedForeground,
+      removedBackground: removedBackground ?? this.removedBackground,
+      removedForeground: removedForeground ?? this.removedForeground,
+      contextForeground: contextForeground ?? this.contextForeground,
+      headerForeground: headerForeground ?? this.headerForeground,
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,6 +457,8 @@ class Theme {
     this.statusBarTheme,
     this.accentPanelTheme,
     this.commandPaletteTheme,
+    this.dialogTheme,
+    this.gitDiffTheme,
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -468,6 +629,12 @@ class Theme {
   /// Theme overrides for [CommandPalette] widgets.
   final CommandPaletteThemeData? commandPaletteTheme;
 
+  /// Theme overrides for dialog widgets.
+  final DialogThemeData? dialogTheme;
+
+  /// Theme overrides for [GitDiffViewer] widgets.
+  final GitDiffThemeData? gitDiffTheme;
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Built-in Themes
   // ─────────────────────────────────────────────────────────────────────────────
@@ -626,6 +793,8 @@ class Theme {
     StatusBarThemeData? statusBarTheme,
     AccentPanelThemeData? accentPanelTheme,
     CommandPaletteThemeData? commandPaletteTheme,
+    DialogThemeData? dialogTheme,
+    GitDiffThemeData? gitDiffTheme,
   }) {
     return Theme(
       primary: primary ?? this.primary,
@@ -664,6 +833,8 @@ class Theme {
       statusBarTheme: statusBarTheme ?? this.statusBarTheme,
       accentPanelTheme: accentPanelTheme ?? this.accentPanelTheme,
       commandPaletteTheme: commandPaletteTheme ?? this.commandPaletteTheme,
+      dialogTheme: dialogTheme ?? this.dialogTheme,
+      gitDiffTheme: gitDiffTheme ?? this.gitDiffTheme,
     );
   }
 

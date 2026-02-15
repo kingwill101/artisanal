@@ -5,6 +5,7 @@
 @experimental
 library;
 
+import 'package:artisanal/widgets.dart';
 import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
@@ -38,7 +39,8 @@ import '../theme/theme.dart'
         hasDarkBackground,
         StatusBarThemeData,
         AccentPanelThemeData,
-        CommandPaletteThemeData;
+        CommandPaletteThemeData,
+        DialogThemeData;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../animation/animation_controller.dart';
 import '../animation/animation_mixin.dart';
@@ -85,3 +87,10 @@ part 'tree_view.dart';
 part 'metric_display.dart';
 part 'step_indicator.dart';
 part 'hyperlink_text.dart';
+part 'action_button.dart';
+part 'prompt_footer_bar.dart';
+part 'dialog_stack.dart';
+part 'dialog_select.dart';
+part 'dialog_confirm.dart';
+part 'dialog_alert.dart';
+part 'dialog_prompt.dart';
