@@ -15,6 +15,7 @@ workspace:
   - pkgs/dash_web
   - pkgs/dash_tui
   - pkgs/dash_pty
+  - pkgs/ultraviolet
 
 funding:
   - https://www.buymeacoffee.com/kingwill101
