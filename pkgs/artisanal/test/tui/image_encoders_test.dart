@@ -171,7 +171,7 @@ void main() {
         // A 10x10 RGBA image is 400 bytes raw. PNG should be significantly
         // smaller as base64 in the escape sequence.
         final image = _solidImage(10, 10);
-        final result = KittyImage.encode(image);
+        expect(KittyImage.encode(image), isNotEmpty);
 
         // Raw RGBA base64 would be at least base64Encode(400 bytes) = 536 chars.
         // Plus control sequences. PNG of a solid color should be much smaller.

@@ -2,6 +2,8 @@
 ///
 /// Tests the UV renderer pipeline to detect cell-level issues when
 /// scrolling content that contains wide-character emoji.
+library;
+
 import 'package:artisanal/src/unicode/width.dart';
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';

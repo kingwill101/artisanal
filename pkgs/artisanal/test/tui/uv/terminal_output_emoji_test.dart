@@ -1,5 +1,7 @@
 /// Tests the actual terminal escape sequences emitted by UvTerminalRenderer
 /// when scrolling content with emoji, verifying cursor positions.
+library;
+
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:artisanal/src/unicode/width.dart';
 import 'package:test/test.dart';
@@ -228,7 +230,6 @@ void main() {
         r.flush();
 
         // Capture initial state
-        var termOutput = out.value;
         // Note: simulateTerminal is a simplified parser that doesn't handle
         // all CSI sequences emitted by the renderer. Use buffer-level checks
         // instead for reliable verification.

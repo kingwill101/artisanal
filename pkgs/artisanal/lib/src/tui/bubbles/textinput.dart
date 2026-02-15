@@ -715,8 +715,8 @@ class TextInputModel extends ViewComponent {
   int _valueVersion = 0; // Bumped on every value mutation
 
   // Selection
-  int? _selectionStart;
-  int? _selectionEnd;
+  int? selectionStart;
+  int? selectionEnd;
   bool _mouseSelecting = false;
 
   // Double click tracking
@@ -805,22 +805,6 @@ class TextInputModel extends ViewComponent {
     return _matchedSuggestions[_currentSuggestionIndex].join();
   }
 
-  /// Gets the selection start position.
-  int? get selectionStart => _selectionStart;
-
-  /// Sets the selection start position.
-  set selectionStart(int? value) {
-    _selectionStart = value;
-  }
-
-  /// Gets the selection end position.
-  int? get selectionEnd => _selectionEnd;
-
-  /// Sets the selection end position.
-  set selectionEnd(int? value) {
-    _selectionEnd = value;
-  }
-
   /// Focus the input.
   Cmd? focus() {
     _focused = true;
@@ -832,16 +816,16 @@ class TextInputModel extends ViewComponent {
 
   /// Selects all text in the input.
   void selectAll() {
-    _selectionStart = 0;
-    _selectionEnd = _value.length;
+    selectionStart = 0;
+    selectionEnd = _value.length;
     position = _value.length;
   }
 
   /// Returns the currently selected text.
   String getSelectedText() {
-    if (_selectionStart == null || _selectionEnd == null) return '';
-    final start = math.min(_selectionStart!, _selectionEnd!);
-    final end = math.max(_selectionStart!, _selectionEnd!);
+    if (selectionStart == null || selectionEnd == null) return '';
+    final start = math.min(selectionStart!, selectionEnd!);
+    final end = math.max(selectionStart!, selectionEnd!);
     if (start == end) return '';
     return _value.sublist(start, end).join();
   }
@@ -1508,19 +1492,19 @@ class TextInputModel extends ViewComponent {
   }
 
   bool _deleteSelection() {
-    if (_selectionStart == null || _selectionEnd == null) return false;
-    final start = math.min(_selectionStart!, _selectionEnd!);
-    final end = math.max(_selectionStart!, _selectionEnd!);
+    if (selectionStart == null || selectionEnd == null) return false;
+    final start = math.min(selectionStart!, selectionEnd!);
+    final end = math.max(selectionStart!, selectionEnd!);
     if (start == end) {
-      _selectionStart = null;
-      _selectionEnd = null;
+      selectionStart = null;
+      selectionEnd = null;
       return false;
     }
     _value.removeRange(start, end);
     _invalidateWrappedLines();
     position = start;
-    _selectionStart = null;
-    _selectionEnd = null;
+    selectionStart = null;
+    selectionEnd = null;
     error = _validate(_value);
     return true;
   }
@@ -1781,8 +1765,8 @@ class TextInputModel extends ViewComponent {
       }
       if (msg.y != 0) {
         if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
-          _selectionStart = null;
-          _selectionEnd = null;
+          selectionStart = null;
+          selectionEnd = null;
           _mouseSelecting = false;
           _focused = false;
         }
@@ -1808,31 +1792,31 @@ class TextInputModel extends ViewComponent {
             _lastClickPos == x) {
           // Double click: select word
           final (start, end) = _findWordAt(x);
-          _selectionStart = start;
-          _selectionEnd = end;
+          selectionStart = start;
+          selectionEnd = end;
           _pos = end;
           _lastClickTime = now;
           _lastClickPos = x;
         } else {
           position = x;
-          _selectionStart = _pos;
-          _selectionEnd = _pos;
+          selectionStart = _pos;
+          selectionEnd = _pos;
           _lastClickTime = now;
           _lastClickPos = x;
         }
       } else if (msg.action == MouseAction.motion && _mouseSelecting) {
         position = x;
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (msg.action == MouseAction.release && _mouseSelecting) {
         _mouseSelecting = false;
-        if (_selectionStart == _selectionEnd) {
-          _selectionStart = null;
-          _selectionEnd = null;
+        if (selectionStart == selectionEnd) {
+          selectionStart = null;
+          selectionEnd = null;
           return (this, null);
         }
         final cmd = _copySelectionCmdIfAny();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         return (this, cmd);
       }
       return (this, null);
@@ -1869,8 +1853,8 @@ class TextInputModel extends ViewComponent {
       }
 
       if (keyMatches(msg.key, [keyMap.selectAll])) {
-        _selectionStart = 0;
-        _selectionEnd = _value.length;
+        selectionStart = 0;
+        selectionEnd = _value.length;
         position = _value.length;
         return (this, null);
       }
@@ -1909,60 +1893,60 @@ class TextInputModel extends ViewComponent {
         }
       } else if (keyMatches(msg.key, [keyMap.wordBackward])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _wordBackward();
       } else if (keyMatches(msg.key, [keyMap.selectWordBackward])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         _wordBackward();
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterBackward])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         if (_pos > 0) position = _pos - 1;
       } else if (keyMatches(msg.key, [keyMap.selectCharacterBackward])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         if (_pos > 0) position = _pos - 1;
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.wordForward])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _wordForward();
       } else if (keyMatches(msg.key, [keyMap.selectWordForward])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         _wordForward();
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.characterForward])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         if (_pos < _value.length) position = _pos + 1;
       } else if (keyMatches(msg.key, [keyMap.selectCharacterForward])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         if (_pos < _value.length) position = _pos + 1;
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (multiline && keyMatches(msg.key, [keyMap.documentStart])) {
         // Multi-line: Ctrl+Home — go to document start
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         cursorStart();
       } else if (multiline && keyMatches(msg.key, [keyMap.documentEnd])) {
         // Multi-line: Ctrl+End — go to document end
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         cursorEnd();
       } else if (keyMatches(msg.key, [keyMap.lineStart])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         if (multiline) {
           _cursorLineStart();
         } else {
@@ -1970,13 +1954,13 @@ class TextInputModel extends ViewComponent {
         }
       } else if (keyMatches(msg.key, [keyMap.selectLineStart])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         if (multiline) {
           _cursorLineStart();
         } else {
           cursorStart();
         }
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
         _resetDesiredCol();
         if (!_deleteSelection()) {
@@ -1988,8 +1972,8 @@ class TextInputModel extends ViewComponent {
         }
       } else if (keyMatches(msg.key, [keyMap.lineEnd])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         if (multiline) {
           _cursorLineEnd();
         } else {
@@ -1997,22 +1981,22 @@ class TextInputModel extends ViewComponent {
         }
       } else if (keyMatches(msg.key, [keyMap.selectLineEnd])) {
         _resetDesiredCol();
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         if (multiline) {
           _cursorLineEnd();
         } else {
           cursorEnd();
         }
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _deleteAfterCursor();
       } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
         _resetDesiredCol();
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _deleteBeforeCursor();
       } else if (keyMatches(msg.key, [keyMap.paste])) {
         _resetDesiredCol();
@@ -2026,22 +2010,22 @@ class TextInputModel extends ViewComponent {
         }
       } else if (multiline && keyMatches(msg.key, [keyMap.lineUp])) {
         // Multi-line: Up arrow — move cursor up one line
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _lineUp();
       } else if (multiline && keyMatches(msg.key, [keyMap.selectLineUp])) {
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         _lineUp();
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (multiline && keyMatches(msg.key, [keyMap.lineDown])) {
         // Multi-line: Down arrow — move cursor down one line
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _lineDown();
       } else if (multiline && keyMatches(msg.key, [keyMap.selectLineDown])) {
-        _selectionStart ??= _pos;
+        selectionStart ??= _pos;
         _lineDown();
-        _selectionEnd = _pos;
+        selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
         _nextSuggestion();
       } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
@@ -2141,9 +2125,9 @@ class TextInputModel extends ViewComponent {
 
     // Selection range in visible space
     int? selStart, selEnd;
-    if (_selectionStart != null && _selectionEnd != null) {
-      final start = math.min(_selectionStart!, _selectionEnd!);
-      final end = math.max(_selectionStart!, _selectionEnd!);
+    if (selectionStart != null && selectionEnd != null) {
+      final start = math.min(selectionStart!, selectionEnd!);
+      final end = math.max(selectionStart!, selectionEnd!);
 
       selStart = math.max(0, start - _offset);
       selEnd = math.min(visibleValue.length, end - _offset);
@@ -2257,8 +2241,8 @@ class TextInputModel extends ViewComponent {
     // Click outside visible area — unfocus.
     if (msg.y < 0 || msg.y >= visibleHeight) {
       if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
-        _selectionStart = null;
-        _selectionEnd = null;
+        selectionStart = null;
+        selectionEnd = null;
         _mouseSelecting = false;
         _focused = false;
       }
@@ -2296,15 +2280,15 @@ class TextInputModel extends ViewComponent {
           _lastClickPos == pressFlatPos) {
         // Double click: select word
         final (start, end) = _findWordAt(pressFlatPos);
-        _selectionStart = start;
-        _selectionEnd = end;
+        selectionStart = start;
+        selectionEnd = end;
         _pos = end;
         _lastClickTime = now;
         _lastClickPos = pressFlatPos;
       } else {
         position = pressFlatPos;
-        _selectionStart = _pos;
-        _selectionEnd = _pos;
+        selectionStart = _pos;
+        selectionEnd = _pos;
         _lastClickTime = now;
         _lastClickPos = pressFlatPos;
       }
@@ -2318,7 +2302,7 @@ class TextInputModel extends ViewComponent {
     } else if (msg.action == MouseAction.motion && _mouseSelecting) {
       _resetDesiredCol();
       position = flatPos;
-      _selectionEnd = _pos;
+      selectionEnd = _pos;
       if (TuiTrace.enabled) {
         TuiTrace.log(
           'mouse.multiline motion x=${msg.x} y=${msg.y} localX=$localX '
@@ -2331,17 +2315,17 @@ class TextInputModel extends ViewComponent {
         TuiTrace.log(
           'mouse.multiline release x=${msg.x} y=${msg.y} localX=$localX '
           'row=$row clampedRow=$clampedRow flat=$flatPos before=$beforePos after=$_pos '
-          'sel=(${_selectionStart ?? -1},${_selectionEnd ?? -1})',
+          'sel=(${selectionStart ?? -1},${selectionEnd ?? -1})',
         );
       }
-      if (_selectionStart == _selectionEnd) {
-        _selectionStart = null;
-        _selectionEnd = null;
+      if (selectionStart == selectionEnd) {
+        selectionStart = null;
+        selectionEnd = null;
         return (this, null);
       }
       final cmd = _copySelectionCmdIfAny();
-      _selectionStart = null;
-      _selectionEnd = null;
+      selectionStart = null;
+      selectionEnd = null;
       return (this, cmd);
     }
     return (this, null);
@@ -2376,9 +2360,9 @@ class TextInputModel extends ViewComponent {
 
     // Compute absolute selection range.
     int? absSelStart, absSelEnd;
-    if (_selectionStart != null && _selectionEnd != null) {
-      absSelStart = math.min(_selectionStart!, _selectionEnd!);
-      absSelEnd = math.max(_selectionStart!, _selectionEnd!);
+    if (selectionStart != null && selectionEnd != null) {
+      absSelStart = math.min(selectionStart!, selectionEnd!);
+      absSelEnd = math.max(selectionStart!, selectionEnd!);
       if (absSelStart == absSelEnd) {
         absSelStart = null;
         absSelEnd = null;
