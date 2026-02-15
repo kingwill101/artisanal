@@ -1,0 +1,466 @@
+{
+  "name": "manual_scrollbar_drag_from_trace",
+  "description": "Converted from manual capture trace",
+  "screen": {
+    "width": 0,
+    "height": 0,
+    "fixedRightWidth": 0
+  },
+  "actions": [
+    {
+      "type": "special",
+      "key": "enter"
+    },
+    {
+      "type": "sleep",
+      "ms": 4020
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 13
+    },
+    {
+      "type": "sleep",
+      "ms": 1851
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 119,
+      "y": 12
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 120,
+      "y": 12,
+      "repeat": 2
+    },
+    {
+      "type": "sleep",
+      "ms": 959
+    },
+    {
+      "type": "drag",
+      "x": 127,
+      "y": 10,
+      "x2": 127,
+      "y2": 11,
+      "steps": 1
+    },
+    {
+      "type": "sleep",
+      "ms": 1862
+    },
+    {
+      "type": "tap",
+      "x": 135,
+      "y": 12
+    },
+    {
+      "type": "sleep",
+      "ms": 304
+    },
+    {
+      "type": "drag",
+      "x": 135,
+      "y": 17,
+      "x2": 135,
+      "y2": 19,
+      "steps": 2
+    },
+    {
+      "type": "sleep",
+      "ms": 4576
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 159,
+      "y": 18,
+      "repeat": 3
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 158,
+      "y": 18,
+      "repeat": 2
+    },
+    {
+      "type": "sleep",
+      "ms": 197
+    },
+    {
+      "type": "wheel",
+      "direction": "up",
+      "x": 158,
+      "y": 18,
+      "repeat": 4
+    },
+    {
+      "type": "sleep",
+      "ms": 508
+    },
+    {
+      "type": "tap",
+      "x": 141,
+      "y": 17
+    },
+    {
+      "type": "sleep",
+      "ms": 585
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 145,
+      "y": 21,
+      "repeat": 4
+    },
+    {
+      "type": "sleep",
+      "ms": 384
+    },
+    {
+      "type": "tap",
+      "x": 143,
+      "y": 18
+    },
+    {
+      "type": "sleep",
+      "ms": 323
+    },
+    {
+      "type": "tap",
+      "x": 144,
+      "y": 19
+    },
+    {
+      "type": "sleep",
+      "ms": 616
+    },
+    {
+      "type": "tap",
+      "x": 143,
+      "y": 17
+    },
+    {
+      "type": "sleep",
+      "ms": 797
+    },
+    {
+      "type": "tap",
+      "x": 139,
+      "y": 20
+    },
+    {
+      "type": "sleep",
+      "ms": 349
+    },
+    {
+      "type": "tap",
+      "x": 140,
+      "y": 19
+    },
+    {
+      "type": "sleep",
+      "ms": 744
+    },
+    {
+      "type": "tap",
+      "x": 141,
+      "y": 17
+    },
+    {
+      "type": "sleep",
+      "ms": 1846
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 12,
+      "repeat": 4
+    },
+    {
+      "type": "sleep",
+      "ms": 501
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 12,
+      "repeat": 3
+    },
+    {
+      "type": "sleep",
+      "ms": 504
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 12,
+      "repeat": 4
+    },
+    {
+      "type": "sleep",
+      "ms": 1403
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 135,
+      "y": 12,
+      "repeat": 2
+    },
+    {
+      "type": "sleep",
+      "ms": 2161
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 13,
+      "repeat": 2
+    },
+    {
+      "type": "sleep",
+      "ms": 393
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 13,
+      "repeat": 3
+    },
+    {
+      "type": "sleep",
+      "ms": 558
+    },
+    {
+      "type": "wheel",
+      "direction": "down",
+      "x": 133,
+      "y": 13,
+      "repeat": 4
+    },
+    {
+      "type": "sleep",
+      "ms": 734
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 13
+    },
+    {
+      "type": "sleep",
+      "ms": 621
+    },
+    {
+      "type": "tap",
+      "x": 132,
+      "y": 13
+    },
+    {
+      "type": "sleep",
+      "ms": 820
+    },
+    {
+      "type": "drag",
+      "x": 133,
+      "y": 14,
+      "x2": 133,
+      "y2": 20,
+      "steps": 6
+    },
+    {
+      "type": "sleep",
+      "ms": 753
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 21
+    },
+    {
+      "type": "sleep",
+      "ms": 578
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 21
+    },
+    {
+      "type": "sleep",
+      "ms": 579
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 24
+    },
+    {
+      "type": "sleep",
+      "ms": 522
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 26
+    },
+    {
+      "type": "sleep",
+      "ms": 721
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 26
+    },
+    {
+      "type": "sleep",
+      "ms": 330
+    },
+    {
+      "type": "tap",
+      "x": 135,
+      "y": 26
+    },
+    {
+      "type": "sleep",
+      "ms": 206
+    },
+    {
+      "type": "drag",
+      "x": 135,
+      "y": 26,
+      "x2": 135,
+      "y2": 27,
+      "steps": 1
+    },
+    {
+      "type": "sleep",
+      "ms": 169
+    },
+    {
+      "type": "tap",
+      "x": 135,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 107
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 89
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 85
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 41
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 59
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 56
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 208
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 107
+    },
+    {
+      "type": "tap",
+      "x": 134,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 140
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 101
+    },
+    {
+      "type": "tap",
+      "x": 133,
+      "y": 27
+    },
+    {
+      "type": "sleep",
+      "ms": 656
+    },
+    {
+      "type": "drag",
+      "x": 133,
+      "y": 27,
+      "x2": 133,
+      "y2": 5,
+      "steps": 22
+    }
+  ]
+}
