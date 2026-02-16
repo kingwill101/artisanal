@@ -1,0 +1,47 @@
+version: "3"
+
+vars:
+  cli_dir: ./pkgs/dash_cli
+  app_dir: ./pkgs/dash_app
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  run-cli:
+    desc: Run the Dash CLI
+    dir: "{{.cli_dir}}"
+    cmds:
+      - ./dash
+
+  run-app:
+    desc: Run the Flutter Dash App
+    dir: "{{.app_dir}}"
+    cmds:
+      - flutter run
+
+  build-cli:
+    desc: Build the Dash CLI executable
+    dir: "{{.cli_dir}}"
+    cmds:
+      - task default  # Uses sub-Taskfile to compile
+
+  build-app:
+    desc: Build the Flutter Dash App
+    dir: "{{.app_dir}}"
+    cmds:
+      - flutter build linux  # Assume Linux default; adjust for macOS if needed
+
+  test-cli:
+    desc: Run tests for Dash CLI
+    dir: "{{.cli_dir}}"
+    cmds:
+      - dart test
+
+  test-app:
+    desc: Run tests for Dash App
+    dir: "{{.app_dir}}"
+    cmds:
+      - flutter test
