@@ -187,9 +187,10 @@ class BasicColor extends Color {
 
   static String _dimHex(String hex) {
     // Reduce brightness by 40%
-    final r = int.parse(hex.substring(1, 3), radix: 16);
-    final g = int.parse(hex.substring(3, 5), radix: 16);
-    final b = int.parse(hex.substring(5, 7), radix: 16);
+    final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
+    final r = _parseHexChannel(normalized.substring(0, 2));
+    final g = _parseHexChannel(normalized.substring(2, 4));
+    final b = _parseHexChannel(normalized.substring(4, 6));
     final dr = (r * 0.6).round().clamp(0, 255);
     final dg = (g * 0.6).round().clamp(0, 255);
     final db = (b * 0.6).round().clamp(0, 255);
@@ -711,8 +712,10 @@ cp.Profile _toInternalProfile(ColorProfile profile) {
 
 (int, int, int) _parseHexRgb(String hex) {
   final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
-  final r = int.parse(normalized.substring(0, 2), radix: 16);
-  final g = int.parse(normalized.substring(2, 4), radix: 16);
-  final b = int.parse(normalized.substring(4, 6), radix: 16);
+  final r = _parseHexChannel(normalized.substring(0, 2));
+  final g = _parseHexChannel(normalized.substring(2, 4));
+  final b = _parseHexChannel(normalized.substring(4, 6));
   return (r, g, b);
 }
+
+int _parseHexChannel(String value) => int.tryParse(value, radix: 16) ?? 0;

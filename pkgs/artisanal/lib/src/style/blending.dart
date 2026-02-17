@@ -153,9 +153,9 @@ cp.Rgb? _toRgb(Color c, {required bool hasDarkBackground}) {
         return cp.ansi256ToRgb(code);
       }
       final hex = _normalizeHex(value);
-      final r = int.parse(hex.substring(1, 3), radix: 16);
-      final g = int.parse(hex.substring(3, 5), radix: 16);
-      final b = int.parse(hex.substring(5, 7), radix: 16);
+      final r = _parseHexChannel(hex.substring(1, 3));
+      final g = _parseHexChannel(hex.substring(3, 5));
+      final b = _parseHexChannel(hex.substring(5, 7));
       return cp.Rgb(r, g, b);
     case AdaptiveColor(:final light, :final dark):
       return _toRgb(
@@ -184,3 +184,5 @@ String _normalizeHex(String value) {
   }
   return '#$hex';
 }
+
+int _parseHexChannel(String value) => int.tryParse(value, radix: 16) ?? 0;

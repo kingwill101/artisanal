@@ -440,9 +440,9 @@ class ColorProfileMsg extends Msg {
   if (hex == null) return null;
   final s = hex.trim();
   if (!RegExp(r'^#[0-9a-fA-F]{6}$').hasMatch(s)) return null;
-  final r = int.parse(s.substring(1, 3), radix: 16);
-  final g = int.parse(s.substring(3, 5), radix: 16);
-  final b = int.parse(s.substring(5, 7), radix: 16);
+  final r = int.tryParse(s.substring(1, 3), radix: 16) ?? 0;
+  final g = int.tryParse(s.substring(3, 5), radix: 16) ?? 0;
+  final b = int.tryParse(s.substring(5, 7), radix: 16) ?? 0;
   return (r: r, g: g, b: b);
 }
 

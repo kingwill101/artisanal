@@ -902,8 +902,8 @@ class GitDiffModel extends ViewComponent {
           r'^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(.*)$',
         ).firstMatch(line);
         if (hunkMatch != null) {
-          oldLineNum = int.parse(hunkMatch.group(1)!);
-          newLineNum = int.parse(hunkMatch.group(2)!);
+          oldLineNum = int.tryParse(hunkMatch.group(1) ?? '') ?? 0;
+          newLineNum = int.tryParse(hunkMatch.group(2) ?? '') ?? 0;
         }
         currentLines.add(
           DiffLine(type: DiffLineType.hunkHeader, content: line),

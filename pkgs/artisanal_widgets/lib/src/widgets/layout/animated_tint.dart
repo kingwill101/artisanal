@@ -160,12 +160,12 @@ Color _lerpColor(Color a, Color b, double t) {
 
   if (normA.length != 6 || normB.length != 6) return t < 0.5 ? a : b;
 
-  final rA = int.parse(normA.substring(0, 2), radix: 16);
-  final gA = int.parse(normA.substring(2, 4), radix: 16);
-  final bA = int.parse(normA.substring(4, 6), radix: 16);
-  final rB = int.parse(normB.substring(0, 2), radix: 16);
-  final gB = int.parse(normB.substring(2, 4), radix: 16);
-  final bB = int.parse(normB.substring(4, 6), radix: 16);
+  final rA = int.tryParse(normA.substring(0, 2), radix: 16) ?? 0;
+  final gA = int.tryParse(normA.substring(2, 4), radix: 16) ?? 0;
+  final bA = int.tryParse(normA.substring(4, 6), radix: 16) ?? 0;
+  final rB = int.tryParse(normB.substring(0, 2), radix: 16) ?? 0;
+  final gB = int.tryParse(normB.substring(2, 4), radix: 16) ?? 0;
+  final bB = int.tryParse(normB.substring(4, 6), radix: 16) ?? 0;
 
   final r = (rA + (rB - rA) * t).round().clamp(0, 255);
   final g = (gA + (gB - gA) * t).round().clamp(0, 255);

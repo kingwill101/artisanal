@@ -2019,7 +2019,10 @@ List<int> _decodeHex(String hexStr) {
   if (hexStr.length.isOdd) throw const FormatException('odd length hex');
   final out = <int>[];
   for (var i = 0; i < hexStr.length; i += 2) {
-    final byte = int.parse(hexStr.substring(i, i + 2), radix: 16);
+    final byte = int.tryParse(hexStr.substring(i, i + 2), radix: 16);
+    if (byte == null) {
+      return const [];
+    }
     out.add(byte);
   }
   return out;

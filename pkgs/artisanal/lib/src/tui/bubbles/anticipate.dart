@@ -122,7 +122,9 @@ class AnticipateModel extends ViewComponent {
        _suggestionStyle = suggestionStyle ?? Style(),
        _selectedSuggestionStyle =
            selectedSuggestionStyle ??
-           Style().foreground(AnsiColor(int.parse(config.highlightColor)));
+           Style().foreground(
+             AnsiColor(int.tryParse(config.highlightColor) ?? 0),
+           );
 
   /// Prompt displayed before input.
   final String prompt;
