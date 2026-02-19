@@ -1,6 +1,6 @@
 # artisanal_widgets Architecture Review
 
-Last updated: 2026-02-12
+Last updated: 2026-02-19
 
 This document captures the current implementation state and near-term plans for
 widget architecture in `pkgs/artisanal_widgets`, plus direct integration
@@ -82,6 +82,15 @@ boundaries in `pkgs/artisanal`.
 - The package intentionally mirrors Flutter idioms while preserving artisanal's
   TEA command model.
 
+### Dependency and example ownership boundaries
+
+- `artisanal_widgets` now keeps OpenCode example state models local to
+  `example/opencode/models/*` and imports those directly from example widgets.
+- The package dependency surface is intentionally minimal: runtime deps are
+  `artisanal`, `image`, and `meta`; dev deps are `lints` and `test`.
+- This keeps package architecture independent from external app-package model
+  libraries while still allowing rich example apps.
+
 ## 2) Concrete strengths
 
 1. Clear layering (`Widget -> Element -> RenderObject`) backed by explicit
@@ -101,6 +110,8 @@ boundaries in `pkgs/artisanal`.
 11. Performance/debug instrumentation is built into `BuildOwner`/`WidgetApp`.
 12. Integration boundaries are documented and consistently tied to artisanal's
     public barrels.
+13. OpenCode example model ownership is self-contained, reducing cross-package
+    coupling risk for `artisanal_widgets`.
 
 ## 3) Concrete gaps and risks
 
@@ -123,6 +134,8 @@ boundaries in `pkgs/artisanal`.
    flags.
 10. The broader artisanal package is explicitly marked work-in-progress and API
     instability remains an integration risk.
+11. Example-local OpenCode models can drift from external app ecosystems if
+    model evolution is not periodically reviewed.
 
 ## 4) Evidence (file references)
 
@@ -171,5 +184,12 @@ boundaries in `pkgs/artisanal`.
 - Testing approach: `pkgs/artisanal_widgets/lib/src/widgets/testing/widget_tester.dart:1`,
   `pkgs/artisanal_widgets/lib/src/widgets/testing/widget_tester.dart:6`,
   `pkgs/artisanal_widgets/lib/src/widgets/testing/widget_tester.dart:68`.
+- Example model ownership and dependency boundary:
+  `pkgs/artisanal_widgets/example/opencode/main.dart:14`,
+  `pkgs/artisanal_widgets/example/opencode/main.dart:15`,
+  `pkgs/artisanal_widgets/example/opencode/models/chat_model.dart:1`,
+  `pkgs/artisanal_widgets/example/opencode/models/message.dart:1`,
+  `pkgs/artisanal_widgets/pubspec.yaml:19`,
+  `pkgs/artisanal_widgets/pubspec.yaml:25`.
 - Integration boundary in core package: `pkgs/artisanal/README.md:27`,
   `pkgs/artisanal/README.md:43`, `pkgs/artisanal/README.md:50`.

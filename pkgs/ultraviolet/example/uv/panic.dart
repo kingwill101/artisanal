@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'dart:async';
 
 void main() async {
@@ -32,6 +32,10 @@ void main() async {
     display();
 
     await for (final event in terminal.events) {
+      if (event is WindowSizeEvent) {
+        terminal.resize(event.width, event.height);
+        terminal.clearScreen();
+      }
       if (event is KeyEvent) {
         if (event.matchString('q', 'ctrl+c')) {
           break;

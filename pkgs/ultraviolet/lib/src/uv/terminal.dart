@@ -444,6 +444,14 @@ class Terminal
     _renderer.setScrollOptim(v);
   }
 
+  /// Sets whether rendered frames should use synchronized terminal updates.
+  ///
+  /// When enabled, compatible terminals buffer a frame and present it
+  /// atomically, which can reduce visible tearing during rapid redraws.
+  void setSynchronizedOutput(bool v) {
+    _renderer.setSynchronizedOutput(v);
+  }
+
   /// Sets the escape sequence timeout.
   void setEscTimeout(Duration d) {
     _reader.escTimeout = d;

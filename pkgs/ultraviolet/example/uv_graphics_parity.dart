@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'package:image/image.dart' as img;
 
 void main() async {
@@ -87,6 +87,16 @@ void main() async {
   // Wait for a key
   await for (final event in terminal.events) {
     if (event is KeyPressEvent) break;
+    if (event is WindowSizeEvent) {
+      terminal.resize(event.width, event.height);
+      terminal.clearScreen();
+      draw();
+    }
+    if (event is KittyGraphicsEvent ||
+        event is PrimaryDeviceAttributesEvent ||
+        event is SecondaryDeviceAttributesEvent) {
+      draw();
+    }
   }
 
   await terminal.stop();

@@ -295,6 +295,7 @@ abstract final class _Flag {
   static const int fullscreen = 1 << 1;
   static const int mapNewline = 1 << 2;
   static const int scrollOptim = 1 << 3;
+  static const int synchronizedOutput = 1 << 4;
 }
 
 final class _Cursor {
@@ -425,6 +426,24 @@ final class UvTerminalRenderer {
       _flags &= ~_Flag.scrollOptim;
     }
   }
+
+  /// Enables or disables synchronized terminal updates (DECSET 2026).
+  ///
+  /// When enabled, each rendered frame is wrapped between
+  /// [UvAnsi.beginSynchronizedUpdate] and [UvAnsi.endSynchronizedUpdate] so
+  /// compatible terminals present the frame atomically.
+  ///
+  /// This is opt-in and disabled by default for parity with upstream outputs.
+  void setSynchronizedOutput(bool v) {
+    if (v) {
+      _flags |= _Flag.synchronizedOutput;
+    } else {
+      _flags &= ~_Flag.synchronizedOutput;
+    }
+  }
+
+  /// Whether synchronized frame output is enabled.
+  bool synchronizedOutput() => (_flags & _Flag.synchronizedOutput) != 0;
 
   /// Enables or disables fullscreen (alternate screen) mode.
   void setFullscreen(bool v) {
@@ -764,6 +783,11 @@ final class UvTerminalRenderer {
       return;
     }
 
+    final useSync = synchronizedOutput();
+    if (useSync) {
+      _buf.write(UvAnsi.beginSynchronizedUpdate);
+    }
+
     _curbuf ??= Buffer.create(newbuf.width(), newbuf.height());
 
     final newWidth = newbuf.width();
@@ -856,6 +880,9 @@ final class UvTerminalRenderer {
 
     // Reset pen after rendering to avoid style/link bleed.
     _updatePen(null);
+    if (useSync) {
+      _buf.write(UvAnsi.endSynchronizedUpdate);
+    }
 
     metrics.endFrame();
   }

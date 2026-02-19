@@ -842,14 +842,15 @@ Structured trace events use a strict, versioned schema:
   - mouse: `kind=mouse`, `action`, `button`, `x`, `y`
 
 Use `TuiTrace.tryParseEventLine(...)` to consume trace events without regex.
-This gives Dash/custom tooling a stable contract for type-specific replay and
+This gives apps/custom tooling a stable contract for type-specific replay and
 interceptor logic.
 
 ### Extension Log Routing
 
-Dash config supports extension log routing under `tui.extensionLogMode`:
+Application config can support extension log routing under
+`tui.extensionLogMode`:
 
-- `ui` (default): route `dash.log.*` through the UI bridge (safe for TUI)
+- `ui` (default): route `app.log.*` through the UI bridge (safe for TUI)
 - `stdout`: write logs to terminal stdout directly
 - `off`: suppress extension log output
 
@@ -861,23 +862,23 @@ Dash config supports extension log routing under `tui.extensionLogMode`:
 }
 ```
 
-## Replay + Trace Workflow (Dash TUI Example)
+## Replay + Trace Workflow (OpenCode Example)
 
 Record a manual run:
 
 ```bash
 ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_CAPTURE=1 \
-ARTISANAL_TUI_TRACE_PATH="pkgs/dash_tui/traces/manual-$(date +%Y-%m-%dT%H-%M-%S).log" \
-dart run pkgs/dash_tui/bin/dash_tui.dart
+ARTISANAL_TUI_TRACE_PATH="pkgs/artisanal_widgets/example/opencode/traces/manual-$(date +%Y-%m-%dT%H-%M-%S).log" \
+dart run pkgs/artisanal_widgets/example/opencode/main.dart
 ```
 
 Convert trace to replay scenario:
 
 ```bash
-LATEST_TRACE="$(ls -1t pkgs/dash_tui/traces/*.log | head -n1)"
-dart run pkgs/dash_tui/bin/dash_tui.dart \
+LATEST_TRACE="$(ls -1t pkgs/artisanal_widgets/example/opencode/traces/*.log | head -n1)"
+dart run pkgs/artisanal_widgets/example/opencode/main.dart \
   --replay-trace "$LATEST_TRACE" \
-  --replay-trace-out pkgs/dash_tui/scenarios/manual_from_trace.json \
+  --replay-trace-out pkgs/artisanal_widgets/example/opencode/scenarios/manual_from_trace.json \
   --replay-trace-name manual_from_trace \
   --replay-convert-only
 ```
@@ -885,27 +886,20 @@ dart run pkgs/dash_tui/bin/dash_tui.dart \
 Replay deterministically (and block manual input):
 
 ```bash
-dart run pkgs/dash_tui/bin/dash_tui.dart \
-  --replay-scenario pkgs/dash_tui/scenarios/manual_from_trace.json \
+dart run pkgs/artisanal_widgets/example/opencode/main.dart \
+  --replay-scenario pkgs/artisanal_widgets/example/opencode/scenarios/manual_from_trace.json \
   --replay-block-input \
   --replay-speed 8
 ```
 
-Compare scrollbar behavior between manual and replay traces:
+Inspect top trace hotspots after a run:
 
 ```bash
-dart run pkgs/dash_tui/bin/trace_compare.dart \
-  --left pkgs/dash_tui/traces/manual-a.log \
-  --right pkgs/dash_tui/traces/replay-b.log \
-  --left-label manual \
-  --right-label replay
+python pkgs/artisanal_widgets/example/opencode/analyze_trace.py \
+  "$LATEST_TRACE" --top 12
 ```
 
-The comparison utility summarizes:
-- `window.size` capture metadata
-- total `scrollbar.jump` counts
-- per-`x` press buckets (`presses_with_jump`, `presses_without_jump`)
-- side-by-side diff of per-`x` buckets
+The analyzer summarizes high-cost handlers and event categories.
 
 ## UV Renderer Integration
 

@@ -79,7 +79,12 @@ dart run pkgs/artisanal_widgets/example/linear_progress_indicator/main.dart
 dart run pkgs/artisanal_widgets/example/circular_progress_indicator/main.dart
 dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
 dart run pkgs/artisanal_widgets/example/charting/main.dart
+dart run pkgs/artisanal_widgets/example/opencode/main.dart
 ```
+
+The OpenCode example is self-contained under
+`pkgs/artisanal_widgets/example/opencode` (including local data models and
+theme assets).
 
 ## Program Instrumentation
 

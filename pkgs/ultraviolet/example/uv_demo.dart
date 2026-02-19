@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 void main() async {
   final terminal = Terminal();
@@ -90,6 +90,8 @@ void main() async {
         mouseY = event.mouse().y;
       } else if (event is WindowSizeEvent) {
         lastEvent = 'Resized to ${event.width}x${event.height}';
+        terminal.resize(event.width, event.height);
+        terminal.clearScreen();
       }
 
       draw();

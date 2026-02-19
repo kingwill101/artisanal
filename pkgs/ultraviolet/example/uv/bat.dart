@@ -1,14 +1,18 @@
 import 'dart:io';
 import 'dart:math';
-import 'package:artisanal/uv.dart';
-import 'package:artisanal/terminal.dart' as term;
+import 'package:ultraviolet/ultraviolet.dart';
 
 const _headerHeight = 3;
 const _footerHeight = 2;
+const _ansiReset = '\x1b[0m';
+const _ansiBold = '\x1b[1m';
+const _ansiDim = '\x1b[2m';
+
+String _ansiFg256(int color) => '\x1b[38;5;${color}m';
 
 void main(List<String> args) async {
   if (args.isEmpty) {
-    print('Usage: dart bat_clone.dart <file>');
+    print('Usage: dart run example/uv/bat.dart <file>');
     return;
   }
 
@@ -44,10 +48,10 @@ void main(List<String> args) async {
   }) {
     return [
       color,
-      if (bold) term.Ansi.bold,
-      if (dim) term.Ansi.dim,
+      if (bold) _ansiBold,
+      if (dim) _ansiDim,
       text,
-      term.Ansi.reset,
+      _ansiReset,
     ].join();
   }
 
@@ -79,26 +83,26 @@ void main(List<String> args) async {
     }
     final gutterPad = styled(
       ' ' * lineNumWidth,
-      color: term.Ansi.fg256(240),
+      color: _ansiFg256(240),
       dim: true,
     );
-    final gutterSpacer = styled(' ', color: term.Ansi.fg256(240), dim: true);
+    final gutterSpacer = styled(' ', color: _ansiFg256(240), dim: true);
 
     // Header
     final topBorder =
-        '${styled('─' * leftBorderWidth, color: term.Ansi.fg256(240), dim: true)}'
+        '${styled('─' * leftBorderWidth, color: _ansiFg256(240), dim: true)}'
         '┬'
-        '${styled('─' * headerWidth, color: term.Ansi.fg256(240), dim: true)}';
+        '${styled('─' * headerWidth, color: _ansiFg256(240), dim: true)}';
     final headerText =
         'File: $fileName  '
         'Lines: ${lines.length}';
     final fileLine =
-        '$gutterPad$gutterSpacer${styled('│', color: term.Ansi.fg256(240), dim: true)} '
-        '${styled(truncate(headerText, contentWidth), color: term.Ansi.fg256(81), bold: true)}';
+        '$gutterPad$gutterSpacer${styled('│', color: _ansiFg256(240), dim: true)} '
+        '${styled(truncate(headerText, contentWidth), color: _ansiFg256(81), bold: true)}';
     final midBorder =
-        '${styled('─' * leftBorderWidth, color: term.Ansi.fg256(240), dim: true)}'
+        '${styled('─' * leftBorderWidth, color: _ansiFg256(240), dim: true)}'
         '┼'
-        '${styled('─' * headerWidth, color: term.Ansi.fg256(240), dim: true)}';
+        '${styled('─' * headerWidth, color: _ansiFg256(240), dim: true)}';
 
     StyledString(topBorder).draw(terminal, rect(0, 0, width, 1));
     StyledString(fileLine).draw(terminal, rect(0, 1, width, 1));
@@ -111,12 +115,12 @@ void main(List<String> args) async {
       final lineNumText = (lineIndex + 1).toString();
       final lineNum = styled(
         lineNumText.padLeft(lineNumWidth),
-        color: term.Ansi.fg256(244),
+        color: _ansiFg256(244),
         dim: true,
       );
       final lineText =
           '$lineNum'
-          '$gutterSpacer${styled('│', color: term.Ansi.fg256(240), dim: true)} '
+          '$gutterSpacer${styled('│', color: _ansiFg256(240), dim: true)} '
           '${truncate(lines[lineIndex], contentWidth)}';
       final ss = StyledString(lineText);
       ss.draw(terminal, rect(0, 3 + i, width, 1));
@@ -135,11 +139,11 @@ void main(List<String> args) async {
       status = '$startLine-$endLine/${lines.length} ($percent%)';
     }
     final statusLine =
-        '$gutterPad$gutterSpacer${styled('│', color: term.Ansi.fg256(240), dim: true)} '
-        '${styled(truncate(status, contentWidth), color: term.Ansi.fg256(247), bold: true)}';
+        '$gutterPad$gutterSpacer${styled('│', color: _ansiFg256(240), dim: true)} '
+        '${styled(truncate(status, contentWidth), color: _ansiFg256(247), bold: true)}';
     final helpLine =
-        '$gutterPad$gutterSpacer${styled('│', color: term.Ansi.fg256(240), dim: true)} '
-        '${styled(truncate('q: quit  Up/Down: scroll  PgUp/PgDn: page', contentWidth), color: term.Ansi.fg256(245), dim: true)}';
+        '$gutterPad$gutterSpacer${styled('│', color: _ansiFg256(240), dim: true)} '
+        '${styled(truncate('q: quit  Up/Down: scroll  PgUp/PgDn: page', contentWidth), color: _ansiFg256(245), dim: true)}';
 
     StyledString(statusLine).draw(terminal, rect(0, height - 2, width, 1));
     StyledString(helpLine).draw(terminal, rect(0, height - 1, width, 1));

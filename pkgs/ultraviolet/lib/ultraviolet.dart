@@ -88,6 +88,7 @@ export 'src/uv/ansi_slice.dart' show cutAnsiByCells;
 export 'src/uv/key.dart';
 export 'src/uv/key_table.dart';
 export 'src/uv/ansi.dart' show UvAnsi;
+export 'src/ansi.dart' show Ansi;
 export 'src/uv/style_ops.dart';
 export 'src/uv/progress_bar.dart';
 export 'src/uv/wrap.dart';

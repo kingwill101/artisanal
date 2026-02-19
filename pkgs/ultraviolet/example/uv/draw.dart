@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 void main() async {
   final terminal = Terminal();

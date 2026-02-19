@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 final gray = UvColor.rgb(104, 104, 104);
 final white = UvColor.rgb(180, 180, 180);
@@ -105,12 +105,12 @@ void main() async {
         height = event.height;
         terminal.resize(width, height);
         terminal.clearScreen();
-        display();
       } else if (event is KeyEvent) {
         if (event.matchString('q', 'ctrl+c')) {
           break;
         }
       }
+      display();
     }
   } finally {
     await terminal.stop();

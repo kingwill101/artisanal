@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'dart:async';
 
 class Layout {
@@ -55,6 +55,7 @@ void main() async {
         area = event.bounds();
         terminal.resize(event.width, event.height);
         terminal.clearScreen();
+        display();
       } else if (event is KeyEvent) {
         if (event.matchString('ctrl+c', 'q')) {
           break;

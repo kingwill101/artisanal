@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 void main() async {
   final terminal = Terminal();
@@ -49,7 +49,6 @@ void main() async {
         width = event.width;
         height = event.height;
         terminal.clearScreen();
-        display();
       } else if (event is KeyEvent) {
         if (event.matchString('ctrl+c', 'q')) {
           altScreen = false;

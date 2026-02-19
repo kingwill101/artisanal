@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 
 // #region uv_basic_usage
 void main() async {
@@ -42,7 +42,6 @@ void main() async {
       if (event is WindowSizeEvent) {
         terminal.resize(event.width, event.height);
         terminal.clearScreen();
-        display();
       } else if (event is KeyEvent) {
         if (event.matchString('q', 'ctrl+c')) {
           break;

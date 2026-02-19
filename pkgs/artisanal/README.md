@@ -262,4 +262,4 @@ See the `example/` directory for comprehensive demos:
 - `lipgloss_table.dart` – Styled tables
 - `log_viewer_demo.dart` – Monitoring dashboard
 - `command_center_demo.dart` – Multi-panel layouts
-- `uv_demo.dart` – Ultraviolet renderer basics
+- UV-specific demos now live in `pkgs/ultraviolet/example/`

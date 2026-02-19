@@ -1,8 +1,13 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'dart:io';
 
 import 'package:image/image.dart' as img;
-import 'package:path/path.dart' as p;
+
+String _basename(String value) {
+  final normalized = value.replaceAll('\\', '/');
+  final idx = normalized.lastIndexOf('/');
+  return idx == -1 ? normalized : normalized.substring(idx + 1);
+}
 
 void main(List<String> args) async {
   final t = Terminal();
@@ -17,9 +22,9 @@ void main(List<String> args) async {
   } else {
     // Try to find a default image in the workspace.
     final possiblePaths = [
-      'example/tui/examples/timer/timer.gif',
-      'packages/artisanal/example/tui/examples/timer/timer.gif',
-      '../example/tui/examples/timer/timer.gif',
+      '../artisanal/example/tui/examples/timer/timer.gif',
+      'pkgs/artisanal/example/tui/examples/timer/timer.gif',
+      './pkgs/artisanal/example/tui/examples/timer/timer.gif',
     ];
     for (final path in possiblePaths) {
       if (File(path).existsSync()) {
@@ -53,7 +58,7 @@ void main(List<String> args) async {
           '''
 Image Example
 =============
-File: ${p.basename(imagePath!)}
+File: ${_basename(imagePath!)}
 Protocol: ${t.capabilities.hasKittyGraphics
               ? 'Kitty'
               : t.capabilities.hasITerm2
@@ -108,6 +113,8 @@ Press 'q' to exit.
         }
       }
       if (event is WindowSizeEvent) {
+        t.resize(event.width, event.height);
+        t.clearScreen();
         render();
       }
       // Re-render if capabilities change (e.g. after query responses).

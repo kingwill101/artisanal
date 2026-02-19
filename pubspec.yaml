@@ -3,19 +3,6 @@ publish_to: none
 workspace:
   - pkgs/artisanal
   - pkgs/artisanal_widgets
-  - pkgs/dash_ai
-  - pkgs/dash_agent
-  - pkgs/dash
-  - pkgs/dash_acp
-  - pkgs/dash_cli
-  - pkgs/dash_lsp
-  - pkgs/dash_mcp
-  - pkgs/dash_memory
-  - pkgs/dash_ui
-  - pkgs/dash_web
-  - pkgs/dash_telegram
-  - pkgs/dash_tui
-  - pkgs/dash_pty
   - pkgs/ultraviolet
 
 funding:

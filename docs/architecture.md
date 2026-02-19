@@ -1,25 +1,20 @@
-# Dash Architecture
+# Artisanal Workspace Architecture
 
-Dash is the Pi‑equivalent core used to build an OpenClaw‑like assistant layer.
-Keep the core lean and composable; build product UX on top.
+The workspace is centered on reusable terminal UI primitives and rendering,
+with app-level behavior built on top.
 
 ## Package Boundaries
-1. `dash_ai`: provider SDK and model/runtime types.
-2. `dash_agent`: agent loop, events, tool protocol, steering.
-3. `dash`: core library (config, permissions, sessions, tool implementations).
-4. `dash_cli`: CLI runtime and print‑mode renderer.
-5. Assistant UX (TUI/web/server/MCP surfaces) should live in a separate app/package.
+1. `artisanal`: core terminal toolkit (styles, layout, markdown, TUI runtime).
+2. `artisanal_widgets`: composable widget system and higher-level UI widgets.
+3. `ultraviolet`: low-level UV terminal renderer and graphics primitives.
 
 ## Core Principles
-1. Minimal prompt + minimal core tools in `dash_agent`.
-2. Extensions/skills add UI and domain behavior, not the core.
-3. Sessions are trees; extension state belongs in custom messages.
-4. MCP is not a core dependency; integrate via a higher‑level package.
+1. Keep `artisanal` focused on stable primitives, not app-specific logic.
+2. Build reusable UI components in `artisanal_widgets` without product coupling.
+3. Keep renderer concerns (`diff`, sync output, frame behavior) in `ultraviolet`.
+4. Treat examples and app shells as consumers, not framework core.
 
-## Non‑Goals (for `dash`)
-1. Rich UI (TUI/web) or assistant orchestration UI.
-2. Embedded MCP servers/clients.
-3. Opinionated assistant workflows (those belong in the higher‑level package).
-
-## References
-- https://lucumr.pocoo.org/2026/1/31/pi/
+## Non-Goals
+1. Embedding product-specific assistant orchestration in core packages.
+2. Tight coupling from widgets/examples to external app repos.
+3. Mixing renderer internals into widget/business-layer APIs.

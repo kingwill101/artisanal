@@ -1,4 +1,4 @@
-import 'package:artisanal/uv.dart';
+import 'package:ultraviolet/ultraviolet.dart';
 import 'dart:async';
 import 'dart:math';
 
@@ -77,6 +77,7 @@ void main() async {
           lastHeight = height;
           terminal.resize(width, height);
           terminal.clearScreen();
+          display();
         }
       } else if (event is KeyEvent) {
         if (event.matchString('q', 'ctrl+c')) {

@@ -11,7 +11,8 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'dart:io';
 
-import 'package:dash_ui/dash_ui.dart';
+import 'models/chat_model.dart';
+import 'models/message.dart';
 import 'theme.dart';
 import 'widgets/chat_body.dart';
 import 'widgets/copy_toast.dart';

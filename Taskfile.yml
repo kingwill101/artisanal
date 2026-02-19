@@ -1,8 +1,9 @@
 version: "3"
 
 vars:
-  cli_dir: ./pkgs/dash_cli
-  app_dir: ./pkgs/dash_app
+  core_dir: ./pkgs/artisanal
+  widgets_dir: ./pkgs/artisanal_widgets
+  uv_dir: ./pkgs/ultraviolet
 
 tasks:
   default:
@@ -10,38 +11,35 @@ tasks:
     cmds:
       - task --list
 
-  run-cli:
-    desc: Run the Dash CLI
-    dir: "{{.cli_dir}}"
+  analyze:
+    desc: Analyze the workspace
     cmds:
-      - ./dash
+      - dart analyze
 
-  run-app:
-    desc: Run the Flutter Dash App
-    dir: "{{.app_dir}}"
-    cmds:
-      - flutter run
-
-  build-cli:
-    desc: Build the Dash CLI executable
-    dir: "{{.cli_dir}}"
-    cmds:
-      - task default  # Uses sub-Taskfile to compile
-
-  build-app:
-    desc: Build the Flutter Dash App
-    dir: "{{.app_dir}}"
-    cmds:
-      - flutter build linux  # Assume Linux default; adjust for macOS if needed
-
-  test-cli:
-    desc: Run tests for Dash CLI
-    dir: "{{.cli_dir}}"
+  test-core:
+    desc: Run tests for artisanal core
+    dir: "{{.core_dir}}"
     cmds:
       - dart test
 
-  test-app:
-    desc: Run tests for Dash App
-    dir: "{{.app_dir}}"
+  test-widgets:
+    desc: Run tests for artisanal widgets
+    dir: "{{.widgets_dir}}"
     cmds:
-      - flutter test
+      - dart test
+
+  test-uv:
+    desc: Run tests for ultraviolet
+    dir: "{{.uv_dir}}"
+    cmds:
+      - dart test
+
+  run-opencode:
+    desc: Run the artisanal_widgets OpenCode example
+    cmds:
+      - dart run pkgs/artisanal_widgets/example/opencode/main.dart
+
+  run-uv-layout:
+    desc: Run the ultraviolet layout example
+    cmds:
+      - dart run pkgs/ultraviolet/example/uv/layout.dart

@@ -713,7 +713,7 @@ final class _GraphicsPage extends _KitchenSinkPage {
       '',
       'Note: To see real images, check out the dedicated image demos:',
       '  - example/compositor_image_demo.dart',
-      '  - example/uv/image.dart',
+      '  - pkgs/ultraviolet/example/uv/image.dart',
     ].join('\n');
   }
 }
