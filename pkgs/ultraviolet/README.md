@@ -71,21 +71,14 @@ Future<void> main() async {
 
 ## Demo Captures
 
-Raycast maze:
+Media files are in `assets/`:
 
-![Raycast maze demo](assets/raycast.gif)
+- `assets/raycast.gif` (raycast maze)
+- `assets/conway.gif` (Conway's Game of Life)
+- `assets/metaballs.gif` (metaballs/marching squares)
+- `assets/layout.png` (`example/layout.dart`)
 
-Conway's Game of Life:
-
-![Conway demo](assets/conway.gif)
-
-Metaballs / marching squares:
-
-![Metaballs demo](assets/metaballs.gif)
-
-Layout example (`example/layout.dart`):
-
-![Layout demo](assets/layout.png)
+On pub.dev, use the package screenshot gallery (configured in `pubspec.yaml`).
 
 ## Performance Tips
 

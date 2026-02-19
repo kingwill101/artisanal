@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+### Fixed
+
+- Updated package screenshots/readme media setup for pub.dev rendering.
+- Added `pubspec.yaml` screenshot metadata (`assets/layout.png`) for package page preview.
+
 ## 0.1.0
 
 ### Added
