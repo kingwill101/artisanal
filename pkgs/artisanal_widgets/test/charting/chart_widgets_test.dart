@@ -241,7 +241,7 @@ void main() {
       model.addListener(() => notified++);
 
       model.dispose();
-      model.type = ChartType.pie;
+      expect(() => model.type = ChartType.pie, throwsStateError);
       expect(notified, 0);
     });
   });

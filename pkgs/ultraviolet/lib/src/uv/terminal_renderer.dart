@@ -651,6 +651,15 @@ final class UvTerminalRenderer {
     return n;
   }
 
+  int _dirtyTouched(Buffer buf) {
+    if (buf.touched.isEmpty) return buf.height();
+    var n = 0;
+    for (final ch in buf.touched) {
+      if (ch != null && (ch.firstCell != -1 || ch.lastCell != -1)) n++;
+    }
+    return n;
+  }
+
   /// Returns the number of touched (dirty) lines in [buf].
   int touched(Buffer buf) => _touched(buf);
 
@@ -777,7 +786,7 @@ final class UvTerminalRenderer {
   void render(Buffer newbuf) {
     metrics.beginFrame();
 
-    final touchedLines = _touched(newbuf);
+    final touchedLines = _dirtyTouched(newbuf);
     if (!_clear && touchedLines == 0) {
       metrics.endFrame(skipped: true);
       return;

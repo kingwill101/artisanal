@@ -4,6 +4,19 @@ import 'package:artisanal/src/terminal/ansi.dart';
 import 'package:artisanal/src/tui/markdown/ansi_renderer.dart';
 import 'package:test/test.dart';
 
+File _resolvePackageFile(String relativePath) {
+  final candidates = <String>[
+    relativePath,
+    'pkgs/artisanal/$relativePath',
+    'packages/artisanal/$relativePath',
+  ];
+  for (final candidate in candidates) {
+    final file = File(candidate);
+    if (file.existsSync()) return file;
+  }
+  throw FileSystemException('Unable to locate test fixture', relativePath);
+}
+
 void main() {
   group('Markdown file rendering', () {
     late String markdownContent;
@@ -11,7 +24,7 @@ void main() {
 
     setUpAll(() {
       // Read the comprehensive markdown test file
-      final file = File('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
       markdownContent = file.readAsStringSync();
       rendered = markdownToAnsi(markdownContent);
     });
@@ -289,7 +302,7 @@ void main() {
 
   group('Markdown file comparison', () {
     test('multiple renders produce identical output', () {
-      final file = File('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
       final content = file.readAsStringSync();
 
       final render1 = markdownToAnsi(content);
@@ -299,7 +312,7 @@ void main() {
     });
 
     test('AnsiRenderer state is properly reset between renders', () {
-      final file = File('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
       final content = file.readAsStringSync();
 
       // Render a complex document

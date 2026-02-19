@@ -7,17 +7,24 @@ import 'package:artisanal/src/tui/bubbles/components/base.dart';
 import 'package:artisanal/src/tui/bubbles/components/tree.dart';
 import 'package:test/test.dart';
 
-String _readGolden(String relativePath) {
-  // We now use local testdata
-  final localPath = relativePath.replaceFirst(
-    'test/testdata/list/',
-    'test/testdata/list/',
-  );
-  var file = File(localPath);
-  if (!file.existsSync()) {
-    file = File('packages/artisanal/$localPath');
+File _resolvePackageFile(String relativePath) {
+  final candidates = <String>[
+    relativePath,
+    'pkgs/artisanal/$relativePath',
+    'packages/artisanal/$relativePath',
+  ];
+  for (final candidate in candidates) {
+    final file = File(candidate);
+    if (file.existsSync()) return file;
   }
-  return file.readAsStringSync().replaceAll('\r\n', '\n');
+  throw FileSystemException('Unable to locate test fixture', relativePath);
+}
+
+String _readGolden(String relativePath) {
+  return _resolvePackageFile(relativePath).readAsStringSync().replaceAll(
+    '\r\n',
+    '\n',
+  );
 }
 
 void _expectGolden(String relativePath, String actual) {

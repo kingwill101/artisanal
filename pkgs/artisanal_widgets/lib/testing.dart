@@ -18,4 +18,4 @@
 /// ```
 library;
 
-export 'src/widgets/testing/widget_test.dart';
+export 'src/widgets/testing/widget_testing.dart';

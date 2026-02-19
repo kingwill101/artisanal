@@ -5,7 +5,7 @@
 library;
 
 export 'events.dart';
-export 'hit_test.dart';
+export 'hit_testing.dart';
 export 'recognizer.dart';
 export 'tap.dart';
 export 'long_press.dart';

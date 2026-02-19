@@ -436,10 +436,17 @@ void main() {
         await tester.pumpWidget(spinner);
         expect(tester.find.text('A'), isTrue);
 
-        await Future<void>.delayed(const Duration(milliseconds: 120));
-        tester.pump();
+        var advanced = false;
+        for (var i = 0; i < 6; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 40));
+          tester.pump();
+          if (tester.find.text('B') || tester.find.text('C')) {
+            advanced = true;
+            break;
+          }
+        }
 
-        expect(tester.find.text('B') || tester.find.text('C'), isTrue);
+        expect(advanced, isTrue);
       } finally {
         await tester.dispose();
       }

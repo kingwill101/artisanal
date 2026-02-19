@@ -14,38 +14,8 @@ import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
     show Cmd, Msg, KeyMsg, MouseMsg, RenderMetrics, RenderMetricsMsg, every;
-import 'package:artisanal/bubbles.dart'
-    show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
 export 'package:artisanal/bubbles.dart'
     show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
-import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
-import '../core/widget.dart';
-import '../core/element.dart' show Element, elementOf;
-import '../focus/focus.dart';
-import '../layout/layout_widgets.dart';
-import '../media/media_query.dart' show MediaQuery;
-import '../rendering/render_object.dart' show RenderObject;
-import '../scroll/scroll_widgets.dart'
-    show
-        ScrollController,
-        WidgetScrollController,
-        SingleChildScrollView,
-        Scrollbar;
-import '../input/input_widgets.dart' show TextField;
-import '../theme/theme.dart'
-    show
-        Theme,
-        hasDarkBackground,
-        StatusBarThemeData,
-        AccentPanelThemeData,
-        CommandPaletteThemeData,
-        DialogThemeData;
-import '../theme/theme_scope.dart' show ThemeScope;
-import '../animation/animation_controller.dart';
-import '../animation/animation_mixin.dart';
-import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
-import 'overlay.dart' show Overlay, OverlayEntry, OverlayState;
 
 part '_component_utils.dart';
 part 'frame.dart';
