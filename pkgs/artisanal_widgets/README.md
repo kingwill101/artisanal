@@ -5,14 +5,20 @@ Flutter-inspired widget framework for terminal UIs, built on top of
 
 ## Table of Contents
 
+- [Installation](#installation)
 - [Import](#import)
 - [Quick start](#quick-start)
-- [Architecture review](#architecture-review)
 - [Flutter-style component ports](#flutter-style-component-ports)
-- [Widget-specific examples](#widget-specific-examples)
 - [Program Instrumentation](#program-instrumentation)
 - [Tests](#tests)
 - [Command execution note](#command-execution-note)
+
+## Installation
+
+```yaml
+dependencies:
+  artisanal_widgets: ^0.1.0
+```
 
 ## Import
 
@@ -47,11 +53,6 @@ void main() async {
 }
 ```
 
-## Architecture review
-
-See `ARCHITECTURE_REVIEW.md` for the current architecture/state analysis,
-strengths, gaps/risks, and evidence references.
-
 ## Flutter-style component ports
 
 - Chips: `Chip`, `ActionChip`, `ChoiceChip`, `FilterChip`, `InputChip`
@@ -62,29 +63,13 @@ strengths, gaps/risks, and evidence references.
 - Charts: `SparklineChart`, `LineChart`, `BarChart`, `HeatmapChart`,
   `PieChart`, `RibbonChart` with optional in-chart legends
 
-## Widget-specific examples
-
-Run from workspace root:
-
-```bash
-dart run pkgs/artisanal_widgets/example/chip/main.dart
-dart run pkgs/artisanal_widgets/example/action_chip/main.dart
-dart run pkgs/artisanal_widgets/example/choice_chip/main.dart
-dart run pkgs/artisanal_widgets/example/filter_chip/main.dart
-dart run pkgs/artisanal_widgets/example/input_chip/main.dart
-dart run pkgs/artisanal_widgets/example/dropdown_button/main.dart
-dart run pkgs/artisanal_widgets/example/slider/main.dart
-dart run pkgs/artisanal_widgets/example/range_slider/main.dart
-dart run pkgs/artisanal_widgets/example/linear_progress_indicator/main.dart
-dart run pkgs/artisanal_widgets/example/circular_progress_indicator/main.dart
-dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
-dart run pkgs/artisanal_widgets/example/charting/main.dart
-dart run pkgs/artisanal_widgets/example/opencode/main.dart
-```
-
+![Charts](images/charting.png)
 The OpenCode example is self-contained under
-`pkgs/artisanal_widgets/example/opencode` (including local data models and
-theme assets).
+`example/opencode` (including local data models and theme assets).
+
+![OpenCode Clone](images/opencode_clone.png)
+![OpenCode Clone 2](images/opencode_clone2.png)
+![Panel Box](images/panel_box.png)
 
 ## Program Instrumentation
 
@@ -111,19 +96,19 @@ await tui.runProgram(
 );
 ```
 
-See `docs/TUI.md` for full interceptor/replay API details.
+See the `package:artisanal/tui.dart` API docs for full interceptor/replay details.
 
 ## Tests
 
 Component tests are split by widget under
-`pkgs/artisanal_widgets/test/components/*_test.dart`.
+`test/components/*_test.dart`.
 
 Useful commands:
 
 ```bash
-dart test pkgs/artisanal_widgets/test/components
-dart test pkgs/artisanal_widgets
-dart analyze pkgs/artisanal_widgets
+dart test test/components
+dart test
+dart analyze
 ```
 
 ## Command execution note

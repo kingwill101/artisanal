@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
-
-- Internal release-readiness updates and test/fixture cleanup.
-
 ## 0.1.0
 
-- Initial release.
+### Added
+
+- Initial release of `artisanal_widgets`.
+- Flutter-style terminal widget system built on top of `artisanal`.
+- Core widget framework, layout primitives, focus/gesture/input systems, and component library.
+- Charting widgets, scroll/selection support, and testing harnesses for TUI widget behavior.
