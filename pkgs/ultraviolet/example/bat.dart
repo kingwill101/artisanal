@@ -12,7 +12,7 @@ String _ansiFg256(int color) => '\x1b[38;5;${color}m';
 
 void main(List<String> args) async {
   if (args.isEmpty) {
-    print('Usage: dart run example/uv/bat.dart <file>');
+    print('Usage: dart run example/bat.dart <file>');
     return;
   }
 

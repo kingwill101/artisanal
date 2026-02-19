@@ -55,11 +55,7 @@ final class BufferRenderSink {
   }
 
   /// Render [source] through [filters] into this sink.
-  Buffer render(
-    Buffer source,
-    List<BufferFilter> filters, {
-    double dt = 0,
-  }) {
+  Buffer render(Buffer source, List<BufferFilter> filters, {double dt = 0}) {
     final width = source.width();
     final height = source.height();
     if (_front.width() != width || _front.height() != height) {

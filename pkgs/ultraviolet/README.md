@@ -69,6 +69,24 @@ Future<void> main() async {
 }
 ```
 
+## Demo Captures
+
+Raycast maze:
+
+![Raycast maze demo](assets/raycast.gif)
+
+Conway's Game of Life:
+
+![Conway demo](assets/conway.gif)
+
+Metaballs / marching squares:
+
+![Metaballs demo](assets/metaballs.gif)
+
+Layout example (`example/layout.dart`):
+
+![Layout demo](assets/layout.png)
+
 ## Performance Tips
 
 - Prefer incremental updates over full-screen redraws.
@@ -182,4 +200,3 @@ terminal.setSynchronizedOutput(true);
 See:
 
 - `pkgs/ultraviolet/example/`
-- `pkgs/ultraviolet/example/uv/`
