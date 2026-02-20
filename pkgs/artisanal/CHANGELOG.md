@@ -5,8 +5,6 @@
 ### Added
 
 - New charting module (`package:artisanal/charting.dart`) with sparkline, histogram, heatmap, line, pie/donut, and ribbon renderers.
-- New Liquid template module (`package:artisanal/liquid.dart`) with terminal UI tags and render targets.
-- New physics module (`package:artisanal/physics.dart`) with forge2d integration helpers.
 - Console tag parser support for style-tagged output (for example `<red>...</red>`).
 - Structured TUI tracing and replay hooks for improved debugging and deterministic replay workflows.
 

@@ -40,6 +40,18 @@ dependencies:
 
 > **Note**: This package uses workspace resolution. Use a path or git reference in standalone projects.
 
+
+
+
+## 🖼️ Screenshots
+
+![Log Viewer](images/log_viewer.png)
+
+![Console Tags](images/console_tags.png)
+
+![Layout](images/layout.png)
+
+
 ## Library Exports
 
 | Import | Purpose |
@@ -55,8 +67,6 @@ dependencies:
 | `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
 | `package:artisanal/glamour.dart` | High-fidelity Markdown renderer |
 | `package:artisanal/charting.dart` | Charting primitives |
-| `package:artisanal/liquid.dart` | Liquid template adapters (experimental) |
-| `package:artisanal/physics.dart` | Forge2D helpers (experimental) |
 
 ## Documentation
 
@@ -96,6 +106,9 @@ Future<void> main() async {
 }
 ```
 
+![CLI Output](images/console_quickstart.png)
+
+
 ## Quick Start: Styling (Lip Gloss)
 
 ```dart
@@ -109,6 +122,9 @@ final style = Style()
 
 print(style.render('Hello, Artisanal!'));
 ```
+
+
+![Hello artisanal](images/hello.png)
 
 ### Style Capabilities
 
@@ -217,6 +233,8 @@ void main(List<String> args) {
   runner.run(args);
 }
 ```
+
+![Command Runner](images/command_runner.png)
 
 ## Ultraviolet Renderer
 

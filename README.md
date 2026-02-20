@@ -17,6 +17,32 @@ A **full-stack terminal toolkit** for Dart, combining CLI I/O, Lip Gloss styling
 
 ---
 
+## 🖼️ Screenshots
+
+![Log Viewer](pkgs/artisanal/images/log_viewer.png)
+
+![Console Tags](pkgs/artisanal/images/console_tags.png)
+
+![Layout](pkgs/artisanal/images/layout.png)
+
+
+Raycast maze:
+
+![Raycast maze demo](pkgs/ultraviolet/assets/raycast.gif)
+
+Conway's Game of Life:
+
+![Conway demo](pkgs/ultraviolet/assets/conway.gif)
+
+Metaballs / marching squares:
+
+![Metaballs demo](pkgs/ultraviolet/assets/metaballs.gif)
+
+Layout example (`example/layout.dart`):
+
+![Layout demo](pkgs/ultraviolet/assets/layout.png)
+
+
 ## 🚀 Code Examples
 
 ### 1. Basic Console Output

@@ -1,10 +1,18 @@
 # Artisanal Documentation Index
 
-This index links the primary documentation files. Each doc includes runnable, copy/paste examples.
+This index links the current primary documentation across the workspace.
 
-## Core
+## Getting Started
 
-- Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Workspace README: [../README.md](../README.md)
+- `artisanal` package README: [../pkgs/artisanal/README.md](../pkgs/artisanal/README.md)
+- `ultraviolet` package README: [../pkgs/ultraviolet/README.md](../pkgs/ultraviolet/README.md)
+- `artisanal_widgets` package README: [../pkgs/artisanal_widgets/README.md](../pkgs/artisanal_widgets/README.md)
+
+## Core Toolkit
+
+- Architecture overview (detailed): [ARCHITECTURE.md](ARCHITECTURE.md)
+- Architecture overview (concise): [architecture.md](architecture.md)
 - Console I/O: [CONSOLE.md](CONSOLE.md)
 - Args runner: [ARGS.md](ARGS.md)
 - Terminal abstraction: [TERMINAL.md](TERMINAL.md)
@@ -17,24 +25,16 @@ This index links the primary documentation files. Each doc includes runnable, co
 - Unicode utilities: [UNICODE.md](UNICODE.md)
 - Color profiles: [COLORPROFILE.md](COLORPROFILE.md)
 
-## TUI
+## TUI and Components
 
 - TUI runtime: [TUI.md](TUI.md)
-- Widgets: [WIDGETS.md](WIDGETS.md)
-- artisanal_widgets package guide: [../pkgs/artisanal_widgets/README.md](../pkgs/artisanal_widgets/README.md)
+- Widget catalog: [WIDGETS.md](WIDGETS.md)
 - Bubbles components: [BUBBLES.md](BUBBLES.md)
-- Console components helper: [IO_COMPONENTS.md](IO_COMPONENTS.md)
+- Console components helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)
 
-## IPC
-
-- IPC worker protocol and extension host contract: [IPC.md](IPC.md)
-
-## UV (Ultraviolet)
+## Rendering and Content
 
 - UV system: [UV.md](UV.md)
-
-## Rendering Extras
-
 - Markdown rendering (ANSI + Glamour): [MARKDOWN.md](MARKDOWN.md)
 - Charting primitives: [CHARTING.md](CHARTING.md)
 
