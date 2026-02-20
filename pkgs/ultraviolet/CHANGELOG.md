@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.1.1+1
+- fix documentation + missing assets
 ## 0.1.1
 
 ### Fixed
