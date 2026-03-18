@@ -201,6 +201,8 @@ class TextInputKeyMap implements KeyMap {
     KeyBinding? paste,
     KeyBinding? copy,
     KeyBinding? cut,
+    KeyBinding? undo,
+    KeyBinding? redo,
     KeyBinding? acceptSuggestion,
     KeyBinding? nextSuggestion,
     KeyBinding? prevSuggestion,
@@ -344,6 +346,18 @@ class TextInputKeyMap implements KeyMap {
              keys: ['ctrl+x'],
              help: Help(key: '^x', desc: 'Cut'),
            ),
+       undo =
+           undo ??
+           KeyBinding(
+             keys: ['ctrl+z'],
+             help: Help(key: '^z', desc: 'Undo'),
+           ),
+       redo =
+           redo ??
+           KeyBinding(
+             keys: ['ctrl+y', 'ctrl+shift+z'],
+             help: Help(key: '^y', desc: 'Redo'),
+           ),
 
        acceptSuggestion =
            acceptSuggestion ??
@@ -474,6 +488,12 @@ class TextInputKeyMap implements KeyMap {
   /// Cut to clipboard.
   final KeyBinding cut;
 
+  /// Undo the most recent edit.
+  final KeyBinding undo;
+
+  /// Redo the most recently undone edit.
+  final KeyBinding redo;
+
   /// Accept current suggestion.
   final KeyBinding acceptSuggestion;
 
@@ -527,6 +547,8 @@ class TextInputKeyMap implements KeyMap {
       paste,
       copy,
       cut,
+      undo,
+      redo,
       acceptSuggestion,
       nextSuggestion,
       prevSuggestion,
@@ -556,6 +578,46 @@ class PasteErrorMsg implements Msg {
 /// Internal message used to apply a large paste in chunks.
 class _PasteChunkMsg implements Msg {
   const _PasteChunkMsg();
+}
+
+class _TextInputEditState {
+  const _TextInputEditState({
+    required this.value,
+    required this.position,
+    required this.selectionStart,
+    required this.selectionEnd,
+    required this.error,
+  });
+
+  final List<String> value;
+  final int position;
+  final int? selectionStart;
+  final int? selectionEnd;
+  final String? error;
+
+  bool sameAs(_TextInputEditState other) {
+    if (position != other.position ||
+        selectionStart != other.selectionStart ||
+        selectionEnd != other.selectionEnd ||
+        error != other.error ||
+        value.length != other.value.length) {
+      return false;
+    }
+    for (var i = 0; i < value.length; i++) {
+      if (value[i] != other.value[i]) return false;
+    }
+    return true;
+  }
+}
+
+enum _TextInputHistoryAction {
+  insert,
+  deleteBackward,
+  deleteForward,
+  paste,
+  replace,
+  setText,
+  reset,
 }
 
 /// A wrapped visual line, referencing a [start, end) range in the flat value list.
@@ -713,6 +775,15 @@ class TextInputModel extends ViewComponent {
   int _wrappedLinesCacheVersion = 0; // Invalidation counter
   int _wrappedLinesCacheWidth = -1; // Width used for last cache computation
   int _valueVersion = 0; // Bumped on every value mutation
+  static const int _maxHistoryEntries = 100;
+  final List<_TextInputEditState> _undoStack = <_TextInputEditState>[];
+  final List<_TextInputEditState> _redoStack = <_TextInputEditState>[];
+  bool _editFrameActive = false;
+  bool _didRecordUndoSnapshot = false;
+  _TextInputHistoryAction? _currentHistoryAction;
+  _TextInputHistoryAction? _lastHistoryAction;
+  int? _lastHistoryCursorAfter;
+  int? _lastHistoryLengthAfter;
 
   // Selection
   int? selectionStart;
@@ -754,10 +825,7 @@ class TextInputModel extends ViewComponent {
 
   /// Sets the value of the text input.
   set value(String s) {
-    final runes = _san(uni.codePoints(s));
-    final graphemes = uni.graphemes(String.fromCharCodes(runes)).toList();
-    final err = _validate(graphemes);
-    _setValueInternal(graphemes, err);
+    setText(s);
   }
 
   /// Sets the value of the text input (method form for API compatibility).
@@ -765,7 +833,58 @@ class TextInputModel extends ViewComponent {
   /// This is equivalent to using the [value] setter and exists for parity with
   /// the upstream bubbletea Go library. Prefer using `model.value = s` in Dart.
   void setValue(String s) {
-    value = s;
+    setText(s);
+  }
+
+  /// Replaces the current text and collapses the selection at the end.
+  void setText(String s, {bool recordHistory = true}) {
+    _runEditFrame(() {
+      _beginHistoryAction(_TextInputHistoryAction.setText, breakChain: true);
+      if (recordHistory) {
+        _recordUndoSnapshot();
+      }
+      final runes = _san(uni.codePoints(s));
+      final graphemes = uni.graphemes(String.fromCharCodes(runes)).toList();
+      final err = _validate(graphemes);
+      _setValueInternal(graphemes, err);
+      selectionStart = null;
+      selectionEnd = null;
+      position = _value.length;
+      _resetDesiredCol();
+      _updateSuggestions();
+    });
+  }
+
+  /// Replaces the current text and selection state.
+  void setTextState({
+    required String text,
+    required int selectionBase,
+    required int selectionExtent,
+    bool recordHistory = true,
+  }) {
+    _runEditFrame(() {
+      _beginHistoryAction(_TextInputHistoryAction.setText, breakChain: true);
+      if (recordHistory) {
+        _recordUndoSnapshot();
+      }
+      final runes = _san(uni.codePoints(text));
+      final graphemes = uni.graphemes(String.fromCharCodes(runes)).toList();
+      final err = _validate(graphemes);
+      _setValueInternal(graphemes, err);
+      final base = selectionBase.clamp(0, _value.length);
+      final extent = selectionExtent.clamp(0, _value.length);
+      if (base == extent) {
+        selectionStart = null;
+        selectionEnd = null;
+      } else {
+        selectionStart = base;
+        selectionEnd = extent;
+      }
+      position = extent;
+      _resetDesiredCol();
+      _handleOverflow();
+      _updateSuggestions();
+    });
   }
 
   /// Gets the cursor position.
@@ -779,6 +898,12 @@ class TextInputModel extends ViewComponent {
 
   /// Whether the input is focused.
   bool get focused => _focused;
+
+  /// Whether there is an edit available to undo.
+  bool get canUndo => _undoStack.isNotEmpty;
+
+  /// Whether there is an undone edit available to redo.
+  bool get canRedo => _redoStack.isNotEmpty;
 
   /// Sets available suggestions for autocomplete.
   set suggestions(List<String> suggestions) {
@@ -814,11 +939,180 @@ class TextInputModel extends ViewComponent {
     return cmd;
   }
 
+  /// Clears all undo and redo history.
+  void clearHistory() {
+    _undoStack.clear();
+    _redoStack.clear();
+    _breakHistoryCoalescing();
+  }
+
+  /// Restores the most recent previous edit state.
+  bool undo() {
+    if (_undoStack.isEmpty) return false;
+    _breakHistoryCoalescing();
+    final current = _captureEditState();
+    final previous = _undoStack.removeLast();
+    _redoStack.add(current);
+    _restoreEditState(previous);
+    return true;
+  }
+
+  /// Reapplies the most recently undone edit state.
+  bool redo() {
+    if (_redoStack.isEmpty) return false;
+    _breakHistoryCoalescing();
+    final current = _captureEditState();
+    final next = _redoStack.removeLast();
+    _undoStack.add(current);
+    _restoreEditState(next);
+    return true;
+  }
+
   /// Selects all text in the input.
   void selectAll() {
     selectionStart = 0;
     selectionEnd = _value.length;
     position = _value.length;
+  }
+
+  /// Breaks the current undo coalescing chain.
+  ///
+  /// Call this before a submit/save/apply action if the next edit should start
+  /// a fresh undo step instead of merging with the previous contiguous burst.
+  void pushHistoryBoundary() {
+    _breakHistoryCoalescing();
+  }
+
+  /// Inserts [text] at the cursor, optionally replacing the current selection.
+  void insertText(
+    String text, {
+    bool replaceSelection = true,
+    bool coalesce = false,
+  }) {
+    if (text.isEmpty) return;
+    _runEditFrame(() {
+      final hasSelection =
+          selectionStart != null &&
+          selectionEnd != null &&
+          selectionStart != selectionEnd;
+      final action =
+          replaceSelection && hasSelection
+          ? _TextInputHistoryAction.replace
+          : _TextInputHistoryAction.insert;
+      _beginHistoryAction(
+        action,
+        breakChain: !coalesce || action == _TextInputHistoryAction.replace,
+      );
+      _resetDesiredCol();
+      if (replaceSelection) {
+        _deleteSelection();
+      }
+      _insertRunes(uni.codePoints(text));
+      _updateSuggestions();
+      _handleOverflow();
+    });
+  }
+
+  /// Replaces the current selection, or inserts at the cursor if collapsed.
+  void replaceSelection(String text) {
+    _runEditFrame(() {
+      _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
+      _resetDesiredCol();
+      _deleteSelection();
+      if (text.isNotEmpty) {
+        _insertRunes(uni.codePoints(text));
+      }
+      _updateSuggestions();
+      _handleOverflow();
+    });
+  }
+
+  /// Deletes the current selection, returning whether anything changed.
+  bool deleteSelection() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
+      final changed = _deleteSelection();
+      if (changed) {
+        _resetDesiredCol();
+        _updateSuggestions();
+        _handleOverflow();
+      }
+      return changed;
+    });
+  }
+
+  /// Deletes backward from the cursor or removes the current selection.
+  bool deleteBackward({bool word = false, bool coalesce = false}) {
+    return _runEditFrame(() {
+      final hasSelection =
+          selectionStart != null &&
+          selectionEnd != null &&
+          selectionStart != selectionEnd;
+      final action =
+          hasSelection
+          ? _TextInputHistoryAction.replace
+          : _TextInputHistoryAction.deleteBackward;
+      _beginHistoryAction(
+        action,
+        breakChain: !coalesce || action == _TextInputHistoryAction.replace,
+      );
+      _resetDesiredCol();
+      if (_deleteSelection()) {
+        _updateSuggestions();
+        _handleOverflow();
+        return true;
+      }
+      final before = _captureEditState();
+      if (word) {
+        _deleteWordBackward();
+      } else if (_value.isNotEmpty && _pos > 0) {
+        error = null;
+        _recordUndoSnapshot();
+        _value.removeAt(_pos - 1);
+        _invalidateWrappedLines();
+        error = _validate(_value);
+        position = _pos - 1;
+      }
+      _updateSuggestions();
+      _handleOverflow();
+      return !before.sameAs(_captureEditState());
+    });
+  }
+
+  /// Deletes forward from the cursor or removes the current selection.
+  bool deleteForward({bool word = false, bool coalesce = false}) {
+    return _runEditFrame(() {
+      final hasSelection =
+          selectionStart != null &&
+          selectionEnd != null &&
+          selectionStart != selectionEnd;
+      final action =
+          hasSelection
+          ? _TextInputHistoryAction.replace
+          : _TextInputHistoryAction.deleteForward;
+      _beginHistoryAction(
+        action,
+        breakChain: !coalesce || action == _TextInputHistoryAction.replace,
+      );
+      _resetDesiredCol();
+      if (_deleteSelection()) {
+        _updateSuggestions();
+        _handleOverflow();
+        return true;
+      }
+      final before = _captureEditState();
+      if (word) {
+        _deleteWordForward();
+      } else if (_value.isNotEmpty && _pos < _value.length) {
+        _recordUndoSnapshot();
+        _value.removeAt(_pos);
+        _invalidateWrappedLines();
+        error = _validate(_value);
+      }
+      _updateSuggestions();
+      _handleOverflow();
+      return !before.sameAs(_captureEditState());
+    });
   }
 
   /// Returns the currently selected text.
@@ -924,9 +1218,18 @@ class TextInputModel extends ViewComponent {
 
   /// Reset the input to empty.
   void reset() {
-    _value = <String>[];
-    _invalidateWrappedLines();
-    position = 0;
+    _runEditFrame(() {
+      _beginHistoryAction(_TextInputHistoryAction.reset, breakChain: true);
+      _recordUndoSnapshot();
+      _value = <String>[];
+      _invalidateWrappedLines();
+      selectionStart = null;
+      selectionEnd = null;
+      error = _validate(_value);
+      position = 0;
+      _resetDesiredCol();
+      _updateSuggestions();
+    });
   }
 
   /// Move cursor to start.
@@ -1132,6 +1435,7 @@ class TextInputModel extends ViewComponent {
 
   /// Inserts a newline character at the cursor position.
   void _insertNewline() {
+    _recordUndoSnapshot();
     _deleteSelection();
     final head = _value.sublist(0, _pos);
     final tail = _value.sublist(_pos);
@@ -1225,6 +1529,119 @@ class TextInputModel extends ViewComponent {
       return validate!(graphemes.join());
     }
     return null;
+  }
+
+  T _runEditFrame<T>(T Function() body) {
+    final wasActive = _editFrameActive;
+    _TextInputEditState? beforeState;
+    if (!wasActive) {
+      _editFrameActive = true;
+      _didRecordUndoSnapshot = false;
+      beforeState = _captureEditState();
+    }
+    try {
+      return body();
+    } finally {
+      if (!wasActive) {
+        _finalizeEditFrame(beforeState!);
+        _editFrameActive = false;
+        _didRecordUndoSnapshot = false;
+        _currentHistoryAction = null;
+      }
+    }
+  }
+
+  _TextInputEditState _captureEditState() {
+    return _TextInputEditState(
+      value: List<String>.of(_value, growable: false),
+      position: _pos,
+      selectionStart: selectionStart,
+      selectionEnd: selectionEnd,
+      error: error,
+    );
+  }
+
+  void _restoreEditState(_TextInputEditState state) {
+    _value = List<String>.of(state.value);
+    _invalidateWrappedLines();
+    _pos = state.position.clamp(0, _value.length);
+    selectionStart = state.selectionStart?.clamp(0, _value.length);
+    selectionEnd = state.selectionEnd?.clamp(0, _value.length);
+    error = state.error;
+    _resetDesiredCol();
+    _handleOverflow();
+    _updateSuggestions();
+  }
+
+  void _beginHistoryAction(
+    _TextInputHistoryAction action, {
+    bool breakChain = false,
+  }) {
+    if (breakChain) {
+      _breakHistoryCoalescing();
+    }
+    _currentHistoryAction = action;
+  }
+
+  void _breakHistoryCoalescing() {
+    _currentHistoryAction = null;
+    _lastHistoryAction = null;
+    _lastHistoryCursorAfter = null;
+    _lastHistoryLengthAfter = null;
+  }
+
+  bool _shouldCoalesceSnapshot(_TextInputHistoryAction action) {
+    if (selectionStart != null || selectionEnd != null) return false;
+    if (_lastHistoryAction != action) return false;
+    if (_lastHistoryCursorAfter != _pos) return false;
+    if (_lastHistoryLengthAfter != _value.length) return false;
+    return switch (action) {
+      _TextInputHistoryAction.insert => true,
+      _TextInputHistoryAction.deleteBackward => true,
+      _TextInputHistoryAction.deleteForward => true,
+      _TextInputHistoryAction.paste => true,
+      _ => false,
+    };
+  }
+
+  void _recordUndoSnapshot() {
+    if (_editFrameActive && _didRecordUndoSnapshot) {
+      return;
+    }
+    final action = _currentHistoryAction;
+    if (action != null && _shouldCoalesceSnapshot(action)) {
+      _didRecordUndoSnapshot = true;
+      return;
+    }
+    final snapshot = _captureEditState();
+    if (_undoStack.isNotEmpty && _undoStack.last.sameAs(snapshot)) {
+      _didRecordUndoSnapshot = true;
+      return;
+    }
+    _undoStack.add(snapshot);
+    if (_undoStack.length > _maxHistoryEntries) {
+      _undoStack.removeAt(0);
+    }
+    _redoStack.clear();
+    _didRecordUndoSnapshot = true;
+  }
+
+  void _finalizeEditFrame(_TextInputEditState beforeState) {
+    final action = _currentHistoryAction;
+    final afterState = _captureEditState();
+    if (beforeState.sameAs(afterState)) {
+      if (action == null) {
+        _breakHistoryCoalescing();
+      }
+      return;
+    }
+    if (action == null) {
+      _breakHistoryCoalescing();
+      return;
+    }
+    _lastHistoryAction = action;
+    _lastHistoryCursorAfter = afterState.position;
+    _lastHistoryLengthAfter = afterState.value.length;
   }
 
   void _setValueInternal(
@@ -1397,6 +1814,7 @@ class TextInputModel extends ViewComponent {
 
   void _insertLimited(List<String> paste) {
     if (paste.isEmpty) return;
+    _recordUndoSnapshot();
 
     final wasEmpty = _value.isEmpty;
     final oldLen = _value.length;
@@ -1500,6 +1918,7 @@ class TextInputModel extends ViewComponent {
       selectionEnd = null;
       return false;
     }
+    _recordUndoSnapshot();
     _value.removeRange(start, end);
     _invalidateWrappedLines();
     position = start;
@@ -1511,6 +1930,7 @@ class TextInputModel extends ViewComponent {
 
   void _deleteBeforeCursor() {
     if (_pos <= 0) return;
+    _recordUndoSnapshot();
     _value.removeRange(0, _pos);
     _invalidateWrappedLines();
     error = _validate(_value);
@@ -1520,6 +1940,7 @@ class TextInputModel extends ViewComponent {
 
   void _deleteAfterCursor() {
     if (_pos >= _value.length) return;
+    _recordUndoSnapshot();
     _value.removeRange(_pos, _value.length);
     _invalidateWrappedLines();
     error = _validate(_value);
@@ -1543,6 +1964,7 @@ class TextInputModel extends ViewComponent {
     }
     final start = (i + 1).clamp(0, _pos);
 
+    _recordUndoSnapshot();
     _value.removeRange(start, _pos);
     _invalidateWrappedLines();
     error = _validate(_value);
@@ -1565,6 +1987,7 @@ class TextInputModel extends ViewComponent {
       i++;
     }
 
+    _recordUndoSnapshot();
     _value.removeRange(_pos, i);
     _invalidateWrappedLines();
     error = _validate(_value);
@@ -1742,7 +2165,8 @@ class TextInputModel extends ViewComponent {
 
   @override
   (TextInputModel, Cmd?) update(Msg msg) {
-    final cmds = <Cmd>[];
+    return _runEditFrame(() {
+      final cmds = <Cmd>[];
 
     if (msg is MouseMsg) {
       if (multiline) {
@@ -1829,6 +2253,8 @@ class TextInputModel extends ViewComponent {
     // Check for suggestion acceptance first
     if (msg is KeyMsg && keyMatches(msg.key, [keyMap.acceptSuggestion])) {
       if (_canAcceptSuggestion()) {
+        _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
+        _recordUndoSnapshot();
         final suggestion = _matchedSuggestions[_currentSuggestionIndex];
         _value = [..._value, ...suggestion.sublist(_value.length)];
         _invalidateWrappedLines();
@@ -1844,9 +2270,22 @@ class TextInputModel extends ViewComponent {
         }
       }
 
+      if (keyMatches(msg.key, [keyMap.undo])) {
+        undo();
+        _updateSuggestions();
+        return (this, null);
+      }
+
+      if (keyMatches(msg.key, [keyMap.redo])) {
+        redo();
+        _updateSuggestions();
+        return (this, null);
+      }
+
       if (keyMatches(msg.key, [keyMap.cut])) {
         final selected = getSelectedText();
         if (selected.isNotEmpty) {
+          _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
           _deleteSelection();
           return (this, Cmd.setClipboardBestEffort(selected));
         }
@@ -1861,6 +2300,7 @@ class TextInputModel extends ViewComponent {
 
       // Multi-line: newline insertion (Enter / Shift+Enter)
       if (multiline && keyMatches(msg.key, [keyMap.newline])) {
+        _beginHistoryAction(_TextInputHistoryAction.insert);
         _deleteSelection();
         _resetDesiredCol();
         _insertNewline();
@@ -1870,21 +2310,25 @@ class TextInputModel extends ViewComponent {
       }
 
       if (msg.key.type == KeyType.space) {
+        _beginHistoryAction(_TextInputHistoryAction.insert);
         _resetDesiredCol();
         _insertRunes([0x20]);
         return (this, null);
       }
 
       if (keyMatches(msg.key, [keyMap.deleteWordBackward])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
         _resetDesiredCol();
         if (!_deleteSelection()) {
           _deleteWordBackward();
         }
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterBackward])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
         _resetDesiredCol();
         if (!_deleteSelection()) {
           error = null;
           if (_value.isNotEmpty && _pos > 0) {
+            _recordUndoSnapshot();
             _value.removeAt(_pos - 1);
             _invalidateWrappedLines();
             error = _validate(_value);
@@ -1962,9 +2406,11 @@ class TextInputModel extends ViewComponent {
         }
         selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
         _resetDesiredCol();
         if (!_deleteSelection()) {
           if (_value.isNotEmpty && _pos < _value.length) {
+            _recordUndoSnapshot();
             _value.removeAt(_pos);
             _invalidateWrappedLines();
             error = _validate(_value);
@@ -1989,21 +2435,25 @@ class TextInputModel extends ViewComponent {
         }
         selectionEnd = _pos;
       } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
         _resetDesiredCol();
         selectionStart = null;
         selectionEnd = null;
         _deleteAfterCursor();
       } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
         _resetDesiredCol();
         selectionStart = null;
         selectionEnd = null;
         _deleteBeforeCursor();
       } else if (keyMatches(msg.key, [keyMap.paste])) {
+        _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
         _resetDesiredCol();
         _deleteSelection();
         // Return paste command - caller handles clipboard
         return (this, _pasteCmd());
       } else if (keyMatches(msg.key, [keyMap.deleteWordForward])) {
+        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
         _resetDesiredCol();
         if (!_deleteSelection()) {
           _deleteWordForward();
@@ -2050,6 +2500,7 @@ class TextInputModel extends ViewComponent {
           _updateSuggestions();
           return (this, null);
         }
+        _beginHistoryAction(_TextInputHistoryAction.insert);
         _resetDesiredCol();
         _deleteSelection();
         _insertRunes(insertable);
@@ -2057,11 +2508,13 @@ class TextInputModel extends ViewComponent {
 
       _updateSuggestions();
     } else if (msg is _PasteChunkMsg) {
+      _beginHistoryAction(_TextInputHistoryAction.paste);
       _applyNextPasteChunk();
       if (_pendingPasteRunes != null) {
         cmds.add(_schedulePasteChunk());
       }
     } else if (msg is PasteMsg || msg is PasteTextMsg) {
+      _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
       final content = msg is PasteMsg
           ? msg.content
           : (msg as PasteTextMsg).content;
@@ -2092,8 +2545,9 @@ class TextInputModel extends ViewComponent {
     // Avoid scheduling a blink command on every keypress. Cursor blinking is
     // already driven by its own timer loop while focused.
 
-    _handleOverflow();
-    return (this, cmds.isNotEmpty ? Cmd.batch(cmds) : null);
+      _handleOverflow();
+      return (this, cmds.isNotEmpty ? Cmd.batch(cmds) : null);
+    });
   }
 
   @override

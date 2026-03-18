@@ -209,6 +209,24 @@ void main() {
       expect(ctrl.model.value, equals('hello'));
     });
 
+    test('ctrl+z and ctrl+y undo and redo coalesced edits', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextFieldController();
+      await tester.pumpWidget(TextField(controller: ctrl, autofocus: true));
+
+      tester.sendKey('h');
+      tester.sendKey('i');
+      expect(ctrl.text, 'hi');
+
+      tester.sendMsg(tui.KeyMsg(tui.Key.char('z', ctrl: true)));
+      expect(ctrl.text, '');
+
+      tester.sendMsg(tui.KeyMsg(tui.Key.char('y', ctrl: true)));
+      expect(ctrl.text, 'hi');
+    });
+
     test(
       'focused field consumes editing keys before sibling traversal',
       () async {

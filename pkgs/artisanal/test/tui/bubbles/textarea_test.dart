@@ -78,6 +78,47 @@ void main() {
         expect(textarea.cursorLine(), 1);
         expect(textarea.cursorColumn(), 2);
       });
+
+      test('selectAll parity', () {
+        final textarea = TextAreaModel();
+        textarea.setValue('line1\nline2');
+
+        textarea.selectAll();
+
+        expect(textarea.selectionBase, (line: 0, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 5));
+        expect(textarea.cursorLine(), 1);
+        expect(textarea.cursorColumn(), 5);
+      });
+
+      test('ctrl+a selects all through update', () {
+        final textarea = TextAreaModel();
+        textarea.setValue('line1\nline2');
+
+        final (updated, _) = textarea.update(
+          const KeyMsg(Key(KeyType.runes, runes: [0x61], ctrl: true)),
+        );
+
+        expect(updated.selectionBase, (line: 0, column: 0));
+        expect(updated.selectionExtent, (line: 1, column: 5));
+        expect(updated.cursorLine(), 1);
+        expect(updated.cursorColumn(), 5);
+      });
+
+      test('ctrl+l selects the current line through update', () {
+        final textarea = TextAreaModel();
+        textarea.setValue('line1\nline2\nline3');
+        textarea.setCursor(1, 2);
+
+        final (updated, _) = textarea.update(
+          const KeyMsg(Key(KeyType.runes, runes: [0x6c], ctrl: true)),
+        );
+
+        expect(updated.selectionBase, (line: 1, column: 0));
+        expect(updated.selectionExtent, (line: 1, column: 5));
+        expect(updated.cursorLine(), 1);
+        expect(updated.cursorColumn(), 5);
+      });
     });
 
     group('Focus', () {
@@ -215,6 +256,504 @@ void main() {
         textarea.reset();
         expect(textarea.line, 0);
         expect(textarea.column, 0);
+      });
+    });
+
+    group('Undo and redo', () {
+      test('ctrl+z undoes a coalesced typing burst', () {
+        final textarea = TextAreaModel();
+
+        textarea.update(KeyMsg(Key.char('a')));
+        textarea.update(KeyMsg(Key.char('b')));
+
+        expect(textarea.value, 'ab');
+        expect(textarea.canUndo, isTrue);
+
+        textarea.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(textarea.value, '');
+        expect(textarea.canRedo, isTrue);
+      });
+
+      test('ctrl+y reapplies an undone edit', () {
+        final textarea = TextAreaModel();
+
+        textarea.update(KeyMsg(Key.char('a')));
+        textarea.update(KeyMsg(Key.char('b')));
+        textarea.update(KeyMsg(Key.char('z', ctrl: true)));
+        textarea.update(KeyMsg(Key.char('y', ctrl: true)));
+
+        expect(textarea.value, 'ab');
+      });
+
+      test('programmatic setText participates in history', () {
+        final textarea = TextAreaModel();
+
+        textarea.setText('line one');
+        textarea.setText('line one\nline two');
+
+        expect(textarea.undo(), isTrue);
+        expect(textarea.value, 'line one');
+        expect(textarea.redo(), isTrue);
+        expect(textarea.value, 'line one\nline two');
+      });
+
+      test('splitLine inserts a newline at the cursor', () {
+        final textarea = TextAreaModel();
+
+        textarea.setValue('alpha beta');
+        textarea.setCursor(0, 5);
+
+        expect(textarea.splitLine(), isTrue);
+        expect(textarea.value, 'alpha\n beta');
+        expect(textarea.cursorLine(), 1);
+        expect(textarea.cursorColumn(), 0);
+      });
+
+      test('splitLine replaces the selected range with a newline', () {
+        final textarea = TextAreaModel();
+
+        textarea.setValue('alpha beta\ngamma');
+        textarea.setSelection(
+          baseLine: 0,
+          baseColumn: 5,
+          extentLine: 1,
+          extentColumn: 2,
+        );
+
+        expect(textarea.splitLine(), isTrue);
+        expect(textarea.value, 'alpha\nmma');
+        expect(textarea.cursorLine(), 1);
+        expect(textarea.cursorColumn(), 0);
+      });
+
+      test(
+        'indentLines and outdentLines transform selected lines as one step',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha\n  beta\ngamma');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 6,
+          );
+
+          expect(textarea.indentLines(width: 2), isTrue);
+          expect(textarea.value, '  alpha\n    beta\ngamma');
+
+          expect(textarea.undo(), isTrue);
+          expect(textarea.value, 'alpha\n  beta\ngamma');
+
+          expect(textarea.redo(), isTrue);
+          expect(textarea.value, '  alpha\n    beta\ngamma');
+
+          expect(textarea.outdentLines(width: 2), isTrue);
+          expect(textarea.value, 'alpha\n  beta\ngamma');
+        },
+      );
+
+      test('moveLinesUp and moveLinesDown move the selected block', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha\nbeta\ngamma\ndelta');
+        textarea.setSelection(
+          baseLine: 1,
+          baseColumn: 0,
+          extentLine: 2,
+          extentColumn: 5,
+        );
+
+        expect(textarea.moveLinesUp(), isTrue);
+        expect(textarea.value, 'beta\ngamma\nalpha\ndelta');
+        expect(textarea.selectionBase, (line: 0, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 5));
+
+        expect(textarea.moveLinesDown(), isTrue);
+        expect(textarea.value, 'alpha\nbeta\ngamma\ndelta');
+        expect(textarea.undo(), isTrue);
+        expect(textarea.value, 'beta\ngamma\nalpha\ndelta');
+      });
+
+      test(
+        'duplicateLinesBelow duplicates the current line or selected block',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha\nbeta\ngamma');
+          textarea.setCursor(1, 2);
+
+          expect(textarea.duplicateLinesBelow(), isTrue);
+          expect(textarea.value, 'alpha\nbeta\nbeta\ngamma');
+          expect(textarea.line, 2);
+          expect(textarea.column, 2);
+
+          textarea.setSelection(
+            baseLine: 1,
+            baseColumn: 0,
+            extentLine: 2,
+            extentColumn: 4,
+          );
+          expect(textarea.duplicateLinesBelow(), isTrue);
+          expect(textarea.value, 'alpha\nbeta\nbeta\nbeta\nbeta\ngamma');
+          expect(textarea.selectionBase, (line: 3, column: 0));
+          expect(textarea.selectionExtent, (line: 4, column: 4));
+        },
+      );
+
+      test(
+        'duplicateLinesAbove duplicates the current line or selected block',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha\nbeta\ngamma');
+          textarea.setCursor(1, 2);
+
+          expect(textarea.duplicateLinesAbove(), isTrue);
+          expect(textarea.value, 'alpha\nbeta\nbeta\ngamma');
+          expect(textarea.line, 1);
+          expect(textarea.column, 2);
+
+          textarea.setText('alpha\nbeta\ngamma');
+          textarea.setSelection(
+            baseLine: 1,
+            baseColumn: 0,
+            extentLine: 2,
+            extentColumn: 4,
+          );
+          expect(textarea.duplicateLinesAbove(), isTrue);
+          expect(textarea.value, 'alpha\nbeta\ngamma\nbeta\ngamma');
+          expect(textarea.selectionBase, (line: 1, column: 0));
+          expect(textarea.selectionExtent, (line: 2, column: 4));
+        },
+      );
+
+      test(
+        'cleanupWhitespace trims trailing whitespace and trailing blank lines',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha  \nbeta\t\n\n');
+          textarea.setCursor(3, 0);
+
+          expect(textarea.cleanupWhitespace(), isTrue);
+          expect(textarea.value, 'alpha\nbeta');
+          expect(textarea.line, 1);
+          expect(textarea.column, 4);
+
+          textarea.setText('alpha  \nbeta\t\ngamma  ');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 5,
+          );
+
+          expect(textarea.cleanupWhitespace(), isTrue);
+          expect(textarea.value, 'alpha\nbeta\ngamma  ');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 4));
+        },
+      );
+
+      test(
+        'selection or line case transforms update the selected block or current line',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha beta\ngamma delta');
+          textarea.setCursor(0, 3);
+
+          expect(textarea.uppercaseSelectionOrLine(), isTrue);
+          expect(textarea.value, 'ALPHA BETA\ngamma delta');
+          expect(textarea.line, 0);
+          expect(textarea.column, 3);
+
+          textarea.setSelection(
+            baseLine: 1,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 11,
+          );
+          expect(textarea.lowercaseSelectionOrLine(), isFalse);
+
+          textarea.setText('alpha beta\nGAMMA DELTA');
+          textarea.setSelection(
+            baseLine: 1,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 11,
+          );
+          expect(textarea.lowercaseSelectionOrLine(), isTrue);
+          expect(textarea.value, 'alpha beta\ngamma delta');
+          expect(textarea.selectionBase, (line: 1, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 11));
+
+          expect(textarea.capitalizeSelectionOrLine(), isTrue);
+          expect(textarea.value, 'alpha beta\nGamma Delta');
+          expect(textarea.selectionBase, (line: 1, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 11));
+        },
+      );
+
+      test('sortSelectedLines sorts the selected block or entire buffer', () {
+        final textarea = TextAreaModel();
+        textarea.setText('delta\nbeta\nalpha\ngamma');
+        textarea.setSelection(
+          baseLine: 1,
+          baseColumn: 0,
+          extentLine: 3,
+          extentColumn: 5,
+        );
+
+        expect(textarea.sortSelectedLines(), isTrue);
+        expect(textarea.value, 'delta\nalpha\nbeta\ngamma');
+        expect(textarea.selectionBase, (line: 1, column: 0));
+        expect(textarea.selectionExtent, (line: 3, column: 5));
+
+        textarea.setText('delta\nbeta\nalpha');
+        textarea.setCursor(2, 3);
+        expect(textarea.sortSelectedLines(), isTrue);
+        expect(textarea.value, 'alpha\nbeta\ndelta');
+        expect(textarea.line, 2);
+        expect(textarea.column, 3);
+      });
+
+      test(
+        'toggleLinePrefix toggles a prefix on the current line or selection',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha\nbeta');
+          textarea.setCursor(0, 2);
+
+          expect(textarea.toggleLinePrefix('>'), isTrue);
+          expect(textarea.value, '> alpha\nbeta');
+          expect(textarea.line, 0);
+          expect(textarea.column, 4);
+
+          expect(textarea.toggleLinePrefix('>'), isTrue);
+          expect(textarea.value, 'alpha\nbeta');
+          expect(textarea.line, 0);
+          expect(textarea.column, 2);
+
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 4,
+          );
+          expect(textarea.toggleLinePrefix('//'), isTrue);
+          expect(textarea.value, '// alpha\n// beta');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 7));
+        },
+      );
+
+      test(
+        'wrapSelection surrounds the current selection and preserves it',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 6,
+            extentLine: 0,
+            extentColumn: 10,
+          );
+
+          expect(textarea.wrapSelection('(', after: ')'), isTrue);
+          expect(textarea.value, 'alpha (beta)');
+          expect(textarea.selectionBase, (line: 0, column: 7));
+          expect(textarea.selectionExtent, (line: 0, column: 11));
+          expect(textarea.line, 0);
+          expect(textarea.column, 11);
+        },
+      );
+
+      test(
+        'toggleNumberedList toggles numbering on the current line or selection',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha\nbeta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 4,
+          );
+
+          expect(textarea.toggleNumberedList(), isTrue);
+          expect(textarea.value, '1. alpha\n2. beta');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 7));
+
+          expect(textarea.toggleNumberedList(), isTrue);
+          expect(textarea.value, 'alpha\nbeta');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 4));
+
+          textarea.setText('alpha\n\nbeta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 2,
+            extentColumn: 4,
+          );
+          expect(textarea.toggleNumberedList(), isTrue);
+          expect(textarea.value, '1. alpha\n\n2. beta');
+        },
+      );
+
+      test(
+        'toggleChecklistState marks and clears checklist items in the block',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('- [ ] alpha\n- [x] beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 10,
+          );
+
+          expect(textarea.toggleChecklistState(), isTrue);
+          expect(textarea.value, '- [x] alpha\n- [x] beta');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 10));
+
+          expect(textarea.toggleChecklistState(), isTrue);
+          expect(textarea.value, '- [ ] alpha\n- [ ] beta');
+
+          textarea.setText('alpha\nbeta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 4,
+          );
+          expect(textarea.toggleChecklistState(), isFalse);
+        },
+      );
+
+      test(
+        'renumberNumberedList renumbers existing numbered items in the block',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('9. alpha\n10. beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 8,
+          );
+
+          expect(textarea.renumberNumberedList(), isTrue);
+          expect(textarea.value, '1. alpha\n2. beta');
+          expect(textarea.selectionBase, (line: 0, column: 0));
+          expect(textarea.selectionExtent, (line: 1, column: 7));
+
+          textarea.setText('alpha\nbeta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 1,
+            extentColumn: 4,
+          );
+          expect(textarea.renumberNumberedList(), isFalse);
+        },
+      );
+
+      test('toggleHeadingPrefix normalizes or removes markdown headings', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha\n## beta');
+        textarea.setSelection(
+          baseLine: 0,
+          baseColumn: 0,
+          extentLine: 1,
+          extentColumn: 7,
+        );
+
+        expect(textarea.toggleHeadingPrefix(), isTrue);
+        expect(textarea.value, '# alpha\n# beta');
+        expect(textarea.selectionBase, (line: 0, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 6));
+
+        expect(textarea.toggleHeadingPrefix(), isTrue);
+        expect(textarea.value, 'alpha\nbeta');
+        expect(textarea.selectionBase, (line: 0, column: 0));
+        expect(textarea.selectionExtent, (line: 1, column: 4));
+      });
+
+      test(
+        'unwrapSelection removes matching delimiters and preserves the selection',
+        () {
+          final textarea = TextAreaModel();
+          textarea.setText('alpha (beta)');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 7,
+            extentLine: 0,
+            extentColumn: 11,
+          );
+
+          expect(textarea.unwrapSelection(), isTrue);
+          expect(textarea.value, 'alpha beta');
+          expect(textarea.selectionBase, (line: 0, column: 6));
+          expect(textarea.selectionExtent, (line: 0, column: 10));
+          expect(textarea.line, 0);
+          expect(textarea.column, 10);
+
+          textarea.setText('alpha beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 6,
+            extentLine: 0,
+            extentColumn: 10,
+          );
+          expect(textarea.unwrapSelection(), isFalse);
+        },
+      );
+
+      test('deleteLines removes the current line or selected block', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha\nbeta\ngamma\ndelta');
+        textarea.setCursor(1, 2);
+
+        expect(textarea.deleteLines(), isTrue);
+        expect(textarea.value, 'alpha\ngamma\ndelta');
+        expect(textarea.line, 1);
+        expect(textarea.column, 2);
+
+        textarea.setSelection(
+          baseLine: 1,
+          baseColumn: 0,
+          extentLine: 2,
+          extentColumn: 5,
+        );
+        expect(textarea.deleteLines(), isTrue);
+        expect(textarea.value, 'alpha');
+        expect(textarea.line, 0);
+        expect(textarea.column, 5);
+
+        expect(textarea.undo(), isTrue);
+        expect(textarea.value, 'alpha\ngamma\ndelta');
+      });
+
+      test('joinLines joins the current line or selected block', () {
+        final textarea = TextAreaModel();
+        textarea.setText('alpha\n  beta\ngamma');
+        textarea.setCursor(0, 2);
+
+        expect(textarea.joinLines(), isTrue);
+        expect(textarea.value, 'alpha beta\ngamma');
+        expect(textarea.line, 0);
+        expect(textarea.column, 'alpha beta'.length);
+
+        textarea.setSelection(
+          baseLine: 0,
+          baseColumn: 0,
+          extentLine: 1,
+          extentColumn: 5,
+        );
+        expect(textarea.joinLines(), isTrue);
+        expect(textarea.value, 'alpha beta gamma');
+
+        expect(textarea.undo(), isTrue);
+        expect(textarea.value, 'alpha beta\ngamma');
       });
     });
 
@@ -606,6 +1145,8 @@ void main() {
       expect(keyMap.characterBackward.keys, isNotEmpty);
       expect(keyMap.lineNext.keys, isNotEmpty);
       expect(keyMap.linePrevious.keys, isNotEmpty);
+      expect(keyMap.undo.keys, isNotEmpty);
+      expect(keyMap.redo.keys, isNotEmpty);
     });
 
     test('shortHelp returns bindings', () {
@@ -618,6 +1159,8 @@ void main() {
       final keyMap = TextAreaKeyMap();
       final help = keyMap.fullHelp();
       expect(help, isNotEmpty);
+      expect(help.expand((group) => group), contains(keyMap.selectAll));
+      expect(help.expand((group) => group), contains(keyMap.selectLine));
     });
   });
 

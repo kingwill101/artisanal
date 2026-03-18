@@ -185,6 +185,49 @@ class TextAreaPasteErrorMsg implements Msg {
   final Object error;
 }
 
+class _TextAreaEditState {
+  const _TextAreaEditState({
+    required this.value,
+    required this.row,
+    required this.col,
+    required this.selectionStart,
+    required this.selectionEnd,
+  });
+
+  final String value;
+  final int row;
+  final int col;
+  final (int, int)? selectionStart;
+  final (int, int)? selectionEnd;
+
+  bool sameAs(_TextAreaEditState other) {
+    return value == other.value &&
+        row == other.row &&
+        col == other.col &&
+        selectionStart == other.selectionStart &&
+        selectionEnd == other.selectionEnd;
+  }
+}
+
+enum _TextAreaHistoryAction {
+  insert,
+  deleteBackward,
+  deleteForward,
+  paste,
+  setText,
+  reset,
+  transform,
+}
+
+const Map<String, String> _selectionSurroundPairs = {
+  '(': ')',
+  '[': ']',
+  '{': '}',
+  '"': '"',
+  "'": "'",
+  '`': '`',
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Key map
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,6 +238,8 @@ class TextAreaKeyMap implements KeyMap {
     KeyBinding? characterBackward,
     KeyBinding? wordForward,
     KeyBinding? wordBackward,
+    KeyBinding? selectAll,
+    KeyBinding? selectLine,
     KeyBinding? lineStart,
     KeyBinding? lineEnd,
     KeyBinding? lineNext,
@@ -214,6 +259,8 @@ class TextAreaKeyMap implements KeyMap {
     KeyBinding? lowercaseWordForward,
     KeyBinding? capitalizeWordForward,
     KeyBinding? copy,
+    KeyBinding? undo,
+    KeyBinding? redo,
   }) : characterForward =
            characterForward ??
            KeyBinding.withHelp(['right', 'ctrl+f'], '→', 'character forward'),
@@ -226,9 +273,13 @@ class TextAreaKeyMap implements KeyMap {
        wordBackward =
            wordBackward ??
            KeyBinding.withHelp(['Alt+b'], 'alt+b', 'word backward'),
+       selectAll =
+           selectAll ?? KeyBinding.withHelp(['ctrl+a'], 'ctrl+a', 'select all'),
+       selectLine =
+           selectLine ??
+           KeyBinding.withHelp(['ctrl+l'], 'ctrl+l', 'select line'),
        lineStart =
-           lineStart ??
-           KeyBinding.withHelp(['home', 'Ctrl+a'], 'home', 'line start'),
+           lineStart ?? KeyBinding.withHelp(['home'], 'home', 'line start'),
        lineEnd =
            lineEnd ?? KeyBinding.withHelp(['end', 'Ctrl+e'], 'end', 'line end'),
        lineNext =
@@ -279,12 +330,18 @@ class TextAreaKeyMap implements KeyMap {
        capitalizeWordForward =
            capitalizeWordForward ??
            KeyBinding.withHelp(['alt+c'], 'alt+c', 'capitalize word'),
-       copy = copy ?? KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'copy');
+       copy = copy ?? KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'copy'),
+       undo = undo ?? KeyBinding.withHelp(['ctrl+z'], 'ctrl+z', 'undo'),
+       redo =
+           redo ??
+           KeyBinding.withHelp(['ctrl+y', 'ctrl+shift+z'], 'ctrl+y', 'redo');
 
   final KeyBinding characterForward;
   final KeyBinding characterBackward;
   final KeyBinding wordForward;
   final KeyBinding wordBackward;
+  final KeyBinding selectAll;
+  final KeyBinding selectLine;
   final KeyBinding lineStart;
   final KeyBinding lineEnd;
   final KeyBinding lineNext;
@@ -304,12 +361,16 @@ class TextAreaKeyMap implements KeyMap {
   final KeyBinding lowercaseWordForward;
   final KeyBinding capitalizeWordForward;
   final KeyBinding copy;
+  final KeyBinding undo;
+  final KeyBinding redo;
 
   TextAreaKeyMap copyWith({
     KeyBinding? characterForward,
     KeyBinding? characterBackward,
     KeyBinding? wordForward,
     KeyBinding? wordBackward,
+    KeyBinding? selectAll,
+    KeyBinding? selectLine,
     KeyBinding? lineStart,
     KeyBinding? lineEnd,
     KeyBinding? lineNext,
@@ -329,12 +390,16 @@ class TextAreaKeyMap implements KeyMap {
     KeyBinding? lowercaseWordForward,
     KeyBinding? capitalizeWordForward,
     KeyBinding? copy,
+    KeyBinding? undo,
+    KeyBinding? redo,
   }) {
     return TextAreaKeyMap(
       characterForward: characterForward ?? this.characterForward,
       characterBackward: characterBackward ?? this.characterBackward,
       wordForward: wordForward ?? this.wordForward,
       wordBackward: wordBackward ?? this.wordBackward,
+      selectAll: selectAll ?? this.selectAll,
+      selectLine: selectLine ?? this.selectLine,
       lineStart: lineStart ?? this.lineStart,
       lineEnd: lineEnd ?? this.lineEnd,
       lineNext: lineNext ?? this.lineNext,
@@ -357,6 +422,8 @@ class TextAreaKeyMap implements KeyMap {
       capitalizeWordForward:
           capitalizeWordForward ?? this.capitalizeWordForward,
       copy: copy ?? this.copy,
+      undo: undo ?? this.undo,
+      redo: redo ?? this.redo,
     );
   }
 
@@ -374,6 +441,7 @@ class TextAreaKeyMap implements KeyMap {
   List<List<KeyBinding>> fullHelp() => [
     [characterBackward, characterForward],
     [wordBackward, wordForward],
+    [selectAll, selectLine],
     [lineStart, lineEnd],
     [linePrevious, lineNext],
     [
@@ -388,6 +456,8 @@ class TextAreaKeyMap implements KeyMap {
     [
       inputBegin,
       inputEnd,
+      undo,
+      redo,
       transposeCharacterBackward,
       uppercaseWordForward,
       lowercaseWordForward,
@@ -447,6 +517,16 @@ class TextAreaModel extends ViewComponent {
   int _width;
   int _height;
   int? _promptWidth;
+  static const int _maxHistoryEntries = 100;
+  final List<_TextAreaEditState> _undoStack = <_TextAreaEditState>[];
+  final List<_TextAreaEditState> _redoStack = <_TextAreaEditState>[];
+  bool _editFrameActive = false;
+  bool _didRecordUndoSnapshot = false;
+  _TextAreaHistoryAction? _currentHistoryAction;
+  _TextAreaHistoryAction? _lastHistoryAction;
+  int? _lastHistoryRowAfter;
+  int? _lastHistoryColAfter;
+  int? _lastHistoryLengthAfter;
 
   (int, int)? _selectionStart;
   (int, int)? _selectionEnd;
@@ -462,16 +542,26 @@ class TextAreaModel extends ViewComponent {
   int get height => _height;
   int get lineCount => _lines.length;
   int get length => _totalGraphemeLength();
+  bool get canUndo => _undoStack.isNotEmpty;
+  bool get canRedo => _redoStack.isNotEmpty;
+  bool get hasSelection => _hasSelection();
+
+  /// Anchor position of the current selection, if any.
+  ({int line, int column})? get selectionBase => _selectionStart == null
+      ? null
+      : (line: _selectionStart!.$2, column: _selectionStart!.$1);
+
+  /// Active extent position of the current selection, if any.
+  ({int line, int column})? get selectionExtent => _selectionEnd == null
+      ? null
+      : (line: _selectionEnd!.$2, column: _selectionEnd!.$1);
 
   /// Returns the current value of the textarea.
   String get value => _lines.map((l) => l.join()).join('\n');
 
   /// Sets the value of the textarea.
   set value(String v) {
-    final limited = _applyCharLimit(v);
-    _lines = _parseLines(limited);
-    _row = _lines.length - 1;
-    _col = _lines.isNotEmpty ? _lines.last.length : 0;
+    setText(v);
   }
 
   /// Sets the value of the textarea (method form for API compatibility).
@@ -479,7 +569,23 @@ class TextAreaModel extends ViewComponent {
   /// This is equivalent to using the [value] setter and exists for parity with
   /// the upstream bubbletea Go library. Prefer using `model.value = v` in Dart.
   void setValue(String v) {
-    value = v;
+    setText(v);
+  }
+
+  /// Replaces the text and collapses the cursor at the end.
+  void setText(String v, {bool recordHistory = true}) {
+    _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.setText, breakChain: true);
+      if (recordHistory) {
+        _recordUndoSnapshot();
+      }
+      final limited = _applyCharLimit(v);
+      _lines = _parseLines(limited);
+      _row = _lines.length - 1;
+      _col = _lines.isNotEmpty ? _lines.last.length : 0;
+      _selectionStart = null;
+      _selectionEnd = null;
+    });
   }
 
   /// Sets the prompt function.
@@ -498,6 +604,51 @@ class TextAreaModel extends ViewComponent {
   void setCursor(int row, int col) {
     _row = row.clamp(0, _lines.length - 1);
     _col = col.clamp(0, _lines[_row].length);
+  }
+
+  /// Sets the current selection and places the cursor at the extent.
+  void setSelection({
+    required int baseLine,
+    required int baseColumn,
+    required int extentLine,
+    required int extentColumn,
+  }) {
+    final clampedBaseLine = baseLine.clamp(0, _lines.length - 1);
+    final clampedExtentLine = extentLine.clamp(0, _lines.length - 1);
+    _selectionStart = (
+      baseColumn.clamp(0, _lines[clampedBaseLine].length),
+      clampedBaseLine,
+    );
+    _selectionEnd = (
+      extentColumn.clamp(0, _lines[clampedExtentLine].length),
+      clampedExtentLine,
+    );
+    _row = clampedExtentLine;
+    _col = extentColumn.clamp(0, _lines[_row].length);
+  }
+
+  /// Clears the current selection.
+  void clearSelection() {
+    _selectionStart = null;
+    _selectionEnd = null;
+  }
+
+  /// Selects the entire textarea contents.
+  void selectAll() {
+    final lastLine = _lines.length - 1;
+    _selectionStart = (0, 0);
+    _selectionEnd = (_lines[lastLine].length, lastLine);
+    _row = lastLine;
+    _col = _lines[lastLine].length;
+  }
+
+  /// Selects the current line, or expands the current selection to full lines.
+  void selectCurrentLine() {
+    final (startLine, endLine) = _selectedLineRange();
+    _selectionStart = (0, startLine);
+    _selectionEnd = (_lines[endLine].length, endLine);
+    _row = endLine;
+    _col = _lines[endLine].length;
   }
 
   /// Returns the current cursor line (0-indexed).
@@ -528,6 +679,123 @@ class TextAreaModel extends ViewComponent {
   /// Returns the appropriate style state based on focus.
   TextAreaStyleState activeStyle() =>
       _focused ? styles.focused : styles.blurred;
+
+  T _runEditFrame<T>(T Function() body) {
+    final wasActive = _editFrameActive;
+    _TextAreaEditState? beforeState;
+    if (!wasActive) {
+      _editFrameActive = true;
+      _didRecordUndoSnapshot = false;
+      beforeState = _captureEditState();
+    }
+    try {
+      return body();
+    } finally {
+      if (!wasActive) {
+        _finalizeEditFrame(beforeState!);
+        _editFrameActive = false;
+        _didRecordUndoSnapshot = false;
+        _currentHistoryAction = null;
+      }
+    }
+  }
+
+  _TextAreaEditState _captureEditState() {
+    return _TextAreaEditState(
+      value: value,
+      row: _row,
+      col: _col,
+      selectionStart: _selectionStart,
+      selectionEnd: _selectionEnd,
+    );
+  }
+
+  void _restoreEditState(_TextAreaEditState state) {
+    _lines = _parseLines(state.value);
+    _row = state.row.clamp(0, _lines.length - 1);
+    _col = state.col.clamp(0, _lines[_row].length);
+    _selectionStart = state.selectionStart;
+    _selectionEnd = state.selectionEnd;
+  }
+
+  void _beginHistoryAction(
+    _TextAreaHistoryAction action, {
+    bool breakChain = false,
+  }) {
+    if (breakChain) {
+      _breakHistoryCoalescing();
+    }
+    _currentHistoryAction = action;
+  }
+
+  void _breakHistoryCoalescing() {
+    _currentHistoryAction = null;
+    _lastHistoryAction = null;
+    _lastHistoryRowAfter = null;
+    _lastHistoryColAfter = null;
+    _lastHistoryLengthAfter = null;
+  }
+
+  bool _hasSelection() =>
+      _selectionStart != null &&
+      _selectionEnd != null &&
+      _selectionStart != _selectionEnd;
+
+  bool _shouldCoalesceSnapshot(_TextAreaHistoryAction action) {
+    if (_hasSelection()) return false;
+    if (_lastHistoryAction != action) return false;
+    if (_lastHistoryRowAfter != _row) return false;
+    if (_lastHistoryColAfter != _col) return false;
+    if (_lastHistoryLengthAfter != length) return false;
+    return switch (action) {
+      _TextAreaHistoryAction.insert => true,
+      _TextAreaHistoryAction.deleteBackward => true,
+      _TextAreaHistoryAction.deleteForward => true,
+      _TextAreaHistoryAction.paste => true,
+      _ => false,
+    };
+  }
+
+  void _recordUndoSnapshot() {
+    if (_editFrameActive && _didRecordUndoSnapshot) {
+      return;
+    }
+    final action = _currentHistoryAction;
+    if (action != null && _shouldCoalesceSnapshot(action)) {
+      _didRecordUndoSnapshot = true;
+      return;
+    }
+    final snapshot = _captureEditState();
+    if (_undoStack.isNotEmpty && _undoStack.last.sameAs(snapshot)) {
+      _didRecordUndoSnapshot = true;
+      return;
+    }
+    _undoStack.add(snapshot);
+    if (_undoStack.length > _maxHistoryEntries) {
+      _undoStack.removeAt(0);
+    }
+    _redoStack.clear();
+    _didRecordUndoSnapshot = true;
+  }
+
+  void _finalizeEditFrame(_TextAreaEditState beforeState) {
+    final action = _currentHistoryAction;
+    final afterState = _captureEditState();
+    if (beforeState.sameAs(afterState)) {
+      if (action == null) {
+        _breakHistoryCoalescing();
+      }
+      return;
+    }
+    if (action == null) {
+      _breakHistoryCoalescing();
+      return;
+    }
+    _lastHistoryAction = action;
+    _lastHistoryRowAfter = afterState.row;
+    _lastHistoryColAfter = afterState.col;
+    _lastHistoryLengthAfter = uni.graphemes(afterState.value).length;
+  }
 
   /// Returns a [Cursor] for rendering a real cursor in a TUI program.
   /// This requires that [useVirtualCursor] is set to false.
@@ -585,9 +853,1074 @@ class TextAreaModel extends ViewComponent {
   bool isFocused() => _focused;
 
   void reset() {
-    _lines = [[]];
-    _row = 0;
-    _col = 0;
+    _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.reset, breakChain: true);
+      _recordUndoSnapshot();
+      _lines = [[]];
+      _row = 0;
+      _col = 0;
+      _selectionStart = null;
+      _selectionEnd = null;
+    });
+  }
+
+  /// Clears all undo and redo history.
+  void clearHistory() {
+    _undoStack.clear();
+    _redoStack.clear();
+    _breakHistoryCoalescing();
+  }
+
+  /// Breaks the current undo coalescing chain.
+  void pushHistoryBoundary() {
+    _breakHistoryCoalescing();
+  }
+
+  /// Indents the selected lines, or the current line if there is no selection.
+  bool indentLines({int width = 2}) {
+    final indentWidth = width < 1 ? 1 : width;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      final deltas = <int, int>{};
+      final indent = List<String>.filled(indentWidth, ' ', growable: false);
+
+      _recordUndoSnapshot();
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        _lines[lineIndex].insertAll(0, indent);
+        deltas[lineIndex] = indentWidth;
+      }
+
+      _applyLineColumnDeltas(deltas);
+      return true;
+    });
+  }
+
+  /// Outdents the selected lines, or the current line if there is no selection.
+  bool outdentLines({int width = 2}) {
+    final indentWidth = width < 1 ? 1 : width;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      final removalCounts = <int, int>{};
+      var changed = false;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final removalCount = _leadingIndentRemovalCount(
+          _lines[lineIndex],
+          indentWidth,
+        );
+        removalCounts[lineIndex] = removalCount;
+        changed = changed || removalCount > 0;
+      }
+
+      if (!changed) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final removalCount = removalCounts[lineIndex]!;
+        if (removalCount == 0) continue;
+        _lines[lineIndex].removeRange(0, removalCount);
+        removalCounts[lineIndex] = -removalCount;
+      }
+
+      _applyLineColumnDeltas(removalCounts);
+      return true;
+    });
+  }
+
+  /// Moves the selected lines, or the current line, one row upward.
+  bool moveLinesUp() {
+    return _moveSelectedLines(-1);
+  }
+
+  /// Moves the selected lines, or the current line, one row downward.
+  bool moveLinesDown() {
+    return _moveSelectedLines(1);
+  }
+
+  /// Duplicates the selected lines, or the current line, above the current
+  /// block and moves the selection/cursor to the duplicate.
+  bool duplicateLinesAbove() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      final blockHeight = endLine - startLine + 1;
+      final hadSelection = _hasSelection();
+      final duplicatedLines = _lines
+          .sublist(startLine, endLine + 1)
+          .map((line) => List<String>.from(line))
+          .toList(growable: false);
+
+      _recordUndoSnapshot();
+      _lines.insertAll(startLine, duplicatedLines);
+
+      if (hadSelection) {
+        _selectionStart = _duplicateAbovePoint(
+          _selectionStart,
+          startLine: startLine,
+          endLine: endLine,
+          delta: blockHeight,
+        );
+        _selectionEnd = _duplicateAbovePoint(
+          _selectionEnd,
+          startLine: startLine,
+          endLine: endLine,
+          delta: blockHeight,
+        );
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+      }
+
+      if (_row > endLine) {
+        _row = (_row + blockHeight).clamp(0, _lines.length - 1);
+      }
+      _col = _col.clamp(0, _lines[_row].length);
+      return true;
+    });
+  }
+
+  /// Duplicates the selected lines, or the current line, below the current
+  /// block and moves the selection/cursor to the duplicate.
+  bool duplicateLinesBelow() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      final blockHeight = endLine - startLine + 1;
+      final hadSelection = _hasSelection();
+      final duplicatedLines = _lines
+          .sublist(startLine, endLine + 1)
+          .map((line) => List<String>.from(line))
+          .toList(growable: false);
+
+      _recordUndoSnapshot();
+      _lines.insertAll(endLine + 1, duplicatedLines);
+
+      if (hadSelection) {
+        _selectionStart = _shiftPointRowRange(
+          _selectionStart,
+          startLine: startLine,
+          endLine: endLine,
+          delta: blockHeight,
+        );
+        _selectionEnd = _shiftPointRowRange(
+          _selectionEnd,
+          startLine: startLine,
+          endLine: endLine,
+          delta: blockHeight,
+        );
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+      }
+
+      if (_row >= startLine && _row <= endLine) {
+        _row = (_row + blockHeight).clamp(0, _lines.length - 1);
+        _col = _col.clamp(0, _lines[_row].length);
+      }
+      return true;
+    });
+  }
+
+  /// Cleans up trailing horizontal whitespace in the selected block, or the
+  /// entire buffer when there is no selection.
+  ///
+  /// When operating on the entire buffer, this also removes extra trailing
+  /// blank lines from the end of the document while keeping at least one line.
+  bool cleanupWhitespace({bool trimTrailingBlankLines = true}) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final hasSelection = _hasSelection();
+      final (startLine, endLine) = hasSelection
+          ? _selectedLineRange()
+          : (0, _lines.length - 1);
+      final trimmedLengths = <int, int>{};
+      var changed = false;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final trimmedLength = _trailingHorizontalTrimLength(_lines[lineIndex]);
+        trimmedLengths[lineIndex] = trimmedLength;
+        changed = changed || trimmedLength != _lines[lineIndex].length;
+      }
+
+      var removedTrailingLines = 0;
+      if (!hasSelection && trimTrailingBlankLines) {
+        var lineIndex = _lines.length - 1;
+        while (lineIndex > 0 && trimmedLengths[lineIndex] == 0) {
+          removedTrailingLines++;
+          lineIndex--;
+        }
+        changed = changed || removedTrailingLines > 0;
+      }
+
+      if (!changed) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final trimmedLength = trimmedLengths[lineIndex]!;
+        if (trimmedLength == _lines[lineIndex].length) continue;
+        _lines[lineIndex].removeRange(trimmedLength, _lines[lineIndex].length);
+      }
+
+      if (!hasSelection && removedTrailingLines > 0) {
+        _lines.removeRange(_lines.length - removedTrailingLines, _lines.length);
+      }
+
+      if (_row >= _lines.length) {
+        _row = _lines.length - 1;
+        _col = _lines[_row].length;
+      } else {
+        _row = _row.clamp(0, _lines.length - 1);
+        _col = _col.clamp(0, _lines[_row].length);
+      }
+      _selectionStart = _clampPointToBuffer(_selectionStart);
+      _selectionEnd = _clampPointToBuffer(_selectionEnd);
+      return true;
+    });
+  }
+
+  /// Deletes the selected lines, or the current line if there is no selection.
+  bool deleteLines() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      final deletedCount = endLine - startLine + 1;
+
+      _recordUndoSnapshot();
+      if (deletedCount >= _lines.length) {
+        _lines = [[]];
+        _row = 0;
+        _col = 0;
+        _selectionStart = null;
+        _selectionEnd = null;
+        return true;
+      }
+
+      _lines.removeRange(startLine, endLine + 1);
+      if (_row > endLine) {
+        _row -= deletedCount;
+      } else if (_row >= startLine) {
+        _row = startLine.clamp(0, _lines.length - 1);
+      }
+      _col = _col.clamp(0, _lines[_row].length);
+      _selectionStart = null;
+      _selectionEnd = null;
+      return true;
+    });
+  }
+
+  /// Joins the current line with the next line, or joins the selected block
+  /// into a single line.
+  bool joinLines() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, selectedEndLine) = _selectedLineRange();
+      final endLine = _hasSelection()
+          ? selectedEndLine
+          : math.min(startLine + 1, _lines.length - 1);
+      if (startLine >= endLine) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      final joined = List<String>.from(_lines[startLine]);
+      for (var lineIndex = startLine + 1; lineIndex <= endLine; lineIndex++) {
+        final trimmed = _trimLeadingHorizontalWhitespace(_lines[lineIndex]);
+        final separator = _lineJoinSeparator(joined, trimmed);
+        if (separator.isNotEmpty) {
+          joined.add(separator);
+        }
+        joined.addAll(trimmed);
+      }
+
+      _lines[startLine] = joined;
+      _lines.removeRange(startLine + 1, endLine + 1);
+      _row = startLine;
+      _col = joined.length;
+      _selectionStart = null;
+      _selectionEnd = null;
+      return true;
+    });
+  }
+
+  /// Splits the current line at the cursor, or replaces the selected range
+  /// with a newline and places the cursor at the start of the new line.
+  bool splitLine() {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final flat = _flattenWithNewlines();
+      var start = _globalOffset();
+      var end = start;
+      if (_hasSelection()) {
+        start = _globalOffsetForPoint(_selectionStart!);
+        end = _globalOffsetForPoint(_selectionEnd!);
+        if (start > end) {
+          final tmp = start;
+          start = end;
+          end = tmp;
+        }
+      }
+
+      _recordUndoSnapshot();
+      flat.replaceRange(start, end, const ['\n']);
+      _setValueAndCursor(flat.join(), start + 1);
+      _selectionStart = null;
+      _selectionEnd = null;
+      return true;
+    });
+  }
+
+  /// Uppercases the selected range, or the current line when there is no
+  /// selection.
+  bool uppercaseSelectionOrLine() {
+    return _transformSelectionOrLine((text) => text.toUpperCase());
+  }
+
+  /// Lowercases the selected range, or the current line when there is no
+  /// selection.
+  bool lowercaseSelectionOrLine() {
+    return _transformSelectionOrLine((text) => text.toLowerCase());
+  }
+
+  /// Capitalizes words in the selected range, or the current line when there
+  /// is no selection.
+  bool capitalizeSelectionOrLine() {
+    return _transformSelectionOrLine(_capitalizeWords);
+  }
+
+  /// Sorts the selected lines, or the entire buffer when there is no
+  /// selection.
+  bool sortSelectedLines({
+    bool descending = false,
+    bool caseSensitive = false,
+  }) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final hasSelection = _hasSelection();
+      final (startLine, endLine) = hasSelection
+          ? _selectedLineRange()
+          : (0, _lines.length - 1);
+      if (startLine >= endLine) {
+        return false;
+      }
+
+      final originalTexts = _lines
+          .sublist(startLine, endLine + 1)
+          .map((line) => line.join())
+          .toList(growable: false);
+      final sortedLines = _lines
+          .sublist(startLine, endLine + 1)
+          .map((line) => List<String>.from(line))
+          .toList();
+      sortedLines.sort(
+        (a, b) => _compareLineContent(
+          a,
+          b,
+          descending: descending,
+          caseSensitive: caseSensitive,
+        ),
+      );
+      final sortedTexts = sortedLines
+          .map((line) => line.join())
+          .toList(growable: false);
+      if (_listStringEquals(originalTexts, sortedTexts)) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines.replaceRange(startLine, endLine + 1, sortedLines);
+      _row = _row.clamp(0, _lines.length - 1);
+      _col = _col.clamp(0, _lines[_row].length);
+      _selectionStart = _clampPointToBuffer(_selectionStart);
+      _selectionEnd = _clampPointToBuffer(_selectionEnd);
+      return true;
+    });
+  }
+
+  /// Toggles [prefix] on the current line or selected block.
+  ///
+  /// The prefix is inserted after leading indentation, and a single space is
+  /// added before non-empty content when [addSpaceWhenNonEmpty] is `true`.
+  bool toggleLinePrefix(
+    String prefix, {
+    bool addSpaceWhenNonEmpty = true,
+    bool skipBlankLinesWhenChecking = true,
+  }) {
+    if (prefix.isEmpty) return false;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final lineTexts = _lines
+          .map((line) => line.join())
+          .toList(growable: true);
+      if (lineTexts.isEmpty) {
+        return false;
+      }
+
+      final row = _row.clamp(0, lineTexts.length - 1);
+      final hasSelection =
+          _hasSelection() && _selectionStart != null && _selectionEnd != null;
+      final startLine = hasSelection
+          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+      final endLine = hasSelection
+          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+
+      var hasRelevantLine = false;
+      var allPrefixed = true;
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final body = line.substring(leadingWhitespace);
+        if (skipBlankLinesWhenChecking && body.trim().isEmpty) {
+          continue;
+        }
+        hasRelevantLine = true;
+        if (!body.startsWith(prefix)) {
+          allPrefixed = false;
+          break;
+        }
+      }
+      if (!hasRelevantLine) {
+        allPrefixed = false;
+      }
+
+      var adjustedBase = _selectionStart;
+      var adjustedExtent = _selectionEnd;
+      var nextColumn = _col;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final indent = line.substring(0, leadingWhitespace);
+        final body = line.substring(leadingWhitespace);
+        final wasPrefixed = body.startsWith(prefix);
+        final hadTrailingSpace = wasPrefixed && body.length > prefix.length
+            ? body.substring(prefix.length).startsWith(' ')
+            : false;
+        final removeCount = prefix.length + (hadTrailingSpace ? 1 : 0);
+        final addCount =
+            prefix.length + (addSpaceWhenNonEmpty && body.isNotEmpty ? 1 : 0);
+
+        lineTexts[lineIndex] = allPrefixed && wasPrefixed
+            ? '$indent${body.substring(removeCount)}'
+            : '$indent$prefix${addSpaceWhenNonEmpty && body.isNotEmpty ? ' ' : ''}$body';
+
+        if (!allPrefixed) {
+          if (lineIndex == row) {
+            nextColumn = _adjustLinePrefixColumn(
+              column: nextColumn,
+              leadingWhitespace: leadingWhitespace,
+              delta: addCount,
+              remove: false,
+            );
+          }
+          adjustedBase = _adjustLinePrefixPoint(
+            adjustedBase,
+            line: lineIndex,
+            leadingWhitespace: leadingWhitespace,
+            delta: addCount,
+            remove: false,
+          );
+          adjustedExtent = _adjustLinePrefixPoint(
+            adjustedExtent,
+            line: lineIndex,
+            leadingWhitespace: leadingWhitespace,
+            delta: addCount,
+            remove: false,
+          );
+          continue;
+        }
+
+        if (lineIndex == row) {
+          nextColumn = _adjustLinePrefixColumn(
+            column: nextColumn,
+            leadingWhitespace: leadingWhitespace,
+            delta: removeCount,
+            remove: true,
+          );
+        }
+        adjustedBase = _adjustLinePrefixPoint(
+          adjustedBase,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: removeCount,
+          remove: true,
+        );
+        adjustedExtent = _adjustLinePrefixPoint(
+          adjustedExtent,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: removeCount,
+          remove: true,
+        );
+      }
+
+      final nextValue = lineTexts.join('\n');
+      if (nextValue == value) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines = _parseLines(nextValue);
+      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
+        _selectionStart = _clampPointToBuffer(adjustedBase);
+        _selectionEnd = _clampPointToBuffer(adjustedExtent);
+        _row = _selectionEnd!.$2;
+        _col = _selectionEnd!.$1;
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+        _row = row.clamp(0, _lines.length - 1);
+        _col = nextColumn.clamp(0, _lines[_row].length);
+      }
+      return true;
+    });
+  }
+
+  /// Toggles numbered list prefixes on the current line or selected block.
+  ///
+  /// When adding numbering, non-blank lines are numbered sequentially starting
+  /// at [startAt]. Blank lines are left unchanged.
+  bool toggleNumberedList({int startAt = 1}) {
+    final initialNumber = startAt < 1 ? 1 : startAt;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final lineTexts = _lines
+          .map((line) => line.join())
+          .toList(growable: true);
+      if (lineTexts.isEmpty) {
+        return false;
+      }
+
+      final row = _row.clamp(0, lineTexts.length - 1);
+      final hasSelection =
+          _hasSelection() && _selectionStart != null && _selectionEnd != null;
+      final startLine = hasSelection
+          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+      final endLine = hasSelection
+          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+
+      var hasRelevantLine = false;
+      var allNumbered = true;
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final body = line.substring(leadingWhitespace);
+        if (body.trim().isEmpty) {
+          continue;
+        }
+        hasRelevantLine = true;
+        if (_leadingNumberedPrefixLength(body) == null) {
+          allNumbered = false;
+          break;
+        }
+      }
+
+      var adjustedBase = _selectionStart;
+      var adjustedExtent = _selectionEnd;
+      var nextColumn = _col;
+      var nextNumber = initialNumber;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final indent = line.substring(0, leadingWhitespace);
+        final body = line.substring(leadingWhitespace);
+        final numberedPrefixLength = _leadingNumberedPrefixLength(body);
+        final isBlank = body.trim().isEmpty;
+        if (isBlank && hasRelevantLine) {
+          continue;
+        }
+
+        final addPrefix = '${nextNumber++}. ';
+        final removeCount = numberedPrefixLength ?? 0;
+        final addCount = addPrefix.length;
+
+        lineTexts[lineIndex] = allNumbered && removeCount > 0
+            ? '$indent${body.substring(removeCount)}'
+            : '$indent$addPrefix$body';
+
+        if (!allNumbered) {
+          if (lineIndex == row) {
+            nextColumn = _adjustLinePrefixColumn(
+              column: nextColumn,
+              leadingWhitespace: leadingWhitespace,
+              delta: addCount,
+              remove: false,
+            );
+          }
+          adjustedBase = _adjustLinePrefixPoint(
+            adjustedBase,
+            line: lineIndex,
+            leadingWhitespace: leadingWhitespace,
+            delta: addCount,
+            remove: false,
+          );
+          adjustedExtent = _adjustLinePrefixPoint(
+            adjustedExtent,
+            line: lineIndex,
+            leadingWhitespace: leadingWhitespace,
+            delta: addCount,
+            remove: false,
+          );
+          continue;
+        }
+
+        if (lineIndex == row) {
+          nextColumn = _adjustLinePrefixColumn(
+            column: nextColumn,
+            leadingWhitespace: leadingWhitespace,
+            delta: removeCount,
+            remove: true,
+          );
+        }
+        adjustedBase = _adjustLinePrefixPoint(
+          adjustedBase,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: removeCount,
+          remove: true,
+        );
+        adjustedExtent = _adjustLinePrefixPoint(
+          adjustedExtent,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: removeCount,
+          remove: true,
+        );
+      }
+
+      final nextValue = lineTexts.join('\n');
+      if (nextValue == value) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines = _parseLines(nextValue);
+      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
+        _selectionStart = _clampPointToBuffer(adjustedBase);
+        _selectionEnd = _clampPointToBuffer(adjustedExtent);
+        _row = _selectionEnd!.$2;
+        _col = _selectionEnd!.$1;
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+        _row = row.clamp(0, _lines.length - 1);
+        _col = nextColumn.clamp(0, _lines[_row].length);
+      }
+      return true;
+    });
+  }
+
+  /// Renumbers existing numbered list items in the current line or selected
+  /// block.
+  ///
+  /// Only lines that already begin with a numbered list prefix are rewritten.
+  /// Other lines are left unchanged.
+  bool renumberNumberedList({int startAt = 1}) {
+    final initialNumber = startAt < 1 ? 1 : startAt;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final lineTexts = _lines
+          .map((line) => line.join())
+          .toList(growable: true);
+      if (lineTexts.isEmpty) {
+        return false;
+      }
+
+      final row = _row.clamp(0, lineTexts.length - 1);
+      final hasSelection =
+          _hasSelection() && _selectionStart != null && _selectionEnd != null;
+      final startLine = hasSelection
+          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+      final endLine = hasSelection
+          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+
+      var hasNumberedLine = false;
+      var adjustedBase = _selectionStart;
+      var adjustedExtent = _selectionEnd;
+      var nextColumn = _col;
+      var nextNumber = initialNumber;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final indent = line.substring(0, leadingWhitespace);
+        final body = line.substring(leadingWhitespace);
+        final numberedPrefixLength = _leadingNumberedPrefixLength(body);
+        if (numberedPrefixLength == null) {
+          continue;
+        }
+
+        hasNumberedLine = true;
+        final nextPrefix = '${nextNumber++}. ';
+        final nextLine =
+            '$indent$nextPrefix${body.substring(numberedPrefixLength)}';
+        final delta = nextPrefix.length - numberedPrefixLength;
+        lineTexts[lineIndex] = nextLine;
+
+        if (delta == 0) {
+          continue;
+        }
+
+        if (lineIndex == row) {
+          nextColumn = _adjustLinePrefixColumnDelta(
+            column: nextColumn,
+            leadingWhitespace: leadingWhitespace,
+            delta: delta,
+          );
+        }
+        adjustedBase = _adjustLinePrefixPointDelta(
+          adjustedBase,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: delta,
+        );
+        adjustedExtent = _adjustLinePrefixPointDelta(
+          adjustedExtent,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: delta,
+        );
+      }
+
+      if (!hasNumberedLine) {
+        return false;
+      }
+
+      final nextValue = lineTexts.join('\n');
+      if (nextValue == value) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines = _parseLines(nextValue);
+      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
+        _selectionStart = _clampPointToBuffer(adjustedBase);
+        _selectionEnd = _clampPointToBuffer(adjustedExtent);
+        _row = _selectionEnd!.$2;
+        _col = _selectionEnd!.$1;
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+        _row = row.clamp(0, _lines.length - 1);
+        _col = nextColumn.clamp(0, _lines[_row].length);
+      }
+      return true;
+    });
+  }
+
+  /// Toggles Markdown heading prefixes on the current line or selected block.
+  ///
+  /// When all relevant lines already use the requested heading [level], that
+  /// prefix is removed. Otherwise, existing heading prefixes are normalized to
+  /// the requested level and missing prefixes are added.
+  bool toggleHeadingPrefix({int level = 1}) {
+    final targetLevel = level.clamp(1, 6);
+    final targetPrefix = '${'#' * targetLevel} ';
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final lineTexts = _lines
+          .map((line) => line.join())
+          .toList(growable: true);
+      if (lineTexts.isEmpty) {
+        return false;
+      }
+
+      final row = _row.clamp(0, lineTexts.length - 1);
+      final hasSelection =
+          _hasSelection() && _selectionStart != null && _selectionEnd != null;
+      final startLine = hasSelection
+          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+      final endLine = hasSelection
+          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+
+      var hasRelevantLine = false;
+      var allAtTargetLevel = true;
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final body = line.substring(leadingWhitespace);
+        final headingPrefix = _leadingHeadingPrefix(body);
+        if (body.trim().isEmpty && headingPrefix == null) {
+          continue;
+        }
+        hasRelevantLine = true;
+        if (headingPrefix == null || headingPrefix.level != targetLevel) {
+          allAtTargetLevel = false;
+          break;
+        }
+      }
+      if (!hasRelevantLine) {
+        return false;
+      }
+
+      var adjustedBase = _selectionStart;
+      var adjustedExtent = _selectionEnd;
+      var nextColumn = _col;
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final indent = line.substring(0, leadingWhitespace);
+        final body = line.substring(leadingWhitespace);
+        final headingPrefix = _leadingHeadingPrefix(body);
+        if (body.trim().isEmpty && headingPrefix == null) {
+          continue;
+        }
+
+        final removeCount = headingPrefix?.length ?? 0;
+        final nextBody = removeCount > 0 ? body.substring(removeCount) : body;
+        final delta = allAtTargetLevel
+            ? -removeCount
+            : targetPrefix.length - removeCount;
+        lineTexts[lineIndex] = allAtTargetLevel
+            ? '$indent$nextBody'
+            : '$indent$targetPrefix$nextBody';
+
+        if (delta == 0) {
+          continue;
+        }
+
+        if (lineIndex == row) {
+          nextColumn = _adjustLinePrefixColumnDelta(
+            column: nextColumn,
+            leadingWhitespace: leadingWhitespace,
+            delta: delta,
+          );
+        }
+        adjustedBase = _adjustLinePrefixPointDelta(
+          adjustedBase,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: delta,
+        );
+        adjustedExtent = _adjustLinePrefixPointDelta(
+          adjustedExtent,
+          line: lineIndex,
+          leadingWhitespace: leadingWhitespace,
+          delta: delta,
+        );
+      }
+
+      final nextValue = lineTexts.join('\n');
+      if (nextValue == value) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines = _parseLines(nextValue);
+      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
+        _selectionStart = _clampPointToBuffer(adjustedBase);
+        _selectionEnd = _clampPointToBuffer(adjustedExtent);
+        _row = _selectionEnd!.$2;
+        _col = _selectionEnd!.$1;
+      } else {
+        _selectionStart = null;
+        _selectionEnd = null;
+        _row = row.clamp(0, _lines.length - 1);
+        _col = nextColumn.clamp(0, _lines[_row].length);
+      }
+      return true;
+    });
+  }
+
+  /// Toggles checklist completion state on the current line or selected block.
+  ///
+  /// When all relevant checklist items are checked, they are cleared back to
+  /// unchecked state. Otherwise all relevant items are marked with
+  /// [checkedMarker].
+  bool toggleChecklistState({String checkedMarker = 'x'}) {
+    final marker = checkedMarker.isEmpty ? 'x' : checkedMarker[0];
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final lineTexts = _lines
+          .map((line) => line.join())
+          .toList(growable: true);
+      if (lineTexts.isEmpty) {
+        return false;
+      }
+
+      final row = _row.clamp(0, lineTexts.length - 1);
+      final hasSelection =
+          _hasSelection() && _selectionStart != null && _selectionEnd != null;
+      final startLine = hasSelection
+          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+      final endLine = hasSelection
+          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
+          : row;
+
+      var hasChecklist = false;
+      var allChecked = true;
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final body = line.substring(leadingWhitespace);
+        final prefixLength = _leadingChecklistPrefixLength(body);
+        if (prefixLength == null) {
+          continue;
+        }
+        hasChecklist = true;
+        if (!_isChecklistChecked(body)) {
+          allChecked = false;
+          break;
+        }
+      }
+      if (!hasChecklist) {
+        return false;
+      }
+
+      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
+        final line = lineTexts[lineIndex];
+        final leadingWhitespace = line.length - line.trimLeft().length;
+        final indent = line.substring(0, leadingWhitespace);
+        final body = line.substring(leadingWhitespace);
+        final prefixLength = _leadingChecklistPrefixLength(body);
+        if (prefixLength == null) {
+          continue;
+        }
+
+        final rest = body.substring(prefixLength);
+        final hasBody = rest.isNotEmpty;
+        final nextPrefix = allChecked ? '- [ ]' : '- [$marker]';
+        lineTexts[lineIndex] = '$indent$nextPrefix${hasBody ? ' ' : ''}$rest';
+      }
+
+      final nextValue = lineTexts.join('\n');
+      if (nextValue == value) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _lines = _parseLines(nextValue);
+      _selectionStart = _clampPointToBuffer(_selectionStart);
+      _selectionEnd = _clampPointToBuffer(_selectionEnd);
+      _row = _row.clamp(0, _lines.length - 1);
+      _col = _col.clamp(0, _lines[_row].length);
+      return true;
+    });
+  }
+
+  /// Wraps the current selection with [before] and [after].
+  ///
+  /// If [after] is omitted, [before] is used for both sides.
+  /// Returns `false` when there is no active selection.
+  bool wrapSelection(String before, {String? after}) {
+    if (!_hasSelection()) return false;
+    final suffix = after ?? before;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      var start = _globalOffsetForPoint(_selectionStart!);
+      var end = _globalOffsetForPoint(_selectionEnd!);
+      if (start > end) {
+        final tmp = start;
+        start = end;
+        end = tmp;
+      }
+      if (start == end) {
+        return false;
+      }
+
+      final flat = _flattenWithNewlines();
+      final prefix = uni.graphemes(before).toList(growable: false);
+      final suffixGs = uni.graphemes(suffix).toList(growable: false);
+      final selected = flat.sublist(start, end).toList(growable: false);
+
+      _recordUndoSnapshot();
+      flat.replaceRange(start, end, [...prefix, ...selected, ...suffixGs]);
+      final nextValue = flat.join();
+      final selectionStart = start + prefix.length;
+      final selectionEnd = selectionStart + selected.length;
+
+      _setValueAndCursor(nextValue, selectionEnd);
+      _selectionStart = _pointFromGlobalOffset(selectionStart);
+      _selectionEnd = _pointFromGlobalOffset(selectionEnd);
+      _row = _selectionEnd!.$2;
+      _col = _selectionEnd!.$1;
+      return true;
+    });
+  }
+
+  /// Removes a matching surrounding delimiter pair around the current
+  /// selection and preserves the inner selection.
+  ///
+  /// Returns `false` when there is no active selection, the selection is
+  /// empty, or the surrounding graphemes do not form a known delimiter pair.
+  bool unwrapSelection() {
+    if (!_hasSelection()) return false;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      var start = _globalOffsetForPoint(_selectionStart!);
+      var end = _globalOffsetForPoint(_selectionEnd!);
+      if (start > end) {
+        final tmp = start;
+        start = end;
+        end = tmp;
+      }
+      if (start == end) {
+        return false;
+      }
+
+      final flat = _flattenWithNewlines();
+      if (start < 1 || end >= flat.length) {
+        return false;
+      }
+
+      final before = flat[start - 1];
+      final after = flat[end];
+      if (_selectionSurroundPairs[before] != after) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      flat.removeAt(end);
+      flat.removeAt(start - 1);
+      final nextValue = flat.join();
+      final selectionStart = start - 1;
+      final selectionEnd = end - 1;
+
+      _setValueAndCursor(nextValue, selectionEnd);
+      _selectionStart = _pointFromGlobalOffset(selectionStart);
+      _selectionEnd = _pointFromGlobalOffset(selectionEnd);
+      _row = _selectionEnd!.$2;
+      _col = _selectionEnd!.$1;
+      return true;
+    });
+  }
+
+  /// Restores the most recent previous edit state.
+  bool undo() {
+    if (_undoStack.isEmpty) return false;
+    _breakHistoryCoalescing();
+    final current = _captureEditState();
+    final previous = _undoStack.removeLast();
+    _redoStack.add(current);
+    _restoreEditState(previous);
+    return true;
+  }
+
+  /// Reapplies the most recently undone edit state.
+  bool redo() {
+    if (_redoStack.isEmpty) return false;
+    _breakHistoryCoalescing();
+    final current = _captureEditState();
+    final next = _redoStack.removeLast();
+    _undoStack.add(current);
+    _restoreEditState(next);
+    return true;
   }
 
   /// Sets the width of the textarea.
@@ -612,23 +1945,34 @@ class TextAreaModel extends ViewComponent {
   }
 
   void insertString(String s) {
-    for (final g in uni.graphemes(s)) {
-      if (g == '\n') {
-        _newline();
-      } else {
-        _insertChar(g);
+    if (s.isEmpty) return;
+    _runEditFrame(() {
+      _beginHistoryAction(
+        s.contains('\n')
+            ? _TextAreaHistoryAction.paste
+            : _TextAreaHistoryAction.insert,
+        breakChain: s.contains('\n'),
+      );
+      for (final g in uni.graphemes(s)) {
+        if (g == '\n') {
+          _newline();
+        } else {
+          _insertChar(g);
+        }
       }
-    }
+    });
   }
 
   void _insertChar(String ch) {
     if (ch.isEmpty) return;
+    _recordUndoSnapshot();
     _lines[_row].insert(_col, ch);
     _col += 1;
     _enforceCharLimit();
   }
 
   void _newline() {
+    _recordUndoSnapshot();
     final current = _lines[_row];
     final before = current.sublist(0, _col);
     final after = current.sublist(_col);
@@ -641,6 +1985,7 @@ class TextAreaModel extends ViewComponent {
 
   void _backspace() {
     if (_row == 0 && _col == 0) return;
+    _recordUndoSnapshot();
     if (_col > 0) {
       _lines[_row].removeAt(_col - 1);
       _col -= 1;
@@ -671,225 +2016,296 @@ class TextAreaModel extends ViewComponent {
 
   @override
   (TextAreaModel, Cmd?) update(Msg msg) {
-    switch (msg) {
-      case TextAreaPasteMsg(:final content):
-        insertString(content);
-        return (this, null);
-      case PasteMsg(:final content):
-        insertString(content);
-        return (this, null);
-      case KeyMsg(key: final key):
-        // deletion
-        if (key.matchesSingle(keyMap.deleteBeforeCursor)) {
-          _backspace();
+    return _runEditFrame(() {
+      switch (msg) {
+        case TextAreaPasteMsg(:final content):
+          _beginHistoryAction(_TextAreaHistoryAction.paste, breakChain: true);
+          insertString(content);
           return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteCharacterForward)) {
-          _deleteCharForward();
+        case PasteMsg(:final content):
+          _beginHistoryAction(_TextAreaHistoryAction.paste, breakChain: true);
+          insertString(content);
           return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteWordBackward)) {
-          _deleteWordBackward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteWordForward)) {
-          _deleteWordForward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteToLineStart)) {
-          _deleteToLineStart();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteToLineEnd)) {
-          _deleteToLineEnd();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.deleteAfterCursor)) {
-          _deleteToLineEnd();
-          return (this, null);
-        }
-
-        // navigation
-        if (key.matchesSingle(keyMap.wordForward)) {
-          _moveWordForward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.wordBackward)) {
-          _moveWordBackward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.lineStart)) {
-          _cursorStartOfLine();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.lineEnd)) {
-          _cursorEndOfLine();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.inputBegin)) {
-          _cursorStartOfInput();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.inputEnd)) {
-          _cursorEndOfInput();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.characterForward)) {
-          _moveRight();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.characterBackward)) {
-          _moveLeft();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.lineNext)) {
-          _lineNext();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.linePrevious)) {
-          _linePrev();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
-          _transposeBackward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.uppercaseWordForward)) {
-          _uppercaseWordForward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.lowercaseWordForward)) {
-          _lowercaseWordForward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.capitalizeWordForward)) {
-          _capitalizeWordForward();
-          return (this, null);
-        }
-        if (key.matchesSingle(keyMap.copy)) {
-          final text = getSelectedText();
-          if (text.isNotEmpty) {
-            return (this, Cmd.setClipboard(text));
+        case KeyMsg(key: final key):
+          if (key.matchesSingle(keyMap.undo)) {
+            undo();
+            return (this, null);
           }
-        }
+          if (key.matchesSingle(keyMap.redo)) {
+            redo();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.selectAll)) {
+            selectAll();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.selectLine)) {
+            selectCurrentLine();
+            return (this, null);
+          }
 
-        // Fallback direct modifier checks for common combos.
-        if (key.type == KeyType.delete && key.alt) {
-          _deleteWordForward();
-          return (this, null);
-        }
-        if (key.ctrl && key.type == KeyType.runes && key.runes.isNotEmpty) {
-          final r = key.runes.first;
-          if (r == 0x74) {
-            // ctrl+t
+          // deletion
+          if (key.matchesSingle(keyMap.deleteBeforeCursor)) {
+            _beginHistoryAction(_TextAreaHistoryAction.deleteBackward);
+            _backspace();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteCharacterForward)) {
+            _beginHistoryAction(_TextAreaHistoryAction.deleteForward);
+            _deleteCharForward();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteWordBackward)) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteBackward,
+              breakChain: true,
+            );
+            _deleteWordBackward();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteWordForward)) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteForward,
+              breakChain: true,
+            );
+            _deleteWordForward();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteToLineStart)) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteBackward,
+              breakChain: true,
+            );
+            _deleteToLineStart();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteToLineEnd)) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteForward,
+              breakChain: true,
+            );
+            _deleteToLineEnd();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.deleteAfterCursor)) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteForward,
+              breakChain: true,
+            );
+            _deleteToLineEnd();
+            return (this, null);
+          }
+
+          // navigation
+          if (key.matchesSingle(keyMap.wordForward)) {
+            _moveWordForward();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.wordBackward)) {
+            _moveWordBackward();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.lineStart)) {
+            _cursorStartOfLine();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.lineEnd)) {
+            _cursorEndOfLine();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.inputBegin)) {
+            _cursorStartOfInput();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.inputEnd)) {
+            _cursorEndOfInput();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.characterForward)) {
+            _moveRight();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.characterBackward)) {
+            _moveLeft();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.lineNext)) {
+            _lineNext();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.linePrevious)) {
+            _linePrev();
+            return (this, null);
+          }
+          if (key.matchesSingle(keyMap.transposeCharacterBackward)) {
             _transposeBackward();
             return (this, null);
           }
-        }
-        if (key.alt && key.type == KeyType.runes && key.runes.isNotEmpty) {
-          final r = key.runes.first;
-          if (r == 0x75) {
+          if (key.matchesSingle(keyMap.uppercaseWordForward)) {
             _uppercaseWordForward();
             return (this, null);
           }
-          if (r == 0x6c) {
+          if (key.matchesSingle(keyMap.lowercaseWordForward)) {
             _lowercaseWordForward();
             return (this, null);
           }
-          if (r == 0x63) {
+          if (key.matchesSingle(keyMap.capitalizeWordForward)) {
             _capitalizeWordForward();
             return (this, null);
           }
-        }
+          if (key.matchesSingle(keyMap.copy)) {
+            final text = getSelectedText();
+            if (text.isNotEmpty) {
+              return (this, Cmd.setClipboard(text));
+            }
+          }
 
-        if (key.type == KeyType.space) {
-          _insertChar(' ');
-          return (this, null);
-        }
+          // Fallback direct modifier checks for common combos.
+          if (key.type == KeyType.delete && key.alt) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.deleteForward,
+              breakChain: true,
+            );
+            _deleteWordForward();
+            return (this, null);
+          }
+          if (key.ctrl && key.type == KeyType.runes && key.runes.isNotEmpty) {
+            final r = key.runes.first;
+            if (r == 0x74) {
+              // ctrl+t
+              _beginHistoryAction(
+                _TextAreaHistoryAction.transform,
+                breakChain: true,
+              );
+              _transposeBackward();
+              return (this, null);
+            }
+          }
+          if (key.alt && key.type == KeyType.runes && key.runes.isNotEmpty) {
+            final r = key.runes.first;
+            if (r == 0x75) {
+              _beginHistoryAction(
+                _TextAreaHistoryAction.transform,
+                breakChain: true,
+              );
+              _uppercaseWordForward();
+              return (this, null);
+            }
+            if (r == 0x6c) {
+              _beginHistoryAction(
+                _TextAreaHistoryAction.transform,
+                breakChain: true,
+              );
+              _lowercaseWordForward();
+              return (this, null);
+            }
+            if (r == 0x63) {
+              _beginHistoryAction(
+                _TextAreaHistoryAction.transform,
+                breakChain: true,
+              );
+              _capitalizeWordForward();
+              return (this, null);
+            }
+          }
 
-        if (key.type == KeyType.enter && keyMap.insertNewline.enabled) {
-          _newline();
-          return (this, null);
-        }
+          if (key.type == KeyType.space) {
+            _beginHistoryAction(_TextAreaHistoryAction.insert);
+            _insertChar(' ');
+            return (this, null);
+          }
 
-        if (key.type == KeyType.runes && key.runes.isNotEmpty) {
-          final rune = key.runes.first;
-          if (rune == 0x0a) {
+          if (key.type == KeyType.enter && keyMap.insertNewline.enabled) {
+            _beginHistoryAction(
+              _TextAreaHistoryAction.insert,
+              breakChain: true,
+            );
             _newline();
-          } else {
-            _insertChar(String.fromCharCode(rune));
+            return (this, null);
+          }
+
+          if (key.type == KeyType.runes && key.runes.isNotEmpty) {
+            _beginHistoryAction(_TextAreaHistoryAction.insert);
+            final rune = key.runes.first;
+            if (rune == 0x0a) {
+              _newline();
+            } else {
+              _insertChar(String.fromCharCode(rune));
+            }
+            return (this, null);
+          }
+      }
+
+      if (msg is MouseMsg) {
+        final lineNumberDigits = showLineNumbers
+            ? '${_lines.length}'.length
+            : 0;
+        final displayLines = _softWrappedLines(lineNumberDigits);
+        final action = msg.action;
+        final button = msg.button;
+        final x = msg.x;
+        final y = msg.y;
+
+        if (y < 0 || y >= displayLines.length) {
+          if (action == MouseAction.press && button == MouseButton.left) {
+            _selectionStart = null;
+            _selectionEnd = null;
+            _focused = false;
           }
           return (this, null);
         }
-    }
 
-    if (msg is MouseMsg) {
-      final lineNumberDigits = showLineNumbers ? '${_lines.length}'.length : 0;
-      final displayLines = _softWrappedLines(lineNumberDigits);
-      final action = msg.action;
-      final button = msg.button;
-      final x = msg.x;
-      final y = msg.y;
+        final dl = displayLines[y];
 
-      if (y < 0 || y >= displayLines.length) {
         if (action == MouseAction.press && button == MouseButton.left) {
-          _selectionStart = null;
-          _selectionEnd = null;
-          _focused = false;
-        }
-        return (this, null);
-      }
+          _focused = true;
+          final promptW = _getPromptWidth(y);
+          final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
+          final localX = x - promptW - lineNumberW;
+          final contentX = localX + dl.charOffset;
+          final contentY = dl.rowIndex;
+          final now = DateTime.now();
 
-      final dl = displayLines[y];
+          if (_lastClickTime != null &&
+              now.difference(_lastClickTime!) <
+                  const Duration(milliseconds: 500) &&
+              _lastClickPos == (contentX, contentY)) {
+            // Double click: select word
+            final (start, end) = _findWordAt(contentX, contentY);
+            _selectionStart = (start, contentY);
+            _selectionEnd = (end, contentY);
+            _lastClickTime = now;
+            _lastClickPos = (contentX, contentY);
+            return (this, null);
+          }
 
-      if (action == MouseAction.press && button == MouseButton.left) {
-        _focused = true;
-        final promptW = _getPromptWidth(y);
-        final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
-        final localX = x - promptW - lineNumberW;
-        final contentX = localX + dl.charOffset;
-        final contentY = dl.rowIndex;
-        final now = DateTime.now();
-
-        if (_lastClickTime != null &&
-            now.difference(_lastClickTime!) <
-                const Duration(milliseconds: 500) &&
-            _lastClickPos == (contentX, contentY)) {
-          // Double click: select word
-          final (start, end) = _findWordAt(contentX, contentY);
-          _selectionStart = (start, contentY);
-          _selectionEnd = (end, contentY);
+          // Start selection
+          _selectionStart = (contentX, contentY);
+          _selectionEnd = (contentX, contentY);
           _lastClickTime = now;
           _lastClickPos = (contentX, contentY);
           return (this, null);
         }
 
-        // Start selection
-        _selectionStart = (contentX, contentY);
-        _selectionEnd = (contentX, contentY);
-        _lastClickTime = now;
-        _lastClickPos = (contentX, contentY);
-        return (this, null);
+        if (action == MouseAction.motion && _selectionStart != null) {
+          // Update selection
+          final promptW = _getPromptWidth(y);
+          final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
+          final localX = x - promptW - lineNumberW;
+          final contentX = localX + dl.charOffset;
+          final contentY = dl.rowIndex;
+          _selectionEnd = (contentX, contentY);
+          return (this, null);
+        }
+
+        if (action == MouseAction.release && button == MouseButton.left) {
+          // Finalize selection
+          return (this, null);
+        }
       }
 
-      if (action == MouseAction.motion && _selectionStart != null) {
-        // Update selection
-        final promptW = _getPromptWidth(y);
-        final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
-        final localX = x - promptW - lineNumberW;
-        final contentX = localX + dl.charOffset;
-        final contentY = dl.rowIndex;
-        _selectionEnd = (contentX, contentY);
-        return (this, null);
-      }
-
-      if (action == MouseAction.release && button == MouseButton.left) {
-        // Finalize selection
-        return (this, null);
-      }
-    }
-
-    return (this, null);
+      return (this, null);
+    });
   }
 
   /// Returns the currently selected text.
@@ -1140,6 +2556,7 @@ class TextAreaModel extends ViewComponent {
     final flat = _flattenWithNewlines();
     final pos = _globalOffset();
     if (pos == 0) return;
+    _recordUndoSnapshot();
 
     var newPos = pos - 1;
     while (newPos > 0 && !_isWordGrapheme(flat[newPos])) {
@@ -1155,6 +2572,7 @@ class TextAreaModel extends ViewComponent {
 
   void _deleteToLineStart() {
     if (_col == 0) return;
+    _recordUndoSnapshot();
     _lines[_row].removeRange(0, _col);
     _col = 0;
   }
@@ -1162,6 +2580,7 @@ class TextAreaModel extends ViewComponent {
   void _deleteToLineEnd() {
     final line = _lines[_row];
     if (_col >= line.length) return;
+    _recordUndoSnapshot();
     line.removeRange(_col, line.length);
   }
 
@@ -1217,10 +2636,12 @@ class TextAreaModel extends ViewComponent {
   void _deleteCharForward() {
     final line = _lines[_row];
     if (_col < line.length) {
+      _recordUndoSnapshot();
       line.removeAt(_col);
       return;
     }
     if (_row < _lines.length - 1) {
+      _recordUndoSnapshot();
       final next = _lines.removeAt(_row + 1);
       line.addAll(next);
     }
@@ -1230,6 +2651,7 @@ class TextAreaModel extends ViewComponent {
     final flat = _flattenWithNewlines();
     final pos = _globalOffset();
     if (pos >= flat.length) return;
+    _recordUndoSnapshot();
 
     var end = pos;
     if (_isWordGrapheme(flat[pos])) {
@@ -1253,6 +2675,7 @@ class TextAreaModel extends ViewComponent {
     final line = _lines[_row];
     if (line.isEmpty) return;
     if (_col == 0) return;
+    _recordUndoSnapshot();
 
     // Swap char before cursor with the one at cursor (Bubble Tea behavior).
     final at = math.min(_col, line.length - 1);
@@ -1267,6 +2690,7 @@ class TextAreaModel extends ViewComponent {
   void _uppercaseWordForward() {
     final (start, end) = _wordRangeForTransform();
     if (start == -1) return;
+    _recordUndoSnapshot();
     final flat = _flattenWithNewlines();
     final segment = flat.sublist(start, end).join().toUpperCase();
     final replacement = uni.graphemes(segment).toList(growable: false);
@@ -1277,6 +2701,7 @@ class TextAreaModel extends ViewComponent {
   void _lowercaseWordForward() {
     final (start, end) = _wordRangeForTransform();
     if (start == -1) return;
+    _recordUndoSnapshot();
     final flat = _flattenWithNewlines();
     final segment = flat.sublist(start, end).join().toLowerCase();
     final replacement = uni.graphemes(segment).toList(growable: false);
@@ -1287,6 +2712,7 @@ class TextAreaModel extends ViewComponent {
   void _capitalizeWordForward() {
     final (start, end) = _wordRangeForTransform();
     if (start == -1) return;
+    _recordUndoSnapshot();
     final flat = _flattenWithNewlines();
     final word = flat.sublist(start, end).join();
     if (word.isEmpty) return;
@@ -1297,6 +2723,98 @@ class TextAreaModel extends ViewComponent {
     final replacement = uni.graphemes('$first$rest').toList(growable: false);
     flat.replaceRange(start, end, replacement);
     _setValueAndCursor(flat.join(), start + replacement.length);
+  }
+
+  bool _transformSelectionOrLine(String Function(String text) transform) {
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final hasSelection = _hasSelection();
+      final originalCursorOffset = _globalOffset();
+      var start = hasSelection
+          ? _globalOffsetForPoint(_selectionStart!)
+          : _globalOffsetForPoint((0, _row));
+      var end = hasSelection
+          ? _globalOffsetForPoint(_selectionEnd!)
+          : _globalOffsetForPoint((_lines[_row].length, _row));
+      if (start > end) {
+        final tmp = start;
+        start = end;
+        end = tmp;
+      }
+      if (start == end) {
+        return false;
+      }
+
+      final flat = _flattenWithNewlines();
+      final original = flat.sublist(start, end).join();
+      final transformed = transform(original);
+      if (transformed == original) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      final replacement = uni.graphemes(transformed).toList(growable: false);
+      flat.replaceRange(start, end, replacement);
+      final nextValue = flat.join();
+      final nextExtent = start + replacement.length;
+
+      _setValueAndCursor(nextValue, nextExtent);
+      if (hasSelection) {
+        _selectionStart = _pointFromGlobalOffset(start);
+        _selectionEnd = _pointFromGlobalOffset(nextExtent);
+      } else {
+        final relativeCursor = (originalCursorOffset - start).clamp(
+          0,
+          replacement.length,
+        );
+        _selectionStart = null;
+        _selectionEnd = null;
+        _setCursorFromGlobal(start + relativeCursor);
+      }
+      return true;
+    });
+  }
+
+  String _capitalizeWords(String text) {
+    final graphemes = uni.graphemes(text).toList(growable: false);
+    final buffer = StringBuffer();
+    var capitalizeNext = true;
+    for (final grapheme in graphemes) {
+      if (_isWordGrapheme(grapheme)) {
+        buffer.write(
+          capitalizeNext ? grapheme.toUpperCase() : grapheme.toLowerCase(),
+        );
+        capitalizeNext = false;
+      } else {
+        buffer.write(grapheme);
+        capitalizeNext = true;
+      }
+    }
+    return buffer.toString();
+  }
+
+  int _compareLineContent(
+    List<String> a,
+    List<String> b, {
+    required bool descending,
+    required bool caseSensitive,
+  }) {
+    final aText = a.join();
+    final bText = b.join();
+    final lhs = caseSensitive ? aText : aText.toLowerCase();
+    final rhs = caseSensitive ? bText : bText.toLowerCase();
+    final base = lhs.compareTo(rhs);
+    final resolved = base != 0 ? base : aText.compareTo(bText);
+    return descending ? -resolved : resolved;
+  }
+
+  bool _listStringEquals(List<String> a, List<String> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
   }
 
   (int, int) _nextWordRange() {
@@ -1376,6 +2894,15 @@ class TextAreaModel extends ViewComponent {
     return offset;
   }
 
+  int _globalOffsetForPoint((int, int) point) {
+    var offset = 0;
+    final line = point.$2.clamp(0, _lines.length - 1);
+    for (var index = 0; index < line; index++) {
+      offset += _lines[index].length + 1;
+    }
+    return offset + point.$1.clamp(0, _lines[line].length);
+  }
+
   void _setCursorFromGlobal(int offset) {
     var remaining = offset;
     for (var i = 0; i < _lines.length; i++) {
@@ -1392,10 +2919,294 @@ class TextAreaModel extends ViewComponent {
     _col = _lines.last.length;
   }
 
+  (int, int) _pointFromGlobalOffset(int offset) {
+    var remaining = offset;
+    for (var i = 0; i < _lines.length; i++) {
+      final lineLength = _lines[i].length;
+      if (remaining <= lineLength) {
+        return (remaining, i);
+      }
+      remaining -= lineLength + 1;
+    }
+    return (_lines.last.length, _lines.length - 1);
+  }
+
   void _setValueAndCursor(String newValue, int cursorPos) {
     final limited = _applyCharLimit(newValue);
     _lines = _parseLines(limited);
     _setCursorFromGlobal(cursorPos.clamp(0, _totalGraphemeLength()));
+  }
+
+  (int, int) _selectedLineRange() {
+    if (!_hasSelection()) {
+      return (_row, _row);
+    }
+    final startLine = math.min(_selectionStart!.$2, _selectionEnd!.$2);
+    final endLine = math.max(_selectionStart!.$2, _selectionEnd!.$2);
+    return (startLine, endLine);
+  }
+
+  (int, int)? _adjustLinePrefixPoint(
+    (int, int)? point, {
+    required int line,
+    required int leadingWhitespace,
+    required int delta,
+    required bool remove,
+  }) {
+    if (point == null || point.$2 != line) {
+      return point;
+    }
+    return (
+      _adjustLinePrefixColumn(
+        column: point.$1,
+        leadingWhitespace: leadingWhitespace,
+        delta: delta,
+        remove: remove,
+      ),
+      point.$2,
+    );
+  }
+
+  (int, int)? _adjustLinePrefixPointDelta(
+    (int, int)? point, {
+    required int line,
+    required int leadingWhitespace,
+    required int delta,
+  }) {
+    if (point == null || point.$2 != line || delta == 0) {
+      return point;
+    }
+    return (
+      _adjustLinePrefixColumnDelta(
+        column: point.$1,
+        leadingWhitespace: leadingWhitespace,
+        delta: delta,
+      ),
+      point.$2,
+    );
+  }
+
+  int _adjustLinePrefixColumn({
+    required int column,
+    required int leadingWhitespace,
+    required int delta,
+    required bool remove,
+  }) {
+    if (column <= leadingWhitespace) {
+      return column;
+    }
+    if (!remove) {
+      return column + delta;
+    }
+    return math.max(leadingWhitespace, column - delta);
+  }
+
+  int _adjustLinePrefixColumnDelta({
+    required int column,
+    required int leadingWhitespace,
+    required int delta,
+  }) {
+    if (delta == 0 || column <= leadingWhitespace) {
+      return column;
+    }
+    if (delta > 0) {
+      return column + delta;
+    }
+    return math.max(leadingWhitespace, column + delta);
+  }
+
+  int? _leadingNumberedPrefixLength(String text) {
+    final match = RegExp(r'^\d+\.\s?').firstMatch(text);
+    return match?.group(0)?.length;
+  }
+
+  ({int level, int length})? _leadingHeadingPrefix(String text) {
+    final match = RegExp(r'^(#{1,6})(?:\s+|$)').firstMatch(text);
+    final hashes = match?.group(1);
+    final length = match?.group(0)?.length;
+    if (hashes == null || length == null) {
+      return null;
+    }
+    return (level: hashes.length, length: length);
+  }
+
+  int? _leadingChecklistPrefixLength(String text) {
+    final match = RegExp(r'^-\s\[(?:\s|x|X)\]\s?').firstMatch(text);
+    return match?.group(0)?.length;
+  }
+
+  bool _isChecklistChecked(String text) {
+    final match = RegExp(r'^-\s\[(.)\]').firstMatch(text);
+    if (match == null) {
+      return false;
+    }
+    final marker = match.group(1);
+    return marker != null && marker.trim().isNotEmpty;
+  }
+
+  int _leadingIndentRemovalCount(List<String> line, int width) {
+    if (line.isEmpty || width < 1) return 0;
+    if (line.first == '\t') return 1;
+
+    var removed = 0;
+    while (removed < width && removed < line.length && line[removed] == ' ') {
+      removed++;
+    }
+    return removed;
+  }
+
+  int _trailingHorizontalTrimLength(List<String> line) {
+    var end = line.length;
+    while (end > 0 && (line[end - 1] == ' ' || line[end - 1] == '\t')) {
+      end--;
+    }
+    return end;
+  }
+
+  void _applyLineColumnDeltas(Map<int, int> deltas) {
+    if (deltas.isEmpty) return;
+
+    if (deltas.containsKey(_row)) {
+      _col = (_col + deltas[_row]!).clamp(0, _lines[_row].length);
+    }
+    _selectionStart = _shiftPointByLineDelta(_selectionStart, deltas);
+    _selectionEnd = _shiftPointByLineDelta(_selectionEnd, deltas);
+  }
+
+  (int, int)? _shiftPointByLineDelta((int, int)? point, Map<int, int> deltas) {
+    if (point == null) return null;
+    final delta = deltas[point.$2];
+    if (delta == null) return point;
+    return ((point.$1 + delta).clamp(0, _lines[point.$2].length), point.$2);
+  }
+
+  (int, int)? _clampPointToBuffer((int, int)? point) {
+    if (point == null) return null;
+    final row = point.$2.clamp(0, _lines.length - 1);
+    if (point.$2 > _lines.length - 1) {
+      return (_lines[row].length, row);
+    }
+    final col = point.$1.clamp(0, _lines[row].length);
+    return (col, row);
+  }
+
+  (int, int)? _duplicateAbovePoint(
+    (int, int)? point, {
+    required int startLine,
+    required int endLine,
+    required int delta,
+  }) {
+    if (point == null) return null;
+    if (point.$2 < startLine) return point;
+    if (point.$2 > endLine) {
+      return (point.$1, point.$2 + delta);
+    }
+    return (point.$1.clamp(0, _lines[point.$2].length), point.$2);
+  }
+
+  bool _moveSelectedLines(int direction) {
+    if (direction != -1 && direction != 1) return false;
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final (startLine, endLine) = _selectedLineRange();
+      if (direction < 0 && startLine == 0) return false;
+      if (direction > 0 && endLine >= _lines.length - 1) return false;
+
+      _recordUndoSnapshot();
+      final movedLines = _lines
+          .sublist(startLine, endLine + 1)
+          .map((line) => List<String>.from(line))
+          .toList(growable: false);
+      _lines.removeRange(startLine, endLine + 1);
+      final insertionLine = direction < 0 ? startLine - 1 : startLine + 1;
+      _lines.insertAll(insertionLine, movedLines);
+
+      _shiftCursorAndSelectionRows(
+        startLine: startLine,
+        endLine: endLine,
+        delta: direction,
+      );
+      return true;
+    });
+  }
+
+  void _shiftCursorAndSelectionRows({
+    required int startLine,
+    required int endLine,
+    required int delta,
+  }) {
+    if (_row >= startLine && _row <= endLine) {
+      _row = (_row + delta).clamp(0, _lines.length - 1);
+      _col = _col.clamp(0, _lines[_row].length);
+    }
+    _selectionStart = _shiftPointRowRange(
+      _selectionStart,
+      startLine: startLine,
+      endLine: endLine,
+      delta: delta,
+    );
+    _selectionEnd = _shiftPointRowRange(
+      _selectionEnd,
+      startLine: startLine,
+      endLine: endLine,
+      delta: delta,
+    );
+  }
+
+  (int, int)? _shiftPointRowRange(
+    (int, int)? point, {
+    required int startLine,
+    required int endLine,
+    required int delta,
+  }) {
+    if (point == null) return null;
+    if (point.$2 < startLine || point.$2 > endLine) return point;
+    final row = (point.$2 + delta).clamp(0, _lines.length - 1);
+    return (point.$1.clamp(0, _lines[row].length), row);
+  }
+
+  List<String> _trimLeadingHorizontalWhitespace(List<String> line) {
+    var start = 0;
+    while (start < line.length && (line[start] == ' ' || line[start] == '\t')) {
+      start++;
+    }
+    return line.sublist(start);
+  }
+
+  String _lineJoinSeparator(List<String> left, List<String> right) {
+    if (left.isEmpty || right.isEmpty) return '';
+    final last = left.last;
+    final first = right.first;
+    if (_isHorizontalWhitespace(last) || _isHorizontalWhitespace(first)) {
+      return '';
+    }
+    if (_suppressesLineJoinSpaceBefore(last) ||
+        _suppressesLineJoinSpaceAfter(first)) {
+      return '';
+    }
+    return ' ';
+  }
+
+  bool _suppressesLineJoinSpaceBefore(String grapheme) {
+    return grapheme == '(' ||
+        grapheme == '[' ||
+        grapheme == '{' ||
+        grapheme == '<';
+  }
+
+  bool _suppressesLineJoinSpaceAfter(String grapheme) {
+    return grapheme == ')' ||
+        grapheme == ']' ||
+        grapheme == '}' ||
+        grapheme == '>' ||
+        grapheme == ',' ||
+        grapheme == ';' ||
+        grapheme == ':' ||
+        grapheme == '.';
+  }
+
+  bool _isHorizontalWhitespace(String grapheme) {
+    return grapheme == ' ' || grapheme == '\t';
   }
 
   bool _isWordChar(int rune) {

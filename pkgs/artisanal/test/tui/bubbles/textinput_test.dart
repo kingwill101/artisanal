@@ -250,6 +250,143 @@ void main() {
       });
     });
 
+    group('Undo and redo', () {
+      test('undo coalesces consecutive typed characters', () {
+        final input = TextInputModel()..focus();
+
+        input.update(KeyMsg(Key.char('a')));
+        input.update(KeyMsg(Key.char('b')));
+
+        expect(input.value, 'ab');
+        expect(input.canUndo, isTrue);
+
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(input.value, '');
+        expect(input.canRedo, isTrue);
+      });
+
+      test('redo reapplies an undone edit', () {
+        final input = TextInputModel()..focus();
+
+        input.update(KeyMsg(Key.char('a')));
+        input.update(KeyMsg(Key.char('b')));
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        input.update(KeyMsg(Key.char('y', ctrl: true)));
+
+        expect(input.value, 'ab');
+      });
+
+      test('new edit clears redo history', () {
+        final input = TextInputModel()..focus();
+
+        input.update(KeyMsg(Key.char('a')));
+        input.update(KeyMsg(Key.char('b')));
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(input.canRedo, isTrue);
+
+        input.update(KeyMsg(Key.char('c')));
+
+        expect(input.value, 'c');
+        expect(input.canRedo, isFalse);
+      });
+
+      test('cursor movement breaks insert coalescing', () {
+        final input = TextInputModel()..focus();
+
+        input.update(KeyMsg(Key.char('a')));
+        input.update(KeyMsg(Key.char('b')));
+        input.update(const KeyMsg(Key(KeyType.left)));
+        input.update(KeyMsg(Key.char('x')));
+
+        expect(input.value, 'axb');
+
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(input.value, 'ab');
+
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(input.value, '');
+      });
+
+      test('backspace coalesces consecutive deletions', () {
+        final input = TextInputModel()..focus();
+        input.value = 'abcd';
+
+        input.update(const KeyMsg(Key(KeyType.backspace)));
+        input.update(const KeyMsg(Key(KeyType.backspace)));
+
+        expect(input.value, 'ab');
+        input.update(KeyMsg(Key.char('z', ctrl: true)));
+        expect(input.value, 'abcd');
+      });
+
+      test('programmatic setText participates in history', () {
+        final input = TextInputModel();
+
+        input.setText('hello');
+        input.setText('hello world');
+
+        expect(input.undo(), isTrue);
+        expect(input.value, 'hello');
+        expect(input.redo(), isTrue);
+        expect(input.value, 'hello world');
+      });
+
+      test('pushHistoryBoundary splits coalesced insert bursts', () {
+        final input = TextInputModel()..focus();
+
+        input.insertText('a', coalesce: true);
+        input.insertText('b', coalesce: true);
+        input.pushHistoryBoundary();
+        input.insertText('c', coalesce: true);
+
+        expect(input.value, 'abc');
+
+        input.undo();
+        expect(input.value, 'ab');
+
+        input.undo();
+        expect(input.value, '');
+      });
+    });
+
+    group('Programmatic edit operations', () {
+      test('insertText inserts at the cursor', () {
+        final input = TextInputModel();
+        input.value = 'ac';
+        input.position = 1;
+
+        input.insertText('b');
+
+        expect(input.value, 'abc');
+        expect(input.position, 2);
+      });
+
+      test('replaceSelection replaces selected content', () {
+        final input = TextInputModel();
+        input.value = 'hello world';
+        input.selectionStart = 6;
+        input.selectionEnd = 11;
+        input.position = 11;
+
+        input.replaceSelection('dart');
+
+        expect(input.value, 'hello dart');
+        expect(input.position, 10);
+      });
+
+      test('deleteBackward and deleteForward work programmatically', () {
+        final input = TextInputModel();
+        input.value = 'abcd';
+        input.position = 2;
+
+        expect(input.deleteBackward(), isTrue);
+        expect(input.value, 'acd');
+
+        expect(input.deleteForward(), isTrue);
+        expect(input.value, 'ad');
+      });
+    });
+
     group('Init', () {
       test('returns null', () {
         final input = TextInputModel();
@@ -552,6 +689,8 @@ void main() {
       expect(keyMap.characterForward.keys, isNotEmpty);
       expect(keyMap.characterBackward.keys, isNotEmpty);
       expect(keyMap.deleteCharacterBackward.keys, isNotEmpty);
+      expect(keyMap.undo.keys, isNotEmpty);
+      expect(keyMap.redo.keys, isNotEmpty);
     });
 
     test('shortHelp returns bindings', () {

@@ -113,6 +113,64 @@ void main() {
       expect(ctrl.selection.baseOffset, 0);
     });
 
+    test('undo and redo track programmatic text changes', () {
+      final ctrl = TextEditingController();
+
+      ctrl.text = 'hello';
+      ctrl.text = 'hello world';
+
+      expect(ctrl.canUndo, isTrue);
+      expect(ctrl.undo(), isTrue);
+      expect(ctrl.text, 'hello');
+      expect(ctrl.canRedo, isTrue);
+      expect(ctrl.redo(), isTrue);
+      expect(ctrl.text, 'hello world');
+    });
+
+    test('setting value participates in undo history', () {
+      final ctrl = TextEditingController(text: 'hello');
+
+      ctrl.value = const TextEditingValue(
+        text: 'world',
+        selection: TextSelection(baseOffset: 1, extentOffset: 3),
+      );
+
+      expect(ctrl.undo(), isTrue);
+      expect(ctrl.text, 'hello');
+      expect(ctrl.selection.baseOffset, 5);
+      expect(ctrl.selection.extentOffset, 5);
+    });
+
+    test('programmatic edit helpers mutate text and selection', () {
+      final ctrl = TextEditingController(text: 'hello world');
+
+      ctrl.selection = const TextSelection(baseOffset: 6, extentOffset: 11);
+      ctrl.replaceSelection('dart');
+      expect(ctrl.text, 'hello dart');
+
+      ctrl.selection = const TextSelection.collapsed(offset: 5);
+      ctrl.insertText(' amazing');
+      expect(ctrl.text, 'hello amazing dart');
+
+      expect(ctrl.deleteBackward(word: true), isTrue);
+      expect(ctrl.text, 'hello  dart');
+    });
+
+    test('pushHistoryBoundary splits programmatic coalesced inserts', () {
+      final ctrl = TextEditingController();
+
+      ctrl.insertText('a', coalesce: true);
+      ctrl.insertText('b', coalesce: true);
+      ctrl.pushHistoryBoundary();
+      ctrl.insertText('c', coalesce: true);
+
+      expect(ctrl.text, 'abc');
+      expect(ctrl.undo(), isTrue);
+      expect(ctrl.text, 'ab');
+      expect(ctrl.undo(), isTrue);
+      expect(ctrl.text, isEmpty);
+    });
+
     test('selectAll selects entire text', () {
       final ctrl = TextEditingController(text: 'hello world');
       var notified = false;
