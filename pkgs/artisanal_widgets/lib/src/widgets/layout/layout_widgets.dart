@@ -18,16 +18,21 @@ import 'package:meta/meta.dart' show experimental;
 
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io' show File;
+import 'dart:io' show File, HttpClient, Platform;
 import 'dart:math' as math;
-import 'dart:typed_data' show Uint8List;
+import 'dart:typed_data' show BytesBuilder, Uint8List;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/uv.dart'
     show
         Canvas,
         Cell,
+        Drawable,
+        ITerm2ImageDrawable,
+        KittyImageDrawable,
+        SixelImageDrawable,
         StyledString,
+        TerminalCapabilities,
         UvStyle,
         UvColor,
         UnderlineStyle,

@@ -68,6 +68,47 @@ class MemoryImage extends ImageProvider {
   }
 }
 
+/// An [ImageProvider] that loads an image from an HTTP(S) URL.
+///
+/// ```dart
+/// Image(image: NetworkImage('https://example.com/photo.png'))
+/// ```
+class NetworkImage extends ImageProvider {
+  const NetworkImage(this.url, {this.headers = const {}});
+
+  /// The URL to fetch.
+  final String url;
+
+  /// Optional request headers.
+  final Map<String, String> headers;
+
+  @override
+  Future<ImageData> resolve() async {
+    final client = HttpClient();
+    try {
+      final request = await client.getUrl(Uri.parse(url));
+      headers.forEach((name, value) => request.headers.add(name, value));
+      final response = await request.close();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Failed to load image: HTTP ${response.statusCode}');
+      }
+
+      final builder = BytesBuilder(copy: false);
+      await for (final chunk in response) {
+        builder.add(chunk);
+      }
+      final bytes = builder.takeBytes();
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) {
+        throw Exception('Failed to decode image: $url');
+      }
+      return ImageData(decoded);
+    } finally {
+      client.close(force: true);
+    }
+  }
+}
+
 /// How an image should be inscribed into a box.
 enum BoxFit {
   /// Fill the target box by distorting the aspect ratio.
@@ -89,10 +130,30 @@ enum BoxFit {
   none,
 }
 
+/// Preferred rendering backend for the [Image] widget.
+enum ImageRenderMode {
+  /// Pick the best available protocol using UV's terminal capability hints.
+  auto,
+
+  /// Force Kitty graphics protocol output.
+  kitty,
+
+  /// Force iTerm2 inline image protocol output.
+  iterm2,
+
+  /// Force Sixel graphics output.
+  sixel,
+
+  /// Force portable half-block / unicode rendering.
+  unicodeBlocks,
+}
+
 /// A widget that displays an image in the terminal.
 ///
-/// Uses [HalfBlockImageDrawable] for cross-terminal compatibility, rendering
-/// images using half-block characters (`▀`) with foreground/background colors.
+/// By default, [renderMode] preserves the current half-block rendering path for
+/// deterministic output across tests and basic terminals. Set it to
+/// [ImageRenderMode.auto] to let UV select the best protocol for the current
+/// terminal (Kitty, iTerm2, Sixel, or half-block fallback).
 ///
 /// The [image] parameter provides the image data asynchronously. While loading,
 /// [placeholder] is displayed. If loading fails, [errorWidget] is shown.
@@ -111,6 +172,7 @@ class Image extends StatefulWidget {
     this.width,
     this.height,
     this.fit = BoxFit.contain,
+    this.renderMode = ImageRenderMode.unicodeBlocks,
     this.placeholder,
     this.errorWidget,
     super.key,
@@ -128,6 +190,9 @@ class Image extends StatefulWidget {
 
   /// How the image should be fitted into the available space.
   final BoxFit fit;
+
+  /// Which rendering backend to use for the resolved image.
+  final ImageRenderMode renderMode;
 
   /// Widget to display while the image is loading.
   final Widget? placeholder;
@@ -190,23 +255,26 @@ class _ImageState extends State<Image> {
       width: widget.width,
       height: widget.height,
       fit: widget.fit,
+      renderMode: widget.renderMode,
     );
   }
 }
 
-/// Internal leaf widget that renders an [ImageData] using [HalfBlockImageDrawable].
+/// Internal leaf widget that renders an [ImageData] using a UV drawable.
 class _RawImage extends LeafRenderObjectWidget {
   _RawImage({
     required this.imageData,
     this.width,
     this.height,
     this.fit = BoxFit.contain,
+    this.renderMode = ImageRenderMode.unicodeBlocks,
   });
 
   final ImageData imageData;
   final int? width;
   final int? height;
   final BoxFit fit;
+  final ImageRenderMode renderMode;
 
   @override
   RenderObject createRenderObject() {
@@ -215,6 +283,7 @@ class _RawImage extends LeafRenderObjectWidget {
       targetWidth: width,
       targetHeight: height,
       fit: fit,
+      renderMode: renderMode,
     );
   }
 
@@ -225,11 +294,12 @@ class _RawImage extends LeafRenderObjectWidget {
       ..imageData = imageData
       ..targetWidth = width
       ..targetHeight = height
-      ..fit = fit;
+      ..fit = fit
+      ..renderMode = renderMode;
   }
 
   @override
-  Object view() => _renderImage(imageData, width, height, fit);
+  Object view() => _renderImage(imageData, width, height, fit, renderMode);
 }
 
 class _RenderImage extends RenderBox {
@@ -238,18 +308,26 @@ class _RenderImage extends RenderBox {
     this.targetWidth,
     this.targetHeight,
     required this.fit,
+    required this.renderMode,
   });
 
   ImageData imageData;
   int? targetWidth;
   int? targetHeight;
   BoxFit fit;
+  ImageRenderMode renderMode;
   String? _lastPaint;
 
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    _lastPaint = _renderImage(imageData, targetWidth, targetHeight, fit);
+    _lastPaint = _renderImage(
+      imageData,
+      targetWidth,
+      targetHeight,
+      fit,
+      renderMode,
+    );
     size = constraints.constrain(
       Size(
         Layout.getWidth(_lastPaint!).toDouble(),
@@ -268,6 +346,7 @@ String _renderImage(
   int? targetWidth,
   int? targetHeight,
   BoxFit fit,
+  ImageRenderMode renderMode,
 ) {
   final srcW = imageData.width;
   final srcH = imageData.height;
@@ -283,16 +362,74 @@ String _renderImage(
 
   if (cols <= 0 || rows <= 0) return '';
 
-  final drawable = HalfBlockImageDrawable(
+  final drawable = _resolveDrawable(
     imageData.image,
     columns: cols,
     rows: rows,
+    renderMode: renderMode,
   );
 
   final canvas = Canvas(cols, rows);
   drawable.draw(canvas, canvas.bounds());
   return canvas.render();
 }
+
+Drawable _resolveDrawable(
+  img.Image image, {
+  required int columns,
+  required int rows,
+  required ImageRenderMode renderMode,
+}) {
+  return switch (renderMode) {
+    ImageRenderMode.auto => _bestDrawableFromCapabilities(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+    ImageRenderMode.kitty => KittyImageDrawable(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+    ImageRenderMode.iterm2 => ITerm2ImageDrawable(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+    ImageRenderMode.sixel => SixelImageDrawable(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+    ImageRenderMode.unicodeBlocks => HalfBlockImageDrawable(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+  };
+}
+
+Drawable _bestDrawableFromCapabilities(
+  img.Image image, {
+  required int columns,
+  required int rows,
+}) {
+  return switch (_widgetImageCapabilities) {
+    TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
+      KittyImageDrawable(image, columns: columns, rows: rows),
+    TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
+      ITerm2ImageDrawable(image, columns: columns, rows: rows),
+    TerminalCapabilities(:final hasSixel) when hasSixel =>
+      SixelImageDrawable(image, columns: columns, rows: rows),
+    _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
+  };
+}
+
+final TerminalCapabilities _widgetImageCapabilities = TerminalCapabilities(
+  env: Platform.environment.entries
+      .map((entry) => '${entry.key}=${entry.value}')
+      .toList(growable: false),
+);
 
 /// Applies [BoxFit] logic, returning (columns, rows).
 (int, int) _applyBoxFit(

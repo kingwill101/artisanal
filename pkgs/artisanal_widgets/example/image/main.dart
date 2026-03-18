@@ -1,6 +1,7 @@
 // Image Example
 //
-// Demonstrates the Image widget with MemoryImage and various BoxFit modes.
+// Demonstrates the Image widget with MemoryImage, UV-backed auto protocol
+// selection, and various BoxFit modes.
 // Uses package:image to generate a synthetic gradient image in memory.
 //
 // Run with: dart run example/image/main.dart
@@ -138,6 +139,10 @@ class _ImageDemoState extends w.State<ImageDemo> {
                   'Gradient image (80x40 pixels) in 40x10 terminal area:',
                   style: label,
                 ),
+                w.Text(
+                  'Render mode: auto (Kitty / iTerm2 / Sixel / half-block fallback)',
+                  style: label,
+                ),
                 w.Container(
                   decoration: w.BoxDecoration(
                     border: Border.normal,
@@ -148,6 +153,7 @@ class _ImageDemoState extends w.State<ImageDemo> {
                     width: 40,
                     height: 10,
                     fit: currentFit,
+                    renderMode: w.ImageRenderMode.auto,
                     placeholder: w.Text('Loading gradient...', style: label),
                     errorWidget: w.Text(
                       'Failed to load image',
