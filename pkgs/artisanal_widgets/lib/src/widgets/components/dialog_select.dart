@@ -131,6 +131,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
   int _selectedIndex = 0;
   String _searchQuery = '';
   late TextEditingController _searchController;
+  late List<DialogSelectItem<T>> _filteredItems;
   WidgetScrollController? _scrollController;
 
   WidgetScrollController get _scroll =>
@@ -140,7 +141,17 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _selectedIndex = _indexOfCurrent(_filteredItems);
+    _filteredItems = <DialogSelectItem<T>>[];
+    _recomputeFilteredItems(preserveSelection: false);
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant DialogSelect<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.items, widget.items)) {
+      _recomputeFilteredItems(preserveSelection: true);
+    }
+    return null;
   }
 
   @override
@@ -151,14 +162,49 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
 
   // ── Filtering ──────────────────────────────────────────────────────────────
 
-  List<DialogSelectItem<T>> get _filteredItems {
-    if (_searchQuery.isEmpty) return widget.items;
-    final q = _searchQuery.toLowerCase();
-    return widget.items.where((item) {
-      return item.label.toLowerCase().contains(q) ||
-          (item.description?.toLowerCase().contains(q) ?? false) ||
-          (item.category?.toLowerCase().contains(q) ?? false);
-    }).toList();
+  void _recomputeFilteredItems({required bool preserveSelection}) {
+    final previousItems = _filteredItems;
+    final previousSelection =
+        preserveSelection &&
+            _selectedIndex >= 0 &&
+            _selectedIndex < previousItems.length
+        ? previousItems[_selectedIndex]
+        : null;
+
+    final nextItems = () {
+      if (_searchQuery.isEmpty) return widget.items;
+      final q = _searchQuery.toLowerCase();
+      return widget.items.where((item) {
+        return item.label.toLowerCase().contains(q) ||
+            (item.description?.toLowerCase().contains(q) ?? false) ||
+            (item.category?.toLowerCase().contains(q) ?? false);
+      }).toList(growable: false);
+    }();
+
+    var nextIndex = 0;
+    if (nextItems.isNotEmpty) {
+      if (previousSelection != null) {
+        nextIndex = nextItems.indexWhere(
+          (item) => identical(item, previousSelection),
+        );
+        if (nextIndex < 0) {
+          final previousValue = previousSelection.value;
+          if (previousValue != null) {
+            nextIndex = nextItems.indexWhere(
+              (item) => item.value == previousValue,
+            );
+          }
+        }
+      } else {
+        nextIndex = _indexOfCurrent(nextItems);
+      }
+      if (nextIndex < 0) {
+        nextIndex = _selectedIndex.clamp(0, nextItems.length - 1);
+      }
+    }
+
+    _filteredItems = nextItems;
+    _selectedIndex = nextIndex;
   }
 
   int _indexOfCurrent(List<DialogSelectItem<T>> items) {
@@ -373,7 +419,7 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
                 onChanged: (value) {
                   setState(() {
                     _searchQuery = value;
-                    _selectedIndex = 0;
+                    _recomputeFilteredItems(preserveSelection: false);
                   });
                 },
               ),
@@ -457,15 +503,17 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
         onTap: item.isDisabled
             ? null
             : () {
-                setState(() {
-                  _selectedIndex = index;
-                });
+                if (_selectedIndex != index) {
+                  setState(() {
+                    _selectedIndex = index;
+                  });
+                }
                 widget.onSelect?.call(item);
                 return null;
               },
         child: MouseRegion(
           onEnter: (_) {
-            if (!item.isDisabled) {
+            if (!item.isDisabled && _selectedIndex != index) {
               setState(() {
                 _selectedIndex = index;
               });
