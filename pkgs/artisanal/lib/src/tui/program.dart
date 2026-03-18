@@ -87,14 +87,11 @@ export 'msg.dart' show InterruptMsg, RepaintMsg;
 /// Example:
 /// ```dart
 /// Msg? preventQuitFilter(Model model, Msg msg) {
-///   if (msg is KeyMsg && msg.key.ctrl && msg.key.runes.firstOrNull == 0x63) {
-///     // Ctrl+C pressed
-///     if (model is MyModel && model.hasUnsavedChanges) {
-///       // Block quit and show warning instead
-///       return const ShowUnsavedWarningMsg();
-///     }
+///   if (msg is InterruptMsg && model is MyModel && model.hasUnsavedChanges) {
+///     // Block Ctrl+C and show a warning instead.
+///     return const ShowUnsavedWarningMsg();
 ///   }
-///   return msg; // Allow message through
+///   return msg; // Allow message through.
 /// }
 /// ```
 typedef MessageFilter = Msg? Function(Model model, Msg msg);
@@ -317,11 +314,12 @@ class ProgramOptions {
 
   /// Whether to send [InterruptMsg] on SIGINT instead of a Ctrl+C [KeyMsg].
   ///
-  /// When true (default), SIGINT generates an [InterruptMsg] that can be
-  /// handled differently from regular Ctrl+C key presses.
+  /// When true (default), pressing Ctrl+C is delivered as an [InterruptMsg].
+  /// This lets the model or widget tree handle terminal interrupts separately
+  /// from ordinary keyboard shortcuts.
   ///
   /// When false, SIGINT is converted to a Ctrl+C [KeyMsg] for backward
-  /// compatibility.
+  /// compatibility. Call [withoutInterruptMsg] to opt into that behavior.
   final bool sendInterrupt;
 
   /// Optional title to set on program startup.
@@ -521,7 +519,9 @@ class ProgramOptions {
   /// The program will not install SIGINT or SIGWINCH handlers.
   ProgramOptions withoutSignalHandlers() => copyWith(signalHandlers: false);
 
-  /// Creates options that send Ctrl+C KeyMsg instead of InterruptMsg on SIGINT.
+  /// Creates options that send a Ctrl+C [KeyMsg] instead of [InterruptMsg].
+  ///
+  /// Use this when a model expects legacy key-based Ctrl+C handling.
   ProgramOptions withoutInterruptMsg() => copyWith(sendInterrupt: false);
 
   /// Creates options with the given startup title.

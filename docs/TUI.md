@@ -10,6 +10,7 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Program Class](#program-class)
 - [Command System (Cmd)](#command-system-cmd)
 - [Message Types (Msg)](#message-types-msg)
+- [Interrupt Handling](#interrupt-handling)
 - [View Rendering](#view-rendering)
 - [Markdown Rendering](#markdown-rendering)
 - [Built-in Bubbles (Components)](#built-in-bubbles-components)
@@ -171,6 +172,7 @@ await program.run();
 | `replay` | `ProgramReplay?` | `null` | Stream/script source for automatic message injection |
 | `blockInputWhileReplay` | `bool` | `false` | Drop terminal input while replay stream is active |
 | `signalHandlers` | `bool` | `true` | Install signal handlers (SIGINT, SIGWINCH) |
+| `sendInterrupt` | `bool` | `true` | Deliver SIGINT/Ctrl+C as `InterruptMsg` instead of a Ctrl+C `KeyMsg` |
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
 
@@ -180,6 +182,7 @@ Convenience helpers are available on `ProgramOptions`:
 - `withInterceptor(...)` / `withoutInterceptor()`
 - `withReplay(...)` / `withoutReplay()`
 - `withReplayInputBlocking(...)`
+- `withoutInterruptMsg()`
 
 ### Renderers and Output Modes
 
@@ -383,11 +386,46 @@ FrameTickMsg(
 // Quit signal
 QuitMsg()
 
-// Interrupt (Ctrl+C)
+// Interrupt (default Ctrl+C behavior)
 InterruptMsg()
 
 // Batch multiple messages
 BatchMsg([msg1, msg2, msg3])
+```
+
+By default, terminal Ctrl+C is delivered as `InterruptMsg`, not as
+`KeyMsg(key: Key(ctrl: true, ...))`. This makes interrupt handling explicit and
+keeps it separate from normal key bindings. If you need the legacy key-based
+behavior, set `ProgramOptions(sendInterrupt: false)` or call
+`ProgramOptions().withoutInterruptMsg()`.
+
+## Interrupt Handling
+
+Use `InterruptMsg` when you want to react to a real terminal interrupt such as
+Ctrl+C:
+
+```dart
+@override
+(Model, Cmd?) update(Msg msg) {
+  return switch (msg) {
+    InterruptMsg() when hasUnsavedChanges => (
+      copyWith(showConfirmQuit: true),
+      null,
+    ),
+    InterruptMsg() => (this, Cmd.quit()),
+    _ => (this, null),
+  };
+}
+```
+
+If you explicitly want Ctrl+C to arrive as a `KeyMsg`, opt out of interrupt
+messages:
+
+```dart
+await runProgram(
+  MyModel(),
+  options: ProgramOptions().withoutInterruptMsg(),
+);
 ```
 
 ### Extended Messages
@@ -682,14 +720,13 @@ Filter or transform messages before they reach the model:
 
 ```dart
 Msg? preventUnsavedQuit(Model model, Msg msg) {
-  if (msg is KeyMsg && msg.key.ctrl && msg.key.runes.firstOrNull == 0x63) {
-    // Ctrl+C pressed
-    if (model is EditorModel && model.hasUnsavedChanges) {
-      // Show warning instead of quitting
-      return const ShowUnsavedWarningMsg();
-    }
+  if (msg is InterruptMsg &&
+      model is EditorModel &&
+      model.hasUnsavedChanges) {
+    // Show warning instead of quitting.
+    return const ShowUnsavedWarningMsg();
   }
-  return msg; // Allow message through
+  return msg; // Allow message through.
 }
 
 final program = Program(

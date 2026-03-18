@@ -679,10 +679,15 @@ class PasteMsg extends Msg {
   int get hashCode => content.hashCode;
 }
 
-/// Message sent when an interrupt signal (SIGINT/Ctrl+C) is received.
+/// Message sent when the runtime receives a terminal interrupt.
 ///
 /// This is distinct from [QuitMsg] in that it represents an external
 /// interrupt request rather than a programmatic quit command.
+///
+/// By default, pressing Ctrl+C produces this message instead of a Ctrl+C
+/// [KeyMsg]. Disable that behavior with `ProgramOptions(sendInterrupt: false)`
+/// or `ProgramOptions.withoutInterruptMsg()` if a model needs legacy
+/// key-based handling.
 ///
 /// The model can handle this to:
 /// - Prompt for confirmation before quitting

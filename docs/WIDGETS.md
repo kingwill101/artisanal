@@ -1271,7 +1271,7 @@ Implemented component widgets and companion types include:
 
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
-  `CommandPalette`, `CommandPaletteItem`
+  `Wizard`, `WizardFormStep`, `CommandPalette`, `CommandPaletteItem`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,
@@ -1933,7 +1933,9 @@ Widgets commonly handle these message types:
     KeyMsg(key: Key(type: KeyType.escape)) => _cancel(),
     KeyMsg(key: Key(type: KeyType.up)) => _moveUp(),
     KeyMsg(key: Key(type: KeyType.down)) => _moveDown(),
-    KeyMsg(key: Key(ctrl: true, runes: [0x63])) => (this, Cmd.quit()), // Ctrl+C
+    
+    // Runtime interrupt
+    InterruptMsg() => (this, Cmd.quit()),
     
     // Window resize
     WindowSizeMsg(:final width, :final height) => _resize(width, height),
@@ -1951,6 +1953,12 @@ Widgets commonly handle these message types:
   };
 }
 ```
+
+When widgets run through `WidgetApp` or `runProgram()`, real Ctrl+C usually
+arrives as `InterruptMsg` because `ProgramOptions.sendInterrupt` defaults to
+`true`. Handle `KeyMsg(key: Key(ctrl: true, ...))` only if you opt into the
+legacy behavior with `ProgramOptions(sendInterrupt: false)` or
+`ProgramOptions().withoutInterruptMsg()`.
 
 ---
 
