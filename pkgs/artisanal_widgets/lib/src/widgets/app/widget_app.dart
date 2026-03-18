@@ -424,7 +424,14 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     if (cmd != null) cmds.add(cmd);
 
     root = _currentRoot();
-    if (msg is WindowSizeMsg || msg is BackgroundColorMsg) {
+    if (msg is BackgroundColorMsg) {
+      // Adaptive theme state lives outside the element tree. When the terminal
+      // reports a new background color, rebuild the root so widgets that read
+      // ThemeScope/current theme in build() update immediately without waiting
+      // for an unrelated resize or input event.
+      _tree.root.markNeedsBuild();
+      _dirty = true;
+    } else if (msg is WindowSizeMsg) {
       _dirty = true;
     } else {
       _dirty =

@@ -266,6 +266,9 @@ export 'zone/zone.dart'
 export 'trace.dart'
     show TuiTrace, TraceTag, TraceSpan, TraceEventType, TraceEventRecord;
 
-// Widget system for composable components
-export 'package:artisanal_widgets/artisanal_widgets.dart'
-    hide Key, LocalKey, UniqueKey, ValueKey;
+// Experimental widget system for composable components.
+//
+// This keeps `package:artisanal/tui.dart` backward-compatible while routing
+// consumers through the package-level experimental widgets entrypoint.
+// ignore: experimental_member_use
+export '../../widgets.dart' hide Key, LocalKey, UniqueKey, ValueKey;

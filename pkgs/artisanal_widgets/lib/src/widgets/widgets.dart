@@ -46,6 +46,7 @@ export 'core/framework.dart';
 export 'core/element.dart';
 export 'focus/focus.dart';
 export 'app/widget_app.dart';
+export 'app/artisanal_app.dart';
 export 'app/performance.dart';
 export 'app/render_metrics_provider.dart';
 export 'rendering/render_object.dart';
