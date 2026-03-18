@@ -47,6 +47,7 @@ class _AppWidgetState extends tui.State<AppWidget> {
   bool _drawerOpen = false;
   double _progressValue = 0.35;
   String _lastAction = 'None';
+  final _helpKeyMap = _ComponentHelpKeyMap();
 
   final List<tui.TabItem> _componentTabs = const [
     tui.TabItem('Core'),
@@ -366,7 +367,7 @@ class _AppWidgetState extends tui.State<AppWidget> {
   tui.Widget _componentsDemo(int width) {
     final isWide = width >= 110;
     final sections = switch (_componentSection) {
-      0 => [_panelButtons(), _panelIndicators()],
+      0 => [_panelButtons(), _panelIndicators(), _panelHelp()],
       1 => [_panelInputs(), _panelSelect()],
       2 => [_panelNavigation(), _panelData(), _panelLayout()],
       _ => [_panelOverlays()],
@@ -649,6 +650,22 @@ class _AppWidgetState extends tui.State<AppWidget> {
               return null;
             },
           ),
+        ],
+      ),
+    );
+  }
+
+  tui.Widget _panelHelp() {
+    return tui.PanelBox(
+      title: 'Shortcuts + Help',
+      child: tui.Column(
+        gap: 1,
+        children: [
+          tui.Text('Compact summary', style: theme.labelSmall),
+          tui.HelpView(keyMap: _helpKeyMap),
+          tui.Divider(width: 34),
+          tui.Text('Full grouped help', style: theme.labelSmall),
+          tui.HelpView(keyMap: _helpKeyMap, showAll: true, columnGap: 6),
         ],
       ),
     );
@@ -984,4 +1001,24 @@ class _ClickCounterState extends tui.State<ClickCounter> {
       ),
     );
   }
+}
+
+class _ComponentHelpKeyMap implements tui.KeyMap {
+  final up = tui.KeyBinding.withHelp(['up', 'k'], '↑/k', 'move up');
+  final down = tui.KeyBinding.withHelp(['down', 'j'], '↓/j', 'move down');
+  final open = tui.KeyBinding.withHelp(['enter'], '↵', 'open');
+  final palette = tui.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'commands');
+  final search = tui.KeyBinding.withHelp(['/'], '/', 'search');
+  final help = tui.KeyBinding.withHelp(['?'], '?', 'toggle help');
+  final quit = tui.KeyBinding.withHelp(['q'], 'q', 'quit');
+
+  @override
+  List<tui.KeyBinding> shortHelp() => [palette, search, help, quit];
+
+  @override
+  List<List<tui.KeyBinding>> fullHelp() => [
+    [up, down, open],
+    [palette, search, help],
+    [quit],
+  ];
 }

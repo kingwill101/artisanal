@@ -13,7 +13,16 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
-    show Cmd, Msg, KeyMsg, MouseMsg, RenderMetrics, RenderMetricsMsg, every;
+    show
+        Cmd,
+        Msg,
+        KeyBinding,
+        KeyMap,
+        KeyMsg,
+        MouseMsg,
+        RenderMetrics,
+        RenderMetricsMsg,
+        every;
 export 'package:artisanal/bubbles.dart'
     show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
 
@@ -49,6 +58,7 @@ part 'fade_modal_barrier.dart';
 part 'debug_overlay.dart';
 part 'git_diff.dart';
 part 'key_hint.dart';
+part 'help_view.dart';
 part 'status_bar.dart';
 part 'accent_panel.dart';
 part 'command_palette.dart';

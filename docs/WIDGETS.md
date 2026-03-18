@@ -1018,7 +1018,8 @@ Opacity(opacity: 0.5, child: Text('Muted'))
 
 ### Expanded
 
-Wraps a child with a flex factor (for future flex layout support):
+Wraps a child with a flex factor and a tight fit so it fills its allocated
+share of the available space inside `Row` and `Column` layouts:
 
 ```dart
 Expanded(
@@ -1269,7 +1270,7 @@ dedicated component test file under `pkgs/artisanal_widgets/test/components/`.
 Implemented component widgets and companion types include:
 
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
-  `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`,
+  `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
   `CommandPalette`, `CommandPaletteItem`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
