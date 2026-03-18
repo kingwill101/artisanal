@@ -47,6 +47,30 @@ export 'terminal_base.dart'
         StringTerminal,
         RawModeGuard;
 
+export 'backend.dart'
+    show
+        TerminalDimensions,
+        TerminalBackend,
+        BackendTerminal,
+        StdioTerminalBackend,
+        EmbeddedTerminalBackend,
+        TerminalBridge,
+        SocketTerminalBackend;
+
+export 'bridge_protocol.dart'
+    show
+        TerminalBridgeMessageType,
+        TerminalBridgeMessage,
+        TerminalBridgeJsonChannel,
+        JsonTerminalBackend,
+        WebSocketTerminalBackend;
+
+export 'browser_host.dart'
+    show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
+
+export 'socket_host.dart'
+    show SocketTerminalSessionHandler, SocketTerminalHostServer;
+
 export 'stdin_stream.dart'
     show
         sharedStdinStream,

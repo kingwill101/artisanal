@@ -88,8 +88,28 @@ library;
 // Terminal abstraction
 export 'terminal.dart'
     show
+        TerminalBackend,
+        TerminalDimensions,
+        BackendTerminal,
+        StdioTerminalBackend,
+        EmbeddedTerminalBackend,
+        TerminalBridge,
+        SocketTerminalBackend,
+        TerminalBridgeMessageType,
+        TerminalBridgeMessage,
+        TerminalBridgeJsonChannel,
+        JsonTerminalBackend,
+        WebSocketTerminalBackend,
+        BrowserTerminalSessionHandler,
+        BrowserTerminalHostServer,
+        SocketTerminalSessionHandler,
+        SocketTerminalHostServer,
         TuiTerminal,
+        SplitTerminal,
         StdioTerminal,
+        TtyTerminal,
+        StringTerminal,
+        RawModeGuard,
         TerminalState,
         sharedStdinStream,
         isSharedStdinStreamStarted,
@@ -209,6 +229,9 @@ export 'renderer.dart'
 // Program runtime
 export 'program.dart'
     show
+        ProgramHostResolver,
+        ProgramHostBinding,
+        ProgramHost,
         ProgramInterceptor,
         ProgramReplay,
         ProgramReplayStep,

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:artisanal/src/terminal/terminal.dart';
 import 'package:test/test.dart';
 
@@ -101,6 +104,83 @@ void main() {
       final caps = t.optimizeMovements();
       expect(caps.useTabs, isTrue);
       expect(caps.useBackspace, isFalse);
+    });
+
+    test('BackendTerminal emits ANSI sequences through embedded backend', () async {
+      final writes = <String>[];
+      final backend = EmbeddedTerminalBackend(output: writes.add);
+      final terminal = BackendTerminal(backend);
+
+      terminal.hideCursor();
+      terminal.enterAltScreen();
+      terminal.setTitle('Embedded');
+      terminal.enableBracketedPaste();
+      terminal.disableBracketedPaste();
+      await terminal.flush();
+
+      final output = writes.join();
+      expect(output, contains(Ansi.cursorHide));
+      expect(output, contains(Ansi.altScreenEnter));
+      expect(output, contains(Ansi.setTitle('Embedded')));
+      expect(output, contains(Ansi.bracketedPasteEnable));
+      expect(output, contains(Ansi.bracketedPasteDisable));
+
+      terminal.dispose();
+    });
+
+    test('TerminalBridge captures output and forwards input/resize', () async {
+      final bridge = TerminalBridge();
+      final outputChunks = <String>[];
+      final outputSubscription = bridge.output.listen(outputChunks.add);
+      final inputFuture = bridge.backend.inputStream!.first;
+      final resizeFuture = bridge.backend.resizeStream!.first;
+
+      bridge.terminal.setTitle('Bridge');
+      await bridge.terminal.flush();
+      bridge.addInputString('abc');
+      bridge.resize(width: 120, height: 40);
+
+      final input = await inputFuture;
+      final resize = await resizeFuture;
+
+      expect(outputChunks.join(), contains(Ansi.setTitle('Bridge')));
+      expect(bridge.bufferedOutput, contains(Ansi.setTitle('Bridge')));
+      expect(utf8.decode(input), 'abc');
+      expect(resize.width, 120);
+      expect(resize.height, 40);
+
+      await outputSubscription.cancel();
+      bridge.dispose();
+    });
+
+    test('SocketTerminalBackend strips OSC 9999 resize messages from input', () async {
+      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final accepted = server.first;
+      final client = await Socket.connect(
+        InternetAddress.loopbackIPv4,
+        server.port,
+      );
+      final serverSocket = await accepted;
+
+      final backend = SocketTerminalBackend(serverSocket);
+      final inputFuture = backend.inputStream!.first;
+      final resizeFuture = backend.resizeStream!.first;
+
+      client.add(utf8.encode('ab\x1b]9999;120;40\x07cd'));
+      await client.flush();
+
+      final input = await inputFuture;
+      final resize = await resizeFuture;
+
+      expect(utf8.decode(input), 'abcd');
+      expect(resize.width, 120);
+      expect(resize.height, 40);
+      expect(backend.size.width, 120);
+      expect(backend.size.height, 40);
+
+      backend.dispose();
+      await client.close();
+      await server.close();
     });
   });
 }

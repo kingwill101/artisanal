@@ -16,7 +16,7 @@ import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
-import '../style/color.dart' show Color;
+import '../style/color.dart' show Color, ColorProfile;
 import 'background_color_probe.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
@@ -637,6 +637,229 @@ class ProgramOptions {
   );
 }
 
+/// Resolves a reusable launch target for a [Program].
+///
+/// Hosts package the terminal/backend choice separately from the model and
+/// other runtime options so callers can reuse the same launch surface across
+/// local stdio, split-TTY, embedded, or future remote backends.
+typedef ProgramHostResolver =
+    ProgramHostBinding Function(ProgramOptions options);
+
+/// Resolved runtime configuration produced by a [ProgramHost].
+///
+/// The [options] value should be treated as the final runtime options after
+/// any host-specific adjustments. When [terminal] is omitted, [Program] falls
+/// back to its built-in stdio terminal selection.
+final class ProgramHostBinding {
+  /// Creates a resolved host binding.
+  const ProgramHostBinding({required this.options, this.terminal});
+
+  /// Final runtime options after host adjustments.
+  final ProgramOptions options;
+
+  /// Optional terminal implementation to use for the run.
+  final TuiTerminal? terminal;
+}
+
+/// Reusable launch target for a [Program].
+///
+/// Use [ProgramHost] to package backend selection separately from model logic.
+/// The current runtime supports:
+///
+/// - [ProgramHost.stdio] for the built-in stdio host
+/// - [ProgramHost.backend] for backend-driven embedded/native hosts
+/// - [ProgramHost.bridge] for ergonomic embedded/web bridge hosts
+/// - [ProgramHost.jsonChannel] for message-oriented JSON transports
+/// - [ProgramHost.webSocket] for websocket JSON bridge hosts
+/// - [ProgramHost.terminal] for an already-created terminal
+/// - [ProgramHost.split] for separate control/output terminals
+/// - [ProgramHost.custom] for embedding adapters and future backends
+abstract interface class ProgramHost {
+  /// Creates a stdio-backed host.
+  ///
+  /// Set [inputTTY] when the app should read input from `/dev/tty` even if
+  /// stdin is redirected.
+  factory ProgramHost.stdio({bool inputTTY = false}) =>
+      _StdioProgramHost(inputTTY: inputTTY);
+
+  /// Creates a host backed by [backend].
+  factory ProgramHost.backend(TerminalBackend backend) =>
+      _BackendProgramHost(backend);
+
+  /// Creates a host backed by [bridge].
+  factory ProgramHost.bridge(TerminalBridge bridge) =>
+      _BackendProgramHost(bridge.backend);
+
+  /// Creates a host backed by a JSON message channel.
+  factory ProgramHost.jsonChannel({
+    required void Function(String message) sendMessage,
+    required Stream<Object?> inboundMessages,
+    Future<void> Function()? flushMessages,
+    Future<void> Function()? closeTransport,
+    TerminalDimensions initialSize = const (width: 80, height: 24),
+    bool supportsAnsi = true,
+    bool isTerminal = true,
+    ColorProfile colorProfile = ColorProfile.trueColor,
+    ({bool useTabs, bool useBackspace}) movementCaps = const (
+      useTabs: false,
+      useBackspace: true,
+    ),
+  }) => _BackendProgramHost(
+    JsonTerminalBackend(
+      sendMessage: sendMessage,
+      inboundMessages: inboundMessages,
+      flushMessages: flushMessages,
+      closeTransport: closeTransport,
+      initialSize: initialSize,
+      supportsAnsi: supportsAnsi,
+      isTerminal: isTerminal,
+      colorProfile: colorProfile,
+      movementCaps: movementCaps,
+    ),
+  );
+
+  /// Creates a websocket-backed host using the JSON bridge protocol.
+  factory ProgramHost.webSocket(
+    io.WebSocket socket, {
+    TerminalDimensions initialSize = const (width: 80, height: 24),
+    bool supportsAnsi = true,
+    bool isTerminal = true,
+    ColorProfile colorProfile = ColorProfile.trueColor,
+    ({bool useTabs, bool useBackspace}) movementCaps = const (
+      useTabs: false,
+      useBackspace: true,
+    ),
+    bool closeSocketOnDispose = true,
+  }) => _BackendProgramHost(
+    WebSocketTerminalBackend(
+      socket,
+      initialSize: initialSize,
+      supportsAnsi: supportsAnsi,
+      isTerminal: isTerminal,
+      colorProfile: colorProfile,
+      movementCaps: movementCaps,
+      closeSocketOnDispose: closeSocketOnDispose,
+    ),
+  );
+
+  /// Creates a socket-backed host for remote or shell-mode terminals.
+  factory ProgramHost.socket(
+    io.Socket socket, {
+    TerminalDimensions initialSize = const (width: 80, height: 24),
+    bool supportsAnsi = true,
+    ColorProfile colorProfile = ColorProfile.trueColor,
+    bool closeSocketOnDispose = true,
+  }) => _BackendProgramHost(
+    SocketTerminalBackend(
+      socket,
+      initialSize: initialSize,
+      supportsAnsi: supportsAnsi,
+      colorProfile: colorProfile,
+      closeSocketOnDispose: closeSocketOnDispose,
+    ),
+  );
+
+  /// Creates a host that always uses [terminal].
+  factory ProgramHost.terminal(TuiTerminal terminal) =>
+      _TerminalProgramHost(terminal);
+
+  /// Creates a split host with separate [control] and [output] terminals.
+  factory ProgramHost.split({
+    required TuiTerminal control,
+    required TuiTerminal output,
+  }) => _SplitProgramHost(control: control, output: output);
+
+  /// Creates a custom host using [resolver].
+  factory ProgramHost.custom(ProgramHostResolver resolver) =>
+      _CustomProgramHost(resolver);
+
+  /// Resolves the host against [options].
+  ProgramHostBinding resolve(ProgramOptions options);
+}
+
+final class _StdioProgramHost implements ProgramHost {
+  const _StdioProgramHost({this.inputTTY = false});
+
+  final bool inputTTY;
+
+  @override
+  ProgramHostBinding resolve(ProgramOptions options) {
+    return ProgramHostBinding(
+      options: options.copyWith(inputTTY: inputTTY || options.inputTTY),
+    );
+  }
+}
+
+final class _TerminalProgramHost implements ProgramHost {
+  const _TerminalProgramHost(this.terminal);
+
+  final TuiTerminal terminal;
+
+  @override
+  ProgramHostBinding resolve(ProgramOptions options) {
+    return ProgramHostBinding(
+      // A supplied terminal should own its own input source.
+      options: options.copyWith(inputTTY: false),
+      terminal: terminal,
+    );
+  }
+}
+
+final class _BackendProgramHost implements ProgramHost {
+  const _BackendProgramHost(this.backend);
+
+  final TerminalBackend backend;
+
+  @override
+  ProgramHostBinding resolve(ProgramOptions options) {
+    return ProgramHostBinding(
+      options: options.copyWith(inputTTY: false),
+      terminal: BackendTerminal(backend),
+    );
+  }
+}
+
+final class _SplitProgramHost implements ProgramHost {
+  const _SplitProgramHost({required this.control, required this.output});
+
+  final TuiTerminal control;
+  final TuiTerminal output;
+
+  @override
+  ProgramHostBinding resolve(ProgramOptions options) {
+    return ProgramHostBinding(
+      // Split terminals already provide the control/input path.
+      options: options.copyWith(inputTTY: false),
+      terminal: SplitTerminal(control: control, output: output),
+    );
+  }
+}
+
+final class _CustomProgramHost implements ProgramHost {
+  const _CustomProgramHost(this.resolver);
+
+  final ProgramHostResolver resolver;
+
+  @override
+  ProgramHostBinding resolve(ProgramOptions options) => resolver(options);
+}
+
+ProgramHostBinding _resolveProgramHost({
+  required ProgramOptions options,
+  ProgramHost? host,
+  TuiTerminal? terminal,
+}) {
+  assert(
+    host == null || terminal == null,
+    'Provide either a ProgramHost or a terminal, not both.',
+  );
+  if (host == null) {
+    return ProgramHostBinding(options: options, terminal: terminal);
+  }
+  final binding = host.resolve(options);
+  return ProgramHostBinding(options: binding.options, terminal: binding.terminal);
+}
+
 /// Error thrown when a program is cancelled via an external signal.
 class ProgramCancelledError implements Exception {
   @override
@@ -723,11 +946,18 @@ class ProgramCancelledError implements Exception {
 class Program<M extends Model> {
   /// Creates a new TUI program with the given initial model.
   Program(
-    this._initialModel, {
+    M initialModel, {
     ProgramOptions options = const ProgramOptions(),
+    ProgramHost? host,
     TuiTerminal? terminal,
-  }) : _options = options,
-       _terminal = terminal;
+  }) : this._resolved(
+         initialModel,
+         _resolveProgramHost(options: options, host: host, terminal: terminal),
+       );
+
+  Program._resolved(this._initialModel, ProgramHostBinding binding)
+    : _options = binding.options,
+      _terminal = binding.terminal;
 
   final M _initialModel;
   final ProgramOptions _options;
@@ -816,6 +1046,8 @@ class Program<M extends Model> {
   /// Signal subscriptions.
   StreamSubscription<io.ProcessSignal>? _sigintSubscription;
   StreamSubscription<io.ProcessSignal>? _sigwinchSubscription;
+  StreamSubscription<TerminalDimensions>? _backendResizeSubscription;
+  StreamSubscription<void>? _backendShutdownSubscription;
 
   /// Stored panic for re-throwing after cleanup.
   Object? _panic;
@@ -1096,9 +1328,14 @@ class Program<M extends Model> {
       _terminal!.enableBracketedPaste();
     }
 
-    // Set up signal handlers (if enabled)
+    _setupBackendLifecycleListeners();
+
+    // Set up signal handlers (if enabled and not provided by the backend).
     if (_options.signalHandlers) {
-      _setupSignalHandlers();
+      _setupSignalHandlers(
+        handleInterrupt: _backendShutdownSubscription == null,
+        handleResize: _backendResizeSubscription == null,
+      );
     }
 
     // Start listening for input
@@ -1299,31 +1536,57 @@ class Program<M extends Model> {
     }
   }
 
-  /// Sets up signal handlers for graceful shutdown and resize.
-  void _setupSignalHandlers() {
-    // Handle Ctrl+C (SIGINT)
-    try {
-      _sigintSubscription = io.ProcessSignal.sigint.watch().listen((_) {
+  void _setupBackendLifecycleListeners() {
+    final terminal = _terminal;
+    if (terminal is! BackendTerminal) return;
+
+    final resizeStream = terminal.resizeStream;
+    if (resizeStream != null) {
+      _backendResizeSubscription = resizeStream.listen((size) {
+        send(WindowSizeMsg(size.width, size.height));
+      });
+    }
+
+    final shutdownStream = terminal.shutdownStream;
+    if (shutdownStream != null) {
+      _backendShutdownSubscription = shutdownStream.listen((_) {
         if (_options.sendInterrupt) {
-          // Send InterruptMsg for explicit interrupt handling
           send(const InterruptMsg());
         } else {
-          // Send Ctrl+C as a key message for backward compatibility
           send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
         }
       });
-    } catch (_) {
-      // Signal handling not supported on this platform
+    }
+  }
+
+  /// Sets up signal handlers for graceful shutdown and resize.
+  void _setupSignalHandlers({
+    required bool handleInterrupt,
+    required bool handleResize,
+  }) {
+    if (handleInterrupt) {
+      try {
+        _sigintSubscription = io.ProcessSignal.sigint.watch().listen((_) {
+          if (_options.sendInterrupt) {
+            send(const InterruptMsg());
+          } else {
+            send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
+          }
+        });
+      } catch (_) {
+        // Signal handling not supported on this platform
+      }
     }
 
-    // Handle window resize (SIGWINCH) - Unix only
-    try {
-      _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
-        final size = _terminal!.size;
-        send(WindowSizeMsg(size.width, size.height));
-      });
-    } catch (_) {
-      // SIGWINCH not available on this platform
+    if (handleResize) {
+      try {
+        _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
+          final size = _terminal!.size;
+          send(WindowSizeMsg(size.width, size.height));
+        });
+      } catch (_) {
+        // SIGWINCH not available on this platform
+      }
     }
   }
 
@@ -2160,8 +2423,13 @@ class Program<M extends Model> {
         return true;
 
       case WriteRawMsg(:final data):
-        _terminal?.write(data);
-        unawaited(_terminal?.flush());
+        final terminal = _terminal;
+        if (terminal == null) return true;
+        if (!terminal.isTerminal && _isTerminalReportRequest(data)) {
+          return true;
+        }
+        terminal.write(data);
+        unawaited(terminal.flush());
         return true;
 
       case SuspendMsg():
@@ -2835,6 +3103,12 @@ class Program<M extends Model> {
     await tryAsync(() async => _sigwinchSubscription?.cancel());
     _sigwinchSubscription = null;
 
+    await tryAsync(() async => _backendResizeSubscription?.cancel());
+    _backendResizeSubscription = null;
+
+    await tryAsync(() async => _backendShutdownSubscription?.cancel());
+    _backendShutdownSubscription = null;
+
     // Stop stream commands
     for (final cmd in _streamCommands) {
       await tryAsync(() async => cmd.cancel());
@@ -2916,8 +3190,15 @@ class Program<M extends Model> {
 Future<void> runProgram<M extends Model>(
   M model, {
   ProgramOptions options = const ProgramOptions(),
+  ProgramHost? host,
+  TuiTerminal? terminal,
 }) async {
-  final program = Program<M>(model, options: options);
+  final program = Program<M>(
+    model,
+    options: options,
+    host: host,
+    terminal: terminal,
+  );
   await program.run();
 }
 
@@ -2925,8 +3206,15 @@ Future<void> runProgram<M extends Model>(
 Future<M> runProgramWithResult<M extends Model>(
   M model, {
   ProgramOptions options = const ProgramOptions(),
+  ProgramHost? host,
+  TuiTerminal? terminal,
 }) async {
-  final program = Program<M>(model, options: options);
+  final program = Program<M>(
+    model,
+    options: options,
+    host: host,
+    terminal: terminal,
+  );
   await program.run();
   return program.finalModel ?? model;
 }
@@ -2944,8 +3232,60 @@ Future<M> runProgramWithResult<M extends Model>(
 Future<void> runProgramDebug<M extends Model>(
   M model, {
   ProgramOptions? options,
+  ProgramHost? host,
+  TuiTerminal? terminal,
 }) async {
-  final opts = (options ?? const ProgramOptions()).withoutCatchPanics();
-  final program = Program<M>(model, options: opts);
+  final resolved = _resolveProgramHost(
+    options: options ?? const ProgramOptions(),
+    host: host,
+    terminal: terminal,
+  );
+  final program = Program<M>._resolved(
+    model,
+    ProgramHostBinding(
+      options: resolved.options.withoutCatchPanics(),
+      terminal: resolved.terminal,
+    ),
+  );
   await program.run();
+}
+
+bool _isTerminalReportRequest(String data) {
+  if (data.isEmpty) return false;
+
+  var remaining = data;
+  var matchedAny = false;
+  while (remaining.isNotEmpty) {
+    if (remaining.startsWith(Ansi.requestForegroundColor)) {
+      remaining = remaining.substring(Ansi.requestForegroundColor.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith(Ansi.requestBackgroundColor)) {
+      remaining = remaining.substring(Ansi.requestBackgroundColor.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith(Ansi.requestCursorColor)) {
+      remaining = remaining.substring(Ansi.requestCursorColor.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith(Ansi.requestPrimaryDeviceAttributes)) {
+      remaining = remaining.substring(Ansi.requestPrimaryDeviceAttributes.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith('\x1b[18t')) {
+      remaining = remaining.substring('\x1b[18t'.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith('\x1b]52;') && remaining.endsWith('?\x07')) {
+      return true;
+    }
+    return false;
+  }
+
+  return matchedAny;
 }

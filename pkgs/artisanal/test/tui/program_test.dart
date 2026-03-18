@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' as io;
 
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/tui/cmd.dart';
@@ -518,6 +519,237 @@ void main() {
       // Other options unchanged
       expect(debug.altScreen, options.altScreen);
       expect(debug.mouse, options.mouse);
+    });
+  });
+
+  group('ProgramHost', () {
+    test('stdio host can prefer inputTTY', () {
+      final binding = ProgramHost.stdio(
+        inputTTY: true,
+      ).resolve(const ProgramOptions());
+
+      expect(binding.terminal, isNull);
+      expect(binding.options.inputTTY, isTrue);
+    });
+
+    test('terminal host injects terminal and disables inputTTY override', () {
+      final terminal = MockTerminal();
+      final binding = ProgramHost.terminal(
+        terminal,
+      ).resolve(const ProgramOptions(inputTTY: true));
+
+      expect(binding.terminal, same(terminal));
+      expect(binding.options.inputTTY, isFalse);
+    });
+
+    test('split host creates a split terminal', () {
+      final control = MockTerminal();
+      final output = MockTerminal();
+      final binding = ProgramHost.split(
+        control: control,
+        output: output,
+      ).resolve(const ProgramOptions(inputTTY: true));
+
+      expect(binding.terminal, isA<SplitTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+    });
+
+    test('custom host can override options and terminal', () {
+      final terminal = MockTerminal();
+      final binding = ProgramHost.custom((options) {
+        return ProgramHostBinding(
+          options: options.copyWith(startupTitle: 'Custom Host'),
+          terminal: terminal,
+        );
+      }).resolve(const ProgramOptions());
+
+      expect(binding.terminal, same(terminal));
+      expect(binding.options.startupTitle, 'Custom Host');
+    });
+
+    test('backend host resolves to a BackendTerminal', () {
+      final backend = EmbeddedTerminalBackend(output: (_) {});
+      final binding = ProgramHost.backend(backend).resolve(
+        const ProgramOptions(),
+      );
+
+      expect(binding.terminal, isA<BackendTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+      binding.terminal?.dispose();
+    });
+
+    test('bridge host resolves to a BackendTerminal', () {
+      final bridge = TerminalBridge();
+      final binding = ProgramHost.bridge(bridge).resolve(
+        const ProgramOptions(),
+      );
+
+      expect(binding.terminal, isA<BackendTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+      bridge.dispose();
+    });
+
+    test('jsonChannel host resolves to a BackendTerminal', () async {
+      final inbound = StreamController<Object?>();
+      final binding = ProgramHost.jsonChannel(
+        sendMessage: (_) {},
+        inboundMessages: inbound.stream,
+      ).resolve(const ProgramOptions());
+
+      expect(binding.terminal, isA<BackendTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+
+      binding.terminal?.dispose();
+      await inbound.close();
+    });
+
+    test('webSocket host resolves to a BackendTerminal', () async {
+      final server = await io.HttpServer.bind(
+        io.InternetAddress.loopbackIPv4,
+        0,
+      );
+      final acceptedSocket = server.transform(io.WebSocketTransformer()).first;
+      final client = await io.WebSocket.connect(
+        'ws://${server.address.address}:${server.port}',
+      );
+      final serverSocket = await acceptedSocket;
+
+      final binding = ProgramHost.webSocket(serverSocket).resolve(
+        const ProgramOptions(),
+      );
+
+      expect(binding.terminal, isA<BackendTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+
+      binding.terminal?.dispose();
+      await client.close();
+      await server.close(force: true);
+    });
+
+    test('socket host resolves to a BackendTerminal', () async {
+      final server = await io.ServerSocket.bind(
+        io.InternetAddress.loopbackIPv4,
+        0,
+      );
+      final accepted = server.first;
+      final client = await io.Socket.connect(
+        io.InternetAddress.loopbackIPv4,
+        server.port,
+      );
+      final serverSocket = await accepted;
+
+      final binding = ProgramHost.socket(serverSocket).resolve(
+        const ProgramOptions(),
+      );
+
+      expect(binding.terminal, isA<BackendTerminal>());
+      expect(binding.options.inputTTY, isFalse);
+
+      binding.terminal?.dispose();
+      await client.close();
+      await server.close();
+    });
+  });
+
+  group('Program helpers', () {
+    test('runProgram can use a host terminal', () async {
+      final terminal = MockTerminal();
+
+      await runProgram(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(altScreen: false),
+        host: ProgramHost.terminal(terminal),
+      );
+
+      expect(terminal.operations, contains('enableRawMode'));
+      expect(terminal.disposed, isTrue);
+    });
+
+    test('runProgramWithResult can use an explicit terminal', () async {
+      final terminal = MockTerminal();
+
+      final result = await runProgramWithResult<ImmediateQuitModel>(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      expect(result, isA<ImmediateQuitModel>());
+      expect(terminal.disposed, isTrue);
+    });
+
+    test('runProgramDebug keeps panic catching disabled after host resolution', () async {
+      final terminal = MockTerminal();
+      final host = ProgramHost.custom((options) {
+        return ProgramHostBinding(
+          options: options.copyWith(catchPanics: true),
+          terminal: terminal,
+        );
+      });
+
+      await expectLater(
+        runProgramDebug(
+          InitPanicModel(),
+          options: const ProgramOptions(altScreen: false),
+          host: host,
+        ),
+        throwsStateError,
+      );
+    });
+
+    test('backend host forwards resize and shutdown events', () async {
+      final backend = EmbeddedTerminalBackend(output: (_) {});
+      final received = <Msg>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+          if (msg is InterruptMsg) {
+            return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final runFuture = runProgram(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        host: ProgramHost.backend(backend),
+      );
+
+      await _waitUntil(() => backend.isRawMode);
+      backend.notifySizeChanged((width: 120, height: 33));
+      await _waitUntil(
+        () => received.any(
+          (msg) => msg is WindowSizeMsg && msg.width == 120 && msg.height == 33,
+        ),
+      );
+
+      backend.requestShutdown();
+      await runFuture;
+
+      expect(received.whereType<InterruptMsg>(), isNotEmpty);
+    });
+
+    test('bridge host can drive a program end to end', () async {
+      final bridge = TerminalBridge();
+
+      final runFuture = runProgram(
+        const CounterModel(),
+        options: const ProgramOptions(
+          altScreen: false,
+          frameTick: false,
+          signalHandlers: false,
+        ),
+        host: ProgramHost.bridge(bridge),
+      );
+
+      await _waitUntil(() => bridge.bufferedOutput.contains('Count: 0'));
+      bridge.addInputString('q');
+      await runFuture;
+
+      expect(bridge.bufferedOutput, contains('Count: 0'));
+      bridge.dispose();
     });
   });
 
@@ -1321,7 +1553,7 @@ void main() {
       );
 
       final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await _waitUntil(() => viewCalls > 0);
       final before = viewCalls;
       program.send(const CustomMsg('start'));
       await runFuture;
@@ -1748,7 +1980,9 @@ void main() {
       );
 
       final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
+      await _waitUntil(
+        () => received.whereType<CustomMsg>().any((m) => m.value == 'boot'),
+      );
 
       program.send(const IncrementMsg());
       program.send(const CustomMsg('raw'));
@@ -2437,6 +2671,20 @@ class _RecordingProgramInterceptor extends ProgramInterceptor {
   @override
   void onStop() {
     stopped = true;
+  }
+}
+
+Future<void> _waitUntil(
+  bool Function() condition, {
+  Duration timeout = const Duration(milliseconds: 250),
+  Duration poll = const Duration(milliseconds: 5),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (!condition()) {
+    if (DateTime.now().isAfter(deadline)) {
+      fail('Timed out waiting for test condition');
+    }
+    await Future<void>.delayed(poll);
   }
 }
 
