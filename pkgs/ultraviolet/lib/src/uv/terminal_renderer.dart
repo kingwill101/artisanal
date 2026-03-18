@@ -1273,7 +1273,11 @@ final class UvTerminalRenderer {
           final moveCost = assumeHomeForInlineRelative
               ? UvAnsi.cursorForward(firstCell).length
               : _moveCursorSeq(this, newbuf, firstCell, y, false).seq.length;
-          if (moveCost > firstCell) {
+          // Do not replace cursor motion with raw blank emission for plain
+          // empty cells. Those spaces inherit the terminal default background,
+          // which can produce left-edge artifacts during scroll/redraw when
+          // the app background differs from the terminal default.
+          if (moveCost > firstCell && !blank.isEmpty) {
             firstCell = 0;
           }
         }
@@ -1742,6 +1746,45 @@ bool _notLocal(int cols, int fx, int fy, int tx, int ty) {
       ((ty - fy).abs() + (tx - fx).abs() > longDist);
 }
 
+String? _overwriteMoveSeq(
+  UvTerminalRenderer s,
+  Buffer? newbuf,
+  int fx,
+  int fy,
+  int tx,
+  int ty,
+) {
+  if (newbuf == null || fy != ty || tx <= fx) return null;
+  if (ty < 0 || ty >= newbuf.height()) return null;
+
+  final line = newbuf.line(ty);
+  if (line == null) return null;
+
+  final seq = StringBuffer();
+  for (var x = fx; x < tx; x++) {
+    if (x < 0 || x >= line.cells.length) return null;
+
+    final cell = line.cells[x];
+    if (cell.width != 1) return null;
+    if (cell.content.isEmpty) return null;
+    if (cell.content.trim().isEmpty) return null;
+    if (stringWidth(cell.content) != 1) return null;
+    if (cell.content.contains('\x1b') ||
+        cell.content.contains('\n') ||
+        cell.content.contains('\r')) {
+      return null;
+    }
+
+    final style = style_ops.convertStyle(cell.style, s._profile);
+    final link = style_ops.convertLink(cell.link, s._profile);
+    if (style != s._cur.style || link != s._cur.link) return null;
+
+    seq.write(cell.content);
+  }
+
+  return seq.toString();
+}
+
 ({String seq, int scrollHeight}) _relativeCursorMove(
   UvTerminalRenderer s,
   Buffer? newbuf,
@@ -1822,7 +1865,13 @@ bool _notLocal(int cols, int fx, int fy, int tx, int ty) {
 
       final cuf = UvAnsi.cursorForward(n);
       if (xseq.isEmpty || cuf.length < xseq.length) xseq = cuf;
-      // Overwrite optimization not implemented in this minimal port.
+      if (overwrite) {
+        final overwriteSeq = _overwriteMoveSeq(s, newbuf, fx, fy, tx, ty);
+        if (overwriteSeq != null &&
+            (xseq.isEmpty || overwriteSeq.length < xseq.length)) {
+          xseq = overwriteSeq;
+        }
+      }
     } else {
       var n = fx - tx;
       if (useTabs && s._tabs != null && (s._caps & _Cap.cbt) != 0) {

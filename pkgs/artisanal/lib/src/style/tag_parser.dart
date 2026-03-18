@@ -266,12 +266,26 @@ class ConsoleTagParser {
   /// Finds the closing `>` for a tag starting at position [start].
   /// Returns -1 if not found.
   int _findTagEnd(String text, int start) {
-    // Simple case: find first >
-    // TODO: Handle quoted attributes with > inside
+    String? quote;
     for (var i = start + 1; i < text.length; i++) {
-      if (text[i] == '>') return i;
+      final ch = text[i];
+      if (quote != null) {
+        if (ch == quote && (i == start + 1 || text[i - 1] != '\\')) {
+          quote = null;
+        }
+        if (ch == '\n') return -1;
+        continue;
+      }
+
+      if ((ch == '"' || ch == '\'') &&
+          (i == start + 1 || text[i - 1] != '\\')) {
+        quote = ch;
+        continue;
+      }
+
+      if (ch == '>') return i;
       // Abort on newline - tags shouldn't span lines
-      if (text[i] == '\n') return -1;
+      if (ch == '\n') return -1;
     }
     return -1;
   }
@@ -442,13 +456,13 @@ class ConsoleTagParser {
     final options = <String>[];
     String? href;
 
-    for (final part in tag.split(';')) {
+    for (final part in _splitTagAttributes(tag)) {
       final trimmed = part.trim();
       final eqIndex = trimmed.indexOf('=');
       if (eqIndex == -1) continue;
 
       final key = trimmed.substring(0, eqIndex).toLowerCase();
-      final value = trimmed.substring(eqIndex + 1);
+      final value = _unquoteAttributeValue(trimmed.substring(eqIndex + 1));
 
       switch (key) {
         case 'fg':
@@ -468,6 +482,53 @@ class ConsoleTagParser {
       options: options,
       href: href,
     );
+  }
+
+  List<String> _splitTagAttributes(String tag) {
+    final parts = <String>[];
+    final buffer = StringBuffer();
+    String? quote;
+
+    for (var i = 0; i < tag.length; i++) {
+      final ch = tag[i];
+      if (quote != null) {
+        buffer.write(ch);
+        if (ch == quote && (i == 0 || tag[i - 1] != '\\')) {
+          quote = null;
+        }
+        continue;
+      }
+
+      if ((ch == '"' || ch == '\'') && (i == 0 || tag[i - 1] != '\\')) {
+        quote = ch;
+        buffer.write(ch);
+        continue;
+      }
+
+      if (ch == ';') {
+        parts.add(buffer.toString());
+        buffer.clear();
+        continue;
+      }
+
+      buffer.write(ch);
+    }
+
+    parts.add(buffer.toString());
+    return parts;
+  }
+
+  String _unquoteAttributeValue(String value) {
+    final trimmed = value.trim();
+    if (trimmed.length < 2) return trimmed;
+
+    final first = trimmed[0];
+    final last = trimmed[trimmed.length - 1];
+    if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+      return trimmed.substring(1, trimmed.length - 1);
+    }
+
+    return trimmed;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

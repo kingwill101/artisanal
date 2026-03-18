@@ -5,7 +5,9 @@ import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
 import '../uv/ansi.dart' show UvAnsi;
+import '../uv/cell.dart' show Link, UvStyle;
 import '../uv/buffer.dart' as uv_buffer;
+import '../uv/style_ops.dart' as uv_style;
 import '../uv/styled_string.dart' as uv_styled;
 import '../uv/terminal_renderer.dart' as uv_term;
 
@@ -108,6 +110,7 @@ class FullScreenTuiRenderer implements TuiRenderer {
 
   /// The last rendered view (for skip-if-unchanged optimization).
   String? _lastView;
+  _ParsedFrame? _lastFrame;
 
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
@@ -165,14 +168,16 @@ class FullScreenTuiRenderer implements TuiRenderer {
       return;
     }
 
-    // Full redraw (future: diff with _lastView and update only changed lines)
-    terminal.cursorHome();
     final output = _options.ansiCompress ? compressAnsi(content) : content;
-    final mapped = _options.altScreen ? _mapNewlines(output) : output;
-    terminal.write(mapped);
 
-    // Clear any remaining content from previous render
-    _clearToEndOfScreen(content);
+    if (!terminal.supportsAnsi || _lastFrame == null) {
+      _renderFullRedraw(output);
+      _lastFrame = _parseFrame(output);
+    } else {
+      final nextFrame = _parseFrame(output);
+      _renderDiffFrame(_lastFrame!, nextFrame);
+      _lastFrame = nextFrame;
+    }
 
     _lastView = content;
     // Reset and start the stopwatch for next frame timing
@@ -203,10 +208,48 @@ class FullScreenTuiRenderer implements TuiRenderer {
     }
   }
 
+  void _renderFullRedraw(String content) {
+    terminal.cursorHome();
+    final mapped = _options.altScreen ? _mapNewlines(content) : content;
+    terminal.write(mapped);
+
+    // Clear any remaining content from previous render
+    _clearToEndOfScreen(content);
+  }
+
+  void _renderDiffFrame(_ParsedFrame previous, _ParsedFrame next) {
+    final maxLineCount = previous.lines.length > next.lines.length
+        ? previous.lines.length
+        : next.lines.length;
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < maxLineCount; i++) {
+      final oldLine = i < previous.lines.length ? previous.lines[i] : null;
+      final newLine = i < next.lines.length ? next.lines[i] : null;
+
+      if (oldLine == newLine) continue;
+
+      buffer.write(Ansi.cursorTo(i + 1, 1));
+      buffer.write(Ansi.clearLine);
+      buffer.write(Ansi.reset);
+      buffer.write(UvAnsi.resetHyperlink());
+
+      if (newLine != null) {
+        buffer.write(newLine.statePrefix);
+        buffer.write(newLine.raw);
+      }
+    }
+
+    if (buffer.isNotEmpty) {
+      terminal.write(buffer.toString());
+    }
+  }
+
   @override
   void clear() {
     terminal.clearScreen();
     _lastView = null;
+    _lastFrame = null;
   }
 
   @override
@@ -226,6 +269,144 @@ class FullScreenTuiRenderer implements TuiRenderer {
     }
     _initialized = false;
   }
+}
+
+final class _ParsedFrame {
+  const _ParsedFrame(this.lines);
+
+  final List<_ParsedLine> lines;
+}
+
+final class _ParsedLine {
+  const _ParsedLine({required this.raw, required this.statePrefix});
+
+  final String raw;
+  final String statePrefix;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ParsedLine &&
+      other.raw == raw &&
+      other.statePrefix == statePrefix;
+
+  @override
+  int get hashCode => Object.hash(raw, statePrefix);
+}
+
+_ParsedFrame _parseFrame(String content) {
+  if (content.isEmpty) {
+    return const _ParsedFrame(<_ParsedLine>[
+      _ParsedLine(raw: '', statePrefix: ''),
+    ]);
+  }
+
+  final lines = <_ParsedLine>[];
+  final lineBuffer = StringBuffer();
+  final styleState = uv_styled.StyleState(const UvStyle());
+  final linkState = uv_styled.LinkState(const Link());
+
+  UvStyle lineStartStyle = styleState.style;
+  Link lineStartLink = linkState.link;
+
+  void flushLine() {
+    lines.add(
+      _ParsedLine(
+        raw: lineBuffer.toString(),
+        statePrefix: _lineStatePrefix(lineStartStyle, lineStartLink),
+      ),
+    );
+    lineBuffer.clear();
+    lineStartStyle = styleState.style;
+    lineStartLink = linkState.link;
+  }
+
+  var i = 0;
+  while (i < content.length) {
+    final code = content.codeUnitAt(i);
+
+    if (code == 0x0A) {
+      flushLine();
+      i++;
+      continue;
+    }
+
+    if (code == 0x1B) {
+      final next = Ansi.consumeEscapeSequence(content, i);
+      final sequence = content.substring(i, next);
+      lineBuffer.write(sequence);
+      _applyAnsiState(sequence, styleState, linkState);
+      i = next;
+      continue;
+    }
+
+    lineBuffer.writeCharCode(code);
+    i++;
+  }
+
+  flushLine();
+  return _ParsedFrame(lines);
+}
+
+String _lineStatePrefix(UvStyle style, Link link) {
+  final buffer = StringBuffer();
+  if (!link.isZero) {
+    buffer.write(UvAnsi.setHyperlink(link.url, link.params));
+  }
+  if (!style.isZero) {
+    buffer.write(uv_style.styleToSgr(style));
+  }
+  return buffer.toString();
+}
+
+void _applyAnsiState(
+  String sequence,
+  uv_styled.StyleState styleState,
+  uv_styled.LinkState linkState,
+) {
+  if (sequence.length < 2 || sequence.codeUnitAt(0) != 0x1B) return;
+
+  final introducer = sequence.codeUnitAt(1);
+  if (introducer == 0x5B && sequence.endsWith('m')) {
+    final paramsRaw = sequence.substring(2, sequence.length - 1);
+    uv_styled.readStyle(_parseSgrParams(paramsRaw), styleState);
+    return;
+  }
+
+  if (introducer != 0x5D) return;
+
+  final terminatorLength = sequence.endsWith('\x1B\\') ? 2 : 1;
+  if (sequence.length <= 2 + terminatorLength) return;
+
+  final body = sequence.substring(2, sequence.length - terminatorLength);
+  final separator = body.indexOf(';');
+  if (separator <= 0) return;
+
+  final command = int.tryParse(body.substring(0, separator));
+  if (command != 8) return;
+
+  uv_styled.readLink(body.substring(separator + 1), linkState);
+}
+
+List<uv_styled.SgrParam> _parseSgrParams(String raw) {
+  if (raw.isEmpty) return const <uv_styled.SgrParam>[];
+
+  final out = <uv_styled.SgrParam>[];
+  for (final part in raw.split(';')) {
+    if (part.isEmpty) {
+      out.add(const uv_styled.SgrParam(0, <int>[]));
+      continue;
+    }
+
+    final subParts = part.split(':');
+    final value = int.tryParse(subParts[0]) ?? 0;
+    final sub = <int>[];
+    for (var i = 1; i < subParts.length; i++) {
+      final segment = subParts[i];
+      sub.add(int.tryParse(segment.isEmpty ? '0' : segment) ?? 0);
+    }
+    out.add(uv_styled.SgrParam(value, sub));
+  }
+  return out;
 }
 
 /// Inline renderer that renders below the current cursor position.

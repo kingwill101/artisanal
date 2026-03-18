@@ -50,5 +50,40 @@ void main() {
       expect(m.selection, ClipboardSelection.system);
       expect(m.content, 'Hello');
     });
+
+    test('emits TerminalVersionMsg from DCS terminal version report', () {
+      final p = UvTuiInputParser();
+      final msgs = [
+        ...p.parseAll('\x1bP>|Ultraviolet\x1b\\'.codeUnits),
+        ...p.parseAll(const [], expired: true),
+      ];
+
+      expect(msgs, hasLength(1));
+      expect(msgs.single, isA<TerminalVersionMsg>());
+      expect((msgs.single as TerminalVersionMsg).version, 'Ultraviolet');
+    });
+
+    test('emits CapabilityMsg from XTGETTCAP response', () {
+      final p = UvTuiInputParser();
+      final msgs = [
+        ...p.parseAll('\x1bP1+r524742\x1b\\'.codeUnits),
+        ...p.parseAll(const [], expired: true),
+      ];
+
+      expect(msgs, hasLength(1));
+      expect(msgs.single, isA<CapabilityMsg>());
+      expect((msgs.single as CapabilityMsg).content, 'RGB');
+    });
+
+    test('emits KeyboardEnhancementsMsg from kitty keyboard report', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[?2u\x1b[?u'.codeUnits);
+
+      expect(msgs, hasLength(2));
+      expect(msgs.first, isA<KeyboardEnhancementsMsg>());
+      expect((msgs.first as KeyboardEnhancementsMsg).reportEventTypes, isTrue);
+      expect(msgs.last, isA<KeyboardEnhancementsMsg>());
+      expect((msgs.last as KeyboardEnhancementsMsg).reportEventTypes, isFalse);
+    });
   });
 }

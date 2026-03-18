@@ -119,6 +119,18 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [ClipboardMsg(selection: sel, content: ev.content)];
   }
 
+  if (ev is uvev.TerminalVersionEvent) {
+    return [TerminalVersionMsg(ev.name)];
+  }
+
+  if (ev is uvev.CapabilityEvent) {
+    return [CapabilityMsg(ev.content)];
+  }
+
+  if (ev is uvev.KeyboardEnhancementsEvent) {
+    return [KeyboardEnhancementsMsg(reportEventTypes: ev.supportsKeyReleases)];
+  }
+
   if (ev is uvev.ForegroundColorEvent) {
     final hex = ev.toString();
     return [ForegroundColorMsg(hex: hex)];
@@ -147,7 +159,7 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [_mouseMsg(MouseAction.wheel, ev.mouse())];
   }
 
-  // Unknown/unsupported UV events are currently dropped.
+  // Remaining UV events fall back to UvEventMsg in parseAll().
   return const [];
 }
 

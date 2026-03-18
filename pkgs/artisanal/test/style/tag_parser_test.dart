@@ -292,6 +292,22 @@ void main() {
         expect(output, contains('Styled Link'));
         expect(output, contains('\x1B]8;;https://example.com'));
       });
+
+      test('quoted hyperlink value can contain >', () {
+        final output = parser.render(
+          '<href="https://example.com?q=1>2">Quoted Link</>',
+        );
+        expect(output, contains('Quoted Link'));
+        expect(output, contains('\x1B]8;;https://example.com?q=1>2'));
+      });
+
+      test('quoted hyperlink value can contain ;', () {
+        final output = parser.render(
+          '<fg=blue;href="https://example.com?a=1;b=2">Styled Link</>',
+        );
+        expect(output, contains('Styled Link'));
+        expect(output, contains('\x1B]8;;https://example.com?a=1;b=2'));
+      });
     });
 
     group('edge cases', () {
