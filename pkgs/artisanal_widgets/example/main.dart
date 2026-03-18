@@ -40,6 +40,38 @@ class _AppWidgetState extends tui.State<AppWidget> {
   bool _switchValue = false;
   int _radioValue = 1;
   String _selectValue = 'Alpha';
+  final tui.FocusController _editorFocus = tui.FocusController();
+  final tui.TextFieldController _editorTitleController =
+      tui.TextFieldController();
+  final tui.TextAreaController _editorBodyController = tui.TextAreaController(
+    text: 'Build the widget showcase\nRefine hosted runners',
+  );
+  final tui.TextAreaController _codeEditorController = tui.TextAreaController(
+    text: '''
+Future<void> bootHostedApp() async {
+  await runArtisanalApp(
+    ArtisanalApp(title: 'Hosted Demo', home: DemoScreen()),
+  );
+}
+''',
+  );
+  final tui.TextAreaController _markdownEditorController =
+      tui.TextAreaController(
+        text: '''
+# Release Notes
+
+- Shipped `TextEditor`
+- Shipped `CodeEditor`
+- Drafting `MarkdownEditor`
+
+> Shared editor transforms now live in the base surface.
+''',
+      );
+  String _editorTitle = '';
+  String _editorBody = 'Build the widget showcase\nRefine hosted runners';
+  String _editorStatus = 'Press Ctrl+S to save';
+  String _codeEditorStatus = 'Press Ctrl+S to save code changes';
+  String _markdownEditorStatus = 'Press Ctrl+S to save markdown changes';
   int _componentSection = 0;
   int _page = 1;
   bool _accordionExpanded = true;
@@ -368,7 +400,7 @@ class _AppWidgetState extends tui.State<AppWidget> {
     final isWide = width >= 110;
     final sections = switch (_componentSection) {
       0 => [_panelButtons(), _panelIndicators(), _panelHelp()],
-      1 => [_panelInputs(), _panelSelect()],
+      1 => [_panelInputs(), _panelEditors(), _panelSelect()],
       2 => [_panelNavigation(), _panelData(), _panelLayout()],
       _ => [_panelOverlays()],
     };
@@ -583,6 +615,83 @@ class _AppWidgetState extends tui.State<AppWidget> {
             },
           ),
           tui.Text('Selected: $_selectValue', style: theme.labelSmall),
+        ],
+      ),
+    );
+  }
+
+  tui.Widget _panelEditors() {
+    return tui.PanelBox(
+      title: 'Text Editors',
+      child: tui.Column(
+        gap: 1,
+        children: [
+          tui.TextField(
+            focusController: _editorFocus,
+            focusId: 'editor-title',
+            controller: _editorTitleController,
+            prompt: 'Title: ',
+            placeholder: 'Sprint notes',
+            onChanged: (value) {
+              setState(() => _editorTitle = value);
+            },
+          ),
+          tui.TextEditor(
+            title: _editorTitle.isEmpty ? 'Untitled draft' : _editorTitle,
+            controller: _editorBodyController,
+            focusController: _editorFocus,
+            focusId: 'editor-body',
+            height: 5,
+            placeholder: 'Write a few lines...',
+            onChanged: (value) {
+              setState(() => _editorBody = value);
+            },
+            onSave: (value) {
+              setState(() {
+                _editorStatus = 'Saved ${value.runes.length} characters';
+              });
+              return null;
+            },
+          ),
+          tui.Text(_editorStatus, style: theme.labelSmall),
+          tui.Text('Draft Preview', style: theme.labelSmall),
+          tui.Text(_editorBody, style: theme.bodySmall, softWrap: true),
+          tui.Divider(width: 32),
+          tui.CodeEditor(
+            title: 'host_runner.dart',
+            language: 'dart',
+            controller: _codeEditorController,
+            focusController: _editorFocus,
+            focusId: 'editor-code',
+            height: 5,
+            previewHeight: 5,
+            showHelpBar: false,
+            onSave: (value) {
+              setState(() {
+                _codeEditorStatus = 'Saved ${value.runes.length} code chars';
+              });
+              return null;
+            },
+          ),
+          tui.Text(_codeEditorStatus, style: theme.labelSmall),
+          tui.Divider(width: 32),
+          tui.MarkdownEditor(
+            title: 'release_notes.md',
+            controller: _markdownEditorController,
+            focusController: _editorFocus,
+            focusId: 'editor-markdown',
+            height: 5,
+            previewHeight: 5,
+            showHelpBar: false,
+            onSave: (value) {
+              setState(() {
+                _markdownEditorStatus =
+                    'Saved ${value.runes.length} markdown chars';
+              });
+              return null;
+            },
+          ),
+          tui.Text(_markdownEditorStatus, style: theme.labelSmall),
         ],
       ),
     );

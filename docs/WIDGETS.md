@@ -122,12 +122,159 @@ final app = WidgetApp(MyRoot(), scanZones: true);
 runProgram(app, options: const ProgramOptions(mouse: true));
 ```
 
+For the common fullscreen widget case, use the higher-level runners:
+
+```dart
+await runWidgetApp(WidgetApp(MyRoot()));
+
+await runArtisanalApp(
+  ArtisanalApp(
+    title: 'Demo',
+    themeMode: ThemeMode.system,
+    home: MyRoot(),
+  ),
+);
+```
+
+Use `theme` / `darkTheme` with `themeMode` when you want an explicit light and
+dark pair instead of the default adaptive palette:
+
+```dart
+await runArtisanalApp(
+  ArtisanalApp(
+    title: 'Docs',
+    theme: Theme.light(),
+    darkTheme: Theme.dark(),
+    themeMode: ThemeMode.dark,
+    home: DocsScreen(),
+  ),
+);
+```
+
+The same runner layer can also target browser and raw-socket hosts:
+
+```dart
+final browserHost = await serveArtisanalAppInBrowser(
+  browserTitle: 'Browser Demo',
+  appBuilder: () => ArtisanalApp(
+    title: 'Browser Demo',
+    home: MyRoot(),
+  ),
+);
+
+final socketHost = await serveArtisanalAppOnSocket(
+  appBuilder: () => ArtisanalApp(
+    title: 'Socket Demo',
+    home: MyRoot(),
+  ),
+);
+```
+
+Use the browser host when you want an xterm.js-backed remote session, and the
+socket host when you want a raw TCP terminal stream managed by your own client.
+
+When using `ArtisanalApp` with a `DebugConsoleController`, you can also opt
+into automatic `print()` and uncaught zone error capture:
+
+```dart
+final console = DebugConsoleController(initiallyVisible: true);
+
+await runArtisanalApp(
+  ArtisanalApp(
+    title: 'Diagnostics',
+    debugConsoleController: console,
+    debugConsoleCapturePrint: true,
+    debugConsoleCaptureErrors: true,
+    home: DiagnosticsScreen(),
+  ),
+);
+```
+
 Set `scanZones: true` when you want automatic zone scanning at the root.
 Use `debugRebuilds: true` to log dirty element rebuilds.
 
 `WidgetApp` runs collected widget/state `handleInit()` commands via
 `ParallelCmd`, which ensures runtime-managed commands (for example
 `EveryCmd`/`StreamCmd`) are started correctly.
+
+### Development Reloads
+
+Use `ReloadHost` with a `ReloadController` when you want a subtree that can be
+rebuilt or fully restarted from an editor hook, file watcher, or in-app
+shortcut:
+
+```dart
+final controller = ReloadController();
+
+await runArtisanalApp(
+  ArtisanalApp(
+    title: 'Reload Demo',
+    home: ReloadHost(
+      controller: controller,
+      builder: (context, revision) => MyRoot(revision: revision),
+    ),
+  ),
+);
+
+controller.reload();  // rebuild, preserve compatible state
+controller.restart(); // remount from scratch
+```
+
+For a lightweight local development loop, pair the controller with
+`ReloadFileWatcher`:
+
+```dart
+final controller = ReloadController();
+final watcher = await ReloadFileWatcher.watch(
+  controller: controller,
+  roots: const ['lib', 'test'],
+  extensions: const ['.dart'],
+);
+
+await runArtisanalApp(
+  ArtisanalApp(
+    title: 'Reload Demo',
+    home: ReloadHost(
+      controller: controller,
+      builder: (context, revision) => MyRoot(revision: revision),
+    ),
+  ),
+);
+
+await watcher.dispose();
+await controller.dispose();
+```
+
+Use `mode: ReloadMode.restart` when changed files should force a full remount
+instead of a state-preserving rebuild.
+
+For the common case, the runner helpers can own the watcher lifecycle:
+
+```dart
+await runWatchedArtisanalApp(
+  title: 'Reload Demo',
+  watchRoots: const ['lib', 'test'],
+  homeBuilder: (context, revision) => MyRoot(revision: revision),
+);
+```
+
+To expose the same reload flow through the browser host, use
+`serveWatchedArtisanalAppInBrowser(...)`. See
+[`pkgs/artisanal_widgets/example/browser_host/main.dart`](../pkgs/artisanal_widgets/example/browser_host/main.dart)
+for a complete example.
+
+If you want manual control over when reloads happen, use the app-shell helper
+without a watcher:
+
+```dart
+final controller = ReloadController();
+
+await runReloadableArtisanalApp(
+  title: 'Reload Demo',
+  controller: controller,
+  homeBuilder: (context, revision) => MyRoot(revision: revision),
+);
+```
 
 ### Build Owner and Dirty Elements
 
@@ -1075,7 +1222,9 @@ or `MouseMode.allMotion` for interactive focus with the mouse.
 The input module includes:
 
 - `TextField` for interactive editing
+- `TextArea` for multi-line editing with line numbers
 - `TextEditingController` for external model/control access
+- `TextAreaController` for textarea state/control access
 - `TextEditingValue` and `TextSelection` for value + selection state
 
 ### TextField
@@ -1097,6 +1246,225 @@ TextField(
 
 TextField uses a static cursor by default. Pass a custom `cursor` if you need
 blinking behavior.
+
+Editing history is built into the shared text model:
+
+- `Ctrl+Z` undoes the current contiguous edit burst
+- `Ctrl+Y` and `Ctrl+Shift+Z` redo
+- `TextEditingController` exposes `canUndo`, `canRedo`, `undo()`, `redo()`, and `clearHistory()`
+- `TextEditingController` also exposes programmatic edit helpers: `insertText()`, `replaceSelection()`, `deleteSelection()`, `deleteBackward()`, `deleteForward()`, and `pushHistoryBoundary()`
+
+Typing and repeated deletes are coalesced into a single undo step until
+navigation, selection changes, or another non-edit action breaks the history
+chain.
+
+### TextArea
+
+Multi-line text editing powered by the bubbles textarea model:
+
+```dart
+final focus = FocusController();
+final controller = TextAreaController(text: 'Line one\nLine two');
+
+TextArea(
+  controller: controller,
+  focusController: focus,
+  focusId: 'notes',
+  height: 8,
+  placeholder: 'Write notes here...',
+)
+```
+
+`TextArea` is the better fit when you want:
+
+- fixed-height multi-line editing
+- built-in line numbers
+- prompt-per-line rendering
+- textarea-style mouse selection and navigation
+
+Use `TextField(multiline: true)` when you want a field-oriented widget that
+still behaves like the single-line input API, and `TextArea` when you want an
+editor-style surface.
+
+`TextAreaController` exposes the same basic history controls as the text field
+controller:
+
+- `Ctrl+A` selects the entire textarea contents
+- `Ctrl+L` selects the current line, or expands the current selection to whole lines
+- `Ctrl+Z` undoes the current contiguous typing or delete burst
+- `Ctrl+Y` and `Ctrl+Shift+Z` redo
+- `canUndo`, `canRedo`, `undo()`, `redo()`, `clearHistory()`, and `pushHistoryBoundary()`
+
+### TextEditor
+
+`TextEditor` is a higher-level component built on top of `TextArea`. It adds
+editor chrome like a title row, dirty/save status, cursor/length status, and a
+compact shortcuts bar:
+
+```dart
+final controller = TextAreaController(text: 'Ship editor component');
+
+TextEditor(
+  title: 'Roadmap.md',
+  controller: controller,
+  height: 8,
+  onSave: (value) {
+    saveDraft(value);
+    return null;
+  },
+)
+```
+
+Use `TextEditor` when you want a ready-made editing surface, and `TextArea`
+when you want to embed the raw multiline editor behavior inside your own
+layout/chrome.
+
+- `Ctrl+S` calls `onSave` and resets the dirty indicator.
+- `Ctrl+A` selects the entire editor contents.
+- `Ctrl+L` selects the current line, or expands the current selection to whole lines.
+- `Ctrl+F` opens an inline find bar shared by `TextEditor` and `CodeEditor`.
+- `Ctrl+G` opens an inline go-to-line bar.
+- While find is open, `Enter` jumps to the next match, `Shift+Enter` moves
+  backward, and `Esc` closes the find bar.
+- While go-to-line is open, typing a line number updates the cursor target,
+  `Enter` applies it, and `Esc` closes the bar.
+- `Tab` inserts editor indentation (`indentWidth`, default `2` spaces), or
+  indents the selected lines as a block.
+- `Shift+Tab` outdents the current line or selected block.
+- `Alt+J` joins the current line with the next line, or joins the selected
+  block into one line.
+- `Ctrl+Shift+K` deletes the current line or selected block.
+- `Ctrl+Shift+D` duplicates the current line or selected block below.
+- `Alt+Shift+Up` duplicates the current line or selected block above.
+- `Alt+Shift+Down` duplicates the current line or selected block below.
+- `Alt+Up` and `Alt+Down` move the current line or selected block.
+- `Alt+Shift+J` splits the current line at the cursor, or replaces the
+  selected range with a newline.
+- `Alt+Shift+U`, `Alt+Shift+L`, and `Alt+Shift+C` uppercase, lowercase, or
+  capitalize the selected block, or the current line when there is no
+  selection.
+- `Alt+Shift+S` sorts the selected lines, or the whole buffer when nothing is
+  selected.
+- `Alt+Shift+Q` toggles quote prefixes (`> `) on the current line or selected
+  block.
+- `Alt+Shift+B` toggles bullet list prefixes (`- `) on the current line or
+  selected block.
+- `Alt+Shift+X` toggles checklist prefixes (`- [ ] `) on the current line or
+  selected block.
+- `Alt+Shift+N` toggles numbered list prefixes on the current line or
+  selected block.
+- `Alt+Shift+M` toggles checklist completion state on the current line or
+  selected checklist block.
+- `Alt+Shift+R` renumbers existing numbered list items in the current line or
+  selected block.
+- `Alt+Shift+H` toggles Markdown heading prefixes on the current line or
+  selected block, normalizing existing headings to level 1 before toggling
+  them back off.
+- `Alt+Shift+F` trims trailing whitespace in the selected block, or in the
+  whole buffer when there is no selection. On the whole buffer it also removes
+  extra blank lines from the end of the file.
+- Typing opening delimiters like `(`, `[`, `{`, quotes, or backticks wraps the
+  current selection instead of replacing it.
+- `Alt+Shift+W` removes matching surrounding delimiters or quotes from around
+  the current selection.
+- `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z` come from the shared textarea history.
+
+### CodeEditor
+
+`CodeEditor` builds on `TextEditor` and adds a live syntax-highlighted preview
+using artisanal's existing code highlighter:
+
+```dart
+final controller = TextAreaController(
+  text: 'void main() {\n  print("hello");\n}',
+);
+
+CodeEditor(
+  title: 'main.dart',
+  language: 'dart',
+  controller: controller,
+  height: 8,
+  previewHeight: 8,
+)
+```
+
+- Reuses all `TextEditor` editing, save, and history behavior.
+- Inherits the same `Ctrl+A` select-all behavior as `TextEditor`.
+- Inherits the same `Ctrl+L` line selection behavior as `TextEditor`.
+- Inherits the same inline find workflow (`Ctrl+F`, `Enter`, `Shift+Enter`,
+  `Esc`) as `TextEditor`.
+- Inherits the same go-to-line workflow (`Ctrl+G`) as `TextEditor`.
+- `Enter` keeps the current line indentation and adds one more indent level
+  after opening delimiters like `{`, `[`, and `(`.
+- Pressing `Enter` directly before a matching closing `}`, `]`, or `)` opens
+  an indented blank line and keeps the closing delimiter on its own line.
+- Typing opening delimiters like `(`, `[`, `{`, quotes, and backticks inserts
+  matching closing delimiters, wraps selections, and skips over existing
+  closing delimiters when appropriate.
+- Pressing `Backspace` between an empty auto-paired delimiter collapses the
+  whole pair as one edit.
+- Typing a closing `}`, `]`, or `)` on an otherwise blank indented line snaps
+  that delimiter outward by one indent level instead of leaving it at the
+  inner block indentation.
+- `Alt+J` joins the current line with the next line, or joins the selected
+  block into one line.
+- `Alt+Shift+J` splits the current line at the cursor, or replaces the
+  selected range with a newline.
+- `Ctrl+Shift+K` deletes the current line or selected block.
+- `Ctrl+Shift+D` duplicates the current line or selected block below.
+- `Alt+Shift+Up` duplicates the current line or selected block above.
+- `Alt+Shift+Down` duplicates the current line or selected block below.
+- `Alt+Shift+F` trims trailing whitespace in the selected block, or in the
+  whole buffer when there is no selection. On the whole buffer it also removes
+  extra blank lines from the end of the file.
+- Inherits the same `Alt+Shift+U`, `Alt+Shift+L`, and `Alt+Shift+C`
+  block-level text transforms as `TextEditor`.
+- Inherits the same `Alt+Shift+S` line sorting behavior as `TextEditor`.
+- Inherits the same `Alt+Shift+Q` quote-prefix toggle as `TextEditor`.
+- Inherits the same `Alt+Shift+B` and `Alt+Shift+X` list-prefix toggles as
+  `TextEditor`.
+- Inherits the same `Alt+Shift+N` numbered-list toggle as `TextEditor`.
+- Inherits the same `Alt+Shift+M` checklist-state toggle as `TextEditor`.
+- Inherits the same `Alt+Shift+R` numbered-list renumber action as
+  `TextEditor`.
+- Inherits the same `Alt+Shift+H` Markdown heading toggle as `TextEditor`.
+- Inherits the same `Alt+Shift+W` selection unwrap behavior as `TextEditor`.
+- `Alt+Up` and `Alt+Down` move the current line or selected lines.
+- `Tab` indents selected lines, while `Shift+Tab` outdents the current line or
+  selected lines.
+- `Ctrl+/` toggles line comments for the current line or selected lines.
+- `Alt+Shift+A` toggles block comments around the current line or selected
+  block when the active language supports block delimiters.
+- Adds a preview panel rendered with `highlightCodeString`.
+- Supports explicit `syntaxTheme` or adaptive `adaptiveSyntaxTheme`.
+- Uses shared scroll semantics for the preview through `ScrollArea`.
+
+### MarkdownEditor
+
+`MarkdownEditor` builds on `TextEditor` and adds a live rendered markdown
+preview using `MarkdownText`:
+
+```dart
+final controller = TextAreaController(
+  text: '# Notes\n\n- Ship MarkdownEditor',
+);
+
+MarkdownEditor(
+  title: 'README.md',
+  controller: controller,
+  height: 8,
+  previewHeight: 10,
+)
+```
+
+- Reuses all `TextEditor` editing, save, selection, list, heading, and
+  history behavior.
+- Adds a live markdown preview panel titled `Preview · markdown`.
+- Uses the shared `MarkdownText` renderer, so headings, lists, blockquotes,
+  fenced code blocks, and inline formatting render the same way they do
+  elsewhere in the widget layer.
+- Supports preview wrapping, preview height, preview scrollbar control, and
+  custom markdown renderer options through `markdownOptions`.
 
 ---
 
@@ -1271,7 +1639,8 @@ Implemented component widgets and companion types include:
 
 - **Buttons/actions:** `Button`, `ElevatedButton`, `FilledButton`,
   `TextButton`, `OutlinedButton`, `IconButton`, `KeyHint`, `HelpView`,
-  `Wizard`, `WizardFormStep`, `CommandPalette`, `CommandPaletteItem`
+  `DebugConsole`, `Wizard`, `WizardFormStep`, `FilePicker`, `CommandPalette`,
+  `CommandPaletteItem`
 - **Surfaces/feedback:** `Frame`, `Card`, `PanelBox`, `AccentPanel`,
   `StatusBar`, `AlertBox`, `Toast`, `Badge`
 - **Navigation/layout components:** `Tabs`, `TabItem`, `Tooltip`, `Modal`,

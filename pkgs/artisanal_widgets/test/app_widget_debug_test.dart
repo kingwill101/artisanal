@@ -111,6 +111,26 @@ void main() {
       );
     });
 
+    test('components forms section shows text editors panel', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+
+      tester.tap(tester.find.textLocation('Components'));
+      expect(tester.find.text('Buttons + Badges'), isTrue);
+
+      tester.tap(tester.find.textLocation('Forms'));
+
+      expect(tester.find.text('Text Editors'), isTrue);
+      expect(tester.find.text('Build the widget showcase'), isTrue);
+      expect(tester.find.text('Refine hosted runners'), isTrue);
+      expect(tester.view, contains('host_runner.dart'));
+      expect(tester.view, contains('bootHostedApp'));
+      expect(tester.view, contains('release_notes.md'));
+      expect(tester.view, contains('Preview · markdown'));
+    });
+
     test('overlays panel modal does not shift panel content vertically', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
