@@ -8,6 +8,7 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Quick Start](#quick-start)
 - [Model Interface](#model-interface)
 - [Program Class](#program-class)
+- [Program Hosts](#program-hosts)
 - [Command System (Cmd)](#command-system-cmd)
 - [Message Types (Msg)](#message-types-msg)
 - [Interrupt Handling](#interrupt-handling)
@@ -215,6 +216,158 @@ await program.run();
 final stream = sharedStdinStream;
 await shutdownSharedStdinStream();
 ```
+
+### Program Hosts
+
+`ProgramHost` packages backend selection separately from your model and
+`ProgramOptions`. Use it when you want a reusable launch target for stdio,
+split-TTY, embedded terminals, or future remote/web backends.
+
+```dart
+await runProgram(
+  MyModel(),
+  host: ProgramHost.stdio(inputTTY: true),
+);
+
+final backend = EmbeddedTerminalBackend(
+  output: (data) => socket.write(data),
+);
+await runProgram(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false, frameTick: false),
+  host: ProgramHost.backend(backend),
+);
+
+final bridge = TerminalBridge(initialSize: (width: 120, height: 32));
+bridge.output.listen((data) => xterm.write(data));
+xterm.onData(bridge.addInputString);
+xterm.onResize((size) {
+  bridge.resize(width: size.cols, height: size.rows);
+});
+await runProgram(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false),
+  host: ProgramHost.bridge(bridge),
+);
+
+await runProgram(
+  MyModel(),
+  host: ProgramHost.socket(socket),
+);
+
+final socketServer = await SocketTerminalHostServer.serveProgram(
+  port: 2323,
+  modelBuilder: () => MyModel(),
+);
+print('Connect with: nc 127.0.0.1:${socketServer.server.port}');
+
+final terminal = StringTerminal();
+await runProgram(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false),
+  host: ProgramHost.terminal(terminal),
+);
+
+await runProgram(
+  MyModel(),
+  host: ProgramHost.custom((options) {
+    return ProgramHostBinding(
+      options: options.copyWith(startupTitle: 'Embedded demo'),
+      terminal: terminal,
+    );
+  }),
+);
+```
+
+Use the helpers that fit the current runtime:
+
+- `ProgramHost.stdio(...)` keeps the built-in stdio selection but can opt into
+  `inputTTY: true`
+- `ProgramHost.backend(...)` wraps a `TerminalBackend` such as
+  `StdioTerminalBackend` or `EmbeddedTerminalBackend`
+- `ProgramHost.bridge(...)` wraps a `TerminalBridge` for hosts that already
+  expose callbacks or streams for output, input, and resize
+- `ProgramHost.jsonChannel(...)` wraps any message-oriented transport using the
+  JSON bridge protocol
+- `ProgramHost.webSocket(...)` is the websocket-specific JSON bridge host
+- `ProgramHost.socket(...)` creates a `SocketTerminalBackend` for shell/remote
+  transport and understands `OSC 9999;<cols>;<rows>` resize updates
+- `SocketTerminalHostServer.bind(...)` accepts raw TCP terminal sessions
+- `SocketTerminalHostServer.serveProgram(...)` runs one program per TCP client
+- `ProgramHost.terminal(...)` uses an already-created terminal implementation
+- `ProgramHost.split(...)` uses separate control/output terminals
+- `ProgramHost.custom(...)` is the extension point for embedded, socket, PTY,
+  or browser-style hosts
+
+For raw socket clients, report resize events with:
+
+```text
+ESC ] 9999 ; <cols> ; <rows> BEL
+```
+
+Use `SocketTerminalHostServer.resizeControlSequence(...)` or
+`SocketTerminalHostServer.resizeControlBytes(...)` instead of constructing
+that control string by hand.
+
+`TerminalBridge` is the recommended controller surface for browser terminals,
+GUI widgets, or other embedded hosts:
+
+- `output.listen(...)` receives terminal writes
+- `addInput(...)` / `addInputString(...)` forward host input to the runtime
+- `resize(...)` reports host viewport changes
+- `requestShutdown()` forwards close or interrupt events
+
+When the host lives in another process, tab, or runtime, layer
+`TerminalBridgeJsonChannel` over the bridge. It serializes host/runtime traffic
+as small JSON objects:
+
+```dart
+final bridge = TerminalBridge(initialSize: (width: 120, height: 32));
+final channel = TerminalBridgeJsonChannel(bridge);
+
+channel.outboundMessages.listen(webSocket.add);
+webSocket.listen(channel.addInboundJson);
+
+await runProgram(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false),
+  host: ProgramHost.bridge(bridge),
+);
+```
+
+Example protocol messages:
+
+```json
+{"type":"output","data":"\u001b[?25l"}
+{"type":"input.text","data":"q"}
+{"type":"resize","width":120,"height":32}
+{"type":"shutdown"}
+```
+
+For direct host setup without manually constructing a `TerminalBridge`, use
+`ProgramHost.jsonChannel(...)` or `ProgramHost.webSocket(...)`:
+
+```dart
+await runProgram(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false),
+  host: ProgramHost.jsonChannel(
+    sendMessage: socket.add,
+    inboundMessages: socket,
+  ),
+);
+```
+
+The package examples include scripted JSON bridge, raw socket, and browser
+websocket demos:
+
+- `dart run example/tui/bridge_json_demo.dart`
+- `dart run example/tui/socket_host_demo.dart --port=2323`
+- `dart run example/tui/browser_websocket_demo.dart --port=8080`
+
+For a reusable server wrapper, use `BrowserTerminalHostServer.bind(...)` or
+`BrowserTerminalHostServer.serveProgram(...)`. These helpers serve the default
+xterm.js page and wire websocket sessions into your TUI runtime.
 
 ### Convenience Functions
 

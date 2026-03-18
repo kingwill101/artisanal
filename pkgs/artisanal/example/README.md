@@ -157,6 +157,18 @@ dart run main.dart ui:chalk --ansi
 ```bash
 # Terminal information and utilities
 dart run main.dart ui:terminal --ansi
+
+# Embedded bridge host demo
+dart run example/tui/bridge_host_demo.dart
+
+# JSON bridge protocol demo
+dart run example/tui/bridge_json_demo.dart
+
+# Raw socket host demo
+dart run example/tui/socket_host_demo.dart --port=2323
+
+# Browser websocket host demo
+dart run example/tui/browser_websocket_demo.dart --port=8080
 ```
 
 ## Global Options
@@ -236,4 +248,3 @@ All commands support these global options:
 - ✅ Key code handling
 - ✅ Clickable hyperlinks (OSC 8)
 - ✅ Link groups for footnotes
-
