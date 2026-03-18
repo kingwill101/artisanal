@@ -743,6 +743,12 @@ void main() {
       final color = AnsiColor(196);
       expect(color.toAnsi(ColorProfile.ascii), isEmpty);
     });
+
+    test('converts ANSI-256 colors to hex', () {
+      expect(AnsiColor(196).toHex(), equals('#ff0000'));
+      expect(AnsiColor(233).toHex(), equals('#121212'));
+      expect(AnsiColor(255).toHex(), equals('#eeeeee'));
+    });
   });
 
   group('AdaptiveColor', () {

@@ -17,6 +17,7 @@ import 'trace.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
 import '../style/color.dart' show Color;
+import 'background_color_probe.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 
@@ -1125,6 +1126,11 @@ class Program<M extends Model> {
       await _executeCommand(initCmd);
     }
 
+    await _runPreRenderStartupProbesIfNeeded();
+    _startupProbes?.drain(_processMessage);
+    _startupProbes = null;
+    _startupProbeContext = null;
+
     // Initialization complete - render the initialized state immediately so the
     // user sees content without waiting for startup probes.
     _initializing = false;
@@ -1139,11 +1145,13 @@ class Program<M extends Model> {
     // avoid visual artifacts during probing.  Even if the emoji presentation
     // width didn't change, the terminal display was disturbed and must be
     // repainted.
-    await _runStartupProbesIfNeeded();
+    await _runPostRenderStartupProbesIfNeeded();
     _startupProbes?.drain(_processMessage);
     if (_startupProbes != null) {
       _forceRender();
     }
+    _startupProbes = null;
+    _startupProbeContext = null;
 
     // Start optional runtime timers (metrics + frame ticks) based on current
     // model capabilities/flags.
@@ -1723,7 +1731,23 @@ class Program<M extends Model> {
     return PasteTextMsg(String.fromCharCodes(runes));
   }
 
-  Future<void> _runStartupProbesIfNeeded() async {
+  Future<void> _runPreRenderStartupProbesIfNeeded() async {
+    if (_options.disableRenderer) return;
+    if (!_options.useUltravioletRenderer) return;
+    if (!_options.useUltravioletInputDecoder) return;
+    final term = _terminal;
+    if (term == null) return;
+    if (!term.supportsAnsi || !term.isTerminal) return;
+
+    final ctx = StartupProbeContext(terminal: term);
+    _startupProbeContext = ctx;
+
+    final runner = StartupProbeRunner([BackgroundColorProbe()]);
+    _startupProbes = runner;
+    await runner.runAll(ctx);
+  }
+
+  Future<void> _runPostRenderStartupProbesIfNeeded() async {
     if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
     if (!_options.useUltravioletInputDecoder) return;

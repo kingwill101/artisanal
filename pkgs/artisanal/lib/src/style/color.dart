@@ -255,7 +255,13 @@ class AnsiColor extends Color {
   }
 
   @override
-  String toHex() => '';
+  String toHex() {
+    final rgb = cp.ansi256ToRgb(code);
+    final r = rgb.r.toRadixString(16).padLeft(2, '0');
+    final g = rgb.g.toRadixString(16).padLeft(2, '0');
+    final b = rgb.b.toRadixString(16).padLeft(2, '0');
+    return '#$r$g$b';
+  }
 
   @override
   bool operator ==(Object other) =>
