@@ -78,6 +78,23 @@ void main() {
       expect(tester.find.text('↑/k'), isTrue);
       expect(tester.find.text('move up'), isTrue);
     });
+
+    test('stacks bindings on narrow widths instead of clipping', () async {
+      final tester = WidgetTester(screenWidth: 14, screenHeight: 12);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: HelpView(keyMap: _NarrowKeyMap()),
+        ),
+      );
+
+      expect(tester.find.text('enter'), isTrue);
+      expect(tester.find.text('continue'), isTrue);
+      expect(tester.find.text('ctrl+c'), isTrue);
+      expect(tester.find.text('quit'), isTrue);
+    });
   });
 }
 
@@ -104,4 +121,18 @@ class _EmptyKeyMap implements KeyMap {
 
   @override
   List<List<KeyBinding>> fullHelp() => [];
+}
+
+class _NarrowKeyMap implements KeyMap {
+  final next = KeyBinding.withHelp(['enter'], 'enter', 'continue');
+  final quit = KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit');
+
+  @override
+  List<KeyBinding> shortHelp() => [next, quit];
+
+  @override
+  List<List<KeyBinding>> fullHelp() => [
+    [next],
+    [quit],
+  ];
 }

@@ -63,49 +63,92 @@ class HelpView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final resolvedKeyStyle = _copyStyle(keyStyle ?? theme.labelLarge);
-    final resolvedDescriptionStyle = _copyStyle(
-      descriptionStyle ?? theme.bodySmall,
-    );
+    final resolvedKeyStyle = (keyStyle ?? theme.labelLarge).copy();
+    final resolvedDescriptionStyle =
+        (descriptionStyle ?? theme.bodySmall).copy();
 
-    if (showAll) {
-      final groups = keyMap.fullHelp().map(_visibleBindings).where((group) {
-        return group.isNotEmpty;
-      }).toList();
-      if (groups.isEmpty) return SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth.toInt()
+            : (MediaQuery.maybeOf(context)?.size.width.toInt() ?? 80);
 
-      return Row(
-        gap: columnGap,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final group in groups)
-            Column(
-              gap: rowGap,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: _buildColumn(
-                group,
+        if (showAll) {
+          final groups = keyMap.fullHelp().map(_visibleBindings).where((group) {
+            return group.isNotEmpty;
+          }).toList();
+          if (groups.isEmpty) return SizedBox.shrink();
+
+          final stackGroups = _shouldStackGroups(groups, maxWidth, columnGap);
+          if (stackGroups) {
+            return Column(
+              gap: math.max(1, rowGap),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final group in groups)
+                  Column(
+                    gap: rowGap,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _buildResponsiveColumn(
+                      group,
+                      resolvedKeyStyle,
+                      resolvedDescriptionStyle,
+                      maxWidth,
+                    ),
+                  ),
+              ],
+            );
+          }
+
+          return Row(
+            gap: columnGap,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final group in groups)
+                Column(
+                  gap: rowGap,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _buildColumn(
+                    group,
+                    resolvedKeyStyle,
+                    resolvedDescriptionStyle,
+                  ),
+                ),
+            ],
+          );
+        }
+
+        final bindings = _visibleBindings(keyMap.shortHelp());
+        if (bindings.isEmpty) return SizedBox.shrink();
+
+        if (_shouldStackBindings(bindings, maxWidth)) {
+          return Column(
+            gap: math.max(1, runSpacing),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final binding in bindings)
+                _buildResponsiveBinding(
+                  binding,
+                  resolvedKeyStyle,
+                  resolvedDescriptionStyle,
+                ),
+            ],
+          );
+        }
+
+        return Wrap(
+          spacing: itemSpacing,
+          runSpacing: runSpacing,
+          children: [
+            for (final binding in bindings)
+              _buildInlineBinding(
+                binding,
                 resolvedKeyStyle,
                 resolvedDescriptionStyle,
               ),
-            ),
-        ],
-      );
-    }
-
-    final bindings = _visibleBindings(keyMap.shortHelp());
-    if (bindings.isEmpty) return SizedBox.shrink();
-
-    return Wrap(
-      spacing: itemSpacing,
-      runSpacing: runSpacing,
-      children: [
-        for (final binding in bindings)
-          _buildInlineBinding(
-            binding,
-            resolvedKeyStyle,
-            resolvedDescriptionStyle,
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -142,6 +185,21 @@ class HelpView extends StatelessWidget {
     ];
   }
 
+  static List<Widget> _buildResponsiveColumn(
+    List<KeyBinding> bindings,
+    Style keyStyle,
+    Style descriptionStyle,
+    int maxWidth,
+  ) {
+    return [
+      for (final binding in bindings)
+        if (_bindingWidth(binding) > maxWidth)
+          _buildResponsiveBinding(binding, keyStyle, descriptionStyle)
+        else
+          _buildInlineBinding(binding, keyStyle, descriptionStyle),
+    ];
+  }
+
   static Widget _buildInlineBinding(
     KeyBinding binding,
     Style keyStyle,
@@ -151,6 +209,52 @@ class HelpView extends StatelessWidget {
       TextSpan(children: _bindingSpans(binding, keyStyle, descriptionStyle)),
       softWrap: false,
     );
+  }
+
+  static Widget _buildResponsiveBinding(
+    KeyBinding binding,
+    Style keyStyle,
+    Style descriptionStyle,
+  ) {
+    return Text.rich(
+      TextSpan(children: _bindingSpans(binding, keyStyle, descriptionStyle)),
+      softWrap: true,
+    );
+  }
+
+  static bool _shouldStackBindings(List<KeyBinding> bindings, int maxWidth) {
+    if (maxWidth <= 0) return true;
+    return bindings.any((binding) => _bindingWidth(binding) > maxWidth);
+  }
+
+  static bool _shouldStackGroups(
+    List<List<KeyBinding>> groups,
+    int maxWidth,
+    int columnGap,
+  ) {
+    if (maxWidth <= 0) return true;
+
+    var totalWidth = 0;
+    for (var i = 0; i < groups.length; i++) {
+      if (i > 0) totalWidth += columnGap;
+      totalWidth += _groupWidth(groups[i]);
+    }
+    return totalWidth > maxWidth ||
+        groups.any((group) => group.any((binding) => _bindingWidth(binding) > maxWidth));
+  }
+
+  static int _groupWidth(List<KeyBinding> bindings) {
+    return bindings.fold<int>(0, (maxWidth, binding) {
+      final width = _bindingWidth(binding);
+      return width > maxWidth ? width : maxWidth;
+    });
+  }
+
+  static int _bindingWidth(KeyBinding binding) {
+    final keyWidth = Style.visibleLength(binding.help.key);
+    final desc = binding.help.desc;
+    if (desc.isEmpty) return keyWidth;
+    return keyWidth + 1 + Style.visibleLength(desc);
   }
 
   static List<TextSpan> _bindingSpans(
