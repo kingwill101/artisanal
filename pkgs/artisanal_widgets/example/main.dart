@@ -797,34 +797,61 @@ class _AppWidgetState extends tui.State<AppWidget> {
       ),
     );
 
-    final modalPreview = tui.Modal(
-      open: _modalOpen,
-      onDismiss: () {
-        setState(() => _modalOpen = false);
-        return null;
-      },
-      dialog: modalDialog,
-      child: tui.Container(
-        color: theme.background,
-        padding: const tui.EdgeInsets.all(1),
-        child: tui.Row(
-          gap: 1,
-          children: [
-            tui.Text('Modal preview', style: theme.labelSmall),
-            tui.Button(
-              label: 'Open',
-              size: tui.ButtonSize.small,
-              onPressed: () {
-                setState(() => _modalOpen = true);
-                return null;
-              },
-            ),
-          ],
+    final overlayPreview = tui.Column(
+      gap: 1,
+      children: [
+        tui.Tooltip(
+          message: 'Hover to preview tooltips',
+          child: tui.Button(
+            label: 'Hover me',
+            size: tui.ButtonSize.small,
+            onPressed: () {
+              setState(() => _lastAction = 'Tooltip');
+              return null;
+            },
+          ),
         ),
-      ),
+        tui.Container(
+          color: theme.background,
+          padding: const tui.EdgeInsets.all(1),
+          child: tui.Row(
+            gap: 1,
+            children: [
+              tui.Text('Modal preview', style: theme.labelSmall),
+              tui.Button(
+                label: 'Open',
+                size: tui.ButtonSize.small,
+                onPressed: () {
+                  setState(() => _modalOpen = true);
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        tui.Container(
+          color: theme.background,
+          padding: const tui.EdgeInsets.all(1),
+          child: tui.Row(
+            gap: 1,
+            children: [
+              tui.Text('Drawer preview', style: theme.labelSmall),
+              tui.Button(
+                label: 'Open',
+                size: tui.ButtonSize.small,
+                onPressed: () {
+                  setState(() => _drawerOpen = true);
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
     );
 
-    final drawerPreview = tui.Drawer(
+    tui.Widget layeredPreview = overlayPreview;
+    layeredPreview = tui.Drawer(
       open: _drawerOpen,
       width: 20,
       onDismiss: () {
@@ -832,46 +859,21 @@ class _AppWidgetState extends tui.State<AppWidget> {
         return null;
       },
       drawer: drawerPanel,
-      child: tui.Container(
-        color: theme.background,
-        padding: const tui.EdgeInsets.all(1),
-        child: tui.Row(
-          gap: 1,
-          children: [
-            tui.Text('Drawer preview', style: theme.labelSmall),
-            tui.Button(
-              label: 'Open',
-              size: tui.ButtonSize.small,
-              onPressed: () {
-                setState(() => _drawerOpen = true);
-                return null;
-              },
-            ),
-          ],
-        ),
-      ),
+      child: layeredPreview,
+    );
+    layeredPreview = tui.Modal(
+      open: _modalOpen,
+      onDismiss: () {
+        setState(() => _modalOpen = false);
+        return null;
+      },
+      dialog: modalDialog,
+      child: layeredPreview,
     );
 
     return tui.PanelBox(
       title: 'Overlays + Tooltip',
-      child: tui.Column(
-        gap: 1,
-        children: [
-          tui.Tooltip(
-            message: 'Hover to preview tooltips',
-            child: tui.Button(
-              label: 'Hover me',
-              size: tui.ButtonSize.small,
-              onPressed: () {
-                setState(() => _lastAction = 'Tooltip');
-                return null;
-              },
-            ),
-          ),
-          modalPreview,
-          drawerPreview,
-        ],
-      ),
+      child: layeredPreview,
     );
   }
 

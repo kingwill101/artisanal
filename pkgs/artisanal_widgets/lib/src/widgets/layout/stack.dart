@@ -47,10 +47,6 @@ class RenderStack extends RenderBox {
     super.layout(constraints);
     var maxWidth = 0.0;
     var maxHeight = 0.0;
-
-    // For StackFit.expand we know the final size up-front from constraints,
-    // so we can skip the first measurement pass entirely and lay out each
-    // child exactly once with tight constraints.
     final isExpand = fit == StackFit.expand;
     final expandWidth = isExpand && constraints.hasBoundedWidth
         ? constraints.maxWidth
@@ -58,68 +54,42 @@ class RenderStack extends RenderBox {
     final expandHeight = isExpand && constraints.hasBoundedHeight
         ? constraints.maxHeight
         : null;
-
-    if (isExpand && expandWidth != null && expandHeight != null) {
-      // Single-pass: lay out each child once with the correct constraints.
-      for (final child in children) {
-        final data = child.parentData as StackParentData?;
-        BoxConstraints childConstraints;
-        if (data != null && data.isPositioned) {
-          final left = _resolveDimensionDouble(data.left);
-          final right = _resolveDimensionDouble(data.right);
-          final top = _resolveDimensionDouble(data.top);
-          final bottom = _resolveDimensionDouble(data.bottom);
-          final childWidth =
-              _resolveDimensionDouble(data.width) ??
-              (left != null && right != null
-                  ? math.max(0, expandWidth - left - right)
-                  : null);
-          final childHeight =
-              _resolveDimensionDouble(data.height) ??
-              (top != null && bottom != null
-                  ? math.max(0, expandHeight - top - bottom)
-                  : null);
-          if (childWidth != null && childHeight != null) {
-            childConstraints = BoxConstraints.tight(
-              Size(childWidth, childHeight),
-            );
-          } else {
-            // Positioned child without fully determined dimensions: use loose
-            // with stack size as max, then it will report its natural size.
-            childConstraints = BoxConstraints(
-              maxWidth: expandWidth,
-              maxHeight: expandHeight,
-            );
-          }
-        } else {
-          childConstraints = BoxConstraints.tight(
-            Size(expandWidth, expandHeight),
-          );
-        }
-        child.layout(childConstraints);
-        maxWidth = math.max(maxWidth, child.size.width);
-        maxHeight = math.max(maxHeight, child.size.height);
-      }
-
-      size = constraints.constrain(Size(expandWidth, expandHeight));
-      return;
-    }
-
-    // Two-pass layout for non-expand modes:
-    // Pass 1: measure children with loose constraints.
-    final looseConstraints = BoxConstraints(
-      maxWidth: constraints.maxWidth,
-      maxHeight: constraints.maxHeight,
-    );
+    var hasNonPositionedChild = false;
 
     for (final child in children) {
-      child.layout(looseConstraints);
+      final data = child.parentData as StackParentData?;
+      if (data != null && data.isPositioned) {
+        continue;
+      }
+      child.layout(
+        BoxConstraints(
+          minWidth: expandWidth ?? 0,
+          maxWidth: expandWidth ?? constraints.maxWidth,
+          minHeight: expandHeight ?? 0,
+          maxHeight: expandHeight ?? constraints.maxHeight,
+        ),
+      );
+      hasNonPositionedChild = true;
       maxWidth = math.max(maxWidth, child.size.width);
       maxHeight = math.max(maxHeight, child.size.height);
     }
 
-    var resolvedWidth = _resolveDimensionDouble(width) ?? maxWidth;
-    var resolvedHeight = _resolveDimensionDouble(height) ?? maxHeight;
+    var resolvedWidth =
+        _resolveDimensionDouble(width) ??
+        (expandWidth ??
+            (hasNonPositionedChild
+            ? maxWidth
+            : constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : 0.0));
+    var resolvedHeight =
+        _resolveDimensionDouble(height) ??
+        (expandHeight ??
+            (hasNonPositionedChild
+            ? maxHeight
+            : constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : 0.0));
 
     if (resolvedWidth.isInfinite) {
       resolvedWidth = maxWidth;
@@ -128,7 +98,8 @@ class RenderStack extends RenderBox {
       resolvedHeight = maxHeight;
     }
 
-    // Pass 2: re-layout only positioned children whose constraints changed.
+    // Positioned children paint over the stack's resolved size but do not
+    // contribute to it in loose mode.
     for (var i = 0; i < children.length; i++) {
       final child = children[i];
       final data = child.parentData as StackParentData?;
@@ -141,19 +112,20 @@ class RenderStack extends RenderBox {
             _resolveDimensionDouble(data.width) ??
             (left != null && right != null
                 ? math.max(0, resolvedWidth - left - right)
-                : child.size.width);
+                : null);
         final childHeight =
             _resolveDimensionDouble(data.height) ??
             (top != null && bottom != null
                 ? math.max(0, resolvedHeight - top - bottom)
-                : child.size.height);
-        final childConstraints = BoxConstraints.tight(
-          Size(childWidth, childHeight),
+                : null);
+        final childConstraints = BoxConstraints(
+          minWidth: childWidth ?? 0,
+          maxWidth: childWidth ?? resolvedWidth,
+          minHeight: childHeight ?? 0,
+          maxHeight: childHeight ?? resolvedHeight,
         );
         child.layout(childConstraints);
       }
-      // Non-positioned children with StackFit.loose already have correct
-      // sizes from pass 1 — skip re-layout.
     }
 
     size = constraints.constrain(Size(resolvedWidth, resolvedHeight));

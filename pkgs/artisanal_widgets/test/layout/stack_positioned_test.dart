@@ -548,6 +548,40 @@ void main() {
       expect(pos!.x, equals(0));
       expect(pos.y, equals(0));
     });
+
+    test('positioned children do not grow a loose stack', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  Text('Base'),
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [Text('Tall1'), Text('Tall2'), Text('Tall3')],
+                    ),
+                  ),
+                ],
+              ),
+              Text('After'),
+            ],
+          ),
+        ),
+      );
+
+      final after = tester.locateText('After');
+      expect(after, isNotNull);
+      expect(after!.y, equals(1));
+    });
   });
 
   group('StackFit.expand', () {

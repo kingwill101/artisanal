@@ -283,5 +283,76 @@ void main() {
       );
       expect(tester.locateText('Nav1'), isNotNull);
     });
+
+    test('open modal does not push sibling content in a column', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 50,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Modal(
+                open: true,
+                child: Text('Preview'),
+                dialog: Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Dialog title'),
+                      Text('Dialog body'),
+                      Text('Dialog actions'),
+                    ],
+                  ),
+                ),
+              ),
+              Text('After'),
+            ],
+          ),
+        ),
+      );
+
+      final after = tester.locateText('After');
+      expect(after, isNotNull);
+      expect(after!.y, equals(1));
+    });
+
+    test('open drawer does not push sibling content in a column', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Container(
+          width: 60,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Drawer(
+                open: true,
+                width: 20,
+                child: Text('Preview'),
+                drawer: Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Drawer title'),
+                      Text('Drawer body'),
+                      Text('Drawer actions'),
+                    ],
+                  ),
+                ),
+              ),
+              Text('After'),
+            ],
+          ),
+        ),
+      );
+
+      final after = tester.locateText('After');
+      expect(after, isNotNull);
+      expect(after!.y, equals(1));
+    });
   });
 }

@@ -41,6 +41,19 @@ class Drawer extends StatelessWidget {
         ? Positioned(left: 0, top: 0, bottom: 0, width: width, child: panel)
         : Positioned(right: 0, top: 0, bottom: 0, width: width, child: panel);
 
-    return Stack(fit: StackFit.expand, children: [child, backdrop, positioned]);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: backdrop,
+        ),
+        positioned,
+      ],
+    );
   }
 }

@@ -110,6 +110,27 @@ void main() {
         reason: 'Tab selection should survive resize',
       );
     });
+
+    test('overlays panel modal does not shift panel content vertically', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+
+      tester.tap(tester.find.textLocation('Components'));
+      tester.tap(tester.find.textLocation('Overlays'));
+
+      final before = tester.locateText('Drawer preview');
+      expect(before, isNotNull);
+
+      tester.tap(tester.find.textLocation('Open'));
+
+      expect(tester.find.text('Modal Dialog'), isTrue);
+
+      final after = tester.locateText('Drawer preview');
+      expect(after, isNotNull);
+      expect(after!.y, equals(before!.y));
+    });
   });
 
   group('GestureDetector + Container tab switching variants', () {
