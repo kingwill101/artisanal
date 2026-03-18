@@ -80,3 +80,5 @@ part 'dialog_select.dart';
 part 'dialog_confirm.dart';
 part 'dialog_alert.dart';
 part 'dialog_prompt.dart';
+import 'dart:io';
+part 'file_picker.dart';
