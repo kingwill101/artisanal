@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.1.0+1
+- Documentation + assets
 ## 0.1.0
 
 ### Added

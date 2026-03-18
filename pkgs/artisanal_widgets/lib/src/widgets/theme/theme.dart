@@ -983,7 +983,7 @@ void setTheme(Theme theme) {
 ///
 /// Call this when the terminal reports its background color.
 /// This is typically done automatically by [Widget.update] when it
-/// receives a [BackgroundColorMsg].
+/// receives a terminal background color update.
 void setHasDarkBackground(bool value) {
   _hasDarkBackground = value;
 }
