@@ -6,13 +6,27 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:artisanal/widgets.dart';
+import 'package:artisanal/markdown.dart'
+    show
+        AdaptiveChromaTheme,
+        AnsiRendererOptions,
+        ChromaTheme,
+        highlightCodeString;
 import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/bubbles.dart' show EchoMode;
+import 'package:artisanal/bubbles.dart'
+    show
+        CursorModel,
+        EchoMode,
+        keyMatchesSingle,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
@@ -71,7 +85,11 @@ part 'data_table.dart';
 part 'tree_view.dart';
 part 'metric_display.dart';
 part 'step_indicator.dart';
+part 'text_editor.dart';
+part 'code_editor.dart';
+part 'markdown_editor.dart';
 part 'wizard.dart';
+part 'file_picker.dart';
 part 'hyperlink_text.dart';
 part 'action_button.dart';
 part 'prompt_footer_bar.dart';
@@ -80,5 +98,3 @@ part 'dialog_select.dart';
 part 'dialog_confirm.dart';
 part 'dialog_alert.dart';
 part 'dialog_prompt.dart';
-import 'dart:io';
-part 'file_picker.dart';

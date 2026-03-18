@@ -539,6 +539,8 @@ class KeyParser {
       0x18 => const Key(KeyType.runes, runes: [0x78], ctrl: true), // Ctrl+X
       0x19 => const Key(KeyType.runes, runes: [0x79], ctrl: true), // Ctrl+Y
       0x1a => const Key(KeyType.runes, runes: [0x7a], ctrl: true), // Ctrl+Z
+      // Many terminals encode Ctrl+/ (Ctrl+_) as US (0x1F).
+      0x1f => const Key(KeyType.runes, runes: [0x2f], ctrl: true),
       _ => const Key(KeyType.unknown),
     };
   }

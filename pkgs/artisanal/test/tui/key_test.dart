@@ -178,6 +178,13 @@ void main() {
       expect(keys[0].runes, [0x61]); // 'a'
     });
 
+    test('parses Ctrl+/ from unit separator', () {
+      final keys = parser.parse([0x1f]);
+      expect(keys, hasLength(1));
+      expect(keys[0].ctrl, isTrue);
+      expect(keys[0].char, '/');
+    });
+
     test('parses arrow up', () {
       final keys = parser.parse([0x1b, 0x5b, 0x41]); // ESC [ A
       expect(keys, hasLength(1));

@@ -1,0 +1,1070 @@
+part of 'components_widgets.dart';
+
+/// A higher-level editor surface built on top of [TextArea].
+///
+/// `TextEditor` adds lightweight chrome around the raw textarea:
+/// a title row, dirty/save status, cursor/length status, and a compact
+/// shortcuts bar.
+///
+/// ```dart
+/// final controller = TextAreaController(text: 'notes');
+///
+/// TextEditor(
+///   title: 'Scratchpad',
+///   controller: controller,
+///   height: 8,
+///   onSave: (value) => saveDraft(value),
+/// )
+/// ```
+class TextEditor extends StatefulWidget {
+  TextEditor({
+    this.title = 'Editor',
+    this.controller,
+    this.model,
+    this.focusController,
+    this.focusId,
+    this.autofocus = false,
+    this.enabled = true,
+    this.prompt,
+    this.placeholder,
+    this.width,
+    this.height = 8,
+    this.showLineNumbers = true,
+    this.softWrap = true,
+    this.useVirtualCursor,
+    this.keyMap,
+    this.styles,
+    this.cursor,
+    this.showHelpBar = true,
+    this.helpExpanded = false,
+    this.headerTrailing,
+    this.footer,
+    this.onChanged,
+    this.onSave,
+    this.onKey,
+    this.extraHelpBindings = const [],
+    this.showSaveStatus = true,
+    this.cleanLabel = 'saved',
+    this.dirtyLabel = 'modified',
+    this.indentWidth = 2,
+    super.key,
+  });
+
+  /// Title shown in the editor header.
+  final String title;
+
+  /// Optional textarea controller.
+  final TextAreaController? controller;
+
+  /// Optional textarea model.
+  final TextAreaModel? model;
+
+  /// Optional focus controller for focus coordination.
+  final FocusController? focusController;
+
+  /// Optional focus identifier.
+  final String? focusId;
+
+  /// Whether to request focus on first build.
+  final bool autofocus;
+
+  /// Whether input is enabled.
+  final bool enabled;
+
+  /// Prompt displayed before each line.
+  final String? prompt;
+
+  /// Placeholder text when empty.
+  final String? placeholder;
+
+  /// Explicit editor width in cells.
+  final int? width;
+
+  /// Visible editor height in rows.
+  final int height;
+
+  /// Whether to show line numbers.
+  final bool showLineNumbers;
+
+  /// Whether to soft-wrap long lines.
+  final bool softWrap;
+
+  /// Whether to render a virtual cursor.
+  final bool? useVirtualCursor;
+
+  /// Optional key bindings for the embedded textarea.
+  final TextAreaKeyMap? keyMap;
+
+  /// Optional textarea styles.
+  final TextAreaStyles? styles;
+
+  /// Optional cursor model.
+  final CursorModel? cursor;
+
+  /// Whether to show the compact help footer.
+  final bool showHelpBar;
+
+  /// Whether to expand the help footer into grouped mode.
+  final bool helpExpanded;
+
+  /// Optional trailing widget in the header row.
+  final Widget? headerTrailing;
+
+  /// Optional footer widget shown below the help bar.
+  final Widget? footer;
+
+  /// Called when the text changes.
+  final TextChangedCallback? onChanged;
+
+  /// Called when the user saves the current editor contents with `Ctrl+S`.
+  final ValueCmdCallback<String>? onSave;
+
+  /// Optional extra key handler invoked after search/goto handling and before
+  /// the default indent/save shortcuts.
+  final ValueCmdCallback<KeyMsg>? onKey;
+
+  /// Optional additional help bindings to show in the footer.
+  final List<KeyBinding> extraHelpBindings;
+
+  /// Whether to show the clean/dirty status label in the header.
+  final bool showSaveStatus;
+
+  /// Header label shown after the current contents have been saved.
+  final String cleanLabel;
+
+  /// Header label shown when the contents have unsaved changes.
+  final String dirtyLabel;
+
+  /// Number of spaces inserted when `Tab` is pressed inside the editor.
+  final int indentWidth;
+
+  @override
+  State createState() => _TextEditorState();
+}
+
+class _TextEditorState extends State<TextEditor> {
+  static const Map<String, String> _selectionWrapPairs = {
+    '(': ')',
+    '[': ']',
+    '{': '}',
+    '"': '"',
+    "'": "'",
+    '`': '`',
+  };
+  static final KeyBinding _saveBinding = KeyBinding.withHelp(
+    ['ctrl+s'],
+    'ctrl+s',
+    'save',
+  );
+  static final KeyBinding _searchBinding = KeyBinding.withHelp(
+    ['ctrl+f'],
+    'ctrl+f',
+    'find',
+  );
+  static final KeyBinding _gotoBinding = KeyBinding.withHelp(
+    ['ctrl+g'],
+    'ctrl+g',
+    'go to line',
+  );
+  static final KeyBinding _searchNextBinding = KeyBinding.withHelp(
+    ['enter'],
+    'enter',
+    'next match',
+  );
+  static final KeyBinding _searchPreviousBinding = KeyBinding.withHelp(
+    ['shift+enter'],
+    'shift+enter',
+    'prev match',
+  );
+  static final KeyBinding _searchCloseBinding = KeyBinding.withHelp(
+    ['esc'],
+    'esc',
+    'close find',
+  );
+  static final KeyBinding _gotoApplyBinding = KeyBinding.withHelp(
+    ['enter'],
+    'enter',
+    'go to line',
+  );
+  static final KeyBinding _gotoCloseBinding = KeyBinding.withHelp(
+    ['esc'],
+    'esc',
+    'close goto',
+  );
+  static final KeyBinding _indentBinding = KeyBinding.withHelp(
+    ['tab'],
+    'tab',
+    'indent',
+  );
+  static final KeyBinding _outdentBinding = KeyBinding.withHelp(
+    ['shift+tab'],
+    'shift+tab',
+    'outdent',
+  );
+  static final KeyBinding _joinLinesBinding = KeyBinding.withHelp(
+    ['alt+j'],
+    'alt+j',
+    'join lines',
+  );
+  static final KeyBinding _deleteLineBinding = KeyBinding.withHelp(
+    ['ctrl+shift+k'],
+    'ctrl+shift+k',
+    'delete line',
+  );
+  static final KeyBinding _duplicateLineBinding = KeyBinding.withHelp(
+    ['ctrl+shift+d'],
+    'ctrl+shift+d',
+    'duplicate line',
+  );
+  static final KeyBinding _duplicateLineAboveBinding = KeyBinding.withHelp(
+    ['alt+shift+up'],
+    'alt+shift+↑',
+    'duplicate above',
+  );
+  static final KeyBinding _duplicateLineBelowBinding = KeyBinding.withHelp(
+    ['alt+shift+down'],
+    'alt+shift+↓',
+    'duplicate below',
+  );
+  static final KeyBinding _moveLineUpBinding = KeyBinding.withHelp(
+    ['alt+up'],
+    'alt+↑',
+    'move line up',
+  );
+  static final KeyBinding _moveLineDownBinding = KeyBinding.withHelp(
+    ['alt+down'],
+    'alt+↓',
+    'move line down',
+  );
+  static final KeyBinding _splitLineBinding = KeyBinding.withHelp(
+    ['alt+shift+j'],
+    'alt+shift+j',
+    'split line',
+  );
+  static final KeyBinding _uppercaseTransformBinding = KeyBinding.withHelp(
+    ['alt+shift+u'],
+    'alt+shift+u',
+    'uppercase block',
+  );
+  static final KeyBinding _lowercaseTransformBinding = KeyBinding.withHelp(
+    ['alt+shift+l'],
+    'alt+shift+l',
+    'lowercase block',
+  );
+  static final KeyBinding _capitalizeTransformBinding = KeyBinding.withHelp(
+    ['alt+shift+c'],
+    'alt+shift+c',
+    'capitalize block',
+  );
+  static final KeyBinding _sortLinesBinding = KeyBinding.withHelp(
+    ['alt+shift+s'],
+    'alt+shift+s',
+    'sort lines',
+  );
+  static final KeyBinding _quoteLinesBinding = KeyBinding.withHelp(
+    ['alt+shift+q'],
+    'alt+shift+q',
+    'quote lines',
+  );
+  static final KeyBinding _bulletListBinding = KeyBinding.withHelp(
+    ['alt+shift+b'],
+    'alt+shift+b',
+    'bullet list',
+  );
+  static final KeyBinding _checklistBinding = KeyBinding.withHelp(
+    ['alt+shift+x'],
+    'alt+shift+x',
+    'checklist',
+  );
+  static final KeyBinding _numberedListBinding = KeyBinding.withHelp(
+    ['alt+shift+n'],
+    'alt+shift+n',
+    'numbered list',
+  );
+  static final KeyBinding _toggleChecklistStateBinding = KeyBinding.withHelp(
+    ['alt+shift+m'],
+    'alt+shift+m',
+    'mark checklist',
+  );
+  static final KeyBinding _renumberListBinding = KeyBinding.withHelp(
+    ['alt+shift+r'],
+    'alt+shift+r',
+    'renumber list',
+  );
+  static final KeyBinding _headingBinding = KeyBinding.withHelp(
+    ['alt+shift+h'],
+    'alt+shift+h',
+    'heading',
+  );
+  static final KeyBinding _cleanupBinding = KeyBinding.withHelp(
+    ['alt+shift+f'],
+    'alt+shift+f',
+    'cleanup whitespace',
+  );
+  static final KeyBinding _unwrapSelectionBinding = KeyBinding.withHelp(
+    ['alt+shift+w'],
+    'alt+shift+w',
+    'unwrap selection',
+  );
+
+  TextAreaController? _internalController;
+  TextFieldController? _internalSearchController;
+  TextFieldController? _internalGotoController;
+  FocusController? _internalFocusController;
+  String? _lastSavedText;
+  bool _searchVisible = false;
+  bool _gotoVisible = false;
+  List<(int row, int col)> _searchMatches = const [];
+  int _activeSearchMatchIndex = -1;
+  TextAreaController get _controller =>
+      widget.controller ??
+      (_internalController ??= TextAreaController(model: widget.model));
+  TextFieldController get _searchController =>
+      _internalSearchController ??= TextFieldController();
+  TextFieldController get _gotoController =>
+      _internalGotoController ??= TextFieldController();
+  FocusController get _focusController =>
+      widget.focusController ??
+      (_internalFocusController ??= FocusController());
+  String get _focusId => widget.focusId ?? '${widget.id}.editor';
+  String get _searchFocusId => '${widget.id}.search';
+  String get _gotoFocusId => '${widget.id}.goto';
+
+  @override
+  void initState() {
+    super.initState();
+    _lastSavedText = _controller.text;
+    _controller.addListener(_handleControllerChanged);
+    _searchController.addListener(_handleSearchChanged);
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant TextEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      (oldWidget.controller ?? _internalController)?.removeListener(
+        _handleControllerChanged,
+      );
+      _controller.addListener(_handleControllerChanged);
+      _lastSavedText = _controller.text;
+    }
+    if (oldWidget.model != widget.model && widget.model != null) {
+      _controller.model = widget.model!;
+      _lastSavedText = _controller.text;
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    (widget.controller ?? _internalController)?.removeListener(
+      _handleControllerChanged,
+    );
+    _internalSearchController?.removeListener(_handleSearchChanged);
+    _internalController?.dispose();
+    _internalSearchController?.dispose();
+    _internalGotoController?.dispose();
+    super.dispose();
+  }
+
+  void _handleControllerChanged() {
+    if (!mounted) return;
+    if (_searchVisible || _searchController.text.isNotEmpty) {
+      _refreshSearchMatches();
+    }
+    setState(() {});
+  }
+
+  bool get _isDirty => _controller.text != (_lastSavedText ?? '');
+  bool get _isSearchFocused => _focusController.isFocused(_searchFocusId);
+  bool get _isGotoFocused => _focusController.isFocused(_gotoFocusId);
+
+  void _handleSearchChanged() {
+    if (!mounted) return;
+    _refreshSearchMatches(jumpToFirst: true);
+    setState(() {});
+  }
+
+  void _openSearch() {
+    _refreshSearchMatches(jumpToFirst: true);
+    setState(() {
+      _searchVisible = true;
+      _gotoVisible = false;
+    });
+    _focusController.requestFocus(_searchFocusId);
+  }
+
+  void _openGotoLine() {
+    _gotoController.text = '${_controller.line + 1}';
+    setState(() {
+      _gotoVisible = true;
+      _searchVisible = false;
+    });
+    _focusController.requestFocus(_gotoFocusId);
+  }
+
+  void _closeUtilityBar() {
+    setState(() {
+      _searchVisible = false;
+      _gotoVisible = false;
+    });
+    _focusController.requestFocus(_focusId);
+  }
+
+  void _refreshSearchMatches({bool jumpToFirst = false}) {
+    final matches = _findSearchMatches(
+      _controller.text,
+      _searchController.text,
+    );
+    _searchMatches = matches;
+    if (matches.isEmpty) {
+      _activeSearchMatchIndex = -1;
+      return;
+    }
+
+    if (jumpToFirst) {
+      _activeSearchMatchIndex = 0;
+      _jumpToSearchMatch(0);
+      return;
+    }
+
+    if (_activeSearchMatchIndex < 0) {
+      _activeSearchMatchIndex = 0;
+      return;
+    }
+    if (_activeSearchMatchIndex >= matches.length) {
+      _activeSearchMatchIndex = matches.length - 1;
+    }
+  }
+
+  List<(int row, int col)> _findSearchMatches(String text, String query) {
+    if (query.isEmpty) return const [];
+
+    final needle = query.toLowerCase();
+    final matches = <(int row, int col)>[];
+    final lines = text.split('\n');
+    for (var row = 0; row < lines.length; row++) {
+      final haystack = lines[row].toLowerCase();
+      var start = 0;
+      while (true) {
+        final col = haystack.indexOf(needle, start);
+        if (col < 0) break;
+        matches.add((row, col));
+        start = col + math.max(needle.length, 1);
+      }
+    }
+    return matches;
+  }
+
+  void _jumpToSearchMatch(int index) {
+    final match = _searchMatches[index];
+    _controller.setCursor(match.$1, match.$2);
+  }
+
+  void _stepSearch(int delta) {
+    if (_searchMatches.isEmpty) return;
+    final next = (_activeSearchMatchIndex + delta) % _searchMatches.length;
+    final normalized = next < 0 ? next + _searchMatches.length : next;
+    setState(() {
+      _activeSearchMatchIndex = normalized;
+    });
+    _jumpToSearchMatch(normalized);
+  }
+
+  void _applyGotoLine() {
+    final requested = int.tryParse(_gotoController.text.trim());
+    if (requested == null) return;
+    final totalLines = _controller.text.split('\n').length;
+    final clamped = requested.clamp(1, totalLines);
+    _controller.setCursor(clamped - 1, 0);
+  }
+
+  Cmd? _handleEditorKey(KeyMsg msg) {
+    final key = msg.key;
+    if (keyMatchesSingle(key, _searchBinding)) {
+      _openSearch();
+      return Cmd.none();
+    }
+    if (keyMatchesSingle(key, _gotoBinding)) {
+      _openGotoLine();
+      return Cmd.none();
+    }
+
+    if (_searchVisible && _isSearchFocused) {
+      if (key.type == terminal_keys.KeyType.escape) {
+        _closeUtilityBar();
+        return Cmd.none();
+      }
+      if (key.isEnterLike) {
+        _stepSearch(key.shift ? -1 : 1);
+        return Cmd.none();
+      }
+    }
+
+    if (_gotoVisible && _isGotoFocused) {
+      if (key.type == terminal_keys.KeyType.escape) {
+        _closeUtilityBar();
+        return Cmd.none();
+      }
+      if (key.isEnterLike) {
+        _applyGotoLine();
+        _closeUtilityBar();
+        return Cmd.none();
+      }
+    }
+
+    final extraCmd = widget.onKey?.call(msg);
+    if (extraCmd != null) {
+      return extraCmd;
+    }
+
+    if (key.type == terminal_keys.KeyType.tab &&
+        key.shift &&
+        !key.ctrl &&
+        !key.alt &&
+        !key.meta) {
+      final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
+      _controller.outdentLines(width: width);
+      return Cmd.none();
+    }
+
+    if (key.type == terminal_keys.KeyType.tab &&
+        !key.shift &&
+        !key.ctrl &&
+        !key.alt &&
+        !key.meta) {
+      final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
+      if (_controller.hasSelection) {
+        _controller.indentLines(width: width);
+        return Cmd.none();
+      }
+      _controller.insertText(' ' * width);
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _joinLinesBinding)) {
+      _controller.joinLines();
+      return Cmd.none();
+    }
+
+    if (key.ctrl &&
+        key.shift &&
+        !key.alt &&
+        !key.meta &&
+        key.type == terminal_keys.KeyType.runes &&
+        key.runes.isNotEmpty &&
+        String.fromCharCode(key.runes.first).toLowerCase() == 'k') {
+      _controller.deleteLines();
+      return Cmd.none();
+    }
+
+    if (key.ctrl &&
+        key.shift &&
+        !key.alt &&
+        !key.meta &&
+        key.type == terminal_keys.KeyType.runes &&
+        key.runes.isNotEmpty &&
+        String.fromCharCode(key.runes.first).toLowerCase() == 'd') {
+      _controller.duplicateLinesBelow();
+      return Cmd.none();
+    }
+
+    if (key.type == terminal_keys.KeyType.up &&
+        key.alt &&
+        key.shift &&
+        !key.ctrl &&
+        !key.meta) {
+      _controller.duplicateLinesAbove();
+      return Cmd.none();
+    }
+
+    if (key.type == terminal_keys.KeyType.down &&
+        key.alt &&
+        key.shift &&
+        !key.ctrl &&
+        !key.meta) {
+      _controller.duplicateLinesBelow();
+      return Cmd.none();
+    }
+
+    if (key.type == terminal_keys.KeyType.up &&
+        key.alt &&
+        !key.shift &&
+        !key.ctrl &&
+        !key.meta) {
+      _controller.moveLinesUp();
+      return Cmd.none();
+    }
+
+    if (key.type == terminal_keys.KeyType.down &&
+        key.alt &&
+        !key.shift &&
+        !key.ctrl &&
+        !key.meta) {
+      _controller.moveLinesDown();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _splitLineBinding)) {
+      _controller.splitLine();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _uppercaseTransformBinding)) {
+      _controller.uppercaseSelectionOrLine();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _lowercaseTransformBinding)) {
+      _controller.lowercaseSelectionOrLine();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _capitalizeTransformBinding)) {
+      _controller.capitalizeSelectionOrLine();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _sortLinesBinding)) {
+      _controller.sortSelectedLines();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _quoteLinesBinding)) {
+      _controller.toggleLinePrefix('>');
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _bulletListBinding)) {
+      _controller.toggleLinePrefix('-');
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _checklistBinding)) {
+      _controller.toggleLinePrefix('- [ ]');
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _numberedListBinding)) {
+      _controller.toggleNumberedList();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _toggleChecklistStateBinding)) {
+      _controller.toggleChecklistState();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _renumberListBinding)) {
+      _controller.renumberNumberedList();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _headingBinding)) {
+      _controller.toggleHeadingPrefix();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _cleanupBinding)) {
+      _controller.cleanupWhitespace();
+      return Cmd.none();
+    }
+
+    if (keyMatchesSingle(key, _unwrapSelectionBinding)) {
+      _controller.unwrapSelection();
+      return Cmd.none();
+    }
+
+    if (_handleSelectionWrapKey(key)) {
+      return Cmd.none();
+    }
+
+    if (widget.onSave == null || !keyMatchesSingle(msg.key, _saveBinding)) {
+      return null;
+    }
+    final text = _controller.text;
+    _controller.pushHistoryBoundary();
+    setState(() {
+      _lastSavedText = text;
+    });
+    return widget.onSave!(text) ?? Cmd.none();
+  }
+
+  bool _handleSelectionWrapKey(terminal_keys.Key key) {
+    if (!_controller.hasSelection) return false;
+    if (key.type != terminal_keys.KeyType.runes ||
+        key.runes.length != 1 ||
+        key.ctrl ||
+        key.alt ||
+        key.meta) {
+      return false;
+    }
+    final opening = String.fromCharCode(key.runes.single);
+    final closing = _selectionWrapPairs[opening];
+    if (closing == null) return false;
+    return _controller.wrapSelection(opening, after: closing);
+  }
+
+  Widget _buildSearchBar(Theme theme, int width) {
+    final query = _searchController.text;
+    final statusText = switch ((query.isEmpty, _searchMatches.isEmpty)) {
+      (true, _) => 'Type to search',
+      (false, true) => 'No matches',
+      _ => '${_activeSearchMatchIndex + 1}/${_searchMatches.length} matches',
+    };
+    final statusStyle = theme.labelSmall.copy().foreground(
+      theme.resolvedOnSurfaceVariant,
+    );
+    final searchFieldWidth = math.max(18, (width > 0 ? width : 72) - 24);
+    final searchField = TextField(
+      controller: _searchController,
+      focusController: _focusController,
+      focusId: _searchFocusId,
+      width: searchFieldWidth,
+      placeholder: 'Find in document',
+      onChanged: (_) {
+        _refreshSearchMatches(jumpToFirst: true);
+        setState(() {});
+      },
+    );
+    final searchLabel = Text('Find', style: theme.labelMedium);
+    final statusLabel = Text(statusText, style: statusStyle);
+    final searchHint = Text(
+      'enter next  shift+enter prev  esc close',
+      style: statusStyle,
+    );
+
+    final content = width >= 72
+        ? Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                gap: 2,
+                children: [
+                  searchLabel,
+                  Expanded(child: searchField),
+                  statusLabel,
+                ],
+              ),
+              searchHint,
+            ],
+          )
+        : Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [searchLabel, searchField, statusLabel, searchHint],
+          );
+
+    return Frame(
+      background: theme.surface,
+      padding: const EdgeInsets.all(1),
+      child: content,
+    );
+  }
+
+  Widget _buildGotoBar(Theme theme, int width) {
+    final totalLines = _controller.text.split('\n').length;
+    final requested = int.tryParse(_gotoController.text.trim());
+    final statusText = switch (requested) {
+      null => 'Enter a line number',
+      final line when line < 1 => 'Line number must be at least 1',
+      final line when line > totalLines => 'Clamped to $totalLines',
+      final line => 'Line $line of $totalLines',
+    };
+    final statusStyle = theme.labelSmall.copy().foreground(
+      theme.resolvedOnSurfaceVariant,
+    );
+    final gotoFieldWidth = math.max(12, (width > 0 ? width : 72) - 28);
+    final gotoField = TextField(
+      controller: _gotoController,
+      focusController: _focusController,
+      focusId: _gotoFocusId,
+      width: gotoFieldWidth,
+      placeholder: 'Line number',
+      onChanged: (_) {
+        _applyGotoLine();
+        setState(() {});
+      },
+    );
+    final gotoLabel = Text('Go to line', style: theme.labelMedium);
+    final statusLabel = Text(statusText, style: statusStyle);
+    final gotoHint = Text('enter apply  esc close', style: statusStyle);
+
+    final content = width >= 72
+        ? Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                gap: 2,
+                children: [
+                  gotoLabel,
+                  Expanded(child: gotoField),
+                  statusLabel,
+                ],
+              ),
+              gotoHint,
+            ],
+          )
+        : Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [gotoLabel, gotoField, statusLabel, gotoHint],
+          );
+
+    return Frame(
+      background: theme.surface,
+      padding: const EdgeInsets.all(1),
+      child: content,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = ThemeScope.of(context);
+    final width = MediaQuery.of(context).size.width.round();
+    final bodyController = _controller;
+    final keyMap = widget.keyMap ?? bodyController.model.keyMap;
+    final helpKeyMap = _TextEditorHelpKeyMap(
+      keyMap,
+      saveBinding: widget.onSave == null ? null : _saveBinding,
+      searchBinding: _searchBinding,
+      gotoBinding: _gotoBinding,
+      searchNextBinding: _searchNextBinding,
+      searchPreviousBinding: _searchPreviousBinding,
+      searchCloseBinding: _searchCloseBinding,
+      gotoApplyBinding: _gotoApplyBinding,
+      gotoCloseBinding: _gotoCloseBinding,
+      searchActive: _searchVisible,
+      gotoActive: _gotoVisible,
+      indentBinding: _indentBinding,
+      outdentBinding: _outdentBinding,
+      joinLinesBinding: _joinLinesBinding,
+      splitLineBinding: _splitLineBinding,
+      extraBindings: [
+        _uppercaseTransformBinding,
+        _lowercaseTransformBinding,
+        _capitalizeTransformBinding,
+        _deleteLineBinding,
+        _duplicateLineBinding,
+        _duplicateLineAboveBinding,
+        _duplicateLineBelowBinding,
+        _moveLineUpBinding,
+        _moveLineDownBinding,
+        _sortLinesBinding,
+        _quoteLinesBinding,
+        _bulletListBinding,
+        _checklistBinding,
+        _numberedListBinding,
+        _toggleChecklistStateBinding,
+        _renumberListBinding,
+        _headingBinding,
+        _cleanupBinding,
+        _unwrapSelectionBinding,
+        ...widget.extraHelpBindings,
+      ],
+    );
+    final statsStyle = _copyStyle(theme.labelSmall)
+      ..foreground(theme.resolvedOnSurfaceVariant);
+    final statusStyle = _copyStyle(theme.labelSmall)
+      ..foreground(_isDirty ? theme.warning : theme.resolvedOnSurfaceVariant);
+
+    final header = Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(widget.title, style: theme.titleMedium),
+        Row(
+          gap: 2,
+          children: [
+            if (widget.showSaveStatus && widget.onSave != null)
+              Text(
+                _isDirty ? widget.dirtyLabel : widget.cleanLabel,
+                style: statusStyle,
+              ),
+            Text(
+              'Ln ${bodyController.line + 1}, Col ${bodyController.column + 1}',
+              style: statsStyle,
+            ),
+            Text(
+              '${bodyController.text.runes.length} chars',
+              style: statsStyle,
+            ),
+            if (widget.headerTrailing != null) widget.headerTrailing!,
+          ],
+        ),
+      ],
+    );
+
+    final editorBody = FocusScope(
+      controller: _focusController,
+      child: Frame(
+        background: theme.surface,
+        padding: const EdgeInsets.all(1),
+        child: TextArea(
+          controller: bodyController,
+          focusController: _focusController,
+          focusId: _focusId,
+          autofocus: widget.autofocus,
+          enabled: widget.enabled,
+          prompt: widget.prompt,
+          placeholder: widget.placeholder,
+          width: widget.width,
+          height: widget.height,
+          showLineNumbers: widget.showLineNumbers,
+          softWrap: widget.softWrap,
+          useVirtualCursor: widget.useVirtualCursor,
+          keyMap: widget.keyMap,
+          styles: widget.styles,
+          cursor: widget.cursor,
+          onChanged: widget.onChanged,
+        ),
+      ),
+    );
+
+    final children = <Widget>[header, editorBody];
+
+    if (_searchVisible) {
+      children.add(_buildSearchBar(theme, width));
+    }
+    if (_gotoVisible) {
+      children.add(_buildGotoBar(theme, width));
+    }
+
+    if (widget.showHelpBar) {
+      children.add(
+        HelpView(
+          keyMap: helpKeyMap,
+          showAll: widget.helpExpanded,
+          itemSpacing: 2,
+          columnGap: 4,
+        ),
+      );
+    }
+
+    if (widget.footer != null) {
+      children.add(widget.footer!);
+    }
+
+    return KeyboardListener(
+      onKey: _handleEditorKey,
+      child: Column(
+        gap: 1,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+class _TextEditorHelpKeyMap implements KeyMap {
+  _TextEditorHelpKeyMap(
+    this.base, {
+    this.saveBinding,
+    this.searchBinding,
+    this.gotoBinding,
+    this.searchNextBinding,
+    this.searchPreviousBinding,
+    this.searchCloseBinding,
+    this.gotoApplyBinding,
+    this.gotoCloseBinding,
+    this.searchActive = false,
+    this.gotoActive = false,
+    this.indentBinding,
+    this.outdentBinding,
+    this.joinLinesBinding,
+    this.splitLineBinding,
+    this.extraBindings = const [],
+  });
+
+  final KeyMap base;
+  final KeyBinding? saveBinding;
+  final KeyBinding? searchBinding;
+  final KeyBinding? gotoBinding;
+  final KeyBinding? searchNextBinding;
+  final KeyBinding? searchPreviousBinding;
+  final KeyBinding? searchCloseBinding;
+  final KeyBinding? gotoApplyBinding;
+  final KeyBinding? gotoCloseBinding;
+  final bool searchActive;
+  final bool gotoActive;
+  final KeyBinding? indentBinding;
+  final KeyBinding? outdentBinding;
+  final KeyBinding? joinLinesBinding;
+  final KeyBinding? splitLineBinding;
+  final List<KeyBinding> extraBindings;
+
+  @override
+  List<KeyBinding> shortHelp() {
+    if (base is! TextAreaKeyMap) {
+      final bindings = base.shortHelp();
+      return [
+        if (saveBinding != null) saveBinding!,
+        if (searchBinding != null) searchBinding!,
+        if (gotoBinding != null) gotoBinding!,
+        if (searchActive && searchNextBinding != null) searchNextBinding!,
+        if (searchActive && searchPreviousBinding != null)
+          searchPreviousBinding!,
+        if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+        if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
+        if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
+        if (indentBinding != null) indentBinding!,
+        if (outdentBinding != null) outdentBinding!,
+        if (joinLinesBinding != null) joinLinesBinding!,
+        if (splitLineBinding != null) splitLineBinding!,
+        ...extraBindings,
+        ...bindings,
+      ];
+    }
+
+    final textAreaKeyMap = base as TextAreaKeyMap;
+    return [
+      if (saveBinding != null) saveBinding!,
+      if (searchBinding != null) searchBinding!,
+      if (gotoBinding != null) gotoBinding!,
+      if (searchActive && searchNextBinding != null) searchNextBinding!,
+      if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
+      if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+      if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
+      if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
+      if (indentBinding != null) indentBinding!,
+      if (outdentBinding != null) outdentBinding!,
+      if (joinLinesBinding != null) joinLinesBinding!,
+      if (splitLineBinding != null) splitLineBinding!,
+      ...extraBindings,
+      textAreaKeyMap.selectAll,
+      textAreaKeyMap.selectLine,
+      textAreaKeyMap.undo,
+      textAreaKeyMap.redo,
+      textAreaKeyMap.insertNewline,
+      textAreaKeyMap.wordBackward,
+      textAreaKeyMap.wordForward,
+      textAreaKeyMap.linePrevious,
+      textAreaKeyMap.lineNext,
+    ];
+  }
+
+  @override
+  List<List<KeyBinding>> fullHelp() {
+    final groups = [...base.fullHelp()];
+    final editorBindings = <KeyBinding>[
+      if (saveBinding != null) saveBinding!,
+      if (searchBinding != null) searchBinding!,
+      if (gotoBinding != null) gotoBinding!,
+      if (searchActive && searchNextBinding != null) searchNextBinding!,
+      if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
+      if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+      if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
+      if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
+      if (indentBinding != null) indentBinding!,
+      if (outdentBinding != null) outdentBinding!,
+      if (joinLinesBinding != null) joinLinesBinding!,
+      if (splitLineBinding != null) splitLineBinding!,
+      ...extraBindings,
+    ];
+    if (editorBindings.isNotEmpty) {
+      groups.insert(0, editorBindings);
+    }
+    return groups;
+  }
+}
