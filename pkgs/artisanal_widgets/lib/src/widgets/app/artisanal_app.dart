@@ -6,7 +6,11 @@ import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart' show View;
 
-import '../components/components_widgets.dart' show DebugOverlayPosition;
+import '../components/components_widgets.dart'
+    show
+        DebugConsoleController,
+        DebugConsoleHost,
+        DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
 import '../navigation/navigation.dart'
@@ -16,9 +20,21 @@ import '../navigation/navigation.dart'
         PopBehavior,
         RouteFactory,
         RouteWidgetBuilder;
-import '../theme/theme.dart' show Theme;
+import '../theme/theme.dart' show Theme, hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'widget_app.dart';
+
+/// Controls how [ArtisanalApp] resolves its shell theme.
+enum ThemeMode {
+  /// Follow the terminal background when possible.
+  system,
+
+  /// Always use the light/base theme.
+  light,
+
+  /// Always use the dark theme.
+  dark,
+}
 
 /// A high-level root shell for artisanal widget applications.
 ///
@@ -30,8 +46,8 @@ import 'widget_app.dart';
 /// ```dart
 /// final app = ArtisanalApp(
 ///   title: 'Demo',
+///   themeMode: ThemeMode.system,
 ///   home: HomeScreen(),
-///   theme: Theme.adaptive(),
 /// );
 /// ```
 ///
@@ -40,6 +56,8 @@ final class ArtisanalApp extends WidgetApp {
   ArtisanalApp({
     this.title,
     this.theme,
+    this.darkTheme,
+    this.themeMode = ThemeMode.system,
     this.themeBuilder,
     this.child,
     this.home,
@@ -49,6 +67,10 @@ final class ArtisanalApp extends WidgetApp {
     this.onUnknownRoute,
     this.popBehavior = PopBehavior.defaultBehavior,
     this.observers = const [],
+    this.debugConsoleController,
+    this.debugConsoleHeight = 8,
+    this.debugConsoleCapturePrint = false,
+    this.debugConsoleCaptureErrors = false,
     super.scanZones = false,
     super.useHitTesting = true,
     super.handleFrameTick = false,
@@ -76,6 +98,8 @@ final class ArtisanalApp extends WidgetApp {
        super(
          _ArtisanalAppRoot(
            appTheme: theme,
+           darkTheme: darkTheme,
+           themeMode: themeMode,
            themeBuilder: themeBuilder,
            child: child,
            home: home,
@@ -85,9 +109,16 @@ final class ArtisanalApp extends WidgetApp {
            onUnknownRoute: onUnknownRoute,
            popBehavior: popBehavior,
            observers: observers,
+           debugConsoleController: debugConsoleController,
+           debugConsoleHeight: debugConsoleHeight,
          ),
          backgroundColorBuilder: () =>
-             (themeBuilder?.call() ?? theme ?? Theme.adaptive()).background,
+             _resolveArtisanalTheme(
+               theme: theme,
+               darkTheme: darkTheme,
+               themeMode: themeMode,
+               themeBuilder: themeBuilder,
+             ).background,
        );
 
   /// Terminal window title published via [View.windowTitle].
@@ -97,6 +128,14 @@ final class ArtisanalApp extends WidgetApp {
   ///
   /// When omitted, [Theme.adaptive] is used.
   final Theme? theme;
+
+  /// Explicit dark theme used when [themeMode] resolves to [ThemeMode.dark] or
+  /// a terminal-driven dark system theme.
+  final Theme? darkTheme;
+
+  /// Controls whether the shell follows the terminal background or forces a
+  /// specific light/dark theme choice.
+  final ThemeMode themeMode;
 
   /// Optional dynamic theme callback evaluated during each view build.
   ///
@@ -127,6 +166,23 @@ final class ArtisanalApp extends WidgetApp {
 
   /// Navigation observers attached to the shell navigator.
   final List<NavigatorObserver> observers;
+
+  /// Optional developer console controller exposed to the app subtree.
+  ///
+  /// When provided, [ArtisanalApp] mounts a built-in bottom console pane that
+  /// can be toggled with `F10`.
+  final DebugConsoleController? debugConsoleController;
+
+  /// Number of visible log rows in the built-in debug console.
+  final int debugConsoleHeight;
+
+  /// Whether `runArtisanalApp` should capture `print()` output into the
+  /// attached [debugConsoleController].
+  final bool debugConsoleCapturePrint;
+
+  /// Whether `runArtisanalApp` should capture uncaught zone errors into the
+  /// attached [debugConsoleController].
+  final bool debugConsoleCaptureErrors;
 
   @override
   Object view() {
@@ -161,6 +217,8 @@ final class ArtisanalApp extends WidgetApp {
 final class _ArtisanalAppRoot extends StatelessWidget {
   _ArtisanalAppRoot({
     this.appTheme,
+    this.darkTheme,
+    required this.themeMode,
     this.themeBuilder,
     this.child,
     this.home,
@@ -170,9 +228,13 @@ final class _ArtisanalAppRoot extends StatelessWidget {
     this.onUnknownRoute,
     required this.popBehavior,
     required this.observers,
+    this.debugConsoleController,
+    required this.debugConsoleHeight,
   });
 
   final Theme? appTheme;
+  final Theme? darkTheme;
+  final ThemeMode themeMode;
   final Theme Function()? themeBuilder;
   final Widget? child;
   final Widget? home;
@@ -182,12 +244,18 @@ final class _ArtisanalAppRoot extends StatelessWidget {
   final RouteFactory? onUnknownRoute;
   final PopBehavior popBehavior;
   final List<NavigatorObserver> observers;
+  final DebugConsoleController? debugConsoleController;
+  final int debugConsoleHeight;
 
   @override
   Widget build(BuildContext context) {
-    final resolvedTheme =
-        themeBuilder?.call() ?? appTheme ?? Theme.adaptive();
-    final root =
+    final resolvedTheme = _resolveArtisanalTheme(
+      theme: appTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+      themeBuilder: themeBuilder,
+    );
+    var root =
         child ??
         Navigator(
           home: home,
@@ -199,6 +267,36 @@ final class _ArtisanalAppRoot extends StatelessWidget {
           observers: observers,
         );
 
+    final consoleController = debugConsoleController;
+    if (consoleController != null) {
+      root = DebugConsoleHost(
+        controller: consoleController,
+        consoleHeight: debugConsoleHeight,
+        child: root,
+      );
+    }
+
     return ThemeScope(theme: resolvedTheme, child: root);
   }
+}
+
+Theme _resolveArtisanalTheme({
+  Theme? theme,
+  Theme? darkTheme,
+  required ThemeMode themeMode,
+  Theme Function()? themeBuilder,
+}) {
+  final builtTheme = themeBuilder?.call();
+  if (builtTheme != null) return builtTheme;
+
+  return switch (themeMode) {
+    ThemeMode.light => theme ?? darkTheme ?? Theme.light(),
+    ThemeMode.dark => darkTheme ?? theme ?? Theme.dark(),
+    ThemeMode.system => switch ((theme, darkTheme)) {
+      (null, null) => Theme.adaptive(),
+      _ => hasDarkBackground
+          ? darkTheme ?? theme ?? Theme.dark()
+          : theme ?? darkTheme ?? Theme.light(),
+    },
+  };
 }

@@ -14,13 +14,7 @@ void main() async {
     home: _HomeScreen(),
   );
 
-  await tui.runProgram(
-    app,
-    options: const tui.ProgramOptions(
-      altScreen: true,
-      mouseMode: tui.MouseMode.allMotion,
-    ),
-  );
+  await w.runArtisanalApp(app);
 }
 
 final class _HomeScreen extends w.StatefulWidget {

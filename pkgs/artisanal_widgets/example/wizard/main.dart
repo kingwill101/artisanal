@@ -5,9 +5,8 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 
 void main() async {
-  await tui.runProgram(
+  await w.runArtisanalApp(
     w.ArtisanalApp(title: 'Wizard Showcase', home: WizardShowcaseScreen()),
-    options: const tui.ProgramOptions(altScreen: true, mouse: true),
   );
 }
 

@@ -5,6 +5,8 @@
 @experimental
 library;
 
+import 'dart:async';
+
 import 'package:artisanal/widgets.dart';
 import 'package:meta/meta.dart' show experimental;
 
@@ -58,6 +60,7 @@ part 'drawer.dart';
 part 'scroll_area.dart';
 part 'fade_modal_barrier.dart';
 part 'debug_overlay.dart';
+part 'debug_console.dart';
 part 'git_diff.dart';
 part 'key_hint.dart';
 part 'help_view.dart';

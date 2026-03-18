@@ -457,9 +457,13 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         preRenderBackgroundColor != _cachedBackgroundColor;
 
     final canReuseCachedBase =
-        !_dirty && !_tree.hasPaintDirty && _cachedView != null;
+        !_dirty &&
+        !_tree.hasDirty &&
+        !_tree.hasPaintDirty &&
+        _cachedView != null;
 
     if (!_dirty &&
+        !_tree.hasDirty &&
         !backgroundChanged &&
         !_overlayDirty &&
         _cachedViewObject != null &&
