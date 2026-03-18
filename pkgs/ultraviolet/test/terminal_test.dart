@@ -51,6 +51,38 @@ void main() {
       expect(outputBuffer.toString(), isNotEmpty);
       await terminal.stop();
     });
+
+    test('start queries terminal capabilities', () async {
+      await terminal.start(handleSignals: false);
+
+      final output = outputBuffer.toString();
+      expect(output, contains('\x1b[?c'));
+      expect(output, contains('\x1b[?u'));
+      expect(output, contains('\x1b]11;?\x1b\\'));
+      expect(output, contains('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'));
+
+      await terminal.stop();
+    });
+
+    test('stop disables enabled modes and exits alt screen', () async {
+      await terminal.start(handleSignals: false);
+      terminal.enterAltScreen();
+      terminal.hideCursor();
+      terminal.enableMouse();
+      terminal.enableBracketedPaste();
+      terminal.enableFocusReporting();
+
+      outputBuffer.clear();
+      await terminal.stop();
+
+      final output = outputBuffer.toString();
+      expect(output, contains(UvAnsi.disableMouseAllEvents));
+      expect(output, contains(UvAnsi.disableMouseSgr));
+      expect(output, contains(UvAnsi.disableBracketedPaste));
+      expect(output, contains(UvAnsi.disableFocusReporting));
+      expect(output, contains(UvAnsi.showCursor));
+      expect(output, contains(UvAnsi.resetModeAltScreenSaveCursor));
+    });
   });
 }
 

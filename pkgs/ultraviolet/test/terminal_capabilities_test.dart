@@ -24,5 +24,33 @@ void main() {
       caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 4, 18]));
       expect(caps.hasSixel, isTrue);
     });
+
+    test('stores background color and palette reports', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      final backgroundChanged = caps.updateFromEvent(
+        const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33)),
+      );
+      final paletteChanged = caps.updateFromEvent(
+        const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc)),
+      );
+
+      expect(backgroundChanged, isTrue);
+      expect(paletteChanged, isTrue);
+      expect(caps.backgroundColor, const UvRgb(0x11, 0x22, 0x33));
+      expect(caps.hasBackgroundColor, isTrue);
+      expect(caps.palette[4], const UvRgb(0xaa, 0xbb, 0xcc));
+      expect(caps.hasColorPalette, isTrue);
+    });
+
+    test('ignores palette query responses without a color payload', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      final changed = caps.updateFromEvent(const ColorPaletteEvent(7, null));
+
+      expect(changed, isFalse);
+      expect(caps.palette, isEmpty);
+      expect(caps.hasColorPalette, isFalse);
+    });
   });
 }

@@ -1037,6 +1037,24 @@ class Program<M extends Model> {
   /// Whether the terminal foreground color was overridden via OSC 10.
   bool _fgColorOverridden = false;
 
+  /// Desired mouse tracking mode for the current runtime/view state.
+  MouseMode _desiredMouseMode = MouseMode.none;
+
+  /// Mouse tracking mode currently applied to the terminal.
+  MouseMode _appliedMouseMode = MouseMode.none;
+
+  /// Whether bracketed paste should be enabled for the current runtime/view state.
+  bool _desiredBracketedPaste = false;
+
+  /// Whether bracketed paste is currently enabled on the terminal.
+  bool _appliedBracketedPaste = false;
+
+  /// Whether focus reporting should be enabled for the current runtime/view state.
+  bool _desiredFocusReporting = false;
+
+  /// Whether focus reporting is currently enabled on the terminal.
+  bool _appliedFocusReporting = false;
+
   /// Completer for the run() method.
   Completer<void>? _runCompleter;
 
@@ -1325,7 +1343,7 @@ class Program<M extends Model> {
 
     // Enable bracketed paste if requested
     if (_options.bracketedPaste) {
-      _terminal!.enableBracketedPaste();
+      _setDesiredBracketedPaste(true);
     }
 
     _setupBackendLifecycleListeners();
@@ -2347,39 +2365,31 @@ class Program<M extends Model> {
         return true;
 
       case EnableMouseCellMotionMsg():
-        _terminal?.enableMouse();
+        _setDesiredMouseMode(MouseMode.cellMotion);
         return true;
 
       case EnableMouseAllMotionMsg():
-        // Enable all motion tracking (1003 mode)
-        if (_terminal?.supportsAnsi ?? false) {
-          _terminal?.write('\x1b[?1003h');
-          _terminal?.write('\x1b[?1006h'); // SGR mode
-        }
+        _setDesiredMouseMode(MouseMode.allMotion);
         return true;
 
       case DisableMouseMsg():
-        _terminal?.disableMouse();
+        _setDesiredMouseMode(MouseMode.none);
         return true;
 
       case EnableBracketedPasteMsg():
-        _terminal?.enableBracketedPaste();
+        _setDesiredBracketedPaste(true);
         return true;
 
       case DisableBracketedPasteMsg():
-        _terminal?.disableBracketedPaste();
+        _setDesiredBracketedPaste(false);
         return true;
 
       case EnableReportFocusMsg():
-        if (_terminal?.supportsAnsi ?? false) {
-          _terminal?.write('\x1b[?1004h');
-        }
+        _setDesiredFocusReporting(true);
         return true;
 
       case DisableReportFocusMsg():
-        if (_terminal?.supportsAnsi ?? false) {
-          _terminal?.write('\x1b[?1004l');
-        }
+        _setDesiredFocusReporting(false);
         return true;
 
       case RequestWindowSizeMsg():
@@ -2541,29 +2551,17 @@ class Program<M extends Model> {
       _terminal?.write('\x1b]110\x07');
     }
 
+    _disableAppliedTerminalModes();
+
     // Restore terminal to normal mode
     _terminal?.disableRawMode();
     _terminal?.showCursor();
-
-    final mouseMode = _effectiveMouseMode();
-    if (mouseMode != MouseMode.none) {
-      _terminal?.disableMouse();
-    }
-    if (_options.bracketedPaste) {
-      _terminal?.disableBracketedPaste();
-    }
   }
 
   /// Restores the terminal after external process execution.
   void _restoreTerminal() {
     // Re-enable raw mode
     _terminal?.enableRawMode();
-
-    // Restore options
-    _applyMouseMode();
-    if (_options.bracketedPaste) {
-      _terminal?.enableBracketedPaste();
-    }
 
     // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
@@ -2595,10 +2593,16 @@ class Program<M extends Model> {
       );
     }
 
+    _restoreDesiredTerminalModes();
+
     // Restart input listening.
     if (_inputSubscription == null) {
       _startInputListener();
     }
+
+    // Force metadata reapplication even when the model returns the same cached
+    // view object after restoring the terminal.
+    _lastRenderedView = null;
 
     // Re-render
     _render();
@@ -2610,16 +2614,89 @@ class Program<M extends Model> {
   }
 
   void _applyMouseMode() {
-    final mode = _effectiveMouseMode();
-    switch (mode) {
+    _setDesiredMouseMode(_effectiveMouseMode());
+  }
+
+  void _setDesiredMouseMode(MouseMode mode) {
+    _desiredMouseMode = mode;
+    _applyDesiredMouseMode();
+  }
+
+  void _applyDesiredMouseMode() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_appliedMouseMode == _desiredMouseMode) return;
+    if (_appliedMouseMode != MouseMode.none) {
+      terminal.disableMouse();
+      _appliedMouseMode = MouseMode.none;
+    }
+    switch (_desiredMouseMode) {
       case MouseMode.none:
-        break;
+        return;
       case MouseMode.cellMotion:
-        _terminal?.enableMouseCellMotion();
+        terminal.enableMouseCellMotion();
         break;
       case MouseMode.allMotion:
-        _terminal?.enableMouseAllMotion();
+        terminal.enableMouseAllMotion();
         break;
+    }
+    _appliedMouseMode = _desiredMouseMode;
+  }
+
+  void _setDesiredBracketedPaste(bool enabled) {
+    _desiredBracketedPaste = enabled;
+    _applyDesiredBracketedPaste();
+  }
+
+  void _applyDesiredBracketedPaste() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_appliedBracketedPaste == _desiredBracketedPaste) return;
+    if (_desiredBracketedPaste) {
+      terminal.enableBracketedPaste();
+    } else {
+      terminal.disableBracketedPaste();
+    }
+    _appliedBracketedPaste = _desiredBracketedPaste;
+  }
+
+  void _setDesiredFocusReporting(bool enabled) {
+    _desiredFocusReporting = enabled;
+    _applyDesiredFocusReporting();
+  }
+
+  void _applyDesiredFocusReporting() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_appliedFocusReporting == _desiredFocusReporting) return;
+    if (_desiredFocusReporting) {
+      terminal.enableFocusReporting();
+    } else {
+      terminal.disableFocusReporting();
+    }
+    _appliedFocusReporting = _desiredFocusReporting;
+  }
+
+  void _restoreDesiredTerminalModes() {
+    _applyDesiredFocusReporting();
+    _applyDesiredBracketedPaste();
+    _applyDesiredMouseMode();
+  }
+
+  void _disableAppliedTerminalModes() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_appliedFocusReporting) {
+      terminal.disableFocusReporting();
+      _appliedFocusReporting = false;
+    }
+    if (_appliedBracketedPaste) {
+      terminal.disableBracketedPaste();
+      _appliedBracketedPaste = false;
+    }
+    if (_appliedMouseMode != MouseMode.none) {
+      terminal.disableMouse();
+      _appliedMouseMode = MouseMode.none;
     }
   }
 
@@ -2638,6 +2715,7 @@ class Program<M extends Model> {
     _inputSubscription = null;
 
     // Restore terminal
+    _disableAppliedTerminalModes();
     _terminal?.disableRawMode();
     _terminal?.showCursor();
     if (_options.altScreen) {
@@ -2697,11 +2775,16 @@ class Program<M extends Model> {
       );
     }
 
+    _restoreDesiredTerminalModes();
+
     // Restart input.
     _startInputListener();
 
     // Restart metrics timer.
     _startMetricsTimer();
+
+    // Force resume to repaint even when the model returns the same cached view.
+    _lastRenderedView = null;
 
     // Send resume message
     _processMessage(const ResumeMsg());
@@ -2802,33 +2885,18 @@ class Program<M extends Model> {
     }
 
     if (view.reportFocus != null) {
-      if (view.reportFocus!) {
-        _terminal?.enableFocusReporting();
-      } else {
-        _terminal?.disableFocusReporting();
-      }
+      _setDesiredFocusReporting(view.reportFocus!);
     }
 
     if (view.bracketedPaste != null) {
-      if (view.bracketedPaste!) {
-        _terminal?.enableBracketedPaste();
-      } else {
-        _terminal?.disableBracketedPaste();
-      }
+      _setDesiredBracketedPaste(view.bracketedPaste!);
     }
 
     if (view.mouseMode != null) {
       if (TuiTrace.enabled) {
         _trace('view mouseMode=${view.mouseMode}');
       }
-      switch (view.mouseMode!) {
-        case MouseMode.none:
-          _terminal?.disableMouse();
-        case MouseMode.cellMotion:
-          _terminal?.enableMouseCellMotion();
-        case MouseMode.allMotion:
-          _terminal?.enableMouseAllMotion();
-      }
+      _setDesiredMouseMode(view.mouseMode!);
     }
 
     if (view.keyboardEnhancements != null) {
@@ -3146,15 +3214,7 @@ class Program<M extends Model> {
     // Restore terminal state (belt and suspenders approach)
     // Even if renderer.dispose() failed, try to restore these
     trySync(() {
-      if (_options.bracketedPaste) {
-        _terminal?.disableBracketedPaste();
-      }
-    });
-
-    trySync(() {
-      if (_options.mouse) {
-        _terminal?.disableMouse();
-      }
+      _disableAppliedTerminalModes();
     });
 
     // Flush all buffered escape sequences (alt-screen exit, cursor restore,

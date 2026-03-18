@@ -8,6 +8,7 @@ import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
 import 'package:artisanal/src/tui/terminal.dart';
+import 'package:artisanal/src/tui/view.dart';
 import 'package:test/test.dart';
 
 // Import ExecResult for testing
@@ -1295,6 +1296,67 @@ void main() {
       expect(terminal.operations, contains('disableBracketedPaste'));
     });
 
+    test('cleans up view-driven focus, paste, and all-motion mouse on exit', () async {
+      final program = Program(
+        _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 10),
+            (_) => const QuitMsg(),
+          ),
+          onView: () => const View(
+            content: 'runtime hardening',
+            reportFocus: true,
+            bracketedPaste: true,
+            mouseMode: MouseMode.allMotion,
+          ),
+        ),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(terminal.operations, contains('enableFocusReporting'));
+      expect(terminal.operations, contains('enableBracketedPaste'));
+      expect(terminal.operations, contains('enableMouseAllMotion'));
+      expect(terminal.operations, contains('disableFocusReporting'));
+      expect(terminal.operations, contains('disableBracketedPaste'));
+      expect(terminal.operations, contains('disableMouse'));
+    });
+
+    test('switches mouse modes by disabling before re-enabling', () async {
+      var currentMode = MouseMode.cellMotion;
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('switch')) {
+              currentMode = MouseMode.allMotion;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => View(content: 'mouse mode', mouseMode: currentMode),
+        ),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.operations.contains('enableMouseCellMotion'),
+      );
+      program.send(const CustomMsg('switch'));
+      await runFuture;
+
+      final enableCellIndex = terminal.operations.indexOf('enableMouseCellMotion');
+      final disableIndex = terminal.operations.indexOf('disableMouse');
+      final enableAllIndex = terminal.operations.indexOf('enableMouseAllMotion');
+
+      expect(enableCellIndex, isNonNegative);
+      expect(disableIndex, greaterThan(enableCellIndex));
+      expect(enableAllIndex, greaterThan(disableIndex));
+    });
+
     test(
       'collapses large multiline key burst into PasteTextMsg (UV parser)',
       () async {
@@ -1733,6 +1795,69 @@ void main() {
 
       // Should have at least initial enableRawMode and one after exec restore
       expect(enableIndices, isNotEmpty);
+    });
+
+    test('ExecProcess restore reapplies identical view terminal metadata', () async {
+      final view = View(
+        content: 'sticky metadata',
+        reportFocus: true,
+        bracketedPaste: true,
+        mouseMode: MouseMode.allMotion,
+        backgroundColor: const BasicColor('#112233'),
+        foregroundColor: const BasicColor('#eeddcc'),
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => view,
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.operations.contains('enableFocusReporting'),
+      );
+      program.send(const CustomMsg('exec'));
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enableFocusReporting').length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
+        greaterThanOrEqualTo(2),
+      );
+
+      final joinedOutput = terminal.output.join();
+      expect(
+        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(joinedOutput, contains('\x1b]111\x07'));
+      expect(joinedOutput, contains('\x1b]110\x07'));
     });
   });
 
@@ -2693,14 +2818,14 @@ class _CallbackModel implements Model {
   _CallbackModel({
     Cmd? Function()? onInit,
     Cmd? Function(Msg)? onUpdate,
-    String Function()? onView,
+    Object Function()? onView,
   }) : _onInit = onInit,
        _onUpdate = onUpdate,
        _onView = onView;
 
   final Cmd? Function()? _onInit;
   final Cmd? Function(Msg)? _onUpdate;
-  final String Function()? _onView;
+  final Object Function()? _onView;
 
   @override
   Cmd? init() => _onInit?.call();
@@ -2712,7 +2837,7 @@ class _CallbackModel implements Model {
   }
 
   @override
-  String view() => _onView?.call() ?? 'Callback model';
+  Object view() => _onView?.call() ?? 'Callback model';
 }
 
 /// A terminal that throws during some operations (for testing robust cleanup).
