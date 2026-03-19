@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/app.dart' as app;
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal_widgets/app.dart' as app;
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as w;
 
 void main() async {
   await app.runArtisanalApp(

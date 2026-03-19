@@ -13,6 +13,7 @@
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.
 - Updated the package README and focused examples to prefer the stable top-level entrypoints over the broad compatibility import.
 - Updated the remaining widget examples and tooling to import the stable `package:artisanal_widgets/widgets.dart` entrypoint instead of the broad compatibility surface.
+- Updated the flagship widget app examples to use the stable umbrella imports from `package:artisanal/app.dart` and `package:artisanal/widgets.dart`.
 
 ## 0.1.0+1
 - Documentation + assets

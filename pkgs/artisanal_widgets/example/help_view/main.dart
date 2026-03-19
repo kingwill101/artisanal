@@ -5,11 +5,11 @@
 //
 // Run with: dart run example/help_view/main.dart
 
+import 'package:artisanal/app.dart' as app;
 import 'package:artisanal/style.dart'
     show AdaptiveColor, BasicColor, Color, CompleteAdaptiveColor;
 import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal_widgets/app.dart' as app;
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as w;
 
 app.WidgetApp createHelpViewApp() => app.WidgetApp(
   HelpViewShowcase(),
