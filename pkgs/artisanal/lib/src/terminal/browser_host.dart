@@ -235,9 +235,13 @@ final class BrowserTerminalHostServer {
     String foreground = '#e6edf3',
     String cursor = '#58a6ff',
     String selectionBackground = '#334155',
+    String lightBackground = '#f8fafc',
+    String lightForeground = '#0f172a',
+    String lightCursor = '#2563eb',
+    String lightSelectionBackground = '#cbd5e1',
   }) {
     final cssColorScheme =
-        _prefersDarkColorScheme(background) ? 'dark' : 'light';
+        _prefersDarkColorScheme(background) ? 'dark light' : 'light dark';
     return '''
 <!doctype html>
 <html lang="en">
@@ -375,12 +379,27 @@ final class BrowserTerminalHostServer {
       let mouseAnyEnabled = false;
       let mouseSgrEnabled = false;
       let modifyOtherKeysMode = 0;
-      const defaultBackground = '$background';
-      const defaultForeground = '$foreground';
-      const defaultCursor = '$cursor';
-      let currentBackground = defaultBackground;
-      let currentForeground = defaultForeground;
-      let currentCursor = defaultCursor;
+      const darkTheme = {
+        background: '$background',
+        foreground: '$foreground',
+        cursor: '$cursor',
+        selectionBackground: '$selectionBackground'
+      };
+      const lightTheme = {
+        background: '$lightBackground',
+        foreground: '$lightForeground',
+        cursor: '$lightCursor',
+        selectionBackground: '$lightSelectionBackground'
+      };
+      const colorSchemeMedia =
+        typeof window.matchMedia === 'function'
+          ? window.matchMedia('(prefers-color-scheme: dark)')
+          : null;
+      let activeDefaultTheme = darkTheme;
+      let currentBackground = darkTheme.background;
+      let currentForeground = darkTheme.foreground;
+      let currentCursor = darkTheme.cursor;
+      let currentSelectionBackground = darkTheme.selectionBackground;
       const defaultPalette = {
         0: '#000000',
         1: '#cd0000',
@@ -486,7 +505,7 @@ final class BrowserTerminalHostServer {
           background: currentBackground,
           foreground: currentForeground,
           cursor: currentCursor,
-          selectionBackground: '$selectionBackground'
+          selectionBackground: currentSelectionBackground
         };
         document.body.style.background = currentBackground;
         document.body.style.color = currentForeground;
@@ -494,8 +513,61 @@ final class BrowserTerminalHostServer {
           prefersDarkBackground(currentBackground) ? 'dark' : 'light';
       }
 
+      function preferredTheme() {
+        return colorSchemeMedia && !colorSchemeMedia.matches
+          ? lightTheme
+          : darkTheme;
+      }
+
+      function sameTheme(left, right) {
+        return (
+          left.background === right.background &&
+          left.foreground === right.foreground &&
+          left.cursor === right.cursor &&
+          left.selectionBackground === right.selectionBackground
+        );
+      }
+
+      function usingDefaultTheme() {
+        return sameTheme(
+          {
+            background: currentBackground,
+            foreground: currentForeground,
+            cursor: currentCursor,
+            selectionBackground: currentSelectionBackground
+          },
+          activeDefaultTheme
+        );
+      }
+
+      function applyDefaultTheme(theme) {
+        activeDefaultTheme = theme;
+        currentBackground = theme.background;
+        currentForeground = theme.foreground;
+        currentCursor = theme.cursor;
+        currentSelectionBackground = theme.selectionBackground;
+        applyTerminalTheme();
+      }
+
       function currentColorSchemeReport() {
         return prefersDarkBackground(currentBackground) ? 1 : 2;
+      }
+
+      function publishColorSchemeReport() {
+        sendMessage({
+          type: 'input.text',
+          data: `\\x1b[?997;\${currentColorSchemeReport()}n`
+        });
+      }
+
+      function handlePreferredColorSchemeChange() {
+        const nextTheme = preferredTheme();
+        if (usingDefaultTheme()) {
+          applyDefaultTheme(nextTheme);
+          publishColorSchemeReport();
+          return;
+        }
+        activeDefaultTheme = nextTheme;
       }
 
       function modifyOtherKeysReport() {
@@ -923,19 +995,19 @@ final class BrowserTerminalHostServer {
 
         while (remaining.length > 0) {
           if (remaining.startsWith(resetForegroundSequence)) {
-            currentForeground = defaultForeground;
+            currentForeground = activeDefaultTheme.foreground;
             applyTerminalTheme();
             remaining = remaining.slice(resetForegroundSequence.length);
             continue;
           }
           if (remaining.startsWith(resetBackgroundSequence)) {
-            currentBackground = defaultBackground;
+            currentBackground = activeDefaultTheme.background;
             applyTerminalTheme();
             remaining = remaining.slice(resetBackgroundSequence.length);
             continue;
           }
           if (remaining.startsWith(resetCursorSequence)) {
-            currentCursor = defaultCursor;
+            currentCursor = activeDefaultTheme.cursor;
             applyTerminalTheme();
             remaining = remaining.slice(resetCursorSequence.length);
             continue;
@@ -1035,10 +1107,7 @@ final class BrowserTerminalHostServer {
             continue;
           }
           if (remaining.startsWith(requestColorScheme)) {
-            sendMessage({
-              type: 'input.text',
-              data: `\\x1b[?997;\${currentColorSchemeReport()}n`
-            });
+            publishColorSchemeReport();
             remaining = remaining.slice(requestColorScheme.length);
             continue;
           }
@@ -1287,11 +1356,21 @@ final class BrowserTerminalHostServer {
         resizeObserver.observe(terminalNode);
       }
 
+      if (colorSchemeMedia) {
+        if (typeof colorSchemeMedia.addEventListener === 'function') {
+          colorSchemeMedia.addEventListener('change', handlePreferredColorSchemeChange);
+        } else if (typeof colorSchemeMedia.addListener === 'function') {
+          colorSchemeMedia.addListener(handlePreferredColorSchemeChange);
+        }
+      }
+
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(() => {
           scheduleResize();
         }).catch(() => {});
       }
+
+      applyDefaultTheme(preferredTheme());
 
       ws.addEventListener('open', () => {
         statusNode.textContent = 'connected';

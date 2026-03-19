@@ -22,6 +22,7 @@
 - Added stable `package:artisanal/runtime.dart` and `package:artisanal/hosts.dart` entrypoints for the focused TEA runtime and host/backend surfaces.
 - Added stable `package:artisanal/app.dart`, `package:artisanal/editors.dart`, `package:artisanal/selection.dart`, and `package:artisanal/testing.dart` re-exports for the supported widget modules.
 - Added `blendColor()` to the public style blending helpers so callers can interpolate a single color pair without building a gradient first.
+- Added adaptive light-theme defaults to the built-in browser host page and made it emit live color-scheme reports when the browser theme changes while the hosted session is still using the page defaults.
 
 ### Changed
 

@@ -53,6 +53,12 @@ void main() {
       expect(html, contains(r"const oscBell = '\x07';"));
       expect(html, contains(r"const requestPrivateModePrefix = '\x1b[?';"));
       expect(html, contains(r"const requestModeSuffix = '$p';"));
+      expect(
+        html,
+        contains("window.matchMedia('(prefers-color-scheme: dark)')"),
+      );
+      expect(html, contains('const darkTheme = {'));
+      expect(html, contains('const lightTheme = {'));
       expect(html, contains(r"const enableMouseNormal = '\x1b[?1000h';"));
       expect(html, contains(r"const disableMouseNormal = '\x1b[?1000l';"));
       expect(html, contains(r"const enableMouseButton = '\x1b[?1002h';"));
@@ -92,7 +98,13 @@ void main() {
       expect(html, contains('function prefersDarkBackground(color)'));
       expect(html, contains('function normalizeOscColor(value)'));
       expect(html, contains('function applyTerminalTheme()'));
+      expect(html, contains('function preferredTheme()'));
+      expect(html, contains('function sameTheme(left, right)'));
+      expect(html, contains('function usingDefaultTheme()'));
+      expect(html, contains('function applyDefaultTheme(theme)'));
       expect(html, contains('function currentColorSchemeReport()'));
+      expect(html, contains('function publishColorSchemeReport()'));
+      expect(html, contains('function handlePreferredColorSchemeChange()'));
       expect(html, contains('function oscColorReply(index, color)'));
       expect(html, contains('function oscTitleInfo(data)'));
       expect(html, contains('function oscColorInfo(data, prefix)'));
@@ -114,16 +126,23 @@ void main() {
       expect(html, contains("currentPalette.set(palette.index, color);"));
       expect(html, contains("currentPalette.clear();"));
       expect(html, contains('setBrowserTitle(title.title);'));
-      expect(html, contains('currentForeground = defaultForeground;'));
-      expect(html, contains('currentBackground = defaultBackground;'));
-      expect(html, contains('currentCursor = defaultCursor;'));
+      expect(html, contains('currentForeground = activeDefaultTheme.foreground;'));
+      expect(html, contains('currentBackground = activeDefaultTheme.background;'));
+      expect(html, contains('currentCursor = activeDefaultTheme.cursor;'));
       expect(html, contains('currentForeground = color;'));
       expect(html, contains('currentBackground = color;'));
       expect(html, contains('currentCursor = color;'));
-      expect(html, contains(r"data: `\x1b[?997;${currentColorSchemeReport()}n`"));
+      expect(
+        html,
+        contains(r"data: `\x1b[?997;${currentColorSchemeReport()}n`"),
+      );
       expect(html, contains('const reply = oscColorReply(10, currentForeground);'));
       expect(html, contains('const reply = oscColorReply(11, currentBackground);'));
       expect(html, contains('const reply = oscColorReply(12, currentCursor);'));
+      expect(html, contains('currentSelectionBackground = theme.selectionBackground;'));
+      expect(html, contains('currentForeground = activeDefaultTheme.foreground;'));
+      expect(html, contains('currentBackground = activeDefaultTheme.background;'));
+      expect(html, contains('currentCursor = activeDefaultTheme.cursor;'));
       expect(html, contains('document.documentElement.style.colorScheme ='));
       expect(html, contains('case 1004:'));
       expect(html, contains('case 1000:'));
@@ -154,18 +173,33 @@ void main() {
       expect(html, contains("window.addEventListener('focus'"));
       expect(html, contains("window.addEventListener('blur'"));
       expect(html, contains("window.addEventListener('paste'"));
+      expect(html, contains('colorSchemeMedia.addEventListener(\'change\', handlePreferredColorSchemeChange);'));
+      expect(html, contains('colorSchemeMedia.addListener(handlePreferredColorSchemeChange);'));
+      expect(html, contains('applyDefaultTheme(preferredTheme());'));
       expect(html, contains('focusReportingEnabled = true;'));
       expect(html, contains('bracketedPasteEnabled = true;'));
     });
 
-    test('defaultPageHtml derives a light color scheme from a light background', () {
+    test('defaultPageHtml advertises support for both color schemes', () {
       final html = BrowserTerminalHostServer.defaultPageHtml(
         title: 'Light Browser Test',
         webSocketPath: '/ws',
         background: '#f8fafc',
       );
 
-      expect(html, contains(":root { color-scheme: light; }"));
+      expect(html, contains(":root { color-scheme: light dark; }"));
+    });
+
+    test('defaultPageHtml exposes a light fallback theme for browser hosts', () {
+      final html = BrowserTerminalHostServer.defaultPageHtml(
+        title: 'Adaptive Browser Test',
+        webSocketPath: '/ws',
+      );
+
+      expect(html, contains("background: '#f8fafc'"));
+      expect(html, contains("foreground: '#0f172a'"));
+      expect(html, contains("cursor: '#2563eb'"));
+      expect(html, contains("selectionBackground: '#cbd5e1'"));
     });
 
     test('bind serves the page and a 404 for unknown routes', () async {

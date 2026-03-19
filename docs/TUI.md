@@ -436,8 +436,10 @@ those terminal modes. It also tracks mouse mode enables for 1000/1002/1003/1006
 so mode report queries can reflect hosted mouse state, mirrors OSC 0/2 title updates into the browser
 tab title and the page toolbar heading, applies OSC 10/11/12 color changes
 plus OSC 110/111/112 resets to the hosted terminal theme, answers later
-color-scheme / OSC color queries from that current hosted theme state, and
-supports `OSC 4` palette queries plus palette set/reset tracking.
+color-scheme / OSC color queries from that current hosted theme state, tracks
+browser `prefers-color-scheme` changes while the hosted session is still using
+the page defaults, and supports `OSC 4` palette queries plus palette
+set/reset tracking.
 
 ### Convenience Functions
 
