@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:artisanal/hosts.dart' as hosts;
 import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/terminal.dart' show Ansi;
 import 'package:artisanal/widgets.dart' as w;
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
@@ -54,6 +56,58 @@ Future<String> _readSocketUntil(
   subscription = socket.listen(
     (chunk) {
       buffer.write(utf8.decode(chunk, allowMalformed: true));
+      if (predicate(buffer.toString())) {
+        finish();
+      }
+    },
+    onError: finish,
+    onDone: () => finish(),
+    cancelOnError: true,
+  );
+
+  return completer.future;
+}
+
+Future<String> _readWebSocketOutputUntil(
+  WebSocket socket,
+  bool Function(String output) predicate, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  final buffer = StringBuffer();
+  final completer = Completer<String>();
+  late final StreamSubscription<dynamic> subscription;
+  Timer? timer;
+
+  void finish([Object? error]) {
+    timer?.cancel();
+    subscription.cancel();
+    if (error != null) {
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+      return;
+    }
+    if (!completer.isCompleted) {
+      completer.complete(buffer.toString());
+    }
+  }
+
+  timer = Timer(timeout, () {
+    finish(
+      TimeoutException(
+        'Timed out waiting for websocket output',
+        timeout,
+      ),
+    );
+  });
+
+  subscription = socket.listen(
+    (event) {
+      final message = hosts.TerminalBridgeMessage.decodeJson(event as String);
+      if (message.type != hosts.TerminalBridgeMessageType.output) {
+        return;
+      }
+      buffer.write(message.data ?? '');
       if (predicate(buffer.toString())) {
         finish();
       }
@@ -283,6 +337,44 @@ void main() {
       },
     );
 
+    test(
+      'serveWidgetAppInBrowser requests image capability reports by default',
+      () async {
+        final server = await w.serveWidgetAppInBrowser(
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.WidgetApp(
+            w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        );
+
+        addTearDown(server.close);
+
+        final socket = await WebSocket.connect(server.webSocketUri.toString());
+        addTearDown(socket.close);
+
+        final output = await _readWebSocketOutputUntil(
+          socket,
+          (output) =>
+              output.contains(Ansi.requestPrimaryDeviceAttributes) &&
+              output.contains(Ansi.requestTerminalVersion),
+        );
+
+        expect(output, contains(Ansi.requestPrimaryDeviceAttributes));
+        expect(output, contains(Ansi.requestTerminalVersion));
+      },
+    );
+
     test('serveWatchedArtisanalAppInBrowser watches files and serves the page', () async {
       final tempDir = await Directory.systemTemp.createTemp('watched-browser-app-');
       final host = await w.serveWatchedArtisanalAppInBrowser(
@@ -382,6 +474,47 @@ void main() {
         expect(output, isNot(contains('\x1b_G')));
         expect(output, isNot(contains('\x1b]1337;File=')));
         expect(output, isNot(contains('\x1bPq')));
+      },
+    );
+
+    test(
+      'serveArtisanalAppOnSocket portable image mode skips session capability probes',
+      () async {
+        final server = await w.serveArtisanalAppOnSocket(
+          port: 0,
+          imageAutoMode: w.ImageAutoMode.portableFallback,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.ArtisanalApp(
+            home: w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        );
+
+        addTearDown(server.close);
+
+        final socket = await Socket.connect(
+          server.server.address.address,
+          server.server.port,
+        );
+        addTearDown(socket.close);
+
+        final output = await _readSocketUntil(
+          socket,
+          (output) => output.contains('▀'),
+        );
+
+        expect(output, contains('▀'));
+        expect(output, isNot(contains(Ansi.requestPrimaryDeviceAttributes)));
+        expect(output, isNot(contains(Ansi.requestTerminalVersion)));
       },
     );
 
