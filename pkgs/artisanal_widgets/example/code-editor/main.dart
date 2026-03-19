@@ -1,7 +1,7 @@
+import 'package:artisanal/app.dart' as app;
+import 'package:artisanal/editors.dart' as editors;
 import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal_widgets/app.dart' as app;
-import 'package:artisanal_widgets/editors.dart' as editors;
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as w;
 
 Future<void> main() async {
   await app.runArtisanalApp(
