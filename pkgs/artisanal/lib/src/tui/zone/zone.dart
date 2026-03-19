@@ -21,8 +21,11 @@
 ///   // Initialize the global zone manager
 ///   initGlobalZone();
 ///
-///   // Run your program with mouse enabled
-///   runProgram(MyModel(), options: ProgramOptions(mouse: true));
+///   // Run your program with passive hover + mouse enabled.
+///   runProgram(
+///     MyModel(),
+///     options: ProgramOptions(mouseMode: MouseMode.allMotion),
+///   );
 /// }
 ///
 /// class MyModel extends Model {
