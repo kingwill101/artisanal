@@ -17,6 +17,13 @@ void main() {
       expect(html, contains('/custom-ws'));
       expect(html, contains('convertEol: true'));
       expect(html, contains('@xterm/xterm'));
+      expect(html, contains('--page-background: #101318;'));
+      expect(html, contains('--page-foreground: #e6edf3;'));
+      expect(html, contains('@media (prefers-color-scheme: light) {'));
+      expect(html, contains('--page-background: #f8fafc;'));
+      expect(html, contains('--page-foreground: #0f172a;'));
+      expect(html, contains('background: var(--page-background);'));
+      expect(html, contains('color: var(--page-foreground);'));
       expect(html, contains('const toolbarNode = document.querySelector(\'.toolbar\');'));
       expect(html, contains('stripAndReplyTerminalQueries'));
       expect(html, contains('xterm.js browser host'));
@@ -206,7 +213,7 @@ void main() {
         background: '#f8fafc',
       );
 
-      expect(html, contains(":root { color-scheme: light dark; }"));
+      expect(html, contains('color-scheme: light dark;'));
     });
 
     test('defaultPageHtml exposes a light fallback theme for browser hosts', () {

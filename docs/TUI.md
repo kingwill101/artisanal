@@ -442,7 +442,9 @@ the page defaults, and supports `OSC 4` palette queries plus palette
 set/reset tracking. The built-in toolbar and badges are tinted from the same
 hosted theme state so the page chrome stays in sync with light/dark changes,
 and the default ANSI palette follows those light/dark host defaults too until
-the session mutates it explicitly.
+the session mutates it explicitly. The initial page CSS also preloads matching
+light/dark values so browser-backed sessions do not flash the wrong theme
+before the host script applies the runtime state.
 
 ### Convenience Functions
 

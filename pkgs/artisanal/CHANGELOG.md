@@ -25,6 +25,7 @@
 - Added adaptive light-theme defaults to the built-in browser host page and made it emit live color-scheme reports when the browser theme changes while the hosted session is still using the page defaults.
 - Made the built-in browser host page retint its toolbar and status badges from the hosted terminal theme, so browser-backed sessions no longer keep dark page chrome after a light-theme switch.
 - Made the built-in browser host page switch its default ANSI palette with the hosted light/dark theme too, so `OSC 4` queries and palette resets stay consistent with browser-backed theme changes until the session overrides them.
+- Preloaded light/dark CSS variables for the built-in browser host page so browser-backed sessions paint with the correct page theme before the host script finishes applying runtime state.
 
 ### Changed
 

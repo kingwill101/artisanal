@@ -242,6 +242,26 @@ final class BrowserTerminalHostServer {
   }) {
     final cssColorScheme =
         _prefersDarkColorScheme(background) ? 'dark light' : 'light dark';
+    final darkToolbarStart =
+        _blendHexColor(background, foreground, 0.08) ?? '#161c25';
+    final darkToolbarEnd =
+        _blendHexColor(background, foreground, 0.04) ?? '#121720';
+    final darkToolbarBorder =
+        _blendHexColor(background, foreground, 0.18) ?? '#202938';
+    final darkBadgeBackground =
+        _blendHexColor(background, foreground, 0.12) ?? '#1f2937';
+    final darkBadgeForeground =
+        _blendHexColor(foreground, background, 0.22) ?? '#9fb3c8';
+    final lightToolbarStart =
+        _blendHexColor(lightBackground, lightForeground, 0.08) ?? '#e8edf3';
+    final lightToolbarEnd =
+        _blendHexColor(lightBackground, lightForeground, 0.04) ?? '#eef2f7';
+    final lightToolbarBorder =
+        _blendHexColor(lightBackground, lightForeground, 0.18) ?? '#cbd5e1';
+    final lightBadgeBackground =
+        _blendHexColor(lightBackground, lightForeground, 0.12) ?? '#e2e8f0';
+    final lightBadgeForeground =
+        _blendHexColor(lightForeground, lightBackground, 0.22) ?? '#334155';
     return '''
 <!doctype html>
 <html lang="en">
@@ -251,12 +271,32 @@ final class BrowserTerminalHostServer {
     <title>${_escapeHtml(title)}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
     <style>
-      :root { color-scheme: $cssColorScheme; }
+      :root {
+        color-scheme: $cssColorScheme;
+        --page-background: $background;
+        --page-foreground: $foreground;
+        --toolbar-start: $darkToolbarStart;
+        --toolbar-end: $darkToolbarEnd;
+        --toolbar-border: $darkToolbarBorder;
+        --badge-background: $darkBadgeBackground;
+        --badge-foreground: $darkBadgeForeground;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --page-background: $lightBackground;
+          --page-foreground: $lightForeground;
+          --toolbar-start: $lightToolbarStart;
+          --toolbar-end: $lightToolbarEnd;
+          --toolbar-border: $lightToolbarBorder;
+          --badge-background: $lightBadgeBackground;
+          --badge-foreground: $lightBadgeForeground;
+        }
+      }
       html, body {
         margin: 0;
         height: 100%;
-        background: $background;
-        color: $foreground;
+        background: var(--page-background);
+        color: var(--page-foreground);
         font-family: ui-sans-serif, system-ui, sans-serif;
       }
       body {
@@ -1592,4 +1632,27 @@ String? _normalizedHexColor(String color) {
   }
 
   return hex.toLowerCase();
+}
+
+String? _blendHexColor(String start, String end, double amount) {
+  final left = _normalizedHexColor(start);
+  final right = _normalizedHexColor(end);
+  if (left == null || right == null) {
+    return null;
+  }
+
+  int channel(String hex, int offset) =>
+      int.parse(hex.substring(offset, offset + 2), radix: 16);
+  int mix(int from, int to) => (from + ((to - from) * amount)).round().clamp(
+    0,
+    255,
+  );
+  final red = mix(channel(left, 0), channel(right, 0));
+  final green = mix(channel(left, 2), channel(right, 2));
+  final blue = mix(channel(left, 4), channel(right, 4));
+  final hex =
+      red.toRadixString(16).padLeft(2, '0') +
+      green.toRadixString(16).padLeft(2, '0') +
+      blue.toRadixString(16).padLeft(2, '0');
+  return '#$hex';
 }
