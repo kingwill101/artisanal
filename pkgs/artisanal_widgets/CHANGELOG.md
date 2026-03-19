@@ -19,6 +19,7 @@
 - Updated the flagship component and showcase tests to use the stable `package:artisanal/widgets.dart`, `package:artisanal/testing.dart`, and `package:artisanal/app.dart` entrypoints.
 - Updated the editor showcase and HelpView regression tests to use the stable `package:artisanal/testing.dart` and `package:artisanal/widgets.dart` entrypoints.
 - Updated the app-shell, reload, and core HelpView tests to use the stable `package:artisanal/app.dart`, `package:artisanal/widgets.dart`, and `package:artisanal/testing.dart` entrypoints.
+- Updated the status, progress, metric, and key-hint component tests to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
 
 ## 0.1.0+1
 - Documentation + assets
