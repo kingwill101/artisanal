@@ -17,6 +17,7 @@ void main() {
       expect(html, contains('/custom-ws'));
       expect(html, contains('convertEol: true'));
       expect(html, contains('@xterm/xterm'));
+      expect(html, contains('const toolbarNode = document.querySelector(\'.toolbar\');'));
       expect(html, contains('stripAndReplyTerminalQueries'));
       expect(html, contains('xterm.js browser host'));
       expect(html, contains(r"const requestCursorPosition = '\x1b[6n';"));
@@ -97,6 +98,8 @@ void main() {
       expect(html, contains('function setBrowserTitle(title)'));
       expect(html, contains('function prefersDarkBackground(color)'));
       expect(html, contains('function normalizeOscColor(value)'));
+      expect(html, contains('function hexChannels(color)'));
+      expect(html, contains('function mixHexColors(start, end, amount)'));
       expect(html, contains('function applyTerminalTheme()'));
       expect(html, contains('function preferredTheme()'));
       expect(html, contains('function sameTheme(left, right)'));
@@ -144,6 +147,13 @@ void main() {
       expect(html, contains('currentBackground = activeDefaultTheme.background;'));
       expect(html, contains('currentCursor = activeDefaultTheme.cursor;'));
       expect(html, contains('document.documentElement.style.colorScheme ='));
+      expect(html, contains("document.documentElement.style.setProperty("));
+      expect(html, contains("'--toolbar-start'"));
+      expect(html, contains("'--toolbar-end'"));
+      expect(html, contains("'--toolbar-border'"));
+      expect(html, contains("'--badge-background'"));
+      expect(html, contains("'--badge-foreground'"));
+      expect(html, contains('toolbarNode.style.color = currentForeground;'));
       expect(html, contains('case 1004:'));
       expect(html, contains('case 1000:'));
       expect(html, contains('case 1002:'));

@@ -268,15 +268,19 @@ final class BrowserTerminalHostServer {
         gap: 16px;
         align-items: center;
         padding: 10px 14px;
-        border-bottom: 1px solid #202938;
-        background: linear-gradient(180deg, #161c25, #121720);
+        border-bottom: 1px solid var(--toolbar-border, #202938);
+        background: linear-gradient(
+          180deg,
+          var(--toolbar-start, #161c25),
+          var(--toolbar-end, #121720)
+        );
       }
       .badge {
         padding: 4px 8px;
         border-radius: 999px;
         font-size: 12px;
-        background: #1f2937;
-        color: #9fb3c8;
+        background: var(--badge-background, #1f2937);
+        color: var(--badge-foreground, #9fb3c8);
       }
       #terminal {
         height: 100%;
@@ -298,6 +302,7 @@ final class BrowserTerminalHostServer {
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
     <script>
       const terminalNode = document.getElementById('terminal');
+      const toolbarNode = document.querySelector('.toolbar');
       const titleNode = document.getElementById('title');
       const statusNode = document.getElementById('status');
       const endpointNode = document.getElementById('endpoint');
@@ -499,6 +504,37 @@ final class BrowserTerminalHostServer {
         return null;
       }
 
+      function hexChannels(color) {
+        const normalized = normalizeOscColor(color);
+        if (normalized === null) {
+          return null;
+        }
+        return {
+          red: Number.parseInt(normalized.slice(1, 3), 16),
+          green: Number.parseInt(normalized.slice(3, 5), 16),
+          blue: Number.parseInt(normalized.slice(5, 7), 16)
+        };
+      }
+
+      function mixHexColors(start, end, amount) {
+        const left = hexChannels(start);
+        const right = hexChannels(end);
+        if (left === null || right === null) {
+          return start;
+        }
+        const ratio = Math.max(0, Math.min(1, amount));
+        const mixChannel = (from, to) =>
+          Math.round(from + ((to - from) * ratio))
+            .toString(16)
+            .padStart(2, '0');
+        return (
+          '#' +
+          mixChannel(left.red, right.red) +
+          mixChannel(left.green, right.green) +
+          mixChannel(left.blue, right.blue)
+        );
+      }
+
       function applyTerminalTheme() {
         term.options.theme = {
           ...(term.options.theme || {}),
@@ -511,6 +547,29 @@ final class BrowserTerminalHostServer {
         document.body.style.color = currentForeground;
         document.documentElement.style.colorScheme =
           prefersDarkBackground(currentBackground) ? 'dark' : 'light';
+        document.documentElement.style.setProperty(
+          '--toolbar-start',
+          mixHexColors(currentBackground, currentForeground, 0.08)
+        );
+        document.documentElement.style.setProperty(
+          '--toolbar-end',
+          mixHexColors(currentBackground, currentForeground, 0.04)
+        );
+        document.documentElement.style.setProperty(
+          '--toolbar-border',
+          mixHexColors(currentBackground, currentForeground, 0.18)
+        );
+        document.documentElement.style.setProperty(
+          '--badge-background',
+          mixHexColors(currentBackground, currentForeground, 0.12)
+        );
+        document.documentElement.style.setProperty(
+          '--badge-foreground',
+          mixHexColors(currentForeground, currentBackground, 0.22)
+        );
+        if (toolbarNode) {
+          toolbarNode.style.color = currentForeground;
+        }
       }
 
       function preferredTheme() {
