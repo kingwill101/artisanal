@@ -22,6 +22,28 @@ void main() {
       expect(html, contains('rgb:e6e6/eded/f3f3'));
       expect(html, contains('rgb:1010/1313/1818'));
       expect(html, contains('rgb:5858/a6a6/ffff'));
+      expect(html, contains(r"const requestCursorPosition = '\x1b[6n';"));
+      expect(
+        html,
+        contains(r"const requestExtendedCursorPosition = '\x1b[?6n';"),
+      );
+      expect(html, contains(r"const requestWindowSize = '\x1b[18t';"));
+      expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
+      expect(html, contains(r"const requestCellSize = '\x1b[16t';"));
+      expect(html, contains('function terminalPixelSize()'));
+      expect(html, contains('function terminalCellSize()'));
+      expect(html, contains('function cursorPositionReport(extended)'));
+      expect(html, contains("data: cursorPositionReport(false)"));
+      expect(html, contains("data: cursorPositionReport(true)"));
+      expect(html, contains(r"data: `\x1b[8;${term.rows};${term.cols}t`"));
+      expect(
+        html,
+        contains(r"data: `\x1b[4;${pixels.height};${pixels.width}t`"),
+      );
+      expect(
+        html,
+        contains(r"data: `\x1b[6;${cell.height};${cell.width}t`"),
+      );
       expect(html, contains("window.addEventListener('focus'"));
       expect(html, contains("window.addEventListener('blur'"));
       expect(html, contains("window.addEventListener('paste'"));

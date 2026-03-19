@@ -37,6 +37,7 @@
 ### Fixed
 
 - Taught the default browser host page to answer terminal color-scheme, foreground/background/cursor color, DA1, and XTVERSION queries and to forward browser focus changes and bracketed paste while those modes are enabled, so hosted browser sessions can participate in startup probing and runtime input delivery without leaking those control sequences into visible output.
+- Taught the default browser host page to answer cursor-position and window/cell size queries, including the extended cursor-position reply used by the emoji-width probe, so hosted browser sessions can participate in more of the runtime report and startup-probe surface without timing out on those requests.
 - Reset cursor color overrides during terminal restore/cleanup paths and hardened startup background probing so the first rendered frame can reflect the probed terminal background.
 - Hardened the pre-render theme probe so the first rendered frame can also follow an explicit terminal light/dark color-scheme reply when OSC 11 background color is unavailable.
 - Added end-to-end runtime coverage for foreground and cursor color requests through the `Program` message path.

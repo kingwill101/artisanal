@@ -321,6 +321,11 @@ final class BrowserTerminalHostServer {
       const requestColorScheme = '\\x1b[?996n';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestTerminalVersion = '\\x1b[>0q';
+      const requestCursorPosition = '\\x1b[6n';
+      const requestExtendedCursorPosition = '\\x1b[?6n';
+      const requestWindowSize = '\\x1b[18t';
+      const requestWindowPixelSize = '\\x1b[14t';
+      const requestCellSize = '\\x1b[16t';
       const requestForegroundColor = '\\x1b]10;?\\x07';
       const requestBackgroundColor = '\\x1b]11;?\\x07';
       const requestCursorColor = '\\x1b]12;?\\x07';
@@ -357,6 +362,38 @@ final class BrowserTerminalHostServer {
         });
       }
 
+      function terminalPixelSize() {
+        const rect = terminalNode.getBoundingClientRect();
+        return {
+          width: Math.max(0, Math.round(rect.width)),
+          height: Math.max(0, Math.round(rect.height))
+        };
+      }
+
+      function terminalCellSize() {
+        const pixels = terminalPixelSize();
+        return {
+          width: term.cols > 0 ? Math.max(0, Math.round(pixels.width / term.cols)) : 0,
+          height: term.rows > 0 ? Math.max(0, Math.round(pixels.height / term.rows)) : 0
+        };
+      }
+
+      function cursorPositionReport(extended) {
+        const cursorX =
+          term.buffer && term.buffer.active
+            ? term.buffer.active.cursorX
+            : 0;
+        const cursorY =
+          term.buffer && term.buffer.active
+            ? term.buffer.active.cursorY
+            : 0;
+        const row = cursorY + 1;
+        const col = cursorX + 1;
+        return extended
+          ? `\\x1b[?\${row};\${col}R`
+          : `\\x1b[\${row};\${col}R`;
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
@@ -384,6 +421,48 @@ final class BrowserTerminalHostServer {
               data: reportedTerminalVersion
             });
             remaining = remaining.slice(requestTerminalVersion.length);
+            continue;
+          }
+          if (remaining.startsWith(requestCursorPosition)) {
+            sendMessage({
+              type: 'input.text',
+              data: cursorPositionReport(false)
+            });
+            remaining = remaining.slice(requestCursorPosition.length);
+            continue;
+          }
+          if (remaining.startsWith(requestExtendedCursorPosition)) {
+            sendMessage({
+              type: 'input.text',
+              data: cursorPositionReport(true)
+            });
+            remaining = remaining.slice(requestExtendedCursorPosition.length);
+            continue;
+          }
+          if (remaining.startsWith(requestWindowSize)) {
+            sendMessage({
+              type: 'input.text',
+              data: `\\x1b[8;\${term.rows};\${term.cols}t`
+            });
+            remaining = remaining.slice(requestWindowSize.length);
+            continue;
+          }
+          if (remaining.startsWith(requestWindowPixelSize)) {
+            const pixels = terminalPixelSize();
+            sendMessage({
+              type: 'input.text',
+              data: `\\x1b[4;\${pixels.height};\${pixels.width}t`
+            });
+            remaining = remaining.slice(requestWindowPixelSize.length);
+            continue;
+          }
+          if (remaining.startsWith(requestCellSize)) {
+            const cell = terminalCellSize();
+            sendMessage({
+              type: 'input.text',
+              data: `\\x1b[6;\${cell.height};\${cell.width}t`
+            });
+            remaining = remaining.slice(requestCellSize.length);
             continue;
           }
           if (remaining.startsWith(requestForegroundColor)) {
