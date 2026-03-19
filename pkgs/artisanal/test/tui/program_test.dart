@@ -745,6 +745,48 @@ void main() {
       expect(received.whereType<InterruptMsg>(), isNotEmpty);
     });
 
+    test('backend host ignores duplicate resize events with the same size', () async {
+      final backend = EmbeddedTerminalBackend(output: (_) {});
+      final received = <Msg>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+          if (msg is InterruptMsg) {
+            return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final runFuture = runProgram(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        host: ProgramHost.backend(backend),
+      );
+
+      await _waitUntil(() => backend.isRawMode);
+      backend.notifySizeChanged((width: 120, height: 33));
+      await _waitUntil(
+        () => received.whereType<WindowSizeMsg>().any(
+          (msg) => msg.width == 120 && msg.height == 33,
+        ),
+      );
+
+      backend.notifySizeChanged((width: 120, height: 33));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(
+        received
+            .whereType<WindowSizeMsg>()
+            .where((msg) => msg.width == 120 && msg.height == 33),
+        hasLength(1),
+      );
+
+      backend.requestShutdown();
+      await runFuture;
+    });
+
     test('bridge host can drive a program end to end', () async {
       final bridge = TerminalBridge();
 
@@ -1259,6 +1301,33 @@ void main() {
 
       expect(terminal.output.any((s) => s.contains('XYZ')), isTrue);
       expect(terminal.operations.any((s) => s.startsWith('write: ')), isTrue);
+    });
+
+    test('RequestWindowSizeMsg still delivers the current size explicitly', () async {
+      var repeatedWindowSizeCount = 0;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is WindowSizeMsg && msg.width == 80 && msg.height == 24) {
+            repeatedWindowSizeCount++;
+            if (repeatedWindowSizeCount == 1) {
+              return Cmd.windowSize();
+            }
+            return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(repeatedWindowSizeCount, 2);
     });
 
     test('ShowCursorMsg and HideCursorMsg control cursor', () async {
@@ -2245,6 +2314,48 @@ void main() {
 
       expect(modelInFilter, isA<CounterModel>());
       expect((modelInFilter as CounterModel).count, 42);
+    });
+
+    test('filter also applies to explicit window size requests', () async {
+      final receivedMessages = <Msg>[];
+      var filteredWindowSizeCount = 0;
+
+      final model = _TrackingModel(
+        onUpdate: (msg) {
+          receivedMessages.add(msg);
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: ProgramOptions(
+          altScreen: false,
+          filter: (m, msg) {
+            if (msg is WindowSizeMsg) {
+              filteredWindowSizeCount++;
+              return null;
+            }
+            return msg;
+          },
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      program.send(const CustomMsg('test'));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      program.send(const RequestWindowSizeMsg());
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      program.quit();
+      await runFuture;
+
+      expect(filteredWindowSizeCount, 2);
+      expect(receivedMessages.whereType<WindowSizeMsg>(), isEmpty);
+      expect(receivedMessages.whereType<CustomMsg>(), hasLength(1));
     });
 
     test('filter can prevent quit', () async {

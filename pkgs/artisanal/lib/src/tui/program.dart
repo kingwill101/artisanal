@@ -981,6 +981,10 @@ class Program<M extends Model> {
   int? _lastRenderWidth;
   int? _lastRenderHeight;
 
+  /// Last window size dispatched to the model from passive resize sources.
+  int? _lastWindowSizeWidth;
+  int? _lastWindowSizeHeight;
+
   /// The renderer for output.
   TuiRenderer? _renderer;
 
@@ -1391,6 +1395,8 @@ class Program<M extends Model> {
 
     // Send initial window size (model receives this before init runs)
     final size = _terminal!.size;
+    _lastWindowSizeWidth = size.width;
+    _lastWindowSizeHeight = size.height;
     _processMessage(WindowSizeMsg(size.width, size.height));
 
     // Send initial color profile (model receives this before init runs)
@@ -1582,7 +1588,7 @@ class Program<M extends Model> {
     final resizeStream = terminal.resizeStream;
     if (resizeStream != null) {
       _backendResizeSubscription = resizeStream.listen((size) {
-        send(WindowSizeMsg(size.width, size.height));
+        _sendWindowSizeIfChanged(size.width, size.height);
       });
     }
 
@@ -1621,12 +1627,21 @@ class Program<M extends Model> {
       try {
         _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
           final size = _terminal!.size;
-          send(WindowSizeMsg(size.width, size.height));
+          _sendWindowSizeIfChanged(size.width, size.height);
         });
       } catch (_) {
         // SIGWINCH not available on this platform
       }
     }
+  }
+
+  void _sendWindowSizeIfChanged(int width, int height) {
+    if (_lastWindowSizeWidth == width && _lastWindowSizeHeight == height) {
+      return;
+    }
+    _lastWindowSizeWidth = width;
+    _lastWindowSizeHeight = height;
+    send(WindowSizeMsg(width, height));
   }
 
   /// Starts listening for terminal input.
@@ -2425,20 +2440,14 @@ class Program<M extends Model> {
 
       case RequestWindowSizeMsg():
         final size = _terminal?.size ?? (width: 80, height: 24);
+        _lastWindowSizeWidth = size.width;
+        _lastWindowSizeHeight = size.height;
         TuiTrace.event(
           TraceEventType.windowSize,
           tag: TraceTag.input,
           fields: <String, Object?>{'width': size.width, 'height': size.height},
         );
-        // Send the window size message to the model
-        final (newModel, cmd) = _model!.update(
-          WindowSizeMsg(size.width, size.height),
-        );
-        _model = newModel as M;
-        _render();
-        if (cmd != null) {
-          _executeCommand(cmd);
-        }
+        _processMessage(WindowSizeMsg(size.width, size.height));
         return true;
 
       case PrintLineMsg(:final text):
