@@ -4152,6 +4152,52 @@ void main() {
 
       final joinedOutput = terminal.output.join();
       expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
+      expect(joinedOutput, contains('light first frame'));
+      expect(joinedOutput, isNot(contains('dark first frame')));
+    });
+
+    test('color scheme probe updates the first rendered frame before paint', () async {
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestColorScheme) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b[?997;2n'.codeUnits);
+            });
+          }
+        },
+      );
+
+      var sawLightBackground = false;
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg case ColorSchemeMsg(dark: false)) {
+            sawLightBackground = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => sawLightBackground ? 'light first frame' : 'dark first frame',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestColorScheme));
       expect(joinedOutput, contains('light first frame'));
       expect(joinedOutput, isNot(contains('dark first frame')));
     });

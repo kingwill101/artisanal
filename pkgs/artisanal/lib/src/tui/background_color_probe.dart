@@ -6,10 +6,10 @@ import 'msg.dart';
 import '../uv/event.dart' as uvev;
 import 'startup_probe.dart';
 
-/// Best-effort probe for the terminal background color before the first frame.
+/// Best-effort probe for terminal theme state before the first frame.
 ///
 /// This avoids an initial adaptive-theme flash where widgets default to a dark
-/// palette until an OSC 11 response arrives later.
+/// palette until an OSC 11 or color-scheme response arrives later.
 final class BackgroundColorProbe implements StartupProbe {
   /// Creates a background-color probe.
   BackgroundColorProbe({
@@ -36,6 +36,7 @@ final class BackgroundColorProbe implements StartupProbe {
 
     final term = ctx.terminal;
     term.write(Ansi.requestBackgroundColor);
+    term.write(Ansi.requestColorScheme);
     await term.flush();
 
     try {
@@ -52,7 +53,7 @@ final class BackgroundColorProbe implements StartupProbe {
   bool handleMsg(Msg msg, StartupProbeContext ctx) {
     if (!_active || _done.isCompleted) return false;
 
-    if (msg is BackgroundColorMsg) {
+    if (msg is BackgroundColorMsg || msg is ColorSchemeMsg) {
       _done.complete();
       return false;
     }
