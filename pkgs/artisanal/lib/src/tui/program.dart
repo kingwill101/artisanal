@@ -1833,7 +1833,7 @@ class Program<M extends Model> {
         );
       }
       for (final msg in coalesced) {
-        send(msg);
+        _dispatchParsedInputMsg(msg);
       }
 
       if (_uvInputParser.hasPending) {
@@ -1861,7 +1861,7 @@ class Program<M extends Model> {
             );
           }
           for (final msg in coalesced) {
-            send(msg);
+            _dispatchParsedInputMsg(msg);
           }
         });
       }
@@ -1919,8 +1919,16 @@ class Program<M extends Model> {
 
     // Send each result as a message
     for (final msg in parsedMessages) {
-      send(msg);
+      _dispatchParsedInputMsg(msg);
     }
+  }
+
+  void _dispatchParsedInputMsg(Msg msg) {
+    if (msg case WindowSizeMsg(:final width, :final height)) {
+      _sendWindowSizeIfChanged(width, height);
+      return;
+    }
+    send(msg);
   }
 
   List<Msg> _coalesceInputMsgs(List<Msg> msgs) {

@@ -1888,6 +1888,38 @@ void main() {
       expect(received, const WindowSizeMsg(120, 33));
     });
 
+    test('deduplicates repeated window size messages from UV input reports', () async {
+      var count = 0;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowSizeMsg && msg.width == 120 && msg.height == 33) {
+              count++;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => const View(content: 'duplicate resize'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('duplicate resize'));
+      terminal.sendInput('\x1b[8;33;120t\x1b[8;33;120t'.codeUnits);
+      await runFuture;
+
+      expect(count, 1);
+    });
+
     test('delivers window size messages from UV in-band size reports', () async {
       WindowSizeMsg? received;
 
