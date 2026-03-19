@@ -1,4 +1,5 @@
 import 'package:artisanal/src/tui/msg.dart';
+import 'package:artisanal/src/uv/event.dart' as uvev;
 import 'package:artisanal/src/uv/tui_adapter.dart';
 import 'package:artisanal/terminal.dart';
 import 'package:test/test.dart';
@@ -30,6 +31,20 @@ void main() {
       final m = msgs.first as ColorPaletteMsg;
       expect(m.index, 42);
       expect(m.hex, '#112233');
+    });
+
+    test('emits FocusMsg for focus in and out events', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[I\x1b[O'.codeUnits);
+
+      expect(msgs, [const FocusMsg(true), const FocusMsg(false)]);
+    });
+
+    test('emits PasteMsg for bracketed paste payloads', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
+
+      expect(msgs, [const PasteMsg('hello\nworld')]);
     });
 
     test('maps UnknownEvent to KeyMsg via key table on timeout flush', () {
@@ -98,6 +113,85 @@ void main() {
       expect((msgs.first as KeyboardEnhancementsMsg).reportEventTypes, isTrue);
       expect(msgs.last, isA<KeyboardEnhancementsMsg>());
       expect((msgs.last as KeyboardEnhancementsMsg).reportEventTypes, isFalse);
+    });
+
+    test('emits MouseMsg press and release from SGR mouse sequences', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[<0;5;3M\x1b[<0;5;3m'.codeUnits);
+
+      expect(msgs, hasLength(2));
+      expect(
+        msgs.first,
+        const MouseMsg(
+          x: 4,
+          y: 2,
+          button: MouseButton.left,
+          action: MouseAction.press,
+        ),
+      );
+      expect(
+        msgs.last,
+        const MouseMsg(
+          x: 4,
+          y: 2,
+          button: MouseButton.left,
+          action: MouseAction.release,
+        ),
+      );
+    });
+
+    test('emits MouseMsg wheel from SGR mouse wheel sequence', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[<64;7;4M'.codeUnits);
+
+      expect(msgs, hasLength(1));
+      expect(
+        msgs.single,
+        const MouseMsg(
+          x: 6,
+          y: 3,
+          button: MouseButton.wheelUp,
+          action: MouseAction.wheel,
+        ),
+      );
+    });
+
+    test('emits MouseMsg motion from SGR mouse motion sequence', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[<32;9;6M'.codeUnits);
+
+      expect(msgs, hasLength(1));
+      expect(
+        msgs.single,
+        const MouseMsg(
+          x: 8,
+          y: 5,
+          button: MouseButton.left,
+          action: MouseAction.motion,
+        ),
+      );
+    });
+
+    test('emits WindowSizeMsg from CSI t window size reports', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[8;33;120t'.codeUnits);
+
+      expect(msgs, hasLength(1));
+      expect(msgs.single, const WindowSizeMsg(120, 33));
+    });
+
+    test('emits WindowSizeMsg from in-band CSI 48 size reports', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[48;33;120;660;2400t'.codeUnits);
+
+      expect(msgs, hasLength(2));
+      expect(msgs.first, const WindowSizeMsg(120, 33));
+      expect(msgs.last, isA<UvEventMsg>());
+      final uvMsg = msgs.last as UvEventMsg;
+      expect(uvMsg.event, isA<uvev.WindowPixelSizeEvent>());
+      final px = uvMsg.event as uvev.WindowPixelSizeEvent;
+      expect(px.width, 2400);
+      expect(px.height, 660);
     });
   });
 }

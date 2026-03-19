@@ -1636,6 +1636,101 @@ void main() {
       );
     });
 
+    test('delivers window size messages from UV input reports', () async {
+      WindowSizeMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowSizeMsg && msg.width == 120 && msg.height == 33) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'resize'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('resize'));
+      terminal.sendInput('\x1b[8;33;120t'.codeUnits);
+      await runFuture;
+
+      expect(received, const WindowSizeMsg(120, 33));
+    });
+
+    test('delivers window size messages from UV in-band size reports', () async {
+      WindowSizeMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowSizeMsg && msg.width == 120 && msg.height == 33) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'in-band resize'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('in-band resize'));
+      terminal.sendInput('\x1b[48;33;120;660;2400t'.codeUnits);
+      await runFuture;
+
+      expect(received, const WindowSizeMsg(120, 33));
+    });
+
+    test('delivers mouse motion messages end to end (UV parser)', () async {
+      MouseMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is MouseMsg && msg.action == MouseAction.motion) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'mouse motion'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('mouse motion'));
+      terminal.sendInput('\x1b[<32;9;6M'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const MouseMsg(
+          x: 8,
+          y: 5,
+          button: MouseButton.left,
+          action: MouseAction.motion,
+        ),
+      );
+    });
+
     test('cleans up view-driven focus, paste, and all-motion mouse on exit', () async {
       final program = Program(
         _CallbackModel(
