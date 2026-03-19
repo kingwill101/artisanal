@@ -88,6 +88,14 @@ final class TerminalCapabilities {
   /// Kitty Keyboard Protocol enhancement flags reported by the terminal.
   int keyboardEnhancementFlags = 0;
 
+  /// The terminal's reported ModifyOtherKeys mode, if known.
+  int? modifyOtherKeysMode;
+
+  /// The terminal's reported dark/light scheme preference, if known.
+  ///
+  /// `true` means dark mode, `false` means light mode.
+  bool? darkColorScheme;
+
   /// Whether the terminal supports Kitty Keyboard Protocol enhancements.
   bool get hasKeyboardEnhancements => keyboardEnhancementFlags != 0;
 
@@ -141,6 +149,11 @@ final class TerminalCapabilities {
         keyboardEnhancementFlags = event.flags;
         return true;
       }
+    } else if (event is ModifyOtherKeysEvent) {
+      if (modifyOtherKeysMode != event.mode) {
+        modifyOtherKeysMode = event.mode;
+        return true;
+      }
     } else if (event is PrimaryDeviceAttributesEvent) {
       final attrsChanged =
           primaryAttributes.length != event.attrs.length ||
@@ -192,6 +205,16 @@ final class TerminalCapabilities {
         terminalVersion = event.name;
         return true;
       }
+    } else if (event is DarkColorSchemeEvent) {
+      if (darkColorScheme != true) {
+        darkColorScheme = true;
+        return true;
+      }
+    } else if (event is LightColorSchemeEvent) {
+      if (darkColorScheme != false) {
+        darkColorScheme = false;
+        return true;
+      }
     }
     return false;
   }
@@ -204,6 +227,8 @@ final class TerminalCapabilities {
     buf.writeln('  hasSixel: $hasSixel,');
     buf.writeln('  hasITerm2: $hasITerm2,');
     buf.writeln('  hasKeyboardEnhancements: $hasKeyboardEnhancements,');
+    buf.writeln('  modifyOtherKeysMode: ${modifyOtherKeysMode ?? "null"},');
+    buf.writeln('  darkColorScheme: ${darkColorScheme ?? "null"},');
     buf.writeln('  primaryAttributes: $primaryAttributes,');
     buf.writeln('  secondaryAttributes: $secondaryAttributes,');
     buf.writeln('  tertiaryAttributes: ${tertiaryAttributes ?? "null"},');

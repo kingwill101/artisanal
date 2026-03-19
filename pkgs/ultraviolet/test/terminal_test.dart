@@ -220,6 +220,23 @@ void main() {
 
       final report = await reportFuture;
       expect(report.mode, 1);
+      expect(terminal.capabilities.modifyOtherKeysMode, 1);
+
+      await terminal.stop();
+    });
+
+    test('receives color scheme reports and updates capabilities', () async {
+      await terminal.start(handleSignals: false);
+      final darkFuture = terminal.events.where((e) => e is DarkColorSchemeEvent).first;
+      final lightFuture = terminal.events.where((e) => e is LightColorSchemeEvent).first;
+
+      inputController.add('\x1b[?997;1n'.codeUnits);
+      await darkFuture;
+      expect(terminal.capabilities.darkColorScheme, isTrue);
+
+      inputController.add('\x1b[?997;2n'.codeUnits);
+      await lightFuture;
+      expect(terminal.capabilities.darkColorScheme, isFalse);
 
       await terminal.stop();
     });

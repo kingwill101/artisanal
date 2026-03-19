@@ -146,6 +146,22 @@ void main() {
       );
     });
 
+    test('tracks modifyOtherKeys mode and color scheme reports', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      expect(caps.updateFromEvent(const ModifyOtherKeysEvent(2)), isTrue);
+      expect(caps.modifyOtherKeysMode, 2);
+      expect(caps.updateFromEvent(const ModifyOtherKeysEvent(2)), isFalse);
+
+      expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isTrue);
+      expect(caps.darkColorScheme, isTrue);
+      expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isFalse);
+
+      expect(caps.updateFromEvent(const LightColorSchemeEvent()), isTrue);
+      expect(caps.darkColorScheme, isFalse);
+      expect(caps.updateFromEvent(const LightColorSchemeEvent()), isFalse);
+    });
+
     test('keyboard enhancement flags can clear back to zero', () {
       final caps = TerminalCapabilities(env: const []);
 
@@ -204,6 +220,18 @@ void main() {
       );
 
       expect(
+        caps.updateFromEvent(const ModifyOtherKeysEvent(2)),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const ModifyOtherKeysEvent(2)),
+        isFalse,
+      );
+
+      expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isTrue);
+      expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isFalse);
+
+      expect(
         caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
         isTrue,
       );
@@ -229,6 +257,9 @@ void main() {
         caps.updateFromEvent(const TerminalVersionEvent('Ultraviolet')),
         isFalse,
       );
+
+      expect(caps.updateFromEvent(const LightColorSchemeEvent()), isTrue);
+      expect(caps.updateFromEvent(const LightColorSchemeEvent()), isFalse);
     });
   });
 }
