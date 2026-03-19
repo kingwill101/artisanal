@@ -42,9 +42,13 @@ class _TooltipState extends State<Tooltip> {
   bool _hovered = false;
   OverlayEntry? _floatingEntry;
   bool _floatingSyncScheduled = false;
+  ({int x, int y})? _lastPointer;
 
-  void _setHovered(bool value) {
+  void _setHovered(bool value, [MouseMsg? event]) {
     if (_hovered == value) return;
+    if (event != null) {
+      _lastPointer = (x: event.x, y: event.y);
+    }
     setState(() {
       _hovered = value;
     });
@@ -75,6 +79,14 @@ class _TooltipState extends State<Tooltip> {
       width: anchor.size.width.toInt(),
       height: anchor.size.height.toInt(),
     );
+  }
+
+  ({int x, int y, int width, int height})? _anchorGeometry() {
+    final trigger = _triggerGeometry();
+    if (trigger != null) return trigger;
+    final pointer = _lastPointer;
+    if (pointer == null) return null;
+    return (x: pointer.x, y: pointer.y, width: 0, height: 0);
   }
 
   String _viewToString(Object view) {
@@ -132,7 +144,7 @@ class _TooltipState extends State<Tooltip> {
 
     final entry = OverlayEntry(
       builder: (overlayContext) {
-        final trigger = _triggerGeometry();
+        final trigger = _anchorGeometry();
         if (trigger == null) return SizedBox.shrink();
         final bubble = _buildBubble(context);
         final viewport = MediaQuery.of(overlayContext).size;
@@ -178,7 +190,7 @@ class _TooltipState extends State<Tooltip> {
       _removeFloatingEntry();
       return;
     }
-    if (_triggerGeometry() == null) {
+    if (_anchorGeometry() == null) {
       _scheduleFloatingSync();
       return;
     }
@@ -217,12 +229,12 @@ class _TooltipState extends State<Tooltip> {
 
     final target = widget.enabled
         ? MouseRegion(
-            onEnter: (_) {
-              _setHovered(true);
+            onEnter: (event) {
+              _setHovered(true, event);
               return null;
             },
-            onExit: (_) {
-              _setHovered(false);
+            onExit: (event) {
+              _setHovered(false, event);
               return null;
             },
             child: widget.child,
