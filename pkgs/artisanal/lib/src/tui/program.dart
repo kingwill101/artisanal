@@ -2795,7 +2795,7 @@ class Program<M extends Model> {
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
-    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _applyWindowTitle(_restoreWindowTitle());
     _releasedWindowTitle = null;
 
     _restoreDesiredTerminalModes();
@@ -2931,6 +2931,9 @@ class Program<M extends Model> {
     _applyDesiredMouseMode();
     _applyDesiredKeyboardEnhancements();
   }
+
+  String? _restoreWindowTitle() =>
+      _releasedWindowTitle ?? _lastView?.windowTitle ?? _options.startupTitle;
 
   void _applyWindowTitle(String? title) {
     if (title == null) return;
@@ -3115,7 +3118,7 @@ class Program<M extends Model> {
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
-    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _applyWindowTitle(_restoreWindowTitle());
     _releasedWindowTitle = null;
 
     _restoreDesiredTerminalModes();

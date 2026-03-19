@@ -4137,6 +4137,50 @@ Future<void> main() async {
     });
 
     test(
+      'ExecProcess restore reapplies a view-scoped window title without falling back to startup title',
+      () async {
+        const view = View(content: 'plain view', windowTitle: 'Scoped Title');
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec(
+                'echo',
+                ['restored'],
+                onComplete: (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => view,
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            startupTitle: 'Base Title',
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
+        program.send(const CustomMsg('exec'));
+        await runFuture;
+
+        expect(
+          terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+          0,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'setTitle(Scoped Title)').length,
+          2,
+        );
+      },
+    );
+
+    test(
       'ExecProcess restore emits the current terminal size when it changes while released',
       () async {
         final tempDir = await io.Directory.systemTemp.createTemp(
@@ -4348,6 +4392,50 @@ Future<void> main() async {
         1,
       );
     });
+
+    test(
+      'SuspendMsg restore reapplies a view-scoped window title without falling back to startup title',
+      () async {
+        const view = View(content: 'plain view', windowTitle: 'Scoped Title');
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => view,
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            startupTitle: 'Base Title',
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        expect(
+          terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+          0,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'setTitle(Scoped Title)').length,
+          2,
+        );
+      },
+    );
 
     test('SuspendMsg restore reapplies a view-scoped alt-screen override', () async {
       const view = View(content: 'dynamic alt during suspend', altScreen: true);
