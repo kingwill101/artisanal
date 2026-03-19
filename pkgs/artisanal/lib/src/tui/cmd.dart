@@ -381,6 +381,13 @@ class Cmd {
     return writeRaw('\x1b]52;$sel;?\x07');
   }
 
+  /// Request the terminal to report primary device attributes (DA1).
+  ///
+  /// Terminals respond with `CSI ? <attrs> c`, which UV decoding maps to
+  /// [PrimaryDeviceAttributesMsg].
+  static Cmd requestPrimaryDeviceAttributesReport() =>
+      writeRaw(term_ansi.Ansi.requestPrimaryDeviceAttributes);
+
   /// Request the terminal to report its character cell size (rows/cols).
   ///
   /// Terminals that support xterm window ops respond to `CSI 18 t` with

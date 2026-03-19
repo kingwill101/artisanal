@@ -1338,6 +1338,7 @@ void main() {
     test('window and cell size request commands write raw xterm queries', () async {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestPrimaryDeviceAttributesReport(),
           Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
@@ -1354,6 +1355,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, contains('\x1b[?c'));
       expect(output, contains('\x1b[6n'));
       expect(output, contains('\x1b[14t'));
       expect(output, contains('\x1b[16t'));
@@ -1385,6 +1387,7 @@ void main() {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestPrimaryDeviceAttributesReport(),
           Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
@@ -1402,6 +1405,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[?c')));
       expect(output, isNot(contains('\x1b[6n')));
       expect(output, isNot(contains('\x1b[14t')));
       expect(output, isNot(contains('\x1b[16t')));
