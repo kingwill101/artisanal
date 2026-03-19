@@ -97,6 +97,7 @@
 - Fixed `SuspendMsg` terminal release so fullscreen suspend/restore no longer double-exits alt screen, and added direct suspend lifecycle coverage for metadata, fullscreen state, and startup-title restore.
 - Fixed `SuspendMsg` restore so immediate resume commands such as `Cmd.quit()` are drained before the forced repaint, avoiding stale post-resume frames when the model exits during resume handling.
 - Fixed `ExecProcess` restore so immediate completion messages such as `QuitMsg` are drained before the forced repaint, avoiding stale post-exec frames when the model exits during completion handling.
+- Fixed restore-time backend shutdown races so immediate embedded host shutdown requests can cancel suspend repaints before a stale frame is drawn.
 
 ## 0.2.0+1
 

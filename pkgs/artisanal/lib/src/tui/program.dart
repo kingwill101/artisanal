@@ -2834,16 +2834,17 @@ class Program<M extends Model> {
 
   void _schedulePostRestoreRender({bool skipSizeDispatch = false}) {
     unawaited(
-      Future<void>.microtask(() {
+      Future<void>.delayed(Duration.zero, () {
         if (!_running) return;
         _drainMessageQueue();
+        if (_backendShutdownRequested) return;
         _renderAfterTerminalRestore(skipSizeDispatch: skipSizeDispatch);
       }),
     );
   }
 
   bool _dispatchRestoreSizeIfChanged() {
-    if (!_running) return false;
+    if (!_running || _backendShutdownRequested) return false;
 
     final size = _terminal?.size;
     if (size != null &&
@@ -2857,7 +2858,7 @@ class Program<M extends Model> {
   }
 
   void _renderAfterTerminalRestore({bool skipSizeDispatch = false}) {
-    if (!_running) return;
+    if (!_running || _backendShutdownRequested) return;
 
     // Force metadata reapplication even when the model returns the same cached
     // view object after restoring the terminal.

@@ -4902,6 +4902,47 @@ Future<void> main() async {
       expect(joinedOutput, contains('render #1'));
       expect(joinedOutput, isNot(contains('render #2')));
     });
+
+    test(
+      'SuspendMsg resume-triggered backend shutdown skips forced repaint',
+      () async {
+        final writes = <String>[];
+        final backend = EmbeddedTerminalBackend(output: writes.add);
+        final terminal = BackendTerminal(backend);
+        var renderCount = 0;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              backend.requestShutdown();
+            }
+            return null;
+          },
+          onView: () {
+            renderCount += 1;
+            return 'render #$renderCount';
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => writes.join().contains('render #1'));
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        final joinedOutput = writes.join();
+        expect(joinedOutput, contains('render #1'));
+        expect(joinedOutput, isNot(contains('render #2')));
+      },
+    );
   });
 
   group('View metadata', () {

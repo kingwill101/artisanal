@@ -742,7 +742,7 @@ class EmbeddedTerminalBackend implements TerminalBackend {
   final StreamController<TerminalDimensions> _resizeController =
       StreamController<TerminalDimensions>.broadcast();
   final StreamController<void> _shutdownController =
-      StreamController<void>.broadcast();
+      StreamController<void>.broadcast(sync: true);
 
   StreamSubscription<List<int>>? _inputStreamSubscription;
   StreamSubscription<TerminalDimensions>? _resizeStreamSubscription;
