@@ -22,6 +22,13 @@ export '../uv/terminal_renderer.dart' show RenderMetrics;
 ///
 /// {@macro artisanal_tui_rendering_overview}
 abstract class TuiRenderer {
+  /// Initializes terminal state needed before the first render.
+  ///
+  /// Most renderers can keep the default no-op implementation, but fullscreen
+  /// renderers should eagerly enter their terminal modes here so init-triggered
+  /// quits still leave the terminal in a consistent state.
+  void initialize() {}
+
   /// Renders the view to the terminal.
   ///
   /// [view] is the string representation of the current UI state,
@@ -126,6 +133,7 @@ class FullScreenTuiRenderer implements TuiRenderer {
   /// Initializes the renderer.
   ///
   /// Sets up the terminal for fullscreen rendering.
+  @override
   void initialize() {
     if (_initialized) return;
 
@@ -444,6 +452,9 @@ class InlineTuiRenderer implements TuiRenderer {
   uv_term.RenderMetrics? get metrics => _metrics;
 
   @override
+  void initialize() {}
+
+  @override
   void render(Object view) {
     _metrics.beginFrame();
 
@@ -606,6 +617,11 @@ class BufferedTuiRenderer implements TuiRenderer {
 
   /// Whether we have pending output.
   bool _dirty = false;
+
+  @override
+  void initialize() {
+    inner.initialize();
+  }
 
   @override
   uv_term.RenderMetrics? get metrics => inner.metrics;
@@ -779,6 +795,9 @@ class UltravioletTuiRenderer implements TuiRenderer {
     _initialized = true;
   }
 
+  @override
+  void initialize() => _initialize();
+
   void _ensureSize() {
     final (width: w, height: h) = terminal.size;
     final scr = _screen;
@@ -945,6 +964,9 @@ class NullTuiRenderer implements TuiRenderer {
   final List<Object> views = [];
 
   @override
+  void initialize() {}
+
+  @override
   uv_term.RenderMetrics? get metrics => null;
 
   @override
@@ -976,6 +998,9 @@ class SimpleTuiRenderer implements TuiRenderer {
   /// The terminal to render to.
   final TuiTerminal terminal;
   final TuiRendererOptions _options;
+
+  @override
+  void initialize() {}
 
   @override
   uv_term.RenderMetrics? get metrics => null;
@@ -1039,6 +1064,9 @@ class StringSinkTuiRenderer implements TuiRenderer {
 
   /// The sink to write to.
   final StringSink sink;
+
+  @override
+  void initialize() {}
 
   @override
   uv_term.RenderMetrics? get metrics => null;

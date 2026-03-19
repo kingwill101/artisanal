@@ -982,6 +982,72 @@ void main() {
       expect(sawIncrementInOnSend, isTrue);
     });
 
+    test('immediate init messages land before the first rendered frame', () async {
+      var initialized = false;
+      final model = _CallbackModel(
+        onInit: () => Cmd.message(const IncrementMsg()),
+        onUpdate: (msg) {
+          if (msg is IncrementMsg) {
+            initialized = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => initialized
+            ? 'initialized first frame'
+            : 'uninitialized first frame',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletRenderer: false,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final allOutput = terminal.output.join();
+      expect(allOutput, contains('initialized first frame'));
+      expect(allOutput, isNot(contains('uninitialized first frame')));
+    });
+
+    test('slow init commands do not block the first rendered frame', () async {
+      var delayedQuitScheduled = false;
+      final model = _CallbackModel(
+        onInit: () => Cmd.delayed(const Duration(milliseconds: 40), () {
+          delayedQuitScheduled = true;
+          return const QuitMsg();
+        }),
+        onView: () => 'rendered before init completion',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletRenderer: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+
+      await _waitUntil(
+        () => terminal.output.join().contains('rendered before init completion'),
+      );
+      expect(delayedQuitScheduled, isFalse);
+      expect(program.isRunning, isTrue);
+
+      await runFuture;
+      expect(delayedQuitScheduled, isTrue);
+    });
+
     test('renders initial view', () async {
       final program = Program(
         const CounterModel(42),
@@ -1006,6 +1072,63 @@ void main() {
       final allOutput = terminal.output.join();
       expect(allOutput, contains('Count: 42'));
     });
+
+    test('init-triggered quit still renders the initialized first frame', () async {
+      final program = Program(
+        ImmediateQuitModel(),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletRenderer: false,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final allOutput = terminal.output.join();
+      expect(allOutput, contains('Quitting...'));
+    });
+
+    test(
+      'init-triggered quit initializes and restores fullscreen renderer state',
+      () async {
+        final program = Program(
+          ImmediateQuitModel(),
+          options: const ProgramOptions(
+            altScreen: true,
+            useUltravioletRenderer: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(terminal.operations, contains('enterAltScreen'));
+        expect(terminal.operations, contains('exitAltScreen'));
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
+
+    test(
+      'init-triggered quit initializes and restores ultraviolet fullscreen state',
+      () async {
+        final program = Program(
+          ImmediateQuitModel(),
+          options: const ProgramOptions(
+            altScreen: true,
+            useUltravioletRenderer: true,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(terminal.operations, contains('enterAltScreen'));
+        expect(terminal.operations, contains('exitAltScreen'));
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
 
     test('send() injects messages', () async {
       final program = Program(
@@ -1298,10 +1421,7 @@ void main() {
 
       await program.run();
 
-      final titleOutput = terminal.output.where(
-        (s) => s.contains('\x1b]0;My App\x07'),
-      );
-      expect(titleOutput, isNotEmpty);
+      expect(terminal.operations, contains('setTitle(My App)'));
       expect(windowSizeReceived, isTrue);
     });
 
@@ -3525,6 +3645,135 @@ Future<void> main() async {
       expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
     });
 
+    test('ExecProcess restore reapplies fullscreen terminal state only once', () async {
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => 'fullscreen restore',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const CustomMsg('exec'));
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'hideCursor').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'showCursor').length,
+        2,
+      );
+    });
+
+    test('ExecProcess restore reapplies explicit hide cursor override', () async {
+      var restored = false;
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.hideCursor(),
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const CustomMsg('restored'),
+            );
+          }
+          if (msg == const CustomMsg('restored')) {
+            restored = true;
+          }
+          return null;
+        },
+        onView: () => restored ? 'restored' : 'running',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('running'));
+      program.send(const CustomMsg('exec'));
+      await _waitUntil(() => restored);
+
+      expect(terminal.cursorHidden, isTrue);
+
+      program.quit();
+      await runFuture;
+    });
+
+    test('ExecProcess restore reapplies explicit show cursor override', () async {
+      var restored = false;
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.showCursor(),
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const CustomMsg('restored'),
+            );
+          }
+          if (msg == const CustomMsg('restored')) {
+            restored = true;
+          }
+          return null;
+        },
+        onView: () => restored ? 'restored' : 'running',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const CustomMsg('exec'));
+      await _waitUntil(() => restored);
+
+      expect(terminal.cursorHidden, isFalse);
+
+      program.quit();
+      await runFuture;
+    });
+
     test('ExecProcess restore reapplies startup title when no view override exists', () async {
       final model = _CallbackModel(
         onUpdate: (msg) {
@@ -4230,6 +4479,18 @@ Future<void> main() async {
       expect(options.startupTitle, 'Test App');
     });
 
+    test('startupProbes defaults to auto', () {
+      const options = ProgramOptions();
+      expect(options.startupProbes, isNull);
+    });
+
+    test('withStartupProbes sets explicit startup probe behavior', () {
+      final enabled = ProgramOptions().withStartupProbes(true);
+      final disabled = ProgramOptions().withStartupProbes(false);
+      expect(enabled.startupProbes, isTrue);
+      expect(disabled.startupProbes, isFalse);
+    });
+
     test('custom input stream can be set', () {
       final stream = Stream<List<int>>.empty();
       final options = ProgramOptions().withInput(stream);
@@ -4615,6 +4876,71 @@ Future<void> main() async {
       expect(received, const ColorProfileMsg(ColorProfile.ansi256));
     });
 
+    test('custom injected terminals skip auto startup probes by default', () async {
+      final terminal = MockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.tick(
+          const Duration(milliseconds: 10),
+          (_) => const QuitMsg(),
+        ),
+        onView: () => 'first frame without auto probes',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains('first frame without auto probes'));
+      expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
+      expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+    });
+
+    test('startupProbes false disables startup probes for backend terminals', () async {
+      final writes = <String>[];
+      final backend = EmbeddedTerminalBackend(output: writes.add);
+      final terminal = BackendTerminal(backend);
+      final model = _CallbackModel(
+        onInit: () => Cmd.tick(
+          const Duration(milliseconds: 10),
+          (_) => const QuitMsg(),
+        ),
+        onView: () => 'built-in backend without probes',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+          startupProbes: false,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = writes.join();
+      expect(joinedOutput, contains('built-in backend without probes'));
+      expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
+      expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+    });
+
     test('startup UV capability replies are delivered during initialization', () async {
       final terminal = _ProbeAwareMockTerminal(
         onWrite: (data, terminal) {
@@ -4668,6 +4994,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );
@@ -4715,6 +5042,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );
@@ -4761,6 +5089,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );
@@ -4802,6 +5131,7 @@ Future<void> main() async {
             hideCursor: false,
             useUltravioletRenderer: true,
             useUltravioletInputDecoder: true,
+            startupProbes: true,
           ),
           terminal: terminal,
         );
@@ -4849,6 +5179,7 @@ Future<void> main() async {
             hideCursor: false,
             useUltravioletRenderer: true,
             useUltravioletInputDecoder: true,
+            startupProbes: true,
           ),
           terminal: terminal,
         );
@@ -4887,6 +5218,7 @@ Future<void> main() async {
             hideCursor: false,
             useUltravioletRenderer: true,
             useUltravioletInputDecoder: true,
+            startupProbes: true,
           ),
           terminal: BackendTerminal(backend),
         );
@@ -4929,6 +5261,7 @@ Future<void> main() async {
             hideCursor: false,
             useUltravioletRenderer: true,
             useUltravioletInputDecoder: true,
+            startupProbes: true,
           ),
           terminal: terminal,
         );
@@ -4942,6 +5275,48 @@ Future<void> main() async {
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
         expect(rendered, isFalse);
         expect(program.wasKilled, isTrue);
+      },
+    );
+
+    test(
+      'cancel signal during pre-render startup probing aborts later probes and skips first render',
+      () async {
+        final cancelCompleter = Completer<void>();
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(cancelCompleter.complete);
+            }
+          },
+        );
+
+        var rendered = false;
+        final program = Program(
+          _CallbackModel(
+            onView: () {
+              rendered = true;
+              return 'should not render';
+            },
+          ),
+          options: ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+            cancelSignal: cancelCompleter.future,
+          ),
+          terminal: terminal,
+        );
+
+        await expectLater(program.run(), throwsA(isA<ProgramCancelledError>()));
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(rendered, isFalse);
       },
     );
 
@@ -5012,6 +5387,7 @@ Future<void> main() async {
             hideCursor: false,
             useUltravioletRenderer: true,
             useUltravioletInputDecoder: true,
+            startupProbes: true,
           ),
           terminal: terminal,
         );
@@ -5021,6 +5397,46 @@ Future<void> main() async {
         expect(killScheduled, isTrue);
         expect(renderCount, 1);
         expect(program.wasKilled, isTrue);
+      },
+    );
+
+    test(
+      'cancel signal during post-render emoji probing skips the forced repaint',
+      () async {
+        final cancelCompleter = Completer<void>();
+        var renderCount = 0;
+        var cancelScheduled = false;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (!cancelScheduled && data == Ansi.requestExtendedCursorPosition) {
+              cancelScheduled = true;
+              scheduleMicrotask(cancelCompleter.complete);
+            }
+          },
+        );
+
+        final program = Program(
+          _CallbackModel(
+            onView: () {
+              renderCount++;
+              return 'render #$renderCount';
+            },
+          ),
+          options: ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+            cancelSignal: cancelCompleter.future,
+          ),
+          terminal: terminal,
+        );
+
+        await expectLater(program.run(), throwsA(isA<ProgramCancelledError>()));
+
+        expect(cancelScheduled, isTrue);
+        expect(renderCount, 1);
       },
     );
   });
@@ -5078,6 +5494,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );
@@ -5132,6 +5549,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );
@@ -5184,6 +5602,7 @@ Future<void> main() async {
           hideCursor: false,
           useUltravioletRenderer: true,
           useUltravioletInputDecoder: true,
+          startupProbes: true,
         ),
         terminal: terminal,
       );

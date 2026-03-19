@@ -54,8 +54,15 @@ The Elm Architecture (TEA) is a pattern for building interactive applications wi
 
 ## Quick Start
 
+Focused stable entrypoints:
+
+- `package:artisanal/runtime.dart` for the supported `Model`/`Msg`/`Cmd`/`Program` surface, including `StringTerminal` for deterministic tests and runtime messages like `ZoneInBoundsMsg`
+- `package:artisanal/hosts.dart` for backends, bridges, and browser/socket hosts
+- `package:artisanal/app.dart`, `package:artisanal/editors.dart`, `package:artisanal/selection.dart`, and `package:artisanal/testing.dart` for the stable widget modules re-exported by the umbrella package
+- `package:artisanal/tui.dart` for the broader compatibility barrel, including bubbles and the widget re-export
+
 ```dart
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 class CounterModel implements Model {
   final int count;
@@ -176,6 +183,7 @@ await program.run();
 | `sendInterrupt` | `bool` | `true` | Deliver SIGINT/Ctrl+C as `InterruptMsg` instead of a Ctrl+C `KeyMsg` |
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
+| `startupProbes` | `bool?` | `null` | Force startup probes on/off; `null` auto-runs only on built-in terminals |
 
 Convenience helpers are available on `ProgramOptions`:
 
@@ -184,6 +192,7 @@ Convenience helpers are available on `ProgramOptions`:
 - `withReplay(...)` / `withoutReplay()`
 - `withReplayInputBlocking(...)`
 - `withoutInterruptMsg()`
+- `withStartupProbes(...)`
 
 ### Renderers and Output Modes
 
@@ -219,12 +228,24 @@ await shutdownSharedStdinStream();
 
 ### Startup Probes
 
+`model.init()` is started before the first frame, but `Program` does not block
+the initial paint on long-running init commands. Immediately-resolved init
+messages are drained into the same startup turn so they can affect the first
+render, while slower timers/processes/streams continue in the background after
+the first frame is shown.
+
 When UV rendering and UV input decoding are both enabled on a real terminal,
 `Program` runs a small set of best-effort startup probes:
 
-- before the first render: background color, color scheme, DA2, and kitty
-  keyboard support
+- before the first render: background color and color scheme
+- after the first render: DA2 and kitty keyboard support
 - after the first render in alt-screen mode: emoji width probing
+
+By default, this auto-runs only for the built-in terminal implementations
+(`StdioTerminal`, `SplitTerminal`, `TtyTerminal`, and backend terminals). If
+you inject a custom terminal, probes are skipped unless you opt in with
+`ProgramOptions(startupProbes: true)` or
+`ProgramOptions().withStartupProbes(true)`.
 
 These probes are intentionally short-lived and do not block forever. Critical
 lifecycle events abort the active probe immediately and skip the remaining
@@ -1162,10 +1183,10 @@ UpdateResult quit(Model model) => (model, Cmd.quit());
 ## Import
 
 ```dart
-// Core TUI framework
-import 'package:artisanal/tui.dart';
+// Stable core TUI runtime
+import 'package:artisanal/runtime.dart';
 
-// Pre-built bubble components
+// Broader compatibility barrel and pre-built bubbles
 import 'package:artisanal/bubbles.dart';
 ```
 

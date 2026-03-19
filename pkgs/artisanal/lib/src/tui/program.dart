@@ -188,6 +188,7 @@ class ProgramOptions {
     this.ansiCompress = false,
     this.useUltravioletRenderer = true,
     this.useUltravioletInputDecoder = true,
+    this.startupProbes,
     this.cancelSignal,
     this.environment,
     this.inputTTY = false,
@@ -357,6 +358,16 @@ class ProgramOptions {
   /// This is opt-in. The default input parser remains [KeyParser].
   final bool useUltravioletInputDecoder;
 
+  /// Whether to run UV startup probes before and after the first render.
+  ///
+  /// When `true`, probes always run when the active terminal supports them.
+  /// When `false`, probes are skipped entirely.
+  ///
+  /// When `null` (default), the runtime only auto-runs startup probes for the
+  /// built-in terminal implementations that it knows how to interrogate
+  /// safely. Arbitrary injected terminals are skipped unless they opt in.
+  final bool? startupProbes;
+
   /// Optional cancellation signal. When this completes, the program exits with cancellation.
   final Future<void>? cancelSignal;
 
@@ -419,6 +430,7 @@ class ProgramOptions {
     bool? ansiCompress,
     bool? useUltravioletRenderer,
     bool? useUltravioletInputDecoder,
+    bool? startupProbes,
     Future<void>? cancelSignal,
     List<String>? environment,
     bool? inputTTY,
@@ -453,6 +465,7 @@ class ProgramOptions {
           useUltravioletRenderer ?? this.useUltravioletRenderer,
       useUltravioletInputDecoder:
           useUltravioletInputDecoder ?? this.useUltravioletInputDecoder,
+      startupProbes: startupProbes ?? this.startupProbes,
       cancelSignal: cancelSignal ?? this.cancelSignal,
       environment: environment ?? this.environment,
       inputTTY: inputTTY ?? this.inputTTY,
@@ -507,6 +520,7 @@ class ProgramOptions {
     ansiCompress: ansiCompress,
     useUltravioletRenderer: useUltravioletRenderer,
     useUltravioletInputDecoder: useUltravioletInputDecoder,
+    startupProbes: startupProbes,
     cancelSignal: cancelSignal,
     environment: environment,
     inputTTY: inputTTY,
@@ -528,6 +542,10 @@ class ProgramOptions {
   /// Creates options with the given startup title.
   ProgramOptions withStartupTitle(String title) =>
       copyWith(startupTitle: title);
+
+  /// Creates options with startup probes forced on or off.
+  ProgramOptions withStartupProbes(bool enabled) =>
+      copyWith(startupProbes: enabled);
 
   /// Creates options with custom input stream.
   ProgramOptions withInput(Stream<List<int>> input) => copyWith(input: input);
@@ -596,6 +614,7 @@ class ProgramOptions {
     ansiCompress: ansiCompress,
     useUltravioletRenderer: useUltravioletRenderer,
     useUltravioletInputDecoder: useUltravioletInputDecoder,
+    startupProbes: startupProbes,
     cancelSignal: cancelSignal,
     environment: environment,
     inputTTY: inputTTY,
@@ -629,6 +648,7 @@ class ProgramOptions {
     ansiCompress: ansiCompress,
     useUltravioletRenderer: useUltravioletRenderer,
     useUltravioletInputDecoder: useUltravioletInputDecoder,
+    startupProbes: startupProbes,
     cancelSignal: cancelSignal,
     environment: environment,
     inputTTY: inputTTY,
@@ -1033,6 +1053,12 @@ class Program<M extends Model> {
   /// Whether we're in the initialization phase (suppresses renders until init completes).
   bool _initializing = false;
 
+  /// Whether init-command completions are being drained before the first frame.
+  bool _drainingInitMessages = false;
+
+  /// Whether a graceful quit should happen immediately after the first render.
+  bool _quitAfterInitialRender = false;
+
   /// Whether cleanup has already been performed (prevents double cleanup).
   bool _cleanedUp = false;
 
@@ -1053,6 +1079,10 @@ class Program<M extends Model> {
 
   /// Whether the terminal is temporarily released for exec/suspend.
   bool _terminalReleased = false;
+
+  /// Sticky cursor visibility override requested by control messages.
+  bool? _desiredCursorVisibilityOverride;
+  bool? _appliedCursorVisibilityOverride;
 
   /// Monotonic token for released-terminal exec lifecycles.
   int _terminalReleaseGeneration = 0;
@@ -1356,27 +1386,7 @@ class Program<M extends Model> {
       ansiCompress: _options.ansiCompress,
     );
 
-    if (_options.disableRenderer) {
-      _renderer = SimpleTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.useUltravioletRenderer) {
-      _renderer = UltravioletTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.altScreen) {
-      _renderer = FullScreenTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else {
-      _renderer = InlineTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    }
+    _createRenderer(rendererOptions);
 
     // Enable mouse tracking if requested
     _applyMouseMode();
@@ -1403,6 +1413,31 @@ class Program<M extends Model> {
     _startInputListener();
   }
 
+  void _createRenderer(TuiRendererOptions options) {
+    if (_options.disableRenderer) {
+      _renderer = SimpleTuiRenderer(
+        terminal: _terminal!,
+        options: options,
+      );
+    } else if (_options.useUltravioletRenderer) {
+      _renderer = UltravioletTuiRenderer(
+        terminal: _terminal!,
+        options: options,
+      );
+    } else if (_options.altScreen) {
+      _renderer = FullScreenTuiRenderer(
+        terminal: _terminal!,
+        options: options,
+      );
+    } else {
+      _renderer = InlineTuiRenderer(
+        terminal: _terminal!,
+        options: options,
+      );
+    }
+    _renderer!.initialize();
+  }
+
   /// Initializes the model and renders initial view.
   Future<void> _initialize() async {
     _replayActive = false;
@@ -1420,10 +1455,31 @@ class Program<M extends Model> {
     // Send initial color profile (model receives this before init runs)
     _processMessage(ColorProfileMsg(_terminal!.colorProfile));
 
-    // Execute init command before first render so user sees initialized state
+    // Kick off the init command before first render, but do not block the
+    // first paint on long-running or delayed side effects such as timers,
+    // process launches, or network work. This keeps startup responsive while
+    // still allowing immediately-resolved init messages to land in the same
+    // initialization turn.
     final initCmd = _model!.init();
     if (initCmd != null) {
-      await _executeCommand(initCmd);
+      _drainingInitMessages = true;
+      try {
+        unawaited(_executeCommand(initCmd));
+        await Future<void>.microtask(() {});
+        _drainMessageQueue();
+      } finally {
+        _drainingInitMessages = false;
+      }
+    }
+
+    if (_quitAfterInitialRender) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      _initializing = false;
+      _render();
+      _quitAfterInitialRender = false;
+      _quit();
+      return;
     }
 
     await _runPreRenderStartupProbesIfNeeded();
@@ -2118,15 +2174,12 @@ class Program<M extends Model> {
     if (!_options.useUltravioletInputDecoder) return;
     final term = _terminal;
     if (term == null) return;
-    if (!term.supportsAnsi || !term.isTerminal) return;
+    if (!_shouldRunStartupProbes(term)) return;
 
     final ctx = StartupProbeContext(terminal: term);
     _startupProbeContext = ctx;
 
-    final runner = StartupProbeRunner([
-      BackgroundColorProbe(),
-      UvCapabilityProbe(),
-    ]);
+    final runner = StartupProbeRunner([BackgroundColorProbe()]);
     _startupProbes = runner;
     await runner.runAll(ctx);
   }
@@ -2135,31 +2188,46 @@ class Program<M extends Model> {
     if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
     if (!_options.useUltravioletInputDecoder) return;
-    // Avoid messing with normal terminal output in inline mode. Users can
-    // always override via UV_EMOJI_WIDTH/EMOJI_WIDTH if needed.
-    if (!_options.altScreen) return;
     final term = _terminal;
     if (term == null) return;
-    if (!term.supportsAnsi || !term.isTerminal) return;
+    if (!_shouldRunStartupProbes(term)) return;
 
-    // Allow explicit override via environment (skip probing).
-    final override =
-        io.Platform.environment['UV_EMOJI_WIDTH'] ??
-        io.Platform.environment['EMOJI_WIDTH'];
-    if (override != null) {
-      final v = int.tryParse(override.trim());
-      if (v != null) uni_width.setEmojiPresentationWidth(v);
-      return;
+    final probes = <StartupProbe>[UvCapabilityProbe()];
+
+    // Avoid messing with normal terminal output in inline mode. Users can
+    // always override via UV_EMOJI_WIDTH/EMOJI_WIDTH if needed.
+    if (_options.altScreen) {
+      final override =
+          io.Platform.environment['UV_EMOJI_WIDTH'] ??
+          io.Platform.environment['EMOJI_WIDTH'];
+      if (override != null) {
+        final v = int.tryParse(override.trim());
+        if (v != null) uni_width.setEmojiPresentationWidth(v);
+      } else {
+        probes.add(EmojiWidthProbe());
+      }
     }
+
+    if (probes.isEmpty) return;
 
     final ctx = StartupProbeContext(terminal: term);
     _startupProbeContext = ctx;
 
-    // For now, only emoji-width probing is wired, but this runner makes it easy
-    // to add other one-shot terminal capability probes later.
-    final runner = StartupProbeRunner([EmojiWidthProbe()]);
+    // Run non-visual capability probing after the first frame so it cannot
+    // delay paint. Emoji-width probing remains opt-in to fullscreen mode.
+    final runner = StartupProbeRunner(probes);
     _startupProbes = runner;
     await runner.runAll(ctx);
+  }
+
+  bool _shouldRunStartupProbes(TuiTerminal term) {
+    if (!term.supportsAnsi || !term.isTerminal) return false;
+    final explicit = _options.startupProbes;
+    if (explicit != null) return explicit;
+    return term is StdioTerminal ||
+        term is SplitTerminal ||
+        term is TtyTerminal ||
+        term is BackendTerminal;
   }
 
   /// Sends a message to the program.
@@ -2356,6 +2424,10 @@ class Program<M extends Model> {
 
       // Handle quit message
       if (msg is QuitMsg) {
+        if (_drainingInitMessages) {
+          _quitAfterInitialRender = true;
+          return;
+        }
         _quit();
         return;
       }
@@ -2477,12 +2549,12 @@ class Program<M extends Model> {
 
       case ShowCursorMsg():
         if (_terminalReleased) return true;
-        _terminal?.showCursor();
+        _setDesiredCursorVisibilityOverride(true);
         return true;
 
       case HideCursorMsg():
         if (_terminalReleased) return true;
-        _terminal?.hideCursor();
+        _setDesiredCursorVisibilityOverride(false);
         return true;
 
       case EnableMouseCellMotionMsg():
@@ -2654,6 +2726,7 @@ class Program<M extends Model> {
   Future<void> _releaseTerminal() async {
     _terminalReleased = true;
     _releasedWindowTitle = null;
+    final rendererHandledCursor = _rendererHandlesCursorLifecycle();
 
     // Stop input listening temporarily.
     _uvInputTimeoutTimer?.cancel();
@@ -2678,10 +2751,13 @@ class Program<M extends Model> {
     _appliedWindowTitle = null;
 
     _disableAppliedTerminalModes();
+    _appliedCursorVisibilityOverride = null;
 
     // Restore terminal to normal mode
     _terminal?.disableRawMode();
-    _terminal?.showCursor();
+    if (!rendererHandledCursor) {
+      _terminal?.showCursor();
+    }
   }
 
   /// Restores the terminal after external process execution.
@@ -2690,40 +2766,20 @@ class Program<M extends Model> {
 
     // Re-enable raw mode
     _terminal?.enableRawMode();
-    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
-    _releasedWindowTitle = null;
 
-    // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
       altScreen: _options.altScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
     );
-
-    if (_options.disableRenderer) {
-      _renderer = SimpleTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.useUltravioletRenderer) {
-      _renderer = UltravioletTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.altScreen) {
-      _renderer = FullScreenTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else {
-      _renderer = InlineTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    }
+    _createRenderer(rendererOptions);
+    _appliedCursorVisibilityOverride = null;
+    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _releasedWindowTitle = null;
 
     _restoreDesiredTerminalModes();
+    _applyDesiredCursorVisibilityOverride();
     _applyDynamicAltScreen();
 
     // Restart input listening.
@@ -2887,6 +2943,36 @@ class Program<M extends Model> {
     }
   }
 
+  bool _rendererHandlesCursorLifecycle() {
+    if (_options.disableRenderer || !_options.hideCursor) return false;
+    final renderer = _renderer;
+    return renderer is FullScreenTuiRenderer ||
+        renderer is UltravioletTuiRenderer;
+  }
+
+  void _setDesiredCursorVisibilityOverride(bool? visible) {
+    _desiredCursorVisibilityOverride = visible;
+    _applyDesiredCursorVisibilityOverride();
+  }
+
+  void _applyDesiredCursorVisibilityOverride() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_terminalReleased) return;
+    final target = _desiredCursorVisibilityOverride;
+    if (target == null) {
+      _appliedCursorVisibilityOverride = null;
+      return;
+    }
+    if (_appliedCursorVisibilityOverride == target) return;
+    if (target) {
+      terminal.showCursor();
+    } else {
+      terminal.hideCursor();
+    }
+    _appliedCursorVisibilityOverride = target;
+  }
+
   void _applyDynamicAltScreen() {
     if (_options.altScreen) return;
     if (_terminalReleased) return;
@@ -2943,6 +3029,7 @@ class Program<M extends Model> {
     final restoreDynamicAltScreen = _appliedDynamicAltScreen;
     _terminalReleased = true;
     _releasedWindowTitle = null;
+    final rendererHandledCursor = _rendererHandlesCursorLifecycle();
 
     // Save terminal state
     _renderer?.dispose();
@@ -2959,7 +3046,10 @@ class Program<M extends Model> {
     // Restore terminal
     _disableAppliedTerminalModes();
     _terminal?.disableRawMode();
-    _terminal?.showCursor();
+    _appliedCursorVisibilityOverride = null;
+    if (!rendererHandledCursor) {
+      _terminal?.showCursor();
+    }
     if (_options.altScreen) {
       _terminal?.exitAltScreen();
     } else if (_appliedDynamicAltScreen) {
@@ -2982,48 +3072,24 @@ class Program<M extends Model> {
     // When resumed, restore terminal state
     _terminalReleased = false;
     _terminal?.enableRawMode();
-    if (_options.altScreen) {
-      _terminal?.enterAltScreen();
-    } else if (restoreDynamicAltScreen) {
+    if (!_options.altScreen && restoreDynamicAltScreen) {
       _terminal?.enterAltScreen();
       _appliedDynamicAltScreen = true;
     }
-    if (_options.hideCursor) {
-      _terminal?.hideCursor();
-    }
-    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
-    _releasedWindowTitle = null;
 
-    // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
       altScreen: _options.altScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
     );
-    if (_options.disableRenderer) {
-      _renderer = SimpleTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.useUltravioletRenderer) {
-      _renderer = UltravioletTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else if (_options.altScreen) {
-      _renderer = FullScreenTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    } else {
-      _renderer = InlineTuiRenderer(
-        terminal: _terminal!,
-        options: rendererOptions,
-      );
-    }
+    _createRenderer(rendererOptions);
+    _appliedCursorVisibilityOverride = null;
+    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _releasedWindowTitle = null;
 
     _restoreDesiredTerminalModes();
+    _applyDesiredCursorVisibilityOverride();
     _applyDynamicAltScreen();
 
     // Restart input.
