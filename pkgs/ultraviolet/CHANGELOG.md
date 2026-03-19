@@ -2,9 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- `TerminalCapabilities` now tracks exact kitty keyboard enhancement flags plus foreground, background, cursor, and palette color reports with idempotent updates.
+
 ### Fixed
 
 - Added lifecycle coverage for kitty keyboard enhancement enable/disable behavior and shutdown cleanup in `Terminal`.
+- Fixed capability state tracking so primary device attribute changes are detected even when Sixel support does not change, and repeated identical color/capability reports no longer churn state.
 
 ## 0.1.1+1
 - fix documentation + missing assets

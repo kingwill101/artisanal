@@ -25,20 +25,52 @@ void main() {
       expect(caps.hasSixel, isTrue);
     });
 
-    test('stores background color and palette reports', () {
+    test('tracks primary device attribute changes even without sixel changes', () {
       final caps = TerminalCapabilities(env: const []);
 
+      expect(
+        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+        isTrue,
+      );
+      expect(caps.primaryAttributes, [1, 2]);
+      expect(
+        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+        isFalse,
+      );
+      expect(
+        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 18])),
+        isTrue,
+      );
+      expect(caps.primaryAttributes, [1, 18]);
+      expect(caps.hasSixel, isFalse);
+    });
+
+    test('stores foreground, background, cursor, and palette reports', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      final foregroundChanged = caps.updateFromEvent(
+        const ForegroundColorEvent(UvRgb(0x44, 0x55, 0x66)),
+      );
       final backgroundChanged = caps.updateFromEvent(
         const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33)),
+      );
+      final cursorChanged = caps.updateFromEvent(
+        const CursorColorEvent(UvRgb(0x77, 0x88, 0x99)),
       );
       final paletteChanged = caps.updateFromEvent(
         const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc)),
       );
 
+      expect(foregroundChanged, isTrue);
       expect(backgroundChanged, isTrue);
+      expect(cursorChanged, isTrue);
       expect(paletteChanged, isTrue);
+      expect(caps.foregroundColor, const UvRgb(0x44, 0x55, 0x66));
+      expect(caps.hasForegroundColor, isTrue);
       expect(caps.backgroundColor, const UvRgb(0x11, 0x22, 0x33));
       expect(caps.hasBackgroundColor, isTrue);
+      expect(caps.cursorColor, const UvRgb(0x77, 0x88, 0x99));
+      expect(caps.hasCursorColor, isTrue);
       expect(caps.palette[4], const UvRgb(0xaa, 0xbb, 0xcc));
       expect(caps.hasColorPalette, isTrue);
     });
@@ -51,6 +83,83 @@ void main() {
       expect(changed, isFalse);
       expect(caps.palette, isEmpty);
       expect(caps.hasColorPalette, isFalse);
+    });
+
+    test('tracks keyboard enhancement flags', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      final changed = caps.updateFromEvent(
+        const KeyboardEnhancementsEvent(
+          KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+              KeyboardEnhancementsEvent.reportEventTypes,
+        ),
+      );
+
+      expect(changed, isTrue);
+      expect(caps.hasKeyboardEnhancements, isTrue);
+      expect(
+        caps.keyboardEnhancementFlags,
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+            KeyboardEnhancementsEvent.reportEventTypes,
+      );
+    });
+
+    test('keyboard enhancement flags can clear back to zero', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      expect(
+        caps.updateFromEvent(
+          const KeyboardEnhancementsEvent(
+            KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const KeyboardEnhancementsEvent(0)),
+        isTrue,
+      );
+      expect(caps.hasKeyboardEnhancements, isFalse);
+      expect(caps.keyboardEnhancementFlags, 0);
+    });
+
+    test('repeated identical reports are idempotent', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      expect(
+        caps.updateFromEvent(const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33))),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33))),
+        isFalse,
+      );
+
+      expect(
+        caps.updateFromEvent(const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc))),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc))),
+        isFalse,
+      );
+
+      expect(
+        caps.updateFromEvent(
+          const KeyboardEnhancementsEvent(
+            KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(
+          const KeyboardEnhancementsEvent(
+            KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+          ),
+        ),
+        isFalse,
+      );
     });
   });
 }

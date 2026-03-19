@@ -85,8 +85,11 @@ final class TerminalCapabilities {
   /// Whether the terminal supports iTerm2 Image Protocol.
   bool hasITerm2 = false;
 
+  /// Kitty Keyboard Protocol enhancement flags reported by the terminal.
+  int keyboardEnhancementFlags = 0;
+
   /// Whether the terminal supports Kitty Keyboard Protocol enhancements.
-  bool hasKeyboardEnhancements = false;
+  bool get hasKeyboardEnhancements => keyboardEnhancementFlags != 0;
 
   /// The primary device attributes reported by the terminal.
   List<int> primaryAttributes = [];
@@ -94,11 +97,23 @@ final class TerminalCapabilities {
   /// The terminal background color.
   UvRgb? backgroundColor;
 
+  /// The terminal foreground color.
+  UvRgb? foregroundColor;
+
+  /// The terminal cursor color.
+  UvRgb? cursorColor;
+
   /// The terminal color palette.
   final Map<int, UvRgb> palette = {};
 
   /// Whether the terminal has reported its background color.
   bool get hasBackgroundColor => backgroundColor != null;
+
+  /// Whether the terminal has reported its foreground color.
+  bool get hasForegroundColor => foregroundColor != null;
+
+  /// Whether the terminal has reported its cursor color.
+  bool get hasCursorColor => cursorColor != null;
 
   /// Whether the terminal has reported any color palette entries.
   bool get hasColorPalette => palette.isNotEmpty;
@@ -113,23 +128,42 @@ final class TerminalCapabilities {
         return true;
       }
     } else if (event is KeyboardEnhancementsEvent) {
-      if (!hasKeyboardEnhancements) {
-        hasKeyboardEnhancements = true;
+      if (keyboardEnhancementFlags != event.flags) {
+        keyboardEnhancementFlags = event.flags;
         return true;
       }
     } else if (event is PrimaryDeviceAttributesEvent) {
+      final attrsChanged =
+          primaryAttributes.length != event.attrs.length ||
+          primaryAttributes.asMap().entries.any(
+            (entry) => entry.value != event.attrs[entry.key],
+          );
       primaryAttributes = event.attrs;
       // Attribute 4 is Sixel.
       final oldSixel = hasSixel;
       hasSixel = event.attrs.contains(4);
-      return oldSixel != hasSixel;
+      return attrsChanged || oldSixel != hasSixel;
+    } else if (event is ForegroundColorEvent) {
+      if (foregroundColor != event.color) {
+        foregroundColor = event.color;
+        return true;
+      }
     } else if (event is BackgroundColorEvent) {
-      backgroundColor = event.color;
-      return true;
+      if (backgroundColor != event.color) {
+        backgroundColor = event.color;
+        return true;
+      }
+    } else if (event is CursorColorEvent) {
+      if (cursorColor != event.color) {
+        cursorColor = event.color;
+        return true;
+      }
     } else if (event is ColorPaletteEvent) {
       if (event.color != null) {
-        palette[event.index] = event.color!;
-        return true;
+        if (palette[event.index] != event.color) {
+          palette[event.index] = event.color!;
+          return true;
+        }
       }
     } else if (event is SecondaryDeviceAttributesEvent) {
       // iTerm2 often identifies itself in secondary DA or via environment.
@@ -147,7 +181,9 @@ final class TerminalCapabilities {
     buf.writeln('  hasITerm2: $hasITerm2,');
     buf.writeln('  hasKeyboardEnhancements: $hasKeyboardEnhancements,');
     buf.writeln('  primaryAttributes: $primaryAttributes,');
+    buf.writeln('  foregroundColor: ${foregroundColor ?? "null"},');
     buf.writeln('  backgroundColor: ${backgroundColor ?? "null"},');
+    buf.writeln('  cursorColor: ${cursorColor ?? "null"},');
     if (palette.isEmpty) {
       buf.writeln('  palette: {}');
     } else {
