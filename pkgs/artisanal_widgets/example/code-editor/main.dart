@@ -1,5 +1,5 @@
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main() async {
   await w.runArtisanalApp(

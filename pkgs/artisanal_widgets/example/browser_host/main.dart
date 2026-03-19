@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main(List<String> args) async {
   final config = _parseArgs(args);

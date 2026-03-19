@@ -8,7 +8,7 @@
 import 'package:artisanal/style.dart'
     show AdaptiveColor, BasicColor, Color, CompleteAdaptiveColor;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 tui.WidgetApp createHelpViewApp() => tui.WidgetApp(
   HelpViewShowcase(),

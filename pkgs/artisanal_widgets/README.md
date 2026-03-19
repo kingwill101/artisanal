@@ -23,9 +23,18 @@ dependencies:
 ## Import
 
 ```dart
-import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 import 'package:artisanal/tui.dart' as tui;
 ```
+
+Use the focused stable entrypoints when you need those modules:
+
+- `package:artisanal_widgets/charting.dart` for chart widgets
+- `package:artisanal_widgets/selection.dart` for `SelectableText` and `SelectionArea`
+- `package:artisanal_widgets/testing.dart` for `WidgetTester`
+
+Keep `package:artisanal_widgets/artisanal_widgets.dart` only when you
+explicitly want the broader experimental compatibility surface.
 
 ## Quick start
 
@@ -47,9 +56,12 @@ class HelloApp extends StatelessWidget {
 }
 
 void main() async {
-  final app = tui.WidgetApp(HelloApp());
-
-  await tui.runProgram(app);
+  await runArtisanalApp(
+    ArtisanalApp(
+      title: 'Hello widgets',
+      home: HelloApp(),
+    ),
+  );
 }
 ```
 

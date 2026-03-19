@@ -42,6 +42,16 @@ The Widget system provides:
 - **Layout primitives** - `Row`, `Column`, `Wrap`, `Stack`, `Container`, `Text`, `Icon`, `Spacer`, `Divider` (aliases: `HBox`, `VBox`, `Label`)
 - **Adaptive styling** - Colors that auto-switch between light and dark terminals
 
+Stable top-level entrypoints:
+
+- `package:artisanal_widgets/widgets.dart` for the main widget/app/layout/input/navigation surface
+- `package:artisanal_widgets/charting.dart` for chart widgets
+- `package:artisanal_widgets/selection.dart` for text selection widgets
+- `package:artisanal_widgets/testing.dart` for `WidgetTester`
+
+The older `package:artisanal_widgets/artisanal_widgets.dart` import remains
+available as the broader experimental compatibility surface.
+
 ```dart
 import 'package:artisanal/tui.dart';
 
@@ -1828,6 +1838,9 @@ Navigator.of(context).push(PageRoute(builder: (_) => DetailsScreen()));
 
 Text selection widgets for copyable terminal content:
 
+Import `package:artisanal_widgets/selection.dart` when you want the stable
+selection surface.
+
 - `SelectableText` for per-widget selection
 - `SelectionArea` for cross-widget shared selection
 - `SelectionController` for programmatic access
@@ -1848,6 +1861,9 @@ SelectionArea(
 ## Chart Widgets
 
 Charting widgets use UV canvas-backed render objects:
+
+Import `package:artisanal_widgets/charting.dart` when you want the stable
+chart widget surface.
 
 - `SparklineChart`, `LineChart`, `BarChart`, `HeatmapChart`, `PieChart`,
   `RibbonChart`

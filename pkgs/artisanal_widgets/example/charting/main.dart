@@ -15,7 +15,7 @@ import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/charting.dart' as w;
 
 void main() async {
   final app = tui.WidgetApp(ChartShowcase());

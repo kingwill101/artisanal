@@ -5,7 +5,7 @@
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal/tui.dart' show TuiTrace;
 
 void _trace(String msg) {

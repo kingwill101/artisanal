@@ -4,6 +4,12 @@
 /// app shells, runners, themes, layout/input primitives, scrolling,
 /// navigation, animations, and the higher-level component set.
 ///
+/// Additional stable entrypoints are available for focused modules:
+///
+/// - `package:artisanal_widgets/charting.dart`
+/// - `package:artisanal_widgets/selection.dart`
+/// - `package:artisanal_widgets/testing.dart`
+///
 /// The legacy `package:artisanal_widgets/artisanal_widgets.dart` entrypoint
 /// remains available for backward compatibility and still exposes additional
 /// experimental internals and modules.
