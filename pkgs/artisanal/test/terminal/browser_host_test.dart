@@ -19,6 +19,9 @@ void main() {
       expect(html, contains('stripAndReplyTerminalQueries'));
       expect(html, contains('xterm.js browser host'));
       expect(html, contains('const reportedColorScheme = 1;'));
+      expect(html, contains('rgb:e6e6/eded/f3f3'));
+      expect(html, contains('rgb:1010/1313/1818'));
+      expect(html, contains('rgb:5858/a6a6/ffff'));
       expect(html, contains("window.addEventListener('focus'"));
       expect(html, contains("window.addEventListener('blur'"));
       expect(html, contains("window.addEventListener('paste'"));

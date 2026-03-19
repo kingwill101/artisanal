@@ -238,6 +238,9 @@ final class BrowserTerminalHostServer {
   }) {
     final reportedColorScheme = _prefersDarkColorScheme(background) ? 1 : 2;
     final cssColorScheme = reportedColorScheme == 1 ? 'dark' : 'light';
+    final reportedForegroundColor = _oscColorReply(10, foreground);
+    final reportedBackgroundColor = _oscColorReply(11, background);
+    final reportedCursorColor = _oscColorReply(12, cursor);
     return '''
 <!doctype html>
 <html lang="en">
@@ -318,11 +321,17 @@ final class BrowserTerminalHostServer {
       const requestColorScheme = '\\x1b[?996n';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestTerminalVersion = '\\x1b[>0q';
+      const requestForegroundColor = '\\x1b]10;?\\x07';
+      const requestBackgroundColor = '\\x1b]11;?\\x07';
+      const requestCursorColor = '\\x1b]12;?\\x07';
       const enableFocusReporting = '\\x1b[?1004h';
       const disableFocusReporting = '\\x1b[?1004l';
       const enableBracketedPaste = '\\x1b[?2004h';
       const disableBracketedPaste = '\\x1b[?2004l';
       const reportedColorScheme = $reportedColorScheme;
+      const reportedForegroundColor = ${_javaScriptStringLiteral(reportedForegroundColor)};
+      const reportedBackgroundColor = ${_javaScriptStringLiteral(reportedBackgroundColor)};
+      const reportedCursorColor = ${_javaScriptStringLiteral(reportedCursorColor)};
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
       const focusInReport = '\\x1b[I';
@@ -375,6 +384,36 @@ final class BrowserTerminalHostServer {
               data: reportedTerminalVersion
             });
             remaining = remaining.slice(requestTerminalVersion.length);
+            continue;
+          }
+          if (remaining.startsWith(requestForegroundColor)) {
+            if (reportedForegroundColor !== null) {
+              sendMessage({
+                type: 'input.text',
+                data: reportedForegroundColor
+              });
+            }
+            remaining = remaining.slice(requestForegroundColor.length);
+            continue;
+          }
+          if (remaining.startsWith(requestBackgroundColor)) {
+            if (reportedBackgroundColor !== null) {
+              sendMessage({
+                type: 'input.text',
+                data: reportedBackgroundColor
+              });
+            }
+            remaining = remaining.slice(requestBackgroundColor.length);
+            continue;
+          }
+          if (remaining.startsWith(requestCursorColor)) {
+            if (reportedCursorColor !== null) {
+              sendMessage({
+                type: 'input.text',
+                data: reportedCursorColor
+              });
+            }
+            remaining = remaining.slice(requestCursorColor.length);
             continue;
           }
           if (remaining.startsWith(enableFocusReporting)) {
@@ -498,7 +537,28 @@ String _escapeHtml(String value) {
 }
 
 bool _prefersDarkColorScheme(String background) {
-  final normalized = background.trim();
+  final hex = _normalizedHexColor(background);
+  if (hex == null) return true;
+
+  final red = int.parse(hex.substring(0, 2), radix: 16);
+  final green = int.parse(hex.substring(2, 4), radix: 16);
+  final blue = int.parse(hex.substring(4, 6), radix: 16);
+  final luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
+  return luminance < 0.5;
+}
+
+String? _oscColorReply(int slot, String color) {
+  final hex = _normalizedHexColor(color);
+  if (hex == null) return null;
+
+  final red = hex.substring(0, 2);
+  final green = hex.substring(2, 4);
+  final blue = hex.substring(4, 6);
+  return '\\x1b]$slot;rgb:$red$red/$green$green/$blue$blue\\x07';
+}
+
+String? _normalizedHexColor(String color) {
+  final normalized = color.trim();
   final hex = switch (normalized.length) {
     4 when normalized.startsWith('#') =>
       '${normalized[1]}${normalized[1]}'
@@ -507,15 +567,22 @@ bool _prefersDarkColorScheme(String background) {
     7 when normalized.startsWith('#') => normalized.substring(1),
     _ => null,
   };
-  if (hex == null) return true;
+  if (hex == null) return null;
 
   final red = int.tryParse(hex.substring(0, 2), radix: 16);
   final green = int.tryParse(hex.substring(2, 4), radix: 16);
   final blue = int.tryParse(hex.substring(4, 6), radix: 16);
   if (red == null || green == null || blue == null) {
-    return true;
+    return null;
   }
 
-  final luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
-  return luminance < 0.5;
+  return hex.toLowerCase();
+}
+
+String _javaScriptStringLiteral(String? value) {
+  if (value == null) return 'null';
+  final escaped = value
+      .replaceAll('\\', r'\\')
+      .replaceAll("'", r"\'");
+  return "'$escaped'";
 }
