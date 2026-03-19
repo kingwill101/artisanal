@@ -1,4 +1,4 @@
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/wizard/main.dart' as example;

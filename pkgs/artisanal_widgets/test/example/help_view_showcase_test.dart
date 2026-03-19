@@ -1,10 +1,10 @@
 import 'package:artisanal/style.dart' show BasicColor;
 import 'package:artisanal/terminal.dart' show StringTerminal;
+import 'package:artisanal/app.dart' as app;
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/runtime.dart' show View, WindowSizeMsg;
-import 'package:artisanal_widgets/app.dart' as app;
-import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal/testing.dart';
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';

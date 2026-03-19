@@ -16,6 +16,7 @@
 - Updated the flagship widget app examples to use the stable umbrella imports from `package:artisanal/app.dart` and `package:artisanal/widgets.dart`.
 - Updated the editor showcase examples to use the stable umbrella imports from `package:artisanal/app.dart`, `package:artisanal/editors.dart`, and `package:artisanal/widgets.dart`.
 - Updated the shared text input test suites to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
+- Updated the flagship component and showcase tests to use the stable `package:artisanal/widgets.dart`, `package:artisanal/testing.dart`, and `package:artisanal/app.dart` entrypoints.
 
 ## 0.1.0+1
 - Documentation + assets
