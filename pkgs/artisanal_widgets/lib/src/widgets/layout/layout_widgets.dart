@@ -33,6 +33,7 @@ import 'package:artisanal/uv.dart'
         TerminalCapabilities,
         UvStyle,
         UvColor,
+        UvRgb,
         UnderlineStyle,
         HalfBlockImageDrawable;
 import 'package:artisanal/tui.dart'

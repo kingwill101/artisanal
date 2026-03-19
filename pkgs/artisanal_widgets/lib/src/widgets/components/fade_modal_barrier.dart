@@ -3,9 +3,10 @@ part of 'components_widgets.dart';
 /// A modal barrier that fades in/out with an animated opacity.
 ///
 /// In terminal layouts there is no true alpha compositing, so when this widget
-/// has real child content it dims that content in place rather than painting an
-/// opaque colored layer above it. When used as a standalone overlay with an
-/// empty child, it falls back to painting a full-screen barrier layer.
+/// has real child content it blends that content toward the barrier color in
+/// place rather than painting an opaque colored layer above it. When used as a
+/// standalone overlay with an empty child, it falls back to painting a
+/// full-screen barrier layer.
 ///
 /// When visible, it covers the entire parent area and optionally dismisses on
 /// tap. Uses [AnimationMixin] to animate the opacity transition.
@@ -117,7 +118,11 @@ class _FadeModalBarrierState extends State<FadeModalBarrier>
     }
 
     final dimmedChild = effectiveOpacity > 0.0
-        ? Opacity(opacity: effectiveOpacity, child: widget.child)
+        ? Tint(
+            color: widget.color ?? theme.background,
+            opacity: effectiveOpacity,
+            child: widget.child,
+          )
         : widget.child;
 
     final dismissLayer = widget.dismissible

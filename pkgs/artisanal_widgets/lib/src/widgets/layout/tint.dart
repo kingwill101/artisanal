@@ -6,9 +6,8 @@ part of 'layout_widgets.dart';
 /// rendered by the child. An [opacity] of 1.0 fully replaces the
 /// foreground with the tint color, while 0.0 has no effect.
 ///
-/// In a terminal context, true alpha blending is not possible, so the
-/// tint works by replacing the foreground color of each cell when
-/// [opacity] is above 0.5, or leaving it unchanged when below 0.5.
+/// In a terminal context, true alpha compositing is not possible, so the tint
+/// blends each rendered cell's foreground/background colors toward [color].
 ///
 /// ```dart
 /// Tint(
@@ -111,17 +110,22 @@ String _applyTint(String content, Color color, double opacity) {
         continue;
       }
 
-      // Apply tint: if opacity >= 0.5, replace fg with tint color.
-      // Also apply tint as bg if opacity is full.
-      final UvStyle tintedStyle;
-      if (opacity >= 1.0) {
-        tintedStyle = srcCell.style.copyWith(fg: tintFg);
-      } else if (opacity >= 0.5) {
-        tintedStyle = srcCell.style.copyWith(fg: tintFg);
-      } else {
-        // Low opacity — no visible tint in terminal.
-        tintedStyle = srcCell.style;
-      }
+      final defaultFg = _colorToUvColor(currentTheme.onBackground);
+      final defaultBg = _colorToUvColor(currentTheme.background);
+      final tintedStyle = srcCell.style.copyWith(
+        fg: _blendTintColor(
+          srcCell.style.fg,
+          tintFg,
+          opacity,
+          fallback: srcCell.content.trim().isEmpty ? null : defaultFg,
+        ),
+        bg: _blendTintColor(
+          srcCell.style.bg,
+          tintFg,
+          opacity,
+          fallback: defaultBg,
+        ),
+      );
 
       canvas.setCell(
         x,
@@ -137,4 +141,33 @@ String _applyTint(String content, Color color, double opacity) {
   }
 
   return canvas.render();
+}
+
+UvColor? _blendTintColor(
+  UvColor? source,
+  UvColor tint,
+  double opacity, {
+  UvColor? fallback,
+}) {
+  final sourceRgb = _uvColorToRgb(source ?? fallback);
+  final tintRgb = _uvColorToRgb(tint);
+  if (sourceRgb == null || tintRgb == null) {
+    return source ?? fallback;
+  }
+
+  int blend(int from, int to) => (from + ((to - from) * opacity)).round();
+
+  return UvColor.rgb(
+    blend(sourceRgb.r, tintRgb.r),
+    blend(sourceRgb.g, tintRgb.g),
+    blend(sourceRgb.b, tintRgb.b),
+    a: blend(sourceRgb.a, tintRgb.a),
+  );
+}
+
+UvRgb? _uvColorToRgb(UvColor? color) {
+  return switch (color) {
+    UvRgb() => color,
+    _ => null,
+  };
 }

@@ -464,6 +464,24 @@ void main() {
       expect(tester2.find.text('NoTint'), isTrue);
     });
 
+    test('partial opacity blends differently from full tint', () async {
+      final partial = WidgetTester();
+      addTearDown(() => partial.dispose());
+      final full = WidgetTester();
+      addTearDown(() => full.dispose());
+
+      await partial.pumpWidget(
+        Tint(color: Colors.red, opacity: 0.25, child: Text('Blend')),
+      );
+      await full.pumpWidget(
+        Tint(color: Colors.red, opacity: 1.0, child: Text('Blend')),
+      );
+
+      expect(partial.view, isNot(equals(full.view)));
+      expect(partial.find.text('Blend'), isTrue);
+      expect(full.find.text('Blend'), isTrue);
+    });
+
     test('has unique id', () {
       final t1 = Tint(color: Colors.red, child: Text('a'));
       final t2 = Tint(color: Colors.blue, child: Text('b'));
