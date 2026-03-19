@@ -86,8 +86,10 @@ void main() {
       expect(html, contains('function writeClipboardText(text)'));
       expect(html, contains('function readClipboardText(selection)'));
       expect(html, contains('function clipboardQueryInfo(data)'));
-      expect(html, contains('const defaultPalette = {'));
-      expect(html, contains('const currentPalette = new Map(Object.entries(defaultPalette));'));
+      expect(html, contains('const darkPalette = {'));
+      expect(html, contains('const lightPalette = {'));
+      expect(html, contains('let activeDefaultPalette = darkPalette;'));
+      expect(html, contains('const currentPalette = new Map();'));
       expect(html, contains('function oscPaletteReply(index, color)'));
       expect(html, contains('function paletteQueryInfo(data, prefix)'));
       expect(html, contains('function paletteResetInfo(data)'));
@@ -105,6 +107,10 @@ void main() {
       expect(html, contains('function sameTheme(left, right)'));
       expect(html, contains('function usingDefaultTheme()'));
       expect(html, contains('function applyDefaultTheme(theme)'));
+      expect(html, contains('function preferredPalette()'));
+      expect(html, contains('function samePalette(current, target)'));
+      expect(html, contains('function usingDefaultPalette()'));
+      expect(html, contains('function applyDefaultPalette(palette)'));
       expect(html, contains('function currentColorSchemeReport()'));
       expect(html, contains('function publishColorSchemeReport()'));
       expect(html, contains('function handlePreferredColorSchemeChange()'));
@@ -128,6 +134,8 @@ void main() {
       expect(html, contains("const reply = oscPaletteReply("));
       expect(html, contains("currentPalette.set(palette.index, color);"));
       expect(html, contains("currentPalette.clear();"));
+      expect(html, contains("applyDefaultPalette(activeDefaultPalette);"));
+      expect(html, contains("activeDefaultPalette[paletteReset.index] ?? '#000000'"));
       expect(html, contains('setBrowserTitle(title.title);'));
       expect(html, contains('currentForeground = activeDefaultTheme.foreground;'));
       expect(html, contains('currentBackground = activeDefaultTheme.background;'));
@@ -186,6 +194,7 @@ void main() {
       expect(html, contains('colorSchemeMedia.addEventListener(\'change\', handlePreferredColorSchemeChange);'));
       expect(html, contains('colorSchemeMedia.addListener(handlePreferredColorSchemeChange);'));
       expect(html, contains('applyDefaultTheme(preferredTheme());'));
+      expect(html, contains('applyDefaultPalette(preferredPalette());'));
       expect(html, contains('focusReportingEnabled = true;'));
       expect(html, contains('bracketedPasteEnabled = true;'));
     });
@@ -210,6 +219,8 @@ void main() {
       expect(html, contains("foreground: '#0f172a'"));
       expect(html, contains("cursor: '#2563eb'"));
       expect(html, contains("selectionBackground: '#cbd5e1'"));
+      expect(html, contains("0: '#333333'"));
+      expect(html, contains("12: '#0451a5'"));
     });
 
     test('bind serves the page and a 404 for unknown routes', () async {

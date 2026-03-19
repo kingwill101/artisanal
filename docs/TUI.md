@@ -440,7 +440,9 @@ color-scheme / OSC color queries from that current hosted theme state, tracks
 browser `prefers-color-scheme` changes while the hosted session is still using
 the page defaults, and supports `OSC 4` palette queries plus palette
 set/reset tracking. The built-in toolbar and badges are tinted from the same
-hosted theme state so the page chrome stays in sync with light/dark changes.
+hosted theme state so the page chrome stays in sync with light/dark changes,
+and the default ANSI palette follows those light/dark host defaults too until
+the session mutates it explicitly.
 
 ### Convenience Functions
 

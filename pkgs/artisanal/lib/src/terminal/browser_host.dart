@@ -405,7 +405,7 @@ final class BrowserTerminalHostServer {
       let currentForeground = darkTheme.foreground;
       let currentCursor = darkTheme.cursor;
       let currentSelectionBackground = darkTheme.selectionBackground;
-      const defaultPalette = {
+      const darkPalette = {
         0: '#000000',
         1: '#cd0000',
         2: '#00cd00',
@@ -423,7 +423,26 @@ final class BrowserTerminalHostServer {
         14: '#00ffff',
         15: '#ffffff'
       };
-      const currentPalette = new Map(Object.entries(defaultPalette));
+      const lightPalette = {
+        0: '#333333',
+        1: '#cd3131',
+        2: '#00bc00',
+        3: '#949800',
+        4: '#0451a5',
+        5: '#bc05bc',
+        6: '#0598bc',
+        7: '#555555',
+        8: '#666666',
+        9: '#cd3131',
+        10: '#14ce14',
+        11: '#b5ba00',
+        12: '#0451a5',
+        13: '#bc05bc',
+        14: '#0598bc',
+        15: '#a5a5a5'
+      };
+      let activeDefaultPalette = darkPalette;
+      const currentPalette = new Map();
 
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
@@ -578,6 +597,12 @@ final class BrowserTerminalHostServer {
           : darkTheme;
       }
 
+      function preferredPalette() {
+        return colorSchemeMedia && !colorSchemeMedia.matches
+          ? lightPalette
+          : darkPalette;
+      }
+
       function sameTheme(left, right) {
         return (
           left.background === right.background &&
@@ -608,6 +633,31 @@ final class BrowserTerminalHostServer {
         applyTerminalTheme();
       }
 
+      function samePalette(current, target) {
+        const targetEntries = Object.entries(target);
+        if (current.size !== targetEntries.length) {
+          return false;
+        }
+        for (const [index, color] of targetEntries) {
+          if ((current.get(index) || '').toLowerCase() !== color.toLowerCase()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function usingDefaultPalette() {
+        return samePalette(currentPalette, activeDefaultPalette);
+      }
+
+      function applyDefaultPalette(palette) {
+        activeDefaultPalette = palette;
+        currentPalette.clear();
+        for (const [index, color] of Object.entries(palette)) {
+          currentPalette.set(index, color);
+        }
+      }
+
       function currentColorSchemeReport() {
         return prefersDarkBackground(currentBackground) ? 1 : 2;
       }
@@ -621,12 +671,18 @@ final class BrowserTerminalHostServer {
 
       function handlePreferredColorSchemeChange() {
         const nextTheme = preferredTheme();
+        const nextPalette = preferredPalette();
         if (usingDefaultTheme()) {
           applyDefaultTheme(nextTheme);
           publishColorSchemeReport();
-          return;
+        } else {
+          activeDefaultTheme = nextTheme;
         }
-        activeDefaultTheme = nextTheme;
+        if (usingDefaultPalette()) {
+          applyDefaultPalette(nextPalette);
+        } else {
+          activeDefaultPalette = nextPalette;
+        }
       }
 
       function modifyOtherKeysReport() {
@@ -1120,14 +1176,11 @@ final class BrowserTerminalHostServer {
           const paletteReset = paletteResetInfo(remaining);
           if (paletteReset !== null) {
             if (paletteReset.index === null) {
-              currentPalette.clear();
-              for (const [index, color] of Object.entries(defaultPalette)) {
-                currentPalette.set(index, color);
-              }
+              applyDefaultPalette(activeDefaultPalette);
             } else {
               currentPalette.set(
                 paletteReset.index,
-                defaultPalette[paletteReset.index] ?? '#000000'
+                activeDefaultPalette[paletteReset.index] ?? '#000000'
               );
             }
             remaining = remaining.slice(paletteReset.consumed);
@@ -1430,6 +1483,7 @@ final class BrowserTerminalHostServer {
       }
 
       applyDefaultTheme(preferredTheme());
+      applyDefaultPalette(preferredPalette());
 
       ws.addEventListener('open', () => {
         statusNode.textContent = 'connected';
