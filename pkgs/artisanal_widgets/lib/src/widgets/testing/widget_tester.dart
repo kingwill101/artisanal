@@ -17,7 +17,7 @@
 /// ## Quick Start
 ///
 /// ```dart
-/// import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+/// import 'package:artisanal_widgets/widgets.dart' as w;
 /// import 'package:artisanal/tui.dart' as tui;
 /// import 'package:artisanal_widgets/testing.dart';
 ///

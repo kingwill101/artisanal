@@ -5,7 +5,7 @@
 ///
 /// To use a specific theme:
 /// ```dart
-/// import 'package:artisanal_widgets/artisanal_widgets.dart';
+/// import 'package:artisanal_widgets/widgets.dart';
 ///
 /// setTheme(OpenCodeThemes.dracula());
 /// ```

@@ -4,7 +4,8 @@
 /// and asserting on rendered output — similar to Flutter's widget testing.
 ///
 /// ```dart
-/// import 'package:artisanal_widgets/artisanal_widgets.dart';
+/// import 'package:artisanal_widgets/widgets.dart';
+/// import 'package:artisanal_widgets/testing.dart';
 ///
 /// void main() {
 ///   testWidgets('counter increments on tap', (tester) {

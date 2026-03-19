@@ -7,7 +7,7 @@
 /// ## Quick Start
 ///
 /// ```dart
-/// import 'package:artisanal_widgets/artisanal_widgets.dart';
+/// import 'package:artisanal_widgets/widgets.dart';
 ///
 /// class _FadeInState extends State<FadeIn> with AnimationMixin {
 ///   late AnimationController _controller;

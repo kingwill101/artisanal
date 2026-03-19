@@ -6,7 +6,7 @@
 /// ## Quick Start
 ///
 /// ```dart
-/// import 'package:artisanal_widgets/artisanal_widgets.dart';
+/// import 'package:artisanal_widgets/widgets.dart';
 ///
 /// class MyApp extends Widget {
 ///   @override
