@@ -251,6 +251,7 @@ void main() {
       expect(secondary.attrs, [1, 2, 3]);
       expect(tertiary.value, 'Chrm');
       expect(terminal.capabilities.primaryAttributes, [1, 4, 18]);
+      expect(terminal.capabilities.secondaryAttributes, [1, 2, 3]);
       expect(terminal.capabilities.hasSixel, isTrue);
 
       await terminal.stop();
@@ -296,6 +297,7 @@ void main() {
 
       final output = outputBuffer.toString();
       expect(output, contains('\x1b[?c'));
+      expect(output, contains('\x1b[>c'));
       expect(output, contains('\x1b[?u'));
       expect(output, contains('\x1b]10;?\x1b\\'));
       expect(output, contains('\x1b]11;?\x1b\\'));

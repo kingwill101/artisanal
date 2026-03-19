@@ -94,6 +94,9 @@ final class TerminalCapabilities {
   /// The primary device attributes reported by the terminal.
   List<int> primaryAttributes = [];
 
+  /// The secondary device attributes reported by the terminal.
+  List<int> secondaryAttributes = [];
+
   /// The terminal background color.
   UvRgb? backgroundColor;
 
@@ -166,8 +169,13 @@ final class TerminalCapabilities {
         }
       }
     } else if (event is SecondaryDeviceAttributesEvent) {
-      // iTerm2 often identifies itself in secondary DA or via environment.
-      // We also check environment in Terminal.
+      final attrsChanged =
+          secondaryAttributes.length != event.attrs.length ||
+          secondaryAttributes.asMap().entries.any(
+            (entry) => entry.value != event.attrs[entry.key],
+          );
+      secondaryAttributes = event.attrs;
+      return attrsChanged;
     }
     return false;
   }
@@ -181,6 +189,7 @@ final class TerminalCapabilities {
     buf.writeln('  hasITerm2: $hasITerm2,');
     buf.writeln('  hasKeyboardEnhancements: $hasKeyboardEnhancements,');
     buf.writeln('  primaryAttributes: $primaryAttributes,');
+    buf.writeln('  secondaryAttributes: $secondaryAttributes,');
     buf.writeln('  foregroundColor: ${foregroundColor ?? "null"},');
     buf.writeln('  backgroundColor: ${backgroundColor ?? "null"},');
     buf.writeln('  cursorColor: ${cursorColor ?? "null"},');

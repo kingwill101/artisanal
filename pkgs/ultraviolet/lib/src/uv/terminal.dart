@@ -359,6 +359,7 @@ class Terminal
   /// Queries the terminal for its capabilities.
   void queryCapabilities() {
     _renderer.queryPrimaryDeviceAttributes();
+    _renderer.querySecondaryDeviceAttributes();
     _renderer.queryKittyGraphics();
     _renderer.queryKeyboardEnhancements();
     _renderer.queryForegroundColor();

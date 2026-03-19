@@ -577,6 +577,11 @@ final class UvTerminalRenderer {
     _buf.write('\x1b[?c');
   }
 
+  /// Queries secondary device attributes.
+  void querySecondaryDeviceAttributes() {
+    _buf.write('\x1b[>c');
+  }
+
   /// Queries Kitty Graphics support.
   void queryKittyGraphics() {
     // Use a random id=31 to query support.

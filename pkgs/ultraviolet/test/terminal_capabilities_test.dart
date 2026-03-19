@@ -45,6 +45,25 @@ void main() {
       expect(caps.hasSixel, isFalse);
     });
 
+    test('tracks secondary device attribute changes', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      expect(
+        caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
+        isTrue,
+      );
+      expect(caps.secondaryAttributes, [1, 2, 3]);
+      expect(
+        caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
+        isFalse,
+      );
+      expect(
+        caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 4, 5])),
+        isTrue,
+      );
+      expect(caps.secondaryAttributes, [1, 4, 5]);
+    });
+
     test('stores foreground, background, cursor, and palette reports', () {
       final caps = TerminalCapabilities(env: const []);
 
@@ -158,6 +177,15 @@ void main() {
             KeyboardEnhancementsEvent.disambiguateEscapeCodes,
           ),
         ),
+        isFalse,
+      );
+
+      expect(
+        caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
         isFalse,
       );
     });
