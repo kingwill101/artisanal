@@ -1054,6 +1054,9 @@ class Program<M extends Model> {
   /// Whether the terminal is temporarily released for exec/suspend.
   bool _terminalReleased = false;
 
+  /// Monotonic token for released-terminal exec lifecycles.
+  int _terminalReleaseGeneration = 0;
+
   /// The last window title this program believes it applied.
   String? _appliedWindowTitle;
 
@@ -2598,6 +2601,8 @@ class Program<M extends Model> {
     String? workingDirectory,
     Map<String, String>? environment,
   ) async {
+    final releaseGeneration = ++_terminalReleaseGeneration;
+
     // Release terminal for external process
     await _releaseTerminal();
 
@@ -2610,6 +2615,8 @@ class Program<M extends Model> {
         environment: environment,
         runInShell: io.Platform.isWindows,
       );
+
+      if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
 
       // Restore terminal
       _restoreTerminal();
@@ -2627,6 +2634,7 @@ class Program<M extends Model> {
       send(onComplete(result));
     } catch (e) {
       // Restore terminal even on error
+      if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
       _restoreTerminal();
 
       // Send error result
@@ -2638,6 +2646,9 @@ class Program<M extends Model> {
       send(onComplete(result));
     }
   }
+
+  bool _canRestoreReleasedTerminal(int releaseGeneration) =>
+      _running && _terminalReleaseGeneration == releaseGeneration;
 
   /// Releases the terminal for external process execution.
   Future<void> _releaseTerminal() async {

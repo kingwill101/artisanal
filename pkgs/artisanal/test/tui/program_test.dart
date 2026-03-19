@@ -3196,6 +3196,177 @@ Future<void> main() async {
       expect(altScreenIndex, greaterThan(restoreIndex));
     });
 
+    test('kill during exec does not restore the terminal after process exit', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_kill_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var completionDelivered = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(const Duration(milliseconds: 30), program.kill);
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) {
+                completionDelivered = true;
+                return const CustomMsg('exec-done');
+              },
+            );
+          }
+          return null;
+        },
+        onView: () => 'kill during exec',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+
+      expect(program.wasKilled, isTrue);
+      expect(completionDelivered, isFalse);
+      expect(
+        terminal.operations.where((op) => op == 'enableRawMode').length,
+        1,
+      );
+    });
+
+    test('quit during exec does not restore the terminal after process exit', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_quit_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var completionDelivered = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(
+              const Duration(milliseconds: 30),
+              () => program.send(const QuitMsg()),
+            );
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) {
+                completionDelivered = true;
+                return const CustomMsg('exec-done');
+              },
+            );
+          }
+          return null;
+        },
+        onView: () => 'quit during exec',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+
+      expect(program.wasKilled, isFalse);
+      expect(completionDelivered, isFalse);
+      expect(
+        terminal.operations.where((op) => op == 'enableRawMode').length,
+        1,
+      );
+    });
+
+    test('backend shutdown during exec does not restore the terminal after process exit', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_backend_shutdown_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      final writes = <String>[];
+      final backend = EmbeddedTerminalBackend(output: writes.add);
+      final terminal = BackendTerminal(backend);
+
+      late Program program;
+      var completionDelivered = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(const Duration(milliseconds: 30), backend.requestShutdown);
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) {
+                completionDelivered = true;
+                return const CustomMsg('exec-done');
+              },
+            );
+          }
+          return null;
+        },
+        onView: () => 'backend shutdown during exec',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+
+      expect(completionDelivered, isFalse);
+      expect(backend.isRawMode, isFalse);
+    });
+
     test('ExecProcess restore reapplies identical view terminal metadata', () async {
       final view = View(
         content: 'sticky metadata',
