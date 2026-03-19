@@ -387,6 +387,19 @@ class Cmd {
   /// `CSI 8 ; <rows> ; <cols> t`, which UV decoding maps to [WindowSizeMsg].
   static Cmd requestWindowSizeReport() => writeRaw('\x1b[18t');
 
+  /// Request the terminal to report its window size in pixels.
+  ///
+  /// Terminals that support xterm window ops respond to `CSI 14 t` with
+  /// `CSI 4 ; <height> ; <width> t`, which UV decoding maps to
+  /// [WindowPixelSizeMsg].
+  static Cmd requestWindowPixelSizeReport() => writeRaw('\x1b[14t');
+
+  /// Request the terminal to report its cell size in pixels.
+  ///
+  /// Terminals that support xterm window ops respond to `CSI 16 t` with
+  /// `CSI 6 ; <height> ; <width> t`, which UV decoding maps to [CellSizeMsg].
+  static Cmd requestCellSizeReport() => writeRaw('\x1b[16t');
+
   /// Requests terminal foreground/background/cursor color reports (OSC 10/11/12),
   /// plus DA1 as a follow-up.
   ///

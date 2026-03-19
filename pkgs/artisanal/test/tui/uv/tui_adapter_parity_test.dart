@@ -1,5 +1,4 @@
 import 'package:artisanal/src/tui/msg.dart';
-import 'package:artisanal/src/uv/event.dart' as uvev;
 import 'package:artisanal/src/uv/tui_adapter.dart';
 import 'package:artisanal/terminal.dart';
 import 'package:test/test.dart';
@@ -186,12 +185,16 @@ void main() {
 
       expect(msgs, hasLength(2));
       expect(msgs.first, const WindowSizeMsg(120, 33));
-      expect(msgs.last, isA<UvEventMsg>());
-      final uvMsg = msgs.last as UvEventMsg;
-      expect(uvMsg.event, isA<uvev.WindowPixelSizeEvent>());
-      final px = uvMsg.event as uvev.WindowPixelSizeEvent;
-      expect(px.width, 2400);
-      expect(px.height, 660);
+      expect(msgs.last, const WindowPixelSizeMsg(2400, 660));
+    });
+
+    test('emits pixel and cell size messages from CSI t reports', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[4;660;2400t\x1b[6;13;7t'.codeUnits);
+
+      expect(msgs, hasLength(2));
+      expect(msgs.first, const WindowPixelSizeMsg(2400, 660));
+      expect(msgs.last, const CellSizeMsg(7, 13));
     });
   });
 }

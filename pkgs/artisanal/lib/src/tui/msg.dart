@@ -139,6 +139,61 @@ class WindowSizeMsg extends Msg {
   int get hashCode => Object.hash(width, height);
 }
 
+/// Message sent when the terminal window reports its pixel dimensions.
+///
+/// This comes from xterm-style window operation replies such as `CSI 4 ; h ; w t`
+/// or the pixel-size half of in-band `CSI 48 ; rows ; cols ; height ; width t`
+/// reports when UV input decoding is enabled.
+class WindowPixelSizeMsg extends Msg {
+  /// Creates a window pixel-size message.
+  const WindowPixelSizeMsg(this.width, this.height);
+
+  /// The window width in pixels.
+  final int width;
+
+  /// The window height in pixels.
+  final int height;
+
+  @override
+  String toString() => 'WindowPixelSizeMsg($width x $height px)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is WindowPixelSizeMsg &&
+          width == other.width &&
+          height == other.height);
+
+  @override
+  int get hashCode => Object.hash(width, height);
+}
+
+/// Message sent when the terminal reports its cell size in pixels.
+///
+/// This comes from xterm-style `CSI 6 ; height ; width t` replies when UV
+/// input decoding is enabled.
+class CellSizeMsg extends Msg {
+  /// Creates a cell-size message.
+  const CellSizeMsg(this.width, this.height);
+
+  /// The cell width in pixels.
+  final int width;
+
+  /// The cell height in pixels.
+  final int height;
+
+  @override
+  String toString() => 'CellSizeMsg($width x $height px)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CellSizeMsg && width == other.width && height == other.height);
+
+  @override
+  int get hashCode => Object.hash(width, height);
+}
+
 /// Message sent when a timer tick occurs.
 ///
 /// Created by [Cmd.tick] or [Cmd.every] commands.

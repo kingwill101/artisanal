@@ -3502,6 +3502,16 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith('\x1b[14t')) {
+      remaining = remaining.substring('\x1b[14t'.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith('\x1b[16t')) {
+      remaining = remaining.substring('\x1b[16t'.length);
+      matchedAny = true;
+      continue;
+    }
     if (remaining.startsWith('\x1b]52;') && remaining.endsWith('?\x07')) {
       return true;
     }

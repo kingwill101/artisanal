@@ -138,6 +138,8 @@ export 'msg.dart'
         MouseMode,
         HitTestMouseMsg,
         WindowSizeMsg,
+        WindowPixelSizeMsg,
+        CellSizeMsg,
         TickMsg,
         FrameTickMsg,
         QuitMsg,

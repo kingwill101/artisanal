@@ -475,6 +475,11 @@ class MockTerminal implements TuiTerminal {
   }
 }
 
+final class _NonTerminalMockTerminal extends MockTerminal {
+  @override
+  bool get isTerminal => false;
+}
+
 final class _ProbeAwareMockTerminal extends MockTerminal {
   _ProbeAwareMockTerminal({required this.onWrite});
 
@@ -1330,6 +1335,53 @@ void main() {
       expect(repeatedWindowSizeCount, 2);
     });
 
+    test('window and cell size request commands write raw xterm queries', () async {
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestWindowPixelSizeReport(),
+          Cmd.requestCellSizeReport(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, contains('\x1b[14t'));
+      expect(output, contains('\x1b[16t'));
+    });
+
+    test('non-terminal hosts suppress window and cell size report queries', () async {
+      final terminal = _NonTerminalMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestWindowPixelSizeReport(),
+          Cmd.requestCellSizeReport(),
+          Cmd.requestWindowSizeReport(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[14t')));
+      expect(output, isNot(contains('\x1b[16t')));
+      expect(output, isNot(contains('\x1b[18t')));
+    });
+
     test('ShowCursorMsg and HideCursorMsg control cursor', () async {
       var phase = 0;
 
@@ -1692,6 +1744,66 @@ void main() {
       await runFuture;
 
       expect(received, const WindowSizeMsg(120, 33));
+    });
+
+    test('delivers window pixel size messages from UV reports', () async {
+      WindowPixelSizeMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowPixelSizeMsg &&
+                msg.width == 2400 &&
+                msg.height == 660) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'pixel resize'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('pixel resize'));
+      terminal.sendInput('\x1b[4;660;2400t'.codeUnits);
+      await runFuture;
+
+      expect(received, const WindowPixelSizeMsg(2400, 660));
+    });
+
+    test('delivers cell size messages from UV reports', () async {
+      CellSizeMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is CellSizeMsg && msg.width == 7 && msg.height == 13) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'cell size'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('cell size'));
+      terminal.sendInput('\x1b[6;13;7t'.codeUnits);
+      await runFuture;
+
+      expect(received, const CellSizeMsg(7, 13));
     });
 
     test('delivers mouse motion messages end to end (UV parser)', () async {

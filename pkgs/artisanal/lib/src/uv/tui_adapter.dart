@@ -107,6 +107,12 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [WindowSizeMsg(ev.width, ev.height)];
   }
   if (ev is uvev.Size) return [WindowSizeMsg(ev.width, ev.height)];
+  if (ev is uvev.WindowPixelSizeEvent) {
+    return [WindowPixelSizeMsg(ev.width, ev.height)];
+  }
+  if (ev is uvev.CellSizeEvent) {
+    return [CellSizeMsg(ev.width, ev.height)];
+  }
 
   if (ev is uvev.PasteEvent) return [PasteMsg(ev.content)];
 
