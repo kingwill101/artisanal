@@ -157,6 +157,11 @@ abstract final class Ansi {
   /// Terminal responds with `CSI ? 997 ; <n> n`.
   static const requestColorScheme = '\x1b[?996n';
 
+  /// Requests the xterm ModifyOtherKeys mode.
+  ///
+  /// Terminals respond with `CSI > 4 ; <mode> m`.
+  static const requestModifyOtherKeys = '\x1b[?4m';
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Escape Sequences
   // ─────────────────────────────────────────────────────────────────────────────

@@ -422,7 +422,7 @@ For a reusable server wrapper, use `BrowserTerminalHostServer.bind(...)` or
 xterm.js page and wire websocket sessions into your TUI runtime. The default
 page also answers the runtime's basic color-scheme, foreground/background/cursor
 color, DA1/DA2/DA3, kitty-keyboard, XTVERSION, XTGETTCAP (`RGB`/`TN`),
-cursor-position, and window/cell-size queries so browser-backed sessions can
+cursor-position, ModifyOtherKeys, and window/cell-size queries so browser-backed sessions can
 participate in startup probing and session-based capability detection. It also
 maps OSC 52 clipboard reads and writes onto the browser clipboard when
 available, answers private mode reports for focus and bracketed paste, and

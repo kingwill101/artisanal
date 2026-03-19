@@ -1779,6 +1779,7 @@ void main() {
     test('mode report request commands write raw DECRQM queries', () async {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestModifyOtherKeysReport(),
           Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(2, private: false),
@@ -1795,6 +1796,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, contains(Ansi.requestModifyOtherKeys));
       expect(output, contains('\x1b[?u'));
       expect(output, contains('\x1b[?2004\$p'));
       expect(output, contains('\x1b[2\$p'));
@@ -1925,6 +1927,7 @@ void main() {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestModifyOtherKeysReport(),
           Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(1004),
@@ -1942,6 +1945,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, isNot(contains(Ansi.requestModifyOtherKeys)));
       expect(output, isNot(contains('\x1b[?u')));
       expect(output, isNot(contains('\x1b[?2004\$p')));
       expect(output, isNot(contains('\x1b[?1004\$p')));
@@ -1952,6 +1956,7 @@ void main() {
       final terminal = _NonAnsiMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestModifyOtherKeysReport(),
           Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(1004),
@@ -1969,6 +1974,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, isNot(contains(Ansi.requestModifyOtherKeys)));
       expect(output, isNot(contains('\x1b[?u')));
       expect(output, isNot(contains('\x1b[?2004\$p')));
       expect(output, isNot(contains('\x1b[?1004\$p')));

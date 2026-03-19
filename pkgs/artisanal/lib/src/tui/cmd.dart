@@ -424,6 +424,13 @@ class Cmd {
   static Cmd requestKeyboardEnhancementsReport() =>
       writeRaw(term_ansi.Ansi.requestKittyKeyboard);
 
+  /// Request the xterm ModifyOtherKeys mode.
+  ///
+  /// Terminals respond with `CSI > 4 ; <mode> m`, which UV decoding maps to
+  /// [ModifyOtherKeysMsg].
+  static Cmd requestModifyOtherKeysReport() =>
+      writeRaw(term_ansi.Ansi.requestModifyOtherKeys);
+
   /// Request the terminal to report its character cell size (rows/cols).
   ///
   /// Terminals that support xterm window ops respond to `CSI 18 t` with

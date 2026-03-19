@@ -12,6 +12,7 @@
 - Added `Cmd.requestTertiaryDeviceAttributesReport()` so DA3 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestTerminalVersionReport()` and `Cmd.requestTermcapStrings()` so XTVERSION and XTGETTCAP queries have explicit TUI command helpers instead of requiring raw escape writes.
 - Added `Cmd.requestColorSchemeReport()` so terminal light/dark scheme queries have an explicit TUI command helper instead of requiring raw escape writes.
+- Added `Cmd.requestModifyOtherKeysReport()` so xterm ModifyOtherKeys status queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `ModifyOtherKeysMsg` plus device-attribute report messages so UV capability/startup reports no longer fall back to raw UV events in the TUI runtime.
 - Added `ModeReportMsg`, `ColorSchemeMsg`, and `Cmd.requestModeReport()` so UV mode-status replies and light/dark color-scheme reports are exposed through the TUI runtime instead of falling back to raw UV events.
 - Added `WindowPixelSizeMsg`, `CellSizeMsg`, and matching `Cmd` request helpers so UV pixel-size and cell-size reports are exposed through the TUI runtime instead of staying UV-internal.
@@ -43,6 +44,7 @@
 - Taught the default browser host page to answer XTGETTCAP requests for `RGB` and `TN`, so browser-backed sessions can participate in termcap-style capability discovery without requiring custom page glue.
 - Taught the default browser host page to intercept OSC 52 clipboard reads and writes, mapping them onto the browser clipboard when available and replying with empty clipboard payloads when browser clipboard access is unavailable.
 - Taught the default browser host page to answer private mode report queries for focus reporting and bracketed paste, so `Cmd.requestModeReport(1004/2004)` can complete against hosted browser sessions.
+- Taught the default browser host page to answer xterm ModifyOtherKeys status queries and track later ModifyOtherKeys writes, so hosted browser sessions can report that state too.
 - Taught the default browser host page to track mouse mode enable/disable writes and answer mode report queries for 1000/1002/1003/1006, so mouse-mode status requests work against hosted browser sessions too.
 - Taught the default browser host page to consume OSC 0/2 title updates and mirror them into the browser tab title and toolbar heading, so hosted sessions reflect runtime window-title changes instead of dropping them.
 - Taught the default browser host page to apply OSC 10/11/12 color changes and OSC 110/111/112 resets to the browser-hosted terminal theme, so hosted sessions can follow runtime foreground/background/cursor color updates after startup.

@@ -38,6 +38,7 @@ void main() {
       expect(html, contains(r"const requestWindowSize = '\x1b[18t';"));
       expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
       expect(html, contains(r"const requestCellSize = '\x1b[16t';"));
+      expect(html, contains(r"const requestModifyOtherKeys = '\x1b[?4m';"));
       expect(html, contains(r"const requestClipboardPrefix = '\x1b]52;';"));
       expect(html, contains(r"const requestPalettePrefix = '\x1b]4;';"));
       expect(html, contains(r"const resetPalettePrefix = '\x1b]104;';"));
@@ -85,6 +86,8 @@ void main() {
       expect(html, contains('function paletteResetInfo(data)'));
       expect(html, contains('function modeReportInfo(data)'));
       expect(html, contains('function modeReportValue(mode)'));
+      expect(html, contains('function modifyOtherKeysReport()'));
+      expect(html, contains('function modifyOtherKeysInfo(data)'));
       expect(html, contains('function setBrowserTitle(title)'));
       expect(html, contains('function prefersDarkBackground(color)'));
       expect(html, contains('function normalizeOscColor(value)'));
@@ -126,7 +129,10 @@ void main() {
       expect(html, contains('mouseButtonEnabled = true;'));
       expect(html, contains('mouseAnyEnabled = true;'));
       expect(html, contains('mouseSgrEnabled = true;'));
+      expect(html, contains('let modifyOtherKeysMode = 0;'));
       expect(html, contains(r"`\x1b[?${modeReport.mode};${modeReportValue(modeReport.mode)}$y`"));
+      expect(html, contains('data: modifyOtherKeysReport()'));
+      expect(html, contains('modifyOtherKeysMode = modifyOtherKeys.mode;'));
       expect(html, contains("data: cursorPositionReport(false)"));
       expect(html, contains("data: cursorPositionReport(true)"));
       expect(html, contains(r"data: `\x1b[8;${term.rows};${term.cols}t`"));

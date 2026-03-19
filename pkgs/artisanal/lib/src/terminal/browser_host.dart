@@ -317,6 +317,7 @@ final class BrowserTerminalHostServer {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = wsProtocol + '//' + window.location.host + '$webSocketPath';
       const requestColorScheme = '\\x1b[?996n';
+      const requestModifyOtherKeys = '\\x1b[?4m';
       const requestPrivateModePrefix = '\\x1b[?';
       const requestModeSuffix = '\$p';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
@@ -373,6 +374,7 @@ final class BrowserTerminalHostServer {
       let mouseButtonEnabled = false;
       let mouseAnyEnabled = false;
       let mouseSgrEnabled = false;
+      let modifyOtherKeysMode = 0;
       const defaultBackground = '$background';
       const defaultForeground = '$foreground';
       const defaultCursor = '$cursor';
@@ -494,6 +496,10 @@ final class BrowserTerminalHostServer {
 
       function currentColorSchemeReport() {
         return prefersDarkBackground(currentBackground) ? 1 : 2;
+      }
+
+      function modifyOtherKeysReport() {
+        return `\\x1b[>4;\${modifyOtherKeysMode}m`;
       }
 
       function oscColorReply(index, color) {
@@ -817,6 +823,36 @@ final class BrowserTerminalHostServer {
         }
       }
 
+      function modifyOtherKeysInfo(data) {
+        if (!data.startsWith('\\x1b[>4')) {
+          return null;
+        }
+        if (data.startsWith('\\x1b[>4m')) {
+          return {
+            mode: 0,
+            consumed: '\\x1b[>4m'.length,
+          };
+        }
+        if (!data.startsWith('\\x1b[>4;')) {
+          return null;
+        }
+
+        const suffixIndex = data.indexOf('m', '\\x1b[>4;'.length);
+        if (suffixIndex === -1) {
+          return null;
+        }
+
+        const digits = data.slice('\\x1b[>4;'.length, suffixIndex);
+        if (!digits || Array.from(digits).some((ch) => ch < '0' || ch > '9')) {
+          return null;
+        }
+
+        return {
+          mode: Number.parseInt(digits, 10),
+          consumed: suffixIndex + 1,
+        };
+      }
+
       function oscTitleInfo(data) {
         let prefix = null;
         if (data.startsWith(titleOsc0Prefix)) {
@@ -1004,6 +1040,14 @@ final class BrowserTerminalHostServer {
               data: `\\x1b[?997;\${currentColorSchemeReport()}n`
             });
             remaining = remaining.slice(requestColorScheme.length);
+            continue;
+          }
+          if (remaining.startsWith(requestModifyOtherKeys)) {
+            sendMessage({
+              type: 'input.text',
+              data: modifyOtherKeysReport()
+            });
+            remaining = remaining.slice(requestModifyOtherKeys.length);
             continue;
           }
           if (remaining.startsWith(requestPrimaryDeviceAttributes)) {
@@ -1205,6 +1249,12 @@ final class BrowserTerminalHostServer {
           if (remaining.startsWith(disableMouseSgr)) {
             mouseSgrEnabled = false;
             remaining = remaining.slice(disableMouseSgr.length);
+            continue;
+          }
+          const modifyOtherKeys = modifyOtherKeysInfo(remaining);
+          if (modifyOtherKeys !== null) {
+            modifyOtherKeysMode = modifyOtherKeys.mode;
+            remaining = remaining.slice(modifyOtherKeys.consumed);
             continue;
           }
 
