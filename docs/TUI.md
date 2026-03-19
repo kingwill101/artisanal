@@ -353,10 +353,10 @@ that control string by hand.
 
 Host shutdown is explicit too:
 
-- `SocketTerminalHostServer.close(force: true)` destroys active client sockets
-  immediately
+- `SocketTerminalHostServer.close(force: true)` tears down active client
+  sockets immediately and still waits for session cleanup before returning
 - `BrowserTerminalHostServer.close(force: true)` closes active websocket
-  sessions immediately
+  sessions immediately and still waits for session cleanup before returning
 - backend disconnects surface as `InterruptMsg` by default and now also fall
   back to `QuitMsg` shutdown if the model ignores the interrupt
 

@@ -167,6 +167,49 @@ void main() {
       await clientClosed.future.timeout(const Duration(seconds: 5));
     });
 
+    test('close(force: true) waits for socket session cleanup', () async {
+      final sessionStarted = Completer<void>();
+      final cleanupStarted = Completer<void>();
+      final allowCleanup = Completer<void>();
+      final cleanupFinished = Completer<void>();
+      final server = await SocketTerminalHostServer.bind(
+        port: 0,
+        onSession: (socket) async {
+          if (!sessionStarted.isCompleted) {
+            sessionStarted.complete();
+          }
+          await socket.done;
+          if (!cleanupStarted.isCompleted) {
+            cleanupStarted.complete();
+          }
+          await allowCleanup.future;
+          if (!cleanupFinished.isCompleted) {
+            cleanupFinished.complete();
+          }
+        },
+      );
+
+      final client = await io.Socket.connect(
+        io.InternetAddress.loopbackIPv4,
+        server.server.port,
+      );
+      addTearDown(client.close);
+
+      await sessionStarted.future.timeout(const Duration(seconds: 5));
+      var closeCompleted = false;
+      final closeFuture = server.close(force: true).then((_) {
+        closeCompleted = true;
+      });
+
+      await cleanupStarted.future.timeout(const Duration(seconds: 5));
+      await Future<void>.delayed(Duration.zero);
+      expect(closeCompleted, isFalse);
+
+      allowCleanup.complete();
+      await closeFuture.timeout(const Duration(seconds: 5));
+      await cleanupFinished.future.timeout(const Duration(seconds: 5));
+    });
+
     test('synchronous session handler errors still clean up sockets', () async {
       var accepted = 0;
       final server = await SocketTerminalHostServer.bind(

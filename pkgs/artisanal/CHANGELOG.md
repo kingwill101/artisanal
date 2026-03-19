@@ -64,6 +64,7 @@
 - Suppressed DA3 capability queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed XTVERSION and XTGETTCAP report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed batched OSC color, palette, and clipboard report queries on non-terminal hosts instead of only handling clipboard reads as a trailing special case.
+- Made `SocketTerminalHostServer.close(force: true)` wait for in-flight session cleanup after tearing down active client sockets, matching the browser host lifecycle contract.
 
 ## 0.2.0+1
 

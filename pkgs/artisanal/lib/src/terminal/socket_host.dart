@@ -139,8 +139,9 @@ final class SocketTerminalHostServer {
 
   /// Closes the underlying TCP server.
   ///
-  /// When [force] is `true`, all active client sockets are destroyed before the
-  /// method returns.
+  /// When [force] is `true`, all active client sockets are torn down before the
+  /// method returns, and this call still waits for in-flight session cleanup to
+  /// finish.
   Future<void> close({bool force = false}) async {
     if (_closed) return;
     _closed = true;
@@ -148,10 +149,15 @@ final class SocketTerminalHostServer {
     await server.close();
 
     if (force) {
+      await Future.wait(
+        _activeSockets.toList(growable: false).map(
+          (socket) => Future.sync(socket.close),
+        ),
+        eagerError: false,
+      );
       for (final socket in _activeSockets.toList(growable: false)) {
         socket.destroy();
       }
-      return;
     }
 
     if (_activeSessions.isNotEmpty) {

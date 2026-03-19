@@ -177,6 +177,47 @@ void main() {
       await socketClosed.future.timeout(const Duration(seconds: 5));
     });
 
+    test('close(force: true) waits for websocket session cleanup', () async {
+      final sessionStarted = Completer<void>();
+      final cleanupStarted = Completer<void>();
+      final allowCleanup = Completer<void>();
+      final cleanupFinished = Completer<void>();
+      final server = await BrowserTerminalHostServer.bind(
+        port: 0,
+        title: 'Force Close Wait Test',
+        onSession: (socket) async {
+          if (!sessionStarted.isCompleted) {
+            sessionStarted.complete();
+          }
+          await socket.done;
+          if (!cleanupStarted.isCompleted) {
+            cleanupStarted.complete();
+          }
+          await allowCleanup.future;
+          if (!cleanupFinished.isCompleted) {
+            cleanupFinished.complete();
+          }
+        },
+      );
+
+      final socket = await io.WebSocket.connect(server.webSocketUri.toString());
+      addTearDown(socket.close);
+
+      await sessionStarted.future.timeout(const Duration(seconds: 5));
+      var closeCompleted = false;
+      final closeFuture = server.close(force: true).then((_) {
+        closeCompleted = true;
+      });
+
+      await cleanupStarted.future.timeout(const Duration(seconds: 5));
+      await Future<void>.delayed(Duration.zero);
+      expect(closeCompleted, isFalse);
+
+      allowCleanup.complete();
+      await closeFuture.timeout(const Duration(seconds: 5));
+      await cleanupFinished.future.timeout(const Duration(seconds: 5));
+    });
+
     test('close is idempotent after serving requests', () async {
       final server = await BrowserTerminalHostServer.bind(
         port: 0,

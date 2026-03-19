@@ -297,7 +297,8 @@ for a complete example.
 
 The watched browser/socket host wrappers also expose `close(force: true)` when
 you need to tear down active remote sessions immediately during test cleanup or
-development restarts.
+development restarts. Forced close still waits for the wrapped host session
+cleanup to finish before the wrapper returns.
 
 If you want manual control over when reloads happen, use the app-shell helper
 without a watcher:
