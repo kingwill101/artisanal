@@ -563,6 +563,22 @@ void main() {
       expect(modified.sendInterrupt, options.sendInterrupt);
       expect(modified.altScreen, options.altScreen);
     });
+
+    test('withoutFilter preserves mouseMode and other runtime flags', () {
+      final options = ProgramOptions(
+        mouse: true,
+        mouseMode: MouseMode.allMotion,
+        signalHandlers: false,
+        filter: (_, msg) => msg,
+      );
+
+      final modified = options.withoutFilter();
+
+      expect(modified.filter, isNull);
+      expect(modified.mouseMode, MouseMode.allMotion);
+      expect(modified.mouse, isTrue);
+      expect(modified.signalHandlers, isFalse);
+    });
   });
 
   group('ProgramHost', () {

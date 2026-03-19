@@ -514,6 +514,7 @@ class ProgramOptions {
   ProgramOptions withoutFilter() => ProgramOptions(
     altScreen: altScreen,
     mouse: mouse,
+    mouseMode: mouseMode,
     fps: fps,
     frameTick: frameTick,
     hideCursor: hideCursor,
