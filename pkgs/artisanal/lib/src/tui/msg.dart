@@ -484,6 +484,87 @@ class TerminalVersionMsg extends Msg {
   String toString() => 'TerminalVersionMsg($version)';
 }
 
+/// Message sent when the terminal reports a ModifyOtherKeys mode.
+class ModifyOtherKeysMsg extends Msg {
+  /// Creates a ModifyOtherKeys report message.
+  const ModifyOtherKeysMsg(this.mode);
+
+  /// The reported ModifyOtherKeys mode.
+  final int mode;
+
+  @override
+  String toString() => 'ModifyOtherKeysMsg($mode)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ModifyOtherKeysMsg && mode == other.mode);
+
+  @override
+  int get hashCode => mode.hashCode;
+}
+
+/// Message sent when the terminal replies with primary device attributes.
+class PrimaryDeviceAttributesMsg extends Msg {
+  /// Creates a primary device attributes message.
+  const PrimaryDeviceAttributesMsg(this.attrs);
+
+  /// The raw DA1 attribute list.
+  final List<int> attrs;
+
+  @override
+  String toString() => 'PrimaryDeviceAttributesMsg($attrs)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PrimaryDeviceAttributesMsg && _listEquals(attrs, other.attrs));
+
+  @override
+  int get hashCode => Object.hashAll(attrs);
+}
+
+/// Message sent when the terminal replies with secondary device attributes.
+class SecondaryDeviceAttributesMsg extends Msg {
+  /// Creates a secondary device attributes message.
+  const SecondaryDeviceAttributesMsg(this.attrs);
+
+  /// The raw DA2 attribute list.
+  final List<int> attrs;
+
+  @override
+  String toString() => 'SecondaryDeviceAttributesMsg($attrs)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SecondaryDeviceAttributesMsg &&
+          _listEquals(attrs, other.attrs));
+
+  @override
+  int get hashCode => Object.hashAll(attrs);
+}
+
+/// Message sent when the terminal replies with tertiary device attributes.
+class TertiaryDeviceAttributesMsg extends Msg {
+  /// Creates a tertiary device attributes message.
+  const TertiaryDeviceAttributesMsg(this.value);
+
+  /// The decoded DA3 identifier string.
+  final String value;
+
+  @override
+  String toString() => 'TertiaryDeviceAttributesMsg($value)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TertiaryDeviceAttributesMsg && value == other.value);
+
+  @override
+  int get hashCode => value.hashCode;
+}
+
 /// Message sent when keyboard enhancements are reported.
 class KeyboardEnhancementsMsg extends Msg {
   /// Creates a keyboard enhancements capability message.
@@ -577,6 +658,15 @@ class ColorSchemeMsg extends Msg {
   final g = int.tryParse(s.substring(3, 5), radix: 16) ?? 0;
   final b = int.tryParse(s.substring(5, 7), radix: 16) ?? 0;
   return (r: r, g: g, b: b);
+}
+
+bool _listEquals(List<int> a, List<int> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// Mouse tracking modes for the terminal.

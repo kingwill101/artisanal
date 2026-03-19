@@ -119,6 +119,15 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
   if (ev is uvev.CellSizeEvent) {
     return [CellSizeMsg(ev.width, ev.height)];
   }
+  if (ev is uvev.PrimaryDeviceAttributesEvent) {
+    return [PrimaryDeviceAttributesMsg(List<int>.unmodifiable(ev.attrs))];
+  }
+  if (ev is uvev.SecondaryDeviceAttributesEvent) {
+    return [SecondaryDeviceAttributesMsg(List<int>.unmodifiable(ev.attrs))];
+  }
+  if (ev is uvev.TertiaryDeviceAttributesEvent) {
+    return [TertiaryDeviceAttributesMsg(ev.value)];
+  }
 
   if (ev is uvev.PasteEvent) return [PasteMsg(ev.content)];
 
@@ -141,6 +150,9 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
 
   if (ev is uvev.KeyboardEnhancementsEvent) {
     return [KeyboardEnhancementsMsg(reportEventTypes: ev.supportsKeyReleases)];
+  }
+  if (ev is uvev.ModifyOtherKeysEvent) {
+    return [ModifyOtherKeysMsg(ev.mode)];
   }
   if (ev is uvev.ModeReportEvent) {
     return [

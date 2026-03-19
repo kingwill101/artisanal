@@ -1917,6 +1917,70 @@ void main() {
       );
     });
 
+    test('delivers primary device attributes messages from UV reports', () async {
+      PrimaryDeviceAttributesMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is PrimaryDeviceAttributesMsg &&
+                msg.attrs.length == 3 &&
+                msg.attrs[0] == 1 &&
+                msg.attrs[1] == 2 &&
+                msg.attrs[2] == 4) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'primary attrs'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('primary attrs'));
+      terminal.sendInput('\x1b[?1;2;4c'.codeUnits);
+      await runFuture;
+
+      expect(received, const PrimaryDeviceAttributesMsg([1, 2, 4]));
+    });
+
+    test('delivers ModifyOtherKeys messages from UV reports', () async {
+      ModifyOtherKeysMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ModifyOtherKeysMsg && msg.mode == 1) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'modify other keys'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('modify other keys'),
+      );
+      terminal.sendInput('\x1b[>4;1m'.codeUnits);
+      await runFuture;
+
+      expect(received, const ModifyOtherKeysMsg(1));
+    });
+
     test('delivers mouse motion messages end to end (UV parser)', () async {
       MouseMsg? received;
 

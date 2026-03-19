@@ -113,6 +113,26 @@ void main() {
       expect((msgs.single as CapabilityMsg).content, 'RGB');
     });
 
+    test(
+      'emits device-attribute and modify-other-keys messages from reports',
+      () {
+        final p = UvTuiInputParser();
+        final msgs = [
+          ...p.parseAll('\x1b[>4;1m'.codeUnits),
+          ...p.parseAll('\x1b[?1;2;4c'.codeUnits),
+          ...p.parseAll('\x1b[>1;2;3c'.codeUnits),
+          ...p.parseAll('\x1bP!|4368726d\x1b\\'.codeUnits),
+          ...p.parseAll(const [], expired: true),
+        ];
+
+        expect(msgs, hasLength(4));
+        expect(msgs[0], const ModifyOtherKeysMsg(1));
+        expect(msgs[1], const PrimaryDeviceAttributesMsg([1, 2, 4]));
+        expect(msgs[2], const SecondaryDeviceAttributesMsg([1, 2, 3]));
+        expect(msgs[3], const TertiaryDeviceAttributesMsg('Chrm'));
+      },
+    );
+
     test('emits KeyboardEnhancementsMsg from kitty keyboard report', () {
       final p = UvTuiInputParser();
       final msgs = p.parseAll('\x1b[?2u\x1b[?u'.codeUnits);
