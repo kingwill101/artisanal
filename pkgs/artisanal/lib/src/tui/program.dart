@@ -3498,6 +3498,19 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith(Ansi.requestTerminalVersion)) {
+      remaining = remaining.substring(Ansi.requestTerminalVersion.length);
+      matchedAny = true;
+      continue;
+    }
+    if (remaining.startsWith('\x1bP+q')) {
+      final consumed = _consumeXtGetTcapRequest(remaining);
+      if (consumed > 0) {
+        remaining = remaining.substring(consumed);
+        matchedAny = true;
+        continue;
+      }
+    }
     if (remaining.startsWith(Ansi.requestCursorPosition)) {
       remaining = remaining.substring(Ansi.requestCursorPosition.length);
       matchedAny = true;
@@ -3543,4 +3556,19 @@ int _consumePaletteColorRequest(String text, {required String terminator}) {
   }
   if (int.tryParse(parts[1]) == null) return 0;
   return end + terminator.length;
+}
+
+int _consumeXtGetTcapRequest(String text) {
+  const prefix = '\x1bP+q';
+  if (!text.startsWith(prefix)) return 0;
+  final end = text.indexOf('\x1b\\', prefix.length);
+  if (end < 0) return 0;
+  final payload = text.substring(prefix.length, end);
+  if (payload.isEmpty) return 0;
+  final parts = payload.split(';');
+  final hexPart = RegExp(r'^[0-9a-fA-F]+$');
+  if (parts.any((part) => part.isEmpty || part.length.isOdd || !hexPart.hasMatch(part))) {
+    return 0;
+  }
+  return end + '\x1b\\'.length;
 }

@@ -388,6 +388,21 @@ class Cmd {
   static Cmd requestPrimaryDeviceAttributesReport() =>
       writeRaw(term_ansi.Ansi.requestPrimaryDeviceAttributes);
 
+  /// Request the terminal to report its name and version (XTVERSION).
+  ///
+  /// Terminals respond with `DCS > | <text> ST`, which UV decoding maps to
+  /// [TerminalVersionMsg].
+  static Cmd requestTerminalVersionReport() =>
+      writeRaw(term_ansi.Ansi.requestTerminalVersion);
+
+  /// Request termcap/terminfo capability strings (XTGETTCAP).
+  ///
+  /// Terminals respond with `DCS 1 + r ... ST`, which UV decoding maps to
+  /// [CapabilityMsg]. Capability names are encoded as hexadecimal bytes per
+  /// xterm's XTGETTCAP protocol.
+  static Cmd requestTermcapStrings(Iterable<String> names) =>
+      writeRaw(term_ansi.Ansi.requestTermcapStrings(names));
+
   /// Request the terminal to report its character cell size (rows/cols).
   ///
   /// Terminals that support xterm window ops respond to `CSI 18 t` with

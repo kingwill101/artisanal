@@ -1339,6 +1339,8 @@ void main() {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
+          Cmd.requestTerminalVersionReport(),
+          Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
@@ -1356,6 +1358,8 @@ void main() {
 
       final output = terminal.output.join();
       expect(output, contains('\x1b[?c'));
+      expect(output, contains('\x1b[>0q'));
+      expect(output, contains('\x1bP+q524742;544e\x1b\\'));
       expect(output, contains('\x1b[6n'));
       expect(output, contains('\x1b[14t'));
       expect(output, contains('\x1b[16t'));
@@ -1388,6 +1392,8 @@ void main() {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
+          Cmd.requestTerminalVersionReport(),
+          Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
@@ -1406,6 +1412,8 @@ void main() {
 
       final output = terminal.output.join();
       expect(output, isNot(contains('\x1b[?c')));
+      expect(output, isNot(contains('\x1b[>0q')));
+      expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
       expect(output, isNot(contains('\x1b[6n')));
       expect(output, isNot(contains('\x1b[14t')));
       expect(output, isNot(contains('\x1b[16t')));
@@ -1987,6 +1995,70 @@ void main() {
       await runFuture;
 
       expect(received, const PrimaryDeviceAttributesMsg([1, 2, 4]));
+    });
+
+    test('delivers terminal version messages from UV reports', () async {
+      TerminalVersionMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is TerminalVersionMsg && msg.version == 'Ultraviolet') {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'terminal version'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('terminal version'),
+      );
+      terminal.sendInput('\x1bP>|Ultraviolet\x1b\\'.codeUnits);
+      await runFuture;
+
+      expect(received, const TerminalVersionMsg('Ultraviolet'));
+    });
+
+    test('delivers XTGETTCAP capability messages from UV reports', () async {
+      CapabilityMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is CapabilityMsg && msg.content == 'RGB;TN=xterm-256color') {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'termcap capability'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('termcap capability'),
+      );
+      terminal.sendInput(
+        '\x1bP1+r524742;544e=787465726d2d323536636f6c6f72\x1b\\'.codeUnits,
+      );
+      await runFuture;
+
+      expect(received, const CapabilityMsg('RGB;TN=xterm-256color'));
     });
 
     test('delivers ModifyOtherKeys messages from UV reports', () async {

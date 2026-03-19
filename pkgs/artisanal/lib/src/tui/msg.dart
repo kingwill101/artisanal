@@ -493,6 +493,14 @@ class CapabilityMsg extends Msg {
 
   @override
   String toString() => 'CapabilityMsg($content)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CapabilityMsg && content == other.content);
+
+  @override
+  int get hashCode => content.hashCode;
 }
 
 /// Message sent when the terminal version is reported.
@@ -505,6 +513,14 @@ class TerminalVersionMsg extends Msg {
 
   @override
   String toString() => 'TerminalVersionMsg($version)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TerminalVersionMsg && version == other.version);
+
+  @override
+  int get hashCode => version.hashCode;
 }
 
 /// Message sent when the terminal reports a ModifyOtherKeys mode.

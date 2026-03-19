@@ -114,6 +114,19 @@ abstract final class Ansi {
   /// Upstream parity: `x/ansi.RequestPrimaryDeviceAttributes`.
   static const requestPrimaryDeviceAttributes = '\x1b[?c';
 
+  /// Request xterm name and version (XTVERSION).
+  ///
+  /// Terminal responds with `DCS > | <text> ST`.
+  static const requestTerminalVersion = '\x1b[>0q';
+
+  /// Requests termcap/terminfo capability strings (XTGETTCAP).
+  ///
+  /// Terminal responds with `DCS 1 + r ... ST` for valid requests.
+  static String requestTermcapStrings(Iterable<String> names) {
+    final encoded = names.map(_encodeHexBytes).join(';');
+    return '\x1bP+q$encoded\x1b\\';
+  }
+
   /// Requests the terminal foreground color (OSC 10).
   ///
   /// Terminal responds with `ESC ] 10 ; <color> (BEL|ST)`.
@@ -219,6 +232,10 @@ abstract final class Ansi {
 
   /// Moves cursor to beginning of line [n] lines up.
   static String cursorPrevLineBy(int n) => '\x1b[${n}F';
+
+  static String _encodeHexBytes(String text) => text.codeUnits
+      .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join();
 
   /// Moves cursor to column [n] (1-based).
   static String cursorToColumn(int n) => '\x1b[${n}G';
