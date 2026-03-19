@@ -96,6 +96,12 @@ void main() {
       expect(html, contains('function oscColorReply(index, color)'));
       expect(html, contains('function oscTitleInfo(data)'));
       expect(html, contains('function oscColorInfo(data, prefix)'));
+      expect(html, contains('function scheduleResize()'));
+      expect(html, contains("if (typeof ResizeObserver !== 'undefined') {"));
+      expect(html, contains('const resizeObserver = new ResizeObserver(() => {'));
+      expect(html, contains('resizeObserver.observe(terminalNode);'));
+      expect(html, contains('if (document.fonts && document.fonts.ready) {'));
+      expect(html, contains('document.fonts.ready.then(() => {'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
       expect(html, contains('data: reportedTertiaryDeviceAttributes'));
       expect(html, contains(r"data: '\x1bP1+r' + responsePayload + '\x1b\\'"));
@@ -144,6 +150,7 @@ void main() {
         html,
         contains(r"data: `\x1b[6;${cell.height};${cell.width}t`"),
       );
+      expect(html, contains("window.addEventListener('resize', scheduleResize);"));
       expect(html, contains("window.addEventListener('focus'"));
       expect(html, contains("window.addEventListener('blur'"));
       expect(html, contains("window.addEventListener('paste'"));

@@ -52,6 +52,7 @@
 - Taught the default browser host page to consume OSC 0/2 title updates and mirror them into the browser tab title and toolbar heading, so hosted sessions reflect runtime window-title changes instead of dropping them.
 - Taught the default browser host page to apply OSC 10/11/12 color changes and OSC 110/111/112 resets to the browser-hosted terminal theme, so hosted sessions can follow runtime foreground/background/cursor color updates after startup.
 - Made browser-host color-scheme and OSC color queries reflect the current hosted theme state after OSC 10/11/12 and 110/111/112 mutations, not just the startup defaults.
+- Made the default browser host page refit and resend terminal size when the terminal element itself resizes or browser font metrics finish loading, not just on `window.resize`.
 - Taught the default browser host page to answer `OSC 4 ; index ; ?` palette queries and track palette mutations/resets, so browser-backed sessions can participate in palette reporting too.
 - Reset cursor color overrides during terminal restore/cleanup paths and hardened startup background probing so the first rendered frame can reflect the probed terminal background.
 - Hardened the pre-render theme probe so the first rendered frame can also follow an explicit terminal light/dark color-scheme reply when OSC 11 background color is unavailable.

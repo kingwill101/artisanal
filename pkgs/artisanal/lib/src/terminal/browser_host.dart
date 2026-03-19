@@ -1274,6 +1274,25 @@ final class BrowserTerminalHostServer {
         });
       }
 
+      let resizeTimer = null;
+      function scheduleResize() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(sendResize, 50);
+      }
+
+      if (typeof ResizeObserver !== 'undefined') {
+        const resizeObserver = new ResizeObserver(() => {
+          scheduleResize();
+        });
+        resizeObserver.observe(terminalNode);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => {
+          scheduleResize();
+        }).catch(() => {});
+      }
+
       ws.addEventListener('open', () => {
         statusNode.textContent = 'connected';
         sendResize();
@@ -1306,11 +1325,7 @@ final class BrowserTerminalHostServer {
         sendMessage({type: 'input.text', data});
       });
 
-      let resizeTimer = null;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(sendResize, 50);
-      });
+      window.addEventListener('resize', scheduleResize);
       window.addEventListener('focus', () => publishFocusState(true));
       window.addEventListener('blur', () => publishFocusState(false));
       window.addEventListener('paste', (event) => {
