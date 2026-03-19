@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/widgets.dart' as w;
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
 
@@ -66,17 +66,17 @@ Future<String> _readSocketUntil(
   return completer.future;
 }
 
-String _terminalOperationsText(tui.StringTerminal terminal) =>
+String _terminalOperationsText(runtime.StringTerminal terminal) =>
     terminal.operations.join('\n');
 
 void main() {
   group('runWidgetApp', () {
     test('uses widget-friendly defaults', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
 
       await w.runWidgetApp(
-        tui.WidgetApp(_QuitOnInitWidget()),
-        host: tui.ProgramHost.terminal(terminal),
+        w.WidgetApp(_QuitOnInitWidget()),
+        host: runtime.ProgramHost.terminal(terminal),
       );
 
       expect(terminal.operations, contains('enterAltScreen'));
@@ -84,14 +84,14 @@ void main() {
     });
 
     test('explicit options can disable the widget defaults', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
 
       await w.runWidgetApp(
-        tui.WidgetApp(_QuitOnInitWidget()),
-        host: tui.ProgramHost.terminal(terminal),
-        options: const tui.ProgramOptions(
+        w.WidgetApp(_QuitOnInitWidget()),
+        host: runtime.ProgramHost.terminal(terminal),
+        options: const runtime.ProgramOptions(
           altScreen: false,
-          mouseMode: tui.MouseMode.none,
+          mouseMode: runtime.MouseMode.none,
           signalHandlers: false,
           frameTick: false,
         ),
@@ -102,15 +102,28 @@ void main() {
       expect(terminal.operations, isNot(contains('enableMouseCellMotion')));
       expect(terminal.operations, isNot(contains('enableMouseAllMotion')));
     });
+
+    test('can override imageAutoMode for local runs', () async {
+      final terminal = runtime.StringTerminal();
+      final app = w.WidgetApp(_QuitOnInitWidget());
+
+      await w.runWidgetApp(
+        app,
+        host: runtime.ProgramHost.terminal(terminal),
+        imageAutoMode: w.ImageAutoMode.portableFallback,
+      );
+
+      expect(app.imageAutoMode, w.ImageAutoMode.portableFallback);
+    });
   });
 
   group('runArtisanalApp', () {
     test('propagates the app title to startup output by default', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
 
       await w.runArtisanalApp(
         w.ArtisanalApp(title: 'Run App Test', home: _QuitOnInitWidget()),
-        host: tui.ProgramHost.terminal(terminal),
+        host: runtime.ProgramHost.terminal(terminal),
       );
 
       expect(
@@ -120,7 +133,7 @@ void main() {
     });
 
     test('captures print output into the debug console when enabled', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
       final controller = w.DebugConsoleController(initiallyVisible: true);
 
       await w.runArtisanalApp(
@@ -130,17 +143,33 @@ void main() {
           debugConsoleCapturePrint: true,
           home: _PrintAndQuitWidget(),
         ),
-        host: tui.ProgramHost.terminal(terminal),
+        host: runtime.ProgramHost.terminal(terminal),
       );
 
       final messages = controller.entries.map((entry) => entry.message).join('\n');
       expect(messages, contains('captured print'));
     });
+
+    test('can override imageAutoMode for local app-shell runs', () async {
+      final terminal = runtime.StringTerminal();
+      final app = w.ArtisanalApp(
+        title: 'Image Mode',
+        home: _QuitOnInitWidget(),
+      );
+
+      await w.runArtisanalApp(
+        app,
+        host: runtime.ProgramHost.terminal(terminal),
+        imageAutoMode: w.ImageAutoMode.portableFallback,
+      );
+
+      expect(app.imageAutoMode, w.ImageAutoMode.portableFallback);
+    });
   });
 
   group('reloadable runners', () {
     test('runReloadableArtisanalApp keeps the app shell title', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
       final controller = w.ReloadController();
 
       addTearDown(controller.dispose);
@@ -148,7 +177,7 @@ void main() {
       await w.runReloadableArtisanalApp(
         title: 'Reloadable App',
         controller: controller,
-        host: tui.ProgramHost.terminal(terminal),
+        host: runtime.ProgramHost.terminal(terminal),
         homeBuilder: (context, revision) => _QuitOnInitWidget(),
       );
 
@@ -161,7 +190,7 @@ void main() {
 
   group('watched runners', () {
     test('runWatchedWidgetApp wires a file watcher around the reload host', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
       final tempDir = await Directory.systemTemp.createTemp('run-watched-widget-');
 
       addTearDown(() async {
@@ -171,7 +200,7 @@ void main() {
       await w.runWatchedWidgetApp(
         (context, revision) => _QuitOnInitWidget(),
         watchRoots: [tempDir.path],
-        host: tui.ProgramHost.terminal(terminal),
+        host: runtime.ProgramHost.terminal(terminal),
       );
 
       expect(terminal.operations, contains('enterAltScreen'));
@@ -179,7 +208,7 @@ void main() {
     });
 
     test('runWatchedArtisanalApp applies the app shell title', () async {
-      final terminal = tui.StringTerminal();
+      final terminal = runtime.StringTerminal();
       final tempDir = await Directory.systemTemp.createTemp('run-watched-artisanal-');
 
       addTearDown(() async {
@@ -189,7 +218,7 @@ void main() {
       await w.runWatchedArtisanalApp(
         title: 'Watched App',
         watchRoots: [tempDir.path],
-        host: tui.ProgramHost.terminal(terminal),
+        host: runtime.ProgramHost.terminal(terminal),
         homeBuilder: (context, revision) => _QuitOnInitWidget(),
       );
 
@@ -205,7 +234,7 @@ void main() {
       final server = await w.serveWidgetAppInBrowser(
         port: 0,
         browserTitle: 'Widget Browser Test',
-        appBuilder: () => tui.WidgetApp(_QuitOnInitWidget()),
+        appBuilder: () => w.WidgetApp(_QuitOnInitWidget()),
       );
 
       addTearDown(server.close);
@@ -254,9 +283,9 @@ void main() {
     test('serveArtisanalAppOnSocket exposes app output over tcp', () async {
       final server = await w.serveArtisanalAppOnSocket(
         port: 0,
-        options: const tui.ProgramOptions(
+        options: const runtime.ProgramOptions(
           altScreen: false,
-          mouseMode: tui.MouseMode.none,
+          mouseMode: runtime.MouseMode.none,
           signalHandlers: false,
           frameTick: false,
         ),
@@ -285,9 +314,9 @@ void main() {
       () async {
         final server = await w.serveArtisanalAppOnSocket(
           port: 0,
-          options: const tui.ProgramOptions(
+          options: const runtime.ProgramOptions(
             altScreen: false,
-            mouseMode: tui.MouseMode.none,
+            mouseMode: runtime.MouseMode.none,
             signalHandlers: false,
             frameTick: false,
           ),
@@ -326,9 +355,9 @@ void main() {
       final server = await w.serveWatchedArtisanalAppOnSocket(
         port: 0,
         watchRoots: [tempDir.path],
-        options: const tui.ProgramOptions(
+        options: const runtime.ProgramOptions(
           altScreen: false,
-          mouseMode: tui.MouseMode.none,
+          mouseMode: runtime.MouseMode.none,
           signalHandlers: false,
           frameTick: false,
         ),
@@ -363,9 +392,9 @@ void main() {
       final host = await w.serveWatchedArtisanalAppOnSocket(
         port: 0,
         watchRoots: [tempDir.path],
-        options: const tui.ProgramOptions(
+        options: const runtime.ProgramOptions(
           altScreen: false,
-          mouseMode: tui.MouseMode.none,
+          mouseMode: runtime.MouseMode.none,
           signalHandlers: false,
           frameTick: false,
         ),
@@ -414,9 +443,9 @@ void main() {
       final host = await w.serveWatchedArtisanalAppInBrowser(
         port: 0,
         watchRoots: [tempDir.path],
-        options: const tui.ProgramOptions(
+        options: const runtime.ProgramOptions(
           altScreen: false,
-          mouseMode: tui.MouseMode.none,
+          mouseMode: runtime.MouseMode.none,
           signalHandlers: false,
           frameTick: false,
         ),
@@ -463,7 +492,7 @@ final class _QuitOnInitWidget extends w.StatefulWidget {
 
 final class _QuitOnInitWidgetState extends w.State<_QuitOnInitWidget> {
   @override
-  tui.Cmd? handleInit() => tui.Cmd.quit();
+  runtime.Cmd? handleInit() => runtime.Cmd.quit();
 
   @override
   w.Widget build(w.BuildContext context) => w.Text('ready');
@@ -476,9 +505,9 @@ final class _PrintAndQuitWidget extends w.StatefulWidget {
 
 final class _PrintAndQuitWidgetState extends w.State<_PrintAndQuitWidget> {
   @override
-  tui.Cmd? handleInit() {
+  runtime.Cmd? handleInit() {
     print('captured print');
-    return tui.Cmd.quit();
+    return runtime.Cmd.quit();
   }
 
   @override

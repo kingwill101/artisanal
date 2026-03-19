@@ -7,10 +7,11 @@
 
 import 'package:artisanal/style.dart'
     show AdaptiveColor, BasicColor, Color, CompleteAdaptiveColor;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
-tui.WidgetApp createHelpViewApp() => tui.WidgetApp(
+app.WidgetApp createHelpViewApp() => app.WidgetApp(
   HelpViewShowcase(),
   backgroundColorBuilder: _resolvedHelpViewTerminalBackground,
 );
@@ -31,13 +32,13 @@ Color _resolvedHelpViewTerminalBackground() {
 }
 
 void main() async {
-  final app = createHelpViewApp();
-  await tui.runProgram(
-    app,
-    options: const tui.ProgramOptions(
+  final shell = createHelpViewApp();
+  await runtime.runProgram(
+    shell,
+    options: const runtime.ProgramOptions(
       altScreen: true,
       mouse: true,
-      mouseMode: tui.MouseMode.allMotion,
+      mouseMode: runtime.MouseMode.allMotion,
     ),
   );
 }
@@ -146,9 +147,9 @@ class _HelpViewShowcaseState extends w.State<HelpViewShowcase> {
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
-      if (msg.key.char == 'q') return tui.Cmd.quit();
+  runtime.Cmd? handleUpdate(runtime.Msg msg) {
+    if (msg is runtime.KeyMsg) {
+      if (msg.key.char == 'q') return runtime.Cmd.quit();
       if (msg.key.char == '?') {
         setState(() => _showAll = !_showAll);
       }
@@ -157,21 +158,21 @@ class _HelpViewShowcaseState extends w.State<HelpViewShowcase> {
   }
 }
 
-class _HelpExampleKeyMap implements tui.KeyMap {
-  final next = tui.KeyBinding.withHelp(['down', 'j'], '↓/j', 'next item');
-  final previous = tui.KeyBinding.withHelp(['up', 'k'], '↑/k', 'previous item');
-  final open = tui.KeyBinding.withHelp(['enter'], '↵', 'open item');
-  final palette = tui.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'commands');
-  final search = tui.KeyBinding.withHelp(['/'], '/', 'search');
-  final filter = tui.KeyBinding.withHelp(['f'], 'f', 'filter');
-  final help = tui.KeyBinding.withHelp(['?'], '?', 'toggle help');
-  final quit = tui.KeyBinding.withHelp(['q'], 'q', 'quit');
+class _HelpExampleKeyMap implements w.KeyMap {
+  final next = w.KeyBinding.withHelp(['down', 'j'], '↓/j', 'next item');
+  final previous = w.KeyBinding.withHelp(['up', 'k'], '↑/k', 'previous item');
+  final open = w.KeyBinding.withHelp(['enter'], '↵', 'open item');
+  final palette = w.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'commands');
+  final search = w.KeyBinding.withHelp(['/'], '/', 'search');
+  final filter = w.KeyBinding.withHelp(['f'], 'f', 'filter');
+  final help = w.KeyBinding.withHelp(['?'], '?', 'toggle help');
+  final quit = w.KeyBinding.withHelp(['q'], 'q', 'quit');
 
   @override
-  List<tui.KeyBinding> shortHelp() => [palette, search, help, quit];
+  List<w.KeyBinding> shortHelp() => [palette, search, help, quit];
 
   @override
-  List<List<tui.KeyBinding>> fullHelp() => [
+  List<List<w.KeyBinding>> fullHelp() => [
     [previous, next, open],
     [palette, search, filter],
     [help, quit],

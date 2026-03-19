@@ -171,6 +171,10 @@ dart run example/tui/socket_host_demo.dart --port=2323
 dart run example/tui/browser_websocket_demo.dart --port=8080
 ```
 
+These focused host demos intentionally import the stable
+`package:artisanal/runtime.dart` and `package:artisanal/hosts.dart`
+entrypoints rather than the broader `package:artisanal/tui.dart` barrel.
+
 ## Global Options
 
 All commands support these global options:

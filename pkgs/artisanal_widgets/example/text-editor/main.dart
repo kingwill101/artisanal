@@ -1,9 +1,11 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
+import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main() async {
-  await w.runArtisanalApp(
-    w.ArtisanalApp(title: 'TextEditor Demo', home: TextEditorDemoScreen()),
+  await app.runArtisanalApp(
+    app.ArtisanalApp(title: 'TextEditor Demo', home: TextEditorDemoScreen()),
   );
 }
 
@@ -16,24 +18,26 @@ class TextEditorDemoScreen extends w.StatefulWidget {
 
 class _TextEditorDemoScreenState extends w.State<TextEditorDemoScreen> {
   final w.FocusController _focus = w.FocusController();
-  final w.TextAreaController _controller = w.TextAreaController(
+  final editors.TextAreaController _controller = editors.TextAreaController(
     text: 'Ship TextEditor component\nAdd smarter editor chrome',
   );
   String _status = 'Press Ctrl+S to save';
 
   @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is tui.InterruptMsg) {
-      return tui.Cmd.quit();
+  runtime.Cmd? handleIntercept(runtime.Msg msg) {
+    if (msg is runtime.InterruptMsg) {
+      return runtime.Cmd.quit();
     }
-    if (msg is tui.KeyMsg &&
-        msg.key.type == tui.KeyType.escape &&
+    if (msg is runtime.KeyMsg &&
+        msg.key.type == runtime.KeyType.escape &&
         _focus.hasFocus) {
       _clearFocus();
-      return tui.Cmd.none();
+      return runtime.Cmd.none();
     }
-    if (msg is tui.KeyMsg && !_focus.hasFocus && _isQuitShortcut(msg.key)) {
-      return tui.Cmd.quit();
+    if (msg is runtime.KeyMsg &&
+        !_focus.hasFocus &&
+        _isQuitShortcut(msg.key)) {
+      return runtime.Cmd.quit();
     }
     return null;
   }
@@ -74,7 +78,7 @@ class _TextEditorDemoScreenState extends w.State<TextEditorDemoScreen> {
                 ),
               ],
             ),
-            w.TextEditor(
+            editors.TextEditor(
               title: 'Roadmap.md',
               controller: _controller,
               focusController: _focus,
@@ -107,9 +111,9 @@ class _TextEditorDemoScreenState extends w.State<TextEditorDemoScreen> {
   }
 }
 
-bool _isQuitShortcut(tui.Key key) {
+bool _isQuitShortcut(runtime.Key key) {
   if (!key.ctrl || key.alt || key.meta) return false;
-  if (key.type != tui.KeyType.runes || key.runes.isEmpty) return false;
+  if (key.type != runtime.KeyType.runes || key.runes.isEmpty) return false;
   final rune = key.runes.first;
   return rune == 0x03 || String.fromCharCode(rune).toLowerCase() == 'c';
 }

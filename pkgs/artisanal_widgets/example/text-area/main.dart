@@ -1,9 +1,11 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
+import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main() async {
-  await w.runArtisanalApp(
-    w.ArtisanalApp(title: 'TextArea Demo', home: TextAreaDemoScreen()),
+  await app.runArtisanalApp(
+    app.ArtisanalApp(title: 'TextArea Demo', home: TextAreaDemoScreen()),
   );
 }
 
@@ -16,23 +18,25 @@ class TextAreaDemoScreen extends w.StatefulWidget {
 
 class _TextAreaDemoScreenState extends w.State<TextAreaDemoScreen> {
   final w.FocusController _focus = w.FocusController();
-  final w.TextAreaController _controller = w.TextAreaController(
+  final editors.TextAreaController _controller = editors.TextAreaController(
     text: 'Line one\nLine two',
   );
 
   @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is tui.InterruptMsg) {
-      return tui.Cmd.quit();
+  runtime.Cmd? handleIntercept(runtime.Msg msg) {
+    if (msg is runtime.InterruptMsg) {
+      return runtime.Cmd.quit();
     }
-    if (msg is tui.KeyMsg &&
-        msg.key.type == tui.KeyType.escape &&
+    if (msg is runtime.KeyMsg &&
+        msg.key.type == runtime.KeyType.escape &&
         _focus.hasFocus) {
       _clearFocus();
-      return tui.Cmd.none();
+      return runtime.Cmd.none();
     }
-    if (msg is tui.KeyMsg && !_focus.hasFocus && _isQuitShortcut(msg.key)) {
-      return tui.Cmd.quit();
+    if (msg is runtime.KeyMsg &&
+        !_focus.hasFocus &&
+        _isQuitShortcut(msg.key)) {
+      return runtime.Cmd.quit();
     }
     return null;
   }
@@ -77,7 +81,7 @@ class _TextAreaDemoScreenState extends w.State<TextAreaDemoScreen> {
               height: 10,
               color: theme.surface,
               padding: const w.EdgeInsets.all(1),
-              child: w.TextArea(
+              child: editors.TextArea(
                 controller: _controller,
                 focusController: _focus,
                 focusId: 'editor',
@@ -110,9 +114,9 @@ class _TextAreaDemoScreenState extends w.State<TextAreaDemoScreen> {
   }
 }
 
-bool _isQuitShortcut(tui.Key key) {
+bool _isQuitShortcut(runtime.Key key) {
   if (!key.ctrl || key.alt || key.meta) return false;
-  if (key.type != tui.KeyType.runes || key.runes.isEmpty) return false;
+  if (key.type != runtime.KeyType.runes || key.runes.isEmpty) return false;
   final rune = key.runes.first;
   return rune == 0x03 || String.fromCharCode(rune).toLowerCase() == 'c';
 }

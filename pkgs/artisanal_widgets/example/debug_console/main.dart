@@ -1,16 +1,17 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
   final controller = w.DebugConsoleController(initiallyVisible: true);
-  final app = w.ArtisanalApp(
+  final shell = app.ArtisanalApp(
     title: 'Debug Console Showcase',
     debugConsoleController: controller,
     debugConsoleCapturePrint: true,
     debugConsoleCaptureErrors: true,
     home: DebugConsoleShowcaseScreen(),
   );
-  await w.runArtisanalApp(app);
+  await app.runArtisanalApp(shell);
 }
 
 class DebugConsoleShowcaseScreen extends w.StatefulWidget {
@@ -27,7 +28,7 @@ class _DebugConsoleShowcaseScreenState
   w.DebugConsoleController get _console => w.DebugConsoleScope.of(context);
 
   @override
-  tui.Cmd? handleInit() {
+  runtime.Cmd? handleInit() {
     _console.info('Debug console ready.');
     _console.debug('Press space to add logs. Press F10 to toggle the pane.');
     print('Captured startup print');
@@ -35,11 +36,11 @@ class _DebugConsoleShowcaseScreenState
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is! tui.KeyMsg) return null;
+  runtime.Cmd? handleUpdate(runtime.Msg msg) {
+    if (msg is! runtime.KeyMsg) return null;
 
     final char = msg.key.char;
-    if (char == 'q') return tui.Cmd.quit();
+    if (char == 'q') return runtime.Cmd.quit();
 
     if (char == ' ') {
       setState(() => _counter++);

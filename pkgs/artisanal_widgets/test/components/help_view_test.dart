@@ -1,6 +1,5 @@
-import 'package:artisanal/bubbles.dart' show KeyBinding, KeyMap;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 

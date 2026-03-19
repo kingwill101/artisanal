@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  await w.runArtisanalApp(
-    w.ArtisanalApp(title: 'Wizard Showcase', home: WizardShowcaseScreen()),
+  await app.runArtisanalApp(
+    app.ArtisanalApp(title: 'Wizard Showcase', home: WizardShowcaseScreen()),
   );
 }
 
@@ -114,7 +115,7 @@ class _WizardShowcaseState extends w.State<WizardShowcaseScreen> {
         });
         return null;
       },
-      onExit: tui.Cmd.quit,
+      onExit: runtime.Cmd.quit,
     );
   }
 

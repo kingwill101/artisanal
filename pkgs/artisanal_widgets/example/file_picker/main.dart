@@ -1,12 +1,13 @@
 import 'dart:io' as io;
 import 'dart:math' as math;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  await w.runArtisanalApp(
-    w.ArtisanalApp(
+  await app.runArtisanalApp(
+    app.ArtisanalApp(
       title: 'File Picker Showcase',
       home: FilePickerShowcaseScreen(),
     ),
@@ -70,7 +71,7 @@ class _FilePickerShowcaseState extends w.State<FilePickerShowcaseScreen> {
         });
         return null;
       },
-      onExit: tui.Cmd.quit,
+      onExit: runtime.Cmd.quit,
     );
   }
 

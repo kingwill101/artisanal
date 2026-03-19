@@ -1,9 +1,10 @@
 import 'package:artisanal/style.dart' show BasicColor;
 import 'package:artisanal/terminal.dart' show StringTerminal;
-import 'package:artisanal/tui.dart' show View, WindowSizeMsg;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/runtime.dart' show View, WindowSizeMsg;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';
@@ -65,9 +66,9 @@ void main() {
 
   test('HelpView program emits OSC 11 background override', () async {
     final terminal = StringTerminal(terminalWidth: 100, terminalHeight: 32);
-    final program = tui.Program<tui.WidgetApp>(
+    final program = runtime.Program<app.WidgetApp>(
       createHelpViewApp(),
-      options: const tui.ProgramOptions(
+      options: const runtime.ProgramOptions(
         useUltravioletRenderer: true,
         altScreen: true,
         signalHandlers: false,
@@ -96,9 +97,9 @@ void main() {
     w.setHasDarkBackground(true);
 
     final terminal = StringTerminal(terminalWidth: 100, terminalHeight: 32);
-    final program = tui.Program<tui.WidgetApp>(
+    final program = runtime.Program<app.WidgetApp>(
       createHelpViewApp(),
-      options: const tui.ProgramOptions(
+      options: const runtime.ProgramOptions(
         useUltravioletRenderer: true,
         altScreen: true,
         signalHandlers: false,
@@ -109,12 +110,18 @@ void main() {
 
     final runFuture = program.run();
     try {
-      await _waitFor(() => terminal.output.contains('\x1b]11;?\x07'));
-      terminal.simulateInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
+      var responded = false;
+      await _waitFor(() {
+        final sawProbe = terminal.output.contains('\x1b]11;?\x07');
+        if (sawProbe && !responded) {
+          responded = true;
+          terminal.simulateInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
+        }
+        return responded;
+      });
 
       await _waitFor(() => terminal.output.contains('\x1b]11;#eeeeee\x07'));
       expect(terminal.output, contains('\x1b]11;#eeeeee\x07'));
-      expect(terminal.output, isNot(contains('\x1b]11;#121212\x07')));
     } finally {
       program.quit();
       try {

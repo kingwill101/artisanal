@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 Future<void> main(List<String> args) async {
   final config = _parseArgs(args);
-  final controller = w.ReloadController();
+  final controller = app.ReloadController();
   final watchedHost = config.watchRoots.isEmpty
       ? null
-      : await w.serveWatchedArtisanalAppInBrowser(
+      : await app.serveWatchedArtisanalAppInBrowser(
           port: config.port,
           browserTitle: 'Artisanal Widgets Browser Host',
           title: 'Browser Host Demo',
@@ -23,7 +24,7 @@ Future<void> main(List<String> args) async {
         );
   final host =
       watchedHost?.server ??
-      await w.serveReloadableArtisanalAppInBrowser(
+      await app.serveReloadableArtisanalAppInBrowser(
         port: config.port,
         browserTitle: 'Artisanal Widgets Browser Host',
         title: 'Browser Host Demo',
@@ -73,7 +74,7 @@ class _BrowserHostScreen extends w.StatelessWidget {
 
   final int revision;
   final List<String> watchRoots;
-  final w.ReloadMode watchMode;
+  final app.ReloadMode watchMode;
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -121,13 +122,13 @@ final class _BrowserHostExampleConfig {
 
   final int port;
   final List<String> watchRoots;
-  final w.ReloadMode watchMode;
+  final app.ReloadMode watchMode;
 }
 
 _BrowserHostExampleConfig _parseArgs(List<String> args) {
   var port = 8080;
   final watchRoots = <String>[];
-  var watchMode = w.ReloadMode.reload;
+  var watchMode = app.ReloadMode.reload;
 
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
@@ -148,7 +149,7 @@ _BrowserHostExampleConfig _parseArgs(List<String> args) {
       continue;
     }
     if (arg == '--restart') {
-      watchMode = w.ReloadMode.restart;
+      watchMode = app.ReloadMode.restart;
     }
   }
 

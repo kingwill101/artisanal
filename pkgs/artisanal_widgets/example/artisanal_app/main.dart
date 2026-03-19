@@ -4,17 +4,18 @@
 // theming, and built-in navigator wiring.
 
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = w.ArtisanalApp(
+  final shell = app.ArtisanalApp(
     title: 'ArtisanalApp Demo',
     theme: w.Theme.adaptive(),
     home: _HomeScreen(),
   );
 
-  await w.runArtisanalApp(app);
+  await app.runArtisanalApp(shell);
 }
 
 final class _HomeScreen extends w.StatefulWidget {
@@ -24,12 +25,12 @@ final class _HomeScreen extends w.StatefulWidget {
 
 final class _HomeScreenState extends w.State<_HomeScreen> {
   @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is! tui.KeyMsg) return null;
-    if (msg.key.char == 'q') return tui.Cmd.quit();
+  runtime.Cmd? handleIntercept(runtime.Msg msg) {
+    if (msg is! runtime.KeyMsg) return null;
+    if (msg.key.char == 'q') return runtime.Cmd.quit();
     if (msg.key.type == KeyType.enter) {
       w.Navigator.of(context).pushWidget(_DetailsScreen());
-      return tui.Cmd.none();
+      return runtime.Cmd.none();
     }
     return null;
   }

@@ -3,10 +3,10 @@
 //
 // Run with: dart run example/main.dart
 
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/runtime.dart' show TuiTrace;
 import 'package:artisanal/style.dart';
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/widgets.dart' as w;
-import 'package:artisanal/tui.dart' show TuiTrace;
+import 'package:artisanal/widgets.dart' as tui;
 
 void _trace(String msg) {
   TuiTrace.log('EXAMPLE $msg');
@@ -14,9 +14,9 @@ void _trace(String msg) {
 
 void main() async {
   final app = tui.WidgetApp(AppWidget());
-  await tui.runProgram(
+  await runtime.runProgram(
     app,
-    options: const tui.ProgramOptions(altScreen: true, mouse: true),
+    options: const runtime.ProgramOptions(altScreen: true, mouse: true),
   );
 }
 
@@ -33,7 +33,7 @@ class _AppWidgetState extends tui.State<AppWidget> {
   int? _hoveredTab;
 
   final ClickCounter _clickCounter = ClickCounter(
-    key: w.ValueKey<String>('click-counter'),
+    key: tui.ValueKey<String>('click-counter'),
   );
 
   bool _checkboxValue = true;
@@ -172,7 +172,7 @@ Future<void> bootHostedApp() async {
         .foreground(fg);
 
     return tui.GestureDetector(
-      key: w.ValueKey<int>(index),
+      key: tui.ValueKey<int>(index),
       onTap: () {
         _trace('tab.onTap index=$index _selectedTab(before)=$_selectedTab');
         setState(() => _selectedTab = index);
@@ -707,7 +707,7 @@ Future<void> bootHostedApp() async {
             gap: 2,
             children: [
               tui.ProgressIndicator(value: _progressValue, showLabel: true),
-              tui.SpinnerIndicator(key: w.ValueKey<String>('spinner')),
+              tui.SpinnerIndicator(key: tui.ValueKey<String>('spinner')),
             ],
           ),
           tui.Button(
@@ -1018,15 +1018,15 @@ Future<void> bootHostedApp() async {
   }
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  runtime.Cmd? handleUpdate(runtime.Msg msg) {
+    if (msg is runtime.KeyMsg) {
       final key = msg.key;
       _trace(
         'handleUpdate KeyMsg char=${key.char} type=${key.type} _counter=$_counter _selectedTab=$_selectedTab mounted=$mounted',
       );
 
       if (key.char == 'q' || key.char == 'Q') {
-        return tui.Cmd.quit();
+        return runtime.Cmd.quit();
       }
 
       if (key.char == '+' || key.char == '=') {

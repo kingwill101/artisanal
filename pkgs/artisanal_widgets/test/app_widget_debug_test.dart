@@ -13,10 +13,9 @@
 /// leaving stale render objects in the tree.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/testing.dart';
 import 'package:artisanal/style.dart' show BasicColor;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 // Import the actual example app widget.
@@ -213,16 +212,16 @@ void main() {
 
 /// Tabs using GestureDetector > Container(horizontal+vertical padding) > Text.
 /// Mirrors the real AppWidget's _tab() structure.
-class _PaddedTabWidget extends tui.StatefulWidget {
+class _PaddedTabWidget extends w.StatefulWidget {
   @override
-  tui.State createState() => _PaddedTabWidgetState();
+  w.State createState() => _PaddedTabWidgetState();
 }
 
-class _PaddedTabWidgetState extends tui.State<_PaddedTabWidget> {
+class _PaddedTabWidgetState extends w.State<_PaddedTabWidget> {
   int _selectedTab = 0;
 
   @override
-  tui.Widget build(tui.BuildContext context) {
+  w.Widget build(w.BuildContext context) {
     return w.Column(
       children: [
         w.Row(
@@ -253,16 +252,16 @@ class _PaddedTabWidgetState extends tui.State<_PaddedTabWidget> {
 }
 
 /// Same but WITHOUT vertical padding — control case.
-class _NoPaddingTabWidget extends tui.StatefulWidget {
+class _NoPaddingTabWidget extends w.StatefulWidget {
   @override
-  tui.State createState() => _NoPaddingTabWidgetState();
+  w.State createState() => _NoPaddingTabWidgetState();
 }
 
-class _NoPaddingTabWidgetState extends tui.State<_NoPaddingTabWidget> {
+class _NoPaddingTabWidgetState extends w.State<_NoPaddingTabWidget> {
   int _selectedTab = 0;
 
   @override
-  tui.Widget build(tui.BuildContext context) {
+  w.Widget build(w.BuildContext context) {
     return w.Column(
       children: [
         w.Row(
@@ -289,16 +288,16 @@ class _NoPaddingTabWidgetState extends tui.State<_NoPaddingTabWidget> {
 }
 
 /// Container with color but no vertical padding.
-class _ColoredTabWidget extends tui.StatefulWidget {
+class _ColoredTabWidget extends w.StatefulWidget {
   @override
-  tui.State createState() => _ColoredTabWidgetState();
+  w.State createState() => _ColoredTabWidgetState();
 }
 
-class _ColoredTabWidgetState extends tui.State<_ColoredTabWidget> {
+class _ColoredTabWidgetState extends w.State<_ColoredTabWidget> {
   int _selectedTab = 0;
 
   @override
-  tui.Widget build(tui.BuildContext context) {
+  w.Widget build(w.BuildContext context) {
     return w.Column(
       children: [
         w.Row(

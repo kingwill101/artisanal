@@ -1,14 +1,15 @@
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main(List<String> args) async {
   final config = _parseArgs(args);
-  final controller = w.ReloadController();
+  final controller = app.ReloadController();
 
   try {
     if (config.watchRoots.isEmpty) {
-      await w.runReloadableArtisanalApp(
+      await app.runReloadableArtisanalApp(
         title: 'Reload Host Showcase',
         controller: controller,
         homeBuilder: (context, revision) => ReloadShowcaseScreen(
@@ -18,7 +19,7 @@ void main(List<String> args) async {
         ),
       );
     } else {
-      await w.runWatchedArtisanalApp(
+      await app.runWatchedArtisanalApp(
         title: 'Reload Host Showcase',
         controller: controller,
         watchRoots: config.watchRoots,
@@ -39,13 +40,13 @@ class ReloadShowcaseScreen extends w.StatefulWidget {
   ReloadShowcaseScreen({
     required this.revision,
     this.watchRoots = const <String>[],
-    this.watchMode = w.ReloadMode.reload,
+    this.watchMode = app.ReloadMode.reload,
     super.key,
   });
 
   final int revision;
   final List<String> watchRoots;
-  final w.ReloadMode watchMode;
+  final app.ReloadMode watchMode;
 
   @override
   w.State<ReloadShowcaseScreen> createState() => _ReloadShowcaseScreenState();
@@ -62,19 +63,19 @@ class _ReloadShowcaseScreenState extends w.State<ReloadShowcaseScreen> {
     _instanceId = _mountCounter;
   }
 
-  w.ReloadController get _reload => w.ReloadScope.of(context);
+  app.ReloadController get _reload => app.ReloadScope.of(context);
 
   @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is! tui.KeyMsg) return null;
-    if (msg.key.char == 'q') return tui.Cmd.quit();
+  runtime.Cmd? handleIntercept(runtime.Msg msg) {
+    if (msg is! runtime.KeyMsg) return null;
+    if (msg.key.char == 'q') return runtime.Cmd.quit();
     if (msg.key.type == KeyType.f5) {
       _reload.reload();
-      return tui.Cmd.none();
+      return runtime.Cmd.none();
     }
     if (msg.key.type == KeyType.f6) {
       _reload.restart();
-      return tui.Cmd.none();
+      return runtime.Cmd.none();
     }
     return null;
   }
@@ -120,12 +121,12 @@ final class _ReloadExampleConfig {
   });
 
   final List<String> watchRoots;
-  final w.ReloadMode watchMode;
+  final app.ReloadMode watchMode;
 }
 
 _ReloadExampleConfig _parseArgs(List<String> args) {
   final watchRoots = <String>[];
-  var watchMode = w.ReloadMode.reload;
+  var watchMode = app.ReloadMode.reload;
 
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
@@ -138,7 +139,7 @@ _ReloadExampleConfig _parseArgs(List<String> args) {
       continue;
     }
     if (arg == '--restart') {
-      watchMode = w.ReloadMode.restart;
+      watchMode = app.ReloadMode.restart;
     }
   }
 

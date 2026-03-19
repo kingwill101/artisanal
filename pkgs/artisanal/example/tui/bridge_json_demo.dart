@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/hosts.dart';
+import 'package:artisanal/runtime.dart';
 
 /// Demonstrates the JSON bridge protocol used by remote or browser hosts.
 void main() async {

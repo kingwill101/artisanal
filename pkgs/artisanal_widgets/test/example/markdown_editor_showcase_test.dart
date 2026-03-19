@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
@@ -30,7 +30,9 @@ void main() {
     expect(tester.program!.isRunning, isTrue);
     tester.tap(tester.find.textLocation('Blur editor'));
     tester.sendMsg(
-      tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: const [0x03], ctrl: true)),
+      runtime.KeyMsg(
+        runtime.Key(runtime.KeyType.runes, runes: const [0x03], ctrl: true),
+      ),
     );
     await Future<void>.delayed(const Duration(milliseconds: 10));
     expect(tester.program!.isRunning, isFalse);
