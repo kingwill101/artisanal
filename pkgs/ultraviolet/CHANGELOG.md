@@ -14,6 +14,7 @@
 - Added direct `Terminal` coverage for focus/blur events, bracketed paste events, and startup foreground/cursor color capability updates.
 - Added direct `Terminal` coverage for mouse click, release, motion, and wheel events plus standard and in-band resize report handling.
 - Added direct `Terminal` coverage for cursor-position, ModifyOtherKeys, and primary/secondary/tertiary device-attribute reports, including capability-state updates from DA1.
+- Added direct `Terminal` coverage for clipboard, terminal-version, XTGETTCAP, background-color, and palette report handling.
 
 ## 0.1.1+1
 - fix documentation + missing assets

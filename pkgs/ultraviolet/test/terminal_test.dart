@@ -68,6 +68,22 @@ void main() {
       await terminal.stop();
     });
 
+    test('receives clipboard responses', () async {
+      await terminal.start(handleSignals: false);
+      final clipboardFuture = terminal.events
+          .where((e) => e is ClipboardEvent)
+          .cast<ClipboardEvent>()
+          .firstWhere((e) => e.selection == 0x63 && e.content == 'Hello');
+
+      inputController.add('\x1b]52;c;SGVsbG8=\x07'.codeUnits);
+
+      final event = await clipboardFuture;
+      expect(event.selection, 0x63);
+      expect(event.content, 'Hello');
+
+      await terminal.stop();
+    });
+
     test('receives mouse click and release events', () async {
       await terminal.start(handleSignals: false);
       final clickFuture = terminal.events
@@ -240,6 +256,31 @@ void main() {
       await terminal.stop();
     });
 
+    test('receives terminal version and XTGETTCAP responses', () async {
+      await terminal.start(handleSignals: false);
+      final versionFuture = terminal.events
+          .where((e) => e is TerminalVersionEvent)
+          .cast<TerminalVersionEvent>()
+          .firstWhere((e) => e.name == 'Ultraviolet');
+      final capabilityFuture = terminal.events
+          .where((e) => e is CapabilityEvent)
+          .cast<CapabilityEvent>()
+          .firstWhere((e) => e.content == 'RGB;TN=xterm-256color');
+
+      inputController.add('\x1bP>|Ultraviolet\x1b\\'.codeUnits);
+      inputController.add(
+        '\x1bP1+r524742;544e=787465726d2d323536636f6c6f72\x1b\\'.codeUnits,
+      );
+
+      final version = await versionFuture;
+      final capability = await capabilityFuture;
+
+      expect(version.name, 'Ultraviolet');
+      expect(capability.content, 'RGB;TN=xterm-256color');
+
+      await terminal.stop();
+    });
+
     test('draw writes to output', () async {
       await terminal.start(handleSignals: false);
       terminal.resize(10, 10);
@@ -281,6 +322,31 @@ void main() {
       expect(terminal.capabilities.hasForegroundColor, isTrue);
       expect(terminal.capabilities.cursorColor, const UvRgb(0xaa, 0xbb, 0xcc));
       expect(terminal.capabilities.hasCursorColor, isTrue);
+
+      await terminal.stop();
+    });
+
+    test('background and palette reports update capability state', () async {
+      await terminal.start(handleSignals: false);
+
+      final backgroundFuture = terminal.events
+          .where((e) => e is BackgroundColorEvent)
+          .cast<BackgroundColorEvent>()
+          .firstWhere((e) => e.color == const UvRgb(0x11, 0x22, 0x33));
+      final paletteFuture = terminal.events
+          .where((e) => e is ColorPaletteEvent)
+          .cast<ColorPaletteEvent>()
+          .firstWhere((e) => e.index == 42 && e.color == const UvRgb(0x0f, 0x1a, 0x2b));
+
+      inputController.add('\x1b]11;rgb:1111/2222/3333\x1b\\'.codeUnits);
+      inputController.add('\x1b]4;42;rgb:0f0f/1a1a/2b2b\x1b\\'.codeUnits);
+
+      await Future.wait([backgroundFuture, paletteFuture]);
+
+      expect(terminal.capabilities.backgroundColor, const UvRgb(0x11, 0x22, 0x33));
+      expect(terminal.capabilities.hasBackgroundColor, isTrue);
+      expect(terminal.capabilities.palette[42], const UvRgb(0x0f, 0x1a, 0x2b));
+      expect(terminal.capabilities.hasColorPalette, isTrue);
 
       await terminal.stop();
     });
