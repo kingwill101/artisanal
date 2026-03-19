@@ -1,6 +1,6 @@
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/testing.dart';
+import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -203,8 +203,12 @@ void main() {
       final line = tester.view
           .split('\n')
           .firstWhere((entry) => entry.contains('Card Title'));
-      expect(line, contains('48;5;236'));
-      expect(line, isNot(contains('39;48;5;233;22m')), reason: line);
+      final hasSurfaceBackground =
+          line.contains('48;5;236') || line.contains('48;2;48;48;48');
+      final hasPageBackground =
+          line.contains('48;5;233') || line.contains('48;2;18;18;18');
+      expect(hasSurfaceBackground, isTrue, reason: line);
+      expect(hasPageBackground, isFalse, reason: line);
     });
 
     test('has unique id', () {
