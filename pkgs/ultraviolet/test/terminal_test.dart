@@ -64,6 +64,23 @@ void main() {
       await terminal.stop();
     });
 
+    test('keyboard enhancements enable and disable with kitty protocol', () async {
+      await terminal.start(handleSignals: false);
+
+      outputBuffer.clear();
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+            KeyboardEnhancementsEvent.reportEventTypes,
+      );
+      terminal.disableKeyboardEnhancements();
+
+      final output = outputBuffer.toString();
+      expect(output, contains('\x1b[>3u'));
+      expect(output, contains('\x1b[<u'));
+
+      await terminal.stop();
+    });
+
     test('stop disables enabled modes and exits alt screen', () async {
       await terminal.start(handleSignals: false);
       terminal.enterAltScreen();
@@ -71,11 +88,15 @@ void main() {
       terminal.enableMouse();
       terminal.enableBracketedPaste();
       terminal.enableFocusReporting();
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+      );
 
       outputBuffer.clear();
       await terminal.stop();
 
       final output = outputBuffer.toString();
+      expect(output, contains('\x1b[<u'));
       expect(output, contains(UvAnsi.disableMouseAllEvents));
       expect(output, contains(UvAnsi.disableMouseSgr));
       expect(output, contains(UvAnsi.disableBracketedPaste));
