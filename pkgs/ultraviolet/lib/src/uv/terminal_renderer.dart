@@ -613,6 +613,11 @@ final class UvTerminalRenderer {
     _buf.write('\x1b]12;?\x1b\\');
   }
 
+  /// Queries the terminal light/dark color-scheme preference.
+  void queryColorScheme() {
+    _buf.write('\x1b[?996n');
+  }
+
   /// Queries a color from the terminal palette.
   void queryColorPalette(int index) {
     _buf.write('\x1b]4;$index;?\x1b\\');

@@ -6,6 +6,7 @@
 
 - `Terminal` startup capability probing now queries DA2 as well as DA1, kitty keyboard, colors, and kitty graphics.
 - `Terminal` startup capability probing now queries DA3 and terminal-version reports alongside the existing DA1/DA2, kitty keyboard, color, and kitty-graphics probes.
+- `Terminal` startup capability probing now queries the terminal light/dark color-scheme report alongside the existing device, keyboard, graphics, and color probes.
 - `TerminalCapabilities` now tracks exact kitty keyboard enhancement flags plus foreground, background, cursor, and palette color reports with idempotent updates.
 - `TerminalCapabilities` now tracks `ModifyOtherKeys` mode reports and terminal dark/light color-scheme state instead of treating those reports as transient decode-only events.
 - `Terminal` startup capability probing now queries foreground and cursor colors in addition to the existing background, keyboard, device-attribute, and kitty-graphics probes.

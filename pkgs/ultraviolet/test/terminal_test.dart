@@ -323,6 +323,7 @@ void main() {
       expect(output, contains('\x1b]10;?\x1b\\'));
       expect(output, contains('\x1b]11;?\x1b\\'));
       expect(output, contains('\x1b]12;?\x1b\\'));
+      expect(output, contains('\x1b[?996n'));
       expect(output, contains('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'));
 
       await terminal.stop();

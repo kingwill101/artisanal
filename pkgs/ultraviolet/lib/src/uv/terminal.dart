@@ -367,6 +367,7 @@ class Terminal
     _renderer.queryForegroundColor();
     _renderer.queryBackgroundColor();
     _renderer.queryCursorColor();
+    _renderer.queryColorScheme();
     _renderer.flush();
   }
 
