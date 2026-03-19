@@ -33,11 +33,13 @@
 - Added end-to-end `Program` and UV-to-TUI adapter coverage for cursor-position reports.
 - Added end-to-end `Program` coverage for terminal-version and XTGETTCAP capability reports.
 - Added end-to-end `Program` coverage for kitty keyboard enhancement reports.
+- Added end-to-end `Program` coverage for clipboard read replies.
 - Suppressed xterm pixel-size and cell-size report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed xterm mode-status report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed cursor-position report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed kitty keyboard enhancement report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed XTVERSION and XTGETTCAP report queries on non-terminal hosts alongside the existing terminal-report guards.
+- Suppressed batched OSC color, palette, and clipboard report queries on non-terminal hosts instead of only handling clipboard reads as a trailing special case.
 
 ## 0.2.0+1
 

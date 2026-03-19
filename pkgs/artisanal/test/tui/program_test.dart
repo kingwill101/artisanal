@@ -1389,6 +1389,34 @@ void main() {
       expect(output, contains('\x1b[2\$p'));
     });
 
+    test('color, palette, and clipboard request commands write raw OSC queries', () async {
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestForegroundColor(),
+          Cmd.requestBackgroundColor(),
+          Cmd.requestCursorColor(),
+          Cmd.requestColorPalette(42),
+          Cmd.requestClipboard(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, contains(Ansi.requestForegroundColor));
+      expect(output, contains(Ansi.requestBackgroundColor));
+      expect(output, contains(Ansi.requestCursorColor));
+      expect(output, contains('\x1b]4;42;?\x07'));
+      expect(output, contains('\x1b]52;c;?\x07'));
+    });
+
     test('non-terminal hosts suppress window and cell size report queries', () async {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
@@ -1445,6 +1473,35 @@ void main() {
       expect(output, isNot(contains('\x1b[?u')));
       expect(output, isNot(contains('\x1b[?2004\$p')));
       expect(output, isNot(contains('\x1b[?1004\$p')));
+    });
+
+    test('non-terminal hosts suppress color, palette, and clipboard report queries', () async {
+      final terminal = _NonTerminalMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestForegroundColor(),
+          Cmd.requestBackgroundColor(),
+          Cmd.requestCursorColor(),
+          Cmd.requestColorPalette(42),
+          Cmd.requestClipboard(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains(Ansi.requestForegroundColor)));
+      expect(output, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(output, isNot(contains(Ansi.requestCursorColor)));
+      expect(output, isNot(contains('\x1b]4;42;?\x07')));
+      expect(output, isNot(contains('\x1b]52;c;?\x07')));
     });
 
     test('ShowCursorMsg and HideCursorMsg control cursor', () async {
@@ -3981,6 +4038,58 @@ void main() {
       expect(paletteIndex, 42);
       expect(paletteHex, '#0f1a2b');
       expect(terminal.output.join(), contains(paletteRequest));
+    });
+
+    test('clipboard replies are delivered as messages', () async {
+      const clipboardRequest = '\x1b]52;c;?\x07';
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+            });
+          }
+          if (data == clipboardRequest) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]52;c;SGVsbG8=\x07'.codeUnits);
+            });
+          }
+        },
+      );
+
+      ClipboardSelection? selection;
+      String? content;
+      final model = _CallbackModel(
+        onInit: () => Cmd.requestClipboard(),
+        onUpdate: (msg) {
+          switch (msg) {
+            case ClipboardMsg(selection: final sel, content: final text):
+              selection = sel;
+              content = text;
+              return Cmd.message(const QuitMsg());
+            default:
+              return null;
+          }
+        },
+        onView: () => 'clipboard request runtime',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(selection, ClipboardSelection.system);
+      expect(content, 'Hello');
+      expect(terminal.output.join(), contains(clipboardRequest));
     });
   });
 

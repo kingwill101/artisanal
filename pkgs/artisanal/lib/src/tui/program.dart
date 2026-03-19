@@ -3542,8 +3542,21 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
-    if (remaining.startsWith('\x1b]52;') && remaining.endsWith('?\x07')) {
-      return true;
+    if (remaining.startsWith('\x1b]52;')) {
+      final belLen = _consumeClipboardReadRequest(
+        remaining,
+        terminator: '\x07',
+      );
+      final stLen = _consumeClipboardReadRequest(
+        remaining,
+        terminator: '\x1b\\',
+      );
+      final consumed = belLen > 0 ? belLen : stLen;
+      if (consumed > 0) {
+        remaining = remaining.substring(consumed);
+        matchedAny = true;
+        continue;
+      }
     }
     return false;
   }
@@ -3576,4 +3589,17 @@ int _consumeXtGetTcapRequest(String text) {
     return 0;
   }
   return end + '\x1b\\'.length;
+}
+
+int _consumeClipboardReadRequest(String text, {required String terminator}) {
+  if (!text.startsWith('\x1b]52;')) return 0;
+  final end = text.indexOf(terminator);
+  if (end <= 0) return 0;
+  final payload = text.substring(0, end);
+  final parts = payload.split(';');
+  if (parts.length != 3 || parts[0] != '\x1b]52' || parts[2] != '?') {
+    return 0;
+  }
+  if (parts[1].isEmpty) return 0;
+  return end + terminator.length;
 }
