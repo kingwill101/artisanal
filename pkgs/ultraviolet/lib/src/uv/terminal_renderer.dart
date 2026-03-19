@@ -588,6 +588,16 @@ final class UvTerminalRenderer {
     _buf.write('\x1b]11;?\x1b\\');
   }
 
+  /// Queries the terminal foreground color.
+  void queryForegroundColor() {
+    _buf.write('\x1b]10;?\x1b\\');
+  }
+
+  /// Queries the terminal cursor color.
+  void queryCursorColor() {
+    _buf.write('\x1b]12;?\x1b\\');
+  }
+
   /// Queries a color from the terminal palette.
   void queryColorPalette(int index) {
     _buf.write('\x1b]4;$index;?\x1b\\');

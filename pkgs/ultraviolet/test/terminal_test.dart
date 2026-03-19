@@ -42,6 +42,32 @@ void main() {
       await terminal.stop();
     });
 
+    test('receives focus and blur events', () async {
+      await terminal.start(handleSignals: false);
+      final focusFuture = terminal.events.where((e) => e is FocusEvent).first;
+      final blurFuture = terminal.events.where((e) => e is BlurEvent).first;
+
+      inputController.add('\x1b[I'.codeUnits);
+      inputController.add('\x1b[O'.codeUnits);
+
+      expect(await focusFuture, isA<FocusEvent>());
+      expect(await blurFuture, isA<BlurEvent>());
+
+      await terminal.stop();
+    });
+
+    test('receives bracketed paste events', () async {
+      await terminal.start(handleSignals: false);
+      final pasteFuture = terminal.events.where((e) => e is PasteEvent).first;
+
+      inputController.add('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
+
+      final event = await pasteFuture as PasteEvent;
+      expect(event.content, 'hello\nworld');
+
+      await terminal.stop();
+    });
+
     test('draw writes to output', () async {
       await terminal.start(handleSignals: false);
       terminal.resize(10, 10);
@@ -58,8 +84,31 @@ void main() {
       final output = outputBuffer.toString();
       expect(output, contains('\x1b[?c'));
       expect(output, contains('\x1b[?u'));
+      expect(output, contains('\x1b]10;?\x1b\\'));
       expect(output, contains('\x1b]11;?\x1b\\'));
+      expect(output, contains('\x1b]12;?\x1b\\'));
       expect(output, contains('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'));
+
+      await terminal.stop();
+    });
+
+    test('startup color probes update capability state', () async {
+      await terminal.start(handleSignals: false);
+
+      final foregroundFuture = terminal.events
+          .where((e) => e is ForegroundColorEvent)
+          .first;
+      final cursorFuture = terminal.events.where((e) => e is CursorColorEvent).first;
+
+      inputController.add('\x1b]10;rgb:1111/2222/3333\x1b\\'.codeUnits);
+      inputController.add('\x1b]12;rgb:aaaa/bbbb/cccc\x1b\\'.codeUnits);
+
+      await Future.wait([foregroundFuture, cursorFuture]);
+
+      expect(terminal.capabilities.foregroundColor, const UvRgb(0x11, 0x22, 0x33));
+      expect(terminal.capabilities.hasForegroundColor, isTrue);
+      expect(terminal.capabilities.cursorColor, const UvRgb(0xaa, 0xbb, 0xcc));
+      expect(terminal.capabilities.hasCursorColor, isTrue);
 
       await terminal.stop();
     });

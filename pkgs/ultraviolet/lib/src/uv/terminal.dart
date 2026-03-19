@@ -361,7 +361,9 @@ class Terminal
     _renderer.queryPrimaryDeviceAttributes();
     _renderer.queryKittyGraphics();
     _renderer.queryKeyboardEnhancements();
+    _renderer.queryForegroundColor();
     _renderer.queryBackgroundColor();
+    _renderer.queryCursorColor();
     _renderer.flush();
   }
 
