@@ -3367,6 +3367,74 @@ Future<void> main() async {
       expect(backend.isRawMode, isFalse);
     });
 
+    test('terminal write control messages are suppressed while released', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_control_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var outputCountAtRelease = -1;
+      var outputCountDuringRelease = -1;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(const Duration(milliseconds: 30), () {
+              program.println('suppressed while released');
+              program.forceRepaint();
+              program.send(const WriteRawMsg('RAW-SHOULD-NOT-WRITE'));
+            });
+            Timer(
+              const Duration(milliseconds: 60),
+              () => outputCountDuringRelease = terminal.output.length,
+            );
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) => const CustomMsg('exec-done'),
+            );
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            return Cmd.tick(
+              const Duration(milliseconds: 40),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          return null;
+        },
+        onView: () => 'release control messages',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await _waitUntil(() => terminal.operations.contains('disableRawMode'));
+      outputCountAtRelease = terminal.output.length;
+      await runFuture;
+
+      expect(outputCountDuringRelease, outputCountAtRelease);
+      expect(terminal.output.join(), isNot(contains('suppressed while released')));
+      expect(terminal.output.join(), isNot(contains('RAW-SHOULD-NOT-WRITE')));
+    });
+
     test('ExecProcess restore reapplies identical view terminal metadata', () async {
       final view = View(
         content: 'sticky metadata',

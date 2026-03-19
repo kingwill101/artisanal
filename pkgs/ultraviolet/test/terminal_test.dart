@@ -44,6 +44,16 @@ void main() {
       );
     });
 
+    test('start is idempotent while already running', () async {
+      await terminal.start(handleSignals: false);
+
+      outputBuffer.clear();
+      await terminal.start(handleSignals: false);
+
+      expect(outputBuffer.toString(), isEmpty);
+      await terminal.stop();
+    });
+
     test('repeated lifecycle mode calls are idempotent', () async {
       await terminal.start(handleSignals: false);
 
