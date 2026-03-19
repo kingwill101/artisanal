@@ -1,12 +1,13 @@
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
-import 'package:artisanal_widgets/src/widgets/testing/widget_tester.dart';
+import 'package:artisanal/app.dart' as app;
+import 'package:artisanal/testing.dart';
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 void main() {
   group('ReloadHost', () {
     test('reload rebuilds while preserving compatible state', () async {
       _ReloadProbeState.mountCount = 0;
-      final controller = w.ReloadController();
+      final controller = app.ReloadController();
       final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
       addTearDown(() async {
         await controller.dispose();
@@ -14,7 +15,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        w.ReloadHost(
+        app.ReloadHost(
           controller: controller,
           builder: (context, revision) => _ReloadProbe(revision: revision),
         ),
@@ -32,7 +33,7 @@ void main() {
 
     test('restart remounts the subtree', () async {
       _ReloadProbeState.mountCount = 0;
-      final controller = w.ReloadController();
+      final controller = app.ReloadController();
       final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
       addTearDown(() async {
         await controller.dispose();
@@ -40,7 +41,7 @@ void main() {
       });
 
       await tester.pumpWidget(
-        w.ReloadHost(
+        app.ReloadHost(
           controller: controller,
           builder: (context, revision) => _ReloadProbe(revision: revision),
         ),
@@ -54,7 +55,7 @@ void main() {
     });
 
     test('ReloadScope exposes the controller to descendants', () async {
-      final controller = w.ReloadController();
+      final controller = app.ReloadController();
       final tester = WidgetTester(screenWidth: 80, screenHeight: 24);
       addTearDown(() async {
         await controller.dispose();
@@ -62,10 +63,10 @@ void main() {
       });
 
       await tester.pumpWidget(
-        w.ReloadHost(
+        app.ReloadHost(
           controller: controller,
           builder: (context, revision) => w.Text(
-            identical(w.ReloadScope.of(context), controller)
+            identical(app.ReloadScope.of(context), controller)
                 ? 'scope:ok'
                 : 'scope:missing',
           ),

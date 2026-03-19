@@ -1,14 +1,14 @@
 import 'dart:io';
 
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/app.dart' as app;
 import 'package:test/test.dart';
 
 void main() {
   group('ReloadFileWatcher', () {
     test('reloads on matching file changes', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = w.ReloadController();
-      final watcher = await w.ReloadFileWatcher.watch(
+      final controller = app.ReloadController();
+      final watcher = await app.ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
@@ -25,13 +25,13 @@ void main() {
       await File('${tempDir.path}/main.dart').writeAsString('void main() {}\n');
 
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, w.ReloadMode.reload);
+      expect(signal.mode, app.ReloadMode.reload);
     });
 
     test('ignores non-matching extensions', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = w.ReloadController();
-      final watcher = await w.ReloadFileWatcher.watch(
+      final controller = app.ReloadController();
+      final watcher = await app.ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
@@ -58,12 +58,12 @@ void main() {
 
     test('can emit restart signals', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = w.ReloadController();
-      final watcher = await w.ReloadFileWatcher.watch(
+      final controller = app.ReloadController();
+      final watcher = await app.ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
-        mode: w.ReloadMode.restart,
+        mode: app.ReloadMode.restart,
       );
 
       addTearDown(() async {
@@ -76,7 +76,7 @@ void main() {
       await File('${tempDir.path}/widget.dart').writeAsString('class Demo {}\n');
 
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, w.ReloadMode.restart);
+      expect(signal.mode, app.ReloadMode.restart);
     });
   });
 }

@@ -1,6 +1,6 @@
 import 'package:artisanal/style.dart' show Style;
-import 'package:artisanal_widgets/widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/testing.dart';
+import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
