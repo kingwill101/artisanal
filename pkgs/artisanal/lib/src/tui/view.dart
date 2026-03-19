@@ -66,6 +66,9 @@ class View {
   final Color? foregroundColor;
 
   /// Optional terminal window title.
+  ///
+  /// When omitted, the runtime falls back to [ProgramOptions.startupTitle] if
+  /// one was configured for the program.
   final String? windowTitle;
 
   /// Optional terminal progress bar state.

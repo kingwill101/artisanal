@@ -1044,8 +1044,14 @@ class Program<M extends Model> {
   /// Whether the terminal cursor color was overridden via OSC 12.
   bool _cursorColorOverridden = false;
 
+  /// Whether the terminal cursor style was overridden from the default block blink.
+  bool _cursorStyleOverridden = false;
+
   /// Whether the terminal progress bar was overridden via OSC 9;4.
   bool _progressBarOverridden = false;
+
+  /// The last window title this program believes it applied.
+  String? _appliedWindowTitle;
 
   /// Desired mouse tracking mode for the current runtime/view state.
   MouseMode _desiredMouseMode = MouseMode.none;
@@ -1328,6 +1334,7 @@ class Program<M extends Model> {
     // Set startup title if provided
     if (_options.startupTitle != null) {
       _terminal!.write('\x1b]0;${_options.startupTitle}\x07');
+      _appliedWindowTitle = _options.startupTitle;
     }
 
     // Set up renderer based on options
@@ -2585,6 +2592,8 @@ class Program<M extends Model> {
 
     _resetProgressBarIfOverridden();
     _resetTerminalColorOverrides();
+    _resetCursorStyleOverride();
+    _appliedWindowTitle = null;
 
     _disableAppliedTerminalModes();
 
@@ -2741,6 +2750,12 @@ class Program<M extends Model> {
     _applyDesiredKeyboardEnhancements();
   }
 
+  void _applyWindowTitle(String? title) {
+    if (title == null || _appliedWindowTitle == title) return;
+    _terminal?.setTitle(title);
+    _appliedWindowTitle = title;
+  }
+
   void _resetProgressBarIfOverridden() {
     if (_progressBarOverridden) {
       _terminal?.setProgressBar(TerminalProgressBarState.none.index, 0);
@@ -2757,9 +2772,20 @@ class Program<M extends Model> {
       _terminal?.write('\x1b]110\x07');
       _fgColorOverridden = false;
     }
+    _resetCursorColorOverride();
+  }
+
+  void _resetCursorColorOverride() {
     if (_cursorColorOverridden) {
       _terminal?.write('\x1b]112\x07');
       _cursorColorOverridden = false;
+    }
+  }
+
+  void _resetCursorStyleOverride() {
+    if (_cursorStyleOverridden) {
+      _terminal?.write('\x1b[1 q');
+      _cursorStyleOverridden = false;
     }
   }
 
@@ -2776,6 +2802,7 @@ class Program<M extends Model> {
   }
 
   void _resetViewScopedTerminalMetadata() {
+    _applyWindowTitle(_options.startupTitle);
     _viewAltScreenOverride = null;
     _applyDynamicAltScreen();
     _setDesiredFocusReporting(false);
@@ -2784,6 +2811,7 @@ class Program<M extends Model> {
     _setDesiredKeyboardEnhancementFlags(0);
     _resetProgressBarIfOverridden();
     _resetTerminalColorOverrides();
+    _resetCursorStyleOverride();
   }
 
   void _disableAppliedTerminalModes() {
@@ -2840,6 +2868,8 @@ class Program<M extends Model> {
 
     _resetProgressBarIfOverridden();
     _resetTerminalColorOverrides();
+    _resetCursorStyleOverride();
+    _appliedWindowTitle = null;
 
     // Send SIGTSTP to suspend (Unix only)
     try {
@@ -2969,7 +2999,9 @@ class Program<M extends Model> {
   /// Applies metadata from a [View] object to the terminal state.
   void _applyViewMetadata(View view) {
     if (view.windowTitle != null) {
-      _terminal?.setTitle(view.windowTitle!);
+      _applyWindowTitle(view.windowTitle!);
+    } else {
+      _applyWindowTitle(_options.startupTitle);
     }
 
     if (view.backgroundColor != null) {
@@ -3035,19 +3067,19 @@ class Program<M extends Model> {
       // Set shape and blink
       final code = view.cursor!.shape.encode(blink: view.cursor!.blink);
       _terminal?.write('\x1b[$code q');
+      _cursorStyleOverridden = code != CursorShape.block.encode(blink: true);
       // Set color if provided
       if (view.cursor!.color != null) {
         _terminal?.write(
           '\x1b]12;${(view.cursor!.color! as Color).toHex()}\x07',
         );
         _cursorColorOverridden = true;
-      } else if (_cursorColorOverridden) {
-        _terminal?.write('\x1b]112\x07');
-        _cursorColorOverridden = false;
+      } else {
+        _resetCursorColorOverride();
       }
-    } else if (_cursorColorOverridden) {
-      _terminal?.write('\x1b]112\x07');
-      _cursorColorOverridden = false;
+    } else {
+      _resetCursorColorOverride();
+      _resetCursorStyleOverride();
     }
   }
 

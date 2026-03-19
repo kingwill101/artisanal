@@ -9,7 +9,7 @@ import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
-import 'package:artisanal/src/uv/uv.dart' show Cursor;
+import 'package:artisanal/src/uv/uv.dart' show Cursor, CursorShape;
 import 'package:test/test.dart';
 
 // Import ExecResult for testing
@@ -1397,6 +1397,124 @@ void main() {
       expect(terminal.operations, contains('disableBracketedPaste'));
     });
 
+    test('delivers focus messages end to end (UV parser)', () async {
+      final received = <FocusMsg>[];
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is FocusMsg) {
+              received.add(msg);
+              if (received.length >= 2) return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'focus', reportFocus: true),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      terminal.sendInput('\x1b[I'.codeUnits);
+      terminal.sendInput('\x1b[O'.codeUnits);
+      await runFuture;
+
+      expect(received, [const FocusMsg(true), const FocusMsg(false)]);
+    });
+
+    test('delivers focus messages end to end (key parser)', () async {
+      final received = <FocusMsg>[];
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is FocusMsg) {
+              received.add(msg);
+              if (received.length >= 2) return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'focus', reportFocus: true),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      terminal.sendInput('\x1b[I'.codeUnits);
+      terminal.sendInput('\x1b[O'.codeUnits);
+      await runFuture;
+
+      expect(received, [const FocusMsg(true), const FocusMsg(false)]);
+    });
+
+    test('delivers bracketed paste messages end to end (UV parser)', () async {
+      PasteMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is PasteMsg) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'paste', bracketedPaste: true),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableBracketedPaste'));
+      terminal.sendInput('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
+      await runFuture;
+
+      expect(received, const PasteMsg('hello\nworld'));
+    });
+
+    test('delivers bracketed paste messages end to end (key parser)', () async {
+      PasteMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is PasteMsg) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'paste', bracketedPaste: true),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableBracketedPaste'));
+      terminal.sendInput('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
+      await runFuture;
+
+      expect(received, const PasteMsg('hello\nworld'));
+    });
+
     test('cleans up view-driven focus, paste, and all-motion mouse on exit', () async {
       final program = Program(
         _CallbackModel(
@@ -1907,7 +2025,10 @@ void main() {
         keyboardEnhancements: const KeyboardEnhancements(reportEventTypes: true),
         backgroundColor: const BasicColor('#112233'),
         foregroundColor: const BasicColor('#eeddcc'),
-        cursor: Cursor.at(0, 0)..color = const BasicColor('#445566'),
+        cursor: (Cursor.at(0, 0)
+          ..shape = CursorShape.bar
+          ..blink = false
+          ..color = const BasicColor('#445566')),
       );
 
       final model = _CallbackModel(
@@ -1974,10 +2095,51 @@ void main() {
         RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
         greaterThanOrEqualTo(2),
       );
+      expect(
+        RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
       expect(joinedOutput, contains('\x1b]111\x07'));
       expect(joinedOutput, contains('\x1b]110\x07'));
       expect(joinedOutput, contains('\x1b]112\x07'));
+      expect(joinedOutput, contains('\x1b[1 q'));
       expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+    });
+
+    test('ExecProcess restore reapplies startup title when no view override exists', () async {
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => 'plain view',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('\x1b]0;Base Title\x07'));
+      program.send(const CustomMsg('exec'));
+      await runFuture;
+
+      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+      expect(
+        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+        greaterThanOrEqualTo(1),
+      );
     });
   });
 
@@ -2018,7 +2180,10 @@ void main() {
                   state: TerminalProgressBarState.defaultState,
                   value: 42,
                 ),
-                cursor: Cursor.at(0, 0)..color = const BasicColor('#445566'),
+                cursor: (Cursor.at(0, 0)
+                  ..shape = CursorShape.bar
+                  ..blink = false
+                  ..color = const BasicColor('#445566')),
               ),
       );
 
@@ -2064,6 +2229,8 @@ void main() {
         1,
       );
       expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
     });
 
     test('null view metadata fields reset previous terminal overrides', () async {
@@ -2096,7 +2263,10 @@ void main() {
                   state: TerminalProgressBarState.defaultState,
                   value: 80,
                 ),
-                cursor: Cursor.at(1, 1)..color = const BasicColor('#556677'),
+                cursor: (Cursor.at(1, 1)
+                  ..shape = CursorShape.underline
+                  ..blink = false
+                  ..color = const BasicColor('#556677')),
               ),
       );
 
@@ -2123,6 +2293,49 @@ void main() {
       expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
       expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
       expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b\[4 q').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
+    });
+
+    test('window title falls back to startup title when override clears', () async {
+      var cleared = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('clear')) {
+            cleared = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => cleared
+            ? const View(content: 'title cleared')
+            : const View(content: 'title set', windowTitle: 'Scoped Title'),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
+      program.send(const CustomMsg('clear'));
+      await runFuture;
+
+      final scopedIndex = terminal.operations.indexOf('setTitle(Scoped Title)');
+      final fallbackIndex = terminal.operations.lastIndexOf('setTitle(Base Title)');
+
+      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+      expect(scopedIndex, isNonNegative);
+      expect(fallbackIndex, greaterThan(scopedIndex));
     });
 
     test('view alt-screen override resets when falling back to plain text', () async {
