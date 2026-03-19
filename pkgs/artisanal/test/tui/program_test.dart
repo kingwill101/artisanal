@@ -4436,6 +4436,51 @@ Future<void> main() async {
         expect(terminal.output.join(), contains('120x33'));
       },
     );
+
+    test(
+      'SuspendMsg resume-triggered kill skips restore resize dispatch and repaint',
+      () async {
+        final terminal = _ResizableMockTerminal(
+          onDisableRawMode: (terminal) {
+            terminal.setSize(width: 120, height: 33);
+          },
+        );
+        WindowSizeMsg? restoredSize;
+        late Program program;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg case WindowSizeMsg(width: 120, height: 33)) {
+              restoredSize = msg;
+            }
+            if (msg is ResumeMsg) {
+              program.kill();
+            }
+            return null;
+          },
+          onView: () => restoredSize == null
+              ? 'size=80x24'
+              : 'size=${restoredSize!.width}x${restoredSize!.height}',
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        expect(restoredSize, isNull);
+        expect(terminal.output.join(), isNot(contains('120x33')));
+      },
+    );
   });
 
   group('View metadata', () {

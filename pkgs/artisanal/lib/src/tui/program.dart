@@ -2813,6 +2813,8 @@ class Program<M extends Model> {
   }
 
   void _renderAfterTerminalRestore() {
+    if (!_running) return;
+
     // Force metadata reapplication even when the model returns the same cached
     // view object after restoring the terminal.
     _lastRenderedView = null;

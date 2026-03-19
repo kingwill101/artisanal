@@ -49,6 +49,7 @@
 - Fixed first-frame rendering on injected custom terminals by skipping automatic UV startup probes unless the terminal explicitly opts in.
 - Fixed delayed `init()` commands such as `Cmd.tick(...)` so they no longer block the first render.
 - Fixed exec/suspend restore so `Program` emits the current terminal size when dimensions changed while the terminal was released, even if no resize signal or backend resize event arrived during that window.
+- Fixed terminal restore helpers so an immediate shutdown during resume no longer dispatches stale resize updates or repaints after shutdown has already started.
 - Added UV-to-TUI adapter parity coverage for focus, paste, mouse, and resize report translation.
 - Added end-to-end `Program` and UV-to-TUI adapter coverage for mode-status replies and light/dark color-scheme reports.
 - Added end-to-end `Program` and UV-to-TUI adapter coverage for ModifyOtherKeys and primary/secondary/tertiary device-attribute reports.
