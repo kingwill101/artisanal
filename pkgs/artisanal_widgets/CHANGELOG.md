@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Fixed `FadeModalBarrier` so content-backed barriers dim the child in place instead of painting an opaque black layer over the full view, while keeping the standalone overlay fallback for empty-child route barriers.
 - Clarified the package guidance so `artisanal_widgets` remains the primary widget dependency, while the `package:artisanal/...` widget entrypoints are documented as optional umbrella convenience re-exports.
 - Hosted browser/socket runner helpers now default `Image(renderMode: auto)` to `ImageAutoMode.sessionCapabilities` instead of forcing the portable fallback, so remote terminals can upgrade image rendering from live session capability reports.
 - Added hosted-runner regression coverage for session-capability image probing by default and for portable-fallback mode suppressing those extra image capability requests.

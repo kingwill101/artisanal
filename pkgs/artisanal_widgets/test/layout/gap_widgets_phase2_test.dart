@@ -618,10 +618,17 @@ void main() {
       await tester.pumpWidget(
         FadeModalBarrier(visible: true, child: Text('Content')),
       );
-      // When the barrier is visible and opaque, it obscures the child text.
-      // The widget tree still contains the child, and the view is non-empty.
-      final view = tester.view;
-      expect(view.isNotEmpty, isTrue);
+      expect(tester.find.text('Content'), isTrue);
+    });
+
+    test('paints a standalone overlay for empty children', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        FadeModalBarrier(visible: true, child: SizedBox.shrink()),
+      );
+      expect(tester.view.isNotEmpty, isTrue);
     });
 
     test('visible defaults to false', () {

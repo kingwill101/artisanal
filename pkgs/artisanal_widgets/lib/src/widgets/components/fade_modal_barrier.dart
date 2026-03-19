@@ -2,8 +2,13 @@ part of 'components_widgets.dart';
 
 /// A modal barrier that fades in/out with an animated opacity.
 ///
-/// When visible, it covers the entire parent area and optionally dismisses
-/// on tap. Uses [AnimationMixin] to animate the opacity transition.
+/// In terminal layouts there is no true alpha compositing, so when this widget
+/// has real child content it dims that content in place rather than painting an
+/// opaque colored layer above it. When used as a standalone overlay with an
+/// empty child, it falls back to painting a full-screen barrier layer.
+///
+/// When visible, it covers the entire parent area and optionally dismisses on
+/// tap. Uses [AnimationMixin] to animate the opacity transition.
 ///
 /// ```dart
 /// FadeModalBarrier(
@@ -94,14 +99,53 @@ class _FadeModalBarrierState extends State<FadeModalBarrier>
     }
 
     final theme = ThemeScope.of(context);
-    final barrier = GestureDetector(
-      onTap: widget.dismissible ? () => widget.onDismiss?.call() : null,
-      child: Opacity(
-        opacity: _controller.value * widget.opacity,
-        child: Container(color: widget.color ?? theme.background),
-      ),
+    final effectiveOpacity = (_controller.value * widget.opacity).clamp(
+      0.0,
+      1.0,
     );
 
-    return Stack(fit: StackFit.expand, children: [widget.child, barrier]);
+    if (_usesStandaloneOverlayFallback(widget.child)) {
+      final barrier = GestureDetector(
+        onTap: widget.dismissible ? () => widget.onDismiss?.call() : null,
+        child: Opacity(
+          opacity: effectiveOpacity,
+          child: Container(color: widget.color ?? theme.background),
+        ),
+      );
+
+      return Stack(fit: StackFit.expand, children: [widget.child, barrier]);
+    }
+
+    final dimmedChild = effectiveOpacity > 0.0
+        ? Opacity(opacity: effectiveOpacity, child: widget.child)
+        : widget.child;
+
+    final dismissLayer = widget.dismissible
+        ? GestureDetector(
+            onTap: () => widget.onDismiss?.call(),
+            child: Container(),
+          )
+        : Container();
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        IgnorePointer(ignoring: true, child: dimmedChild),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          child: dismissLayer,
+        ),
+      ],
+    );
   }
+}
+
+bool _usesStandaloneOverlayFallback(Widget child) {
+  return child is SizedBox &&
+      child.child == null &&
+      (child.width == null || child.width == 0) &&
+      (child.height == null || child.height == 0);
 }
