@@ -1140,6 +1140,190 @@ void main() {
       },
     );
 
+    test(
+      'init-triggered suspend initializes and restores fullscreen renderer state',
+      () async {
+        final program = Program(
+          _CallbackModel(
+            onInit: () => Cmd.message(const SuspendMsg()),
+            onUpdate: (msg) {
+              if (msg is ResumeMsg) {
+                return Cmd.tick(
+                  const Duration(milliseconds: 1),
+                  (_) => const QuitMsg(),
+                );
+              }
+              return null;
+            },
+            onView: () => 'init suspend',
+          ),
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            sendSuspendSignal: false,
+            useUltravioletRenderer: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'hideCursor').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'showCursor').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
+
+    test(
+      'init-triggered suspend initializes and restores ultraviolet fullscreen state',
+      () async {
+        final program = Program(
+          _CallbackModel(
+            onInit: () => Cmd.message(const SuspendMsg()),
+            onUpdate: (msg) {
+              if (msg is ResumeMsg) {
+                return Cmd.tick(
+                  const Duration(milliseconds: 1),
+                  (_) => const QuitMsg(),
+                );
+              }
+              return null;
+            },
+            onView: () => 'init suspend uv',
+          ),
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            sendSuspendSignal: false,
+            useUltravioletRenderer: true,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'hideCursor').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'showCursor').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
+
+    test(
+      'init-triggered exec renders and restores fullscreen renderer state',
+      () async {
+        final program = Program(
+          _CallbackModel(
+            onInit: () => Cmd.exec(
+              'echo',
+              ['init exec'],
+              onComplete: (_) => const QuitMsg(),
+            ),
+            onView: () => 'init exec first frame',
+          ),
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            useUltravioletRenderer: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(terminal.output.join(), contains('init exec first frame'));
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'hideCursor').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'showCursor').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
+
+    test(
+      'init-triggered exec renders and restores ultraviolet fullscreen state',
+      () async {
+        final program = Program(
+          _CallbackModel(
+            onInit: () => Cmd.exec(
+              'echo',
+              ['init exec uv'],
+              onComplete: (_) => const QuitMsg(),
+            ),
+            onView: () => 'init exec uv first frame',
+          ),
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            useUltravioletRenderer: true,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(terminal.output.join(), contains('init exec uv first frame'));
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'hideCursor').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'showCursor').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
+
     test('send() injects messages', () async {
       final program = Program(
         const CounterModel(0),
