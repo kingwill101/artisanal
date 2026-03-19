@@ -64,6 +64,7 @@
 - Added pre-render `Program` startup coverage for UV DA2 and kitty keyboard capability replies.
 - Added direct `Program` coverage for init-triggered suspend and exec lifecycles across both fullscreen renderer backends.
 - Added direct `Program` coverage for view-scoped alt-screen restoration across exec and suspend lifecycles.
+- Added direct `Program` suspend lifecycle coverage for identical view-scoped metadata reapplication, including colors, cursor styling, progress bars, and input modes.
 - Suppressed xterm pixel-size and cell-size report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed xterm mode-status report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed cursor-position report queries on non-terminal hosts alongside the existing terminal-report guards.

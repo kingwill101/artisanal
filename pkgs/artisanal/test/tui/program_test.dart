@@ -4308,6 +4308,93 @@ Future<void> main() async {
       );
     });
 
+    test('SuspendMsg restore reapplies identical view terminal metadata', () async {
+      final view = View(
+        content: 'sticky metadata',
+        reportFocus: true,
+        bracketedPaste: true,
+        mouseMode: MouseMode.allMotion,
+        backgroundColor: const BasicColor('#112233'),
+        foregroundColor: const BasicColor('#eeddcc'),
+        progressBar: const TerminalProgressBar(
+          state: TerminalProgressBarState.defaultState,
+          value: 40,
+        ),
+        cursor: (Cursor.at(0, 0)
+          ..shape = CursorShape.bar
+          ..blink = false
+          ..color = const BasicColor('#445566')),
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => view,
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enableFocusReporting').length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        terminal.operations
+            .where((op) => op == 'setProgressBar(1, 40)')
+            .length,
+        greaterThanOrEqualTo(2),
+      );
+
+      final joinedOutput = terminal.output.join();
+      expect(
+        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(joinedOutput, contains('\x1b]111\x07'));
+      expect(joinedOutput, contains('\x1b]110\x07'));
+      expect(joinedOutput, contains('\x1b]112\x07'));
+      expect(joinedOutput, contains('\x1b[1 q'));
+    });
+
     test('SuspendMsg restore reapplies fullscreen terminal state only once', () async {
       final model = _CallbackModel(
         onUpdate: (msg) {
