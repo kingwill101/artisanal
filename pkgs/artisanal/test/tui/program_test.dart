@@ -9,6 +9,7 @@ import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
+import 'package:artisanal/src/uv/uv.dart' show Cursor;
 import 'package:test/test.dart';
 
 // Import ExecResult for testing
@@ -471,6 +472,18 @@ class MockTerminal implements TuiTerminal {
   @override
   void saveCursor() {
     // TODO: implement saveCursor
+  }
+}
+
+final class _ProbeAwareMockTerminal extends MockTerminal {
+  _ProbeAwareMockTerminal({required this.onWrite});
+
+  final void Function(String data, _ProbeAwareMockTerminal terminal) onWrite;
+
+  @override
+  void write(String data) {
+    super.write(data);
+    onWrite(data, this);
   }
 }
 
@@ -1805,6 +1818,7 @@ void main() {
         mouseMode: MouseMode.allMotion,
         backgroundColor: const BasicColor('#112233'),
         foregroundColor: const BasicColor('#eeddcc'),
+        cursor: Cursor.at(0, 0)..color = const BasicColor('#445566'),
       );
 
       final model = _CallbackModel(
@@ -1856,8 +1870,13 @@ void main() {
         RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
         greaterThanOrEqualTo(2),
       );
+      expect(
+        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
       expect(joinedOutput, contains('\x1b]111\x07'));
       expect(joinedOutput, contains('\x1b]110\x07'));
+      expect(joinedOutput, contains('\x1b]112\x07'));
     });
   });
 
@@ -2545,6 +2564,53 @@ void main() {
 
       // Check that title escape sequence was written
       expect(terminal.output.join(), contains('\x1b]0;My Test App\x07'));
+    });
+  });
+
+  group('Startup probes', () {
+    test('background probe updates the first rendered frame before paint', () async {
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
+            });
+          }
+        },
+      );
+
+      var sawLightBackground = false;
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is BackgroundColorMsg) {
+            sawLightBackground = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => sawLightBackground ? 'light first frame' : 'dark first frame',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+      expect(joinedOutput, contains('light first frame'));
+      expect(joinedOutput, isNot(contains('dark first frame')));
     });
   });
 

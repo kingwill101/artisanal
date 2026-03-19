@@ -1037,6 +1037,9 @@ class Program<M extends Model> {
   /// Whether the terminal foreground color was overridden via OSC 10.
   bool _fgColorOverridden = false;
 
+  /// Whether the terminal cursor color was overridden via OSC 12.
+  bool _cursorColorOverridden = false;
+
   /// Desired mouse tracking mode for the current runtime/view state.
   MouseMode _desiredMouseMode = MouseMode.none;
 
@@ -2550,6 +2553,9 @@ class Program<M extends Model> {
     if (_fgColorOverridden) {
       _terminal?.write('\x1b]110\x07');
     }
+    if (_cursorColorOverridden) {
+      _terminal?.write('\x1b]112\x07');
+    }
 
     _disableAppliedTerminalModes();
 
@@ -2728,6 +2734,9 @@ class Program<M extends Model> {
     }
     if (_fgColorOverridden) {
       _terminal?.write('\x1b]110\x07');
+    }
+    if (_cursorColorOverridden) {
+      _terminal?.write('\x1b]112\x07');
     }
 
     // Send SIGTSTP to suspend (Unix only)
@@ -2922,6 +2931,7 @@ class Program<M extends Model> {
         _terminal?.write(
           '\x1b]12;${(view.cursor!.color! as Color).toHex()}\x07',
         );
+        _cursorColorOverridden = true;
       }
     }
   }
@@ -3208,6 +3218,9 @@ class Program<M extends Model> {
       }
       if (_fgColorOverridden) {
         _terminal?.write('\x1b]110\x07');
+      }
+      if (_cursorColorOverridden) {
+        _terminal?.write('\x1b]112\x07');
       }
     });
 
