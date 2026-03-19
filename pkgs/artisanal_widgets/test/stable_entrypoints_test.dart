@@ -1,25 +1,38 @@
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal_widgets/charting.dart' as charts;
+import 'package:artisanal_widgets/editors.dart' as editors;
 import 'package:artisanal_widgets/selection.dart' as selection;
 import 'package:artisanal_widgets/testing.dart' as testing;
 import 'package:artisanal_widgets/widgets.dart' as widgets;
 import 'package:test/test.dart';
 
-class _DemoKeyMap implements tui.KeyMap {
-  final help = tui.KeyBinding.withHelp(['?'], '?', 'help');
-  final quit = tui.KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit');
+class _DemoKeyMap implements widgets.KeyMap {
+  final help = widgets.KeyBinding.withHelp(['?'], '?', 'help');
+  final quit = widgets.KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit');
 
   @override
-  List<tui.KeyBinding> shortHelp() => [help, quit];
+  List<widgets.KeyBinding> shortHelp() => [help, quit];
 
   @override
-  List<List<tui.KeyBinding>> fullHelp() => [
+  List<List<widgets.KeyBinding>> fullHelp() => [
     [help],
     [quit],
   ];
 }
 
 void main() {
+  test('stable app entrypoint exposes app shells and runners', () {
+    final shell = app.ArtisanalApp(
+      title: 'Demo',
+      home: widgets.Text('hello'),
+    );
+
+    expect(shell, isA<app.ArtisanalApp>());
+    expect(app.runArtisanalApp, isA<Function>());
+    expect(app.runWidgetApp, isA<Function>());
+    expect(app.runReloadableArtisanalApp, isA<Function>());
+  });
+
   test('stable widgets entrypoint exposes the high-level app and component surface', () {
     final widget = widgets.Text('hello');
     final app = widgets.ArtisanalApp(title: 'Demo', home: widget);
@@ -38,7 +51,41 @@ void main() {
     expect(editor, isA<widgets.TextEditor>());
     expect(codeEditor, isA<widgets.CodeEditor>());
     expect(widget, isA<widgets.Widget>());
+    expect(widgets.ZoneInBoundsMsg, isA<Type>());
     expect(widgets.runArtisanalApp, isA<Function>());
+  });
+
+  test('stable editors entrypoint exposes text input and editor widgets', () {
+    final textFieldKeyMap = editors.TextInputKeyMap();
+    final textAreaKeyMap = editors.TextAreaKeyMap();
+    final textField = editors.TextField(
+      controller: editors.TextEditingController(text: 'hello'),
+      keyMap: textFieldKeyMap,
+    );
+    final textArea = editors.TextArea(
+      controller: editors.TextAreaController(text: 'hello\nworld'),
+      keyMap: textAreaKeyMap,
+    );
+    final textEditor = editors.TextEditor(
+      controller: editors.TextAreaController(text: 'hello'),
+      keyMap: textAreaKeyMap,
+    );
+    final codeEditor = editors.CodeEditor(
+      controller: editors.TextAreaController(text: 'void main() {}'),
+      keyMap: textAreaKeyMap,
+    );
+    final markdownEditor = editors.MarkdownEditor(
+      controller: editors.TextAreaController(text: '# Hello'),
+      keyMap: textAreaKeyMap,
+    );
+
+    expect(textFieldKeyMap, isA<editors.TextInputKeyMap>());
+    expect(textAreaKeyMap, isA<editors.TextAreaKeyMap>());
+    expect(textField, isA<editors.TextField>());
+    expect(textArea, isA<editors.TextArea>());
+    expect(textEditor, isA<editors.TextEditor>());
+    expect(codeEditor, isA<editors.CodeEditor>());
+    expect(markdownEditor, isA<editors.MarkdownEditor>());
   });
 
   test('stable charting entrypoint exposes chart widgets and models', () {

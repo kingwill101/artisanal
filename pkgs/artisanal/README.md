@@ -59,9 +59,16 @@ dependencies:
 | `package:artisanal/artisanal.dart` | Full CLI kit (Console, Style, Terminal, Layout) |
 | `package:artisanal/args.dart` | Command runner utilities (`CommandRunner`, `Command`) |
 | `package:artisanal/style.dart` | Styling, Layout, Colors, Borders, Themes |
+| `package:artisanal/runtime.dart` | Focused TEA runtime surface (`Model`, `Msg`, `Cmd`, `Program`, `StringTerminal`, runtime messages) |
+| `package:artisanal/hosts.dart` | Terminal backends, bridges, browser/socket hosts |
 | `package:artisanal/tui.dart` | TUI runtime: Model, Msg, Cmd, Program |
 | `package:artisanal/bubbles.dart` | Reusable interactive widgets |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI codes, Keys |
+| `package:artisanal/app.dart` | Stable widget app shells, runners, and hosted wrappers |
+| `package:artisanal/editors.dart` | Stable widget text inputs and editors |
+| `package:artisanal/selection.dart` | Stable widget text selection |
+| `package:artisanal/testing.dart` | Stable widget testing helpers |
+| `package:artisanal/widgets.dart` | Stable re-export of the widget framework, including shortcut and zone-hit message support |
 | `package:ultraviolet/ultraviolet.dart` | Low-level cell-buffer renderer |
 | `package:artisanal/uv.dart` | Compatibility re-export for UV (`package:ultraviolet/ultraviolet.dart`) |
 | `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
@@ -139,7 +146,7 @@ print(style.render('Hello, Artisanal!'));
 ## Quick Start: TUI (Elm Architecture)
 
 ```dart
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 class CounterModel implements Model {
   final int count;

@@ -29,12 +29,19 @@
 /// For specific functionality, you may want to import the modular libraries:
 /// - `package:artisanal/args.dart`: Command-line argument parsing and runners.
 /// - `package:artisanal/style.dart`: Full Lip Gloss-style styling system.
+/// - `package:artisanal/runtime.dart`: Focused TEA runtime surface.
+/// - `package:artisanal/hosts.dart`: Terminal backends, bridges, and host servers.
 /// - `package:artisanal/tui.dart`: Interactive TUI framework (Elm Architecture).
 /// - `package:artisanal/bubbles.dart`: Reusable interactive TUI components.
+/// - `package:artisanal/app.dart`: Stable widget app shells, runners, and hosted wrappers.
+/// - `package:artisanal/editors.dart`: Stable widget text input and editor surface.
+/// - `package:artisanal/selection.dart`: Stable widget text-selection surface.
+/// - `package:artisanal/testing.dart`: Stable widget testing helpers.
 /// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
 /// - `package:artisanal/uv.dart`: Compatibility re-export for UV types.
 /// - `package:artisanal/charting.dart`: Terminal-native charting primitives.
 /// - `package:artisanal/liquid.dart`: Liquify template adapters.
+/// - `package:artisanal/widgets.dart`: Stable re-export of the widget framework.
 ///
 /// {@template artisanal_io_overview}
 /// The [Console] class is the primary entry point for high-level CLI output.

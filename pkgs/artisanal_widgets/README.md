@@ -23,22 +23,36 @@ dependencies:
 ## Import
 
 ```dart
+import 'package:artisanal_widgets/app.dart';
 import 'package:artisanal_widgets/widgets.dart';
-import 'package:artisanal/tui.dart' as tui;
 ```
 
 Use the focused stable entrypoints when you need those modules:
 
+- `package:artisanal_widgets/app.dart` for app shells, runners, reload helpers, and hosted wrappers
 - `package:artisanal_widgets/charting.dart` for chart widgets
+- `package:artisanal_widgets/editors.dart` for `TextField`, `TextArea`, `TextEditor`, `CodeEditor`, `MarkdownEditor`, and the stable `TextInputKeyMap` / `TextAreaKeyMap` customization surface
 - `package:artisanal_widgets/selection.dart` for `SelectableText` and `SelectionArea`
 - `package:artisanal_widgets/testing.dart` for `WidgetTester`
+
+The main `package:artisanal_widgets/widgets.dart` barrel also re-exports
+`KeyMap` and `KeyBinding`, so component-level shortcut UIs such as `HelpView`
+and zone-hit messages such as `ZoneInBoundsMsg`, so shortcut and pointer-aware
+widgets do not need an extra `package:artisanal/tui.dart` import.
 
 Keep `package:artisanal_widgets/artisanal_widgets.dart` only when you
 explicitly want the broader experimental compatibility surface.
 
+Both the local runner helpers and the hosted browser/socket helpers accept an
+`imageAutoMode` override when you need to force portable half-block rendering
+or opt into richer terminal graphics behavior explicitly.
+
 ## Quick start
 
 ```dart
+import 'package:artisanal_widgets/app.dart';
+import 'package:artisanal_widgets/widgets.dart';
+
 class HelloApp extends StatelessWidget {
   HelloApp({super.key});
 
@@ -92,23 +106,30 @@ for any app (not OpenCode-specific):
 - `ProgramReplay` for deterministic event playback.
 
 ```dart
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart';
 
-final replay = tui.ProgramReplay.script([
-  tui.ProgramReplayStep(
+final replay = runtime.ProgramReplay.script([
+  runtime.ProgramReplayStep(
     after: Duration(milliseconds: 120),
-    msg: tui.KeyMsg(tui.Key(tui.KeyType.runes, runes: [0x61])),
+    msg: runtime.KeyMsg(
+      runtime.Key(runtime.KeyType.runes, runes: [0x61]),
+    ),
   ),
-  tui.ProgramReplayStep(after: Duration(milliseconds: 16), msg: tui.QuitMsg()),
+  runtime.ProgramReplayStep(
+    after: Duration(milliseconds: 16),
+    msg: runtime.QuitMsg(),
+  ),
 ]);
 
-await tui.runProgram(
-  tui.WidgetApp(MyApp()),
-  options: tui.ProgramOptions(replay: replay),
+await runtime.runProgram(
+  WidgetApp(MyApp()),
+  options: runtime.ProgramOptions(replay: replay),
 );
 ```
 
-See the `package:artisanal/tui.dart` API docs for full interceptor/replay details.
+See the `package:artisanal/runtime.dart` API docs for full interceptor/replay
+details.
 
 ## Tests
 

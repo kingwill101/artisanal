@@ -34,6 +34,8 @@ export 'src/widgets/layout/keyboard_listener.dart';
 export 'src/widgets/layout/block_focus.dart';
 export 'src/widgets/components/components_widgets.dart';
 export 'src/widgets/components/overlay.dart';
+export 'package:artisanal/runtime.dart' show ZoneInBoundsMsg;
+export 'package:artisanal/tui.dart' show KeyBinding, KeyMap;
 export 'src/widgets/input/input_widgets.dart';
 export 'src/widgets/scroll/scroll_widgets.dart';
 export 'src/widgets/animation/animations.dart';

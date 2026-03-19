@@ -44,16 +44,24 @@ The Widget system provides:
 
 Stable top-level entrypoints:
 
-- `package:artisanal_widgets/widgets.dart` for the main widget/app/layout/input/navigation surface
+- `package:artisanal/app.dart` and `package:artisanal_widgets/app.dart` for app shells, runners, reload helpers, and hosted wrappers
+- `package:artisanal/widgets.dart` and `package:artisanal_widgets/widgets.dart` for the main widget/app/layout/input/navigation surface, including `KeyMap`/`KeyBinding` for shortcut-oriented components like `HelpView` and zone-hit messages like `ZoneInBoundsMsg` for interactive demos
 - `package:artisanal_widgets/charting.dart` for chart widgets
-- `package:artisanal_widgets/selection.dart` for text selection widgets
-- `package:artisanal_widgets/testing.dart` for `WidgetTester`
+- `package:artisanal/editors.dart` and `package:artisanal_widgets/editors.dart` for text inputs, higher-level editors, and stable `TextInputKeyMap` / `TextAreaKeyMap` customization
+- `package:artisanal/selection.dart` and `package:artisanal_widgets/selection.dart` for text selection widgets
+- `package:artisanal/testing.dart` and `package:artisanal_widgets/testing.dart` for `WidgetTester`
 
 The older `package:artisanal_widgets/artisanal_widgets.dart` import remains
 available as the broader experimental compatibility surface.
 
+The local runner helpers (`runWidgetApp`, `runArtisanalApp`, watched/reloadable
+variants) and the hosted browser/socket helpers all accept an `imageAutoMode`
+override. Use that when you want to force portable half-block rendering or
+explicitly opt into richer terminal-graphics behavior.
+
 ```dart
-import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/app.dart';
+import 'package:artisanal_widgets/widgets.dart';
 
 class MyApp extends Widget {
   final header = Text('My Application', style: Style().bold());
@@ -128,8 +136,14 @@ Use `WidgetApp` to render widgets through the element tree (required for
 `StatefulWidget`):
 
 ```dart
+import 'package:artisanal/runtime.dart';
+import 'package:artisanal_widgets/app.dart';
+
 final app = WidgetApp(MyRoot(), scanZones: true);
-runProgram(app, options: const ProgramOptions(mouse: true));
+runProgram(
+  app,
+  options: const ProgramOptions(mouseMode: MouseMode.allMotion),
+);
 ```
 
 For the common fullscreen widget case, use the higher-level runners:
