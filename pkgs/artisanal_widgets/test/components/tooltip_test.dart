@@ -40,6 +40,23 @@ void main() {
       expect(tester.find.text('Default tip'), isFalse);
     });
 
+    test('shows message on hover for plain text child', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Tooltip(message: 'Hover tip', child: Text('Hover target')),
+      );
+
+      expect(tester.find.text('Hover tip'), isFalse);
+      final target = tester.locateText('Hover target');
+      expect(target, isNotNull);
+
+      tester.mouseMove(target!.x, target.y);
+
+      expect(tester.find.text('Hover tip'), isTrue);
+    });
+
     test(
       'shows message below child when position=below and show=true',
       () async {
@@ -160,6 +177,26 @@ void main() {
 
       expect(tester.find.text('Click to submit'), isTrue);
       expect(tester.find.text('Submit'), isTrue);
+    });
+
+    test('tooltip wrapping a Button shows on hover', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Tooltip(
+          message: 'Hover button tip',
+          child: Button(label: 'Submit', onPressed: () => null),
+        ),
+      );
+
+      expect(tester.find.text('Hover button tip'), isFalse);
+      final target = tester.locateText('Submit');
+      expect(target, isNotNull);
+
+      tester.mouseMove(target!.x, target.y);
+
+      expect(tester.find.text('Hover button tip'), isTrue);
     });
 
     test('tooltip inside a Column', () async {
