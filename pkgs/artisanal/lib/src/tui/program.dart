@@ -2809,11 +2809,22 @@ class Program<M extends Model> {
 
     _syncModelOptionalTimers();
 
+    _renderAfterTerminalRestore();
+  }
+
+  void _renderAfterTerminalRestore() {
     // Force metadata reapplication even when the model returns the same cached
     // view object after restoring the terminal.
     _lastRenderedView = null;
 
-    // Re-render
+    final size = _terminal?.size;
+    if (size != null &&
+        (_lastWindowSizeWidth != size.width ||
+            _lastWindowSizeHeight != size.height)) {
+      _sendWindowSizeIfChanged(size.width, size.height);
+      return;
+    }
+
     _render();
   }
 
@@ -3120,6 +3131,8 @@ class Program<M extends Model> {
 
     // Send resume message
     _processMessage(const ResumeMsg());
+
+    _renderAfterTerminalRestore();
   }
 
   /// Renders the current view.

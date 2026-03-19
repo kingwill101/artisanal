@@ -4135,6 +4135,65 @@ Future<void> main() async {
         greaterThanOrEqualTo(1),
       );
     });
+
+    test(
+      'ExecProcess restore emits the current terminal size when it changes while released',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_restore_size_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+        final terminal = _ResizableMockTerminal();
+        WindowSizeMsg? restoredSize;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              Timer(
+                const Duration(milliseconds: 30),
+                () => terminal.setSize(width: 120, height: 33),
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const QuitMsg(),
+              );
+            }
+            if (msg case WindowSizeMsg(width: 120, height: 33)) {
+              restoredSize = msg;
+            }
+            return null;
+          },
+          onView: () => restoredSize == null
+              ? 'size=80x24'
+              : 'size=${restoredSize!.width}x${restoredSize!.height}',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+        program.send(const CustomMsg('exec'));
+        await runFuture;
+
+        expect(restoredSize, const WindowSizeMsg(120, 33));
+        expect(terminal.output.join(), contains('120x33'));
+      },
+    );
   });
 
   group('Suspend lifecycle', () {
@@ -4330,6 +4389,53 @@ Future<void> main() async {
       );
       expect(terminal.isAltScreen, isFalse);
     });
+
+    test(
+      'SuspendMsg restore emits the current terminal size when it changes while released',
+      () async {
+        final terminal = _ResizableMockTerminal(
+          onDisableRawMode: (terminal) {
+            terminal.setSize(width: 120, height: 33);
+          },
+        );
+        WindowSizeMsg? restoredSize;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg case WindowSizeMsg(width: 120, height: 33)) {
+              restoredSize = msg;
+            }
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => restoredSize == null
+              ? 'size=80x24'
+              : 'size=${restoredSize!.width}x${restoredSize!.height}',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('size=80x24'));
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        expect(restoredSize, const WindowSizeMsg(120, 33));
+        expect(terminal.output.join(), contains('120x33'));
+      },
+    );
   });
 
   group('View metadata', () {
@@ -6884,5 +6990,38 @@ class _DisposeTrackingTerminal implements TuiTerminal {
   void dispose() {
     onDispose?.call();
     _inputController.close();
+  }
+}
+
+class _ResizableMockTerminal extends MockTerminal {
+  _ResizableMockTerminal({
+    int width = 80,
+    int height = 24,
+    this.onDisableRawMode,
+  }) : _width = width,
+       _height = height;
+
+  int _width;
+  int _height;
+  final void Function(_ResizableMockTerminal terminal)? onDisableRawMode;
+
+  @override
+  int get width => _width;
+
+  @override
+  int get height => _height;
+
+  @override
+  ({int width, int height}) get size => (width: _width, height: _height);
+
+  void setSize({required int width, required int height}) {
+    _width = width;
+    _height = height;
+  }
+
+  @override
+  void disableRawMode() {
+    onDisableRawMode?.call(this);
+    super.disableRawMode();
   }
 }
