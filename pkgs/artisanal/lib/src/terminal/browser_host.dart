@@ -320,7 +320,9 @@ final class BrowserTerminalHostServer {
       const wsUrl = wsProtocol + '//' + window.location.host + '$webSocketPath';
       const requestColorScheme = '\\x1b[?996n';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
+      const requestSecondaryDeviceAttributes = '\\x1b[>c';
       const requestTerminalVersion = '\\x1b[>0q';
+      const requestKittyKeyboard = '\\x1b[?u';
       const requestCursorPosition = '\\x1b[6n';
       const requestExtendedCursorPosition = '\\x1b[?6n';
       const requestWindowSize = '\\x1b[18t';
@@ -338,6 +340,8 @@ final class BrowserTerminalHostServer {
       const reportedBackgroundColor = ${_javaScriptStringLiteral(reportedBackgroundColor)};
       const reportedCursorColor = ${_javaScriptStringLiteral(reportedCursorColor)};
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
+      const reportedSecondaryDeviceAttributes = '\\x1b[>0;0;0c';
+      const reportedKittyKeyboard = '\\x1b[?u';
       const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
       const focusInReport = '\\x1b[I';
       const focusOutReport = '\\x1b[O';
@@ -415,12 +419,28 @@ final class BrowserTerminalHostServer {
             remaining = remaining.slice(requestPrimaryDeviceAttributes.length);
             continue;
           }
+          if (remaining.startsWith(requestSecondaryDeviceAttributes)) {
+            sendMessage({
+              type: 'input.text',
+              data: reportedSecondaryDeviceAttributes
+            });
+            remaining = remaining.slice(requestSecondaryDeviceAttributes.length);
+            continue;
+          }
           if (remaining.startsWith(requestTerminalVersion)) {
             sendMessage({
               type: 'input.text',
               data: reportedTerminalVersion
             });
             remaining = remaining.slice(requestTerminalVersion.length);
+            continue;
+          }
+          if (remaining.startsWith(requestKittyKeyboard)) {
+            sendMessage({
+              type: 'input.text',
+              data: reportedKittyKeyboard
+            });
+            remaining = remaining.slice(requestKittyKeyboard.length);
             continue;
           }
           if (remaining.startsWith(requestCursorPosition)) {

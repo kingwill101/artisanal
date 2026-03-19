@@ -27,12 +27,21 @@ void main() {
         html,
         contains(r"const requestExtendedCursorPosition = '\x1b[?6n';"),
       );
+      expect(
+        html,
+        contains(r"const requestSecondaryDeviceAttributes = '\x1b[>c';"),
+      );
+      expect(html, contains(r"const requestKittyKeyboard = '\x1b[?u';"));
       expect(html, contains(r"const requestWindowSize = '\x1b[18t';"));
       expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
       expect(html, contains(r"const requestCellSize = '\x1b[16t';"));
+      expect(html, contains(r"const reportedSecondaryDeviceAttributes = '\x1b[>0;0;0c';"));
+      expect(html, contains(r"const reportedKittyKeyboard = '\x1b[?u';"));
       expect(html, contains('function terminalPixelSize()'));
       expect(html, contains('function terminalCellSize()'));
       expect(html, contains('function cursorPositionReport(extended)'));
+      expect(html, contains('data: reportedSecondaryDeviceAttributes'));
+      expect(html, contains('data: reportedKittyKeyboard'));
       expect(html, contains("data: cursorPositionReport(false)"));
       expect(html, contains("data: cursorPositionReport(true)"));
       expect(html, contains(r"data: `\x1b[8;${term.rows};${term.cols}t`"));
