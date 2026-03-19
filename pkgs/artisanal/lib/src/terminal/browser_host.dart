@@ -35,6 +35,11 @@ final class BrowserTerminalHostServer {
   final String pageHtml;
 
   final BrowserTerminalSessionHandler onSession;
+  late final StreamSubscription<io.HttpRequest> _subscription;
+  final Set<io.WebSocket> _activeSockets = <io.WebSocket>{};
+  final Set<Future<void>> _activeRequests = <Future<void>>{};
+  final Set<Future<void>> _activeSessions = <Future<void>>{};
+  bool _closed = false;
 
   /// Binds a browser host server.
   static Future<BrowserTerminalHostServer> bind({
@@ -64,7 +69,12 @@ final class BrowserTerminalHostServer {
           ),
       onSession: onSession,
     );
-    unawaited(server.forEach(host._handleRequest));
+    host._subscription = server.listen(
+      (request) {
+        unawaited(host._handleRequestSafely(request));
+      },
+      cancelOnError: false,
+    );
     return host;
   }
 
@@ -138,10 +148,49 @@ final class BrowserTerminalHostServer {
     await request.response.close();
   }
 
-  Future<void> _handleSession(io.WebSocket socket) async {
+  Future<void> _handleRequestSafely(io.HttpRequest request) async {
+    Future<void>? task;
     try {
-      await onSession(socket);
+      task = Future<void>.sync(() => _handleRequest(request));
+      _activeRequests.add(task);
+      await task;
+    } catch (error) {
+      final response = request.response;
+      try {
+        response.statusCode =
+            error is io.WebSocketException
+                ? io.HttpStatus.badRequest
+                : io.HttpStatus.internalServerError;
+        response.write(
+          error is io.WebSocketException
+              ? 'Bad websocket upgrade'
+              : 'Internal server error',
+        );
+        await response.close();
+      } catch (_) {
+        // Best-effort only: a dropped client should not poison the host.
+      }
     } finally {
+      if (task != null) {
+        _activeRequests.remove(task);
+      }
+    }
+  }
+
+  Future<void> _handleSession(io.WebSocket socket) async {
+    _activeSockets.add(socket);
+    Future<void>? session;
+    try {
+      session = Future<void>.sync(() => onSession(socket));
+      _activeSessions.add(session);
+      await session;
+    } catch (_) {
+      // Keep the host alive when a single session handler fails.
+    } finally {
+      if (session != null) {
+        _activeSessions.remove(session);
+      }
+      _activeSockets.remove(socket);
       if (socket.closeCode == null) {
         await socket.close();
       }
@@ -149,7 +198,33 @@ final class BrowserTerminalHostServer {
   }
 
   /// Closes the underlying HTTP server.
-  Future<void> close({bool force = false}) => server.close(force: force);
+  Future<void> close({bool force = false}) async {
+    if (_closed) return;
+    _closed = true;
+    await _subscription.cancel();
+    await server.close(force: force);
+
+    if (_activeRequests.isNotEmpty) {
+      await Future.wait(
+        _activeRequests.toList(growable: false),
+        eagerError: false,
+      );
+    }
+
+    if (force) {
+      await Future.wait(
+        _activeSockets.toList(growable: false).map((socket) => socket.close()),
+        eagerError: false,
+      );
+    }
+
+    if (_activeSessions.isNotEmpty) {
+      await Future.wait(
+        _activeSessions.toList(growable: false),
+        eagerError: false,
+      );
+    }
+  }
 
   /// Builds a default xterm.js browser page for websocket-backed terminal
   /// sessions.

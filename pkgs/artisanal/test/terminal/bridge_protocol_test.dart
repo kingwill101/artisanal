@@ -174,6 +174,25 @@ void main() {
       await inbound.close();
     });
 
+    test('ignores late output writes after the transport sink closes', () async {
+      final inbound = StreamController<Object?>();
+      var writes = 0;
+      final backend = JsonTerminalBackend(
+        sendMessage: (_) {
+          writes++;
+          throw StateError('closed');
+        },
+        inboundMessages: inbound.stream,
+      );
+      final terminal = BackendTerminal(backend);
+
+      expect(() => terminal.setTitle('late write'), returnsNormally);
+      expect(writes, 1);
+
+      terminal.dispose();
+      await inbound.close();
+    });
+
     test('closing inbound transport emits shutdown', () async {
       final inbound = StreamController<Object?>();
       final backend = JsonTerminalBackend(

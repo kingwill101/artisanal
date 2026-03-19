@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'key.dart';
 import 'msg.dart';
 import 'terminal.dart';
 
@@ -34,6 +35,13 @@ abstract interface class StartupProbe {
   ///
   /// Return true to consume the message.
   bool handleMsg(Msg msg, StartupProbeContext ctx);
+
+  /// Aborts the probe early.
+  ///
+  /// This is used for critical lifecycle messages such as quit/interrupt so
+  /// startup probing does not sit out its timeout once shutdown is already in
+  /// flight.
+  void abort();
 }
 
 /// Runs startup probes and optionally buffers messages while they are active.
@@ -43,15 +51,22 @@ final class StartupProbeRunner {
   final List<StartupProbe> _probes;
   final List<Msg> _buffered = <Msg>[];
   bool _draining = false;
+  bool _aborted = false;
 
   StartupProbe? get _active => _probes.where((p) => p.isActive).firstOrNull;
+
+  /// Whether any startup probe is currently active.
+  bool get hasActiveProbe => _active != null;
 
   bool get hasBufferedMessages => _buffered.isNotEmpty;
 
   /// Runs probes sequentially.
   Future<void> runAll(StartupProbeContext ctx) async {
+    _aborted = false;
     for (final probe in _probes) {
+      if (_aborted) break;
       await probe.start(ctx);
+      if (_aborted) break;
     }
   }
 
@@ -64,7 +79,13 @@ final class StartupProbeRunner {
 
     if (probe.handleMsg(msg, ctx)) return true;
 
-    if (probe.gateNonCriticalMessages && !_isCritical(msg)) {
+    if (_isCritical(msg)) {
+      _aborted = true;
+      probe.abort();
+      return false;
+    }
+
+    if (probe.gateNonCriticalMessages) {
       _buffered.add(msg);
       return true;
     }
@@ -88,7 +109,14 @@ final class StartupProbeRunner {
     }
   }
 
-  static bool _isCritical(Msg msg) => msg is QuitMsg || msg is InterruptMsg;
+  static bool _isCritical(Msg msg) =>
+      msg is QuitMsg ||
+      msg is InterruptMsg ||
+      (msg is KeyMsg &&
+          (msg.key.isCtrlC ||
+              (msg.key.type == KeyType.runes &&
+                  msg.key.runes.length == 1 &&
+                  msg.key.runes.first == 0x03)));
 }
 
 extension<T> on Iterable<T> {

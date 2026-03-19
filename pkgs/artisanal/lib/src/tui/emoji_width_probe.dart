@@ -113,4 +113,10 @@ final class EmojiWidthProbe implements StartupProbe {
 
     return false;
   }
+
+  @override
+  void abort() {
+    if (!_active || _done.isCompleted) return;
+    _done.complete();
+  }
 }

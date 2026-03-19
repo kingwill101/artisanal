@@ -1098,6 +1098,7 @@ class Program<M extends Model> {
   StreamSubscription<io.ProcessSignal>? _sigwinchSubscription;
   StreamSubscription<TerminalDimensions>? _backendResizeSubscription;
   StreamSubscription<void>? _backendShutdownSubscription;
+  bool _backendShutdownRequested = false;
 
   /// Stored panic for re-throwing after cleanup.
   Object? _panic;
@@ -1417,7 +1418,19 @@ class Program<M extends Model> {
     }
 
     await _runPreRenderStartupProbesIfNeeded();
+    _drainMessageQueue();
+    if (!_running || _backendShutdownRequested) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      return;
+    }
     _startupProbes?.drain(_processMessage);
+    _drainMessageQueue();
+    if (!_running || _backendShutdownRequested) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      return;
+    }
     _startupProbes = null;
     _startupProbeContext = null;
 
@@ -1436,7 +1449,19 @@ class Program<M extends Model> {
     // width didn't change, the terminal display was disturbed and must be
     // repainted.
     await _runPostRenderStartupProbesIfNeeded();
+    _drainMessageQueue();
+    if (!_running || _backendShutdownRequested) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      return;
+    }
     _startupProbes?.drain(_processMessage);
+    _drainMessageQueue();
+    if (!_running || _backendShutdownRequested) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      return;
+    }
     if (_startupProbes != null) {
       _forceRender();
     }
@@ -1603,13 +1628,26 @@ class Program<M extends Model> {
     final shutdownStream = terminal.shutdownStream;
     if (shutdownStream != null) {
       _backendShutdownSubscription = shutdownStream.listen((_) {
-        if (_options.sendInterrupt) {
-          send(const InterruptMsg());
-        } else {
-          send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
-        }
+        _handleBackendShutdown();
       });
     }
+  }
+
+  void _handleBackendShutdown() {
+    if (_backendShutdownRequested || !_running) return;
+    _backendShutdownRequested = true;
+
+    if (_options.sendInterrupt) {
+      send(const InterruptMsg());
+    } else {
+      send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
+    }
+
+    scheduleMicrotask(() {
+      if (_running) {
+        quit();
+      }
+    });
   }
 
   /// Sets up signal handlers for graceful shutdown and resize.
@@ -2360,10 +2398,15 @@ class Program<M extends Model> {
       if (msg is RenderMetricsMsg) {
         _renderer?.metrics?.metricsOnlyFrame = true;
       }
-      if (deferRender) {
+      final startupProbeActive = _startupProbes?.hasActiveProbe ?? false;
+      if (deferRender || startupProbeActive) {
         if (TuiTrace.enabled && msg is KeyMsg) {
           TuiTrace.log(
-            'render deferred for queued key; queue_len=${_messageQueue.length}',
+            startupProbeActive
+                ? 'render deferred while startup probe active; '
+                      'queue_len=${_messageQueue.length}'
+                : 'render deferred for queued key; '
+                      'queue_len=${_messageQueue.length}',
             tag: TraceTag.render,
           );
         }

@@ -233,7 +233,10 @@ final class JsonTerminalBackend implements TerminalBackend {
        _closeTransport = closeTransport,
        _delegate = EmbeddedTerminalBackend(
          output: (data) {
-           sendMessage(TerminalBridgeMessage.output(data).encodeJson());
+           _trySendBridgeMessage(
+             sendMessage,
+             TerminalBridgeMessage.output(data).encodeJson(),
+           );
          },
          initialSize: initialSize,
          supportsAnsi: supportsAnsi,
@@ -355,6 +358,19 @@ final class JsonTerminalBackend implements TerminalBackend {
     if (closeTransport != null) {
       unawaited(closeTransport());
     }
+  }
+}
+
+void _trySendBridgeMessage(
+  void Function(String message) sendMessage,
+  String message,
+) {
+  try {
+    sendMessage(message);
+  } on StateError {
+    // The transport closed between runtime shutdown and a late write. Treat it
+    // as a no-op so forced remote-session teardown does not surface spurious
+    // errors from startup probes or final repaint attempts.
   }
 }
 

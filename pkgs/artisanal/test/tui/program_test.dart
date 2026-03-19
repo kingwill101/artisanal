@@ -801,6 +801,31 @@ void main() {
       await runFuture;
     });
 
+    test(
+      'backend shutdown still quits when the model ignores InterruptMsg',
+      () async {
+        final backend = EmbeddedTerminalBackend(output: (_) {});
+        final received = <Msg>[];
+
+        final runFuture = runProgram(
+          _CallbackModel(
+            onUpdate: (msg) {
+              received.add(msg);
+              return null;
+            },
+          ),
+          options: const ProgramOptions(altScreen: false, frameTick: false),
+          host: ProgramHost.backend(backend),
+        );
+
+        await _waitUntil(() => backend.isRawMode);
+        backend.requestShutdown();
+        await runFuture.timeout(const Duration(seconds: 2));
+
+        expect(received.whereType<InterruptMsg>(), isNotEmpty);
+      },
+    );
+
     test('bridge host can drive a program end to end', () async {
       final bridge = TerminalBridge();
 
@@ -831,8 +856,12 @@ void main() {
     });
 
     test('initializes terminal on run', () async {
+      final model = _CallbackModel(
+        onInit: () =>
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+      );
       final program = Program(
-        ImmediateQuitModel(),
+        model,
         options: const ProgramOptions(altScreen: true, hideCursor: true),
         terminal: terminal,
       );
@@ -4201,6 +4230,173 @@ void main() {
       expect(joinedOutput, contains('light first frame'));
       expect(joinedOutput, isNot(contains('dark first frame')));
     });
+
+    test(
+      'quit during pre-render startup probing aborts later probes and skips first render',
+      () async {
+        late Program<_CallbackModel> program;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(() {
+                program.send(const QuitMsg());
+              });
+            }
+          },
+        );
+
+        var rendered = false;
+        final model = _CallbackModel(
+          onView: () {
+            rendered = true;
+            return 'should not render';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(joinedOutput, isNot(contains('should not render')));
+        expect(rendered, isFalse);
+      },
+    );
+
+    test(
+      'quit during post-render emoji probing skips the forced repaint',
+      () async {
+        late Program<_CallbackModel> program;
+        var renderCount = 0;
+        var quitScheduled = false;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (!quitScheduled && data == Ansi.requestExtendedCursorPosition) {
+              quitScheduled = true;
+              scheduleMicrotask(() {
+                program.send(const QuitMsg());
+              });
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onView: () {
+            renderCount++;
+            return 'render #$renderCount';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(quitScheduled, isTrue);
+        expect(renderCount, 1);
+      },
+    );
+
+    test(
+      'backend shutdown during pre-render probing aborts later probes and skips first render',
+      () async {
+        late final EmbeddedTerminalBackend backend;
+        final writes = <String>[];
+        backend = EmbeddedTerminalBackend(
+          output: (data) {
+            writes.add(data);
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(backend.requestShutdown);
+            }
+          },
+        );
+
+        var rendered = false;
+        final program = Program(
+          _CallbackModel(
+            onView: () {
+              rendered = true;
+              return 'should not render';
+            },
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: BackendTerminal(backend),
+        );
+
+        await program.run();
+
+        final joinedOutput = writes.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(rendered, isFalse);
+      },
+    );
+
+    test(
+      'backend shutdown during post-render emoji probing skips the forced repaint',
+      () async {
+        late final EmbeddedTerminalBackend backend;
+        var renderCount = 0;
+        var shutdownRequested = false;
+        backend = EmbeddedTerminalBackend(
+          output: (data) {
+            if (!shutdownRequested && data == Ansi.requestExtendedCursorPosition) {
+              shutdownRequested = true;
+              scheduleMicrotask(backend.requestShutdown);
+            }
+          },
+        );
+
+        final program = Program(
+          _CallbackModel(
+            onView: () {
+              renderCount++;
+              return 'render #$renderCount';
+            },
+          ),
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: BackendTerminal(backend),
+        );
+
+        await program.run();
+
+        expect(shutdownRequested, isTrue);
+        expect(renderCount, 1);
+      },
+    );
   });
 
   group('Terminal color requests', () {
@@ -4927,6 +5123,7 @@ class _FragileTerminal implements TuiTerminal {
   void dispose() {
     disposeAttempted = true;
     _inputController.close();
+    throw StateError('Simulated cleanup failure');
   }
 }
 

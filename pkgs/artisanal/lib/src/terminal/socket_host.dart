@@ -36,6 +36,8 @@ final class SocketTerminalHostServer {
 
   final SocketTerminalSessionHandler onSession;
   late final StreamSubscription<io.Socket> _subscription;
+  final Set<io.Socket> _activeSockets = <io.Socket>{};
+  final Set<Future<void>> _activeSessions = <Future<void>>{};
   bool _closed = false;
 
   /// Binds a socket host server.
@@ -118,18 +120,45 @@ final class SocketTerminalHostServer {
   );
 
   Future<void> _handleSession(io.Socket socket) async {
+    _activeSockets.add(socket);
+    Future<void>? session;
     try {
-      await onSession(socket);
+      session = Future<void>.sync(() => onSession(socket));
+      _activeSessions.add(session);
+      await session;
+    } catch (_) {
+      // Keep the host alive when a single session handler fails.
     } finally {
+      if (session != null) {
+        _activeSessions.remove(session);
+      }
+      _activeSockets.remove(socket);
       socket.destroy();
     }
   }
 
   /// Closes the underlying TCP server.
-  Future<void> close() async {
+  ///
+  /// When [force] is `true`, all active client sockets are destroyed before the
+  /// method returns.
+  Future<void> close({bool force = false}) async {
     if (_closed) return;
     _closed = true;
     await _subscription.cancel();
     await server.close();
+
+    if (force) {
+      for (final socket in _activeSockets.toList(growable: false)) {
+        socket.destroy();
+      }
+      return;
+    }
+
+    if (_activeSessions.isNotEmpty) {
+      await Future.wait(
+        _activeSessions.toList(growable: false),
+        eagerError: false,
+      );
+    }
   }
 }

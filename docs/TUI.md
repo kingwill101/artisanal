@@ -217,6 +217,27 @@ final stream = sharedStdinStream;
 await shutdownSharedStdinStream();
 ```
 
+### Startup Probes
+
+When UV rendering and UV input decoding are both enabled on a real terminal,
+`Program` runs a small set of best-effort startup probes:
+
+- before the first render: background color, color scheme, DA2, and kitty
+  keyboard support
+- after the first render in alt-screen mode: emoji width probing
+
+These probes are intentionally short-lived and do not block forever. Critical
+lifecycle events abort the active probe immediately and skip the remaining
+probe sequence:
+
+- `QuitMsg`
+- `InterruptMsg`
+- legacy `Ctrl+C` key input
+- backend shutdown/disconnect requests from browser/socket/embedded hosts
+
+That keeps startup responsive even when a remote host disconnects or the user
+quits while probing is still in progress.
+
 ### Program Hosts
 
 `ProgramHost` packages backend selection separately from your model and
@@ -308,6 +329,15 @@ ESC ] 9999 ; <cols> ; <rows> BEL
 Use `SocketTerminalHostServer.resizeControlSequence(...)` or
 `SocketTerminalHostServer.resizeControlBytes(...)` instead of constructing
 that control string by hand.
+
+Host shutdown is explicit too:
+
+- `SocketTerminalHostServer.close(force: true)` destroys active client sockets
+  immediately
+- `BrowserTerminalHostServer.close(force: true)` closes active websocket
+  sessions immediately
+- backend disconnects surface as `InterruptMsg` by default and now also fall
+  back to `QuitMsg` shutdown if the model ignores the interrupt
 
 `TerminalBridge` is the recommended controller surface for browser terminals,
 GUI widgets, or other embedded hosts:

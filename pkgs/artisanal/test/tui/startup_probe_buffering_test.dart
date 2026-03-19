@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/src/tui/key.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/startup_probe.dart';
 import 'package:artisanal/src/tui/terminal.dart';
@@ -179,6 +180,7 @@ final class _GatingProbe implements StartupProbe {
   _GatingProbe(this._started);
 
   final Completer<void> _started;
+  final Completer<void> _done = Completer<void>();
 
   bool _active = false;
 
@@ -192,7 +194,7 @@ final class _GatingProbe implements StartupProbe {
   Future<void> start(StartupProbeContext ctx) async {
     _active = true;
     _started.complete();
-    // Keep active until explicitly deactivated.
+    await _done.future;
   }
 
   @override
@@ -201,9 +203,43 @@ final class _GatingProbe implements StartupProbe {
     return false;
   }
 
+  @override
+  void abort() {
+    _active = false;
+    if (!_done.isCompleted) {
+      _done.complete();
+    }
+  }
+
   void deactivate() {
     _active = false;
+    if (!_done.isCompleted) {
+      _done.complete();
+    }
   }
+}
+
+final class _ImmediateProbe implements StartupProbe {
+  _ImmediateProbe(this.onStart);
+
+  final void Function() onStart;
+
+  @override
+  bool get isActive => false;
+
+  @override
+  bool get gateNonCriticalMessages => false;
+
+  @override
+  Future<void> start(StartupProbeContext ctx) async {
+    onStart();
+  }
+
+  @override
+  bool handleMsg(Msg msg, StartupProbeContext ctx) => false;
+
+  @override
+  void abort() {}
 }
 
 void main() {
@@ -244,5 +280,54 @@ void main() {
     expect(drained.length, 2);
     expect(drained[0], const WindowSizeMsg(10, 10));
     expect(drained[1] is MouseMsg, true);
+  });
+
+  test('StartupProbeRunner aborts active probes on critical messages', () async {
+    final started = Completer<void>();
+    final probe = _GatingProbe(started);
+    final runner = StartupProbeRunner([probe]);
+    final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+    final runAll = runner.runAll(ctx);
+    await started.future;
+
+    expect(runner.intercept(const InterruptMsg(), ctx), false);
+    await runAll.timeout(const Duration(seconds: 1));
+    expect(probe.isActive, isFalse);
+  });
+
+  test('StartupProbeRunner aborts on legacy ctrl+c key messages', () async {
+    final started = Completer<void>();
+    final probe = _GatingProbe(started);
+    final runner = StartupProbeRunner([probe]);
+    final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+    final runAll = runner.runAll(ctx);
+    await started.future;
+
+    expect(
+      runner.intercept(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)), ctx),
+      false,
+    );
+    await runAll.timeout(const Duration(seconds: 1));
+    expect(probe.isActive, isFalse);
+  });
+
+  test('StartupProbeRunner does not start later probes after abort', () async {
+    final started = Completer<void>();
+    final probe = _GatingProbe(started);
+    var laterStarts = 0;
+    final runner = StartupProbeRunner([
+      probe,
+      _ImmediateProbe(() => laterStarts++),
+    ]);
+    final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+    final runAll = runner.runAll(ctx);
+    await started.future;
+
+    expect(runner.intercept(const InterruptMsg(), ctx), false);
+    await runAll.timeout(const Duration(seconds: 1));
+    expect(laterStarts, 0);
   });
 }
