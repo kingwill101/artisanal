@@ -28,6 +28,10 @@ void main() {
         html,
         contains(r"const requestSecondaryDeviceAttributes = '\x1b[>c';"),
       );
+      expect(
+        html,
+        contains(r"const requestTertiaryDeviceAttributes = '\x1b[=c';"),
+      );
       expect(html, contains(r"const requestTermcapPrefix = '\x1bP+q';"));
       expect(html, contains(r"const stringTerminator = '\x1b\\';"));
       expect(html, contains(r"const requestKittyKeyboard = '\x1b[?u';"));
@@ -49,6 +53,10 @@ void main() {
       expect(html, contains(r"const requestPrivateModePrefix = '\x1b[?';"));
       expect(html, contains(r"const requestModeSuffix = '$p';"));
       expect(html, contains(r"const reportedSecondaryDeviceAttributes = '\x1b[>0;0;0c';"));
+      expect(
+        html,
+        contains(r"const reportedTertiaryDeviceAttributes = '\x1bP!|787465726d2e6a73\x1b\\';"),
+      );
       expect(html, contains(r"const reportedKittyKeyboard = '\x1b[?u';"));
       expect(html, contains('function terminalPixelSize()'));
       expect(html, contains('function terminalCellSize()'));
@@ -78,6 +86,7 @@ void main() {
       expect(html, contains('function oscTitleInfo(data)'));
       expect(html, contains('function oscColorInfo(data, prefix)'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
+      expect(html, contains('data: reportedTertiaryDeviceAttributes'));
       expect(html, contains(r"data: '\x1bP1+r' + responsePayload + '\x1b\\'"));
       expect(html, contains('data: reportedKittyKeyboard'));
       expect(html, contains("encodeHexBytes('TN') + '=' + encodeHexBytes('xterm.js')"));

@@ -321,6 +321,7 @@ final class BrowserTerminalHostServer {
       const requestModeSuffix = '\$p';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestSecondaryDeviceAttributes = '\\x1b[>c';
+      const requestTertiaryDeviceAttributes = '\\x1b[=c';
       const requestTerminalVersion = '\\x1b[>0q';
       const requestTermcapPrefix = '\\x1bP+q';
       const stringTerminator = '\\x1b\\\\';
@@ -351,6 +352,7 @@ final class BrowserTerminalHostServer {
       const disableBracketedPaste = '\\x1b[?2004l';
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedSecondaryDeviceAttributes = '\\x1b[>0;0;0c';
+      const reportedTertiaryDeviceAttributes = '\\x1bP!|787465726d2e6a73\\x1b\\\\';
       const reportedKittyKeyboard = '\\x1b[?u';
       const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
       const focusInReport = '\\x1b[I';
@@ -998,6 +1000,14 @@ final class BrowserTerminalHostServer {
               data: reportedSecondaryDeviceAttributes
             });
             remaining = remaining.slice(requestSecondaryDeviceAttributes.length);
+            continue;
+          }
+          if (remaining.startsWith(requestTertiaryDeviceAttributes)) {
+            sendMessage({
+              type: 'input.text',
+              data: reportedTertiaryDeviceAttributes
+            });
+            remaining = remaining.slice(requestTertiaryDeviceAttributes.length);
             continue;
           }
           if (remaining.startsWith(requestTerminalVersion)) {
