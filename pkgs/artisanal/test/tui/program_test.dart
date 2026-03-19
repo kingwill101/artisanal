@@ -1515,6 +1515,127 @@ void main() {
       expect(received, const PasteMsg('hello\nworld'));
     });
 
+    test('delivers mouse press messages end to end (UV parser)', () async {
+      MouseMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is MouseMsg) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'mouse'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      terminal.sendInput('\x1b[<0;5;3M'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const MouseMsg(
+          x: 4,
+          y: 2,
+          button: MouseButton.left,
+          action: MouseAction.press,
+        ),
+      );
+    });
+
+    test('delivers mouse press messages end to end (key parser)', () async {
+      MouseMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is MouseMsg) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'mouse'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      terminal.sendInput('\x1b[<0;5;3M'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const MouseMsg(
+          x: 4,
+          y: 2,
+          button: MouseButton.left,
+          action: MouseAction.press,
+        ),
+      );
+    });
+
+    test('view onMouse hook executes commands for live mouse input', () async {
+      var hookCalled = false;
+      final received = <MouseMsg>[];
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is MouseMsg) {
+              received.add(msg);
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => View(
+            content: 'mouse hook',
+            onMouse: (msg) {
+              hookCalled = true;
+              return null;
+            },
+          ),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('mouse hook'));
+      terminal.sendInput('\x1b[<64;7;4M'.codeUnits);
+      await runFuture;
+
+      expect(hookCalled, isTrue);
+      expect(
+        received,
+        [
+          const MouseMsg(
+            x: 6,
+            y: 3,
+            button: MouseButton.wheelUp,
+            action: MouseAction.wheel,
+          ),
+        ],
+      );
+    });
+
     test('cleans up view-driven focus, paste, and all-motion mouse on exit', () async {
       final program = Program(
         _CallbackModel(
