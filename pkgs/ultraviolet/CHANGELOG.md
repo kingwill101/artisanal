@@ -13,6 +13,7 @@
 
 ### Fixed
 
+- `Terminal` is now explicitly single-use after `stop()`, repeated mode toggles are idempotent, and changing kitty keyboard enhancement flags now resets the old mode before applying the new one.
 - Added lifecycle coverage for kitty keyboard enhancement enable/disable behavior and shutdown cleanup in `Terminal`.
 - Fixed capability state tracking so primary device attribute changes are detected even when Sixel support does not change, and repeated identical color/capability reports no longer churn state.
 - `TerminalCapabilities` now stores and de-duplicates secondary device attributes instead of discarding DA2 reports after decode.

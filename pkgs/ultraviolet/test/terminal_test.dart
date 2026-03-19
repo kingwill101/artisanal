@@ -28,6 +28,126 @@ void main() {
       await terminal.stop();
     });
 
+    test('stop is idempotent after shutdown', () async {
+      await terminal.start(handleSignals: false);
+      await terminal.stop();
+      await terminal.stop();
+    });
+
+    test('cannot restart after stop', () async {
+      await terminal.start(handleSignals: false);
+      await terminal.stop();
+
+      await expectLater(
+        () => terminal.start(handleSignals: false),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('repeated lifecycle mode calls are idempotent', () async {
+      await terminal.start(handleSignals: false);
+
+      outputBuffer.clear();
+      terminal.enterAltScreen();
+      terminal.enterAltScreen();
+      terminal.hideCursor();
+      terminal.hideCursor();
+      terminal.enableMouse();
+      terminal.enableMouse();
+      terminal.enableBracketedPaste();
+      terminal.enableBracketedPaste();
+      terminal.enableFocusReporting();
+      terminal.enableFocusReporting();
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+      );
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+      );
+      terminal.disableKeyboardEnhancements();
+      terminal.disableKeyboardEnhancements();
+      terminal.disableFocusReporting();
+      terminal.disableFocusReporting();
+      terminal.disableBracketedPaste();
+      terminal.disableBracketedPaste();
+      terminal.disableMouse();
+      terminal.disableMouse();
+      terminal.showCursor();
+      terminal.showCursor();
+      terminal.exitAltScreen();
+      terminal.exitAltScreen();
+
+      final output = outputBuffer.toString();
+      expect(
+        RegExp(RegExp.escape(UvAnsi.setModeAltScreenSaveCursor)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.hideCursor)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.enableMouseAllEvents)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.enableBracketedPaste)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.enableFocusReporting)).allMatches(output).length,
+        1,
+      );
+      expect(RegExp(r'\x1b\[>1u').allMatches(output).length, 1);
+      expect(
+        RegExp(RegExp.escape(UvAnsi.disableFocusReporting)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.disableBracketedPaste)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.disableMouseAllEvents)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.showCursor)).allMatches(output).length,
+        1,
+      );
+      expect(
+        RegExp(RegExp.escape(UvAnsi.resetModeAltScreenSaveCursor)).allMatches(output).length,
+        1,
+      );
+      expect(RegExp(r'\x1b\[<u').allMatches(output).length, 1);
+
+      await terminal.stop();
+    });
+
+    test('changing keyboard enhancement flags resets the old mode first', () async {
+      await terminal.start(handleSignals: false);
+
+      outputBuffer.clear();
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+      );
+      terminal.enableKeyboardEnhancements(
+        KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+            KeyboardEnhancementsEvent.reportEventTypes,
+      );
+
+      final output = outputBuffer.toString();
+      final firstPush = output.indexOf('\x1b[>1u');
+      final pop = output.indexOf('\x1b[<u');
+      final secondPush = output.indexOf('\x1b[>3u');
+
+      expect(firstPush, isNonNegative);
+      expect(pop, greaterThan(firstPush));
+      expect(secondPush, greaterThan(pop));
+
+      await terminal.stop();
+    });
+
     test('receives key events', () async {
       await terminal.start(handleSignals: false);
       final eventFuture = terminal.events

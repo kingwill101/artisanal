@@ -124,6 +124,7 @@ class Terminal
   final Buffer _buf;
   final TerminalCapabilities capabilities;
   bool _running = false;
+  bool _stopped = false;
   bool _inAltScreen = false;
   bool _mouseEnabled = false;
   bool _bracketedPasteEnabled = false;
@@ -147,8 +148,14 @@ class Terminal
   ///
   /// If [handleSignals] is true (default), installs a SIGINT handler that
   /// restores terminal state and exits the process.
+  ///
+  /// A [Terminal] is single-use: after [stop] completes, create a new
+  /// instance instead of calling [start] again.
   Future<void> start({bool handleSignals = true}) async {
     if (_running) return;
+    if (_stopped) {
+      throw StateError('Terminal cannot be restarted after stop(); create a new instance.');
+    }
     _running = true;
 
     // Enter raw mode.
@@ -219,6 +226,7 @@ class Terminal
   Future<void> stop() async {
     if (!_running) return;
     _running = false;
+    _stopped = true;
 
     // Restore terminal state in reverse order.
     if (_keyboardEnhancements != 0) disableKeyboardEnhancements();
@@ -288,6 +296,7 @@ class Terminal
 
   /// Hides the terminal cursor.
   void hideCursor() {
+    if (_cursorHidden) return;
     _cursorHidden = true;
     _renderer.hideCursor();
     _renderer.flush();
@@ -295,6 +304,7 @@ class Terminal
 
   /// Shows the terminal cursor.
   void showCursor() {
+    if (!_cursorHidden) return;
     _cursorHidden = false;
     _renderer.showCursor();
     _renderer.flush();
@@ -302,6 +312,7 @@ class Terminal
 
   /// Enables mouse tracking.
   void enableMouse() {
+    if (_mouseEnabled) return;
     _mouseEnabled = true;
     _renderer.enableMouseAllEvents();
     _renderer.flush();
@@ -309,6 +320,7 @@ class Terminal
 
   /// Disables mouse tracking.
   void disableMouse() {
+    if (!_mouseEnabled) return;
     _mouseEnabled = false;
     _renderer.disableMouseAllEvents();
     _renderer.flush();
@@ -316,6 +328,7 @@ class Terminal
 
   /// Enables bracketed paste mode.
   void enableBracketedPaste() {
+    if (_bracketedPasteEnabled) return;
     _bracketedPasteEnabled = true;
     _renderer.enableBracketedPaste();
     _renderer.flush();
@@ -323,6 +336,7 @@ class Terminal
 
   /// Disables bracketed paste mode.
   void disableBracketedPaste() {
+    if (!_bracketedPasteEnabled) return;
     _bracketedPasteEnabled = false;
     _renderer.disableBracketedPaste();
     _renderer.flush();
@@ -330,6 +344,7 @@ class Terminal
 
   /// Enables focus reporting.
   void enableFocusReporting() {
+    if (_focusReportingEnabled) return;
     _focusReportingEnabled = true;
     _renderer.enableFocusReporting();
     _renderer.flush();
@@ -337,6 +352,7 @@ class Terminal
 
   /// Disables focus reporting.
   void disableFocusReporting() {
+    if (!_focusReportingEnabled) return;
     _focusReportingEnabled = false;
     _renderer.disableFocusReporting();
     _renderer.flush();
@@ -344,13 +360,20 @@ class Terminal
 
   /// Enables keyboard enhancements (Kitty Keyboard Protocol) with the specified [flags].
   void enableKeyboardEnhancements(int flags) {
+    if (_keyboardEnhancements == flags) return;
+    if (_keyboardEnhancements != 0) {
+      _renderer.popKeyboardEnhancements();
+    }
     _keyboardEnhancements = flags;
-    _renderer.pushKeyboardEnhancements(flags);
+    if (flags != 0) {
+      _renderer.pushKeyboardEnhancements(flags);
+    }
     _renderer.flush();
   }
 
   /// Disables keyboard enhancements (Kitty Keyboard Protocol).
   void disableKeyboardEnhancements() {
+    if (_keyboardEnhancements == 0) return;
     _keyboardEnhancements = 0;
     _renderer.popKeyboardEnhancements();
     _renderer.flush();
@@ -512,6 +535,7 @@ class Terminal
 
   /// Enters the alternate screen buffer.
   void enterAltScreen() {
+    if (_inAltScreen) return;
     _inAltScreen = true;
     _renderer.enterAltScreen();
     _renderer.flush();
@@ -519,6 +543,7 @@ class Terminal
 
   /// Exits the alternate screen buffer.
   void exitAltScreen() {
+    if (!_inAltScreen) return;
     _inAltScreen = false;
     _renderer.exitAltScreen();
     _renderer.flush();
