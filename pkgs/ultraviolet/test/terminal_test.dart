@@ -68,6 +68,115 @@ void main() {
       await terminal.stop();
     });
 
+    test('receives mouse click and release events', () async {
+      await terminal.start(handleSignals: false);
+      final clickFuture = terminal.events
+          .where((e) => e is MouseClickEvent)
+          .first;
+      final releaseFuture = terminal.events
+          .where((e) => e is MouseReleaseEvent)
+          .first;
+
+      inputController.add('\x1b[<0;5;3M'.codeUnits);
+      inputController.add('\x1b[<0;5;3m'.codeUnits);
+
+      final click = await clickFuture as MouseClickEvent;
+      final release = await releaseFuture as MouseReleaseEvent;
+
+      expect(
+        click.mouse(),
+        const Mouse(x: 4, y: 2, button: MouseButton.left, mod: 0),
+      );
+      expect(
+        release.mouse(),
+        const Mouse(x: 4, y: 2, button: MouseButton.left, mod: 0),
+      );
+
+      await terminal.stop();
+    });
+
+    test('receives mouse wheel events', () async {
+      await terminal.start(handleSignals: false);
+      final wheelFuture = terminal.events
+          .where((e) => e is MouseWheelEvent)
+          .first;
+
+      inputController.add('\x1b[<64;7;4M'.codeUnits);
+
+      final wheel = await wheelFuture as MouseWheelEvent;
+      expect(
+        wheel.mouse(),
+        const Mouse(
+          x: 6,
+          y: 3,
+          button: MouseButton.wheelUp,
+          mod: 0,
+        ),
+      );
+
+      await terminal.stop();
+    });
+
+    test('receives mouse motion events', () async {
+      await terminal.start(handleSignals: false);
+      final motionFuture = terminal.events
+          .where((e) => e is MouseMotionEvent)
+          .first;
+
+      inputController.add('\x1b[<32;9;6M'.codeUnits);
+
+      final motion = await motionFuture as MouseMotionEvent;
+      expect(
+        motion.mouse(),
+        const Mouse(x: 8, y: 5, button: MouseButton.left, mod: 0),
+      );
+
+      await terminal.stop();
+    });
+
+    test('receives window size reports and updates terminal size', () async {
+      await terminal.start(handleSignals: false);
+      final resizeFuture = terminal.events
+          .where((e) => e is WindowSizeEvent)
+          .cast<WindowSizeEvent>()
+          .firstWhere((e) => e.width == 120 && e.height == 33);
+
+      inputController.add('\x1b[8;33;120t'.codeUnits);
+
+      final resize = await resizeFuture;
+      expect(resize.width, 120);
+      expect(resize.height, 33);
+      expect(terminal.bounds().width, 120);
+      expect(terminal.bounds().height, 33);
+
+      await terminal.stop();
+    });
+
+    test('receives in-band terminal size reports and updates terminal size', () async {
+      await terminal.start(handleSignals: false);
+      final resizeFuture = terminal.events
+          .where((e) => e is WindowSizeEvent)
+          .cast<WindowSizeEvent>()
+          .firstWhere((e) => e.width == 120 && e.height == 33);
+      final pixelFuture = terminal.events
+          .where((e) => e is WindowPixelSizeEvent)
+          .cast<WindowPixelSizeEvent>()
+          .firstWhere((e) => e.width == 2400 && e.height == 660);
+
+      inputController.add('\x1b[48;33;120;660;2400t'.codeUnits);
+
+      final resize = await resizeFuture;
+      final pixels = await pixelFuture;
+      expect(resize.width, 120);
+      expect(resize.height, 33);
+      expect(pixels.width, 2400);
+      expect(pixels.height, 660);
+      expect(terminal.bounds().width, 120);
+      expect(terminal.bounds().height, 33);
+
+      await terminal.stop();
+    });
+
     test('draw writes to output', () async {
       await terminal.start(handleSignals: false);
       terminal.resize(10, 10);
