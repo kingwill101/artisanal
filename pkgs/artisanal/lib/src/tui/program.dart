@@ -3150,8 +3150,13 @@ class Program<M extends Model> {
 
     // Send resume message
     _processMessage(const ResumeMsg(), deferRender: true);
-
-    _renderAfterTerminalRestore();
+    unawaited(
+      Future<void>.microtask(() {
+        if (!_running) return;
+        _drainMessageQueue();
+        _renderAfterTerminalRestore();
+      }),
+    );
   }
 
   /// Renders the current view.

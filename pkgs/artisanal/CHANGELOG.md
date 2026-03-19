@@ -95,6 +95,7 @@
 - Suppressed the same terminal report queries on `supportsAnsi: false` hosts so socket/embedded clients that disable ANSI output do not receive DA, OSC color, clipboard, or window-report probes.
 - Made `SocketTerminalHostServer.close(force: true)` wait for in-flight session cleanup after tearing down active client sockets, matching the browser host lifecycle contract.
 - Fixed `SuspendMsg` terminal release so fullscreen suspend/restore no longer double-exits alt screen, and added direct suspend lifecycle coverage for metadata, fullscreen state, and startup-title restore.
+- Fixed `SuspendMsg` restore so immediate resume commands such as `Cmd.quit()` are drained before the forced repaint, avoiding stale post-resume frames when the model exits during resume handling.
 
 ## 0.2.0+1
 

@@ -4830,6 +4830,41 @@ Future<void> main() async {
         expect(terminal.output.join(), isNot(contains('120x33')));
       },
     );
+
+    test('SuspendMsg resume-triggered quit skips forced repaint', () async {
+      var renderCount = 0;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.quit();
+          }
+          return null;
+        },
+        onView: () {
+          renderCount += 1;
+          return 'render #$renderCount';
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('render #1'));
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains('render #1'));
+      expect(joinedOutput, isNot(contains('render #2')));
+    });
   });
 
   group('View metadata', () {
