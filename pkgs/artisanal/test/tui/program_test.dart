@@ -1402,6 +1402,25 @@ void main() {
       expect(output, contains('\x1b[2\$p'));
     });
 
+    test('color scheme request commands write raw xterm queries', () async {
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestColorSchemeReport(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(terminal.output.join(), contains(Ansi.requestColorScheme));
+    });
+
     test('color, palette, and clipboard request commands write raw OSC queries', () async {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
@@ -1474,6 +1493,7 @@ void main() {
           Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(1004),
+          Cmd.requestColorSchemeReport(),
           Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
         ]),
       );
@@ -1490,6 +1510,7 @@ void main() {
       expect(output, isNot(contains('\x1b[?u')));
       expect(output, isNot(contains('\x1b[?2004\$p')));
       expect(output, isNot(contains('\x1b[?1004\$p')));
+      expect(output, isNot(contains(Ansi.requestColorScheme)));
     });
 
     test('non-terminal hosts suppress color, palette, and clipboard report queries', () async {

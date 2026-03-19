@@ -152,6 +152,11 @@ abstract final class Ansi {
   /// Terminal responds with `ESC ] 12 ; <color> (BEL|ST)`.
   static const requestCursorColor = '\x1b]12;?\x07';
 
+  /// Requests the terminal light/dark color-scheme preference.
+  ///
+  /// Terminal responds with `CSI ? 997 ; <n> n`.
+  static const requestColorScheme = '\x1b[?996n';
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Escape Sequences
   // ─────────────────────────────────────────────────────────────────────────────

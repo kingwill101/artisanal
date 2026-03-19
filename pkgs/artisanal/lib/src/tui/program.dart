@@ -3495,6 +3495,11 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith(Ansi.requestColorScheme)) {
+      remaining = remaining.substring(Ansi.requestColorScheme.length);
+      matchedAny = true;
+      continue;
+    }
     if (remaining.startsWith('\x1b]4;')) {
       final belLen = _consumePaletteColorRequest(remaining, terminator: '\x07');
       final stLen = _consumePaletteColorRequest(remaining, terminator: '\x1b\\');

@@ -11,6 +11,7 @@
 - Added `Cmd.requestSecondaryDeviceAttributesReport()` so DA2 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestTertiaryDeviceAttributesReport()` so DA3 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestTerminalVersionReport()` and `Cmd.requestTermcapStrings()` so XTVERSION and XTGETTCAP queries have explicit TUI command helpers instead of requiring raw escape writes.
+- Added `Cmd.requestColorSchemeReport()` so terminal light/dark scheme queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `ModifyOtherKeysMsg` plus device-attribute report messages so UV capability/startup reports no longer fall back to raw UV events in the TUI runtime.
 - Added `ModeReportMsg`, `ColorSchemeMsg`, and `Cmd.requestModeReport()` so UV mode-status replies and light/dark color-scheme reports are exposed through the TUI runtime instead of falling back to raw UV events.
 - Added `WindowPixelSizeMsg`, `CellSizeMsg`, and matching `Cmd` request helpers so UV pixel-size and cell-size reports are exposed through the TUI runtime instead of staying UV-internal.
@@ -45,6 +46,7 @@
 - Suppressed xterm mode-status report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed cursor-position report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed kitty keyboard enhancement report queries on non-terminal hosts alongside the existing terminal-report guards.
+- Suppressed terminal color-scheme report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed DA2 capability queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed DA3 capability queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed XTVERSION and XTGETTCAP report queries on non-terminal hosts alongside the existing terminal-report guards.

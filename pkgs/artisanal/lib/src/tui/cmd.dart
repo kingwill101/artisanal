@@ -457,6 +457,13 @@ class Cmd {
   static Cmd requestModeReport(int mode, {bool private = true}) =>
       writeRaw('\x1b[${private ? '?' : ''}$mode\$p');
 
+  /// Request the terminal to report its light/dark color-scheme preference.
+  ///
+  /// When UV input decoding is enabled, replies such as `CSI ? 997 ; 1 n` and
+  /// `CSI ? 997 ; 2 n` are translated to [ColorSchemeMsg].
+  static Cmd requestColorSchemeReport() =>
+      writeRaw(term_ansi.Ansi.requestColorScheme);
+
   /// Requests terminal foreground/background/cursor color reports (OSC 10/11/12),
   /// plus DA1 as a follow-up.
   ///
