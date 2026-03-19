@@ -48,6 +48,7 @@
 - Reset cursor color overrides during terminal restore/cleanup paths and hardened startup background probing so the first rendered frame can reflect the probed terminal background.
 - Hardened the pre-render theme probe so the first rendered frame can also follow an explicit terminal light/dark color-scheme reply when OSC 11 background color is unavailable.
 - Treated `SuspendMsg` as a critical startup-probe lifecycle message so suspend aborts pre-render and emoji probes immediately instead of waiting on their timeouts.
+- Treated `ExecProcessMsg` as a critical startup-probe lifecycle message so exec release aborts active startup probes immediately instead of waiting on their timeouts.
 - Added end-to-end runtime coverage for foreground and cursor color requests through the `Program` message path.
 - Fixed inline-mode dynamic alt-screen handling so command-driven and view-driven alt-screen toggles reset cleanly on later frames, suspend/restore, and shutdown, and so inline printing is suppressed while the alternate screen is active.
 - Hardened `Program` resize dispatch so passive backend/SIGWINCH resize notifications are deduplicated while explicit `Cmd.windowSize()` requests still flow through filters and interceptors.

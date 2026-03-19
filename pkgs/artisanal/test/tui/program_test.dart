@@ -6372,6 +6372,68 @@ Future<void> main() async {
     );
 
     test(
+      'exec during pre-render startup probing aborts later probes and restores cleanly',
+      () async {
+        late Program<_CallbackModel> program;
+        var execDone = false;
+        var renderCount = 0;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              program.send(
+                ExecProcessMsg(
+                  executable: 'echo',
+                  arguments: const ['startup exec'],
+                  onComplete: (_) => const CustomMsg('exec-done'),
+                ),
+              );
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec-done')) {
+              execDone = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount++;
+            return execDone ? 'exec-done render' : 'initial render';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(joinedOutput, contains('initial render'));
+        expect(joinedOutput, contains('exec-done render'));
+        expect(renderCount, greaterThanOrEqualTo(2));
+      },
+    );
+
+    test(
       'kill during pre-render startup probing aborts later probes and skips first render',
       () async {
         late Program<_CallbackModel> program;
@@ -6547,6 +6609,84 @@ Future<void> main() async {
         expect(suspendScheduled, isTrue);
         expect(renderCount, greaterThanOrEqualTo(2));
         expect(joinedOutput, contains('resumed render'));
+        expect(
+          RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
+        expect(
+          RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
+        expect(
+          RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
+      },
+    );
+
+    test(
+      'exec during post-render emoji probing resumes without rerunning startup probes',
+      () async {
+        late Program<_CallbackModel> program;
+        var renderCount = 0;
+        var execScheduled = false;
+        var execDone = false;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (!execScheduled && data == Ansi.requestExtendedCursorPosition) {
+              execScheduled = true;
+              program.send(
+                ExecProcessMsg(
+                  executable: 'echo',
+                  arguments: const ['post-render exec'],
+                  onComplete: (_) => const CustomMsg('exec-done'),
+                ),
+              );
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec-done')) {
+              execDone = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount++;
+            return execDone ? 'exec-done render #$renderCount' : 'render #$renderCount';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(execScheduled, isTrue);
+        expect(renderCount, greaterThanOrEqualTo(2));
+        expect(joinedOutput, contains('exec-done render'));
         expect(
           RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
               .allMatches(joinedOutput)

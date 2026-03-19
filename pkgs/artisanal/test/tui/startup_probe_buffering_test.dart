@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/src/tui/cmd.dart';
 import 'package:artisanal/src/tui/key.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/startup_probe.dart';
@@ -307,6 +308,30 @@ void main() {
 
     expect(
       runner.intercept(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)), ctx),
+      false,
+    );
+    await runAll.timeout(const Duration(seconds: 1));
+    expect(probe.isActive, isFalse);
+  });
+
+  test('StartupProbeRunner aborts on ExecProcessMsg lifecycle messages', () async {
+    final started = Completer<void>();
+    final probe = _GatingProbe(started);
+    final runner = StartupProbeRunner([probe]);
+    final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+    final runAll = runner.runAll(ctx);
+    await started.future;
+
+    expect(
+      runner.intercept(
+        ExecProcessMsg(
+          executable: 'echo',
+          arguments: const ['probe'],
+          onComplete: (_) => const QuitMsg(),
+        ),
+        ctx,
+      ),
       false,
     );
     await runAll.timeout(const Duration(seconds: 1));
