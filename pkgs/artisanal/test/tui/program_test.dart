@@ -2893,6 +2893,83 @@ void main() {
       expect(enableIndices, isNotEmpty);
     });
 
+    test('ExecProcess pauses frame ticks while released and restarts them after restore', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_frame_ticks_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var execActive = false;
+      var execDone = false;
+      var ticksBeforeExec = 0;
+      var ticksDuringExec = 0;
+      var ticksAfterExec = 0;
+
+      final model = _FrameTickCallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            execActive = true;
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) => const CustomMsg('exec-done'),
+            );
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            execActive = false;
+            execDone = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 250),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          if (msg is FrameTickMsg) {
+            if (execActive) {
+              ticksDuringExec++;
+            } else if (execDone) {
+              ticksAfterExec++;
+              if (ticksAfterExec >= 1) return Cmd.quit();
+            } else {
+              ticksBeforeExec++;
+            }
+          }
+          return null;
+        },
+        onView: () => 'frame ticks around exec',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          frameTick: true,
+          fps: 60,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => ticksBeforeExec > 0);
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      expect(ticksBeforeExec, greaterThan(0));
+      expect(ticksDuringExec, 0);
+      expect(ticksAfterExec, greaterThanOrEqualTo(1));
+    });
+
     test('ExecProcess restore reapplies identical view terminal metadata', () async {
       final view = View(
         content: 'sticky metadata',
@@ -4860,6 +4937,16 @@ class _CallbackModel implements Model {
 
   @override
   Object view() => _onView?.call() ?? 'Callback model';
+}
+
+class _FrameTickCallbackModel extends _CallbackModel implements FrameTickModel {
+  _FrameTickCallbackModel({
+    super.onUpdate,
+    super.onView,
+  });
+
+  @override
+  bool get wantsFrameTicks => true;
 }
 
 /// A terminal that throws during some operations (for testing robust cleanup).

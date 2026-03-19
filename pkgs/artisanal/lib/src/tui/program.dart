@@ -1051,6 +1051,9 @@ class Program<M extends Model> {
   /// Whether the terminal progress bar was overridden via OSC 9;4.
   bool _progressBarOverridden = false;
 
+  /// Whether the terminal is temporarily released for exec/suspend.
+  bool _terminalReleased = false;
+
   /// The last window title this program believes it applied.
   String? _appliedWindowTitle;
 
@@ -1525,6 +1528,7 @@ class Program<M extends Model> {
     }
 
     _metricsTimer = Timer.periodic(_options.metricsInterval, (_) {
+      if (_terminalReleased) return;
       final metrics = _renderer?.metrics;
       if (metrics != null) {
         send(RenderMetricsMsg(metrics));
@@ -1554,7 +1558,7 @@ class Program<M extends Model> {
     _lastFrameTime = DateTime.now();
 
     _frameTickTimer = Timer.periodic(interval, (_) {
-      if (!_running) return;
+      if (!_running || _terminalReleased) return;
 
       final now = DateTime.now();
       final delta = _lastFrameTime != null
@@ -2628,11 +2632,13 @@ class Program<M extends Model> {
 
   /// Releases the terminal for external process execution.
   Future<void> _releaseTerminal() async {
+    _terminalReleased = true;
+
     // Stop input listening temporarily.
     _uvInputTimeoutTimer?.cancel();
     _uvInputTimeoutTimer = null;
-    _metricsTimer?.cancel();
-    _metricsTimer = null;
+    _stopMetricsTimer();
+    _stopFrameTickTimer();
     _uvInputParser.clear();
 
     try {
@@ -2659,8 +2665,11 @@ class Program<M extends Model> {
 
   /// Restores the terminal after external process execution.
   void _restoreTerminal() {
+    _terminalReleased = false;
+
     // Re-enable raw mode
     _terminal?.enableRawMode();
+    _applyWindowTitle(_options.startupTitle);
 
     // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
@@ -2698,6 +2707,8 @@ class Program<M extends Model> {
     if (_inputSubscription == null) {
       _startInputListener();
     }
+
+    _syncModelOptionalTimers();
 
     // Force metadata reapplication even when the model returns the same cached
     // view object after restoring the terminal.
@@ -2897,6 +2908,7 @@ class Program<M extends Model> {
   /// Suspends the program temporarily.
   void _suspend() {
     final restoreDynamicAltScreen = _appliedDynamicAltScreen;
+    _terminalReleased = true;
 
     // Save terminal state
     _renderer?.dispose();
@@ -2904,8 +2916,8 @@ class Program<M extends Model> {
     // Stop input listening and timers temporarily.
     _uvInputTimeoutTimer?.cancel();
     _uvInputTimeoutTimer = null;
-    _metricsTimer?.cancel();
-    _metricsTimer = null;
+    _stopMetricsTimer();
+    _stopFrameTickTimer();
     _uvInputParser.clear();
     unawaited(_inputSubscription?.cancel());
     _inputSubscription = null;
@@ -2934,6 +2946,7 @@ class Program<M extends Model> {
     }
 
     // When resumed, restore terminal state
+    _terminalReleased = false;
     _terminal?.enableRawMode();
     if (_options.altScreen) {
       _terminal?.enterAltScreen();
@@ -2944,6 +2957,7 @@ class Program<M extends Model> {
     if (_options.hideCursor) {
       _terminal?.hideCursor();
     }
+    _applyWindowTitle(_options.startupTitle);
 
     // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
@@ -2979,8 +2993,8 @@ class Program<M extends Model> {
     // Restart input.
     _startInputListener();
 
-    // Restart metrics timer.
-    _startMetricsTimer();
+    // Restart optional runtime timers.
+    _syncModelOptionalTimers();
 
     // Force resume to repaint even when the model returns the same cached view.
     _lastRenderedView = null;
