@@ -37,6 +37,8 @@ void main() {
       expect(html, contains(r"const requestWindowSize = '\x1b[18t';"));
       expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
       expect(html, contains(r"const requestCellSize = '\x1b[16t';"));
+      expect(html, contains(r"const requestClipboardPrefix = '\x1b]52;';"));
+      expect(html, contains(r"const oscBell = '\x07';"));
       expect(html, contains(r"const reportedSecondaryDeviceAttributes = '\x1b[>0;0;0c';"));
       expect(html, contains(r"const reportedKittyKeyboard = '\x1b[?u';"));
       expect(html, contains('function terminalPixelSize()'));
@@ -45,10 +47,19 @@ void main() {
       expect(html, contains('function decodeHexBytes(hex)'));
       expect(html, contains('function encodeHexBytes(text)'));
       expect(html, contains('function termcapResponsePayload(requestPayload)'));
+      expect(html, contains('function encodeBase64Utf8(text)'));
+      expect(html, contains('function decodeBase64Utf8(text)'));
+      expect(html, contains('function clipboardResponse(selection, text)'));
+      expect(html, contains('function writeClipboardText(text)'));
+      expect(html, contains('function readClipboardText(selection)'));
+      expect(html, contains('function clipboardQueryInfo(data)'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
       expect(html, contains(r"data: '\x1bP1+r' + responsePayload + '\x1b\\'"));
       expect(html, contains('data: reportedKittyKeyboard'));
       expect(html, contains("encodeHexBytes('TN') + '=' + encodeHexBytes('xterm.js')"));
+      expect(html, contains('navigator.clipboard.readText()'));
+      expect(html, contains('navigator.clipboard.writeText(text).catch(() => {});'));
+      expect(html, contains("if (clipboard.content === '?')"));
       expect(html, contains("data: cursorPositionReport(false)"));
       expect(html, contains("data: cursorPositionReport(true)"));
       expect(html, contains(r"data: `\x1b[8;${term.rows};${term.cols}t`"));

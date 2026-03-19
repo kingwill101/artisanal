@@ -330,6 +330,8 @@ final class BrowserTerminalHostServer {
       const requestWindowSize = '\\x1b[18t';
       const requestWindowPixelSize = '\\x1b[14t';
       const requestCellSize = '\\x1b[16t';
+      const requestClipboardPrefix = '\\x1b]52;';
+      const oscBell = '\\x07';
       const requestForegroundColor = '\\x1b]10;?\\x07';
       const requestBackgroundColor = '\\x1b]11;?\\x07';
       const requestCursorColor = '\\x1b]12;?\\x07';
@@ -444,11 +446,114 @@ final class BrowserTerminalHostServer {
         return parts.length > 0 ? parts.join(';') : null;
       }
 
+      function encodeBase64Utf8(text) {
+        const bytes = new TextEncoder().encode(text);
+        let binary = '';
+        for (const byte of bytes) {
+          binary += String.fromCharCode(byte);
+        }
+        return btoa(binary);
+      }
+
+      function decodeBase64Utf8(text) {
+        try {
+          const binary = atob(text);
+          const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+          return new TextDecoder().decode(bytes);
+        } catch (_) {
+          return text;
+        }
+      }
+
+      function clipboardResponse(selection, text) {
+        return `\\x1b]52;\${selection};\${encodeBase64Utf8(text)}\\x07`;
+      }
+
+      function writeClipboardText(text) {
+        if (!window.isSecureContext ||
+            !navigator.clipboard ||
+            !navigator.clipboard.writeText) {
+          return;
+        }
+        navigator.clipboard.writeText(text).catch(() => {});
+      }
+
+      function readClipboardText(selection) {
+        if (!window.isSecureContext ||
+            !navigator.clipboard ||
+            !navigator.clipboard.readText) {
+          sendMessage({
+            type: 'input.text',
+            data: clipboardResponse(selection, '')
+          });
+          return;
+        }
+        navigator.clipboard.readText()
+          .then((text) => {
+            sendMessage({
+              type: 'input.text',
+              data: clipboardResponse(selection, text)
+            });
+          })
+          .catch(() => {
+            sendMessage({
+              type: 'input.text',
+              data: clipboardResponse(selection, '')
+            });
+          });
+      }
+
+      function clipboardQueryInfo(data) {
+        if (!data.startsWith(requestClipboardPrefix)) {
+          return null;
+        }
+
+        const start = requestClipboardPrefix.length;
+        const bellIndex = data.indexOf(oscBell, start);
+        const stIndex = data.indexOf(stringTerminator, start);
+        let end = -1;
+        let terminatorLength = 0;
+
+        if (bellIndex !== -1 && (stIndex === -1 || bellIndex < stIndex)) {
+          end = bellIndex;
+          terminatorLength = oscBell.length;
+        } else if (stIndex !== -1) {
+          end = stIndex;
+          terminatorLength = stringTerminator.length;
+        }
+
+        if (end === -1) {
+          return null;
+        }
+
+        const payload = data.slice(start, end);
+        const separator = payload.indexOf(';');
+        if (separator === -1 || separator === 0) {
+          return null;
+        }
+
+        return {
+          selection: payload.slice(0, separator)[0],
+          content: payload.slice(separator + 1),
+          consumed: end + terminatorLength,
+        };
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
 
         while (remaining.length > 0) {
+          const clipboard = clipboardQueryInfo(remaining);
+          if (clipboard !== null) {
+            if (clipboard.content === '?') {
+              readClipboardText(clipboard.selection);
+            } else {
+              writeClipboardText(decodeBase64Utf8(clipboard.content));
+            }
+            remaining = remaining.slice(clipboard.consumed);
+            continue;
+          }
           if (remaining.startsWith(requestColorScheme)) {
             sendMessage({
               type: 'input.text',
