@@ -6,7 +6,7 @@ library;
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/markdown.dart' as markdown;
 import 'package:artisanal/tui.dart' show Cmd;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../models/message.dart';
 import '../theme.dart';

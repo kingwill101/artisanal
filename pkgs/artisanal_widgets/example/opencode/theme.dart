@@ -3,7 +3,7 @@ library;
 import 'dart:io';
 
 import 'package:artisanal/style.dart' as style;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 import 'models/opencode_theme.dart';
 

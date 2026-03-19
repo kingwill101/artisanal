@@ -1,7 +1,7 @@
 import 'dart:io' show stdout;
 
 import 'package:artisanal/style.dart';
-import 'package:artisanal_widgets/artisanal_widgets.dart';
+import 'package:artisanal_widgets/widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
 
 import '../example/buttons/main.dart' as demo;

@@ -6,7 +6,7 @@
 // Run with: dart run example/popup_menu_button/main.dart
 
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
   final app = tui.WidgetApp(PopupMenuButtonShowcase());

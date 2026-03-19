@@ -12,6 +12,7 @@
 - Kept `package:artisanal_widgets/artisanal_widgets.dart` as the broader experimental compatibility surface while stabilizing the primary widget/app/layout/input/navigation APIs.
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.
 - Updated the package README and focused examples to prefer the stable top-level entrypoints over the broad compatibility import.
+- Updated the remaining widget examples and tooling to import the stable `package:artisanal_widgets/widgets.dart` entrypoint instead of the broad compatibility surface.
 
 ## 0.1.0+1
 - Documentation + assets
