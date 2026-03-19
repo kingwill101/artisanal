@@ -287,7 +287,7 @@ final class BrowserTerminalHostServer {
   </head>
   <body>
     <div class="toolbar">
-      <strong>${_escapeHtml(title)}</strong>
+      <strong id="title">${_escapeHtml(title)}</strong>
       <span class="badge" id="endpoint"></span>
       <span class="badge" id="status">connecting</span>
     </div>
@@ -297,6 +297,7 @@ final class BrowserTerminalHostServer {
     <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
     <script>
       const terminalNode = document.getElementById('terminal');
+      const titleNode = document.getElementById('title');
       const statusNode = document.getElementById('status');
       const endpointNode = document.getElementById('endpoint');
       const term = new Terminal({
@@ -333,6 +334,8 @@ final class BrowserTerminalHostServer {
       const requestWindowPixelSize = '\\x1b[14t';
       const requestCellSize = '\\x1b[16t';
       const requestClipboardPrefix = '\\x1b]52;';
+      const titleOsc0Prefix = '\\x1b]0;';
+      const titleOsc2Prefix = '\\x1b]2;';
       const oscBell = '\\x07';
       const requestForegroundColor = '\\x1b]10;?\\x07';
       const requestBackgroundColor = '\\x1b]11;?\\x07';
@@ -359,6 +362,13 @@ final class BrowserTerminalHostServer {
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(message));
+        }
+      }
+
+      function setBrowserTitle(title) {
+        document.title = title;
+        if (titleNode) {
+          titleNode.textContent = title;
         }
       }
 
@@ -576,11 +586,52 @@ final class BrowserTerminalHostServer {
         }
       }
 
+      function oscTitleInfo(data) {
+        let prefix = null;
+        if (data.startsWith(titleOsc0Prefix)) {
+          prefix = titleOsc0Prefix;
+        } else if (data.startsWith(titleOsc2Prefix)) {
+          prefix = titleOsc2Prefix;
+        }
+        if (prefix === null) {
+          return null;
+        }
+
+        const start = prefix.length;
+        const bellIndex = data.indexOf(oscBell, start);
+        const stIndex = data.indexOf(stringTerminator, start);
+        let end = -1;
+        let terminatorLength = 0;
+
+        if (bellIndex !== -1 && (stIndex === -1 || bellIndex < stIndex)) {
+          end = bellIndex;
+          terminatorLength = oscBell.length;
+        } else if (stIndex !== -1) {
+          end = stIndex;
+          terminatorLength = stringTerminator.length;
+        }
+
+        if (end === -1) {
+          return null;
+        }
+
+        return {
+          title: data.slice(start, end),
+          consumed: end + terminatorLength,
+        };
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
 
         while (remaining.length > 0) {
+          const title = oscTitleInfo(remaining);
+          if (title !== null) {
+            setBrowserTitle(title.title);
+            remaining = remaining.slice(title.consumed);
+            continue;
+          }
           const clipboard = clipboardQueryInfo(remaining);
           if (clipboard !== null) {
             if (clipboard.content === '?') {

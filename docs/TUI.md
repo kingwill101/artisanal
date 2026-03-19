@@ -427,7 +427,8 @@ participate in startup probing and session-based capability detection. It also
 maps OSC 52 clipboard reads and writes onto the browser clipboard when
 available, answers private mode reports for focus and bracketed paste, and
 forwards browser focus changes and bracketed paste whenever the runtime enables
-those terminal modes.
+those terminal modes. It also mirrors OSC 0/2 title updates into the browser
+tab title and the page toolbar heading.
 
 ### Convenience Functions
 
