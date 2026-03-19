@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:image/image.dart' as img;
@@ -159,5 +160,43 @@ void main() {
     expect(tester.view, isNot(contains('\x1b_G')));
     expect(tester.view, isNot(contains('\x1b]1337;File=')));
     expect(tester.view, isNot(contains('\x1bPq')));
+  });
+
+  test('auto render mode can follow session terminal version hints', () async {
+    final tester = WidgetTester();
+    addTearDown(() => tester.dispose());
+
+    await tester.pumpWidget(
+      w.Image(
+        image: w.MemoryImage(_encodeTestImage()),
+        width: 2,
+        height: 1,
+        renderMode: w.ImageRenderMode.auto,
+      ),
+      imageAutoMode: w.ImageAutoMode.sessionCapabilities,
+    );
+
+    tester.sendMsg(const tui.TerminalVersionMsg('xterm-kitty 0.40.0'));
+    await _pumpUntil(tester, () => tester.view.contains('\x1b_G'));
+    expect(tester.view, contains('\x1b_G'));
+  });
+
+  test('auto render mode can follow session device attribute hints', () async {
+    final tester = WidgetTester();
+    addTearDown(() => tester.dispose());
+
+    await tester.pumpWidget(
+      w.Image(
+        image: w.MemoryImage(_encodeTestImage()),
+        width: 2,
+        height: 1,
+        renderMode: w.ImageRenderMode.auto,
+      ),
+      imageAutoMode: w.ImageAutoMode.sessionCapabilities,
+    );
+
+    tester.sendMsg(const tui.PrimaryDeviceAttributesMsg([1, 4, 18]));
+    await _pumpUntil(tester, () => tester.view.contains('\x1bPq'));
+    expect(tester.view, contains('\x1bPq'));
   });
 }

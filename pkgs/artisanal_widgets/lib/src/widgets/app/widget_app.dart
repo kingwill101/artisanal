@@ -7,6 +7,7 @@ import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
         Cmd,
+        PrimaryDeviceAttributesMsg,
         DebugOverlayModel,
         EveryCmd,
         FrameTickModel,
@@ -22,10 +23,16 @@ import 'package:artisanal/tui.dart'
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
+        TerminalVersionMsg,
         StreamCmd,
         TuiTrace,
         View,
         WindowSizeMsg;
+import 'package:artisanal/uv.dart'
+    show
+        PrimaryDeviceAttributesEvent,
+        TerminalCapabilities,
+        TerminalVersionEvent;
 import 'package:artisanal/style.dart'
     show Color, AdaptiveColor, CompleteAdaptiveColor;
 import 'package:artisanal/terminal.dart' show KeyType;
@@ -34,7 +41,8 @@ import '../core/element.dart'
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../layout/layout_widgets.dart' show ImageAutoMode, withImageAutoMode;
+import '../layout/layout_widgets.dart'
+    show ImageAutoMode, withImageAutoConfiguration;
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
@@ -177,6 +185,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
   /// Mutable holder written to by WidgetApp, read by [RenderMetricsProvider].
   final RenderMetricsHolder _metricsHolder;
+  final TerminalCapabilities _sessionImageCapabilities = TerminalCapabilities();
 
   /// Latest runtime-level render metrics received from [RenderMetricsMsg].
   RenderMetrics? _latestRenderMetrics;
@@ -215,6 +224,10 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   @override
   Cmd? init() {
     final cmds = <Cmd>[Cmd.requestBackgroundColorReport()];
+    if (_imageAutoMode == ImageAutoMode.sessionCapabilities) {
+      cmds.add(Cmd.requestPrimaryDeviceAttributesReport());
+      cmds.add(Cmd.requestTerminalVersionReport());
+    }
 
     if (enableRenderMetricsInjection) {
       cmds.add(
@@ -237,6 +250,18 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       (cmd) => cmd is ParallelCmd || cmd is EveryCmd || cmd is StreamCmd,
     );
     return hasRuntimeManaged ? ParallelCmd(cmds) : Cmd.batch(cmds);
+  }
+
+  bool _updateSessionImageCapabilities(Msg msg) {
+    return switch (msg) {
+      PrimaryDeviceAttributesMsg(:final attrs) =>
+        _sessionImageCapabilities.updateFromEvent(
+          PrimaryDeviceAttributesEvent(attrs),
+        ),
+      TerminalVersionMsg(:final version) =>
+        _sessionImageCapabilities.updateFromEvent(TerminalVersionEvent(version)),
+      _ => false,
+    };
   }
 
   @override
@@ -434,6 +459,10 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     }
     if (cmd != null) cmds.add(cmd);
 
+    final imageCapabilitiesChanged =
+        _imageAutoMode == ImageAutoMode.sessionCapabilities &&
+        _updateSessionImageCapabilities(msg);
+
     root = _currentRoot();
     if (msg is BackgroundColorMsg) {
       // Adaptive theme state lives outside the element tree. When the terminal
@@ -447,6 +476,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     } else {
       _dirty =
           _dirty ||
+          imageCapabilitiesChanged ||
           hadDirtyBeforeDispatch ||
           _tree.hasDirty ||
           _tree.hasPaintDirty;
@@ -491,7 +521,11 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     } else {
       final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
       sw?.start();
-      baseContent = withImageAutoMode(imageAutoMode, _tree.render);
+      baseContent = withImageAutoConfiguration(
+        mode: imageAutoMode,
+        capabilities: _sessionImageCapabilities,
+        callback: _tree.render,
+      );
       sw?.stop();
       if (sw != null) {
         TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');

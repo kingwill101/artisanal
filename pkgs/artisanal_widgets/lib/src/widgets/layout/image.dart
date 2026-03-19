@@ -153,6 +153,13 @@ enum ImageAutoMode {
   /// Use UV terminal capability hints derived from the local environment.
   environment,
 
+  /// Use capability hints reported by the active terminal session.
+  ///
+  /// This is useful for embedded, socket, or browser-backed hosts that can
+  /// forward device/version reports from the actual remote client instead of
+  /// relying on the server process environment.
+  sessionCapabilities,
+
   /// Force the portable half-block fallback for remote or embedded hosts.
   portableFallback,
 }
@@ -438,16 +445,57 @@ Drawable _bestDrawableFromCapabilities(
         SixelImageDrawable(image, columns: columns, rows: rows),
       _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
     },
+    ImageAutoMode.sessionCapabilities => switch (_currentImageCapabilities) {
+      TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
+        KittyImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
+        ITerm2ImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasSixel) when hasSixel =>
+        SixelImageDrawable(image, columns: columns, rows: rows),
+      _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
+    },
   };
 }
 
 T withImageAutoMode<T>(ImageAutoMode mode, T Function() callback) {
-  if (_currentImageAutoMode == mode) {
+  return withImageAutoConfiguration(mode: mode, callback: callback);
+}
+
+T withImageAutoConfiguration<T>({
+  required ImageAutoMode mode,
+  TerminalCapabilities? capabilities,
+  required T Function() callback,
+}) {
+  final sameMode = _currentImageAutoMode == mode;
+  final sameCapabilities =
+      capabilities == null || identical(_currentImageCapabilities, capabilities);
+  if (sameMode && sameCapabilities) {
     return callback();
   }
   return dart_async.runZoned(
     callback,
-    zoneValues: <Object?, Object?>{_imageAutoModeZoneKey: mode},
+    zoneValues: <Object?, Object?>{
+      _imageAutoModeZoneKey: mode,
+      if (capabilities != null) _imageCapabilitiesZoneKey: capabilities,
+    },
+  );
+}
+
+TerminalCapabilities get _currentImageCapabilities =>
+    dart_async.Zone.current[_imageCapabilitiesZoneKey]
+        as TerminalCapabilities? ??
+    _widgetImageCapabilities;
+
+const Symbol _imageCapabilitiesZoneKey = #artisanal_widgets_imageCapabilities;
+
+T withImageAutoCapabilities<T>(
+  TerminalCapabilities capabilities,
+  T Function() callback,
+) {
+  return withImageAutoConfiguration(
+    mode: _currentImageAutoMode,
+    capabilities: capabilities,
+    callback: callback,
   );
 }
 

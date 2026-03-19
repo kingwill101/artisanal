@@ -6,6 +6,7 @@
 
 - Added a stable `package:artisanal_widgets/widgets.dart` entrypoint for the high-level widget framework surface.
 - Added stable `package:artisanal_widgets/charting.dart` and `package:artisanal_widgets/selection.dart` entrypoints for the supported charting and text-selection surfaces.
+- Added `ImageAutoMode.sessionCapabilities` so `Image(renderMode: auto)` can follow terminal version and device-attribute reports from the active session instead of only using the local process environment.
 
 ### Changed
 

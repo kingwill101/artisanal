@@ -10,6 +10,7 @@
 - `TerminalCapabilities` now tracks exact kitty keyboard enhancement flags plus foreground, background, cursor, and palette color reports with idempotent updates.
 - `TerminalCapabilities` now tracks `ModifyOtherKeys` mode reports and terminal dark/light color-scheme state instead of treating those reports as transient decode-only events.
 - `Terminal` startup capability probing now queries foreground and cursor colors in addition to the existing background, keyboard, device-attribute, and kitty-graphics probes.
+- `TerminalCapabilities` now infers Kitty and iTerm2 image-protocol support from terminal-version replies in addition to the existing environment and device-attribute hints.
 
 ### Fixed
 

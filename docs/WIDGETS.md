@@ -57,7 +57,10 @@ available as the broader experimental compatibility surface.
 The local runner helpers (`runWidgetApp`, `runArtisanalApp`, watched/reloadable
 variants) and the hosted browser/socket helpers all accept an `imageAutoMode`
 override. Use that when you want to force portable half-block rendering or
-explicitly opt into richer terminal-graphics behavior.
+explicitly opt into richer terminal-graphics behavior. `ImageAutoMode.sessionCapabilities`
+lets `Image(renderMode: ImageRenderMode.auto)` follow terminal version and
+device-attribute reports from the active session instead of only the local
+process environment.
 
 ```dart
 import 'package:artisanal_widgets/app.dart';
@@ -200,7 +203,9 @@ socket host when you want a raw TCP terminal stream managed by your own client.
 Hosted browser and socket runners default `Image(renderMode: ImageRenderMode.auto)`
 to a portable half-block fallback so a server-side Kitty/iTerm environment
 does not leak graphics-protocol choices into remote clients. Override
-`imageAutoMode` when the hosted surface can negotiate richer image protocols.
+`imageAutoMode` when the hosted surface can negotiate richer image protocols;
+use `ImageAutoMode.sessionCapabilities` when the remote terminal can answer
+device/version queries and you want `Image.auto` to follow those live hints.
 
 `WidgetTester` uses the same portable fallback by default so widget tests stay
 deterministic regardless of the terminal they were launched from.

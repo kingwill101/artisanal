@@ -201,10 +201,26 @@ final class TerminalCapabilities {
         return true;
       }
     } else if (event is TerminalVersionEvent) {
+      var changed = false;
       if (terminalVersion != event.name) {
         terminalVersion = event.name;
-        return true;
+        changed = true;
       }
+
+      final normalized = event.name.toLowerCase();
+      if (!hasKittyGraphics &&
+          (normalized.contains('kitty') ||
+              normalized.contains('ghostty') ||
+              normalized.contains('wezterm'))) {
+        hasKittyGraphics = true;
+        changed = true;
+      }
+      if (!hasITerm2 && normalized.contains('iterm')) {
+        hasITerm2 = true;
+        changed = true;
+      }
+
+      return changed;
     } else if (event is DarkColorSchemeEvent) {
       if (darkColorScheme != true) {
         darkColorScheme = true;
