@@ -579,6 +579,38 @@ void main() {
       expect(modified.mouse, isTrue);
       expect(modified.signalHandlers, isFalse);
     });
+
+    test('nullable override helpers clear explicit overrides cleanly', () {
+      final input = Stream<List<int>>.empty();
+      final output = <String>[];
+      final cancelSignal = Completer<void>().future;
+      final options = ProgramOptions(
+        mouseMode: MouseMode.cellMotion,
+        startupTitle: 'Demo',
+        input: input,
+        output: output.add,
+        startupProbes: true,
+        cancelSignal: cancelSignal,
+        movementCapsOverride: const (useTabs: true, useBackspace: false),
+      );
+
+      final modified =
+          options
+              .withoutStartupTitle()
+              .withoutInput()
+              .withoutOutput()
+              .withoutStartupProbeOverride()
+              .withoutCancelSignal()
+              .withoutMovementCapsOverride();
+
+      expect(modified.startupTitle, isNull);
+      expect(modified.input, isNull);
+      expect(modified.output, isNull);
+      expect(modified.startupProbes, isNull);
+      expect(modified.cancelSignal, isNull);
+      expect(modified.movementCapsOverride, isNull);
+      expect(modified.mouseMode, MouseMode.cellMotion);
+    });
   });
 
   group('ProgramHost', () {

@@ -163,6 +163,8 @@ final class ProgramReplay {
 
 /// Options for configuring the TUI program.
 class ProgramOptions {
+  static const Object _retainValue = Object();
+
   /// Creates program configuration options.
   const ProgramOptions({
     this.altScreen = true,
@@ -511,39 +513,7 @@ class ProgramOptions {
   ProgramOptions withFilter(MessageFilter filter) => copyWith(filter: filter);
 
   /// Creates options with no message filter.
-  ProgramOptions withoutFilter() => ProgramOptions(
-    altScreen: altScreen,
-    mouse: mouse,
-    mouseMode: mouseMode,
-    fps: fps,
-    frameTick: frameTick,
-    hideCursor: hideCursor,
-    bracketedPaste: bracketedPaste,
-    inputTimeout: inputTimeout,
-    catchPanics: catchPanics,
-    maxStackFrames: maxStackFrames,
-    filter: null,
-    interceptor: interceptor,
-    replay: replay,
-    blockInputWhileReplay: blockInputWhileReplay,
-    signalHandlers: signalHandlers,
-    sendInterrupt: sendInterrupt,
-    sendSuspendSignal: sendSuspendSignal,
-    startupTitle: startupTitle,
-    input: input,
-    output: output,
-    disableRenderer: disableRenderer,
-    ansiCompress: ansiCompress,
-    useUltravioletRenderer: useUltravioletRenderer,
-    useUltravioletInputDecoder: useUltravioletInputDecoder,
-    startupProbes: startupProbes,
-    cancelSignal: cancelSignal,
-    environment: environment,
-    inputTTY: inputTTY,
-    movementCapsOverride: movementCapsOverride,
-    shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
-    metricsInterval: metricsInterval,
-  );
+  ProgramOptions withoutFilter() => _copyClearingNullable(filter: null);
 
   /// Creates options with signal handlers disabled.
   ///
@@ -562,16 +532,33 @@ class ProgramOptions {
   ProgramOptions withStartupTitle(String title) =>
       copyWith(startupTitle: title);
 
+  /// Creates options with no startup title override.
+  ProgramOptions withoutStartupTitle() =>
+      _copyClearingNullable(startupTitle: null);
+
   /// Creates options with startup probes forced on or off.
   ProgramOptions withStartupProbes(bool enabled) =>
       copyWith(startupProbes: enabled);
 
+  /// Creates options that clear any explicit startup-probe override.
+  ///
+  /// After calling this helper, startup probing returns to the default
+  /// terminal-driven auto behavior.
+  ProgramOptions withoutStartupProbeOverride() =>
+      _copyClearingNullable(startupProbes: null);
+
   /// Creates options with custom input stream.
   ProgramOptions withInput(Stream<List<int>> input) => copyWith(input: input);
+
+  /// Creates options with custom input cleared.
+  ProgramOptions withoutInput() => _copyClearingNullable(input: null);
 
   /// Creates options with custom output function.
   ProgramOptions withOutput(void Function(String) output) =>
       copyWith(output: output);
+
+  /// Creates options with custom output cleared.
+  ProgramOptions withoutOutput() => _copyClearingNullable(output: null);
 
   /// Creates options with the given interceptor.
   ProgramOptions withInterceptor(ProgramInterceptor interceptor) =>
@@ -609,74 +596,92 @@ class ProgramOptions {
   ProgramOptions withoutFrameTick() => copyWith(frameTick: false);
 
   /// Creates options with replay disabled.
-  ProgramOptions withoutReplay() => ProgramOptions(
-    altScreen: altScreen,
-    mouse: mouse,
-    mouseMode: mouseMode,
-    fps: fps,
-    frameTick: frameTick,
-    hideCursor: hideCursor,
-    bracketedPaste: bracketedPaste,
-    inputTimeout: inputTimeout,
-    catchPanics: catchPanics,
-    maxStackFrames: maxStackFrames,
-    filter: filter,
-    interceptor: interceptor,
-    replay: null,
-    blockInputWhileReplay: blockInputWhileReplay,
-    signalHandlers: signalHandlers,
-    sendInterrupt: sendInterrupt,
-    sendSuspendSignal: sendSuspendSignal,
-    startupTitle: startupTitle,
-    input: input,
-    output: output,
-    disableRenderer: disableRenderer,
-    ansiCompress: ansiCompress,
-    useUltravioletRenderer: useUltravioletRenderer,
-    useUltravioletInputDecoder: useUltravioletInputDecoder,
-    startupProbes: startupProbes,
-    cancelSignal: cancelSignal,
-    environment: environment,
-    inputTTY: inputTTY,
-    movementCapsOverride: movementCapsOverride,
-    shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
-    metricsInterval: metricsInterval,
-  );
+  ProgramOptions withoutReplay() => _copyClearingNullable(replay: null);
 
   /// Creates options with interceptor disabled.
-  ProgramOptions withoutInterceptor() => ProgramOptions(
-    altScreen: altScreen,
-    mouse: mouse,
-    mouseMode: mouseMode,
-    fps: fps,
-    frameTick: frameTick,
-    hideCursor: hideCursor,
-    bracketedPaste: bracketedPaste,
-    inputTimeout: inputTimeout,
-    catchPanics: catchPanics,
-    maxStackFrames: maxStackFrames,
-    filter: filter,
-    interceptor: null,
-    replay: replay,
-    blockInputWhileReplay: blockInputWhileReplay,
-    signalHandlers: signalHandlers,
-    sendInterrupt: sendInterrupt,
-    sendSuspendSignal: sendSuspendSignal,
-    startupTitle: startupTitle,
-    input: input,
-    output: output,
-    disableRenderer: disableRenderer,
-    ansiCompress: ansiCompress,
-    useUltravioletRenderer: useUltravioletRenderer,
-    useUltravioletInputDecoder: useUltravioletInputDecoder,
-    startupProbes: startupProbes,
-    cancelSignal: cancelSignal,
-    environment: environment,
-    inputTTY: inputTTY,
-    movementCapsOverride: movementCapsOverride,
-    shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
-    metricsInterval: metricsInterval,
-  );
+  ProgramOptions withoutInterceptor() =>
+      _copyClearingNullable(interceptor: null);
+
+  /// Creates options with no external cancellation signal.
+  ProgramOptions withoutCancelSignal() =>
+      _copyClearingNullable(cancelSignal: null);
+
+  /// Creates options with no movement capability override.
+  ProgramOptions withoutMovementCapsOverride() =>
+      _copyClearingNullable(movementCapsOverride: null);
+
+  ProgramOptions _copyClearingNullable({
+    Object? filter = _retainValue,
+    Object? interceptor = _retainValue,
+    Object? replay = _retainValue,
+    Object? startupTitle = _retainValue,
+    Object? input = _retainValue,
+    Object? output = _retainValue,
+    Object? startupProbes = _retainValue,
+    Object? cancelSignal = _retainValue,
+    Object? movementCapsOverride = _retainValue,
+  }) {
+    return ProgramOptions(
+      altScreen: altScreen,
+      mouse: mouse,
+      mouseMode: mouseMode,
+      fps: fps,
+      frameTick: frameTick,
+      hideCursor: hideCursor,
+      bracketedPaste: bracketedPaste,
+      inputTimeout: inputTimeout,
+      catchPanics: catchPanics,
+      maxStackFrames: maxStackFrames,
+      filter:
+          identical(filter, _retainValue)
+              ? this.filter
+              : filter as MessageFilter?,
+      interceptor:
+          identical(interceptor, _retainValue)
+              ? this.interceptor
+              : interceptor as ProgramInterceptor?,
+      replay:
+          identical(replay, _retainValue)
+              ? this.replay
+              : replay as ProgramReplay?,
+      blockInputWhileReplay: blockInputWhileReplay,
+      signalHandlers: signalHandlers,
+      sendInterrupt: sendInterrupt,
+      sendSuspendSignal: sendSuspendSignal,
+      startupTitle:
+          identical(startupTitle, _retainValue)
+              ? this.startupTitle
+              : startupTitle as String?,
+      input:
+          identical(input, _retainValue)
+              ? this.input
+              : input as Stream<List<int>>?,
+      output:
+          identical(output, _retainValue)
+              ? this.output
+              : output as void Function(String)?,
+      disableRenderer: disableRenderer,
+      ansiCompress: ansiCompress,
+      useUltravioletRenderer: useUltravioletRenderer,
+      useUltravioletInputDecoder: useUltravioletInputDecoder,
+      startupProbes:
+          identical(startupProbes, _retainValue)
+              ? this.startupProbes
+              : startupProbes as bool?,
+      cancelSignal:
+          identical(cancelSignal, _retainValue)
+              ? this.cancelSignal
+              : cancelSignal as Future<void>?,
+      environment: environment,
+      inputTTY: inputTTY,
+      movementCapsOverride:
+          identical(movementCapsOverride, _retainValue)
+              ? this.movementCapsOverride
+              : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
+      shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
+      metricsInterval: metricsInterval,
+    );
+  }
 }
 
 /// Resolves a reusable launch target for a [Program].

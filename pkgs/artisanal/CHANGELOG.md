@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `withoutStartupTitle()`, `withoutStartupProbeOverride()`, `withoutInput()`, `withoutOutput()`, `withoutCancelSignal()`, and `withoutMovementCapsOverride()` helpers so `ProgramOptions` can clear nullable overrides without rebuilding options manually.
 - Added `ColorPaletteMsg` and `Cmd.requestColorPalette()` so OSC 4 palette replies are exposed through the TUI runtime instead of staying UV-internal.
 - Added `CursorPositionMsg` and `Cmd.requestCursorPositionReport()` so cursor-position reports are exposed through the TUI runtime instead of staying UV-internal.
 - Added `Cmd.requestPrimaryDeviceAttributesReport()` so DA1 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
