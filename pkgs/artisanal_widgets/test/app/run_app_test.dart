@@ -385,6 +385,44 @@ void main() {
       },
     );
 
+    test(
+      'serveArtisanalAppOnSocket suppresses startup probes for non-ANSI clients',
+      () async {
+        final server = await w.serveArtisanalAppOnSocket(
+          port: 0,
+          supportsAnsi: false,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.ArtisanalApp(
+            home: w.Text('plain socket client'),
+          ),
+        );
+
+        addTearDown(server.close);
+
+        final socket = await Socket.connect(
+          server.server.address.address,
+          server.server.port,
+        );
+        addTearDown(socket.close);
+
+        final output = await _readSocketUntil(
+          socket,
+          (output) => output.contains('plain socket client'),
+        );
+
+        expect(output, contains('plain socket client'));
+        expect(output, isNot(contains('\x1b]11;?\x07')));
+        expect(output, isNot(contains('\x1b[?996n')));
+        expect(output, isNot(contains('\x1b[?c')));
+        expect(output, isNot(contains('\x1b[>0q')));
+      },
+    );
+
     test('serveWatchedArtisanalAppOnSocket watches files and serves tcp output', () async {
       final tempDir = await Directory.systemTemp.createTemp('watched-socket-app-');
       final server = await w.serveWatchedArtisanalAppOnSocket(
