@@ -41,6 +41,12 @@ void main() {
       expect(html, contains(r"const requestClipboardPrefix = '\x1b]52;';"));
       expect(html, contains(r"const titleOsc0Prefix = '\x1b]0;';"));
       expect(html, contains(r"const titleOsc2Prefix = '\x1b]2;';"));
+      expect(html, contains(r"const setForegroundPrefix = '\x1b]10;';"));
+      expect(html, contains(r"const setBackgroundPrefix = '\x1b]11;';"));
+      expect(html, contains(r"const setCursorPrefix = '\x1b]12;';"));
+      expect(html, contains(r"const resetForegroundSequence = '\x1b]110\x07';"));
+      expect(html, contains(r"const resetBackgroundSequence = '\x1b]111\x07';"));
+      expect(html, contains(r"const resetCursorSequence = '\x1b]112\x07';"));
       expect(html, contains(r"const oscBell = '\x07';"));
       expect(html, contains(r"const requestPrivateModePrefix = '\x1b[?';"));
       expect(html, contains(r"const requestModeSuffix = '$p';"));
@@ -61,7 +67,11 @@ void main() {
       expect(html, contains('function modeReportInfo(data)'));
       expect(html, contains('function modeReportValue(mode)'));
       expect(html, contains('function setBrowserTitle(title)'));
+      expect(html, contains('function prefersDarkBackground(color)'));
+      expect(html, contains('function normalizeOscColor(value)'));
+      expect(html, contains('function applyTerminalTheme()'));
       expect(html, contains('function oscTitleInfo(data)'));
+      expect(html, contains('function oscColorInfo(data, prefix)'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
       expect(html, contains(r"data: '\x1bP1+r' + responsePayload + '\x1b\\'"));
       expect(html, contains('data: reportedKittyKeyboard'));
@@ -70,6 +80,13 @@ void main() {
       expect(html, contains('navigator.clipboard.writeText(text).catch(() => {});'));
       expect(html, contains("if (clipboard.content === '?')"));
       expect(html, contains('setBrowserTitle(title.title);'));
+      expect(html, contains('currentForeground = defaultForeground;'));
+      expect(html, contains('currentBackground = defaultBackground;'));
+      expect(html, contains('currentCursor = defaultCursor;'));
+      expect(html, contains('currentForeground = color;'));
+      expect(html, contains('currentBackground = color;'));
+      expect(html, contains('currentCursor = color;'));
+      expect(html, contains('document.documentElement.style.colorScheme ='));
       expect(html, contains('case 1004:'));
       expect(html, contains('case 2004:'));
       expect(html, contains(r"`\x1b[?${modeReport.mode};${modeReportValue(modeReport.mode)}$y`"));

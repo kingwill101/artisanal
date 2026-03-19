@@ -336,6 +336,12 @@ final class BrowserTerminalHostServer {
       const requestClipboardPrefix = '\\x1b]52;';
       const titleOsc0Prefix = '\\x1b]0;';
       const titleOsc2Prefix = '\\x1b]2;';
+      const setForegroundPrefix = '\\x1b]10;';
+      const setBackgroundPrefix = '\\x1b]11;';
+      const setCursorPrefix = '\\x1b]12;';
+      const resetForegroundSequence = '\\x1b]110\\x07';
+      const resetBackgroundSequence = '\\x1b]111\\x07';
+      const resetCursorSequence = '\\x1b]112\\x07';
       const oscBell = '\\x07';
       const requestForegroundColor = '\\x1b]10;?\\x07';
       const requestBackgroundColor = '\\x1b]11;?\\x07';
@@ -358,6 +364,12 @@ final class BrowserTerminalHostServer {
       const ws = new WebSocket(wsUrl);
       let focusReportingEnabled = false;
       let bracketedPasteEnabled = false;
+      const defaultBackground = '$background';
+      const defaultForeground = '$foreground';
+      const defaultCursor = '$cursor';
+      let currentBackground = defaultBackground;
+      let currentForeground = defaultForeground;
+      let currentCursor = defaultCursor;
 
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
@@ -370,6 +382,86 @@ final class BrowserTerminalHostServer {
         if (titleNode) {
           titleNode.textContent = title;
         }
+      }
+
+      function prefersDarkBackground(color) {
+        if (!color || !color.startsWith('#')) {
+          return true;
+        }
+        const normalized =
+          color.length === 4
+            ? '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
+            : color;
+        if (normalized.length !== 7) {
+          return true;
+        }
+        const red = Number.parseInt(normalized.slice(1, 3), 16);
+        const green = Number.parseInt(normalized.slice(3, 5), 16);
+        const blue = Number.parseInt(normalized.slice(5, 7), 16);
+        if ([red, green, blue].some((value) => Number.isNaN(value))) {
+          return true;
+        }
+        const luminance =
+          ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
+        return luminance < 0.5;
+      }
+
+      function normalizeOscColor(value) {
+        if (!value) {
+          return null;
+        }
+        const trimmed = value.trim();
+        if (trimmed.startsWith('#')) {
+          if (trimmed.length === 4) {
+            return (
+              '#' +
+              trimmed[1] + trimmed[1] +
+              trimmed[2] + trimmed[2] +
+              trimmed[3] + trimmed[3]
+            ).toLowerCase();
+          }
+          if (trimmed.length === 7) {
+            return trimmed.toLowerCase();
+          }
+          return null;
+        }
+        if (trimmed.startsWith('rgb:')) {
+          const parts = trimmed.slice(4).split('/');
+          if (parts.length !== 3) {
+            return null;
+          }
+          const channels = [];
+          for (const part of parts) {
+            if (part.length < 2 || part.length > 4) {
+              return null;
+            }
+            const expanded =
+              part.length === 2
+                ? part
+                : part.slice(0, 2);
+            const value = Number.parseInt(expanded, 16);
+            if (Number.isNaN(value)) {
+              return null;
+            }
+            channels.push(expanded.toLowerCase());
+          }
+          return '#' + channels.join('');
+        }
+        return null;
+      }
+
+      function applyTerminalTheme() {
+        term.options.theme = {
+          ...(term.options.theme || {}),
+          background: currentBackground,
+          foreground: currentForeground,
+          cursor: currentCursor,
+          selectionBackground: '$selectionBackground'
+        };
+        document.body.style.background = currentBackground;
+        document.body.style.color = currentForeground;
+        document.documentElement.style.colorScheme =
+          prefersDarkBackground(currentBackground) ? 'dark' : 'light';
       }
 
       function publishFocusState(hasFocus) {
@@ -621,11 +713,88 @@ final class BrowserTerminalHostServer {
         };
       }
 
+      function oscColorInfo(data, prefix) {
+        if (!data.startsWith(prefix)) {
+          return null;
+        }
+
+        const start = prefix.length;
+        const bellIndex = data.indexOf(oscBell, start);
+        const stIndex = data.indexOf(stringTerminator, start);
+        let end = -1;
+        let terminatorLength = 0;
+
+        if (bellIndex !== -1 && (stIndex === -1 || bellIndex < stIndex)) {
+          end = bellIndex;
+          terminatorLength = oscBell.length;
+        } else if (stIndex !== -1) {
+          end = stIndex;
+          terminatorLength = stringTerminator.length;
+        }
+
+        if (end === -1) {
+          return null;
+        }
+
+        return {
+          value: data.slice(start, end),
+          consumed: end + terminatorLength,
+        };
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
 
         while (remaining.length > 0) {
+          if (remaining.startsWith(resetForegroundSequence)) {
+            currentForeground = defaultForeground;
+            applyTerminalTheme();
+            remaining = remaining.slice(resetForegroundSequence.length);
+            continue;
+          }
+          if (remaining.startsWith(resetBackgroundSequence)) {
+            currentBackground = defaultBackground;
+            applyTerminalTheme();
+            remaining = remaining.slice(resetBackgroundSequence.length);
+            continue;
+          }
+          if (remaining.startsWith(resetCursorSequence)) {
+            currentCursor = defaultCursor;
+            applyTerminalTheme();
+            remaining = remaining.slice(resetCursorSequence.length);
+            continue;
+          }
+          const foreground = oscColorInfo(remaining, setForegroundPrefix);
+          if (foreground !== null) {
+            const color = normalizeOscColor(foreground.value);
+            if (color !== null) {
+              currentForeground = color;
+              applyTerminalTheme();
+            }
+            remaining = remaining.slice(foreground.consumed);
+            continue;
+          }
+          const background = oscColorInfo(remaining, setBackgroundPrefix);
+          if (background !== null) {
+            const color = normalizeOscColor(background.value);
+            if (color !== null) {
+              currentBackground = color;
+              applyTerminalTheme();
+            }
+            remaining = remaining.slice(background.consumed);
+            continue;
+          }
+          const cursor = oscColorInfo(remaining, setCursorPrefix);
+          if (cursor !== null) {
+            const color = normalizeOscColor(cursor.value);
+            if (color !== null) {
+              currentCursor = color;
+              applyTerminalTheme();
+            }
+            remaining = remaining.slice(cursor.consumed);
+            continue;
+          }
           const title = oscTitleInfo(remaining);
           if (title !== null) {
             setBrowserTitle(title.title);
