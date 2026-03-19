@@ -31,6 +31,8 @@ void main() {
         html,
         contains(r"const requestSecondaryDeviceAttributes = '\x1b[>c';"),
       );
+      expect(html, contains(r"const requestTermcapPrefix = '\x1bP+q';"));
+      expect(html, contains(r"const stringTerminator = '\x1b\\';"));
       expect(html, contains(r"const requestKittyKeyboard = '\x1b[?u';"));
       expect(html, contains(r"const requestWindowSize = '\x1b[18t';"));
       expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
@@ -40,8 +42,13 @@ void main() {
       expect(html, contains('function terminalPixelSize()'));
       expect(html, contains('function terminalCellSize()'));
       expect(html, contains('function cursorPositionReport(extended)'));
+      expect(html, contains('function decodeHexBytes(hex)'));
+      expect(html, contains('function encodeHexBytes(text)'));
+      expect(html, contains('function termcapResponsePayload(requestPayload)'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
+      expect(html, contains(r"data: '\x1bP1+r' + responsePayload + '\x1b\\'"));
       expect(html, contains('data: reportedKittyKeyboard'));
+      expect(html, contains("encodeHexBytes('TN') + '=' + encodeHexBytes('xterm.js')"));
       expect(html, contains("data: cursorPositionReport(false)"));
       expect(html, contains("data: cursorPositionReport(true)"));
       expect(html, contains(r"data: `\x1b[8;${term.rows};${term.cols}t`"));

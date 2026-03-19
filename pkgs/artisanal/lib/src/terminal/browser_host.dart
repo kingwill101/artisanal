@@ -322,6 +322,8 @@ final class BrowserTerminalHostServer {
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestSecondaryDeviceAttributes = '\\x1b[>c';
       const requestTerminalVersion = '\\x1b[>0q';
+      const requestTermcapPrefix = '\\x1bP+q';
+      const stringTerminator = '\\x1b\\\\';
       const requestKittyKeyboard = '\\x1b[?u';
       const requestCursorPosition = '\\x1b[6n';
       const requestExtendedCursorPosition = '\\x1b[?6n';
@@ -398,6 +400,50 @@ final class BrowserTerminalHostServer {
           : `\\x1b[\${row};\${col}R`;
       }
 
+      function decodeHexBytes(hex) {
+        if (!hex || (hex.length % 2) !== 0) {
+          return null;
+        }
+        let text = '';
+        for (let i = 0; i < hex.length; i += 2) {
+          const value = Number.parseInt(hex.slice(i, i + 2), 16);
+          if (Number.isNaN(value)) {
+            return null;
+          }
+          text += String.fromCharCode(value);
+        }
+        return text;
+      }
+
+      function encodeHexBytes(text) {
+        let hex = '';
+        for (let i = 0; i < text.length; i += 1) {
+          hex += text.charCodeAt(i).toString(16).padStart(2, '0');
+        }
+        return hex;
+      }
+
+      function termcapResponsePayload(requestPayload) {
+        const parts = [];
+        for (const encodedName of requestPayload.split(';')) {
+          if (!encodedName) {
+            continue;
+          }
+          const name = decodeHexBytes(encodedName);
+          if (name === null) {
+            return null;
+          }
+          if (name === 'RGB') {
+            parts.push(encodeHexBytes('RGB'));
+            continue;
+          }
+          if (name === 'TN') {
+            parts.push(encodeHexBytes('TN') + '=' + encodeHexBytes('xterm.js'));
+          }
+        }
+        return parts.length > 0 ? parts.join(';') : null;
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
@@ -434,6 +480,29 @@ final class BrowserTerminalHostServer {
             });
             remaining = remaining.slice(requestTerminalVersion.length);
             continue;
+          }
+          if (remaining.startsWith(requestTermcapPrefix)) {
+            const terminatorIndex = remaining.indexOf(
+              stringTerminator,
+              requestTermcapPrefix.length
+            );
+            if (terminatorIndex !== -1) {
+              const requestPayload = remaining.slice(
+                requestTermcapPrefix.length,
+                terminatorIndex
+              );
+              const responsePayload = termcapResponsePayload(requestPayload);
+              if (responsePayload !== null) {
+                sendMessage({
+                  type: 'input.text',
+                  data: '\\x1bP1+r' + responsePayload + '\\x1b\\\\'
+                });
+              }
+              remaining = remaining.slice(
+                terminatorIndex + stringTerminator.length
+              );
+              continue;
+            }
           }
           if (remaining.startsWith(requestKittyKeyboard)) {
             sendMessage({
