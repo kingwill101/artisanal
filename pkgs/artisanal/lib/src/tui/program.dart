@@ -2726,6 +2726,7 @@ class Program<M extends Model> {
 
       // Restore terminal
       _restoreTerminal();
+      final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
 
       // Send result message
       final result = ExecResult(
@@ -2738,10 +2739,14 @@ class Program<M extends Model> {
       // coalescing, and ordering semantics are consistent with all other
       // runtime messages.
       send(onComplete(result));
+      if (!restoreSizeChanged) {
+        _schedulePostRestoreRender(skipSizeDispatch: true);
+      }
     } catch (e) {
       // Restore terminal even on error
       if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
       _restoreTerminal();
+      final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
 
       // Send error result
       final result = ExecResult(exitCode: -1, stdout: '', stderr: e.toString());
@@ -2750,6 +2755,9 @@ class Program<M extends Model> {
       // coalescing, and ordering semantics are consistent with all other
       // runtime messages.
       send(onComplete(result));
+      if (!restoreSizeChanged) {
+        _schedulePostRestoreRender(skipSizeDispatch: true);
+      }
     }
   }
 
@@ -2822,22 +2830,40 @@ class Program<M extends Model> {
     }
 
     _syncModelOptionalTimers();
-
-    _renderAfterTerminalRestore();
   }
 
-  void _renderAfterTerminalRestore() {
-    if (!_running) return;
+  void _schedulePostRestoreRender({bool skipSizeDispatch = false}) {
+    unawaited(
+      Future<void>.microtask(() {
+        if (!_running) return;
+        _drainMessageQueue();
+        _renderAfterTerminalRestore(skipSizeDispatch: skipSizeDispatch);
+      }),
+    );
+  }
 
-    // Force metadata reapplication even when the model returns the same cached
-    // view object after restoring the terminal.
-    _lastRenderedView = null;
+  bool _dispatchRestoreSizeIfChanged() {
+    if (!_running) return false;
 
     final size = _terminal?.size;
     if (size != null &&
         (_lastWindowSizeWidth != size.width ||
             _lastWindowSizeHeight != size.height)) {
       _sendWindowSizeIfChanged(size.width, size.height);
+      return true;
+    }
+
+    return false;
+  }
+
+  void _renderAfterTerminalRestore({bool skipSizeDispatch = false}) {
+    if (!_running) return;
+
+    // Force metadata reapplication even when the model returns the same cached
+    // view object after restoring the terminal.
+    _lastRenderedView = null;
+
+    if (!skipSizeDispatch && _dispatchRestoreSizeIfChanged()) {
       return;
     }
 
@@ -3150,13 +3176,7 @@ class Program<M extends Model> {
 
     // Send resume message
     _processMessage(const ResumeMsg(), deferRender: true);
-    unawaited(
-      Future<void>.microtask(() {
-        if (!_running) return;
-        _drainMessageQueue();
-        _renderAfterTerminalRestore();
-      }),
-    );
+    _schedulePostRestoreRender();
   }
 
   /// Renders the current view.

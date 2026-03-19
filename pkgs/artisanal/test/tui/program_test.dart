@@ -3404,6 +3404,43 @@ void main() {
       expect(enableIndices, isNotEmpty);
     });
 
+    test('ExecProcess completion-triggered quit skips forced repaint', () async {
+      var renderCount = 0;
+      late Program program;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['test output'],
+              onComplete: (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () {
+          renderCount += 1;
+          return 'render #$renderCount';
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, mouse: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('render #1'));
+      program.send(const CustomMsg('exec'));
+      await runFuture;
+
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains('render #1'));
+      expect(joinedOutput, isNot(contains('render #2')));
+    });
+
     test('ExecProcess pauses frame ticks while released and restarts them after restore', () async {
       final tempDir = await io.Directory.systemTemp.createTemp(
         'artisanal_exec_frame_ticks_',
