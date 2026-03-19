@@ -677,6 +677,14 @@ class ColorProfileMsg extends Msg {
 
   @override
   String toString() => 'ColorProfileMsg($profile)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ColorProfileMsg && profile == other.profile);
+
+  @override
+  int get hashCode => profile.hashCode;
 }
 
 /// Message sent when the terminal reports its preferred light/dark scheme.

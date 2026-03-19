@@ -492,6 +492,15 @@ final class _ProbeAwareMockTerminal extends MockTerminal {
   }
 }
 
+final class _ProfileMockTerminal extends MockTerminal {
+  _ProfileMockTerminal(this._profile);
+
+  final ColorProfile _profile;
+
+  @override
+  ColorProfile get colorProfile => _profile;
+}
+
 // =============================================================================
 // Tests
 // =============================================================================
@@ -3953,6 +3962,35 @@ void main() {
   });
 
   group('Startup probes', () {
+    test('initial color profile is delivered as a startup message', () async {
+      final terminal = _ProfileMockTerminal(ColorProfile.ansi256);
+      ColorProfileMsg? received;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ColorProfileMsg) {
+            received = msg;
+            return Cmd.quit();
+          }
+          return null;
+        },
+        onView: () => 'color profile startup',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(received, const ColorProfileMsg(ColorProfile.ansi256));
+    });
+
     test('background probe updates the first rendered frame before paint', () async {
       final terminal = _ProbeAwareMockTerminal(
         onWrite: (data, terminal) {
