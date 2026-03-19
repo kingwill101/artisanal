@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('BrowserTerminalHostServer', () {
-    test('defaultPageHtml wires the websocket path and query helpers', () {
+    test('defaultPageHtml wires the websocket path and browser terminal helpers', () {
       final html = BrowserTerminalHostServer.defaultPageHtml(
         title: 'Browser Test',
         webSocketPath: '/custom-ws',
@@ -19,6 +19,9 @@ void main() {
       expect(html, contains('stripAndReplyTerminalQueries'));
       expect(html, contains('xterm.js browser host'));
       expect(html, contains('const reportedColorScheme = 1;'));
+      expect(html, contains("window.addEventListener('focus'"));
+      expect(html, contains("window.addEventListener('blur'"));
+      expect(html, contains('focusReportingEnabled = true;'));
     });
 
     test('defaultPageHtml derives a light color scheme from a light background', () {

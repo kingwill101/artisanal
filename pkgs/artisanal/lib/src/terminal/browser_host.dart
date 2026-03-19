@@ -318,16 +318,31 @@ final class BrowserTerminalHostServer {
       const requestColorScheme = '\\x1b[?996n';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestTerminalVersion = '\\x1b[>0q';
+      const enableFocusReporting = '\\x1b[?1004h';
+      const disableFocusReporting = '\\x1b[?1004l';
       const reportedColorScheme = $reportedColorScheme;
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
+      const focusInReport = '\\x1b[I';
+      const focusOutReport = '\\x1b[O';
       endpointNode.textContent = wsUrl;
       const ws = new WebSocket(wsUrl);
+      let focusReportingEnabled = false;
 
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(message));
         }
+      }
+
+      function publishFocusState(hasFocus) {
+        if (!focusReportingEnabled) {
+          return;
+        }
+        sendMessage({
+          type: 'input.text',
+          data: hasFocus ? focusInReport : focusOutReport
+        });
       }
 
       function stripAndReplyTerminalQueries(data) {
@@ -357,6 +372,19 @@ final class BrowserTerminalHostServer {
               data: reportedTerminalVersion
             });
             remaining = remaining.slice(requestTerminalVersion.length);
+            continue;
+          }
+          if (remaining.startsWith(enableFocusReporting)) {
+            focusReportingEnabled = true;
+            if (document.hasFocus()) {
+              publishFocusState(true);
+            }
+            remaining = remaining.slice(enableFocusReporting.length);
+            continue;
+          }
+          if (remaining.startsWith(disableFocusReporting)) {
+            focusReportingEnabled = false;
+            remaining = remaining.slice(disableFocusReporting.length);
             continue;
           }
 
@@ -413,6 +441,8 @@ final class BrowserTerminalHostServer {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(sendResize, 50);
       });
+      window.addEventListener('focus', () => publishFocusState(true));
+      window.addEventListener('blur', () => publishFocusState(false));
     </script>
   </body>
 </html>
