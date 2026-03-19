@@ -23,13 +23,16 @@ class Modal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!open) return child;
+    final theme = ThemeScope.of(context);
 
-    // Dim the background content so the dialog stands out.
-    // In a terminal we cannot do true alpha blending, so Opacity applies
-    // Style().dim() to the child content, letting it remain visible but
-    // visually receded behind the dialog.
+    // Blend the background content toward the backdrop color so the dialog
+    // stands out while keeping the underlying content visible.
     final dimmedChild = backdropOpacity < 1.0 && backdropOpacity > 0.0
-        ? Opacity(opacity: backdropOpacity, child: child)
+        ? Tint(
+            color: backdropColor ?? theme.background,
+            opacity: backdropOpacity,
+            child: child,
+          )
         : child;
 
     // Prevent pointer/scroll events from leaking to background content while

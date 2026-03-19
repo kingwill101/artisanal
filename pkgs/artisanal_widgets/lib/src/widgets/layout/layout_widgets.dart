@@ -32,7 +32,9 @@ import 'package:artisanal/uv.dart'
         StyledString,
         TerminalCapabilities,
         UvStyle,
+        UvBasic16,
         UvColor,
+        UvIndexed256,
         UvRgb,
         UnderlineStyle,
         HalfBlockImageDrawable;

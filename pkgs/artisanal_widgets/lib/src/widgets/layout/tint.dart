@@ -149,25 +149,32 @@ UvColor? _blendTintColor(
   double opacity, {
   UvColor? fallback,
 }) {
-  final sourceRgb = _uvColorToRgb(source ?? fallback);
-  final tintRgb = _uvColorToRgb(tint);
-  if (sourceRgb == null || tintRgb == null) {
+  final sourceColor = _uvColorToStyleColor(source ?? fallback);
+  final tintColor = _uvColorToStyleColor(tint);
+  if (sourceColor == null || tintColor == null) {
     return source ?? fallback;
   }
 
-  int blend(int from, int to) => (from + ((to - from) * opacity)).round();
-
-  return UvColor.rgb(
-    blend(sourceRgb.r, tintRgb.r),
-    blend(sourceRgb.g, tintRgb.g),
-    blend(sourceRgb.b, tintRgb.b),
-    a: blend(sourceRgb.a, tintRgb.a),
+  return _colorToUvColor(
+    blendColor(
+      sourceColor,
+      tintColor,
+      opacity,
+      hasDarkBackground: hasDarkBackground,
+    ),
   );
 }
 
-UvRgb? _uvColorToRgb(UvColor? color) {
+Color? _uvColorToStyleColor(UvColor? color) {
   return switch (color) {
-    UvRgb() => color,
+    UvRgb(:final r, :final g, :final b) => BasicColor(
+      '#'
+      '${r.toRadixString(16).padLeft(2, '0')}'
+      '${g.toRadixString(16).padLeft(2, '0')}'
+      '${b.toRadixString(16).padLeft(2, '0')}',
+    ),
+    UvIndexed256(:final index) => AnsiColor(index),
+    UvBasic16(:final index, :final bright) => AnsiColor(index + (bright ? 8 : 0)),
     _ => null,
   };
 }

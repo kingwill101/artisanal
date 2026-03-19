@@ -21,6 +21,7 @@
 - Added `ProgramOptions.sendSuspendSignal` / `withoutSuspendSignal()` so `SuspendMsg` can exercise the full terminal release/restore lifecycle without sending `SIGTSTP`.
 - Added stable `package:artisanal/runtime.dart` and `package:artisanal/hosts.dart` entrypoints for the focused TEA runtime and host/backend surfaces.
 - Added stable `package:artisanal/app.dart`, `package:artisanal/editors.dart`, `package:artisanal/selection.dart`, and `package:artisanal/testing.dart` re-exports for the supported widget modules.
+- Added `blendColor()` to the public style blending helpers so callers can interpolate a single color pair without building a gradient first.
 
 ### Changed
 

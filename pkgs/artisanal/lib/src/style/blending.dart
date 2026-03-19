@@ -132,6 +132,35 @@ List<Color> blend2D(
   return out;
 }
 
+/// Blends two colors into a single interpolated color.
+///
+/// This reuses the same RGB interpolation path as [blend1D] and [blend2D].
+/// If either color cannot be represented as RGB, the closer endpoint is
+/// returned instead of attempting a lossy interpolation.
+Color blendColor(
+  Color from,
+  Color to,
+  double t, {
+  required bool hasDarkBackground,
+}) {
+  if (t <= 0.0) return from;
+  if (t >= 1.0) return to;
+
+  final fromRgb = _toRgb(from, hasDarkBackground: hasDarkBackground);
+  final toRgb = _toRgb(to, hasDarkBackground: hasDarkBackground);
+  if (fromRgb == null || toRgb == null) {
+    return t < 0.5 ? from : to;
+  }
+
+  return _colorFromRgb(
+    cp.Rgb(
+      _lerp(fromRgb.r, toRgb.r, t),
+      _lerp(fromRgb.g, toRgb.g, t),
+      _lerp(fromRgb.b, toRgb.b, t),
+    ),
+  );
+}
+
 int _lerp(int a, int b, double t) => (a + (b - a) * t).round().clamp(0, 255);
 
 String _hexFromRgb(int r, int g, int b) =>

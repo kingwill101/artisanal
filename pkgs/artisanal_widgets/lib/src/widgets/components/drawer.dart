@@ -27,8 +27,13 @@ class Drawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!open) return child;
+    final theme = ThemeScope.of(context);
     final dimmedChild = backdropOpacity > 0.0
-        ? Opacity(opacity: backdropOpacity, child: child)
+        ? Tint(
+            color: backdropColor ?? theme.background,
+            opacity: backdropOpacity,
+            child: child,
+          )
         : child;
 
     final dismissLayer = dismissible

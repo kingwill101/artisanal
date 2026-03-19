@@ -120,6 +120,40 @@ void main() {
       );
       expect(modal.backdropColor, equals(Colors.red));
     });
+
+    test('custom backdropColor affects rendered backdrop tint', () async {
+      final redTester = WidgetTester();
+      addTearDown(() => redTester.dispose());
+      final blueTester = WidgetTester();
+      addTearDown(() => blueTester.dispose());
+
+      await redTester.pumpWidget(
+        Container(
+          width: 40,
+          height: 10,
+          child: Modal(
+            child: Text('Background'),
+            dialog: Text('Dialog'),
+            open: true,
+            backdropColor: Colors.red,
+          ),
+        ),
+      );
+      await blueTester.pumpWidget(
+        Container(
+          width: 40,
+          height: 10,
+          child: Modal(
+            child: Text('Background'),
+            dialog: Text('Dialog'),
+            open: true,
+            backdropColor: Colors.blue,
+          ),
+        ),
+      );
+
+      expect(redTester.view, isNot(equals(blueTester.view)));
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -244,6 +278,44 @@ void main() {
         backdropColor: Colors.blue,
       );
       expect(drawer.backdropColor, equals(Colors.blue));
+    });
+
+    test('custom backdropColor affects rendered drawer tint', () async {
+      final redTester = WidgetTester();
+      addTearDown(() => redTester.dispose());
+      final blueTester = WidgetTester();
+      addTearDown(() => blueTester.dispose());
+
+      await redTester.pumpWidget(
+        Container(
+          width: 60,
+          height: 10,
+          child: Drawer(
+            child: Text('MainArea'),
+            drawer: Text('DrawerContent'),
+            open: true,
+            side: SidebarSide.right,
+            width: 20,
+            backdropColor: Colors.red,
+          ),
+        ),
+      );
+      await blueTester.pumpWidget(
+        Container(
+          width: 60,
+          height: 10,
+          child: Drawer(
+            child: Text('MainArea'),
+            drawer: Text('DrawerContent'),
+            open: true,
+            side: SidebarSide.right,
+            width: 20,
+            backdropColor: Colors.blue,
+          ),
+        ),
+      );
+
+      expect(redTester.view, isNot(equals(blueTester.view)));
     });
   });
 
