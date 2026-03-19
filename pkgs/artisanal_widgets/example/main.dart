@@ -12,8 +12,16 @@ void _trace(String msg) {
   TuiTrace.log('EXAMPLE $msg');
 }
 
+// Wrap the showcase in an Overlay so floating widgets like Tooltip and
+// PopupMenuButton can paint above the gallery without reflowing its layout.
+tui.Widget _galleryRoot() => tui.Overlay(
+  initialEntries: [
+    tui.OverlayEntry(builder: (_) => AppWidget()),
+  ],
+);
+
 void main() async {
-  final app = tui.WidgetApp(AppWidget());
+  final app = tui.WidgetApp(_galleryRoot());
   await runtime.runProgram(
     app,
     options: const runtime.ProgramOptions(

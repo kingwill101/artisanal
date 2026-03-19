@@ -22,6 +22,7 @@
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.
 - Updated the package README and focused examples to prefer the stable top-level entrypoints over the broad compatibility import.
 - Updated the remaining widget examples and tooling to import the stable `package:artisanal_widgets/widgets.dart` entrypoint instead of the broad compatibility surface.
+- Made `Tooltip` float from an `Overlay` ancestor instead of reflowing surrounding layout, and updated the gallery example to host its overlay demos through a root overlay so hover tooltips behave like anchored popups.
 - Updated the flagship widget app examples to use the stable umbrella imports from `package:artisanal/app.dart` and `package:artisanal/widgets.dart`.
 - Updated the editor showcase examples to use the stable umbrella imports from `package:artisanal/app.dart`, `package:artisanal/editors.dart`, and `package:artisanal/widgets.dart`.
 - Updated the shared text input test suites to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.

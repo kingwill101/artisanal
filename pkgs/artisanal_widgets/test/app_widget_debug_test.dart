@@ -21,6 +21,12 @@ import 'package:test/test.dart';
 // Import the actual example app widget.
 import '../example/main.dart' show AppWidget;
 
+w.Widget _exampleOverlayRoot() => w.Overlay(
+  initialEntries: [
+    w.OverlayEntry(builder: (_) => AppWidget()),
+  ],
+);
+
 void main() {
   group('AppWidget tab click regression', () {
     test('clicking Theme tab shows theme content', () async {
@@ -155,18 +161,26 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+      await tester.pumpWidget(_exampleOverlayRoot(), width: 120, height: 40);
 
       tester.tap(tester.find.textLocation('Components'));
       tester.tap(tester.find.textLocation('Overlays'));
 
       expect(tester.find.text('Hover to preview tooltips'), isFalse);
       final hoverTarget = tester.locateText('Hover me');
+      final before = tester.locateText('Modal preview');
       expect(hoverTarget, isNotNull);
+      expect(before, isNotNull);
 
       tester.mouseMove(hoverTarget!.x, hoverTarget.y);
 
       expect(tester.find.text('Hover to preview tooltips'), isTrue);
+      final tooltip = tester.locateText('Hover to preview tooltips');
+      final after = tester.locateText('Modal preview');
+      expect(tooltip, isNotNull);
+      expect(after, isNotNull);
+      expect(tooltip!.y, lessThan(hoverTarget.y));
+      expect(after!.y, equals(before!.y));
     });
   });
 
