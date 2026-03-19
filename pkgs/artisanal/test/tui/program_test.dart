@@ -515,6 +515,7 @@ void main() {
       expect(options.hideCursor, isTrue);
       expect(options.bracketedPaste, isFalse);
       expect(options.catchPanics, isTrue);
+      expect(options.sendSuspendSignal, isTrue);
       expect(options.maxStackFrames, 10);
     });
 
@@ -547,6 +548,15 @@ void main() {
       // Other options unchanged
       expect(debug.altScreen, options.altScreen);
       expect(debug.mouse, options.mouse);
+    });
+
+    test('withoutSuspendSignal skips OS-level suspend signaling', () {
+      const options = ProgramOptions();
+      final modified = options.withoutSuspendSignal();
+
+      expect(modified.sendSuspendSignal, isFalse);
+      expect(modified.sendInterrupt, options.sendInterrupt);
+      expect(modified.altScreen, options.altScreen);
     });
   });
 
@@ -3807,6 +3817,160 @@ Future<void> main() async {
       expect(
         terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
         greaterThanOrEqualTo(1),
+      );
+    });
+  });
+
+  group('Suspend lifecycle', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('SuspendMsg restore reapplies stateful terminal control writes', () async {
+      var resumed = false;
+      final view = View(
+        content: 'sticky metadata',
+        reportFocus: true,
+        bracketedPaste: true,
+        mouseMode: MouseMode.allMotion,
+        altScreen: true,
+      );
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            resumed = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => resumed ? 'resumed' : view,
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      final disableIndex = terminal.operations.indexOf('disableRawMode');
+      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
+
+      expect(disableIndex, isNonNegative);
+      expect(restoreIndex, greaterThan(disableIndex));
+      expect(
+        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enableFocusReporting').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+    });
+
+    test('SuspendMsg restore reapplies fullscreen terminal state only once', () async {
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => 'suspend fullscreen restore',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'hideCursor').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'showCursor').length,
+        2,
+      );
+    });
+
+    test('SuspendMsg restore reapplies startup title when no view override exists', () async {
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => 'plain view',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          startupTitle: 'Base Title',
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
+      );
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+      expect(
+        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+        1,
       );
     });
   });

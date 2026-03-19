@@ -181,6 +181,7 @@ await program.run();
 | `blockInputWhileReplay` | `bool` | `false` | Drop terminal input while replay stream is active |
 | `signalHandlers` | `bool` | `true` | Install signal handlers (SIGINT, SIGWINCH) |
 | `sendInterrupt` | `bool` | `true` | Deliver SIGINT/Ctrl+C as `InterruptMsg` instead of a Ctrl+C `KeyMsg` |
+| `sendSuspendSignal` | `bool` | `true` | Let `SuspendMsg` send `SIGTSTP`; disable it to exercise suspend release/restore without suspending the parent process |
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
 | `startupProbes` | `bool?` | `null` | Force startup probes on/off; `null` auto-runs only on built-in terminals |
@@ -602,6 +603,12 @@ By default, terminal Ctrl+C is delivered as `InterruptMsg`, not as
 keeps it separate from normal key bindings. If you need the legacy key-based
 behavior, set `ProgramOptions(sendInterrupt: false)` or call
 `ProgramOptions().withoutInterruptMsg()`.
+
+`Cmd.suspend()` and `SuspendMsg` normally release the terminal and then send
+`SIGTSTP` on Unix. For tests, embedded hosts, or environments that want the
+release/restore lifecycle without suspending the parent process, set
+`ProgramOptions(sendSuspendSignal: false)` or call
+`ProgramOptions().withoutSuspendSignal()`.
 
 ## Interrupt Handling
 

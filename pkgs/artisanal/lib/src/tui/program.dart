@@ -181,6 +181,7 @@ class ProgramOptions {
     this.blockInputWhileReplay = false,
     this.signalHandlers = true,
     this.sendInterrupt = true,
+    this.sendSuspendSignal = true,
     this.startupTitle,
     this.input,
     this.output,
@@ -324,6 +325,17 @@ class ProgramOptions {
   /// compatibility. Call [withoutInterruptMsg] to opt into that behavior.
   final bool sendInterrupt;
 
+  /// Whether [SuspendMsg] should send `SIGTSTP` to the current process.
+  ///
+  /// When true (default), suspend behaves like a normal terminal app on Unix:
+  /// the runtime releases the terminal and then sends `SIGTSTP`.
+  ///
+  /// When false, the runtime still executes the full release/restore suspend
+  /// lifecycle but skips the OS-level suspend signal. This is useful for
+  /// embedded hosts, tests, and environments that do not want to suspend the
+  /// parent process.
+  final bool sendSuspendSignal;
+
   /// Optional title to set on program startup.
   ///
   /// When provided, sets the terminal window title when the program starts.
@@ -423,6 +435,7 @@ class ProgramOptions {
     bool? blockInputWhileReplay,
     bool? signalHandlers,
     bool? sendInterrupt,
+    bool? sendSuspendSignal,
     String? startupTitle,
     Stream<List<int>>? input,
     void Function(String)? output,
@@ -456,6 +469,7 @@ class ProgramOptions {
           blockInputWhileReplay ?? this.blockInputWhileReplay,
       signalHandlers: signalHandlers ?? this.signalHandlers,
       sendInterrupt: sendInterrupt ?? this.sendInterrupt,
+      sendSuspendSignal: sendSuspendSignal ?? this.sendSuspendSignal,
       startupTitle: startupTitle ?? this.startupTitle,
       input: input ?? this.input,
       output: output ?? this.output,
@@ -513,6 +527,7 @@ class ProgramOptions {
     blockInputWhileReplay: blockInputWhileReplay,
     signalHandlers: signalHandlers,
     sendInterrupt: sendInterrupt,
+    sendSuspendSignal: sendSuspendSignal,
     startupTitle: startupTitle,
     input: input,
     output: output,
@@ -538,6 +553,9 @@ class ProgramOptions {
   ///
   /// Use this when a model expects legacy key-based Ctrl+C handling.
   ProgramOptions withoutInterruptMsg() => copyWith(sendInterrupt: false);
+
+  /// Creates options that skip the OS-level suspend signal during [SuspendMsg].
+  ProgramOptions withoutSuspendSignal() => copyWith(sendSuspendSignal: false);
 
   /// Creates options with the given startup title.
   ProgramOptions withStartupTitle(String title) =>
@@ -607,6 +625,7 @@ class ProgramOptions {
     blockInputWhileReplay: blockInputWhileReplay,
     signalHandlers: signalHandlers,
     sendInterrupt: sendInterrupt,
+    sendSuspendSignal: sendSuspendSignal,
     startupTitle: startupTitle,
     input: input,
     output: output,
@@ -641,6 +660,7 @@ class ProgramOptions {
     blockInputWhileReplay: blockInputWhileReplay,
     signalHandlers: signalHandlers,
     sendInterrupt: sendInterrupt,
+    sendSuspendSignal: sendSuspendSignal,
     startupTitle: startupTitle,
     input: input,
     output: output,
@@ -3050,23 +3070,20 @@ class Program<M extends Model> {
     if (!rendererHandledCursor) {
       _terminal?.showCursor();
     }
-    if (_options.altScreen) {
-      _terminal?.exitAltScreen();
-    } else if (_appliedDynamicAltScreen) {
-      _terminal?.exitAltScreen();
-      _appliedDynamicAltScreen = false;
-    }
 
     _resetProgressBarIfOverridden();
     _resetTerminalColorOverrides();
     _resetCursorStyleOverride();
     _appliedWindowTitle = null;
 
-    // Send SIGTSTP to suspend (Unix only)
-    try {
-      io.Process.killPid(io.pid, io.ProcessSignal.sigtstp);
-    } catch (_) {
-      // Suspend not supported on this platform
+    // Send SIGTSTP to suspend (Unix only) unless the caller explicitly wants
+    // the release/restore lifecycle without suspending the parent process.
+    if (_options.sendSuspendSignal) {
+      try {
+        io.Process.killPid(io.pid, io.ProcessSignal.sigtstp);
+      } catch (_) {
+        // Suspend not supported on this platform
+      }
     }
 
     // When resumed, restore terminal state
