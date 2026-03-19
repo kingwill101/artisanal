@@ -319,6 +319,8 @@ final class BrowserTerminalHostServer {
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = wsProtocol + '//' + window.location.host + '$webSocketPath';
       const requestColorScheme = '\\x1b[?996n';
+      const requestPrivateModePrefix = '\\x1b[?';
+      const requestModeSuffix = '\$p';
       const requestPrimaryDeviceAttributes = '\\x1b[?c';
       const requestSecondaryDeviceAttributes = '\\x1b[>c';
       const requestTerminalVersion = '\\x1b[>0q';
@@ -539,6 +541,41 @@ final class BrowserTerminalHostServer {
         };
       }
 
+      function modeReportInfo(data) {
+        if (!data.startsWith(requestPrivateModePrefix)) {
+          return null;
+        }
+
+        const suffixIndex = data.indexOf(
+          requestModeSuffix,
+          requestPrivateModePrefix.length
+        );
+        if (suffixIndex === -1) {
+          return null;
+        }
+
+        const digits = data.slice(requestPrivateModePrefix.length, suffixIndex);
+        if (!digits || Array.from(digits).some((ch) => ch < '0' || ch > '9')) {
+          return null;
+        }
+
+        return {
+          mode: Number.parseInt(digits, 10),
+          consumed: suffixIndex + requestModeSuffix.length,
+        };
+      }
+
+      function modeReportValue(mode) {
+        switch (mode) {
+          case 1004:
+            return focusReportingEnabled ? 1 : 2;
+          case 2004:
+            return bracketedPasteEnabled ? 1 : 2;
+          default:
+            return 0;
+        }
+      }
+
       function stripAndReplyTerminalQueries(data) {
         let remaining = data || '';
         let visible = '';
@@ -552,6 +589,16 @@ final class BrowserTerminalHostServer {
               writeClipboardText(decodeBase64Utf8(clipboard.content));
             }
             remaining = remaining.slice(clipboard.consumed);
+            continue;
+          }
+          const modeReport = modeReportInfo(remaining);
+          if (modeReport !== null) {
+            sendMessage({
+              type: 'input.text',
+              data:
+                `\\x1b[?\${modeReport.mode};\${modeReportValue(modeReport.mode)}\$y`
+            });
+            remaining = remaining.slice(modeReport.consumed);
             continue;
           }
           if (remaining.startsWith(requestColorScheme)) {
