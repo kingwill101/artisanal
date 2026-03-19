@@ -64,6 +64,29 @@ void main() {
       expect(caps.secondaryAttributes, [1, 4, 5]);
     });
 
+    test('tracks tertiary device attributes and terminal version', () {
+      final caps = TerminalCapabilities(env: const []);
+
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isTrue,
+      );
+      expect(caps.tertiaryAttributes, 'Chrm');
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isFalse,
+      );
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+        isTrue,
+      );
+      expect(caps.terminalVersion, 'Ghostty 1.2.3');
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+        isFalse,
+      );
+    });
+
     test('stores foreground, background, cursor, and palette reports', () {
       final caps = TerminalCapabilities(env: const []);
 
@@ -186,6 +209,24 @@ void main() {
       );
       expect(
         caps.updateFromEvent(const SecondaryDeviceAttributesEvent([1, 2, 3])),
+        isFalse,
+      );
+
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+        isFalse,
+      );
+
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ultraviolet')),
+        isTrue,
+      );
+      expect(
+        caps.updateFromEvent(const TerminalVersionEvent('Ultraviolet')),
         isFalse,
       );
     });

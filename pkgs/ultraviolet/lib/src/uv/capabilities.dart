@@ -97,6 +97,12 @@ final class TerminalCapabilities {
   /// The secondary device attributes reported by the terminal.
   List<int> secondaryAttributes = [];
 
+  /// The tertiary device attributes reported by the terminal.
+  String? tertiaryAttributes;
+
+  /// The terminal version string reported by the terminal.
+  String? terminalVersion;
+
   /// The terminal background color.
   UvRgb? backgroundColor;
 
@@ -176,6 +182,16 @@ final class TerminalCapabilities {
           );
       secondaryAttributes = event.attrs;
       return attrsChanged;
+    } else if (event is TertiaryDeviceAttributesEvent) {
+      if (tertiaryAttributes != event.value) {
+        tertiaryAttributes = event.value;
+        return true;
+      }
+    } else if (event is TerminalVersionEvent) {
+      if (terminalVersion != event.name) {
+        terminalVersion = event.name;
+        return true;
+      }
     }
     return false;
   }
@@ -190,6 +206,8 @@ final class TerminalCapabilities {
     buf.writeln('  hasKeyboardEnhancements: $hasKeyboardEnhancements,');
     buf.writeln('  primaryAttributes: $primaryAttributes,');
     buf.writeln('  secondaryAttributes: $secondaryAttributes,');
+    buf.writeln('  tertiaryAttributes: ${tertiaryAttributes ?? "null"},');
+    buf.writeln('  terminalVersion: ${terminalVersion ?? "null"},');
     buf.writeln('  foregroundColor: ${foregroundColor ?? "null"},');
     buf.writeln('  backgroundColor: ${backgroundColor ?? "null"},');
     buf.writeln('  cursorColor: ${cursorColor ?? "null"},');

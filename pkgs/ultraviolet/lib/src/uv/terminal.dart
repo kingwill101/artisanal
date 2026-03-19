@@ -360,6 +360,8 @@ class Terminal
   void queryCapabilities() {
     _renderer.queryPrimaryDeviceAttributes();
     _renderer.querySecondaryDeviceAttributes();
+    _renderer.queryTertiaryDeviceAttributes();
+    _renderer.queryTerminalVersion();
     _renderer.queryKittyGraphics();
     _renderer.queryKeyboardEnhancements();
     _renderer.queryForegroundColor();

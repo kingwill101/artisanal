@@ -582,6 +582,16 @@ final class UvTerminalRenderer {
     _buf.write('\x1b[>c');
   }
 
+  /// Queries tertiary device attributes.
+  void queryTertiaryDeviceAttributes() {
+    _buf.write('\x1b[=c');
+  }
+
+  /// Queries the terminal version string.
+  void queryTerminalVersion() {
+    _buf.write('\x1b[>0q');
+  }
+
   /// Queries Kitty Graphics support.
   void queryKittyGraphics() {
     // Use a random id=31 to query support.
