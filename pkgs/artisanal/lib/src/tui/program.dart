@@ -1067,6 +1067,15 @@ class Program<M extends Model> {
   /// Kitty keyboard enhancement flags currently applied to the terminal.
   int _appliedKeyboardEnhancementFlags = 0;
 
+  /// Persistent alt-screen state requested by control messages in inline mode.
+  bool _commandAltScreenEnabled = false;
+
+  /// Per-view alt-screen override for inline-mode programs.
+  bool? _viewAltScreenOverride;
+
+  /// Whether inline-mode dynamic alt-screen is currently active.
+  bool _appliedDynamicAltScreen = false;
+
   /// Completer for the run() method.
   Completer<void>? _runCompleter;
 
@@ -2361,11 +2370,21 @@ class Program<M extends Model> {
         return true;
 
       case EnterAltScreenMsg():
-        _terminal?.enterAltScreen();
+        if (_options.altScreen) {
+          _terminal?.enterAltScreen();
+        } else {
+          _commandAltScreenEnabled = true;
+          _applyDynamicAltScreen();
+        }
         return true;
 
       case ExitAltScreenMsg():
-        _terminal?.exitAltScreen();
+        if (_options.altScreen) {
+          _terminal?.exitAltScreen();
+        } else {
+          _commandAltScreenEnabled = false;
+          _applyDynamicAltScreen();
+        }
         return true;
 
       case ShowCursorMsg():
@@ -2735,7 +2754,21 @@ class Program<M extends Model> {
     }
   }
 
+  void _applyDynamicAltScreen() {
+    if (_options.altScreen) return;
+    final target = _viewAltScreenOverride ?? _commandAltScreenEnabled;
+    if (_appliedDynamicAltScreen == target) return;
+    if (target) {
+      _terminal?.enterAltScreen();
+    } else {
+      _terminal?.exitAltScreen();
+    }
+    _appliedDynamicAltScreen = target;
+  }
+
   void _resetViewScopedTerminalMetadata() {
+    _viewAltScreenOverride = null;
+    _applyDynamicAltScreen();
     _setDesiredFocusReporting(false);
     _setDesiredBracketedPaste(_options.bracketedPaste);
     _applyMouseMode();
@@ -2747,6 +2780,10 @@ class Program<M extends Model> {
   void _disableAppliedTerminalModes() {
     final terminal = _terminal;
     if (terminal == null) return;
+    if (_appliedDynamicAltScreen) {
+      terminal.exitAltScreen();
+      _appliedDynamicAltScreen = false;
+    }
     if (_appliedFocusReporting) {
       terminal.disableFocusReporting();
       _appliedFocusReporting = false;
@@ -2767,6 +2804,8 @@ class Program<M extends Model> {
 
   /// Suspends the program temporarily.
   void _suspend() {
+    final restoreDynamicAltScreen = _appliedDynamicAltScreen;
+
     // Save terminal state
     _renderer?.dispose();
 
@@ -2785,6 +2824,9 @@ class Program<M extends Model> {
     _terminal?.showCursor();
     if (_options.altScreen) {
       _terminal?.exitAltScreen();
+    } else if (_appliedDynamicAltScreen) {
+      _terminal?.exitAltScreen();
+      _appliedDynamicAltScreen = false;
     }
 
     _resetProgressBarIfOverridden();
@@ -2801,6 +2843,9 @@ class Program<M extends Model> {
     _terminal?.enableRawMode();
     if (_options.altScreen) {
       _terminal?.enterAltScreen();
+    } else if (restoreDynamicAltScreen) {
+      _terminal?.enterAltScreen();
+      _appliedDynamicAltScreen = true;
     }
     if (_options.hideCursor) {
       _terminal?.hideCursor();
@@ -2947,13 +2992,8 @@ class Program<M extends Model> {
       _resetProgressBarIfOverridden();
     }
 
-    if (view.altScreen != null) {
-      if (view.altScreen!) {
-        _terminal?.enterAltScreen();
-      } else {
-        _terminal?.exitAltScreen();
-      }
-    }
+    _viewAltScreenOverride = view.altScreen;
+    _applyDynamicAltScreen();
 
     _setDesiredFocusReporting(view.reportFocus ?? false);
 
@@ -3149,7 +3189,7 @@ class Program<M extends Model> {
   /// program.println('Loading complete!');
   /// ```
   void println(String text) {
-    if (!_running || _options.altScreen) return;
+    if (!_running || _options.altScreen || _appliedDynamicAltScreen) return;
     send(PrintLineMsg(text));
   }
 
@@ -3162,7 +3202,7 @@ class Program<M extends Model> {
   /// program.printf('Loaded %d items', [items.length]);
   /// ```
   void printf(String format, List<Object?> args) {
-    if (!_running || _options.altScreen) return;
+    if (!_running || _options.altScreen || _appliedDynamicAltScreen) return;
 
     // Simple printf-style formatting
     var result = format;
@@ -3401,6 +3441,16 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith('\x1b]4;')) {
+      final belLen = _consumePaletteColorRequest(remaining, terminator: '\x07');
+      final stLen = _consumePaletteColorRequest(remaining, terminator: '\x1b\\');
+      final consumed = belLen > 0 ? belLen : stLen;
+      if (consumed > 0) {
+        remaining = remaining.substring(consumed);
+        matchedAny = true;
+        continue;
+      }
+    }
     if (remaining.startsWith(Ansi.requestPrimaryDeviceAttributes)) {
       remaining = remaining.substring(Ansi.requestPrimaryDeviceAttributes.length);
       matchedAny = true;
@@ -3418,4 +3468,16 @@ bool _isTerminalReportRequest(String data) {
   }
 
   return matchedAny;
+}
+
+int _consumePaletteColorRequest(String text, {required String terminator}) {
+  final end = text.indexOf(terminator);
+  if (end <= 0) return 0;
+  final payload = text.substring(0, end);
+  final parts = payload.split(';');
+  if (parts.length != 3 || parts[0] != '\x1b]4' || parts[2] != '?') {
+    return 0;
+  }
+  if (int.tryParse(parts[1]) == null) return 0;
+  return end + terminator.length;
 }

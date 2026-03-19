@@ -146,6 +146,15 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [CursorColorMsg(hex: hex)];
   }
 
+  if (ev is uvev.ColorPaletteEvent && ev.color != null) {
+    final hex =
+        '#'
+        '${ev.color!.r.toRadixString(16).padLeft(2, '0')}'
+        '${ev.color!.g.toRadixString(16).padLeft(2, '0')}'
+        '${ev.color!.b.toRadixString(16).padLeft(2, '0')}';
+    return [ColorPaletteMsg(index: ev.index, hex: hex)];
+  }
+
   if (ev is uvev.MouseClickEvent) {
     return [_mouseMsg(MouseAction.press, ev.mouse())];
   }

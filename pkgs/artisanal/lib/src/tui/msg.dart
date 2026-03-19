@@ -387,6 +387,24 @@ final class CursorColorMsg extends Msg {
   String toString() => 'CursorColorMsg($hex)';
 }
 
+/// Message containing a terminal palette entry color.
+///
+/// Only emitted when UV input decoding is enabled and the terminal reports an
+/// OSC 4 palette color response.
+final class ColorPaletteMsg extends Msg {
+  /// Creates a terminal palette color message.
+  const ColorPaletteMsg({required this.index, required this.hex});
+
+  /// The palette slot index that was reported.
+  final int index;
+
+  /// The palette color reported by the terminal (hex string).
+  final String hex;
+
+  @override
+  String toString() => 'ColorPaletteMsg($index, $hex)';
+}
+
 /// Message sent when a terminal capability is reported.
 class CapabilityMsg extends Msg {
   /// Creates a terminal capability response message.

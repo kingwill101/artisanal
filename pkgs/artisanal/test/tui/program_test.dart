@@ -801,6 +801,25 @@ void main() {
       expect(terminal.disposed, isTrue);
     });
 
+    test('restores dynamic alt screen entered at runtime on exit', () async {
+      final program = Program(
+        _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.enterAltScreen(),
+            Cmd.tick(const Duration(milliseconds: 1), (_) => const QuitMsg()),
+          ]),
+        ),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(terminal.operations, contains('enterAltScreen'));
+      expect(terminal.operations, contains('exitAltScreen'));
+      expect(terminal.isAltScreen, isFalse);
+    });
+
     test('sends initial WindowSizeMsg', () async {
       var receivedWindowSize = false;
 
@@ -2036,6 +2055,82 @@ void main() {
       expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
       expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
     });
+
+    test('view alt-screen override resets when falling back to plain text', () async {
+      var plainTextPhase = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('clear')) {
+            plainTextPhase = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => plainTextPhase
+            ? 'plain view'
+            : const View(content: 'dynamic alt', altScreen: true),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const CustomMsg('clear'));
+      await runFuture;
+
+      expect(terminal.operations, contains('enterAltScreen'));
+      expect(terminal.operations, contains('exitAltScreen'));
+      expect(terminal.isAltScreen, isFalse);
+    });
+
+    test('null alt-screen view field resets previous alt-screen override', () async {
+      var cleared = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('clear')) {
+            cleared = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => cleared
+            ? const View(content: 'metadata cleared')
+            : const View(content: 'metadata set', altScreen: true),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const CustomMsg('clear'));
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        1,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        1,
+      );
+      expect(terminal.isAltScreen, isFalse);
+    });
   });
 
   group('Message filtering', () {
@@ -2649,6 +2744,28 @@ void main() {
       program.quit();
       await runFuture;
     });
+
+    test('println does nothing when dynamic alt screen is active', () async {
+      final program = Program(
+        _CallbackModel(onInit: () => Cmd.enterAltScreen()),
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+
+      terminal.clearOperations();
+      terminal.output.clear();
+      program.println('test message');
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      expect(terminal.output.join(), isNot(contains('test message')));
+
+      program.quit();
+      await runFuture;
+    });
   });
 
   group('RepaintMsg and Cmd.repaint()', () {
@@ -2836,6 +2953,58 @@ void main() {
       final joinedOutput = terminal.output.join();
       expect(joinedOutput, contains(Ansi.requestForegroundColor));
       expect(joinedOutput, contains(Ansi.requestCursorColor));
+    });
+
+    test('palette color replies are delivered as messages', () async {
+      const paletteRequest = '\x1b]4;42;?\x07';
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+            });
+          }
+          if (data == paletteRequest) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]4;42;rgb:0f0f/1a1a/2b2b\x07'.codeUnits);
+            });
+          }
+        },
+      );
+
+      int? paletteIndex;
+      String? paletteHex;
+      final model = _CallbackModel(
+        onInit: () => Cmd.requestColorPalette(42),
+        onUpdate: (msg) {
+          switch (msg) {
+            case ColorPaletteMsg(index: final index, hex: final hex):
+              paletteIndex = index;
+              paletteHex = hex;
+              return Cmd.message(const QuitMsg());
+            default:
+              return null;
+          }
+        },
+        onView: () => 'palette request runtime',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(paletteIndex, 42);
+      expect(paletteHex, '#0f1a2b');
+      expect(terminal.output.join(), contains(paletteRequest));
     });
   });
 

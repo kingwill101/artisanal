@@ -131,6 +131,7 @@ export 'msg.dart'
         BackgroundColorMsg,
         ForegroundColorMsg,
         CursorColorMsg,
+        ColorPaletteMsg,
         MouseMsg,
         MouseButton,
         MouseAction,

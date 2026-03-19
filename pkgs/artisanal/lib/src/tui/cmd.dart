@@ -698,6 +698,14 @@ class Cmd {
   static Cmd requestCursorColor() =>
       Cmd(() async => WriteRawMsg(term_ansi.Ansi.requestCursorColor));
 
+  /// Requests a color from the terminal palette.
+  ///
+  /// This sends OSC 4 ; [index] ; ? to the terminal. The terminal will respond
+  /// with an OSC 4 sequence which is decoded into a [ColorPaletteMsg].
+  static Cmd requestColorPalette(int index) => Cmd(
+    () async => WriteRawMsg('\x1b]4;$index;?\x07'),
+  );
+
   /// A command that sends a message immediately.
   ///
   /// Useful for triggering an immediate update without async work.

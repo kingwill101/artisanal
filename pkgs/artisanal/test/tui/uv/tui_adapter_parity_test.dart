@@ -18,6 +18,20 @@ void main() {
       expect(m.hex, '#1a1b2c');
     });
 
+    test('emits ColorPaletteMsg for palette report events', () {
+      final p = UvTuiInputParser();
+      final msgs = [
+        ...p.parseAll('\x1b]4;42;rgb:1111/2222/3333\x07'.codeUnits),
+        ...p.parseAll(const [], expired: true),
+      ];
+
+      expect(msgs, hasLength(1));
+      expect(msgs.first, isA<ColorPaletteMsg>());
+      final m = msgs.first as ColorPaletteMsg;
+      expect(m.index, 42);
+      expect(m.hex, '#112233');
+    });
+
     test('maps UnknownEvent to KeyMsg via key table on timeout flush', () {
       final p = UvTuiInputParser();
 
