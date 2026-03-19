@@ -1069,6 +1069,7 @@ class Program<M extends Model> {
   DateTime? _lastQueuedKeyAt;
   DateTime? _lastProcessedKeyAt;
   int _traceRenderId = 0;
+  int _renderGeneration = 0;
 
   /// Whether we're in the initialization phase (suppresses renders until init completes).
   bool _initializing = false;
@@ -2738,8 +2739,10 @@ class Program<M extends Model> {
       // Route completion through the normal send/queue path so interceptors,
       // coalescing, and ordering semantics are consistent with all other
       // runtime messages.
+      final renderGenerationBeforeCompletion = _renderGeneration;
       send(onComplete(result));
-      if (!restoreSizeChanged) {
+      if (!restoreSizeChanged &&
+          _renderGeneration == renderGenerationBeforeCompletion) {
         _schedulePostRestoreRender(skipSizeDispatch: true);
       }
     } catch (e) {
@@ -2754,8 +2757,10 @@ class Program<M extends Model> {
       // Route completion through the normal send/queue path so interceptors,
       // coalescing, and ordering semantics are consistent with all other
       // runtime messages.
+      final renderGenerationBeforeCompletion = _renderGeneration;
       send(onComplete(result));
-      if (!restoreSizeChanged) {
+      if (!restoreSizeChanged &&
+          _renderGeneration == renderGenerationBeforeCompletion) {
         _schedulePostRestoreRender(skipSizeDispatch: true);
       }
     }
@@ -2836,8 +2841,14 @@ class Program<M extends Model> {
     unawaited(
       Future<void>.delayed(Duration.zero, () {
         if (!_running) return;
+        if (_processingMessage) {
+          _schedulePostRestoreRender(skipSizeDispatch: skipSizeDispatch);
+          return;
+        }
+        final renderGenerationBeforeDrain = _renderGeneration;
         _drainMessageQueue();
         if (_backendShutdownRequested) return;
+        if (_renderGeneration != renderGenerationBeforeDrain) return;
         _renderAfterTerminalRestore(skipSizeDispatch: skipSizeDispatch);
       }),
     );
@@ -3231,6 +3242,7 @@ class Program<M extends Model> {
     final Stopwatch? renderSw = renderId == null ? null : Stopwatch();
     renderSw?.start();
     _renderer!.render(view);
+    _renderGeneration += 1;
     renderSw?.stop();
     if (renderId != null && renderSw != null) {
       _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
@@ -3348,6 +3360,7 @@ class Program<M extends Model> {
     }
 
     _renderer!.render(view);
+    _renderGeneration += 1;
     _lastRenderedView = view;
     final termSize = _terminal?.size;
     if (termSize != null) {

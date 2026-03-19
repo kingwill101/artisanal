@@ -3441,6 +3441,59 @@ void main() {
       expect(joinedOutput, isNot(contains('render #2')));
     });
 
+    test(
+      'ExecProcess completion-triggered messages update the first restored frame',
+      () async {
+        var renderCount = 0;
+        var execDone = false;
+        late Program program;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec(
+                'echo',
+                ['test output'],
+                onComplete: (_) => const CustomMsg('done'),
+              );
+            }
+            if (msg == const CustomMsg('done')) {
+              execDone = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount += 1;
+            return execDone
+                ? 'exec-done render #$renderCount'
+                : 'initial render #$renderCount';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, mouse: false),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('initial render #1'),
+        );
+        program.send(const CustomMsg('exec'));
+        await runFuture;
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains('initial render #1'));
+        expect(joinedOutput, contains('exec-done render #3'));
+        expect(joinedOutput, isNot(contains('initial render #3')));
+      },
+    );
+
     test('ExecProcess pauses frame ticks while released and restarts them after restore', () async {
       final tempDir = await io.Directory.systemTemp.createTemp(
         'artisanal_exec_frame_ticks_',
@@ -4941,6 +4994,57 @@ Future<void> main() async {
         final joinedOutput = writes.join();
         expect(joinedOutput, contains('render #1'));
         expect(joinedOutput, isNot(contains('render #2')));
+      },
+    );
+
+    test(
+      'SuspendMsg resume-triggered messages update the first restored frame',
+      () async {
+        var renderCount = 0;
+        var resumed = false;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.message(const CustomMsg('done'));
+            }
+            if (msg == const CustomMsg('done')) {
+              resumed = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount += 1;
+            return resumed
+                ? 'resumed render #$renderCount'
+                : 'initial render #$renderCount';
+          },
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('initial render #1'),
+        );
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains('initial render #1'));
+        expect(joinedOutput, contains('resumed render #2'));
+        expect(joinedOutput, isNot(contains('initial render #2')));
       },
     );
   });
