@@ -113,6 +113,9 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
     return [WindowSizeMsg(ev.width, ev.height)];
   }
   if (ev is uvev.Size) return [WindowSizeMsg(ev.width, ev.height)];
+  if (ev is uvev.CursorPositionEvent) {
+    return [CursorPositionMsg(ev.x, ev.y)];
+  }
   if (ev is uvev.WindowPixelSizeEvent) {
     return [WindowPixelSizeMsg(ev.width, ev.height)];
   }

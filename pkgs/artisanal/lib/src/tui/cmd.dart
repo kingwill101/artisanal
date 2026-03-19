@@ -387,6 +387,13 @@ class Cmd {
   /// `CSI 8 ; <rows> ; <cols> t`, which UV decoding maps to [WindowSizeMsg].
   static Cmd requestWindowSizeReport() => writeRaw('\x1b[18t');
 
+  /// Request the terminal to report the current cursor position.
+  ///
+  /// Terminals respond to `CSI 6 n` with `CSI <row> ; <col> R`, which UV
+  /// decoding maps to [CursorPositionMsg].
+  static Cmd requestCursorPositionReport() =>
+      writeRaw(term_ansi.Ansi.requestCursorPosition);
+
   /// Request the terminal to report its window size in pixels.
   ///
   /// Terminals that support xterm window ops respond to `CSI 14 t` with

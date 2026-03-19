@@ -224,6 +224,14 @@ void main() {
       expect(msgs.single, const WindowSizeMsg(120, 33));
     });
 
+    test('emits CursorPositionMsg from cursor position reports', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[12;34R'.codeUnits);
+
+      expect(msgs, hasLength(1));
+      expect(msgs.single, const CursorPositionMsg(33, 11));
+    });
+
     test('emits WindowSizeMsg from in-band CSI 48 size reports', () {
       final p = UvTuiInputParser();
       final msgs = p.parseAll('\x1b[48;33;120;660;2400t'.codeUnits);

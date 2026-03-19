@@ -3498,6 +3498,11 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith(Ansi.requestCursorPosition)) {
+      remaining = remaining.substring(Ansi.requestCursorPosition.length);
+      matchedAny = true;
+      continue;
+    }
     if (remaining.startsWith('\x1b[18t')) {
       remaining = remaining.substring('\x1b[18t'.length);
       matchedAny = true;

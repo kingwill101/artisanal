@@ -1338,6 +1338,7 @@ void main() {
     test('window and cell size request commands write raw xterm queries', () async {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
           Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
@@ -1353,6 +1354,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, contains('\x1b[6n'));
       expect(output, contains('\x1b[14t'));
       expect(output, contains('\x1b[16t'));
     });
@@ -1383,6 +1385,7 @@ void main() {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestCursorPositionReport(),
           Cmd.requestWindowPixelSizeReport(),
           Cmd.requestCellSizeReport(),
           Cmd.requestWindowSizeReport(),
@@ -1399,6 +1402,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[6n')));
       expect(output, isNot(contains('\x1b[14t')));
       expect(output, isNot(contains('\x1b[16t')));
       expect(output, isNot(contains('\x1b[18t')));
@@ -1821,6 +1825,37 @@ void main() {
       await runFuture;
 
       expect(received, const WindowSizeMsg(120, 33));
+    });
+
+    test('delivers cursor position messages from UV reports', () async {
+      CursorPositionMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is CursorPositionMsg && msg.x == 33 && msg.y == 11) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'cursor position'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('cursor position'),
+      );
+      terminal.sendInput('\x1b[12;34R'.codeUnits);
+      await runFuture;
+
+      expect(received, const CursorPositionMsg(33, 11));
     });
 
     test('delivers window pixel size messages from UV reports', () async {

@@ -139,6 +139,29 @@ class WindowSizeMsg extends Msg {
   int get hashCode => Object.hash(width, height);
 }
 
+/// Message sent when the terminal reports the cursor position.
+class CursorPositionMsg extends Msg {
+  /// Creates a cursor-position message.
+  const CursorPositionMsg(this.x, this.y);
+
+  /// The zero-based cursor column.
+  final int x;
+
+  /// The zero-based cursor row.
+  final int y;
+
+  @override
+  String toString() => 'CursorPositionMsg($x, $y)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CursorPositionMsg && x == other.x && y == other.y);
+
+  @override
+  int get hashCode => Object.hash(x, y);
+}
+
 /// Message sent when the terminal window reports its pixel dimensions.
 ///
 /// This comes from xterm-style window operation replies such as `CSI 4 ; h ; w t`
