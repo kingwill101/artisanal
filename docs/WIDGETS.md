@@ -54,6 +54,11 @@ Stable top-level entrypoints:
 The older `package:artisanal_widgets/artisanal_widgets.dart` import remains
 available as the broader experimental compatibility surface.
 
+Prefer the direct `package:artisanal_widgets/...` entrypoints when widget code
+is the main thing your app depends on. Use the `package:artisanal/...`
+variants as umbrella convenience re-exports when you already want the broader
+CLI/style/runtime toolkit from the same package.
+
 The local runner helpers (`runWidgetApp`, `runArtisanalApp`, watched/reloadable
 variants) and the hosted browser/socket helpers all accept an `imageAutoMode`
 override. Local runners keep the default environment-driven behavior. Hosted

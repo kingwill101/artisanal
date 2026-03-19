@@ -3,6 +3,10 @@
 Flutter-inspired widget framework for terminal UIs, built on top of
 `artisanal`.
 
+This is the primary package for widget-first apps. Use the umbrella
+`package:artisanal/...` widget entrypoints only when you intentionally want the
+broader Artisanal toolkit from a single dependency.
+
 ## Table of Contents
 
 - [Installation](#installation)

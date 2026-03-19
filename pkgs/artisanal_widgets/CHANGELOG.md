@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Clarified the package guidance so `artisanal_widgets` remains the primary widget dependency, while the `package:artisanal/...` widget entrypoints are documented as optional umbrella convenience re-exports.
 - Hosted browser/socket runner helpers now default `Image(renderMode: auto)` to `ImageAutoMode.sessionCapabilities` instead of forcing the portable fallback, so remote terminals can upgrade image rendering from live session capability reports.
 - Kept `package:artisanal_widgets/artisanal_widgets.dart` as the broader experimental compatibility surface while stabilizing the primary widget/app/layout/input/navigation APIs.
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.

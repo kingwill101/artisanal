@@ -40,6 +40,10 @@ dependencies:
 
 > **Note**: This package uses workspace resolution. Use a path or git reference in standalone projects.
 
+If you are building a widget app and do not need the rest of the CLI/style/runtime
+toolkit from this package, prefer depending on `artisanal_widgets` directly.
+Use `package:artisanal/...` as the umbrella convenience surface when you want
+the broader stack from a single package.
 
 
 
@@ -74,6 +78,11 @@ dependencies:
 | `package:artisanal/markdown.dart` | Markdown to ANSI renderer |
 | `package:artisanal/glamour.dart` | High-fidelity Markdown renderer |
 | `package:artisanal/charting.dart` | Charting primitives |
+
+For widget work, the `package:artisanal/...` widget entrypoints are convenience
+re-exports of the primary `package:artisanal_widgets/...` libraries. Prefer the
+direct `artisanal_widgets` imports when that is the only package your app
+needs.
 
 ## Documentation
 

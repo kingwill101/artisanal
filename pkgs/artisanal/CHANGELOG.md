@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Clarified the widget import guidance so `package:artisanal/...` widget entrypoints are documented as umbrella convenience re-exports, while `artisanal_widgets` remains the primary widget package for widget-first apps.
 - Prevented late external-process completion from restoring the terminal or delivering completion messages after the program has already quit, been killed, or lost its backend host session.
 - Made direct `Program.kill()` abort active startup probes immediately, so kill behaves like quit/backend shutdown during pre-render and emoji probing.
 - Deferred renders and stateful terminal control writes while `Program` temporarily releases the terminal for exec/suspend, then reapplied deferred titles and inline alt-screen/mode state on restore.
