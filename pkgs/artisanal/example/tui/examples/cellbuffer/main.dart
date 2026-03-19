@@ -228,7 +228,7 @@ Future<void> main() async {
     options: const tui.ProgramOptions(
       altScreen: true,
       hideCursor: true,
-      mouse: true,
+      mouseMode: tui.MouseMode.allMotion,
     ),
   );
 }

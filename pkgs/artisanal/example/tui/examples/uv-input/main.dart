@@ -32,7 +32,7 @@ class _LogModel implements tui.Model {
     return tui.Cmd.batch([
       tui.Cmd.enableReportFocus(),
       tui.Cmd.enableBracketedPaste(),
-      tui.Cmd.enableMouseCellMotion(),
+      tui.Cmd.enableMouseAllMotion(),
       // Request a few common terminal reports. Not all terminals respond.
       tui.Cmd.requestTerminalColors(),
     ]);
@@ -189,7 +189,7 @@ Options:
     _LogModel(useUvInput: !legacy, useUvRenderer: uvRenderer),
     options: tui.ProgramOptions(
       altScreen: true,
-      mouse: true,
+      mouseMode: tui.MouseMode.allMotion,
       bracketedPaste: true,
       useUltravioletInputDecoder: !legacy,
       useUltravioletRenderer: uvRenderer,

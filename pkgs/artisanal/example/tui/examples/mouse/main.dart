@@ -43,7 +43,7 @@ Future<void> main() async {
   await runProgram(
     const MouseModel(),
     options: const ProgramOptions(
-      mouse: true,
+      mouseMode: MouseMode.allMotion,
       altScreen: false, // keep prints visible
       hideCursor: false,
     ),

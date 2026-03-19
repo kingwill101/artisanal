@@ -38,6 +38,7 @@
 - Moved UV capability probing behind the first frame so pre-render startup probing only blocks on theme detection, not DA2/kitty capability replies.
 - Updated the basic runtime-only TUI examples to import the stable `package:artisanal/runtime.dart` surface instead of the broader compatibility barrel.
 - Updated more core runtime-only TUI examples to import the stable `package:artisanal/runtime.dart` surface instead of the broader compatibility barrel.
+- Updated the widget gallery, kitchen sink, zone, mouse, cellbuffer, and UV input examples to opt into `MouseMode.allMotion` so passive hover and free pointer motion work without a button press.
 
 ### Fixed
 

@@ -529,7 +529,7 @@ Options:
     _KitchenSinkModel(useUvInput: !legacy, useUvRenderer: uvRenderer),
     options: tui.ProgramOptions(
       altScreen: true,
-      mouse: true,
+      mouseMode: tui.MouseMode.allMotion,
       bracketedPaste: true,
       useUltravioletInputDecoder: !legacy,
       useUltravioletRenderer: uvRenderer,

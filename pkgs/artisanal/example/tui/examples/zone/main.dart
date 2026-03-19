@@ -15,7 +15,7 @@ void main() async {
   await runProgram(
     ZoneExampleModel(),
     options: const ProgramOptions(
-      mouse: true, // Enable mouse support
+      mouseMode: MouseMode.allMotion, // Enable passive hover + mouse support
       altScreen: true, // Use alternate screen
     ),
   );

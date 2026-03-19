@@ -16,7 +16,10 @@ void main() async {
   final app = tui.WidgetApp(AppWidget());
   await tui.runProgram(
     app,
-    options: const tui.ProgramOptions(altScreen: true, mouse: true),
+    options: const tui.ProgramOptions(
+      altScreen: true,
+      mouseMode: tui.MouseMode.allMotion,
+    ),
   );
 }
 
