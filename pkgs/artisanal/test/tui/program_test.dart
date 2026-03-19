@@ -4540,6 +4540,76 @@ Future<void> main() async {
       );
     });
 
+    test('SuspendMsg restore reapplies explicit hide cursor override', () async {
+      var resumed = false;
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.hideCursor(),
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            resumed = true;
+          }
+          return null;
+        },
+        onView: () => resumed ? 'resumed' : 'running',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('running'));
+      program.send(const SuspendMsg());
+      await _waitUntil(() => resumed);
+
+      expect(terminal.cursorHidden, isTrue);
+
+      program.quit();
+      await runFuture;
+    });
+
+    test('SuspendMsg restore reapplies explicit show cursor override', () async {
+      var resumed = false;
+
+      final model = _CallbackModel(
+        onInit: () => Cmd.showCursor(),
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            resumed = true;
+          }
+          return null;
+        },
+        onView: () => resumed ? 'resumed' : 'running',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: true,
+          hideCursor: true,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const SuspendMsg());
+      await _waitUntil(() => resumed);
+
+      expect(terminal.cursorHidden, isFalse);
+
+      program.quit();
+      await runFuture;
+    });
+
     test('SuspendMsg restore reapplies startup title when no view override exists', () async {
       final model = _CallbackModel(
         onUpdate: (msg) {
