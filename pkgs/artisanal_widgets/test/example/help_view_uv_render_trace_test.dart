@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'package:artisanal/style.dart' show Layout;
 import 'package:artisanal/terminal.dart' show StringTerminal;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';

@@ -1,5 +1,5 @@
 import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/text-area/main.dart' as example;

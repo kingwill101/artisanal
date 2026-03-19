@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' show StringTerminal;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 Future<void> _waitForRender(

@@ -3,8 +3,8 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart' show Layout;
+import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';
