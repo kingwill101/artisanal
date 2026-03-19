@@ -1,8 +1,8 @@
 import 'package:artisanal/bubbles.dart' show TextInputModel;
 import 'package:artisanal/terminal.dart' show Key, KeyType;
+import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart' show KeyMsg;
-import 'package:artisanal_widgets/artisanal_widgets.dart' hide Key;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/widgets.dart' hide Key;
 import 'package:test/test.dart';
 
 void main() {
