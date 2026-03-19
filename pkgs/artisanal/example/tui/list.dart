@@ -6,7 +6,7 @@
 /// Run with: dart run example/tui_list.dart
 library;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 /// The list selection model.
 class ListModel implements Model {

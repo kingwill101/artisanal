@@ -4,7 +4,7 @@
 /// and `Ctrl+Z` to suspend (if your shell supports it).
 library;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 // #region custom_msg
 /// Message fired every second.

@@ -6,7 +6,7 @@
 /// Run with: dart run example/tui_counter.dart
 library;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 // #region model_example
 /// The counter model.

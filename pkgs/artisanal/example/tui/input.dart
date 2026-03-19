@@ -6,7 +6,7 @@
 /// Run with: dart run example/tui_input.dart
 library;
 
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/runtime.dart';
 
 /// Message for when the form is submitted.
 class SubmitMsg extends Msg {
