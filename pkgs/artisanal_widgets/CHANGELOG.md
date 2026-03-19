@@ -25,6 +25,7 @@
 - Updated the accent-panel, chip, tooltip, accordion, expansion-tile, and hyperlink component tests to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
 - Updated the data-table, list-tile control, and select/pagination component tests to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
 - Updated the command palette, modal/drawer, and git-diff component tests to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
+- Updated the frame border regressions and the OpenCode home layout showcase test to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
 
 ## 0.1.0+1
 - Documentation + assets

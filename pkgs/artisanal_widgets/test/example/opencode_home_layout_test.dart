@@ -1,5 +1,5 @@
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
-import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/testing.dart';
+import 'package:artisanal/widgets.dart' as w;
 import 'package:test/test.dart';
 
 import '../../example/opencode/models/chat_model.dart';
