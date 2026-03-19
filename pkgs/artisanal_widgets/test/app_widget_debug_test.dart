@@ -182,6 +182,25 @@ void main() {
       expect(tooltip!.y, lessThan(hoverTarget.y));
       expect(after!.y, equals(before!.y));
     });
+
+    test('floating tooltip does not block later mouse interaction', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_exampleOverlayRoot(), width: 120, height: 40);
+
+      tester.tap(tester.find.textLocation('Components'));
+      tester.tap(tester.find.textLocation('Overlays'));
+
+      final hoverTarget = tester.locateText('Hover me');
+      expect(hoverTarget, isNotNull);
+
+      tester.mouseMove(hoverTarget!.x, hoverTarget.y);
+      expect(tester.find.text('Hover to preview tooltips'), isTrue);
+
+      tester.tap(tester.find.textLocation('Open'));
+      expect(tester.find.text('Modal Dialog'), isTrue);
+    });
   });
 
   group('GestureDetector + Container tab switching variants', () {

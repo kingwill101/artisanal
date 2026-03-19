@@ -25,6 +25,7 @@
 - Made `Tooltip` float from an `Overlay` ancestor instead of reflowing surrounding layout, and updated the gallery example to host its overlay demos through a root overlay so hover tooltips behave like anchored popups.
 - Made floating `Tooltip` fall back to the latest hover pointer position when anchor geometry is not ready yet, avoiding delayed tooltip popups in live sessions.
 - Made floating `Tooltip` request an immediate repaint on hover enter and exit so overlay tooltips appear and disappear without waiting for a later event.
+- Made floating `Tooltip` hit-test transparent so it no longer blocks later mouse hover and click interaction underneath.
 - Updated the flagship widget app examples to use the stable umbrella imports from `package:artisanal/app.dart` and `package:artisanal/widgets.dart`.
 - Updated the editor showcase examples to use the stable umbrella imports from `package:artisanal/app.dart`, `package:artisanal/editors.dart`, and `package:artisanal/widgets.dart`.
 - Updated the shared text input test suites to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.

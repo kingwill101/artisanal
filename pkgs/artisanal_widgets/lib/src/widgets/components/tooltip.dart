@@ -172,7 +172,11 @@ class _TooltipState extends State<Tooltip> {
             math.max(0, viewport.height.toInt() - bubbleHeight),
           ),
         };
-        return Positioned(left: left, top: top, child: bubble);
+        return Positioned(
+          left: left,
+          top: top,
+          child: IgnorePointer(ignoring: true, child: bubble),
+        );
       },
     );
     _floatingEntry = entry;
