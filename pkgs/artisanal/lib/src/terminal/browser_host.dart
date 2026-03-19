@@ -236,11 +236,8 @@ final class BrowserTerminalHostServer {
     String cursor = '#58a6ff',
     String selectionBackground = '#334155',
   }) {
-    final reportedColorScheme = _prefersDarkColorScheme(background) ? 1 : 2;
-    final cssColorScheme = reportedColorScheme == 1 ? 'dark' : 'light';
-    final reportedForegroundColor = _oscColorReply(10, foreground);
-    final reportedBackgroundColor = _oscColorReply(11, background);
-    final reportedCursorColor = _oscColorReply(12, cursor);
+    final cssColorScheme =
+        _prefersDarkColorScheme(background) ? 'dark' : 'light';
     return '''
 <!doctype html>
 <html lang="en">
@@ -350,10 +347,6 @@ final class BrowserTerminalHostServer {
       const disableFocusReporting = '\\x1b[?1004l';
       const enableBracketedPaste = '\\x1b[?2004h';
       const disableBracketedPaste = '\\x1b[?2004l';
-      const reportedColorScheme = $reportedColorScheme;
-      const reportedForegroundColor = ${_javaScriptStringLiteral(reportedForegroundColor)};
-      const reportedBackgroundColor = ${_javaScriptStringLiteral(reportedBackgroundColor)};
-      const reportedCursorColor = ${_javaScriptStringLiteral(reportedCursorColor)};
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedSecondaryDeviceAttributes = '\\x1b[>0;0;0c';
       const reportedKittyKeyboard = '\\x1b[?u';
@@ -462,6 +455,24 @@ final class BrowserTerminalHostServer {
         document.body.style.color = currentForeground;
         document.documentElement.style.colorScheme =
           prefersDarkBackground(currentBackground) ? 'dark' : 'light';
+      }
+
+      function currentColorSchemeReport() {
+        return prefersDarkBackground(currentBackground) ? 1 : 2;
+      }
+
+      function oscColorReply(index, color) {
+        const normalized = normalizeOscColor(color);
+        if (normalized === null || normalized.length !== 7) {
+          return null;
+        }
+        const red = normalized.slice(1, 3);
+        const green = normalized.slice(3, 5);
+        const blue = normalized.slice(5, 7);
+        return (
+          `\\x1b]\${index};rgb:` +
+          `\${red}\${red}/\${green}\${green}/\${blue}\${blue}\\x07`
+        );
       }
 
       function publishFocusState(hasFocus) {
@@ -824,7 +835,7 @@ final class BrowserTerminalHostServer {
           if (remaining.startsWith(requestColorScheme)) {
             sendMessage({
               type: 'input.text',
-              data: `\\x1b[?997;${reportedColorScheme}n`
+              data: `\\x1b[?997;\${currentColorSchemeReport()}n`
             });
             remaining = remaining.slice(requestColorScheme.length);
             continue;
@@ -927,30 +938,33 @@ final class BrowserTerminalHostServer {
             continue;
           }
           if (remaining.startsWith(requestForegroundColor)) {
-            if (reportedForegroundColor !== null) {
+            const reply = oscColorReply(10, currentForeground);
+            if (reply !== null) {
               sendMessage({
                 type: 'input.text',
-                data: reportedForegroundColor
+                data: reply
               });
             }
             remaining = remaining.slice(requestForegroundColor.length);
             continue;
           }
           if (remaining.startsWith(requestBackgroundColor)) {
-            if (reportedBackgroundColor !== null) {
+            const reply = oscColorReply(11, currentBackground);
+            if (reply !== null) {
               sendMessage({
                 type: 'input.text',
-                data: reportedBackgroundColor
+                data: reply
               });
             }
             remaining = remaining.slice(requestBackgroundColor.length);
             continue;
           }
           if (remaining.startsWith(requestCursorColor)) {
-            if (reportedCursorColor !== null) {
+            const reply = oscColorReply(12, currentCursor);
+            if (reply !== null) {
               sendMessage({
                 type: 'input.text',
-                data: reportedCursorColor
+                data: reply
               });
             }
             remaining = remaining.slice(requestCursorColor.length);
@@ -1087,16 +1101,6 @@ bool _prefersDarkColorScheme(String background) {
   return luminance < 0.5;
 }
 
-String? _oscColorReply(int slot, String color) {
-  final hex = _normalizedHexColor(color);
-  if (hex == null) return null;
-
-  final red = hex.substring(0, 2);
-  final green = hex.substring(2, 4);
-  final blue = hex.substring(4, 6);
-  return '\\x1b]$slot;rgb:$red$red/$green$green/$blue$blue\\x07';
-}
-
 String? _normalizedHexColor(String color) {
   final normalized = color.trim();
   final hex = switch (normalized.length) {
@@ -1117,12 +1121,4 @@ String? _normalizedHexColor(String color) {
   }
 
   return hex.toLowerCase();
-}
-
-String _javaScriptStringLiteral(String? value) {
-  if (value == null) return 'null';
-  final escaped = value
-      .replaceAll('\\', r'\\')
-      .replaceAll("'", r"\'");
-  return "'$escaped'";
 }

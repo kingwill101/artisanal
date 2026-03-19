@@ -428,8 +428,9 @@ maps OSC 52 clipboard reads and writes onto the browser clipboard when
 available, answers private mode reports for focus and bracketed paste, and
 forwards browser focus changes and bracketed paste whenever the runtime enables
 those terminal modes. It also mirrors OSC 0/2 title updates into the browser
-tab title and the page toolbar heading, and applies OSC 10/11/12 color changes
-plus OSC 110/111/112 resets to the hosted terminal theme.
+tab title and the page toolbar heading, applies OSC 10/11/12 color changes
+plus OSC 110/111/112 resets to the hosted terminal theme, and answers later
+color-scheme / OSC color queries from that current hosted theme state.
 
 ### Convenience Functions
 

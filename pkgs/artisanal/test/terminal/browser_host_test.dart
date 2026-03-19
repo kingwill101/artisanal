@@ -19,10 +19,6 @@ void main() {
       expect(html, contains('@xterm/xterm'));
       expect(html, contains('stripAndReplyTerminalQueries'));
       expect(html, contains('xterm.js browser host'));
-      expect(html, contains('const reportedColorScheme = 1;'));
-      expect(html, contains('rgb:e6e6/eded/f3f3'));
-      expect(html, contains('rgb:1010/1313/1818'));
-      expect(html, contains('rgb:5858/a6a6/ffff'));
       expect(html, contains(r"const requestCursorPosition = '\x1b[6n';"));
       expect(
         html,
@@ -70,6 +66,8 @@ void main() {
       expect(html, contains('function prefersDarkBackground(color)'));
       expect(html, contains('function normalizeOscColor(value)'));
       expect(html, contains('function applyTerminalTheme()'));
+      expect(html, contains('function currentColorSchemeReport()'));
+      expect(html, contains('function oscColorReply(index, color)'));
       expect(html, contains('function oscTitleInfo(data)'));
       expect(html, contains('function oscColorInfo(data, prefix)'));
       expect(html, contains('data: reportedSecondaryDeviceAttributes'));
@@ -86,6 +84,10 @@ void main() {
       expect(html, contains('currentForeground = color;'));
       expect(html, contains('currentBackground = color;'));
       expect(html, contains('currentCursor = color;'));
+      expect(html, contains(r"data: `\x1b[?997;${currentColorSchemeReport()}n`"));
+      expect(html, contains('const reply = oscColorReply(10, currentForeground);'));
+      expect(html, contains('const reply = oscColorReply(11, currentBackground);'));
+      expect(html, contains('const reply = oscColorReply(12, currentCursor);'));
       expect(html, contains('document.documentElement.style.colorScheme ='));
       expect(html, contains('case 1004:'));
       expect(html, contains('case 2004:'));
@@ -115,7 +117,7 @@ void main() {
         background: '#f8fafc',
       );
 
-      expect(html, contains('const reportedColorScheme = 2;'));
+      expect(html, contains(":root { color-scheme: light; }"));
     });
 
     test('bind serves the page and a 404 for unknown routes', () async {
