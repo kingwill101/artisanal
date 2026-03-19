@@ -34,6 +34,7 @@ final class UvCapabilityProbe implements StartupProbe {
   @override
   Future<void> start(StartupProbeContext ctx) async {
     if (_active) return;
+    if (!ctx.terminal.supportsAnsi || !ctx.terminal.isTerminal) return;
     _active = true;
     _done = Completer<void>();
     _sawSecondaryAttributes = false;

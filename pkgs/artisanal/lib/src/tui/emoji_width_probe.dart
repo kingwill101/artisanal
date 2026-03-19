@@ -42,6 +42,7 @@ final class EmojiWidthProbe implements StartupProbe {
   @override
   Future<void> start(StartupProbeContext ctx) async {
     if (_active) return;
+    if (!ctx.terminal.supportsAnsi || !ctx.terminal.isTerminal) return;
     _active = true;
 
     final term = ctx.terminal;

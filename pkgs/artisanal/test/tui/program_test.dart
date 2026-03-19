@@ -5886,6 +5886,71 @@ Future<void> main() async {
       expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
     });
 
+    test(
+      'forced startup probes skip non-ANSI and non-terminal backend terminals',
+      () async {
+        for (final scenario in <({String label, EmbeddedTerminalBackend backend})>[
+          (
+            label: 'non-ANSI',
+            backend: EmbeddedTerminalBackend(
+              output: (_) {},
+              supportsAnsi: false,
+            ),
+          ),
+          (
+            label: 'non-terminal',
+            backend: EmbeddedTerminalBackend(
+              output: (_) {},
+              isTerminal: false,
+            ),
+          ),
+        ]) {
+          final writes = <String>[];
+          final backend = EmbeddedTerminalBackend(
+            output: writes.add,
+            supportsAnsi: scenario.backend.supportsAnsi,
+            isTerminal: scenario.backend.isTerminal,
+          );
+          final terminal = BackendTerminal(backend);
+          final model = _CallbackModel(
+            onInit: () => Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            ),
+            onView: () => '${scenario.label} backend without startup probes',
+          );
+
+          final program = Program(
+            model,
+            options: const ProgramOptions(
+              altScreen: false,
+              hideCursor: false,
+              useUltravioletRenderer: true,
+              useUltravioletInputDecoder: true,
+              startupProbes: true,
+            ),
+            terminal: terminal,
+          );
+
+          await program.run();
+
+          final joinedOutput = writes.join();
+          expect(
+            joinedOutput,
+            contains('${scenario.label} backend without startup probes'),
+          );
+          expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+          expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
+          expect(
+            joinedOutput,
+            isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+          );
+          expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+          expect(joinedOutput, isNot(contains(Ansi.requestExtendedCursorPosition)));
+        }
+      },
+    );
+
     test('startup UV capability replies are delivered during initialization', () async {
       final terminal = _ProbeAwareMockTerminal(
         onWrite: (data, terminal) {
