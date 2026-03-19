@@ -32,6 +32,7 @@
 - Made `Program` reset view-scoped window titles and cursor styling declaratively, falling back to `startupTitle` when later frames drop a title override and restoring the default cursor shape when cursor metadata clears.
 - Moved UV capability probing behind the first frame so pre-render startup probing only blocks on theme detection, not DA2/kitty capability replies.
 - Updated the basic runtime-only TUI examples to import the stable `package:artisanal/runtime.dart` surface instead of the broader compatibility barrel.
+- Updated more core runtime-only TUI examples to import the stable `package:artisanal/runtime.dart` surface instead of the broader compatibility barrel.
 
 ### Fixed
 

@@ -1,7 +1,7 @@
 /// Fullscreen countdown example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 class TickMsg extends tui.Msg {
   const TickMsg();

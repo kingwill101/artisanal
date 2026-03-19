@@ -3,7 +3,7 @@ library;
 
 import 'dart:io' as io;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/runtime.dart' as tui;
 
 const _url = 'https://charm.sh/';
 
