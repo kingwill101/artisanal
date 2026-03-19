@@ -812,6 +812,56 @@ void main() {
     });
 
     test(
+      'backend host forwards distinct resize bursts while collapsing duplicates',
+      () async {
+        final backend = EmbeddedTerminalBackend(output: (_) {});
+        final received = <WindowSizeMsg>[];
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowSizeMsg && msg.width >= 120) {
+              received.add(msg);
+            }
+            if (msg is InterruptMsg) {
+              return Cmd.quit();
+            }
+            return null;
+          },
+        );
+
+        final runFuture = runProgram(
+          model,
+          options: const ProgramOptions(altScreen: false, frameTick: false),
+          host: ProgramHost.backend(backend),
+        );
+
+        await _waitUntil(() => backend.isRawMode);
+        backend.notifySizeChanged((width: 120, height: 33));
+        backend.notifySizeChanged((width: 121, height: 34));
+        backend.notifySizeChanged((width: 121, height: 34));
+        backend.notifySizeChanged((width: 122, height: 35));
+
+        await _waitUntil(
+          () =>
+              received.length == 3 &&
+              received.last == const WindowSizeMsg(122, 35),
+        );
+
+        backend.requestShutdown();
+        await runFuture;
+
+        expect(
+          received,
+          equals(const <WindowSizeMsg>[
+            WindowSizeMsg(120, 33),
+            WindowSizeMsg(121, 34),
+            WindowSizeMsg(122, 35),
+          ]),
+        );
+      },
+    );
+
+    test(
       'backend shutdown still quits when the model ignores InterruptMsg',
       () async {
         final backend = EmbeddedTerminalBackend(output: (_) {});
@@ -2283,6 +2333,49 @@ void main() {
 
       expect(count, 1);
     });
+
+    test(
+      'forwards distinct UV window size bursts while collapsing duplicates',
+      () async {
+        final received = <WindowSizeMsg>[];
+
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is WindowSizeMsg && msg.width >= 120) {
+                received.add(msg);
+                if (msg == const WindowSizeMsg(122, 35)) {
+                  return Cmd.quit();
+                }
+              }
+              return null;
+            },
+            onView: () => const View(content: 'resize burst'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('resize burst'));
+        terminal.sendInput(
+          '\x1b[8;33;120t\x1b[8;34;121t\x1b[8;34;121t\x1b[8;35;122t'.codeUnits,
+        );
+        await runFuture;
+
+        expect(
+          received,
+          equals(const <WindowSizeMsg>[
+            WindowSizeMsg(120, 33),
+            WindowSizeMsg(121, 34),
+            WindowSizeMsg(122, 35),
+          ]),
+        );
+      },
+    );
 
     test('delivers window size messages from UV in-band size reports', () async {
       WindowSizeMsg? received;

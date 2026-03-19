@@ -42,6 +42,7 @@
 - Fixed inline-mode dynamic alt-screen handling so command-driven and view-driven alt-screen toggles reset cleanly on later frames, suspend/restore, and shutdown, and so inline printing is suppressed while the alternate screen is active.
 - Hardened `Program` resize dispatch so passive backend/SIGWINCH resize notifications are deduplicated while explicit `Cmd.windowSize()` requests still flow through filters and interceptors.
 - Hardened `Program` resize dispatch so repeated passive UV window-size reports are deduplicated before reaching the model.
+- Added end-to-end `Program` coverage for passive resize bursts so distinct backend and UV window-size updates still flow while duplicate sizes collapse.
 - Added end-to-end `Program` coverage for focus and bracketed-paste delivery across both the UV decoder path and the legacy key parser path.
 - Added end-to-end `Program` coverage for live mouse press, wheel, and `View.onMouse` command delivery across both parser paths.
 - Added end-to-end `Program` coverage for UV mouse motion delivery plus parser-driven standard and in-band resize reports.
