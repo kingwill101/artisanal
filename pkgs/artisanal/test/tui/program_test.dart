@@ -480,6 +480,11 @@ final class _NonTerminalMockTerminal extends MockTerminal {
   bool get isTerminal => false;
 }
 
+final class _NonAnsiMockTerminal extends MockTerminal {
+  @override
+  bool get supportsAnsi => false;
+}
+
 final class _ProbeAwareMockTerminal extends MockTerminal {
   _ProbeAwareMockTerminal({required this.onWrite});
 
@@ -1879,6 +1884,43 @@ void main() {
       expect(output, isNot(contains('\x1b[18t')));
     });
 
+    test('non-ANSI hosts suppress window and cell size report queries', () async {
+      final terminal = _NonAnsiMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestPrimaryDeviceAttributesReport(),
+          Cmd.requestSecondaryDeviceAttributesReport(),
+          Cmd.requestTertiaryDeviceAttributesReport(),
+          Cmd.requestTerminalVersionReport(),
+          Cmd.requestTermcapStrings(['RGB', 'TN']),
+          Cmd.requestCursorPositionReport(),
+          Cmd.requestWindowPixelSizeReport(),
+          Cmd.requestCellSizeReport(),
+          Cmd.requestWindowSizeReport(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[?c')));
+      expect(output, isNot(contains('\x1b[>c')));
+      expect(output, isNot(contains('\x1b[=c')));
+      expect(output, isNot(contains('\x1b[>0q')));
+      expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
+      expect(output, isNot(contains('\x1b[6n')));
+      expect(output, isNot(contains('\x1b[14t')));
+      expect(output, isNot(contains('\x1b[16t')));
+      expect(output, isNot(contains('\x1b[18t')));
+    });
+
     test('non-terminal hosts suppress mode report queries', () async {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
@@ -1906,8 +1948,64 @@ void main() {
       expect(output, isNot(contains(Ansi.requestColorScheme)));
     });
 
+    test('non-ANSI hosts suppress mode report queries', () async {
+      final terminal = _NonAnsiMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestKeyboardEnhancementsReport(),
+          Cmd.requestModeReport(2004),
+          Cmd.requestModeReport(1004),
+          Cmd.requestColorSchemeReport(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[?u')));
+      expect(output, isNot(contains('\x1b[?2004\$p')));
+      expect(output, isNot(contains('\x1b[?1004\$p')));
+      expect(output, isNot(contains(Ansi.requestColorScheme)));
+    });
+
     test('non-terminal hosts suppress color, palette, and clipboard report queries', () async {
       final terminal = _NonTerminalMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestForegroundColor(),
+          Cmd.requestBackgroundColor(),
+          Cmd.requestCursorColor(),
+          Cmd.requestColorPalette(42),
+          Cmd.requestClipboard(),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains(Ansi.requestForegroundColor)));
+      expect(output, isNot(contains(Ansi.requestBackgroundColor)));
+      expect(output, isNot(contains(Ansi.requestCursorColor)));
+      expect(output, isNot(contains('\x1b]4;42;?\x07')));
+      expect(output, isNot(contains('\x1b]52;c;?\x07')));
+    });
+
+    test('non-ANSI hosts suppress color, palette, and clipboard report queries', () async {
+      final terminal = _NonAnsiMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
           Cmd.requestForegroundColor(),

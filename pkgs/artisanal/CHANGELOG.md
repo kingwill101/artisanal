@@ -75,6 +75,7 @@
 - Suppressed DA3 capability queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed XTVERSION and XTGETTCAP report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed batched OSC color, palette, and clipboard report queries on non-terminal hosts instead of only handling clipboard reads as a trailing special case.
+- Suppressed the same terminal report queries on `supportsAnsi: false` hosts so socket/embedded clients that disable ANSI output do not receive DA, OSC color, clipboard, or window-report probes.
 - Made `SocketTerminalHostServer.close(force: true)` wait for in-flight session cleanup after tearing down active client sockets, matching the browser host lifecycle contract.
 - Fixed `SuspendMsg` terminal release so fullscreen suspend/restore no longer double-exits alt screen, and added direct suspend lifecycle coverage for metadata, fullscreen state, and startup-title restore.
 

@@ -2644,7 +2644,8 @@ class Program<M extends Model> {
         if (_terminalReleased) return true;
         final terminal = _terminal;
         if (terminal == null) return true;
-        if (!terminal.isTerminal && _isTerminalReportRequest(data)) {
+        if ((!terminal.isTerminal || !terminal.supportsAnsi) &&
+            _isTerminalReportRequest(data)) {
           return true;
         }
         terminal.write(data);
