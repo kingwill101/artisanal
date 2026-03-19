@@ -27,14 +27,13 @@ class Drawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!open) return child;
-    final theme = ThemeScope.of(context);
-    final backdrop = GestureDetector(
-      onTap: dismissible ? () => onDismiss?.call() : null,
-      child: Opacity(
-        opacity: backdropOpacity,
-        child: Container(color: backdropColor ?? theme.background),
-      ),
-    );
+    final dimmedChild = backdropOpacity > 0.0
+        ? Opacity(opacity: backdropOpacity, child: child)
+        : child;
+
+    final dismissLayer = dismissible
+        ? GestureDetector(onTap: () => onDismiss?.call(), child: Container())
+        : Container();
 
     final panel = SizedBox(width: width, child: drawer);
     final positioned = side == SidebarSide.left
@@ -44,13 +43,13 @@ class Drawer extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        child,
+        IgnorePointer(ignoring: true, child: dimmedChild),
         Positioned(
           left: 0,
           right: 0,
           top: 0,
           bottom: 0,
-          child: backdrop,
+          child: dismissLayer,
         ),
         positioned,
       ],

@@ -153,10 +153,13 @@ void main() {
             child: Text('MainArea'),
             drawer: Text('DrawerContent'),
             open: true,
+            side: SidebarSide.right,
+            width: 20,
           ),
         ),
       );
       expect(tester.locateText('DrawerContent'), isNotNull);
+      expect(tester.locateText('MainArea'), isNotNull);
     });
 
     test('default open is false', () {
