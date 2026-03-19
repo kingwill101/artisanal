@@ -37,4 +37,18 @@ void main() {
     s = s.update(UvEventMsg(const DarkColorSchemeEvent()));
     expect(s.hasDarkBackground, true);
   });
+
+  test('TerminalThemeState updates from ColorSchemeMsg', () {
+    var s = const TerminalThemeState(
+      backgroundHex: '#101010',
+      hasDarkBackground: null,
+    );
+
+    s = s.update(const ColorSchemeMsg(dark: false));
+    expect(s.backgroundHex, '#101010');
+    expect(s.hasDarkBackground, false);
+
+    s = s.update(const ColorSchemeMsg(dark: true));
+    expect(s.hasDarkBackground, true);
+  });
 }

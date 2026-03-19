@@ -20,8 +20,12 @@ final class TerminalThemeState {
   TerminalThemeState update(Msg msg) {
     return switch (msg) {
       BackgroundColorMsg(hex: final hex) => _withBackgroundHex(hex),
+      ColorSchemeMsg(dark: final dark) => TerminalThemeState(
+        backgroundHex: backgroundHex,
+        hasDarkBackground: dark,
+      ),
 
-      // UV decoder can also emit light/dark scheme events.
+      // Backward-compatible fallback for code still looking at raw UV events.
       UvEventMsg(event: final ev) when ev is uvev.DarkColorSchemeEvent =>
         TerminalThemeState(
           backgroundHex: backgroundHex,

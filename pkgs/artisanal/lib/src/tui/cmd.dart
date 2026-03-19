@@ -400,6 +400,13 @@ class Cmd {
   /// `CSI 6 ; <height> ; <width> t`, which UV decoding maps to [CellSizeMsg].
   static Cmd requestCellSizeReport() => writeRaw('\x1b[16t');
 
+  /// Request the terminal to report the current state of a terminal mode.
+  ///
+  /// When UV input decoding is enabled, xterm-style mode replies such as
+  /// `CSI ? 2004 ; 1 $ y` are translated to [ModeReportMsg].
+  static Cmd requestModeReport(int mode, {bool private = true}) =>
+      writeRaw('\x1b[${private ? '?' : ''}$mode\$p');
+
   /// Requests terminal foreground/background/cursor color reports (OSC 10/11/12),
   /// plus DA1 as a follow-up.
   ///

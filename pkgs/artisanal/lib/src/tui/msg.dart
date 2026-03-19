@@ -497,6 +497,47 @@ class KeyboardEnhancementsMsg extends Msg {
       'KeyboardEnhancementsMsg(reportEventTypes: $reportEventTypes)';
 }
 
+/// The reported state of a terminal mode query.
+enum ModeReportValue {
+  /// The terminal did not recognize the requested mode.
+  notRecognized,
+
+  /// The mode is currently reset/disabled.
+  reset,
+
+  /// The mode is currently set/enabled.
+  set,
+
+  /// The mode is permanently set/enabled.
+  permanentlySet,
+
+  /// The mode is permanently reset/disabled.
+  permanentlyReset,
+}
+
+/// Message sent when the terminal replies to a mode status query.
+class ModeReportMsg extends Msg {
+  /// Creates a terminal mode report message.
+  const ModeReportMsg({required this.mode, required this.value});
+
+  /// The reported terminal mode number.
+  final int mode;
+
+  /// The reported mode state.
+  final ModeReportValue value;
+
+  @override
+  String toString() => 'ModeReportMsg(mode: $mode, value: $value)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ModeReportMsg && mode == other.mode && value == other.value);
+
+  @override
+  int get hashCode => Object.hash(mode, value);
+}
+
 /// Message sent when the terminal color profile is detected or changed.
 class ColorProfileMsg extends Msg {
   /// Creates a color profile detection message.
@@ -507,6 +548,25 @@ class ColorProfileMsg extends Msg {
 
   @override
   String toString() => 'ColorProfileMsg($profile)';
+}
+
+/// Message sent when the terminal reports its preferred light/dark scheme.
+class ColorSchemeMsg extends Msg {
+  /// Creates a terminal color-scheme message.
+  const ColorSchemeMsg({required this.dark});
+
+  /// Whether the terminal reports a dark color scheme.
+  final bool dark;
+
+  @override
+  String toString() => 'ColorSchemeMsg(${dark ? "dark" : "light"})';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is ColorSchemeMsg && dark == other.dark);
+
+  @override
+  int get hashCode => dark.hashCode;
 }
 
 ({int r, int g, int b})? _parseHexRgb(String? hex) {

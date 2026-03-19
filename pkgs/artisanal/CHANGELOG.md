@@ -5,6 +5,7 @@
 ### Added
 
 - Added `ColorPaletteMsg` and `Cmd.requestColorPalette()` so OSC 4 palette replies are exposed through the TUI runtime instead of staying UV-internal.
+- Added `ModeReportMsg`, `ColorSchemeMsg`, and `Cmd.requestModeReport()` so UV mode-status replies and light/dark color-scheme reports are exposed through the TUI runtime instead of falling back to raw UV events.
 - Added `WindowPixelSizeMsg`, `CellSizeMsg`, and matching `Cmd` request helpers so UV pixel-size and cell-size reports are exposed through the TUI runtime instead of staying UV-internal.
 
 ### Changed
@@ -22,7 +23,9 @@
 - Added end-to-end `Program` coverage for live mouse press, wheel, and `View.onMouse` command delivery across both parser paths.
 - Added end-to-end `Program` coverage for UV mouse motion delivery plus parser-driven standard and in-band resize reports.
 - Added UV-to-TUI adapter parity coverage for focus, paste, mouse, and resize report translation.
+- Added end-to-end `Program` and UV-to-TUI adapter coverage for mode-status replies and light/dark color-scheme reports.
 - Suppressed xterm pixel-size and cell-size report queries on non-terminal hosts alongside the existing terminal-report guards.
+- Suppressed xterm mode-status report queries on non-terminal hosts alongside the existing terminal-report guards.
 
 ## 0.2.0+1
 

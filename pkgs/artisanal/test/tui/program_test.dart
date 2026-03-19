@@ -1357,6 +1357,28 @@ void main() {
       expect(output, contains('\x1b[16t'));
     });
 
+    test('mode report request commands write raw DECRQM queries', () async {
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestModeReport(2004),
+          Cmd.requestModeReport(2, private: false),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, contains('\x1b[?2004\$p'));
+      expect(output, contains('\x1b[2\$p'));
+    });
+
     test('non-terminal hosts suppress window and cell size report queries', () async {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
@@ -1380,6 +1402,29 @@ void main() {
       expect(output, isNot(contains('\x1b[14t')));
       expect(output, isNot(contains('\x1b[16t')));
       expect(output, isNot(contains('\x1b[18t')));
+    });
+
+    test('non-terminal hosts suppress mode report queries', () async {
+      final terminal = _NonTerminalMockTerminal();
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestModeReport(2004),
+          Cmd.requestModeReport(1004),
+          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+        ]),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[?2004\$p')));
+      expect(output, isNot(contains('\x1b[?1004\$p')));
     });
 
     test('ShowCursorMsg and HideCursorMsg control cursor', () async {
@@ -1477,6 +1522,38 @@ void main() {
       await runFuture;
 
       expect(received, [const FocusMsg(true), const FocusMsg(false)]);
+    });
+
+    test('delivers color scheme messages end to end (UV parser)', () async {
+      final received = <ColorSchemeMsg>[];
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ColorSchemeMsg) {
+              received.add(msg);
+              if (received.length >= 2) return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'color scheme'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('color scheme'));
+      terminal.sendInput('\x1b[?997;1n\x1b[?997;2n'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const [ColorSchemeMsg(dark: true), ColorSchemeMsg(dark: false)],
+      );
     });
 
     test('delivers focus messages end to end (key parser)', () async {
@@ -1804,6 +1881,40 @@ void main() {
       await runFuture;
 
       expect(received, const CellSizeMsg(7, 13));
+    });
+
+    test('delivers mode report messages from UV reports', () async {
+      ModeReportMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ModeReportMsg &&
+                msg.mode == 2004 &&
+                msg.value == ModeReportValue.set) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'mode report'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.join().contains('mode report'));
+      terminal.sendInput('\x1b[?2004;1\$y'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const ModeReportMsg(mode: 2004, value: ModeReportValue.set),
+      );
     });
 
     test('delivers mouse motion messages end to end (UV parser)', () async {

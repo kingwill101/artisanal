@@ -39,6 +39,16 @@ void main() {
       expect(msgs, [const FocusMsg(true), const FocusMsg(false)]);
     });
 
+    test('emits ColorSchemeMsg for light/dark scheme reports', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[?997;1n\x1b[?997;2n'.codeUnits);
+
+      expect(
+        msgs,
+        const [ColorSchemeMsg(dark: true), ColorSchemeMsg(dark: false)],
+      );
+    });
+
     test('emits PasteMsg for bracketed paste payloads', () {
       final p = UvTuiInputParser();
       final msgs = p.parseAll('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
@@ -112,6 +122,21 @@ void main() {
       expect((msgs.first as KeyboardEnhancementsMsg).reportEventTypes, isTrue);
       expect(msgs.last, isA<KeyboardEnhancementsMsg>());
       expect((msgs.last as KeyboardEnhancementsMsg).reportEventTypes, isFalse);
+    });
+
+    test('emits ModeReportMsg from CSI mode status replies', () {
+      final p = UvTuiInputParser();
+      final msgs = p.parseAll('\x1b[?2004;1\$y\x1b[?1004;2\$y'.codeUnits);
+
+      expect(msgs, hasLength(2));
+      expect(
+        msgs.first,
+        const ModeReportMsg(mode: 2004, value: ModeReportValue.set),
+      );
+      expect(
+        msgs.last,
+        const ModeReportMsg(mode: 1004, value: ModeReportValue.reset),
+      );
     });
 
     test('emits MouseMsg press and release from SGR mouse sequences', () {

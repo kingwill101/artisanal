@@ -3464,6 +3464,7 @@ Future<void> runProgramDebug<M extends Model>(
 bool _isTerminalReportRequest(String data) {
   if (data.isEmpty) return false;
 
+  final modeReportMatch = RegExp(r'^\x1b\[\??\d+(?:;\d+)*\$p');
   var remaining = data;
   var matchedAny = false;
   while (remaining.isNotEmpty) {
@@ -3509,6 +3510,12 @@ bool _isTerminalReportRequest(String data) {
     }
     if (remaining.startsWith('\x1b[16t')) {
       remaining = remaining.substring('\x1b[16t'.length);
+      matchedAny = true;
+      continue;
+    }
+    final modeReport = modeReportMatch.matchAsPrefix(remaining);
+    if (modeReport != null) {
+      remaining = remaining.substring(modeReport.group(0)!.length);
       matchedAny = true;
       continue;
     }

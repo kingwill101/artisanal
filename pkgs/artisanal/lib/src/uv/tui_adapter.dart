@@ -102,6 +102,12 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
 
   if (ev is uvev.FocusEvent) return const [FocusMsg(true)];
   if (ev is uvev.BlurEvent) return const [FocusMsg(false)];
+  if (ev is uvev.DarkColorSchemeEvent) {
+    return const [ColorSchemeMsg(dark: true)];
+  }
+  if (ev is uvev.LightColorSchemeEvent) {
+    return const [ColorSchemeMsg(dark: false)];
+  }
 
   if (ev is uvev.WindowSizeEvent) {
     return [WindowSizeMsg(ev.width, ev.height)];
@@ -135,6 +141,21 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
 
   if (ev is uvev.KeyboardEnhancementsEvent) {
     return [KeyboardEnhancementsMsg(reportEventTypes: ev.supportsKeyReleases)];
+  }
+  if (ev is uvev.ModeReportEvent) {
+    return [
+      ModeReportMsg(
+        mode: ev.mode,
+        value: switch (ev.value) {
+          uvev.ModeSetting.notRecognized => ModeReportValue.notRecognized,
+          uvev.ModeSetting.reset => ModeReportValue.reset,
+          uvev.ModeSetting.set => ModeReportValue.set,
+          uvev.ModeSetting.permanentlySet => ModeReportValue.permanentlySet,
+          uvev.ModeSetting.permanentlyReset =>
+            ModeReportValue.permanentlyReset,
+        },
+      ),
+    ];
   }
 
   if (ev is uvev.ForegroundColorEvent) {
