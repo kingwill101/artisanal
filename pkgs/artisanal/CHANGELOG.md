@@ -18,6 +18,7 @@
 
 ### Changed
 
+- Deferred renders and stateful terminal control writes while `Program` temporarily releases the terminal for exec/suspend, then reapplied deferred titles and inline alt-screen/mode state on restore.
 - Paused frame-tick and metrics timers while `Program` temporarily releases the terminal for exec/suspend, then resumed them cleanly on restore so background timers do not run against a released terminal.
 - Reapplied `startupTitle` when restoring the terminal after exec/suspend when no view-scoped title override is active.
 - `package:artisanal/widgets.dart` now re-exports the stabilized `package:artisanal_widgets/widgets.dart` surface instead of the broader experimental compatibility entrypoint.

@@ -1057,6 +1057,9 @@ class Program<M extends Model> {
   /// The last window title this program believes it applied.
   String? _appliedWindowTitle;
 
+  /// A window title requested while the terminal was temporarily released.
+  String? _releasedWindowTitle;
+
   /// Desired mouse tracking mode for the current runtime/view state.
   MouseMode _desiredMouseMode = MouseMode.none;
 
@@ -2442,10 +2445,11 @@ class Program<M extends Model> {
   bool _handleControlMessage(Msg msg) {
     switch (msg) {
       case SetWindowTitleMsg(:final title):
-        _terminal?.write('\x1b]0;$title\x07');
+        _applyWindowTitle(title);
         return true;
 
       case ClearScreenMsg():
+        if (_terminalReleased) return true;
         _terminal?.clearScreen();
         _render();
         return true;
@@ -2469,10 +2473,12 @@ class Program<M extends Model> {
         return true;
 
       case ShowCursorMsg():
+        if (_terminalReleased) return true;
         _terminal?.showCursor();
         return true;
 
       case HideCursorMsg():
+        if (_terminalReleased) return true;
         _terminal?.hideCursor();
         return true;
 
@@ -2517,6 +2523,7 @@ class Program<M extends Model> {
         return true;
 
       case PrintLineMsg(:final text):
+        if (_terminalReleased) return true;
         // Print above the program.
         //
         // With the UV renderer this is implemented as a renderer-owned "print
@@ -2539,6 +2546,7 @@ class Program<M extends Model> {
         return true;
 
       case WriteRawMsg(:final data):
+        if (_terminalReleased) return true;
         final terminal = _terminal;
         if (terminal == null) return true;
         if (!terminal.isTerminal && _isTerminalReportRequest(data)) {
@@ -2569,6 +2577,7 @@ class Program<M extends Model> {
         return true;
 
       case RepaintRequestMsg(:final force):
+        if (_terminalReleased) return true;
         if (force) {
           _forceRender();
         } else {
@@ -2633,6 +2642,7 @@ class Program<M extends Model> {
   /// Releases the terminal for external process execution.
   Future<void> _releaseTerminal() async {
     _terminalReleased = true;
+    _releasedWindowTitle = null;
 
     // Stop input listening temporarily.
     _uvInputTimeoutTimer?.cancel();
@@ -2669,7 +2679,8 @@ class Program<M extends Model> {
 
     // Re-enable raw mode
     _terminal?.enableRawMode();
-    _applyWindowTitle(_options.startupTitle);
+    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _releasedWindowTitle = null;
 
     // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
@@ -2702,6 +2713,7 @@ class Program<M extends Model> {
     }
 
     _restoreDesiredTerminalModes();
+    _applyDynamicAltScreen();
 
     // Restart input listening.
     if (_inputSubscription == null) {
@@ -2735,6 +2747,7 @@ class Program<M extends Model> {
   void _applyDesiredMouseMode() {
     final terminal = _terminal;
     if (terminal == null) return;
+    if (_terminalReleased) return;
     if (_appliedMouseMode == _desiredMouseMode) return;
     if (_appliedMouseMode != MouseMode.none) {
       terminal.disableMouse();
@@ -2761,6 +2774,7 @@ class Program<M extends Model> {
   void _applyDesiredBracketedPaste() {
     final terminal = _terminal;
     if (terminal == null) return;
+    if (_terminalReleased) return;
     if (_appliedBracketedPaste == _desiredBracketedPaste) return;
     if (_desiredBracketedPaste) {
       terminal.enableBracketedPaste();
@@ -2778,6 +2792,7 @@ class Program<M extends Model> {
   void _applyDesiredFocusReporting() {
     final terminal = _terminal;
     if (terminal == null) return;
+    if (_terminalReleased) return;
     if (_appliedFocusReporting == _desiredFocusReporting) return;
     if (_desiredFocusReporting) {
       terminal.enableFocusReporting();
@@ -2795,6 +2810,7 @@ class Program<M extends Model> {
   void _applyDesiredKeyboardEnhancements() {
     final terminal = _terminal;
     if (terminal == null) return;
+    if (_terminalReleased) return;
     if (_appliedKeyboardEnhancementFlags == _desiredKeyboardEnhancementFlags) {
       return;
     }
@@ -2817,7 +2833,12 @@ class Program<M extends Model> {
   }
 
   void _applyWindowTitle(String? title) {
-    if (title == null || _appliedWindowTitle == title) return;
+    if (title == null) return;
+    if (_terminalReleased) {
+      _releasedWindowTitle = title;
+      return;
+    }
+    if (_appliedWindowTitle == title) return;
     _terminal?.setTitle(title);
     _appliedWindowTitle = title;
   }
@@ -2857,6 +2878,7 @@ class Program<M extends Model> {
 
   void _applyDynamicAltScreen() {
     if (_options.altScreen) return;
+    if (_terminalReleased) return;
     final target = _viewAltScreenOverride ?? _commandAltScreenEnabled;
     if (_appliedDynamicAltScreen == target) return;
     if (target) {
@@ -2909,6 +2931,7 @@ class Program<M extends Model> {
   void _suspend() {
     final restoreDynamicAltScreen = _appliedDynamicAltScreen;
     _terminalReleased = true;
+    _releasedWindowTitle = null;
 
     // Save terminal state
     _renderer?.dispose();
@@ -2957,7 +2980,8 @@ class Program<M extends Model> {
     if (_options.hideCursor) {
       _terminal?.hideCursor();
     }
-    _applyWindowTitle(_options.startupTitle);
+    _applyWindowTitle(_releasedWindowTitle ?? _options.startupTitle);
+    _releasedWindowTitle = null;
 
     // Re-initialize renderer
     final rendererOptions = TuiRendererOptions(
@@ -2989,6 +3013,7 @@ class Program<M extends Model> {
     }
 
     _restoreDesiredTerminalModes();
+    _applyDynamicAltScreen();
 
     // Restart input.
     _startInputListener();
@@ -3006,6 +3031,7 @@ class Program<M extends Model> {
   /// Renders the current view.
   void _render() {
     if (_model == null || _renderer == null) return;
+    if (_terminalReleased) return;
     // Skip rendering during initialization phase to avoid visual flash
     if (_initializing) return;
 
@@ -3155,6 +3181,7 @@ class Program<M extends Model> {
   /// Forces a re-render, bypassing the skip-if-unchanged optimization.
   void _forceRender() {
     if (_model == null || _renderer == null) return;
+    if (_terminalReleased) return;
 
     // Clear the renderer's cached view to force a full redraw
     _renderer!.clear();

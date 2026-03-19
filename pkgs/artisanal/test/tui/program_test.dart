@@ -2970,6 +2970,232 @@ Future<void> main() async {
       expect(ticksAfterExec, greaterThanOrEqualTo(1));
     });
 
+    test('ExecProcess suppresses renders triggered during terminal release', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_render_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var counter = 0;
+      var outputCountAtRelease = -1;
+      var outputCountDuringRelease = -1;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            Timer(
+              const Duration(milliseconds: 30),
+              () => program.send(const CustomMsg('bump')),
+            );
+            Timer(
+              const Duration(milliseconds: 60),
+              () => outputCountDuringRelease = terminal.output.length,
+            );
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) => const CustomMsg('exec-done'),
+            );
+          }
+
+          if (msg == const CustomMsg('bump')) {
+            counter++;
+            return null;
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            return Cmd.tick(
+              const Duration(milliseconds: 40),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          return null;
+        },
+        onView: () => 'counter=$counter',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+      program.send(const CustomMsg('start'));
+      await _waitUntil(() => terminal.operations.contains('disableRawMode'));
+      outputCountAtRelease = terminal.output.length;
+      await runFuture;
+
+      expect(counter, 1);
+      expect(outputCountDuringRelease, outputCountAtRelease);
+      expect(terminal.output.length, greaterThan(outputCountAtRelease));
+    });
+
+    test('ExecProcess defers window title writes until terminal restore', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_title_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var execActive = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            execActive = true;
+            Timer(
+              const Duration(milliseconds: 30),
+              () => program.send(const CustomMsg('title')),
+            );
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) => const CustomMsg('exec-done'),
+            );
+          }
+
+          if (msg == const CustomMsg('title')) {
+            return Cmd.setWindowTitle('Deferred Title');
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            execActive = false;
+            return Cmd.tick(
+              const Duration(milliseconds: 40),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          return null;
+        },
+        onView: () => execActive ? 'exec active' : 'exec idle',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      final disableIndex = terminal.operations.indexOf('disableRawMode');
+      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
+      final deferredTitleIndex = terminal.operations.indexOf(
+        'setTitle(Deferred Title)',
+      );
+
+      expect(disableIndex, isNonNegative);
+      expect(restoreIndex, greaterThan(disableIndex));
+      expect(deferredTitleIndex, greaterThan(restoreIndex));
+    });
+
+    test('ExecProcess defers stateful terminal control writes until restore', () async {
+      final tempDir = await io.Directory.systemTemp.createTemp(
+        'artisanal_exec_modes_release_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+
+      final script = io.File('${tempDir.path}/delay.dart');
+      await script.writeAsString('''
+import 'dart:async';
+
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
+
+      late Program program;
+      var execActive = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('start')) {
+            execActive = true;
+            Timer(
+              const Duration(milliseconds: 30),
+              () => program.send(const CustomMsg('modes')),
+            );
+            return Cmd.exec(
+              io.Platform.resolvedExecutable,
+              [script.path],
+              onComplete: (_) => const CustomMsg('exec-done'),
+            );
+          }
+
+          if (msg == const CustomMsg('modes')) {
+            return Cmd.batch([
+              Cmd.enableMouseAllMotion(),
+              Cmd.enableBracketedPaste(),
+              Cmd.enableReportFocus(),
+              Cmd.enterAltScreen(),
+            ]);
+          }
+
+          if (msg == const CustomMsg('exec-done')) {
+            execActive = false;
+            return Cmd.tick(
+              const Duration(milliseconds: 40),
+              (_) => const QuitMsg(),
+            );
+          }
+
+          return null;
+        },
+        onView: () => execActive ? 'exec active' : 'exec idle',
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      final disableIndex = terminal.operations.indexOf('disableRawMode');
+      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
+      final mouseIndex = terminal.operations.indexOf('enableMouseAllMotion');
+      final pasteIndex = terminal.operations.indexOf('enableBracketedPaste');
+      final focusIndex = terminal.operations.indexOf('enableFocusReporting');
+      final altScreenIndex = terminal.operations.indexOf('enterAltScreen');
+
+      expect(disableIndex, isNonNegative);
+      expect(restoreIndex, greaterThan(disableIndex));
+      expect(mouseIndex, greaterThan(restoreIndex));
+      expect(pasteIndex, greaterThan(restoreIndex));
+      expect(focusIndex, greaterThan(restoreIndex));
+      expect(altScreenIndex, greaterThan(restoreIndex));
+    });
+
     test('ExecProcess restore reapplies identical view terminal metadata', () async {
       final view = View(
         content: 'sticky metadata',
