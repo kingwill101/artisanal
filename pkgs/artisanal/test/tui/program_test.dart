@@ -3991,6 +3991,73 @@ void main() {
       expect(received, const ColorProfileMsg(ColorProfile.ansi256));
     });
 
+    test('startup UV capability replies are delivered during initialization', () async {
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+            });
+          }
+          if (data == Ansi.requestSecondaryDeviceAttributes) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b[>1;2;3c'.codeUnits);
+            });
+          }
+          if (data == Ansi.requestKittyKeyboard) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b[?2u'.codeUnits);
+            });
+          }
+        },
+      );
+
+      SecondaryDeviceAttributesMsg? secondary;
+      KeyboardEnhancementsMsg? keyboard;
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          switch (msg) {
+            case SecondaryDeviceAttributesMsg():
+              secondary = msg;
+            case KeyboardEnhancementsMsg():
+              keyboard = msg;
+            default:
+              break;
+          }
+          if (secondary != null && keyboard != null) {
+            return Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => secondary != null && keyboard != null
+            ? 'startup capabilities ready'
+            : 'waiting for startup capabilities',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(secondary, const SecondaryDeviceAttributesMsg([1, 2, 3]));
+      expect(
+        keyboard,
+        const KeyboardEnhancementsMsg(reportEventTypes: true),
+      );
+      expect(terminal.output.join(), contains('startup capabilities ready'));
+    });
+
     test('background probe updates the first rendered frame before paint', () async {
       final terminal = _ProbeAwareMockTerminal(
         onWrite: (data, terminal) {

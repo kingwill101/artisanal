@@ -18,6 +18,7 @@ import 'view.dart';
 import '../layout/layout.dart' show Layout;
 import '../style/color.dart' show Color, ColorProfile;
 import 'background_color_probe.dart';
+import 'uv_capability_probe.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 
@@ -2066,7 +2067,10 @@ class Program<M extends Model> {
     final ctx = StartupProbeContext(terminal: term);
     _startupProbeContext = ctx;
 
-    final runner = StartupProbeRunner([BackgroundColorProbe()]);
+    final runner = StartupProbeRunner([
+      BackgroundColorProbe(),
+      UvCapabilityProbe(),
+    ]);
     _startupProbes = runner;
     await runner.runAll(ctx);
   }
