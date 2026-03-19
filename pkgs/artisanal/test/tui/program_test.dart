@@ -6315,6 +6315,63 @@ Future<void> main() async {
     );
 
     test(
+      'suspend during pre-render startup probing aborts later probes and defers first render until resume',
+      () async {
+        late Program<_CallbackModel> program;
+        var resumed = false;
+        var renderCount = 0;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              program.send(const SuspendMsg());
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              resumed = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount++;
+            return resumed ? 'resumed render' : 'initial render';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(joinedOutput, isNot(contains('initial render')));
+        expect(joinedOutput, contains('resumed render'));
+        expect(renderCount, 1);
+      },
+    );
+
+    test(
       'kill during pre-render startup probing aborts later probes and skips first render',
       () async {
         late Program<_CallbackModel> program;
@@ -6435,6 +6492,79 @@ Future<void> main() async {
 
         expect(shutdownRequested, isTrue);
         expect(renderCount, 1);
+      },
+    );
+
+    test(
+      'suspend during post-render emoji probing resumes without rerunning startup probes',
+      () async {
+        late Program<_CallbackModel> program;
+        var renderCount = 0;
+        var resumed = false;
+        var suspendScheduled = false;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (!suspendScheduled && data == Ansi.requestExtendedCursorPosition) {
+              suspendScheduled = true;
+              program.send(const SuspendMsg());
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              resumed = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () {
+            renderCount++;
+            return resumed ? 'resumed render #$renderCount' : 'render #$renderCount';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(suspendScheduled, isTrue);
+        expect(renderCount, greaterThanOrEqualTo(2));
+        expect(joinedOutput, contains('resumed render'));
+        expect(
+          RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
+        expect(
+          RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
+        expect(
+          RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
+              .allMatches(joinedOutput)
+              .length,
+          1,
+        );
       },
     );
 

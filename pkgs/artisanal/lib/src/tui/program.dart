@@ -1516,6 +1516,7 @@ class Program<M extends Model> {
       _startupProbeContext = null;
       return;
     }
+    final skipPostRenderStartupProbes = _startupProbes?.wasAborted ?? false;
     _startupProbes = null;
     _startupProbeContext = null;
 
@@ -1523,6 +1524,13 @@ class Program<M extends Model> {
     // user sees content without waiting for startup probes.
     _initializing = false;
     _render();
+
+    if (skipPostRenderStartupProbes) {
+      _syncModelOptionalTimers();
+      _options.interceptor?.onStart(send);
+      _startReplay();
+      return;
+    }
 
     // Run startup probes (e.g. emoji width detection) AFTER the first frame is
     // painted.  The probe uses cursor save/restore on the already-active alt
@@ -1547,7 +1555,7 @@ class Program<M extends Model> {
       _startupProbeContext = null;
       return;
     }
-    if (_startupProbes != null) {
+    if (_startupProbes case final probes? when !probes.wasAborted) {
       _forceRender();
     }
     _startupProbes = null;
@@ -2260,6 +2268,11 @@ class Program<M extends Model> {
   /// conditions and ensure consistent state updates.
   void send(Msg msg) {
     if (!_running) return;
+
+    if ((_startupProbes?.hasActiveProbe ?? false) &&
+        isCriticalStartupProbeMsg(msg)) {
+      _startupProbes?.abort();
+    }
 
     final interceptor = _options.interceptor;
     if (interceptor != null) {
@@ -3136,7 +3149,7 @@ class Program<M extends Model> {
     _lastRenderedView = null;
 
     // Send resume message
-    _processMessage(const ResumeMsg());
+    _processMessage(const ResumeMsg(), deferRender: true);
 
     _renderAfterTerminalRestore();
   }

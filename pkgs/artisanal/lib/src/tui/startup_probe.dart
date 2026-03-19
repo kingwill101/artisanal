@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'cmd.dart';
 import 'key.dart';
 import 'msg.dart';
 import 'terminal.dart';
@@ -60,6 +61,8 @@ final class StartupProbeRunner {
 
   bool get hasBufferedMessages => _buffered.isNotEmpty;
 
+  bool get wasAborted => _aborted;
+
   /// Runs probes sequentially.
   Future<void> runAll(StartupProbeContext ctx) async {
     _aborted = false;
@@ -79,7 +82,7 @@ final class StartupProbeRunner {
 
     if (probe.handleMsg(msg, ctx)) return true;
 
-    if (_isCritical(msg)) {
+    if (isCriticalStartupProbeMsg(msg)) {
       _aborted = true;
       probe.abort();
       return false;
@@ -115,15 +118,17 @@ final class StartupProbeRunner {
     _active?.abort();
   }
 
-  static bool _isCritical(Msg msg) =>
-      msg is QuitMsg ||
-      msg is InterruptMsg ||
-      (msg is KeyMsg &&
-          (msg.key.isCtrlC ||
-              (msg.key.type == KeyType.runes &&
-                  msg.key.runes.length == 1 &&
-                  msg.key.runes.first == 0x03)));
 }
+
+bool isCriticalStartupProbeMsg(Msg msg) =>
+    msg is QuitMsg ||
+    msg is SuspendMsg ||
+    msg is InterruptMsg ||
+    (msg is KeyMsg &&
+        (msg.key.isCtrlC ||
+            (msg.key.type == KeyType.runes &&
+                msg.key.runes.length == 1 &&
+                msg.key.runes.first == 0x03)));
 
 extension<T> on Iterable<T> {
   T? get firstOrNull {
