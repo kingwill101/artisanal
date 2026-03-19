@@ -3498,6 +3498,13 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith(Ansi.requestSecondaryDeviceAttributes)) {
+      remaining = remaining.substring(
+        Ansi.requestSecondaryDeviceAttributes.length,
+      );
+      matchedAny = true;
+      continue;
+    }
     if (remaining.startsWith(Ansi.requestTerminalVersion)) {
       remaining = remaining.substring(Ansi.requestTerminalVersion.length);
       matchedAny = true;

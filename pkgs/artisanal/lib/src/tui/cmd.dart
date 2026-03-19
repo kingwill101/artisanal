@@ -388,6 +388,13 @@ class Cmd {
   static Cmd requestPrimaryDeviceAttributesReport() =>
       writeRaw(term_ansi.Ansi.requestPrimaryDeviceAttributes);
 
+  /// Request the terminal to report secondary device attributes (DA2).
+  ///
+  /// Terminals respond with `CSI > <attrs> c`, which UV decoding maps to
+  /// [SecondaryDeviceAttributesMsg].
+  static Cmd requestSecondaryDeviceAttributesReport() =>
+      writeRaw(term_ansi.Ansi.requestSecondaryDeviceAttributes);
+
   /// Request the terminal to report its name and version (XTVERSION).
   ///
   /// Terminals respond with `DCS > | <text> ST`, which UV decoding maps to

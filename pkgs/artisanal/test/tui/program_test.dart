@@ -1339,6 +1339,7 @@ void main() {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
+          Cmd.requestSecondaryDeviceAttributesReport(),
           Cmd.requestTerminalVersionReport(),
           Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
@@ -1358,6 +1359,7 @@ void main() {
 
       final output = terminal.output.join();
       expect(output, contains('\x1b[?c'));
+      expect(output, contains('\x1b[>c'));
       expect(output, contains('\x1b[>0q'));
       expect(output, contains('\x1bP+q524742;544e\x1b\\'));
       expect(output, contains('\x1b[6n'));
@@ -1422,6 +1424,7 @@ void main() {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
+          Cmd.requestSecondaryDeviceAttributesReport(),
           Cmd.requestTerminalVersionReport(),
           Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
@@ -1442,6 +1445,7 @@ void main() {
 
       final output = terminal.output.join();
       expect(output, isNot(contains('\x1b[?c')));
+      expect(output, isNot(contains('\x1b[>c')));
       expect(output, isNot(contains('\x1b[>0q')));
       expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
       expect(output, isNot(contains('\x1b[6n')));
@@ -2057,6 +2061,44 @@ void main() {
 
       expect(received, const PrimaryDeviceAttributesMsg([1, 2, 4]));
     });
+
+    test(
+      'delivers secondary device attributes messages from UV reports',
+      () async {
+        SecondaryDeviceAttributesMsg? received;
+
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is SecondaryDeviceAttributesMsg &&
+                  msg.attrs.length == 3 &&
+                  msg.attrs[0] == 1 &&
+                  msg.attrs[1] == 2 &&
+                  msg.attrs[2] == 3) {
+                received = msg;
+                return Cmd.quit();
+              }
+              return null;
+            },
+            onView: () => const View(content: 'secondary attrs'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('secondary attrs'),
+        );
+        terminal.sendInput('\x1b[>1;2;3c'.codeUnits);
+        await runFuture;
+
+        expect(received, const SecondaryDeviceAttributesMsg([1, 2, 3]));
+      },
+    );
 
     test('delivers terminal version messages from UV reports', () async {
       TerminalVersionMsg? received;

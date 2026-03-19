@@ -114,6 +114,11 @@ abstract final class Ansi {
   /// Upstream parity: `x/ansi.RequestPrimaryDeviceAttributes`.
   static const requestPrimaryDeviceAttributes = '\x1b[?c';
 
+  /// Request secondary device attributes (DA2).
+  ///
+  /// Terminal responds with `ESC [ > <attrs> c`.
+  static const requestSecondaryDeviceAttributes = '\x1b[>c';
+
   /// Request xterm name and version (XTVERSION).
   ///
   /// Terminal responds with `DCS > | <text> ST`.
