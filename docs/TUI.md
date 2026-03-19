@@ -422,8 +422,8 @@ For a reusable server wrapper, use `BrowserTerminalHostServer.bind(...)` or
 xterm.js page and wire websocket sessions into your TUI runtime. The default
 page also answers the runtime's basic color-scheme, DA1, and XTVERSION queries
 so browser-backed sessions can participate in startup probing and session-based
-capability detection, and it forwards browser focus changes whenever the
-runtime enables focus reporting.
+capability detection, and it forwards browser focus changes and bracketed paste
+whenever the runtime enables those terminal modes.
 
 ### Convenience Functions
 

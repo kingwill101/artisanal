@@ -320,6 +320,8 @@ final class BrowserTerminalHostServer {
       const requestTerminalVersion = '\\x1b[>0q';
       const enableFocusReporting = '\\x1b[?1004h';
       const disableFocusReporting = '\\x1b[?1004l';
+      const enableBracketedPaste = '\\x1b[?2004h';
+      const disableBracketedPaste = '\\x1b[?2004l';
       const reportedColorScheme = $reportedColorScheme;
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
@@ -328,6 +330,7 @@ final class BrowserTerminalHostServer {
       endpointNode.textContent = wsUrl;
       const ws = new WebSocket(wsUrl);
       let focusReportingEnabled = false;
+      let bracketedPasteEnabled = false;
 
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
@@ -387,6 +390,16 @@ final class BrowserTerminalHostServer {
             remaining = remaining.slice(disableFocusReporting.length);
             continue;
           }
+          if (remaining.startsWith(enableBracketedPaste)) {
+            bracketedPasteEnabled = true;
+            remaining = remaining.slice(enableBracketedPaste.length);
+            continue;
+          }
+          if (remaining.startsWith(disableBracketedPaste)) {
+            bracketedPasteEnabled = false;
+            remaining = remaining.slice(disableBracketedPaste.length);
+            continue;
+          }
 
           visible += remaining[0];
           remaining = remaining.slice(1);
@@ -443,6 +456,22 @@ final class BrowserTerminalHostServer {
       });
       window.addEventListener('focus', () => publishFocusState(true));
       window.addEventListener('blur', () => publishFocusState(false));
+      window.addEventListener('paste', (event) => {
+        if (!bracketedPasteEnabled) {
+          return;
+        }
+        const text = event.clipboardData
+          ? event.clipboardData.getData('text/plain')
+          : '';
+        if (!text) {
+          return;
+        }
+        event.preventDefault();
+        sendMessage({
+          type: 'input.text',
+          data: `\\x1b[200~\${text}\\x1b[201~`
+        });
+      });
     </script>
   </body>
 </html>

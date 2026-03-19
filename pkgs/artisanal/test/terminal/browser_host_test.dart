@@ -21,7 +21,9 @@ void main() {
       expect(html, contains('const reportedColorScheme = 1;'));
       expect(html, contains("window.addEventListener('focus'"));
       expect(html, contains("window.addEventListener('blur'"));
+      expect(html, contains("window.addEventListener('paste'"));
       expect(html, contains('focusReportingEnabled = true;'));
+      expect(html, contains('bracketedPasteEnabled = true;'));
     });
 
     test('defaultPageHtml derives a light color scheme from a light background', () {
