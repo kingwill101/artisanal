@@ -2,6 +2,12 @@ part of 'components_widgets.dart';
 
 enum TooltipPosition { above, below }
 
+/// A hover-triggered message bubble for a child widget.
+///
+/// When [show] is omitted, the tooltip appears on mouse enter and hides on
+/// mouse exit. Passive hover requires `MouseMode.allMotion` when widgets are
+/// launched through the low-level runtime directly. The higher-level widget
+/// runners already opt into that mode by default.
 class Tooltip extends StatefulWidget {
   Tooltip({
     required this.message,

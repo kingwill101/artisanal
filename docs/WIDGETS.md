@@ -1780,6 +1780,10 @@ Tooltip(
 )
 ```
 
+Passive hover requires `MouseMode.allMotion` when you launch widgets through
+`Program` or `runProgram()` directly. The higher-level `runWidgetApp()` and
+`runArtisanalApp()` helpers already enable that mode by default.
+
 ### Modal and Drawer
 
 ```dart
@@ -2328,13 +2332,17 @@ void main() async {
     app,
     options: ProgramOptions(
       altScreen: true,
-      mouse: true,
+      mouseMode: MouseMode.allMotion,
       fps: 60,
     ),
   );
   await program.run();
 }
 ```
+
+`mouse: true` alone enables `MouseMode.cellMotion`, which is enough for clicks,
+drags, and wheel events. Use `MouseMode.allMotion` for passive hover behaviors
+such as tooltips, hover styles, and `MouseRegion` enter/exit callbacks.
 
 ### Convenience Helper
 

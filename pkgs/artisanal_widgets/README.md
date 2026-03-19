@@ -84,6 +84,13 @@ void main() async {
 }
 ```
 
+`runWidgetApp()` and `runArtisanalApp()` default to
+`MouseMode.allMotion`, so hover-driven widgets such as `Tooltip`,
+`MouseRegion`, and hover-aware scrollbars work without extra setup. If you
+call `runtime.runProgram()` directly, set `mouseMode: runtime.MouseMode.allMotion`
+for passive hover behavior; `mouse: true` alone only enables
+`MouseMode.cellMotion`.
+
 ## Flutter-style component ports
 
 - Chips: `Chip`, `ActionChip`, `ChoiceChip`, `FilterChip`, `InputChip`

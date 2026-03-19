@@ -210,12 +210,21 @@ class ProgramOptions {
   ///
   /// When true, mouse events (clicks, motion, wheel) are reported
   /// as [MouseMsg] messages.
+  ///
+  /// This enables [MouseMode.cellMotion] unless [mouseMode] is set explicitly.
+  /// Use [MouseMode.allMotion] for passive hover behavior such as tooltips,
+  /// hover styling, and `MouseRegion` enter/exit callbacks that should fire
+  /// without a mouse button being held.
   final bool mouse;
 
   /// Mouse tracking mode (none, cell motion, all motion).
   ///
   /// Takes precedence over [mouse]. When not [MouseMode.none],
   /// mouse tracking is enabled according to the chosen mode.
+  ///
+  /// Use [MouseMode.cellMotion] for click/drag interactions where pointer
+  /// motion only matters while a button is pressed. Use [MouseMode.allMotion]
+  /// for passive hover interactions.
   final MouseMode mouseMode;
 
   /// Maximum frames per second for rendering.

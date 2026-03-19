@@ -150,7 +150,7 @@ final program = Program(
   MyModel(),
   options: ProgramOptions(
     altScreen: true,        // Use alternate screen buffer
-    mouse: true,            // Enable mouse tracking
+    mouseMode: MouseMode.allMotion, // Enable passive hover tracking
     fps: 60,                // Maximum frames per second
     frameTick: true,        // Auto-send FrameTickMsg
     hideCursor: true,       // Hide cursor during execution
@@ -185,6 +185,11 @@ await program.run();
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
 | `startupProbes` | `bool?` | `null` | Force startup probes on/off; `null` auto-runs only on built-in terminals |
+
+`mouse: true` alone enables `MouseMode.cellMotion`, which reports clicks,
+wheel input, and pointer motion while a button is pressed. Use
+`MouseMode.allMotion` for passive hover behavior such as tooltips and
+`MouseRegion` enter/exit callbacks.
 
 Convenience helpers are available on `ProgramOptions`:
 
@@ -445,7 +450,7 @@ await runProgram(
   MyModel(),
   options: const ProgramOptions(
     altScreen: true,
-    mouse: true,
+    mouseMode: MouseMode.allMotion,
   ),
 );
 ```

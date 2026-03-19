@@ -14,7 +14,7 @@ import 'widget_app.dart';
 /// Widget-friendly runtime defaults for [runWidgetApp] and [runArtisanalApp].
 ///
 /// These defaults mirror how most interactive widget examples are launched:
-/// fullscreen with mouse reporting enabled.
+/// fullscreen with passive hover-enabled mouse reporting.
 const runtime.ProgramOptions defaultWidgetProgramOptions =
     runtime.ProgramOptions(
   altScreen: true,
@@ -34,6 +34,10 @@ T _configureImageAutoMode<T extends WidgetApp>(
 ///
 /// Pass [options] to override the defaults, or [host] to target a custom
 /// terminal/backend such as a bridge, websocket, or embedded terminal.
+///
+/// The default options enable [runtime.MouseMode.allMotion], which is needed
+/// for passive hover behaviors such as tooltips, hover styling, and
+/// `MouseRegion` enter/exit callbacks.
 Future<void> runWidgetApp(
   WidgetApp app, {
   runtime.ProgramOptions? options,
