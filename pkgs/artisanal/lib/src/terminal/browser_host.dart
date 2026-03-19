@@ -235,7 +235,10 @@ final class BrowserTerminalHostServer {
     String foreground = '#e6edf3',
     String cursor = '#58a6ff',
     String selectionBackground = '#334155',
-  }) => '''
+  }) {
+    final reportedColorScheme = _prefersDarkColorScheme(background) ? 1 : 2;
+    final cssColorScheme = reportedColorScheme == 1 ? 'dark' : 'light';
+    return '''
 <!doctype html>
 <html lang="en">
   <head>
@@ -244,7 +247,7 @@ final class BrowserTerminalHostServer {
     <title>${_escapeHtml(title)}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
     <style>
-      :root { color-scheme: dark; }
+      :root { color-scheme: $cssColorScheme; }
       html, body {
         margin: 0;
         height: 100%;
@@ -312,6 +315,12 @@ final class BrowserTerminalHostServer {
 
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = wsProtocol + '//' + window.location.host + '$webSocketPath';
+      const requestColorScheme = '\\x1b[?996n';
+      const requestPrimaryDeviceAttributes = '\\x1b[?c';
+      const requestTerminalVersion = '\\x1b[>0q';
+      const reportedColorScheme = $reportedColorScheme;
+      const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
+      const reportedTerminalVersion = '\\x1bP>|xterm.js browser host\\x1b\\\\';
       endpointNode.textContent = wsUrl;
       const ws = new WebSocket(wsUrl);
 
@@ -319,6 +328,43 @@ final class BrowserTerminalHostServer {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(message));
         }
+      }
+
+      function stripAndReplyTerminalQueries(data) {
+        let remaining = data || '';
+        let visible = '';
+
+        while (remaining.length > 0) {
+          if (remaining.startsWith(requestColorScheme)) {
+            sendMessage({
+              type: 'input.text',
+              data: `\\x1b[?997;${reportedColorScheme}n`
+            });
+            remaining = remaining.slice(requestColorScheme.length);
+            continue;
+          }
+          if (remaining.startsWith(requestPrimaryDeviceAttributes)) {
+            sendMessage({
+              type: 'input.text',
+              data: reportedPrimaryDeviceAttributes
+            });
+            remaining = remaining.slice(requestPrimaryDeviceAttributes.length);
+            continue;
+          }
+          if (remaining.startsWith(requestTerminalVersion)) {
+            sendMessage({
+              type: 'input.text',
+              data: reportedTerminalVersion
+            });
+            remaining = remaining.slice(requestTerminalVersion.length);
+            continue;
+          }
+
+          visible += remaining[0];
+          remaining = remaining.slice(1);
+        }
+
+        return visible;
       }
 
       function sendResize() {
@@ -338,7 +384,10 @@ final class BrowserTerminalHostServer {
       ws.addEventListener('message', (event) => {
         const message = JSON.parse(event.data);
         if (message.type === 'output') {
-          term.write(message.data || '');
+          const renderable = stripAndReplyTerminalQueries(message.data || '');
+          if (renderable.length > 0) {
+            term.write(renderable);
+          }
           return;
         }
         if (message.type === 'shutdown') {
@@ -368,6 +417,7 @@ final class BrowserTerminalHostServer {
   </body>
 </html>
 ''';
+  }
 }
 
 String _normalizePath(String path, {bool allowRoot = false}) {
@@ -386,4 +436,27 @@ String _escapeHtml(String value) {
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#39;');
+}
+
+bool _prefersDarkColorScheme(String background) {
+  final normalized = background.trim();
+  final hex = switch (normalized.length) {
+    4 when normalized.startsWith('#') =>
+      '${normalized[1]}${normalized[1]}'
+      '${normalized[2]}${normalized[2]}'
+      '${normalized[3]}${normalized[3]}',
+    7 when normalized.startsWith('#') => normalized.substring(1),
+    _ => null,
+  };
+  if (hex == null) return true;
+
+  final red = int.tryParse(hex.substring(0, 2), radix: 16);
+  final green = int.tryParse(hex.substring(2, 4), radix: 16);
+  final blue = int.tryParse(hex.substring(4, 6), radix: 16);
+  if (red == null || green == null || blue == null) {
+    return true;
+  }
+
+  final luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
+  return luminance < 0.5;
 }

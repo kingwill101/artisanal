@@ -36,6 +36,7 @@
 
 ### Fixed
 
+- Taught the default browser host page to answer terminal color-scheme, DA1, and XTVERSION queries so hosted browser sessions can participate in startup probing and session-scoped capability detection without leaking those request sequences into visible output.
 - Reset cursor color overrides during terminal restore/cleanup paths and hardened startup background probing so the first rendered frame can reflect the probed terminal background.
 - Hardened the pre-render theme probe so the first rendered frame can also follow an explicit terminal light/dark color-scheme reply when OSC 11 background color is unavailable.
 - Added end-to-end runtime coverage for foreground and cursor color requests through the `Program` message path.

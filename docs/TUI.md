@@ -419,7 +419,10 @@ websocket demos:
 
 For a reusable server wrapper, use `BrowserTerminalHostServer.bind(...)` or
 `BrowserTerminalHostServer.serveProgram(...)`. These helpers serve the default
-xterm.js page and wire websocket sessions into your TUI runtime.
+xterm.js page and wire websocket sessions into your TUI runtime. The default
+page also answers the runtime's basic color-scheme, DA1, and XTVERSION queries
+so browser-backed sessions can participate in startup probing and session-based
+capability detection.
 
 ### Convenience Functions
 

@@ -6,7 +6,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('BrowserTerminalHostServer', () {
-    test('defaultPageHtml wires the websocket path', () {
+    test('defaultPageHtml wires the websocket path and query helpers', () {
       final html = BrowserTerminalHostServer.defaultPageHtml(
         title: 'Browser Test',
         webSocketPath: '/custom-ws',
@@ -16,6 +16,19 @@ void main() {
       expect(html, contains('/custom-ws'));
       expect(html, contains('convertEol: true'));
       expect(html, contains('@xterm/xterm'));
+      expect(html, contains('stripAndReplyTerminalQueries'));
+      expect(html, contains('xterm.js browser host'));
+      expect(html, contains('const reportedColorScheme = 1;'));
+    });
+
+    test('defaultPageHtml derives a light color scheme from a light background', () {
+      final html = BrowserTerminalHostServer.defaultPageHtml(
+        title: 'Light Browser Test',
+        webSocketPath: '/ws',
+        background: '#f8fafc',
+      );
+
+      expect(html, contains('const reportedColorScheme = 2;'));
     });
 
     test('bind serves the page and a 404 for unknown routes', () async {
