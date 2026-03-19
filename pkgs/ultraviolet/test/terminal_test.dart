@@ -152,6 +152,22 @@ void main() {
       await terminal.stop();
     });
 
+    test('receives cursor position reports', () async {
+      await terminal.start(handleSignals: false);
+      final cursorFuture = terminal.events
+          .where((e) => e is CursorPositionEvent)
+          .cast<CursorPositionEvent>()
+          .firstWhere((e) => e.x == 33 && e.y == 11);
+
+      inputController.add('\x1b[12;34R'.codeUnits);
+
+      final pos = await cursorFuture;
+      expect(pos.x, 33);
+      expect(pos.y, 11);
+
+      await terminal.stop();
+    });
+
     test('receives in-band terminal size reports and updates terminal size', () async {
       await terminal.start(handleSignals: false);
       final resizeFuture = terminal.events
@@ -173,6 +189,53 @@ void main() {
       expect(pixels.height, 660);
       expect(terminal.bounds().width, 120);
       expect(terminal.bounds().height, 33);
+
+      await terminal.stop();
+    });
+
+    test('receives ModifyOtherKeys reports', () async {
+      await terminal.start(handleSignals: false);
+      final reportFuture = terminal.events
+          .where((e) => e is ModifyOtherKeysEvent)
+          .cast<ModifyOtherKeysEvent>()
+          .firstWhere((e) => e.mode == 1);
+
+      inputController.add('\x1b[>4;1m'.codeUnits);
+
+      final report = await reportFuture;
+      expect(report.mode, 1);
+
+      await terminal.stop();
+    });
+
+    test('receives device attribute reports and updates capabilities', () async {
+      await terminal.start(handleSignals: false);
+      final primaryFuture = terminal.events
+          .where((e) => e is PrimaryDeviceAttributesEvent)
+          .cast<PrimaryDeviceAttributesEvent>()
+          .firstWhere((e) => e.attrs.length == 3 && e.attrs[1] == 4);
+      final secondaryFuture = terminal.events
+          .where((e) => e is SecondaryDeviceAttributesEvent)
+          .cast<SecondaryDeviceAttributesEvent>()
+          .firstWhere((e) => e.attrs.length == 3 && e.attrs[2] == 3);
+      final tertiaryFuture = terminal.events
+          .where((e) => e is TertiaryDeviceAttributesEvent)
+          .cast<TertiaryDeviceAttributesEvent>()
+          .firstWhere((e) => e.value == 'Chrm');
+
+      inputController.add('\x1b[?1;4;18c'.codeUnits);
+      inputController.add('\x1b[>1;2;3c'.codeUnits);
+      inputController.add('\x1bP!|4368726d\x1b\\'.codeUnits);
+
+      final primary = await primaryFuture;
+      final secondary = await secondaryFuture;
+      final tertiary = await tertiaryFuture;
+
+      expect(primary.attrs, [1, 4, 18]);
+      expect(secondary.attrs, [1, 2, 3]);
+      expect(tertiary.value, 'Chrm');
+      expect(terminal.capabilities.primaryAttributes, [1, 4, 18]);
+      expect(terminal.capabilities.hasSixel, isTrue);
 
       await terminal.stop();
     });
