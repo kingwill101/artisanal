@@ -41,7 +41,6 @@ class Tooltip extends StatefulWidget {
 class _TooltipState extends State<Tooltip> {
   bool _hovered = false;
   OverlayEntry? _floatingEntry;
-  bool _floatingSyncScheduled = false;
   ({int x, int y})? _lastPointer;
 
   void _setHovered(bool value, [MouseMsg? event]) {
@@ -110,16 +109,6 @@ class _TooltipState extends State<Tooltip> {
       TooltipPosition.below when !fitsBelow && fitsAbove => TooltipPosition.above,
       _ => preferred,
     };
-  }
-
-  void _scheduleFloatingSync() {
-    if (_floatingSyncScheduled || !mounted) return;
-    _floatingSyncScheduled = true;
-    scheduleMicrotask(() {
-      _floatingSyncScheduled = false;
-      if (!mounted) return;
-      _syncFloatingEntry();
-    });
   }
 
   Widget _buildBubble(BuildContext context) {
@@ -194,10 +183,7 @@ class _TooltipState extends State<Tooltip> {
       _removeFloatingEntry();
       return;
     }
-    if (_anchorGeometry() == null) {
-      _scheduleFloatingSync();
-      return;
-    }
+    if (_anchorGeometry() == null) return;
     _ensureFloatingEntry(overlayState);
   }
 
@@ -208,14 +194,6 @@ class _TooltipState extends State<Tooltip> {
       return Cmd.repaint();
     }
     return null;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.enabled && widget.show == true) {
-      _scheduleFloatingSync();
-    }
   }
 
   @override
@@ -272,8 +250,6 @@ class _TooltipState extends State<Tooltip> {
     if (overlayState != null) {
       if (_floatingEntry != null) {
         _floatingEntry!.markNeedsBuild();
-      } else {
-        _scheduleFloatingSync();
       }
       return target;
     }

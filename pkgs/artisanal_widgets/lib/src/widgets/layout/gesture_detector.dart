@@ -176,14 +176,13 @@ class _GestureDetectorState extends State<GestureDetector> {
     elementOf(widget)?.releaseMouse();
   }
 
-  void _setHovering(bool next, MouseMsg msg) {
-    if (_hovering == next) return;
+  Cmd? _setHovering(bool next, MouseMsg msg) {
+    if (_hovering == next) return null;
     _hovering = next;
     if (next) {
-      widget.onEnter?.call(msg);
-    } else {
-      widget.onExit?.call(msg);
+      return widget.onEnter?.call(msg);
     }
+    return widget.onExit?.call(msg);
   }
 
   /// Collects all pending commands from recognizers.
@@ -292,7 +291,8 @@ class _GestureDetectorState extends State<GestureDetector> {
 
       case MouseAction.motion:
         if (!_hovering) {
-          _setHovering(true, event);
+          final hoverCmd = _setHovering(true, event);
+          if (hoverCmd != null) cmds.add(hoverCmd);
         }
         // Feed pointer-move to active recognizers.
         _tap?.handlePointerMove(event, localPos);
@@ -383,6 +383,8 @@ class _GestureDetectorState extends State<GestureDetector> {
 
     // ---- Global mouse events (for captured drags, hover exit, etc.) ----
     if (msg is MouseMsg) {
+      final cmds = <Cmd>[];
+
       // If the mouse moved but hit-testing didn't deliver to us (we got the
       // raw broadcast instead of a HitTestMouseMsg), the pointer has left
       // our bounds → fire onExit.  But skip this if we already received a
@@ -394,15 +396,17 @@ class _GestureDetectorState extends State<GestureDetector> {
           _hitTestedThisFrame = false;
         } else {
           // No hit-test this frame — cursor left our bounds.
-          _setHovering(false, msg);
+          final hoverCmd = _setHovering(false, msg);
+          if (hoverCmd != null) cmds.add(hoverCmd);
         }
       } else {
         _hitTestedThisFrame = false;
       }
-      if (!widget.captureMouse) {
-        return null;
+      if (widget.captureMouse) {
+        final capturedCmd = _handleCapturedMouse(msg);
+        if (capturedCmd != null) cmds.add(capturedCmd);
       }
-      return _handleCapturedMouse(msg);
+      return _batchCmds(cmds);
     }
 
     return null;

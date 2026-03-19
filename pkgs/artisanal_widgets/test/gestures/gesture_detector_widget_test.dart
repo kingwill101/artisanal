@@ -475,6 +475,33 @@ void main() {
       tester.mouseMove(79, 23);
       expect(tester.find.text('not hovered'), isTrue);
     });
+
+    test('onEnter command is dispatched through the widget pipeline', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_HoverCmdWidget());
+
+      expect(tester.find.text('not hovered'), isTrue);
+
+      tester.mouseMove(0, 0);
+
+      expect(tester.find.text('hovered'), isTrue);
+    });
+
+    test('onExit command is dispatched through the widget pipeline', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_HoverCmdWidget());
+
+      tester.mouseMove(0, 0);
+      expect(tester.find.text('hovered'), isTrue);
+
+      tester.mouseMove(79, 23);
+
+      expect(tester.find.text('not hovered'), isTrue);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -1215,6 +1242,52 @@ class _HoverToggleState extends w.State<_HoverToggleWidget> {
               setState(() => _hovering = false);
               return null;
             },
+            child: w.Container(
+              width: 20,
+              height: 1,
+              child: w.Text(_hovering ? 'hovered' : 'not hovered'),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoverCmdMsg extends tui.Msg {
+  const _HoverCmdMsg(this.hovering);
+
+  final bool hovering;
+}
+
+class _HoverCmdWidget extends w.StatefulWidget {
+  @override
+  w.State createState() => _HoverCmdState();
+}
+
+class _HoverCmdState extends w.State<_HoverCmdWidget> {
+  bool _hovering = false;
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is _HoverCmdMsg) {
+      setState(() => _hovering = msg.hovering);
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Stack(
+      width: 80,
+      height: 24,
+      children: [
+        w.Positioned(
+          left: 0,
+          top: 0,
+          child: w.GestureDetector(
+            onEnter: (_) => tui.Cmd.message(const _HoverCmdMsg(true)),
+            onExit: (_) => tui.Cmd.message(const _HoverCmdMsg(false)),
             child: w.Container(
               width: 20,
               height: 1,
