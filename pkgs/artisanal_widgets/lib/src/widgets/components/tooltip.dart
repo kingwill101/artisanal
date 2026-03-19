@@ -198,6 +198,15 @@ class _TooltipState extends State<Tooltip> {
   }
 
   @override
+  Cmd? handleInit() {
+    if (widget.enabled && widget.show == true) {
+      _syncFloatingEntry();
+      return Cmd.repaint();
+    }
+    return null;
+  }
+
+  @override
   void initState() {
     super.initState();
     if (widget.enabled && widget.show == true) {
@@ -208,10 +217,22 @@ class _TooltipState extends State<Tooltip> {
   @override
   Cmd? didUpdateWidget(covariant Tooltip oldWidget) {
     super.didUpdateWidget(oldWidget);
+    final visibilityChanged =
+        oldWidget.enabled != widget.enabled || oldWidget.show != widget.show;
+    final appearanceChanged =
+        oldWidget.message != widget.message ||
+        oldWidget.position != widget.position ||
+        oldWidget.padding != widget.padding ||
+        oldWidget.background != widget.background ||
+        oldWidget.foreground != widget.foreground ||
+        oldWidget.textStyle != widget.textStyle;
     if (!widget.enabled || widget.show == false) {
       _removeFloatingEntry();
-    } else {
-      _syncFloatingEntry();
+      return visibilityChanged ? Cmd.repaint() : null;
+    }
+    _syncFloatingEntry();
+    if (visibilityChanged || (_floatingEntry != null && appearanceChanged)) {
+      return Cmd.repaint();
     }
     return null;
   }
@@ -231,11 +252,11 @@ class _TooltipState extends State<Tooltip> {
         ? MouseRegion(
             onEnter: (event) {
               _setHovered(true, event);
-              return null;
+              return Cmd.repaint();
             },
             onExit: (event) {
               _setHovered(false, event);
-              return null;
+              return Cmd.repaint();
             },
             child: widget.child,
           )
