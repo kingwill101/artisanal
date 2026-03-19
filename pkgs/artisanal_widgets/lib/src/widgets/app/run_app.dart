@@ -303,7 +303,7 @@ Future<hosts.BrowserTerminalHostServer> serveReloadableArtisanalAppInBrowser({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return serveArtisanalAppInBrowser(
@@ -348,7 +348,7 @@ Future<hosts.SocketTerminalHostServer> serveReloadableArtisanalAppOnSocket({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return serveArtisanalAppOnSocket(
@@ -399,7 +399,7 @@ Future<WatchedBrowserArtisanalAppHost> serveWatchedArtisanalAppInBrowser({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) async {
   final reloadController = controller ?? ReloadController();
@@ -470,7 +470,7 @@ Future<WatchedSocketArtisanalAppHost> serveWatchedArtisanalAppOnSocket({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) async {
   final reloadController = controller ?? ReloadController();
@@ -529,7 +529,7 @@ Future<hosts.BrowserTerminalHostServer> serveWidgetAppInBrowser({
   String webSocketPath = '/ws',
   String browserTitle = 'Artisanal Widget Host',
   String? pageHtml,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return hosts.BrowserTerminalHostServer.serveProgram(
@@ -556,7 +556,7 @@ Future<hosts.BrowserTerminalHostServer> serveArtisanalAppInBrowser({
   String webSocketPath = '/ws',
   String browserTitle = 'Artisanal Widget Host',
   String? pageHtml,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return hosts.BrowserTerminalHostServer.serveProgram(
@@ -584,7 +584,7 @@ Future<hosts.SocketTerminalHostServer> serveWidgetAppOnSocket({
   hosts.TerminalDimensions initialSize = const (width: 80, height: 24),
   bool supportsAnsi = true,
   ColorProfile colorProfile = ColorProfile.trueColor,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return hosts.SocketTerminalHostServer.serveProgram(
@@ -613,7 +613,7 @@ Future<hosts.SocketTerminalHostServer> serveArtisanalAppOnSocket({
   hosts.TerminalDimensions initialSize = const (width: 80, height: 24),
   bool supportsAnsi = true,
   ColorProfile colorProfile = ColorProfile.trueColor,
-  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
+  ImageAutoMode imageAutoMode = ImageAutoMode.sessionCapabilities,
   runtime.ProgramOptions? options,
 }) {
   return hosts.SocketTerminalHostServer.serveProgram(

@@ -250,6 +250,39 @@ void main() {
       expect(body, contains('Widget Browser Test'));
     });
 
+    test(
+      'serveWidgetAppInBrowser uses session capability image mode by default',
+      () async {
+        late w.WidgetApp app;
+        final server = await w.serveWidgetAppInBrowser(
+          port: 0,
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => app = w.WidgetApp(
+            w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        );
+
+        addTearDown(server.close);
+
+        final socket = await WebSocket.connect(server.webSocketUri.toString());
+        addTearDown(socket.close);
+
+        await socket.first.timeout(const Duration(seconds: 5));
+
+        expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
+      },
+    );
+
     test('serveWatchedArtisanalAppInBrowser watches files and serves the page', () async {
       final tempDir = await Directory.systemTemp.createTemp('watched-browser-app-');
       final host = await w.serveWatchedArtisanalAppInBrowser(
@@ -310,8 +343,9 @@ void main() {
     });
 
     test(
-      'serveArtisanalAppOnSocket uses portable image fallback by default',
+      'serveArtisanalAppOnSocket uses session capability image mode by default',
       () async {
+        late w.ArtisanalApp app;
         final server = await w.serveArtisanalAppOnSocket(
           port: 0,
           options: const runtime.ProgramOptions(
@@ -320,7 +354,7 @@ void main() {
             signalHandlers: false,
             frameTick: false,
           ),
-          appBuilder: () => w.ArtisanalApp(
+          appBuilder: () => app = w.ArtisanalApp(
             home: w.Image(
               image: w.MemoryImage(_encodeTestImage()),
               width: 2,
@@ -343,6 +377,7 @@ void main() {
           (output) => output.contains('▀'),
         );
 
+        expect(app.imageAutoMode, w.ImageAutoMode.sessionCapabilities);
         expect(output, contains('▀'));
         expect(output, isNot(contains('\x1b_G')));
         expect(output, isNot(contains('\x1b]1337;File=')));

@@ -44,8 +44,9 @@ Keep `package:artisanal_widgets/artisanal_widgets.dart` only when you
 explicitly want the broader experimental compatibility surface.
 
 Both the local runner helpers and the hosted browser/socket helpers accept an
-`imageAutoMode` override when you need to force portable half-block rendering
-or opt into richer terminal graphics behavior explicitly.
+`imageAutoMode` override. Hosted browser/socket runners now default
+`Image(renderMode: auto)` to session-driven capability detection, while
+`WidgetTester` keeps the portable half-block fallback for deterministic tests.
 
 ## Quick start
 

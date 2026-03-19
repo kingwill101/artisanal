@@ -56,11 +56,12 @@ available as the broader experimental compatibility surface.
 
 The local runner helpers (`runWidgetApp`, `runArtisanalApp`, watched/reloadable
 variants) and the hosted browser/socket helpers all accept an `imageAutoMode`
-override. Use that when you want to force portable half-block rendering or
-explicitly opt into richer terminal-graphics behavior. `ImageAutoMode.sessionCapabilities`
-lets `Image(renderMode: ImageRenderMode.auto)` follow terminal version and
-device-attribute reports from the active session instead of only the local
-process environment.
+override. Local runners keep the default environment-driven behavior. Hosted
+browser/socket runners now default to `ImageAutoMode.sessionCapabilities`, so
+`Image(renderMode: ImageRenderMode.auto)` can follow terminal version and
+device-attribute reports from the active remote session instead of only the
+server process environment. Override `imageAutoMode` when you want to force
+portable half-block rendering or another explicit mode.
 
 ```dart
 import 'package:artisanal_widgets/app.dart';
@@ -201,11 +202,10 @@ Use the browser host when you want an xterm.js-backed remote session, and the
 socket host when you want a raw TCP terminal stream managed by your own client.
 
 Hosted browser and socket runners default `Image(renderMode: ImageRenderMode.auto)`
-to a portable half-block fallback so a server-side Kitty/iTerm environment
-does not leak graphics-protocol choices into remote clients. Override
-`imageAutoMode` when the hosted surface can negotiate richer image protocols;
-use `ImageAutoMode.sessionCapabilities` when the remote terminal can answer
-device/version queries and you want `Image.auto` to follow those live hints.
+to `ImageAutoMode.sessionCapabilities`, so remote terminals can upgrade from
+portable half-block rendering when they answer device/version queries. Override
+`imageAutoMode` when the hosted surface should stay portable-only or when you
+need another explicit mode.
 
 `WidgetTester` uses the same portable fallback by default so widget tests stay
 deterministic regardless of the terminal they were launched from.
