@@ -146,34 +146,5 @@ class _FadeTintState extends State<FadeTint> with AnimationMixin {
 /// Returns a hex Color for the interpolated value. For terminal use,
 /// we convert to hex components and blend.
 Color _lerpColor(Color a, Color b, double t) {
-  if (t <= 0.0) return a;
-  if (t >= 1.0) return b;
-
-  final hexA = a.toHex();
-  final hexB = b.toHex();
-
-  // If either color doesn't have a hex representation, just snap.
-  if (hexA.isEmpty || hexB.isEmpty) return t < 0.5 ? a : b;
-
-  final normA = hexA.startsWith('#') ? hexA.substring(1) : hexA;
-  final normB = hexB.startsWith('#') ? hexB.substring(1) : hexB;
-
-  if (normA.length != 6 || normB.length != 6) return t < 0.5 ? a : b;
-
-  final rA = int.tryParse(normA.substring(0, 2), radix: 16) ?? 0;
-  final gA = int.tryParse(normA.substring(2, 4), radix: 16) ?? 0;
-  final bA = int.tryParse(normA.substring(4, 6), radix: 16) ?? 0;
-  final rB = int.tryParse(normB.substring(0, 2), radix: 16) ?? 0;
-  final gB = int.tryParse(normB.substring(2, 4), radix: 16) ?? 0;
-  final bB = int.tryParse(normB.substring(4, 6), radix: 16) ?? 0;
-
-  final r = (rA + (rB - rA) * t).round().clamp(0, 255);
-  final g = (gA + (gB - gA) * t).round().clamp(0, 255);
-  final blue = (bA + (bB - bA) * t).round().clamp(0, 255);
-
-  final hex =
-      '#${r.toRadixString(16).padLeft(2, '0')}'
-      '${g.toRadixString(16).padLeft(2, '0')}'
-      '${blue.toRadixString(16).padLeft(2, '0')}';
-  return Colors.hex(hex);
+  return blendColor(a, b, t, hasDarkBackground: hasDarkBackground);
 }
