@@ -10,6 +10,7 @@ import '../components/components_widgets.dart'
         DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
+import '../layout/layout_widgets.dart' show ImageAutoMode;
 import '../navigation/navigation.dart'
     show
         Navigator,
@@ -56,6 +57,7 @@ final class ArtisanalApp extends WidgetApp {
     this.darkTheme,
     this.themeMode = ThemeMode.system,
     this.themeBuilder,
+    ImageAutoMode imageAutoMode = ImageAutoMode.environment,
     this.child,
     this.home,
     this.routes,
@@ -110,12 +112,13 @@ final class ArtisanalApp extends WidgetApp {
            debugConsoleHeight: debugConsoleHeight,
          ),
          backgroundColorBuilder: () =>
-             _resolveArtisanalTheme(
+         _resolveArtisanalTheme(
                theme: theme,
                darkTheme: darkTheme,
                themeMode: themeMode,
                themeBuilder: themeBuilder,
              ).background,
+         imageAutoMode: imageAutoMode,
        );
 
   /// Terminal window title published via [View.windowTitle].

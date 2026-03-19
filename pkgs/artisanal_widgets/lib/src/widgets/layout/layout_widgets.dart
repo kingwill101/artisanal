@@ -14,6 +14,7 @@
 library;
 
 import 'dart:async';
+import 'dart:async' as dart_async;
 import 'dart:collection';
 import 'dart:io' show File, HttpClient, Platform;
 import 'dart:math' as math;

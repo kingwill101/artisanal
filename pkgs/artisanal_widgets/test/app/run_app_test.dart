@@ -1,9 +1,73 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
+
+Uint8List _encodeTestImage() {
+  final image = img.Image(width: 4, height: 4);
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      image.setPixelRgba(x, y, x * 50, y * 50, 180, 255);
+    }
+  }
+  return Uint8List.fromList(img.encodePng(image));
+}
+
+Future<String> _readSocketUntil(
+  Socket socket,
+  bool Function(String output) predicate, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  final buffer = StringBuffer();
+  final completer = Completer<String>();
+  late final StreamSubscription<List<int>> subscription;
+  Timer? timer;
+
+  void finish([Object? error]) {
+    timer?.cancel();
+    subscription.cancel();
+    if (error != null) {
+      if (!completer.isCompleted) {
+        completer.completeError(error);
+      }
+      return;
+    }
+    if (!completer.isCompleted) {
+      completer.complete(buffer.toString());
+    }
+  }
+
+  timer = Timer(timeout, () {
+    finish(
+      TimeoutException(
+        'Timed out waiting for socket output',
+        timeout,
+      ),
+    );
+  });
+
+  subscription = socket.listen(
+    (chunk) {
+      buffer.write(utf8.decode(chunk, allowMalformed: true));
+      if (predicate(buffer.toString())) {
+        finish();
+      }
+    },
+    onError: finish,
+    onDone: () => finish(),
+    cancelOnError: true,
+  );
+
+  return completer.future;
+}
+
+String _terminalOperationsText(tui.StringTerminal terminal) =>
+    terminal.operations.join('\n');
 
 void main() {
   group('runWidgetApp', () {
@@ -49,7 +113,10 @@ void main() {
         host: tui.ProgramHost.terminal(terminal),
       );
 
-      expect(terminal.operations, contains('setTitle(Run App Test)'));
+      expect(
+        _terminalOperationsText(terminal),
+        contains('write: \x1B]0;Run App Test\x07'),
+      );
     });
 
     test('captures print output into the debug console when enabled', () async {
@@ -85,7 +152,10 @@ void main() {
         homeBuilder: (context, revision) => _QuitOnInitWidget(),
       );
 
-      expect(terminal.operations, contains('setTitle(Reloadable App)'));
+      expect(
+        _terminalOperationsText(terminal),
+        contains('write: \x1B]0;Reloadable App\x07'),
+      );
     });
   });
 
@@ -123,7 +193,10 @@ void main() {
         homeBuilder: (context, revision) => _QuitOnInitWidget(),
       );
 
-      expect(terminal.operations, contains('setTitle(Watched App)'));
+      expect(
+        _terminalOperationsText(terminal),
+        contains('write: \x1B]0;Watched App\x07'),
+      );
     });
   });
 
@@ -207,6 +280,47 @@ void main() {
       expect(output, contains('ready'));
     });
 
+    test(
+      'serveArtisanalAppOnSocket uses portable image fallback by default',
+      () async {
+        final server = await w.serveArtisanalAppOnSocket(
+          port: 0,
+          options: const tui.ProgramOptions(
+            altScreen: false,
+            mouseMode: tui.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          appBuilder: () => w.ArtisanalApp(
+            home: w.Image(
+              image: w.MemoryImage(_encodeTestImage()),
+              width: 2,
+              height: 1,
+              renderMode: w.ImageRenderMode.auto,
+            ),
+          ),
+        );
+
+        addTearDown(server.close);
+
+        final socket = await Socket.connect(
+          server.server.address.address,
+          server.server.port,
+        );
+        addTearDown(socket.close);
+
+        final output = await _readSocketUntil(
+          socket,
+          (output) => output.contains('▀'),
+        );
+
+        expect(output, contains('▀'));
+        expect(output, isNot(contains('\x1b_G')));
+        expect(output, isNot(contains('\x1b]1337;File=')));
+        expect(output, isNot(contains('\x1bPq')));
+      },
+    );
+
     test('serveWatchedArtisanalAppOnSocket watches files and serves tcp output', () async {
       final tempDir = await Directory.systemTemp.createTemp('watched-socket-app-');
       final server = await w.serveWatchedArtisanalAppOnSocket(
@@ -241,6 +355,104 @@ void main() {
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
       expect(signal.mode, w.ReloadMode.reload);
     });
+
+    test('serveWatchedArtisanalAppOnSocket close(force: true) tears down clients', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'watched-socket-force-close-',
+      );
+      final host = await w.serveWatchedArtisanalAppOnSocket(
+        port: 0,
+        watchRoots: [tempDir.path],
+        options: const tui.ProgramOptions(
+          altScreen: false,
+          mouseMode: tui.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        homeBuilder: (context, revision) => _IdleWidget(),
+      );
+
+      addTearDown(() async {
+        await host.close(force: true);
+        await tempDir.delete(recursive: true);
+      });
+
+      final socket = await Socket.connect(
+        host.server.server.address.address,
+        host.server.server.port,
+      );
+
+      final firstOutput = Completer<void>();
+      final closed = Completer<void>();
+      late final StreamSubscription<List<int>> subscription;
+      subscription = socket.listen(
+        (_) {
+          if (!firstOutput.isCompleted) {
+            firstOutput.complete();
+          }
+        },
+        onDone: () {
+          if (!closed.isCompleted) {
+            closed.complete();
+          }
+        },
+      );
+      addTearDown(() async {
+        await subscription.cancel();
+        await socket.close();
+      });
+
+      await firstOutput.future.timeout(const Duration(seconds: 5));
+      await host.close(force: true);
+      await closed.future.timeout(const Duration(seconds: 5));
+    });
+
+    test('serveWatchedArtisanalAppInBrowser close(force: true) tears down clients', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'watched-browser-force-close-',
+      );
+      final host = await w.serveWatchedArtisanalAppInBrowser(
+        port: 0,
+        watchRoots: [tempDir.path],
+        options: const tui.ProgramOptions(
+          altScreen: false,
+          mouseMode: tui.MouseMode.none,
+          signalHandlers: false,
+          frameTick: false,
+        ),
+        homeBuilder: (context, revision) => _IdleWidget(),
+      );
+
+      addTearDown(() async {
+        await host.close(force: true);
+        await tempDir.delete(recursive: true);
+      });
+
+      final socket = await WebSocket.connect(host.server.webSocketUri.toString());
+      final firstOutput = Completer<void>();
+      final closed = Completer<void>();
+      late final StreamSubscription<dynamic> subscription;
+      subscription = socket.listen(
+        (_) {
+          if (!firstOutput.isCompleted) {
+            firstOutput.complete();
+          }
+        },
+        onDone: () {
+          if (!closed.isCompleted) {
+            closed.complete();
+          }
+        },
+      );
+      addTearDown(() async {
+        await subscription.cancel();
+        await socket.close();
+      });
+
+      await firstOutput.future.timeout(const Duration(seconds: 5));
+      await host.close(force: true);
+      await closed.future.timeout(const Duration(seconds: 5));
+    });
   });
 }
 
@@ -271,4 +483,9 @@ final class _PrintAndQuitWidgetState extends w.State<_PrintAndQuitWidget> {
 
   @override
   w.Widget build(w.BuildContext context) => w.Text('printed');
+}
+
+final class _IdleWidget extends w.StatelessWidget {
+  @override
+  w.Widget build(w.BuildContext context) => w.Text('idle');
 }

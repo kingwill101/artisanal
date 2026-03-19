@@ -173,6 +173,14 @@ final socketHost = await serveArtisanalAppOnSocket(
 Use the browser host when you want an xterm.js-backed remote session, and the
 socket host when you want a raw TCP terminal stream managed by your own client.
 
+Hosted browser and socket runners default `Image(renderMode: ImageRenderMode.auto)`
+to a portable half-block fallback so a server-side Kitty/iTerm environment
+does not leak graphics-protocol choices into remote clients. Override
+`imageAutoMode` when the hosted surface can negotiate richer image protocols.
+
+`WidgetTester` uses the same portable fallback by default so widget tests stay
+deterministic regardless of the terminal they were launched from.
+
 When using `ArtisanalApp` with a `DebugConsoleController`, you can also opt
 into automatic `print()` and uncaught zone error capture:
 
@@ -262,6 +270,10 @@ To expose the same reload flow through the browser host, use
 `serveWatchedArtisanalAppInBrowser(...)`. See
 [`pkgs/artisanal_widgets/example/browser_host/main.dart`](../pkgs/artisanal_widgets/example/browser_host/main.dart)
 for a complete example.
+
+The watched browser/socket host wrappers also expose `close(force: true)` when
+you need to tear down active remote sessions immediately during test cleanup or
+development restarts.
 
 If you want manual control over when reloads happen, use the app-shell helper
 without a watcher:

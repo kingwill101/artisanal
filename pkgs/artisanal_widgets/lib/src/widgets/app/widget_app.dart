@@ -34,6 +34,7 @@ import '../core/element.dart'
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
+import '../layout/layout_widgets.dart' show ImageAutoMode, withImageAutoMode;
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
@@ -59,6 +60,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     this.root, {
     this.backgroundColor,
     this.backgroundColorBuilder,
+    ImageAutoMode imageAutoMode = ImageAutoMode.environment,
     this.scanZones = false,
     this.useHitTesting = true,
     this.handleFrameTick = false,
@@ -68,6 +70,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     this.debugOverlayPosition = DebugOverlayPosition.topRight,
     bool debugRebuilds = false,
   }) : _mediaQueryData = MediaQueryData.zero,
+       _imageAutoMode = imageAutoMode,
        _debugOverlayEnabled = debugOverlay,
        _metricsHolder = RenderMetricsHolder() {
     _tree = ElementTree(
@@ -103,6 +106,17 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// via an in-app theme picker). If provided, this value takes precedence
   /// over [backgroundColor] and is applied to the returned [View] each frame.
   final Color? Function()? backgroundColorBuilder;
+
+  ImageAutoMode get imageAutoMode => _imageAutoMode;
+  ImageAutoMode _imageAutoMode;
+
+  set imageAutoMode(ImageAutoMode value) {
+    if (_imageAutoMode == value) return;
+    _imageAutoMode = value;
+    _cachedView = null;
+    _cachedViewObject = null;
+    _dirty = true;
+  }
 
   /// Legacy no-op compatibility flag.
   ///
@@ -477,7 +491,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     } else {
       final Stopwatch? sw = TuiTrace.enabled ? Stopwatch() : null;
       sw?.start();
-      baseContent = _tree.render();
+      baseContent = withImageAutoMode(imageAutoMode, _tree.render);
       sw?.stop();
       if (sw != null) {
         TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');

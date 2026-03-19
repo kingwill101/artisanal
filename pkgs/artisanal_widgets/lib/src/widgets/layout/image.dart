@@ -148,6 +148,15 @@ enum ImageRenderMode {
   unicodeBlocks,
 }
 
+/// Controls how [ImageRenderMode.auto] chooses a rendering backend.
+enum ImageAutoMode {
+  /// Use UV terminal capability hints derived from the local environment.
+  environment,
+
+  /// Force the portable half-block fallback for remote or embedded hosts.
+  portableFallback,
+}
+
 /// A widget that displays an image in the terminal.
 ///
 /// By default, [renderMode] preserves the current half-block rendering path for
@@ -414,16 +423,39 @@ Drawable _bestDrawableFromCapabilities(
   required int columns,
   required int rows,
 }) {
-  return switch (_widgetImageCapabilities) {
-    TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
-      KittyImageDrawable(image, columns: columns, rows: rows),
-    TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
-      ITerm2ImageDrawable(image, columns: columns, rows: rows),
-    TerminalCapabilities(:final hasSixel) when hasSixel =>
-      SixelImageDrawable(image, columns: columns, rows: rows),
-    _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
+  return switch (_currentImageAutoMode) {
+    ImageAutoMode.portableFallback => HalfBlockImageDrawable(
+      image,
+      columns: columns,
+      rows: rows,
+    ),
+    ImageAutoMode.environment => switch (_widgetImageCapabilities) {
+      TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
+        KittyImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
+        ITerm2ImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasSixel) when hasSixel =>
+        SixelImageDrawable(image, columns: columns, rows: rows),
+      _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
+    },
   };
 }
+
+T withImageAutoMode<T>(ImageAutoMode mode, T Function() callback) {
+  if (_currentImageAutoMode == mode) {
+    return callback();
+  }
+  return dart_async.runZoned(
+    callback,
+    zoneValues: <Object?, Object?>{_imageAutoModeZoneKey: mode},
+  );
+}
+
+ImageAutoMode get _currentImageAutoMode =>
+    dart_async.Zone.current[_imageAutoModeZoneKey] as ImageAutoMode? ??
+    ImageAutoMode.environment;
+
+const Symbol _imageAutoModeZoneKey = #artisanal_widgets_imageAutoMode;
 
 final TerminalCapabilities _widgetImageCapabilities = TerminalCapabilities(
   env: Platform.environment.entries

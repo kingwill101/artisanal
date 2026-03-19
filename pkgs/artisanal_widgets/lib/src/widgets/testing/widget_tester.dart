@@ -55,6 +55,7 @@ import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
 import '../core/key.dart' show Key;
 import '../core/element.dart' show HitTestElementEntry, Element;
+import '../layout/layout_widgets.dart' show ImageAutoMode;
 import '../rendering/render_object.dart' show RenderObject;
 
 // ---------------------------------------------------------------------------
@@ -392,6 +393,7 @@ class WidgetTester {
     bool useHitTesting = true,
     bool debugOverlay = false,
     DebugOverlayPosition? debugOverlayPosition,
+    ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
     int? width,
     int? height,
   }) async {
@@ -403,6 +405,7 @@ class WidgetTester {
       scanZones: scanZones,
       useHitTesting: useHitTesting,
       debugOverlay: debugOverlay,
+      imageAutoMode: imageAutoMode,
       debugOverlayPosition:
           debugOverlayPosition ?? DebugOverlayPosition.topRight,
     );

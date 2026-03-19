@@ -119,4 +119,45 @@ void main() {
     await _pumpUntil(tester, () => tester.view.contains('▀'));
     expect(tester.view, contains('▀'));
   });
+
+  test('auto render mode can be scoped to portable fallback', () async {
+    final tester = WidgetTester();
+    addTearDown(() => tester.dispose());
+
+    await tester.pumpWidget(
+      w.Image(
+        image: w.MemoryImage(_encodeTestImage()),
+        width: 2,
+        height: 1,
+        renderMode: w.ImageRenderMode.auto,
+      ),
+      imageAutoMode: w.ImageAutoMode.portableFallback,
+    );
+
+    await _pumpUntil(tester, () => tester.view.contains('▀'));
+    expect(tester.view, contains('▀'));
+    expect(tester.view, isNot(contains('\x1b_G')));
+    expect(tester.view, isNot(contains('\x1b]1337;File=')));
+    expect(tester.view, isNot(contains('\x1bPq')));
+  });
+
+  test('WidgetTester defaults auto render mode to portable fallback', () async {
+    final tester = WidgetTester();
+    addTearDown(() => tester.dispose());
+
+    await tester.pumpWidget(
+      w.Image(
+        image: w.MemoryImage(_encodeTestImage()),
+        width: 2,
+        height: 1,
+        renderMode: w.ImageRenderMode.auto,
+      ),
+    );
+
+    await _pumpUntil(tester, () => tester.view.contains('▀'));
+    expect(tester.view, contains('▀'));
+    expect(tester.view, isNot(contains('\x1b_G')));
+    expect(tester.view, isNot(contains('\x1b]1337;File=')));
+    expect(tester.view, isNot(contains('\x1bPq')));
+  });
 }

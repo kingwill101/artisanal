@@ -6,6 +6,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'artisanal_app.dart';
 import 'reload.dart';
 import 'reload_watcher.dart';
+import '../layout/layout_widgets.dart' show ImageAutoMode;
 import '../theme/theme.dart';
 import 'widget_app.dart';
 
@@ -17,6 +18,14 @@ const tui.ProgramOptions defaultWidgetProgramOptions = tui.ProgramOptions(
   altScreen: true,
   mouseMode: tui.MouseMode.allMotion,
 );
+
+T _configureHostedImageAutoMode<T extends WidgetApp>(
+  T app, {
+  required ImageAutoMode imageAutoMode,
+}) {
+  app.imageAutoMode = imageAutoMode;
+  return app;
+}
 
 /// Runs a [WidgetApp] with widget-oriented runtime defaults.
 ///
@@ -121,8 +130,11 @@ final class WatchedSocketArtisanalAppHost {
   final bool _ownsController;
 
   /// Closes the host server and releases any owned reload resources.
-  Future<void> close() async {
-    await server.close();
+  ///
+  /// When [force] is `true`, active socket sessions are terminated immediately
+  /// before watcher/controller disposal continues.
+  Future<void> close({bool force = false}) async {
+    await server.close(force: force);
     await watcher?.dispose();
     if (_ownsController) {
       await controller.dispose();
@@ -278,6 +290,7 @@ Future<tui.BrowserTerminalHostServer> serveReloadableArtisanalAppInBrowser({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return serveArtisanalAppInBrowser(
@@ -294,6 +307,7 @@ Future<tui.BrowserTerminalHostServer> serveReloadableArtisanalAppInBrowser({
       darkTheme: darkTheme,
       themeMode: themeMode,
       themeBuilder: themeBuilder,
+      imageAutoMode: imageAutoMode,
       home: ReloadHost(
         controller: controller,
         builder: homeBuilder,
@@ -321,6 +335,7 @@ Future<tui.SocketTerminalHostServer> serveReloadableArtisanalAppOnSocket({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return serveArtisanalAppOnSocket(
@@ -338,6 +353,7 @@ Future<tui.SocketTerminalHostServer> serveReloadableArtisanalAppOnSocket({
       darkTheme: darkTheme,
       themeMode: themeMode,
       themeBuilder: themeBuilder,
+      imageAutoMode: imageAutoMode,
       home: ReloadHost(
         controller: controller,
         builder: homeBuilder,
@@ -370,6 +386,7 @@ Future<WatchedBrowserArtisanalAppHost> serveWatchedArtisanalAppInBrowser({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) async {
   final reloadController = controller ?? ReloadController();
@@ -399,6 +416,7 @@ Future<WatchedBrowserArtisanalAppHost> serveWatchedArtisanalAppInBrowser({
       darkTheme: darkTheme,
       themeMode: themeMode,
       themeBuilder: themeBuilder,
+      imageAutoMode: imageAutoMode,
       options: options,
     );
 
@@ -439,6 +457,7 @@ Future<WatchedSocketArtisanalAppHost> serveWatchedArtisanalAppOnSocket({
   Theme? darkTheme,
   ThemeMode themeMode = ThemeMode.system,
   Theme Function()? themeBuilder,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) async {
   final reloadController = controller ?? ReloadController();
@@ -469,6 +488,7 @@ Future<WatchedSocketArtisanalAppHost> serveWatchedArtisanalAppOnSocket({
       darkTheme: darkTheme,
       themeMode: themeMode,
       themeBuilder: themeBuilder,
+      imageAutoMode: imageAutoMode,
       options: options,
     );
 
@@ -496,6 +516,7 @@ Future<tui.BrowserTerminalHostServer> serveWidgetAppInBrowser({
   String webSocketPath = '/ws',
   String browserTitle = 'Artisanal Widget Host',
   String? pageHtml,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return tui.BrowserTerminalHostServer.serveProgram(
@@ -505,7 +526,10 @@ Future<tui.BrowserTerminalHostServer> serveWidgetAppInBrowser({
     webSocketPath: webSocketPath,
     title: browserTitle,
     pageHtml: pageHtml,
-    modelBuilder: appBuilder,
+    modelBuilder: () => _configureHostedImageAutoMode(
+      appBuilder(),
+      imageAutoMode: imageAutoMode,
+    ),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -519,6 +543,7 @@ Future<tui.BrowserTerminalHostServer> serveArtisanalAppInBrowser({
   String webSocketPath = '/ws',
   String browserTitle = 'Artisanal Widget Host',
   String? pageHtml,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return tui.BrowserTerminalHostServer.serveProgram(
@@ -528,7 +553,10 @@ Future<tui.BrowserTerminalHostServer> serveArtisanalAppInBrowser({
     webSocketPath: webSocketPath,
     title: browserTitle,
     pageHtml: pageHtml,
-    modelBuilder: appBuilder,
+    modelBuilder: () => _configureHostedImageAutoMode(
+      appBuilder(),
+      imageAutoMode: imageAutoMode,
+    ),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -543,6 +571,7 @@ Future<tui.SocketTerminalHostServer> serveWidgetAppOnSocket({
   tui.TerminalDimensions initialSize = const (width: 80, height: 24),
   bool supportsAnsi = true,
   ColorProfile colorProfile = ColorProfile.trueColor,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return tui.SocketTerminalHostServer.serveProgram(
@@ -553,7 +582,10 @@ Future<tui.SocketTerminalHostServer> serveWidgetAppOnSocket({
     initialSize: initialSize,
     supportsAnsi: supportsAnsi,
     colorProfile: colorProfile,
-    modelBuilder: appBuilder,
+    modelBuilder: () => _configureHostedImageAutoMode(
+      appBuilder(),
+      imageAutoMode: imageAutoMode,
+    ),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -568,6 +600,7 @@ Future<tui.SocketTerminalHostServer> serveArtisanalAppOnSocket({
   tui.TerminalDimensions initialSize = const (width: 80, height: 24),
   bool supportsAnsi = true,
   ColorProfile colorProfile = ColorProfile.trueColor,
+  ImageAutoMode imageAutoMode = ImageAutoMode.portableFallback,
   tui.ProgramOptions? options,
 }) {
   return tui.SocketTerminalHostServer.serveProgram(
@@ -578,7 +611,10 @@ Future<tui.SocketTerminalHostServer> serveArtisanalAppOnSocket({
     initialSize: initialSize,
     supportsAnsi: supportsAnsi,
     colorProfile: colorProfile,
-    modelBuilder: appBuilder,
+    modelBuilder: () => _configureHostedImageAutoMode(
+      appBuilder(),
+      imageAutoMode: imageAutoMode,
+    ),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
