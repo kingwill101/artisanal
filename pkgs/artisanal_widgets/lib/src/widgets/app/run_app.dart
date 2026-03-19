@@ -36,7 +36,7 @@ Future<void> runWidgetApp(
 
 /// Runs an [ArtisanalApp] with widget-oriented runtime defaults.
 ///
-/// When [options.startupTitle] is not provided, the app shell [ArtisanalApp.title]
+/// When `ProgramOptions.startupTitle` is not provided, the app shell [ArtisanalApp.title]
 /// is also published as the startup title so hosts that react before the first
 /// render still get a sensible window label.
 Future<void> runArtisanalApp(
@@ -130,7 +130,7 @@ final class WatchedSocketArtisanalAppHost {
   }
 }
 
-/// Runs an [ArtisanalApp] with a reloadable [home] widget.
+/// Runs an [ArtisanalApp] with a reloadable `home` widget.
 ///
 /// This is the app-shell equivalent of [runReloadableWidgetApp]. It keeps the
 /// `ArtisanalApp` conveniences such as title propagation, theming, and the
@@ -207,7 +207,7 @@ Future<void> runWatchedWidgetApp(
   }
 }
 
-/// Runs an [ArtisanalApp] with a watched, reloadable [home] widget.
+/// Runs an [ArtisanalApp] with a watched, reloadable `home` widget.
 ///
 /// This uses [ReloadHost] under the hood and automatically disposes the
 /// watcher and controller when the program exits.

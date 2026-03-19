@@ -25,10 +25,7 @@
 ///   statusBarTheme: StatusBarThemeData(background: myColor),
 /// ));
 /// ```
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/style.dart';
 import '../layout/layout_widgets.dart' show EdgeInsets;

@@ -1,8 +1,5 @@
 /// High-level app shell for artisanal widgets.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart' show View;
 

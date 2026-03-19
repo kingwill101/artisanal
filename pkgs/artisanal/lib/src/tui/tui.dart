@@ -300,9 +300,8 @@ export 'zone/zone.dart'
 export 'trace.dart'
     show TuiTrace, TraceTag, TraceSpan, TraceEventType, TraceEventRecord;
 
-// Experimental widget system for composable components.
+// Stable high-level widget system for composable components.
 //
 // This keeps `package:artisanal/tui.dart` backward-compatible while routing
-// consumers through the package-level experimental widgets entrypoint.
-// ignore: experimental_member_use
+// consumers through the package-level stabilized widget entrypoint.
 export '../../widgets.dart' hide Key, LocalKey, UniqueKey, ValueKey;

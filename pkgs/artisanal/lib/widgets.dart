@@ -1,10 +1,6 @@
-/// Widget system for composable TUI components.
+/// Stable high-level widget API for composable terminal UIs.
 ///
-/// This library re-exports the widget API from the `artisanal_widgets` package
-/// for backward compatibility.
-@experimental
+/// This library re-exports the stabilized widget surface from
+/// `package:artisanal_widgets/widgets.dart`.
 library;
-
-import 'package:meta/meta.dart' show experimental;
-
-export 'package:artisanal_widgets/artisanal_widgets.dart';
+export 'package:artisanal_widgets/widgets.dart';

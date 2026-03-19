@@ -1,10 +1,7 @@
 /// Pop behavior configuration for the navigation system.
 ///
 /// Configures which keyboard keys trigger a pop action in the navigator.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart' show KeyMsg;
 import 'package:artisanal/terminal.dart' show KeyType;

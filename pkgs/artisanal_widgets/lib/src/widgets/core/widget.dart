@@ -21,10 +21,9 @@
 ///   }
 /// }
 /// ```
-@experimental
 library;
 
-import 'package:meta/meta.dart' show experimental, protected;
+import 'package:meta/meta.dart' show protected;
 
 import 'package:artisanal/tui.dart' show Model, Msg, Cmd, BackgroundColorMsg;
 import 'key.dart';

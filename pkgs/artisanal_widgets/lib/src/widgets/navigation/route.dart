@@ -2,13 +2,11 @@
 ///
 /// Provides the route hierarchy: [Route] (abstract base), [PageRoute] (full-screen),
 /// and [ModalRoute] (dialog/modal overlay with barrier).
-@experimental
 library;
 
 import 'dart:async' show Completer;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:meta/meta.dart' show experimental;
 
 import '../components/components_widgets.dart'
     show CmdCallback, FadeModalBarrier;

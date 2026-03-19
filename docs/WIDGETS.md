@@ -104,7 +104,7 @@ abstract class Widget implements Model {
 Use widget keys to preserve identity (and to derive zone IDs automatically):
 
 ```dart
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal_widgets/widgets.dart' as w;
 
 w.Text('Title', key: const w.Key('title'))
 ```
@@ -1614,8 +1614,10 @@ Container(
 ## Components Widgets
 
 Higher-level widgets built from layout primitives. These are exported from
-`package:artisanal_widgets/artisanal_widgets.dart` (and re-exported by
-`package:artisanal/tui.dart`).
+the stable `package:artisanal_widgets/widgets.dart` entrypoint (and re-exported
+by `package:artisanal/tui.dart`). The older
+`package:artisanal_widgets/artisanal_widgets.dart` import remains available as
+the broader experimental compatibility surface.
 
 **Naming note:** `AlertBox`, `PanelBox`, and `ListTile` are used to avoid
 collisions with bubbles components that expose `Alert`, `Panel`, and `ListItem`.

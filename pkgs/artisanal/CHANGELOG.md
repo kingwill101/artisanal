@@ -18,6 +18,7 @@
 
 ### Changed
 
+- `package:artisanal/widgets.dart` now re-exports the stabilized `package:artisanal_widgets/widgets.dart` surface instead of the broader experimental compatibility entrypoint.
 - Made `Program` treat view-scoped terminal metadata declaratively, resetting colors, progress bars, focus reporting, bracketed paste, mouse mode, and kitty keyboard enhancements when later frames stop requesting them.
 - Made `Program` reset view-scoped window titles and cursor styling declaratively, falling back to `startupTitle` when later frames drop a title override and restoring the default cursor shape when cursor metadata clears.
 

@@ -1,7 +1,4 @@
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart'
     show

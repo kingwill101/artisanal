@@ -2,10 +2,7 @@
 ///
 /// Provides an abstract [NavigatorObserver] that can be subclassed to
 /// listen for route push, pop, remove, and replace events.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'route.dart';
 

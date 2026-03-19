@@ -19,10 +19,7 @@
 /// // Pop back
 /// Navigator.of(context).pop();
 /// ```
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 export 'navigator.dart';
 export 'navigator_observer.dart';

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:artisanal/src/style/color.dart';
-import 'package:artisanal/src/terminal/terminal_base.dart' show RawModeGuard;
 import 'package:artisanal/tui.dart';
 import 'package:test/test.dart';
 

@@ -2,10 +2,7 @@
 ///
 /// Provides a simplified overlay system for managing floating content
 /// such as dropdowns, tooltips, popups, and navigation route layers.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';

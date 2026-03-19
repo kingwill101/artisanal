@@ -1,7 +1,4 @@
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import '../core/framework.dart' show BuildContext, InheritedWidget;
 import '../layout/geometry.dart' show Size;

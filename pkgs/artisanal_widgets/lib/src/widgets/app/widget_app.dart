@@ -1,10 +1,7 @@
 /// WidgetApp integrates widgets with the TUI program loop.
-@experimental
 library;
 
 import 'dart:collection';
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart'
     show

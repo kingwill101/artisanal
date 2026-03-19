@@ -2,14 +2,12 @@
 ///
 /// Provides a Flutter-like navigation system adapted for the TEA
 /// (The Elm Architecture) message-passing model used by artisanal_widgets.
-@experimental
 library;
 
 import 'dart:async' show Completer;
 
 import 'package:artisanal/tui.dart' show Cmd, Msg, KeyMsg;
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:meta/meta.dart' show experimental;
 
 import '../components/overlay.dart';
 import '../core/framework.dart' show BuildContext, State, StatefulWidget;

@@ -1,10 +1,7 @@
 /// Route settings for the navigation system.
 ///
 /// Provides metadata associated with a route, including its name and arguments.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 /// Immutable route metadata.
 ///

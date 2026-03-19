@@ -1,8 +1,5 @@
 /// Geometry primitives for widget layout.
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
 

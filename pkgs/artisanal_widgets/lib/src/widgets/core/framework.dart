@@ -1,8 +1,7 @@
 /// Flutter-style widget framework primitives.
-@experimental
 library;
 
-import 'package:meta/meta.dart' show experimental, internal, mustCallSuper;
+import 'package:meta/meta.dart' show internal, mustCallSuper;
 
 import 'package:artisanal/tui.dart' show Cmd, Msg;
 import 'widget.dart';

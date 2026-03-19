@@ -11,10 +11,7 @@
 ///   ],
 /// )
 /// ```
-@experimental
 library;
-
-import 'package:meta/meta.dart' show experimental;
 
 import 'dart:async';
 import 'dart:collection';

@@ -1,10 +1,9 @@
 /// Keys for widget identity.
 ///
 /// Borrowed from Flutter's `foundation/key.dart`, trimmed for TUI use.
-@experimental
 library;
 
-import 'package:meta/meta.dart' show immutable, experimental, protected;
+import 'package:meta/meta.dart' show immutable, protected;
 
 /// A [Key] is an identifier for [Widget]s.
 ///
@@ -19,7 +18,7 @@ abstract class Key {
   const Key.empty();
 }
 
-/// A key that is not a [GlobalKey].
+/// A key that is scoped to local widget identity only.
 abstract class LocalKey extends Key {
   /// Abstract const constructor for subclasses.
   const LocalKey() : super.empty();

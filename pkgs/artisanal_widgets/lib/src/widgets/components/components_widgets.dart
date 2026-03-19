@@ -2,7 +2,6 @@
 ///
 /// This library groups reusable UI components such as cards, buttons,
 /// overlays, command palette utilities, and the git diff viewer.
-@experimental
 library;
 
 import 'dart:async';
@@ -15,7 +14,6 @@ import 'package:artisanal/markdown.dart'
         AnsiRendererOptions,
         ChromaTheme,
         highlightCodeString;
-import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
 
@@ -41,6 +39,9 @@ import 'package:artisanal/tui.dart'
         RenderMetrics,
         RenderMetricsMsg,
         every;
+import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
+import '../core/element.dart' show Element, elementOf;
+import '../rendering/render_object.dart' show RenderObject;
 export 'package:artisanal/bubbles.dart'
     show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
 
