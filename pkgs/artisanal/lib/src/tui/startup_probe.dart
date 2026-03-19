@@ -109,6 +109,12 @@ final class StartupProbeRunner {
     }
   }
 
+  /// Aborts the currently active probe, if any.
+  void abort() {
+    _aborted = true;
+    _active?.abort();
+  }
+
   static bool _isCritical(Msg msg) =>
       msg is QuitMsg ||
       msg is InterruptMsg ||

@@ -3253,6 +3253,7 @@ class Program<M extends Model> {
   void _quit() {
     if (!_running) return;
     _running = false; // Stop accepting new messages immediately
+    _startupProbes?.abort();
     _messageQueue.clear(); // Clear any pending messages
     final completer = _runCompleter;
     if (completer == null || completer.isCompleted) return;
@@ -3289,6 +3290,7 @@ class Program<M extends Model> {
     if (!_running) return;
     _killed = true;
     _running = false; // Stop accepting new messages immediately
+    _startupProbes?.abort();
     _messageQueue.clear(); // Clear any pending messages
     final completer = _runCompleter;
     if (completer == null || completer.isCompleted) return;

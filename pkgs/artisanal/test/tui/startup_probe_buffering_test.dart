@@ -313,6 +313,20 @@ void main() {
     expect(probe.isActive, isFalse);
   });
 
+  test('StartupProbeRunner can be aborted directly', () async {
+    final started = Completer<void>();
+    final probe = _GatingProbe(started);
+    final runner = StartupProbeRunner([probe]);
+    final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+    final runAll = runner.runAll(ctx);
+    await started.future;
+
+    runner.abort();
+    await runAll.timeout(const Duration(seconds: 1));
+    expect(probe.isActive, isFalse);
+  });
+
   test('StartupProbeRunner does not start later probes after abort', () async {
     final started = Completer<void>();
     final probe = _GatingProbe(started);

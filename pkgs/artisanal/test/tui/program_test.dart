@@ -4664,6 +4664,49 @@ Future<void> main() async {
     );
 
     test(
+      'kill during pre-render startup probing aborts later probes and skips first render',
+      () async {
+        late Program<_CallbackModel> program;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(program.kill);
+            }
+          },
+        );
+
+        var rendered = false;
+        final model = _CallbackModel(
+          onView: () {
+            rendered = true;
+            return 'should not render';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+        expect(rendered, isFalse);
+        expect(program.wasKilled, isTrue);
+      },
+    );
+
+    test(
       'backend shutdown during post-render emoji probing skips the forced repaint',
       () async {
         late final EmbeddedTerminalBackend backend;
@@ -4698,6 +4741,47 @@ Future<void> main() async {
 
         expect(shutdownRequested, isTrue);
         expect(renderCount, 1);
+      },
+    );
+
+    test(
+      'kill during post-render emoji probing skips the forced repaint',
+      () async {
+        late Program<_CallbackModel> program;
+        var renderCount = 0;
+        var killScheduled = false;
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (!killScheduled && data == Ansi.requestExtendedCursorPosition) {
+              killScheduled = true;
+              scheduleMicrotask(program.kill);
+            }
+          },
+        );
+
+        final model = _CallbackModel(
+          onView: () {
+            renderCount++;
+            return 'render #$renderCount';
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
+
+        await program.run();
+
+        expect(killScheduled, isTrue);
+        expect(renderCount, 1);
+        expect(program.wasKilled, isTrue);
       },
     );
   });
