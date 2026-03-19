@@ -52,6 +52,14 @@ void main() {
       expect(html, contains(r"const oscBell = '\x07';"));
       expect(html, contains(r"const requestPrivateModePrefix = '\x1b[?';"));
       expect(html, contains(r"const requestModeSuffix = '$p';"));
+      expect(html, contains(r"const enableMouseNormal = '\x1b[?1000h';"));
+      expect(html, contains(r"const disableMouseNormal = '\x1b[?1000l';"));
+      expect(html, contains(r"const enableMouseButton = '\x1b[?1002h';"));
+      expect(html, contains(r"const disableMouseButton = '\x1b[?1002l';"));
+      expect(html, contains(r"const enableMouseAny = '\x1b[?1003h';"));
+      expect(html, contains(r"const disableMouseAny = '\x1b[?1003l';"));
+      expect(html, contains(r"const enableMouseSgr = '\x1b[?1006h';"));
+      expect(html, contains(r"const disableMouseSgr = '\x1b[?1006l';"));
       expect(html, contains(r"const reportedSecondaryDeviceAttributes = '\x1b[>0;0;0c';"));
       expect(
         html,
@@ -109,7 +117,15 @@ void main() {
       expect(html, contains('const reply = oscColorReply(12, currentCursor);'));
       expect(html, contains('document.documentElement.style.colorScheme ='));
       expect(html, contains('case 1004:'));
+      expect(html, contains('case 1000:'));
+      expect(html, contains('case 1002:'));
+      expect(html, contains('case 1003:'));
+      expect(html, contains('case 1006:'));
       expect(html, contains('case 2004:'));
+      expect(html, contains('mouseNormalEnabled = true;'));
+      expect(html, contains('mouseButtonEnabled = true;'));
+      expect(html, contains('mouseAnyEnabled = true;'));
+      expect(html, contains('mouseSgrEnabled = true;'));
       expect(html, contains(r"`\x1b[?${modeReport.mode};${modeReportValue(modeReport.mode)}$y`"));
       expect(html, contains("data: cursorPositionReport(false)"));
       expect(html, contains("data: cursorPositionReport(true)"));

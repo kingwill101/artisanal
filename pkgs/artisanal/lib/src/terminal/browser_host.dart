@@ -350,6 +350,14 @@ final class BrowserTerminalHostServer {
       const disableFocusReporting = '\\x1b[?1004l';
       const enableBracketedPaste = '\\x1b[?2004h';
       const disableBracketedPaste = '\\x1b[?2004l';
+      const enableMouseNormal = '\\x1b[?1000h';
+      const disableMouseNormal = '\\x1b[?1000l';
+      const enableMouseButton = '\\x1b[?1002h';
+      const disableMouseButton = '\\x1b[?1002l';
+      const enableMouseAny = '\\x1b[?1003h';
+      const disableMouseAny = '\\x1b[?1003l';
+      const enableMouseSgr = '\\x1b[?1006h';
+      const disableMouseSgr = '\\x1b[?1006l';
       const reportedPrimaryDeviceAttributes = '\\x1b[?1;2c';
       const reportedSecondaryDeviceAttributes = '\\x1b[>0;0;0c';
       const reportedTertiaryDeviceAttributes = '\\x1bP!|787465726d2e6a73\\x1b\\\\';
@@ -361,6 +369,10 @@ final class BrowserTerminalHostServer {
       const ws = new WebSocket(wsUrl);
       let focusReportingEnabled = false;
       let bracketedPasteEnabled = false;
+      let mouseNormalEnabled = false;
+      let mouseButtonEnabled = false;
+      let mouseAnyEnabled = false;
+      let mouseSgrEnabled = false;
       const defaultBackground = '$background';
       const defaultForeground = '$foreground';
       const defaultCursor = '$cursor';
@@ -788,8 +800,16 @@ final class BrowserTerminalHostServer {
 
       function modeReportValue(mode) {
         switch (mode) {
+          case 1000:
+            return mouseNormalEnabled ? 1 : 2;
+          case 1002:
+            return mouseButtonEnabled ? 1 : 2;
+          case 1003:
+            return mouseAnyEnabled ? 1 : 2;
           case 1004:
             return focusReportingEnabled ? 1 : 2;
+          case 1006:
+            return mouseSgrEnabled ? 1 : 2;
           case 2004:
             return bracketedPasteEnabled ? 1 : 2;
           default:
@@ -1145,6 +1165,46 @@ final class BrowserTerminalHostServer {
           if (remaining.startsWith(disableBracketedPaste)) {
             bracketedPasteEnabled = false;
             remaining = remaining.slice(disableBracketedPaste.length);
+            continue;
+          }
+          if (remaining.startsWith(enableMouseNormal)) {
+            mouseNormalEnabled = true;
+            remaining = remaining.slice(enableMouseNormal.length);
+            continue;
+          }
+          if (remaining.startsWith(disableMouseNormal)) {
+            mouseNormalEnabled = false;
+            remaining = remaining.slice(disableMouseNormal.length);
+            continue;
+          }
+          if (remaining.startsWith(enableMouseButton)) {
+            mouseButtonEnabled = true;
+            remaining = remaining.slice(enableMouseButton.length);
+            continue;
+          }
+          if (remaining.startsWith(disableMouseButton)) {
+            mouseButtonEnabled = false;
+            remaining = remaining.slice(disableMouseButton.length);
+            continue;
+          }
+          if (remaining.startsWith(enableMouseAny)) {
+            mouseAnyEnabled = true;
+            remaining = remaining.slice(enableMouseAny.length);
+            continue;
+          }
+          if (remaining.startsWith(disableMouseAny)) {
+            mouseAnyEnabled = false;
+            remaining = remaining.slice(disableMouseAny.length);
+            continue;
+          }
+          if (remaining.startsWith(enableMouseSgr)) {
+            mouseSgrEnabled = true;
+            remaining = remaining.slice(enableMouseSgr.length);
+            continue;
+          }
+          if (remaining.startsWith(disableMouseSgr)) {
+            mouseSgrEnabled = false;
+            remaining = remaining.slice(disableMouseSgr.length);
             continue;
           }
 

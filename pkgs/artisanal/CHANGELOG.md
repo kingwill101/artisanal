@@ -43,6 +43,7 @@
 - Taught the default browser host page to answer XTGETTCAP requests for `RGB` and `TN`, so browser-backed sessions can participate in termcap-style capability discovery without requiring custom page glue.
 - Taught the default browser host page to intercept OSC 52 clipboard reads and writes, mapping them onto the browser clipboard when available and replying with empty clipboard payloads when browser clipboard access is unavailable.
 - Taught the default browser host page to answer private mode report queries for focus reporting and bracketed paste, so `Cmd.requestModeReport(1004/2004)` can complete against hosted browser sessions.
+- Taught the default browser host page to track mouse mode enable/disable writes and answer mode report queries for 1000/1002/1003/1006, so mouse-mode status requests work against hosted browser sessions too.
 - Taught the default browser host page to consume OSC 0/2 title updates and mirror them into the browser tab title and toolbar heading, so hosted sessions reflect runtime window-title changes instead of dropping them.
 - Taught the default browser host page to apply OSC 10/11/12 color changes and OSC 110/111/112 resets to the browser-hosted terminal theme, so hosted sessions can follow runtime foreground/background/cursor color updates after startup.
 - Made browser-host color-scheme and OSC color queries reflect the current hosted theme state after OSC 10/11/12 and 110/111/112 mutations, not just the startup defaults.
