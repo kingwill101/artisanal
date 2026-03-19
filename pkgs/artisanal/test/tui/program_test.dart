@@ -3839,6 +3839,45 @@ Future<void> main() async {
       expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
     });
 
+    test('ExecProcess restore reapplies a view-scoped alt-screen override', () async {
+      const view = View(content: 'dynamic alt during exec', altScreen: true);
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('exec')) {
+            return Cmd.exec(
+              'echo',
+              ['restored'],
+              onComplete: (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => view,
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const CustomMsg('exec'));
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(terminal.isAltScreen, isFalse);
+    });
+
     test('ExecProcess restore reapplies fullscreen terminal state only once', () async {
       final model = _CallbackModel(
         onUpdate: (msg) {
@@ -4156,6 +4195,47 @@ Future<void> main() async {
         terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
         1,
       );
+    });
+
+    test('SuspendMsg restore reapplies a view-scoped alt-screen override', () async {
+      const view = View(content: 'dynamic alt during suspend', altScreen: true);
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is ResumeMsg) {
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => view,
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          sendSuspendSignal: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+      program.send(const SuspendMsg());
+      await runFuture;
+
+      expect(
+        terminal.operations.where((op) => op == 'enterAltScreen').length,
+        2,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'exitAltScreen').length,
+        2,
+      );
+      expect(terminal.isAltScreen, isFalse);
     });
   });
 
