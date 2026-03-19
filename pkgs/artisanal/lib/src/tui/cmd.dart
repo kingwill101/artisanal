@@ -395,6 +395,13 @@ class Cmd {
   static Cmd requestSecondaryDeviceAttributesReport() =>
       writeRaw(term_ansi.Ansi.requestSecondaryDeviceAttributes);
 
+  /// Request the terminal to report tertiary device attributes (DA3).
+  ///
+  /// Terminals respond with `DCS ! | <text> ST`, which UV decoding maps to
+  /// [TertiaryDeviceAttributesMsg].
+  static Cmd requestTertiaryDeviceAttributesReport() =>
+      writeRaw(term_ansi.Ansi.requestTertiaryDeviceAttributes);
+
   /// Request the terminal to report its name and version (XTVERSION).
   ///
   /// Terminals respond with `DCS > | <text> ST`, which UV decoding maps to

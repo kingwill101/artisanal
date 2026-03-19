@@ -9,6 +9,7 @@
 - Added `Cmd.requestPrimaryDeviceAttributesReport()` so DA1 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestKeyboardEnhancementsReport()` so kitty keyboard support queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestSecondaryDeviceAttributesReport()` so DA2 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
+- Added `Cmd.requestTertiaryDeviceAttributesReport()` so DA3 capability queries have an explicit TUI command helper instead of requiring raw escape writes.
 - Added `Cmd.requestTerminalVersionReport()` and `Cmd.requestTermcapStrings()` so XTVERSION and XTGETTCAP queries have explicit TUI command helpers instead of requiring raw escape writes.
 - Added `ModifyOtherKeysMsg` plus device-attribute report messages so UV capability/startup reports no longer fall back to raw UV events in the TUI runtime.
 - Added `ModeReportMsg`, `ColorSchemeMsg`, and `Cmd.requestModeReport()` so UV mode-status replies and light/dark color-scheme reports are exposed through the TUI runtime instead of falling back to raw UV events.
@@ -35,12 +36,14 @@
 - Added end-to-end `Program` coverage for terminal-version and XTGETTCAP capability reports.
 - Added end-to-end `Program` coverage for kitty keyboard enhancement reports.
 - Added end-to-end `Program` coverage for secondary device-attribute reports.
+- Added end-to-end `Program` coverage for tertiary device-attribute reports.
 - Added end-to-end `Program` coverage for clipboard read replies.
 - Suppressed xterm pixel-size and cell-size report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed xterm mode-status report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed cursor-position report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed kitty keyboard enhancement report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed DA2 capability queries on non-terminal hosts alongside the existing terminal-report guards.
+- Suppressed DA3 capability queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed XTVERSION and XTGETTCAP report queries on non-terminal hosts alongside the existing terminal-report guards.
 - Suppressed batched OSC color, palette, and clipboard report queries on non-terminal hosts instead of only handling clipboard reads as a trailing special case.
 

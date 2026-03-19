@@ -1340,6 +1340,7 @@ void main() {
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
           Cmd.requestSecondaryDeviceAttributesReport(),
+          Cmd.requestTertiaryDeviceAttributesReport(),
           Cmd.requestTerminalVersionReport(),
           Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
@@ -1360,6 +1361,7 @@ void main() {
       final output = terminal.output.join();
       expect(output, contains('\x1b[?c'));
       expect(output, contains('\x1b[>c'));
+      expect(output, contains('\x1b[=c'));
       expect(output, contains('\x1b[>0q'));
       expect(output, contains('\x1bP+q524742;544e\x1b\\'));
       expect(output, contains('\x1b[6n'));
@@ -1425,6 +1427,7 @@ void main() {
         onInit: () => Cmd.batch([
           Cmd.requestPrimaryDeviceAttributesReport(),
           Cmd.requestSecondaryDeviceAttributesReport(),
+          Cmd.requestTertiaryDeviceAttributesReport(),
           Cmd.requestTerminalVersionReport(),
           Cmd.requestTermcapStrings(['RGB', 'TN']),
           Cmd.requestCursorPositionReport(),
@@ -1446,6 +1449,7 @@ void main() {
       final output = terminal.output.join();
       expect(output, isNot(contains('\x1b[?c')));
       expect(output, isNot(contains('\x1b[>c')));
+      expect(output, isNot(contains('\x1b[=c')));
       expect(output, isNot(contains('\x1b[>0q')));
       expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
       expect(output, isNot(contains('\x1b[6n')));
@@ -2099,6 +2103,37 @@ void main() {
         expect(received, const SecondaryDeviceAttributesMsg([1, 2, 3]));
       },
     );
+
+    test('delivers tertiary device attributes messages from UV reports', () async {
+      TertiaryDeviceAttributesMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is TertiaryDeviceAttributesMsg && msg.value == 'Chrm') {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'tertiary attrs'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('tertiary attrs'),
+      );
+      terminal.sendInput('\x1bP!|4368726d\x1b\\'.codeUnits);
+      await runFuture;
+
+      expect(received, const TertiaryDeviceAttributesMsg('Chrm'));
+    });
 
     test('delivers terminal version messages from UV reports', () async {
       TerminalVersionMsg? received;

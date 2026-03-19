@@ -119,6 +119,11 @@ abstract final class Ansi {
   /// Terminal responds with `ESC [ > <attrs> c`.
   static const requestSecondaryDeviceAttributes = '\x1b[>c';
 
+  /// Request tertiary device attributes (DA3).
+  ///
+  /// Terminal responds with `DCS ! | <text> ST`.
+  static const requestTertiaryDeviceAttributes = '\x1b[=c';
+
   /// Request xterm name and version (XTVERSION).
   ///
   /// Terminal responds with `DCS > | <text> ST`.
