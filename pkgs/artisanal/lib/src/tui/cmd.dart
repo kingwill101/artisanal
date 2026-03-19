@@ -403,6 +403,13 @@ class Cmd {
   static Cmd requestTermcapStrings(Iterable<String> names) =>
       writeRaw(term_ansi.Ansi.requestTermcapStrings(names));
 
+  /// Request kitty keyboard enhancement support details.
+  ///
+  /// Terminals respond with `CSI ? ... u`, which UV decoding maps to
+  /// [KeyboardEnhancementsMsg].
+  static Cmd requestKeyboardEnhancementsReport() =>
+      writeRaw(term_ansi.Ansi.requestKittyKeyboard);
+
   /// Request the terminal to report its character cell size (rows/cols).
   ///
   /// Terminals that support xterm window ops respond to `CSI 18 t` with

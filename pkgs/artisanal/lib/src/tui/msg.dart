@@ -615,6 +615,15 @@ class KeyboardEnhancementsMsg extends Msg {
   @override
   String toString() =>
       'KeyboardEnhancementsMsg(reportEventTypes: $reportEventTypes)';
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KeyboardEnhancementsMsg &&
+          reportEventTypes == other.reportEventTypes);
+
+  @override
+  int get hashCode => reportEventTypes.hashCode;
 }
 
 /// The reported state of a terminal mode query.

@@ -3516,6 +3516,11 @@ bool _isTerminalReportRequest(String data) {
       matchedAny = true;
       continue;
     }
+    if (remaining.startsWith(Ansi.requestKittyKeyboard)) {
+      remaining = remaining.substring(Ansi.requestKittyKeyboard.length);
+      matchedAny = true;
+      continue;
+    }
     if (remaining.startsWith('\x1b[18t')) {
       remaining = remaining.substring('\x1b[18t'.length);
       matchedAny = true;

@@ -1368,6 +1368,7 @@ void main() {
     test('mode report request commands write raw DECRQM queries', () async {
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(2, private: false),
           Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
@@ -1383,6 +1384,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, contains('\x1b[?u'));
       expect(output, contains('\x1b[?2004\$p'));
       expect(output, contains('\x1b[2\$p'));
     });
@@ -1424,6 +1426,7 @@ void main() {
       final terminal = _NonTerminalMockTerminal();
       final model = _CallbackModel(
         onInit: () => Cmd.batch([
+          Cmd.requestKeyboardEnhancementsReport(),
           Cmd.requestModeReport(2004),
           Cmd.requestModeReport(1004),
           Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
@@ -1439,6 +1442,7 @@ void main() {
       await program.run();
 
       final output = terminal.output.join();
+      expect(output, isNot(contains('\x1b[?u')));
       expect(output, isNot(contains('\x1b[?2004\$p')));
       expect(output, isNot(contains('\x1b[?1004\$p')));
     });
@@ -2090,6 +2094,40 @@ void main() {
       await runFuture;
 
       expect(received, const ModifyOtherKeysMsg(1));
+    });
+
+    test('delivers keyboard enhancement messages from UV reports', () async {
+      KeyboardEnhancementsMsg? received;
+
+      final program = Program(
+        _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is KeyboardEnhancementsMsg && msg.reportEventTypes) {
+              received = msg;
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => const View(content: 'keyboard enhancements'),
+        ),
+        options: const ProgramOptions(
+          altScreen: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(
+        () => terminal.output.join().contains('keyboard enhancements'),
+      );
+      terminal.sendInput('\x1b[?2u'.codeUnits);
+      await runFuture;
+
+      expect(
+        received,
+        const KeyboardEnhancementsMsg(reportEventTypes: true),
+      );
     });
 
     test('delivers mouse motion messages end to end (UV parser)', () async {
