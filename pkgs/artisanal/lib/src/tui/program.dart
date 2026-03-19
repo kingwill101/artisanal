@@ -1040,6 +1040,9 @@ class Program<M extends Model> {
   /// Whether the terminal cursor color was overridden via OSC 12.
   bool _cursorColorOverridden = false;
 
+  /// Whether the terminal progress bar was overridden via OSC 9;4.
+  bool _progressBarOverridden = false;
+
   /// Desired mouse tracking mode for the current runtime/view state.
   MouseMode _desiredMouseMode = MouseMode.none;
 
@@ -1057,6 +1060,12 @@ class Program<M extends Model> {
 
   /// Whether focus reporting is currently enabled on the terminal.
   bool _appliedFocusReporting = false;
+
+  /// Desired kitty keyboard enhancement flags for the current runtime/view state.
+  int _desiredKeyboardEnhancementFlags = 0;
+
+  /// Kitty keyboard enhancement flags currently applied to the terminal.
+  int _appliedKeyboardEnhancementFlags = 0;
 
   /// Completer for the run() method.
   Completer<void>? _runCompleter;
@@ -2546,16 +2555,8 @@ class Program<M extends Model> {
     // Dispose renderer (restores cursor, exits alt screen if needed)
     _renderer?.dispose();
 
-    // Reset terminal colors if overridden via OSC 11/10
-    if (_bgColorOverridden) {
-      _terminal?.write('\x1b]111\x07');
-    }
-    if (_fgColorOverridden) {
-      _terminal?.write('\x1b]110\x07');
-    }
-    if (_cursorColorOverridden) {
-      _terminal?.write('\x1b]112\x07');
-    }
+    _resetProgressBarIfOverridden();
+    _resetTerminalColorOverrides();
 
     _disableAppliedTerminalModes();
 
@@ -2683,10 +2684,64 @@ class Program<M extends Model> {
     _appliedFocusReporting = _desiredFocusReporting;
   }
 
+  void _setDesiredKeyboardEnhancementFlags(int flags) {
+    _desiredKeyboardEnhancementFlags = flags;
+    _applyDesiredKeyboardEnhancements();
+  }
+
+  void _applyDesiredKeyboardEnhancements() {
+    final terminal = _terminal;
+    if (terminal == null) return;
+    if (_appliedKeyboardEnhancementFlags == _desiredKeyboardEnhancementFlags) {
+      return;
+    }
+    if (_appliedKeyboardEnhancementFlags != 0) {
+      terminal.write(Ansi.resetKittyKeyboard);
+      _appliedKeyboardEnhancementFlags = 0;
+    }
+    if (_desiredKeyboardEnhancementFlags != 0) {
+      terminal.write(Ansi.kittyKeyboard(_desiredKeyboardEnhancementFlags, mode: 1));
+      terminal.write(Ansi.requestKittyKeyboard);
+      _appliedKeyboardEnhancementFlags = _desiredKeyboardEnhancementFlags;
+    }
+  }
+
   void _restoreDesiredTerminalModes() {
     _applyDesiredFocusReporting();
     _applyDesiredBracketedPaste();
     _applyDesiredMouseMode();
+    _applyDesiredKeyboardEnhancements();
+  }
+
+  void _resetProgressBarIfOverridden() {
+    if (_progressBarOverridden) {
+      _terminal?.setProgressBar(TerminalProgressBarState.none.index, 0);
+      _progressBarOverridden = false;
+    }
+  }
+
+  void _resetTerminalColorOverrides() {
+    if (_bgColorOverridden) {
+      _terminal?.write('\x1b]111\x07');
+      _bgColorOverridden = false;
+    }
+    if (_fgColorOverridden) {
+      _terminal?.write('\x1b]110\x07');
+      _fgColorOverridden = false;
+    }
+    if (_cursorColorOverridden) {
+      _terminal?.write('\x1b]112\x07');
+      _cursorColorOverridden = false;
+    }
+  }
+
+  void _resetViewScopedTerminalMetadata() {
+    _setDesiredFocusReporting(false);
+    _setDesiredBracketedPaste(_options.bracketedPaste);
+    _applyMouseMode();
+    _setDesiredKeyboardEnhancementFlags(0);
+    _resetProgressBarIfOverridden();
+    _resetTerminalColorOverrides();
   }
 
   void _disableAppliedTerminalModes() {
@@ -2703,6 +2758,10 @@ class Program<M extends Model> {
     if (_appliedMouseMode != MouseMode.none) {
       terminal.disableMouse();
       _appliedMouseMode = MouseMode.none;
+    }
+    if (_appliedKeyboardEnhancementFlags != 0) {
+      terminal.write(Ansi.resetKittyKeyboard);
+      _appliedKeyboardEnhancementFlags = 0;
     }
   }
 
@@ -2728,16 +2787,8 @@ class Program<M extends Model> {
       _terminal?.exitAltScreen();
     }
 
-    // Reset terminal colors if overridden via OSC 11/10
-    if (_bgColorOverridden) {
-      _terminal?.write('\x1b]111\x07');
-    }
-    if (_fgColorOverridden) {
-      _terminal?.write('\x1b]110\x07');
-    }
-    if (_cursorColorOverridden) {
-      _terminal?.write('\x1b]112\x07');
-    }
+    _resetProgressBarIfOverridden();
+    _resetTerminalColorOverrides();
 
     // Send SIGTSTP to suspend (Unix only)
     try {
@@ -2842,6 +2893,7 @@ class Program<M extends Model> {
       _lastView = view;
       _applyViewMetadata(view);
     } else {
+      _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
@@ -2870,12 +2922,18 @@ class Program<M extends Model> {
       // OSC 11
       _terminal?.write('\x1b]11;${view.backgroundColor!.toHex()}\x07');
       _bgColorOverridden = true;
+    } else if (_bgColorOverridden) {
+      _terminal?.write('\x1b]111\x07');
+      _bgColorOverridden = false;
     }
 
     if (view.foregroundColor != null) {
       // OSC 10
       _terminal?.write('\x1b]10;${view.foregroundColor!.toHex()}\x07');
       _fgColorOverridden = true;
+    } else if (_fgColorOverridden) {
+      _terminal?.write('\x1b]110\x07');
+      _fgColorOverridden = false;
     }
 
     if (view.progressBar != null) {
@@ -2883,6 +2941,10 @@ class Program<M extends Model> {
         view.progressBar!.state.index,
         view.progressBar!.value,
       );
+      _progressBarOverridden =
+          view.progressBar!.state != TerminalProgressBarState.none;
+    } else {
+      _resetProgressBarIfOverridden();
     }
 
     if (view.altScreen != null) {
@@ -2893,29 +2955,27 @@ class Program<M extends Model> {
       }
     }
 
-    if (view.reportFocus != null) {
-      _setDesiredFocusReporting(view.reportFocus!);
-    }
+    _setDesiredFocusReporting(view.reportFocus ?? false);
 
-    if (view.bracketedPaste != null) {
-      _setDesiredBracketedPaste(view.bracketedPaste!);
-    }
+    _setDesiredBracketedPaste(view.bracketedPaste ?? _options.bracketedPaste);
 
     if (view.mouseMode != null) {
       if (TuiTrace.enabled) {
         _trace('view mouseMode=${view.mouseMode}');
       }
       _setDesiredMouseMode(view.mouseMode!);
+    } else {
+      _applyMouseMode();
     }
 
+    var keyboardEnhancementFlags = 0;
     if (view.keyboardEnhancements != null) {
-      var flags = Ansi.kittyDisambiguateEscapeCodes;
+      keyboardEnhancementFlags = Ansi.kittyDisambiguateEscapeCodes;
       if (view.keyboardEnhancements!.reportEventTypes) {
-        flags |= Ansi.kittyReportEventTypes;
+        keyboardEnhancementFlags |= Ansi.kittyReportEventTypes;
       }
-      _terminal?.write(Ansi.kittyKeyboard(flags, mode: 1));
-      _terminal?.write(Ansi.requestKittyKeyboard);
     }
+    _setDesiredKeyboardEnhancementFlags(keyboardEnhancementFlags);
 
     if (view.cursor != null) {
       // Move cursor to position
@@ -2932,7 +2992,13 @@ class Program<M extends Model> {
           '\x1b]12;${(view.cursor!.color! as Color).toHex()}\x07',
         );
         _cursorColorOverridden = true;
+      } else if (_cursorColorOverridden) {
+        _terminal?.write('\x1b]112\x07');
+        _cursorColorOverridden = false;
       }
+    } else if (_cursorColorOverridden) {
+      _terminal?.write('\x1b]112\x07');
+      _cursorColorOverridden = false;
     }
   }
 
@@ -2948,6 +3014,7 @@ class Program<M extends Model> {
       _lastView = view;
       _applyViewMetadata(view);
     } else {
+      _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
@@ -3209,19 +3276,9 @@ class Program<M extends Model> {
     trySync(() => _renderer?.dispose());
     _renderer = null;
 
-    // Reset terminal colors if they were overridden via View metadata.
-    // OSC 11 sets the terminal-wide background color; OSC 111 resets it.
-    // Without this, the terminal background stays tinted after program exit.
     trySync(() {
-      if (_bgColorOverridden) {
-        _terminal?.write('\x1b]111\x07');
-      }
-      if (_fgColorOverridden) {
-        _terminal?.write('\x1b]110\x07');
-      }
-      if (_cursorColorOverridden) {
-        _terminal?.write('\x1b]112\x07');
-      }
+      _resetProgressBarIfOverridden();
+      _resetTerminalColorOverrides();
     });
 
     // Restore terminal state (belt and suspenders approach)

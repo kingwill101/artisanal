@@ -1816,6 +1816,7 @@ void main() {
         reportFocus: true,
         bracketedPaste: true,
         mouseMode: MouseMode.allMotion,
+        keyboardEnhancements: const KeyboardEnhancements(reportEventTypes: true),
         backgroundColor: const BasicColor('#112233'),
         foregroundColor: const BasicColor('#eeddcc'),
         cursor: Cursor.at(0, 0)..color = const BasicColor('#445566'),
@@ -1863,6 +1864,17 @@ void main() {
 
       final joinedOutput = terminal.output.join();
       expect(
+        RegExp(RegExp.escape(Ansi.kittyKeyboard(
+          Ansi.kittyDisambiguateEscapeCodes | Ansi.kittyReportEventTypes,
+          mode: 1,
+        ))).allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        RegExp(RegExp.escape(Ansi.requestKittyKeyboard)).allMatches(joinedOutput).length,
+        greaterThanOrEqualTo(2),
+      );
+      expect(
         RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
         greaterThanOrEqualTo(2),
       );
@@ -1877,6 +1889,152 @@ void main() {
       expect(joinedOutput, contains('\x1b]111\x07'));
       expect(joinedOutput, contains('\x1b]110\x07'));
       expect(joinedOutput, contains('\x1b]112\x07'));
+      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+    });
+  });
+
+  group('View metadata', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('falling back to plain text resets view-scoped terminal metadata', () async {
+      var plainTextPhase = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('clear')) {
+            plainTextPhase = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => plainTextPhase
+            ? 'plain terminal view'
+            : View(
+                content: 'scoped metadata',
+                reportFocus: true,
+                bracketedPaste: true,
+                mouseMode: MouseMode.allMotion,
+                keyboardEnhancements: const KeyboardEnhancements(
+                  reportEventTypes: true,
+                ),
+                backgroundColor: const BasicColor('#112233'),
+                foregroundColor: const BasicColor('#eeddcc'),
+                progressBar: const TerminalProgressBar(
+                  state: TerminalProgressBarState.defaultState,
+                  value: 42,
+                ),
+                cursor: Cursor.at(0, 0)..color = const BasicColor('#445566'),
+              ),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      program.send(const CustomMsg('clear'));
+      await runFuture;
+
+      final joinedOutput = terminal.output.join();
+      expect(terminal.operations, contains('enableFocusReporting'));
+      expect(terminal.operations, contains('disableFocusReporting'));
+      expect(terminal.operations, contains('enableBracketedPaste'));
+      expect(terminal.operations, contains('disableBracketedPaste'));
+      expect(terminal.operations, contains('enableMouseAllMotion'));
+      expect(terminal.operations, contains('disableMouse'));
+      expect(
+        terminal.operations.where((op) => op == 'setProgressBar(1, 42)').length,
+        1,
+      );
+      expect(
+        terminal.operations.where((op) => op == 'setProgressBar(0, 0)').length,
+        1,
+      );
+      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+      expect(
+        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+        1,
+      );
+      expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
+      expect(
+        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+        1,
+      );
+      expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
+      expect(
+        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+        1,
+      );
+      expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
+    });
+
+    test('null view metadata fields reset previous terminal overrides', () async {
+      var cleared = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg == const CustomMsg('clear')) {
+            cleared = true;
+            return Cmd.tick(
+              const Duration(milliseconds: 1),
+              (_) => const QuitMsg(),
+            );
+          }
+          return null;
+        },
+        onView: () => cleared
+            ? const View(content: 'metadata cleared')
+            : View(
+                content: 'metadata set',
+                reportFocus: true,
+                bracketedPaste: true,
+                mouseMode: MouseMode.allMotion,
+                keyboardEnhancements: const KeyboardEnhancements(
+                  reportEventTypes: true,
+                ),
+                backgroundColor: const BasicColor('#223344'),
+                foregroundColor: const BasicColor('#ddeeff'),
+                progressBar: const TerminalProgressBar(
+                  state: TerminalProgressBarState.defaultState,
+                  value: 80,
+                ),
+                cursor: Cursor.at(1, 1)..color = const BasicColor('#556677'),
+              ),
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      program.send(const CustomMsg('clear'));
+      await runFuture;
+
+      final joinedOutput = terminal.output.join();
+      expect(terminal.operations, contains('disableFocusReporting'));
+      expect(terminal.operations, contains('disableBracketedPaste'));
+      expect(terminal.operations, contains('disableMouse'));
+      expect(
+        terminal.operations.where((op) => op == 'setProgressBar(0, 0)').length,
+        1,
+      );
+      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+      expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
+      expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
     });
   });
 
@@ -2611,6 +2769,73 @@ void main() {
       expect(joinedOutput, contains(Ansi.requestBackgroundColor));
       expect(joinedOutput, contains('light first frame'));
       expect(joinedOutput, isNot(contains('dark first frame')));
+    });
+  });
+
+  group('Terminal color requests', () {
+    test('foreground and cursor color replies are delivered as messages', () async {
+      final terminal = _ProbeAwareMockTerminal(
+        onWrite: (data, terminal) {
+          if (data == Ansi.requestBackgroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+            });
+          }
+          if (data == Ansi.requestForegroundColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]10;rgb:aaaa/bbbb/cccc\x07'.codeUnits);
+            });
+          }
+          if (data == Ansi.requestCursorColor) {
+            scheduleMicrotask(() {
+              terminal.sendInput('\x1b]12;rgb:1234/5678/9abc\x07'.codeUnits);
+            });
+          }
+        },
+      );
+
+      String? foregroundHex;
+      String? cursorHex;
+      final model = _CallbackModel(
+        onInit: () => Cmd.batch([
+          Cmd.requestForegroundColor(),
+          Cmd.requestCursorColor(),
+        ]),
+        onUpdate: (msg) {
+          switch (msg) {
+            case ForegroundColorMsg(hex: final hex):
+              foregroundHex = hex;
+            case CursorColorMsg(hex: final hex):
+              cursorHex = hex;
+            default:
+              break;
+          }
+          if (foregroundHex != null && cursorHex != null) {
+            return Cmd.message(const QuitMsg());
+          }
+          return null;
+        },
+        onView: () => 'color request runtime',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          hideCursor: false,
+          useUltravioletRenderer: true,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      await program.run();
+
+      expect(foregroundHex, '#aabbcc');
+      expect(cursorHex, '#12569a');
+      final joinedOutput = terminal.output.join();
+      expect(joinedOutput, contains(Ansi.requestForegroundColor));
+      expect(joinedOutput, contains(Ansi.requestCursorColor));
     });
   });
 
