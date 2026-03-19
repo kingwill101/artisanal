@@ -35,6 +35,8 @@ void main() {
       expect(html, contains(r"const requestWindowPixelSize = '\x1b[14t';"));
       expect(html, contains(r"const requestCellSize = '\x1b[16t';"));
       expect(html, contains(r"const requestClipboardPrefix = '\x1b]52;';"));
+      expect(html, contains(r"const requestPalettePrefix = '\x1b]4;';"));
+      expect(html, contains(r"const resetPalettePrefix = '\x1b]104;';"));
       expect(html, contains(r"const titleOsc0Prefix = '\x1b]0;';"));
       expect(html, contains(r"const titleOsc2Prefix = '\x1b]2;';"));
       expect(html, contains(r"const setForegroundPrefix = '\x1b]10;';"));
@@ -60,6 +62,11 @@ void main() {
       expect(html, contains('function writeClipboardText(text)'));
       expect(html, contains('function readClipboardText(selection)'));
       expect(html, contains('function clipboardQueryInfo(data)'));
+      expect(html, contains('const defaultPalette = {'));
+      expect(html, contains('const currentPalette = new Map(Object.entries(defaultPalette));'));
+      expect(html, contains('function oscPaletteReply(index, color)'));
+      expect(html, contains('function paletteQueryInfo(data, prefix)'));
+      expect(html, contains('function paletteResetInfo(data)'));
       expect(html, contains('function modeReportInfo(data)'));
       expect(html, contains('function modeReportValue(mode)'));
       expect(html, contains('function setBrowserTitle(title)'));
@@ -77,6 +84,9 @@ void main() {
       expect(html, contains('navigator.clipboard.readText()'));
       expect(html, contains('navigator.clipboard.writeText(text).catch(() => {});'));
       expect(html, contains("if (clipboard.content === '?')"));
+      expect(html, contains("const reply = oscPaletteReply("));
+      expect(html, contains("currentPalette.set(palette.index, color);"));
+      expect(html, contains("currentPalette.clear();"));
       expect(html, contains('setBrowserTitle(title.title);'));
       expect(html, contains('currentForeground = defaultForeground;'));
       expect(html, contains('currentBackground = defaultBackground;'));

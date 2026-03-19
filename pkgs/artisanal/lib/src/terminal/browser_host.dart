@@ -331,6 +331,8 @@ final class BrowserTerminalHostServer {
       const requestWindowPixelSize = '\\x1b[14t';
       const requestCellSize = '\\x1b[16t';
       const requestClipboardPrefix = '\\x1b]52;';
+      const requestPalettePrefix = '\\x1b]4;';
+      const resetPalettePrefix = '\\x1b]104;';
       const titleOsc0Prefix = '\\x1b]0;';
       const titleOsc2Prefix = '\\x1b]2;';
       const setForegroundPrefix = '\\x1b]10;';
@@ -363,6 +365,25 @@ final class BrowserTerminalHostServer {
       let currentBackground = defaultBackground;
       let currentForeground = defaultForeground;
       let currentCursor = defaultCursor;
+      const defaultPalette = {
+        0: '#000000',
+        1: '#cd0000',
+        2: '#00cd00',
+        3: '#cdcd00',
+        4: '#0000ee',
+        5: '#cd00cd',
+        6: '#00cdcd',
+        7: '#e5e5e5',
+        8: '#7f7f7f',
+        9: '#ff0000',
+        10: '#00ff00',
+        11: '#ffff00',
+        12: '#5c5cff',
+        13: '#ff00ff',
+        14: '#00ffff',
+        15: '#ffffff'
+      };
+      const currentPalette = new Map(Object.entries(defaultPalette));
 
       function sendMessage(message) {
         if (ws.readyState === WebSocket.OPEN) {
@@ -473,6 +494,10 @@ final class BrowserTerminalHostServer {
           `\\x1b]\${index};rgb:` +
           `\${red}\${red}/\${green}\${green}/\${blue}\${blue}\\x07`
         );
+      }
+
+      function oscPaletteReply(index, color) {
+        return oscColorReply('4;' + index, color);
       }
 
       function publishFocusState(hasFocus) {
@@ -654,6 +679,87 @@ final class BrowserTerminalHostServer {
         };
       }
 
+      function paletteQueryInfo(data, prefix) {
+        if (!data.startsWith(prefix)) {
+          return null;
+        }
+
+        const start = prefix.length;
+        const bellIndex = data.indexOf(oscBell, start);
+        const stIndex = data.indexOf(stringTerminator, start);
+        let end = -1;
+        let terminatorLength = 0;
+
+        if (bellIndex !== -1 && (stIndex === -1 || bellIndex < stIndex)) {
+          end = bellIndex;
+          terminatorLength = oscBell.length;
+        } else if (stIndex !== -1) {
+          end = stIndex;
+          terminatorLength = stringTerminator.length;
+        }
+
+        if (end === -1) {
+          return null;
+        }
+
+        const payload = data.slice(start, end);
+        const separator = payload.indexOf(';');
+        if (separator === -1 || separator === 0) {
+          return null;
+        }
+
+        const indexText = payload.slice(0, separator);
+        if (Array.from(indexText).some((ch) => ch < '0' || ch > '9')) {
+          return null;
+        }
+
+        return {
+          index: indexText,
+          content: payload.slice(separator + 1),
+          consumed: end + terminatorLength,
+        };
+      }
+
+      function paletteResetInfo(data) {
+        if (!data.startsWith(resetPalettePrefix)) {
+          return null;
+        }
+
+        const start = resetPalettePrefix.length;
+        const bellIndex = data.indexOf(oscBell, start);
+        const stIndex = data.indexOf(stringTerminator, start);
+        let end = -1;
+        let terminatorLength = 0;
+
+        if (bellIndex !== -1 && (stIndex === -1 || bellIndex < stIndex)) {
+          end = bellIndex;
+          terminatorLength = oscBell.length;
+        } else if (stIndex !== -1) {
+          end = stIndex;
+          terminatorLength = stringTerminator.length;
+        }
+
+        if (end === -1) {
+          return null;
+        }
+
+        const payload = data.slice(start, end).trim();
+        if (payload.length === 0) {
+          return {
+            index: null,
+            consumed: end + terminatorLength,
+          };
+        }
+        if (Array.from(payload).some((ch) => ch < '0' || ch > '9')) {
+          return null;
+        }
+
+        return {
+          index: payload,
+          consumed: end + terminatorLength,
+        };
+      }
+
       function modeReportInfo(data) {
         if (!data.startsWith(requestPrivateModePrefix)) {
           return null;
@@ -820,6 +926,44 @@ final class BrowserTerminalHostServer {
               writeClipboardText(decodeBase64Utf8(clipboard.content));
             }
             remaining = remaining.slice(clipboard.consumed);
+            continue;
+          }
+          const paletteReset = paletteResetInfo(remaining);
+          if (paletteReset !== null) {
+            if (paletteReset.index === null) {
+              currentPalette.clear();
+              for (const [index, color] of Object.entries(defaultPalette)) {
+                currentPalette.set(index, color);
+              }
+            } else {
+              currentPalette.set(
+                paletteReset.index,
+                defaultPalette[paletteReset.index] ?? '#000000'
+              );
+            }
+            remaining = remaining.slice(paletteReset.consumed);
+            continue;
+          }
+          const palette = paletteQueryInfo(remaining, requestPalettePrefix);
+          if (palette !== null) {
+            if (palette.content === '?') {
+              const reply = oscPaletteReply(
+                palette.index,
+                currentPalette.get(palette.index) ?? '#000000'
+              );
+              if (reply !== null) {
+                sendMessage({
+                  type: 'input.text',
+                  data: reply
+                });
+              }
+            } else {
+              const color = normalizeOscColor(palette.content);
+              if (color !== null) {
+                currentPalette.set(palette.index, color);
+              }
+            }
+            remaining = remaining.slice(palette.consumed);
             continue;
           }
           const modeReport = modeReportInfo(remaining);
