@@ -28,6 +28,7 @@ Future<void> main() async {
   var clipboardStatus = 'unread';
   var urlStatus = 'idle';
   var noticeStatus = 'idle';
+  var pickerStatus = 'idle';
 
   Future<void> publish() async {
     final current = _messages[ticks % _messages.length];
@@ -35,7 +36,7 @@ Future<void> main() async {
       boxedFrame(
         surfaceId: _surfaceId,
         width: 42,
-        height: 11,
+        height: 12,
         title: focused ? 'Activity [focused]' : 'Activity',
         accent: focused ? '#f59e0b' : '#38bdf8',
         bodyLines: <String>[
@@ -46,6 +47,7 @@ Future<void> main() async {
           'Clipboard: $clipboardStatus',
           'URL: $urlStatus',
           'Notice: $noticeStatus',
+          'Picker: $pickerStatus',
         ],
       ),
     );
@@ -62,7 +64,7 @@ Future<void> main() async {
         surfaceId: _surfaceId,
         kind: plugins.RemotePluginSurfaceKind.panel,
         width: 42,
-        height: 9,
+        height: 12,
         title: 'Activity',
         slot: 'main',
       ),
@@ -115,6 +117,16 @@ Future<void> main() async {
               noticeStatus = 'sent';
             } on plugins.RemotePluginServiceException catch (error) {
               noticeStatus = error.message;
+            }
+          } else if (!ctrl && !alt && !shift && !meta && key == 'p') {
+            try {
+              final paths = await session.services.pickPaths(
+                title: 'Select workspace file',
+                initialPath: '/tmp',
+              );
+              pickerStatus = paths.isEmpty ? 'none' : paths.first;
+            } on plugins.RemotePluginServiceException catch (error) {
+              pickerStatus = error.message;
             }
           }
           await publish();

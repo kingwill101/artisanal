@@ -30,6 +30,7 @@ Keys:
 - `c` in the activity plugin reads the host clipboard service
 - `o` in the activity plugin calls the host URL-open service
 - `n` in the activity plugin calls the host notification service
+- `p` in the activity plugin calls the host file-picker service
 - `r` reload the workspace
 - `q` quit
 
@@ -84,6 +85,13 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
   --snapshot \
   --snapshot-click=37,6 \
   --snapshot-key=n
+```
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
+  --snapshot \
+  --snapshot-click=37,6 \
+  --snapshot-key=p
 ```
 
 And you can inject one synthetic hover motion into the workspace:

@@ -107,6 +107,7 @@ String _snapshotKeyExpectation(String label) {
     'c' => 'Clipboard: workspace clipboard',
     'o' => 'URL: opened',
     'n' => 'Notice: sent',
+    'p' => 'Picker: /tmp/workspace.txt',
     _ => 'Last key: $label',
   };
 }
@@ -541,6 +542,9 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
       );
       genericService.registerOpenUrl(openUrl: (_) {});
       genericService.registerNotification(notify: (_) {});
+      genericService.registerFilePicker(
+        pickPaths: (_) => const <String>['/tmp/workspace.txt'],
+      );
       genericServices.add(genericService);
       connections[manifest.id] = connection;
     }

@@ -19,6 +19,7 @@
 - Migrated file-picker requests onto the generic remote-plugin service path too, so guest picker helpers now use `plugin.service.request` / `host.service.response` whenever a host advertises `services`, while the older typed file-picker messages remain available for backward compatibility.
 - Updated the `remote_plugin_workspace` example host to advertise `services` and bind its clipboard capability through the generic host-service registry, so the flagship multi-plugin demo now dogfoods the shared RPC path too.
 - Extended the `remote_plugin_workspace` activity plugin to call the host URL-open and notification services too, so the flagship multi-plugin demo now visibly exercises three shared host-owned RPCs instead of only clipboard.
+- Extended the `remote_plugin_workspace` activity plugin to call the host file-picker service too, so the flagship multi-plugin demo now visibly exercises all four built-in shared host-owned RPCs.
 - Added `RemotePluginSurfaceInputRouter` so hosts can turn resolved remote surface placements into focus, blur, mouse, and key routing without rebuilding per-surface dispatch logic by hand.
 - Added `RemotePluginSurfaceInputRouter.sendTuiMouse(...)` so host apps can forward runtime `MouseMsg` events into remote plugin surfaces without rewriting button/action translation by hand.
 - Added resolved placement and hit-test helpers for remote plugin surfaces, so hosts can map global coordinates into the topmost plugin panel or popup using the same placement logic as UV composition.
