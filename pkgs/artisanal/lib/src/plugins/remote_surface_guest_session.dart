@@ -10,7 +10,11 @@ import 'remote_surface_protocol.dart';
 /// [RemotePluginHostHello] handshake, and then forwards all subsequent host
 /// messages through [messages].
 final class RemotePluginGuestSession {
-  RemotePluginGuestSession._(this.channel);
+  RemotePluginGuestSession._(this.channel) {
+    _messages = StreamController<RemotePluginMessage>.broadcast(
+      onListen: _flushPendingEvents,
+    );
+  }
 
   /// Connects to a remote host channel and completes the hello handshake.
   static Future<RemotePluginGuestSession> connect({
@@ -58,10 +62,11 @@ final class RemotePluginGuestSession {
   }
 
   final RemotePluginJsonChannel channel;
-  final StreamController<RemotePluginMessage> _messages =
-      StreamController<RemotePluginMessage>.broadcast();
+  late final StreamController<RemotePluginMessage> _messages;
   final Completer<RemotePluginHostHello> _hostHello =
       Completer<RemotePluginHostHello>();
+  final List<_PendingGuestSessionEvent> _pendingEvents =
+      <_PendingGuestSessionEvent>[];
 
   StreamSubscription<RemotePluginMessage>? _subscription;
   bool _disposed = false;
@@ -69,6 +74,44 @@ final class RemotePluginGuestSession {
 
   /// Post-handshake host messages.
   Stream<RemotePluginMessage> get messages => _messages.stream;
+
+  void _flushPendingEvents() {
+    if (_disposed || !_messages.hasListener || _pendingEvents.isEmpty) {
+      return;
+    }
+
+    final pendingEvents = List<_PendingGuestSessionEvent>.of(_pendingEvents);
+    _pendingEvents.clear();
+    for (final event in pendingEvents) {
+      event.deliver(_messages);
+    }
+  }
+
+  void _emitMessage(RemotePluginMessage message) {
+    if (_disposed) {
+      return;
+    }
+
+    if (_messages.hasListener) {
+      _messages.add(message);
+      return;
+    }
+
+    _pendingEvents.add(_PendingGuestSessionMessage(message));
+  }
+
+  void _emitError(Object error, StackTrace stackTrace) {
+    if (_disposed) {
+      return;
+    }
+
+    if (_messages.hasListener) {
+      _messages.addError(error, stackTrace);
+      return;
+    }
+
+    _pendingEvents.add(_PendingGuestSessionError(error, stackTrace));
+  }
 
   void _bind() {
     _subscription = channel.messages.listen(
@@ -86,18 +129,14 @@ final class RemotePluginGuestSession {
           return;
         }
 
-        if (!_disposed) {
-          _messages.add(message);
-        }
+        _emitMessage(message);
       },
       onError: (Object error, StackTrace stackTrace) {
         if (!_hostHello.isCompleted) {
           _hostHello.completeError(error, stackTrace);
           return;
         }
-        if (!_disposed) {
-          _messages.addError(error, stackTrace);
-        }
+        _emitError(error, stackTrace);
       },
       onDone: () {
         if (!_hostHello.isCompleted) {
@@ -122,8 +161,38 @@ final class RemotePluginGuestSession {
       return;
     }
     _disposed = true;
+    _pendingEvents.clear();
     await _subscription?.cancel();
     await _messages.close();
     await channel.dispose();
+  }
+}
+
+sealed class _PendingGuestSessionEvent {
+  const _PendingGuestSessionEvent();
+
+  void deliver(StreamController<RemotePluginMessage> controller);
+}
+
+final class _PendingGuestSessionMessage extends _PendingGuestSessionEvent {
+  const _PendingGuestSessionMessage(this.message);
+
+  final RemotePluginMessage message;
+
+  @override
+  void deliver(StreamController<RemotePluginMessage> controller) {
+    controller.add(message);
+  }
+}
+
+final class _PendingGuestSessionError extends _PendingGuestSessionEvent {
+  const _PendingGuestSessionError(this.error, this.stackTrace);
+
+  final Object error;
+  final StackTrace stackTrace;
+
+  @override
+  void deliver(StreamController<RemotePluginMessage> controller) {
+    controller.addError(error, stackTrace);
   }
 }

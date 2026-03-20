@@ -57,11 +57,19 @@ void main() {
       await hostChannel.send(
         const plugins.RemotePluginFocusInput(surfaceId: 'sidebar'),
       );
+      await hostChannel.send(
+        const plugins.RemotePluginBlurInput(surfaceId: 'sidebar'),
+      );
 
-      final forwarded = await session.messages.first.timeout(
+      final forwarded = await session.messages
+          .take(2)
+          .toList()
+          .timeout(
         const Duration(seconds: 1),
       );
-      expect(forwarded, isA<plugins.RemotePluginFocusInput>());
+      expect(forwarded, hasLength(2));
+      expect(forwarded.first, isA<plugins.RemotePluginFocusInput>());
+      expect(forwarded.last, isA<plugins.RemotePluginBlurInput>());
     });
 
     test('bindStdio wires byte input and line output together', () async {
