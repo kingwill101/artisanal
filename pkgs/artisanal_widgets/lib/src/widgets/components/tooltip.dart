@@ -323,9 +323,6 @@ class _TooltipState extends State<Tooltip> {
 
     final overlayState = Overlay.maybeOf(context);
     if (overlayState != null) {
-      if (_floatingEntry != null) {
-        _floatingEntry!.markNeedsBuild();
-      }
       return target;
     }
 

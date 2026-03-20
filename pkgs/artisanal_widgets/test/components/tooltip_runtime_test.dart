@@ -293,6 +293,57 @@ void main() {
       expect(plain, isNot(contains('Hover to preview tooltips')));
       expect(plain, contains('Hover me'));
     });
+
+    test('floating tooltip stays stable without repaint churn while hovered', () async {
+      final terminal = runtime.StringTerminal();
+      final program = runtime.Program(
+        w.WidgetApp(_overlayRoot()),
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouse: true,
+          mouseMode: runtime.MouseMode.allMotion,
+          signalHandlers: false,
+          frameTick: false,
+          startupProbes: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      addTearDown(() async {
+        program.send(const runtime.QuitMsg());
+        await runFuture;
+      });
+
+      await _waitUntil(
+        () => Style.stripAnsi(terminal.output).contains('Hover me'),
+      );
+
+      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
+      expect(hoverTarget, isNotNull);
+
+      terminal.clear();
+      program.send(
+        runtime.MouseMsg(
+          action: runtime.MouseAction.motion,
+          button: runtime.MouseButton.none,
+          x: hoverTarget!.x,
+          y: hoverTarget.y,
+        ),
+      );
+
+      await _waitUntil(
+        () => Style.stripAnsi(terminal.output).contains('Hover to preview tooltips'),
+      );
+
+      final settledOutput = terminal.output;
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+      expect(
+        terminal.output,
+        equals(settledOutput),
+        reason: 'tooltip output should stay stable without new input',
+      );
+    });
   });
 }
 
