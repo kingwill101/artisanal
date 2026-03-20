@@ -9,7 +9,7 @@ part of 'components_widgets.dart';
 ///
 /// You may supply an external [ScrollController] to programmatically
 /// control the scroll position or to share it with other widgets.
-class ScrollArea extends StatelessWidget {
+class ScrollArea extends StatefulWidget {
   ScrollArea({
     required this.child,
     this.padding,
@@ -28,22 +28,45 @@ class ScrollArea extends StatelessWidget {
   final ScrollController? controller;
 
   @override
+  State createState() => _ScrollAreaState();
+}
+
+class _ScrollAreaState extends State<ScrollArea> {
+  WidgetScrollController? _ownController;
+
+  ScrollController get _effectiveController =>
+      widget.controller ?? (_ownController ??= WidgetScrollController());
+
+  @override
+  Cmd? didUpdateWidget(covariant ScrollArea oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controller != oldWidget.controller &&
+        widget.controller != null) {
+      _ownController = null;
+    }
+    return null;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Use a shared controller so the scrollbar and scroll view stay in sync.
-    final ctrl = controller ?? WidgetScrollController();
+    final ctrl = _effectiveController;
 
     Widget inner = SingleChildScrollView(
       controller: ctrl,
-      padding: padding,
-      child: child,
+      padding: widget.padding,
+      child: widget.child,
     );
 
-    if (showScrollbar) {
+    if (widget.showScrollbar) {
       inner = Scrollbar(controller: ctrl, child: inner);
     }
 
-    if (width != null || height != null) {
-      inner = Container(width: width, height: height, child: inner);
+    if (widget.width != null || widget.height != null) {
+      inner = Container(
+        width: widget.width,
+        height: widget.height,
+        child: inner,
+      );
     }
 
     return inner;

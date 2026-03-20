@@ -191,6 +191,16 @@ class _TextEditorState extends State<TextEditor> {
     'esc',
     'close goto',
   );
+  static final KeyBinding _nextDiagnosticBinding = KeyBinding.withHelp(
+    ['f8'],
+    'f8',
+    'next diagnostic',
+  );
+  static final KeyBinding _previousDiagnosticBinding = KeyBinding.withHelp(
+    ['shift+f8'],
+    'shift+f8',
+    'prev diagnostic',
+  );
   static final KeyBinding _indentBinding = KeyBinding.withHelp(
     ['tab'],
     'tab',
@@ -311,10 +321,11 @@ class _TextEditorState extends State<TextEditor> {
   TextFieldController? _internalSearchController;
   TextFieldController? _internalGotoController;
   FocusController? _internalFocusController;
+  late final TextDecorationLayerBinding _searchDecorationBinding;
   String? _lastSavedText;
   bool _searchVisible = false;
   bool _gotoVisible = false;
-  List<(int row, int col)> _searchMatches = const [];
+  List<TextHighlightRange> _searchMatches = const [];
   int _activeSearchMatchIndex = -1;
   TextAreaController get _controller =>
       widget.controller ??
@@ -327,8 +338,8 @@ class _TextEditorState extends State<TextEditor> {
       widget.focusController ??
       (_internalFocusController ??= FocusController());
   String get _focusId => widget.focusId ?? '${widget.id}.editor';
-  String get _searchFocusId => '${widget.id}.search';
-  String get _gotoFocusId => '${widget.id}.goto';
+  String get _searchFocusId => '$_focusId.search';
+  String get _gotoFocusId => '$_focusId.goto';
   _TextAreaControllerCoreBridge get _coreBridge =>
       _TextAreaControllerCoreBridge(_controller);
 
@@ -338,21 +349,42 @@ class _TextEditorState extends State<TextEditor> {
     _lastSavedText = _controller.text;
     _controller.addListener(_handleControllerChanged);
     _searchController.addListener(_handleSearchChanged);
+    _searchDecorationBinding = TextDecorationLayerBinding(
+      controller: _controller,
+      layerKey: textSearchDecorationLayerKey,
+      buildDecorations: _buildSearchDecorations,
+      priority: textSearchDecorationLayerPriority,
+      isActive: () => _searchVisible,
+      syncImmediately: false,
+    );
   }
 
   @override
   Cmd? didUpdateWidget(covariant TextEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      (oldWidget.controller ?? _internalController)?.removeListener(
-        _handleControllerChanged,
-      );
+      final oldController = oldWidget.controller ?? _internalController;
+      oldController?.removeListener(_handleControllerChanged);
+      if (!identical(oldController, _controller)) {
+        oldController?.clearDecorationLayer(textSearchDecorationLayerKey);
+      }
+      _searchMatches = const [];
+      _activeSearchMatchIndex = -1;
+      _searchDecorationBinding.controller = _controller;
       _controller.addListener(_handleControllerChanged);
       _lastSavedText = _controller.text;
     }
     if (oldWidget.model != widget.model && widget.model != null) {
       _controller.model = widget.model!;
       _lastSavedText = _controller.text;
+    }
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.model != widget.model) {
+      if (_searchVisible) {
+        _refreshSearchMatches(jumpToFirst: true, forceDecorationSync: true);
+      } else {
+        _searchDecorationBinding.clear();
+      }
     }
     return null;
   }
@@ -363,6 +395,8 @@ class _TextEditorState extends State<TextEditor> {
       _handleControllerChanged,
     );
     _internalSearchController?.removeListener(_handleSearchChanged);
+    _searchDecorationBinding.clear();
+    _searchDecorationBinding.dispose();
     _internalController?.dispose();
     _internalSearchController?.dispose();
     _internalGotoController?.dispose();
@@ -371,7 +405,7 @@ class _TextEditorState extends State<TextEditor> {
 
   void _handleControllerChanged() {
     if (!mounted) return;
-    if (_searchVisible || _searchController.text.isNotEmpty) {
+    if (_searchVisible) {
       _refreshSearchMatches();
     }
     setState(() {});
@@ -380,19 +414,21 @@ class _TextEditorState extends State<TextEditor> {
   bool get _isDirty => _controller.text != (_lastSavedText ?? '');
   bool get _isSearchFocused => _focusController.isFocused(_searchFocusId);
   bool get _isGotoFocused => _focusController.isFocused(_gotoFocusId);
+  bool get _isUtilityFocused => _isSearchFocused || _isGotoFocused;
+  bool get _hasDiagnostics => _controller.diagnostics.isNotEmpty;
 
   void _handleSearchChanged() {
     if (!mounted) return;
-    _refreshSearchMatches(jumpToFirst: true);
+    _refreshSearchMatches(jumpToFirst: true, forceDecorationSync: true);
     setState(() {});
   }
 
   void _openSearch() {
-    _refreshSearchMatches(jumpToFirst: true);
     setState(() {
       _searchVisible = true;
       _gotoVisible = false;
     });
+    _refreshSearchMatches(jumpToFirst: true, forceDecorationSync: true);
     _focusController.requestFocus(_searchFocusId);
   }
 
@@ -402,65 +438,69 @@ class _TextEditorState extends State<TextEditor> {
       _gotoVisible = true;
       _searchVisible = false;
     });
+    _searchDecorationBinding.clear();
     _focusController.requestFocus(_gotoFocusId);
   }
 
   void _closeUtilityBar() {
+    final wasSearchVisible = _searchVisible;
     setState(() {
       _searchVisible = false;
       _gotoVisible = false;
     });
+    if (wasSearchVisible) {
+      _searchDecorationBinding.clear();
+    }
     _focusController.requestFocus(_focusId);
   }
 
-  void _refreshSearchMatches({bool jumpToFirst = false}) {
-    final matches = _findSearchMatches(
-      _controller.text,
-      _searchController.text,
+  List<TextDecorationRange> _buildSearchDecorations(String _) {
+    if (!_searchVisible || _searchMatches.isEmpty) {
+      return const [];
+    }
+    return textSearchDecorations(
+      _searchMatches,
+      activeIndex: _activeSearchMatchIndex,
+    );
+  }
+
+  void _refreshSearchMatches({
+    bool jumpToFirst = false,
+    bool forceDecorationSync = false,
+  }) {
+    final document = TextDocument(text: _controller.text);
+    final matches = findTextQueryHighlights(
+      document: document,
+      query: _searchController.text,
     );
     _searchMatches = matches;
     if (matches.isEmpty) {
       _activeSearchMatchIndex = -1;
+      _searchDecorationBinding.sync(force: forceDecorationSync);
       return;
     }
 
     if (jumpToFirst) {
       _activeSearchMatchIndex = 0;
-      _jumpToSearchMatch(0);
+      _searchDecorationBinding.sync(force: forceDecorationSync);
+      _jumpToSearchMatch(0, document: document);
       return;
     }
 
     if (_activeSearchMatchIndex < 0) {
       _activeSearchMatchIndex = 0;
-      return;
     }
     if (_activeSearchMatchIndex >= matches.length) {
       _activeSearchMatchIndex = matches.length - 1;
     }
+    _searchDecorationBinding.sync(force: forceDecorationSync);
   }
 
-  List<(int row, int col)> _findSearchMatches(String text, String query) {
-    if (query.isEmpty) return const [];
-
-    final needle = query.toLowerCase();
-    final matches = <(int row, int col)>[];
-    final lines = text.split('\n');
-    for (var row = 0; row < lines.length; row++) {
-      final haystack = lines[row].toLowerCase();
-      var start = 0;
-      while (true) {
-        final col = haystack.indexOf(needle, start);
-        if (col < 0) break;
-        matches.add((row, col));
-        start = col + math.max(needle.length, 1);
-      }
-    }
-    return matches;
-  }
-
-  void _jumpToSearchMatch(int index) {
+  void _jumpToSearchMatch(int index, {TextDocument? document}) {
     final match = _searchMatches[index];
-    _controller.setCursor(match.$1, match.$2);
+    final searchDocument = document ?? TextDocument(text: _controller.text);
+    final position = searchDocument.positionForOffset(match.startOffset);
+    _controller.setCursor(position.line, position.column);
   }
 
   void _stepSearch(int delta) {
@@ -470,7 +510,26 @@ class _TextEditorState extends State<TextEditor> {
     setState(() {
       _activeSearchMatchIndex = normalized;
     });
+    _searchDecorationBinding.sync(force: true);
     _jumpToSearchMatch(normalized);
+  }
+
+  void _stepDiagnostic(int delta) {
+    final changed = delta < 0
+        ? _controller.selectPreviousDiagnostic()
+        : _controller.selectNextDiagnostic();
+    if (changed) {
+      _focusController.requestFocus(_focusId);
+    }
+  }
+
+  Color _diagnosticColor(Theme theme, TextDiagnosticSeverity severity) {
+    return switch (severity) {
+      TextDiagnosticSeverity.error => theme.error,
+      TextDiagnosticSeverity.warning => theme.warning,
+      TextDiagnosticSeverity.info => theme.resolvedInfo,
+      TextDiagnosticSeverity.hint => theme.resolvedOnSurfaceVariant,
+    };
   }
 
   void _applyGotoLine() {
@@ -513,6 +572,15 @@ class _TextEditorState extends State<TextEditor> {
         _closeUtilityBar();
         return Cmd.none();
       }
+    }
+
+    if (_hasDiagnostics &&
+        key.type == terminal_keys.KeyType.f8 &&
+        !key.ctrl &&
+        !key.alt &&
+        !key.meta) {
+      _stepDiagnostic(key.shift ? -1 : 1);
+      return Cmd.none();
     }
 
     final extraCmd = widget.onKey?.call(msg);
@@ -835,6 +903,7 @@ class _TextEditorState extends State<TextEditor> {
   }
 
   Widget _buildSearchBar(Theme theme, int width) {
+    final editorTheme = theme.editorTheme;
     final query = _searchController.text;
     final statusText = switch ((query.isEmpty, _searchMatches.isEmpty)) {
       (true, _) => 'Type to search',
@@ -852,7 +921,7 @@ class _TextEditorState extends State<TextEditor> {
       width: searchFieldWidth,
       placeholder: 'Find in document',
       onChanged: (_) {
-        _refreshSearchMatches(jumpToFirst: true);
+        _refreshSearchMatches(jumpToFirst: true, forceDecorationSync: true);
         setState(() {});
       },
     );
@@ -886,13 +955,18 @@ class _TextEditorState extends State<TextEditor> {
           );
 
     return Frame(
-      background: theme.surface,
+      background: editorTheme?.utilityBackground ?? theme.background,
+      border: Border.normal,
+      borderColor: _isSearchFocused
+          ? (editorTheme?.activeShellBorderColor ?? theme.primary)
+          : (editorTheme?.utilityBorderColor ?? theme.resolvedOutline),
       padding: const EdgeInsets.all(1),
       child: content,
     );
   }
 
   Widget _buildGotoBar(Theme theme, int width) {
+    final editorTheme = theme.editorTheme;
     final totalLines = _controller.text.split('\n').length;
     final requested = int.tryParse(_gotoController.text.trim());
     final statusText = switch (requested) {
@@ -943,9 +1017,32 @@ class _TextEditorState extends State<TextEditor> {
           );
 
     return Frame(
-      background: theme.surface,
+      background: editorTheme?.utilityBackground ?? theme.background,
+      border: Border.normal,
+      borderColor: _isGotoFocused
+          ? (editorTheme?.activeShellBorderColor ?? theme.primary)
+          : (editorTheme?.utilityBorderColor ?? theme.resolvedOutline),
       padding: const EdgeInsets.all(1),
       child: content,
+    );
+  }
+
+  Widget _buildChromeBand(
+    Theme theme, {
+    required bool active,
+    required Widget child,
+  }) {
+    final editorTheme = theme.editorTheme;
+    return Frame(
+      background: active
+          ? (editorTheme?.utilityBackground ?? theme.surface)
+          : (editorTheme?.inactiveShellBackground ?? theme.surface),
+      border: Border.normal,
+      borderColor: active
+          ? (editorTheme?.utilityBorderColor ?? theme.resolvedOutline)
+          : (editorTheme?.inactiveShellBorderColor ?? theme.border),
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: child,
     );
   }
 
@@ -954,6 +1051,13 @@ class _TextEditorState extends State<TextEditor> {
     final theme = ThemeScope.of(context);
     final width = MediaQuery.of(context).size.width.round();
     final bodyController = _controller;
+    final editorTheme = theme.editorTheme;
+    final baseBodyStyles = widget.styles ?? textAreaStylesFromTheme(theme);
+    final bodyStyles = _isUtilityFocused
+        ? baseBodyStyles.copyWith(blurred: baseBodyStyles.focused)
+        : baseBodyStyles;
+    final isEditorActive =
+        _focusController.isFocused(_focusId) || _isUtilityFocused;
     final keyMap = widget.keyMap ?? bodyController.model.keyMap;
     final helpKeyMap = _TextEditorHelpKeyMap(
       keyMap,
@@ -963,6 +1067,10 @@ class _TextEditorState extends State<TextEditor> {
       searchNextBinding: _searchNextBinding,
       searchPreviousBinding: _searchPreviousBinding,
       searchCloseBinding: _searchCloseBinding,
+      nextDiagnosticBinding: _hasDiagnostics ? _nextDiagnosticBinding : null,
+      previousDiagnosticBinding: _hasDiagnostics
+          ? _previousDiagnosticBinding
+          : null,
       gotoApplyBinding: _gotoApplyBinding,
       gotoCloseBinding: _gotoCloseBinding,
       searchActive: _searchVisible,
@@ -995,14 +1103,43 @@ class _TextEditorState extends State<TextEditor> {
       ],
     );
     final statsStyle = _copyStyle(theme.labelSmall)
-      ..foreground(theme.resolvedOnSurfaceVariant);
+      ..foreground(
+        isEditorActive
+            ? (editorTheme?.metaForeground ?? theme.resolvedOnSurfaceVariant)
+            : (editorTheme?.inactiveMetaForeground ?? theme.muted),
+      );
     final statusStyle = _copyStyle(theme.labelSmall)
-      ..foreground(_isDirty ? theme.warning : theme.resolvedOnSurfaceVariant);
+      ..foreground(
+        _isDirty
+            ? theme.warning
+            : (isEditorActive
+                  ? (editorTheme?.metaForeground ??
+                        theme.resolvedOnSurfaceVariant)
+                  : (editorTheme?.inactiveMetaForeground ?? theme.muted)),
+      );
+    final activeDiagnostic = bodyController.activeDiagnostic;
+    final diagnosticStyle = activeDiagnostic == null
+        ? null
+        : (_copyStyle(theme.labelSmall)
+            ..foreground(_diagnosticColor(theme, activeDiagnostic.severity)));
+    final titleStyle = _copyStyle(theme.titleMedium)
+      ..foreground(
+        isEditorActive
+            ? (editorTheme?.titleForeground ?? theme.onSurface)
+            : (editorTheme?.inactiveTitleForeground ??
+                  theme.resolvedOnSurfaceVariant),
+      );
+    final shellBorderColor = isEditorActive
+        ? (editorTheme?.activeShellBorderColor ?? theme.primary)
+        : (editorTheme?.inactiveShellBorderColor ?? theme.resolvedOutline);
+    final shellBackground = isEditorActive
+        ? (editorTheme?.shellBackground ?? theme.resolvedSurfaceVariant)
+        : (editorTheme?.inactiveShellBackground ?? theme.surface);
 
     final header = Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(widget.title, style: theme.titleMedium),
+        Text(widget.title, style: titleStyle),
         Row(
           gap: 2,
           children: [
@@ -1025,11 +1162,28 @@ class _TextEditorState extends State<TextEditor> {
       ],
     );
 
+    final diagnosticBanner = activeDiagnostic == null
+        ? null
+        : Text(
+            textDiagnosticSummaryLabel(
+              text: _controller.text,
+              diagnostic: activeDiagnostic,
+            ),
+            style: diagnosticStyle,
+            softWrap: true,
+          );
+
     final editorBody = FocusScope(
       controller: _focusController,
       child: Frame(
-        background: theme.surface,
-        padding: const EdgeInsets.all(1),
+        background: isEditorActive
+            ? (editorTheme?.bodyBackground ?? theme.background)
+            : (editorTheme?.inactiveBodyBackground ?? theme.background),
+        border: Border.normal,
+        borderColor: isEditorActive
+            ? (editorTheme?.activeBodyBorderColor ?? theme.resolvedOutline)
+            : (editorTheme?.inactiveBodyBorderColor ?? theme.border),
+        padding: const EdgeInsets.symmetric(horizontal: 1),
         child: TextArea(
           controller: bodyController,
           focusController: _focusController,
@@ -1044,14 +1198,29 @@ class _TextEditorState extends State<TextEditor> {
           softWrap: widget.softWrap,
           useVirtualCursor: widget.useVirtualCursor,
           keyMap: widget.keyMap,
-          styles: widget.styles,
+          styles: bodyStyles,
           cursor: widget.cursor,
           onChanged: widget.onChanged,
         ),
       ),
     );
+    final headerBandChildren = <Widget>[
+      header,
+      if (diagnosticBanner != null) diagnosticBanner,
+    ];
 
-    final children = <Widget>[header, editorBody];
+    final children = <Widget>[
+      _buildChromeBand(
+        theme,
+        active: isEditorActive,
+        child: Column(
+          gap: 1,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: headerBandChildren,
+        ),
+      ),
+      editorBody,
+    ];
 
     if (_searchVisible) {
       children.add(_buildSearchBar(theme, width));
@@ -1060,27 +1229,43 @@ class _TextEditorState extends State<TextEditor> {
       children.add(_buildGotoBar(theme, width));
     }
 
-    if (widget.showHelpBar) {
-      children.add(
+    final lowerBandChildren = <Widget>[
+      if (widget.showHelpBar)
         HelpView(
           keyMap: helpKeyMap,
           showAll: widget.helpExpanded,
           itemSpacing: 2,
           columnGap: 4,
         ),
-      );
-    }
+      if (widget.footer != null) widget.footer!,
+    ];
 
-    if (widget.footer != null) {
-      children.add(widget.footer!);
+    if (lowerBandChildren.isNotEmpty) {
+      children.add(
+        _buildChromeBand(
+          theme,
+          active: isEditorActive,
+          child: Column(
+            gap: 1,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: lowerBandChildren,
+          ),
+        ),
+      );
     }
 
     return KeyboardListener(
       onKey: _handleEditorKey,
-      child: Column(
-        gap: 1,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      child: Frame(
+        background: shellBackground,
+        border: Border.rounded,
+        borderColor: shellBorderColor,
+        padding: const EdgeInsets.symmetric(horizontal: 1),
+        child: Column(
+          gap: 1,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: children,
+        ),
       ),
     );
   }
@@ -1095,6 +1280,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
     this.searchNextBinding,
     this.searchPreviousBinding,
     this.searchCloseBinding,
+    this.nextDiagnosticBinding,
+    this.previousDiagnosticBinding,
     this.gotoApplyBinding,
     this.gotoCloseBinding,
     this.searchActive = false,
@@ -1113,6 +1300,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
   final KeyBinding? searchNextBinding;
   final KeyBinding? searchPreviousBinding;
   final KeyBinding? searchCloseBinding;
+  final KeyBinding? nextDiagnosticBinding;
+  final KeyBinding? previousDiagnosticBinding;
   final KeyBinding? gotoApplyBinding;
   final KeyBinding? gotoCloseBinding;
   final bool searchActive;
@@ -1135,6 +1324,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
         if (searchActive && searchPreviousBinding != null)
           searchPreviousBinding!,
         if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+        if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
+        if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
         if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
         if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
         if (indentBinding != null) indentBinding!,
@@ -1154,6 +1345,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
       if (searchActive && searchNextBinding != null) searchNextBinding!,
       if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
       if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+      if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
+      if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
       if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
       if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
       if (indentBinding != null) indentBinding!,
@@ -1183,6 +1376,8 @@ class _TextEditorHelpKeyMap implements KeyMap {
       if (searchActive && searchNextBinding != null) searchNextBinding!,
       if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
       if (searchActive && searchCloseBinding != null) searchCloseBinding!,
+      if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
+      if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
       if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
       if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
       if (indentBinding != null) indentBinding!,

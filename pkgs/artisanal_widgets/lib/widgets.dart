@@ -37,6 +37,8 @@ export 'src/widgets/components/overlay.dart';
 export 'package:artisanal/runtime.dart' show ZoneInBoundsMsg;
 export 'package:artisanal/tui.dart' show KeyBinding, KeyMap;
 export 'src/widgets/input/input_widgets.dart';
+export 'src/widgets/input/text_decoration_binding.dart';
+export 'src/widgets/input/text_diagnostics_binding.dart';
 export 'src/widgets/scroll/scroll_widgets.dart';
 export 'src/widgets/animation/animations.dart';
 export 'src/widgets/navigation/navigation.dart';

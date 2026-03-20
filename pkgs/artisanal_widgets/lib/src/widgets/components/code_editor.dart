@@ -111,6 +111,7 @@ class _CodeEditorState extends State<CodeEditor> {
     'toggle block comment',
   );
   TextAreaController? _internalController;
+  late final TextDecorationLayerBinding _syntaxDecorationBinding;
   TextAreaController get _controller =>
       widget.controller ??
       (_internalController ??= TextAreaController(model: widget.model));
@@ -120,40 +121,115 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void initState() {
     super.initState();
+    _syntaxDecorationBinding = TextDecorationLayerBinding(
+      controller: _controller,
+      layerKey: textSyntaxDecorationLayerKey,
+      buildDecorations: _buildSyntaxDecorations,
+      priority: textSyntaxDecorationLayerPriority,
+      syncImmediately: false,
+    );
     _controller.addListener(_handleControllerChanged);
+    _syntaxDecorationBinding.sync(force: true);
   }
 
   @override
   Cmd? didUpdateWidget(covariant CodeEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
-      (oldWidget.controller ?? _internalController)?.removeListener(
-        _handleControllerChanged,
-      );
+      final oldController = oldWidget.controller ?? _internalController;
+      oldController?.removeListener(_handleControllerChanged);
+      if (!identical(oldController, _controller)) {
+        oldController?.clearDecorationLayer(textSyntaxDecorationLayerKey);
+      }
+      _syntaxDecorationBinding.controller = _controller;
       _controller.addListener(_handleControllerChanged);
     }
     if (oldWidget.model != widget.model && widget.model != null) {
       _controller.model = widget.model!;
+    }
+    if (oldWidget.controller != widget.controller ||
+        oldWidget.model != widget.model ||
+        oldWidget.language != widget.language) {
+      _syntaxDecorationBinding.sync(force: true);
     }
     return null;
   }
 
   @override
   void dispose() {
-    (widget.controller ?? _internalController)?.removeListener(
-      _handleControllerChanged,
-    );
+    final controller = widget.controller ?? _internalController;
+    controller?.removeListener(_handleControllerChanged);
+    _syntaxDecorationBinding.clear();
+    _syntaxDecorationBinding.dispose();
     _internalController?.dispose();
     super.dispose();
   }
 
   void _handleControllerChanged() {
     if (!mounted) return;
+    _syntaxDecorationBinding.sync();
     setState(() {});
   }
 
   CodeLanguageProfile get _languageProfile =>
       resolveCodeLanguageProfile(widget.language);
+
+  ChromaTheme _resolvedSyntaxTheme() {
+    if (widget.syntaxTheme != null) {
+      return widget.syntaxTheme!;
+    }
+
+    return (widget.adaptiveSyntaxTheme ?? AdaptiveChromaTheme.draculaGithub)
+        .resolve(hasDarkBackground: hasDarkBackground);
+  }
+
+  TextAreaStyles _resolvedEditorStyles(Theme theme) {
+    final baseStyles = widget.styles ?? textAreaStylesFromTheme(theme);
+    final syntaxDecorationStyles = SyntaxHighlighter(
+      theme: _resolvedSyntaxTheme(),
+    ).decorationStyles();
+    if (syntaxDecorationStyles.isEmpty) {
+      return baseStyles;
+    }
+
+    return baseStyles.copyWith(
+      focused: baseStyles.focused.copyWith(
+        decorationStyles: <String, Style>{
+          ...baseStyles.focused.decorationStyles,
+          ...syntaxDecorationStyles,
+        },
+      ),
+      blurred: baseStyles.blurred.copyWith(
+        decorationStyles: <String, Style>{
+          ...baseStyles.blurred.decorationStyles,
+          ...syntaxDecorationStyles,
+        },
+      ),
+    );
+  }
+
+  List<TextDecorationRange> _buildSyntaxDecorations(String text) {
+    if (text.isEmpty) {
+      return const [];
+    }
+
+    final spans = SyntaxHighlighter().highlightSpans(
+      text,
+      language: widget.language,
+    );
+    if (spans.isEmpty) {
+      return const [];
+    }
+
+    return [
+      for (final span in spans)
+        TextDecorationRange(
+          startOffset: span.startOffset,
+          endOffset: span.endOffset,
+          styleKey: span.styleKey,
+        ),
+    ];
+  }
 
   Cmd? _handleCodeEditorKey(KeyMsg msg) {
     final key = msg.key;
@@ -419,10 +495,7 @@ class _CodeEditorState extends State<CodeEditor> {
           .render('No code yet.');
     }
 
-    final resolvedTheme =
-        widget.syntaxTheme ??
-        (widget.adaptiveSyntaxTheme ?? AdaptiveChromaTheme.draculaGithub)
-            .resolve(hasDarkBackground: hasDarkBackground);
+    final resolvedTheme = _resolvedSyntaxTheme();
     return highlightCodeString(
       text,
       language: widget.language,
@@ -430,8 +503,50 @@ class _CodeEditorState extends State<CodeEditor> {
     );
   }
 
+  Widget _buildPreviewPane(Theme theme, String previewTitle) {
+    final editorTheme = theme.editorTheme;
+    final titleStyle = _copyStyle(theme.titleSmall)
+      ..foreground(
+        editorTheme?.inactiveTitleForeground ?? theme.resolvedOnSurfaceVariant,
+      );
+
+    return Frame(
+      background: editorTheme?.inactiveShellBackground ?? theme.surface,
+      border: Border.rounded,
+      borderColor: editorTheme?.inactiveShellBorderColor ?? theme.border,
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: Column(
+        gap: 1,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Frame(
+            background: editorTheme?.utilityBackground ?? theme.surface,
+            border: Border.normal,
+            borderColor:
+                editorTheme?.utilityBorderColor ?? theme.resolvedOutline,
+            padding: const EdgeInsets.symmetric(horizontal: 1),
+            child: Text(previewTitle, style: titleStyle),
+          ),
+          Frame(
+            background: editorTheme?.inactiveBodyBackground ?? theme.background,
+            border: Border.normal,
+            borderColor: editorTheme?.inactiveBodyBorderColor ?? theme.border,
+            padding: const EdgeInsets.symmetric(horizontal: 1),
+            child: ScrollArea(
+              controller: widget.previewController,
+              height: widget.previewHeight,
+              showScrollbar: widget.showPreviewScrollbar,
+              child: Text(_highlightedPreview(), softWrap: widget.previewWrap),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = ThemeScope.of(context);
     final previewTitle = widget.language == null || widget.language!.isEmpty
         ? widget.previewTitle
         : '${widget.previewTitle} · ${widget.language}';
@@ -455,7 +570,7 @@ class _CodeEditorState extends State<CodeEditor> {
           softWrap: widget.softWrap,
           useVirtualCursor: widget.useVirtualCursor,
           keyMap: widget.keyMap,
-          styles: widget.styles,
+          styles: _resolvedEditorStyles(theme),
           cursor: widget.cursor,
           showHelpBar: widget.showHelpBar,
           helpExpanded: widget.helpExpanded,
@@ -474,16 +589,7 @@ class _CodeEditorState extends State<CodeEditor> {
           dirtyLabel: widget.dirtyLabel,
           indentWidth: widget.indentWidth,
         ),
-        if (widget.showPreview)
-          PanelBox(
-            title: previewTitle,
-            child: ScrollArea(
-              controller: widget.previewController,
-              height: widget.previewHeight,
-              showScrollbar: widget.showPreviewScrollbar,
-              child: Text(_highlightedPreview(), softWrap: widget.previewWrap),
-            ),
-          ),
+        if (widget.showPreview) _buildPreviewPane(theme, previewTitle),
       ],
     );
   }

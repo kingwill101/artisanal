@@ -407,6 +407,215 @@ class GitDiffThemeData {
   }
 }
 
+/// Theme data for editable text surfaces such as [TextArea], [TextEditor],
+/// [CodeEditor], and [MarkdownEditor].
+///
+/// This gives editor surfaces their own shell/body/utility chroming so they
+/// don't have to infer everything from generic panel tokens.
+class EditorThemeData {
+  const EditorThemeData({
+    this.shellBackground,
+    this.inactiveShellBackground,
+    this.activeShellBorderColor,
+    this.inactiveShellBorderColor,
+    this.bodyBackground,
+    this.inactiveBodyBackground,
+    this.activeBodyBorderColor,
+    this.inactiveBodyBorderColor,
+    this.utilityBackground,
+    this.utilityBorderColor,
+    this.titleForeground,
+    this.inactiveTitleForeground,
+    this.metaForeground,
+    this.inactiveMetaForeground,
+    this.focusedPromptForeground,
+    this.blurredPromptForeground,
+    this.focusedTextForeground,
+    this.blurredTextForeground,
+    this.focusedPlaceholderForeground,
+    this.blurredPlaceholderForeground,
+    this.focusedLineNumberForeground,
+    this.blurredLineNumberForeground,
+    this.focusedCursorLineBackground,
+    this.blurredCursorLineBackground,
+    this.focusedCursorLineNumberForeground,
+    this.blurredCursorLineNumberForeground,
+    this.searchMatchBackground,
+    this.searchMatchUnderlineColor,
+  });
+
+  /// Background of the outer editor shell while active.
+  final Color? shellBackground;
+
+  /// Background of the outer editor shell while inactive.
+  final Color? inactiveShellBackground;
+
+  /// Border color of the outer editor shell while active.
+  final Color? activeShellBorderColor;
+
+  /// Border color of the outer editor shell while inactive.
+  final Color? inactiveShellBorderColor;
+
+  /// Background of the editable text well while active.
+  final Color? bodyBackground;
+
+  /// Background of the editable text well while inactive.
+  final Color? inactiveBodyBackground;
+
+  /// Border color of the editable text well while active.
+  final Color? activeBodyBorderColor;
+
+  /// Border color of the editable text well while inactive.
+  final Color? inactiveBodyBorderColor;
+
+  /// Background of utility bars such as find and go-to-line.
+  final Color? utilityBackground;
+
+  /// Border color of utility bars while inactive.
+  final Color? utilityBorderColor;
+
+  /// Title foreground while the editor is active.
+  final Color? titleForeground;
+
+  /// Title foreground while the editor is inactive.
+  final Color? inactiveTitleForeground;
+
+  /// Meta/status foreground while the editor is active.
+  final Color? metaForeground;
+
+  /// Meta/status foreground while the editor is inactive.
+  final Color? inactiveMetaForeground;
+
+  /// Prompt foreground while the text surface is focused.
+  final Color? focusedPromptForeground;
+
+  /// Prompt foreground while the text surface is blurred.
+  final Color? blurredPromptForeground;
+
+  /// Text foreground while the text surface is focused.
+  final Color? focusedTextForeground;
+
+  /// Text foreground while the text surface is blurred.
+  final Color? blurredTextForeground;
+
+  /// Placeholder foreground while the text surface is focused.
+  final Color? focusedPlaceholderForeground;
+
+  /// Placeholder foreground while the text surface is blurred.
+  final Color? blurredPlaceholderForeground;
+
+  /// Line-number foreground while the text surface is focused.
+  final Color? focusedLineNumberForeground;
+
+  /// Line-number foreground while the text surface is blurred.
+  final Color? blurredLineNumberForeground;
+
+  /// Active-line background while the text surface is focused.
+  final Color? focusedCursorLineBackground;
+
+  /// Active-line background while the text surface is blurred.
+  final Color? blurredCursorLineBackground;
+
+  /// Active-line line-number foreground while focused.
+  final Color? focusedCursorLineNumberForeground;
+
+  /// Active-line line-number foreground while blurred.
+  final Color? blurredCursorLineNumberForeground;
+
+  /// Background applied to passive search matches.
+  final Color? searchMatchBackground;
+
+  /// Underline color applied to passive search matches.
+  final Color? searchMatchUnderlineColor;
+
+  /// Copy with selective overrides.
+  EditorThemeData copyWith({
+    Color? shellBackground,
+    Color? inactiveShellBackground,
+    Color? activeShellBorderColor,
+    Color? inactiveShellBorderColor,
+    Color? bodyBackground,
+    Color? inactiveBodyBackground,
+    Color? activeBodyBorderColor,
+    Color? inactiveBodyBorderColor,
+    Color? utilityBackground,
+    Color? utilityBorderColor,
+    Color? titleForeground,
+    Color? inactiveTitleForeground,
+    Color? metaForeground,
+    Color? inactiveMetaForeground,
+    Color? focusedPromptForeground,
+    Color? blurredPromptForeground,
+    Color? focusedTextForeground,
+    Color? blurredTextForeground,
+    Color? focusedPlaceholderForeground,
+    Color? blurredPlaceholderForeground,
+    Color? focusedLineNumberForeground,
+    Color? blurredLineNumberForeground,
+    Color? focusedCursorLineBackground,
+    Color? blurredCursorLineBackground,
+    Color? focusedCursorLineNumberForeground,
+    Color? blurredCursorLineNumberForeground,
+    Color? searchMatchBackground,
+    Color? searchMatchUnderlineColor,
+  }) {
+    return EditorThemeData(
+      shellBackground: shellBackground ?? this.shellBackground,
+      inactiveShellBackground:
+          inactiveShellBackground ?? this.inactiveShellBackground,
+      activeShellBorderColor:
+          activeShellBorderColor ?? this.activeShellBorderColor,
+      inactiveShellBorderColor:
+          inactiveShellBorderColor ?? this.inactiveShellBorderColor,
+      bodyBackground: bodyBackground ?? this.bodyBackground,
+      inactiveBodyBackground:
+          inactiveBodyBackground ?? this.inactiveBodyBackground,
+      activeBodyBorderColor:
+          activeBodyBorderColor ?? this.activeBodyBorderColor,
+      inactiveBodyBorderColor:
+          inactiveBodyBorderColor ?? this.inactiveBodyBorderColor,
+      utilityBackground: utilityBackground ?? this.utilityBackground,
+      utilityBorderColor: utilityBorderColor ?? this.utilityBorderColor,
+      titleForeground: titleForeground ?? this.titleForeground,
+      inactiveTitleForeground:
+          inactiveTitleForeground ?? this.inactiveTitleForeground,
+      metaForeground: metaForeground ?? this.metaForeground,
+      inactiveMetaForeground:
+          inactiveMetaForeground ?? this.inactiveMetaForeground,
+      focusedPromptForeground:
+          focusedPromptForeground ?? this.focusedPromptForeground,
+      blurredPromptForeground:
+          blurredPromptForeground ?? this.blurredPromptForeground,
+      focusedTextForeground:
+          focusedTextForeground ?? this.focusedTextForeground,
+      blurredTextForeground:
+          blurredTextForeground ?? this.blurredTextForeground,
+      focusedPlaceholderForeground:
+          focusedPlaceholderForeground ?? this.focusedPlaceholderForeground,
+      blurredPlaceholderForeground:
+          blurredPlaceholderForeground ?? this.blurredPlaceholderForeground,
+      focusedLineNumberForeground:
+          focusedLineNumberForeground ?? this.focusedLineNumberForeground,
+      blurredLineNumberForeground:
+          blurredLineNumberForeground ?? this.blurredLineNumberForeground,
+      focusedCursorLineBackground:
+          focusedCursorLineBackground ?? this.focusedCursorLineBackground,
+      blurredCursorLineBackground:
+          blurredCursorLineBackground ?? this.blurredCursorLineBackground,
+      focusedCursorLineNumberForeground:
+          focusedCursorLineNumberForeground ??
+          this.focusedCursorLineNumberForeground,
+      blurredCursorLineNumberForeground:
+          blurredCursorLineNumberForeground ??
+          this.blurredCursorLineNumberForeground,
+      searchMatchBackground:
+          searchMatchBackground ?? this.searchMatchBackground,
+      searchMatchUnderlineColor:
+          searchMatchUnderlineColor ?? this.searchMatchUnderlineColor,
+    );
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme
 // ─────────────────────────────────────────────────────────────────────────────
@@ -456,6 +665,7 @@ class Theme {
     this.commandPaletteTheme,
     this.dialogTheme,
     this.gitDiffTheme,
+    this.editorTheme,
   });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -632,6 +842,9 @@ class Theme {
   /// Theme overrides for [GitDiffViewer] widgets.
   final GitDiffThemeData? gitDiffTheme;
 
+  /// Theme overrides for editable text surfaces.
+  final EditorThemeData? editorTheme;
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Built-in Themes
   // ─────────────────────────────────────────────────────────────────────────────
@@ -689,6 +902,36 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      editorTheme: EditorThemeData(
+        shellBackground: const AnsiColor(236),
+        inactiveShellBackground: const AnsiColor(234),
+        activeShellBorderColor: primary,
+        inactiveShellBorderColor: const AnsiColor(238),
+        bodyBackground: const AnsiColor(233),
+        inactiveBodyBackground: const AnsiColor(234),
+        activeBodyBorderColor: const AnsiColor(240),
+        inactiveBodyBorderColor: border,
+        utilityBackground: const AnsiColor(234),
+        utilityBorderColor: const AnsiColor(240),
+        titleForeground: onSurface,
+        inactiveTitleForeground: const AnsiColor(250),
+        metaForeground: const AnsiColor(245),
+        inactiveMetaForeground: muted,
+        focusedPromptForeground: const AnsiColor(250),
+        blurredPromptForeground: const AnsiColor(245),
+        focusedTextForeground: onSurface,
+        blurredTextForeground: const AnsiColor(250),
+        focusedPlaceholderForeground: const AnsiColor(245),
+        blurredPlaceholderForeground: muted,
+        focusedLineNumberForeground: const AnsiColor(245),
+        blurredLineNumberForeground: const AnsiColor(242),
+        focusedCursorLineBackground: const AnsiColor(234),
+        blurredCursorLineBackground: const AnsiColor(233),
+        focusedCursorLineNumberForeground: primary,
+        blurredCursorLineNumberForeground: const AnsiColor(242),
+        searchMatchBackground: const AnsiColor(234),
+        searchMatchUnderlineColor: primary,
+      ),
     );
   }
 
@@ -745,6 +988,36 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      editorTheme: EditorThemeData(
+        shellBackground: const AnsiColor(254),
+        inactiveShellBackground: const AnsiColor(253),
+        activeShellBorderColor: primary,
+        inactiveShellBorderColor: const AnsiColor(250),
+        bodyBackground: background,
+        inactiveBodyBackground: const AnsiColor(254),
+        activeBodyBorderColor: const AnsiColor(248),
+        inactiveBodyBorderColor: border,
+        utilityBackground: const AnsiColor(253),
+        utilityBorderColor: const AnsiColor(248),
+        titleForeground: onSurface,
+        inactiveTitleForeground: const AnsiColor(240),
+        metaForeground: const AnsiColor(245),
+        inactiveMetaForeground: muted,
+        focusedPromptForeground: const AnsiColor(240),
+        blurredPromptForeground: const AnsiColor(245),
+        focusedTextForeground: onSurface,
+        blurredTextForeground: const AnsiColor(240),
+        focusedPlaceholderForeground: const AnsiColor(245),
+        blurredPlaceholderForeground: muted,
+        focusedLineNumberForeground: const AnsiColor(245),
+        blurredLineNumberForeground: const AnsiColor(248),
+        focusedCursorLineBackground: const AnsiColor(253),
+        blurredCursorLineBackground: const AnsiColor(254),
+        focusedCursorLineNumberForeground: primary,
+        blurredCursorLineNumberForeground: const AnsiColor(248),
+        searchMatchBackground: const AnsiColor(253),
+        searchMatchUnderlineColor: primary,
+      ),
     );
   }
 
@@ -792,6 +1065,7 @@ class Theme {
     CommandPaletteThemeData? commandPaletteTheme,
     DialogThemeData? dialogTheme,
     GitDiffThemeData? gitDiffTheme,
+    EditorThemeData? editorTheme,
   }) {
     return Theme(
       primary: primary ?? this.primary,
@@ -832,6 +1106,7 @@ class Theme {
       commandPaletteTheme: commandPaletteTheme ?? this.commandPaletteTheme,
       dialogTheme: dialogTheme ?? this.dialogTheme,
       gitDiffTheme: gitDiffTheme ?? this.gitDiffTheme,
+      editorTheme: editorTheme ?? this.editorTheme,
     );
   }
 
@@ -952,6 +1227,120 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      editorTheme: const EditorThemeData(
+        shellBackground: AdaptiveColor(
+          light: AnsiColor(254),
+          dark: AnsiColor(236),
+        ),
+        inactiveShellBackground: AdaptiveColor(
+          light: AnsiColor(253),
+          dark: AnsiColor(234),
+        ),
+        activeShellBorderColor: AdaptiveColor(
+          light: AnsiColor(33),
+          dark: AnsiColor(39),
+        ),
+        inactiveShellBorderColor: AdaptiveColor(
+          light: AnsiColor(250),
+          dark: AnsiColor(238),
+        ),
+        bodyBackground: AdaptiveColor(
+          light: AnsiColor(255),
+          dark: AnsiColor(233),
+        ),
+        inactiveBodyBackground: AdaptiveColor(
+          light: AnsiColor(254),
+          dark: AnsiColor(234),
+        ),
+        activeBodyBorderColor: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(240),
+        ),
+        inactiveBodyBorderColor: AdaptiveColor(
+          light: AnsiColor(250),
+          dark: AnsiColor(238),
+        ),
+        utilityBackground: AdaptiveColor(
+          light: AnsiColor(253),
+          dark: AnsiColor(234),
+        ),
+        utilityBorderColor: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(240),
+        ),
+        titleForeground: AdaptiveColor(
+          light: AnsiColor(235),
+          dark: AnsiColor(252),
+        ),
+        inactiveTitleForeground: AdaptiveColor(
+          light: AnsiColor(240),
+          dark: AnsiColor(250),
+        ),
+        metaForeground: AdaptiveColor(
+          light: AnsiColor(245),
+          dark: AnsiColor(245),
+        ),
+        inactiveMetaForeground: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(242),
+        ),
+        focusedPromptForeground: AdaptiveColor(
+          light: AnsiColor(240),
+          dark: AnsiColor(250),
+        ),
+        blurredPromptForeground: AdaptiveColor(
+          light: AnsiColor(245),
+          dark: AnsiColor(245),
+        ),
+        focusedTextForeground: AdaptiveColor(
+          light: AnsiColor(235),
+          dark: AnsiColor(252),
+        ),
+        blurredTextForeground: AdaptiveColor(
+          light: AnsiColor(240),
+          dark: AnsiColor(250),
+        ),
+        focusedPlaceholderForeground: AdaptiveColor(
+          light: AnsiColor(245),
+          dark: AnsiColor(245),
+        ),
+        blurredPlaceholderForeground: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(242),
+        ),
+        focusedLineNumberForeground: AdaptiveColor(
+          light: AnsiColor(245),
+          dark: AnsiColor(245),
+        ),
+        blurredLineNumberForeground: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(242),
+        ),
+        focusedCursorLineBackground: AdaptiveColor(
+          light: AnsiColor(253),
+          dark: AnsiColor(234),
+        ),
+        blurredCursorLineBackground: AdaptiveColor(
+          light: AnsiColor(254),
+          dark: AnsiColor(233),
+        ),
+        focusedCursorLineNumberForeground: AdaptiveColor(
+          light: AnsiColor(33),
+          dark: AnsiColor(39),
+        ),
+        blurredCursorLineNumberForeground: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(242),
+        ),
+        searchMatchBackground: AdaptiveColor(
+          light: AnsiColor(253),
+          dark: AnsiColor(234),
+        ),
+        searchMatchUnderlineColor: AdaptiveColor(
+          light: AnsiColor(33),
+          dark: AnsiColor(39),
+        ),
+      ),
     );
   }
 }

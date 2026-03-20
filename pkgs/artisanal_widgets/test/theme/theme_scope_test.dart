@@ -70,6 +70,126 @@ void main() {
       expect(theme.labelMedium, isA<Style>());
       expect(theme.labelSmall, isA<Style>());
     });
+
+    test(
+      'Theme.adaptive() editor theme separates active and inactive tiers',
+      () {
+        final editor = Theme.adaptive().editorTheme!;
+
+        expect(
+          editor.shellBackground,
+          isNot(equals(editor.inactiveShellBackground)),
+        );
+        expect(
+          editor.bodyBackground,
+          isNot(equals(editor.inactiveBodyBackground)),
+        );
+        expect(editor.utilityBackground, isNot(equals(editor.bodyBackground)));
+        expect(
+          editor.focusedTextForeground,
+          isNot(equals(editor.blurredTextForeground)),
+        );
+        expect(
+          editor.titleForeground,
+          isNot(equals(editor.inactiveTitleForeground)),
+        );
+      },
+    );
+
+    test(
+      'OpenCodeThemes.dracula() editor theme keeps readable tier separation',
+      () {
+        final editor = OpenCodeThemes.dracula().editorTheme!;
+
+        expect(editor.utilityBackground, isNot(equals(editor.bodyBackground)));
+        expect(
+          editor.focusedTextForeground,
+          isNot(equals(editor.blurredTextForeground)),
+        );
+        expect(editor.metaForeground, isNot(equals(editor.titleForeground)));
+        expect(
+          editor.inactiveMetaForeground,
+          isNot(equals(editor.metaForeground)),
+        );
+        expect(
+          editor.focusedLineNumberForeground,
+          isNot(equals(editor.blurredLineNumberForeground)),
+        );
+      },
+    );
+
+    test(
+      'weak OpenCode presets keep editor shell and blurred tiers distinct',
+      () {
+        final presets = <String, Theme Function()>{
+          'cursor': OpenCodeThemes.cursor,
+          'mercury': OpenCodeThemes.mercury,
+          'nightowl': OpenCodeThemes.nightowl,
+          'solarized': OpenCodeThemes.solarized,
+        };
+
+        for (final entry in presets.entries) {
+          final editor = entry.value().editorTheme!;
+
+          expect(
+            editor.shellBackground,
+            isNot(equals(editor.inactiveShellBackground)),
+            reason: '${entry.key} should separate active and inactive shells',
+          );
+          expect(
+            editor.utilityBackground,
+            isNot(equals(editor.bodyBackground)),
+            reason: '${entry.key} should keep utility chrome separate',
+          );
+          expect(
+            editor.focusedTextForeground,
+            isNot(equals(editor.blurredTextForeground)),
+            reason: '${entry.key} should keep blurred text readable but softer',
+          );
+          expect(
+            editor.activeShellBorderColor,
+            isNot(equals(editor.inactiveShellBorderColor)),
+            reason: '${entry.key} should keep inactive shells less forceful',
+          );
+          expect(
+            editor.focusedLineNumberForeground,
+            isNot(equals(editor.blurredLineNumberForeground)),
+            reason: '${entry.key} should keep focused line numbers stronger',
+          );
+        }
+      },
+    );
+
+    test(
+      'additional OpenCode presets keep shell, body, and border tiers distinct',
+      () {
+        final aura = OpenCodeThemes.aura().editorTheme!;
+        expect(
+          aura.shellBackground,
+          isNot(equals(aura.inactiveShellBackground)),
+        );
+
+        final ayu = OpenCodeThemes.ayu().editorTheme!;
+        expect(
+          ayu.activeShellBorderColor,
+          isNot(equals(ayu.inactiveShellBorderColor)),
+        );
+
+        final lucentOrng = OpenCodeThemes.lucentOrng().editorTheme!;
+        expect(
+          lucentOrng.shellBackground,
+          isNot(equals(lucentOrng.inactiveShellBackground)),
+        );
+        expect(
+          lucentOrng.bodyBackground,
+          isNot(equals(lucentOrng.inactiveBodyBackground)),
+        );
+        expect(
+          lucentOrng.utilityBackground,
+          isNot(equals(lucentOrng.bodyBackground)),
+        );
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

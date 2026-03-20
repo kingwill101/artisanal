@@ -110,6 +110,19 @@ void main() {
       );
     });
 
+    test('root showcase theme controls switch the active preset', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+
+      expect(tester.view, contains('Preset: Adaptive core'));
+
+      tester.tap(tester.find.textLocation('Palette next'));
+
+      expect(tester.view, contains('Preset: Dark core'));
+    });
+
     test('components forms section shows text editors panel', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -128,28 +141,62 @@ void main() {
       expect(tester.view, contains('bootHostedApp'));
       expect(tester.view, contains('release_notes.md'));
       expect(tester.view, contains('Preview · markdown'));
+      expect(tester.view, contains('3~'));
+      expect(tester.view, contains('5!'));
+      expect(tester.view, contains('7i'));
     });
 
-    test('overlays panel modal does not shift panel content vertically', () async {
-      final tester = WidgetTester();
-      addTearDown(() => tester.dispose());
+    test(
+      'components forms section routes shared diagnostics through embedded editors',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+        await tester.pumpWidget(AppWidget(), width: 120, height: 40);
 
-      tester.tap(tester.find.textLocation('Components'));
-      tester.tap(tester.find.textLocation('Overlays'));
+        tester.tap(tester.find.textLocation('Components'));
+        tester.tap(tester.find.textLocation('Forms'));
 
-      final before = tester.locateText('Drawer preview');
-      expect(before, isNotNull);
+        final codeEditor = tester
+            .elementsWhere((element) => element.widget is w.CodeEditor)
+            .map((element) => element.widget as w.CodeEditor)
+            .single;
+        expect(codeEditor.controller, isNotNull);
+        expect(codeEditor.controller!.diagnostics, isNotEmpty);
 
-      tester.tap(tester.find.textLocation('Open'));
+        codeEditor.controller!.selectDiagnosticAtLine(4);
+        tester.pump();
 
-      expect(tester.find.text('Modal Dialog'), isTrue);
+        expect(tester.view, contains('error [showcase/FIX001]'));
+        expect(tester.view, contains('Replace'));
+        expect(tester.view, contains('real hosted'));
+        expect(tester.view, contains('bootstrap flow.'));
+      },
+    );
 
-      final after = tester.locateText('Drawer preview');
-      expect(after, isNotNull);
-      expect(after!.y, equals(before!.y));
-    });
+    test(
+      'overlays panel modal does not shift panel content vertically',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(AppWidget(), width: 120, height: 40);
+
+        tester.tap(tester.find.textLocation('Components'));
+        tester.tap(tester.find.textLocation('Overlays'));
+
+        final before = tester.locateText('Drawer preview');
+        expect(before, isNotNull);
+
+        tester.tap(tester.find.textLocation('Open'));
+
+        expect(tester.find.text('Modal Dialog'), isTrue);
+
+        final after = tester.locateText('Drawer preview');
+        expect(after, isNotNull);
+        expect(after!.y, equals(before!.y));
+      },
+    );
   });
 
   group('GestureDetector + Container tab switching variants', () {

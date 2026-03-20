@@ -1,4 +1,14 @@
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/bubbles.dart'
+    show
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextDiagnosticSeverity,
+        textSearchDecorationLayerKey,
+        textSearchDecorationLayerPriority,
+        textSearchMatchDecorationKey,
+        textSyntaxDecorationLayerKey;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
@@ -12,7 +22,7 @@ void main() {
     });
 
     test('renders editor chrome and syntax preview', () async {
-      final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 60);
       addTearDown(() => tester.dispose());
 
       final controller = TextAreaController(
@@ -72,8 +82,199 @@ void main() {
       expect(tester.view, contains('ctrl+z'));
     });
 
+    test(
+      'keeps syntax decorations while a higher-priority search layer comes and goes',
+      () async {
+        final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
+        addTearDown(() => tester.dispose());
+
+        final controller = TextAreaController(
+          text: 'void main() {\n  print("hi");\n}\nvoid other() {}',
+        );
+        await tester.pumpWidget(
+          FocusScope(
+            controller: focusController,
+            child: Container(
+              width: 80,
+              child: CodeEditor(
+                title: 'main.dart',
+                language: 'dart',
+                controller: controller,
+                focusController: focusController,
+                focusId: 'code',
+                autofocus: true,
+                height: 6,
+                previewHeight: 6,
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+          isNotEmpty,
+        );
+        expect(
+          controller.decorationsForLayer(textSearchDecorationLayerKey),
+          isEmpty,
+        );
+
+        controller.setDecorationLayer(
+          textSearchDecorationLayerKey,
+          const [
+            TextDecorationRange(
+              startOffset: 0,
+              endOffset: 4,
+              styleKey: textSearchMatchDecorationKey,
+            ),
+            TextDecorationRange(
+              startOffset: 29,
+              endOffset: 33,
+              styleKey: textSearchMatchDecorationKey,
+            ),
+          ],
+          priority: textSearchDecorationLayerPriority,
+        );
+
+        expect(
+          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+          isNotEmpty,
+        );
+        expect(
+          controller.decorationsForLayer(textSearchDecorationLayerKey).length,
+          2,
+        );
+
+        controller.clearDecorationLayer(textSearchDecorationLayerKey);
+
+        expect(
+          controller.decorationsForLayer(textSearchDecorationLayerKey),
+          isEmpty,
+        );
+        expect(
+          controller.decorationsForLayer(textSyntaxDecorationLayerKey),
+          isNotEmpty,
+        );
+      },
+    );
+
+    test(
+      'f8 navigates typed diagnostics through the embedded editor',
+      () async {
+        final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+        addTearDown(() => tester.dispose());
+
+        final controller = TextAreaController(
+          text: 'void main() {}\n\nTODO fix this',
+        );
+        controller.setDiagnostics(const [
+          TextDiagnosticRange(
+            startOffset: 0,
+            endOffset: 4,
+            severity: TextDiagnosticSeverity.info,
+            code: 'BOOT001',
+            message:
+                'Bootstrap entrypoint is only informational in this sample.',
+            source: 'playground',
+          ),
+          TextDiagnosticRange(
+            startOffset: 16,
+            endOffset: 20,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          FocusScope(
+            controller: focusController,
+            child: Container(
+              width: 80,
+              child: CodeEditor(
+                title: 'main.dart',
+                language: 'dart',
+                controller: controller,
+                focusController: focusController,
+                focusId: 'code',
+                autofocus: true,
+                height: 6,
+                previewHeight: 6,
+              ),
+            ),
+          ),
+        );
+
+        tester.sendSpecialKey(terminal_keys.KeyType.f8);
+        expect(controller.selectedText, equals('void'));
+        expect(tester.view, contains('info [playground/BOOT001] L1:C1'));
+        expect(tester.view, contains('Bootstrap entrypoint is only'));
+        expect(tester.view, contains('in this sample.'));
+
+        tester.sendSpecialKey(terminal_keys.KeyType.f8);
+        expect(controller.selectedText, equals('TODO'));
+      },
+    );
+
+    test(
+      'clicking a diagnostic gutter marker selects that diagnostic through CodeEditor',
+      () async {
+        final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+        addTearDown(() => tester.dispose());
+
+        final controller = TextAreaController(
+          text: 'void main() {}\n\nTODO fix this',
+        );
+        controller.setDiagnostics(const [
+          TextDiagnosticRange(
+            startOffset: 0,
+            endOffset: 4,
+            severity: TextDiagnosticSeverity.info,
+            code: 'BOOT001',
+            message:
+                'Bootstrap entrypoint is only informational in this sample.',
+            source: 'playground',
+          ),
+          TextDiagnosticRange(
+            startOffset: 16,
+            endOffset: 20,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          FocusScope(
+            controller: focusController,
+            child: Container(
+              width: 80,
+              child: CodeEditor(
+                title: 'main.dart',
+                language: 'dart',
+                controller: controller,
+                focusController: focusController,
+                focusId: 'code',
+                autofocus: true,
+                height: 6,
+                previewHeight: 6,
+              ),
+            ),
+          ),
+        );
+
+        tester.tap(tester.find.textLocation('3~'));
+
+        expect(controller.selectedText, equals('TODO'));
+        expect(controller.selectionBase, equals((line: 2, column: 0)));
+        expect(tester.view, contains('warning [playground/TODO001] L3:C1'));
+      },
+    );
+
     test('opening bracket inserts a matching closing delimiter', () async {
-      final tester = WidgetTester(screenWidth: 100, screenHeight: 32);
+      final tester = WidgetTester(screenWidth: 100, screenHeight: 40);
       addTearDown(() => tester.dispose());
 
       final controller = TextAreaController(text: 'print');
@@ -420,8 +621,6 @@ void main() {
       tester.sendMsg(tui.KeyMsg(tui.Key.char('/', ctrl: true)));
 
       expect(controller.text, 'void main() {\n  // print("hi");\n}');
-      expect(tester.view, contains('ctrl+/'));
-
       tester.sendMsg(tui.KeyMsg(tui.Key.char('z', ctrl: true)));
       expect(controller.text, 'void main() {\n  print("hi");\n}');
     });

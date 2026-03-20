@@ -5,6 +5,7 @@
 ///
 /// - `TextField` / `TextEditingController`
 /// - `TextArea` / `TextAreaController`
+/// - `TextDiagnosticsBinding`
 /// - `TextInputKeyMap` / `TextAreaKeyMap`
 /// - `TextEditor`
 /// - `CodeEditor`
@@ -21,6 +22,24 @@ export 'src/widgets/input/input_widgets.dart'
         TextAreaController,
         TextField,
         TextArea;
-export 'package:artisanal/bubbles.dart' show TextInputKeyMap, TextAreaKeyMap;
+export 'src/widgets/input/text_diagnostics_binding.dart'
+    show TextDiagnosticsBinding, TextDiagnosticsBuilder;
+export 'src/widgets/input/text_decoration_binding.dart'
+    show
+        TextDecorationLayerBinding,
+        TextDecorationLayerBuilder,
+        TextLineDecorationLayerBinding,
+        TextLineDecorationLayerBuilder;
+export 'package:artisanal/bubbles.dart'
+    show
+        TextInputKeyMap,
+        TextAreaKeyMap,
+        TextDecorationRange,
+        TextLineDecoration,
+        TextDiagnosticSeverity,
+        TextDiagnosticRange,
+        TextPositionDiagnosticRange,
+        TextPatternDiagnosticRule,
+        textPatternDiagnostics;
 export 'src/widgets/components/components_widgets.dart'
     show TextEditor, CodeEditor, MarkdownEditor;

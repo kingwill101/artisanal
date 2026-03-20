@@ -58,6 +58,41 @@ void main() {
   test('stable editors entrypoint exposes text input and editor widgets', () {
     final textFieldKeyMap = editors.TextInputKeyMap();
     final textAreaKeyMap = editors.TextAreaKeyMap();
+    final baseController = editors.TextAreaController(text: 'TODO');
+    final diagnosticsBinding = editors.TextDiagnosticsBinding.patternRules(
+      controller: baseController,
+      rules: const [
+        editors.TextPatternDiagnosticRule(
+          pattern: 'TODO',
+          severity: editors.TextDiagnosticSeverity.warning,
+        ),
+      ],
+    );
+    final decorationBinding = editors.TextDecorationLayerBinding(
+      controller: baseController,
+      layerKey: 'search',
+      buildDecorations: (String text) => text.isEmpty
+          ? const []
+          : const [
+              editors.TextDecorationRange(
+                startOffset: 0,
+                endOffset: 1,
+                styleKey: 'match',
+              ),
+            ],
+    );
+    final lineDecorationBinding = editors.TextLineDecorationLayerBinding(
+      controller: baseController,
+      layerKey: 'review',
+      buildDecorations: (String text) => text.isEmpty
+          ? const []
+          : const [
+              editors.TextLineDecoration(
+                lineIndex: 0,
+                styleKey: 'review.line',
+              ),
+            ],
+    );
     final textField = editors.TextField(
       controller: editors.TextEditingController(text: 'hello'),
       keyMap: textFieldKeyMap,
@@ -86,6 +121,16 @@ void main() {
     expect(textEditor, isA<editors.TextEditor>());
     expect(codeEditor, isA<editors.CodeEditor>());
     expect(markdownEditor, isA<editors.MarkdownEditor>());
+    expect(diagnosticsBinding, isA<editors.TextDiagnosticsBinding>());
+    expect(decorationBinding, isA<editors.TextDecorationLayerBinding>());
+    expect(
+      lineDecorationBinding,
+      isA<editors.TextLineDecorationLayerBinding>(),
+    );
+
+    diagnosticsBinding.dispose();
+    decorationBinding.dispose();
+    lineDecorationBinding.dispose();
   });
 
   test('stable charting entrypoint exposes chart widgets and models', () {

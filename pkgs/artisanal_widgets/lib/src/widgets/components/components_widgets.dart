@@ -8,12 +8,12 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:artisanal/widgets.dart';
-import 'package:characters/characters.dart';
 import 'package:artisanal/markdown.dart'
     show
         AdaptiveChromaTheme,
         AnsiRendererOptions,
         ChromaTheme,
+        SyntaxHighlighter,
         highlightCodeString;
 
 import 'dart:math' as math;
