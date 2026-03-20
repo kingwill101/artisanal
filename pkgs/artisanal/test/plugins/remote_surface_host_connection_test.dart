@@ -293,6 +293,63 @@ void main() {
     expect(notification!.level, plugins.RemotePluginNotificationLevel.success);
   });
 
+  test(
+    'host connection can answer notification requests through the generic service registry',
+    () async {
+      final scriptPath = p.join(
+        io.Directory.current.path,
+        'pkgs',
+        'artisanal',
+        'test',
+        'plugins',
+        'fixtures',
+        'notification_plugin.dart',
+      );
+
+      plugins.RemotePluginNotificationRequest? notification;
+      final connection = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[scriptPath],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+          capabilities: <String>['services'],
+        ),
+        timeout: const Duration(seconds: 20),
+      );
+      addTearDown(() => connection.dispose(kill: true));
+
+      final genericService = connection.bindGenericService();
+      genericService.registerNotification(
+        notify: (request) {
+          notification = request;
+        },
+      );
+      addTearDown(genericService.dispose);
+
+      await connection.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = connection.surfaces['notification.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('notify:ok');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(notification, isNotNull);
+      expect(notification!.title, 'Plugin demo');
+      expect(notification!.message, 'Background task finished');
+      expect(
+        notification!.level,
+        plugins.RemotePluginNotificationLevel.success,
+      );
+    },
+  );
+
   test('host connection can answer file-picker requests', () async {
     final scriptPath = p.join(
       io.Directory.current.path,

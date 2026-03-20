@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_host_connection.dart';
+import 'remote_surface_notification_service.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_url_service.dart';
 
@@ -96,6 +97,31 @@ final class RemotePluginGenericHostService {
           _stringParam(request.params, 'url') ??
           (throw FormatException('url.open requires a string "url" param.'));
       await openUrl(Uri.parse(url));
+      return const <String, Object?>{};
+    });
+  }
+
+  void registerNotification({RemotePluginNotifier? notify}) {
+    if (notify == null) {
+      return;
+    }
+
+    register('notify', 'show', (request) async {
+      final level =
+          _stringParam(request.params, 'level') ??
+          RemotePluginNotificationLevel.info.wireName;
+      await notify(
+        RemotePluginNotificationRequest(
+          requestId: request.requestId,
+          title: _stringParam(request.params, 'title'),
+          message:
+              _stringParam(request.params, 'message') ??
+              (throw FormatException(
+                'notify.show requires a string "message" param.',
+              )),
+          level: RemotePluginNotificationLevel.parse(level),
+        ),
+      );
       return const <String, Object?>{};
     });
   }

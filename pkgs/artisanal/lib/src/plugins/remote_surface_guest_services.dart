@@ -180,6 +180,20 @@ final class RemotePluginGuestServices {
     RemotePluginNotificationLevel level = RemotePluginNotificationLevel.info,
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    if (session.hostHello.capabilities.contains('services')) {
+      await call(
+        'notify',
+        'show',
+        params: <String, Object?>{
+          'message': message,
+          if (title != null) 'title': title,
+          'level': level.wireName,
+        },
+        timeout: timeout,
+      );
+      return;
+    }
+
     final requestId = _requestId('notify');
     final future = session.messages
         .where(
