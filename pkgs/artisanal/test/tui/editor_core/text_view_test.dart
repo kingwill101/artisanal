@@ -38,6 +38,42 @@ void main() {
       );
     });
 
+    test('rebuilds line-start offsets after text replacement', () {
+      final document = TextDocument(text: 'ab\ncd');
+
+      document.replaceText('w\nxyz\nq');
+
+      expect(document.length, 7);
+      expect(
+        document.offsetForPosition(const TextPosition(line: 2, column: 1)),
+        7,
+      );
+      expect(
+        document.positionForOffset(5),
+        const TextPosition(line: 1, column: 3),
+      );
+    });
+
+    test('rebuilds line-start offsets after line replacement', () {
+      final document = TextDocument(text: 'ab\ncd');
+
+      document.replaceLines([
+        ['x'],
+        ['y', 'z'],
+        ['q'],
+      ]);
+
+      expect(document.length, 6);
+      expect(
+        document.offsetForPosition(const TextPosition(line: 2, column: 1)),
+        6,
+      );
+      expect(
+        document.positionForOffset(2),
+        const TextPosition(line: 1, column: 0),
+      );
+    });
+
     test('finds word boundaries on text and whitespace', () {
       final document = TextDocument(text: 'alpha  beta');
 

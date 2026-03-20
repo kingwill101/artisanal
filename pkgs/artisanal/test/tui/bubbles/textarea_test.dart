@@ -1689,6 +1689,38 @@ void main() {
         expect(v2.getSelectedText(), equals('Hello'));
       });
 
+      test('triple click selects entire line', () {
+        var textarea = TextAreaModel(prompt: '> ', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        expect(v3.getSelectedText(), equals('Hello World'));
+      });
+
       test('mouse release stops extending the current selection', () {
         var textarea = TextAreaModel(prompt: '', showLineNumbers: false);
         textarea.value = 'Hello World\nLine 2';

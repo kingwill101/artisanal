@@ -131,18 +131,6 @@ TextPosition _clampPositionToLines(TextPosition position, List<String> lines) {
   return (startLine: selection.start.line, endLine: selection.end.line);
 }
 
-TextLineStateSnapshot _lineSnapshot(
-  TextPosition cursor, {
-  TextPosition? selectionBase,
-  TextPosition? selectionExtent,
-}) {
-  return TextLineStateSnapshot(
-    cursor: cursor,
-    selectionBase: selectionBase,
-    selectionExtent: selectionExtent,
-  );
-}
-
 TextLineCommandResult _lineResultFromSnapshot(
   List<String> lines,
   TextLineStateSnapshot snapshot, {

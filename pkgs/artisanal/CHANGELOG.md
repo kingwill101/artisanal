@@ -22,6 +22,7 @@
 
 ### Changed
 
+- Improved editor text-document offset mapping with cached line starts, and added triple-click whole-line selection across the shared text input surfaces.
 - Prevented late external-process completion from restoring the terminal or delivering completion messages after the program has already quit, been killed, or lost its backend host session.
 - Made direct `Program.kill()` abort active startup probes immediately, so kill behaves like quit/backend shutdown during pre-render and emoji probing.
 - Deferred renders and stateful terminal control writes while `Program` temporarily releases the terminal for exec/suspend, then reapplied deferred titles and inline alt-screen/mode state on restore.

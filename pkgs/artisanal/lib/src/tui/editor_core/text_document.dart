@@ -5,9 +5,13 @@ import 'package:characters/characters.dart';
 import 'editor_state.dart';
 
 final class TextDocument {
-  TextDocument({String text = ''}) : _lines = _parseLines(text);
+  TextDocument({String text = ''}) {
+    _replaceLines(_parseLines(text));
+  }
 
-  List<List<String>> _lines;
+  late List<List<String>> _lines;
+  late List<int> _lineStartOffsets;
+  late int _length;
 
   List<List<String>> get lines => _lines
       .map((line) => List<String>.unmodifiable(line))
@@ -15,16 +19,7 @@ final class TextDocument {
 
   int get lineCount => _lines.length;
 
-  int get length {
-    var total = 0;
-    for (var i = 0; i < _lines.length; i++) {
-      total += _lines[i].length;
-      if (i < _lines.length - 1) {
-        total += 1;
-      }
-    }
-    return total;
-  }
+  int get length => _length;
 
   String get text => _lines.map((line) => line.join()).join('\n');
 
@@ -50,23 +45,24 @@ final class TextDocument {
 
   int offsetForPosition(TextPosition position) {
     final clamped = clampPosition(position);
-    var offset = 0;
-    for (var index = 0; index < clamped.line; index++) {
-      offset += _lines[index].length + 1;
-    }
-    return offset + clamped.column;
+    return _lineStartOffsets[clamped.line] + clamped.column;
   }
 
   TextPosition positionForOffset(int offset) {
-    var remaining = offset.clamp(0, length);
-    for (var index = 0; index < _lines.length; index++) {
-      final lineLength = _lines[index].length;
-      if (remaining <= lineLength) {
-        return TextPosition(line: index, column: remaining);
+    final clamped = offset.clamp(0, length);
+    var low = 0;
+    var high = _lines.length - 1;
+    while (low < high) {
+      final mid = (low + high) >> 1;
+      final lineEnd = _lineStartOffsets[mid] + _lines[mid].length;
+      if (clamped <= lineEnd) {
+        high = mid;
+      } else {
+        low = mid + 1;
       }
-      remaining -= lineLength + 1;
     }
-    return TextPosition(line: _lines.length - 1, column: _lines.last.length);
+    final line = low;
+    return TextPosition(line: line, column: clamped - _lineStartOffsets[line]);
   }
 
   List<String> flattenWithNewlines() {
@@ -123,13 +119,17 @@ final class TextDocument {
   }
 
   void replaceText(String text) {
-    _lines = _parseLines(text);
+    _replaceLines(_parseLines(text));
   }
 
   void replaceLines(List<List<String>> lines) {
-    _lines = lines.isEmpty
-        ? <List<String>>[<String>[]]
-        : lines.map((line) => List<String>.from(line)).toList(growable: false);
+    _replaceLines(
+      lines.isEmpty
+          ? <List<String>>[<String>[]]
+          : lines
+                .map((line) => List<String>.from(line))
+                .toList(growable: false),
+    );
   }
 
   static List<List<String>> parseLines(String text) => _parseLines(text);
@@ -143,6 +143,20 @@ final class TextDocument {
         .split('\n')
         .map((line) => line.characters.toList(growable: true))
         .toList(growable: true);
+  }
+
+  void _replaceLines(List<List<String>> lines) {
+    _lines = lines;
+    _lineStartOffsets = List<int>.filled(lines.length, 0, growable: false);
+    var offset = 0;
+    for (var index = 0; index < lines.length; index++) {
+      _lineStartOffsets[index] = offset;
+      offset += lines[index].length;
+      if (index < lines.length - 1) {
+        offset += 1;
+      }
+    }
+    _length = offset;
   }
 
   bool _isWhitespace(String grapheme) {

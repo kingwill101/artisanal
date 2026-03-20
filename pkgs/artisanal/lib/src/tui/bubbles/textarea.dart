@@ -779,6 +779,7 @@ class TextAreaModel extends ViewComponent {
   // Double click tracking
   DateTime? _lastClickTime;
   (int, int)? _lastClickPos;
+  int _lastClickCount = 0;
 
   bool get focused => _focused;
   int get line => _row;
@@ -1491,16 +1492,6 @@ class TextAreaModel extends ViewComponent {
     );
   }
 
-  void _applyEditorStateSnapshot() {
-    _applyLineStateSnapshot(
-      lineSnapshotFromEditorState(
-        _editorState,
-        lineCount: _lines.length,
-        lineLength: (line) => _lines[line].length,
-      ),
-    );
-  }
-
   void _applyLineCommandResult(commands.TextLineCommandResult result) {
     _lines = _parseLines(result.lines.join('\n'));
     _applyLineStateSnapshot(
@@ -1566,10 +1557,6 @@ class TextAreaModel extends ViewComponent {
     bool breakChain = false,
   }) {
     _history.beginAction(action, breakChain: breakChain);
-  }
-
-  void _breakHistoryCoalescing() {
-    _history.breakCoalescing();
   }
 
   bool _hasSelection() =>
@@ -2785,11 +2772,18 @@ class TextAreaModel extends ViewComponent {
           final contentY = hit.line;
           final now = DateTime.now();
 
-          if (_lastClickTime != null &&
-              now.difference(_lastClickTime!) <
-                  const Duration(milliseconds: 500) &&
-              _lastClickPos == (contentX, contentY)) {
-            // Double click: select word
+          final clickCount =
+              _lastClickTime != null &&
+                  now.difference(_lastClickTime!) <
+                      const Duration(milliseconds: 500) &&
+                  _lastClickPos == (contentX, contentY)
+              ? (_lastClickCount + 1).clamp(1, 3)
+              : 1;
+          _lastClickTime = now;
+          _lastClickPos = (contentX, contentY);
+          _lastClickCount = clickCount;
+
+          if (clickCount == 2) {
             _mouseSelecting = false;
             final (start, end) = _findWordAt(contentX, contentY);
             _selectLineState(
@@ -2797,8 +2791,18 @@ class TextAreaModel extends ViewComponent {
               extent: TextPosition(line: contentY, column: end),
             );
             _syncCoreState();
-            _lastClickTime = now;
-            _lastClickPos = (contentX, contentY);
+            return (this, null);
+          }
+          if (clickCount >= 3) {
+            _mouseSelecting = false;
+            _selectLineState(
+              base: TextPosition(line: contentY, column: 0),
+              extent: TextPosition(
+                line: contentY,
+                column: _lines[contentY].length,
+              ),
+            );
+            _syncCoreState();
             return (this, null);
           }
 
@@ -2810,8 +2814,6 @@ class TextAreaModel extends ViewComponent {
             preserveCollapsedSelection: true,
           );
           _syncCoreState();
-          _lastClickTime = now;
-          _lastClickPos = (contentX, contentY);
           return (this, null);
         }
 
@@ -3311,13 +3313,6 @@ class TextAreaModel extends ViewComponent {
     return _document.offsetForPosition(TextPosition(line: _row, column: _col));
   }
 
-  int _globalOffsetForPoint((int, int) point) {
-    _refreshDocumentSnapshot();
-    return _document.offsetForPosition(
-      TextPosition(line: point.$2, column: point.$1),
-    );
-  }
-
   void _setCursorFromGlobal(int offset) {
     _refreshDocumentSnapshot();
     final position = _document.positionForOffset(offset);
@@ -3337,25 +3332,6 @@ class TextAreaModel extends ViewComponent {
     return (range.startLine, range.endLine);
   }
 
-  (int, int)? _clampPointToBuffer((int, int)? point) {
-    if (point == null) return null;
-    _refreshDocumentSnapshot();
-    final position = _document.clampPosition(
-      TextPosition(line: point.$2, column: point.$1),
-    );
-    return (position.column, position.line);
-  }
-
-  bool _isWordChar(int rune) {
-    final ch = String.fromCharCode(rune);
-    return RegExp(r'[A-Za-z0-9_]').hasMatch(ch);
-  }
-
-  bool _isWordGrapheme(String grapheme) {
-    if (grapheme.isEmpty || grapheme == '\n') return false;
-    return _isWordChar(uni.firstCodePoint(grapheme));
-  }
-
   int _totalGraphemeLength() {
     _refreshDocumentSnapshot();
     return _document.length;
@@ -3363,11 +3339,6 @@ class TextAreaModel extends ViewComponent {
 
   List<List<String>> _parseLines(String s) {
     return TextDocument.parseLines(s);
-  }
-
-  List<String> _flattenWithNewlines() {
-    _refreshDocumentSnapshot();
-    return _document.flattenWithNewlines();
   }
 
   void _enforceCharLimit() {

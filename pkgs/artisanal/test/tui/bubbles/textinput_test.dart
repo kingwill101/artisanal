@@ -683,6 +683,40 @@ void main() {
         expect(v2.getSelectedText(), equals('Hello'));
       });
 
+      test('triple click selects entire line', () {
+        var input = TextInputModel(prompt: '> ');
+        input.value = 'Hello World';
+
+        var (v1, _) = input.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        expect(v3.getSelectedText(), equals('Hello World'));
+      });
+
       test('click outside bounds clears selection and blurs', () {
         var input = TextInputModel(prompt: '> ');
         input.value = 'Hello World';

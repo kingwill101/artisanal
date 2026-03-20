@@ -813,6 +813,7 @@ class TextInputModel extends ViewComponent {
   // Double click tracking
   DateTime? _lastClickTime;
   int? _lastClickPos;
+  int _lastClickCount = 0;
 
   // Suggestions
   List<List<String>> _suggestions = <List<String>>[];
@@ -1538,14 +1539,6 @@ class TextInputModel extends ViewComponent {
     );
   }
 
-  void _selectOffsets(int base, int extent) {
-    _selectOffsetState(
-      baseOffset: base,
-      extentOffset: extent,
-      cursorOffset: extent,
-    );
-  }
-
   void _applyOffsetStateSnapshot(TextOffsetStateSnapshot snapshot) {
     final clamped = snapshot.clamp(_value.length);
     _pos = clamped.cursorOffset;
@@ -1697,10 +1690,6 @@ class TextInputModel extends ViewComponent {
     bool breakChain = false,
   }) {
     _history.beginAction(action, breakChain: breakChain);
-  }
-
-  void _breakHistoryCoalescing() {
-    _history.breakCoalescing();
   }
 
   bool _canCoalesceHistoryAction(
@@ -2092,6 +2081,22 @@ class TextInputModel extends ViewComponent {
     );
   }
 
+  (int, int) _findLineAt(int offset) {
+    if (_value.isEmpty) return (0, 0);
+    _refreshDocumentSnapshot();
+    final position = _document.positionForOffset(offset);
+    final start = _document.offsetForPosition(
+      TextPosition(line: position.line, column: 0),
+    );
+    final end = _document.offsetForPosition(
+      TextPosition(
+        line: position.line,
+        column: _document.lineLength(position.line),
+      ),
+    );
+    return (start, end);
+  }
+
   bool _isWhitespace(String grapheme) {
     final rune = uni.firstCodePoint(grapheme);
     return rune == 0x20 || // Space
@@ -2230,19 +2235,31 @@ class TextInputModel extends ViewComponent {
           _focused = true;
           _mouseSelecting = true;
           final now = DateTime.now();
-          if (_lastClickTime != null &&
-              now.difference(_lastClickTime!) <
-                  const Duration(milliseconds: 500) &&
-              _lastClickPos == x) {
-            // Double click: select word
+          final clickCount =
+              _lastClickTime != null &&
+                  now.difference(_lastClickTime!) <
+                      const Duration(milliseconds: 500) &&
+                  _lastClickPos == x
+              ? (_lastClickCount + 1).clamp(1, 3)
+              : 1;
+          _lastClickTime = now;
+          _lastClickPos = x;
+          _lastClickCount = clickCount;
+
+          if (clickCount == 2) {
             final (start, end) = _findWordAt(x);
             _selectOffsetState(
               baseOffset: start,
               extentOffset: end,
               cursorOffset: end,
             );
-            _lastClickTime = now;
-            _lastClickPos = x;
+          } else if (clickCount >= 3) {
+            final (start, end) = _findLineAt(x);
+            _selectOffsetState(
+              baseOffset: start,
+              extentOffset: end,
+              cursorOffset: end,
+            );
           } else {
             _selectOffsetState(
               baseOffset: x,
@@ -2250,8 +2267,6 @@ class TextInputModel extends ViewComponent {
               cursorOffset: x,
               preserveCollapsedSelection: true,
             );
-            _lastClickTime = now;
-            _lastClickPos = x;
           }
         } else if (msg.action == MouseAction.motion && _mouseSelecting) {
           _selectOffsetState(
@@ -2727,18 +2742,31 @@ class TextInputModel extends ViewComponent {
       _resetDesiredCol();
       final pressFlatPos = flatPos;
       final now = DateTime.now();
-      if (_lastClickTime != null &&
-          now.difference(_lastClickTime!) < const Duration(milliseconds: 500) &&
-          _lastClickPos == pressFlatPos) {
-        // Double click: select word
+      final clickCount =
+          _lastClickTime != null &&
+              now.difference(_lastClickTime!) <
+                  const Duration(milliseconds: 500) &&
+              _lastClickPos == pressFlatPos
+          ? (_lastClickCount + 1).clamp(1, 3)
+          : 1;
+      _lastClickTime = now;
+      _lastClickPos = pressFlatPos;
+      _lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final (start, end) = _findWordAt(pressFlatPos);
         _selectOffsetState(
           baseOffset: start,
           extentOffset: end,
           cursorOffset: end,
         );
-        _lastClickTime = now;
-        _lastClickPos = pressFlatPos;
+      } else if (clickCount >= 3) {
+        final (start, end) = _findLineAt(pressFlatPos);
+        _selectOffsetState(
+          baseOffset: start,
+          extentOffset: end,
+          cursorOffset: end,
+        );
       } else {
         _selectOffsetState(
           baseOffset: pressFlatPos,
@@ -2746,8 +2774,6 @@ class TextInputModel extends ViewComponent {
           cursorOffset: pressFlatPos,
           preserveCollapsedSelection: true,
         );
-        _lastClickTime = now;
-        _lastClickPos = pressFlatPos;
       }
       if (TuiTrace.enabled) {
         TuiTrace.log(
