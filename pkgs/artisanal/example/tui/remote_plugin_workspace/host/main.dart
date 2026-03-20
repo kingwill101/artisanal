@@ -16,13 +16,32 @@ const _pluginDirectoryPath =
 Future<void> main(List<String> args) async {
   if (args.contains('--snapshot')) {
     final runtime = await _startWorkspace(_primaryPluginId);
+    var selectedPluginId = _primaryPluginId;
+    final click = _parseSnapshotClick(args);
     try {
+      if (click case final point?) {
+        selectedPluginId = await _routeWorkspaceMousePress(
+          runtime,
+          MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: point.$1,
+            y: point.$2,
+          ),
+          selectedPluginId: selectedPluginId,
+        );
+        await _waitForSnapshotFocus(runtime, selectedPluginId);
+      }
       io.stdout.writeln(
         _renderWorkspace(
           loading: false,
-          selectedPluginId: _primaryPluginId,
-          status: 'Snapshot render',
-          log: const <String>['Snapshot mode', 'Loaded 3 plugin processes'],
+          selectedPluginId: selectedPluginId,
+          status: click == null ? 'Snapshot render' : 'Snapshot click render',
+          log: <String>[
+            'Snapshot mode',
+            if (click != null) 'click ${click.$1},${click.$2}',
+            'Loaded 3 plugin processes',
+          ],
           revision: 0,
           runtime: runtime,
         ),
@@ -39,6 +58,7 @@ Future<void> main(List<String> args) async {
       altScreen: true,
       startupProbes: false,
       hideCursor: false,
+      mouseMode: MouseMode.allMotion,
       startupTitle: 'Remote Plugin Workspace',
     ),
   );
@@ -94,6 +114,15 @@ final class _RemotePluginWorkspaceModel implements Model {
         ),
         null,
       ),
+      _HostMouseRoutedMsg(:final pluginId) => (
+        copyWith(
+          selectedPluginId: pluginId,
+          status: 'Clicked $pluginId',
+          revision: revision + 1,
+          log: _appendLog(log, 'mouse $pluginId'),
+        ),
+        null,
+      ),
       _PluginSurfaceChangedMsg(:final pluginId, :final message) => (
         copyWith(
           status: '$pluginId updated ${message.messageType.wireName}',
@@ -129,6 +158,7 @@ final class _RemotePluginWorkspaceModel implements Model {
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x33])) => _focusPlugin(
         'alerts',
       ),
+      MouseMsg(action: MouseAction.press) => _handleMousePress(msg),
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x72])) => _reload(),
       _ => (this, null),
     };
@@ -211,6 +241,29 @@ final class _RemotePluginWorkspaceModel implements Model {
         },
         onSuccess: _WorkspaceLoadedMsg.new,
         onError: (error, _) => _WorkspaceLoadFailedMsg(error.toString()),
+      ),
+    );
+  }
+
+  (Model, Cmd?) _handleMousePress(MouseMsg msg) {
+    final activeRuntime = runtime;
+    if (activeRuntime == null || loading) {
+      return (this, null);
+    }
+
+    return (
+      copyWith(
+        status: 'Routing click at ${msg.x},${msg.y}',
+        revision: revision + 1,
+      ),
+      Cmd.perform(
+        () => _routeWorkspaceMousePress(
+          activeRuntime,
+          msg,
+          selectedPluginId: selectedPluginId,
+        ),
+        onSuccess: _HostMouseRoutedMsg.new,
+        onError: (error, _) => _WorkspaceLoadFailedMsg('mouse failed: $error'),
       ),
     );
   }
@@ -314,16 +367,26 @@ final class _HostFocusAppliedMsg extends Msg {
   final String pluginId;
 }
 
+final class _HostMouseRoutedMsg extends Msg {
+  const _HostMouseRoutedMsg(this.pluginId);
+
+  final String pluginId;
+}
+
 final class _WorkspaceRuntime {
   const _WorkspaceRuntime({
     required this.manifests,
     required this.surfaces,
     required this.connections,
+    required this.router,
+    required this.pluginIdBySurfaceId,
   });
 
   final List<plugins.RemotePluginManifest> manifests;
   final plugins.RemotePluginSurfaceStore surfaces;
   final Map<String, plugins.RemotePluginHostConnection> connections;
+  final plugins.RemotePluginSurfaceInputRouter router;
+  final Map<String, String> pluginIdBySurfaceId;
 
   Future<void> dispose({bool kill = false}) async {
     for (final connection in connections.values) {
@@ -357,10 +420,28 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
       manifests.expand((manifest) => manifest.surfaceIds),
     );
 
+    final connectionsBySurfaceId = <String, plugins.RemotePluginHostConnection>{
+      for (final manifest in manifests)
+        for (final surfaceId in manifest.surfaceIds)
+          surfaceId: connections[manifest.id]!,
+    };
+    final pluginIdBySurfaceId = <String, String>{
+      for (final manifest in manifests)
+        for (final surfaceId in manifest.surfaceIds) surfaceId: manifest.id,
+    };
+
     final runtime = _WorkspaceRuntime(
       manifests: manifests,
       surfaces: surfaces,
       connections: connections,
+      router: plugins.RemotePluginSurfaceInputRouter.forConnections(
+        surfaces: surfaces,
+        connectionsBySurfaceId: connectionsBySurfaceId,
+        placements: manifests.map(
+          (manifest) => manifest.placement.toSurfacePlacement(),
+        ),
+      ),
+      pluginIdBySurfaceId: pluginIdBySurfaceId,
     );
     await _applyFocus(runtime, selectedPluginId);
     await Future<void>.delayed(_snapshotSettleDelay);
@@ -374,24 +455,75 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
 }
 
 Future<void> _applyFocus(_WorkspaceRuntime runtime, String pluginId) async {
-  final manifestById = <String, plugins.RemotePluginManifest>{
-    for (final manifest in runtime.manifests) manifest.id: manifest,
-  };
-  final selected = manifestById[pluginId];
+  plugins.RemotePluginManifest? selected;
+  for (final manifest in runtime.manifests) {
+    if (manifest.id == pluginId) {
+      selected = manifest;
+      break;
+    }
+  }
   if (selected == null) {
     return;
   }
+  await runtime.router.focusSurface(selected.primarySurfaceId);
+}
 
-  for (final manifest in runtime.manifests) {
-    final connection = runtime.connections[manifest.id];
-    if (connection == null) {
-      continue;
-    }
-    final message = manifest.id == pluginId
-        ? plugins.RemotePluginFocusInput(surfaceId: manifest.primarySurfaceId)
-        : plugins.RemotePluginBlurInput(surfaceId: manifest.primarySurfaceId);
-    await connection.send(message);
+Future<String> _routeWorkspaceMousePress(
+  _WorkspaceRuntime runtime,
+  MouseMsg msg, {
+  required String selectedPluginId,
+}) async {
+  final hit = runtime.router.hitTest(msg.x, msg.y);
+  if (hit == null) {
+    return selectedPluginId;
   }
+
+  final pluginId = runtime.pluginIdBySurfaceId[hit.surface.surfaceId];
+  if (pluginId != null) {
+    await _applyFocus(runtime, pluginId);
+    selectedPluginId = pluginId;
+  }
+
+  await runtime.router.sendTuiMouse(msg, focusOnPress: false);
+  return selectedPluginId;
+}
+
+Future<void> _waitForSnapshotFocus(
+  _WorkspaceRuntime runtime,
+  String pluginId, {
+  Duration timeout = const Duration(seconds: 2),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    if (_surfaceIsFocused(runtime, pluginId)) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 25));
+  }
+}
+
+bool _surfaceIsFocused(_WorkspaceRuntime runtime, String pluginId) {
+  plugins.RemotePluginManifest? manifest;
+  for (final candidate in runtime.manifests) {
+    if (candidate.id == pluginId) {
+      manifest = candidate;
+      break;
+    }
+  }
+  if (manifest == null) {
+    return false;
+  }
+
+  final surface = runtime.surfaces[manifest.primarySurfaceId];
+  if (surface == null || surface.height < 2) {
+    return false;
+  }
+
+  final title = <String>[
+    for (var column = 0; column < surface.width; column++)
+      surface.cellAt(column, 1).symbol,
+  ].join();
+  return title.contains('${manifest.displayName} [focused]');
 }
 
 Future<void> _waitForSurfaceIds(
@@ -423,6 +555,24 @@ Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
   return plugins.loadRemotePluginManifests(
     _resolveWorkspacePath(_pluginDirectoryPath),
   );
+}
+
+(int, int)? _parseSnapshotClick(List<String> args) {
+  for (final arg in args) {
+    if (!arg.startsWith('--snapshot-click=')) {
+      continue;
+    }
+
+    final value = arg.substring('--snapshot-click='.length);
+    final parts = value.split(',');
+    if (parts.length != 2) {
+      throw FormatException(
+        'Expected --snapshot-click=<column>,<row>, got "$value".',
+      );
+    }
+    return (int.parse(parts[0]), int.parse(parts[1]));
+  }
+  return null;
 }
 
 String _renderWorkspace({

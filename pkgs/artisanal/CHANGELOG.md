@@ -4,6 +4,7 @@
 
 ### Added
 
+- Wired the `remote_plugin_workspace` example through the new remote-surface input router, including click-to-focus behavior and a `--snapshot-click=` test mode for deterministic example coverage.
 - Added `RemotePluginSurfaceInputRouter` so hosts can turn resolved remote surface placements into focus, blur, mouse, and key routing without rebuilding per-surface dispatch logic by hand.
 - Added `RemotePluginSurfaceInputRouter.sendTuiMouse(...)` so host apps can forward runtime `MouseMsg` events into remote plugin surfaces without rewriting button/action translation by hand.
 - Added resolved placement and hit-test helpers for remote plugin surfaces, so hosts can map global coordinates into the topmost plugin panel or popup using the same placement logic as UV composition.

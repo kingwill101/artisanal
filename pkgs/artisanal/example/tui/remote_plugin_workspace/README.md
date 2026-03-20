@@ -19,6 +19,7 @@ Keys:
 - `1` focus the overview plugin
 - `2` focus the activity plugin
 - `3` focus the alerts plugin
+- mouse click focus the clicked plugin surface
 - `r` reload the workspace
 - `q` quit
 
@@ -32,3 +33,11 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
 The snapshot mode launches the same plugin workspace, waits for the initial
 surfaces, prints one composed frame, and exits. That is the path used by the
 example regression test.
+
+You can also inject one synthetic click before the snapshot is rendered:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
+  --snapshot \
+  --snapshot-click=37,6
+```
