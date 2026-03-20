@@ -132,6 +132,31 @@ void main() {
       tester.mouseMove(0, 0);
       expect(events, contains('enter'));
     });
+
+    test('nested regions both receive enter on first hover motion', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final events = <String>[];
+      await tester.pumpWidget(
+        w.MouseRegion(
+          onEnter: (_) {
+            events.add('outer-enter');
+            return null;
+          },
+          child: w.MouseRegion(
+            onEnter: (_) {
+              events.add('inner-enter');
+              return null;
+            },
+            child: w.Text('nested-region'),
+          ),
+        ),
+      );
+
+      tester.mouseMove(0, 0);
+      expect(events, containsAll(<String>['outer-enter', 'inner-enter']));
+    });
   });
 
   // ---------------------------------------------------------------------------

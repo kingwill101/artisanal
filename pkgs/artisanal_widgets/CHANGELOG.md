@@ -48,6 +48,7 @@
 - Clarified the widget docs and tooltip API docs so passive hover behavior explicitly points callers to `MouseMode.allMotion` and the widget runners that already default to it.
 - Updated the widget-friendly runner defaults to disable core startup probes so early hover-driven UI feedback, such as tooltips in the gallery example, is not delayed behind terminal capability probing.
 - Added shared `Tooltip` lifecycle trace events for hover transitions, overlay insert/remove, and overlay visible/hidden timing so tooltip traces can measure when the popup is actually requested and rendered.
+- Fixed hit-test motion bubbling so nested hover handlers all see the first in-bounds mouse move, which restores immediate `Tooltip` show timing when the tooltip target contains its own `MouseRegion`.
 
 ## 0.1.0+1
 - Documentation + assets

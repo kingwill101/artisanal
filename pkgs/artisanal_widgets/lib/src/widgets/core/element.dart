@@ -9,6 +9,8 @@ import 'package:artisanal/tui.dart'
         BackgroundColorMsg,
         Cmd,
         EveryCmd,
+        HitTestMouseMsg,
+        MouseAction,
         ParallelCmd,
         Msg,
         RenderMetrics,
@@ -1113,8 +1115,9 @@ class ElementTree {
   /// the root, calling `handleUpdate` on each [StatefulElement]'s state.
   ///
   /// This mirrors Flutter's pointer-event bubbling: the deepest hit element's
-  /// ancestors get to handle the event, and the first one that produces a
-  /// [Cmd] wins.
+  /// ancestors get to handle the event. For most hit-tested mouse events the
+  /// first one that produces a [Cmd] wins, but motion events continue bubbling
+  /// so nested hover handlers can all observe the same enter/update frame.
   ///
   /// When [visited] is provided, elements already in the set are skipped
   /// and newly visited elements are added.  This prevents a
@@ -1130,7 +1133,9 @@ class ElementTree {
     Set<Element>? visited,
   }) {
     Element? current = startElement;
-    Cmd? bubbleCmd;
+    final bubbleCmds = <Cmd>[];
+    final continueOnMotion =
+        msg is HitTestMouseMsg && msg.event.action == MouseAction.motion;
     while (current != null) {
       if (current is StatefulElement) {
         if (visited != null) {
@@ -1143,8 +1148,10 @@ class ElementTree {
         current.rebuild();
         final cmd = current.state.handleUpdate(msg);
         if (cmd != null) {
-          bubbleCmd = cmd;
-          break;
+          bubbleCmds.add(cmd);
+          if (!continueOnMotion) {
+            break;
+          }
         }
       }
       current = current.parent;
@@ -1152,7 +1159,7 @@ class ElementTree {
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
     return _coalesceCommands([
-      if (bubbleCmd != null) bubbleCmd,
+      ...bubbleCmds,
       if (mountInit != null) mountInit,
     ]);
   }

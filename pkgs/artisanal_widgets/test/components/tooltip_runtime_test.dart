@@ -116,6 +116,58 @@ void main() {
       );
     });
 
+    test('floating tooltip appears immediately when child has its own MouseRegion', () async {
+      final terminal = runtime.StringTerminal();
+      final program = runtime.Program(
+        w.WidgetApp(
+          _overlayRoot(
+            child: w.MouseRegion(
+              onEnter: (_) => runtime.Cmd.repaint(),
+              child: w.Button(label: 'Hover me', onPressed: () => null),
+            ),
+          ),
+        ),
+        options: const runtime.ProgramOptions(
+          altScreen: false,
+          mouse: true,
+          mouseMode: runtime.MouseMode.allMotion,
+          signalHandlers: false,
+          frameTick: false,
+          startupProbes: false,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      addTearDown(() async {
+        program.send(const runtime.QuitMsg());
+        await runFuture;
+      });
+
+      await _waitUntil(
+        () => Style.stripAnsi(terminal.output).contains('Hover me'),
+      );
+
+      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
+      expect(hoverTarget, isNotNull);
+
+      terminal.clear();
+      program.send(
+        runtime.MouseMsg(
+          action: runtime.MouseAction.motion,
+          button: runtime.MouseButton.none,
+          x: hoverTarget!.x,
+          y: hoverTarget.y,
+        ),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        Style.stripAnsi(terminal.output),
+        contains('Hover to preview tooltips'),
+      );
+    });
+
     test('floating tooltip appears immediately on hover enter', () async {
       final terminal = runtime.StringTerminal();
       final program = runtime.Program(
