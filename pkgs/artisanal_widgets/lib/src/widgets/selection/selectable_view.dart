@@ -8,6 +8,7 @@ class SelectableView extends StatelessWidget {
   SelectableView(
     this.content, {
     super.key,
+    this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -16,6 +17,7 @@ class SelectableView extends StatelessWidget {
   });
 
   final Object content;
+  final Style? selectionHighlightStyle;
   final TextAlign textAlign;
   final bool softWrap;
   final TextOverflow overflow;
@@ -33,6 +35,7 @@ class SelectableView extends StatelessWidget {
         maxWidth: maxWidth,
       ),
       controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 }

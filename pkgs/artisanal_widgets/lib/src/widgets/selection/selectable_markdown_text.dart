@@ -10,6 +10,7 @@ class SelectableMarkdownText extends StatelessWidget {
     super.key,
     this.options,
     this.textStyle,
+    this.selectionHighlightStyle,
     this.softWrap = true,
     this.maxWidth,
     this.controller,
@@ -18,6 +19,7 @@ class SelectableMarkdownText extends StatelessWidget {
   final String data;
   final AnsiRendererOptions? options;
   final Style? textStyle;
+  final Style? selectionHighlightStyle;
   final bool softWrap;
   final int? maxWidth;
   final SelectionController? controller;
@@ -33,6 +35,7 @@ class SelectableMarkdownText extends StatelessWidget {
         maxWidth: maxWidth,
       ).view().toString(),
       controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 }

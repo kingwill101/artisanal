@@ -243,6 +243,51 @@ void main() {
       }
     });
 
+    test('selection highlighting can use an explicit override style', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+      final overrideStyle = Style()
+        ..background(const AnsiColor(27))
+        ..foreground(const AnsiColor(230));
+      final overriddenSelection = _highlightedTextPattern(
+        foreground: 230,
+        background: 27,
+        text: 'Hello',
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 160,
+        text: 'Hello',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: SelectableText(
+              'Hello World',
+              controller: ctrl,
+              selectionHighlightStyle: overrideStyle,
+            ),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        final output = tester.view;
+        expect(overriddenSelection.hasMatch(output), isTrue);
+        expect(themedSelection.hasMatch(output), isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('click clears previous selection', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       final ctrl = SelectionController();

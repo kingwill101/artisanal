@@ -108,9 +108,21 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
     final bodyStyle = theme.bodyMedium.copy()..foreground(theme.onSurface);
     final labelStyle = theme.labelSmall.copy()..foreground(theme.onBackground);
     final subtleStyle = theme.bodySmall.copy()..foreground(theme.onBackground);
-    final previewText = _selectedText.isEmpty
+  final previewText = _selectedText.isEmpty
         ? 'Drag from the title to the footer. Triple-click selects a full line.'
         : _selectedText;
+    final plainSelectionStyle = Style()
+      ..background(theme.primary)
+      ..foreground(theme.onPrimary);
+    final richSelectionStyle = Style()
+      ..background(theme.warning)
+      ..foreground(theme.resolvedOnWarning);
+    final markdownSelectionStyle = Style()
+      ..background(theme.success)
+      ..foreground(theme.resolvedOnSuccess);
+    final viewSelectionStyle = Style()
+      ..background(theme.secondary)
+      ..foreground(theme.onSecondary);
 
     return w.Container(
       padding: const w.EdgeInsets.all(1),
@@ -165,6 +177,10 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
                 sectionTitleStyle: sectionTitleStyle,
                 bodyStyle: bodyStyle,
                 subtleStyle: subtleStyle,
+                plainSelectionStyle: plainSelectionStyle,
+                richSelectionStyle: richSelectionStyle,
+                markdownSelectionStyle: markdownSelectionStyle,
+                viewSelectionStyle: viewSelectionStyle,
               ),
             ],
           ),
@@ -182,6 +198,10 @@ w.Widget _documentCard({
   required Style sectionTitleStyle,
   required Style bodyStyle,
   required Style subtleStyle,
+  required Style plainSelectionStyle,
+  required Style richSelectionStyle,
+  required Style markdownSelectionStyle,
+  required Style viewSelectionStyle,
 }) {
   return _sectionCard(
     theme: theme,
@@ -208,7 +228,7 @@ w.Widget _documentCard({
               'SelectableText content should merge cleanly with the sections '
               'below when you drag across the document.',
               style: bodyStyle,
-            ).selectable(),
+            ).selectable(selectionHighlightStyle: plainSelectionStyle),
           ),
           _documentBlock(
             theme: theme,
@@ -230,7 +250,7 @@ w.Widget _documentCard({
                   w.TextSpan(text: ' and emphasis still copy as plain text.'),
                 ],
               ),
-            ).selectable(),
+            ).selectable(selectionHighlightStyle: richSelectionStyle),
           ),
           _documentBlock(
             theme: theme,
@@ -243,7 +263,7 @@ w.Widget _documentCard({
                   '- **bold** emphasis stays readable while dragging',
               textStyle: bodyStyle,
               maxWidth: 60,
-            ).selectable(),
+            ).selectable(selectionHighlightStyle: markdownSelectionStyle),
           ),
           _documentBlock(
             theme: theme,
@@ -254,6 +274,7 @@ w.Widget _documentCard({
                   'Raw View() content joins the same drag selection area.',
             ).selectable(
               controller: controller,
+              selectionHighlightStyle: viewSelectionStyle,
             ),
           ),
           _documentBlock(

@@ -8,6 +8,7 @@ class SelectableRichText extends StatelessWidget {
     required this.text,
     super.key,
     this.style,
+    this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -17,6 +18,7 @@ class SelectableRichText extends StatelessWidget {
 
   final TextSpan text;
   final Style? style;
+  final Style? selectionHighlightStyle;
   final TextAlign textAlign;
   final bool softWrap;
   final TextOverflow overflow;
@@ -35,6 +37,7 @@ class SelectableRichText extends StatelessWidget {
         maxWidth: maxWidth,
       ),
       controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 }

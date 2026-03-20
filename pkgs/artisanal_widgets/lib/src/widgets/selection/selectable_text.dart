@@ -64,6 +64,7 @@ class SelectableText extends StatelessWidget {
     this.data, {
     super.key,
     this.style,
+    this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -73,6 +74,7 @@ class SelectableText extends StatelessWidget {
 
   final String data;
   final Style? style;
+  final Style? selectionHighlightStyle;
   final TextAlign textAlign;
   final bool softWrap;
   final TextOverflow overflow;
@@ -91,15 +93,21 @@ class SelectableText extends StatelessWidget {
         maxWidth: maxWidth,
       ),
       controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 }
 
 class _SelectableRenderedText extends StatefulWidget {
-  _SelectableRenderedText({required this.text, this.controller});
+  _SelectableRenderedText({
+    required this.text,
+    this.controller,
+    this.selectionHighlightStyle,
+  });
 
   final String text;
   final SelectionController? controller;
+  final Style? selectionHighlightStyle;
 
   @override
   State createState() => _SelectableRenderedTextState();
@@ -444,9 +452,9 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     _refreshParticipantRegistration();
 
     final ctrl = _effectiveController;
-    final selectionHighlightStyle = selectionHighlightStyleForTheme(
-      ThemeScope.of(context),
-    );
+    final selectionHighlightStyle =
+        widget.selectionHighlightStyle ??
+        selectionHighlightStyleForTheme(ThemeScope.of(context));
 
     return _SelectableTextRender(
       text: widget.text,

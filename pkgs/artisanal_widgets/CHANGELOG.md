@@ -7,6 +7,7 @@
 - Added a stable `package:artisanal_widgets/widgets.dart` entrypoint for the high-level widget framework surface.
 - Added stable `package:artisanal_widgets/charting.dart` and `package:artisanal_widgets/selection.dart` entrypoints for the supported charting and text-selection surfaces.
 - Added external diagnostics sources and listenable diagnostics bindings for editor widgets, so demos and downstream apps can drive diagnostics without custom text-pattern glue.
+- Added per-widget selection highlight overrides for the shared read-only selection surfaces, so mixed documents can use different selection palettes within one `SelectionArea`.
 
 ### Changed
 
