@@ -4,6 +4,7 @@
 
 ### Added
 
+- Fixed init-time exec restore ordering so the first visible frame is only marked complete after a real paint, preserving the initial restored frame before exec-completion updates run.
 - Wired the `remote_plugin_workspace` example through the new remote-surface input router, including click-to-focus behavior and a `--snapshot-click=` test mode for deterministic example coverage.
 - Extended the `remote_plugin_workspace` example to route keyboard input into the focused plugin surface, including a `--snapshot-key=` path so the example regression can assert focused-plugin key handling deterministically.
 - Extended the `remote_plugin_workspace` example to route mouse-motion events into hovered plugin surfaces, including a `--snapshot-motion=` path so the example regression can assert hover-style remote input deterministically.

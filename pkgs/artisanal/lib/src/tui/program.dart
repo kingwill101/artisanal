@@ -1092,6 +1092,9 @@ class Program<M extends Model> {
   /// Whether init-command completions are being drained before the first frame.
   bool _drainingInitMessages = false;
 
+  /// Whether the first user-visible frame has already been painted.
+  bool _initialRenderComplete = false;
+
   /// Whether a graceful quit should happen immediately after the first render.
   bool _quitAfterInitialRender = false;
 
@@ -1520,6 +1523,7 @@ class Program<M extends Model> {
       _startupProbeContext = null;
       _initializing = false;
       _render();
+      _initialRenderComplete = true;
       _quitAfterInitialRender = false;
       _quit();
       return;
@@ -1546,8 +1550,12 @@ class Program<M extends Model> {
     // Initialization complete - render the initialized state immediately so the
     // user sees content without waiting for startup probes.
     _initializing = false;
+    final renderGenerationBeforeInitialRender = _renderGeneration;
     _render();
-    _drainDeferredUntilAfterInitialRender();
+    if (_renderGeneration != renderGenerationBeforeInitialRender) {
+      _initialRenderComplete = true;
+      _drainDeferredUntilAfterInitialRender();
+    }
     if (!_running || _backendShutdownRequested) {
       _startupProbes = null;
       _startupProbeContext = null;
@@ -2755,7 +2763,19 @@ class Program<M extends Model> {
 
       // Restore terminal
       _restoreTerminal();
+      final renderGenerationBeforeRestore = _renderGeneration;
       final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
+      var restoredInitialFrame = false;
+      if (!_initialRenderComplete) {
+        if (!restoreSizeChanged) {
+          _renderAfterTerminalRestore(skipSizeDispatch: true);
+        }
+        if (_renderGeneration != renderGenerationBeforeRestore) {
+          _initialRenderComplete = true;
+          restoredInitialFrame = true;
+          _drainDeferredUntilAfterInitialRender();
+        }
+      }
 
       // Send result message
       final result = ExecResult(
@@ -2764,42 +2784,72 @@ class Program<M extends Model> {
         stderr: process.stderr.toString(),
       );
 
-      final deferCompletionUntilAfterInitialRender = _initializing;
-      if (!restoreSizeChanged && !deferCompletionUntilAfterInitialRender) {
-        _renderAfterTerminalRestore(skipSizeDispatch: true);
-      }
-
+      final deferCompletionUntilAfterInitialRender = !_initialRenderComplete;
       final completionMsg = onComplete(result);
       if (deferCompletionUntilAfterInitialRender) {
         _deferredUntilAfterInitialRender.add(completionMsg);
       } else {
-        // Route completion through the normal send/queue path so interceptors,
-        // coalescing, and ordering semantics are consistent with all other
-        // runtime messages.
-        send(completionMsg);
+        if (completionMsg is QuitMsg) {
+          if (!restoreSizeChanged && !restoredInitialFrame) {
+            _renderAfterTerminalRestore(skipSizeDispatch: true);
+          }
+          send(completionMsg);
+        } else {
+          // Route completion through the normal send/queue path so
+          // interceptors, coalescing, and ordering semantics are consistent
+          // with all other runtime messages.
+          final renderGenerationBeforeCompletion = _renderGeneration;
+          send(completionMsg);
+          if (!restoreSizeChanged &&
+              _running &&
+              _renderGeneration == renderGenerationBeforeCompletion) {
+            _renderAfterTerminalRestore(skipSizeDispatch: true);
+          }
+        }
       }
     } catch (e) {
       // Restore terminal even on error
       if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
       _restoreTerminal();
+      final renderGenerationBeforeRestore = _renderGeneration;
       final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
+      var restoredInitialFrame = false;
+      if (!_initialRenderComplete) {
+        if (!restoreSizeChanged) {
+          _renderAfterTerminalRestore(skipSizeDispatch: true);
+        }
+        if (_renderGeneration != renderGenerationBeforeRestore) {
+          _initialRenderComplete = true;
+          restoredInitialFrame = true;
+          _drainDeferredUntilAfterInitialRender();
+        }
+      }
 
       // Send error result
       final result = ExecResult(exitCode: -1, stdout: '', stderr: e.toString());
 
-      final deferCompletionUntilAfterInitialRender = _initializing;
-      if (!restoreSizeChanged && !deferCompletionUntilAfterInitialRender) {
-        _renderAfterTerminalRestore(skipSizeDispatch: true);
-      }
-
+      final deferCompletionUntilAfterInitialRender = !_initialRenderComplete;
       final completionMsg = onComplete(result);
       if (deferCompletionUntilAfterInitialRender) {
         _deferredUntilAfterInitialRender.add(completionMsg);
       } else {
-        // Route completion through the normal send/queue path so interceptors,
-        // coalescing, and ordering semantics are consistent with all other
-        // runtime messages.
-        send(completionMsg);
+        if (completionMsg is QuitMsg) {
+          if (!restoreSizeChanged && !restoredInitialFrame) {
+            _renderAfterTerminalRestore(skipSizeDispatch: true);
+          }
+          send(completionMsg);
+        } else {
+          // Route completion through the normal send/queue path so
+          // interceptors, coalescing, and ordering semantics are consistent
+          // with all other runtime messages.
+          final renderGenerationBeforeCompletion = _renderGeneration;
+          send(completionMsg);
+          if (!restoreSizeChanged &&
+              _running &&
+              _renderGeneration == renderGenerationBeforeCompletion) {
+            _renderAfterTerminalRestore(skipSizeDispatch: true);
+          }
+        }
       }
     }
   }
