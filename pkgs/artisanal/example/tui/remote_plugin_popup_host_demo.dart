@@ -12,29 +12,22 @@ const _connectTimeout = Duration(seconds: 15);
 
 Future<void> main(List<String> args) async {
   final pluginPath = _parsePluginPath(args);
-  final plugin = await plugins.RemotePluginProcess.start(
+  final connection = await plugins.RemotePluginHostConnection.startProcess(
     io.Platform.resolvedExecutable,
     <String>[pluginPath],
+    hostHello: const plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: <String>['surfaces'],
+    ),
+    timeout: _connectTimeout,
   );
-
-  plugins.RemotePluginSession? session;
-  plugins.RemotePluginSurfaceController? controller;
   try {
-    session = await plugin.connect(
-      hostHello: const plugins.RemotePluginHostHello(
-        hostName: 'artisanal',
-        hostVersion: '0.2.0',
-        capabilities: <String>['surfaces'],
-      ),
-      timeout: _connectTimeout,
-    );
-
-    controller = plugins.RemotePluginSurfaceController.bind(session);
-    await session.send(const plugins.RemotePluginFocusInput(surfaceId: _panelId));
-    await controller.surfaceMessages.drain<void>();
+    await connection.send(const plugins.RemotePluginFocusInput(surfaceId: _panelId));
+    await connection.surfaceMessages.drain<void>();
 
     final layers = plugins.buildRemotePluginSurfaceLayers(
-      controller.surfaces,
+      connection.surfaces,
       placements: const <plugins.RemotePluginSurfacePlacement>[
         plugins.RemotePluginSurfacePlacement(
           surfaceId: _panelId,
@@ -48,17 +41,15 @@ Future<void> main(List<String> args) async {
 
     io.stdout.writeln(
       'Connected plugin: '
-      '${session.pluginHello.pluginId} '
-      '${session.pluginHello.pluginVersion}',
+      '${connection.pluginHello.pluginId} '
+      '${connection.pluginHello.pluginVersion}',
     );
     io.stdout.writeln('Open surfaces: ${layers.map((layer) => layer.id).join(', ')}');
     for (final line in compositor.render().split('\n')) {
       io.stdout.writeln(line);
     }
   } finally {
-    await controller?.dispose();
-    await session?.dispose();
-    await plugin.dispose(kill: true);
+    await connection.dispose(kill: true);
   }
 }
 

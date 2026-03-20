@@ -8,10 +8,12 @@ The host discovers plugins from the `plugins/` directory by loading each
 `*.plugin.json` manifest, validating it, and launching the manifest's
 `entrypoint` relative to the manifest file.
 
-The host advertises the shared `services` capability and binds clipboard access
-through the generic `plugin.service.request` / `host.service.response` lane, so
-the example exercises the same service path intended for future plugin
-capabilities.
+The host passes one `RemotePluginGenericServiceCatalog` into
+`RemotePluginHostConnection.startProcess(..., genericServices: ...)`, which
+automatically advertises the shared `services` capability, exposes the
+catalog's descriptors in `host.hello`, and binds the shared
+`plugin.service.request` / `host.service.response` lane for clipboard, URL,
+notification, and file-picker RPCs.
 
 ## Run the interactive host
 

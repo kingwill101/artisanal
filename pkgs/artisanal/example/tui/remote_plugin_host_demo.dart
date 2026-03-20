@@ -12,37 +12,30 @@ const _connectTimeout = Duration(seconds: 15);
 
 Future<void> main(List<String> args) async {
   final pluginPath = _parsePluginPath(args);
-  final plugin = await plugins.RemotePluginProcess.start(
+  final connection = await plugins.RemotePluginHostConnection.startProcess(
     io.Platform.resolvedExecutable,
     <String>[pluginPath],
+    hostHello: const plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: <String>['surfaces'],
+    ),
+    timeout: _connectTimeout,
   );
-
-  plugins.RemotePluginSession? session;
-  plugins.RemotePluginSurfaceController? controller;
   try {
-    session = await plugin.connect(
-      hostHello: const plugins.RemotePluginHostHello(
-        hostName: 'artisanal',
-        hostVersion: '0.2.0',
-        capabilities: <String>['surfaces'],
-      ),
-      timeout: _connectTimeout,
-    );
+    await connection.send(const plugins.RemotePluginFocusInput(surfaceId: _surfaceId));
 
-    controller = plugins.RemotePluginSurfaceController.bind(session);
-    await session.send(const plugins.RemotePluginFocusInput(surfaceId: _surfaceId));
+    await connection.surfaceMessages.drain<void>();
 
-    await controller.surfaceMessages.drain<void>();
-
-    final surface = controller.surfaces[_surfaceId];
+    final surface = connection.surfaces[_surfaceId];
     if (surface == null) {
       throw StateError('Plugin did not leave an open demo surface.');
     }
 
     io.stdout.writeln(
       'Connected plugin: '
-      '${session.pluginHello.pluginId} '
-      '${session.pluginHello.pluginVersion}',
+      '${connection.pluginHello.pluginId} '
+      '${connection.pluginHello.pluginVersion}',
     );
     io.stdout.writeln(
       'Surface ${surface.surfaceId} '
@@ -52,9 +45,7 @@ Future<void> main(List<String> args) async {
       io.stdout.writeln(line);
     }
   } finally {
-    await controller?.dispose();
-    await session?.dispose();
-    await plugin.dispose(kill: true);
+    await connection.dispose(kill: true);
   }
 }
 
