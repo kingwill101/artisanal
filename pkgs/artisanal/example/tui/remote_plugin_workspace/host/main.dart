@@ -10,8 +10,9 @@ const _snapshotSettleDelay = Duration(milliseconds: 150);
 const _workspaceWidth = 96;
 const _workspaceHeight = 29;
 const _primaryPluginId = 'overview';
-const _pluginDirectoryPath =
+const _defaultPluginDirectoryPath =
     'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins';
+const _pluginDirectoryEnvVar = 'ARTISANAL_REMOTE_PLUGIN_WORKSPACE_PLUGIN_DIR';
 
 Future<void> main(List<String> args) async {
   if (args.contains('--snapshot')) {
@@ -747,8 +748,11 @@ String _resolveWorkspacePath(String path) {
 }
 
 Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
+  final pluginDirectoryPath =
+      io.Platform.environment[_pluginDirectoryEnvVar] ??
+      _defaultPluginDirectoryPath;
   return plugins.loadRemotePluginManifests(
-    _resolveWorkspacePath(_pluginDirectoryPath),
+    _resolveWorkspacePath(pluginDirectoryPath),
   );
 }
 

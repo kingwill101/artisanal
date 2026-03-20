@@ -1,19 +1,24 @@
+import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
+  late _CompiledWorkspaceHarness harness;
+
+  setUpAll(() async {
+    harness = await _CompiledWorkspaceHarness.create();
+  });
+
+  tearDownAll(() async {
+    await harness.dispose();
+  });
+
   test(
     'remote plugin workspace snapshot renders all example plugins',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>['--snapshot']);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -30,15 +35,10 @@ void main() {
   test(
     'remote plugin workspace snapshot click focuses the clicked plugin',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -53,16 +53,11 @@ void main() {
   test(
     'remote plugin workspace snapshot key routes into the focused plugin',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-          '--snapshot-key=a',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+        '--snapshot-key=a',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -78,16 +73,11 @@ void main() {
   test(
     'remote plugin workspace snapshot key can call host clipboard service',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-          '--snapshot-key=c',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+        '--snapshot-key=c',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -102,16 +92,11 @@ void main() {
   test(
     'remote plugin workspace snapshot key can call host open-url service',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-          '--snapshot-key=o',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+        '--snapshot-key=o',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -126,16 +111,11 @@ void main() {
   test(
     'remote plugin workspace snapshot key can call host notification service',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-          '--snapshot-key=n',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+        '--snapshot-key=n',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -150,16 +130,11 @@ void main() {
   test(
     'remote plugin workspace snapshot key can call host file-picker service',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-click=37,6',
-          '--snapshot-key=p',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-click=37,6',
+        '--snapshot-key=p',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -174,15 +149,10 @@ void main() {
   test(
     'remote plugin workspace snapshot motion routes into plugin surfaces',
     () async {
-      final result = await io.Process.run(
-        io.Platform.resolvedExecutable,
-        <String>[
-          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
-          '--snapshot',
-          '--snapshot-motion=5,18',
-        ],
-        workingDirectory: io.Directory.current.path,
-      );
+      final result = await harness.runHost(<String>[
+        '--snapshot',
+        '--snapshot-motion=5,18',
+      ]);
 
       expect(result.exitCode, 0, reason: '${result.stderr}');
 
@@ -193,4 +163,123 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 90)),
   );
+}
+
+final class _CompiledWorkspaceHarness {
+  _CompiledWorkspaceHarness._({
+    required this.tempDirectory,
+    required this.hostKernelPath,
+    required this.pluginDirectoryPath,
+  });
+
+  final io.Directory tempDirectory;
+  final String hostKernelPath;
+  final String pluginDirectoryPath;
+
+  static Future<_CompiledWorkspaceHarness> create() async {
+    final tempDirectory = await io.Directory.systemTemp.createTemp(
+      'artisanal-workspace-harness-',
+    );
+    try {
+      final hostSource = p.join(
+        io.Directory.current.path,
+        'pkgs',
+        'artisanal',
+        'example',
+        'tui',
+        'remote_plugin_workspace',
+        'host',
+        'main.dart',
+      );
+      final hostKernelPath = p.join(tempDirectory.path, 'workspace_host.dill');
+      await _compileKernel(hostSource, hostKernelPath);
+
+      final compiledPluginDirectory = io.Directory(
+        p.join(tempDirectory.path, 'plugins'),
+      );
+      await compiledPluginDirectory.create(recursive: true);
+
+      for (final plugin in const <(String, String)>[
+        ('activity', 'activity_plugin.dart'),
+        ('alerts', 'alerts_plugin.dart'),
+        ('overview', 'overview_plugin.dart'),
+      ]) {
+        final sourcePath = p.join(
+          io.Directory.current.path,
+          'pkgs',
+          'artisanal',
+          'example',
+          'tui',
+          'remote_plugin_workspace',
+          'plugins',
+          plugin.$2,
+        );
+        final outputPath = p.join(
+          compiledPluginDirectory.path,
+          '${plugin.$1}.dill',
+        );
+        await _compileKernel(sourcePath, outputPath);
+
+        final manifestSource = io.File(
+          p.join(
+            io.Directory.current.path,
+            'pkgs',
+            'artisanal',
+            'example',
+            'tui',
+            'remote_plugin_workspace',
+            'plugins',
+            '${plugin.$1}.plugin.json',
+          ),
+        );
+        final manifestJson =
+            jsonDecode(await manifestSource.readAsString())
+                as Map<String, Object?>;
+        manifestJson['entrypoint'] = '${plugin.$1}.dill';
+        final manifestTarget = io.File(
+          p.join(compiledPluginDirectory.path, '${plugin.$1}.plugin.json'),
+        );
+        await manifestTarget.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(manifestJson),
+        );
+      }
+
+      return _CompiledWorkspaceHarness._(
+        tempDirectory: tempDirectory,
+        hostKernelPath: hostKernelPath,
+        pluginDirectoryPath: compiledPluginDirectory.path,
+      );
+    } catch (_) {
+      await tempDirectory.delete(recursive: true);
+      rethrow;
+    }
+  }
+
+  Future<io.ProcessResult> runHost(List<String> args) {
+    return io.Process.run(
+      io.Platform.resolvedExecutable,
+      <String>[hostKernelPath, ...args],
+      workingDirectory: io.Directory.current.path,
+      environment: <String, String>{
+        'ARTISANAL_REMOTE_PLUGIN_WORKSPACE_PLUGIN_DIR': pluginDirectoryPath,
+      },
+    );
+  }
+
+  Future<void> dispose() => tempDirectory.delete(recursive: true);
+}
+
+Future<void> _compileKernel(String sourcePath, String outputPath) async {
+  final result = await io.Process.run(io.Platform.resolvedExecutable, <String>[
+    'compile',
+    'kernel',
+    sourcePath,
+    '-o',
+    outputPath,
+  ], workingDirectory: io.Directory.current.path);
+  if (result.exitCode != 0) {
+    throw StateError(
+      'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',
+    );
+  }
 }
