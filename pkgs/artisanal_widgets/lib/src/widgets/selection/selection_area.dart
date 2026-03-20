@@ -248,13 +248,6 @@ class _SelectionAreaState extends State<SelectionArea> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
-      if (_maybeUpdateSharedSelectionFromArea(msg.event)) {
-        return null;
-      }
-      if (_maybeStartSharedSelectionFromArea(msg.event)) {
-        _lastHitTestAction = null;
-        return null;
-      }
       if (msg.event.action == MouseAction.motion) {
         _maybeAutoScrollSelection(msg.event);
       }
@@ -274,6 +267,8 @@ class _SelectionAreaState extends State<SelectionArea> {
     }
 
     if (msg is MouseMsg) {
+      final wasHandledByHitTest = _lastHitTestAction == msg.action;
+
       if (_isWheelLike(msg) &&
           widget.scrollController != null &&
           _effectiveController.selecting) {
@@ -288,7 +283,7 @@ class _SelectionAreaState extends State<SelectionArea> {
         return null;
       }
 
-      if (_maybeStartSharedSelectionFromArea(msg)) {
+      if (!wasHandledByHitTest && _maybeStartSharedSelectionFromArea(msg)) {
         _lastHitTestAction = null;
         return null;
       }
@@ -301,7 +296,7 @@ class _SelectionAreaState extends State<SelectionArea> {
       // HitTestMouseMsg we received. If so, the event was already
       // dispatched through hit-testing to one of our children — consume
       // the flag and don't treat it as an outside click.
-      if (_lastHitTestAction == msg.action) {
+      if (wasHandledByHitTest) {
         _lastHitTestAction = null;
       } else if ((msg.action == MouseAction.press ||
               msg.action == MouseAction.release) &&

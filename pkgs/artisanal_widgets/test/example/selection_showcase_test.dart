@@ -54,6 +54,32 @@ void main() {
   );
 
   test(
+    'selection showcase double click selects the current word only',
+    () async {
+      final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
+      final controller = s.SelectionController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(controller: controller),
+      );
+
+      final line = tester.locateText('Cross-component selection document')!;
+      final wordX = line.x + 'Cross-component '.length;
+
+      for (var i = 0; i < 2; i++) {
+        tester.mouseDown(wordX, line.y);
+        tester.mouseUp(wordX, line.y);
+      }
+
+      expect(
+        controller.getSelectedRegisteredText(),
+        equals('selection'),
+      );
+    },
+  );
+
+  test(
     'selection showcase triple click selects an entire shared line',
     () async {
       final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
