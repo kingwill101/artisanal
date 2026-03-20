@@ -254,6 +254,38 @@ void main() {
       },
     );
 
+    test('generic service catalogs can register the built-in host services together', () {
+      final catalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerBuiltIns(
+          readClipboard: (_) => 'unused',
+          writeClipboard: (_, _) {},
+          openUrl: (_) {},
+          notify: (_) {},
+          pickPaths: (_) => const <String>['/tmp/demo.txt'],
+        );
+
+      expect(
+        catalog.serviceDescriptors,
+        containsAll(<Matcher>[
+          isA<plugins.RemotePluginServiceDescriptor>()
+              .having((d) => d.service, 'service', 'clipboard')
+              .having((d) => d.method, 'method', 'read'),
+          isA<plugins.RemotePluginServiceDescriptor>()
+              .having((d) => d.service, 'service', 'clipboard')
+              .having((d) => d.method, 'method', 'write'),
+          isA<plugins.RemotePluginServiceDescriptor>()
+              .having((d) => d.service, 'service', 'url')
+              .having((d) => d.method, 'method', 'open'),
+          isA<plugins.RemotePluginServiceDescriptor>()
+              .having((d) => d.service, 'service', 'notify')
+              .having((d) => d.method, 'method', 'show'),
+          isA<plugins.RemotePluginServiceDescriptor>()
+              .having((d) => d.service, 'service', 'filePicker')
+              .having((d) => d.method, 'method', 'open'),
+        ]),
+      );
+    });
+
     test(
       'guest services open urls and notifications as awaitable RPCs',
       () async {

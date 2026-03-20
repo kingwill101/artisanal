@@ -249,6 +249,24 @@ void _registerFilePickerBindings(
   );
 }
 
+void _registerBuiltInBindings(
+  _GenericBindingRegistrar register, {
+  RemotePluginClipboardReader? readClipboard,
+  RemotePluginClipboardWriter? writeClipboard,
+  RemotePluginUrlOpener? openUrl,
+  RemotePluginNotifier? notify,
+  RemotePluginFilePickerHandler? pickPaths,
+}) {
+  _registerClipboardBindings(
+    register,
+    readClipboard: readClipboard,
+    writeClipboard: writeClipboard,
+  );
+  _registerOpenUrlBindings(register, openUrl: openUrl);
+  _registerNotificationBindings(register, notify: notify);
+  _registerFilePickerBindings(register, pickPaths: pickPaths);
+}
+
 final class RemotePluginGenericServiceCatalog {
   final Map<String, Map<String, _RemotePluginGenericServiceBinding>> _handlers =
       <String, Map<String, _RemotePluginGenericServiceBinding>>{};
@@ -328,6 +346,23 @@ final class RemotePluginGenericServiceCatalog {
   void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
     _registerFilePickerBindings(register, pickPaths: pickPaths);
   }
+
+  void registerBuiltIns({
+    RemotePluginClipboardReader? readClipboard,
+    RemotePluginClipboardWriter? writeClipboard,
+    RemotePluginUrlOpener? openUrl,
+    RemotePluginNotifier? notify,
+    RemotePluginFilePickerHandler? pickPaths,
+  }) {
+    _registerBuiltInBindings(
+      register,
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+      openUrl: openUrl,
+      notify: notify,
+      pickPaths: pickPaths,
+    );
+  }
 }
 
 /// Host-side responder for generic remote plugin service envelopes.
@@ -391,13 +426,11 @@ final class RemotePluginGenericHostService {
     bool filePicker = false,
   }) {
     final catalog = RemotePluginGenericServiceCatalog();
-    catalog.registerClipboard(
+    catalog.registerBuiltIns(
       readClipboard: clipboardRead ? (_) => null : null,
       writeClipboard: clipboardWrite ? (_, _) {} : null,
-    );
-    catalog.registerOpenUrl(openUrl: openUrl ? (_) {} : null);
-    catalog.registerNotification(notify: notify ? (_) {} : null);
-    catalog.registerFilePicker(
+      openUrl: openUrl ? (_) {} : null,
+      notify: notify ? (_) {} : null,
       pickPaths: filePicker ? (_) => const <String>[] : null,
     );
     return catalog.serviceDescriptors;
@@ -435,6 +468,23 @@ final class RemotePluginGenericHostService {
 
   void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
     _registerFilePickerBindings(register, pickPaths: pickPaths);
+  }
+
+  void registerBuiltIns({
+    RemotePluginClipboardReader? readClipboard,
+    RemotePluginClipboardWriter? writeClipboard,
+    RemotePluginUrlOpener? openUrl,
+    RemotePluginNotifier? notify,
+    RemotePluginFilePickerHandler? pickPaths,
+  }) {
+    _registerBuiltInBindings(
+      register,
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+      openUrl: openUrl,
+      notify: notify,
+      pickPaths: pickPaths,
+    );
   }
 
   Future<void> _handle(RemotePluginServiceRequest request) async {

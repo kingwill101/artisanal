@@ -523,10 +523,10 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   try {
     for (final manifest in manifests) {
       final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
-        ..registerClipboard(readClipboard: (_) => 'workspace clipboard')
-        ..registerOpenUrl(openUrl: (_) {})
-        ..registerNotification(notify: (_) {})
-        ..registerFilePicker(
+        ..registerBuiltIns(
+          readClipboard: (_) => 'workspace clipboard',
+          openUrl: (_) {},
+          notify: (_) {},
           pickPaths: (_) => const <String>['/tmp/workspace.txt'],
         );
       final connection = await plugins.RemotePluginHostConnection.startManifest(
