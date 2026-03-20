@@ -329,6 +329,8 @@ class _TextEditorState extends State<TextEditor> {
   String get _focusId => widget.focusId ?? '${widget.id}.editor';
   String get _searchFocusId => '${widget.id}.search';
   String get _gotoFocusId => '${widget.id}.goto';
+  _TextAreaControllerCoreBridge get _coreBridge =>
+      _TextAreaControllerCoreBridge(_controller);
 
   @override
   void initState() {
@@ -524,7 +526,10 @@ class _TextEditorState extends State<TextEditor> {
         !key.alt &&
         !key.meta) {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
-      _controller.outdentLines(width: width);
+      _applyLineEdit(
+        (lines, state) =>
+            textOutdentLines(lines: lines, state: state, width: width),
+      );
       return Cmd.none();
     }
 
@@ -535,7 +540,10 @@ class _TextEditorState extends State<TextEditor> {
         !key.meta) {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
       if (_controller.hasSelection) {
-        _controller.indentLines(width: width);
+        _applyLineEdit(
+          (lines, state) =>
+              textIndentLines(lines: lines, state: state, width: width),
+        );
         return Cmd.none();
       }
       _controller.insertText(' ' * width);
@@ -543,7 +551,9 @@ class _TextEditorState extends State<TextEditor> {
     }
 
     if (keyMatchesSingle(key, _joinLinesBinding)) {
-      _controller.joinLines();
+      _applyLineEdit(
+        (lines, state) => textJoinLines(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
@@ -554,7 +564,9 @@ class _TextEditorState extends State<TextEditor> {
         key.type == terminal_keys.KeyType.runes &&
         key.runes.isNotEmpty &&
         String.fromCharCode(key.runes.first).toLowerCase() == 'k') {
-      _controller.deleteLines();
+      _applyLineEdit(
+        (lines, state) => textDeleteLines(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
@@ -565,7 +577,10 @@ class _TextEditorState extends State<TextEditor> {
         key.type == terminal_keys.KeyType.runes &&
         key.runes.isNotEmpty &&
         String.fromCharCode(key.runes.first).toLowerCase() == 'd') {
-      _controller.duplicateLinesBelow();
+      _applyLineEdit(
+        (lines, state) =>
+            textDuplicateSelectedLinesBelow(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
@@ -574,7 +589,10 @@ class _TextEditorState extends State<TextEditor> {
         key.shift &&
         !key.ctrl &&
         !key.meta) {
-      _controller.duplicateLinesAbove();
+      _applyLineEdit(
+        (lines, state) =>
+            textDuplicateSelectedLinesAbove(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
@@ -583,7 +601,10 @@ class _TextEditorState extends State<TextEditor> {
         key.shift &&
         !key.ctrl &&
         !key.meta) {
-      _controller.duplicateLinesBelow();
+      _applyLineEdit(
+        (lines, state) =>
+            textDuplicateSelectedLinesBelow(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
@@ -592,7 +613,10 @@ class _TextEditorState extends State<TextEditor> {
         !key.shift &&
         !key.ctrl &&
         !key.meta) {
-      _controller.moveLinesUp();
+      _applyLineEdit(
+        (lines, state) =>
+            textMoveSelectedLines(lines: lines, state: state, direction: -1),
+      );
       return Cmd.none();
     }
 
@@ -601,77 +625,121 @@ class _TextEditorState extends State<TextEditor> {
         !key.shift &&
         !key.ctrl &&
         !key.meta) {
-      _controller.moveLinesDown();
+      _applyLineEdit(
+        (lines, state) =>
+            textMoveSelectedLines(lines: lines, state: state, direction: 1),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _splitLineBinding)) {
-      _controller.splitLine();
+      _applyOffsetEdit(
+        (document, state) => textSplitLine(document: document, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _uppercaseTransformBinding)) {
-      _controller.uppercaseSelectionOrLine();
+      _applyOffsetEdit(
+        (document, state) => textTransformSelectionOrLine(
+          document: document,
+          state: state,
+          transform: (text) => text.toUpperCase(),
+        ),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _lowercaseTransformBinding)) {
-      _controller.lowercaseSelectionOrLine();
+      _applyOffsetEdit(
+        (document, state) => textTransformSelectionOrLine(
+          document: document,
+          state: state,
+          transform: (text) => text.toLowerCase(),
+        ),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _capitalizeTransformBinding)) {
-      _controller.capitalizeSelectionOrLine();
+      _applyOffsetEdit(
+        (document, state) => textTransformSelectionOrLine(
+          document: document,
+          state: state,
+          transform: textCapitalizeWords,
+        ),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _sortLinesBinding)) {
-      _controller.sortSelectedLines();
+      _applyLineEdit(
+        (lines, state) => textSortSelectedLines(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _quoteLinesBinding)) {
-      _controller.toggleLinePrefix('>');
+      _applyLineEdit(
+        (lines, state) =>
+            textToggleLinePrefix(lines: lines, state: state, prefix: '>'),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _bulletListBinding)) {
-      _controller.toggleLinePrefix('-');
+      _applyLineEdit(
+        (lines, state) =>
+            textToggleLinePrefix(lines: lines, state: state, prefix: '-'),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _checklistBinding)) {
-      _controller.toggleLinePrefix('- [ ]');
+      _applyLineEdit(
+        (lines, state) =>
+            textToggleLinePrefix(lines: lines, state: state, prefix: '- [ ]'),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _numberedListBinding)) {
-      _controller.toggleNumberedList();
+      _applyLineEdit(
+        (lines, state) => textToggleNumberedList(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _toggleChecklistStateBinding)) {
-      _controller.toggleChecklistState();
+      _applyLineEdit(
+        (lines, state) => textToggleChecklistState(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _renumberListBinding)) {
-      _controller.renumberNumberedList();
+      _applyLineEdit(
+        (lines, state) => textRenumberNumberedList(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _headingBinding)) {
-      _controller.toggleHeadingPrefix();
+      _applyLineEdit(
+        (lines, state) => textToggleHeadingPrefix(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _cleanupBinding)) {
-      _controller.cleanupWhitespace();
+      _applyLineEdit(
+        (lines, state) => textCleanupWhitespace(lines: lines, state: state),
+      );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _unwrapSelectionBinding)) {
-      _controller.unwrapSelection();
+      _handleUnwrapSelectionKey();
       return Cmd.none();
     }
 
@@ -702,7 +770,68 @@ class _TextEditorState extends State<TextEditor> {
     final opening = String.fromCharCode(key.runes.single);
     final closing = _selectionWrapPairs[opening];
     if (closing == null) return false;
-    return _controller.wrapSelection(opening, after: closing);
+    final document = TextDocument(text: _controller.text);
+    final result = _coreBridge
+        .currentOffsetStateSnapshot(document: document)
+        .wrapSelectionCommand(
+          document.flattenWithNewlines(),
+          before: [opening],
+          after: [closing],
+        );
+    if (!result.changed) {
+      return false;
+    }
+    _coreBridge.applyTextCommandResult(result);
+    return true;
+  }
+
+  bool _handleUnwrapSelectionKey() {
+    if (!_controller.hasSelection) return false;
+    final document = TextDocument(text: _controller.text);
+    final result = _coreBridge
+        .currentOffsetStateSnapshot(document: document)
+        .unwrapSelectionCommand(
+          document.flattenWithNewlines(),
+          surroundPairs: _selectionWrapPairs,
+        );
+    if (!result.changed) {
+      return false;
+    }
+    _coreBridge.applyTextCommandResult(result);
+    return true;
+  }
+
+  void _applyOffsetEdit(
+    TextCommandResult Function(
+      TextDocument document,
+      TextOffsetStateSnapshot state,
+    )
+    edit,
+  ) {
+    final document = TextDocument(text: _controller.text);
+    final result = edit(
+      document,
+      _coreBridge.currentOffsetStateSnapshot(document: document),
+    );
+    if (!result.changed) {
+      return;
+    }
+    _coreBridge.applyTextCommandResult(result);
+  }
+
+  void _applyLineEdit(
+    TextLineCommandResult Function(
+      List<String> lines,
+      TextLineStateSnapshot state,
+    )
+    edit,
+  ) {
+    final lines = _controller.text.split('\n');
+    final result = edit(lines, _coreBridge.currentLineStateSnapshot());
+    if (!result.changed) {
+      return;
+    }
+    _coreBridge.applyTextLineCommandResult(result);
   }
 
   Widget _buildSearchBar(Theme theme, int width) {
