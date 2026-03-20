@@ -126,7 +126,7 @@ final class _RemotePluginWorkspaceModel implements Model {
     this.revision = 0,
   });
 
-  final _WorkspaceRuntime? runtime;
+  final plugins.RemotePluginWorkspace? runtime;
   final bool loading;
   final String selectedPluginId;
   final String status;
@@ -236,7 +236,9 @@ final class _RemotePluginWorkspaceModel implements Model {
     };
   }
 
-  (Model, Cmd?) _handleWorkspaceLoaded(_WorkspaceRuntime nextRuntime) {
+  (Model, Cmd?) _handleWorkspaceLoaded(
+    plugins.RemotePluginWorkspace nextRuntime,
+  ) {
     final commands = <Cmd>[
       for (final entry in nextRuntime.connections.entries)
         Cmd.listen<plugins.RemotePluginMessage>(
@@ -415,7 +417,7 @@ final class _RemotePluginWorkspaceModel implements Model {
   }
 
   _RemotePluginWorkspaceModel copyWith({
-    _WorkspaceRuntime? runtime,
+    plugins.RemotePluginWorkspace? runtime,
     bool clearRuntime = false,
     bool? loading,
     String? selectedPluginId,
@@ -440,7 +442,7 @@ final class _RemotePluginWorkspaceModel implements Model {
 final class _WorkspaceLoadedMsg extends Msg {
   const _WorkspaceLoadedMsg(this.runtime);
 
-  final _WorkspaceRuntime runtime;
+  final plugins.RemotePluginWorkspace runtime;
 }
 
 final class _WorkspaceLoadFailedMsg extends Msg {
@@ -494,110 +496,43 @@ final class _HostMouseMovedMsg extends Msg {
   final String? pluginId;
 }
 
-final class _WorkspaceRuntime {
-  const _WorkspaceRuntime({
-    required this.manifests,
-    required this.surfaces,
-    required this.connections,
-    required this.router,
-    required this.pluginIdBySurfaceId,
-  });
-
-  final List<plugins.RemotePluginManifest> manifests;
-  final plugins.RemotePluginSurfaceStore surfaces;
-  final Map<String, plugins.RemotePluginHostConnection> connections;
-  final plugins.RemotePluginSurfaceInputRouter router;
-  final Map<String, String> pluginIdBySurfaceId;
-
-  Future<void> dispose({bool kill = false}) async {
-    for (final connection in connections.values) {
-      await connection.dispose(kill: kill);
-    }
-  }
-}
-
-Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
-  final manifests = await _loadWorkspaceManifests();
-  final surfaces = plugins.RemotePluginSurfaceStore();
-  final connections = <String, plugins.RemotePluginHostConnection>{};
+Future<plugins.RemotePluginWorkspace> _startWorkspace(
+  String selectedPluginId,
+) async {
   final genericCatalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
     readClipboard: (_) => 'workspace clipboard',
     openUrl: (_) {},
     notify: (_) {},
     pickPaths: (_) => const <String>['/tmp/workspace.txt'],
   );
-  try {
-    for (final manifest in manifests) {
-      final connection = await plugins.RemotePluginHostConnection.startManifest(
-        manifest,
-        executable: io.Platform.resolvedExecutable,
-        hostHello: plugins.RemotePluginHostHello(
-          hostName: 'artisanal',
-          hostVersion: '0.2.0',
-          capabilities: const <String>['surfaces'],
-        ),
-        genericServices: genericCatalog,
-        surfaces: surfaces,
-        timeout: _connectTimeout,
-      );
-      connections[manifest.id] = connection;
-    }
-
-    await _waitForSurfaceIds(
-      surfaces,
-      manifests.expand((manifest) => manifest.surfaceIds),
-    );
-
-    final connectionsBySurfaceId = <String, plugins.RemotePluginHostConnection>{
-      for (final manifest in manifests)
-        for (final surfaceId in manifest.surfaceIds)
-          surfaceId: connections[manifest.id]!,
-    };
-    final pluginIdBySurfaceId = <String, String>{
-      for (final manifest in manifests)
-        for (final surfaceId in manifest.surfaceIds) surfaceId: manifest.id,
-    };
-
-    final runtime = _WorkspaceRuntime(
-      manifests: manifests,
-      surfaces: surfaces,
-      connections: connections,
-      router: plugins.RemotePluginSurfaceInputRouter.forConnections(
-        surfaces: surfaces,
-        connectionsBySurfaceId: connectionsBySurfaceId,
-        placements: manifests.map(
-          (manifest) => manifest.placement.toSurfacePlacement(),
-        ),
-      ),
-      pluginIdBySurfaceId: pluginIdBySurfaceId,
-    );
-    await _applyFocus(runtime, selectedPluginId);
-    await Future<void>.delayed(_snapshotSettleDelay);
-    return runtime;
-  } catch (_) {
-    for (final connection in connections.values) {
-      await connection.dispose(kill: true);
-    }
-    rethrow;
-  }
+  final pluginDirectoryPath =
+      io.Platform.environment[_pluginDirectoryEnvVar] ??
+      _defaultPluginDirectoryPath;
+  final runtime = await plugins.RemotePluginWorkspace.startManifestDirectory(
+    _resolveWorkspacePath(pluginDirectoryPath),
+    executable: io.Platform.resolvedExecutable,
+    hostHello: plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: const <String>['surfaces'],
+    ),
+    genericServices: genericCatalog,
+    timeout: _connectTimeout,
+  );
+  await runtime.focusPlugin(selectedPluginId);
+  await Future<void>.delayed(_snapshotSettleDelay);
+  return runtime;
 }
 
-Future<void> _applyFocus(_WorkspaceRuntime runtime, String pluginId) async {
-  plugins.RemotePluginManifest? selected;
-  for (final manifest in runtime.manifests) {
-    if (manifest.id == pluginId) {
-      selected = manifest;
-      break;
-    }
-  }
-  if (selected == null) {
-    return;
-  }
-  await runtime.router.focusSurface(selected.primarySurfaceId);
+Future<void> _applyFocus(
+  plugins.RemotePluginWorkspace runtime,
+  String pluginId,
+) async {
+  await runtime.focusPlugin(pluginId);
 }
 
 Future<String> _routeWorkspaceMousePress(
-  _WorkspaceRuntime runtime,
+  plugins.RemotePluginWorkspace runtime,
   MouseMsg msg, {
   required String selectedPluginId,
 }) async {
@@ -606,7 +541,7 @@ Future<String> _routeWorkspaceMousePress(
     return selectedPluginId;
   }
 
-  final pluginId = runtime.pluginIdBySurfaceId[hit.surface.surfaceId];
+  final pluginId = runtime.pluginIdForSurface(hit.surface.surfaceId);
   if (pluginId != null) {
     await _applyFocus(runtime, pluginId);
     selectedPluginId = pluginId;
@@ -617,7 +552,7 @@ Future<String> _routeWorkspaceMousePress(
 }
 
 Future<_SnapshotKey> _routeWorkspaceKey(
-  _WorkspaceRuntime runtime,
+  plugins.RemotePluginWorkspace runtime,
   _SnapshotKey key,
 ) async {
   await runtime.router.sendKey(
@@ -632,18 +567,18 @@ Future<_SnapshotKey> _routeWorkspaceKey(
 }
 
 Future<String?> _routeWorkspaceMouseMotion(
-  _WorkspaceRuntime runtime,
+  plugins.RemotePluginWorkspace runtime,
   MouseMsg msg,
 ) async {
   final hit = await runtime.router.sendTuiMouse(msg, focusOnPress: false);
   if (hit == null) {
     return null;
   }
-  return runtime.pluginIdBySurfaceId[hit.surface.surfaceId];
+  return runtime.pluginIdForSurface(hit.surface.surfaceId);
 }
 
 Future<void> _waitForSnapshotSurfaceText(
-  _WorkspaceRuntime runtime,
+  plugins.RemotePluginWorkspace runtime,
   String pluginId, {
   required String contains,
   Duration timeout = const Duration(seconds: 2),
@@ -658,7 +593,7 @@ Future<void> _waitForSnapshotSurfaceText(
 }
 
 Future<void> _waitForSnapshotWorkspaceReady(
-  _WorkspaceRuntime runtime, {
+  plugins.RemotePluginWorkspace runtime, {
   Duration timeout = const Duration(seconds: 5),
 }) async {
   for (final expectation in const <(String, String)>[
@@ -676,17 +611,11 @@ Future<void> _waitForSnapshotWorkspaceReady(
 }
 
 bool _surfaceContainsText(
-  _WorkspaceRuntime runtime,
+  plugins.RemotePluginWorkspace runtime,
   String pluginId,
   String contains,
 ) {
-  plugins.RemotePluginManifest? manifest;
-  for (final candidate in runtime.manifests) {
-    if (candidate.id == pluginId) {
-      manifest = candidate;
-      break;
-    }
-  }
+  final manifest = runtime.manifestForPlugin(pluginId);
   if (manifest == null) {
     return false;
   }
@@ -708,47 +637,15 @@ bool _surfaceContainsText(
   return false;
 }
 
-Future<void> _waitForSurfaceIds(
-  plugins.RemotePluginSurfaceStore surfaces,
-  Iterable<String> surfaceIds, {
-  Duration timeout = const Duration(seconds: 5),
-}) async {
-  final deadline = DateTime.now().add(timeout);
-  final expected = surfaceIds.toSet();
-  while (DateTime.now().isBefore(deadline)) {
-    final open = expected.every((surfaceId) => surfaces[surfaceId] != null);
-    if (open) {
-      return;
-    }
-    await Future<void>.delayed(const Duration(milliseconds: 25));
-  }
-
-  throw TimeoutException(
-    'Timed out waiting for plugin surfaces: ${expected.join(', ')}',
-    timeout,
-  );
-}
-
 String _resolveWorkspacePath(String path) {
   return io.Directory.current.uri.resolve(path).toFilePath();
 }
 
-Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
-  final pluginDirectoryPath =
-      io.Platform.environment[_pluginDirectoryEnvVar] ??
-      _defaultPluginDirectoryPath;
-  return plugins.loadRemotePluginManifests(
-    _resolveWorkspacePath(pluginDirectoryPath),
-  );
-}
-
-String _pluginDisplayName(_WorkspaceRuntime runtime, String pluginId) {
-  for (final manifest in runtime.manifests) {
-    if (manifest.id == pluginId) {
-      return manifest.displayName ?? manifest.id;
-    }
-  }
-  return pluginId;
+String _pluginDisplayName(
+  plugins.RemotePluginWorkspace runtime,
+  String pluginId,
+) {
+  return runtime.manifestForPlugin(pluginId)?.displayName ?? pluginId;
 }
 
 (int, int)? _parseSnapshotClick(List<String> args) {
@@ -860,7 +757,7 @@ String _renderWorkspace({
   required String status,
   required List<String> log,
   required int revision,
-  required _WorkspaceRuntime? runtime,
+  required plugins.RemotePluginWorkspace? runtime,
   String? error,
 }) {
   final layers = <uv.Layer>[

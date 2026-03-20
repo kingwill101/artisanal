@@ -102,6 +102,8 @@ export 'src/plugins/remote_surface_guest_services.dart'
     show RemotePluginGuestServices, RemotePluginServiceException;
 export 'src/plugins/remote_surface_input_router.dart'
     show RemotePluginSurfaceMessageSender, RemotePluginSurfaceInputRouter;
+export 'src/plugins/remote_surface_workspace.dart'
+    show RemotePluginWorkspace;
 export 'src/plugins/remote_surface_session.dart' show RemotePluginSession;
 export 'src/plugins/remote_surface_process.dart' show RemotePluginProcess;
 export 'src/plugins/remote_surface_state.dart'
