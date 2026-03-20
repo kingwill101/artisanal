@@ -42,6 +42,38 @@ class RenderStack extends RenderBox {
   StackFit fit;
   Overflow clipBehavior;
 
+  Offset _resolveChildOffset(
+    RenderObject child,
+    StackParentData? data,
+    int targetWidth,
+    int targetHeight,
+  ) {
+    final childWidth = child.size.width.toInt();
+    final childHeight = child.size.height.toInt();
+
+    if (data != null && data.isPositioned) {
+      final left = _resolveDimension(data.left);
+      final right = _resolveDimension(data.right);
+      final top = _resolveDimension(data.top);
+      final bottom = _resolveDimension(data.bottom);
+
+      final x = left ??
+          (right != null
+              ? targetWidth - childWidth - right
+              : ((alignment.x + 1) / 2 * (targetWidth - childWidth)).round());
+      final y = top ??
+          (bottom != null
+              ? targetHeight - childHeight - bottom
+              : ((alignment.y + 1) / 2 * (targetHeight - childHeight)).round());
+      return Offset(x.toDouble(), y.toDouble());
+    }
+
+    return Offset(
+      ((alignment.x + 1) / 2 * (targetWidth - childWidth)).round().toDouble(),
+      ((alignment.y + 1) / 2 * (targetHeight - childHeight)).round().toDouble(),
+    );
+  }
+
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
@@ -129,6 +161,13 @@ class RenderStack extends RenderBox {
     }
 
     size = constraints.constrain(Size(resolvedWidth, resolvedHeight));
+
+    final targetWidth = size.width.toInt();
+    final targetHeight = size.height.toInt();
+    for (final child in children) {
+      final data = child.parentData as StackParentData?;
+      child.offset = _resolveChildOffset(child, data, targetWidth, targetHeight);
+    }
   }
 
   @override
@@ -146,34 +185,8 @@ class RenderStack extends RenderBox {
       final content = child.paint();
       final childWidth = child.size.width.toInt();
       final childHeight = child.size.height.toInt();
-      final data = child.parentData as StackParentData?;
-      var x = 0;
-      var y = 0;
-
-      if (data != null && data.isPositioned) {
-        final left = _resolveDimension(data.left);
-        final right = _resolveDimension(data.right);
-        final top = _resolveDimension(data.top);
-        final bottom = _resolveDimension(data.bottom);
-        if (left != null) {
-          x = left;
-        } else if (right != null) {
-          x = targetWidth - childWidth - right;
-        } else {
-          x = ((alignment.x + 1) / 2 * (targetWidth - childWidth)).round();
-        }
-
-        if (top != null) {
-          y = top;
-        } else if (bottom != null) {
-          y = targetHeight - childHeight - bottom;
-        } else {
-          y = ((alignment.y + 1) / 2 * (targetHeight - childHeight)).round();
-        }
-      } else {
-        x = ((alignment.x + 1) / 2 * (targetWidth - childWidth)).round();
-        y = ((alignment.y + 1) / 2 * (targetHeight - childHeight)).round();
-      }
+      final x = child.offset.dx.toInt();
+      final y = child.offset.dy.toInt();
 
       if (isFirstChild &&
           x == 0 &&

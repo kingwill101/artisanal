@@ -248,6 +248,28 @@ void main() {
       expect(pos!.y, equals(3));
     });
 
+    test('hit testing respects positioned child offsets', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Stack(
+          width: 20,
+          height: 5,
+          children: [Positioned(left: 3, top: 2, child: Text('P'))],
+        ),
+      );
+
+      final hits = tester
+          .hitTestAt(3, 2)
+          .map((entry) => entry.element.widget.runtimeType)
+          .toList();
+
+      expect(hits, isNotEmpty);
+      expect(hits.first, equals(Text));
+      expect(hits, contains(Stack));
+    });
+
     test('Positioned with right positions from right edge', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

@@ -27,6 +27,7 @@
 - Made floating `Tooltip` request an immediate repaint on hover enter and exit so overlay tooltips appear and disappear without waiting for a later event.
 - Made floating `Tooltip` hit-test transparent so it no longer blocks later mouse hover and click interaction underneath.
 - Fixed `GestureDetector` hover handling so commands returned from `onEnter` and `onExit` are dispatched through the widget pipeline, allowing overlay-backed hover widgets like `Tooltip` to repaint immediately in live sessions.
+- Fixed `Stack` hit-testing so positioned children use their painted offsets during hit testing, which restores immediate hover interaction for anchored overlays like `Tooltip`.
 - Updated the flagship widget app examples to use the stable umbrella imports from `package:artisanal/app.dart` and `package:artisanal/widgets.dart`.
 - Updated the editor showcase examples to use the stable umbrella imports from `package:artisanal/app.dart`, `package:artisanal/editors.dart`, and `package:artisanal/widgets.dart`.
 - Updated the shared text input test suites to use the stable `package:artisanal/widgets.dart` and `package:artisanal/testing.dart` entrypoints.
