@@ -21,11 +21,8 @@ import 'package:test/test.dart';
 // Import the actual example app widget.
 import '../example/main.dart' show AppWidget;
 
-w.Widget _exampleOverlayRoot() => w.Overlay(
-  initialEntries: [
-    w.OverlayEntry(builder: (_) => AppWidget()),
-  ],
-);
+w.Widget _exampleOverlayRoot() =>
+    w.Overlay(initialEntries: [w.OverlayEntry(builder: (_) => AppWidget())]);
 
 void main() {
   group('AppWidget tab click regression', () {
