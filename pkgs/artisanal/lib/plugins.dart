@@ -55,6 +55,8 @@ export 'src/plugins/remote_surface_clipboard_service.dart'
         RemotePluginClipboardReader,
         RemotePluginClipboardWriter,
         RemotePluginClipboardHostService;
+export 'src/plugins/remote_surface_generic_service.dart'
+    show RemotePluginGenericServiceHandler, RemotePluginGenericHostService;
 export 'src/plugins/remote_surface_url_service.dart'
     show RemotePluginUrlOpener, RemotePluginOpenUrlHostService;
 export 'src/plugins/remote_surface_notification_service.dart'

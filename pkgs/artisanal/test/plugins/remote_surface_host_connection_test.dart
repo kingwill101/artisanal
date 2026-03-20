@@ -5,40 +5,43 @@ import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
-  test('host connection starts a plugin process and forwards other messages', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'echo_plugin.dart',
-    );
+  test(
+    'host connection starts a plugin process and forwards other messages',
+    () async {
+      final scriptPath = p.join(
+        io.Directory.current.path,
+        'pkgs',
+        'artisanal',
+        'test',
+        'plugins',
+        'fixtures',
+        'echo_plugin.dart',
+      );
 
-    final connection = await plugins.RemotePluginHostConnection.startProcess(
-      io.Platform.resolvedExecutable,
-      <String>[scriptPath],
-      hostHello: const plugins.RemotePluginHostHello(
-        hostName: 'artisanal',
-        hostVersion: '0.2.0',
-      ),
-      timeout: const Duration(seconds: 10),
-    );
-    addTearDown(() => connection.dispose(kill: true));
+      final connection = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[scriptPath],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+        timeout: const Duration(seconds: 10),
+      );
+      addTearDown(() => connection.dispose(kill: true));
 
-    expect(connection.pluginHello.pluginId, 'echo-plugin');
-    expect(connection.surfaces.surfaces, isEmpty);
+      expect(connection.pluginHello.pluginId, 'echo-plugin');
+      expect(connection.surfaces.surfaces, isEmpty);
 
-    await connection.send(
-      const plugins.RemotePluginFocusInput(surfaceId: 'side'),
-    );
+      await connection.send(
+        const plugins.RemotePluginFocusInput(surfaceId: 'side'),
+      );
 
-    final echoed = await connection.otherMessages
-        .firstWhere((message) => message is plugins.RemotePluginFocusInput)
-        .timeout(const Duration(seconds: 2));
-    expect(echoed, isA<plugins.RemotePluginFocusInput>());
-  });
+      final echoed = await connection.otherMessages
+          .firstWhere((message) => message is plugins.RemotePluginFocusInput)
+          .timeout(const Duration(seconds: 2));
+      expect(echoed, isA<plugins.RemotePluginFocusInput>());
+    },
+  );
 
   test('host connection can answer clipboard requests', () async {
     final scriptPath = p.join(
@@ -235,6 +238,64 @@ void main() {
     expect(pickerRequest!.title, 'Select a demo file');
     expect(pickerRequest!.initialPath, '/tmp');
     expect(pickerRequest!.kind, plugins.RemotePluginFilePickerKind.file);
+  });
+
+  test('host connection can answer generic service requests', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'generic_service_plugin.dart',
+    );
+
+    plugins.RemotePluginServiceRequest? serviceRequest;
+    final connection = await plugins.RemotePluginHostConnection.startProcess(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+        capabilities: <String>['services'],
+      ),
+      timeout: const Duration(seconds: 20),
+    );
+    addTearDown(() => connection.dispose(kill: true));
+
+    final genericService = connection.bindGenericService(
+      handlers:
+          <String, Map<String, plugins.RemotePluginGenericServiceHandler>>{
+            'host': <String, plugins.RemotePluginGenericServiceHandler>{
+              'ping': (request) {
+                serviceRequest = request;
+                return <String, Object?>{
+                  'reply': 'pong ${request.params['value']}',
+                };
+              },
+            },
+          },
+    );
+    addTearDown(genericService.dispose);
+
+    await connection.surfaceMessages
+        .where((message) => message is plugins.RemotePluginFrame)
+        .cast<plugins.RemotePluginFrame>()
+        .firstWhere((_) {
+          final surface = connection.surfaces['generic.panel'];
+          if (surface == null) {
+            return false;
+          }
+          final text = _surfaceText(surface);
+          return text.contains('generic:pong demo');
+        })
+        .timeout(const Duration(seconds: 5));
+
+    expect(serviceRequest, isNotNull);
+    expect(serviceRequest!.service, 'host');
+    expect(serviceRequest!.method, 'ping');
+    expect(serviceRequest!.params, <String, Object?>{'value': 'demo'});
   });
 }
 

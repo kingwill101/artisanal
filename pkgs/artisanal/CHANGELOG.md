@@ -9,6 +9,7 @@
 - Extended the `remote_plugin_workspace` example to route mouse-motion events into hovered plugin surfaces, including a `--snapshot-motion=` path so the example regression can assert hover-style remote input deterministically.
 - Bound the `remote_plugin_workspace` host example to the remote clipboard service and taught the activity plugin to surface the returned clipboard text on `c`, so the workspace demo now exercises a real host-owned RPC end to end.
 - Added generic `plugin.service.request` / `host.service.response` protocol messages plus a guest-side `RemotePluginGuestServices.call(...)` helper, so future host-owned RPCs can share one versioned envelope instead of growing one bespoke message pair per service.
+- Added `RemotePluginGenericHostService` plus `RemotePluginHostConnection.bindGenericService(...)`, so hosts can dispatch the new generic service envelope by `service + method` without hand-writing message loops for each plugin connection.
 - Added `RemotePluginSurfaceInputRouter` so hosts can turn resolved remote surface placements into focus, blur, mouse, and key routing without rebuilding per-surface dispatch logic by hand.
 - Added `RemotePluginSurfaceInputRouter.sendTuiMouse(...)` so host apps can forward runtime `MouseMsg` events into remote plugin surfaces without rewriting button/action translation by hand.
 - Added resolved placement and hit-test helpers for remote plugin surfaces, so hosts can map global coordinates into the topmost plugin panel or popup using the same placement logic as UV composition.

@@ -3,6 +3,7 @@ import 'dart:io' as io;
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_controller.dart';
 import 'remote_surface_file_picker_service.dart';
+import 'remote_surface_generic_service.dart';
 import 'remote_surface_notification_service.dart';
 import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
@@ -106,6 +107,15 @@ final class RemotePluginHostConnection {
     RemotePluginFilePickerHandler? pickPaths,
   }) {
     return RemotePluginFilePickerHostService.bind(this, pickPaths: pickPaths);
+  }
+
+  /// Binds a generic request/response service registry to this plugin
+  /// connection.
+  RemotePluginGenericHostService bindGenericService({
+    Map<String, Map<String, RemotePluginGenericServiceHandler>> handlers =
+        const <String, Map<String, RemotePluginGenericServiceHandler>>{},
+  }) {
+    return RemotePluginGenericHostService.bind(this, handlers: handlers);
   }
 
   /// Disposes controller, session, and process resources.
