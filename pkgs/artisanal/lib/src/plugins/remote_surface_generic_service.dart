@@ -271,6 +271,23 @@ final class RemotePluginGenericServiceCatalog {
   final Map<String, Map<String, _RemotePluginGenericServiceBinding>> _handlers =
       <String, Map<String, _RemotePluginGenericServiceBinding>>{};
 
+  static RemotePluginGenericServiceCatalog builtIns({
+    RemotePluginClipboardReader? readClipboard,
+    RemotePluginClipboardWriter? writeClipboard,
+    RemotePluginUrlOpener? openUrl,
+    RemotePluginNotifier? notify,
+    RemotePluginFilePickerHandler? pickPaths,
+  }) {
+    return RemotePluginGenericServiceCatalog()
+      ..registerBuiltIns(
+        readClipboard: readClipboard,
+        writeClipboard: writeClipboard,
+        openUrl: openUrl,
+        notify: notify,
+        pickPaths: pickPaths,
+      );
+  }
+
   void register(
     String service,
     String method,
@@ -425,8 +442,7 @@ final class RemotePluginGenericHostService {
     bool notify = false,
     bool filePicker = false,
   }) {
-    final catalog = RemotePluginGenericServiceCatalog();
-    catalog.registerBuiltIns(
+    final catalog = RemotePluginGenericServiceCatalog.builtIns(
       readClipboard: clipboardRead ? (_) => null : null,
       writeClipboard: clipboardWrite ? (_, _) {} : null,
       openUrl: openUrl ? (_) {} : null,

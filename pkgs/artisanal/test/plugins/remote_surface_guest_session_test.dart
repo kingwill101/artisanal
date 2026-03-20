@@ -255,14 +255,13 @@ void main() {
     );
 
     test('generic service catalogs can register the built-in host services together', () {
-      final catalog = plugins.RemotePluginGenericServiceCatalog()
-        ..registerBuiltIns(
-          readClipboard: (_) => 'unused',
-          writeClipboard: (_, _) {},
-          openUrl: (_) {},
-          notify: (_) {},
-          pickPaths: (_) => const <String>['/tmp/demo.txt'],
-        );
+      final catalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
+        readClipboard: (_) => 'unused',
+        writeClipboard: (_, _) {},
+        openUrl: (_) {},
+        notify: (_) {},
+        pickPaths: (_) => const <String>['/tmp/demo.txt'],
+      );
 
       expect(
         catalog.serviceDescriptors,
