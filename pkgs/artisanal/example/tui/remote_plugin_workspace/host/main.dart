@@ -5,7 +5,7 @@ import 'package:artisanal/plugins.dart' as plugins;
 import 'package:artisanal/runtime.dart';
 import 'package:artisanal/uv.dart' as uv;
 
-const _connectTimeout = Duration(seconds: 15);
+const _connectTimeout = Duration(seconds: 30);
 const _snapshotSettleDelay = Duration(milliseconds: 150);
 const _workspaceWidth = 96;
 const _workspaceHeight = 29;
@@ -523,15 +523,23 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
   final genericServices = <plugins.RemotePluginGenericHostService>[];
+  final serviceDescriptors =
+      plugins.RemotePluginGenericHostService.builtInServiceDescriptors(
+        clipboardRead: true,
+        openUrl: true,
+        notify: true,
+        filePicker: true,
+      );
   try {
     for (final manifest in manifests) {
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[manifest.resolveEntrypoint()],
-        hostHello: const plugins.RemotePluginHostHello(
+        hostHello: plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
           capabilities: <String>['surfaces', 'services'],
+          services: serviceDescriptors,
         ),
         surfaces: surfaces,
         timeout: _connectTimeout,

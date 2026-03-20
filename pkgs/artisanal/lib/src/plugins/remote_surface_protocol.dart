@@ -164,6 +164,48 @@ enum RemotePluginFilePickerKind {
   }
 }
 
+final class RemotePluginServiceDescriptor {
+  const RemotePluginServiceDescriptor({
+    required this.service,
+    required this.method,
+    this.description,
+    this.paramsSchema,
+    this.resultSchema,
+  });
+
+  final String service;
+  final String method;
+  final String? description;
+  final JsonObject? paramsSchema;
+  final JsonObject? resultSchema;
+
+  factory RemotePluginServiceDescriptor.fromJson(JsonObject json) {
+    final paramsSchemaValue = json['paramsSchema'];
+    final resultSchemaValue = json['resultSchema'];
+    return RemotePluginServiceDescriptor(
+      service: _requireString(json, 'service'),
+      method: _requireString(json, 'method'),
+      description: _readStringOrNull(json, 'description'),
+      paramsSchema: paramsSchemaValue is Map<Object?, Object?>
+          ? _castJsonObject(paramsSchemaValue)
+          : null,
+      resultSchema: resultSchemaValue is Map<Object?, Object?>
+          ? _castJsonObject(resultSchemaValue)
+          : null,
+    );
+  }
+
+  JsonObject toJson() {
+    return <String, Object?>{
+      'service': service,
+      'method': method,
+      if (description != null) 'description': description,
+      if (paramsSchema != null) 'paramsSchema': paramsSchema,
+      if (resultSchema != null) 'resultSchema': resultSchema,
+    };
+  }
+}
+
 final class RemotePluginAnchorRect {
   const RemotePluginAnchorRect({
     required this.column,
@@ -413,17 +455,23 @@ final class RemotePluginHostHello extends RemotePluginMessage {
     required this.hostName,
     required this.hostVersion,
     this.capabilities = const <String>[],
+    this.services = const <RemotePluginServiceDescriptor>[],
   });
 
   final String hostName;
   final String hostVersion;
   final List<String> capabilities;
+  final List<RemotePluginServiceDescriptor> services;
 
   factory RemotePluginHostHello.fromPayload(JsonObject payload) {
     return RemotePluginHostHello(
       hostName: _requireString(payload, 'hostName'),
       hostVersion: _requireString(payload, 'hostVersion'),
       capabilities: _readStringList(payload, 'capabilities'),
+      services: _readObjectList(
+        payload,
+        'services',
+      ).map(RemotePluginServiceDescriptor.fromJson).toList(growable: false),
     );
   }
 
@@ -435,6 +483,10 @@ final class RemotePluginHostHello extends RemotePluginMessage {
     'hostName': hostName,
     'hostVersion': hostVersion,
     if (capabilities.isNotEmpty) 'capabilities': capabilities,
+    if (services.isNotEmpty)
+      'services': services
+          .map((descriptor) => descriptor.toJson())
+          .toList(growable: false),
   };
 }
 
@@ -1225,12 +1277,25 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema serviceDescriptor = S.object(
+    required: const ['service', 'method'],
+    properties: <String, Schema>{
+      'service': S.string(minLength: 1),
+      'method': S.string(minLength: 1),
+      'description': S.string(minLength: 1),
+      'paramsSchema': S.object(additionalProperties: true),
+      'resultSchema': S.object(additionalProperties: true),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostHelloPayload = S.object(
     required: const ['hostName', 'hostVersion'],
     properties: <String, Schema>{
       'hostName': S.string(minLength: 1),
       'hostVersion': S.string(minLength: 1),
       'capabilities': _stringList(),
+      'services': S.list(items: serviceDescriptor),
     },
     additionalProperties: false,
   );

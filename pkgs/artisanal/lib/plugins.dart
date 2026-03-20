@@ -23,6 +23,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginMouseButton,
         RemotePluginNotificationLevel,
         RemotePluginFilePickerKind,
+        RemotePluginServiceDescriptor,
         RemotePluginAnchorRect,
         RemotePluginCellAttributes,
         RemotePluginFrameCell,

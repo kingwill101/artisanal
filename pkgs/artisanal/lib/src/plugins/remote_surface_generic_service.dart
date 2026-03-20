@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:json_schema_builder/json_schema_builder.dart';
 
@@ -15,11 +16,13 @@ typedef RemotePluginGenericServiceHandler =
 final class _RemotePluginGenericServiceBinding {
   const _RemotePluginGenericServiceBinding(
     this.handler, {
+    this.description,
     this.paramsSchema,
     this.resultSchema,
   });
 
   final RemotePluginGenericServiceHandler handler;
+  final String? description;
   final Schema? paramsSchema;
   final Schema? resultSchema;
 }
@@ -113,6 +116,7 @@ final class RemotePluginGenericHostService {
     String service,
     String method,
     RemotePluginGenericServiceHandler handler, {
+    String? description,
     Schema? paramsSchema,
     Schema? resultSchema,
   }) {
@@ -120,9 +124,83 @@ final class RemotePluginGenericHostService {
             <String, _RemotePluginGenericServiceBinding>{})[method] =
         _RemotePluginGenericServiceBinding(
           handler,
+          description: description,
           paramsSchema: paramsSchema,
           resultSchema: resultSchema,
         );
+  }
+
+  List<RemotePluginServiceDescriptor> get serviceDescriptors {
+    final descriptors = <RemotePluginServiceDescriptor>[];
+    final sortedServices = _handlers.keys.toList()..sort();
+    for (final service in sortedServices) {
+      final methods = _handlers[service]!;
+      final sortedMethods = methods.keys.toList()..sort();
+      for (final method in sortedMethods) {
+        final binding = methods[method]!;
+        descriptors.add(
+          RemotePluginServiceDescriptor(
+            service: service,
+            method: method,
+            description: binding.description,
+            paramsSchema: _schemaToJson(binding.paramsSchema),
+            resultSchema: _schemaToJson(binding.resultSchema),
+          ),
+        );
+      }
+    }
+    return descriptors;
+  }
+
+  static List<RemotePluginServiceDescriptor> builtInServiceDescriptors({
+    bool clipboardRead = false,
+    bool clipboardWrite = false,
+    bool openUrl = false,
+    bool notify = false,
+    bool filePicker = false,
+  }) {
+    return <RemotePluginServiceDescriptor>[
+      if (clipboardRead)
+        RemotePluginServiceDescriptor(
+          service: 'clipboard',
+          method: 'read',
+          description: 'Read text from a named clipboard selection.',
+          paramsSchema: _schemaToJson(_clipboardReadParamsSchema),
+          resultSchema: _schemaToJson(_clipboardReadResultSchema),
+        ),
+      if (clipboardWrite)
+        RemotePluginServiceDescriptor(
+          service: 'clipboard',
+          method: 'write',
+          description: 'Write text into a named clipboard selection.',
+          paramsSchema: _schemaToJson(_clipboardWriteParamsSchema),
+          resultSchema: _schemaToJson(_emptyObjectSchema),
+        ),
+      if (openUrl)
+        RemotePluginServiceDescriptor(
+          service: 'url',
+          method: 'open',
+          description: 'Ask the host to open a URL.',
+          paramsSchema: _schemaToJson(_urlOpenParamsSchema),
+          resultSchema: _schemaToJson(_emptyObjectSchema),
+        ),
+      if (notify)
+        RemotePluginServiceDescriptor(
+          service: 'notify',
+          method: 'show',
+          description: 'Ask the host to show a notification.',
+          paramsSchema: _schemaToJson(_notificationParamsSchema),
+          resultSchema: _schemaToJson(_emptyObjectSchema),
+        ),
+      if (filePicker)
+        RemotePluginServiceDescriptor(
+          service: 'filePicker',
+          method: 'open',
+          description: 'Ask the host to open a file or directory picker.',
+          paramsSchema: _schemaToJson(_filePickerParamsSchema),
+          resultSchema: _schemaToJson(_filePickerResultSchema),
+        ),
+    ];
   }
 
   void unregister(String service, String method) {
@@ -149,6 +227,7 @@ final class RemotePluginGenericHostService {
           final text = await readClipboard(selection);
           return <String, Object?>{'text': text ?? ''};
         },
+        description: 'Read text from a named clipboard selection.',
         paramsSchema: _clipboardReadParamsSchema,
         resultSchema: _clipboardReadResultSchema,
       );
@@ -168,6 +247,7 @@ final class RemotePluginGenericHostService {
           await writeClipboard(selection, text);
           return const <String, Object?>{};
         },
+        description: 'Write text into a named clipboard selection.',
         paramsSchema: _clipboardWriteParamsSchema,
         resultSchema: _emptyObjectSchema,
       );
@@ -189,6 +269,7 @@ final class RemotePluginGenericHostService {
         await openUrl(Uri.parse(url));
         return const <String, Object?>{};
       },
+      description: 'Ask the host to open a URL.',
       paramsSchema: _urlOpenParamsSchema,
       resultSchema: _emptyObjectSchema,
     );
@@ -220,6 +301,7 @@ final class RemotePluginGenericHostService {
         );
         return const <String, Object?>{};
       },
+      description: 'Ask the host to show a notification.',
       paramsSchema: _notificationParamsSchema,
       resultSchema: _emptyObjectSchema,
     );
@@ -251,6 +333,7 @@ final class RemotePluginGenericHostService {
           'canceled': result == null,
         };
       },
+      description: 'Ask the host to open a file or directory picker.',
       paramsSchema: _filePickerParamsSchema,
       resultSchema: _filePickerResultSchema,
     );
@@ -354,6 +437,23 @@ final class RemotePluginGenericHostService {
     _disposed = true;
     await _subscription?.cancel();
   }
+}
+
+JsonObject? _schemaToJson(Schema? schema) {
+  if (schema == null) {
+    return null;
+  }
+  final encoded = jsonEncode(schema);
+  return _jsonObjectFromDecoded(jsonDecode(encoded));
+}
+
+JsonObject _jsonObjectFromDecoded(Object? value) {
+  if (value is! Map<Object?, Object?>) {
+    throw FormatException('Expected a JSON object.');
+  }
+  return Map<String, Object?>.fromEntries(
+    value.entries.map((entry) => MapEntry(entry.key as String, entry.value)),
+  );
 }
 
 String? _stringParam(JsonObject params, String key) {

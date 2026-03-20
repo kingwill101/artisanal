@@ -220,6 +220,10 @@ The current model is host-rendered composition with plugin-rendered content:
   file picking should normally travel through the generic
   `plugin.service.request` / `host.service.response` envelope when the host
   advertises `services`
+- hosts can optionally include explicit `RemotePluginServiceDescriptor`s in
+  `host.hello`, so guests can discover which `service.method` pairs and JSON
+  schemas are actually available instead of relying on the coarse capability
+  flag alone
 - the older typed per-service request/response messages are still available as
   a compatibility fallback for older hosts and guests
 

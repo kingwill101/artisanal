@@ -5,10 +5,29 @@ void main() {
   const validator = plugins.RemotePluginProtocolValidator();
 
   test('host hello round-trips and validates', () async {
-    const message = plugins.RemotePluginHostHello(
+    final message = plugins.RemotePluginHostHello(
       hostName: 'artisanal-host',
       hostVersion: '0.2.0',
       capabilities: <String>['surfaces', 'clipboard'],
+      services: <plugins.RemotePluginServiceDescriptor>[
+        plugins.RemotePluginServiceDescriptor(
+          service: 'clipboard',
+          method: 'read',
+          description: 'Read clipboard text.',
+          paramsSchema: <String, Object?>{
+            'type': 'object',
+            'additionalProperties': false,
+          },
+          resultSchema: <String, Object?>{
+            'type': 'object',
+            'required': <Object?>['text'],
+            'properties': <String, Object?>{
+              'text': <String, Object?>{'type': 'string'},
+            },
+            'additionalProperties': false,
+          },
+        ),
+      ],
     );
 
     final json = message.toJson();
@@ -16,6 +35,7 @@ void main() {
     final errors = await validator.validateMessage(message);
 
     expect(parsed, isA<plugins.RemotePluginHostHello>());
+    expect((parsed as plugins.RemotePluginHostHello).services, hasLength(1));
     expect(errors, isEmpty);
     expect(json['protocol'], plugins.remotePluginProtocolVersion);
     expect(json['type'], plugins.RemotePluginMessageType.hostHello.wireName);

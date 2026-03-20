@@ -194,10 +194,15 @@ void main() {
         });
 
         await hostChannel.send(
-          const plugins.RemotePluginHostHello(
+          plugins.RemotePluginHostHello(
             hostName: 'artisanal',
             hostVersion: '0.2.0',
             capabilities: <String>['services'],
+            services:
+                plugins
+                    .RemotePluginGenericHostService.builtInServiceDescriptors(
+                  clipboardRead: true,
+                ),
           ),
         );
 
@@ -241,6 +246,12 @@ void main() {
         );
 
         expect(await readFuture, 'host-value');
+        expect(session.services.supports('clipboard', 'read'), isTrue);
+        expect(session.services.supports('clipboard', 'write'), isFalse);
+        expect(
+          session.services.descriptorFor('clipboard', 'read')?.description,
+          isNotEmpty,
+        );
       },
     );
 

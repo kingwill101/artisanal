@@ -79,6 +79,31 @@ final class RemotePluginGuestServices {
   final RemotePluginGuestSession session;
   int _nextRequestId = 0;
 
+  bool get supportsGenericServices =>
+      session.hostHello.capabilities.contains('services');
+
+  List<RemotePluginServiceDescriptor> get availableServices =>
+      session.hostHello.services;
+
+  RemotePluginServiceDescriptor? descriptorFor(String service, String method) {
+    for (final descriptor in availableServices) {
+      if (descriptor.service == service && descriptor.method == method) {
+        return descriptor;
+      }
+    }
+    return null;
+  }
+
+  bool supports(String service, String method) {
+    if (!supportsGenericServices) {
+      return false;
+    }
+    if (availableServices.isEmpty) {
+      return true;
+    }
+    return descriptorFor(service, method) != null;
+  }
+
   String _requestId(String prefix) => '$prefix-${++_nextRequestId}';
 
   Future<JsonObject> call(
@@ -141,7 +166,7 @@ final class RemotePluginGuestServices {
     String selection = 'c',
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    if (session.hostHello.capabilities.contains('services')) {
+    if (supports('clipboard', 'read')) {
       final result = await call(
         'clipboard',
         'read',
@@ -181,7 +206,7 @@ final class RemotePluginGuestServices {
     String selection = 'c',
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    if (session.hostHello.capabilities.contains('services')) {
+    if (supports('clipboard', 'write')) {
       await call(
         'clipboard',
         'write',
@@ -222,7 +247,7 @@ final class RemotePluginGuestServices {
     String url, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    if (session.hostHello.capabilities.contains('services')) {
+    if (supports('url', 'open')) {
       await call(
         'url',
         'open',
@@ -261,7 +286,7 @@ final class RemotePluginGuestServices {
     RemotePluginNotificationLevel level = RemotePluginNotificationLevel.info,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    if (session.hostHello.capabilities.contains('services')) {
+    if (supports('notify', 'show')) {
       await call(
         'notify',
         'show',
@@ -310,7 +335,7 @@ final class RemotePluginGuestServices {
     String? initialPath,
     Duration timeout = const Duration(seconds: 5),
   }) async {
-    if (session.hostHello.capabilities.contains('services')) {
+    if (supports('filePicker', 'open')) {
       final result = await call(
         'filePicker',
         'open',
