@@ -76,6 +76,47 @@ void main() {
     },
   );
 
+  test(
+    'selection showcase reverse drags across mixed components into one buffer',
+    () async {
+      final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
+      final controller = s.SelectionController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(controller: controller),
+      );
+
+      final start = tester.locateText(
+        'Footer: this line proves the selection can span the full document.',
+      )!;
+      final editor = tester.locateText('Editor-backed preview')!;
+      final view = tester.locateText('VIEW :: Raw View() content joins the')!;
+      final markdown = tester.locateText('Markdown section')!;
+      final rich = tester.locateText('Rich text section')!;
+      final plain = tester.locateText('Plain text section')!;
+      final end = tester.locateText('Cross-component selection document')!;
+
+      tester.mouseDown(start.x + 20, start.y);
+      tester.mouseMove(editor.x + 10, editor.y);
+      tester.mouseMove(view.x + 20, view.y);
+      tester.mouseMove(markdown.x, markdown.y);
+      tester.mouseMove(rich.x, rich.y);
+      tester.mouseMove(plain.x, plain.y);
+      tester.mouseMove(end.x, end.y);
+      tester.mouseUp(end.x, end.y);
+
+      final selected = controller.getSelectedRegisteredText();
+      expect(selected, contains('Footer: this line pr'));
+      expect(selected, contains('Editor-backed preview'));
+      expect(selected, contains('VIEW :: Raw View() content joins the'));
+      expect(selected, contains('Markdown section'));
+      expect(selected, contains('Rich text section'));
+      expect(selected, contains('Plain text section'));
+      expect(selected, contains('Cross-component selection document'));
+    },
+  );
+
   test('selection showcase selects editor-backed preview text', () async {
     final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
     final controller = s.SelectionController();
