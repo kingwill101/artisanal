@@ -9,6 +9,7 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Model Interface](#model-interface)
 - [Program Class](#program-class)
 - [Program Hosts](#program-hosts)
+- [Remote Plugin Surfaces](#remote-plugin-surfaces)
 - [Command System (Cmd)](#command-system-cmd)
 - [Message Types (Msg)](#message-types-msg)
 - [Interrupt Handling](#interrupt-handling)
@@ -445,6 +446,43 @@ and the default ANSI palette follows those light/dark host defaults too until
 the session mutates it explicitly. The initial page CSS also preloads matching
 light/dark values so browser-backed sessions do not flash the wrong theme
 before the host script applies the runtime state.
+
+## Remote Plugin Surfaces
+
+`package:artisanal/plugins.dart` defines the supported out-of-process plugin
+surface for remote-rendered plugins.
+
+The current stable layers are:
+
+- `RemotePluginJsonTransport` for newline-delimited JSON framing
+- `RemotePluginJsonChannel` for typed decoding and validation over line or byte
+  streams
+- `RemotePluginSession` for the host-side hello handshake and post-handshake
+  plugin messages
+- `RemotePluginGuestSession` for the plugin-side hello handshake, including
+  `bindStdio(...)` for plugin executables
+- `RemotePluginProcess` for launching stdio-based plugin executables
+- `RemotePluginSurfaceStore` for applying open/resize/frame/close messages into
+  concrete host-side cell state
+
+The intended flow is:
+
+1. Host launches a plugin process with `RemotePluginProcess.start(...)`.
+2. Host completes the handshake with `process.connect(...)` or
+   `RemotePluginSession.connect(...)`.
+3. Plugin binds stdin/stdout with `RemotePluginGuestSession.bindStdio(...)`.
+4. Plugin emits `RemotePluginSurfaceOpen` and `RemotePluginFrame` messages.
+5. Host applies those messages into `RemotePluginSurfaceStore`.
+6. The host compositor renders the resulting surface state in its own layout.
+
+Reference demo:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_host_demo.dart
+```
+
+That host example automatically launches the matching guest plugin and prints
+the rendered panel state it receives back over stdio.
 
 ### Convenience Functions
 

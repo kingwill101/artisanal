@@ -169,6 +169,9 @@ dart run example/tui/socket_host_demo.dart --port=2323
 
 # Browser websocket host demo
 dart run example/tui/browser_websocket_demo.dart --port=8080
+
+# Remote plugin surface demo
+dart run example/tui/remote_plugin_host_demo.dart
 ```
 
 These focused host demos intentionally import the stable

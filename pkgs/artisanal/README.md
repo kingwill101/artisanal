@@ -65,6 +65,7 @@ the broader stack from a single package.
 | `package:artisanal/style.dart` | Styling, Layout, Colors, Borders, Themes |
 | `package:artisanal/runtime.dart` | Focused TEA runtime surface (`Model`, `Msg`, `Cmd`, `Program`, `StringTerminal`, runtime messages) |
 | `package:artisanal/hosts.dart` | Terminal backends, bridges, browser/socket hosts |
+| `package:artisanal/plugins.dart` | Stable remote-surface plugin protocol, transport, sessions, and host surface state |
 | `package:artisanal/tui.dart` | TUI runtime: Model, Msg, Cmd, Program |
 | `package:artisanal/bubbles.dart` | Reusable interactive widgets |
 | `package:artisanal/terminal.dart` | Terminal abstraction, ANSI codes, Keys |
@@ -200,6 +201,30 @@ Structured app/domain events can be emitted via `TuiTrace.event(...)` and are
 preserved in replay conversion when they use stable typed `type` names.
 
 Full replay and tracing documentation: `docs/TUI.md`.
+
+## Remote Plugin Surfaces
+
+`package:artisanal/plugins.dart` provides the supported out-of-process plugin
+surface for remote-rendered plugins.
+
+The current model is host-rendered composition with plugin-rendered content:
+
+- the host launches a plugin process and completes the hello handshake with
+  `RemotePluginProcess` and `RemotePluginSession`
+- the plugin process binds stdin/stdout with `RemotePluginGuestSession`
+- plugin UI is described as remote surfaces plus sparse frame cells
+- the host applies `RemotePluginSurfaceOpen` / `RemotePluginFrame` /
+  `RemotePluginSurfaceResize` / `RemotePluginSurfaceClose` messages into
+  `RemotePluginSurfaceStore` before later compositing
+
+Run the end-to-end reference demo:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_host_demo.dart
+```
+
+That launches the matching guest process automatically and prints the rendered
+surface state the host received from the plugin.
 
 ## Bubbles (Reusable Widgets)
 
