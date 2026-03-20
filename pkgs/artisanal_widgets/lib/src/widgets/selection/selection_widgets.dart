@@ -14,17 +14,28 @@ import 'dart:math' as math;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart'
-    show Cmd, Msg, KeyMsg, MouseMsg, MouseAction, MouseButton, HitTestMouseMsg;
-import '../core/element.dart' show elementOf;
+    show
+        Cmd,
+        Msg,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View;
+import '../core/element.dart' show elementOf, Element, RenderObjectElement;
 import '../core/framework.dart'
-    show BuildContext, StatefulWidget, State, InheritedWidget;
+    show BuildContext, StatefulWidget, StatelessWidget, State, InheritedWidget;
 import '../core/widget.dart';
 import '../rendering/render_object.dart';
 import '../layout/geometry.dart';
-import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
+import '../layout/layout_widgets.dart'
+    show Text, RichText, TextSpan, TextAlign, TextOverflow;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'selection_text_utils.dart';
 
 part 'selection_controller.dart';
 part 'selectable_text.dart';
+part 'selectable_rich_text.dart';
+part 'selectable_view.dart';
 part 'selection_area.dart';

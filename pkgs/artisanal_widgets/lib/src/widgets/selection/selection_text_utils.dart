@@ -45,6 +45,13 @@ Style get selectionHighlightStyle =>
   return (start, end);
 }
 
+/// Returns `(startX, endX)` for the full line at the given row.
+(int, int) findLineAt(List<String> lines, int y) {
+  if (y < 0 || y >= lines.length) return (0, 0);
+  final line = Style.stripAnsi(lines[y]).replaceFirst(RegExp(r'[ \t]+$'), '');
+  return (0, Style.visibleLength(line));
+}
+
 /// Extracts the selected text from [lines].
 String extractSelectedText(
   List<String> lines, {
@@ -57,11 +64,13 @@ String extractSelectedText(
   final e = selectionEnd;
   final startY = math.min(s.y, e.y);
   final endY = math.max(s.y, e.y);
-
-  if (startY < 0 || endY >= lines.length) return '';
+  if (lines.isEmpty) return '';
+  if (endY < 0 || startY >= lines.length) return '';
 
   final sb = StringBuffer();
-  for (var y = startY; y <= endY; y++) {
+  final clampedStartY = startY.clamp(0, lines.length - 1);
+  final clampedEndY = endY.clamp(0, lines.length - 1);
+  for (var y = clampedStartY; y <= clampedEndY; y++) {
     final line = lines[y];
     final plain = Style.stripAnsi(line);
 
@@ -88,7 +97,7 @@ String extractSelectedText(
     if (startX < endX) {
       sb.write(cutAnsiByCells(plain, startX, endX));
     }
-    if (y < endY) {
+    if (y < clampedEndY) {
       sb.write('\n');
     }
   }

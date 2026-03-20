@@ -136,6 +136,79 @@ void main() {
       }
     });
 
+    test('triple click selects the entire content line', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 0)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('reverse drag selection works with scrolled content', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        ctrl.jumpTo(8);
+
+        tester.mouseDown(0, 4);
+        tester.mouseMove(6, 1);
+        tester.mouseUp(6, 1);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 12)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 9)));
+        expect(
+          ctrl.getSelectedText(List.generate(30, (i) => 'Line $i')),
+          equals('\nLine 10\nLine 11\n'),
+        );
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection remains correct after viewport resize', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        tester.resize(28, 6);
+        ctrl.jumpTo(6);
+
+        tester.mouseDown(0, 3);
+        tester.mouseMove(6, 1);
+        tester.mouseUp(6, 1);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 9)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 7)));
+        expect(
+          ctrl.getSelectedText(List.generate(30, (i) => 'Line $i')),
+          equals('\nLine 8\n'),
+        );
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('selection works with scrolled content', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();

@@ -1,12 +1,12 @@
 part of 'selection_widgets.dart';
 
-/// Provides a shared [SelectionController] to descendant [SelectableText]
+/// Provides a shared [SelectionController] to descendant selectable text
 /// widgets, enabling cross-widget text selection.
 ///
-/// Wrap any subtree with [SelectionArea] to make all [SelectableText]
-/// descendants share a single selection state. Click-drag across multiple
-/// [SelectableText] widgets selects text spanning all of them, and Ctrl+C
-/// copies the combined selection.
+/// Wrap any subtree with [SelectionArea] to make all [SelectableText],
+/// [SelectableRichText], and [SelectableView] descendants share a single
+/// selection state. Click-drag across multiple selectable widgets selects
+/// text spanning all of them, and Ctrl+C copies the combined selection.
 ///
 /// ```dart
 /// SelectionArea(
@@ -21,7 +21,7 @@ part of 'selection_widgets.dart';
 class SelectionArea extends StatefulWidget {
   SelectionArea({required this.child, this.controller, super.key});
 
-  /// The subtree whose [SelectableText] widgets will share selection.
+  /// The subtree whose selectable text widgets will share selection.
   final Widget child;
 
   /// Optional external [SelectionController]. If null, one is created.
@@ -91,6 +91,13 @@ class _SelectionAreaState extends State<SelectionArea> {
         // release serves as the fallback outside-click signal.
         _lastHitTestAction = null;
         _clearSharedSelection();
+      }
+    }
+
+    if (msg is KeyMsg && msg.key.char == 'c' && msg.key.ctrl) {
+      final text = _effectiveController.getSelectedRegisteredText();
+      if (text.isNotEmpty) {
+        return Cmd.setClipboard(text);
       }
     }
     return null;
