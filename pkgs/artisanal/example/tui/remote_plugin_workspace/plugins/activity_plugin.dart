@@ -25,6 +25,7 @@ Future<void> main() async {
   var ticks = 0;
   var focused = false;
   var lastKey = 'none';
+  var clipboardStatus = 'unread';
 
   Future<void> publish() async {
     final current = _messages[ticks % _messages.length];
@@ -40,7 +41,7 @@ Future<void> main() async {
           'Heartbeat: ${ticks + 1}',
           focused ? 'Input: active routing' : 'Input: passive',
           'Last key: $lastKey',
-          'Plugin: workspace-activity',
+          'Clipboard: $clipboardStatus',
         ],
       ),
     );
@@ -87,6 +88,13 @@ Future<void> main() async {
             shift: shift,
             meta: meta,
           );
+          if (!ctrl && !alt && !shift && !meta && key == 'c') {
+            try {
+              clipboardStatus = await session.services.readClipboard();
+            } on plugins.RemotePluginServiceException catch (error) {
+              clipboardStatus = error.message;
+            }
+          }
           await publish();
         default:
           continue;

@@ -22,6 +22,7 @@ Keys:
 - mouse click focus the clicked plugin surface
 - mouse motion routes into the hovered plugin surface
 - other keys route into the focused plugin surface
+- `c` in the activity plugin reads the host clipboard service
 - `r` reload the workspace
 - `q` quit
 
@@ -51,6 +52,15 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
   --snapshot \
   --snapshot-click=37,6 \
   --snapshot-key=a
+```
+
+The activity plugin also uses the host clipboard service when it receives `c`:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
+  --snapshot \
+  --snapshot-click=37,6 \
+  --snapshot-key=c
 ```
 
 And you can inject one synthetic hover motion into the workspace:

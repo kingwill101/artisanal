@@ -76,6 +76,30 @@ void main() {
   );
 
   test(
+    'remote plugin workspace snapshot key can call host clipboard service',
+    () async {
+      final result = await io.Process.run(
+        io.Platform.resolvedExecutable,
+        <String>[
+          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
+          '--snapshot',
+          '--snapshot-click=37,6',
+          '--snapshot-key=c',
+        ],
+        workingDirectory: io.Directory.current.path,
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+
+      final stdout = result.stdout as String;
+      expect(stdout, contains('Selected: activity'));
+      expect(stdout, contains('Clipboard: workspace clipboard'));
+      expect(stdout, contains('key c'));
+    },
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
+
+  test(
     'remote plugin workspace snapshot motion routes into plugin surfaces',
     () async {
       final result = await io.Process.run(
