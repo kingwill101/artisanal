@@ -18,6 +18,7 @@ Future<void> main(List<String> args) async {
     final runtime = await _startWorkspace(_primaryPluginId);
     var selectedPluginId = _primaryPluginId;
     final click = _parseSnapshotClick(args);
+    final motion = _parseSnapshotMotion(args);
     final key = _parseSnapshotKey(args);
     try {
       if (click case final point?) {
@@ -46,18 +47,36 @@ Future<void> main(List<String> args) async {
           contains: 'Last key: ${value.label}',
         );
       }
+      if (motion case final point?) {
+        await _routeWorkspaceMouseMotion(
+          runtime,
+          MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: point.$1,
+            y: point.$2,
+          ),
+        );
+        await _waitForSnapshotSurfaceText(
+          runtime,
+          'alerts',
+          contains: 'Hover: ${point.$1 - 3},${point.$2 - 17}',
+        );
+      }
       io.stdout.writeln(
         _renderWorkspace(
           loading: false,
           selectedPluginId: selectedPluginId,
-          status: switch ((click, key)) {
-            (null, null) => 'Snapshot render',
-            (_, null) => 'Snapshot click render',
+          status: switch ((click, motion, key)) {
+            (null, null, null) => 'Snapshot render',
+            (_, null, null) => 'Snapshot click render',
+            (_, _, null) => 'Snapshot pointer render',
             _ => 'Snapshot input render',
           },
           log: <String>[
             'Snapshot mode',
             if (click != null) 'click ${click.$1},${click.$2}',
+            if (motion != null) 'motion ${motion.$1},${motion.$2}',
             if (key != null) 'key ${key.label}',
             'Loaded 3 plugin processes',
           ],
@@ -150,6 +169,17 @@ final class _RemotePluginWorkspaceModel implements Model {
         ),
         null,
       ),
+      _HostMouseMovedMsg(:final pluginId) => (
+        copyWith(
+          status: pluginId == null ? 'Hover cleared' : 'Hovering $pluginId',
+          revision: revision + 1,
+          log: _appendLog(
+            log,
+            pluginId == null ? 'hover none' : 'hover $pluginId',
+          ),
+        ),
+        null,
+      ),
       _PluginSurfaceChangedMsg(:final pluginId, :final message) => (
         copyWith(
           status: '$pluginId updated ${message.messageType.wireName}',
@@ -186,6 +216,7 @@ final class _RemotePluginWorkspaceModel implements Model {
         'alerts',
       ),
       MouseMsg(action: MouseAction.press) => _handleMousePress(msg),
+      MouseMsg(action: MouseAction.motion) => _handleMouseMotion(msg),
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x72])) => _reload(),
       KeyMsg(:final key) => _handlePluginKey(key),
       _ => (this, null),
@@ -314,6 +345,25 @@ final class _RemotePluginWorkspaceModel implements Model {
     );
   }
 
+  (Model, Cmd?) _handleMouseMotion(MouseMsg msg) {
+    final activeRuntime = runtime;
+    if (activeRuntime == null || loading) {
+      return (this, null);
+    }
+
+    return (
+      copyWith(
+        status: 'Routing hover at ${msg.x},${msg.y}',
+        revision: revision + 1,
+      ),
+      Cmd.perform(
+        () => _routeWorkspaceMouseMotion(activeRuntime, msg),
+        onSuccess: _HostMouseMovedMsg.new,
+        onError: (error, _) => _WorkspaceLoadFailedMsg('hover failed: $error'),
+      ),
+    );
+  }
+
   (Model, Cmd?) _quit() {
     final activeRuntime = runtime;
     return (
@@ -423,6 +473,12 @@ final class _HostKeyRoutedMsg extends Msg {
   const _HostKeyRoutedMsg(this.label);
 
   final String label;
+}
+
+final class _HostMouseMovedMsg extends Msg {
+  const _HostMouseMovedMsg(this.pluginId);
+
+  final String? pluginId;
 }
 
 final class _WorkspaceRuntime {
@@ -555,6 +611,17 @@ Future<_SnapshotKey> _routeWorkspaceKey(
   return key;
 }
 
+Future<String?> _routeWorkspaceMouseMotion(
+  _WorkspaceRuntime runtime,
+  MouseMsg msg,
+) async {
+  final hit = await runtime.router.sendTuiMouse(msg, focusOnPress: false);
+  if (hit == null) {
+    return null;
+  }
+  return runtime.pluginIdBySurfaceId[hit.surface.surfaceId];
+}
+
 Future<void> _waitForSnapshotSurfaceText(
   _WorkspaceRuntime runtime,
   String pluginId, {
@@ -654,6 +721,24 @@ String _pluginDisplayName(_WorkspaceRuntime runtime, String pluginId) {
     if (parts.length != 2) {
       throw FormatException(
         'Expected --snapshot-click=<column>,<row>, got "$value".',
+      );
+    }
+    return (int.parse(parts[0]), int.parse(parts[1]));
+  }
+  return null;
+}
+
+(int, int)? _parseSnapshotMotion(List<String> args) {
+  for (final arg in args) {
+    if (!arg.startsWith('--snapshot-motion=')) {
+      continue;
+    }
+
+    final value = arg.substring('--snapshot-motion='.length);
+    final parts = value.split(',');
+    if (parts.length != 2) {
+      throw FormatException(
+        'Expected --snapshot-motion=<column>,<row>, got "$value".',
       );
     }
     return (int.parse(parts[0]), int.parse(parts[1]));

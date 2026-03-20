@@ -19,6 +19,7 @@ Future<void> main() async {
 
   var ticks = 0;
   var focused = false;
+  var hoveredCell = 'none';
 
   Future<void> publish() async {
     final severity = switch (ticks % 3) {
@@ -56,7 +57,7 @@ Future<void> main() async {
         title: 'Hint',
         accent: accent,
         bodyLines: <String>[
-          focused ? 'Focused alerts' : 'Hover nearby',
+          hoveredCell == 'none' ? 'Hover nearby' : 'Hover: $hoveredCell',
           'Remote popup',
         ],
       ),
@@ -104,6 +105,14 @@ Future<void> main() async {
           await publish();
         case plugins.RemotePluginBlurInput(surfaceId: _panelId):
           focused = false;
+          await publish();
+        case plugins.RemotePluginMouseInput(
+          surfaceId: _panelId,
+          action: plugins.RemotePluginMouseAction.motion,
+          :final column,
+          :final row,
+        ):
+          hoveredCell = '$column,$row';
           await publish();
         default:
           continue;

@@ -20,6 +20,7 @@ Keys:
 - `2` focus the activity plugin
 - `3` focus the alerts plugin
 - mouse click focus the clicked plugin surface
+- mouse motion routes into the hovered plugin surface
 - other keys route into the focused plugin surface
 - `r` reload the workspace
 - `q` quit
@@ -50,4 +51,12 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
   --snapshot \
   --snapshot-click=37,6 \
   --snapshot-key=a
+```
+
+And you can inject one synthetic hover motion into the workspace:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
+  --snapshot \
+  --snapshot-motion=5,18
 ```
