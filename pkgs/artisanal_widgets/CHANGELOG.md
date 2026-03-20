@@ -8,6 +8,7 @@
 - Added stable `package:artisanal_widgets/charting.dart` and `package:artisanal_widgets/selection.dart` entrypoints for the supported charting and text-selection surfaces.
 - Added external diagnostics sources and listenable diagnostics bindings for editor widgets, so demos and downstream apps can drive diagnostics without custom text-pattern glue.
 - Added per-widget selection highlight overrides for the shared read-only selection surfaces, so mixed documents can use different selection palettes within one `SelectionArea`.
+- Added span-level selection highlight overrides for `SelectableRichText`, so one shared rich-text selection can mix palettes within a single widget.
 
 ### Changed
 

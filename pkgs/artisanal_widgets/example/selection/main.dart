@@ -241,11 +241,17 @@ w.Widget _documentCard({
                   w.TextSpan(
                     text: 'TODO',
                     style: Style().bold().foreground(theme.warning),
+                    selectionHighlightStyle: Style()
+                      ..background(theme.error)
+                      ..foreground(theme.onError),
                   ),
                   w.TextSpan(text: ' labels, '),
                   w.TextSpan(
                     text: 'status flags',
                     style: Style().underline().foreground(theme.primary),
+                    selectionHighlightStyle: Style()
+                      ..background(theme.secondary)
+                      ..foreground(theme.onSecondary),
                   ),
                   w.TextSpan(text: ' and emphasis still copy as plain text.'),
                 ],

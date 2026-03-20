@@ -169,6 +169,89 @@ List<String> applySelectionHighlighting(
   return result;
 }
 
+/// Applies selection highlighting to [lines], allowing per-line style
+/// overrides within the selected region.
+List<String> applySelectionHighlightingWithRanges(
+  List<String> lines, {
+  required int offset,
+  required SelectionPoint? selectionStart,
+  required SelectionPoint? selectionEnd,
+  required List<List<StyleRange>> lineHighlightRanges,
+  Style? highlightStyle,
+}) {
+  if (selectionStart == null || selectionEnd == null) return lines;
+
+  final s = selectionStart;
+  final e = selectionEnd;
+  final startY = math.min(s.y, e.y);
+  final endY = math.max(s.y, e.y);
+
+  if (endY < offset) return lines;
+  if (startY >= offset + lines.length) return lines;
+
+  final result = <String>[];
+  final defaultStyle = highlightStyle ?? selectionHighlightStyle;
+
+  for (var i = 0; i < lines.length; i++) {
+    final lineIdx = i + offset;
+    var line = lines[i];
+
+    if (lineIdx < startY || lineIdx > endY) {
+      result.add(line);
+      continue;
+    }
+
+    final maxX = Style.visibleLength(line);
+
+    int startX;
+    int endX;
+    if (startY == endY) {
+      startX = math.min(s.x, e.x);
+      endX = math.max(s.x, e.x);
+    } else if (lineIdx == startY) {
+      startX = s.y < e.y ? s.x : e.x;
+      endX = maxX;
+    } else if (lineIdx == endY) {
+      startX = 0;
+      endX = s.y < e.y ? e.x : s.x;
+    } else {
+      startX = 0;
+      endX = maxX;
+    }
+
+    startX = startX.clamp(0, maxX);
+    endX = endX.clamp(0, maxX);
+    if (startX >= endX) {
+      result.add(line);
+      continue;
+    }
+
+    final mergedRanges = <StyleRange>[];
+    final overrides = i < lineHighlightRanges.length
+        ? lineHighlightRanges[i]
+        : const <StyleRange>[];
+    var cursor = startX;
+    for (final range in overrides) {
+      final rangeStart = math.max(startX, range.start);
+      final rangeEnd = math.min(endX, range.end);
+      if (rangeEnd <= rangeStart) continue;
+      if (cursor < rangeStart) {
+        mergedRanges.add(StyleRange(cursor, rangeStart, defaultStyle));
+      }
+      mergedRanges.add(StyleRange(rangeStart, rangeEnd, range.style));
+      cursor = rangeEnd;
+    }
+    if (cursor < endX) {
+      mergedRanges.add(StyleRange(cursor, endX, defaultStyle));
+    }
+
+    line = styleRanges(line, mergedRanges);
+    result.add(line);
+  }
+
+  return result;
+}
+
 bool _isWhitespaceChar(String char) {
   return char == ' ' || char == '\t' || char == '\n' || char == '\r';
 }

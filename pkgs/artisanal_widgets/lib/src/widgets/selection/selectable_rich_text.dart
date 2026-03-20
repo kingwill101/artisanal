@@ -27,17 +27,19 @@ class SelectableRichText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = _renderRichSpanContent(
+      text,
+      baseStyle: style,
+      textAlign: textAlign,
+      softWrap: softWrap,
+      overflow: overflow,
+      maxWidth: maxWidth,
+    );
     return _SelectableRenderedText(
-      text: _renderRichSpanText(
-        text,
-        baseStyle: style,
-        textAlign: textAlign,
-        softWrap: softWrap,
-        overflow: overflow,
-        maxWidth: maxWidth,
-      ),
+      text: content.text,
       controller: controller,
       selectionHighlightStyle: selectionHighlightStyle,
+      selectionHighlightRangesByLine: content.selectionHighlightRangesByLine,
     );
   }
 }

@@ -5,12 +5,14 @@ class RenderSelectableText extends RenderBox {
   RenderSelectableText({
     required this.text,
     required this.selectionHighlightStyle,
+    this.selectionHighlightRangesByLine,
     this.selectionStart,
     this.selectionEnd,
   });
 
   String text;
   Style selectionHighlightStyle;
+  List<List<StyleRange>>? selectionHighlightRangesByLine;
   SelectionPoint? selectionStart;
   SelectionPoint? selectionEnd;
 
@@ -38,13 +40,35 @@ class RenderSelectableText extends RenderBox {
     final start = selectionStart;
     final end = selectionEnd;
     if (start != null && end != null) {
-      lines = applySelectionHighlighting(
-        lines,
-        offset: 0,
-        selectionStart: start,
-        selectionEnd: end,
-        highlightStyle: selectionHighlightStyle,
-      );
+      final customRanges = selectionHighlightRangesByLine;
+      lines = customRanges == null
+          ? applySelectionHighlighting(
+              lines,
+              offset: 0,
+              selectionStart: start,
+              selectionEnd: end,
+              highlightStyle: selectionHighlightStyle,
+            )
+          : applySelectionHighlightingWithRanges(
+              lines,
+              offset: 0,
+              selectionStart: start,
+              selectionEnd: end,
+              highlightStyle: selectionHighlightStyle,
+              lineHighlightRanges: [
+                for (var i = 0; i < lines.length; i++)
+                  i < customRanges.length
+                      ? [
+                          for (final range in customRanges[i])
+                            StyleRange(
+                              range.start.clamp(0, maxW),
+                              range.end.clamp(0, maxW),
+                              range.style,
+                            ),
+                        ]
+                      : const <StyleRange>[],
+              ],
+            );
     }
 
     return lines.join('\n');
@@ -101,11 +125,13 @@ class SelectableText extends StatelessWidget {
 class _SelectableRenderedText extends StatefulWidget {
   _SelectableRenderedText({
     required this.text,
+    this.selectionHighlightRangesByLine,
     this.controller,
     this.selectionHighlightStyle,
   });
 
   final String text;
+  final List<List<StyleRange>>? selectionHighlightRangesByLine;
   final SelectionController? controller;
   final Style? selectionHighlightStyle;
 
@@ -458,6 +484,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
     return _SelectableTextRender(
       text: widget.text,
+      selectionHighlightRangesByLine: widget.selectionHighlightRangesByLine,
       selectionStart: _localSelectionPoint(ctrl.selectionStart),
       selectionEnd: _localSelectionPoint(ctrl.selectionEnd),
       selectionHighlightStyle: selectionHighlightStyle,
@@ -470,12 +497,14 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
   _SelectableTextRender({
     required this.text,
     required this.selectionHighlightStyle,
+    this.selectionHighlightRangesByLine,
     this.selectionStart,
     this.selectionEnd,
   });
 
   final String text;
   final Style selectionHighlightStyle;
+  final List<List<StyleRange>>? selectionHighlightRangesByLine;
   final SelectionPoint? selectionStart;
   final SelectionPoint? selectionEnd;
 
@@ -484,6 +513,7 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
     return RenderSelectableText(
       text: text,
       selectionHighlightStyle: selectionHighlightStyle,
+      selectionHighlightRangesByLine: selectionHighlightRangesByLine,
       selectionStart: selectionStart,
       selectionEnd: selectionEnd,
     );
@@ -495,6 +525,7 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
     ro
       ..text = text
       ..selectionHighlightStyle = selectionHighlightStyle
+      ..selectionHighlightRangesByLine = selectionHighlightRangesByLine
       ..selectionStart = selectionStart
       ..selectionEnd = selectionEnd;
   }
@@ -525,7 +556,7 @@ String _renderPlainText(
   );
 }
 
-String _renderRichSpanText(
+_SelectableRenderedContent _renderRichSpanContent(
   TextSpan text, {
   Style? baseStyle,
   required TextAlign textAlign,
@@ -533,8 +564,8 @@ String _renderRichSpanText(
   required TextOverflow overflow,
   int? maxWidth,
 }) {
-  return _finalizeRenderedText(
-    _renderSelectableSpan(text, baseStyle),
+  return _finalizeRenderedContent(
+    _renderSelectableSpanContent(text, baseStyle),
     textAlign: textAlign,
     softWrap: softWrap,
     overflow: overflow,
@@ -603,8 +634,69 @@ String _viewToSelectableString(Object content) {
   return content.toString();
 }
 
-String _renderSelectableSpan(TextSpan span, Style? baseStyle) {
-  final buffer = StringBuffer();
+final class _SelectableRenderedContent {
+  const _SelectableRenderedContent({
+    required this.text,
+    required this.selectionHighlightRangesByLine,
+  });
+
+  final String text;
+  final List<List<StyleRange>> selectionHighlightRangesByLine;
+}
+
+final class _SelectableRenderedContentBuilder {
+  _SelectableRenderedContentBuilder()
+    : _lineBuffers = <StringBuffer>[StringBuffer()],
+      _selectionRangesByLine = <List<StyleRange>>[<StyleRange>[]],
+      _lineWidths = <int>[0];
+
+  final List<StringBuffer> _lineBuffers;
+  final List<List<StyleRange>> _selectionRangesByLine;
+  final List<int> _lineWidths;
+
+  void addText(String text, {Style? renderStyle, Style? selectionStyle}) {
+    final parts = text.split('\n');
+    for (var i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      if (part.isNotEmpty) {
+        final lineIndex = _lineBuffers.length - 1;
+        final start = _lineWidths[lineIndex];
+        final rendered = renderStyle != null ? renderStyle.render(part) : part;
+        _lineBuffers[lineIndex].write(rendered);
+        final width = Layout.visibleLength(part);
+        if (selectionStyle != null && width > 0) {
+          _selectionRangesByLine[lineIndex].add(
+            StyleRange(start, start + width, selectionStyle),
+          );
+        }
+        _lineWidths[lineIndex] = start + width;
+      }
+      if (i < parts.length - 1) {
+        _lineBuffers.add(StringBuffer());
+        _selectionRangesByLine.add(<StyleRange>[]);
+        _lineWidths.add(0);
+      }
+    }
+  }
+
+  _SelectableRenderedContent build() {
+    return _SelectableRenderedContent(
+      text: _lineBuffers.map((buffer) => buffer.toString()).join('\n'),
+      selectionHighlightRangesByLine: [
+        for (final ranges in _selectionRangesByLine)
+          List<StyleRange>.unmodifiable(ranges),
+      ],
+    );
+  }
+}
+
+_SelectableRenderedContent _renderSelectableSpanContent(
+  TextSpan span,
+  Style? baseStyle, {
+  Style? inheritedSelectionStyle,
+  _SelectableRenderedContentBuilder? builder,
+}) {
+  final contentBuilder = builder ?? _SelectableRenderedContentBuilder();
   Style? resolvedStyle;
   if (baseStyle != null || span.style != null) {
     resolvedStyle = (baseStyle ?? Style()).copy();
@@ -613,20 +705,108 @@ String _renderSelectableSpan(TextSpan span, Style? baseStyle) {
     }
   }
 
+  final resolvedSelectionStyle =
+      span.selectionHighlightStyle ?? inheritedSelectionStyle;
+
   final text = span.text;
   if (text != null && text.isNotEmpty) {
-    if (resolvedStyle != null) {
-      buffer.write(resolvedStyle.render(text));
-    } else {
-      buffer.write(text);
-    }
+    contentBuilder.addText(
+      text,
+      renderStyle: resolvedStyle,
+      selectionStyle: resolvedSelectionStyle,
+    );
   }
 
   for (final child in span.children) {
-    buffer.write(_renderSelectableSpan(child, resolvedStyle ?? baseStyle));
+    _renderSelectableSpanContent(
+      child,
+      resolvedStyle ?? baseStyle,
+      inheritedSelectionStyle: resolvedSelectionStyle,
+      builder: contentBuilder,
+    );
   }
 
-  return buffer.toString();
+  return contentBuilder.build();
+}
+
+_SelectableRenderedContent _finalizeRenderedContent(
+  _SelectableRenderedContent content, {
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  var lines = content.text.split('\n');
+  var rangesByLine = [
+    for (final ranges in content.selectionHighlightRangesByLine)
+      List<StyleRange>.from(ranges),
+  ];
+
+  if (softWrap) {
+    final wrapWidth = Layout.getWidth(content.text);
+    if (wrapWidth > 0) {
+      // Current selectable rich text preserves line structure; wrapping to the
+      // widest line matches the existing no-op behavior.
+      lines = lines;
+    }
+  }
+
+  if (overflow == TextOverflow.ellipsis && maxWidth != null) {
+    for (var i = 0; i < lines.length; i++) {
+      lines[i] = Layout.truncate(lines[i], maxWidth, ellipsis: '...');
+      rangesByLine[i] = [
+        for (final range in rangesByLine[i])
+          if (range.start < maxWidth && range.end > 0)
+            StyleRange(
+              range.start.clamp(0, maxWidth),
+              range.end.clamp(0, maxWidth),
+              range.style,
+            ),
+      ];
+    }
+  }
+
+  final renderedWidth = lines.isEmpty
+      ? 0
+      : lines.map(Layout.visibleLength).reduce(math.max);
+
+  if (textAlign != TextAlign.left) {
+    for (var i = 0; i < lines.length; i++) {
+      final lineWidth = Layout.visibleLength(lines[i]);
+      final shortAmount = renderedWidth - lineWidth;
+      if (shortAmount <= 0) continue;
+      final padLeft = switch (textAlign) {
+        TextAlign.center => shortAmount ~/ 2,
+        TextAlign.right => shortAmount,
+        _ => 0,
+      };
+      final padRight = switch (textAlign) {
+        TextAlign.center => shortAmount - padLeft,
+        TextAlign.right => 0,
+        _ => shortAmount,
+      };
+      if (padLeft > 0 || padRight > 0) {
+        lines[i] = '${' ' * padLeft}${lines[i]}${' ' * padRight}';
+        if (padLeft > 0) {
+          rangesByLine[i] = [
+            for (final range in rangesByLine[i])
+              StyleRange(
+                range.start + padLeft,
+                range.end + padLeft,
+                range.style,
+              ),
+          ];
+        }
+      }
+    }
+  }
+
+  return _SelectableRenderedContent(
+    text: lines.join('\n'),
+    selectionHighlightRangesByLine: [
+      for (final ranges in rangesByLine) List<StyleRange>.unmodifiable(ranges),
+    ],
+  );
 }
 
 RenderObject? _firstRenderObjectForWidget(Widget widget) {
