@@ -12,6 +12,15 @@ import 'remote_surface_url_service.dart';
 
 typedef RemotePluginGenericServiceHandler =
     FutureOr<JsonObject> Function(RemotePluginServiceRequest request);
+typedef _GenericBindingRegistrar =
+    void Function(
+      String service,
+      String method,
+      RemotePluginGenericServiceHandler handler, {
+      String? description,
+      Schema? paramsSchema,
+      Schema? resultSchema,
+    });
 
 final class _RemotePluginGenericServiceBinding {
   const _RemotePluginGenericServiceBinding(
@@ -105,6 +114,141 @@ List<RemotePluginServiceDescriptor> _bindingsToServiceDescriptors(
   return descriptors;
 }
 
+void _registerClipboardBindings(
+  _GenericBindingRegistrar register, {
+  RemotePluginClipboardReader? readClipboard,
+  RemotePluginClipboardWriter? writeClipboard,
+}) {
+  if (readClipboard != null) {
+    register(
+      'clipboard',
+      'read',
+      (request) async {
+        final selection = _stringParam(request.params, 'selection') ?? 'c';
+        final text = await readClipboard(selection);
+        return <String, Object?>{'text': text ?? ''};
+      },
+      description: 'Read text from a named clipboard selection.',
+      paramsSchema: _clipboardReadParamsSchema,
+      resultSchema: _clipboardReadResultSchema,
+    );
+  }
+
+  if (writeClipboard != null) {
+    register(
+      'clipboard',
+      'write',
+      (request) async {
+        final selection = _stringParam(request.params, 'selection') ?? 'c';
+        final text =
+            _stringParam(request.params, 'text') ??
+            (throw FormatException(
+              'clipboard.write requires a string "text" param.',
+            ));
+        await writeClipboard(selection, text);
+        return const <String, Object?>{};
+      },
+      description: 'Write text into a named clipboard selection.',
+      paramsSchema: _clipboardWriteParamsSchema,
+      resultSchema: _emptyObjectSchema,
+    );
+  }
+}
+
+void _registerOpenUrlBindings(
+  _GenericBindingRegistrar register, {
+  RemotePluginUrlOpener? openUrl,
+}) {
+  if (openUrl == null) {
+    return;
+  }
+
+  register(
+    'url',
+    'open',
+    (request) async {
+      final url =
+          _stringParam(request.params, 'url') ??
+          (throw FormatException('url.open requires a string "url" param.'));
+      await openUrl(Uri.parse(url));
+      return const <String, Object?>{};
+    },
+    description: 'Ask the host to open a URL.',
+    paramsSchema: _urlOpenParamsSchema,
+    resultSchema: _emptyObjectSchema,
+  );
+}
+
+void _registerNotificationBindings(
+  _GenericBindingRegistrar register, {
+  RemotePluginNotifier? notify,
+}) {
+  if (notify == null) {
+    return;
+  }
+
+  register(
+    'notify',
+    'show',
+    (request) async {
+      final level =
+          _stringParam(request.params, 'level') ??
+          RemotePluginNotificationLevel.info.wireName;
+      await notify(
+        RemotePluginNotificationRequest(
+          requestId: request.requestId,
+          title: _stringParam(request.params, 'title'),
+          message:
+              _stringParam(request.params, 'message') ??
+              (throw FormatException(
+                'notify.show requires a string "message" param.',
+              )),
+          level: RemotePluginNotificationLevel.parse(level),
+        ),
+      );
+      return const <String, Object?>{};
+    },
+    description: 'Ask the host to show a notification.',
+    paramsSchema: _notificationParamsSchema,
+    resultSchema: _emptyObjectSchema,
+  );
+}
+
+void _registerFilePickerBindings(
+  _GenericBindingRegistrar register, {
+  RemotePluginFilePickerHandler? pickPaths,
+}) {
+  if (pickPaths == null) {
+    return;
+  }
+
+  register(
+    'filePicker',
+    'open',
+    (request) async {
+      final result = await pickPaths(
+        RemotePluginFilePickerRequest(
+          requestId: request.requestId,
+          kind: RemotePluginFilePickerKind.parse(
+            _stringParam(request.params, 'kind') ??
+                RemotePluginFilePickerKind.file.wireName,
+          ),
+          allowMultiple: _boolParam(request.params, 'allowMultiple'),
+          title: _stringParam(request.params, 'title'),
+          initialPath: _stringParam(request.params, 'initialPath'),
+        ),
+      );
+      return <String, Object?>{
+        'paths': result ?? const <String>[],
+        'canceled': result == null,
+      };
+    },
+    description: 'Ask the host to open a file or directory picker.',
+    paramsSchema: _filePickerParamsSchema,
+    resultSchema: _filePickerResultSchema,
+  );
+}
+
 final class RemotePluginGenericServiceCatalog {
   final Map<String, Map<String, _RemotePluginGenericServiceBinding>> _handlers =
       <String, Map<String, _RemotePluginGenericServiceBinding>>{};
@@ -166,125 +310,23 @@ final class RemotePluginGenericServiceCatalog {
     RemotePluginClipboardReader? readClipboard,
     RemotePluginClipboardWriter? writeClipboard,
   }) {
-    if (readClipboard != null) {
-      register(
-        'clipboard',
-        'read',
-        (request) async {
-          final selection = _stringParam(request.params, 'selection') ?? 'c';
-          final text = await readClipboard(selection);
-          return <String, Object?>{'text': text ?? ''};
-        },
-        description: 'Read text from a named clipboard selection.',
-        paramsSchema: _clipboardReadParamsSchema,
-        resultSchema: _clipboardReadResultSchema,
-      );
-    }
-
-    if (writeClipboard != null) {
-      register(
-        'clipboard',
-        'write',
-        (request) async {
-          final selection = _stringParam(request.params, 'selection') ?? 'c';
-          final text =
-              _stringParam(request.params, 'text') ??
-              (throw FormatException(
-                'clipboard.write requires a string "text" param.',
-              ));
-          await writeClipboard(selection, text);
-          return const <String, Object?>{};
-        },
-        description: 'Write text into a named clipboard selection.',
-        paramsSchema: _clipboardWriteParamsSchema,
-        resultSchema: _emptyObjectSchema,
-      );
-    }
+    _registerClipboardBindings(
+      register,
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+    );
   }
 
   void registerOpenUrl({RemotePluginUrlOpener? openUrl}) {
-    if (openUrl == null) {
-      return;
-    }
-
-    register(
-      'url',
-      'open',
-      (request) async {
-        final url =
-            _stringParam(request.params, 'url') ??
-            (throw FormatException('url.open requires a string "url" param.'));
-        await openUrl(Uri.parse(url));
-        return const <String, Object?>{};
-      },
-      description: 'Ask the host to open a URL.',
-      paramsSchema: _urlOpenParamsSchema,
-      resultSchema: _emptyObjectSchema,
-    );
+    _registerOpenUrlBindings(register, openUrl: openUrl);
   }
 
   void registerNotification({RemotePluginNotifier? notify}) {
-    if (notify == null) {
-      return;
-    }
-
-    register(
-      'notify',
-      'show',
-      (request) async {
-        final level =
-            _stringParam(request.params, 'level') ??
-            RemotePluginNotificationLevel.info.wireName;
-        await notify(
-          RemotePluginNotificationRequest(
-            requestId: request.requestId,
-            title: _stringParam(request.params, 'title'),
-            message:
-                _stringParam(request.params, 'message') ??
-                (throw FormatException(
-                  'notify.show requires a string "message" param.',
-                )),
-            level: RemotePluginNotificationLevel.parse(level),
-          ),
-        );
-        return const <String, Object?>{};
-      },
-      description: 'Ask the host to show a notification.',
-      paramsSchema: _notificationParamsSchema,
-      resultSchema: _emptyObjectSchema,
-    );
+    _registerNotificationBindings(register, notify: notify);
   }
 
   void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
-    if (pickPaths == null) {
-      return;
-    }
-
-    register(
-      'filePicker',
-      'open',
-      (request) async {
-        final result = await pickPaths(
-          RemotePluginFilePickerRequest(
-            requestId: request.requestId,
-            kind: RemotePluginFilePickerKind.parse(
-              _stringParam(request.params, 'kind') ??
-                  RemotePluginFilePickerKind.file.wireName,
-            ),
-            allowMultiple: _boolParam(request.params, 'allowMultiple'),
-            title: _stringParam(request.params, 'title'),
-            initialPath: _stringParam(request.params, 'initialPath'),
-          ),
-        );
-        return <String, Object?>{
-          'paths': result ?? const <String>[],
-          'canceled': result == null,
-        };
-      },
-      description: 'Ask the host to open a file or directory picker.',
-      paramsSchema: _filePickerParamsSchema,
-      resultSchema: _filePickerResultSchema,
-    );
+    _registerFilePickerBindings(register, pickPaths: pickPaths);
   }
 }
 
@@ -348,48 +390,17 @@ final class RemotePluginGenericHostService {
     bool notify = false,
     bool filePicker = false,
   }) {
-    return <RemotePluginServiceDescriptor>[
-      if (clipboardRead)
-        RemotePluginServiceDescriptor(
-          service: 'clipboard',
-          method: 'read',
-          description: 'Read text from a named clipboard selection.',
-          paramsSchema: _schemaToJson(_clipboardReadParamsSchema),
-          resultSchema: _schemaToJson(_clipboardReadResultSchema),
-        ),
-      if (clipboardWrite)
-        RemotePluginServiceDescriptor(
-          service: 'clipboard',
-          method: 'write',
-          description: 'Write text into a named clipboard selection.',
-          paramsSchema: _schemaToJson(_clipboardWriteParamsSchema),
-          resultSchema: _schemaToJson(_emptyObjectSchema),
-        ),
-      if (openUrl)
-        RemotePluginServiceDescriptor(
-          service: 'url',
-          method: 'open',
-          description: 'Ask the host to open a URL.',
-          paramsSchema: _schemaToJson(_urlOpenParamsSchema),
-          resultSchema: _schemaToJson(_emptyObjectSchema),
-        ),
-      if (notify)
-        RemotePluginServiceDescriptor(
-          service: 'notify',
-          method: 'show',
-          description: 'Ask the host to show a notification.',
-          paramsSchema: _schemaToJson(_notificationParamsSchema),
-          resultSchema: _schemaToJson(_emptyObjectSchema),
-        ),
-      if (filePicker)
-        RemotePluginServiceDescriptor(
-          service: 'filePicker',
-          method: 'open',
-          description: 'Ask the host to open a file or directory picker.',
-          paramsSchema: _schemaToJson(_filePickerParamsSchema),
-          resultSchema: _schemaToJson(_filePickerResultSchema),
-        ),
-    ];
+    final catalog = RemotePluginGenericServiceCatalog();
+    catalog.registerClipboard(
+      readClipboard: clipboardRead ? (_) => null : null,
+      writeClipboard: clipboardWrite ? (_, _) {} : null,
+    );
+    catalog.registerOpenUrl(openUrl: openUrl ? (_) {} : null);
+    catalog.registerNotification(notify: notify ? (_) {} : null);
+    catalog.registerFilePicker(
+      pickPaths: filePicker ? (_) => const <String>[] : null,
+    );
+    return catalog.serviceDescriptors;
   }
 
   void unregister(String service, String method) {
@@ -407,125 +418,23 @@ final class RemotePluginGenericHostService {
     RemotePluginClipboardReader? readClipboard,
     RemotePluginClipboardWriter? writeClipboard,
   }) {
-    if (readClipboard != null) {
-      register(
-        'clipboard',
-        'read',
-        (request) async {
-          final selection = _stringParam(request.params, 'selection') ?? 'c';
-          final text = await readClipboard(selection);
-          return <String, Object?>{'text': text ?? ''};
-        },
-        description: 'Read text from a named clipboard selection.',
-        paramsSchema: _clipboardReadParamsSchema,
-        resultSchema: _clipboardReadResultSchema,
-      );
-    }
-
-    if (writeClipboard != null) {
-      register(
-        'clipboard',
-        'write',
-        (request) async {
-          final selection = _stringParam(request.params, 'selection') ?? 'c';
-          final text =
-              _stringParam(request.params, 'text') ??
-              (throw FormatException(
-                'clipboard.write requires a string "text" param.',
-              ));
-          await writeClipboard(selection, text);
-          return const <String, Object?>{};
-        },
-        description: 'Write text into a named clipboard selection.',
-        paramsSchema: _clipboardWriteParamsSchema,
-        resultSchema: _emptyObjectSchema,
-      );
-    }
+    _registerClipboardBindings(
+      register,
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+    );
   }
 
   void registerOpenUrl({RemotePluginUrlOpener? openUrl}) {
-    if (openUrl == null) {
-      return;
-    }
-
-    register(
-      'url',
-      'open',
-      (request) async {
-        final url =
-            _stringParam(request.params, 'url') ??
-            (throw FormatException('url.open requires a string "url" param.'));
-        await openUrl(Uri.parse(url));
-        return const <String, Object?>{};
-      },
-      description: 'Ask the host to open a URL.',
-      paramsSchema: _urlOpenParamsSchema,
-      resultSchema: _emptyObjectSchema,
-    );
+    _registerOpenUrlBindings(register, openUrl: openUrl);
   }
 
   void registerNotification({RemotePluginNotifier? notify}) {
-    if (notify == null) {
-      return;
-    }
-
-    register(
-      'notify',
-      'show',
-      (request) async {
-        final level =
-            _stringParam(request.params, 'level') ??
-            RemotePluginNotificationLevel.info.wireName;
-        await notify(
-          RemotePluginNotificationRequest(
-            requestId: request.requestId,
-            title: _stringParam(request.params, 'title'),
-            message:
-                _stringParam(request.params, 'message') ??
-                (throw FormatException(
-                  'notify.show requires a string "message" param.',
-                )),
-            level: RemotePluginNotificationLevel.parse(level),
-          ),
-        );
-        return const <String, Object?>{};
-      },
-      description: 'Ask the host to show a notification.',
-      paramsSchema: _notificationParamsSchema,
-      resultSchema: _emptyObjectSchema,
-    );
+    _registerNotificationBindings(register, notify: notify);
   }
 
   void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
-    if (pickPaths == null) {
-      return;
-    }
-
-    register(
-      'filePicker',
-      'open',
-      (request) async {
-        final result = await pickPaths(
-          RemotePluginFilePickerRequest(
-            requestId: request.requestId,
-            kind: RemotePluginFilePickerKind.parse(
-              _stringParam(request.params, 'kind') ??
-                  RemotePluginFilePickerKind.file.wireName,
-            ),
-            allowMultiple: _boolParam(request.params, 'allowMultiple'),
-            title: _stringParam(request.params, 'title'),
-            initialPath: _stringParam(request.params, 'initialPath'),
-          ),
-        );
-        return <String, Object?>{
-          'paths': result ?? const <String>[],
-          'canceled': result == null,
-        };
-      },
-      description: 'Ask the host to open a file or directory picker.',
-      paramsSchema: _filePickerParamsSchema,
-      resultSchema: _filePickerResultSchema,
-    );
+    _registerFilePickerBindings(register, pickPaths: pickPaths);
   }
 
   Future<void> _handle(RemotePluginServiceRequest request) async {
