@@ -1,5 +1,6 @@
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/selection.dart' as s;
+import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
 import '../../example/selection/main.dart' as example;
@@ -114,6 +115,38 @@ void main() {
       expect(selected, contains('Rich text section'));
       expect(selected, contains('Plain text section'));
       expect(selected, contains('Cross-component selection document'));
+    },
+  );
+
+  test(
+    'selection showcase auto-scrolls while dragging toward the footer',
+    () async {
+      final tester = WidgetTester(screenWidth: 90, screenHeight: 24);
+      final controller = s.SelectionController();
+      final scrollController = WidgetScrollController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(
+          controller: controller,
+          scrollController: scrollController,
+        ),
+      );
+
+      final start = tester.locateText('Cross-component selection document')!;
+      final bottomEdgeY = 22;
+
+      tester.mouseDown(start.x, start.y);
+      for (var i = 0; i < 96; i++) {
+        tester.mouseMove(start.x + 10, bottomEdgeY);
+      }
+      tester.mouseUp(start.x + 10, bottomEdgeY);
+
+      expect(scrollController.offset, greaterThan(0));
+      final selected = controller.getSelectedRegisteredText();
+      expect(selected, contains('Cross-component selection document'));
+      expect(selected, contains('Editor-backed preview'));
+      expect(selected, contains('Footer: this line pr'));
     },
   );
 

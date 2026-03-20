@@ -32,6 +32,13 @@ import '../rendering/render_object.dart';
 import '../layout/geometry.dart';
 import '../layout/layout_widgets.dart'
     show Text, RichText, MarkdownText, TextSpan, TextAlign, TextOverflow;
+import '../scroll/scroll_widgets.dart'
+    show
+        ScrollController,
+        RenderSingleChildViewport,
+        RenderListViewScrollViewport,
+        RenderListViewport,
+        RenderViewport;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'selection_text_utils.dart';
 

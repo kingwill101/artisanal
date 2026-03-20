@@ -54,3 +54,23 @@ extension SelectableMarkdownTextAdapter on MarkdownText {
     );
   }
 }
+
+/// Convenience adapter for generic [View] content.
+extension SelectableViewAdapter on View {
+  Widget selectable({
+    SelectionController? controller,
+    TextAlign textAlign = TextAlign.left,
+    bool softWrap = true,
+    TextOverflow overflow = TextOverflow.clip,
+    int? maxWidth,
+  }) {
+    return SelectableView(
+      this,
+      controller: controller,
+      textAlign: textAlign,
+      softWrap: softWrap,
+      overflow: overflow,
+      maxWidth: maxWidth,
+    );
+  }
+}

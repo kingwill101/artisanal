@@ -475,6 +475,24 @@ void main() {
       }
     });
 
+    test('View.selectable() adapts generic view widgets', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          tui.View(content: 'alpha beta').selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableTextFieldView participates in selection', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       final ctrl = SelectionController();

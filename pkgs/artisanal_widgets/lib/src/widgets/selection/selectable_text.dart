@@ -94,7 +94,7 @@ class SelectableText extends StatelessWidget {
 }
 
 class _SelectableRenderedText extends StatefulWidget {
-  _SelectableRenderedText({required this.text, this.controller, super.key});
+  _SelectableRenderedText({required this.text, this.controller});
 
   final String text;
   final SelectionController? controller;
@@ -125,6 +125,11 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final area = _SelectionScope.maybeOf(context);
     return area != null && identical(area, _effectiveController);
   }
+
+  ScrollController? get _sharedScrollController =>
+      _SelectionScope.maybeScrollController(context);
+
+  int get _sharedSelectionYOffset => _sharedScrollController?.offset ?? 0;
 
   List<String> _getContentLines() => widget.text.split('\n');
 
@@ -165,9 +170,10 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   SelectionPoint _globalOrigin() {
     final ro = _firstRenderObjectForWidget(widget);
     if (ro == null) return (x: 0, y: 0);
+    final globalY = _renderObjectGlobalY(ro).toInt();
     return (
       x: _renderObjectGlobalX(ro).toInt(),
-      y: _renderObjectGlobalY(ro).toInt(),
+      y: globalY + (_usingSharedController ? _sharedSelectionYOffset : 0),
     );
   }
 
@@ -204,6 +210,13 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     return (x: origin.x + localX, y: origin.y + localY);
   }
 
+  SelectionPoint _selectionPointForEvent(MouseMsg event) {
+    if (!_usingSharedController) {
+      return (x: event.x.toInt(), y: event.y.toInt());
+    }
+    return (x: event.x.toInt(), y: event.y.toInt() + _sharedSelectionYOffset);
+  }
+
   int _updateClickCount(
     SelectionController ctrl,
     DateTime now,
@@ -238,6 +251,43 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     ctrl._selectionEnd = _selectionPointForLocal(endX, localY);
     ctrl._selecting = false;
     _emitSelectionChanged(ctrl);
+  }
+
+  void _maybeAutoScrollSharedSelection(MouseMsg event) {
+    if (!_usingSharedController) return;
+    final scrollController = _sharedScrollController;
+    if (scrollController == null) return;
+
+    final ro = _findSelectionViewport();
+    if (ro == null) return;
+
+    final viewportLocalY = (event.y - _renderObjectGlobalY(ro)).toInt();
+    final viewportHeight = ro.size.height.toInt();
+    final delta = _selectionAreaAutoScrollDelta(
+      localY: viewportLocalY,
+      viewportHeight: viewportHeight,
+    );
+    if (delta != 0) {
+      scrollController.scrollBy(delta);
+    }
+  }
+
+  RenderObject? _findSelectionViewport() {
+    final el = elementOf(widget);
+    Element? current = el?.parent;
+    while (current != null) {
+      if (current is RenderObjectElement) {
+        final ro = current.renderObject;
+        if (ro is RenderSingleChildViewport ||
+            ro is RenderListViewScrollViewport ||
+            ro is RenderListViewport ||
+            ro is RenderViewport) {
+          return ro;
+        }
+      }
+      current = current.parent;
+    }
+    return null;
   }
 
   @override
@@ -297,8 +347,9 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final localY = msg.localY.toInt();
 
     if (event.action == MouseAction.motion && _isDragging) {
+      _maybeAutoScrollSharedSelection(event);
       ctrl._selectionEnd = _usingSharedController
-          ? (x: event.x.toInt(), y: event.y.toInt())
+          ? _selectionPointForEvent(event)
           : (x: localX, y: localY);
       _emitSelectionChanged(ctrl);
       return null;
@@ -314,7 +365,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
-      final screenPos = (x: event.x.toInt(), y: event.y.toInt());
+      final screenPos = _selectionPointForEvent(event);
       final clickCount = _updateClickCount(ctrl, now, screenPos);
 
       if (clickCount == 2) {
@@ -352,8 +403,9 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final localY = (msg.y - _screenToLocalDy).toInt();
 
     if (msg.action == MouseAction.motion) {
+      _maybeAutoScrollSharedSelection(msg);
       ctrl._selectionEnd = _usingSharedController
-          ? (x: msg.x.toInt(), y: msg.y.toInt())
+          ? _selectionPointForEvent(msg)
           : (x: localX, y: localY);
       _emitSelectionChanged(ctrl);
       return null;
@@ -600,7 +652,24 @@ double _renderObjectGlobalY(RenderObject ro) {
   RenderObject? current = ro;
   while (current != null) {
     y += current.offset.dy;
+    y -= _renderObjectScrollYOffset(current);
     current = current.parent;
   }
   return y;
+}
+
+double _renderObjectScrollYOffset(RenderObject ro) {
+  if (ro is RenderSingleChildViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderListViewScrollViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderListViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  return 0;
 }

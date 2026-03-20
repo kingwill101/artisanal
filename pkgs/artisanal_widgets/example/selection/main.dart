@@ -22,16 +22,18 @@ Future<void> main() async {
 }
 
 class SelectionShowcase extends w.StatefulWidget {
-  SelectionShowcase({super.key, this.controller});
+  SelectionShowcase({super.key, this.controller, this.scrollController});
 
   final s.SelectionController? controller;
+  final w.WidgetScrollController? scrollController;
 
   @override
   w.State createState() => _SelectionShowcaseState();
 }
 
 class _SelectionShowcaseState extends w.State<SelectionShowcase> {
-  final w.WidgetScrollController _scrollController = w.WidgetScrollController();
+  late final w.WidgetScrollController _scrollController =
+      widget.scrollController ?? w.WidgetScrollController();
   final w.WidgetScrollController _snapshotScrollController =
       w.WidgetScrollController();
   final w.TextAreaController _editorPreviewController = w.TextAreaController(
@@ -158,6 +160,7 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
               _documentCard(
                 theme: theme,
                 controller: _selectionController,
+                scrollController: _scrollController,
                 editorPreviewController: _editorPreviewController,
                 sectionTitleStyle: sectionTitleStyle,
                 bodyStyle: bodyStyle,
@@ -174,6 +177,7 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
 w.Widget _documentCard({
   required w.Theme theme,
   required s.SelectionController controller,
+  required w.ScrollController scrollController,
   required w.TextAreaController editorPreviewController,
   required Style sectionTitleStyle,
   required Style bodyStyle,
@@ -184,6 +188,7 @@ w.Widget _documentCard({
     title: 'Shared document surface',
     child: s.SelectionArea(
       controller: controller,
+      scrollController: scrollController,
       child: w.Column(
         gap: 0,
         children: [
@@ -243,12 +248,12 @@ w.Widget _documentCard({
           _documentBlock(
             theme: theme,
             title: 'View-backed section',
-            child: s.SelectableView(
-              View(
-                content:
-                    '${Style().foreground(theme.secondary).render('VIEW')} :: '
-                    'Raw View() content joins the same drag selection area.',
-              ),
+            child: View(
+              content:
+                  '${Style().foreground(theme.secondary).render('VIEW')} :: '
+                  'Raw View() content joins the same drag selection area.',
+            ).selectable(
+              controller: controller,
             ),
           ),
           _documentBlock(

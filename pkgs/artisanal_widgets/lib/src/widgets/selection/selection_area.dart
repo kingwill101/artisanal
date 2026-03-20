@@ -1,5 +1,16 @@
 part of 'selection_widgets.dart';
 
+int _selectionAreaAutoScrollDelta({
+  required int localY,
+  required int viewportHeight,
+}) {
+  if (viewportHeight <= 0) return 0;
+  final edgeThreshold = viewportHeight <= 2 ? 0 : 1;
+  if (localY <= edgeThreshold) return -1;
+  if (localY >= viewportHeight - 1 - edgeThreshold) return 1;
+  return 0;
+}
+
 /// Provides a shared [SelectionController] to descendant selectable text
 /// widgets, enabling cross-widget text selection.
 ///
@@ -19,13 +30,22 @@ part of 'selection_widgets.dart';
 /// )
 /// ```
 class SelectionArea extends StatefulWidget {
-  SelectionArea({required this.child, this.controller, super.key});
+  SelectionArea({
+    required this.child,
+    this.controller,
+    this.scrollController,
+    super.key,
+  });
 
   /// The subtree whose selectable text widgets will share selection.
   final Widget child;
 
   /// Optional external [SelectionController]. If null, one is created.
   final SelectionController? controller;
+
+  /// Optional scroll controller used to auto-scroll while drag selection
+  /// approaches the top or bottom edge of this selection viewport.
+  final ScrollController? scrollController;
 
   @override
   State createState() => _SelectionAreaState();
@@ -54,6 +74,43 @@ class _SelectionAreaState extends State<SelectionArea> {
     }
   }
 
+  void _maybeAutoScrollSelection(MouseMsg event) {
+    final scrollController = widget.scrollController;
+    final ctrl = _effectiveController;
+    if (scrollController == null || !ctrl.selecting) return;
+
+    final ro = _findSelectionViewport();
+    if (ro == null) return;
+
+    final viewportLocalY = (event.y - _renderObjectGlobalY(ro)).toInt();
+    final viewportHeight = ro.size.height.toInt();
+    final delta = _selectionAreaAutoScrollDelta(
+      localY: viewportLocalY,
+      viewportHeight: viewportHeight,
+    );
+    if (delta != 0) {
+      scrollController.scrollBy(delta);
+    }
+  }
+
+  RenderObject? _findSelectionViewport() {
+    final el = elementOf(widget);
+    Element? current = el?.parent;
+    while (current != null) {
+      if (current is RenderObjectElement) {
+        final ro = current.renderObject;
+        if (ro is RenderSingleChildViewport ||
+            ro is RenderListViewScrollViewport ||
+            ro is RenderListViewport ||
+            ro is RenderViewport) {
+          return ro;
+        }
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
   /// The SelectionArea clears the shared selection when a click lands
   /// outside all descendant [SelectableText] widgets.
   ///
@@ -64,6 +121,10 @@ class _SelectionAreaState extends State<SelectionArea> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
+      if (msg.event.action == MouseAction.motion) {
+        _maybeAutoScrollSelection(msg.event);
+      }
+
       final isWheelLike =
           msg.event.action == MouseAction.wheel ||
           msg.event.button == MouseButton.wheelUp ||
@@ -76,6 +137,10 @@ class _SelectionAreaState extends State<SelectionArea> {
     }
 
     if (msg is MouseMsg) {
+      if (msg.action == MouseAction.motion) {
+        _maybeAutoScrollSelection(msg);
+      }
+
       // Check if this raw MouseMsg matches the action of the last
       // HitTestMouseMsg we received. If so, the event was already
       // dispatched through hit-testing to one of our children — consume
@@ -107,6 +172,7 @@ class _SelectionAreaState extends State<SelectionArea> {
   Widget build(BuildContext context) {
     return _SelectionScope(
       controller: _effectiveController,
+      scrollController: widget.scrollController,
       child: widget.child,
     );
   }
@@ -114,9 +180,14 @@ class _SelectionAreaState extends State<SelectionArea> {
 
 /// InheritedWidget that provides a [SelectionController] to descendants.
 class _SelectionScope extends InheritedWidget {
-  _SelectionScope({required this.controller, required super.child});
+  _SelectionScope({
+    required this.controller,
+    required this.scrollController,
+    required super.child,
+  });
 
   final SelectionController controller;
+  final ScrollController? scrollController;
 
   /// Returns the nearest [SelectionController] from the context, if any.
   static SelectionController? maybeOf(BuildContext context) {
@@ -125,8 +196,15 @@ class _SelectionScope extends InheritedWidget {
         ?.controller;
   }
 
+  static ScrollController? maybeScrollController(BuildContext context) {
+    return context
+        .dependOnInheritedWidgetOfExactType<_SelectionScope>()
+        ?.scrollController;
+  }
+
   @override
   bool updateShouldNotify(covariant _SelectionScope oldWidget) {
-    return controller != oldWidget.controller;
+    return controller != oldWidget.controller ||
+        scrollController != oldWidget.scrollController;
   }
 }
