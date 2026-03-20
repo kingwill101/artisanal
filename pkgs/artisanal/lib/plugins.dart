@@ -40,6 +40,8 @@ export 'src/plugins/remote_surface_controller.dart'
     show RemotePluginSurfaceController;
 export 'src/plugins/remote_surface_drawable.dart'
     show RemotePluginSurfaceDrawable;
+export 'src/plugins/remote_surface_layers.dart'
+    show RemotePluginSurfacePlacement, buildRemotePluginSurfaceLayers;
 export 'src/plugins/remote_surface_guest_session.dart'
     show RemotePluginGuestSession;
 export 'src/plugins/remote_surface_session.dart' show RemotePluginSession;
