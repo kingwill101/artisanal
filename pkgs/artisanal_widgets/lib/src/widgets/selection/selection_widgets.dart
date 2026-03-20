@@ -12,6 +12,7 @@ import 'package:meta/meta.dart' show experimental;
 
 import 'dart:math' as math;
 
+import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart'
     show
@@ -30,12 +31,13 @@ import '../core/widget.dart';
 import '../rendering/render_object.dart';
 import '../layout/geometry.dart';
 import '../layout/layout_widgets.dart'
-    show Text, RichText, TextSpan, TextAlign, TextOverflow;
+    show Text, RichText, MarkdownText, TextSpan, TextAlign, TextOverflow;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'selection_text_utils.dart';
 
 part 'selection_controller.dart';
 part 'selectable_text.dart';
 part 'selectable_rich_text.dart';
+part 'selectable_markdown_text.dart';
 part 'selectable_view.dart';
 part 'selection_area.dart';

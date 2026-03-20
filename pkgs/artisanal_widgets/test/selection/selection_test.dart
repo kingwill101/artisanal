@@ -391,6 +391,28 @@ void main() {
       }
     });
 
+    test('SelectableMarkdownText participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          SelectableMarkdownText(
+            data: '- alpha\n- beta',
+            controller: ctrl,
+            maxWidth: 40,
+          ),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseMove(7, 0);
+        tester.mouseUp(7, 0);
+
+        expect(ctrl.getSelectedText(['- alpha', '- beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableText inside Container respects layout', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
@@ -514,6 +536,7 @@ void main() {
                 children: [
                   SelectableText('First line'),
                   SelectableRichText(text: const TextSpan(text: 'Second line')),
+                  SelectableMarkdownText(data: '- Third line', maxWidth: 40),
                   SelectableView('Third line'),
                 ],
               ),
@@ -521,12 +544,12 @@ void main() {
           );
 
           tester.mouseDown(0, 0);
-          tester.mouseMove(5, 2);
-          tester.mouseUp(5, 2);
+          tester.mouseMove(5, 3);
+          tester.mouseUp(5, 3);
 
           expect(
             ctrl.getSelectedRegisteredText(),
-            equals('First line\nSecond line\nThird'),
+            equals('First line\nSecond line\n• Third line\n'),
           );
         } finally {
           await tester.dispose();

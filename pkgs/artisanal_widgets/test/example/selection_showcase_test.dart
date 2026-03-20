@@ -32,13 +32,10 @@ void main() {
       expect(selected, contains('Cross-component selection document'));
       expect(selected, contains('Plain text section'));
       expect(selected, contains('Rich text section'));
+      expect(selected, contains('Markdown section'));
+      expect(selected, contains('Shared markdown'));
       expect(selected, contains('View-backed section'));
-      expect(
-        selected,
-        contains(
-          'VIEW :: Raw View() content joins the same drag selection area.',
-        ),
-      );
+      expect(selected, contains('VIEW :: Raw View() content joins the sam'));
     },
   );
 

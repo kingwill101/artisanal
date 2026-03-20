@@ -201,6 +201,19 @@ w.Widget _documentCard({
           ),
           _documentBlock(
             theme: theme,
+            title: 'Markdown section',
+            child: s.SelectableMarkdownText(
+              data:
+                  '## Shared markdown\n'
+                  '- bullets still join the same selection buffer\n'
+                  '- inline `code` copies as plain text\n'
+                  '- **bold** emphasis stays readable while dragging',
+              textStyle: bodyStyle,
+              maxWidth: 60,
+            ),
+          ),
+          _documentBlock(
+            theme: theme,
             title: 'View-backed section',
             child: s.SelectableView(
               View(
