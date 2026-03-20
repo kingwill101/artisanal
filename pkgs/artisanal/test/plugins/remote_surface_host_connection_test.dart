@@ -2,6 +2,7 @@ import 'dart:io' as io;
 
 import 'package:artisanal/plugins.dart' as plugins;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import 'fixture_compiler.dart';
@@ -128,6 +129,75 @@ void main() {
           })
           .timeout(const Duration(seconds: 5));
 
+      expect(clipboard, 'plugin-copy');
+    },
+  );
+
+  test(
+    'host connection can start a manifest-backed plugin with auto-bound generic services',
+    () async {
+      var clipboard = 'host clipboard';
+      final compiledPath = fixtures.path('clipboard_plugin.dart');
+      final manifestPath = p.join(
+        io.File(compiledPath).parent.path,
+        'clipboard_manifest.plugin.json',
+      );
+      addTearDown(() async {
+        final file = io.File(manifestPath);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      });
+
+      final manifest = plugins.RemotePluginManifest(
+        id: 'clipboard',
+        entrypoint: p.basename(compiledPath),
+        primarySurfaceId: 'clipboard.panel',
+        surfaceIds: const <String>['clipboard.panel'],
+        placement: const plugins.RemotePluginManifestPlacement(
+          surfaceId: 'clipboard.panel',
+          x: 0,
+          y: 0,
+        ),
+        manifestPath: manifestPath,
+      );
+
+      await io.File(manifestPath).writeAsString(manifest.encodeJson());
+
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerClipboard(
+          readClipboard: (_) => clipboard,
+          writeClipboard: (_, text) {
+            clipboard = text;
+          },
+        );
+      final connection = await plugins.RemotePluginHostConnection.startManifest(
+        manifest,
+        executable: io.Platform.resolvedExecutable,
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+        genericServices: genericCatalog,
+        timeout: const Duration(seconds: 20),
+      );
+      addTearDown(() => connection.dispose(kill: true));
+
+      await connection.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = connection.surfaces['clipboard.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('read:host clipboard') &&
+                text.contains('write:ok');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(connection.pluginHello.pluginId, 'clipboard-plugin');
       expect(clipboard, 'plugin-copy');
     },
   );
