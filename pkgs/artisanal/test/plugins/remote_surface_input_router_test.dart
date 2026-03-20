@@ -1,4 +1,5 @@
 import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/runtime.dart' as runtime;
 import 'package:test/test.dart';
 
 void main() {
@@ -150,6 +151,81 @@ void main() {
             .having((message) => message.ctrl, 'ctrl', isTrue)
             .having((message) => message.code, 'code', 'KeyA'),
       ]);
+    });
+
+    test('sendTuiMouse bridges supported runtime mouse events', () async {
+      final store = plugins.RemotePluginSurfaceStore();
+      store.apply(
+        const plugins.RemotePluginSurfaceOpen(
+          surfaceId: 'panel',
+          kind: plugins.RemotePluginSurfaceKind.panel,
+          width: 8,
+          height: 4,
+        ),
+      );
+
+      final panelMessages = <plugins.RemotePluginMessage>[];
+      final router = plugins.RemotePluginSurfaceInputRouter(
+        surfaces: store,
+        sendersBySurfaceId: <String, plugins.RemotePluginSurfaceMessageSender>{
+          'panel': (message) async => panelMessages.add(message),
+        },
+        placements: const <plugins.RemotePluginSurfacePlacement>[
+          plugins.RemotePluginSurfacePlacement(surfaceId: 'panel', x: 4, y: 2),
+        ],
+      );
+
+      final hit = await router.sendTuiMouse(
+        const runtime.MouseMsg(
+          action: runtime.MouseAction.press,
+          button: runtime.MouseButton.left,
+          x: 5,
+          y: 3,
+          ctrl: true,
+        ),
+      );
+
+      expect(hit, isNotNull);
+      expect(hit!.surface.surfaceId, 'panel');
+      expect(panelMessages, <Matcher>[
+        isA<plugins.RemotePluginFocusInput>(),
+        isA<plugins.RemotePluginMouseInput>()
+            .having((message) => message.column, 'column', 1)
+            .having((message) => message.row, 'row', 1)
+            .having((message) => message.ctrl, 'ctrl', isTrue),
+      ]);
+    });
+
+    test('sendTuiMouse ignores unsupported runtime mouse buttons', () async {
+      final store = plugins.RemotePluginSurfaceStore();
+      store.apply(
+        const plugins.RemotePluginSurfaceOpen(
+          surfaceId: 'panel',
+          kind: plugins.RemotePluginSurfaceKind.panel,
+          width: 8,
+          height: 4,
+        ),
+      );
+
+      final panelMessages = <plugins.RemotePluginMessage>[];
+      final router = plugins.RemotePluginSurfaceInputRouter(
+        surfaces: store,
+        sendersBySurfaceId: <String, plugins.RemotePluginSurfaceMessageSender>{
+          'panel': (message) async => panelMessages.add(message),
+        },
+      );
+
+      final hit = await router.sendTuiMouse(
+        const runtime.MouseMsg(
+          action: runtime.MouseAction.wheel,
+          button: runtime.MouseButton.wheelLeft,
+          x: 0,
+          y: 0,
+        ),
+      );
+
+      expect(hit, isNull);
+      expect(panelMessages, isEmpty);
     });
   });
 }

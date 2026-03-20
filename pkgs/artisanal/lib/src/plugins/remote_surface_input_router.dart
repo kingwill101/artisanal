@@ -2,6 +2,7 @@ import 'remote_surface_host_connection.dart';
 import 'remote_surface_layers.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_state.dart';
+import '../tui/msg.dart' as tui;
 
 typedef RemotePluginSurfaceMessageSender =
     Future<void> Function(RemotePluginMessage message);
@@ -124,6 +125,32 @@ final class RemotePluginSurfaceInputRouter {
     return hit;
   }
 
+  /// Sends one TUI mouse event to the topmost hit surface, if supported.
+  ///
+  /// Unsupported host-side mouse buttons such as horizontal wheels or extra
+  /// back/forward buttons are ignored because the remote plugin wire format
+  /// does not currently encode them.
+  Future<RemotePluginSurfaceHit?> sendTuiMouse(
+    tui.MouseMsg event, {
+    bool focusOnPress = true,
+  }) async {
+    final button = _mapMouseButton(event.button);
+    if (button == null) {
+      return null;
+    }
+
+    return sendMouse(
+      action: _mapMouseAction(event.action),
+      button: button,
+      column: event.x,
+      row: event.y,
+      ctrl: event.ctrl,
+      alt: event.alt,
+      shift: event.shift,
+      focusOnPress: focusOnPress,
+    );
+  }
+
   /// Sends one key event to the currently focused surface, if any.
   Future<void> sendKey({
     required String key,
@@ -155,4 +182,28 @@ final class RemotePluginSurfaceInputRouter {
       ),
     );
   }
+}
+
+RemotePluginMouseAction _mapMouseAction(tui.MouseAction action) {
+  return switch (action) {
+    tui.MouseAction.press => RemotePluginMouseAction.press,
+    tui.MouseAction.release => RemotePluginMouseAction.release,
+    tui.MouseAction.motion => RemotePluginMouseAction.motion,
+    tui.MouseAction.wheel => RemotePluginMouseAction.wheel,
+  };
+}
+
+RemotePluginMouseButton? _mapMouseButton(tui.MouseButton button) {
+  return switch (button) {
+    tui.MouseButton.none => RemotePluginMouseButton.none,
+    tui.MouseButton.left => RemotePluginMouseButton.left,
+    tui.MouseButton.middle => RemotePluginMouseButton.middle,
+    tui.MouseButton.right => RemotePluginMouseButton.right,
+    tui.MouseButton.wheelUp => RemotePluginMouseButton.wheelUp,
+    tui.MouseButton.wheelDown => RemotePluginMouseButton.wheelDown,
+    tui.MouseButton.wheelLeft ||
+    tui.MouseButton.wheelRight ||
+    tui.MouseButton.button4 ||
+    tui.MouseButton.button5 => null,
+  };
 }

@@ -5,6 +5,7 @@
 ### Added
 
 - Added `RemotePluginSurfaceInputRouter` so hosts can turn resolved remote surface placements into focus, blur, mouse, and key routing without rebuilding per-surface dispatch logic by hand.
+- Added `RemotePluginSurfaceInputRouter.sendTuiMouse(...)` so host apps can forward runtime `MouseMsg` events into remote plugin surfaces without rewriting button/action translation by hand.
 - Added resolved placement and hit-test helpers for remote plugin surfaces, so hosts can map global coordinates into the topmost plugin panel or popup using the same placement logic as UV composition.
 - Added manifest-backed remote plugin discovery helpers plus workspace example manifests, so hosts can validate and load plugin process specs from `*.plugin.json` files instead of hardcoding entrypoints in app code.
 - Added typed remote plugin file-picker request/response messages plus reusable host and guest helpers, so plugins can ask hosts to select files or directories without inventing custom service glue.
