@@ -304,20 +304,23 @@ String _modelViewString(Object view) {
 }
 
 TextInputStyles _textInputStylesFromTheme(Theme theme) {
+  final selection = Style()
+      .background(theme.resolvedHighlight)
+      .foreground(theme.resolvedOnHighlight);
   return TextInputStyles(
     focused: TextInputStyleState(
       prompt: theme.labelLarge.copy(),
       text: theme.bodyMedium.copy(),
       placeholder: theme.labelSmall.copy(),
       suggestion: theme.labelSmall.copy(),
-      selection: Style().background(theme.primary).foreground(theme.onPrimary),
+      selection: selection,
     ),
     blurred: TextInputStyleState(
       prompt: theme.labelSmall.copy(),
       text: theme.bodySmall.copy(),
       placeholder: theme.labelSmall.copy(),
       suggestion: theme.labelSmall.copy(),
-      selection: Style().background(theme.muted).foreground(theme.onSurface),
+      selection: selection,
     ),
     cursor: TextInputCursorStyle(
       color: theme.primary,
@@ -328,6 +331,9 @@ TextInputStyles _textInputStylesFromTheme(Theme theme) {
 }
 
 TextAreaStyles _textAreaStylesFromTheme(Theme theme) {
+  final selection = Style()
+      .background(theme.resolvedHighlight)
+      .foreground(theme.resolvedOnHighlight);
   return TextAreaStyles(
     focused: TextAreaStyleState(
       prompt: theme.labelLarge.copy(),
@@ -337,6 +343,7 @@ TextAreaStyles _textAreaStylesFromTheme(Theme theme) {
       cursorLine: Style().background(theme.resolvedSurfaceVariant),
       cursorLineNumber: theme.labelSmall.copy().foreground(theme.primary),
       endOfBuffer: theme.labelSmall.copy().foreground(theme.resolvedOutline),
+      selection: selection,
     ),
     blurred: TextAreaStyleState(
       prompt: theme.labelSmall.copy(),
@@ -346,6 +353,7 @@ TextAreaStyles _textAreaStylesFromTheme(Theme theme) {
       cursorLine: Style().background(theme.surface),
       cursorLineNumber: theme.labelSmall.copy().foreground(theme.primary),
       endOfBuffer: theme.labelSmall.copy().foreground(theme.resolvedOutline),
+      selection: selection,
     ),
     cursor: TextAreaCursorStyle(
       color: theme.primary,
