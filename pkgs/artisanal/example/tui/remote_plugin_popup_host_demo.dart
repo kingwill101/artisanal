@@ -1,3 +1,4 @@
+// tui:allow-stdout
 import 'dart:async';
 import 'dart:io' as io;
 

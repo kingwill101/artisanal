@@ -32,6 +32,9 @@ void main() {
 
       final normalized = entity.path.replaceAll('\\', '/');
       final lines = entity.readAsLinesSync();
+      if (lines.any((line) => line.contains(allowMarker))) {
+        continue;
+      }
       for (var i = 0; i < lines.length; i++) {
         final line = lines[i];
         if (line.contains(allowMarker)) continue;
