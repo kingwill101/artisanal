@@ -7,6 +7,7 @@
 - Added stable `package:artisanal/plugins.dart` with a typed remote-surface plugin protocol, JSON schema definitions, and message validation helpers for future out-of-process plugin hosts.
 - Added newline-delimited JSON transport helpers for the remote-surface plugin protocol so plugin hosts can speak the wire format over stdio or sockets without rebuilding framing logic.
 - Added `RemotePluginJsonChannel` so plugin hosts can bind typed remote-surface messages directly to line or byte streams instead of managing framing and validation manually.
+- Added `RemotePluginProcess.start(...)` so plugin hosts can launch stdio-based plugin executables and interact with them as typed remote-surface message streams.
 - Added `withoutStartupTitle()`, `withoutStartupProbeOverride()`, `withoutInput()`, `withoutOutput()`, `withoutCancelSignal()`, and `withoutMovementCapsOverride()` helpers so `ProgramOptions` can clear nullable overrides without rebuilding options manually.
 - Added `ColorPaletteMsg` and `Cmd.requestColorPalette()` so OSC 4 palette replies are exposed through the TUI runtime instead of staying UV-internal.
 - Added `CursorPositionMsg` and `Cmd.requestCursorPositionReport()` so cursor-position reports are exposed through the TUI runtime instead of staying UV-internal.
