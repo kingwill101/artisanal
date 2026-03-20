@@ -475,6 +475,55 @@ void main() {
       }
     });
 
+    test('SelectableTextFieldView participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final textController = TextEditingController(text: 'alpha beta');
+      addTearDown(textController.dispose);
+      try {
+        await tester.pumpWidget(
+          SelectableTextFieldView(
+            controller: textController,
+            selectionController: ctrl,
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableTextAreaView updates when controller text changes', () async {
+      final tester = WidgetTester(screenWidth: 70, screenHeight: 8);
+      final ctrl = SelectionController();
+      final textController = TextAreaController(text: 'alpha\nbeta');
+      addTearDown(textController.dispose);
+      try {
+        await tester.pumpWidget(
+          SelectionArea(
+            controller: ctrl,
+            child: SelectableTextAreaView(
+              controller: textController,
+              selectionController: ctrl,
+              maxWidth: 60,
+            ),
+          ),
+        );
+
+        textController.text = 'gamma\ndelta';
+        tester.pump();
+
+        expect(tester.locateText('gamma'), isNotNull);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableText inside Container respects layout', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {

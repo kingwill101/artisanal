@@ -12,13 +12,17 @@ import 'package:artisanal/tui.dart'
         View,
         TuiTrace;
 import 'package:artisanal/style.dart' show Layout, Style;
+import '../animation/animated_builder.dart' show ListenableBuilder;
 import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
-import '../core/framework.dart' show BuildContext, State, StatefulWidget;
-import '../layout/layout_widgets.dart' show Text, TextOverflow;
+import '../core/framework.dart'
+    show BuildContext, State, StatefulWidget, StatelessWidget;
+import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
+import '../selection/selection_widgets.dart'
+    show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../core/widget.dart';
@@ -1093,6 +1097,86 @@ class _TextAreaControllerSnapshot {
         selectionBase == model.selectionBase &&
         selectionExtent == model.selectionExtent &&
         selectedText == model.getSelectedText();
+  }
+}
+
+/// A read-only selectable view of a [TextEditingController].
+///
+/// This bridges controller-backed editor content into [SelectionArea] without
+/// participating in the live editing selection model.
+class SelectableTextFieldView extends StatelessWidget {
+  SelectableTextFieldView({
+    required this.controller,
+    this.selectionController,
+    this.textAlign = TextAlign.left,
+    this.softWrap = true,
+    this.overflow = TextOverflow.clip,
+    this.maxWidth,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final SelectionController? selectionController;
+  final TextAlign textAlign;
+  final bool softWrap;
+  final TextOverflow overflow;
+  final int? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (BuildContext context, Widget? child) {
+        return SelectableView(
+          _modelViewString(controller.model.view()),
+          controller: selectionController,
+          textAlign: textAlign,
+          softWrap: softWrap,
+          overflow: overflow,
+          maxWidth: maxWidth,
+        );
+      },
+    );
+  }
+}
+
+/// A read-only selectable view of a [TextAreaController].
+///
+/// This exposes textarea-backed content to [SelectionArea] as a shared
+/// selectable fragment while keeping editing selection and focus separate.
+class SelectableTextAreaView extends StatelessWidget {
+  SelectableTextAreaView({
+    required this.controller,
+    this.selectionController,
+    this.textAlign = TextAlign.left,
+    this.softWrap = true,
+    this.overflow = TextOverflow.clip,
+    this.maxWidth,
+    super.key,
+  });
+
+  final TextAreaController controller;
+  final SelectionController? selectionController;
+  final TextAlign textAlign;
+  final bool softWrap;
+  final TextOverflow overflow;
+  final int? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (BuildContext context, Widget? child) {
+        return SelectableView(
+          _modelViewString(controller.model.view()),
+          controller: selectionController,
+          textAlign: textAlign,
+          softWrap: softWrap,
+          overflow: overflow,
+          maxWidth: maxWidth,
+        );
+      },
+    );
   }
 }
 

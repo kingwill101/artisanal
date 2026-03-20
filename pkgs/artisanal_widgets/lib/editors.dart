@@ -20,6 +20,8 @@ export 'src/widgets/input/input_widgets.dart'
         TextEditingController,
         TextFieldController,
         TextAreaController,
+        SelectableTextFieldView,
+        SelectableTextAreaView,
         TextField,
         TextArea;
 export 'src/widgets/input/text_diagnostics_binding.dart'

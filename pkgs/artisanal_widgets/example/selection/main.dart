@@ -32,6 +32,14 @@ class SelectionShowcase extends w.StatefulWidget {
 
 class _SelectionShowcaseState extends w.State<SelectionShowcase> {
   final w.WidgetScrollController _scrollController = w.WidgetScrollController();
+  final w.WidgetScrollController _snapshotScrollController =
+      w.WidgetScrollController();
+  final w.TextAreaController _editorPreviewController = w.TextAreaController(
+    text:
+        'Editor-backed preview\n'
+        'This read-only fragment follows the textarea controller.\n'
+        'Dragging through it should stay in the same selection buffer.',
+  );
   s.SelectionController? _ownController;
   s.SelectionController? _listeningController;
   String _selectedText = '';
@@ -58,6 +66,7 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
   @override
   void dispose() {
     _detachSelectionController();
+    _editorPreviewController.dispose();
     super.dispose();
   }
 
@@ -127,11 +136,29 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
               _sectionCard(
                 theme: theme,
                 title: 'Selection snapshot (${_selectedText.length} chars)',
-                child: w.Text(previewText, style: bodyStyle),
+                child: w.SizedBox(
+                  height: 4,
+                  child: w.Scrollbar(
+                    controller: _snapshotScrollController,
+                    thickness: 1,
+                    gap: 1,
+                    enableHover: true,
+                    trackChar: ' ',
+                    thumbChar: ' ',
+                    trackUsesBackground: true,
+                    thumbUsesBackground: true,
+                    child: w.ScrollView(
+                      controller: _snapshotScrollController,
+                      handleKeys: true,
+                      child: w.Text(previewText, style: bodyStyle),
+                    ),
+                  ),
+                ),
               ),
               _documentCard(
                 theme: theme,
                 controller: _selectionController,
+                editorPreviewController: _editorPreviewController,
                 sectionTitleStyle: sectionTitleStyle,
                 bodyStyle: bodyStyle,
                 subtleStyle: subtleStyle,
@@ -147,6 +174,7 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
 w.Widget _documentCard({
   required w.Theme theme,
   required s.SelectionController controller,
+  required w.TextAreaController editorPreviewController,
   required Style sectionTitleStyle,
   required Style bodyStyle,
   required Style subtleStyle,
@@ -221,6 +249,15 @@ w.Widget _documentCard({
                     '${Style().foreground(theme.secondary).render('VIEW')} :: '
                     'Raw View() content joins the same drag selection area.',
               ),
+            ),
+          ),
+          _documentBlock(
+            theme: theme,
+            title: 'Editor-backed section',
+            child: w.SelectableTextAreaView(
+              controller: editorPreviewController,
+              selectionController: controller,
+              maxWidth: 60,
             ),
           ),
           _documentBlock(
