@@ -19,6 +19,7 @@ enum RemotePluginMessageType {
   pluginUrlOpen('plugin.url.open'),
   pluginNotify('plugin.notify'),
   pluginFilePickerOpen('plugin.filePicker.open'),
+  pluginServiceRequest('plugin.service.request'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
   hostInputFocus('host.input.focus'),
@@ -27,7 +28,8 @@ enum RemotePluginMessageType {
   hostClipboardWrite('host.clipboard.write'),
   hostUrlOpen('host.url.open'),
   hostNotify('host.notify'),
-  hostFilePickerResult('host.filePicker.result');
+  hostFilePickerResult('host.filePicker.result'),
+  hostServiceResponse('host.service.response');
 
   const RemotePluginMessageType(this.wireName);
 
@@ -363,6 +365,8 @@ sealed class RemotePluginMessage {
         RemotePluginNotificationRequest.fromPayload(payload),
       RemotePluginMessageType.pluginFilePickerOpen =>
         RemotePluginFilePickerRequest.fromPayload(payload),
+      RemotePluginMessageType.pluginServiceRequest =>
+        RemotePluginServiceRequest.fromPayload(payload),
       RemotePluginMessageType.hostInputKey => RemotePluginKeyInput.fromPayload(
         payload,
       ),
@@ -382,6 +386,8 @@ sealed class RemotePluginMessage {
         RemotePluginNotificationResponse.fromPayload(payload),
       RemotePluginMessageType.hostFilePickerResult =>
         RemotePluginFilePickerResponse.fromPayload(payload),
+      RemotePluginMessageType.hostServiceResponse =>
+        RemotePluginServiceResponse.fromPayload(payload),
     };
   }
 
@@ -787,8 +793,7 @@ final class RemotePluginNotificationRequest extends RemotePluginMessage {
     'requestId': requestId,
     'message': message,
     if (title != null) 'title': title,
-    if (level != RemotePluginNotificationLevel.info)
-      'level': level.wireName,
+    if (level != RemotePluginNotificationLevel.info) 'level': level.wireName,
   };
 }
 
@@ -831,6 +836,41 @@ final class RemotePluginFilePickerRequest extends RemotePluginMessage {
     if (allowMultiple) 'allowMultiple': allowMultiple,
     if (title != null) 'title': title,
     if (initialPath != null) 'initialPath': initialPath,
+  };
+}
+
+final class RemotePluginServiceRequest extends RemotePluginMessage {
+  const RemotePluginServiceRequest({
+    required this.requestId,
+    required this.service,
+    required this.method,
+    this.params = const <String, Object?>{},
+  });
+
+  final String requestId;
+  final String service;
+  final String method;
+  final JsonObject params;
+
+  factory RemotePluginServiceRequest.fromPayload(JsonObject payload) {
+    return RemotePluginServiceRequest(
+      requestId: _requireString(payload, 'requestId'),
+      service: _requireString(payload, 'service'),
+      method: _requireString(payload, 'method'),
+      params: _readObjectOrEmpty(payload, 'params'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginServiceRequest;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    'service': service,
+    'method': method,
+    if (params.isNotEmpty) 'params': params,
   };
 }
 
@@ -1017,7 +1057,8 @@ final class RemotePluginOpenUrlResponse extends RemotePluginMessage {
   }
 
   @override
-  RemotePluginMessageType get messageType => RemotePluginMessageType.hostUrlOpen;
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.hostUrlOpen;
 
   @override
   JsonObject get payloadJson => <String, Object?>{
@@ -1088,6 +1129,45 @@ final class RemotePluginFilePickerResponse extends RemotePluginMessage {
     'requestId': requestId,
     if (paths.isNotEmpty) 'paths': paths,
     if (canceled) 'canceled': canceled,
+    if (error != null) 'error': error,
+  };
+}
+
+final class RemotePluginServiceResponse extends RemotePluginMessage {
+  const RemotePluginServiceResponse({
+    required this.requestId,
+    required this.service,
+    required this.method,
+    this.result = const <String, Object?>{},
+    this.error,
+  });
+
+  final String requestId;
+  final String service;
+  final String method;
+  final JsonObject result;
+  final String? error;
+
+  factory RemotePluginServiceResponse.fromPayload(JsonObject payload) {
+    return RemotePluginServiceResponse(
+      requestId: _requireString(payload, 'requestId'),
+      service: _requireString(payload, 'service'),
+      method: _requireString(payload, 'method'),
+      result: _readObjectOrEmpty(payload, 'result'),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.hostServiceResponse;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    'service': service,
+    'method': method,
+    if (result.isNotEmpty) 'result': result,
     if (error != null) 'error': error,
   };
 }
@@ -1269,6 +1349,17 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema pluginServiceRequestPayload = S.object(
+    required: const ['requestId', 'service', 'method'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'service': S.string(minLength: 1),
+      'method': S.string(minLength: 1),
+      'params': S.object(additionalProperties: true),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostInputKeyPayload = S.object(
     required: const ['surfaceId', 'key'],
     properties: <String, Schema>{
@@ -1368,6 +1459,18 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema hostServiceResponsePayload = S.object(
+    required: const ['requestId', 'service', 'method'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'service': S.string(minLength: 1),
+      'method': S.string(minLength: 1),
+      'result': S.object(additionalProperties: true),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Map<RemotePluginMessageType, Schema> byType =
       <RemotePluginMessageType, Schema>{
         RemotePluginMessageType.hostHello: _typedEnvelope(
@@ -1414,6 +1517,10 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginFilePickerOpen,
           pluginFilePickerOpenPayload,
         ),
+        RemotePluginMessageType.pluginServiceRequest: _typedEnvelope(
+          RemotePluginMessageType.pluginServiceRequest,
+          pluginServiceRequestPayload,
+        ),
         RemotePluginMessageType.hostInputKey: _typedEnvelope(
           RemotePluginMessageType.hostInputKey,
           hostInputKeyPayload,
@@ -1449,6 +1556,10 @@ final class RemotePluginProtocolSchemas {
         RemotePluginMessageType.hostFilePickerResult: _typedEnvelope(
           RemotePluginMessageType.hostFilePickerResult,
           hostFilePickerResultPayload,
+        ),
+        RemotePluginMessageType.hostServiceResponse: _typedEnvelope(
+          RemotePluginMessageType.hostServiceResponse,
+          hostServiceResponsePayload,
         ),
       };
 
@@ -1570,6 +1681,17 @@ String? _readStringOrNull(
 }) {
   final value = json[key];
   return value is String && (allowEmpty || value.isNotEmpty) ? value : null;
+}
+
+JsonObject _readObjectOrEmpty(JsonObject json, String key) {
+  final value = json[key];
+  if (value == null) {
+    return const <String, Object?>{};
+  }
+  if (value is Map<Object?, Object?>) {
+    return _castJsonObject(value);
+  }
+  throw FormatException('Expected "$key" to be a JSON object');
 }
 
 int _requireInt(JsonObject json, String key) {

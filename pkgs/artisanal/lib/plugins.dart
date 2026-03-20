@@ -33,6 +33,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginOpenUrlRequest,
         RemotePluginNotificationRequest,
         RemotePluginFilePickerRequest,
+        RemotePluginServiceRequest,
         RemotePluginKeyInput,
         RemotePluginMouseInput,
         RemotePluginFocusInput,
@@ -42,6 +43,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginOpenUrlResponse,
         RemotePluginNotificationResponse,
         RemotePluginFilePickerResponse,
+        RemotePluginServiceResponse,
         RemotePluginProtocolSchemas,
         RemotePluginProtocolValidator,
         RemotePluginProtocolValidationException;

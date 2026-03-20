@@ -25,6 +25,37 @@ final class RemotePluginGuestServices {
 
   String _requestId(String prefix) => '$prefix-${++_nextRequestId}';
 
+  Future<JsonObject> call(
+    String service,
+    String method, {
+    JsonObject params = const <String, Object?>{},
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final requestId = _requestId('$service-$method');
+    final future = session.messages
+        .where(
+          (message) =>
+              message is RemotePluginServiceResponse &&
+              message.requestId == requestId,
+        )
+        .cast<RemotePluginServiceResponse>()
+        .first
+        .timeout(timeout);
+    await session.send(
+      RemotePluginServiceRequest(
+        requestId: requestId,
+        service: service,
+        method: method,
+        params: params,
+      ),
+    );
+    final response = await future;
+    if (response.error != null) {
+      throw RemotePluginServiceException(response.error!);
+    }
+    return response.result;
+  }
+
   Future<String> readClipboard({
     String selection = 'c',
     Duration timeout = const Duration(seconds: 5),
