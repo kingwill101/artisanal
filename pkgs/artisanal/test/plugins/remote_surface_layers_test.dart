@@ -107,5 +107,92 @@ void main() {
       expect(compositor.hit(2, 1).id, 'panel');
       expect(compositor.hit(5, 2).id, 'popup');
     });
+
+    test('resolves host placements and hit tests topmost surfaces', () {
+      final store = plugins.RemotePluginSurfaceStore();
+      store.apply(
+        const plugins.RemotePluginSurfaceOpen(
+          surfaceId: 'panel',
+          kind: plugins.RemotePluginSurfaceKind.panel,
+          width: 6,
+          height: 3,
+        ),
+      );
+      store.apply(
+        const plugins.RemotePluginSurfaceOpen(
+          surfaceId: 'popup',
+          kind: plugins.RemotePluginSurfaceKind.popup,
+          width: 2,
+          height: 1,
+          parentSurfaceId: 'panel',
+          anchor: plugins.RemotePluginAnchorRect(
+            column: 2,
+            row: 1,
+            width: 2,
+            height: 1,
+          ),
+        ),
+      );
+
+      final resolved = plugins.resolveRemotePluginSurfacePlacements(
+        store,
+        placements: const <plugins.RemotePluginSurfacePlacement>[
+          plugins.RemotePluginSurfacePlacement(
+            surfaceId: 'panel',
+            x: 4,
+            y: 3,
+            z: 9,
+          ),
+        ],
+      );
+
+      final panel = resolved.firstWhere(
+        (surface) => surface.surfaceId == 'panel',
+      );
+      final popup = resolved.firstWhere(
+        (surface) => surface.surfaceId == 'popup',
+      );
+      final panelHit = plugins.hitTestRemotePluginSurface(
+        store,
+        placements: const <plugins.RemotePluginSurfacePlacement>[
+          plugins.RemotePluginSurfacePlacement(
+            surfaceId: 'panel',
+            x: 4,
+            y: 3,
+            z: 9,
+          ),
+        ],
+        column: 4,
+        row: 3,
+      );
+      final popupHit = plugins.hitTestRemotePluginSurface(
+        store,
+        placements: const <plugins.RemotePluginSurfacePlacement>[
+          plugins.RemotePluginSurfacePlacement(
+            surfaceId: 'panel',
+            x: 4,
+            y: 3,
+            z: 9,
+          ),
+        ],
+        column: 6,
+        row: 4,
+      );
+
+      expect(panel.x, 4);
+      expect(panel.y, 3);
+      expect(panel.z, 9);
+      expect(popup.x, 6);
+      expect(popup.y, 4);
+      expect(popup.z, 109);
+      expect(panelHit, isNotNull);
+      expect(panelHit!.surface.surfaceId, 'panel');
+      expect(panelHit.column, 0);
+      expect(panelHit.row, 0);
+      expect(popupHit, isNotNull);
+      expect(popupHit!.surface.surfaceId, 'popup');
+      expect(popupHit.column, 0);
+      expect(popupHit.row, 0);
+    });
   });
 }

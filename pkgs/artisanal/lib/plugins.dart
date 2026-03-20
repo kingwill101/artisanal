@@ -74,7 +74,13 @@ export 'src/plugins/remote_surface_drawable.dart'
 export 'src/plugins/remote_surface_host_connection.dart'
     show RemotePluginHostConnection;
 export 'src/plugins/remote_surface_layers.dart'
-    show RemotePluginSurfacePlacement, buildRemotePluginSurfaceLayers;
+    show
+        RemotePluginSurfacePlacement,
+        RemotePluginResolvedSurfacePlacement,
+        RemotePluginSurfaceHit,
+        resolveRemotePluginSurfacePlacements,
+        hitTestRemotePluginSurface,
+        buildRemotePluginSurfaceLayers;
 export 'src/plugins/remote_surface_guest_session.dart'
     show RemotePluginGuestSession;
 export 'src/plugins/remote_surface_guest_services.dart'
