@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/plugins.dart' as plugins;
+import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
@@ -513,6 +514,65 @@ void main() {
     expect(serviceRequest!.method, 'ping');
     expect(serviceRequest!.params, <String, Object?>{'value': 'demo'});
   });
+
+  test(
+    'host connection validates generic service params before calling the handler',
+    () async {
+      final scriptPath = p.join(
+        io.Directory.current.path,
+        'pkgs',
+        'artisanal',
+        'test',
+        'plugins',
+        'fixtures',
+        'generic_service_plugin.dart',
+      );
+
+      var callCount = 0;
+      final connection = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[scriptPath],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+          capabilities: <String>['services'],
+        ),
+        timeout: const Duration(seconds: 20),
+      );
+      addTearDown(() => connection.dispose(kill: true));
+
+      final genericService = connection.bindGenericService();
+      genericService.register(
+        'host',
+        'ping',
+        (_) {
+          callCount++;
+          return <String, Object?>{'reply': 'pong'};
+        },
+        paramsSchema: jsb.S.object(
+          required: const <String>['value'],
+          properties: <String, jsb.Schema>{'value': jsb.S.integer()},
+          additionalProperties: false,
+        ),
+      );
+      addTearDown(genericService.dispose);
+
+      await connection.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = connection.surfaces['generic.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('generic:error:');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(callCount, 0);
+    },
+  );
 }
 
 String _surfaceText(plugins.RemotePluginSurfaceState surface) {

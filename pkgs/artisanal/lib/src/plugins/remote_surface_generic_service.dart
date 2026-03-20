@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:json_schema_builder/json_schema_builder.dart';
+
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_file_picker_service.dart';
 import 'remote_surface_host_connection.dart';
@@ -9,6 +11,18 @@ import 'remote_surface_url_service.dart';
 
 typedef RemotePluginGenericServiceHandler =
     FutureOr<JsonObject> Function(RemotePluginServiceRequest request);
+
+final class _RemotePluginGenericServiceBinding {
+  const _RemotePluginGenericServiceBinding(
+    this.handler, {
+    this.paramsSchema,
+    this.resultSchema,
+  });
+
+  final RemotePluginGenericServiceHandler handler;
+  final Schema? paramsSchema;
+  final Schema? resultSchema;
+}
 
 /// Host-side responder for generic remote plugin service envelopes.
 ///
@@ -35,8 +49,8 @@ final class RemotePluginGenericHostService {
   }
 
   final RemotePluginHostConnection connection;
-  final Map<String, Map<String, RemotePluginGenericServiceHandler>> _handlers =
-      <String, Map<String, RemotePluginGenericServiceHandler>>{};
+  final Map<String, Map<String, _RemotePluginGenericServiceBinding>> _handlers =
+      <String, Map<String, _RemotePluginGenericServiceBinding>>{};
 
   StreamSubscription<RemotePluginMessage>? _subscription;
   bool _disposed = false;
@@ -44,11 +58,17 @@ final class RemotePluginGenericHostService {
   void register(
     String service,
     String method,
-    RemotePluginGenericServiceHandler handler,
-  ) {
+    RemotePluginGenericServiceHandler handler, {
+    Schema? paramsSchema,
+    Schema? resultSchema,
+  }) {
     (_handlers[service] ??=
-            <String, RemotePluginGenericServiceHandler>{})[method] =
-        handler;
+            <String, _RemotePluginGenericServiceBinding>{})[method] =
+        _RemotePluginGenericServiceBinding(
+          handler,
+          paramsSchema: paramsSchema,
+          resultSchema: resultSchema,
+        );
   }
 
   void unregister(String service, String method) {
@@ -157,8 +177,8 @@ final class RemotePluginGenericHostService {
       return;
     }
 
-    final handler = _handlers[request.service]?[request.method];
-    if (handler == null) {
+    final binding = _handlers[request.service]?[request.method];
+    if (binding == null) {
       await _send(
         RemotePluginServiceResponse(
           requestId: request.requestId,
@@ -172,7 +192,46 @@ final class RemotePluginGenericHostService {
     }
 
     try {
-      final result = await handler(request);
+      final paramsSchema = binding.paramsSchema;
+      if (paramsSchema != null) {
+        final errors = await paramsSchema.validate(request.params);
+        if (errors.isNotEmpty) {
+          await _send(
+            RemotePluginServiceResponse(
+              requestId: request.requestId,
+              service: request.service,
+              method: request.method,
+              error: _validationErrorMessage(
+                'Invalid params for ${request.service}.${request.method}',
+                errors,
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
+      final result = await binding.handler(request);
+
+      final resultSchema = binding.resultSchema;
+      if (resultSchema != null) {
+        final errors = await resultSchema.validate(result);
+        if (errors.isNotEmpty) {
+          await _send(
+            RemotePluginServiceResponse(
+              requestId: request.requestId,
+              service: request.service,
+              method: request.method,
+              error: _validationErrorMessage(
+                'Invalid result for ${request.service}.${request.method}',
+                errors,
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
       await _send(
         RemotePluginServiceResponse(
           requestId: request.requestId,
@@ -221,4 +280,14 @@ String? _stringParam(JsonObject params, String key) {
 bool _boolParam(JsonObject params, String key) {
   final value = params[key];
   return value is bool ? value : false;
+}
+
+String _validationErrorMessage(String prefix, List<ValidationError> errors) {
+  final buffer = StringBuffer(prefix);
+  for (final error in errors) {
+    buffer
+      ..write('\n- ')
+      ..write(error.toErrorString());
+  }
+  return buffer.toString();
 }
