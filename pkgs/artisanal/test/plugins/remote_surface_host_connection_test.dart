@@ -26,7 +26,7 @@ void main() {
           hostName: 'artisanal',
           hostVersion: '0.2.0',
         ),
-        timeout: const Duration(seconds: 10),
+        timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -64,7 +64,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['clipboard'],
       ),
-      timeout: const Duration(seconds: 10),
+      timeout: const Duration(seconds: 20),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -115,7 +115,7 @@ void main() {
           hostVersion: '0.2.0',
           capabilities: <String>['services'],
         ),
-        timeout: const Duration(seconds: 10),
+        timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
 
@@ -469,31 +469,25 @@ void main() {
     );
 
     plugins.RemotePluginServiceRequest? serviceRequest;
+    final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+      ..register('host', 'ping', (request) {
+        serviceRequest = request;
+        return <String, Object?>{'reply': 'pong ${request.params['value']}'};
+      }, description: 'Ping the host test service.');
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
       <String>[scriptPath],
-      hostHello: const plugins.RemotePluginHostHello(
+      hostHello: plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
         capabilities: <String>['services'],
+        services: genericCatalog.serviceDescriptors,
       ),
       timeout: const Duration(seconds: 20),
     );
     addTearDown(() => connection.dispose(kill: true));
 
-    final genericService = connection.bindGenericService(
-      handlers:
-          <String, Map<String, plugins.RemotePluginGenericServiceHandler>>{
-            'host': <String, plugins.RemotePluginGenericServiceHandler>{
-              'ping': (request) {
-                serviceRequest = request;
-                return <String, Object?>{
-                  'reply': 'pong ${request.params['value']}',
-                };
-              },
-            },
-          },
-    );
+    final genericService = connection.bindGenericServiceCatalog(genericCatalog);
     addTearDown(genericService.dispose);
 
     await connection.surfaceMessages

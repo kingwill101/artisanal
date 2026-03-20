@@ -224,6 +224,9 @@ The current model is host-rendered composition with plugin-rendered content:
   `host.hello`, so guests can discover which `service.method` pairs and JSON
   schemas are actually available instead of relying on the coarse capability
   flag alone
+- `RemotePluginGenericServiceCatalog` lets hosts register those generic
+  services once, reuse the derived descriptors in `host.hello`, and then bind
+  the same handlers to a `RemotePluginHostConnection`
 - the older typed per-service request/response messages are still available as
   a compatibility fallback for older hosts and guests
 

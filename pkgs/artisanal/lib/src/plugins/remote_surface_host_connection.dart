@@ -118,6 +118,13 @@ final class RemotePluginHostConnection {
     return RemotePluginGenericHostService.bind(this, handlers: handlers);
   }
 
+  /// Binds a reusable generic service catalog to this plugin connection.
+  RemotePluginGenericHostService bindGenericServiceCatalog(
+    RemotePluginGenericServiceCatalog catalog,
+  ) {
+    return catalog.bind(this);
+  }
+
   /// Disposes controller, session, and process resources.
   Future<void> dispose({
     bool kill = false,

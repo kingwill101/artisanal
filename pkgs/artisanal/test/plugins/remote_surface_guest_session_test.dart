@@ -199,10 +199,9 @@ void main() {
             hostVersion: '0.2.0',
             capabilities: <String>['services'],
             services:
-                plugins
-                    .RemotePluginGenericHostService.builtInServiceDescriptors(
-                  clipboardRead: true,
-                ),
+                (plugins.RemotePluginGenericServiceCatalog()
+                      ..registerClipboard(readClipboard: (_) => 'unused'))
+                    .serviceDescriptors,
           ),
         );
 

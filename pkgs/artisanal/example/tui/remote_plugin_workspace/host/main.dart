@@ -21,6 +21,7 @@ Future<void> main(List<String> args) async {
     final motion = _parseSnapshotMotion(args);
     final key = _parseSnapshotKey(args);
     try {
+      await _waitForSnapshotWorkspaceReady(runtime);
       if (click case final point?) {
         selectedPluginId = await _routeWorkspaceMousePress(
           runtime,
@@ -523,15 +524,15 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
   final genericServices = <plugins.RemotePluginGenericHostService>[];
-  final serviceDescriptors =
-      plugins.RemotePluginGenericHostService.builtInServiceDescriptors(
-        clipboardRead: true,
-        openUrl: true,
-        notify: true,
-        filePicker: true,
-      );
   try {
     for (final manifest in manifests) {
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerClipboard(readClipboard: (_) => 'workspace clipboard')
+        ..registerOpenUrl(openUrl: (_) {})
+        ..registerNotification(notify: (_) {})
+        ..registerFilePicker(
+          pickPaths: (_) => const <String>['/tmp/workspace.txt'],
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[manifest.resolveEntrypoint()],
@@ -539,19 +540,13 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
           hostName: 'artisanal',
           hostVersion: '0.2.0',
           capabilities: <String>['surfaces', 'services'],
-          services: serviceDescriptors,
+          services: genericCatalog.serviceDescriptors,
         ),
         surfaces: surfaces,
         timeout: _connectTimeout,
       );
-      final genericService = connection.bindGenericService();
-      genericService.registerClipboard(
-        readClipboard: (_) => 'workspace clipboard',
-      );
-      genericService.registerOpenUrl(openUrl: (_) {});
-      genericService.registerNotification(notify: (_) {});
-      genericService.registerFilePicker(
-        pickPaths: (_) => const <String>['/tmp/workspace.txt'],
+      final genericService = connection.bindGenericServiceCatalog(
+        genericCatalog,
       );
       genericServices.add(genericService);
       connections[manifest.id] = connection;
@@ -672,6 +667,24 @@ Future<void> _waitForSnapshotSurfaceText(
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 25));
+  }
+}
+
+Future<void> _waitForSnapshotWorkspaceReady(
+  _WorkspaceRuntime runtime, {
+  Duration timeout = const Duration(seconds: 5),
+}) async {
+  for (final expectation in const <(String, String)>[
+    ('overview', 'Overview'),
+    ('activity', 'Activity'),
+    ('alerts', 'Alerts'),
+  ]) {
+    await _waitForSnapshotSurfaceText(
+      runtime,
+      expectation.$1,
+      contains: expectation.$2,
+      timeout: timeout,
+    );
   }
 }
 
