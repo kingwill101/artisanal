@@ -216,6 +216,12 @@ The current model is host-rendered composition with plugin-rendered content:
 - the host applies `RemotePluginSurfaceOpen` / `RemotePluginFrame` /
   `RemotePluginSurfaceResize` / `RemotePluginSurfaceClose` messages into
   `RemotePluginSurfaceStore` before later compositing
+- host-owned capabilities such as clipboard, URL opening, notifications, and
+  file picking should normally travel through the generic
+  `plugin.service.request` / `host.service.response` envelope when the host
+  advertises `services`
+- the older typed per-service request/response messages are still available as
+  a compatibility fallback for older hosts and guests
 
 Run the end-to-end reference demo:
 
@@ -225,6 +231,16 @@ dart run pkgs/artisanal/example/tui/remote_plugin_host_demo.dart
 
 That launches the matching guest process automatically and prints the rendered
 surface state the host received from the plugin.
+
+Run the full multi-plugin workspace example:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
+```
+
+That example discovers plugin manifests, launches several plugin processes,
+routes focus/input across composed surfaces, and dogfoods the generic host
+service registry through the shared `services` capability.
 
 ## Bubbles (Reusable Widgets)
 
