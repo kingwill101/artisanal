@@ -24,6 +24,60 @@ final class _RemotePluginGenericServiceBinding {
   final Schema? resultSchema;
 }
 
+final Schema _emptyObjectSchema = S.object(additionalProperties: false);
+final Schema _clipboardReadParamsSchema = S.object(
+  properties: <String, Schema>{'selection': S.string(minLength: 1)},
+  additionalProperties: false,
+);
+final Schema _clipboardReadResultSchema = S.object(
+  required: const <String>['text'],
+  properties: <String, Schema>{'text': S.string()},
+  additionalProperties: false,
+);
+final Schema _clipboardWriteParamsSchema = S.object(
+  required: const <String>['text'],
+  properties: <String, Schema>{
+    'selection': S.string(minLength: 1),
+    'text': S.string(),
+  },
+  additionalProperties: false,
+);
+final Schema _urlOpenParamsSchema = S.object(
+  required: const <String>['url'],
+  properties: <String, Schema>{'url': S.string(minLength: 1)},
+  additionalProperties: false,
+);
+final Schema _notificationParamsSchema = S.object(
+  required: const <String>['message'],
+  properties: <String, Schema>{
+    'title': S.string(),
+    'message': S.string(minLength: 1),
+    'level': _enumString(
+      RemotePluginNotificationLevel.values.map((level) => level.wireName),
+    ),
+  },
+  additionalProperties: false,
+);
+final Schema _filePickerParamsSchema = S.object(
+  properties: <String, Schema>{
+    'kind': _enumString(
+      RemotePluginFilePickerKind.values.map((kind) => kind.wireName),
+    ),
+    'allowMultiple': S.boolean(),
+    'title': S.string(),
+    'initialPath': S.string(),
+  },
+  additionalProperties: false,
+);
+final Schema _filePickerResultSchema = S.object(
+  required: const <String>['paths', 'canceled'],
+  properties: <String, Schema>{
+    'paths': S.list(items: S.string()),
+    'canceled': S.boolean(),
+  },
+  additionalProperties: false,
+);
+
 /// Host-side responder for generic remote plugin service envelopes.
 ///
 /// This binds to [RemotePluginHostConnection.otherMessages] and dispatches
@@ -87,24 +141,36 @@ final class RemotePluginGenericHostService {
     RemotePluginClipboardWriter? writeClipboard,
   }) {
     if (readClipboard != null) {
-      register('clipboard', 'read', (request) async {
-        final selection = _stringParam(request.params, 'selection') ?? 'c';
-        final text = await readClipboard(selection);
-        return <String, Object?>{'text': text ?? ''};
-      });
+      register(
+        'clipboard',
+        'read',
+        (request) async {
+          final selection = _stringParam(request.params, 'selection') ?? 'c';
+          final text = await readClipboard(selection);
+          return <String, Object?>{'text': text ?? ''};
+        },
+        paramsSchema: _clipboardReadParamsSchema,
+        resultSchema: _clipboardReadResultSchema,
+      );
     }
 
     if (writeClipboard != null) {
-      register('clipboard', 'write', (request) async {
-        final selection = _stringParam(request.params, 'selection') ?? 'c';
-        final text =
-            _stringParam(request.params, 'text') ??
-            (throw FormatException(
-              'clipboard.write requires a string "text" param.',
-            ));
-        await writeClipboard(selection, text);
-        return const <String, Object?>{};
-      });
+      register(
+        'clipboard',
+        'write',
+        (request) async {
+          final selection = _stringParam(request.params, 'selection') ?? 'c';
+          final text =
+              _stringParam(request.params, 'text') ??
+              (throw FormatException(
+                'clipboard.write requires a string "text" param.',
+              ));
+          await writeClipboard(selection, text);
+          return const <String, Object?>{};
+        },
+        paramsSchema: _clipboardWriteParamsSchema,
+        resultSchema: _emptyObjectSchema,
+      );
     }
   }
 
@@ -113,13 +179,19 @@ final class RemotePluginGenericHostService {
       return;
     }
 
-    register('url', 'open', (request) async {
-      final url =
-          _stringParam(request.params, 'url') ??
-          (throw FormatException('url.open requires a string "url" param.'));
-      await openUrl(Uri.parse(url));
-      return const <String, Object?>{};
-    });
+    register(
+      'url',
+      'open',
+      (request) async {
+        final url =
+            _stringParam(request.params, 'url') ??
+            (throw FormatException('url.open requires a string "url" param.'));
+        await openUrl(Uri.parse(url));
+        return const <String, Object?>{};
+      },
+      paramsSchema: _urlOpenParamsSchema,
+      resultSchema: _emptyObjectSchema,
+    );
   }
 
   void registerNotification({RemotePluginNotifier? notify}) {
@@ -127,24 +199,30 @@ final class RemotePluginGenericHostService {
       return;
     }
 
-    register('notify', 'show', (request) async {
-      final level =
-          _stringParam(request.params, 'level') ??
-          RemotePluginNotificationLevel.info.wireName;
-      await notify(
-        RemotePluginNotificationRequest(
-          requestId: request.requestId,
-          title: _stringParam(request.params, 'title'),
-          message:
-              _stringParam(request.params, 'message') ??
-              (throw FormatException(
-                'notify.show requires a string "message" param.',
-              )),
-          level: RemotePluginNotificationLevel.parse(level),
-        ),
-      );
-      return const <String, Object?>{};
-    });
+    register(
+      'notify',
+      'show',
+      (request) async {
+        final level =
+            _stringParam(request.params, 'level') ??
+            RemotePluginNotificationLevel.info.wireName;
+        await notify(
+          RemotePluginNotificationRequest(
+            requestId: request.requestId,
+            title: _stringParam(request.params, 'title'),
+            message:
+                _stringParam(request.params, 'message') ??
+                (throw FormatException(
+                  'notify.show requires a string "message" param.',
+                )),
+            level: RemotePluginNotificationLevel.parse(level),
+          ),
+        );
+        return const <String, Object?>{};
+      },
+      paramsSchema: _notificationParamsSchema,
+      resultSchema: _emptyObjectSchema,
+    );
   }
 
   void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
@@ -152,24 +230,30 @@ final class RemotePluginGenericHostService {
       return;
     }
 
-    register('filePicker', 'open', (request) async {
-      final result = await pickPaths(
-        RemotePluginFilePickerRequest(
-          requestId: request.requestId,
-          kind: RemotePluginFilePickerKind.parse(
-            _stringParam(request.params, 'kind') ??
-                RemotePluginFilePickerKind.file.wireName,
+    register(
+      'filePicker',
+      'open',
+      (request) async {
+        final result = await pickPaths(
+          RemotePluginFilePickerRequest(
+            requestId: request.requestId,
+            kind: RemotePluginFilePickerKind.parse(
+              _stringParam(request.params, 'kind') ??
+                  RemotePluginFilePickerKind.file.wireName,
+            ),
+            allowMultiple: _boolParam(request.params, 'allowMultiple'),
+            title: _stringParam(request.params, 'title'),
+            initialPath: _stringParam(request.params, 'initialPath'),
           ),
-          allowMultiple: _boolParam(request.params, 'allowMultiple'),
-          title: _stringParam(request.params, 'title'),
-          initialPath: _stringParam(request.params, 'initialPath'),
-        ),
-      );
-      return <String, Object?>{
-        'paths': result ?? const <String>[],
-        'canceled': result == null,
-      };
-    });
+        );
+        return <String, Object?>{
+          'paths': result ?? const <String>[],
+          'canceled': result == null,
+        };
+      },
+      paramsSchema: _filePickerParamsSchema,
+      resultSchema: _filePickerResultSchema,
+    );
   }
 
   Future<void> _handle(RemotePluginServiceRequest request) async {
@@ -290,4 +374,8 @@ String _validationErrorMessage(String prefix, List<ValidationError> errors) {
       ..write(error.toErrorString());
   }
   return buffer.toString();
+}
+
+Schema _enumString(Iterable<String> values) {
+  return S.string(enumValues: values.cast<Object?>().toList(growable: false));
 }
