@@ -22,8 +22,9 @@ import '../core/widget.dart';
 import '../rendering/render_object.dart';
 import '../layout/geometry.dart';
 import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
+import '../theme/theme_scope.dart' show ThemeScope;
+import 'selection_text_utils.dart';
 
 part 'selection_controller.dart';
 part 'selectable_text.dart';
 part 'selection_area.dart';
-part '_selection_utils.dart';

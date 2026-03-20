@@ -1,8 +1,27 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+
+RegExp _highlightedTextPattern({
+  required int foreground,
+  required int background,
+  required String text,
+}) {
+  final esc = RegExp.escape('\x1b[');
+  final reset = RegExp.escape('\x1b[m');
+  final literalText = RegExp.escape(text);
+  return RegExp(
+    '(?:'
+    '$esc[^m]*38;5;$foreground[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    '|$esc[^m]*38;5;$foreground[^m]*m$esc[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*m$esc[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    ')',
+  );
+}
 
 /// Builds a scrollable widget with selection enabled.
 ///
@@ -35,6 +54,24 @@ Widget _buildScrollable({
     child = Scrollbar(controller: controller, child: child);
   }
   return Container(width: width, height: height, child: child);
+}
+
+Widget _buildVirtualScrollable({
+  required WidgetScrollController controller,
+  int lineCount = 30,
+  int height = 10,
+  int width = 40,
+}) {
+  final lines = List.generate(lineCount, (i) => Text('Line $i'));
+  return Container(
+    width: width,
+    height: height,
+    child: VirtualListView(
+      controller: controller,
+      enableSelection: true,
+      children: lines,
+    ),
+  );
 }
 
 void main() {
@@ -164,6 +201,17 @@ void main() {
       expect(ctrl.getSelectedText(lines), equals('o World\nFoo'));
     });
 
+    test('getSelectedText strips ANSI decoration before slicing', () async {
+      final ctrl = WidgetScrollController();
+      final styled = Style()
+          .foreground(const AnsiColor(4))
+          .render('Hello World');
+
+      ctrl.setSelection(start: (x: 6, y: 0), end: (x: 11, y: 0));
+
+      expect(ctrl.getSelectedText([styled]), equals('World'));
+    });
+
     test('clearSelection removes selection', () async {
       final ctrl = WidgetScrollController();
       ctrl.setSelection(start: (x: 0, y: 0), end: (x: 5, y: 0));
@@ -219,6 +267,44 @@ void main() {
         expect(afterOutput, isNot(equals(beforeOutput)));
         // Should contain ANSI escape sequences for the selection style.
         expect(afterOutput.contains('\x1b['), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(124),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 124,
+        text: 'Line',
+      );
+      final hardcodedSelection = _highlightedTextPattern(
+        foreground: 0,
+        background: 7,
+        text: 'Line',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: _buildScrollable(controller: ctrl, useScrollView: false),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(4, 0);
+        tester.mouseUp(4, 0);
+
+        final output = tester.view;
+        expect(themedSelection.hasMatch(output), isTrue);
+        expect(hardcodedSelection.hasMatch(output), isFalse);
       } finally {
         await tester.dispose();
       }
@@ -436,6 +522,39 @@ void main() {
 
         // Selection should NOT be created.
         expect(ctrl.hasSelection, isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
+
+  group('VirtualListView selection', () {
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(28),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 28,
+        text: 'Line',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: _buildVirtualScrollable(controller: ctrl),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(4, 0);
+        tester.mouseUp(4, 0);
+
+        expect(themedSelection.hasMatch(tester.view), isTrue);
       } finally {
         await tester.dispose();
       }

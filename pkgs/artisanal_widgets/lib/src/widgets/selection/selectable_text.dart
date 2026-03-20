@@ -2,10 +2,15 @@ part of 'selection_widgets.dart';
 
 /// A render object that paints text with optional selection highlighting.
 class RenderSelectableText extends RenderBox {
-  RenderSelectableText({required this.text, this.controller});
+  RenderSelectableText({
+    required this.text,
+    this.controller,
+    required this.selectionHighlightStyle,
+  });
 
   String text;
   SelectionController? controller;
+  Style selectionHighlightStyle;
 
   @override
   void layout(BoxConstraints constraints) {
@@ -30,7 +35,13 @@ class RenderSelectableText extends RenderBox {
     // Apply selection highlighting if controller has active selection.
     final ctrl = controller;
     if (ctrl != null && ctrl.hasSelection) {
-      lines = _applySelectionHighlighting(lines, 0, ctrl);
+      lines = applySelectionHighlighting(
+        lines,
+        offset: 0,
+        selectionStart: ctrl.selectionStart,
+        selectionEnd: ctrl.selectionEnd,
+        highlightStyle: selectionHighlightStyle,
+      );
     }
 
     return lines.join('\n');
@@ -41,7 +52,7 @@ class RenderSelectableText extends RenderBox {
 ///
 /// This is a drop-in replacement for [Text] with the same parameters plus
 /// selection support. When selection is active, highlighted text is rendered
-/// with a white-on-black style and Ctrl+C copies to clipboard.
+/// with the current theme's highlight colors and Ctrl+C copies to clipboard.
 ///
 /// Can be used standalone or inside a [SelectionArea] for cross-widget
 /// selection.
@@ -288,7 +299,7 @@ class _SelectableTextState extends State<SelectableText> {
               const Duration(milliseconds: 500) &&
           ctrl._lastClickPos == screenPos) {
         final lines = _getContentLines();
-        final (wordStart, wordEnd) = _findWordAt(lines, localX, localY);
+        final (wordStart, wordEnd) = findWordAt(lines, localX, localY);
         ctrl._selectionStart = (x: wordStart, y: localY);
         ctrl._selectionEnd = (x: wordEnd, y: localY);
         ctrl._selecting = false;
@@ -365,21 +376,37 @@ class _SelectableTextState extends State<SelectableText> {
   Widget build(BuildContext context) {
     final rendered = _renderText();
     final ctrl = _effectiveController;
+    final selectionHighlightStyle = selectionHighlightStyleForTheme(
+      ThemeScope.of(context),
+    );
 
-    return _SelectableTextRender(text: rendered, controller: ctrl);
+    return _SelectableTextRender(
+      text: rendered,
+      controller: ctrl,
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
   }
 }
 
 /// Internal widget that creates the [RenderSelectableText].
 class _SelectableTextRender extends LeafRenderObjectWidget {
-  _SelectableTextRender({required this.text, required this.controller});
+  _SelectableTextRender({
+    required this.text,
+    required this.controller,
+    required this.selectionHighlightStyle,
+  });
 
   final String text;
   final SelectionController controller;
+  final Style selectionHighlightStyle;
 
   @override
   RenderObject createRenderObject() {
-    return RenderSelectableText(text: text, controller: controller);
+    return RenderSelectableText(
+      text: text,
+      controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
   }
 
   @override
@@ -387,7 +414,8 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
     final ro = renderObject as RenderSelectableText;
     ro
       ..text = text
-      ..controller = controller;
+      ..controller = controller
+      ..selectionHighlightStyle = selectionHighlightStyle;
   }
 
   @override

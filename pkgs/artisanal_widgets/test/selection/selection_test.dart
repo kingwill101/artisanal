@@ -1,8 +1,27 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+
+RegExp _highlightedTextPattern({
+  required int foreground,
+  required int background,
+  required String text,
+}) {
+  final esc = RegExp.escape('\x1b[');
+  final reset = RegExp.escape('\x1b[m');
+  final literalText = RegExp.escape(text);
+  return RegExp(
+    '(?:'
+    '$esc[^m]*38;5;$foreground[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    '|$esc[^m]*38;5;$foreground[^m]*m$esc[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*m$esc[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    ')',
+  );
+}
 
 void main() {
   // -------------------------------------------------------
@@ -99,6 +118,17 @@ void main() {
       expect(text, 'World');
     });
 
+    test('getSelectedText strips ANSI decoration before slicing', () {
+      final ctrl = SelectionController();
+      final styled = Style()
+          .foreground(const AnsiColor(2))
+          .render('Hello World');
+
+      ctrl.setSelection(start: (x: 6, y: 0), end: (x: 11, y: 0));
+
+      expect(ctrl.getSelectedText([styled]), 'World');
+    });
+
     test('getSelectedText single char', () {
       final ctrl = SelectionController();
       ctrl.setSelection(start: (x: 0, y: 0), end: (x: 1, y: 0));
@@ -164,6 +194,44 @@ void main() {
         // The output should contain ANSI escape codes for highlighting.
         final output = tester.view;
         expect(output.contains('\x1b['), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 160,
+        text: 'Hello',
+      );
+      final hardcodedSelection = _highlightedTextPattern(
+        foreground: 0,
+        background: 7,
+        text: 'Hello',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: SelectableText('Hello World', controller: ctrl),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        final output = tester.view;
+        expect(themedSelection.hasMatch(output), isTrue);
+        expect(hardcodedSelection.hasMatch(output), isFalse);
       } finally {
         await tester.dispose();
       }
