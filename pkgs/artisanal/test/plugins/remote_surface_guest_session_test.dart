@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:artisanal/plugins.dart' as plugins;
+import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 import 'package:test/test.dart';
 
 void main() {
@@ -670,6 +671,82 @@ void main() {
       );
 
       expect(await callFuture, <String, Object?>{'text': 'host-value'});
+    });
+
+    test('guest services validate generic service results', () async {
+      final hostToPlugin = StreamController<String>();
+      final pluginToHost = StreamController<String>();
+
+      final hostChannel = plugins.RemotePluginJsonChannel(
+        sendLine: hostToPlugin.add,
+      );
+      final pluginChannel = plugins.RemotePluginJsonChannel(
+        sendLine: pluginToHost.add,
+      );
+
+      hostChannel.bindLines(pluginToHost.stream);
+      pluginChannel.bindLines(hostToPlugin.stream);
+
+      addTearDown(() async {
+        await hostChannel.dispose();
+        await pluginChannel.dispose();
+        await hostToPlugin.close();
+        await pluginToHost.close();
+      });
+
+      await hostChannel.send(
+        const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+      );
+
+      final session = await plugins.RemotePluginGuestSession.connect(
+        channel: pluginChannel,
+        pluginHello: const plugins.RemotePluginHello(
+          pluginId: 'service-plugin',
+          pluginVersion: '0.0.1',
+        ),
+      );
+      addTearDown(session.dispose);
+
+      final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+      addTearDown(hostMessages.cancel);
+
+      final callFuture = session.services.call(
+        'host',
+        'ping',
+        params: const <String, Object?>{'value': 'demo'},
+        resultSchema: jsb.S.object(
+          required: const <String>['reply'],
+          properties: <String, jsb.Schema>{'reply': jsb.S.integer()},
+          additionalProperties: false,
+        ),
+      );
+
+      await hostMessages.moveNext().timeout(const Duration(seconds: 1));
+      final request = hostMessages.current;
+      expect(request, isA<plugins.RemotePluginServiceRequest>());
+
+      await hostChannel.send(
+        plugins.RemotePluginServiceResponse(
+          requestId: (request as plugins.RemotePluginServiceRequest).requestId,
+          service: request.service,
+          method: request.method,
+          result: const <String, Object?>{'reply': 'pong'},
+        ),
+      );
+
+      await expectLater(
+        callFuture,
+        throwsA(
+          isA<plugins.RemotePluginServiceException>().having(
+            (error) => error.message,
+            'message',
+            contains('Invalid result for host.ping'),
+          ),
+        ),
+      );
     });
   });
 }

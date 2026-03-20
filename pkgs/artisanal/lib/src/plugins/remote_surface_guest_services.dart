@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:json_schema_builder/json_schema_builder.dart';
+
 import 'remote_surface_guest_session.dart';
 import 'remote_surface_protocol.dart';
 
@@ -12,6 +14,60 @@ final class RemotePluginServiceException implements Exception {
   @override
   String toString() => 'RemotePluginServiceException: $message';
 }
+
+final Schema _emptyObjectSchema = S.object(additionalProperties: false);
+final Schema _clipboardReadParamsSchema = S.object(
+  properties: <String, Schema>{'selection': S.string(minLength: 1)},
+  additionalProperties: false,
+);
+final Schema _clipboardReadResultSchema = S.object(
+  required: const <String>['text'],
+  properties: <String, Schema>{'text': S.string()},
+  additionalProperties: false,
+);
+final Schema _clipboardWriteParamsSchema = S.object(
+  required: const <String>['text'],
+  properties: <String, Schema>{
+    'selection': S.string(minLength: 1),
+    'text': S.string(),
+  },
+  additionalProperties: false,
+);
+final Schema _urlOpenParamsSchema = S.object(
+  required: const <String>['url'],
+  properties: <String, Schema>{'url': S.string(minLength: 1)},
+  additionalProperties: false,
+);
+final Schema _notificationParamsSchema = S.object(
+  required: const <String>['message'],
+  properties: <String, Schema>{
+    'title': S.string(),
+    'message': S.string(minLength: 1),
+    'level': _enumString(
+      RemotePluginNotificationLevel.values.map((level) => level.wireName),
+    ),
+  },
+  additionalProperties: false,
+);
+final Schema _filePickerParamsSchema = S.object(
+  properties: <String, Schema>{
+    'kind': _enumString(
+      RemotePluginFilePickerKind.values.map((kind) => kind.wireName),
+    ),
+    'allowMultiple': S.boolean(),
+    'title': S.string(),
+    'initialPath': S.string(),
+  },
+  additionalProperties: false,
+);
+final Schema _filePickerResultSchema = S.object(
+  required: const <String>['paths', 'canceled'],
+  properties: <String, Schema>{
+    'paths': S.list(items: S.string()),
+    'canceled': S.boolean(),
+  },
+  additionalProperties: false,
+);
 
 /// Guest-side helper for host-owned remote plugin services.
 ///
@@ -30,7 +86,21 @@ final class RemotePluginGuestServices {
     String method, {
     JsonObject params = const <String, Object?>{},
     Duration timeout = const Duration(seconds: 5),
+    Schema? paramsSchema,
+    Schema? resultSchema,
   }) async {
+    if (paramsSchema != null) {
+      final errors = await paramsSchema.validate(params);
+      if (errors.isNotEmpty) {
+        throw RemotePluginServiceException(
+          _validationErrorMessage(
+            'Invalid params for $service.$method',
+            errors,
+          ),
+        );
+      }
+    }
+
     final requestId = _requestId('$service-$method');
     final future = session.messages
         .where(
@@ -53,6 +123,17 @@ final class RemotePluginGuestServices {
     if (response.error != null) {
       throw RemotePluginServiceException(response.error!);
     }
+    if (resultSchema != null) {
+      final errors = await resultSchema.validate(response.result);
+      if (errors.isNotEmpty) {
+        throw RemotePluginServiceException(
+          _validationErrorMessage(
+            'Invalid result for $service.$method',
+            errors,
+          ),
+        );
+      }
+    }
     return response.result;
   }
 
@@ -66,14 +147,10 @@ final class RemotePluginGuestServices {
         'read',
         params: <String, Object?>{'selection': selection},
         timeout: timeout,
+        paramsSchema: _clipboardReadParamsSchema,
+        resultSchema: _clipboardReadResultSchema,
       );
-      final text = result['text'];
-      if (text is! String) {
-        throw const RemotePluginServiceException(
-          'Clipboard read response did not include a string "text" result.',
-        );
-      }
-      return text;
+      return result['text']! as String;
     }
 
     final requestId = _requestId('clipboard-read');
@@ -110,6 +187,8 @@ final class RemotePluginGuestServices {
         'write',
         params: <String, Object?>{'selection': selection, 'text': text},
         timeout: timeout,
+        paramsSchema: _clipboardWriteParamsSchema,
+        resultSchema: _emptyObjectSchema,
       );
       return;
     }
@@ -149,6 +228,8 @@ final class RemotePluginGuestServices {
         'open',
         params: <String, Object?>{'url': url},
         timeout: timeout,
+        paramsSchema: _urlOpenParamsSchema,
+        resultSchema: _emptyObjectSchema,
       );
       return;
     }
@@ -190,6 +271,8 @@ final class RemotePluginGuestServices {
           'level': level.wireName,
         },
         timeout: timeout,
+        paramsSchema: _notificationParamsSchema,
+        resultSchema: _emptyObjectSchema,
       );
       return;
     }
@@ -238,24 +321,15 @@ final class RemotePluginGuestServices {
           if (initialPath != null) 'initialPath': initialPath,
         },
         timeout: timeout,
+        paramsSchema: _filePickerParamsSchema,
+        resultSchema: _filePickerResultSchema,
       );
       final pathsValue = result['paths'];
       final canceledValue = result['canceled'];
-      if (pathsValue is! List) {
-        throw const RemotePluginServiceException(
-          'File picker response did not include a list "paths" result.',
-        );
-      }
       final paths = <String>[
-        for (final path in pathsValue)
-          if (path is String)
-            path
-          else
-            throw const RemotePluginServiceException(
-              'File picker result paths must all be strings.',
-            ),
+        for (final path in pathsValue as List<Object?>) path! as String,
       ];
-      final canceled = canceledValue is bool ? canceledValue : false;
+      final canceled = canceledValue as bool? ?? false;
       return canceled ? const <String>[] : paths;
     }
 
@@ -287,4 +361,18 @@ final class RemotePluginGuestServices {
     }
     return response.paths;
   }
+}
+
+String _validationErrorMessage(String prefix, List<ValidationError> errors) {
+  final buffer = StringBuffer(prefix);
+  for (final error in errors) {
+    buffer
+      ..write('\n- ')
+      ..write(error.toErrorString());
+  }
+  return buffer.toString();
+}
+
+Schema _enumString(Iterable<String> values) {
+  return S.string(enumValues: values.cast<Object?>().toList(growable: false));
 }
