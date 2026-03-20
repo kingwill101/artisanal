@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a `remote_plugin_workspace` example directory with a full host app plus multiple guest plugins, including a snapshot mode for regression testing and local experimentation.
 - Added `RemotePluginHostConnection.startProcess(...)` so plugin hosts can launch a process, complete the handshake, and bind surface state through one host-side entrypoint instead of manually wiring process, session, and controller objects.
 - Added a popup-oriented remote plugin host/guest example pair that exercises anchored child surfaces and UV composition on top of the new remote plugin controller and layer builder.
 - Added `buildRemotePluginSurfaceLayers(...)` plus `RemotePluginSurfacePlacement` so hosts can turn stored remote plugin surfaces into positioned UV layers and compose anchored child surfaces without rebuilding placement logic by hand.

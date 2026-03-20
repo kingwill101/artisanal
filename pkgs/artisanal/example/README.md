@@ -175,6 +175,9 @@ dart run example/tui/remote_plugin_host_demo.dart
 
 # Remote plugin popup/compositor demo
 dart run example/tui/remote_plugin_popup_host_demo.dart
+
+# Full remote plugin workspace
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 ```
 
 These focused host demos intentionally import the stable
