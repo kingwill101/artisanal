@@ -1262,6 +1262,8 @@ The input module includes:
 - `TextArea` for multi-line editing with line numbers
 - `TextEditingController` for external model/control access
 - `TextAreaController` for textarea state/control access
+- `SelectableTextFieldView` and `SelectableTextAreaView` for controller-backed
+  read-only text that should participate in shared selection
 - `TextEditingValue` and `TextSelection` for value + selection state
 
 ### TextField
@@ -1294,6 +1296,12 @@ Editing history is built into the shared text model:
 Typing and repeated deletes are coalesced into a single undo step until
 navigation, selection changes, or another non-edit action breaks the history
 chain.
+
+Mouse selection behavior matches the shared text editor model:
+
+- single click moves the cursor
+- double click selects the current word
+- triple click selects the current logical line
 
 ### TextArea
 
@@ -1332,6 +1340,12 @@ controller:
 - `Ctrl+Y` and `Ctrl+Shift+Z` redo
 - `canUndo`, `canRedo`, `undo()`, `redo()`, `clearHistory()`, and `pushHistoryBoundary()`
 
+Mouse selection behavior also follows the shared editor model:
+
+- single click moves the cursor
+- double click selects the current word
+- triple click selects the current logical line
+
 ### TextEditor
 
 `TextEditor` is a higher-level component built on top of `TextArea`. It adds
@@ -1361,6 +1375,8 @@ layout/chrome.
 - `Ctrl+L` selects the current line, or expands the current selection to whole lines.
 - `Ctrl+F` opens an inline find bar shared by `TextEditor` and `CodeEditor`.
 - `Ctrl+G` opens an inline go-to-line bar.
+- `F8` and `Shift+F8` move to the next or previous diagnostic when diagnostics
+  are present.
 - While find is open, `Enter` jumps to the next match, `Shift+Enter` moves
   backward, and `Esc` closes the find bar.
 - While go-to-line is open, typing a line number updates the cursor target,
@@ -1405,6 +1421,10 @@ layout/chrome.
 - `Alt+Shift+W` removes matching surrounding delimiters or quotes from around
   the current selection.
 - `Ctrl+Z`, `Ctrl+Y`, and `Ctrl+Shift+Z` come from the shared textarea history.
+- The editor body stays visually focused while inline utility UI such as the
+  find bar or go-to-line input has focus.
+- `TextEditor`, `CodeEditor`, and `MarkdownEditor` use the widget theme's
+  editor-specific shell/body/utility tokens instead of generic panel colors.
 
 ### CodeEditor
 
@@ -1428,6 +1448,7 @@ CodeEditor(
 - Reuses all `TextEditor` editing, save, and history behavior.
 - Inherits the same `Ctrl+A` select-all behavior as `TextEditor`.
 - Inherits the same `Ctrl+L` line selection behavior as `TextEditor`.
+- Inherits the same `F8` / `Shift+F8` diagnostic navigation as `TextEditor`.
 - Inherits the same inline find workflow (`Ctrl+F`, `Enter`, `Shift+Enter`,
   `Esc`) as `TextEditor`.
 - Inherits the same go-to-line workflow (`Ctrl+G`) as `TextEditor`.
@@ -1473,6 +1494,9 @@ CodeEditor(
 - `Alt+Shift+A` toggles block comments around the current line or selected
   block when the active language supports block delimiters.
 - Adds a preview panel rendered with `highlightCodeString`.
+- Uses the same shared text decoration layer model as the plain editor, so
+  syntax spans, search matches, diagnostics, and active-line treatment can
+  stack instead of overwriting one another.
 - Supports explicit `syntaxTheme` or adaptive `adaptiveSyntaxTheme`.
 - Uses shared scroll semantics for the preview through `ScrollArea`.
 
@@ -1502,6 +1526,56 @@ MarkdownEditor(
   elsewhere in the widget layer.
 - Supports preview wrapping, preview height, preview scrollbar control, and
   custom markdown renderer options through `markdownOptions`.
+
+### Editor Diagnostics And Decorations
+
+The editor widgets expose a shared diagnostics and decoration system on top of
+`TextAreaController`.
+
+For diagnostics, the stable widget surface includes:
+
+- `TextDiagnosticRange` and `TextPositionDiagnosticRange`
+- `TextDiagnosticsBinding`
+- `TextPositionDiagnosticsSource`
+- `TextDecorationLayerBinding`
+- `TextLineDecorationLayerBinding`
+
+Use `TextPositionDiagnosticsSource` when an external producer should own the
+diagnostics and `TextDiagnosticsBinding.fromPositionListenable(...)` when you
+want to route those diagnostics onto a controller:
+
+```dart
+final controller = TextAreaController(text: 'TODO: wire diagnostics');
+final source = TextPositionDiagnosticsSource.patternRules(
+  text: controller,
+  rules: const [
+    TextPatternDiagnosticRule(
+      pattern: 'TODO',
+      severity: TextDiagnosticSeverity.warning,
+      code: 'TODO001',
+      wholeWord: true,
+    ),
+  ],
+);
+final binding = TextDiagnosticsBinding.fromPositionListenable(
+  controller: controller,
+  diagnostics: source,
+);
+```
+
+At the controller level you can also set overlays directly:
+
+- `setDiagnostics(...)`
+- `setDiagnosticsFromPositions(...)`
+- `clearDiagnostics()`
+- `setDecorations(...)`
+- `clearDecorations(...)`
+- `setLineDecorations(...)`
+- `clearLineDecorations(...)`
+
+`TextEditor` and `CodeEditor` use the same system for search highlighting and
+diagnostic navigation, while `CodeEditor` also feeds editable syntax
+highlighting through a dedicated decoration layer.
 
 ---
 
@@ -1857,19 +1931,49 @@ Import `package:artisanal_widgets/selection.dart` when you want the stable
 selection surface.
 
 - `SelectableText` for per-widget selection
+- `SelectableRichText`, `SelectableMarkdownText`, and `SelectableView` for
+  richer read-only content
 - `SelectionArea` for cross-widget shared selection
 - `SelectionController` for programmatic access
+- `.selectable()` adapters on `Text`, `RichText`, `MarkdownText`, and `View`
+  for opt-in shared selection without changing the original widget's layout role
 
 ```dart
 SelectionArea(
   child: Column(
     children: [
       SelectableText('First paragraph'),
-      SelectableText('Second paragraph'),
+      RichText(
+        text: TextSpan(
+          text: 'Second ',
+          children: [TextSpan(text: 'paragraph')],
+        ),
+      ).selectable(),
     ],
   ),
 )
 ```
+
+Shared selection behavior:
+
+- one `SelectionArea` can span multiple selectable children and copy them as
+  one combined buffer
+- drag selection works top-to-bottom and bottom-to-top across mixed selectable
+  content
+- `SelectionArea(scrollController: ...)` supports edge auto-scroll while
+  dragging and keeps selection active while using the mouse wheel
+- drag selection can begin from surrounding whitespace on the same row, not
+  just directly on top of visible glyphs
+- double click selects the current word
+- triple click selects the current logical line
+
+Selection styling:
+
+- `SelectableText`, `SelectableRichText`, `SelectableMarkdownText`, and
+  `SelectableView` all accept `selectionHighlightStyle`
+- the `.selectable()` adapters also forward `selectionHighlightStyle`
+- `TextSpan.selectionHighlightStyle` lets one `SelectableRichText` mix
+  different selection palettes within the same selected region
 
 ---
 
