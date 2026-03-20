@@ -143,6 +143,16 @@ final class RemotePluginGuestServices {
     String url, {
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    if (session.hostHello.capabilities.contains('services')) {
+      await call(
+        'url',
+        'open',
+        params: <String, Object?>{'url': url},
+        timeout: timeout,
+      );
+      return;
+    }
+
     final requestId = _requestId('open-url');
     final future = session.messages
         .where(

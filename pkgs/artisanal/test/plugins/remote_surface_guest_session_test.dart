@@ -316,6 +316,80 @@ void main() {
       },
     );
 
+    test(
+      'guest services prefer the generic envelope for URL opening when available',
+      () async {
+        final hostToPlugin = StreamController<String>();
+        final pluginToHost = StreamController<String>();
+
+        final hostChannel = plugins.RemotePluginJsonChannel(
+          sendLine: hostToPlugin.add,
+        );
+        final pluginChannel = plugins.RemotePluginJsonChannel(
+          sendLine: pluginToHost.add,
+        );
+
+        hostChannel.bindLines(pluginToHost.stream);
+        pluginChannel.bindLines(hostToPlugin.stream);
+
+        addTearDown(() async {
+          await hostChannel.dispose();
+          await pluginChannel.dispose();
+          await hostToPlugin.close();
+          await pluginToHost.close();
+        });
+
+        await hostChannel.send(
+          const plugins.RemotePluginHostHello(
+            hostName: 'artisanal',
+            hostVersion: '0.2.0',
+            capabilities: <String>['services'],
+          ),
+        );
+
+        final session = await plugins.RemotePluginGuestSession.connect(
+          channel: pluginChannel,
+          pluginHello: const plugins.RemotePluginHello(
+            pluginId: 'service-plugin',
+            pluginVersion: '0.0.1',
+          ),
+        );
+        addTearDown(session.dispose);
+
+        final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+        addTearDown(hostMessages.cancel);
+
+        final openUrlFuture = session.services.openUrl('https://example.com');
+
+        final sawRequest = await hostMessages.moveNext().timeout(
+          const Duration(seconds: 1),
+        );
+        expect(sawRequest, isTrue);
+        final request = hostMessages.current;
+        expect(
+          request,
+          isA<plugins.RemotePluginServiceRequest>()
+              .having((m) => m.service, 'service', 'url')
+              .having((m) => m.method, 'method', 'open')
+              .having((m) => m.params, 'params', <String, Object?>{
+                'url': 'https://example.com',
+              }),
+        );
+
+        await hostChannel.send(
+          plugins.RemotePluginServiceResponse(
+            requestId:
+                (request as plugins.RemotePluginServiceRequest).requestId,
+            service: request.service,
+            method: request.method,
+            result: const <String, Object?>{},
+          ),
+        );
+
+        await openUrlFuture;
+      },
+    );
+
     test('guest services request file picker results', () async {
       final hostToPlugin = StreamController<String>();
       final pluginToHost = StreamController<String>();

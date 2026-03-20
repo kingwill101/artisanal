@@ -3,6 +3,7 @@ import 'dart:async';
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_protocol.dart';
+import 'remote_surface_url_service.dart';
 
 typedef RemotePluginGenericServiceHandler =
     FutureOr<JsonObject> Function(RemotePluginServiceRequest request);
@@ -83,6 +84,20 @@ final class RemotePluginGenericHostService {
         return const <String, Object?>{};
       });
     }
+  }
+
+  void registerOpenUrl({RemotePluginUrlOpener? openUrl}) {
+    if (openUrl == null) {
+      return;
+    }
+
+    register('url', 'open', (request) async {
+      final url =
+          _stringParam(request.params, 'url') ??
+          (throw FormatException('url.open requires a string "url" param.'));
+      await openUrl(Uri.parse(url));
+      return const <String, Object?>{};
+    });
   }
 
   Future<void> _handle(RemotePluginServiceRequest request) async {
