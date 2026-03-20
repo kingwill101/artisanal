@@ -34,6 +34,22 @@ void _traceScroll(String message) {
   TuiTrace.log(message, tag: TraceTag.scroll);
 }
 
+int _selectionAutoScrollDelta({
+  required int localY,
+  required int viewportHeight,
+}) {
+  if (viewportHeight <= 0) return 0;
+  final edgeThreshold = viewportHeight <= 2 ? 0 : 1;
+  if (localY <= edgeThreshold) return -1;
+  if (localY >= viewportHeight - 1 - edgeThreshold) return 1;
+  return 0;
+}
+
+int _clampSelectionViewportY(int localY, int viewportHeight) {
+  if (viewportHeight <= 0) return 0;
+  return localY.clamp(0, viewportHeight - 1);
+}
+
 /// Scroll controller interface for scrollable widgets.
 abstract class ScrollController {
   /// Current scroll offset in rows.
@@ -103,6 +119,9 @@ class WidgetScrollController implements ScrollController {
 
   /// Position of the last click, for double-click detection.
   ({int x, int y})? _lastClickPos;
+
+  /// Sequential click count at the last click position.
+  int _lastClickCount = 0;
 
   /// The selection start point, or null.
   ({int x, int y})? get selectionStart => _selectionStart;
@@ -901,13 +920,26 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     // Motion and release events may have button == none (terminal motion
     // packets don't always re-report the held button). Handle them based on
     // the _selecting flag rather than requiring button == left.
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = ctrl.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -919,13 +951,20 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      // Double-click detection.
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
-        // Double-click: select word.
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = _getPaintedContentLines(ro);
@@ -933,8 +972,18 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = _getPaintedContentLines(ro);
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -944,8 +993,6 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
@@ -1440,13 +1487,26 @@ class _ScrollViewState extends State<ScrollView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     // Motion and release events may have button == none (terminal motion
     // packets don't always re-report the held button). Handle them based on
     // the _selecting flag rather than requiring button == left.
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = ctrl.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -1463,12 +1523,20 @@ class _ScrollViewState extends State<ScrollView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      // Double-click detection.
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = _getPaintedContentLines(ro);
@@ -1476,8 +1544,18 @@ class _ScrollViewState extends State<ScrollView> {
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = _getPaintedContentLines(ro);
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -1486,8 +1564,6 @@ class _ScrollViewState extends State<ScrollView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
@@ -3608,10 +3684,23 @@ class _VirtualListViewState extends State<VirtualListView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = _controller.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -3628,11 +3717,20 @@ class _VirtualListViewState extends State<VirtualListView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = ro.allContentLinesForSelection();
@@ -3640,8 +3738,18 @@ class _VirtualListViewState extends State<VirtualListView> {
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = ro.allContentLinesForSelection();
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -3650,8 +3758,6 @@ class _VirtualListViewState extends State<VirtualListView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
