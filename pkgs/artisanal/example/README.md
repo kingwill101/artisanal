@@ -180,6 +180,10 @@ dart run example/tui/remote_plugin_popup_host_demo.dart
 dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 ```
 
+The remote plugin workspace host discovers plugin processes from the
+`remote_plugin_workspace/plugins/*.plugin.json` manifests rather than
+hardcoding plugin entrypoints in the host app.
+
 These focused host demos intentionally import the stable
 `package:artisanal/runtime.dart` and `package:artisanal/hosts.dart`
 entrypoints rather than the broader `package:artisanal/tui.dart` barrel.

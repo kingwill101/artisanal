@@ -4,6 +4,10 @@ This example shows a full `artisanal` host app launching multiple
 out-of-process plugins and composing their remote surfaces into one UV-backed
 workspace.
 
+The host discovers plugins from the `plugins/` directory by loading each
+`*.plugin.json` manifest, validating it, and launching the manifest's
+`entrypoint` relative to the manifest file.
+
 ## Run the interactive host
 
 ```bash

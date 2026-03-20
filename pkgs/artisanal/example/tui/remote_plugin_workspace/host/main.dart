@@ -10,6 +10,8 @@ const _snapshotSettleDelay = Duration(milliseconds: 150);
 const _workspaceWidth = 96;
 const _workspaceHeight = 29;
 const _primaryPluginId = 'overview';
+const _pluginDirectoryPath =
+    'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins';
 
 Future<void> main(List<String> args) async {
   if (args.contains('--snapshot')) {
@@ -20,10 +22,7 @@ Future<void> main(List<String> args) async {
           loading: false,
           selectedPluginId: _primaryPluginId,
           status: 'Snapshot render',
-          log: const <String>[
-            'Snapshot mode',
-            'Loaded 3 plugin processes',
-          ],
+          log: const <String>['Snapshot mode', 'Loaded 3 plugin processes'],
           revision: 0,
           runtime: runtime,
         ),
@@ -106,10 +105,7 @@ final class _RemotePluginWorkspaceModel implements Model {
         copyWith(
           status: '$pluginId sent ${message.messageType.wireName}',
           revision: revision + 1,
-          log: _appendLog(
-            log,
-            '$pluginId: ${message.messageType.wireName}',
-          ),
+          log: _appendLog(log, '$pluginId: ${message.messageType.wireName}'),
         ),
         null,
       ),
@@ -124,12 +120,15 @@ final class _RemotePluginWorkspaceModel implements Model {
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x71])) => _quit(),
       KeyMsg(key: Key(type: KeyType.escape)) => _quit(),
       KeyMsg(key: Key(ctrl: true, runes: [0x63])) => _quit(),
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x31])) =>
-        _focusPlugin('overview'),
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x32])) =>
-        _focusPlugin('activity'),
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x33])) =>
-        _focusPlugin('alerts'),
+      KeyMsg(key: Key(type: KeyType.runes, runes: [0x31])) => _focusPlugin(
+        'overview',
+      ),
+      KeyMsg(key: Key(type: KeyType.runes, runes: [0x32])) => _focusPlugin(
+        'activity',
+      ),
+      KeyMsg(key: Key(type: KeyType.runes, runes: [0x33])) => _focusPlugin(
+        'alerts',
+      ),
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x72])) => _reload(),
       _ => (this, null),
     };
@@ -317,10 +316,12 @@ final class _HostFocusAppliedMsg extends Msg {
 
 final class _WorkspaceRuntime {
   const _WorkspaceRuntime({
+    required this.manifests,
     required this.surfaces,
     required this.connections,
   });
 
+  final List<plugins.RemotePluginManifest> manifests;
   final plugins.RemotePluginSurfaceStore surfaces;
   final Map<String, plugins.RemotePluginHostConnection> connections;
 
@@ -331,72 +332,15 @@ final class _WorkspaceRuntime {
   }
 }
 
-final class _PluginSpec {
-  const _PluginSpec({
-    required this.id,
-    required this.scriptPath,
-    required this.primarySurfaceId,
-    required this.surfaceIds,
-    required this.placement,
-  });
-
-  final String id;
-  final String scriptPath;
-  final String primarySurfaceId;
-  final List<String> surfaceIds;
-  final plugins.RemotePluginSurfacePlacement placement;
-}
-
-const _pluginSpecs = <_PluginSpec>[
-  _PluginSpec(
-    id: 'overview',
-    scriptPath:
-        'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins/overview_plugin.dart',
-    primarySurfaceId: 'overview.panel',
-    surfaceIds: <String>['overview.panel'],
-    placement: plugins.RemotePluginSurfacePlacement(
-      surfaceId: 'overview.panel',
-      x: 3,
-      y: 5,
-      z: 10,
-    ),
-  ),
-  _PluginSpec(
-    id: 'activity',
-    scriptPath:
-        'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins/activity_plugin.dart',
-    primarySurfaceId: 'activity.panel',
-    surfaceIds: <String>['activity.panel'],
-    placement: plugins.RemotePluginSurfacePlacement(
-      surfaceId: 'activity.panel',
-      x: 36,
-      y: 5,
-      z: 10,
-    ),
-  ),
-  _PluginSpec(
-    id: 'alerts',
-    scriptPath:
-        'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins/alerts_plugin.dart',
-    primarySurfaceId: 'alerts.panel',
-    surfaceIds: <String>['alerts.panel', 'alerts.popup'],
-    placement: plugins.RemotePluginSurfacePlacement(
-      surfaceId: 'alerts.panel',
-      x: 3,
-      y: 17,
-      z: 10,
-    ),
-  ),
-];
-
 Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
+  final manifests = await _loadWorkspaceManifests();
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
   try {
-    for (final spec in _pluginSpecs) {
+    for (final manifest in manifests) {
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[_resolveWorkspacePath(spec.scriptPath)],
+        <String>[manifest.resolveEntrypoint()],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -405,15 +349,16 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         surfaces: surfaces,
         timeout: _connectTimeout,
       );
-      connections[spec.id] = connection;
+      connections[manifest.id] = connection;
     }
 
     await _waitForSurfaceIds(
       surfaces,
-      _pluginSpecs.expand((spec) => spec.surfaceIds),
+      manifests.expand((manifest) => manifest.surfaceIds),
     );
 
     final runtime = _WorkspaceRuntime(
+      manifests: manifests,
       surfaces: surfaces,
       connections: connections,
     );
@@ -429,22 +374,22 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
 }
 
 Future<void> _applyFocus(_WorkspaceRuntime runtime, String pluginId) async {
-  final specById = <String, _PluginSpec>{
-    for (final spec in _pluginSpecs) spec.id: spec,
+  final manifestById = <String, plugins.RemotePluginManifest>{
+    for (final manifest in runtime.manifests) manifest.id: manifest,
   };
-  final selected = specById[pluginId];
+  final selected = manifestById[pluginId];
   if (selected == null) {
     return;
   }
 
-  for (final spec in _pluginSpecs) {
-    final connection = runtime.connections[spec.id];
+  for (final manifest in runtime.manifests) {
+    final connection = runtime.connections[manifest.id];
     if (connection == null) {
       continue;
     }
-    final message = spec.id == pluginId
-        ? plugins.RemotePluginFocusInput(surfaceId: spec.primarySurfaceId)
-        : plugins.RemotePluginBlurInput(surfaceId: spec.primarySurfaceId);
+    final message = manifest.id == pluginId
+        ? plugins.RemotePluginFocusInput(surfaceId: manifest.primarySurfaceId)
+        : plugins.RemotePluginBlurInput(surfaceId: manifest.primarySurfaceId);
     await connection.send(message);
   }
 }
@@ -474,6 +419,12 @@ String _resolveWorkspacePath(String path) {
   return io.Directory.current.uri.resolve(path).toFilePath();
 }
 
+Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
+  return plugins.loadRemotePluginManifests(
+    _resolveWorkspacePath(_pluginDirectoryPath),
+  );
+}
+
 String _renderWorkspace({
   required bool loading,
   required String selectedPluginId,
@@ -484,21 +435,27 @@ String _renderWorkspace({
   String? error,
 }) {
   final layers = <uv.Layer>[
-    uv.Layer(uv.StyledString(_backgroundText(
-      selectedPluginId: selectedPluginId,
-      status: status,
-      log: log,
-      revision: revision,
-      loading: loading,
-      error: error,
-    ))).setId('host.background').setZ(0),
+    uv.Layer(
+      uv.StyledString(
+        _backgroundText(
+          selectedPluginId: selectedPluginId,
+          status: status,
+          log: log,
+          revision: revision,
+          loading: loading,
+          error: error,
+        ),
+      ),
+    ).setId('host.background').setZ(0),
   ];
 
   if (runtime != null) {
     layers.addAll(
       plugins.buildRemotePluginSurfaceLayers(
         runtime.surfaces,
-        placements: _pluginSpecs.map((spec) => spec.placement),
+        placements: runtime.manifests.map(
+          (manifest) => manifest.placement.toSurfacePlacement(),
+        ),
       ),
     );
   }
@@ -548,11 +505,7 @@ String _backgroundText({
   }
 
   writeAt(1, 3, 'Remote Plugin Workspace');
-  writeAt(
-    2,
-    3,
-    '1 overview  2 activity  3 alerts  r reload  q quit',
-  );
+  writeAt(2, 3, '1 overview  2 activity  3 alerts  r reload  q quit');
   writeAt(
     4,
     3,
