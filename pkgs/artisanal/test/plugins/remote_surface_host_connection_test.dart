@@ -88,6 +88,53 @@ void main() {
 
     expect(clipboard, 'plugin-copy');
   });
+
+  test('host connection can answer open-url requests', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'open_url_plugin.dart',
+    );
+
+    Uri? openedUrl;
+    final connection = await plugins.RemotePluginHostConnection.startProcess(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+        capabilities: <String>['open-url'],
+      ),
+      timeout: const Duration(seconds: 10),
+    );
+    addTearDown(() => connection.dispose(kill: true));
+
+    final urlService = connection.bindOpenUrlService(
+      openUrl: (uri) {
+        openedUrl = uri;
+      },
+    );
+    addTearDown(urlService.dispose);
+
+    await connection.surfaceMessages
+        .where((message) => message is plugins.RemotePluginFrame)
+        .cast<plugins.RemotePluginFrame>()
+        .firstWhere((_) {
+          final surface = connection.surfaces['url.panel'];
+          if (surface == null) {
+            return false;
+          }
+          final text = _surfaceText(surface);
+          return text.contains('url:ok');
+        })
+        .timeout(const Duration(seconds: 5));
+
+    expect(openedUrl, Uri.parse('https://example.com/plugin'));
+  });
 }
 
 String _surfaceText(plugins.RemotePluginSurfaceState surface) {

@@ -92,6 +92,22 @@ void main() {
     expect(writeErrors, isEmpty);
   });
 
+  test('open-url request and response messages round-trip and validate', () async {
+    const request = plugins.RemotePluginOpenUrlRequest(
+      requestId: 'req-3',
+      url: 'https://example.com/docs',
+    );
+    const response = plugins.RemotePluginOpenUrlResponse(
+      requestId: 'req-3',
+    );
+
+    final parsedRequest = plugins.RemotePluginMessage.fromJson(request.toJson());
+    final responseErrors = await validator.validateMessage(response);
+
+    expect(parsedRequest, isA<plugins.RemotePluginOpenUrlRequest>());
+    expect(responseErrors, isEmpty);
+  });
+
   test('validator rejects unsupported message types', () async {
     final errors = await validator.validateJson(<String, Object?>{
       'protocol': plugins.remotePluginProtocolVersion,

@@ -6,6 +6,7 @@ import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_session.dart';
 import 'remote_surface_state.dart';
+import 'remote_surface_url_service.dart';
 
 /// Bundled host-side connection to one out-of-process remote plugin.
 final class RemotePluginHostConnection {
@@ -82,6 +83,13 @@ final class RemotePluginHostConnection {
       readClipboard: readClipboard,
       writeClipboard: writeClipboard,
     );
+  }
+
+  /// Binds a URL-open request/response service to this plugin connection.
+  RemotePluginOpenUrlHostService bindOpenUrlService({
+    RemotePluginUrlOpener? openUrl,
+  }) {
+    return RemotePluginOpenUrlHostService.bind(this, openUrl: openUrl);
   }
 
   /// Disposes controller, session, and process resources.

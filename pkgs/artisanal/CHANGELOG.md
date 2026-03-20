@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added typed remote plugin URL-open request/response messages plus a reusable host-side URL opener, so plugins can start delegating external link launches back to the host without custom transport glue.
 - Added typed remote plugin clipboard request/response messages plus a reusable host-side clipboard responder, so out-of-process plugins can start using host-owned services without inventing ad hoc JSON on top of the surface transport.
 - Added a `remote_plugin_workspace` example directory with a full host app plus multiple guest plugins, including a snapshot mode for regression testing and local experimentation.
 - Added `RemotePluginHostConnection.startProcess(...)` so plugin hosts can launch a process, complete the handshake, and bind surface state through one host-side entrypoint instead of manually wiring process, session, and controller objects.

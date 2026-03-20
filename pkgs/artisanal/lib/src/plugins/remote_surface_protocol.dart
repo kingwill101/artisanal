@@ -16,12 +16,14 @@ enum RemotePluginMessageType {
   pluginSurfaceFrame('plugin.surface.frame'),
   pluginClipboardRead('plugin.clipboard.read'),
   pluginClipboardWrite('plugin.clipboard.write'),
+  pluginUrlOpen('plugin.url.open'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
   hostInputFocus('host.input.focus'),
   hostInputBlur('host.input.blur'),
   hostClipboardRead('host.clipboard.read'),
-  hostClipboardWrite('host.clipboard.write');
+  hostClipboardWrite('host.clipboard.write'),
+  hostUrlOpen('host.url.open');
 
   const RemotePluginMessageType(this.wireName);
 
@@ -313,6 +315,8 @@ sealed class RemotePluginMessage {
         RemotePluginClipboardReadRequest.fromPayload(payload),
       RemotePluginMessageType.pluginClipboardWrite =>
         RemotePluginClipboardWriteRequest.fromPayload(payload),
+      RemotePluginMessageType.pluginUrlOpen =>
+        RemotePluginOpenUrlRequest.fromPayload(payload),
       RemotePluginMessageType.hostInputKey => RemotePluginKeyInput.fromPayload(
         payload,
       ),
@@ -326,6 +330,8 @@ sealed class RemotePluginMessage {
         RemotePluginClipboardReadResponse.fromPayload(payload),
       RemotePluginMessageType.hostClipboardWrite =>
         RemotePluginClipboardWriteResponse.fromPayload(payload),
+      RemotePluginMessageType.hostUrlOpen =>
+        RemotePluginOpenUrlResponse.fromPayload(payload),
     };
   }
 
@@ -670,6 +676,33 @@ final class RemotePluginClipboardWriteRequest extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginOpenUrlRequest extends RemotePluginMessage {
+  const RemotePluginOpenUrlRequest({
+    required this.requestId,
+    required this.url,
+  });
+
+  final String requestId;
+  final String url;
+
+  factory RemotePluginOpenUrlRequest.fromPayload(JsonObject payload) {
+    return RemotePluginOpenUrlRequest(
+      requestId: _requireString(payload, 'requestId'),
+      url: _requireUriString(payload, 'url'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginUrlOpen;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    'url': url,
+  };
+}
+
 final class RemotePluginMouseInput extends RemotePluginMessage {
   const RemotePluginMouseInput({
     required this.surfaceId,
@@ -833,6 +866,36 @@ final class RemotePluginClipboardWriteResponse extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginOpenUrlResponse extends RemotePluginMessage {
+  const RemotePluginOpenUrlResponse({
+    required this.requestId,
+    this.accepted = true,
+    this.error,
+  });
+
+  final String requestId;
+  final bool accepted;
+  final String? error;
+
+  factory RemotePluginOpenUrlResponse.fromPayload(JsonObject payload) {
+    return RemotePluginOpenUrlResponse(
+      requestId: _requireString(payload, 'requestId'),
+      accepted: _readBool(payload, 'accepted', fallback: true),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType => RemotePluginMessageType.hostUrlOpen;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (!accepted) 'accepted': accepted,
+    if (error != null) 'error': error,
+  };
+}
+
 final class RemotePluginProtocolSchemas {
   RemotePluginProtocolSchemas._();
 
@@ -974,6 +1037,15 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema pluginUrlOpenPayload = S.object(
+    required: const ['requestId', 'url'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'url': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostInputKeyPayload = S.object(
     required: const ['surfaceId', 'key'],
     properties: <String, Schema>{
@@ -1042,6 +1114,16 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema hostUrlOpenPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'accepted': S.boolean(),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Map<RemotePluginMessageType, Schema> byType =
       <RemotePluginMessageType, Schema>{
         RemotePluginMessageType.hostHello: _typedEnvelope(
@@ -1076,6 +1158,10 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginClipboardWrite,
           pluginClipboardWritePayload,
         ),
+        RemotePluginMessageType.pluginUrlOpen: _typedEnvelope(
+          RemotePluginMessageType.pluginUrlOpen,
+          pluginUrlOpenPayload,
+        ),
         RemotePluginMessageType.hostInputKey: _typedEnvelope(
           RemotePluginMessageType.hostInputKey,
           hostInputKeyPayload,
@@ -1099,6 +1185,10 @@ final class RemotePluginProtocolSchemas {
         RemotePluginMessageType.hostClipboardWrite: _typedEnvelope(
           RemotePluginMessageType.hostClipboardWrite,
           hostClipboardWritePayload,
+        ),
+        RemotePluginMessageType.hostUrlOpen: _typedEnvelope(
+          RemotePluginMessageType.hostUrlOpen,
+          hostUrlOpenPayload,
         ),
       };
 
@@ -1202,6 +1292,15 @@ String _requireString(JsonObject json, String key, {bool allowEmpty = false}) {
   throw FormatException(
     'Expected "$key" to be ${allowEmpty ? 'a string' : 'a non-empty string'}',
   );
+}
+
+String _requireUriString(JsonObject json, String key) {
+  final value = _requireString(json, key);
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme) {
+    return value;
+  }
+  throw FormatException('Expected "$key" to be an absolute URI string');
 }
 
 String? _readStringOrNull(
