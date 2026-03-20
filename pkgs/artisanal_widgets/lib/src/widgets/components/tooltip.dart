@@ -156,11 +156,16 @@ class _TooltipState extends State<Tooltip> {
     );
   }
 
-  void _ensureFloatingEntry(OverlayState overlayState) {
+  void _ensureFloatingEntry(
+    OverlayState overlayState, {
+    bool forceRebuild = false,
+  }) {
     final existing = _floatingEntry;
     if (existing != null) {
-      _traceLifecycle('overlay.markNeedsBuild');
-      existing.markNeedsBuild();
+      if (forceRebuild) {
+        _traceLifecycle('overlay.markNeedsBuild');
+        existing.markNeedsBuild();
+      }
       return;
     }
 
@@ -239,7 +244,7 @@ class _TooltipState extends State<Tooltip> {
     overlayState.insert(entry);
   }
 
-  void _syncFloatingEntry() {
+  void _syncFloatingEntry({bool forceRebuild = false}) {
     final show = widget.enabled && (widget.show ?? _hovered);
     _traceLifecycle(
       'sync',
@@ -259,7 +264,7 @@ class _TooltipState extends State<Tooltip> {
       return;
     }
     if (_anchorGeometry() == null) return;
-    _ensureFloatingEntry(overlayState);
+    _ensureFloatingEntry(overlayState, forceRebuild: forceRebuild);
   }
 
   @override
@@ -287,8 +292,12 @@ class _TooltipState extends State<Tooltip> {
       _removeFloatingEntry();
       return visibilityChanged ? Cmd.repaint() : null;
     }
-    _syncFloatingEntry();
-    if (visibilityChanged || (_floatingEntry != null && appearanceChanged)) {
+    if (visibilityChanged || appearanceChanged) {
+      _syncFloatingEntry(forceRebuild: appearanceChanged);
+    }
+    final showInline =
+        Overlay.maybeOf(context) == null && widget.enabled && (widget.show ?? _hovered);
+    if (visibilityChanged || (showInline && appearanceChanged)) {
       return Cmd.repaint();
     }
     return null;
