@@ -454,26 +454,45 @@ surface for remote-rendered plugins.
 
 The current stable layers are:
 
-- `RemotePluginJsonTransport` for newline-delimited JSON framing
-- `RemotePluginJsonChannel` for typed decoding and validation over line or byte
-  streams
-- `RemotePluginSession` for the host-side hello handshake and post-handshake
-  plugin messages
+- `RemotePluginHostConnection` for the bundled host-side startup path,
+  including process launch, hello handshake, surface controller binding, and
+  optional generic service auto-binding
+- `RemotePluginJsonTransport` / `RemotePluginJsonChannel` for newline-delimited
+  JSON framing plus typed decoding and validation over line or byte streams
+- `RemotePluginSession` for the lower-level host-side hello handshake and
+  post-handshake plugin messages
 - `RemotePluginGuestSession` for the plugin-side hello handshake, including
   `bindStdio(...)` for plugin executables
-- `RemotePluginProcess` for launching stdio-based plugin executables
-- `RemotePluginSurfaceStore` for applying open/resize/frame/close messages into
-  concrete host-side cell state
+- `RemotePluginSurfaceController` and `RemotePluginSurfaceStore` for applying
+  open/resize/frame/close messages into concrete host-side cell state
+- `RemotePluginSurfaceInputRouter` for routing focus, blur, mouse, and key
+  input into composed plugin surfaces
+- `RemotePluginGenericServiceCatalog`, `RemotePluginGenericHostService`, and
+  `RemotePluginGuestServices` for schema-backed host-owned RPCs over the shared
+  `plugin.service.request` / `host.service.response` envelope
+- `RemotePluginManifest`, `loadRemotePluginManifest(...)`, and
+  `RemotePluginHostConnection.startManifest(...)` /
+  `startManifestFile(...)` for manifest-backed discovery and launch
+- `RemotePluginProtocolSchemas` and `RemotePluginManifestSchemas` for
+  `json_schema_builder` validation of the wire protocol and manifest format
 
 The intended flow is:
 
-1. Host launches a plugin process with `RemotePluginProcess.start(...)`.
-2. Host completes the handshake with `process.connect(...)` or
-   `RemotePluginSession.connect(...)`.
-3. Plugin binds stdin/stdout with `RemotePluginGuestSession.bindStdio(...)`.
-4. Plugin emits `RemotePluginSurfaceOpen` and `RemotePluginFrame` messages.
-5. Host applies those messages into `RemotePluginSurfaceStore`.
-6. The host compositor renders the resulting surface state in its own layout.
+1. Host launches one plugin with `RemotePluginHostConnection.startProcess(...)`
+   or a manifest-backed plugin with `startManifest(...)` /
+   `startManifestFile(...)`.
+2. Plugin binds stdin/stdout with `RemotePluginGuestSession.bindStdio(...)`.
+3. Plugin emits `RemotePluginSurfaceOpen` / `RemotePluginFrame` lifecycle
+   messages for one or more remote-rendered surfaces.
+4. The bundled host connection applies those messages into
+   `RemotePluginSurfaceStore` through `RemotePluginSurfaceController`.
+5. The host compositor renders the resulting surface state in its own layout,
+   optionally using `RemotePluginSurfaceInputRouter` to route focus, hover,
+   clicks, and keys back into the plugin surfaces.
+6. Host-owned capabilities such as clipboard, URL opening, notifications, and
+   file picking should normally travel through the generic
+   `plugin.service.request` / `host.service.response` envelope, with optional
+   `RemotePluginServiceDescriptor` discovery metadata in `host.hello`.
 
 Reference demo:
 
@@ -483,6 +502,21 @@ dart run pkgs/artisanal/example/tui/remote_plugin_host_demo.dart
 
 That host example automatically launches the matching guest plugin and prints
 the rendered panel state it receives back over stdio.
+
+Manifest-backed multi-plugin workspace:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
+```
+
+Schema dump helper for non-Dart host/plugin tooling:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --manifest
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --message-type=plugin.surface.open
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --built-in-services
+```
 
 ### Convenience Functions
 

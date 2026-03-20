@@ -209,13 +209,15 @@ surface for remote-rendered plugins.
 
 The current model is host-rendered composition with plugin-rendered content:
 
-- the host launches a plugin process and completes the hello handshake with
-  `RemotePluginProcess` and `RemotePluginSession`
+- the host normally launches a plugin process through
+  `RemotePluginHostConnection.startProcess(...)`,
+  `RemotePluginHostConnection.startManifest(...)`, or
+  `RemotePluginHostConnection.startManifestFile(...)`
 - the plugin process binds stdin/stdout with `RemotePluginGuestSession`
 - plugin UI is described as remote surfaces plus sparse frame cells
-- the host applies `RemotePluginSurfaceOpen` / `RemotePluginFrame` /
-  `RemotePluginSurfaceResize` / `RemotePluginSurfaceClose` messages into
-  `RemotePluginSurfaceStore` before later compositing
+- the bundled host connection binds `RemotePluginSurfaceController` for
+  surface lifecycle/state and can route focus/mouse/key input through
+  `RemotePluginSurfaceInputRouter`
 - host-owned capabilities such as clipboard, URL opening, notifications, and
   file picking should normally travel through the generic
   `plugin.service.request` / `host.service.response` envelope when the host
@@ -227,6 +229,10 @@ The current model is host-rendered composition with plugin-rendered content:
 - `RemotePluginGenericServiceCatalog` lets hosts register those generic
   services once, reuse the derived descriptors in `host.hello`, and then bind
   the same handlers to a `RemotePluginHostConnection`
+- `RemotePluginProtocolSchemas` and `RemotePluginManifestSchemas` expose
+  `json_schema_builder` schemas for the full message protocol, per-message
+  envelopes, and manifest files so non-Dart tooling can validate the same
+  wire format the host and guest libraries use
 - the older typed per-service request/response messages are still available as
   a compatibility fallback for older hosts and guests
 
@@ -248,6 +254,15 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 That example discovers plugin manifests, launches several plugin processes,
 routes focus/input across composed surfaces, and dogfoods the generic host
 service registry through the shared `services` capability.
+
+Dump the current JSON schemas:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --manifest
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --message-type=plugin.service.request
+dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --built-in-services
+```
 
 ## Bubbles (Reusable Widgets)
 
