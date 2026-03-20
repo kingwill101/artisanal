@@ -26,6 +26,8 @@ Future<void> main() async {
   var focused = false;
   var lastKey = 'none';
   var clipboardStatus = 'unread';
+  var urlStatus = 'idle';
+  var noticeStatus = 'idle';
 
   Future<void> publish() async {
     final current = _messages[ticks % _messages.length];
@@ -33,7 +35,7 @@ Future<void> main() async {
       boxedFrame(
         surfaceId: _surfaceId,
         width: 42,
-        height: 9,
+        height: 11,
         title: focused ? 'Activity [focused]' : 'Activity',
         accent: focused ? '#f59e0b' : '#38bdf8',
         bodyLines: <String>[
@@ -42,6 +44,8 @@ Future<void> main() async {
           focused ? 'Input: active routing' : 'Input: passive',
           'Last key: $lastKey',
           'Clipboard: $clipboardStatus',
+          'URL: $urlStatus',
+          'Notice: $noticeStatus',
         ],
       ),
     );
@@ -93,6 +97,24 @@ Future<void> main() async {
               clipboardStatus = await session.services.readClipboard();
             } on plugins.RemotePluginServiceException catch (error) {
               clipboardStatus = error.message;
+            }
+          } else if (!ctrl && !alt && !shift && !meta && key == 'o') {
+            try {
+              await session.services.openUrl('https://example.com/workspace');
+              urlStatus = 'opened';
+            } on plugins.RemotePluginServiceException catch (error) {
+              urlStatus = error.message;
+            }
+          } else if (!ctrl && !alt && !shift && !meta && key == 'n') {
+            try {
+              await session.services.notify(
+                'Activity pinged host',
+                title: 'Workspace Activity',
+                level: plugins.RemotePluginNotificationLevel.info,
+              );
+              noticeStatus = 'sent';
+            } on plugins.RemotePluginServiceException catch (error) {
+              noticeStatus = error.message;
             }
           }
           await publish();

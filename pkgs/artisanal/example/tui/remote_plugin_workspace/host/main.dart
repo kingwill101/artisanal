@@ -44,7 +44,7 @@ Future<void> main(List<String> args) async {
         await _waitForSnapshotSurfaceText(
           runtime,
           selectedPluginId,
-          contains: 'Last key: ${value.label}',
+          contains: _snapshotKeyExpectation(value.label),
         );
       }
       if (motion case final point?) {
@@ -100,6 +100,15 @@ Future<void> main(List<String> args) async {
       startupTitle: 'Remote Plugin Workspace',
     ),
   );
+}
+
+String _snapshotKeyExpectation(String label) {
+  return switch (label) {
+    'c' => 'Clipboard: workspace clipboard',
+    'o' => 'URL: opened',
+    'n' => 'Notice: sent',
+    _ => 'Last key: $label',
+  };
 }
 
 final class _RemotePluginWorkspaceModel implements Model {
@@ -530,6 +539,8 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
       genericService.registerClipboard(
         readClipboard: (_) => 'workspace clipboard',
       );
+      genericService.registerOpenUrl(openUrl: (_) {});
+      genericService.registerNotification(notify: (_) {});
       genericServices.add(genericService);
       connections[manifest.id] = connection;
     }

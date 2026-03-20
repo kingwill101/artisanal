@@ -100,6 +100,54 @@ void main() {
   );
 
   test(
+    'remote plugin workspace snapshot key can call host open-url service',
+    () async {
+      final result = await io.Process.run(
+        io.Platform.resolvedExecutable,
+        <String>[
+          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
+          '--snapshot',
+          '--snapshot-click=37,6',
+          '--snapshot-key=o',
+        ],
+        workingDirectory: io.Directory.current.path,
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+
+      final stdout = result.stdout as String;
+      expect(stdout, contains('Selected: activity'));
+      expect(stdout, contains('URL: opened'));
+      expect(stdout, contains('key o'));
+    },
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
+
+  test(
+    'remote plugin workspace snapshot key can call host notification service',
+    () async {
+      final result = await io.Process.run(
+        io.Platform.resolvedExecutable,
+        <String>[
+          'pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart',
+          '--snapshot',
+          '--snapshot-click=37,6',
+          '--snapshot-key=n',
+        ],
+        workingDirectory: io.Directory.current.path,
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+
+      final stdout = result.stdout as String;
+      expect(stdout, contains('Selected: activity'));
+      expect(stdout, contains('Notice: sent'));
+      expect(stdout, contains('key n'));
+    },
+    timeout: const Timeout(Duration(seconds: 90)),
+  );
+
+  test(
     'remote plugin workspace snapshot motion routes into plugin surfaces',
     () async {
       final result = await io.Process.run(
