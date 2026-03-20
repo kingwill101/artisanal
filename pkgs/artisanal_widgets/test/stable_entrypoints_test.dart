@@ -22,10 +22,7 @@ class _DemoKeyMap implements widgets.KeyMap {
 
 void main() {
   test('stable app entrypoint exposes app shells and runners', () {
-    final shell = app.ArtisanalApp(
-      title: 'Demo',
-      home: widgets.Text('hello'),
-    );
+    final shell = app.ArtisanalApp(title: 'Demo', home: widgets.Text('hello'));
 
     expect(shell, isA<app.ArtisanalApp>());
     expect(app.runArtisanalApp, isA<Function>());
@@ -33,27 +30,30 @@ void main() {
     expect(app.runReloadableArtisanalApp, isA<Function>());
   });
 
-  test('stable widgets entrypoint exposes the high-level app and component surface', () {
-    final widget = widgets.Text('hello');
-    final app = widgets.ArtisanalApp(title: 'Demo', home: widget);
-    final help = widgets.HelpView(keyMap: _DemoKeyMap());
-    final picker = widgets.FilePicker(directory: '.');
-    final editor = widgets.TextEditor(
-      controller: widgets.TextAreaController(text: 'hello'),
-    );
-    final codeEditor = widgets.CodeEditor(
-      controller: widgets.TextAreaController(text: 'void main() {}'),
-    );
+  test(
+    'stable widgets entrypoint exposes the high-level app and component surface',
+    () {
+      final widget = widgets.Text('hello');
+      final app = widgets.ArtisanalApp(title: 'Demo', home: widget);
+      final help = widgets.HelpView(keyMap: _DemoKeyMap());
+      final picker = widgets.FilePicker(directory: '.');
+      final editor = widgets.TextEditor(
+        controller: widgets.TextAreaController(text: 'hello'),
+      );
+      final codeEditor = widgets.CodeEditor(
+        controller: widgets.TextAreaController(text: 'void main() {}'),
+      );
 
-    expect(app, isA<widgets.ArtisanalApp>());
-    expect(help, isA<widgets.HelpView>());
-    expect(picker, isA<widgets.FilePicker>());
-    expect(editor, isA<widgets.TextEditor>());
-    expect(codeEditor, isA<widgets.CodeEditor>());
-    expect(widget, isA<widgets.Widget>());
-    expect(widgets.ZoneInBoundsMsg, isA<Type>());
-    expect(widgets.runArtisanalApp, isA<Function>());
-  });
+      expect(app, isA<widgets.ArtisanalApp>());
+      expect(help, isA<widgets.HelpView>());
+      expect(picker, isA<widgets.FilePicker>());
+      expect(editor, isA<widgets.TextEditor>());
+      expect(codeEditor, isA<widgets.CodeEditor>());
+      expect(widget, isA<widgets.Widget>());
+      expect(widgets.ZoneInBoundsMsg, isA<Type>());
+      expect(widgets.runArtisanalApp, isA<Function>());
+    },
+  );
 
   test('stable editors entrypoint exposes text input and editor widgets', () {
     final textFieldKeyMap = editors.TextInputKeyMap();
@@ -68,6 +68,32 @@ void main() {
         ),
       ],
     );
+    final diagnosticsSource =
+        editors.TextPositionDiagnosticsSource.patternRules(
+          text: baseController,
+          rules: const [
+            editors.TextPatternDiagnosticRule(
+              pattern: 'TODO',
+              severity: editors.TextDiagnosticSeverity.warning,
+            ),
+          ],
+        );
+    final rangeDiagnosticsSource =
+        widgets.ValueNotifier<Iterable<editors.TextDiagnosticRange>>(const []);
+    final positionDiagnosticsSource =
+        widgets.ValueNotifier<Iterable<editors.TextPositionDiagnosticRange>>(
+          const [],
+        );
+    final rangeDiagnosticsBinding =
+        editors.TextDiagnosticsBinding.fromRangeListenable(
+          controller: baseController,
+          diagnostics: rangeDiagnosticsSource,
+        );
+    final positionDiagnosticsBinding =
+        editors.TextDiagnosticsBinding.fromPositionListenable(
+          controller: baseController,
+          diagnostics: positionDiagnosticsSource,
+        );
     final decorationBinding = editors.TextDecorationLayerBinding(
       controller: baseController,
       layerKey: 'search',
@@ -87,10 +113,7 @@ void main() {
       buildDecorations: (String text) => text.isEmpty
           ? const []
           : const [
-              editors.TextLineDecoration(
-                lineIndex: 0,
-                styleKey: 'review.line',
-              ),
+              editors.TextLineDecoration(lineIndex: 0, styleKey: 'review.line'),
             ],
     );
     final textField = editors.TextField(
@@ -100,6 +123,12 @@ void main() {
     final textArea = editors.TextArea(
       controller: editors.TextAreaController(text: 'hello\nworld'),
       keyMap: textAreaKeyMap,
+    );
+    final selectableTextField = editors.SelectableTextFieldView(
+      controller: editors.TextEditingController(text: 'hello'),
+    );
+    final selectableTextArea = editors.SelectableTextAreaView(
+      controller: editors.TextAreaController(text: 'hello\nworld'),
     );
     final textEditor = editors.TextEditor(
       controller: editors.TextAreaController(text: 'hello'),
@@ -118,10 +147,15 @@ void main() {
     expect(textAreaKeyMap, isA<editors.TextAreaKeyMap>());
     expect(textField, isA<editors.TextField>());
     expect(textArea, isA<editors.TextArea>());
+    expect(selectableTextField, isA<editors.SelectableTextFieldView>());
+    expect(selectableTextArea, isA<editors.SelectableTextAreaView>());
     expect(textEditor, isA<editors.TextEditor>());
     expect(codeEditor, isA<editors.CodeEditor>());
     expect(markdownEditor, isA<editors.MarkdownEditor>());
     expect(diagnosticsBinding, isA<editors.TextDiagnosticsBinding>());
+    expect(diagnosticsSource, isA<editors.TextPositionDiagnosticsSource>());
+    expect(rangeDiagnosticsBinding, isA<editors.TextDiagnosticsBinding>());
+    expect(positionDiagnosticsBinding, isA<editors.TextDiagnosticsBinding>());
     expect(decorationBinding, isA<editors.TextDecorationLayerBinding>());
     expect(
       lineDecorationBinding,
@@ -129,6 +163,9 @@ void main() {
     );
 
     diagnosticsBinding.dispose();
+    diagnosticsSource.dispose();
+    rangeDiagnosticsBinding.dispose();
+    positionDiagnosticsBinding.dispose();
     decorationBinding.dispose();
     lineDecorationBinding.dispose();
   });
@@ -139,7 +176,11 @@ void main() {
       values: const [1, 2, 3],
       showGrid: true,
     );
-    final chart = charts.LineChart(values: const [1, 2, 3], width: 12, height: 4);
+    final chart = charts.LineChart(
+      values: const [1, 2, 3],
+      width: 12,
+      height: 4,
+    );
 
     expect(model, isA<charts.ChartModel>());
     expect(chart, isA<charts.LineChart>());
@@ -149,8 +190,14 @@ void main() {
     final widget = selection.SelectionArea(
       child: selection.SelectableText('select me'),
     );
+    final rich = selection.SelectableRichText(
+      text: const widgets.TextSpan(text: 'rich'),
+    );
+    final view = selection.SelectableView('generic');
 
     expect(widget, isA<selection.SelectionArea>());
+    expect(rich, isA<selection.SelectableRichText>());
+    expect(view, isA<selection.SelectableView>());
   });
 
   test('stable testing entrypoint exposes WidgetTester', () {

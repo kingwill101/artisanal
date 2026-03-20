@@ -47,7 +47,7 @@ void main() {
         tester.sendKey(char);
       }
 
-      expect(tester.view, contains('review markdown diagnostics'));
+      expect(tester.find.text('review markdown diagnostics'), isTrue);
 
       tester.sendMsg(
         runtime.KeyMsg(runtime.Key(runtime.KeyType.f8, shift: true)),

@@ -107,6 +107,7 @@ class _AppWidgetState extends tui.State<AppWidget> {
   );
   final tui.TextAreaController _markdownEditorController =
       tui.TextAreaController(text: _initialMarkdownEditorText);
+  late final List<tui.TextPositionDiagnosticsSource> _diagnosticsSources;
   late final List<tui.TextDiagnosticsBinding> _diagnosticsBindings;
   String _editorTitle = '';
   String _editorBody = _initialEditorBodyText;
@@ -141,18 +142,32 @@ class _AppWidgetState extends tui.State<AppWidget> {
   @override
   void initState() {
     super.initState();
+    _diagnosticsSources = <tui.TextPositionDiagnosticsSource>[
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _editorBodyController,
+        rules: _showcaseDiagnosticRules,
+      ),
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _codeEditorController,
+        rules: _showcaseDiagnosticRules,
+      ),
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _markdownEditorController,
+        rules: _showcaseDiagnosticRules,
+      ),
+    ];
     _diagnosticsBindings = <tui.TextDiagnosticsBinding>[
-      tui.TextDiagnosticsBinding.patternRules(
+      tui.TextDiagnosticsBinding.fromPositionListenable(
         controller: _editorBodyController,
-        rules: _showcaseDiagnosticRules,
+        diagnostics: _diagnosticsSources[0],
       ),
-      tui.TextDiagnosticsBinding.patternRules(
+      tui.TextDiagnosticsBinding.fromPositionListenable(
         controller: _codeEditorController,
-        rules: _showcaseDiagnosticRules,
+        diagnostics: _diagnosticsSources[1],
       ),
-      tui.TextDiagnosticsBinding.patternRules(
+      tui.TextDiagnosticsBinding.fromPositionListenable(
         controller: _markdownEditorController,
-        rules: _showcaseDiagnosticRules,
+        diagnostics: _diagnosticsSources[2],
       ),
     ];
   }
@@ -161,6 +176,9 @@ class _AppWidgetState extends tui.State<AppWidget> {
   void dispose() {
     for (final binding in _diagnosticsBindings) {
       binding.dispose();
+    }
+    for (final source in _diagnosticsSources) {
+      source.dispose();
     }
     super.dispose();
   }

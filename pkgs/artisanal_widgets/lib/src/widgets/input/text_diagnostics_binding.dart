@@ -2,10 +2,12 @@ library;
 
 import 'package:artisanal/bubbles.dart'
     show
+        TextDiagnosticRange,
         TextPatternDiagnosticRule,
         TextPositionDiagnosticRange,
         textPatternDiagnostics;
 
+import '../animation/listenable.dart' show ValueListenable;
 import 'input_widgets.dart' show TextAreaController;
 
 /// Builds positional diagnostics from plain text.
@@ -22,13 +24,11 @@ final class TextDiagnosticsBinding {
     required TextAreaController controller,
     required TextDiagnosticsBuilder buildDiagnostics,
     bool syncImmediately = true,
-  }) : _controller = controller,
-       _buildDiagnostics = buildDiagnostics {
-    _controller.addListener(_handleControllerChanged);
-    if (syncImmediately) {
-      sync(force: true);
-    }
-  }
+  }) : this._(
+         controller: controller,
+         buildDiagnostics: buildDiagnostics,
+         syncImmediately: syncImmediately,
+       );
 
   factory TextDiagnosticsBinding.patternRules({
     required TextAreaController controller,
@@ -44,8 +44,51 @@ final class TextDiagnosticsBinding {
     );
   }
 
+  factory TextDiagnosticsBinding.fromRangeListenable({
+    required TextAreaController controller,
+    required ValueListenable<Iterable<TextDiagnosticRange>> diagnostics,
+    bool syncImmediately = true,
+  }) {
+    return TextDiagnosticsBinding._(
+      controller: controller,
+      rangeDiagnostics: diagnostics,
+      syncImmediately: syncImmediately,
+    );
+  }
+
+  factory TextDiagnosticsBinding.fromPositionListenable({
+    required TextAreaController controller,
+    required ValueListenable<Iterable<TextPositionDiagnosticRange>> diagnostics,
+    bool syncImmediately = true,
+  }) {
+    return TextDiagnosticsBinding._(
+      controller: controller,
+      positionDiagnostics: diagnostics,
+      syncImmediately: syncImmediately,
+    );
+  }
+
+  TextDiagnosticsBinding._({
+    required TextAreaController controller,
+    TextDiagnosticsBuilder? buildDiagnostics,
+    ValueListenable<Iterable<TextDiagnosticRange>>? rangeDiagnostics,
+    ValueListenable<Iterable<TextPositionDiagnosticRange>>? positionDiagnostics,
+    bool syncImmediately = true,
+  }) : _controller = controller,
+       _buildDiagnostics = buildDiagnostics,
+       _rangeDiagnostics = rangeDiagnostics,
+       _positionDiagnostics = positionDiagnostics {
+    _attachListeners();
+    if (syncImmediately) {
+      sync(force: true);
+    }
+  }
+
   TextAreaController _controller;
-  final TextDiagnosticsBuilder _buildDiagnostics;
+  final TextDiagnosticsBuilder? _buildDiagnostics;
+  final ValueListenable<Iterable<TextDiagnosticRange>>? _rangeDiagnostics;
+  final ValueListenable<Iterable<TextPositionDiagnosticRange>>?
+  _positionDiagnostics;
   String? _lastText;
   bool _disposed = false;
 
@@ -54,13 +97,31 @@ final class TextDiagnosticsBinding {
   set controller(TextAreaController value) {
     if (identical(_controller, value)) return;
     if (!_disposed) {
-      _controller.removeListener(_handleControllerChanged);
+      _detachControllerListener();
     }
     _controller = value;
     _lastText = null;
     if (!_disposed) {
-      _controller.addListener(_handleControllerChanged);
+      _attachControllerListener();
       sync(force: true);
+    }
+  }
+
+  void _attachListeners() {
+    _attachControllerListener();
+    _rangeDiagnostics?.addListener(_handleDiagnosticsChanged);
+    _positionDiagnostics?.addListener(_handleDiagnosticsChanged);
+  }
+
+  void _attachControllerListener() {
+    if (_buildDiagnostics != null) {
+      _controller.addListener(_handleControllerChanged);
+    }
+  }
+
+  void _detachControllerListener() {
+    if (_buildDiagnostics != null) {
+      _controller.removeListener(_handleControllerChanged);
     }
   }
 
@@ -68,15 +129,37 @@ final class TextDiagnosticsBinding {
     sync();
   }
 
+  void _handleDiagnosticsChanged() {
+    sync(force: true);
+  }
+
   /// Recomputes diagnostics from the controller's current text.
   void sync({bool force = false}) {
     if (_disposed) return;
+    if (_rangeDiagnostics case final diagnosticsSource?) {
+      final diagnostics = diagnosticsSource.value.toList(growable: false);
+      if (diagnostics.isEmpty) {
+        _controller.clearDiagnostics();
+        return;
+      }
+      _controller.setDiagnostics(diagnostics);
+      return;
+    }
+    if (_positionDiagnostics case final diagnosticsSource?) {
+      final diagnostics = diagnosticsSource.value.toList(growable: false);
+      if (diagnostics.isEmpty) {
+        _controller.clearDiagnostics();
+        return;
+      }
+      _controller.setDiagnosticsFromPositions(diagnostics);
+      return;
+    }
     final text = _controller.text;
     if (!force && text == _lastText) {
       return;
     }
     _lastText = text;
-    final diagnostics = _buildDiagnostics(text).toList(growable: false);
+    final diagnostics = _buildDiagnostics!(text).toList(growable: false);
     if (diagnostics.isEmpty) {
       _controller.clearDiagnostics();
       return;
@@ -95,6 +178,8 @@ final class TextDiagnosticsBinding {
   void dispose() {
     if (_disposed) return;
     _disposed = true;
-    _controller.removeListener(_handleControllerChanged);
+    _detachControllerListener();
+    _rangeDiagnostics?.removeListener(_handleDiagnosticsChanged);
+    _positionDiagnostics?.removeListener(_handleDiagnosticsChanged);
   }
 }

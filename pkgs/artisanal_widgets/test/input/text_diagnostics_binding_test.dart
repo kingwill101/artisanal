@@ -1,4 +1,5 @@
 import 'package:artisanal_widgets/editors.dart';
+import 'package:artisanal_widgets/widgets.dart' as widgets;
 import 'package:test/test.dart';
 
 void main() {
@@ -124,6 +125,65 @@ void main() {
 
       expect(second.diagnostics, hasLength(1));
       expect(second.diagnostics.single.code, equals('FIX001'));
+    });
+
+    test('syncs directly from external range diagnostics', () {
+      final controller = TextAreaController(text: 'alpha');
+      final source = widgets.ValueNotifier<Iterable<TextDiagnosticRange>>(
+        const [],
+      );
+      final binding = TextDiagnosticsBinding.fromRangeListenable(
+        controller: controller,
+        diagnostics: source,
+      );
+      addTearDown(binding.dispose);
+
+      expect(controller.diagnostics, isEmpty);
+
+      source.value = const [
+        TextDiagnosticRange(
+          startOffset: 1,
+          endOffset: 4,
+          severity: TextDiagnosticSeverity.error,
+          code: 'EXT001',
+        ),
+      ];
+
+      expect(controller.diagnostics, hasLength(1));
+      expect(controller.diagnostics.single.code, equals('EXT001'));
+      expect(
+        controller.diagnostics.single.severity,
+        equals(TextDiagnosticSeverity.error),
+      );
+    });
+
+    test('syncs directly from external positional diagnostics', () {
+      final controller = TextAreaController(text: 'alpha\nbeta');
+      final source =
+          widgets.ValueNotifier<Iterable<TextPositionDiagnosticRange>>(
+            const [],
+          );
+      final binding = TextDiagnosticsBinding.fromPositionListenable(
+        controller: controller,
+        diagnostics: source,
+      );
+      addTearDown(binding.dispose);
+
+      source.value = const [
+        TextPositionDiagnosticRange(
+          startLine: 1,
+          startColumn: 1,
+          endLine: 1,
+          endColumn: 3,
+          severity: TextDiagnosticSeverity.warning,
+          code: 'POS001',
+        ),
+      ];
+
+      expect(controller.diagnostics, hasLength(1));
+      expect(controller.diagnostics.single.code, equals('POS001'));
+      expect(controller.diagnostics.single.startOffset, equals(7));
+      expect(controller.diagnostics.single.endOffset, equals(9));
     });
   });
 }

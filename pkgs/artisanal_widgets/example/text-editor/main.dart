@@ -55,6 +55,7 @@ class _TextEditorDemoScreenState extends w.State<TextEditorDemoScreen> {
         'TODO: add smarter editor chrome\n'
         'FIXME: wire diagnostics into the demo',
   );
+  late final editors.TextPositionDiagnosticsSource _diagnosticsSource;
   late final editors.TextDiagnosticsBinding _diagnosticsBinding;
   String _themePresetName = 'adaptive';
   String _status = 'Press Ctrl+S to save';
@@ -62,15 +63,20 @@ class _TextEditorDemoScreenState extends w.State<TextEditorDemoScreen> {
   @override
   void initState() {
     super.initState();
-    _diagnosticsBinding = editors.TextDiagnosticsBinding.patternRules(
-      controller: _controller,
+    _diagnosticsSource = editors.TextPositionDiagnosticsSource.patternRules(
+      text: _controller,
       rules: _demoDiagnosticRules,
+    );
+    _diagnosticsBinding = editors.TextDiagnosticsBinding.fromPositionListenable(
+      controller: _controller,
+      diagnostics: _diagnosticsSource,
     );
   }
 
   @override
   void dispose() {
     _diagnosticsBinding.dispose();
+    _diagnosticsSource.dispose();
     super.dispose();
   }
 

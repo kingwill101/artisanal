@@ -124,6 +124,7 @@ class _EditorCorePlaygroundScreenState
       editors.TextAreaController(text: _textEditorSample);
   final editors.TextAreaController _codeEditorController =
       editors.TextAreaController(text: _codeEditorSample);
+  late final List<editors.TextPositionDiagnosticsSource> _diagnosticsSources;
   late final List<editors.TextDiagnosticsBinding> _diagnosticsBindings;
   late final List<editors.TextDecorationLayerBinding> _searchBindings;
   late final List<editors.TextLineDecorationLayerBinding> _reviewLineBindings;
@@ -136,7 +137,7 @@ class _EditorCorePlaygroundScreenState
   String _status =
       'Playground overlays are live. Edit TODO or FIXME lines to watch them move.';
 
-  Iterable<editors.TextAreaController> get _editableControllers => [
+  List<editors.TextAreaController> get _editableControllers => [
     _rawController,
     _textEditorController,
     _codeEditorController,
@@ -145,13 +146,20 @@ class _EditorCorePlaygroundScreenState
   @override
   void initState() {
     super.initState();
-    _diagnosticsBindings = <editors.TextDiagnosticsBinding>[
+    _diagnosticsSources = <editors.TextPositionDiagnosticsSource>[
       for (final controller in _editableControllers)
-        editors.TextDiagnosticsBinding(
-          controller: controller,
+        editors.TextPositionDiagnosticsSource(
+          text: controller,
           buildDiagnostics: (String text) =>
               _diagnosticsEnabled ? _diagnosticsFor(text) : const [],
           syncImmediately: false,
+        ),
+    ];
+    _diagnosticsBindings = <editors.TextDiagnosticsBinding>[
+      for (var index = 0; index < _editableControllers.length; index++)
+        editors.TextDiagnosticsBinding.fromPositionListenable(
+          controller: _editableControllers[index],
+          diagnostics: _diagnosticsSources[index],
         ),
     ];
     _searchBindings = <editors.TextDecorationLayerBinding>[
@@ -186,6 +194,9 @@ class _EditorCorePlaygroundScreenState
   void dispose() {
     for (final binding in _diagnosticsBindings) {
       binding.dispose();
+    }
+    for (final source in _diagnosticsSources) {
+      source.dispose();
     }
     for (final binding in _searchBindings) {
       binding.dispose();
@@ -236,6 +247,9 @@ class _EditorCorePlaygroundScreenState
 
     _syncingDecorations = true;
     try {
+      for (final source in _diagnosticsSources) {
+        source.sync(force: true);
+      }
       for (final binding in _diagnosticsBindings) {
         binding.sync(force: true);
       }

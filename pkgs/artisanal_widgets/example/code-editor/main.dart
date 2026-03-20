@@ -60,6 +60,7 @@ void main() {
 }
 ''',
   );
+  late final editors.TextPositionDiagnosticsSource _diagnosticsSource;
   late final editors.TextDiagnosticsBinding _diagnosticsBinding;
   String _themePresetName = 'adaptive';
   String _status = 'Press Ctrl+S to save';
@@ -67,15 +68,20 @@ void main() {
   @override
   void initState() {
     super.initState();
-    _diagnosticsBinding = editors.TextDiagnosticsBinding.patternRules(
-      controller: _controller,
+    _diagnosticsSource = editors.TextPositionDiagnosticsSource.patternRules(
+      text: _controller,
       rules: _demoDiagnosticRules,
+    );
+    _diagnosticsBinding = editors.TextDiagnosticsBinding.fromPositionListenable(
+      controller: _controller,
+      diagnostics: _diagnosticsSource,
     );
   }
 
   @override
   void dispose() {
     _diagnosticsBinding.dispose();
+    _diagnosticsSource.dispose();
     super.dispose();
   }
 

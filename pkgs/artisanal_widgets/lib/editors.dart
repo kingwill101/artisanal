@@ -6,6 +6,7 @@
 /// - `TextField` / `TextEditingController`
 /// - `TextArea` / `TextAreaController`
 /// - `TextDiagnosticsBinding`
+/// - `TextPositionDiagnosticsSource`
 /// - `TextInputKeyMap` / `TextAreaKeyMap`
 /// - `TextEditor`
 /// - `CodeEditor`
@@ -26,6 +27,8 @@ export 'src/widgets/input/input_widgets.dart'
         TextArea;
 export 'src/widgets/input/text_diagnostics_binding.dart'
     show TextDiagnosticsBinding, TextDiagnosticsBuilder;
+export 'src/widgets/input/text_diagnostics_source.dart'
+    show TextPositionDiagnosticsBuilder, TextPositionDiagnosticsSource;
 export 'src/widgets/input/text_decoration_binding.dart'
     show
         TextDecorationLayerBinding,
