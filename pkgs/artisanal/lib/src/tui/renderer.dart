@@ -817,13 +817,18 @@ class UltravioletTuiRenderer implements TuiRenderer {
       View v => v.content,
       _ => view.toString(),
     };
+    final sizeChanged =
+        _screen == null ||
+        _screen!.width() != terminal.width ||
+        _screen!.height() != terminal.height;
 
     // Frame rate limiting using Stopwatch (immune to clock adjustments)
     if (_frameStopwatch.isRunning) {
       // Only skip if the view hasn't changed; otherwise we must render or the
       // terminal can get stuck with stale overlay content.
       if (_frameStopwatch.elapsed < _options.frameTime &&
-          content == _pendingView) {
+          content == _pendingView &&
+          !sizeChanged) {
         return;
       }
     }
