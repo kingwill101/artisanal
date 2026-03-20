@@ -1,23 +1,33 @@
-import 'dart:io' as io;
-
 import 'package:test/test.dart';
 
-import '_path_utils.dart';
+import '_compiled_remote_plugin_demo_harness.dart';
 
 void main() {
-  test('remote plugin host demo renders the guest surface', () async {
-    final result = await io.Process.run(
-      io.Platform.resolvedExecutable,
-      <String>[
-        'run',
-        resolveArtisanalPath(<String>[
-          'example',
-          'tui',
-          'remote_plugin_host_demo.dart',
-        ]),
+  late CompiledRemotePluginDemoHarness harness;
+
+  setUpAll(() async {
+    harness = await CompiledRemotePluginDemoHarness.create(
+      hostRelativePath: <String>[
+        'example',
+        'tui',
+        'remote_plugin_host_demo.dart',
       ],
-      workingDirectory: io.Directory.current.path,
+      guestRelativePath: <String>[
+        'example',
+        'tui',
+        'remote_plugin_guest_demo.dart',
+      ],
+      hostKernelName: 'remote_plugin_host_demo.dill',
+      guestKernelName: 'remote_plugin_guest_demo.dill',
     );
+  });
+
+  tearDownAll(() async {
+    await harness.dispose();
+  });
+
+  test('remote plugin host demo renders the guest surface', () async {
+    final result = await harness.runHost();
 
     expect(result.exitCode, 0, reason: '${result.stderr}');
 
