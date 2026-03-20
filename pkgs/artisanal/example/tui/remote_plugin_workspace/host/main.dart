@@ -529,9 +529,9 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         ..registerFilePicker(
           pickPaths: (_) => const <String>['/tmp/workspace.txt'],
         );
-      final connection = await plugins.RemotePluginHostConnection.startProcess(
-        io.Platform.resolvedExecutable,
-        <String>[manifest.resolveEntrypoint()],
+      final connection = await plugins.RemotePluginHostConnection.startManifest(
+        manifest,
+        executable: io.Platform.resolvedExecutable,
         hostHello: plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',

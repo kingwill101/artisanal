@@ -5,8 +5,8 @@ out-of-process plugins and composing their remote surfaces into one UV-backed
 workspace.
 
 The host discovers plugins from the `plugins/` directory by loading each
-`*.plugin.json` manifest, validating it, and launching the manifest's
-`entrypoint` relative to the manifest file.
+`*.plugin.json` manifest, validating it, and launching it through
+`RemotePluginHostConnection.startManifest(...)`.
 
 The host passes one `RemotePluginGenericServiceCatalog` into
 `RemotePluginHostConnection.startProcess(..., genericServices: ...)`, which

@@ -4,6 +4,7 @@ import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_controller.dart';
 import 'remote_surface_file_picker_service.dart';
 import 'remote_surface_generic_service.dart';
+import 'remote_surface_manifest.dart';
 import 'remote_surface_notification_service.dart';
 import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
@@ -75,6 +76,41 @@ final class RemotePluginHostConnection {
       await process.dispose(kill: true);
       rethrow;
     }
+  }
+
+  /// Starts a plugin process described by a validated manifest.
+  static Future<RemotePluginHostConnection> startManifest(
+    RemotePluginManifest manifest, {
+    required String executable,
+    required RemotePluginHostHello hostHello,
+    RemotePluginGenericServiceCatalog? genericServices,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    io.ProcessStartMode mode = io.ProcessStartMode.normal,
+    RemotePluginProtocolValidator validator =
+        const RemotePluginProtocolValidator(),
+    RemotePluginSurfaceStore? surfaces,
+    Duration timeout = const Duration(seconds: 5),
+  }) {
+    return startProcess(
+      executable,
+      <String>[
+        manifest.resolveEntrypoint(
+          currentWorkingDirectory: workingDirectory,
+        ),
+      ],
+      hostHello: hostHello,
+      genericServices: genericServices,
+      workingDirectory:
+          workingDirectory ?? _manifestWorkingDirectory(manifest.manifestPath),
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      mode: mode,
+      validator: validator,
+      surfaces: surfaces,
+      timeout: timeout,
+    );
   }
 
   final RemotePluginProcess process;
@@ -184,4 +220,11 @@ RemotePluginHostHello _hostHelloWithGenericServices(
     });
 
   return hostHello.copyWith(capabilities: capabilities, services: services);
+}
+
+String? _manifestWorkingDirectory(String? manifestPath) {
+  if (manifestPath == null) {
+    return null;
+  }
+  return io.File(manifestPath).parent.path;
 }
