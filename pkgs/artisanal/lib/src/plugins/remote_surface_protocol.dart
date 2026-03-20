@@ -10,9 +10,9 @@ typedef JsonObject = Map<String, Object?>;
 enum RemotePluginMessageType {
   hostHello('host.hello'),
   pluginHello('plugin.hello'),
-  hostSurfaceOpen('host.surface.open'),
-  hostSurfaceResize('host.surface.resize'),
-  hostSurfaceClose('host.surface.close'),
+  pluginSurfaceOpen('plugin.surface.open'),
+  pluginSurfaceResize('plugin.surface.resize'),
+  pluginSurfaceClose('plugin.surface.close'),
   pluginSurfaceFrame('plugin.surface.frame'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
@@ -297,11 +297,11 @@ sealed class RemotePluginMessage {
       RemotePluginMessageType.pluginHello => RemotePluginHello.fromPayload(
         payload,
       ),
-      RemotePluginMessageType.hostSurfaceOpen =>
+      RemotePluginMessageType.pluginSurfaceOpen =>
         RemotePluginSurfaceOpen.fromPayload(payload),
-      RemotePluginMessageType.hostSurfaceResize =>
+      RemotePluginMessageType.pluginSurfaceResize =>
         RemotePluginSurfaceResize.fromPayload(payload),
-      RemotePluginMessageType.hostSurfaceClose =>
+      RemotePluginMessageType.pluginSurfaceClose =>
         RemotePluginSurfaceClose.fromPayload(payload),
       RemotePluginMessageType.pluginSurfaceFrame =>
         RemotePluginFrame.fromPayload(payload),
@@ -438,7 +438,7 @@ final class RemotePluginSurfaceOpen extends RemotePluginMessage {
 
   @override
   RemotePluginMessageType get messageType =>
-      RemotePluginMessageType.hostSurfaceOpen;
+      RemotePluginMessageType.pluginSurfaceOpen;
 
   @override
   JsonObject get payloadJson => <String, Object?>{
@@ -474,7 +474,7 @@ final class RemotePluginSurfaceResize extends RemotePluginMessage {
 
   @override
   RemotePluginMessageType get messageType =>
-      RemotePluginMessageType.hostSurfaceResize;
+      RemotePluginMessageType.pluginSurfaceResize;
 
   @override
   JsonObject get payloadJson => <String, Object?>{
@@ -499,7 +499,7 @@ final class RemotePluginSurfaceClose extends RemotePluginMessage {
 
   @override
   RemotePluginMessageType get messageType =>
-      RemotePluginMessageType.hostSurfaceClose;
+      RemotePluginMessageType.pluginSurfaceClose;
 
   @override
   JsonObject get payloadJson => <String, Object?>{
@@ -767,7 +767,7 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
-  static final Schema hostSurfaceOpenPayload = S.object(
+  static final Schema pluginSurfaceOpenPayload = S.object(
     required: const ['surfaceId', 'kind', 'width', 'height'],
     properties: <String, Schema>{
       'surfaceId': S.string(minLength: 1),
@@ -784,7 +784,7 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
-  static final Schema hostSurfaceResizePayload = S.object(
+  static final Schema pluginSurfaceResizePayload = S.object(
     required: const ['surfaceId', 'width', 'height'],
     properties: <String, Schema>{
       'surfaceId': S.string(minLength: 1),
@@ -794,7 +794,7 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
-  static final Schema hostSurfaceClosePayload = S.object(
+  static final Schema pluginSurfaceClosePayload = S.object(
     required: const ['surfaceId'],
     properties: <String, Schema>{
       'surfaceId': S.string(minLength: 1),
@@ -871,17 +871,17 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginHello,
           pluginHelloPayload,
         ),
-        RemotePluginMessageType.hostSurfaceOpen: _typedEnvelope(
-          RemotePluginMessageType.hostSurfaceOpen,
-          hostSurfaceOpenPayload,
+        RemotePluginMessageType.pluginSurfaceOpen: _typedEnvelope(
+          RemotePluginMessageType.pluginSurfaceOpen,
+          pluginSurfaceOpenPayload,
         ),
-        RemotePluginMessageType.hostSurfaceResize: _typedEnvelope(
-          RemotePluginMessageType.hostSurfaceResize,
-          hostSurfaceResizePayload,
+        RemotePluginMessageType.pluginSurfaceResize: _typedEnvelope(
+          RemotePluginMessageType.pluginSurfaceResize,
+          pluginSurfaceResizePayload,
         ),
-        RemotePluginMessageType.hostSurfaceClose: _typedEnvelope(
-          RemotePluginMessageType.hostSurfaceClose,
-          hostSurfaceClosePayload,
+        RemotePluginMessageType.pluginSurfaceClose: _typedEnvelope(
+          RemotePluginMessageType.pluginSurfaceClose,
+          pluginSurfaceClosePayload,
         ),
         RemotePluginMessageType.pluginSurfaceFrame: _typedEnvelope(
           RemotePluginMessageType.pluginSurfaceFrame,

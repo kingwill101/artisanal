@@ -42,6 +42,22 @@ void main() {
     expect(errors, isEmpty);
   });
 
+  test('surface lifecycle messages use plugin surface wire types', () {
+    const open = plugins.RemotePluginSurfaceOpen(
+      surfaceId: 'sidebar',
+      kind: plugins.RemotePluginSurfaceKind.panel,
+      width: 40,
+      height: 10,
+    );
+
+    final json = open.toJson();
+
+    expect(
+      json['type'],
+      plugins.RemotePluginMessageType.pluginSurfaceOpen.wireName,
+    );
+  });
+
   test('validator rejects unsupported message types', () async {
     final errors = await validator.validateJson(<String, Object?>{
       'protocol': plugins.remotePluginProtocolVersion,
