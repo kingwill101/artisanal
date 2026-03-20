@@ -126,6 +126,24 @@ void main() {
     expect(responseErrors, isEmpty);
   });
 
+  test('file-picker request and response messages round-trip and validate', () async {
+    const request = plugins.RemotePluginFilePickerRequest(
+      requestId: 'req-5',
+      title: 'Pick a file',
+      initialPath: '/tmp',
+    );
+    const response = plugins.RemotePluginFilePickerResponse(
+      requestId: 'req-5',
+      paths: <String>['/tmp/demo.txt'],
+    );
+
+    final parsedRequest = plugins.RemotePluginMessage.fromJson(request.toJson());
+    final responseErrors = await validator.validateMessage(response);
+
+    expect(parsedRequest, isA<plugins.RemotePluginFilePickerRequest>());
+    expect(responseErrors, isEmpty);
+  });
+
   test('validator rejects unsupported message types', () async {
     final errors = await validator.validateJson(<String, Object?>{
       'protocol': plugins.remotePluginProtocolVersion,

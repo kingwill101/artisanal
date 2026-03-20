@@ -2,6 +2,7 @@ import 'dart:io' as io;
 
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_controller.dart';
+import 'remote_surface_file_picker_service.dart';
 import 'remote_surface_notification_service.dart';
 import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
@@ -98,6 +99,13 @@ final class RemotePluginHostConnection {
     RemotePluginNotifier? notify,
   }) {
     return RemotePluginNotificationHostService.bind(this, notify: notify);
+  }
+
+  /// Binds a file picker request/response service to this plugin connection.
+  RemotePluginFilePickerHostService bindFilePickerService({
+    RemotePluginFilePickerHandler? pickPaths,
+  }) {
+    return RemotePluginFilePickerHostService.bind(this, pickPaths: pickPaths);
   }
 
   /// Disposes controller, session, and process resources.

@@ -237,5 +237,63 @@ void main() {
       );
       await notifyFuture;
     });
+
+    test('guest services request file picker results', () async {
+      final hostToPlugin = StreamController<String>();
+      final pluginToHost = StreamController<String>();
+
+      final hostChannel = plugins.RemotePluginJsonChannel(
+        sendLine: hostToPlugin.add,
+      );
+      final pluginChannel = plugins.RemotePluginJsonChannel(
+        sendLine: pluginToHost.add,
+      );
+
+      hostChannel.bindLines(pluginToHost.stream);
+      pluginChannel.bindLines(hostToPlugin.stream);
+
+      addTearDown(() async {
+        await hostChannel.dispose();
+        await pluginChannel.dispose();
+        await hostToPlugin.close();
+        await pluginToHost.close();
+      });
+
+      await hostChannel.send(
+        const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+      );
+
+      final session = await plugins.RemotePluginGuestSession.connect(
+        channel: pluginChannel,
+        pluginHello: const plugins.RemotePluginHello(
+          pluginId: 'service-plugin',
+          pluginVersion: '0.0.1',
+        ),
+      );
+      addTearDown(session.dispose);
+
+      final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+      addTearDown(hostMessages.cancel);
+
+      final pickerFuture = session.services.pickPaths(
+        title: 'Pick demo file',
+        initialPath: '/tmp',
+      );
+      await hostMessages.moveNext().timeout(const Duration(seconds: 1));
+      final pickerRequest = hostMessages.current;
+      expect(pickerRequest, isA<plugins.RemotePluginFilePickerRequest>());
+      await hostChannel.send(
+        plugins.RemotePluginFilePickerResponse(
+          requestId:
+              (pickerRequest as plugins.RemotePluginFilePickerRequest)
+                  .requestId,
+          paths: const <String>['/tmp/demo.txt'],
+        ),
+      );
+      expect(await pickerFuture, const <String>['/tmp/demo.txt']);
+    });
   });
 }

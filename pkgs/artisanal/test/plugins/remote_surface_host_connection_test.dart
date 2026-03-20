@@ -185,6 +185,57 @@ void main() {
     expect(notification!.message, 'Background task finished');
     expect(notification!.level, plugins.RemotePluginNotificationLevel.success);
   });
+
+  test('host connection can answer file-picker requests', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'file_picker_plugin.dart',
+    );
+
+    plugins.RemotePluginFilePickerRequest? pickerRequest;
+    final connection = await plugins.RemotePluginHostConnection.startProcess(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+        capabilities: <String>['file-picker'],
+      ),
+      timeout: const Duration(seconds: 20),
+    );
+    addTearDown(() => connection.dispose(kill: true));
+
+    final pickerService = connection.bindFilePickerService(
+      pickPaths: (request) {
+        pickerRequest = request;
+        return const <String>['/tmp/demo.txt'];
+      },
+    );
+    addTearDown(pickerService.dispose);
+
+    await connection.surfaceMessages
+        .where((message) => message is plugins.RemotePluginFrame)
+        .cast<plugins.RemotePluginFrame>()
+        .firstWhere((_) {
+          final surface = connection.surfaces['picker.panel'];
+          if (surface == null) {
+            return false;
+          }
+          final text = _surfaceText(surface);
+          return text.contains('pick:/tmp/demo.txt');
+        })
+        .timeout(const Duration(seconds: 5));
+
+    expect(pickerRequest, isNotNull);
+    expect(pickerRequest!.title, 'Select a demo file');
+    expect(pickerRequest!.initialPath, '/tmp');
+    expect(pickerRequest!.kind, plugins.RemotePluginFilePickerKind.file);
+  });
 }
 
 String _surfaceText(plugins.RemotePluginSurfaceState surface) {

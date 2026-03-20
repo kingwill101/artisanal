@@ -138,4 +138,40 @@ final class RemotePluginGuestServices {
       );
     }
   }
+
+  Future<List<String>> pickPaths({
+    RemotePluginFilePickerKind kind = RemotePluginFilePickerKind.file,
+    bool allowMultiple = false,
+    String? title,
+    String? initialPath,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final requestId = _requestId('file-picker');
+    final future = session.messages
+        .where(
+          (message) =>
+              message is RemotePluginFilePickerResponse &&
+              message.requestId == requestId,
+        )
+        .cast<RemotePluginFilePickerResponse>()
+        .first
+        .timeout(timeout);
+    await session.send(
+      RemotePluginFilePickerRequest(
+        requestId: requestId,
+        kind: kind,
+        allowMultiple: allowMultiple,
+        title: title,
+        initialPath: initialPath,
+      ),
+    );
+    final response = await future;
+    if (response.error != null) {
+      throw RemotePluginServiceException(response.error!);
+    }
+    if (response.canceled) {
+      return const <String>[];
+    }
+    return response.paths;
+  }
 }

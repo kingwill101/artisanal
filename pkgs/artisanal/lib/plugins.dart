@@ -16,6 +16,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginMouseAction,
         RemotePluginMouseButton,
         RemotePluginNotificationLevel,
+        RemotePluginFilePickerKind,
         RemotePluginAnchorRect,
         RemotePluginCellAttributes,
         RemotePluginFrameCell,
@@ -31,6 +32,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginClipboardWriteRequest,
         RemotePluginOpenUrlRequest,
         RemotePluginNotificationRequest,
+        RemotePluginFilePickerRequest,
         RemotePluginKeyInput,
         RemotePluginMouseInput,
         RemotePluginFocusInput,
@@ -39,6 +41,7 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginClipboardWriteResponse,
         RemotePluginOpenUrlResponse,
         RemotePluginNotificationResponse,
+        RemotePluginFilePickerResponse,
         RemotePluginProtocolSchemas,
         RemotePluginProtocolValidator,
         RemotePluginProtocolValidationException;
@@ -54,6 +57,8 @@ export 'src/plugins/remote_surface_url_service.dart'
     show RemotePluginUrlOpener, RemotePluginOpenUrlHostService;
 export 'src/plugins/remote_surface_notification_service.dart'
     show RemotePluginNotifier, RemotePluginNotificationHostService;
+export 'src/plugins/remote_surface_file_picker_service.dart'
+    show RemotePluginFilePickerHandler, RemotePluginFilePickerHostService;
 export 'src/plugins/remote_surface_controller.dart'
     show RemotePluginSurfaceController;
 export 'src/plugins/remote_surface_drawable.dart'

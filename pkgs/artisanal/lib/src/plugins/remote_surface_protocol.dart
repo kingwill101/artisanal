@@ -18,6 +18,7 @@ enum RemotePluginMessageType {
   pluginClipboardWrite('plugin.clipboard.write'),
   pluginUrlOpen('plugin.url.open'),
   pluginNotify('plugin.notify'),
+  pluginFilePickerOpen('plugin.filePicker.open'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
   hostInputFocus('host.input.focus'),
@@ -25,7 +26,8 @@ enum RemotePluginMessageType {
   hostClipboardRead('host.clipboard.read'),
   hostClipboardWrite('host.clipboard.write'),
   hostUrlOpen('host.url.open'),
-  hostNotify('host.notify');
+  hostNotify('host.notify'),
+  hostFilePickerResult('host.filePicker.result');
 
   const RemotePluginMessageType(this.wireName);
 
@@ -137,6 +139,24 @@ enum RemotePluginNotificationLevel {
       (candidate) => candidate.wireName == value,
       orElse: () => throw FormatException(
         'Unsupported remote plugin notification level: $value',
+      ),
+    );
+  }
+}
+
+enum RemotePluginFilePickerKind {
+  file('file'),
+  directory('directory');
+
+  const RemotePluginFilePickerKind(this.wireName);
+
+  final String wireName;
+
+  static RemotePluginFilePickerKind parse(String value) {
+    return values.firstWhere(
+      (candidate) => candidate.wireName == value,
+      orElse: () => throw FormatException(
+        'Unsupported remote plugin file picker kind: $value',
       ),
     );
   }
@@ -341,6 +361,8 @@ sealed class RemotePluginMessage {
         RemotePluginOpenUrlRequest.fromPayload(payload),
       RemotePluginMessageType.pluginNotify =>
         RemotePluginNotificationRequest.fromPayload(payload),
+      RemotePluginMessageType.pluginFilePickerOpen =>
+        RemotePluginFilePickerRequest.fromPayload(payload),
       RemotePluginMessageType.hostInputKey => RemotePluginKeyInput.fromPayload(
         payload,
       ),
@@ -358,6 +380,8 @@ sealed class RemotePluginMessage {
         RemotePluginOpenUrlResponse.fromPayload(payload),
       RemotePluginMessageType.hostNotify =>
         RemotePluginNotificationResponse.fromPayload(payload),
+      RemotePluginMessageType.hostFilePickerResult =>
+        RemotePluginFilePickerResponse.fromPayload(payload),
     };
   }
 
@@ -768,6 +792,48 @@ final class RemotePluginNotificationRequest extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginFilePickerRequest extends RemotePluginMessage {
+  const RemotePluginFilePickerRequest({
+    required this.requestId,
+    this.kind = RemotePluginFilePickerKind.file,
+    this.allowMultiple = false,
+    this.title,
+    this.initialPath,
+  });
+
+  final String requestId;
+  final RemotePluginFilePickerKind kind;
+  final bool allowMultiple;
+  final String? title;
+  final String? initialPath;
+
+  factory RemotePluginFilePickerRequest.fromPayload(JsonObject payload) {
+    final kindValue = payload['kind'];
+    return RemotePluginFilePickerRequest(
+      requestId: _requireString(payload, 'requestId'),
+      kind: kindValue is String
+          ? RemotePluginFilePickerKind.parse(kindValue)
+          : RemotePluginFilePickerKind.file,
+      allowMultiple: _readBool(payload, 'allowMultiple'),
+      title: _readStringOrNull(payload, 'title'),
+      initialPath: _readStringOrNull(payload, 'initialPath'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginFilePickerOpen;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (kind != RemotePluginFilePickerKind.file) 'kind': kind.wireName,
+    if (allowMultiple) 'allowMultiple': allowMultiple,
+    if (title != null) 'title': title,
+    if (initialPath != null) 'initialPath': initialPath,
+  };
+}
+
 final class RemotePluginMouseInput extends RemotePluginMessage {
   const RemotePluginMouseInput({
     required this.surfaceId,
@@ -991,6 +1057,41 @@ final class RemotePluginNotificationResponse extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginFilePickerResponse extends RemotePluginMessage {
+  const RemotePluginFilePickerResponse({
+    required this.requestId,
+    this.paths = const <String>[],
+    this.canceled = false,
+    this.error,
+  });
+
+  final String requestId;
+  final List<String> paths;
+  final bool canceled;
+  final String? error;
+
+  factory RemotePluginFilePickerResponse.fromPayload(JsonObject payload) {
+    return RemotePluginFilePickerResponse(
+      requestId: _requireString(payload, 'requestId'),
+      paths: _readStringList(payload, 'paths'),
+      canceled: _readBool(payload, 'canceled'),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.hostFilePickerResult;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (paths.isNotEmpty) 'paths': paths,
+    if (canceled) 'canceled': canceled,
+    if (error != null) 'error': error,
+  };
+}
+
 final class RemotePluginProtocolSchemas {
   RemotePluginProtocolSchemas._();
 
@@ -1154,6 +1255,20 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema pluginFilePickerOpenPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'kind': _enumString(
+        RemotePluginFilePickerKind.values.map((value) => value.wireName),
+      ),
+      'allowMultiple': S.boolean(),
+      'title': S.string(minLength: 1),
+      'initialPath': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostInputKeyPayload = S.object(
     required: const ['surfaceId', 'key'],
     properties: <String, Schema>{
@@ -1242,6 +1357,17 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema hostFilePickerResultPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'paths': _stringList(),
+      'canceled': S.boolean(),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Map<RemotePluginMessageType, Schema> byType =
       <RemotePluginMessageType, Schema>{
         RemotePluginMessageType.hostHello: _typedEnvelope(
@@ -1284,6 +1410,10 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginNotify,
           pluginNotifyPayload,
         ),
+        RemotePluginMessageType.pluginFilePickerOpen: _typedEnvelope(
+          RemotePluginMessageType.pluginFilePickerOpen,
+          pluginFilePickerOpenPayload,
+        ),
         RemotePluginMessageType.hostInputKey: _typedEnvelope(
           RemotePluginMessageType.hostInputKey,
           hostInputKeyPayload,
@@ -1315,6 +1445,10 @@ final class RemotePluginProtocolSchemas {
         RemotePluginMessageType.hostNotify: _typedEnvelope(
           RemotePluginMessageType.hostNotify,
           hostNotifyPayload,
+        ),
+        RemotePluginMessageType.hostFilePickerResult: _typedEnvelope(
+          RemotePluginMessageType.hostFilePickerResult,
+          hostFilePickerResultPayload,
         ),
       };
 
