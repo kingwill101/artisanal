@@ -1303,11 +1303,7 @@ final class UvTerminalRenderer {
           final moveCost = assumeHomeForInlineRelative
               ? UvAnsi.cursorForward(firstCell).length
               : _moveCursorSeq(this, newbuf, firstCell, y, false).seq.length;
-          // Do not replace cursor motion with raw blank emission for plain
-          // empty cells. Those spaces inherit the terminal default background,
-          // which can produce left-edge artifacts during scroll/redraw when
-          // the app background differs from the terminal default.
-          if (moveCost > firstCell && !blank.isEmpty) {
+          if (moveCost > firstCell) {
             firstCell = 0;
           }
         }
