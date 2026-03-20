@@ -463,6 +463,20 @@ final class RemotePluginHostHello extends RemotePluginMessage {
   final List<String> capabilities;
   final List<RemotePluginServiceDescriptor> services;
 
+  RemotePluginHostHello copyWith({
+    String? hostName,
+    String? hostVersion,
+    List<String>? capabilities,
+    List<RemotePluginServiceDescriptor>? services,
+  }) {
+    return RemotePluginHostHello(
+      hostName: hostName ?? this.hostName,
+      hostVersion: hostVersion ?? this.hostVersion,
+      capabilities: capabilities ?? this.capabilities,
+      services: services ?? this.services,
+    );
+  }
+
   factory RemotePluginHostHello.fromPayload(JsonObject payload) {
     return RemotePluginHostHello(
       hostName: _requireString(payload, 'hostName'),

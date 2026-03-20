@@ -92,29 +92,27 @@ void main() {
   });
 
   test(
-    'host connection can answer clipboard requests through the generic service registry',
+    'host connection can auto-bind clipboard requests through the generic service registry',
     () async {
       var clipboard = 'host clipboard';
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerClipboard(
+          readClipboard: (_) => clipboard,
+          writeClipboard: (_, text) {
+            clipboard = text;
+          },
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[fixtures.path('clipboard_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['services'],
         ),
+        genericServices: genericCatalog,
         timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
-
-      final genericService = connection.bindGenericService();
-      genericService.registerClipboard(
-        readClipboard: (_) => clipboard,
-        writeClipboard: (_, text) {
-          clipboard = text;
-        },
-      );
-      addTearDown(genericService.dispose);
 
       await connection.surfaceMessages
           .where((message) => message is plugins.RemotePluginFrame)
@@ -172,28 +170,26 @@ void main() {
   });
 
   test(
-    'host connection can answer open-url requests through the generic service registry',
+    'host connection can auto-bind open-url requests through the generic service registry',
     () async {
       Uri? openedUrl;
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerOpenUrl(
+          openUrl: (uri) {
+            openedUrl = uri;
+          },
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[fixtures.path('open_url_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['services'],
         ),
+        genericServices: genericCatalog,
         timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
-
-      final genericService = connection.bindGenericService();
-      genericService.registerOpenUrl(
-        openUrl: (uri) {
-          openedUrl = uri;
-        },
-      );
-      addTearDown(genericService.dispose);
 
       await connection.surfaceMessages
           .where((message) => message is plugins.RemotePluginFrame)
@@ -253,28 +249,26 @@ void main() {
   });
 
   test(
-    'host connection can answer notification requests through the generic service registry',
+    'host connection can auto-bind notification requests through the generic service registry',
     () async {
       plugins.RemotePluginNotificationRequest? notification;
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerNotification(
+          notify: (request) {
+            notification = request;
+          },
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[fixtures.path('notification_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['services'],
         ),
+        genericServices: genericCatalog,
         timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
-
-      final genericService = connection.bindGenericService();
-      genericService.registerNotification(
-        notify: (request) {
-          notification = request;
-        },
-      );
-      addTearDown(genericService.dispose);
 
       await connection.surfaceMessages
           .where((message) => message is plugins.RemotePluginFrame)
@@ -341,29 +335,27 @@ void main() {
   });
 
   test(
-    'host connection can answer file-picker requests through the generic service registry',
+    'host connection can auto-bind file-picker requests through the generic service registry',
     () async {
       plugins.RemotePluginFilePickerRequest? pickerRequest;
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..registerFilePicker(
+          pickPaths: (request) {
+            pickerRequest = request;
+            return const <String>['/tmp/demo.txt'];
+          },
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[fixtures.path('file_picker_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['services'],
         ),
+        genericServices: genericCatalog,
         timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
-
-      final genericService = connection.bindGenericService();
-      genericService.registerFilePicker(
-        pickPaths: (request) {
-          pickerRequest = request;
-          return const <String>['/tmp/demo.txt'];
-        },
-      );
-      addTearDown(genericService.dispose);
 
       await connection.surfaceMessages
           .where((message) => message is plugins.RemotePluginFrame)
@@ -398,15 +390,11 @@ void main() {
       hostHello: plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
-        capabilities: <String>['services'],
-        services: genericCatalog.serviceDescriptors,
       ),
+      genericServices: genericCatalog,
       timeout: const Duration(seconds: 20),
     );
     addTearDown(() => connection.dispose(kill: true));
-
-    final genericService = connection.bindGenericServiceCatalog(genericCatalog);
-    addTearDown(genericService.dispose);
 
     await connection.surfaceMessages
         .where((message) => message is plugins.RemotePluginFrame)
@@ -428,36 +416,34 @@ void main() {
   });
 
   test(
-    'host connection validates generic service params before calling the handler',
+    'host connection validates auto-bound generic service params before calling the handler',
     () async {
       var callCount = 0;
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
+        ..register(
+          'host',
+          'ping',
+          (_) {
+            callCount++;
+            return <String, Object?>{'reply': 'pong'};
+          },
+          paramsSchema: jsb.S.object(
+            required: const <String>['value'],
+            properties: <String, jsb.Schema>{'value': jsb.S.integer()},
+            additionalProperties: false,
+          ),
+        );
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
         <String>[fixtures.path('generic_service_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['services'],
         ),
+        genericServices: genericCatalog,
         timeout: const Duration(seconds: 20),
       );
       addTearDown(() => connection.dispose(kill: true));
-
-      final genericService = connection.bindGenericService();
-      genericService.register(
-        'host',
-        'ping',
-        (_) {
-          callCount++;
-          return <String, Object?>{'reply': 'pong'};
-        },
-        paramsSchema: jsb.S.object(
-          required: const <String>['value'],
-          properties: <String, jsb.Schema>{'value': jsb.S.integer()},
-          additionalProperties: false,
-        ),
-      );
-      addTearDown(genericService.dispose);
 
       await connection.surfaceMessages
           .where((message) => message is plugins.RemotePluginFrame)

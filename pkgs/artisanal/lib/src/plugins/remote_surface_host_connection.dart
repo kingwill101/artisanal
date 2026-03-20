@@ -17,7 +17,9 @@ final class RemotePluginHostConnection {
     required this.process,
     required this.session,
     required this.controller,
-  });
+    List<RemotePluginGenericHostService> managedGenericServices =
+        const <RemotePluginGenericHostService>[],
+  }) : _managedGenericServices = managedGenericServices;
 
   /// Starts a plugin process, completes the hello handshake, and binds its
   /// surface traffic into a host-side controller.
@@ -25,6 +27,7 @@ final class RemotePluginHostConnection {
     String executable,
     List<String> arguments, {
     required RemotePluginHostHello hostHello,
+    RemotePluginGenericServiceCatalog? genericServices,
     String? workingDirectory,
     Map<String, String>? environment,
     bool includeParentEnvironment = true,
@@ -34,6 +37,10 @@ final class RemotePluginHostConnection {
     RemotePluginSurfaceStore? surfaces,
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    final effectiveHostHello = _hostHelloWithGenericServices(
+      hostHello,
+      genericServices,
+    );
     final process = await RemotePluginProcess.start(
       executable,
       arguments,
@@ -46,18 +53,24 @@ final class RemotePluginHostConnection {
 
     try {
       final session = await process.connect(
-        hostHello: hostHello,
+        hostHello: effectiveHostHello,
         timeout: timeout,
       );
       final controller = RemotePluginSurfaceController.bind(
         session,
         surfaces: surfaces,
       );
-      return RemotePluginHostConnection._(
+      final managedGenericServices = <RemotePluginGenericHostService>[];
+      final connection = RemotePluginHostConnection._(
         process: process,
         session: session,
         controller: controller,
+        managedGenericServices: managedGenericServices,
       );
+      if (genericServices != null) {
+        managedGenericServices.add(genericServices.bind(connection));
+      }
+      return connection;
     } catch (_) {
       await process.dispose(kill: true);
       rethrow;
@@ -67,6 +80,7 @@ final class RemotePluginHostConnection {
   final RemotePluginProcess process;
   final RemotePluginSession session;
   final RemotePluginSurfaceController controller;
+  final List<RemotePluginGenericHostService> _managedGenericServices;
 
   RemotePluginHello get pluginHello => session.pluginHello;
   RemotePluginSurfaceStore get surfaces => controller.surfaces;
@@ -130,8 +144,44 @@ final class RemotePluginHostConnection {
     bool kill = false,
     io.ProcessSignal signal = io.ProcessSignal.sigterm,
   }) async {
+    for (final service in _managedGenericServices) {
+      await service.dispose();
+    }
     await controller.dispose();
     await session.dispose();
     await process.dispose(kill: kill, signal: signal);
   }
+}
+
+RemotePluginHostHello _hostHelloWithGenericServices(
+  RemotePluginHostHello hostHello,
+  RemotePluginGenericServiceCatalog? genericServices,
+) {
+  if (genericServices == null) {
+    return hostHello;
+  }
+
+  final capabilities = <String>{
+    ...hostHello.capabilities,
+    'services',
+  }.toList(growable: false);
+
+  final merged = <String, RemotePluginServiceDescriptor>{};
+  for (final descriptor in hostHello.services) {
+    merged['${descriptor.service}.${descriptor.method}'] = descriptor;
+  }
+  for (final descriptor in genericServices.serviceDescriptors) {
+    merged['${descriptor.service}.${descriptor.method}'] = descriptor;
+  }
+
+  final services = merged.values.toList(growable: false)
+    ..sort((a, b) {
+      final service = a.service.compareTo(b.service);
+      if (service != 0) {
+        return service;
+      }
+      return a.method.compareTo(b.method);
+    });
+
+  return hostHello.copyWith(capabilities: capabilities, services: services);
 }

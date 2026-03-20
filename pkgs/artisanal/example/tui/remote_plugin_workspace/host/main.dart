@@ -501,7 +501,6 @@ final class _WorkspaceRuntime {
     required this.connections,
     required this.router,
     required this.pluginIdBySurfaceId,
-    required this.genericServices,
   });
 
   final List<plugins.RemotePluginManifest> manifests;
@@ -509,12 +508,8 @@ final class _WorkspaceRuntime {
   final Map<String, plugins.RemotePluginHostConnection> connections;
   final plugins.RemotePluginSurfaceInputRouter router;
   final Map<String, String> pluginIdBySurfaceId;
-  final List<plugins.RemotePluginGenericHostService> genericServices;
 
   Future<void> dispose({bool kill = false}) async {
-    for (final service in genericServices) {
-      await service.dispose();
-    }
     for (final connection in connections.values) {
       await connection.dispose(kill: kill);
     }
@@ -525,7 +520,6 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   final manifests = await _loadWorkspaceManifests();
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
-  final genericServices = <plugins.RemotePluginGenericHostService>[];
   try {
     for (final manifest in manifests) {
       final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
@@ -541,16 +535,12 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         hostHello: plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['surfaces', 'services'],
-          services: genericCatalog.serviceDescriptors,
+          capabilities: const <String>['surfaces'],
         ),
+        genericServices: genericCatalog,
         surfaces: surfaces,
         timeout: _connectTimeout,
       );
-      final genericService = connection.bindGenericServiceCatalog(
-        genericCatalog,
-      );
-      genericServices.add(genericService);
       connections[manifest.id] = connection;
     }
 
@@ -581,15 +571,11 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         ),
       ),
       pluginIdBySurfaceId: pluginIdBySurfaceId,
-      genericServices: genericServices,
     );
     await _applyFocus(runtime, selectedPluginId);
     await Future<void>.delayed(_snapshotSettleDelay);
     return runtime;
   } catch (_) {
-    for (final service in genericServices) {
-      await service.dispose();
-    }
     for (final connection in connections.values) {
       await connection.dispose(kill: true);
     }
