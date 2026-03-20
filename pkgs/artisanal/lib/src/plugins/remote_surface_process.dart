@@ -35,8 +35,9 @@ final class RemotePluginProcess {
     );
 
     final channel = RemotePluginJsonChannel(
-      sendLine: (line) {
+      sendLine: (line) async {
         process.stdin.write(line);
+        await process.stdin.flush();
       },
       validator: validator,
     );
