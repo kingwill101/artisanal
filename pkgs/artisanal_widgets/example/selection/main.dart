@@ -159,28 +159,28 @@ w.Widget _documentCard({
       child: w.Column(
         gap: 0,
         children: [
-          s.SelectableText(
+          w.Text(
             'Cross-component selection document',
             style: sectionTitleStyle.copy()..bold(),
-          ),
-          s.SelectableText(
+          ).selectable(),
+          w.Text(
             'Drag from this title through the footer to copy one combined '
             'buffer across component types.',
             style: bodyStyle,
-          ),
+          ).selectable(),
           _documentBlock(
             theme: theme,
             title: 'Plain text section',
-            child: s.SelectableText(
+            child: w.Text(
               'SelectableText content should merge cleanly with the sections '
               'below when you drag across the document.',
               style: bodyStyle,
-            ),
+            ).selectable(),
           ),
           _documentBlock(
             theme: theme,
             title: 'Rich text section',
-            child: s.SelectableRichText(
+            child: w.RichText(
               text: w.TextSpan(
                 text: 'Styled spans stay visible on screen while ',
                 style: bodyStyle,
@@ -197,12 +197,12 @@ w.Widget _documentCard({
                   w.TextSpan(text: ' and emphasis still copy as plain text.'),
                 ],
               ),
-            ),
+            ).selectable(),
           ),
           _documentBlock(
             theme: theme,
             title: 'Markdown section',
-            child: s.SelectableMarkdownText(
+            child: w.MarkdownText(
               data:
                   '## Shared markdown\n'
                   '- bullets still join the same selection buffer\n'
@@ -210,7 +210,7 @@ w.Widget _documentCard({
                   '- **bold** emphasis stays readable while dragging',
               textStyle: bodyStyle,
               maxWidth: 60,
-            ),
+            ).selectable(),
           ),
           _documentBlock(
             theme: theme,
@@ -244,10 +244,10 @@ w.Widget _documentCard({
               ],
             ),
           ),
-          s.SelectableText(
+          w.Text(
             'Footer: this line proves the selection can span the full document.',
             style: subtleStyle,
-          ),
+          ).selectable(),
         ],
       ),
     ),
@@ -265,10 +265,10 @@ w.Widget _documentBlock({
     child: w.Column(
       gap: 0,
       children: [
-        s.SelectableText(
+        w.Text(
           title,
           style: theme.labelLarge.copy()..foreground(theme.primary),
-        ),
+        ).selectable(),
         child,
       ],
     ),

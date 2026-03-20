@@ -452,6 +452,29 @@ void main() {
       }
     });
 
+    test('RichText.selectable() adapts rich text widgets', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          RichText(
+            text: const TextSpan(
+              text: 'Hello ',
+              children: [TextSpan(text: 'world')],
+            ),
+          ).selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(6, 0);
+        tester.mouseMove(11, 0);
+        tester.mouseUp(11, 0);
+
+        expect(ctrl.getSelectedText(['Hello world']), 'world');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableText inside Container respects layout', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {
