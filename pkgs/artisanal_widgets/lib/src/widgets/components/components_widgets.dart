@@ -38,6 +38,8 @@ import 'package:artisanal/tui.dart'
         MouseMsg,
         RenderMetrics,
         RenderMetricsMsg,
+        TraceTag,
+        TuiTrace,
         every;
 import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
 import '../core/element.dart' show Element, elementOf;

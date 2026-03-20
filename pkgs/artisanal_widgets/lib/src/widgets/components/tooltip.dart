@@ -42,6 +42,26 @@ class _TooltipState extends State<Tooltip> {
   bool _hovered = false;
   OverlayEntry? _floatingEntry;
   ({int x, int y})? _lastPointer;
+  bool _overlayRendered = false;
+
+  void _traceLifecycle(
+    String type, {
+    Map<String, Object?> fields = const <String, Object?>{},
+  }) {
+    if (!TuiTrace.enabled) return;
+    TuiTrace.event(
+      'tooltip.$type',
+      tag: TraceTag.general,
+      fields: <String, Object?>{
+        'message': widget.message,
+        'enabled': widget.enabled,
+        'hovered': _hovered,
+        'explicitShow': widget.show,
+        'hasOverlayEntry': _floatingEntry != null,
+        ...fields,
+      },
+    );
+  }
 
   void _setHovered(bool value, [MouseMsg? event]) {
     if (_hovered == value) return;
@@ -51,6 +71,13 @@ class _TooltipState extends State<Tooltip> {
     setState(() {
       _hovered = value;
     });
+    _traceLifecycle(
+      value ? 'hover.enter' : 'hover.exit',
+      fields: <String, Object?>{
+        if (event != null) 'x': event.x,
+        if (event != null) 'y': event.y,
+      },
+    );
     if (value) {
       _syncFloatingEntry();
     } else {
@@ -62,6 +89,11 @@ class _TooltipState extends State<Tooltip> {
     final entry = _floatingEntry;
     if (entry == null) return;
     _floatingEntry = null;
+    if (_overlayRendered) {
+      _traceLifecycle('overlay.hidden');
+    }
+    _overlayRendered = false;
+    _traceLifecycle('overlay.remove');
     entry.remove();
   }
 
@@ -127,6 +159,7 @@ class _TooltipState extends State<Tooltip> {
   void _ensureFloatingEntry(OverlayState overlayState) {
     final existing = _floatingEntry;
     if (existing != null) {
+      _traceLifecycle('overlay.markNeedsBuild');
       existing.markNeedsBuild();
       return;
     }
@@ -134,7 +167,14 @@ class _TooltipState extends State<Tooltip> {
     final entry = OverlayEntry(
       builder: (overlayContext) {
         final trigger = _anchorGeometry();
-        if (trigger == null) return SizedBox.shrink();
+        if (trigger == null) {
+          if (_overlayRendered) {
+            _overlayRendered = false;
+            _traceLifecycle('overlay.hidden');
+          }
+          _traceLifecycle('overlay.build.skipped', fields: const {'reason': 'no-anchor'});
+          return SizedBox.shrink();
+        }
         final bubble = _buildBubble(context);
         final viewport = MediaQuery.of(overlayContext).size;
         final bubbleContent = _viewToString(bubble.view());
@@ -161,6 +201,32 @@ class _TooltipState extends State<Tooltip> {
             math.max(0, viewport.height.toInt() - bubbleHeight),
           ),
         };
+        if (!_overlayRendered) {
+          _overlayRendered = true;
+          _traceLifecycle(
+            'overlay.visible',
+            fields: <String, Object?>{
+              'left': left,
+              'top': top,
+              'bubbleWidth': bubbleWidth,
+              'bubbleHeight': bubbleHeight,
+              'triggerX': trigger.x,
+              'triggerY': trigger.y,
+              'triggerWidth': trigger.width,
+              'triggerHeight': trigger.height,
+              'position': position.name,
+            },
+          );
+        } else {
+          _traceLifecycle(
+            'overlay.build',
+            fields: <String, Object?>{
+              'left': left,
+              'top': top,
+              'position': position.name,
+            },
+          );
+        }
         return Positioned(
           left: left,
           top: top,
@@ -169,11 +235,20 @@ class _TooltipState extends State<Tooltip> {
       },
     );
     _floatingEntry = entry;
+    _traceLifecycle('overlay.insert');
     overlayState.insert(entry);
   }
 
   void _syncFloatingEntry() {
     final show = widget.enabled && (widget.show ?? _hovered);
+    _traceLifecycle(
+      'sync',
+      fields: <String, Object?>{
+        'show': show,
+        'hasOverlayAncestor': Overlay.maybeOf(context) != null,
+        'hasAnchor': _anchorGeometry() != null,
+      },
+    );
     if (!show) {
       _removeFloatingEntry();
       return;
