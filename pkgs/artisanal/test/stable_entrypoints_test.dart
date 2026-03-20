@@ -90,6 +90,7 @@ void main() {
         ),
         isA<plugins.Schema>(),
       );
+      expect(plugins.RemotePluginJsonTransport.encodeLine, isA<Function>());
       expect(errors, isEmpty);
     },
   );

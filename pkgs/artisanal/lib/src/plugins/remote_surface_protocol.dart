@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:json_schema_builder/json_schema_builder.dart';
 
@@ -284,6 +285,8 @@ sealed class RemotePluginMessage {
     };
   }
 
+  String encodeJson() => jsonEncode(toJson());
+
   static RemotePluginMessage fromJson(JsonObject json) {
     final type = RemotePluginMessageType.parse(_requireString(json, 'type'));
     final payload = _requireObject(json, 'payload');
@@ -312,6 +315,22 @@ sealed class RemotePluginMessage {
       RemotePluginMessageType.hostInputBlur =>
         RemotePluginBlurInput.fromPayload(payload),
     };
+  }
+
+  static Future<RemotePluginMessage> decodeJson(
+    String source, {
+    RemotePluginProtocolValidator validator =
+        const RemotePluginProtocolValidator(),
+  }) async {
+    final decoded = jsonDecode(source);
+    if (decoded is! Map<Object?, Object?>) {
+      throw FormatException(
+        'Remote plugin message must decode to a JSON object.',
+      );
+    }
+    final json = _castJsonObject(decoded);
+    await validator.validateJsonOrThrow(json);
+    return RemotePluginMessage.fromJson(json);
   }
 }
 
