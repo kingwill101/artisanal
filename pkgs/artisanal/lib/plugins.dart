@@ -35,3 +35,4 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginProtocolValidationException;
 export 'src/plugins/remote_surface_transport.dart'
     show RemotePluginJsonTransport;
+export 'src/plugins/remote_surface_channel.dart' show RemotePluginJsonChannel;
