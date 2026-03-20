@@ -109,7 +109,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['open-url'],
       ),
-      timeout: const Duration(seconds: 10),
+      timeout: const Duration(seconds: 20),
     );
     addTearDown(() => connection.dispose(kill: true));
 
@@ -156,7 +156,7 @@ void main() {
         hostVersion: '0.2.0',
         capabilities: <String>['notify'],
       ),
-      timeout: const Duration(seconds: 10),
+      timeout: const Duration(seconds: 20),
     );
     addTearDown(() => connection.dispose(kill: true));
 

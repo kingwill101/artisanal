@@ -107,5 +107,135 @@ void main() {
       );
       expect(decoded, isA<plugins.RemotePluginHello>());
     });
+
+    test('guest services read clipboard and send matching request', () async {
+      final hostToPlugin = StreamController<String>();
+      final pluginToHost = StreamController<String>();
+
+      final hostChannel = plugins.RemotePluginJsonChannel(
+        sendLine: hostToPlugin.add,
+      );
+      final pluginChannel = plugins.RemotePluginJsonChannel(
+        sendLine: pluginToHost.add,
+      );
+
+      hostChannel.bindLines(pluginToHost.stream);
+      pluginChannel.bindLines(hostToPlugin.stream);
+
+      addTearDown(() async {
+        await hostChannel.dispose();
+        await pluginChannel.dispose();
+        await hostToPlugin.close();
+        await pluginToHost.close();
+      });
+
+      await hostChannel.send(
+        const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+      );
+
+      final session = await plugins.RemotePluginGuestSession.connect(
+        channel: pluginChannel,
+        pluginHello: const plugins.RemotePluginHello(
+          pluginId: 'service-plugin',
+          pluginVersion: '0.0.1',
+        ),
+      );
+      addTearDown(session.dispose);
+
+      final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+      addTearDown(hostMessages.cancel);
+
+      final readFuture = session.services.readClipboard();
+
+      final sawRequest = await hostMessages.moveNext().timeout(
+        const Duration(seconds: 1),
+      );
+      expect(sawRequest, isTrue);
+      final request = hostMessages.current;
+      expect(request, isA<plugins.RemotePluginClipboardReadRequest>());
+
+      await hostChannel.send(
+        plugins.RemotePluginClipboardReadResponse(
+          requestId:
+              (request as plugins.RemotePluginClipboardReadRequest).requestId,
+          text: 'host-value',
+        ),
+      );
+
+      expect(await readFuture, 'host-value');
+    });
+
+    test('guest services open urls and notifications as awaitable RPCs', () async {
+      final hostToPlugin = StreamController<String>();
+      final pluginToHost = StreamController<String>();
+
+      final hostChannel = plugins.RemotePluginJsonChannel(
+        sendLine: hostToPlugin.add,
+      );
+      final pluginChannel = plugins.RemotePluginJsonChannel(
+        sendLine: pluginToHost.add,
+      );
+
+      hostChannel.bindLines(pluginToHost.stream);
+      pluginChannel.bindLines(hostToPlugin.stream);
+
+      addTearDown(() async {
+        await hostChannel.dispose();
+        await pluginChannel.dispose();
+        await hostToPlugin.close();
+        await pluginToHost.close();
+      });
+
+      await hostChannel.send(
+        const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+      );
+
+      final session = await plugins.RemotePluginGuestSession.connect(
+        channel: pluginChannel,
+        pluginHello: const plugins.RemotePluginHello(
+          pluginId: 'service-plugin',
+          pluginVersion: '0.0.1',
+        ),
+      );
+      addTearDown(session.dispose);
+
+      final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+      addTearDown(hostMessages.cancel);
+
+      final openUrlFuture = session.services.openUrl('https://example.com');
+      await hostMessages.moveNext().timeout(const Duration(seconds: 1));
+      final openUrlRequest = hostMessages.current;
+      expect(openUrlRequest, isA<plugins.RemotePluginOpenUrlRequest>());
+      await hostChannel.send(
+        plugins.RemotePluginOpenUrlResponse(
+          requestId: (openUrlRequest as plugins.RemotePluginOpenUrlRequest)
+              .requestId,
+        ),
+      );
+      await openUrlFuture;
+
+      final notifyFuture = session.services.notify(
+        'Task finished',
+        title: 'Plugin demo',
+        level: plugins.RemotePluginNotificationLevel.success,
+      );
+      await hostMessages.moveNext().timeout(const Duration(seconds: 1));
+      final notifyRequest = hostMessages.current;
+      expect(notifyRequest, isA<plugins.RemotePluginNotificationRequest>());
+      await hostChannel.send(
+        plugins.RemotePluginNotificationResponse(
+          requestId:
+              (notifyRequest as plugins.RemotePluginNotificationRequest)
+                  .requestId,
+        ),
+      );
+      await notifyFuture;
+    });
   });
 }

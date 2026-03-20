@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import 'remote_surface_channel.dart';
+import 'remote_surface_guest_services.dart';
 import 'remote_surface_protocol.dart';
 
 /// Plugin-side session wrapper around a remote plugin channel.
@@ -75,6 +76,9 @@ final class RemotePluginGuestSession {
   StreamSubscription<RemotePluginMessage>? _subscription;
   bool _disposed = false;
   late final RemotePluginHostHello hostHello;
+  late final RemotePluginGuestServices services = RemotePluginGuestServices(
+    this,
+  );
 
   /// Post-handshake host messages.
   Stream<RemotePluginMessage> get messages => _messages.stream;

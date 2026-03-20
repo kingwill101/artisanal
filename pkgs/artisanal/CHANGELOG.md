@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `RemotePluginGuestServices` so guest plugins can call clipboard, URL-open, and notification host services with awaitable helpers instead of hand-rolling request ids and response matching.
 - Added typed remote plugin notification request/response messages plus a reusable host-side notification responder, so plugins can ask hosts to surface success/info/warning/error notices without inventing custom protocol messages.
 - Added typed remote plugin URL-open request/response messages plus a reusable host-side URL opener, so plugins can start delegating external link launches back to the host without custom transport glue.
 - Added typed remote plugin clipboard request/response messages plus a reusable host-side clipboard responder, so out-of-process plugins can start using host-owned services without inventing ad hoc JSON on top of the surface transport.

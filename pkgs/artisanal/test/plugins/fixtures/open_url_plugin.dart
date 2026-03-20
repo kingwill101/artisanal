@@ -23,6 +23,7 @@ Future<void> main() async {
   );
 
   var status = 'url:pending';
+  final services = session.services;
 
   Future<void> publish() {
     return session.send(
@@ -39,29 +40,14 @@ Future<void> main() async {
   }
 
   await publish();
-  await session.send(
-    const plugins.RemotePluginOpenUrlRequest(
-      requestId: 'url-1',
-      url: 'https://example.com/plugin',
-    ),
-  );
-
-  await for (final message in session.messages) {
-    switch (message) {
-      case plugins.RemotePluginOpenUrlResponse(
-        requestId: 'url-1',
-        :final accepted,
-        :final error,
-      ):
-        status =
-            accepted && error == null ? 'url:ok' : 'url:error:${error ?? ""}';
-        await publish();
-        await session.dispose();
-        return;
-      default:
-        break;
-    }
+  try {
+    await services.openUrl('https://example.com/plugin');
+    status = 'url:ok';
+  } on plugins.RemotePluginServiceException catch (error) {
+    status = 'url:error:${error.message}';
   }
+  await publish();
+  await session.dispose();
 }
 
 List<plugins.RemotePluginFrameCell> _cellsForLines(List<String> lines) {

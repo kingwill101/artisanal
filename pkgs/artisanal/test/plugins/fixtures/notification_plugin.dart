@@ -23,6 +23,7 @@ Future<void> main() async {
   );
 
   var status = 'notify:pending';
+  final services = session.services;
 
   Future<void> publish() {
     return session.send(
@@ -39,33 +40,18 @@ Future<void> main() async {
   }
 
   await publish();
-  await session.send(
-    const plugins.RemotePluginNotificationRequest(
-      requestId: 'notify-1',
+  try {
+    await services.notify(
+      'Background task finished',
       title: 'Plugin demo',
-      message: 'Background task finished',
       level: plugins.RemotePluginNotificationLevel.success,
-    ),
-  );
-
-  await for (final message in session.messages) {
-    switch (message) {
-      case plugins.RemotePluginNotificationResponse(
-        requestId: 'notify-1',
-        :final accepted,
-        :final error,
-      ):
-        status =
-            accepted && error == null
-                ? 'notify:ok'
-                : 'notify:error:${error ?? ""}';
-        await publish();
-        await session.dispose();
-        return;
-      default:
-        break;
-    }
+    );
+    status = 'notify:ok';
+  } on plugins.RemotePluginServiceException catch (error) {
+    status = 'notify:error:${error.message}';
   }
+  await publish();
+  await session.dispose();
 }
 
 List<plugins.RemotePluginFrameCell> _cellsForLines(List<String> lines) {

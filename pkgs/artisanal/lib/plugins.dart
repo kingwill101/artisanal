@@ -64,6 +64,8 @@ export 'src/plugins/remote_surface_layers.dart'
     show RemotePluginSurfacePlacement, buildRemotePluginSurfaceLayers;
 export 'src/plugins/remote_surface_guest_session.dart'
     show RemotePluginGuestSession;
+export 'src/plugins/remote_surface_guest_services.dart'
+    show RemotePluginGuestServices, RemotePluginServiceException;
 export 'src/plugins/remote_surface_session.dart' show RemotePluginSession;
 export 'src/plugins/remote_surface_process.dart' show RemotePluginProcess;
 export 'src/plugins/remote_surface_state.dart'

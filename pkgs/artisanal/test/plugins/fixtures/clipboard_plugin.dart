@@ -24,6 +24,7 @@ Future<void> main() async {
 
   var readStatus = 'read:pending';
   var writeStatus = 'write:pending';
+  final services = session.services;
 
   Future<void> publish() {
     return session.send(
@@ -41,38 +42,19 @@ Future<void> main() async {
   }
 
   await publish();
-  await session.send(
-    const plugins.RemotePluginClipboardReadRequest(requestId: 'read-1'),
-  );
-
-  await for (final message in session.messages) {
-    switch (message) {
-      case plugins.RemotePluginClipboardReadResponse(
-        requestId: 'read-1',
-        :final text,
-        :final error,
-      ):
-        readStatus = error != null ? 'read:error' : 'read:${text ?? ''}';
-        await publish();
-        await session.send(
-          const plugins.RemotePluginClipboardWriteRequest(
-            requestId: 'write-1',
-            text: 'plugin-copy',
-          ),
-        );
-      case plugins.RemotePluginClipboardWriteResponse(
-        requestId: 'write-1',
-        :final accepted,
-        :final error,
-      ):
-        writeStatus = accepted && error == null ? 'write:ok' : 'write:error';
-        await publish();
-        await session.dispose();
-        return;
-      default:
-        break;
-    }
+  try {
+    final text = await services.readClipboard();
+    readStatus = 'read:$text';
+    await publish();
+    await services.writeClipboard('plugin-copy');
+    writeStatus = 'write:ok';
+    await publish();
+  } on plugins.RemotePluginServiceException {
+    readStatus = 'read:error';
+    writeStatus = 'write:error';
+    await publish();
   }
+  await session.dispose();
 }
 
 List<plugins.RemotePluginFrameCell> _cellsForLines(List<String> lines) {
