@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added a popup-oriented remote plugin host/guest example pair that exercises anchored child surfaces and UV composition on top of the new remote plugin controller and layer builder.
 - Added `buildRemotePluginSurfaceLayers(...)` plus `RemotePluginSurfacePlacement` so hosts can turn stored remote plugin surfaces into positioned UV layers and compose anchored child surfaces without rebuilding placement logic by hand.
 - Added `RemotePluginSurfaceDrawable` so remote plugin surface state can be rendered directly through the existing UV `Drawable`/`Canvas` stack instead of requiring hosts to reimplement cell translation by hand.
 - Added `RemotePluginSurfaceController` so plugin hosts can bind a `RemotePluginSession` directly to host-side surface state updates instead of wiring lifecycle and frame routing by hand.
