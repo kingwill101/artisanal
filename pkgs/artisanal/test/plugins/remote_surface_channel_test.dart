@@ -49,6 +49,34 @@ void main() {
     await channel.dispose();
   });
 
+  test('channel buffers inbound messages until the first listener', () async {
+    final channel = plugins.RemotePluginJsonChannel(sendLine: (_) {});
+
+    await channel.addLine(
+      plugins.RemotePluginJsonTransport.encodeLine(
+        const plugins.RemotePluginHello(
+          pluginId: 'echo',
+          pluginVersion: '0.1.0',
+        ),
+      ),
+    );
+    await channel.addLine(
+      plugins.RemotePluginJsonTransport.encodeLine(
+        const plugins.RemotePluginFocusInput(surfaceId: 'sidebar'),
+      ),
+    );
+
+    final received = await channel.messages
+        .take(2)
+        .toList()
+        .timeout(const Duration(seconds: 1));
+
+    expect(received, hasLength(2));
+    expect(received.first, isA<plugins.RemotePluginHello>());
+    expect(received.last, isA<plugins.RemotePluginFocusInput>());
+    await channel.dispose();
+  });
+
   test('channel surfaces inbound validation failures as stream errors', () async {
     final channel = plugins.RemotePluginJsonChannel(sendLine: (_) {});
     final expectation = expectLater(

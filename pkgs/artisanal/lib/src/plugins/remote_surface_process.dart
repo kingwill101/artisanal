@@ -4,6 +4,7 @@ import 'dart:io' as io;
 
 import 'remote_surface_channel.dart';
 import 'remote_surface_protocol.dart';
+import 'remote_surface_session.dart';
 
 /// Running out-of-process plugin connected over stdio.
 final class RemotePluginProcess {
@@ -68,6 +69,18 @@ final class RemotePluginProcess {
 
   /// Sends a typed protocol message to the plugin.
   Future<void> send(RemotePluginMessage message) => channel.send(message);
+
+  /// Completes the host/plugin hello handshake on top of this process channel.
+  Future<RemotePluginSession> connect({
+    required RemotePluginHostHello hostHello,
+    Duration timeout = const Duration(seconds: 5),
+  }) {
+    return RemotePluginSession.connect(
+      channel: channel,
+      hostHello: hostHello,
+      timeout: timeout,
+    );
+  }
 
   /// Closes the stdio channel and optionally terminates the process.
   Future<void> dispose({

@@ -14,18 +14,60 @@ final class RemotePluginJsonChannel {
     RemotePluginProtocolValidator validator =
         const RemotePluginProtocolValidator(),
   }) : _sendLine = sendLine,
-       _validator = validator;
+       _validator = validator {
+    _messages = StreamController<RemotePluginMessage>.broadcast(
+      onListen: _flushPendingEvents,
+    );
+  }
 
   final FutureOr<void> Function(String line) _sendLine;
   final RemotePluginProtocolValidator _validator;
-  final StreamController<RemotePluginMessage> _messages =
-      StreamController<RemotePluginMessage>.broadcast();
+  late final StreamController<RemotePluginMessage> _messages;
+  final List<_PendingChannelEvent> _pendingEvents = <_PendingChannelEvent>[];
 
   StreamSubscription<Object?>? _lineSubscription;
   bool _disposed = false;
 
   /// Typed inbound protocol messages.
   Stream<RemotePluginMessage> get messages => _messages.stream;
+
+  void _flushPendingEvents() {
+    if (_disposed || !_messages.hasListener || _pendingEvents.isEmpty) {
+      return;
+    }
+
+    final pendingEvents = List<_PendingChannelEvent>.of(_pendingEvents);
+    _pendingEvents.clear();
+    for (final event in pendingEvents) {
+      event.deliver(_messages);
+    }
+  }
+
+  void _emitMessage(RemotePluginMessage message) {
+    if (_disposed) {
+      return;
+    }
+
+    if (_messages.hasListener) {
+      _messages.add(message);
+      return;
+    }
+
+    _pendingEvents.add(_PendingChannelMessage(message));
+  }
+
+  void _emitError(Object error, StackTrace stackTrace) {
+    if (_disposed) {
+      return;
+    }
+
+    if (_messages.hasListener) {
+      _messages.addError(error, stackTrace);
+      return;
+    }
+
+    _pendingEvents.add(_PendingChannelError(error, stackTrace));
+  }
 
   Future<RemotePluginMessage?> _decodeLine(String rawLine) async {
     final line = rawLine.trim();
@@ -43,13 +85,11 @@ final class RemotePluginJsonChannel {
 
     try {
       final message = await _decodeLine(line);
-      if (!_disposed && message != null) {
-        _messages.add(message);
+      if (message != null) {
+        _emitMessage(message);
       }
     } catch (error, stackTrace) {
-      if (!_disposed) {
-        _messages.addError(error, stackTrace);
-      }
+      _emitError(error, stackTrace);
     }
   }
 
@@ -60,14 +100,12 @@ final class RemotePluginJsonChannel {
         .asyncMap(_decodeLine)
         .listen(
           (message) {
-            if (!_disposed && message != null) {
-              _messages.add(message);
+            if (message != null) {
+              _emitMessage(message);
             }
           },
           onError: (Object error, StackTrace stackTrace) {
-            if (!_disposed) {
-              _messages.addError(error, stackTrace);
-            }
+            _emitError(error, stackTrace);
           },
           onDone: () {
             if (!_disposed) {
@@ -95,7 +133,37 @@ final class RemotePluginJsonChannel {
       return;
     }
     _disposed = true;
+    _pendingEvents.clear();
     await _lineSubscription?.cancel();
     await _messages.close();
+  }
+}
+
+sealed class _PendingChannelEvent {
+  const _PendingChannelEvent();
+
+  void deliver(StreamController<RemotePluginMessage> controller);
+}
+
+final class _PendingChannelMessage extends _PendingChannelEvent {
+  const _PendingChannelMessage(this.message);
+
+  final RemotePluginMessage message;
+
+  @override
+  void deliver(StreamController<RemotePluginMessage> controller) {
+    controller.add(message);
+  }
+}
+
+final class _PendingChannelError extends _PendingChannelEvent {
+  const _PendingChannelError(this.error, this.stackTrace);
+
+  final Object error;
+  final StackTrace stackTrace;
+
+  @override
+  void deliver(StreamController<RemotePluginMessage> controller) {
+    controller.addError(error, stackTrace);
   }
 }

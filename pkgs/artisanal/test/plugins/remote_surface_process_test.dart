@@ -45,4 +45,44 @@ void main() {
     final echoed = iterator.current;
     expect(echoed, isA<plugins.RemotePluginFocusInput>());
   });
+
+  test('process wrapper can complete the plugin hello handshake', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'echo_plugin.dart',
+    );
+
+    final plugin = await plugins.RemotePluginProcess.start(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+    );
+
+    addTearDown(() async {
+      await plugin.dispose(kill: true);
+    });
+
+    final session = await plugin.connect(
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+      ),
+    );
+    addTearDown(session.dispose);
+
+    expect(session.pluginHello, isA<plugins.RemotePluginHello>());
+
+    await session.send(
+      const plugins.RemotePluginFocusInput(surfaceId: 'side'),
+    );
+
+    final echoed = await session.messages
+        .firstWhere((message) => message is plugins.RemotePluginFocusInput)
+        .timeout(const Duration(seconds: 2));
+    expect(echoed, isA<plugins.RemotePluginFocusInput>());
+  });
 }
