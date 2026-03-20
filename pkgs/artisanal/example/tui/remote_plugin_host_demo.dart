@@ -13,6 +13,7 @@ Future<void> main(List<String> args) async {
   );
 
   plugins.RemotePluginSession? session;
+  plugins.RemotePluginSurfaceController? controller;
   try {
     session = await plugin.connect(
       hostHello: const plugins.RemotePluginHostHello(
@@ -22,16 +23,12 @@ Future<void> main(List<String> args) async {
       ),
     );
 
-    final store = plugins.RemotePluginSurfaceStore();
+    controller = plugins.RemotePluginSurfaceController.bind(session);
     await session.send(const plugins.RemotePluginFocusInput(surfaceId: _surfaceId));
 
-    await for (final message in session.messages) {
-      if (_isSurfaceMessage(message)) {
-        store.apply(message);
-      }
-    }
+    await controller.surfaceMessages.drain<void>();
 
-    final surface = store[_surfaceId];
+    final surface = controller.surfaces[_surfaceId];
     if (surface == null) {
       throw StateError('Plugin did not leave an open demo surface.');
     }
@@ -49,19 +46,10 @@ Future<void> main(List<String> args) async {
       io.stdout.writeln(line);
     }
   } finally {
+    await controller?.dispose();
     await session?.dispose();
     await plugin.dispose(kill: true);
   }
-}
-
-bool _isSurfaceMessage(plugins.RemotePluginMessage message) {
-  return switch (message) {
-    plugins.RemotePluginSurfaceOpen() ||
-    plugins.RemotePluginSurfaceResize() ||
-    plugins.RemotePluginFrame() ||
-    plugins.RemotePluginSurfaceClose() => true,
-    _ => false,
-  };
 }
 
 List<String> _renderSurface(plugins.RemotePluginSurfaceState surface) {

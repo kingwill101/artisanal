@@ -36,6 +36,8 @@ export 'src/plugins/remote_surface_protocol.dart'
 export 'src/plugins/remote_surface_transport.dart'
     show RemotePluginJsonTransport;
 export 'src/plugins/remote_surface_channel.dart' show RemotePluginJsonChannel;
+export 'src/plugins/remote_surface_controller.dart'
+    show RemotePluginSurfaceController;
 export 'src/plugins/remote_surface_guest_session.dart'
     show RemotePluginGuestSession;
 export 'src/plugins/remote_surface_session.dart' show RemotePluginSession;
