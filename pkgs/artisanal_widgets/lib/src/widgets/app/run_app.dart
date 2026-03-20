@@ -14,11 +14,13 @@ import 'widget_app.dart';
 /// Widget-friendly runtime defaults for [runWidgetApp] and [runArtisanalApp].
 ///
 /// These defaults mirror how most interactive widget examples are launched:
-/// fullscreen with passive hover-enabled mouse reporting.
+/// fullscreen with passive hover-enabled mouse reporting and no startup probe
+/// latency on the first interaction.
 const runtime.ProgramOptions defaultWidgetProgramOptions =
     runtime.ProgramOptions(
   altScreen: true,
   mouseMode: runtime.MouseMode.allMotion,
+  startupProbes: false,
 );
 
 T _configureImageAutoMode<T extends WidgetApp>(
@@ -37,7 +39,10 @@ T _configureImageAutoMode<T extends WidgetApp>(
 ///
 /// The default options enable [runtime.MouseMode.allMotion], which is needed
 /// for passive hover behaviors such as tooltips, hover styling, and
-/// `MouseRegion` enter/exit callbacks.
+/// `MouseRegion` enter/exit callbacks. They also disable startup probes so
+/// interactive widget UIs do not defer early hover-driven repaints behind
+/// terminal capability probing; opt back in with [options] if you need the
+/// lower-level runtime startup probes.
 Future<void> runWidgetApp(
   WidgetApp app, {
   runtime.ProgramOptions? options,

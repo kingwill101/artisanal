@@ -137,6 +137,10 @@ void main() {
       expect(terminal.operations, contains('enableMouseAllMotion'));
     });
 
+    test('default widget program options disable startup probes', () {
+      expect(w.defaultWidgetProgramOptions.startupProbes, isFalse);
+    });
+
     test('explicit options can disable the widget defaults', () async {
       final terminal = runtime.StringTerminal();
 

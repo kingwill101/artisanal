@@ -28,6 +28,7 @@ void main() async {
       altScreen: true,
       mouse: true,
       mouseMode: runtime.MouseMode.allMotion,
+      startupProbes: false,
     ),
   );
 }
