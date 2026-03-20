@@ -134,6 +134,77 @@ void main() {
   );
 
   test(
+    'one generic service catalog can be reused across multiple host connections',
+    () async {
+      var clipboard = 'host clipboard';
+      final genericCatalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
+        readClipboard: (_) => clipboard,
+        writeClipboard: (_, text) {
+          clipboard = text;
+        },
+      );
+
+      final first = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[fixtures.path('clipboard_plugin.dart')],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+        genericServices: genericCatalog,
+        timeout: const Duration(seconds: 20),
+      );
+      addTearDown(() => first.dispose(kill: true));
+
+      await first.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = first.surfaces['clipboard.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('read:host clipboard') &&
+                text.contains('write:ok');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(clipboard, 'plugin-copy');
+
+      clipboard = 'host clipboard again';
+
+      final second = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[fixtures.path('clipboard_plugin.dart')],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+        ),
+        genericServices: genericCatalog,
+        timeout: const Duration(seconds: 20),
+      );
+      addTearDown(() => second.dispose(kill: true));
+
+      await second.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = second.surfaces['clipboard.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('read:host clipboard again') &&
+                text.contains('write:ok');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(clipboard, 'plugin-copy');
+    },
+  );
+
+  test(
     'host connection can start a manifest-backed plugin with auto-bound generic services',
     () async {
       var clipboard = 'host clipboard';

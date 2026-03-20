@@ -520,14 +520,14 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   final manifests = await _loadWorkspaceManifests();
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
+  final genericCatalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
+    readClipboard: (_) => 'workspace clipboard',
+    openUrl: (_) {},
+    notify: (_) {},
+    pickPaths: (_) => const <String>['/tmp/workspace.txt'],
+  );
   try {
     for (final manifest in manifests) {
-      final genericCatalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
-        readClipboard: (_) => 'workspace clipboard',
-        openUrl: (_) {},
-        notify: (_) {},
-        pickPaths: (_) => const <String>['/tmp/workspace.txt'],
-      );
       final connection = await plugins.RemotePluginHostConnection.startManifest(
         manifest,
         executable: io.Platform.resolvedExecutable,
