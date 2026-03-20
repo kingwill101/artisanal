@@ -117,6 +117,30 @@ void main() {
     },
   );
 
+  test('loadRemotePluginManifest loads and validates one manifest file', () async {
+    final directory = await io.Directory.systemTemp.createTemp(
+      'remote-plugin-single-loader-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+
+    final manifestFile = io.File('${directory.path}/solo.plugin.json');
+    await manifestFile.writeAsString('''
+{
+  "id": "solo",
+  "entrypoint": "solo.dart",
+  "primarySurfaceId": "solo.panel",
+  "surfaceIds": ["solo.panel"],
+  "placement": {"surfaceId": "solo.panel", "x": 4, "y": 6}
+}
+''');
+
+    final manifest = await plugins.loadRemotePluginManifest(manifestFile.path);
+
+    expect(manifest.id, 'solo');
+    expect(manifest.manifestPath, manifestFile.path);
+    expect(manifest.resolveEntrypoint(), io.File('${directory.path}/solo.dart').path);
+  });
+
   test(
     'validator rejects manifests whose primary surface is undeclared',
     () async {

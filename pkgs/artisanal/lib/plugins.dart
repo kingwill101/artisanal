@@ -80,6 +80,7 @@ export 'src/plugins/remote_surface_manifest.dart'
         RemotePluginManifestSchemas,
         RemotePluginManifestValidator,
         RemotePluginManifestValidationException,
+        loadRemotePluginManifest,
         loadRemotePluginManifests;
 export 'src/plugins/remote_surface_controller.dart'
     show RemotePluginSurfaceController;

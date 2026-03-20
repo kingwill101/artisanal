@@ -216,6 +216,31 @@ final class RemotePluginManifestValidationException implements Exception {
 }
 
 /// Loads all `*.plugin.json` manifests from [directoryPath].
+Future<RemotePluginManifest> loadRemotePluginManifest(
+  String manifestPath, {
+  RemotePluginManifestValidator validator =
+      const RemotePluginManifestValidator(),
+}) async {
+  final file = io.File(manifestPath);
+  if (!await file.exists()) {
+    throw io.FileSystemException(
+      'Remote plugin manifest file does not exist.',
+      manifestPath,
+    );
+  }
+
+  final decoded = jsonDecode(await file.readAsString());
+  if (decoded is! Map<Object?, Object?>) {
+    throw FormatException(
+      'Remote plugin manifest $manifestPath must decode to a JSON object.',
+    );
+  }
+  final json = decoded.cast<String, Object?>();
+  await validator.validateJsonOrThrow(json);
+  return RemotePluginManifest.fromJson(json, manifestPath: manifestPath);
+}
+
+/// Loads all `*.plugin.json` manifests from [directoryPath].
 Future<List<RemotePluginManifest>> loadRemotePluginManifests(
   String directoryPath, {
   RemotePluginManifestValidator validator =
@@ -235,16 +260,8 @@ Future<List<RemotePluginManifest>> loadRemotePluginManifests(
       continue;
     }
 
-    final decoded = jsonDecode(await entity.readAsString());
-    if (decoded is! Map<Object?, Object?>) {
-      throw FormatException(
-        'Remote plugin manifest ${entity.path} must decode to a JSON object.',
-      );
-    }
-    final json = decoded.cast<String, Object?>();
-    await validator.validateJsonOrThrow(json);
     manifests.add(
-      RemotePluginManifest.fromJson(json, manifestPath: entity.path),
+      await loadRemotePluginManifest(entity.path, validator: validator),
     );
   }
 

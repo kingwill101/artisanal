@@ -113,6 +113,42 @@ final class RemotePluginHostConnection {
     );
   }
 
+  /// Loads a validated manifest file and starts the described plugin process.
+  static Future<RemotePluginHostConnection> startManifestFile(
+    String manifestPath, {
+    required String executable,
+    required RemotePluginHostHello hostHello,
+    RemotePluginGenericServiceCatalog? genericServices,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    io.ProcessStartMode mode = io.ProcessStartMode.normal,
+    RemotePluginProtocolValidator validator =
+        const RemotePluginProtocolValidator(),
+    RemotePluginManifestValidator manifestValidator =
+        const RemotePluginManifestValidator(),
+    RemotePluginSurfaceStore? surfaces,
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final manifest = await loadRemotePluginManifest(
+      manifestPath,
+      validator: manifestValidator,
+    );
+    return startManifest(
+      manifest,
+      executable: executable,
+      hostHello: hostHello,
+      genericServices: genericServices,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      mode: mode,
+      validator: validator,
+      surfaces: surfaces,
+      timeout: timeout,
+    );
+  }
+
   final RemotePluginProcess process;
   final RemotePluginSession session;
   final RemotePluginSurfaceController controller;
