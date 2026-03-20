@@ -17,7 +17,9 @@ class RenderSelectableText extends RenderBox {
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    final width = Layout.getWidth(text).toDouble();
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : Layout.getWidth(text).toDouble();
     final height = Layout.getHeight(text).toDouble();
     size = constraints.constrain(Size(width, height));
   }
@@ -261,7 +263,7 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     final ro = _findSelectionViewport();
     if (ro == null) return;
 
-    final viewportLocalY = (event.y - _renderObjectGlobalY(ro)).toInt();
+    final viewportLocalY = (event.y - _renderObjectScreenY(ro)).toInt();
     final viewportHeight = ro.size.height.toInt();
     final delta = _selectionAreaAutoScrollDelta(
       localY: viewportLocalY,
@@ -653,6 +655,16 @@ double _renderObjectGlobalY(RenderObject ro) {
   while (current != null) {
     y += current.offset.dy;
     y -= _renderObjectScrollYOffset(current);
+    current = current.parent;
+  }
+  return y;
+}
+
+double _renderObjectScreenY(RenderObject ro) {
+  double y = 0;
+  RenderObject? current = ro;
+  while (current != null) {
+    y += current.offset.dy;
     current = current.parent;
   }
   return y;

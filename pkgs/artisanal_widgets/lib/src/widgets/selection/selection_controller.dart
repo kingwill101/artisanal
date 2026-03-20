@@ -131,6 +131,44 @@ class SelectionController {
     return selected.join('\n');
   }
 
+  _RegisteredSelectionTarget? _snapGlobalPointToRegisteredRow(
+    SelectionPoint point,
+  ) {
+    _RegisteredSelectionTarget? best;
+    var bestDistance = 1 << 30;
+
+    for (final fragment in _participants.values) {
+      final origin = fragment.globalOrigin;
+      final lines = fragment.getContentLines();
+      for (var localY = 0; localY < lines.length; localY++) {
+        final rowY = origin.y + localY;
+        final distance = (point.y - rowY).abs();
+        if (distance > bestDistance) continue;
+
+        final line = Style.stripAnsi(lines[localY]);
+        final maxX = Style.visibleLength(line);
+        final snappedGlobalX = point.x.clamp(origin.x, origin.x + maxX);
+        final target = _RegisteredSelectionTarget(
+          globalPoint: (x: snappedGlobalX, y: rowY),
+          localX: snappedGlobalX - origin.x,
+          localY: localY,
+          lines: lines,
+        );
+
+        if (distance < bestDistance ||
+            best == null ||
+            target.globalPoint.y < best.globalPoint.y ||
+            (target.globalPoint.y == best.globalPoint.y &&
+                target.globalPoint.x < best.globalPoint.x)) {
+          best = target;
+          bestDistance = distance;
+        }
+      }
+    }
+
+    return best;
+  }
+
   void _registerParticipant(_SelectionParticipant participant) {
     _participants[participant.owner] = participant;
   }
@@ -152,4 +190,18 @@ class _SelectionParticipant {
   final List<String> Function() getContentLines;
 
   SelectionPoint get globalOrigin => getGlobalOrigin();
+}
+
+class _RegisteredSelectionTarget {
+  const _RegisteredSelectionTarget({
+    required this.globalPoint,
+    required this.localX,
+    required this.localY,
+    required this.lines,
+  });
+
+  final SelectionPoint globalPoint;
+  final int localX;
+  final int localY;
+  final List<String> lines;
 }

@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Improved shared read-only selection in scrollable mixed views, including upward and downward edge auto-scroll, mouse-wheel scrolling during drag selection, and row-wide drag starts from surrounding whitespace.
 - Kept `package:artisanal_widgets/artisanal_widgets.dart` as the broader experimental compatibility surface while stabilizing the primary widget/app/layout/input/navigation APIs.
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.
 - Updated the package README and focused examples to prefer the stable top-level entrypoints over the broad compatibility import.

@@ -1,5 +1,6 @@
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/selection.dart' as s;
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
@@ -147,6 +148,104 @@ void main() {
       expect(selected, contains('Cross-component selection document'));
       expect(selected, contains('Editor-backed preview'));
       expect(selected, contains('Footer: this line pr'));
+    },
+  );
+
+  test(
+    'selection showcase auto-scrolls upward while dragging toward the header',
+    () async {
+      final tester = WidgetTester(screenWidth: 90, screenHeight: 24);
+      final controller = s.SelectionController();
+      final scrollController = WidgetScrollController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(
+          controller: controller,
+          scrollController: scrollController,
+        ),
+      );
+
+      final initialOffset = scrollController.maxOffset;
+      expect(initialOffset, greaterThan(0));
+      scrollController.jumpTo(initialOffset);
+      tester.sendMsg(const tui.RepaintMsg());
+
+      final footer = tester.locateText(
+        'Footer: this line proves the selection can span the full document.',
+      )!;
+      final topEdgeY = 1;
+
+      tester.mouseDown(footer.x + 20, footer.y);
+      for (var i = 0; i < 96; i++) {
+        tester.mouseMove(footer.x + 10, topEdgeY);
+      }
+      tester.mouseUp(footer.x + 10, topEdgeY);
+
+      expect(scrollController.offset, lessThan(initialOffset));
+      final selected = controller.getSelectedRegisteredText();
+      expect(selected, contains('Footer: this line pr'));
+      expect(selected, contains('Cross-component selection document'));
+    },
+  );
+
+  test(
+    'selection showcase keeps selection active while using the mouse wheel',
+    () async {
+      final tester = WidgetTester(screenWidth: 90, screenHeight: 24);
+      final controller = s.SelectionController();
+      final scrollController = WidgetScrollController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(
+          controller: controller,
+          scrollController: scrollController,
+        ),
+      );
+
+      final start = tester.locateText('Cross-component selection document')!;
+
+      tester.mouseDown(start.x, start.y);
+      tester.mouseMove(start.x + 10, start.y);
+      for (var i = 0; i < 4; i++) {
+        tester.sendMsg(
+          tui.MouseMsg(
+            action: tui.MouseAction.press,
+            button: tui.MouseButton.wheelDown,
+            x: start.x + 10,
+            y: start.y,
+          ),
+        );
+      }
+      tester.mouseMove(start.x + 10, 22);
+      tester.mouseUp(start.x + 10, 22);
+
+      expect(scrollController.offset, greaterThan(0));
+      final selected = controller.getSelectedRegisteredText();
+      expect(selected, contains('Cross-component selection document'));
+      expect(selected, isNotEmpty);
+    },
+  );
+
+  test(
+    'selection showcase can start dragging from beside the text row',
+    () async {
+      final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
+      final controller = s.SelectionController();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        example.SelectionShowcase(controller: controller),
+      );
+
+      final plain = tester.locateText('Plain text section')!;
+
+      tester.mouseDown(plain.x + 24, plain.y);
+      tester.mouseMove(plain.x + 10, plain.y);
+      tester.mouseUp(plain.x + 10, plain.y);
+
+      expect(controller.getSelectedRegisteredText(), contains('section'));
     },
   );
 

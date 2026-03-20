@@ -53,6 +53,7 @@ class SelectionArea extends StatefulWidget {
 
 class _SelectionAreaState extends State<SelectionArea> {
   SelectionController? _ownController;
+  bool _isDraggingFromArea = false;
 
   /// Tracks the action type of the last HitTestMouseMsg received.
   /// Reset to `null` when the corresponding raw MouseMsg is consumed.
@@ -74,6 +75,132 @@ class _SelectionAreaState extends State<SelectionArea> {
     }
   }
 
+  int _wheelScrollDelta(MouseMsg event) {
+    return switch (event.button) {
+      MouseButton.wheelUp => -3,
+      MouseButton.wheelDown => 3,
+      _ => 0,
+    };
+  }
+
+  SelectionPoint _selectionPointForEvent(MouseMsg event) {
+    final yOffset = widget.scrollController?.offset ?? 0;
+    return (x: event.x.toInt(), y: event.y.toInt() + yOffset);
+  }
+
+  bool _isWheelLike(MouseMsg event) =>
+      event.action == MouseAction.wheel ||
+      event.button == MouseButton.wheelUp ||
+      event.button == MouseButton.wheelDown ||
+      event.button == MouseButton.wheelLeft ||
+      event.button == MouseButton.wheelRight;
+
+  void _selectRegisteredWordAt(
+    SelectionController ctrl,
+    _RegisteredSelectionTarget target,
+  ) {
+    final (startX, endX) = findWordAt(target.lines, target.localX, target.localY);
+    ctrl._selectionStart = (
+      x: target.globalPoint.x - target.localX + startX,
+      y: target.globalPoint.y,
+    );
+    ctrl._selectionEnd = (
+      x: target.globalPoint.x - target.localX + endX,
+      y: target.globalPoint.y,
+    );
+    ctrl._selecting = false;
+    ctrl._notifyListeners();
+  }
+
+  void _selectRegisteredLineAt(
+    SelectionController ctrl,
+    _RegisteredSelectionTarget target,
+  ) {
+    final (startX, endX) = findLineAt(target.lines, target.localY);
+    ctrl._selectionStart = (
+      x: target.globalPoint.x - target.localX + startX,
+      y: target.globalPoint.y,
+    );
+    ctrl._selectionEnd = (
+      x: target.globalPoint.x - target.localX + endX,
+      y: target.globalPoint.y,
+    );
+    ctrl._selecting = false;
+    ctrl._notifyListeners();
+  }
+
+  bool _maybeStartSharedSelectionFromArea(MouseMsg event) {
+    if (event.action != MouseAction.press || event.button != MouseButton.left) {
+      return false;
+    }
+
+    final ctrl = _effectiveController;
+    if (ctrl.selecting) return false;
+
+    final target = ctrl._snapGlobalPointToRegisteredRow(
+      _selectionPointForEvent(event),
+    );
+    if (target == null) return false;
+
+    final now = DateTime.now();
+    final screenPos = target.globalPoint;
+    final isSequential =
+        ctrl._lastClickTime != null &&
+        now.difference(ctrl._lastClickTime!) <
+            const Duration(milliseconds: 500) &&
+        ctrl._lastClickPos == screenPos;
+    final clickCount = isSequential ? math.min(ctrl._lastClickCount + 1, 3) : 1;
+    ctrl
+      .._lastClickTime = now
+      .._lastClickPos = screenPos
+      .._lastClickCount = clickCount;
+
+    if (clickCount == 2) {
+      _selectRegisteredWordAt(ctrl, target);
+      return true;
+    }
+    if (clickCount >= 3) {
+      _selectRegisteredLineAt(ctrl, target);
+      return true;
+    }
+
+    ctrl.clearSelection();
+    ctrl._selectionStart = target.globalPoint;
+    ctrl._selectionEnd = target.globalPoint;
+    ctrl._selecting = true;
+    _isDraggingFromArea = true;
+    elementOf(widget)?.captureMouse();
+    ctrl._notifyListeners();
+    return true;
+  }
+
+  bool _maybeUpdateSharedSelectionFromArea(MouseMsg event) {
+    if (!_isDraggingFromArea) return false;
+    final ctrl = _effectiveController;
+
+    if (event.action == MouseAction.motion) {
+      _maybeAutoScrollSelection(event);
+      final target = ctrl._snapGlobalPointToRegisteredRow(
+        _selectionPointForEvent(event),
+      );
+      if (target != null) {
+        ctrl._selectionEnd = target.globalPoint;
+        ctrl._notifyListeners();
+      }
+      return true;
+    }
+
+    if (event.action == MouseAction.release) {
+      _isDraggingFromArea = false;
+      ctrl._selecting = false;
+      elementOf(widget)?.releaseMouse();
+      ctrl._notifyListeners();
+      return true;
+    }
+
+    return false;
+  }
+
   void _maybeAutoScrollSelection(MouseMsg event) {
     final scrollController = widget.scrollController;
     final ctrl = _effectiveController;
@@ -82,7 +209,7 @@ class _SelectionAreaState extends State<SelectionArea> {
     final ro = _findSelectionViewport();
     if (ro == null) return;
 
-    final viewportLocalY = (event.y - _renderObjectGlobalY(ro)).toInt();
+    final viewportLocalY = (event.y - _renderObjectScreenY(ro)).toInt();
     final viewportHeight = ro.size.height.toInt();
     final delta = _selectionAreaAutoScrollDelta(
       localY: viewportLocalY,
@@ -121,22 +248,51 @@ class _SelectionAreaState extends State<SelectionArea> {
   @override
   Cmd? handleUpdate(Msg msg) {
     if (msg is HitTestMouseMsg) {
+      if (_maybeUpdateSharedSelectionFromArea(msg.event)) {
+        return null;
+      }
+      if (_maybeStartSharedSelectionFromArea(msg.event)) {
+        _lastHitTestAction = null;
+        return null;
+      }
       if (msg.event.action == MouseAction.motion) {
         _maybeAutoScrollSelection(msg.event);
       }
-
-      final isWheelLike =
-          msg.event.action == MouseAction.wheel ||
-          msg.event.button == MouseButton.wheelUp ||
-          msg.event.button == MouseButton.wheelDown ||
-          msg.event.button == MouseButton.wheelLeft ||
-          msg.event.button == MouseButton.wheelRight;
+      final isWheelLike = _isWheelLike(msg.event);
+      if (isWheelLike &&
+          widget.scrollController != null &&
+          _effectiveController.selecting) {
+        final delta = _wheelScrollDelta(msg.event);
+        if (delta != 0) {
+          widget.scrollController!.scrollBy(delta);
+          return Cmd.none();
+        }
+      }
       if (!isWheelLike) {
         _lastHitTestAction = msg.event.action;
       }
     }
 
     if (msg is MouseMsg) {
+      if (_isWheelLike(msg) &&
+          widget.scrollController != null &&
+          _effectiveController.selecting) {
+        final delta = _wheelScrollDelta(msg);
+        if (delta != 0) {
+          widget.scrollController!.scrollBy(delta);
+          return Cmd.none();
+        }
+      }
+
+      if (_maybeUpdateSharedSelectionFromArea(msg)) {
+        return null;
+      }
+
+      if (_maybeStartSharedSelectionFromArea(msg)) {
+        _lastHitTestAction = null;
+        return null;
+      }
+
       if (msg.action == MouseAction.motion) {
         _maybeAutoScrollSelection(msg);
       }
