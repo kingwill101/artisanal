@@ -108,6 +108,24 @@ void main() {
     expect(responseErrors, isEmpty);
   });
 
+  test('notification request and response messages round-trip and validate', () async {
+    const request = plugins.RemotePluginNotificationRequest(
+      requestId: 'req-4',
+      title: 'Plugin demo',
+      message: 'Task finished',
+      level: plugins.RemotePluginNotificationLevel.success,
+    );
+    const response = plugins.RemotePluginNotificationResponse(
+      requestId: 'req-4',
+    );
+
+    final parsedRequest = plugins.RemotePluginMessage.fromJson(request.toJson());
+    final responseErrors = await validator.validateMessage(response);
+
+    expect(parsedRequest, isA<plugins.RemotePluginNotificationRequest>());
+    expect(responseErrors, isEmpty);
+  });
+
   test('validator rejects unsupported message types', () async {
     final errors = await validator.validateJson(<String, Object?>{
       'protocol': plugins.remotePluginProtocolVersion,

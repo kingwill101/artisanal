@@ -17,13 +17,15 @@ enum RemotePluginMessageType {
   pluginClipboardRead('plugin.clipboard.read'),
   pluginClipboardWrite('plugin.clipboard.write'),
   pluginUrlOpen('plugin.url.open'),
+  pluginNotify('plugin.notify'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
   hostInputFocus('host.input.focus'),
   hostInputBlur('host.input.blur'),
   hostClipboardRead('host.clipboard.read'),
   hostClipboardWrite('host.clipboard.write'),
-  hostUrlOpen('host.url.open');
+  hostUrlOpen('host.url.open'),
+  hostNotify('host.notify');
 
   const RemotePluginMessageType(this.wireName);
 
@@ -115,6 +117,26 @@ enum RemotePluginMouseButton {
       (candidate) => candidate.wireName == value,
       orElse: () => throw FormatException(
         'Unsupported remote plugin mouse button: $value',
+      ),
+    );
+  }
+}
+
+enum RemotePluginNotificationLevel {
+  info('info'),
+  success('success'),
+  warning('warning'),
+  error('error');
+
+  const RemotePluginNotificationLevel(this.wireName);
+
+  final String wireName;
+
+  static RemotePluginNotificationLevel parse(String value) {
+    return values.firstWhere(
+      (candidate) => candidate.wireName == value,
+      orElse: () => throw FormatException(
+        'Unsupported remote plugin notification level: $value',
       ),
     );
   }
@@ -317,6 +339,8 @@ sealed class RemotePluginMessage {
         RemotePluginClipboardWriteRequest.fromPayload(payload),
       RemotePluginMessageType.pluginUrlOpen =>
         RemotePluginOpenUrlRequest.fromPayload(payload),
+      RemotePluginMessageType.pluginNotify =>
+        RemotePluginNotificationRequest.fromPayload(payload),
       RemotePluginMessageType.hostInputKey => RemotePluginKeyInput.fromPayload(
         payload,
       ),
@@ -332,6 +356,8 @@ sealed class RemotePluginMessage {
         RemotePluginClipboardWriteResponse.fromPayload(payload),
       RemotePluginMessageType.hostUrlOpen =>
         RemotePluginOpenUrlResponse.fromPayload(payload),
+      RemotePluginMessageType.hostNotify =>
+        RemotePluginNotificationResponse.fromPayload(payload),
     };
   }
 
@@ -703,6 +729,45 @@ final class RemotePluginOpenUrlRequest extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginNotificationRequest extends RemotePluginMessage {
+  const RemotePluginNotificationRequest({
+    required this.requestId,
+    required this.message,
+    this.title,
+    this.level = RemotePluginNotificationLevel.info,
+  });
+
+  final String requestId;
+  final String message;
+  final String? title;
+  final RemotePluginNotificationLevel level;
+
+  factory RemotePluginNotificationRequest.fromPayload(JsonObject payload) {
+    final levelValue = payload['level'];
+    return RemotePluginNotificationRequest(
+      requestId: _requireString(payload, 'requestId'),
+      message: _requireString(payload, 'message'),
+      title: _readStringOrNull(payload, 'title'),
+      level: levelValue is String
+          ? RemotePluginNotificationLevel.parse(levelValue)
+          : RemotePluginNotificationLevel.info,
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginNotify;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    'message': message,
+    if (title != null) 'title': title,
+    if (level != RemotePluginNotificationLevel.info)
+      'level': level.wireName,
+  };
+}
+
 final class RemotePluginMouseInput extends RemotePluginMessage {
   const RemotePluginMouseInput({
     required this.surfaceId,
@@ -896,6 +961,36 @@ final class RemotePluginOpenUrlResponse extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginNotificationResponse extends RemotePluginMessage {
+  const RemotePluginNotificationResponse({
+    required this.requestId,
+    this.accepted = true,
+    this.error,
+  });
+
+  final String requestId;
+  final bool accepted;
+  final String? error;
+
+  factory RemotePluginNotificationResponse.fromPayload(JsonObject payload) {
+    return RemotePluginNotificationResponse(
+      requestId: _requireString(payload, 'requestId'),
+      accepted: _readBool(payload, 'accepted', fallback: true),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType => RemotePluginMessageType.hostNotify;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (!accepted) 'accepted': accepted,
+    if (error != null) 'error': error,
+  };
+}
+
 final class RemotePluginProtocolSchemas {
   RemotePluginProtocolSchemas._();
 
@@ -1046,6 +1141,19 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema pluginNotifyPayload = S.object(
+    required: const ['requestId', 'message'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'message': S.string(minLength: 1),
+      'title': S.string(minLength: 1),
+      'level': _enumString(
+        RemotePluginNotificationLevel.values.map((value) => value.wireName),
+      ),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostInputKeyPayload = S.object(
     required: const ['surfaceId', 'key'],
     properties: <String, Schema>{
@@ -1124,6 +1232,16 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema hostNotifyPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'accepted': S.boolean(),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Map<RemotePluginMessageType, Schema> byType =
       <RemotePluginMessageType, Schema>{
         RemotePluginMessageType.hostHello: _typedEnvelope(
@@ -1162,6 +1280,10 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginUrlOpen,
           pluginUrlOpenPayload,
         ),
+        RemotePluginMessageType.pluginNotify: _typedEnvelope(
+          RemotePluginMessageType.pluginNotify,
+          pluginNotifyPayload,
+        ),
         RemotePluginMessageType.hostInputKey: _typedEnvelope(
           RemotePluginMessageType.hostInputKey,
           hostInputKeyPayload,
@@ -1189,6 +1311,10 @@ final class RemotePluginProtocolSchemas {
         RemotePluginMessageType.hostUrlOpen: _typedEnvelope(
           RemotePluginMessageType.hostUrlOpen,
           hostUrlOpenPayload,
+        ),
+        RemotePluginMessageType.hostNotify: _typedEnvelope(
+          RemotePluginMessageType.hostNotify,
+          hostNotifyPayload,
         ),
       };
 

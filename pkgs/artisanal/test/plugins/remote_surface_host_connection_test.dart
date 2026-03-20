@@ -135,6 +135,56 @@ void main() {
 
     expect(openedUrl, Uri.parse('https://example.com/plugin'));
   });
+
+  test('host connection can answer notification requests', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'notification_plugin.dart',
+    );
+
+    plugins.RemotePluginNotificationRequest? notification;
+    final connection = await plugins.RemotePluginHostConnection.startProcess(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+        capabilities: <String>['notify'],
+      ),
+      timeout: const Duration(seconds: 10),
+    );
+    addTearDown(() => connection.dispose(kill: true));
+
+    final notificationService = connection.bindNotificationService(
+      notify: (request) {
+        notification = request;
+      },
+    );
+    addTearDown(notificationService.dispose);
+
+    await connection.surfaceMessages
+        .where((message) => message is plugins.RemotePluginFrame)
+        .cast<plugins.RemotePluginFrame>()
+        .firstWhere((_) {
+          final surface = connection.surfaces['notification.panel'];
+          if (surface == null) {
+            return false;
+          }
+          final text = _surfaceText(surface);
+          return text.contains('notify:ok');
+        })
+        .timeout(const Duration(seconds: 5));
+
+    expect(notification, isNotNull);
+    expect(notification!.title, 'Plugin demo');
+    expect(notification!.message, 'Background task finished');
+    expect(notification!.level, plugins.RemotePluginNotificationLevel.success);
+  });
 }
 
 String _surfaceText(plugins.RemotePluginSurfaceState surface) {

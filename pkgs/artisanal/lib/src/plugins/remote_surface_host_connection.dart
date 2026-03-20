@@ -2,6 +2,7 @@ import 'dart:io' as io;
 
 import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_controller.dart';
+import 'remote_surface_notification_service.dart';
 import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_session.dart';
@@ -90,6 +91,13 @@ final class RemotePluginHostConnection {
     RemotePluginUrlOpener? openUrl,
   }) {
     return RemotePluginOpenUrlHostService.bind(this, openUrl: openUrl);
+  }
+
+  /// Binds a notification request/response service to this plugin connection.
+  RemotePluginNotificationHostService bindNotificationService({
+    RemotePluginNotifier? notify,
+  }) {
+    return RemotePluginNotificationHostService.bind(this, notify: notify);
   }
 
   /// Disposes controller, session, and process resources.
