@@ -91,6 +91,7 @@ void main() {
         isA<plugins.Schema>(),
       );
       expect(plugins.RemotePluginJsonChannel, isA<Type>());
+      expect(plugins.RemotePluginGuestSession, isA<Type>());
       expect(plugins.RemotePluginSession, isA<Type>());
       expect(plugins.RemotePluginProcess, isA<Type>());
       expect(plugins.RemotePluginSurfaceStore, isA<Type>());
