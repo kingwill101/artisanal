@@ -15,6 +15,8 @@ import 'package:artisanal/src/style/color.dart';
 import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
 import '../msg.dart' show PasteTextMsg;
+import '../editor_core/editor_core.dart';
+import '../editor_core/editor_core.dart' as commands;
 import 'cursor.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
@@ -685,6 +687,22 @@ class TextInputModel extends ViewComponent {
   }) : keyMap = keyMap ?? TextInputKeyMap(),
        cursor = cursor ?? CursorModel(),
        styles = styles ?? defaultTextInputStyles() {
+    _document = TextDocument();
+    _editorState = EditorState();
+    _textView = TextView();
+    _history =
+        EditHistoryController<
+          _TextInputHistoryAction,
+          _TextInputEditState,
+          ({int cursor, int length})
+        >(
+          maxEntries: _maxHistoryEntries,
+          sameState: (a, b) => a.sameAs(b),
+          canCoalesce: _canCoalesceHistoryAction,
+          markerForState: (action, state) =>
+              (cursor: state.position, length: state.value.length),
+        );
+    _syncCoreState();
     _updateVirtualCursorStyle();
   }
 
@@ -763,6 +781,9 @@ class TextInputModel extends ViewComponent {
 
   // Internal state
   List<String> _value = <String>[];
+  late final TextDocument _document;
+  late final EditorState _editorState;
+  late final TextView _textView;
   bool _focused = false;
   int _pos = 0;
   int _offset = 0;
@@ -770,20 +791,19 @@ class TextInputModel extends ViewComponent {
 
   // Multi-line state
   int _scrollRow = 0; // First visible row (for vertical scrolling)
+  bool _followMultilineCursor = true;
   int _desiredCol = -1; // Sticky column for up/down navigation (-1 = unset)
   List<_WrappedLine>? _wrappedLinesCache; // Cached wrapped line computation
   int _wrappedLinesCacheVersion = 0; // Invalidation counter
   int _wrappedLinesCacheWidth = -1; // Width used for last cache computation
   int _valueVersion = 0; // Bumped on every value mutation
   static const int _maxHistoryEntries = 100;
-  final List<_TextInputEditState> _undoStack = <_TextInputEditState>[];
-  final List<_TextInputEditState> _redoStack = <_TextInputEditState>[];
-  bool _editFrameActive = false;
-  bool _didRecordUndoSnapshot = false;
-  _TextInputHistoryAction? _currentHistoryAction;
-  _TextInputHistoryAction? _lastHistoryAction;
-  int? _lastHistoryCursorAfter;
-  int? _lastHistoryLengthAfter;
+  late final EditHistoryController<
+    _TextInputHistoryAction,
+    _TextInputEditState,
+    ({int cursor, int length})
+  >
+  _history;
 
   // Selection
   int? selectionStart;
@@ -799,29 +819,23 @@ class TextInputModel extends ViewComponent {
   List<List<String>> _matchedSuggestions = <List<String>>[];
   int _currentSuggestionIndex = 0;
 
-  // Collapsed paste buffer.
-  final Map<String, String> _pasteBuffer = <String, String>{};
-  int _pasteRefSeq = 0;
-  String? _lastPasteRef;
+  // Paste state.
+  final TextPasteController _pasteController = TextPasteController();
 
-  // Chunked paste state.
   static const int _pasteChunkThresholdRunes = 1200;
   static const int _pasteChunkSizeRunes = 300;
-  List<int>? _pendingPasteRunes;
-  int _pendingPasteOffset = 0;
 
   /// Returns the most recent paste reference URI (e.g. `paste://12`).
-  String? get lastPasteRef => _lastPasteRef;
+  String? get lastPasteRef => _pasteController.lastRef;
 
   /// Returns an unmodifiable view of collapsed paste payloads by URI.
-  Map<String, String> get pasteBuffer => Map.unmodifiable(_pasteBuffer);
-
-  // Rune sanitizer
-  RuneSanitizer? _sanitizer;
-  bool? _sanitizerMultiline;
+  Map<String, String> get pasteBuffer => _pasteController.buffer;
 
   /// Gets the current value as a string.
   String get value => _value.join();
+  TextDocument get document => _document;
+  EditorState get editorState => _editorState;
+  TextView get textView => _textView;
 
   /// Sets the value of the text input.
   set value(String s) {
@@ -843,13 +857,15 @@ class TextInputModel extends ViewComponent {
       if (recordHistory) {
         _recordUndoSnapshot();
       }
-      final runes = _san(uni.codePoints(s));
-      final graphemes = uni.graphemes(String.fromCharCodes(runes)).toList();
+      final graphemes = textPrepareInsertedGraphemes(
+        uni.codePoints(s),
+        multiline: multiline,
+      );
       final err = _validate(graphemes);
       _setValueInternal(graphemes, err);
-      selectionStart = null;
-      selectionEnd = null;
-      position = _value.length;
+      _applyOffsetStateSnapshot(
+        TextOffsetStateSnapshot.collapsed(cursorOffset: _value.length),
+      );
       _resetDesiredCol();
       _updateSuggestions();
     });
@@ -867,20 +883,21 @@ class TextInputModel extends ViewComponent {
       if (recordHistory) {
         _recordUndoSnapshot();
       }
-      final runes = _san(uni.codePoints(text));
-      final graphemes = uni.graphemes(String.fromCharCodes(runes)).toList();
+      final graphemes = textPrepareInsertedGraphemes(
+        uni.codePoints(text),
+        multiline: multiline,
+      );
       final err = _validate(graphemes);
       _setValueInternal(graphemes, err);
       final base = selectionBase.clamp(0, _value.length);
       final extent = selectionExtent.clamp(0, _value.length);
-      if (base == extent) {
-        selectionStart = null;
-        selectionEnd = null;
-      } else {
-        selectionStart = base;
-        selectionEnd = extent;
-      }
-      position = extent;
+      _applyOffsetStateSnapshot(
+        TextOffsetStateSnapshot.selection(
+          baseOffset: base,
+          extentOffset: extent,
+          cursorOffset: extent,
+        ),
+      );
       _resetDesiredCol();
       _handleOverflow();
       _updateSuggestions();
@@ -893,17 +910,21 @@ class TextInputModel extends ViewComponent {
   /// Sets the cursor position.
   set position(int pos) {
     _pos = pos.clamp(0, _value.length);
+    if (multiline) {
+      _followMultilineCursor = true;
+    }
     _handleOverflow();
+    _syncCoreState();
   }
 
   /// Whether the input is focused.
   bool get focused => _focused;
 
   /// Whether there is an edit available to undo.
-  bool get canUndo => _undoStack.isNotEmpty;
+  bool get canUndo => _history.canUndo;
 
   /// Whether there is an undone edit available to redo.
-  bool get canRedo => _redoStack.isNotEmpty;
+  bool get canRedo => _history.canRedo;
 
   /// Sets available suggestions for autocomplete.
   set suggestions(List<String> suggestions) {
@@ -941,38 +962,34 @@ class TextInputModel extends ViewComponent {
 
   /// Clears all undo and redo history.
   void clearHistory() {
-    _undoStack.clear();
-    _redoStack.clear();
-    _breakHistoryCoalescing();
+    _history.clear();
   }
 
   /// Restores the most recent previous edit state.
   bool undo() {
-    if (_undoStack.isEmpty) return false;
-    _breakHistoryCoalescing();
-    final current = _captureEditState();
-    final previous = _undoStack.removeLast();
-    _redoStack.add(current);
-    _restoreEditState(previous);
-    return true;
+    return _history.undo(
+      captureState: _captureEditState,
+      restoreState: _restoreEditState,
+    );
   }
 
   /// Reapplies the most recently undone edit state.
   bool redo() {
-    if (_redoStack.isEmpty) return false;
-    _breakHistoryCoalescing();
-    final current = _captureEditState();
-    final next = _redoStack.removeLast();
-    _undoStack.add(current);
-    _restoreEditState(next);
-    return true;
+    return _history.redo(
+      captureState: _captureEditState,
+      restoreState: _restoreEditState,
+    );
   }
 
   /// Selects all text in the input.
   void selectAll() {
-    selectionStart = 0;
-    selectionEnd = _value.length;
-    position = _value.length;
+    _applyOffsetStateSnapshot(
+      TextOffsetStateSnapshot.selection(
+        baseOffset: 0,
+        extentOffset: _value.length,
+        cursorOffset: _value.length,
+      ),
+    );
   }
 
   /// Breaks the current undo coalescing chain.
@@ -980,7 +997,7 @@ class TextInputModel extends ViewComponent {
   /// Call this before a submit/save/apply action if the next edit should start
   /// a fresh undo step instead of merging with the previous contiguous burst.
   void pushHistoryBoundary() {
-    _breakHistoryCoalescing();
+    _history.breakCoalescing();
   }
 
   /// Inserts [text] at the cursor, optionally replacing the current selection.
@@ -995,8 +1012,7 @@ class TextInputModel extends ViewComponent {
           selectionStart != null &&
           selectionEnd != null &&
           selectionStart != selectionEnd;
-      final action =
-          replaceSelection && hasSelection
+      final action = replaceSelection && hasSelection
           ? _TextInputHistoryAction.replace
           : _TextInputHistoryAction.insert;
       _beginHistoryAction(
@@ -1004,10 +1020,17 @@ class TextInputModel extends ViewComponent {
         breakChain: !coalesce || action == _TextInputHistoryAction.replace,
       );
       _resetDesiredCol();
-      if (replaceSelection) {
-        _deleteSelection();
+      _refreshDocumentSnapshot();
+      final result = textInsertText(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        text: String.fromCharCodes(uni.codePoints(text)),
+        replaceSelection: replaceSelection,
+      );
+      if (result.changed) {
+        _recordUndoSnapshot();
+        _applyEditCommandResult(result);
       }
-      _insertRunes(uni.codePoints(text));
       _updateSuggestions();
       _handleOverflow();
     });
@@ -1018,9 +1041,15 @@ class TextInputModel extends ViewComponent {
     _runEditFrame(() {
       _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
       _resetDesiredCol();
-      _deleteSelection();
-      if (text.isNotEmpty) {
-        _insertRunes(uni.codePoints(text));
+      _refreshDocumentSnapshot();
+      final result = textInsertText(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        text: String.fromCharCodes(uni.codePoints(text)),
+      );
+      if (result.changed) {
+        _recordUndoSnapshot();
+        _applyEditCommandResult(result);
       }
       _updateSuggestions();
       _handleOverflow();
@@ -1048,8 +1077,7 @@ class TextInputModel extends ViewComponent {
           selectionStart != null &&
           selectionEnd != null &&
           selectionStart != selectionEnd;
-      final action =
-          hasSelection
+      final action = hasSelection
           ? _TextInputHistoryAction.replace
           : _TextInputHistoryAction.deleteBackward;
       _beginHistoryAction(
@@ -1065,13 +1093,16 @@ class TextInputModel extends ViewComponent {
       final before = _captureEditState();
       if (word) {
         _deleteWordBackward();
-      } else if (_value.isNotEmpty && _pos > 0) {
-        error = null;
-        _recordUndoSnapshot();
-        _value.removeAt(_pos - 1);
-        _invalidateWrappedLines();
-        error = _validate(_value);
-        position = _pos - 1;
+      } else {
+        _refreshDocumentSnapshot();
+        final result = textDeletePrevious(
+          document: _document,
+          state: _currentOffsetStateSnapshot(),
+        );
+        if (result.changed) {
+          _recordUndoSnapshot();
+          _applyEditCommandResult(result);
+        }
       }
       _updateSuggestions();
       _handleOverflow();
@@ -1086,8 +1117,7 @@ class TextInputModel extends ViewComponent {
           selectionStart != null &&
           selectionEnd != null &&
           selectionStart != selectionEnd;
-      final action =
-          hasSelection
+      final action = hasSelection
           ? _TextInputHistoryAction.replace
           : _TextInputHistoryAction.deleteForward;
       _beginHistoryAction(
@@ -1103,11 +1133,16 @@ class TextInputModel extends ViewComponent {
       final before = _captureEditState();
       if (word) {
         _deleteWordForward();
-      } else if (_value.isNotEmpty && _pos < _value.length) {
-        _recordUndoSnapshot();
-        _value.removeAt(_pos);
-        _invalidateWrappedLines();
-        error = _validate(_value);
+      } else {
+        _refreshDocumentSnapshot();
+        final result = textDeleteNext(
+          document: _document,
+          state: _currentOffsetStateSnapshot(),
+        );
+        if (result.changed) {
+          _recordUndoSnapshot();
+          _applyEditCommandResult(result);
+        }
       }
       _updateSuggestions();
       _handleOverflow();
@@ -1132,9 +1167,16 @@ class TextInputModel extends ViewComponent {
 
   void _scrollMultilineRows(int delta) {
     if (maxHeight <= 0) return;
-    final totalLines = _getWrappedLines().length;
-    final maxScroll = math.max(0, totalLines - maxHeight);
-    _scrollRow = (_scrollRow + delta).clamp(0, maxScroll);
+    _followMultilineCursor = false;
+    _refreshDocumentSnapshot();
+    _textView
+      ..width = width
+      ..height = maxHeight
+      ..softWrap = true
+      ..leadingColumns = 0
+      ..viewportStartRow = _scrollRow;
+    _textView.scrollByRows(delta, _document);
+    _scrollRow = _textView.viewportStartRow;
   }
 
   void _scrollSingleLineBy(int delta) {
@@ -1161,21 +1203,17 @@ class TextInputModel extends ViewComponent {
     final promptWidth = stringWidth(prompt);
 
     if (multiline) {
-      final (cursorRow, cursorCol) = _cursorRowCol();
-      // Compute display x: count cell widths of chars before cursor on this line.
-      final lines = _getWrappedLines();
-      final line = lines[cursorRow.clamp(0, lines.length - 1)];
+      final lines = _visibleTextViewLines();
+      final cursorRow = lines.indexWhere((line) => line.hasCursor);
+      if (cursorRow < 0 || cursorRow >= lines.length) return null;
+      final line = lines[cursorRow];
+      final cursorCol = (_pos - line.charOffset).clamp(0, line.graphemeCount);
       var xOffset = promptWidth;
-      for (
-        var i = line.start;
-        i < line.start + cursorCol && i < line.end;
-        i++
-      ) {
-        if (_value[i] != '\n') {
-          xOffset += runeWidth(uni.firstCodePoint(_value[i]));
-        }
+      final graphemes = uni.graphemes(line.text).toList(growable: false);
+      for (var i = 0; i < cursorCol && i < graphemes.length; i++) {
+        xOffset += runeWidth(uni.firstCodePoint(graphemes[i]));
       }
-      final yOffset = cursorRow - _scrollRow;
+      final yOffset = cursorRow;
 
       return Cursor(
         position: Position(xOffset, yOffset),
@@ -1223,10 +1261,8 @@ class TextInputModel extends ViewComponent {
       _recordUndoSnapshot();
       _value = <String>[];
       _invalidateWrappedLines();
-      selectionStart = null;
-      selectionEnd = null;
       error = _validate(_value);
-      position = 0;
+      _applyOffsetStateSnapshot(const TextOffsetStateSnapshot(cursorOffset: 0));
       _resetDesiredCol();
       _updateSuggestions();
     });
@@ -1234,68 +1270,12 @@ class TextInputModel extends ViewComponent {
 
   /// Move cursor to start.
   void cursorStart() {
-    position = 0;
+    _moveToDocumentBoundary(forward: false);
   }
 
   /// Move cursor to end.
   void cursorEnd() {
-    position = _value.length;
-  }
-
-  List<int> _san(List<int> runes) {
-    // Recreate sanitizer if multiline mode changed.
-    if (_sanitizer == null || _sanitizerMultiline != multiline) {
-      _sanitizerMultiline = multiline;
-      if (multiline) {
-        _sanitizer = createSanitizer(
-          SanitizerOptions(tabReplacement: '    ', newlineReplacement: '\n'),
-        );
-      } else {
-        _sanitizer = createSanitizer(
-          SanitizerOptions(tabReplacement: ' ', newlineReplacement: ' '),
-        );
-      }
-    }
-    return _sanitizer!(runes);
-  }
-
-  static bool _isControlRune(int rune) {
-    if (rune >= 0x00 && rune <= 0x1F) return true;
-    if (rune >= 0x7F && rune <= 0x9F) return true;
-    return false;
-  }
-
-  List<int> _sanitizeLimited(List<int> runes, int maxOutputCodepoints) {
-    if (maxOutputCodepoints <= 0) return const [];
-
-    final tabRunes = multiline
-        ? const <int>[0x20, 0x20, 0x20, 0x20]
-        : const <int>[0x20];
-    final newlineRunes = multiline ? const <int>[0x0A] : const <int>[0x20];
-
-    final out = <int>[];
-    for (final r in runes) {
-      if (out.length >= maxOutputCodepoints) break;
-
-      if (r == 0xFFFD) {
-        continue;
-      } else if (r == 0x0D || r == 0x0A) {
-        for (final cp in newlineRunes) {
-          if (out.length >= maxOutputCodepoints) break;
-          out.add(cp);
-        }
-      } else if (r == 0x09) {
-        for (final cp in tabRunes) {
-          if (out.length >= maxOutputCodepoints) break;
-          out.add(cp);
-        }
-      } else if (_isControlRune(r)) {
-        continue;
-      } else {
-        out.add(r);
-      }
-    }
-    return out;
+    _moveToDocumentBoundary(forward: true);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1380,52 +1360,6 @@ class TextInputModel extends ViewComponent {
     }
   }
 
-  /// Returns (row, col) of `_pos` within the wrapped lines.
-  ///
-  /// `row` is the wrapped-line index, `col` is the offset within that line.
-  (int row, int col) _cursorRowCol() {
-    final lines = _getWrappedLines();
-
-    // Hot-path while typing: cursor typically sits at document end.
-    // Avoid scanning every wrapped line in that common case.
-    if (_pos == _value.length && lines.isNotEmpty) {
-      final last = lines.last;
-      return (lines.length - 1, _pos - last.start);
-    }
-
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      if (_pos >= line.start && _pos <= line.end) {
-        // If this is not the last line and _pos == line.end, the cursor
-        // belongs to the *start* of the next line (unless this line ends
-        // at an explicit newline boundary, in which case it stays here).
-        if (_pos == line.end && i + 1 < lines.length) {
-          // Check if the next line continues from the same position
-          // (soft wrap) vs starts after a newline.
-          final next = lines[i + 1];
-          if (next.start == line.end) {
-            // Soft-wrap continuation — cursor is at start of next line.
-            continue;
-          }
-        }
-        return (i, _pos - line.start);
-      }
-    }
-    // Fallback: cursor at end of last line.
-    final last = lines.last;
-    return (lines.length - 1, _pos - last.start);
-  }
-
-  /// Converts a (row, col) position to a flat index into `_value`.
-  int _rowColToPos(int row, int col) {
-    final lines = _getWrappedLines();
-    final r = row.clamp(0, lines.length - 1);
-    final line = lines[r];
-    final lineLen = line.end - line.start;
-    final c = col.clamp(0, lineLen);
-    return line.start + c;
-  }
-
   /// Returns the total number of wrapped lines.
   int get lineCount => multiline ? _getWrappedLines().length : 1;
 
@@ -1436,87 +1370,50 @@ class TextInputModel extends ViewComponent {
   /// Inserts a newline character at the cursor position.
   void _insertNewline() {
     _recordUndoSnapshot();
-    _deleteSelection();
-    final head = _value.sublist(0, _pos);
-    final tail = _value.sublist(_pos);
-    _value = [...head, '\n', ...tail];
-    _pos++;
-    _invalidateWrappedLines();
-    error = _validate(_value);
-    _handleOverflow();
-  }
-
-  /// Computes the display column (in cells) of the cursor within a wrapped line.
-  int _cursorDisplayCol() {
-    final (_, col) = _cursorRowCol();
-    final lines = _getWrappedLines();
-    final (row, _) = _cursorRowCol();
-    final line = lines[row];
-    // Count display width of characters before cursor on this line.
-    var displayCol = 0;
-    for (var i = line.start; i < line.start + col; i++) {
-      displayCol += runeWidth(uni.firstCodePoint(_value[i]));
-    }
-    return displayCol;
-  }
-
-  /// Converts a display column (cells) to a character offset within a wrapped line.
-  int _displayColToCharOffset(int targetRow, int displayCol) {
-    final lines = _getWrappedLines();
-    final r = targetRow.clamp(0, lines.length - 1);
-    final line = lines[r];
-    var cellCount = 0;
-    var charOffset = 0;
-    for (var i = line.start; i < line.end; i++) {
-      final w = runeWidth(uni.firstCodePoint(_value[i]));
-      if (cellCount + w > displayCol) break;
-      cellCount += w;
-      charOffset++;
-    }
-    return charOffset;
+    _refreshDocumentSnapshot();
+    final result = textInsertText(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      text: '\n',
+    );
+    if (!result.changed) return;
+    _applyEditCommandResult(result);
   }
 
   /// Moves cursor up one wrapped line, preserving the display column.
-  void _lineUp() {
-    final (row, _) = _cursorRowCol();
-    if (row == 0) return; // Already at top.
-
-    // Compute or use sticky display column.
-    if (_desiredCol < 0) {
-      _desiredCol = _cursorDisplayCol();
-    }
-
-    final targetCol = _displayColToCharOffset(row - 1, _desiredCol);
-    position = _rowColToPos(row - 1, targetCol);
+  void _lineUp({bool extendSelection = false}) {
+    _moveByVisualLine(
+      lineDelta: -1,
+      extendSelection: extendSelection,
+      clearSelection: !extendSelection,
+    );
   }
 
   /// Moves cursor down one wrapped line, preserving the display column.
-  void _lineDown() {
-    final lines = _getWrappedLines();
-    final (row, _) = _cursorRowCol();
-    if (row >= lines.length - 1) return; // Already at bottom.
-
-    // Compute or use sticky display column.
-    if (_desiredCol < 0) {
-      _desiredCol = _cursorDisplayCol();
-    }
-
-    final targetCol = _displayColToCharOffset(row + 1, _desiredCol);
-    position = _rowColToPos(row + 1, targetCol);
+  void _lineDown({bool extendSelection = false}) {
+    _moveByVisualLine(
+      lineDelta: 1,
+      extendSelection: extendSelection,
+      clearSelection: !extendSelection,
+    );
   }
 
   /// Moves cursor to start of current wrapped line.
-  void _cursorLineStart() {
-    final (row, _) = _cursorRowCol();
-    final lines = _getWrappedLines();
-    position = lines[row].start;
+  void _cursorLineStart({bool extendSelection = false}) {
+    _moveToVisualLineBoundary(
+      end: false,
+      extendSelection: extendSelection,
+      clearSelection: !extendSelection,
+    );
   }
 
   /// Moves cursor to end of current wrapped line.
-  void _cursorLineEnd() {
-    final (row, _) = _cursorRowCol();
-    final lines = _getWrappedLines();
-    position = lines[row].end;
+  void _cursorLineEnd({bool extendSelection = false}) {
+    _moveToVisualLineBoundary(
+      end: true,
+      extendSelection: extendSelection,
+      clearSelection: !extendSelection,
+    );
   }
 
   /// Resets the sticky column for up/down navigation.
@@ -1532,23 +1429,11 @@ class TextInputModel extends ViewComponent {
   }
 
   T _runEditFrame<T>(T Function() body) {
-    final wasActive = _editFrameActive;
-    _TextInputEditState? beforeState;
-    if (!wasActive) {
-      _editFrameActive = true;
-      _didRecordUndoSnapshot = false;
-      beforeState = _captureEditState();
-    }
-    try {
-      return body();
-    } finally {
-      if (!wasActive) {
-        _finalizeEditFrame(beforeState!);
-        _editFrameActive = false;
-        _didRecordUndoSnapshot = false;
-        _currentHistoryAction = null;
-      }
-    }
+    return _history.runFrame(
+      captureState: _captureEditState,
+      body: body,
+      onCommittedChange: _syncCoreState,
+    );
   }
 
   _TextInputEditState _captureEditState() {
@@ -1561,6 +1446,221 @@ class TextInputModel extends ViewComponent {
     );
   }
 
+  void _syncCoreState() {
+    _document.replaceText(value);
+    syncEditorStateFromOffsets(
+      _document,
+      _editorState,
+      cursorOffset: _pos,
+      selectionBaseOffset: selectionStart,
+      selectionExtentOffset: selectionEnd,
+    );
+
+    _configureTextView();
+
+    if (multiline) {
+      if (_followMultilineCursor) {
+        _scrollRow = _textView.ensureCursorVisible(_document, _editorState);
+      } else {
+        _textView.scrollToRow(_scrollRow, _document);
+        _scrollRow = _textView.viewportStartRow;
+      }
+    } else {
+      _scrollRow = 0;
+      _textView.viewportStartRow = 0;
+    }
+  }
+
+  void _refreshDocumentSnapshot() {
+    _document.replaceText(value);
+  }
+
+  void _configureTextView() {
+    _textView
+      ..width = width
+      ..height = maxHeight
+      ..softWrap = multiline
+      ..leadingColumns = 0
+      ..viewportStartRow = _scrollRow;
+  }
+
+  TextOffsetStateSnapshot _currentOffsetStateSnapshot() {
+    return TextOffsetStateSnapshot(
+      cursorOffset: _pos,
+      selectionBaseOffset: selectionStart,
+      selectionExtentOffset: selectionEnd,
+    );
+  }
+
+  void _collapseOffsetState(int cursorOffset) {
+    _applyOffsetStateSnapshot(
+      TextOffsetStateSnapshot.collapsed(cursorOffset: cursorOffset),
+    );
+  }
+
+  void _selectOffsetState({
+    required int baseOffset,
+    required int extentOffset,
+    int? cursorOffset,
+    bool preserveCollapsedSelection = false,
+  }) {
+    _applyOffsetStateSnapshot(
+      TextOffsetStateSnapshot.selection(
+        baseOffset: baseOffset,
+        extentOffset: extentOffset,
+        cursorOffset: cursorOffset,
+        preserveCollapsedSelection: preserveCollapsedSelection,
+      ),
+    );
+  }
+
+  void _clearOffsetSelection({int? cursorOffset}) {
+    _applyOffsetStateSnapshot(
+      _currentOffsetStateSnapshot().clearSelection(cursorOffset: cursorOffset),
+    );
+  }
+
+  void _selectOffsets(int base, int extent) {
+    _selectOffsetState(
+      baseOffset: base,
+      extentOffset: extent,
+      cursorOffset: extent,
+    );
+  }
+
+  void _applyOffsetStateSnapshot(TextOffsetStateSnapshot snapshot) {
+    final clamped = snapshot.clamp(_value.length);
+    _pos = clamped.cursorOffset;
+    if (multiline) {
+      _followMultilineCursor = true;
+    }
+    selectionStart = clamped.selectionBaseOffset;
+    selectionEnd = clamped.selectionExtentOffset;
+    _handleOverflow();
+    _syncCoreState();
+  }
+
+  void _applyCursorCommandResult(commands.TextCursorCommandResult result) {
+    _applyOffsetStateSnapshot(
+      TextOffsetStateSnapshot(
+        cursorOffset: result.cursorOffset,
+        selectionBaseOffset: result.selectionBaseOffset,
+        selectionExtentOffset: result.selectionExtentOffset,
+      ),
+    );
+  }
+
+  void _applyEditCommandResult(commands.TextCommandResult result) {
+    _value = result.graphemes;
+    _invalidateWrappedLines();
+    error = _validate(_value);
+    _applyOffsetStateSnapshot(
+      TextOffsetStateSnapshot(
+        cursorOffset: result.cursorOffset,
+        selectionBaseOffset: result.selectionBaseOffset,
+        selectionExtentOffset: result.selectionExtentOffset,
+      ),
+    );
+  }
+
+  void _moveByCharacter({
+    required bool forward,
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
+    _refreshDocumentSnapshot();
+    _applyCursorCommandResult(
+      textMoveByCharacter(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: forward,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
+  }
+
+  void _moveToDocumentBoundary({
+    required bool forward,
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
+    _refreshDocumentSnapshot();
+    _applyCursorCommandResult(
+      textMoveToDocumentBoundary(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: forward,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
+  }
+
+  void _moveByVisualLine({
+    required int lineDelta,
+    bool extendSelection = false,
+    bool clearSelection = true,
+  }) {
+    _refreshDocumentSnapshot();
+    _configureTextView();
+    final cursor = _document.positionForOffset(_pos);
+    if (_desiredCol < 0) {
+      _desiredCol =
+          _textView
+              .resolveCursorVisualPosition(
+                _document,
+                _editorState,
+                cursor: cursor,
+              )
+              ?.displayColumn ??
+          0;
+    }
+    _applyCursorCommandResult(
+      _currentOffsetStateSnapshot().moveByVisualLineCommand(
+        _document,
+        _editorState,
+        _textView,
+        lineDelta: lineDelta,
+        desiredDisplayColumn: _desiredCol,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
+  }
+
+  void _moveToVisualLineBoundary({
+    required bool end,
+    bool extendSelection = false,
+    bool clearSelection = true,
+  }) {
+    _refreshDocumentSnapshot();
+    _configureTextView();
+    _applyCursorCommandResult(
+      _currentOffsetStateSnapshot().moveToVisualLineBoundaryCommand(
+        _document,
+        _editorState,
+        _textView,
+        end: end,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
+  }
+
+  List<TextViewLine> _visibleTextViewLines() {
+    _refreshDocumentSnapshot();
+    _configureTextView();
+    if (!multiline) {
+      return _textView.buildLines(_document, _editorState);
+    }
+    final lines = _followMultilineCursor
+        ? _textView.buildViewportLines(_document, _editorState)
+        : _textView.buildLinesForCurrentViewport(_document, _editorState);
+    _scrollRow = _textView.viewportStartRow;
+    return lines;
+  }
+
   void _restoreEditState(_TextInputEditState state) {
     _value = List<String>.of(state.value);
     _invalidateWrappedLines();
@@ -1571,30 +1671,33 @@ class TextInputModel extends ViewComponent {
     _resetDesiredCol();
     _handleOverflow();
     _updateSuggestions();
+    _syncCoreState();
   }
 
   void _beginHistoryAction(
     _TextInputHistoryAction action, {
     bool breakChain = false,
   }) {
-    if (breakChain) {
-      _breakHistoryCoalescing();
-    }
-    _currentHistoryAction = action;
+    _history.beginAction(action, breakChain: breakChain);
   }
 
   void _breakHistoryCoalescing() {
-    _currentHistoryAction = null;
-    _lastHistoryAction = null;
-    _lastHistoryCursorAfter = null;
-    _lastHistoryLengthAfter = null;
+    _history.breakCoalescing();
   }
 
-  bool _shouldCoalesceSnapshot(_TextInputHistoryAction action) {
-    if (selectionStart != null || selectionEnd != null) return false;
-    if (_lastHistoryAction != action) return false;
-    if (_lastHistoryCursorAfter != _pos) return false;
-    if (_lastHistoryLengthAfter != _value.length) return false;
+  bool _canCoalesceHistoryAction(
+    _TextInputHistoryAction action, {
+    required _TextInputHistoryAction? lastAction,
+    required ({int cursor, int length})? lastMarker,
+    required _TextInputEditState currentState,
+  }) {
+    if (currentState.selectionStart != null ||
+        currentState.selectionEnd != null) {
+      return false;
+    }
+    if (lastAction != action || lastMarker == null) return false;
+    if (lastMarker.cursor != currentState.position) return false;
+    if (lastMarker.length != currentState.value.length) return false;
     return switch (action) {
       _TextInputHistoryAction.insert => true,
       _TextInputHistoryAction.deleteBackward => true,
@@ -1605,43 +1708,7 @@ class TextInputModel extends ViewComponent {
   }
 
   void _recordUndoSnapshot() {
-    if (_editFrameActive && _didRecordUndoSnapshot) {
-      return;
-    }
-    final action = _currentHistoryAction;
-    if (action != null && _shouldCoalesceSnapshot(action)) {
-      _didRecordUndoSnapshot = true;
-      return;
-    }
-    final snapshot = _captureEditState();
-    if (_undoStack.isNotEmpty && _undoStack.last.sameAs(snapshot)) {
-      _didRecordUndoSnapshot = true;
-      return;
-    }
-    _undoStack.add(snapshot);
-    if (_undoStack.length > _maxHistoryEntries) {
-      _undoStack.removeAt(0);
-    }
-    _redoStack.clear();
-    _didRecordUndoSnapshot = true;
-  }
-
-  void _finalizeEditFrame(_TextInputEditState beforeState) {
-    final action = _currentHistoryAction;
-    final afterState = _captureEditState();
-    if (beforeState.sameAs(afterState)) {
-      if (action == null) {
-        _breakHistoryCoalescing();
-      }
-      return;
-    }
-    if (action == null) {
-      _breakHistoryCoalescing();
-      return;
-    }
-    _lastHistoryAction = action;
-    _lastHistoryCursorAfter = afterState.position;
-    _lastHistoryLengthAfter = afterState.value.length;
+    _history.recordUndoSnapshot(_captureEditState);
   }
 
   void _setValueInternal(
@@ -1666,104 +1733,71 @@ class TextInputModel extends ViewComponent {
   }
 
   void _insertRunes(List<int> v) {
-    if (charLimit > 0) {
-      final availSpace = charLimit - _value.length;
-      if (availSpace <= 0) return;
-
-      // Large paste fast path: sanitize only enough codepoints to satisfy the
-      // remaining char limit, instead of processing the full payload.
-      if (v.length > availSpace * 4) {
-        final limitedRunes = _sanitizeLimited(v, availSpace);
-        if (limitedRunes.isEmpty) return;
-        final limited = uni
-            .graphemes(String.fromCharCodes(limitedRunes))
-            .take(availSpace)
-            .toList(growable: false);
-        _insertLimited(limited);
-        return;
-      }
-    }
-
-    final pasteRunes = _san(v);
-    final paste = uni.graphemes(String.fromCharCodes(pasteRunes)).toList();
-
-    int availSpace;
-    if (charLimit > 0) {
-      availSpace = charLimit - _value.length;
-      if (availSpace <= 0) return;
-
-      if (availSpace < paste.length) {
-        _insertLimited(paste.sublist(0, availSpace));
-        return;
-      }
-    }
-
+    final maxGraphemes = charLimit > 0 ? charLimit - _value.length : null;
+    final paste = textPrepareInsertedGraphemes(
+      v,
+      multiline: multiline,
+      maxGraphemes: maxGraphemes,
+    );
     _insertLimited(paste);
   }
 
-  Cmd? _startChunkedPaste(String content) {
-    final runes = uni.codePoints(content);
-    if (runes.length < _pasteChunkThresholdRunes) {
-      if (TuiTrace.enabled) {
-        TuiTrace.log(
-          'paste.inline chars=${content.length} runes=${runes.length}',
-          tag: TraceTag.input,
-        );
-      }
-      _insertRunes(runes);
-      return null;
+  Cmd _startChunkedPaste(String content) {
+    final step = _pasteController.startChunked(
+      content,
+      chunkSize: _pasteChunkSizeRunes,
+    );
+    if (step == null) {
+      _finishPendingPaste();
+      return Cmd.none();
     }
-
-    _pendingPasteRunes = runes;
-    _pendingPasteOffset = 0;
     if (TuiTrace.enabled) {
       TuiTrace.log(
-        'paste.chunk.start chars=${content.length} runes=${runes.length} '
+        'paste.chunk.start chars=${content.length} runes=${step.totalRunes} '
         'chunk=$_pasteChunkSizeRunes',
         tag: TraceTag.input,
       );
     }
-    _applyNextPasteChunk();
-    if (_pendingPasteRunes == null) return null;
-    return _schedulePasteChunk();
+
+    _applyPasteChunkStep(step);
+    return _pasteController.hasPendingChunkedPaste
+        ? _schedulePasteChunk()
+        : Cmd.none();
   }
 
   Cmd _schedulePasteChunk() {
     return Cmd.tick(Duration.zero, (_) => const _PasteChunkMsg());
   }
 
-  void _applyNextPasteChunk() {
-    final runes = _pendingPasteRunes;
-    if (runes == null) return;
+  void _finishPendingPaste() {
+    _pasteController.clearPendingChunkedPaste();
+    if (TuiTrace.enabled) {
+      TuiTrace.log('paste.chunk.done', tag: TraceTag.input);
+    }
+  }
 
-    if (_pendingPasteOffset >= runes.length) {
-      _pendingPasteRunes = null;
-      _pendingPasteOffset = 0;
-      if (TuiTrace.enabled) {
-        TuiTrace.log('paste.chunk.done', tag: TraceTag.input);
-      }
+  void _applyNextPasteChunk() {
+    final step = _pasteController.takeNextChunk(
+      chunkSize: _pasteChunkSizeRunes,
+    );
+    if (step == null) {
+      _finishPendingPaste();
       return;
     }
+    _applyPasteChunkStep(step);
+  }
 
-    final end = math.min(
-      runes.length,
-      _pendingPasteOffset + _pasteChunkSizeRunes,
-    );
+  void _applyPasteChunkStep(TextPasteChunkStep step) {
     if (TuiTrace.enabled) {
       TuiTrace.log(
-        'paste.chunk.apply start=$_pendingPasteOffset end=$end total=${runes.length}',
+        'paste.chunk.apply start=${step.start} end=${step.end} total=${step.totalRunes}',
         tag: TraceTag.input,
       );
     }
-    _insertRunes(runes.sublist(_pendingPasteOffset, end));
-    _pendingPasteOffset = end;
+    _insertRunes(step.runes);
 
-    if (_pendingPasteOffset >= runes.length) {
-      _pendingPasteRunes = null;
-      _pendingPasteOffset = 0;
-      if (TuiTrace.enabled) {
-        TuiTrace.log('paste.chunk.done', tag: TraceTag.input);
-      }
+    if (!step.hasMore) {
+      _finishPendingPaste();
     }
   }
 
@@ -1815,19 +1849,19 @@ class TextInputModel extends ViewComponent {
   void _insertLimited(List<String> paste) {
     if (paste.isEmpty) return;
     _recordUndoSnapshot();
+    _refreshDocumentSnapshot();
 
     final wasEmpty = _value.isEmpty;
     final oldLen = _value.length;
     final fastWrapAppend = _tryFastAppendWrapCache(paste, oldLen);
 
-    if (_pos >= _value.length) {
-      _value.addAll(paste);
-    } else if (_pos <= 0) {
-      _value.insertAll(0, paste);
-    } else {
-      _value.insertAll(_pos, paste);
-    }
-    _pos += paste.length;
+    final result = textInsertGraphemes(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      graphemes: paste,
+      replaceSelection: false,
+    );
+    _value = result.graphemes;
 
     final err = _validate(_value);
     if (fastWrapAppend) {
@@ -1835,14 +1869,18 @@ class TextInputModel extends ViewComponent {
       _valueVersion++;
       _wrappedLinesCacheVersion = _valueVersion;
       _wrappedLinesCacheWidth = width;
-      if ((position == 0 && wasEmpty) || position > _value.length) {
-        position = _value.length;
-      }
-      _handleOverflow();
+      final nextOffset =
+          ((position == 0 && wasEmpty) || position > _value.length)
+          ? _value.length
+          : result.cursorOffset;
+      _applyOffsetStateSnapshot(
+        TextOffsetStateSnapshot.collapsed(cursorOffset: nextOffset),
+      );
       return;
     }
 
     _setValueInternal(_value, err, wasEmpty: wasEmpty);
+    _collapseOffsetState(result.cursorOffset);
   }
 
   void _handleOverflow() {
@@ -1855,22 +1893,11 @@ class TextInputModel extends ViewComponent {
       if (maxHeight <= 0) {
         // Unlimited height — no vertical scrolling needed.
         _scrollRow = 0;
+        _syncCoreState();
         return;
       }
 
-      final (cursorRow, _) = _cursorRowCol();
-
-      // Ensure cursor row is visible within the scroll window.
-      if (cursorRow < _scrollRow) {
-        _scrollRow = cursorRow;
-      } else if (cursorRow >= _scrollRow + maxHeight) {
-        _scrollRow = cursorRow - maxHeight + 1;
-      }
-
-      // Clamp scrollRow to valid range.
-      final totalLines = _getWrappedLines().length;
-      final maxScroll = math.max(0, totalLines - maxHeight);
-      _scrollRow = _scrollRow.clamp(0, maxScroll);
+      _syncCoreState();
       return;
     }
 
@@ -1910,41 +1937,41 @@ class TextInputModel extends ViewComponent {
   }
 
   bool _deleteSelection() {
-    if (selectionStart == null || selectionEnd == null) return false;
-    final start = math.min(selectionStart!, selectionEnd!);
-    final end = math.max(selectionStart!, selectionEnd!);
-    if (start == end) {
-      selectionStart = null;
-      selectionEnd = null;
+    _refreshDocumentSnapshot();
+    final result = textDeleteSelection(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    if (!result.changed) {
+      _applyOffsetStateSnapshot(_currentOffsetStateSnapshot().clearSelection());
       return false;
     }
     _recordUndoSnapshot();
-    _value.removeRange(start, end);
-    _invalidateWrappedLines();
-    position = start;
-    selectionStart = null;
-    selectionEnd = null;
-    error = _validate(_value);
+    _applyEditCommandResult(result);
     return true;
   }
 
   void _deleteBeforeCursor() {
     if (_pos <= 0) return;
     _recordUndoSnapshot();
-    _value.removeRange(0, _pos);
-    _invalidateWrappedLines();
-    error = _validate(_value);
+    _refreshDocumentSnapshot();
+    final result = textDeletePrevious(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
     _offset = 0;
-    position = 0;
+    _applyEditCommandResult(result);
   }
 
   void _deleteAfterCursor() {
     if (_pos >= _value.length) return;
     _recordUndoSnapshot();
-    _value.removeRange(_pos, _value.length);
-    _invalidateWrappedLines();
-    error = _validate(_value);
-    position = _value.length;
+    _refreshDocumentSnapshot();
+    final result = textDeleteNext(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyEditCommandResult(result);
   }
 
   void _deleteWordBackward() {
@@ -1955,20 +1982,14 @@ class TextInputModel extends ViewComponent {
       return;
     }
 
-    var i = _pos - 1;
-    while (i >= 0 && _isWhitespace(_value[i])) {
-      i--;
-    }
-    while (i >= 0 && !_isWhitespace(_value[i])) {
-      i--;
-    }
-    final start = (i + 1).clamp(0, _pos);
-
     _recordUndoSnapshot();
-    _value.removeRange(start, _pos);
-    _invalidateWrappedLines();
-    error = _validate(_value);
-    position = start;
+    _refreshDocumentSnapshot();
+    final result = textDeleteWordBackward(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      isWord: (grapheme) => !_isWhitespace(grapheme),
+    );
+    _applyEditCommandResult(result);
   }
 
   void _deleteWordForward() {
@@ -1979,82 +2000,78 @@ class TextInputModel extends ViewComponent {
       return;
     }
 
-    var i = _pos;
-    while (i < _value.length && _isWhitespace(_value[i])) {
-      i++;
-    }
-    while (i < _value.length && !_isWhitespace(_value[i])) {
-      i++;
-    }
-
     _recordUndoSnapshot();
-    _value.removeRange(_pos, i);
-    _invalidateWrappedLines();
-    error = _validate(_value);
-    _handleOverflow();
+    _refreshDocumentSnapshot();
+    final result = textDeleteWordForward(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      isWord: (grapheme) => !_isWhitespace(grapheme),
+    );
+    _applyEditCommandResult(result);
   }
 
-  void _wordBackward() {
+  void _wordBackward({
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
     if (_pos == 0 || _value.isEmpty) return;
 
     if (echoMode != EchoMode.normal) {
-      cursorStart();
+      _moveToDocumentBoundary(
+        forward: false,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      );
       return;
     }
 
-    var i = _pos - 1;
-    while (i >= 0 && _isWhitespace(_value[i])) {
-      i--;
-    }
-    while (i >= 0 && !_isWhitespace(_value[i])) {
-      i--;
-    }
-    position = (i + 1).clamp(0, _value.length);
+    _applyCursorCommandResult(
+      textMoveByWord(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: false,
+        isWord: (grapheme) => !_isWhitespace(grapheme),
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
   }
 
-  void _wordForward() {
+  void _wordForward({
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
     if (_pos >= _value.length || _value.isEmpty) return;
 
     if (echoMode != EchoMode.normal) {
-      cursorEnd();
+      _moveToDocumentBoundary(
+        forward: true,
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      );
       return;
     }
 
-    var i = _pos;
-    while (i < _value.length && _isWhitespace(_value[i])) {
-      i++;
-    }
-    while (i < _value.length && !_isWhitespace(_value[i])) {
-      i++;
-    }
-    position = i;
+    _applyCursorCommandResult(
+      textMoveByWord(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: true,
+        isWord: (grapheme) => !_isWhitespace(grapheme),
+        extendSelection: extendSelection,
+        clearSelection: clearSelection,
+      ),
+    );
   }
 
   (int, int) _findWordAt(int x) {
     if (_value.isEmpty) return (0, 0);
-    final pos = x.clamp(0, _value.length - 1);
-
-    if (_isWhitespace(_value[pos])) {
-      var start = pos;
-      while (start > 0 && _isWhitespace(_value[start - 1])) {
-        start--;
-      }
-      var end = pos;
-      while (end < _value.length && _isWhitespace(_value[end])) {
-        end++;
-      }
-      return (start, end);
-    } else {
-      var start = pos;
-      while (start > 0 && !_isWhitespace(_value[start - 1])) {
-        start--;
-      }
-      var end = pos;
-      while (end < _value.length && !_isWhitespace(_value[end])) {
-        end++;
-      }
-      return (start, end);
-    }
+    _refreshDocumentSnapshot();
+    final boundary = _document.wordBoundaryAt(_document.positionForOffset(x));
+    return (
+      _document.offsetForPosition(boundary.start),
+      _document.offsetForPosition(boundary.end),
+    );
   }
 
   bool _isWhitespace(String grapheme) {
@@ -2114,34 +2131,19 @@ class TextInputModel extends ViewComponent {
     return true;
   }
 
-  int _lineCount(String text) {
-    if (text.isEmpty) return 1;
-    var lines = 1;
-    for (var i = 0; i < text.length; i++) {
-      if (text.codeUnitAt(i) == 10) lines++;
-    }
-    return lines;
-  }
-
-  bool _shouldCollapsePaste(String content) {
-    if (!collapseLargePaste) return false;
-    if (content.length >= collapsedPasteMinChars) return true;
-    return _lineCount(content) >= collapsedPasteMinLines;
-  }
-
-  void _insertCollapsedPasteReference(String content) {
-    final lines = _lineCount(content);
-    final ref = 'paste://${++_pasteRefSeq}';
-    _pasteBuffer[ref] = content;
-    _lastPasteRef = ref;
+  void _insertCollapsedPasteReference(
+    String content, {
+    required int lineCount,
+  }) {
+    final ref = _pasteController.storeCollapsed(content, lineCount: lineCount);
     if (TuiTrace.enabled) {
       TuiTrace.log(
-        'paste.collapse ref=$ref chars=${content.length} lines=$lines',
+        'paste.collapse ref=${ref.uri} chars=${content.length} lines=$lineCount',
         tag: TraceTag.input,
       );
     }
 
-    final token = '[Pasted ~$lines lines]';
+    final token = ref.token;
     _deleteSelection();
     _insertLimited(uni.graphemes(token).toList(growable: false));
   }
@@ -2168,382 +2170,366 @@ class TextInputModel extends ViewComponent {
     return _runEditFrame(() {
       final cmds = <Cmd>[];
 
-    if (msg is MouseMsg) {
-      if (multiline) {
-        return _handleMultilineMouse(msg);
-      }
-      if (msg.action == MouseAction.wheel) {
-        switch (msg.button) {
-          case MouseButton.wheelUp:
-          case MouseButton.wheelLeft:
-            _scrollSingleLineBy(-1);
-            break;
-          case MouseButton.wheelDown:
-          case MouseButton.wheelRight:
-            _scrollSingleLineBy(1);
-            break;
-          default:
-            break;
+      if (msg is MouseMsg) {
+        if (multiline) {
+          return _handleMultilineMouse(msg);
         }
-        return (this, null);
-      }
-      if (msg.y != 0) {
-        if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
-          selectionStart = null;
-          selectionEnd = null;
-          _mouseSelecting = false;
-          _focused = false;
-        }
-        return (this, null);
-      }
-      final promptWidth = stringWidth(prompt);
-      final localX = msg.x - promptWidth;
-      final visibleValue = _value.sublist(_offset, _offsetRight);
-      final visibleText = visibleValue.join();
-      final idxInVisible = layout.localCellXToGraphemeIndex(
-        visibleText,
-        localX,
-      );
-      final x = _offset + idxInVisible;
-
-      if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
-        _focused = true;
-        _mouseSelecting = true;
-        final now = DateTime.now();
-        if (_lastClickTime != null &&
-            now.difference(_lastClickTime!) <
-                const Duration(milliseconds: 500) &&
-            _lastClickPos == x) {
-          // Double click: select word
-          final (start, end) = _findWordAt(x);
-          selectionStart = start;
-          selectionEnd = end;
-          _pos = end;
-          _lastClickTime = now;
-          _lastClickPos = x;
-        } else {
-          position = x;
-          selectionStart = _pos;
-          selectionEnd = _pos;
-          _lastClickTime = now;
-          _lastClickPos = x;
-        }
-      } else if (msg.action == MouseAction.motion && _mouseSelecting) {
-        position = x;
-        selectionEnd = _pos;
-      } else if (msg.action == MouseAction.release && _mouseSelecting) {
-        _mouseSelecting = false;
-        if (selectionStart == selectionEnd) {
-          selectionStart = null;
-          selectionEnd = null;
+        if (msg.action == MouseAction.wheel) {
+          switch (msg.button) {
+            case MouseButton.wheelUp:
+            case MouseButton.wheelLeft:
+              _scrollSingleLineBy(-1);
+              break;
+            case MouseButton.wheelDown:
+            case MouseButton.wheelRight:
+              _scrollSingleLineBy(1);
+              break;
+            default:
+              break;
+          }
           return (this, null);
         }
-        final cmd = _copySelectionCmdIfAny();
-        selectionStart = null;
-        selectionEnd = null;
-        return (this, cmd);
-      }
-      return (this, null);
-    }
-
-    if (!_focused) {
-      return (this, null);
-    }
-
-    // Check for suggestion acceptance first
-    if (msg is KeyMsg && keyMatches(msg.key, [keyMap.acceptSuggestion])) {
-      if (_canAcceptSuggestion()) {
-        _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
-        _recordUndoSnapshot();
-        final suggestion = _matchedSuggestions[_currentSuggestionIndex];
-        _value = [..._value, ...suggestion.sublist(_value.length)];
-        _invalidateWrappedLines();
-        cursorEnd();
-      }
-    }
-
-    if (msg is KeyMsg) {
-      if (keyMatches(msg.key, [keyMap.copy])) {
-        final selected = getSelectedText();
-        if (selected.isNotEmpty) {
-          return (this, Cmd.setClipboardBestEffort(selected));
-        }
-      }
-
-      if (keyMatches(msg.key, [keyMap.undo])) {
-        undo();
-        _updateSuggestions();
-        return (this, null);
-      }
-
-      if (keyMatches(msg.key, [keyMap.redo])) {
-        redo();
-        _updateSuggestions();
-        return (this, null);
-      }
-
-      if (keyMatches(msg.key, [keyMap.cut])) {
-        final selected = getSelectedText();
-        if (selected.isNotEmpty) {
-          _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
-          _deleteSelection();
-          return (this, Cmd.setClipboardBestEffort(selected));
-        }
-      }
-
-      if (keyMatches(msg.key, [keyMap.selectAll])) {
-        selectionStart = 0;
-        selectionEnd = _value.length;
-        position = _value.length;
-        return (this, null);
-      }
-
-      // Multi-line: newline insertion (Enter / Shift+Enter)
-      if (multiline && keyMatches(msg.key, [keyMap.newline])) {
-        _beginHistoryAction(_TextInputHistoryAction.insert);
-        _deleteSelection();
-        _resetDesiredCol();
-        _insertNewline();
-        _updateSuggestions();
-        _handleOverflow();
-        return (this, null);
-      }
-
-      if (msg.key.type == KeyType.space) {
-        _beginHistoryAction(_TextInputHistoryAction.insert);
-        _resetDesiredCol();
-        _insertRunes([0x20]);
-        return (this, null);
-      }
-
-      if (keyMatches(msg.key, [keyMap.deleteWordBackward])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
-        _resetDesiredCol();
-        if (!_deleteSelection()) {
-          _deleteWordBackward();
-        }
-      } else if (keyMatches(msg.key, [keyMap.deleteCharacterBackward])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
-        _resetDesiredCol();
-        if (!_deleteSelection()) {
-          error = null;
-          if (_value.isNotEmpty && _pos > 0) {
-            _recordUndoSnapshot();
-            _value.removeAt(_pos - 1);
-            _invalidateWrappedLines();
-            error = _validate(_value);
-            if (_pos > 0) position = _pos - 1;
+        if (msg.y != 0) {
+          if (msg.action == MouseAction.press &&
+              msg.button == MouseButton.left) {
+            _clearOffsetSelection();
+            _mouseSelecting = false;
+            _focused = false;
           }
+          return (this, null);
         }
-      } else if (keyMatches(msg.key, [keyMap.wordBackward])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        _wordBackward();
-      } else if (keyMatches(msg.key, [keyMap.selectWordBackward])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        _wordBackward();
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.characterBackward])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        if (_pos > 0) position = _pos - 1;
-      } else if (keyMatches(msg.key, [keyMap.selectCharacterBackward])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        if (_pos > 0) position = _pos - 1;
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.wordForward])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        _wordForward();
-      } else if (keyMatches(msg.key, [keyMap.selectWordForward])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        _wordForward();
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.characterForward])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        if (_pos < _value.length) position = _pos + 1;
-      } else if (keyMatches(msg.key, [keyMap.selectCharacterForward])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        if (_pos < _value.length) position = _pos + 1;
-        selectionEnd = _pos;
-      } else if (multiline && keyMatches(msg.key, [keyMap.documentStart])) {
-        // Multi-line: Ctrl+Home — go to document start
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        cursorStart();
-      } else if (multiline && keyMatches(msg.key, [keyMap.documentEnd])) {
-        // Multi-line: Ctrl+End — go to document end
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        cursorEnd();
-      } else if (keyMatches(msg.key, [keyMap.lineStart])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        if (multiline) {
-          _cursorLineStart();
-        } else {
-          cursorStart();
-        }
-      } else if (keyMatches(msg.key, [keyMap.selectLineStart])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        if (multiline) {
-          _cursorLineStart();
-        } else {
-          cursorStart();
-        }
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
-        _resetDesiredCol();
-        if (!_deleteSelection()) {
-          if (_value.isNotEmpty && _pos < _value.length) {
-            _recordUndoSnapshot();
-            _value.removeAt(_pos);
-            _invalidateWrappedLines();
-            error = _validate(_value);
+        final promptWidth = stringWidth(prompt);
+        final localX = msg.x - promptWidth;
+        final visibleValue = _value.sublist(_offset, _offsetRight);
+        final visibleText = visibleValue.join();
+        final idxInVisible = layout.localCellXToGraphemeIndex(
+          visibleText,
+          localX,
+        );
+        final x = _offset + idxInVisible;
+
+        if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
+          _focused = true;
+          _mouseSelecting = true;
+          final now = DateTime.now();
+          if (_lastClickTime != null &&
+              now.difference(_lastClickTime!) <
+                  const Duration(milliseconds: 500) &&
+              _lastClickPos == x) {
+            // Double click: select word
+            final (start, end) = _findWordAt(x);
+            _selectOffsetState(
+              baseOffset: start,
+              extentOffset: end,
+              cursorOffset: end,
+            );
+            _lastClickTime = now;
+            _lastClickPos = x;
+          } else {
+            _selectOffsetState(
+              baseOffset: x,
+              extentOffset: x,
+              cursorOffset: x,
+              preserveCollapsedSelection: true,
+            );
+            _lastClickTime = now;
+            _lastClickPos = x;
           }
+        } else if (msg.action == MouseAction.motion && _mouseSelecting) {
+          _selectOffsetState(
+            baseOffset: selectionStart ?? _pos,
+            extentOffset: x,
+            cursorOffset: x,
+            preserveCollapsedSelection: true,
+          );
+        } else if (msg.action == MouseAction.release && _mouseSelecting) {
+          _mouseSelecting = false;
+          if (selectionStart == selectionEnd) {
+            _clearOffsetSelection();
+            return (this, null);
+          }
+          final cmd = _copySelectionCmdIfAny();
+          _clearOffsetSelection();
+          return (this, cmd);
         }
-      } else if (keyMatches(msg.key, [keyMap.lineEnd])) {
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        if (multiline) {
-          _cursorLineEnd();
-        } else {
+        return (this, null);
+      }
+
+      if (!_focused) {
+        return (this, null);
+      }
+
+      // Check for suggestion acceptance first
+      if (msg is KeyMsg && keyMatches(msg.key, [keyMap.acceptSuggestion])) {
+        if (_canAcceptSuggestion()) {
+          _beginHistoryAction(
+            _TextInputHistoryAction.replace,
+            breakChain: true,
+          );
+          _recordUndoSnapshot();
+          final suggestion = _matchedSuggestions[_currentSuggestionIndex];
+          _value = [..._value, ...suggestion.sublist(_value.length)];
+          _invalidateWrappedLines();
           cursorEnd();
         }
-      } else if (keyMatches(msg.key, [keyMap.selectLineEnd])) {
-        _resetDesiredCol();
-        selectionStart ??= _pos;
-        if (multiline) {
-          _cursorLineEnd();
-        } else {
-          cursorEnd();
-        }
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        _deleteAfterCursor();
-      } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
-        _resetDesiredCol();
-        selectionStart = null;
-        selectionEnd = null;
-        _deleteBeforeCursor();
-      } else if (keyMatches(msg.key, [keyMap.paste])) {
-        _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
-        _resetDesiredCol();
-        _deleteSelection();
-        // Return paste command - caller handles clipboard
-        return (this, _pasteCmd());
-      } else if (keyMatches(msg.key, [keyMap.deleteWordForward])) {
-        _beginHistoryAction(_TextInputHistoryAction.deleteForward);
-        _resetDesiredCol();
-        if (!_deleteSelection()) {
-          _deleteWordForward();
-        }
-      } else if (multiline && keyMatches(msg.key, [keyMap.lineUp])) {
-        // Multi-line: Up arrow — move cursor up one line
-        selectionStart = null;
-        selectionEnd = null;
-        _lineUp();
-      } else if (multiline && keyMatches(msg.key, [keyMap.selectLineUp])) {
-        selectionStart ??= _pos;
-        _lineUp();
-        selectionEnd = _pos;
-      } else if (multiline && keyMatches(msg.key, [keyMap.lineDown])) {
-        // Multi-line: Down arrow — move cursor down one line
-        selectionStart = null;
-        selectionEnd = null;
-        _lineDown();
-      } else if (multiline && keyMatches(msg.key, [keyMap.selectLineDown])) {
-        selectionStart ??= _pos;
-        _lineDown();
-        selectionEnd = _pos;
-      } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
-        _nextSuggestion();
-      } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
-        _previousSuggestion();
-      } else if (!msg.key.alt &&
-          msg.key.type == KeyType.runes &&
-          msg.key.runes.length == 1 &&
-          msg.key.runes.first == 0x03) {
-        final selected = getSelectedText();
-        if (selected.isNotEmpty) {
-          return (this, Cmd.setClipboardBestEffort(selected));
-        }
-      } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
-        // Regular character input
-        final insertable = <int>[];
-        for (final r in msg.key.runes) {
-          if (r >= 0x20 && r != 0x7F) {
-            insertable.add(r);
+      }
+
+      if (msg is KeyMsg) {
+        if (keyMatches(msg.key, [keyMap.copy])) {
+          final selected = getSelectedText();
+          if (selected.isNotEmpty) {
+            return (this, Cmd.setClipboardBestEffort(selected));
           }
         }
-        if (insertable.isEmpty) {
+
+        if (keyMatches(msg.key, [keyMap.undo])) {
+          undo();
           _updateSuggestions();
           return (this, null);
         }
-        _beginHistoryAction(_TextInputHistoryAction.insert);
-        _resetDesiredCol();
-        _deleteSelection();
-        _insertRunes(insertable);
-      }
 
-      _updateSuggestions();
-    } else if (msg is _PasteChunkMsg) {
-      _beginHistoryAction(_TextInputHistoryAction.paste);
-      _applyNextPasteChunk();
-      if (_pendingPasteRunes != null) {
-        cmds.add(_schedulePasteChunk());
-      }
-    } else if (msg is PasteMsg || msg is PasteTextMsg) {
-      _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
-      final content = msg is PasteMsg
-          ? msg.content
-          : (msg as PasteTextMsg).content;
-      if (TuiTrace.enabled) {
-        final kind = msg is PasteMsg ? 'PasteMsg' : 'PasteTextMsg';
-        TuiTrace.log(
-          'paste.msg kind=$kind chars=${content.length} focused=$_focused',
-          tag: TraceTag.input,
-        );
-      }
-      if (_shouldCollapsePaste(content)) {
-        _insertCollapsedPasteReference(content);
-      } else {
-        final cmd = _startChunkedPaste(content);
-        if (cmd != null) {
-          cmds.add(cmd);
+        if (keyMatches(msg.key, [keyMap.redo])) {
+          redo();
+          _updateSuggestions();
+          return (this, null);
         }
+
+        if (keyMatches(msg.key, [keyMap.cut])) {
+          final selected = getSelectedText();
+          if (selected.isNotEmpty) {
+            _beginHistoryAction(
+              _TextInputHistoryAction.replace,
+              breakChain: true,
+            );
+            _deleteSelection();
+            return (this, Cmd.setClipboardBestEffort(selected));
+          }
+        }
+
+        if (keyMatches(msg.key, [keyMap.selectAll])) {
+          selectAll();
+          return (this, null);
+        }
+
+        // Multi-line: newline insertion (Enter / Shift+Enter)
+        if (multiline && keyMatches(msg.key, [keyMap.newline])) {
+          _beginHistoryAction(_TextInputHistoryAction.insert);
+          _deleteSelection();
+          _resetDesiredCol();
+          _insertNewline();
+          _updateSuggestions();
+          _handleOverflow();
+          return (this, null);
+        }
+
+        if (msg.key.type == KeyType.space) {
+          _beginHistoryAction(_TextInputHistoryAction.insert);
+          _resetDesiredCol();
+          _insertRunes([0x20]);
+          return (this, null);
+        }
+
+        if (keyMatches(msg.key, [keyMap.deleteWordBackward])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
+          _resetDesiredCol();
+          if (!_deleteSelection()) {
+            _deleteWordBackward();
+          }
+        } else if (keyMatches(msg.key, [keyMap.deleteCharacterBackward])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
+          _resetDesiredCol();
+          if (!_deleteSelection()) {
+            _deleteBeforeCursor();
+          }
+        } else if (keyMatches(msg.key, [keyMap.wordBackward])) {
+          _resetDesiredCol();
+          _wordBackward(clearSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.selectWordBackward])) {
+          _resetDesiredCol();
+          _wordBackward(extendSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.characterBackward])) {
+          _resetDesiredCol();
+          _moveByCharacter(forward: false, clearSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.selectCharacterBackward])) {
+          _resetDesiredCol();
+          _moveByCharacter(forward: false, extendSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.wordForward])) {
+          _resetDesiredCol();
+          _wordForward(clearSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.selectWordForward])) {
+          _resetDesiredCol();
+          _wordForward(extendSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.characterForward])) {
+          _resetDesiredCol();
+          _moveByCharacter(forward: true, clearSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.selectCharacterForward])) {
+          _resetDesiredCol();
+          _moveByCharacter(forward: true, extendSelection: true);
+        } else if (multiline && keyMatches(msg.key, [keyMap.documentStart])) {
+          // Multi-line: Ctrl+Home — go to document start
+          _resetDesiredCol();
+          _moveToDocumentBoundary(forward: false, clearSelection: true);
+        } else if (multiline && keyMatches(msg.key, [keyMap.documentEnd])) {
+          // Multi-line: Ctrl+End — go to document end
+          _resetDesiredCol();
+          _moveToDocumentBoundary(forward: true, clearSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.lineStart])) {
+          _resetDesiredCol();
+          if (multiline) {
+            _cursorLineStart();
+          } else {
+            cursorStart();
+          }
+        } else if (keyMatches(msg.key, [keyMap.selectLineStart])) {
+          _resetDesiredCol();
+          if (multiline) {
+            _cursorLineStart(extendSelection: true);
+          } else {
+            _moveToDocumentBoundary(
+              forward: false,
+              extendSelection: true,
+              clearSelection: false,
+            );
+          }
+        } else if (keyMatches(msg.key, [keyMap.deleteCharacterForward])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteForward);
+          _resetDesiredCol();
+          if (!_deleteSelection()) {
+            _deleteAfterCursor();
+          }
+        } else if (keyMatches(msg.key, [keyMap.lineEnd])) {
+          _resetDesiredCol();
+          if (multiline) {
+            _cursorLineEnd();
+          } else {
+            cursorEnd();
+          }
+        } else if (keyMatches(msg.key, [keyMap.selectLineEnd])) {
+          _resetDesiredCol();
+          if (multiline) {
+            _cursorLineEnd(extendSelection: true);
+          } else {
+            _moveToDocumentBoundary(
+              forward: true,
+              extendSelection: true,
+              clearSelection: false,
+            );
+          }
+        } else if (keyMatches(msg.key, [keyMap.deleteAfterCursor])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteForward);
+          _resetDesiredCol();
+          _clearOffsetSelection();
+          _deleteAfterCursor();
+        } else if (keyMatches(msg.key, [keyMap.deleteBeforeCursor])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteBackward);
+          _resetDesiredCol();
+          _clearOffsetSelection();
+          _deleteBeforeCursor();
+        } else if (keyMatches(msg.key, [keyMap.paste])) {
+          _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
+          _resetDesiredCol();
+          _deleteSelection();
+          // Return paste command - caller handles clipboard
+          return (this, _pasteCmd());
+        } else if (keyMatches(msg.key, [keyMap.deleteWordForward])) {
+          _beginHistoryAction(_TextInputHistoryAction.deleteForward);
+          _resetDesiredCol();
+          if (!_deleteSelection()) {
+            _deleteWordForward();
+          }
+        } else if (multiline && keyMatches(msg.key, [keyMap.lineUp])) {
+          // Multi-line: Up arrow — move cursor up one line
+          _lineUp();
+        } else if (multiline && keyMatches(msg.key, [keyMap.selectLineUp])) {
+          _lineUp(extendSelection: true);
+        } else if (multiline && keyMatches(msg.key, [keyMap.lineDown])) {
+          // Multi-line: Down arrow — move cursor down one line
+          _lineDown();
+        } else if (multiline && keyMatches(msg.key, [keyMap.selectLineDown])) {
+          _lineDown(extendSelection: true);
+        } else if (keyMatches(msg.key, [keyMap.nextSuggestion])) {
+          _nextSuggestion();
+        } else if (keyMatches(msg.key, [keyMap.prevSuggestion])) {
+          _previousSuggestion();
+        } else if (!msg.key.alt &&
+            msg.key.type == KeyType.runes &&
+            msg.key.runes.length == 1 &&
+            msg.key.runes.first == 0x03) {
+          final selected = getSelectedText();
+          if (selected.isNotEmpty) {
+            return (this, Cmd.setClipboardBestEffort(selected));
+          }
+        } else if (msg.key.runes.isNotEmpty && !msg.key.ctrl && !msg.key.alt) {
+          // Regular character input
+          final insertable = <int>[];
+          for (final r in msg.key.runes) {
+            if (r >= 0x20 && r != 0x7F) {
+              insertable.add(r);
+            }
+          }
+          if (insertable.isEmpty) {
+            _updateSuggestions();
+            return (this, null);
+          }
+          _beginHistoryAction(_TextInputHistoryAction.insert);
+          _resetDesiredCol();
+          _deleteSelection();
+          _insertRunes(insertable);
+        }
+
+        _updateSuggestions();
+      } else if (msg is _PasteChunkMsg) {
+        _beginHistoryAction(_TextInputHistoryAction.paste);
+        _applyNextPasteChunk();
+        if (_pasteController.hasPendingChunkedPaste) {
+          cmds.add(_schedulePasteChunk());
+        }
+      } else if (msg is PasteMsg || msg is PasteTextMsg) {
+        _beginHistoryAction(_TextInputHistoryAction.paste, breakChain: true);
+        final content = msg is PasteMsg
+            ? msg.content
+            : (msg as PasteTextMsg).content;
+        final pastePlan = planTextPaste(
+          content,
+          collapseLargePaste: collapseLargePaste,
+          collapsedPasteMinChars: collapsedPasteMinChars,
+          collapsedPasteMinLines: collapsedPasteMinLines,
+          chunkThresholdRunes: _pasteChunkThresholdRunes,
+        );
+        if (TuiTrace.enabled) {
+          final kind = msg is PasteMsg ? 'PasteMsg' : 'PasteTextMsg';
+          TuiTrace.log(
+            'paste.msg kind=$kind chars=${content.length} focused=$_focused',
+            tag: TraceTag.input,
+          );
+        }
+        if (pastePlan.collapse) {
+          _insertCollapsedPasteReference(
+            content,
+            lineCount: pastePlan.lineCount,
+          );
+        } else if (pastePlan.chunked) {
+          cmds.add(_startChunkedPaste(content));
+        } else {
+          if (TuiTrace.enabled) {
+            TuiTrace.log(
+              'paste.inline chars=${content.length} runes=${pastePlan.runeCount}',
+              tag: TraceTag.input,
+            );
+          }
+          _insertRunes(uni.codePoints(content));
+        }
+      } else if (msg is PasteErrorMsg) {
+        error = msg.error.toString();
       }
-    } else if (msg is PasteErrorMsg) {
-      error = msg.error.toString();
-    }
 
-    // Update cursor
-    final (newCursor, cursorCmd) = cursor.update(msg);
-    cursor = newCursor;
-    if (cursorCmd != null) cmds.add(cursorCmd);
+      // Update cursor
+      final (newCursor, cursorCmd) = cursor.update(msg);
+      cursor = newCursor;
+      if (cursorCmd != null) cmds.add(cursorCmd);
 
-    // Avoid scheduling a blink command on every keypress. Cursor blinking is
-    // already driven by its own timer loop while focused.
+      // Avoid scheduling a blink command on every keypress. Cursor blinking is
+      // already driven by its own timer loop while focused.
 
       _handleOverflow();
       return (this, cmds.isNotEmpty ? Cmd.batch(cmds) : null);
@@ -2685,9 +2671,8 @@ class TextInputModel extends ViewComponent {
       return (this, null);
     }
 
-    final lines = _getWrappedLines();
+    final lines = _visibleTextViewLines();
     final visibleHeight = maxHeight > 0 ? maxHeight : lines.length;
-    final row = msg.y + _scrollRow;
     final promptWidth = stringWidth(prompt);
     final localX = msg.x - promptWidth;
     final beforePos = _pos;
@@ -2695,33 +2680,25 @@ class TextInputModel extends ViewComponent {
     // Click outside visible area — unfocus.
     if (msg.y < 0 || msg.y >= visibleHeight) {
       if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
-        selectionStart = null;
-        selectionEnd = null;
+        _clearOffsetSelection();
         _mouseSelecting = false;
         _focused = false;
       }
       return (this, null);
     }
 
-    // Clamp row to valid range.
-    final clampedRow = row.clamp(0, lines.length - 1);
-    final line = lines[clampedRow];
-
-    // Convert cell x to character offset within this line.
-    final lineText = _value
-        .sublist(line.start, line.end)
-        .join()
-        .replaceAll('\n', '');
-    final charOffset = layout.localCellXToGraphemeIndex(lineText, localX);
-    // Map back to flat position.
-    // Count non-newline chars to find actual position.
-    var flatPos = line.start;
-    var counted = 0;
-    for (var i = line.start; i < line.end && counted < charOffset; i++) {
-      if (_value[i] != '\n') counted++;
-      flatPos = i + 1;
+    final hit = _textView.hitTestContent(
+      _document,
+      _editorState,
+      localX: localX,
+      visualRow: msg.y,
+    );
+    if (hit == null) {
+      return (this, null);
     }
-    flatPos = flatPos.clamp(0, _value.length);
+    final flatPos = _document
+        .offsetForPosition(TextPosition(line: hit.line, column: hit.column))
+        .clamp(0, _value.length);
 
     if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
       _focused = true;
@@ -2734,33 +2711,42 @@ class TextInputModel extends ViewComponent {
           _lastClickPos == pressFlatPos) {
         // Double click: select word
         final (start, end) = _findWordAt(pressFlatPos);
-        selectionStart = start;
-        selectionEnd = end;
-        _pos = end;
+        _selectOffsetState(
+          baseOffset: start,
+          extentOffset: end,
+          cursorOffset: end,
+        );
         _lastClickTime = now;
         _lastClickPos = pressFlatPos;
       } else {
-        position = pressFlatPos;
-        selectionStart = _pos;
-        selectionEnd = _pos;
+        _selectOffsetState(
+          baseOffset: pressFlatPos,
+          extentOffset: pressFlatPos,
+          cursorOffset: pressFlatPos,
+          preserveCollapsedSelection: true,
+        );
         _lastClickTime = now;
         _lastClickPos = pressFlatPos;
       }
       if (TuiTrace.enabled) {
         TuiTrace.log(
           'mouse.multiline press x=${msg.x} y=${msg.y} localX=$localX '
-          'row=$row clampedRow=$clampedRow flat=$flatPos pressFlat=$pressFlatPos '
+          'flat=$flatPos pressFlat=$pressFlatPos '
           'before=$beforePos after=$_pos',
         );
       }
     } else if (msg.action == MouseAction.motion && _mouseSelecting) {
       _resetDesiredCol();
-      position = flatPos;
-      selectionEnd = _pos;
+      _selectOffsetState(
+        baseOffset: selectionStart ?? _pos,
+        extentOffset: flatPos,
+        cursorOffset: flatPos,
+        preserveCollapsedSelection: true,
+      );
       if (TuiTrace.enabled) {
         TuiTrace.log(
           'mouse.multiline motion x=${msg.x} y=${msg.y} localX=$localX '
-          'row=$row clampedRow=$clampedRow flat=$flatPos before=$beforePos after=$_pos',
+          'flat=$flatPos before=$beforePos after=$_pos',
         );
       }
     } else if (msg.action == MouseAction.release && _mouseSelecting) {
@@ -2768,18 +2754,16 @@ class TextInputModel extends ViewComponent {
       if (TuiTrace.enabled) {
         TuiTrace.log(
           'mouse.multiline release x=${msg.x} y=${msg.y} localX=$localX '
-          'row=$row clampedRow=$clampedRow flat=$flatPos before=$beforePos after=$_pos '
+          'flat=$flatPos before=$beforePos after=$_pos '
           'sel=(${selectionStart ?? -1},${selectionEnd ?? -1})',
         );
       }
       if (selectionStart == selectionEnd) {
-        selectionStart = null;
-        selectionEnd = null;
+        _clearOffsetSelection();
         return (this, null);
       }
       final cmd = _copySelectionCmdIfAny();
-      selectionStart = null;
-      selectionEnd = null;
+      _clearOffsetSelection();
       return (this, cmd);
     }
     return (this, null);
@@ -2796,21 +2780,9 @@ class TextInputModel extends ViewComponent {
     String styleText(String s) => textInlineStyle.render(s);
     final selectionStyle = styles.selection;
     final normalEcho = echoMode == EchoMode.normal;
-    final lines = _getWrappedLines();
-    final (cursorRow, cursorCol) = _cursorRowCol();
+    final lines = _visibleTextViewLines();
     final promptWidth = stringWidth(prompt);
     final continuationPrompt = ' ' * promptWidth;
-
-    // Determine visible row range.
-    final totalLines = lines.length;
-    int firstVisible = _scrollRow;
-    int lastVisible; // exclusive
-    if (maxHeight > 0) {
-      lastVisible = math.min(firstVisible + maxHeight, totalLines);
-    } else {
-      firstVisible = 0;
-      lastVisible = totalLines;
-    }
 
     // Compute absolute selection range.
     int? absSelStart, absSelEnd;
@@ -2825,24 +2797,27 @@ class TextInputModel extends ViewComponent {
 
     final rowStrings = <String>[];
 
-    for (var row = firstVisible; row < lastVisible; row++) {
+    for (var row = 0; row < lines.length; row++) {
       final line = lines[row];
-      final linePrompt = (row == 0) ? prompt : continuationPrompt;
+      final linePrompt = (row == 0 && _scrollRow == 0)
+          ? prompt
+          : continuationPrompt;
       final rowStr = StringBuffer();
       var rowContentWidth = 0;
 
-      for (var i = line.start; i < line.end; i++) {
-        // Skip newline characters — they are line boundaries, not displayed.
-        if (_value[i] == '\n') continue;
-
-        final raw = _value[i];
+      final graphemes = uni.graphemes(line.text).toList(growable: false);
+      for (var i = 0; i < graphemes.length; i++) {
+        final raw = graphemes[i];
         final char = normalEcho ? raw : _echoTransform(raw);
         rowContentWidth += normalEcho
             ? runeWidth(uni.firstCodePoint(raw))
             : stringWidth(char);
+        final flatIndex = line.charOffset + i;
         final isSelected =
-            absSelStart != null && i >= absSelStart && i < absSelEnd!;
-        final isCursorPos = row == cursorRow && (i - line.start) == cursorCol;
+            absSelStart != null &&
+            flatIndex >= absSelStart &&
+            flatIndex < absSelEnd!;
+        final isCursorPos = line.hasCursor && (_pos - line.charOffset) == i;
 
         if (isCursorPos) {
           cursor = cursor.setChar(char);
@@ -2859,7 +2834,7 @@ class TextInputModel extends ViewComponent {
 
       // If cursor is at end of this line (past last char).
       final cursorAtLineEnd =
-          row == cursorRow && cursorCol == line.end - line.start;
+          line.hasCursor && (_pos - line.charOffset) == graphemes.length;
       if (cursorAtLineEnd) {
         cursor = cursor.setChar(' ');
         rowStr.write(cursor.view());

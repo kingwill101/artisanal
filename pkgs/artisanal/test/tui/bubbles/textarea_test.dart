@@ -68,6 +68,33 @@ void main() {
         textarea.setValue('parity');
         expect(textarea.value, 'parity');
       });
+
+      test('accepts PasteTextMsg through the shared paste path', () {
+        final textarea = TextAreaModel()..focus();
+
+        final (next, cmd) = textarea.update(const PasteTextMsg('alpha\nbeta'));
+
+        expect(cmd, isNull);
+        expect(next.value, 'alpha\nbeta');
+      });
+
+      test('chunked PasteMsg inserts in scheduled steps', () async {
+        final textarea = TextAreaModel()..focus();
+        final content = 'a' * 1200;
+
+        final (next, cmd) = textarea.update(PasteMsg(content));
+
+        expect(cmd, isNotNull);
+        expect(next.value, 'a' * 300);
+
+        final firstChunkMsg = await cmd!.execute();
+        expect(firstChunkMsg, isNotNull);
+
+        final (afterFirstTick, nextCmd) = next.update(firstChunkMsg!);
+
+        expect(afterFirstTick.value, 'a' * 600);
+        expect(nextCmd, isNotNull);
+      });
     });
 
     group('Cursor', () {
@@ -325,6 +352,37 @@ void main() {
         expect(textarea.cursorLine(), 1);
         expect(textarea.cursorColumn(), 0);
       });
+
+      test(
+        'delete keys remove the active selection before cursor-relative edits',
+        () {
+          final textarea = TextAreaModel();
+
+          textarea.setValue('alpha beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 2,
+            extentLine: 0,
+            extentColumn: 7,
+          );
+
+          textarea.update(KeyMsg(Key(KeyType.backspace)));
+          expect(textarea.value, 'aleta');
+          expect(textarea.hasSelection, isFalse);
+          expect(textarea.cursorLine(), 0);
+          expect(textarea.cursorColumn(), 2);
+
+          textarea.undo();
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 2,
+            extentLine: 0,
+            extentColumn: 7,
+          );
+          textarea.update(KeyMsg(Key(KeyType.delete)));
+          expect(textarea.value, 'aleta');
+        },
+      );
 
       test(
         'indentLines and outdentLines transform selected lines as one step',
@@ -843,6 +901,28 @@ void main() {
         expect(textarea.column, 0);
       });
 
+      test('character and document navigation cross line boundaries', () {
+        final textarea = TextAreaModel();
+        textarea.value = 'ab\ncd';
+        textarea.setCursor(0, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.right)));
+        expect(textarea.line, 1);
+        expect(textarea.column, 0);
+
+        textarea.update(const KeyMsg(Key(KeyType.left)));
+        expect(textarea.line, 0);
+        expect(textarea.column, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.end, ctrl: true)));
+        expect(textarea.line, 1);
+        expect(textarea.column, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.home, ctrl: true)));
+        expect(textarea.line, 0);
+        expect(textarea.column, 0);
+      });
+
       test('delete word backward', () {
         final textarea = TextAreaModel();
         textarea.value = 'hello world';
@@ -1092,6 +1172,82 @@ void main() {
         );
 
         expect(v2.getSelectedText(), equals('Hello'));
+      });
+
+      test('mouse release stops extending the current selection', () {
+        var textarea = TextAreaModel(prompt: '', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.left,
+            x: 5,
+            y: 0,
+          ),
+        );
+        expect(v2.getSelectedText(), equals('Hello'));
+
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.release,
+            button: MouseButton.left,
+            x: 5,
+            y: 0,
+          ),
+        );
+        var (v4, _) = v3.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: 4,
+            y: 1,
+          ),
+        );
+
+        expect(v4.getSelectedText(), equals('Hello'));
+      });
+
+      test('click without drag does not leave selection armed', () {
+        var textarea = TextAreaModel(prompt: '', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.release,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        expect(v2.getSelectedText(), isEmpty);
+
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: 5,
+            y: 0,
+          ),
+        );
+
+        expect(v3.getSelectedText(), isEmpty);
       });
 
       test('click outside bounds clears selection and blurs', () {

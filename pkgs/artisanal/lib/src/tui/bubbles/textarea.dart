@@ -11,12 +11,13 @@ import '../../uv/geometry.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../cmd.dart';
+import '../editor_core/editor_core.dart';
+import '../editor_core/editor_core.dart' as commands;
 import '../key.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
 import 'cursor.dart';
 import '../../unicode/grapheme.dart' as uni;
-import 'text_layout.dart' as layout;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Support types
@@ -68,6 +69,7 @@ class TextAreaStyleState {
     Style? lineNumber,
     Style? placeholder,
     Style? prompt,
+    Style? selection,
     Style? text,
   }) : base = base ?? Style(),
        cursorLine = cursorLine ?? Style(),
@@ -76,6 +78,11 @@ class TextAreaStyleState {
        lineNumber = lineNumber ?? Style(),
        placeholder = placeholder ?? Style(),
        prompt = prompt ?? Style(),
+       selection =
+           selection ??
+           Style()
+               .background(const AnsiColor(7))
+               .foreground(const AnsiColor(0)),
        text = text ?? Style();
 
   Style base;
@@ -85,6 +92,7 @@ class TextAreaStyleState {
   Style lineNumber;
   Style placeholder;
   Style prompt;
+  Style selection;
   Style text;
 
   Style get computedCursorLine => cursorLine.inherit(base).inline(true);
@@ -94,6 +102,7 @@ class TextAreaStyleState {
   Style get computedLineNumber => lineNumber.inherit(base).inline(true);
   Style get computedPlaceholder => placeholder.inherit(base).inline(true);
   Style get computedPrompt => prompt.inherit(base).inline(true);
+  Style get computedSelection => selection.inherit(base).inline(true);
   Style get computedText => text.inherit(base).inline(true);
 
   TextAreaStyleState copyWith({
@@ -104,6 +113,7 @@ class TextAreaStyleState {
     Style? lineNumber,
     Style? placeholder,
     Style? prompt,
+    Style? selection,
     Style? text,
   }) {
     return TextAreaStyleState(
@@ -114,6 +124,7 @@ class TextAreaStyleState {
       lineNumber: lineNumber ?? this.lineNumber,
       placeholder: placeholder ?? this.placeholder,
       prompt: prompt ?? this.prompt,
+      selection: selection ?? this.selection,
       text: text ?? this.text,
     );
   }
@@ -156,6 +167,9 @@ TextAreaStyles defaultTextAreaStyles() {
       lineNumber: Style().foreground(const AnsiColor(249)),
       placeholder: Style().foreground(const AnsiColor(240)),
       prompt: Style().foreground(const AnsiColor(7)),
+      selection: Style()
+          .background(const AnsiColor(7))
+          .foreground(const AnsiColor(0)),
       text: Style(),
     ),
     blurred: TextAreaStyleState(
@@ -165,6 +179,9 @@ TextAreaStyles defaultTextAreaStyles() {
       lineNumber: Style().foreground(const AnsiColor(249)),
       placeholder: Style().foreground(const AnsiColor(240)),
       prompt: Style().foreground(const AnsiColor(7)),
+      selection: Style()
+          .background(const AnsiColor(7))
+          .foreground(const AnsiColor(0)),
       text: Style().foreground(const AnsiColor(245)),
     ),
     cursor: TextAreaCursorStyle(
@@ -183,6 +200,10 @@ class TextAreaPasteMsg implements Msg {
 class TextAreaPasteErrorMsg implements Msg {
   TextAreaPasteErrorMsg(this.error);
   final Object error;
+}
+
+class _TextAreaPasteChunkMsg implements Msg {
+  const _TextAreaPasteChunkMsg();
 }
 
 class _TextAreaEditState {
@@ -489,6 +510,25 @@ class TextAreaModel extends ViewComponent {
        _width = width,
        _height = height {
     _lines = [[]];
+    _document = TextDocument();
+    _editorState = EditorState();
+    _textView = TextView(width: width, height: height, softWrap: softWrap);
+    _history =
+        EditHistoryController<
+          _TextAreaHistoryAction,
+          _TextAreaEditState,
+          ({int row, int col, int length})
+        >(
+          maxEntries: _maxHistoryEntries,
+          sameState: (a, b) => a.sameAs(b),
+          canCoalesce: _canCoalesceHistoryAction,
+          markerForState: (action, state) => (
+            row: state.row,
+            col: state.col,
+            length: uni.graphemes(state.value).length,
+          ),
+        );
+    _syncCoreState();
     _updateVirtualCursorStyle();
   }
 
@@ -512,24 +552,28 @@ class TextAreaModel extends ViewComponent {
 
   bool _focused = false;
   late List<List<String>> _lines;
+  late final TextDocument _document;
+  late final EditorState _editorState;
+  late final TextView _textView;
   int _row = 0;
   int _col = 0;
   int _width;
   int _height;
   int? _promptWidth;
   static const int _maxHistoryEntries = 100;
-  final List<_TextAreaEditState> _undoStack = <_TextAreaEditState>[];
-  final List<_TextAreaEditState> _redoStack = <_TextAreaEditState>[];
-  bool _editFrameActive = false;
-  bool _didRecordUndoSnapshot = false;
-  _TextAreaHistoryAction? _currentHistoryAction;
-  _TextAreaHistoryAction? _lastHistoryAction;
-  int? _lastHistoryRowAfter;
-  int? _lastHistoryColAfter;
-  int? _lastHistoryLengthAfter;
+  static const int _pasteChunkThresholdRunes = 1200;
+  static const int _pasteChunkSizeRunes = 300;
+  late final EditHistoryController<
+    _TextAreaHistoryAction,
+    _TextAreaEditState,
+    ({int row, int col, int length})
+  >
+  _history;
+  final TextPasteController _pasteController = TextPasteController();
 
   (int, int)? _selectionStart;
   (int, int)? _selectionEnd;
+  bool _mouseSelecting = false;
 
   // Double click tracking
   DateTime? _lastClickTime;
@@ -542,9 +586,11 @@ class TextAreaModel extends ViewComponent {
   int get height => _height;
   int get lineCount => _lines.length;
   int get length => _totalGraphemeLength();
-  bool get canUndo => _undoStack.isNotEmpty;
-  bool get canRedo => _redoStack.isNotEmpty;
+  bool get canUndo => _history.canUndo;
+  bool get canRedo => _history.canRedo;
   bool get hasSelection => _hasSelection();
+  TextDocument get document => _document;
+  EditorState get editorState => _editorState;
 
   /// Anchor position of the current selection, if any.
   ({int line, int column})? get selectionBase => _selectionStart == null
@@ -581,10 +627,12 @@ class TextAreaModel extends ViewComponent {
       }
       final limited = _applyCharLimit(v);
       _lines = _parseLines(limited);
-      _row = _lines.length - 1;
-      _col = _lines.isNotEmpty ? _lines.last.length : 0;
-      _selectionStart = null;
-      _selectionEnd = null;
+      _collapseLineState(
+        TextPosition(
+          line: _lines.length - 1,
+          column: _lines.isNotEmpty ? _lines.last.length : 0,
+        ),
+      );
     });
   }
 
@@ -602,8 +650,8 @@ class TextAreaModel extends ViewComponent {
 
   /// Sets the cursor position.
   void setCursor(int row, int col) {
-    _row = row.clamp(0, _lines.length - 1);
-    _col = col.clamp(0, _lines[_row].length);
+    _moveLineCursor(TextPosition(line: row, column: col));
+    _syncCoreState();
   }
 
   /// Sets the current selection and places the cursor at the extent.
@@ -613,42 +661,39 @@ class TextAreaModel extends ViewComponent {
     required int extentLine,
     required int extentColumn,
   }) {
-    final clampedBaseLine = baseLine.clamp(0, _lines.length - 1);
-    final clampedExtentLine = extentLine.clamp(0, _lines.length - 1);
-    _selectionStart = (
-      baseColumn.clamp(0, _lines[clampedBaseLine].length),
-      clampedBaseLine,
+    _selectLineState(
+      base: TextPosition(line: baseLine, column: baseColumn),
+      extent: TextPosition(line: extentLine, column: extentColumn),
+      cursor: TextPosition(line: extentLine, column: extentColumn),
+      preserveCollapsedSelection: true,
     );
-    _selectionEnd = (
-      extentColumn.clamp(0, _lines[clampedExtentLine].length),
-      clampedExtentLine,
-    );
-    _row = clampedExtentLine;
-    _col = extentColumn.clamp(0, _lines[_row].length);
+    _syncCoreState();
   }
 
   /// Clears the current selection.
   void clearSelection() {
-    _selectionStart = null;
-    _selectionEnd = null;
+    _clearLineSelection();
+    _syncCoreState();
   }
 
   /// Selects the entire textarea contents.
   void selectAll() {
     final lastLine = _lines.length - 1;
-    _selectionStart = (0, 0);
-    _selectionEnd = (_lines[lastLine].length, lastLine);
-    _row = lastLine;
-    _col = _lines[lastLine].length;
+    _selectLineState(
+      base: const TextPosition(line: 0, column: 0),
+      extent: TextPosition(line: lastLine, column: _lines[lastLine].length),
+    );
+    _syncCoreState();
   }
 
   /// Selects the current line, or expands the current selection to full lines.
   void selectCurrentLine() {
     final (startLine, endLine) = _selectedLineRange();
-    _selectionStart = (0, startLine);
-    _selectionEnd = (_lines[endLine].length, endLine);
-    _row = endLine;
-    _col = _lines[endLine].length;
+    _selectLineState(
+      base: TextPosition(line: startLine, column: 0),
+      extent: TextPosition(line: endLine, column: _lines[endLine].length),
+    );
+    _syncCoreState();
   }
 
   /// Returns the current cursor line (0-indexed).
@@ -681,23 +726,11 @@ class TextAreaModel extends ViewComponent {
       _focused ? styles.focused : styles.blurred;
 
   T _runEditFrame<T>(T Function() body) {
-    final wasActive = _editFrameActive;
-    _TextAreaEditState? beforeState;
-    if (!wasActive) {
-      _editFrameActive = true;
-      _didRecordUndoSnapshot = false;
-      beforeState = _captureEditState();
-    }
-    try {
-      return body();
-    } finally {
-      if (!wasActive) {
-        _finalizeEditFrame(beforeState!);
-        _editFrameActive = false;
-        _didRecordUndoSnapshot = false;
-        _currentHistoryAction = null;
-      }
-    }
+    return _history.runFrame(
+      captureState: _captureEditState,
+      body: body,
+      onCommittedChange: _syncCoreState,
+    );
   }
 
   _TextAreaEditState _captureEditState() {
@@ -710,30 +743,236 @@ class TextAreaModel extends ViewComponent {
     );
   }
 
+  TextLineStateSnapshot _currentLineStateSnapshot() {
+    final cursor = _currentCursorPosition();
+    final selectionBase = _currentSelectionBasePosition();
+    final selectionExtent = _currentSelectionExtentPosition();
+    if (selectionBase == null || selectionExtent == null) {
+      return TextLineStateSnapshot.collapsed(cursor: cursor);
+    }
+
+    return TextLineStateSnapshot.selection(
+      base: selectionBase,
+      extent: selectionExtent,
+      cursor: cursor,
+      preserveCollapsedSelection: true,
+    );
+  }
+
+  TextOffsetStateSnapshot _currentOffsetStateSnapshot() {
+    _refreshDocumentSnapshot();
+    final cursorOffset = _document.offsetForPosition(_currentCursorPosition());
+    final selectionBase = _currentSelectionBasePosition();
+    final selectionExtent = _currentSelectionExtentPosition();
+    if (selectionBase == null || selectionExtent == null) {
+      return TextOffsetStateSnapshot.collapsed(cursorOffset: cursorOffset);
+    }
+
+    return TextOffsetStateSnapshot(
+      cursorOffset: cursorOffset,
+      selectionBaseOffset: _document.offsetForPosition(selectionBase),
+      selectionExtentOffset: _document.offsetForPosition(selectionExtent),
+    );
+  }
+
+  List<String> _lineTexts() {
+    return _lines.map((line) => line.join()).toList(growable: false);
+  }
+
+  void _applyLineStateSnapshot(TextLineStateSnapshot snapshot) {
+    final clamped = snapshot.clamp(
+      lineCount: _lines.length,
+      lineLength: (line) => _lines[line].length,
+      preserveCollapsedSelection: true,
+    );
+    _row = clamped.cursor.line;
+    _col = clamped.cursor.column;
+    _selectionStart = clamped.selectionBase == null
+        ? null
+        : (clamped.selectionBase!.column, clamped.selectionBase!.line);
+    _selectionEnd = clamped.selectionExtent == null
+        ? null
+        : (clamped.selectionExtent!.column, clamped.selectionExtent!.line);
+  }
+
+  void _collapseLineState(TextPosition cursor) {
+    _moveLineCursor(cursor, clearSelection: true);
+  }
+
+  void _selectLineState({
+    required TextPosition base,
+    required TextPosition extent,
+    TextPosition? cursor,
+    bool preserveCollapsedSelection = false,
+  }) {
+    _applyLineStateSnapshot(
+      TextLineStateSnapshot.selection(
+        base: base,
+        extent: extent,
+        cursor: cursor,
+        preserveCollapsedSelection: preserveCollapsedSelection,
+      ),
+    );
+  }
+
+  void _clearLineSelection() {
+    _applyLineStateSnapshot(_currentLineStateSnapshot().clearSelection());
+  }
+
+  TextPosition _currentCursorPosition() {
+    return TextPosition(line: _row, column: _col);
+  }
+
+  TextPosition? _currentSelectionBasePosition() {
+    if (_selectionStart == null) {
+      return null;
+    }
+    return TextPosition(line: _selectionStart!.$2, column: _selectionStart!.$1);
+  }
+
+  TextPosition? _currentSelectionExtentPosition() {
+    if (_selectionEnd == null) {
+      return null;
+    }
+    return TextPosition(line: _selectionEnd!.$2, column: _selectionEnd!.$1);
+  }
+
+  void _moveLineCursor(TextPosition cursor, {bool clearSelection = false}) {
+    final selectionBase = clearSelection
+        ? null
+        : _currentSelectionBasePosition();
+    final selectionExtent = clearSelection
+        ? null
+        : _currentSelectionExtentPosition();
+    if (selectionBase == null || selectionExtent == null) {
+      _applyLineStateSnapshot(TextLineStateSnapshot.collapsed(cursor: cursor));
+      return;
+    }
+
+    _applyLineStateSnapshot(
+      TextLineStateSnapshot.selection(
+        base: selectionBase,
+        extent: selectionExtent,
+        cursor: cursor,
+        preserveCollapsedSelection: true,
+      ),
+    );
+  }
+
+  void _syncCoreState() {
+    _document.replaceLines(_lines);
+    syncEditorStateFromLineSnapshot(
+      _editorState,
+      _currentLineStateSnapshot(),
+      lineCount: _lines.length,
+      lineLength: (line) => _lines[line].length,
+    );
+
+    _textView
+      ..width = _width
+      ..height = _height
+      ..softWrap = softWrap
+      ..leadingColumns = _leadingColumnsForView();
+    _textView.ensureCursorVisible(_document, _editorState);
+  }
+
+  int _leadingColumnsForView() {
+    final lineNumberDigits = showLineNumbers ? '${_lines.length}'.length : 0;
+    return _getPromptWidth(_row) + (showLineNumbers ? lineNumberDigits + 1 : 0);
+  }
+
+  void _refreshDocumentSnapshot() {
+    _document.replaceLines(_lines);
+  }
+
+  void _refreshEditorStateSnapshot() {
+    syncEditorStateFromLineSnapshot(
+      _editorState,
+      _currentLineStateSnapshot(),
+      lineCount: _lines.length,
+      lineLength: (line) => _lines[line].length,
+    );
+  }
+
+  void _applyEditorStateSnapshot() {
+    _applyLineStateSnapshot(
+      lineSnapshotFromEditorState(
+        _editorState,
+        lineCount: _lines.length,
+        lineLength: (line) => _lines[line].length,
+      ),
+    );
+  }
+
+  void _applyLineCommandResult(commands.TextLineCommandResult result) {
+    _lines = _parseLines(result.lines.join('\n'));
+    _applyLineStateSnapshot(
+      TextLineStateSnapshot(
+        cursor: result.cursor,
+        selectionBase: result.selectionBase,
+        selectionExtent: result.selectionExtent,
+      ),
+    );
+  }
+
+  void _applyOffsetCursorCommandResult(
+    commands.TextCursorCommandResult result,
+  ) {
+    _refreshDocumentSnapshot();
+    _applyLineStateSnapshot(
+      lineSnapshotFromOffsets(
+        _document,
+        cursorOffset: result.cursorOffset,
+        selectionBaseOffset: result.selectionBaseOffset,
+        selectionExtentOffset: result.selectionExtentOffset,
+      ),
+    );
+  }
+
+  void _applyOffsetCommandResult(commands.TextCommandResult result) {
+    _setValueAndCursor(result.graphemes.join(), result.cursorOffset);
+    _refreshDocumentSnapshot();
+    _applyLineStateSnapshot(
+      lineSnapshotFromOffsets(
+        _document,
+        cursorOffset: result.cursorOffset,
+        selectionBaseOffset: result.selectionBaseOffset,
+        selectionExtentOffset: result.selectionExtentOffset,
+      ),
+    );
+  }
+
   void _restoreEditState(_TextAreaEditState state) {
     _lines = _parseLines(state.value);
-    _row = state.row.clamp(0, _lines.length - 1);
-    _col = state.col.clamp(0, _lines[_row].length);
-    _selectionStart = state.selectionStart;
-    _selectionEnd = state.selectionEnd;
+    _applyLineStateSnapshot(
+      TextLineStateSnapshot(
+        cursor: TextPosition(line: state.row, column: state.col),
+        selectionBase: state.selectionStart == null
+            ? null
+            : TextPosition(
+                line: state.selectionStart!.$2,
+                column: state.selectionStart!.$1,
+              ),
+        selectionExtent: state.selectionEnd == null
+            ? null
+            : TextPosition(
+                line: state.selectionEnd!.$2,
+                column: state.selectionEnd!.$1,
+              ),
+      ),
+    );
+    _syncCoreState();
   }
 
   void _beginHistoryAction(
     _TextAreaHistoryAction action, {
     bool breakChain = false,
   }) {
-    if (breakChain) {
-      _breakHistoryCoalescing();
-    }
-    _currentHistoryAction = action;
+    _history.beginAction(action, breakChain: breakChain);
   }
 
   void _breakHistoryCoalescing() {
-    _currentHistoryAction = null;
-    _lastHistoryAction = null;
-    _lastHistoryRowAfter = null;
-    _lastHistoryColAfter = null;
-    _lastHistoryLengthAfter = null;
+    _history.breakCoalescing();
   }
 
   bool _hasSelection() =>
@@ -741,12 +980,23 @@ class TextAreaModel extends ViewComponent {
       _selectionEnd != null &&
       _selectionStart != _selectionEnd;
 
-  bool _shouldCoalesceSnapshot(_TextAreaHistoryAction action) {
-    if (_hasSelection()) return false;
-    if (_lastHistoryAction != action) return false;
-    if (_lastHistoryRowAfter != _row) return false;
-    if (_lastHistoryColAfter != _col) return false;
-    if (_lastHistoryLengthAfter != length) return false;
+  bool _canCoalesceHistoryAction(
+    _TextAreaHistoryAction action, {
+    required _TextAreaHistoryAction? lastAction,
+    required ({int row, int col, int length})? lastMarker,
+    required _TextAreaEditState currentState,
+  }) {
+    if (currentState.selectionStart != null &&
+        currentState.selectionEnd != null &&
+        currentState.selectionStart != currentState.selectionEnd) {
+      return false;
+    }
+    if (lastAction != action || lastMarker == null) return false;
+    if (lastMarker.row != currentState.row) return false;
+    if (lastMarker.col != currentState.col) return false;
+    if (lastMarker.length != uni.graphemes(currentState.value).length) {
+      return false;
+    }
     return switch (action) {
       _TextAreaHistoryAction.insert => true,
       _TextAreaHistoryAction.deleteBackward => true,
@@ -757,44 +1007,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _recordUndoSnapshot() {
-    if (_editFrameActive && _didRecordUndoSnapshot) {
-      return;
-    }
-    final action = _currentHistoryAction;
-    if (action != null && _shouldCoalesceSnapshot(action)) {
-      _didRecordUndoSnapshot = true;
-      return;
-    }
-    final snapshot = _captureEditState();
-    if (_undoStack.isNotEmpty && _undoStack.last.sameAs(snapshot)) {
-      _didRecordUndoSnapshot = true;
-      return;
-    }
-    _undoStack.add(snapshot);
-    if (_undoStack.length > _maxHistoryEntries) {
-      _undoStack.removeAt(0);
-    }
-    _redoStack.clear();
-    _didRecordUndoSnapshot = true;
-  }
-
-  void _finalizeEditFrame(_TextAreaEditState beforeState) {
-    final action = _currentHistoryAction;
-    final afterState = _captureEditState();
-    if (beforeState.sameAs(afterState)) {
-      if (action == null) {
-        _breakHistoryCoalescing();
-      }
-      return;
-    }
-    if (action == null) {
-      _breakHistoryCoalescing();
-      return;
-    }
-    _lastHistoryAction = action;
-    _lastHistoryRowAfter = afterState.row;
-    _lastHistoryColAfter = afterState.col;
-    _lastHistoryLengthAfter = uni.graphemes(afterState.value).length;
+    _history.recordUndoSnapshot(_captureEditState);
   }
 
   /// Returns a [Cursor] for rendering a real cursor in a TUI program.
@@ -857,88 +1070,94 @@ class TextAreaModel extends ViewComponent {
       _beginHistoryAction(_TextAreaHistoryAction.reset, breakChain: true);
       _recordUndoSnapshot();
       _lines = [[]];
-      _row = 0;
-      _col = 0;
-      _selectionStart = null;
-      _selectionEnd = null;
+      _collapseLineState(const TextPosition(line: 0, column: 0));
     });
   }
 
   /// Clears all undo and redo history.
   void clearHistory() {
-    _undoStack.clear();
-    _redoStack.clear();
-    _breakHistoryCoalescing();
+    _history.clear();
   }
 
   /// Breaks the current undo coalescing chain.
   void pushHistoryBoundary() {
-    _breakHistoryCoalescing();
+    _history.breakCoalescing();
   }
 
   /// Indents the selected lines, or the current line if there is no selection.
   bool indentLines({int width = 2}) {
-    final indentWidth = width < 1 ? 1 : width;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      final deltas = <int, int>{};
-      final indent = List<String>.filled(indentWidth, ' ', growable: false);
-
-      _recordUndoSnapshot();
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        _lines[lineIndex].insertAll(0, indent);
-        deltas[lineIndex] = indentWidth;
+      final result = textIndentLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        width: width,
+      );
+      if (!result.changed) {
+        return false;
       }
 
-      _applyLineColumnDeltas(deltas);
+      _recordUndoSnapshot();
+      _applyLineCommandResult(result);
       return true;
     });
   }
 
   /// Outdents the selected lines, or the current line if there is no selection.
   bool outdentLines({int width = 2}) {
-    final indentWidth = width < 1 ? 1 : width;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      final removalCounts = <int, int>{};
-      var changed = false;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final removalCount = _leadingIndentRemovalCount(
-          _lines[lineIndex],
-          indentWidth,
-        );
-        removalCounts[lineIndex] = removalCount;
-        changed = changed || removalCount > 0;
-      }
-
-      if (!changed) {
+      final result = textOutdentLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        width: width,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final removalCount = removalCounts[lineIndex]!;
-        if (removalCount == 0) continue;
-        _lines[lineIndex].removeRange(0, removalCount);
-        removalCounts[lineIndex] = -removalCount;
-      }
-
-      _applyLineColumnDeltas(removalCounts);
+      _applyLineCommandResult(result);
       return true;
     });
   }
 
   /// Moves the selected lines, or the current line, one row upward.
   bool moveLinesUp() {
-    return _moveSelectedLines(-1);
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final result = textMoveSelectedLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        direction: -1,
+      );
+      if (!result.changed) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _applyLineCommandResult(result);
+      return true;
+    });
   }
 
   /// Moves the selected lines, or the current line, one row downward.
   bool moveLinesDown() {
-    return _moveSelectedLines(1);
+    return _runEditFrame(() {
+      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
+      final result = textMoveSelectedLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        direction: 1,
+      );
+      if (!result.changed) {
+        return false;
+      }
+
+      _recordUndoSnapshot();
+      _applyLineCommandResult(result);
+      return true;
+    });
   }
 
   /// Duplicates the selected lines, or the current line, above the current
@@ -946,39 +1165,13 @@ class TextAreaModel extends ViewComponent {
   bool duplicateLinesAbove() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      final blockHeight = endLine - startLine + 1;
-      final hadSelection = _hasSelection();
-      final duplicatedLines = _lines
-          .sublist(startLine, endLine + 1)
-          .map((line) => List<String>.from(line))
-          .toList(growable: false);
+      final result = textDuplicateSelectedLinesAbove(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+      );
 
       _recordUndoSnapshot();
-      _lines.insertAll(startLine, duplicatedLines);
-
-      if (hadSelection) {
-        _selectionStart = _duplicateAbovePoint(
-          _selectionStart,
-          startLine: startLine,
-          endLine: endLine,
-          delta: blockHeight,
-        );
-        _selectionEnd = _duplicateAbovePoint(
-          _selectionEnd,
-          startLine: startLine,
-          endLine: endLine,
-          delta: blockHeight,
-        );
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-      }
-
-      if (_row > endLine) {
-        _row = (_row + blockHeight).clamp(0, _lines.length - 1);
-      }
-      _col = _col.clamp(0, _lines[_row].length);
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -988,39 +1181,13 @@ class TextAreaModel extends ViewComponent {
   bool duplicateLinesBelow() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      final blockHeight = endLine - startLine + 1;
-      final hadSelection = _hasSelection();
-      final duplicatedLines = _lines
-          .sublist(startLine, endLine + 1)
-          .map((line) => List<String>.from(line))
-          .toList(growable: false);
+      final result = textDuplicateSelectedLinesBelow(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+      );
 
       _recordUndoSnapshot();
-      _lines.insertAll(endLine + 1, duplicatedLines);
-
-      if (hadSelection) {
-        _selectionStart = _shiftPointRowRange(
-          _selectionStart,
-          startLine: startLine,
-          endLine: endLine,
-          delta: blockHeight,
-        );
-        _selectionEnd = _shiftPointRowRange(
-          _selectionEnd,
-          startLine: startLine,
-          endLine: endLine,
-          delta: blockHeight,
-        );
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-      }
-
-      if (_row >= startLine && _row <= endLine) {
-        _row = (_row + blockHeight).clamp(0, _lines.length - 1);
-        _col = _col.clamp(0, _lines[_row].length);
-      }
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1033,53 +1200,17 @@ class TextAreaModel extends ViewComponent {
   bool cleanupWhitespace({bool trimTrailingBlankLines = true}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final hasSelection = _hasSelection();
-      final (startLine, endLine) = hasSelection
-          ? _selectedLineRange()
-          : (0, _lines.length - 1);
-      final trimmedLengths = <int, int>{};
-      var changed = false;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final trimmedLength = _trailingHorizontalTrimLength(_lines[lineIndex]);
-        trimmedLengths[lineIndex] = trimmedLength;
-        changed = changed || trimmedLength != _lines[lineIndex].length;
-      }
-
-      var removedTrailingLines = 0;
-      if (!hasSelection && trimTrailingBlankLines) {
-        var lineIndex = _lines.length - 1;
-        while (lineIndex > 0 && trimmedLengths[lineIndex] == 0) {
-          removedTrailingLines++;
-          lineIndex--;
-        }
-        changed = changed || removedTrailingLines > 0;
-      }
-
-      if (!changed) {
+      final result = textCleanupWhitespace(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        trimTrailingBlankLines: trimTrailingBlankLines,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final trimmedLength = trimmedLengths[lineIndex]!;
-        if (trimmedLength == _lines[lineIndex].length) continue;
-        _lines[lineIndex].removeRange(trimmedLength, _lines[lineIndex].length);
-      }
-
-      if (!hasSelection && removedTrailingLines > 0) {
-        _lines.removeRange(_lines.length - removedTrailingLines, _lines.length);
-      }
-
-      if (_row >= _lines.length) {
-        _row = _lines.length - 1;
-        _col = _lines[_row].length;
-      } else {
-        _row = _row.clamp(0, _lines.length - 1);
-        _col = _col.clamp(0, _lines[_row].length);
-      }
-      _selectionStart = _clampPointToBuffer(_selectionStart);
-      _selectionEnd = _clampPointToBuffer(_selectionEnd);
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1088,28 +1219,16 @@ class TextAreaModel extends ViewComponent {
   bool deleteLines() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      final deletedCount = endLine - startLine + 1;
+      final result = textDeleteLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+      );
+      if (!result.changed) {
+        return false;
+      }
 
       _recordUndoSnapshot();
-      if (deletedCount >= _lines.length) {
-        _lines = [[]];
-        _row = 0;
-        _col = 0;
-        _selectionStart = null;
-        _selectionEnd = null;
-        return true;
-      }
-
-      _lines.removeRange(startLine, endLine + 1);
-      if (_row > endLine) {
-        _row -= deletedCount;
-      } else if (_row >= startLine) {
-        _row = startLine.clamp(0, _lines.length - 1);
-      }
-      _col = _col.clamp(0, _lines[_row].length);
-      _selectionStart = null;
-      _selectionEnd = null;
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1119,31 +1238,16 @@ class TextAreaModel extends ViewComponent {
   bool joinLines() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, selectedEndLine) = _selectedLineRange();
-      final endLine = _hasSelection()
-          ? selectedEndLine
-          : math.min(startLine + 1, _lines.length - 1);
-      if (startLine >= endLine) {
+      final result = textJoinLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      final joined = List<String>.from(_lines[startLine]);
-      for (var lineIndex = startLine + 1; lineIndex <= endLine; lineIndex++) {
-        final trimmed = _trimLeadingHorizontalWhitespace(_lines[lineIndex]);
-        final separator = _lineJoinSeparator(joined, trimmed);
-        if (separator.isNotEmpty) {
-          joined.add(separator);
-        }
-        joined.addAll(trimmed);
-      }
-
-      _lines[startLine] = joined;
-      _lines.removeRange(startLine + 1, endLine + 1);
-      _row = startLine;
-      _col = joined.length;
-      _selectionStart = null;
-      _selectionEnd = null;
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1153,24 +1257,17 @@ class TextAreaModel extends ViewComponent {
   bool splitLine() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final flat = _flattenWithNewlines();
-      var start = _globalOffset();
-      var end = start;
-      if (_hasSelection()) {
-        start = _globalOffsetForPoint(_selectionStart!);
-        end = _globalOffsetForPoint(_selectionEnd!);
-        if (start > end) {
-          final tmp = start;
-          start = end;
-          end = tmp;
-        }
+      _refreshDocumentSnapshot();
+      final result = textSplitLine(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+      );
+      if (!result.changed) {
+        return false;
       }
 
       _recordUndoSnapshot();
-      flat.replaceRange(start, end, const ['\n']);
-      _setValueAndCursor(flat.join(), start + 1);
-      _selectionStart = null;
-      _selectionEnd = null;
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -1178,19 +1275,19 @@ class TextAreaModel extends ViewComponent {
   /// Uppercases the selected range, or the current line when there is no
   /// selection.
   bool uppercaseSelectionOrLine() {
-    return _transformSelectionOrLine((text) => text.toUpperCase());
+    return _transformSelectionOrLineShared((text) => text.toUpperCase());
   }
 
   /// Lowercases the selected range, or the current line when there is no
   /// selection.
   bool lowercaseSelectionOrLine() {
-    return _transformSelectionOrLine((text) => text.toLowerCase());
+    return _transformSelectionOrLineShared((text) => text.toLowerCase());
   }
 
   /// Capitalizes words in the selected range, or the current line when there
   /// is no selection.
   bool capitalizeSelectionOrLine() {
-    return _transformSelectionOrLine(_capitalizeWords);
+    return _transformSelectionOrLineShared(textCapitalizeWords);
   }
 
   /// Sorts the selected lines, or the entire buffer when there is no
@@ -1201,43 +1298,18 @@ class TextAreaModel extends ViewComponent {
   }) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final hasSelection = _hasSelection();
-      final (startLine, endLine) = hasSelection
-          ? _selectedLineRange()
-          : (0, _lines.length - 1);
-      if (startLine >= endLine) {
-        return false;
-      }
-
-      final originalTexts = _lines
-          .sublist(startLine, endLine + 1)
-          .map((line) => line.join())
-          .toList(growable: false);
-      final sortedLines = _lines
-          .sublist(startLine, endLine + 1)
-          .map((line) => List<String>.from(line))
-          .toList();
-      sortedLines.sort(
-        (a, b) => _compareLineContent(
-          a,
-          b,
-          descending: descending,
-          caseSensitive: caseSensitive,
-        ),
+      final result = textSortSelectedLines(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        descending: descending,
+        caseSensitive: caseSensitive,
       );
-      final sortedTexts = sortedLines
-          .map((line) => line.join())
-          .toList(growable: false);
-      if (_listStringEquals(originalTexts, sortedTexts)) {
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines.replaceRange(startLine, endLine + 1, sortedLines);
-      _row = _row.clamp(0, _lines.length - 1);
-      _col = _col.clamp(0, _lines[_row].length);
-      _selectionStart = _clampPointToBuffer(_selectionStart);
-      _selectionEnd = _clampPointToBuffer(_selectionEnd);
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1254,131 +1326,19 @@ class TextAreaModel extends ViewComponent {
     if (prefix.isEmpty) return false;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final lineTexts = _lines
-          .map((line) => line.join())
-          .toList(growable: true);
-      if (lineTexts.isEmpty) {
-        return false;
-      }
-
-      final row = _row.clamp(0, lineTexts.length - 1);
-      final hasSelection =
-          _hasSelection() && _selectionStart != null && _selectionEnd != null;
-      final startLine = hasSelection
-          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-      final endLine = hasSelection
-          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-
-      var hasRelevantLine = false;
-      var allPrefixed = true;
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final body = line.substring(leadingWhitespace);
-        if (skipBlankLinesWhenChecking && body.trim().isEmpty) {
-          continue;
-        }
-        hasRelevantLine = true;
-        if (!body.startsWith(prefix)) {
-          allPrefixed = false;
-          break;
-        }
-      }
-      if (!hasRelevantLine) {
-        allPrefixed = false;
-      }
-
-      var adjustedBase = _selectionStart;
-      var adjustedExtent = _selectionEnd;
-      var nextColumn = _col;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final indent = line.substring(0, leadingWhitespace);
-        final body = line.substring(leadingWhitespace);
-        final wasPrefixed = body.startsWith(prefix);
-        final hadTrailingSpace = wasPrefixed && body.length > prefix.length
-            ? body.substring(prefix.length).startsWith(' ')
-            : false;
-        final removeCount = prefix.length + (hadTrailingSpace ? 1 : 0);
-        final addCount =
-            prefix.length + (addSpaceWhenNonEmpty && body.isNotEmpty ? 1 : 0);
-
-        lineTexts[lineIndex] = allPrefixed && wasPrefixed
-            ? '$indent${body.substring(removeCount)}'
-            : '$indent$prefix${addSpaceWhenNonEmpty && body.isNotEmpty ? ' ' : ''}$body';
-
-        if (!allPrefixed) {
-          if (lineIndex == row) {
-            nextColumn = _adjustLinePrefixColumn(
-              column: nextColumn,
-              leadingWhitespace: leadingWhitespace,
-              delta: addCount,
-              remove: false,
-            );
-          }
-          adjustedBase = _adjustLinePrefixPoint(
-            adjustedBase,
-            line: lineIndex,
-            leadingWhitespace: leadingWhitespace,
-            delta: addCount,
-            remove: false,
-          );
-          adjustedExtent = _adjustLinePrefixPoint(
-            adjustedExtent,
-            line: lineIndex,
-            leadingWhitespace: leadingWhitespace,
-            delta: addCount,
-            remove: false,
-          );
-          continue;
-        }
-
-        if (lineIndex == row) {
-          nextColumn = _adjustLinePrefixColumn(
-            column: nextColumn,
-            leadingWhitespace: leadingWhitespace,
-            delta: removeCount,
-            remove: true,
-          );
-        }
-        adjustedBase = _adjustLinePrefixPoint(
-          adjustedBase,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: removeCount,
-          remove: true,
-        );
-        adjustedExtent = _adjustLinePrefixPoint(
-          adjustedExtent,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: removeCount,
-          remove: true,
-        );
-      }
-
-      final nextValue = lineTexts.join('\n');
-      if (nextValue == value) {
+      final result = textToggleLinePrefix(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        prefix: prefix,
+        addSpaceWhenNonEmpty: addSpaceWhenNonEmpty,
+        skipBlankLinesWhenChecking: skipBlankLinesWhenChecking,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines = _parseLines(nextValue);
-      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
-        _selectionStart = _clampPointToBuffer(adjustedBase);
-        _selectionEnd = _clampPointToBuffer(adjustedExtent);
-        _row = _selectionEnd!.$2;
-        _col = _selectionEnd!.$1;
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-        _row = row.clamp(0, _lines.length - 1);
-        _col = nextColumn.clamp(0, _lines[_row].length);
-      }
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1388,134 +1348,19 @@ class TextAreaModel extends ViewComponent {
   /// When adding numbering, non-blank lines are numbered sequentially starting
   /// at [startAt]. Blank lines are left unchanged.
   bool toggleNumberedList({int startAt = 1}) {
-    final initialNumber = startAt < 1 ? 1 : startAt;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final lineTexts = _lines
-          .map((line) => line.join())
-          .toList(growable: true);
-      if (lineTexts.isEmpty) {
-        return false;
-      }
-
-      final row = _row.clamp(0, lineTexts.length - 1);
-      final hasSelection =
-          _hasSelection() && _selectionStart != null && _selectionEnd != null;
-      final startLine = hasSelection
-          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-      final endLine = hasSelection
-          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-
-      var hasRelevantLine = false;
-      var allNumbered = true;
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final body = line.substring(leadingWhitespace);
-        if (body.trim().isEmpty) {
-          continue;
-        }
-        hasRelevantLine = true;
-        if (_leadingNumberedPrefixLength(body) == null) {
-          allNumbered = false;
-          break;
-        }
-      }
-
-      var adjustedBase = _selectionStart;
-      var adjustedExtent = _selectionEnd;
-      var nextColumn = _col;
-      var nextNumber = initialNumber;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final indent = line.substring(0, leadingWhitespace);
-        final body = line.substring(leadingWhitespace);
-        final numberedPrefixLength = _leadingNumberedPrefixLength(body);
-        final isBlank = body.trim().isEmpty;
-        if (isBlank && hasRelevantLine) {
-          continue;
-        }
-
-        final addPrefix = '${nextNumber++}. ';
-        final removeCount = numberedPrefixLength ?? 0;
-        final addCount = addPrefix.length;
-
-        lineTexts[lineIndex] = allNumbered && removeCount > 0
-            ? '$indent${body.substring(removeCount)}'
-            : '$indent$addPrefix$body';
-
-        if (!allNumbered) {
-          if (lineIndex == row) {
-            nextColumn = _adjustLinePrefixColumn(
-              column: nextColumn,
-              leadingWhitespace: leadingWhitespace,
-              delta: addCount,
-              remove: false,
-            );
-          }
-          adjustedBase = _adjustLinePrefixPoint(
-            adjustedBase,
-            line: lineIndex,
-            leadingWhitespace: leadingWhitespace,
-            delta: addCount,
-            remove: false,
-          );
-          adjustedExtent = _adjustLinePrefixPoint(
-            adjustedExtent,
-            line: lineIndex,
-            leadingWhitespace: leadingWhitespace,
-            delta: addCount,
-            remove: false,
-          );
-          continue;
-        }
-
-        if (lineIndex == row) {
-          nextColumn = _adjustLinePrefixColumn(
-            column: nextColumn,
-            leadingWhitespace: leadingWhitespace,
-            delta: removeCount,
-            remove: true,
-          );
-        }
-        adjustedBase = _adjustLinePrefixPoint(
-          adjustedBase,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: removeCount,
-          remove: true,
-        );
-        adjustedExtent = _adjustLinePrefixPoint(
-          adjustedExtent,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: removeCount,
-          remove: true,
-        );
-      }
-
-      final nextValue = lineTexts.join('\n');
-      if (nextValue == value) {
+      final result = textToggleNumberedList(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        startAt: startAt,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines = _parseLines(nextValue);
-      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
-        _selectionStart = _clampPointToBuffer(adjustedBase);
-        _selectionEnd = _clampPointToBuffer(adjustedExtent);
-        _row = _selectionEnd!.$2;
-        _col = _selectionEnd!.$1;
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-        _row = row.clamp(0, _lines.length - 1);
-        _col = nextColumn.clamp(0, _lines[_row].length);
-      }
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1526,96 +1371,19 @@ class TextAreaModel extends ViewComponent {
   /// Only lines that already begin with a numbered list prefix are rewritten.
   /// Other lines are left unchanged.
   bool renumberNumberedList({int startAt = 1}) {
-    final initialNumber = startAt < 1 ? 1 : startAt;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final lineTexts = _lines
-          .map((line) => line.join())
-          .toList(growable: true);
-      if (lineTexts.isEmpty) {
-        return false;
-      }
-
-      final row = _row.clamp(0, lineTexts.length - 1);
-      final hasSelection =
-          _hasSelection() && _selectionStart != null && _selectionEnd != null;
-      final startLine = hasSelection
-          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-      final endLine = hasSelection
-          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-
-      var hasNumberedLine = false;
-      var adjustedBase = _selectionStart;
-      var adjustedExtent = _selectionEnd;
-      var nextColumn = _col;
-      var nextNumber = initialNumber;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final indent = line.substring(0, leadingWhitespace);
-        final body = line.substring(leadingWhitespace);
-        final numberedPrefixLength = _leadingNumberedPrefixLength(body);
-        if (numberedPrefixLength == null) {
-          continue;
-        }
-
-        hasNumberedLine = true;
-        final nextPrefix = '${nextNumber++}. ';
-        final nextLine =
-            '$indent$nextPrefix${body.substring(numberedPrefixLength)}';
-        final delta = nextPrefix.length - numberedPrefixLength;
-        lineTexts[lineIndex] = nextLine;
-
-        if (delta == 0) {
-          continue;
-        }
-
-        if (lineIndex == row) {
-          nextColumn = _adjustLinePrefixColumnDelta(
-            column: nextColumn,
-            leadingWhitespace: leadingWhitespace,
-            delta: delta,
-          );
-        }
-        adjustedBase = _adjustLinePrefixPointDelta(
-          adjustedBase,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: delta,
-        );
-        adjustedExtent = _adjustLinePrefixPointDelta(
-          adjustedExtent,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: delta,
-        );
-      }
-
-      if (!hasNumberedLine) {
-        return false;
-      }
-
-      final nextValue = lineTexts.join('\n');
-      if (nextValue == value) {
+      final result = textRenumberNumberedList(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        startAt: startAt,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines = _parseLines(nextValue);
-      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
-        _selectionStart = _clampPointToBuffer(adjustedBase);
-        _selectionEnd = _clampPointToBuffer(adjustedExtent);
-        _row = _selectionEnd!.$2;
-        _col = _selectionEnd!.$1;
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-        _row = row.clamp(0, _lines.length - 1);
-        _col = nextColumn.clamp(0, _lines[_row].length);
-      }
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1626,113 +1394,19 @@ class TextAreaModel extends ViewComponent {
   /// prefix is removed. Otherwise, existing heading prefixes are normalized to
   /// the requested level and missing prefixes are added.
   bool toggleHeadingPrefix({int level = 1}) {
-    final targetLevel = level.clamp(1, 6);
-    final targetPrefix = '${'#' * targetLevel} ';
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final lineTexts = _lines
-          .map((line) => line.join())
-          .toList(growable: true);
-      if (lineTexts.isEmpty) {
-        return false;
-      }
-
-      final row = _row.clamp(0, lineTexts.length - 1);
-      final hasSelection =
-          _hasSelection() && _selectionStart != null && _selectionEnd != null;
-      final startLine = hasSelection
-          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-      final endLine = hasSelection
-          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-
-      var hasRelevantLine = false;
-      var allAtTargetLevel = true;
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final body = line.substring(leadingWhitespace);
-        final headingPrefix = _leadingHeadingPrefix(body);
-        if (body.trim().isEmpty && headingPrefix == null) {
-          continue;
-        }
-        hasRelevantLine = true;
-        if (headingPrefix == null || headingPrefix.level != targetLevel) {
-          allAtTargetLevel = false;
-          break;
-        }
-      }
-      if (!hasRelevantLine) {
-        return false;
-      }
-
-      var adjustedBase = _selectionStart;
-      var adjustedExtent = _selectionEnd;
-      var nextColumn = _col;
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final indent = line.substring(0, leadingWhitespace);
-        final body = line.substring(leadingWhitespace);
-        final headingPrefix = _leadingHeadingPrefix(body);
-        if (body.trim().isEmpty && headingPrefix == null) {
-          continue;
-        }
-
-        final removeCount = headingPrefix?.length ?? 0;
-        final nextBody = removeCount > 0 ? body.substring(removeCount) : body;
-        final delta = allAtTargetLevel
-            ? -removeCount
-            : targetPrefix.length - removeCount;
-        lineTexts[lineIndex] = allAtTargetLevel
-            ? '$indent$nextBody'
-            : '$indent$targetPrefix$nextBody';
-
-        if (delta == 0) {
-          continue;
-        }
-
-        if (lineIndex == row) {
-          nextColumn = _adjustLinePrefixColumnDelta(
-            column: nextColumn,
-            leadingWhitespace: leadingWhitespace,
-            delta: delta,
-          );
-        }
-        adjustedBase = _adjustLinePrefixPointDelta(
-          adjustedBase,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: delta,
-        );
-        adjustedExtent = _adjustLinePrefixPointDelta(
-          adjustedExtent,
-          line: lineIndex,
-          leadingWhitespace: leadingWhitespace,
-          delta: delta,
-        );
-      }
-
-      final nextValue = lineTexts.join('\n');
-      if (nextValue == value) {
+      final result = textToggleHeadingPrefix(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        level: level,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines = _parseLines(nextValue);
-      if (hasSelection && adjustedBase != null && adjustedExtent != null) {
-        _selectionStart = _clampPointToBuffer(adjustedBase);
-        _selectionEnd = _clampPointToBuffer(adjustedExtent);
-        _row = _selectionEnd!.$2;
-        _col = _selectionEnd!.$1;
-      } else {
-        _selectionStart = null;
-        _selectionEnd = null;
-        _row = row.clamp(0, _lines.length - 1);
-        _col = nextColumn.clamp(0, _lines[_row].length);
-      }
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1743,73 +1417,19 @@ class TextAreaModel extends ViewComponent {
   /// unchecked state. Otherwise all relevant items are marked with
   /// [checkedMarker].
   bool toggleChecklistState({String checkedMarker = 'x'}) {
-    final marker = checkedMarker.isEmpty ? 'x' : checkedMarker[0];
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final lineTexts = _lines
-          .map((line) => line.join())
-          .toList(growable: true);
-      if (lineTexts.isEmpty) {
-        return false;
-      }
-
-      final row = _row.clamp(0, lineTexts.length - 1);
-      final hasSelection =
-          _hasSelection() && _selectionStart != null && _selectionEnd != null;
-      final startLine = hasSelection
-          ? math.min(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-      final endLine = hasSelection
-          ? math.max(_selectionStart!.$2, _selectionEnd!.$2)
-          : row;
-
-      var hasChecklist = false;
-      var allChecked = true;
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final body = line.substring(leadingWhitespace);
-        final prefixLength = _leadingChecklistPrefixLength(body);
-        if (prefixLength == null) {
-          continue;
-        }
-        hasChecklist = true;
-        if (!_isChecklistChecked(body)) {
-          allChecked = false;
-          break;
-        }
-      }
-      if (!hasChecklist) {
-        return false;
-      }
-
-      for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
-        final line = lineTexts[lineIndex];
-        final leadingWhitespace = line.length - line.trimLeft().length;
-        final indent = line.substring(0, leadingWhitespace);
-        final body = line.substring(leadingWhitespace);
-        final prefixLength = _leadingChecklistPrefixLength(body);
-        if (prefixLength == null) {
-          continue;
-        }
-
-        final rest = body.substring(prefixLength);
-        final hasBody = rest.isNotEmpty;
-        final nextPrefix = allChecked ? '- [ ]' : '- [$marker]';
-        lineTexts[lineIndex] = '$indent$nextPrefix${hasBody ? ' ' : ''}$rest';
-      }
-
-      final nextValue = lineTexts.join('\n');
-      if (nextValue == value) {
+      final result = textToggleChecklistState(
+        lines: _lineTexts(),
+        state: _currentLineStateSnapshot(),
+        checkedMarker: checkedMarker,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      _lines = _parseLines(nextValue);
-      _selectionStart = _clampPointToBuffer(_selectionStart);
-      _selectionEnd = _clampPointToBuffer(_selectionEnd);
-      _row = _row.clamp(0, _lines.length - 1);
-      _col = _col.clamp(0, _lines[_row].length);
+      _applyLineCommandResult(result);
       return true;
     });
   }
@@ -1820,36 +1440,21 @@ class TextAreaModel extends ViewComponent {
   /// Returns `false` when there is no active selection.
   bool wrapSelection(String before, {String? after}) {
     if (!_hasSelection()) return false;
-    final suffix = after ?? before;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      var start = _globalOffsetForPoint(_selectionStart!);
-      var end = _globalOffsetForPoint(_selectionEnd!);
-      if (start > end) {
-        final tmp = start;
-        start = end;
-        end = tmp;
-      }
-      if (start == end) {
+      _refreshDocumentSnapshot();
+      final result = textWrapSelection(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        before: before,
+        after: after,
+      );
+      if (!result.changed) {
         return false;
       }
 
-      final flat = _flattenWithNewlines();
-      final prefix = uni.graphemes(before).toList(growable: false);
-      final suffixGs = uni.graphemes(suffix).toList(growable: false);
-      final selected = flat.sublist(start, end).toList(growable: false);
-
       _recordUndoSnapshot();
-      flat.replaceRange(start, end, [...prefix, ...selected, ...suffixGs]);
-      final nextValue = flat.join();
-      final selectionStart = start + prefix.length;
-      final selectionEnd = selectionStart + selected.length;
-
-      _setValueAndCursor(nextValue, selectionEnd);
-      _selectionStart = _pointFromGlobalOffset(selectionStart);
-      _selectionEnd = _pointFromGlobalOffset(selectionEnd);
-      _row = _selectionEnd!.$2;
-      _col = _selectionEnd!.$1;
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -1863,74 +1468,48 @@ class TextAreaModel extends ViewComponent {
     if (!_hasSelection()) return false;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      var start = _globalOffsetForPoint(_selectionStart!);
-      var end = _globalOffsetForPoint(_selectionEnd!);
-      if (start > end) {
-        final tmp = start;
-        start = end;
-        end = tmp;
-      }
-      if (start == end) {
-        return false;
-      }
-
-      final flat = _flattenWithNewlines();
-      if (start < 1 || end >= flat.length) {
-        return false;
-      }
-
-      final before = flat[start - 1];
-      final after = flat[end];
-      if (_selectionSurroundPairs[before] != after) {
+      _refreshDocumentSnapshot();
+      final result = textUnwrapSelection(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        surroundPairs: _selectionSurroundPairs,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      flat.removeAt(end);
-      flat.removeAt(start - 1);
-      final nextValue = flat.join();
-      final selectionStart = start - 1;
-      final selectionEnd = end - 1;
-
-      _setValueAndCursor(nextValue, selectionEnd);
-      _selectionStart = _pointFromGlobalOffset(selectionStart);
-      _selectionEnd = _pointFromGlobalOffset(selectionEnd);
-      _row = _selectionEnd!.$2;
-      _col = _selectionEnd!.$1;
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
 
   /// Restores the most recent previous edit state.
   bool undo() {
-    if (_undoStack.isEmpty) return false;
-    _breakHistoryCoalescing();
-    final current = _captureEditState();
-    final previous = _undoStack.removeLast();
-    _redoStack.add(current);
-    _restoreEditState(previous);
-    return true;
+    return _history.undo(
+      captureState: _captureEditState,
+      restoreState: _restoreEditState,
+    );
   }
 
   /// Reapplies the most recently undone edit state.
   bool redo() {
-    if (_redoStack.isEmpty) return false;
-    _breakHistoryCoalescing();
-    final current = _captureEditState();
-    final next = _redoStack.removeLast();
-    _undoStack.add(current);
-    _restoreEditState(next);
-    return true;
+    return _history.redo(
+      captureState: _captureEditState,
+      restoreState: _restoreEditState,
+    );
   }
 
   /// Sets the width of the textarea.
   void setWidth(int w) {
     _width = w;
+    _syncCoreState();
   }
 
   /// Sets the height of the textarea.
   void setHeight(int h) {
     _height = h;
+    _syncCoreState();
   }
 
   /// Sets the placeholder text.
@@ -1953,50 +1532,42 @@ class TextAreaModel extends ViewComponent {
             : _TextAreaHistoryAction.insert,
         breakChain: s.contains('\n'),
       );
-      for (final g in uni.graphemes(s)) {
-        if (g == '\n') {
-          _newline();
-        } else {
-          _insertChar(g);
-        }
-      }
+      _insertTextShared(s);
     });
   }
 
   void _insertChar(String ch) {
     if (ch.isEmpty) return;
-    _recordUndoSnapshot();
-    _lines[_row].insert(_col, ch);
-    _col += 1;
-    _enforceCharLimit();
+    _insertTextShared(ch);
   }
 
   void _newline() {
+    _insertTextShared('\n');
+  }
+
+  void _insertTextShared(String text) {
+    if (text.isEmpty) return;
     _recordUndoSnapshot();
-    final current = _lines[_row];
-    final before = current.sublist(0, _col);
-    final after = current.sublist(_col);
-    _lines[_row] = before;
-    _lines.insert(_row + 1, after);
-    _row = (_row + 1).clamp(0, _lines.length - 1);
-    _col = 0;
+    _refreshDocumentSnapshot();
+    final result = textInsertText(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      text: text,
+    );
+    if (!result.changed) return;
+    _applyOffsetCommandResult(result);
     _enforceCharLimit();
   }
 
   void _backspace() {
     if (_row == 0 && _col == 0) return;
     _recordUndoSnapshot();
-    if (_col > 0) {
-      _lines[_row].removeAt(_col - 1);
-      _col -= 1;
-    } else if (_row > 0) {
-      final prev = _lines[_row - 1];
-      final current = _lines.removeAt(_row);
-      final prevLen = prev.length;
-      prev.addAll(current);
-      _row -= 1;
-      _col = prevLen;
-    }
+    _refreshDocumentSnapshot();
+    final result = textDeletePrevious(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   String _applyCharLimit(String text) {
@@ -2006,12 +1577,71 @@ class TextAreaModel extends ViewComponent {
     return gs.take(charLimit).join();
   }
 
+  Cmd _schedulePasteChunk() {
+    return Cmd.tick(Duration.zero, (_) => const _TextAreaPasteChunkMsg());
+  }
+
+  void _finishPendingPaste() {
+    _pasteController.clearPendingChunkedPaste();
+  }
+
+  void _applyPasteChunkStep(TextPasteChunkStep step) {
+    _insertTextShared(String.fromCharCodes(step.runes));
+    if (!step.hasMore) {
+      _finishPendingPaste();
+    }
+  }
+
+  void _applyNextPasteChunk() {
+    final step = _pasteController.takeNextChunk(
+      chunkSize: _pasteChunkSizeRunes,
+    );
+    if (step == null) {
+      _finishPendingPaste();
+      return;
+    }
+
+    _applyPasteChunkStep(step);
+  }
+
+  Cmd? _pasteContent(String content) {
+    if (content.isEmpty) return null;
+
+    final pastePlan = planTextPaste(
+      content,
+      collapseLargePaste: false,
+      collapsedPasteMinChars: 0,
+      collapsedPasteMinLines: 0,
+      chunkThresholdRunes: _pasteChunkThresholdRunes,
+    );
+    if (!pastePlan.chunked) {
+      _insertTextShared(content);
+      return null;
+    }
+
+    final step = _pasteController.startChunked(
+      content,
+      chunkSize: _pasteChunkSizeRunes,
+    );
+    if (step == null) {
+      _finishPendingPaste();
+      return null;
+    }
+
+    _applyPasteChunkStep(step);
+    return _pasteController.hasPendingChunkedPaste
+        ? _schedulePasteChunk()
+        : null;
+  }
+
   void cursorStart() {
-    _col = 0;
+    _moveLineCursor(TextPosition(line: _row, column: 0));
+    _syncCoreState();
   }
 
   void cursorEnd() {
-    _col = _lines[_row].length;
+    _moveLineCursor(TextPosition(line: _row, column: _lines[_row].length));
+    _syncCoreState();
   }
 
   @override
@@ -2020,11 +1650,19 @@ class TextAreaModel extends ViewComponent {
       switch (msg) {
         case TextAreaPasteMsg(:final content):
           _beginHistoryAction(_TextAreaHistoryAction.paste, breakChain: true);
-          insertString(content);
-          return (this, null);
+          return (this, _pasteContent(content));
         case PasteMsg(:final content):
           _beginHistoryAction(_TextAreaHistoryAction.paste, breakChain: true);
-          insertString(content);
+          return (this, _pasteContent(content));
+        case PasteTextMsg(:final content):
+          _beginHistoryAction(_TextAreaHistoryAction.paste, breakChain: true);
+          return (this, _pasteContent(content));
+        case _TextAreaPasteChunkMsg():
+          _beginHistoryAction(_TextAreaHistoryAction.paste);
+          _applyNextPasteChunk();
+          if (_pasteController.hasPendingChunkedPaste) {
+            return (this, _schedulePasteChunk());
+          }
           return (this, null);
         case KeyMsg(key: final key):
           if (key.matchesSingle(keyMap.undo)) {
@@ -2047,11 +1685,17 @@ class TextAreaModel extends ViewComponent {
           // deletion
           if (key.matchesSingle(keyMap.deleteBeforeCursor)) {
             _beginHistoryAction(_TextAreaHistoryAction.deleteBackward);
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _backspace();
             return (this, null);
           }
           if (key.matchesSingle(keyMap.deleteCharacterForward)) {
             _beginHistoryAction(_TextAreaHistoryAction.deleteForward);
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteCharForward();
             return (this, null);
           }
@@ -2060,6 +1704,9 @@ class TextAreaModel extends ViewComponent {
               _TextAreaHistoryAction.deleteBackward,
               breakChain: true,
             );
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteWordBackward();
             return (this, null);
           }
@@ -2068,6 +1715,9 @@ class TextAreaModel extends ViewComponent {
               _TextAreaHistoryAction.deleteForward,
               breakChain: true,
             );
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteWordForward();
             return (this, null);
           }
@@ -2076,6 +1726,9 @@ class TextAreaModel extends ViewComponent {
               _TextAreaHistoryAction.deleteBackward,
               breakChain: true,
             );
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteToLineStart();
             return (this, null);
           }
@@ -2084,6 +1737,9 @@ class TextAreaModel extends ViewComponent {
               _TextAreaHistoryAction.deleteForward,
               breakChain: true,
             );
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteToLineEnd();
             return (this, null);
           }
@@ -2092,6 +1748,9 @@ class TextAreaModel extends ViewComponent {
               _TextAreaHistoryAction.deleteForward,
               breakChain: true,
             );
+            if (_deleteSelectionIfAny()) {
+              return (this, null);
+            }
             _deleteToLineEnd();
             return (this, null);
           }
@@ -2248,22 +1907,37 @@ class TextAreaModel extends ViewComponent {
 
         if (y < 0 || y >= displayLines.length) {
           if (action == MouseAction.press && button == MouseButton.left) {
-            _selectionStart = null;
-            _selectionEnd = null;
+            _mouseSelecting = false;
+            _clearLineSelection();
             _focused = false;
+            _syncCoreState();
+          }
+          if (action == MouseAction.release && button == MouseButton.left) {
+            _mouseSelecting = false;
+            if (!_hasSelection()) {
+              _clearLineSelection();
+              _syncCoreState();
+            }
           }
           return (this, null);
         }
-
-        final dl = displayLines[y];
 
         if (action == MouseAction.press && button == MouseButton.left) {
           _focused = true;
           final promptW = _getPromptWidth(y);
           final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
-          final localX = x - promptW - lineNumberW;
-          final contentX = localX + dl.charOffset;
-          final contentY = dl.rowIndex;
+          final hit = _textView.hitTestContent(
+            _document,
+            _editorState,
+            localX: x - promptW - lineNumberW,
+            visualRow: y,
+          );
+          if (hit == null) {
+            _mouseSelecting = false;
+            return (this, null);
+          }
+          final contentX = hit.column;
+          final contentY = hit.line;
           final now = DateTime.now();
 
           if (_lastClickTime != null &&
@@ -2271,35 +1945,64 @@ class TextAreaModel extends ViewComponent {
                   const Duration(milliseconds: 500) &&
               _lastClickPos == (contentX, contentY)) {
             // Double click: select word
+            _mouseSelecting = false;
             final (start, end) = _findWordAt(contentX, contentY);
-            _selectionStart = (start, contentY);
-            _selectionEnd = (end, contentY);
+            _selectLineState(
+              base: TextPosition(line: contentY, column: start),
+              extent: TextPosition(line: contentY, column: end),
+            );
+            _syncCoreState();
             _lastClickTime = now;
             _lastClickPos = (contentX, contentY);
             return (this, null);
           }
 
           // Start selection
-          _selectionStart = (contentX, contentY);
-          _selectionEnd = (contentX, contentY);
+          _mouseSelecting = true;
+          _selectLineState(
+            base: TextPosition(line: contentY, column: contentX),
+            extent: TextPosition(line: contentY, column: contentX),
+            preserveCollapsedSelection: true,
+          );
+          _syncCoreState();
           _lastClickTime = now;
           _lastClickPos = (contentX, contentY);
           return (this, null);
         }
 
-        if (action == MouseAction.motion && _selectionStart != null) {
-          // Update selection
+        if (action == MouseAction.motion &&
+            _mouseSelecting &&
+            _selectionStart != null) {
           final promptW = _getPromptWidth(y);
           final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
-          final localX = x - promptW - lineNumberW;
-          final contentX = localX + dl.charOffset;
-          final contentY = dl.rowIndex;
-          _selectionEnd = (contentX, contentY);
+          final hit = _textView.hitTestContent(
+            _document,
+            _editorState,
+            localX: x - promptW - lineNumberW,
+            visualRow: y,
+          );
+          if (hit == null) {
+            return (this, null);
+          }
+          final contentX = hit.column;
+          final contentY = hit.line;
+          _selectLineState(
+            base: TextPosition(
+              line: _selectionStart!.$2,
+              column: _selectionStart!.$1,
+            ),
+            extent: TextPosition(line: contentY, column: contentX),
+          );
+          _syncCoreState();
           return (this, null);
         }
 
         if (action == MouseAction.release && button == MouseButton.left) {
-          // Finalize selection
+          _mouseSelecting = false;
+          if (!_hasSelection()) {
+            _clearLineSelection();
+            _syncCoreState();
+          }
           return (this, null);
         }
       }
@@ -2390,10 +2093,6 @@ class TextAreaModel extends ViewComponent {
               : ' ' * (lineNumberDigits + 1);
           lnNumber = style.computedLineNumber.render(lnText);
         }
-        final selectionStyle = Style()
-            .background(const AnsiColor(7))
-            .foreground(const AnsiColor(0));
-
         // Compute selection overlap for this visual segment.
         int? selStart;
         int? selEnd;
@@ -2447,18 +2146,19 @@ class TextAreaModel extends ViewComponent {
 
         var renderedBody = '';
         for (var j = 0; j < gs.length; j++) {
+          final isSelected =
+              selStart != null && selEnd != null && j >= selStart && j < selEnd;
           String part;
           if (displayLine.hasCursor && useVirtualCursor && j == cursorCol) {
             cursor = cursor.setChar(gs[j]);
             part = cursor.view();
+            if (isSelected) {
+              part = style.computedSelection.render(part);
+            }
           } else {
-            part = style.computedText.render(gs[j]);
-          }
-
-          final isSelected =
-              selStart != null && selEnd != null && j >= selStart && j < selEnd;
-          if (isSelected) {
-            part = selectionStyle.render(part);
+            part = isSelected
+                ? style.computedSelection.render(gs[j])
+                : style.computedText.render(gs[j]);
           }
           renderedBody += part;
         }
@@ -2503,710 +2203,281 @@ class TextAreaModel extends ViewComponent {
   // Helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  int _effectiveWrapWidth(int lineNumberDigits) {
-    var wrapWidth = _width;
-    if (wrapWidth <= 0) return wrapWidth;
-
-    wrapWidth -= _promptWidth ?? stringWidth(prompt);
-    if (showLineNumbers) {
-      // add a trailing space after the number
-      wrapWidth -= (lineNumberDigits + 1);
-    }
-    return wrapWidth;
+  List<_DisplayLine> _softWrappedLines(int lineNumberDigits) {
+    _textView.leadingColumns =
+        _getPromptWidth(_row) + (showLineNumbers ? lineNumberDigits + 1 : 0);
+    final lines = _textView.buildViewportLines(_document, _editorState);
+    return lines
+        .map(
+          (line) => _DisplayLine(
+            line.text,
+            hasCursor: line.hasCursor,
+            rowIndex: line.logicalLine,
+            charOffset: line.charOffset,
+          ),
+        )
+        .toList(growable: false);
   }
 
-  List<_DisplayLine> _softWrappedLines(int lineNumberDigits) {
-    final result = <_DisplayLine>[];
-    final wrapWidth = softWrap ? _effectiveWrapWidth(lineNumberDigits) : 0;
-
-    final visual = layout.buildVisualLines(
-      _lines,
-      softWrap: softWrap,
-      wrapWidthCells: wrapWidth,
+  bool _deleteSelectionIfAny() {
+    _refreshDocumentSnapshot();
+    final result = textDeleteSelection(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
     );
-
-    for (final v in visual) {
-      final lineLen = _lines[v.rowIndex].length;
-      final cursorCol = _row == v.rowIndex ? _col.clamp(0, lineLen) : -1;
-      final segStart = v.charOffset;
-      final segEnd = segStart + v.graphemeCount;
-      final hasCursor =
-          _row == v.rowIndex && cursorCol >= segStart && cursorCol <= segEnd;
-
-      result.add(
-        _DisplayLine(
-          v.text,
-          hasCursor: hasCursor,
-          rowIndex: v.rowIndex,
-          charOffset: v.charOffset,
-        ),
-      );
+    if (!result.changed) {
+      _clearLineSelection();
+      return false;
     }
 
-    // Respect the configured height by showing the most recent lines.
-    if (_height > 0 && result.length > _height) {
-      final start = (result.length - _height).clamp(0, result.length);
-      return result.sublist(start);
-    }
-
-    return result;
+    _recordUndoSnapshot();
+    _applyOffsetCommandResult(result);
+    return true;
   }
 
   void _deleteWordBackward() {
-    final flat = _flattenWithNewlines();
-    final pos = _globalOffset();
-    if (pos == 0) return;
+    if (_globalOffset() == 0) return;
     _recordUndoSnapshot();
-
-    var newPos = pos - 1;
-    while (newPos > 0 && !_isWordGrapheme(flat[newPos])) {
-      newPos--;
-    }
-    while (newPos > 0 && _isWordGrapheme(flat[newPos - 1])) {
-      newPos--;
-    }
-
-    flat.removeRange(newPos, pos);
-    _setValueAndCursor(flat.join(), newPos);
+    _refreshDocumentSnapshot();
+    final result = textDeleteWordBackward(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   void _deleteToLineStart() {
     if (_col == 0) return;
     _recordUndoSnapshot();
-    _lines[_row].removeRange(0, _col);
-    _col = 0;
+    _refreshDocumentSnapshot();
+    final result = textDeleteToLineStart(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   void _deleteToLineEnd() {
     final line = _lines[_row];
     if (_col >= line.length) return;
     _recordUndoSnapshot();
-    line.removeRange(_col, line.length);
+    _refreshDocumentSnapshot();
+    final result = textDeleteToLineEnd(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   void _moveWordForward() {
-    final flat = _flattenWithNewlines();
-    var pos = _globalOffset();
-    if (pos >= flat.length) return;
-
-    // Skip current character and any non-word chars.
-    pos++;
-    while (pos < flat.length && !_isWordGrapheme(flat[pos])) {
-      pos++;
-    }
-    while (pos < flat.length && _isWordGrapheme(flat[pos])) {
-      pos++;
-    }
-    _setCursorFromGlobal(pos);
+    _refreshDocumentSnapshot();
+    final result = textMoveByWord(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      forward: true,
+      clearSelection: false,
+    );
+    if (!result.changed) return;
+    _applyOffsetCursorCommandResult(result);
   }
 
   void _moveWordBackward() {
-    final flat = _flattenWithNewlines();
-    var pos = _globalOffset();
-    if (pos == 0) return;
-
-    pos--;
-    while (pos > 0 && !_isWordGrapheme(flat[pos])) {
-      pos--;
-    }
-    while (pos > 0 && _isWordGrapheme(flat[pos - 1])) {
-      pos--;
-    }
-    _setCursorFromGlobal(pos);
+    _refreshDocumentSnapshot();
+    final result = textMoveByWord(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      forward: false,
+      clearSelection: false,
+    );
+    if (!result.changed) return;
+    _applyOffsetCursorCommandResult(result);
   }
 
   void _cursorStartOfLine() {
-    _col = 0;
+    cursorStart();
   }
 
   void _cursorEndOfLine() {
-    _col = _lines[_row].length;
+    cursorEnd();
   }
 
   void _cursorStartOfInput() {
-    _row = 0;
-    _col = 0;
+    _refreshDocumentSnapshot();
+    _applyOffsetCursorCommandResult(
+      textMoveToDocumentBoundary(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: false,
+        clearSelection: false,
+      ),
+    );
   }
 
   void _cursorEndOfInput() {
-    _row = _lines.length - 1;
-    _col = _lines.last.length;
+    _refreshDocumentSnapshot();
+    _applyOffsetCursorCommandResult(
+      textMoveToDocumentBoundary(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        forward: true,
+        clearSelection: false,
+      ),
+    );
   }
 
   void _deleteCharForward() {
-    final line = _lines[_row];
-    if (_col < line.length) {
-      _recordUndoSnapshot();
-      line.removeAt(_col);
-      return;
-    }
-    if (_row < _lines.length - 1) {
-      _recordUndoSnapshot();
-      final next = _lines.removeAt(_row + 1);
-      line.addAll(next);
-    }
+    _refreshDocumentSnapshot();
+    if (_globalOffset() >= _document.length) return;
+    _recordUndoSnapshot();
+    final result = textDeleteNext(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   void _deleteWordForward() {
-    final flat = _flattenWithNewlines();
-    final pos = _globalOffset();
-    if (pos >= flat.length) return;
+    _refreshDocumentSnapshot();
+    if (_globalOffset() >= _document.length) return;
     _recordUndoSnapshot();
-
-    var end = pos;
-    if (_isWordGrapheme(flat[pos])) {
-      while (end < flat.length && _isWordGrapheme(flat[end])) {
-        end++;
-      }
-    } else {
-      while (end < flat.length && !_isWordGrapheme(flat[end])) {
-        end++;
-      }
-      while (end < flat.length && _isWordGrapheme(flat[end])) {
-        end++;
-      }
-    }
-
-    flat.removeRange(pos, end);
-    _setValueAndCursor(flat.join(), pos);
+    final result = textDeleteWordForward(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    _applyOffsetCommandResult(result);
   }
 
   void _transposeBackward() {
-    final line = _lines[_row];
-    if (line.isEmpty) return;
-    if (_col == 0) return;
+    _refreshDocumentSnapshot();
     _recordUndoSnapshot();
-
-    // Swap char before cursor with the one at cursor (Bubble Tea behavior).
-    final at = math.min(_col, line.length - 1);
-    final before = at - 1;
-    if (before < 0) return;
-    final tmp = line[before];
-    line[before] = line[at];
-    line[at] = tmp;
-    _col = math.min(at + 1, line.length);
+    final result = textTransposeBackward(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+    );
+    if (!result.changed) return;
+    _applyOffsetCommandResult(result);
   }
 
   void _uppercaseWordForward() {
-    final (start, end) = _wordRangeForTransform();
-    if (start == -1) return;
-    _recordUndoSnapshot();
-    final flat = _flattenWithNewlines();
-    final segment = flat.sublist(start, end).join().toUpperCase();
-    final replacement = uni.graphemes(segment).toList(growable: false);
-    flat.replaceRange(start, end, replacement);
-    _setValueAndCursor(flat.join(), start + replacement.length);
+    _transformWordForward((text) => text.toUpperCase());
   }
 
   void _lowercaseWordForward() {
-    final (start, end) = _wordRangeForTransform();
-    if (start == -1) return;
-    _recordUndoSnapshot();
-    final flat = _flattenWithNewlines();
-    final segment = flat.sublist(start, end).join().toLowerCase();
-    final replacement = uni.graphemes(segment).toList(growable: false);
-    flat.replaceRange(start, end, replacement);
-    _setValueAndCursor(flat.join(), start + replacement.length);
+    _transformWordForward((text) => text.toLowerCase());
   }
 
   void _capitalizeWordForward() {
-    final (start, end) = _wordRangeForTransform();
-    if (start == -1) return;
-    _recordUndoSnapshot();
-    final flat = _flattenWithNewlines();
-    final word = flat.sublist(start, end).join();
-    if (word.isEmpty) return;
-    final wordGs = uni.graphemes(word).toList(growable: false);
-    if (wordGs.isEmpty) return;
-    final first = wordGs.first.toUpperCase();
-    final rest = wordGs.skip(1).join().toLowerCase();
-    final replacement = uni.graphemes('$first$rest').toList(growable: false);
-    flat.replaceRange(start, end, replacement);
-    _setValueAndCursor(flat.join(), start + replacement.length);
+    _transformWordForward(textCapitalizeWords);
   }
 
-  bool _transformSelectionOrLine(String Function(String text) transform) {
+  void _transformWordForward(String Function(String text) transform) {
+    _refreshDocumentSnapshot();
+    final result = textTransformWordOrAdjacent(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      transform: transform,
+    );
+    if (!result.changed) {
+      return;
+    }
+
+    _recordUndoSnapshot();
+    _applyOffsetCommandResult(result);
+  }
+
+  bool _transformSelectionOrLineShared(String Function(String text) transform) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final hasSelection = _hasSelection();
-      final originalCursorOffset = _globalOffset();
-      var start = hasSelection
-          ? _globalOffsetForPoint(_selectionStart!)
-          : _globalOffsetForPoint((0, _row));
-      var end = hasSelection
-          ? _globalOffsetForPoint(_selectionEnd!)
-          : _globalOffsetForPoint((_lines[_row].length, _row));
-      if (start > end) {
-        final tmp = start;
-        start = end;
-        end = tmp;
-      }
-      if (start == end) {
-        return false;
-      }
-
-      final flat = _flattenWithNewlines();
-      final original = flat.sublist(start, end).join();
-      final transformed = transform(original);
-      if (transformed == original) {
+      _refreshDocumentSnapshot();
+      final result = textTransformSelectionOrLine(
+        document: _document,
+        state: _currentOffsetStateSnapshot(),
+        transform: transform,
+      );
+      if (!result.changed) {
         return false;
       }
 
       _recordUndoSnapshot();
-      final replacement = uni.graphemes(transformed).toList(growable: false);
-      flat.replaceRange(start, end, replacement);
-      final nextValue = flat.join();
-      final nextExtent = start + replacement.length;
-
-      _setValueAndCursor(nextValue, nextExtent);
-      if (hasSelection) {
-        _selectionStart = _pointFromGlobalOffset(start);
-        _selectionEnd = _pointFromGlobalOffset(nextExtent);
-      } else {
-        final relativeCursor = (originalCursorOffset - start).clamp(
-          0,
-          replacement.length,
-        );
-        _selectionStart = null;
-        _selectionEnd = null;
-        _setCursorFromGlobal(start + relativeCursor);
-      }
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
 
-  String _capitalizeWords(String text) {
-    final graphemes = uni.graphemes(text).toList(growable: false);
-    final buffer = StringBuffer();
-    var capitalizeNext = true;
-    for (final grapheme in graphemes) {
-      if (_isWordGrapheme(grapheme)) {
-        buffer.write(
-          capitalizeNext ? grapheme.toUpperCase() : grapheme.toLowerCase(),
-        );
-        capitalizeNext = false;
-      } else {
-        buffer.write(grapheme);
-        capitalizeNext = true;
-      }
-    }
-    return buffer.toString();
-  }
-
-  int _compareLineContent(
-    List<String> a,
-    List<String> b, {
-    required bool descending,
-    required bool caseSensitive,
-  }) {
-    final aText = a.join();
-    final bText = b.join();
-    final lhs = caseSensitive ? aText : aText.toLowerCase();
-    final rhs = caseSensitive ? bText : bText.toLowerCase();
-    final base = lhs.compareTo(rhs);
-    final resolved = base != 0 ? base : aText.compareTo(bText);
-    return descending ? -resolved : resolved;
-  }
-
-  bool _listStringEquals(List<String> a, List<String> b) {
-    if (identical(a, b)) return true;
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-
-  (int, int) _nextWordRange() {
-    final flat = _flattenWithNewlines();
-    var pos = _globalOffset();
-    while (pos < flat.length && !_isWordGrapheme(flat[pos])) {
-      pos++;
-    }
-    if (pos >= flat.length) return (-1, -1);
-    var end = pos;
-    while (end < flat.length && _isWordGrapheme(flat[end])) {
-      end++;
-    }
-    return (pos, end);
-  }
-
-  (int, int) _prevWordRange() {
-    final flat = _flattenWithNewlines();
-    var pos = _globalOffset() - 1;
-    while (pos >= 0 && !_isWordGrapheme(flat[pos])) {
-      pos--;
-    }
-    if (pos < 0) return (-1, -1);
-    var end = pos + 1;
-    while (pos >= 0 && _isWordGrapheme(flat[pos])) {
-      pos--;
-    }
-    final start = pos + 1;
-    return (start, end);
-  }
-
-  /// Returns forward word range; if none forward, use previous word.
-  (int, int) _wordRangeForTransform() {
-    final forward = _nextWordRange();
-    if (forward.$1 != -1) return forward;
-    return _prevWordRange();
-  }
-
   void _moveLeft() {
-    if (_col > 0) {
-      _col -= 1;
-    } else if (_row > 0) {
-      _row -= 1;
-      _col = _lines[_row].length;
-    }
+    _refreshDocumentSnapshot();
+    final result = textMoveByCharacter(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      forward: false,
+      clearSelection: false,
+    );
+    if (!result.changed) return;
+    _applyOffsetCursorCommandResult(result);
   }
 
   void _moveRight() {
-    if (_col < _lines[_row].length) {
-      _col += 1;
-    } else if (_row < _lines.length - 1) {
-      _row += 1;
-      _col = 0;
-    }
+    _refreshDocumentSnapshot();
+    final result = textMoveByCharacter(
+      document: _document,
+      state: _currentOffsetStateSnapshot(),
+      forward: true,
+      clearSelection: false,
+    );
+    if (!result.changed) return;
+    _applyOffsetCursorCommandResult(result);
   }
 
   void _lineNext() {
     if (_row < _lines.length - 1) {
-      _row += 1;
-      _col = _col.clamp(0, _lines[_row].length);
+      _moveLineCursor(TextPosition(line: _row + 1, column: _col));
     }
   }
 
   void _linePrev() {
     if (_row > 0) {
-      _row -= 1;
-      _col = _col.clamp(0, _lines[_row].length);
+      _moveLineCursor(TextPosition(line: _row - 1, column: _col));
     }
   }
 
   int _globalOffset() {
-    var offset = 0;
-    for (var i = 0; i < _row; i++) {
-      offset += _lines[i].length + 1; // include newline
-    }
-    offset += _col;
-    return offset;
+    _refreshDocumentSnapshot();
+    return _document.offsetForPosition(TextPosition(line: _row, column: _col));
   }
 
   int _globalOffsetForPoint((int, int) point) {
-    var offset = 0;
-    final line = point.$2.clamp(0, _lines.length - 1);
-    for (var index = 0; index < line; index++) {
-      offset += _lines[index].length + 1;
-    }
-    return offset + point.$1.clamp(0, _lines[line].length);
+    _refreshDocumentSnapshot();
+    return _document.offsetForPosition(
+      TextPosition(line: point.$2, column: point.$1),
+    );
   }
 
   void _setCursorFromGlobal(int offset) {
-    var remaining = offset;
-    for (var i = 0; i < _lines.length; i++) {
-      final lineLength = _lines[i].length;
-      if (remaining <= lineLength) {
-        _row = i;
-        _col = remaining;
-        return;
-      }
-      remaining -= lineLength + 1;
-    }
-    // fallback to end
-    _row = _lines.length - 1;
-    _col = _lines.last.length;
-  }
-
-  (int, int) _pointFromGlobalOffset(int offset) {
-    var remaining = offset;
-    for (var i = 0; i < _lines.length; i++) {
-      final lineLength = _lines[i].length;
-      if (remaining <= lineLength) {
-        return (remaining, i);
-      }
-      remaining -= lineLength + 1;
-    }
-    return (_lines.last.length, _lines.length - 1);
+    _refreshDocumentSnapshot();
+    final position = _document.positionForOffset(offset);
+    _moveLineCursor(position);
   }
 
   void _setValueAndCursor(String newValue, int cursorPos) {
     final limited = _applyCharLimit(newValue);
     _lines = _parseLines(limited);
     _setCursorFromGlobal(cursorPos.clamp(0, _totalGraphemeLength()));
+    _clearLineSelection();
   }
 
   (int, int) _selectedLineRange() {
-    if (!_hasSelection()) {
-      return (_row, _row);
-    }
-    final startLine = math.min(_selectionStart!.$2, _selectionEnd!.$2);
-    final endLine = math.max(_selectionStart!.$2, _selectionEnd!.$2);
-    return (startLine, endLine);
-  }
-
-  (int, int)? _adjustLinePrefixPoint(
-    (int, int)? point, {
-    required int line,
-    required int leadingWhitespace,
-    required int delta,
-    required bool remove,
-  }) {
-    if (point == null || point.$2 != line) {
-      return point;
-    }
-    return (
-      _adjustLinePrefixColumn(
-        column: point.$1,
-        leadingWhitespace: leadingWhitespace,
-        delta: delta,
-        remove: remove,
-      ),
-      point.$2,
-    );
-  }
-
-  (int, int)? _adjustLinePrefixPointDelta(
-    (int, int)? point, {
-    required int line,
-    required int leadingWhitespace,
-    required int delta,
-  }) {
-    if (point == null || point.$2 != line || delta == 0) {
-      return point;
-    }
-    return (
-      _adjustLinePrefixColumnDelta(
-        column: point.$1,
-        leadingWhitespace: leadingWhitespace,
-        delta: delta,
-      ),
-      point.$2,
-    );
-  }
-
-  int _adjustLinePrefixColumn({
-    required int column,
-    required int leadingWhitespace,
-    required int delta,
-    required bool remove,
-  }) {
-    if (column <= leadingWhitespace) {
-      return column;
-    }
-    if (!remove) {
-      return column + delta;
-    }
-    return math.max(leadingWhitespace, column - delta);
-  }
-
-  int _adjustLinePrefixColumnDelta({
-    required int column,
-    required int leadingWhitespace,
-    required int delta,
-  }) {
-    if (delta == 0 || column <= leadingWhitespace) {
-      return column;
-    }
-    if (delta > 0) {
-      return column + delta;
-    }
-    return math.max(leadingWhitespace, column + delta);
-  }
-
-  int? _leadingNumberedPrefixLength(String text) {
-    final match = RegExp(r'^\d+\.\s?').firstMatch(text);
-    return match?.group(0)?.length;
-  }
-
-  ({int level, int length})? _leadingHeadingPrefix(String text) {
-    final match = RegExp(r'^(#{1,6})(?:\s+|$)').firstMatch(text);
-    final hashes = match?.group(1);
-    final length = match?.group(0)?.length;
-    if (hashes == null || length == null) {
-      return null;
-    }
-    return (level: hashes.length, length: length);
-  }
-
-  int? _leadingChecklistPrefixLength(String text) {
-    final match = RegExp(r'^-\s\[(?:\s|x|X)\]\s?').firstMatch(text);
-    return match?.group(0)?.length;
-  }
-
-  bool _isChecklistChecked(String text) {
-    final match = RegExp(r'^-\s\[(.)\]').firstMatch(text);
-    if (match == null) {
-      return false;
-    }
-    final marker = match.group(1);
-    return marker != null && marker.trim().isNotEmpty;
-  }
-
-  int _leadingIndentRemovalCount(List<String> line, int width) {
-    if (line.isEmpty || width < 1) return 0;
-    if (line.first == '\t') return 1;
-
-    var removed = 0;
-    while (removed < width && removed < line.length && line[removed] == ' ') {
-      removed++;
-    }
-    return removed;
-  }
-
-  int _trailingHorizontalTrimLength(List<String> line) {
-    var end = line.length;
-    while (end > 0 && (line[end - 1] == ' ' || line[end - 1] == '\t')) {
-      end--;
-    }
-    return end;
-  }
-
-  void _applyLineColumnDeltas(Map<int, int> deltas) {
-    if (deltas.isEmpty) return;
-
-    if (deltas.containsKey(_row)) {
-      _col = (_col + deltas[_row]!).clamp(0, _lines[_row].length);
-    }
-    _selectionStart = _shiftPointByLineDelta(_selectionStart, deltas);
-    _selectionEnd = _shiftPointByLineDelta(_selectionEnd, deltas);
-  }
-
-  (int, int)? _shiftPointByLineDelta((int, int)? point, Map<int, int> deltas) {
-    if (point == null) return null;
-    final delta = deltas[point.$2];
-    if (delta == null) return point;
-    return ((point.$1 + delta).clamp(0, _lines[point.$2].length), point.$2);
+    _refreshEditorStateSnapshot();
+    final range = _editorState.selectedLineRange();
+    return (range.startLine, range.endLine);
   }
 
   (int, int)? _clampPointToBuffer((int, int)? point) {
     if (point == null) return null;
-    final row = point.$2.clamp(0, _lines.length - 1);
-    if (point.$2 > _lines.length - 1) {
-      return (_lines[row].length, row);
-    }
-    final col = point.$1.clamp(0, _lines[row].length);
-    return (col, row);
-  }
-
-  (int, int)? _duplicateAbovePoint(
-    (int, int)? point, {
-    required int startLine,
-    required int endLine,
-    required int delta,
-  }) {
-    if (point == null) return null;
-    if (point.$2 < startLine) return point;
-    if (point.$2 > endLine) {
-      return (point.$1, point.$2 + delta);
-    }
-    return (point.$1.clamp(0, _lines[point.$2].length), point.$2);
-  }
-
-  bool _moveSelectedLines(int direction) {
-    if (direction != -1 && direction != 1) return false;
-    return _runEditFrame(() {
-      _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final (startLine, endLine) = _selectedLineRange();
-      if (direction < 0 && startLine == 0) return false;
-      if (direction > 0 && endLine >= _lines.length - 1) return false;
-
-      _recordUndoSnapshot();
-      final movedLines = _lines
-          .sublist(startLine, endLine + 1)
-          .map((line) => List<String>.from(line))
-          .toList(growable: false);
-      _lines.removeRange(startLine, endLine + 1);
-      final insertionLine = direction < 0 ? startLine - 1 : startLine + 1;
-      _lines.insertAll(insertionLine, movedLines);
-
-      _shiftCursorAndSelectionRows(
-        startLine: startLine,
-        endLine: endLine,
-        delta: direction,
-      );
-      return true;
-    });
-  }
-
-  void _shiftCursorAndSelectionRows({
-    required int startLine,
-    required int endLine,
-    required int delta,
-  }) {
-    if (_row >= startLine && _row <= endLine) {
-      _row = (_row + delta).clamp(0, _lines.length - 1);
-      _col = _col.clamp(0, _lines[_row].length);
-    }
-    _selectionStart = _shiftPointRowRange(
-      _selectionStart,
-      startLine: startLine,
-      endLine: endLine,
-      delta: delta,
+    _refreshDocumentSnapshot();
+    final position = _document.clampPosition(
+      TextPosition(line: point.$2, column: point.$1),
     );
-    _selectionEnd = _shiftPointRowRange(
-      _selectionEnd,
-      startLine: startLine,
-      endLine: endLine,
-      delta: delta,
-    );
-  }
-
-  (int, int)? _shiftPointRowRange(
-    (int, int)? point, {
-    required int startLine,
-    required int endLine,
-    required int delta,
-  }) {
-    if (point == null) return null;
-    if (point.$2 < startLine || point.$2 > endLine) return point;
-    final row = (point.$2 + delta).clamp(0, _lines.length - 1);
-    return (point.$1.clamp(0, _lines[row].length), row);
-  }
-
-  List<String> _trimLeadingHorizontalWhitespace(List<String> line) {
-    var start = 0;
-    while (start < line.length && (line[start] == ' ' || line[start] == '\t')) {
-      start++;
-    }
-    return line.sublist(start);
-  }
-
-  String _lineJoinSeparator(List<String> left, List<String> right) {
-    if (left.isEmpty || right.isEmpty) return '';
-    final last = left.last;
-    final first = right.first;
-    if (_isHorizontalWhitespace(last) || _isHorizontalWhitespace(first)) {
-      return '';
-    }
-    if (_suppressesLineJoinSpaceBefore(last) ||
-        _suppressesLineJoinSpaceAfter(first)) {
-      return '';
-    }
-    return ' ';
-  }
-
-  bool _suppressesLineJoinSpaceBefore(String grapheme) {
-    return grapheme == '(' ||
-        grapheme == '[' ||
-        grapheme == '{' ||
-        grapheme == '<';
-  }
-
-  bool _suppressesLineJoinSpaceAfter(String grapheme) {
-    return grapheme == ')' ||
-        grapheme == ']' ||
-        grapheme == '}' ||
-        grapheme == '>' ||
-        grapheme == ',' ||
-        grapheme == ';' ||
-        grapheme == ':' ||
-        grapheme == '.';
-  }
-
-  bool _isHorizontalWhitespace(String grapheme) {
-    return grapheme == ' ' || grapheme == '\t';
+    return (position.column, position.line);
   }
 
   bool _isWordChar(int rune) {
@@ -3220,31 +2491,17 @@ class TextAreaModel extends ViewComponent {
   }
 
   int _totalGraphemeLength() {
-    var total = 0;
-    for (var i = 0; i < _lines.length; i++) {
-      total += _lines[i].length;
-      if (i < _lines.length - 1) total += 1; // newline
-    }
-    return total;
+    _refreshDocumentSnapshot();
+    return _document.length;
   }
 
   List<List<String>> _parseLines(String s) {
-    final parts = s.split('\n');
-    if (parts.isEmpty) return [[]];
-    final lines = parts
-        .map((p) => uni.graphemes(p).toList(growable: true))
-        .toList();
-    if (lines.isEmpty) return [[]];
-    return lines;
+    return TextDocument.parseLines(s);
   }
 
   List<String> _flattenWithNewlines() {
-    final result = <String>[];
-    for (var i = 0; i < _lines.length; i++) {
-      result.addAll(_lines[i]);
-      if (i < _lines.length - 1) result.add('\n');
-    }
-    return result;
+    _refreshDocumentSnapshot();
+    return _document.flattenWithNewlines();
   }
 
   void _enforceCharLimit() {
@@ -3257,39 +2514,8 @@ class TextAreaModel extends ViewComponent {
   }
 
   (int, int) _findWordAt(int x, int y) {
-    if (y < 0 || y >= _lines.length) return (x, x);
-    final line = _lines[y];
-    if (line.isEmpty) return (0, 0);
-    final pos = x.clamp(0, line.length - 1);
-
-    if (_isWhitespace(line[pos])) {
-      var start = pos;
-      while (start > 0 && _isWhitespace(line[start - 1])) {
-        start--;
-      }
-      var end = pos;
-      while (end < line.length && _isWhitespace(line[end])) {
-        end++;
-      }
-      return (start, end);
-    } else {
-      var start = pos;
-      while (start > 0 && !_isWhitespace(line[start - 1])) {
-        start--;
-      }
-      var end = pos;
-      while (end < line.length && !_isWhitespace(line[end])) {
-        end++;
-      }
-      return (start, end);
-    }
-  }
-
-  bool _isWhitespace(String grapheme) {
-    final rune = uni.firstCodePoint(grapheme);
-    return rune == 0x20 || // Space
-        rune == 0x09 || // Tab
-        rune == 0x0A || // LF
-        rune == 0x0D; // CR
+    _refreshDocumentSnapshot();
+    final boundary = _document.wordBoundaryAt(TextPosition(line: y, column: x));
+    return (boundary.start.column, boundary.end.column);
   }
 }

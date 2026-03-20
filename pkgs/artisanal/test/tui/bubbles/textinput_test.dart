@@ -1,4 +1,5 @@
 import 'package:artisanal/src/tui/bubbles/textinput.dart';
+import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:artisanal/src/tui/component.dart';
 import 'package:artisanal/src/terminal/ansi.dart';
 import 'package:artisanal/tui.dart'
@@ -61,6 +62,64 @@ void main() {
         input.value = 'hello world';
         expect(input.value.length, lessThanOrEqualTo(5));
       });
+
+      test('syncs the editor core document and cursor state', () {
+        final input = TextInputModel(multiline: true);
+        input.setText('alpha\nbeta');
+
+        expect(input.document.text, 'alpha\nbeta');
+        expect(
+          input.editorState.cursor,
+          const TextPosition(line: 1, column: 4),
+        );
+      });
+
+      test('syncs editor core selection state', () {
+        final input = TextInputModel(multiline: true);
+        input.setTextState(
+          text: 'alpha\nbeta',
+          selectionBase: 1,
+          selectionExtent: 8,
+        );
+
+        expect(input.editorState.hasSelection, isTrue);
+        expect(
+          input.editorState.selection!.base,
+          const TextPosition(line: 0, column: 1),
+        );
+        expect(
+          input.editorState.selection!.extent,
+          const TextPosition(line: 1, column: 2),
+        );
+      });
+
+      test(
+        'preserves position in editor core while selection remains active',
+        () {
+          final input = TextInputModel(multiline: true);
+          input.setTextState(
+            text: 'alpha\nbeta',
+            selectionBase: 1,
+            selectionExtent: 8,
+          );
+
+          input.position = 1;
+
+          expect(input.position, 1);
+          expect(
+            input.editorState.cursor,
+            const TextPosition(line: 0, column: 1),
+          );
+          expect(
+            input.editorState.selection!.base,
+            const TextPosition(line: 0, column: 1),
+          );
+          expect(
+            input.editorState.selection!.extent,
+            const TextPosition(line: 1, column: 2),
+          );
+        },
+      );
     });
 
     group('Position', () {
@@ -248,6 +307,17 @@ void main() {
         expect(input.value, 'x');
         expect(input.position, 0);
       });
+
+      test('delete removes a full grapheme cluster', () {
+        final input = TextInputModel()..focus();
+        input.value = 'e\u0301x'; // 2 graphemes: "é" + "x"
+        input.position = 0;
+
+        input.update(KeyMsg(const Key(KeyType.delete)));
+
+        expect(input.value, 'x');
+        expect(input.position, 0);
+      });
     });
 
     group('Undo and redo', () {
@@ -385,6 +455,16 @@ void main() {
         expect(input.deleteForward(), isTrue);
         expect(input.value, 'ad');
       });
+
+      test('word deletion uses whitespace-delimited word boundaries', () {
+        final input = TextInputModel();
+        input.value = 'foo.bar baz';
+        input.position = 7;
+
+        expect(input.deleteBackward(word: true), isTrue);
+        expect(input.value, ' baz');
+        expect(input.position, 0);
+      });
     });
 
     group('Init', () {
@@ -413,6 +493,56 @@ void main() {
         );
 
         expect(next.getSelectedText(), equals('H'));
+      });
+
+      test('ctrl+shift+arrow extends selection by word', () {
+        var input = TextInputModel(prompt: '> ');
+        input.focus();
+        input.value = 'Hello World';
+        input.position = 0;
+
+        final (next, _) = input.update(
+          const KeyMsg(Key(KeyType.right, ctrl: true, shift: true)),
+        );
+
+        expect(next.getSelectedText(), equals('Hello'));
+        expect(next.position, 5);
+        expect(next.editorState.hasSelection, isTrue);
+      });
+
+      test(
+        'ctrl+shift+arrow keeps textinput whitespace-delimited word motion',
+        () {
+          var input = TextInputModel(prompt: '> ');
+          input.focus();
+          input.value = 'foo.bar baz';
+          input.position = 0;
+
+          final (next, _) = input.update(
+            const KeyMsg(Key(KeyType.right, ctrl: true, shift: true)),
+          );
+
+          expect(next.getSelectedText(), equals('foo.bar'));
+          expect(next.position, 7);
+          expect(next.editorState.hasSelection, isTrue);
+        },
+      );
+
+      test('ctrl+arrow clears selection before moving by word', () {
+        var input = TextInputModel(prompt: '> ');
+        input.focus();
+        input.value = 'Hello World';
+        input.selectionStart = 0;
+        input.selectionEnd = 5;
+        input.position = 5;
+
+        final (next, _) = input.update(
+          const KeyMsg(Key(KeyType.right, ctrl: true)),
+        );
+
+        expect(next.position, 11);
+        expect(next.selectionStart, isNull);
+        expect(next.selectionEnd, isNull);
       });
 
       test('copy shortcut does not delete selected text', () {
@@ -582,6 +712,20 @@ void main() {
         final view = Ansi.stripAnsi(next.view() as String);
         expect(view, contains('line2'));
         expect(view, contains('line3'));
+        expect(next.textView.viewportStartRow, 1);
+      });
+
+      test('multiline core viewport follows cursor to the end', () {
+        final input = TextInputModel(multiline: true, maxHeight: 2, width: 20);
+        input.focus();
+        input.value = 'line1\nline2\nline3\nline4';
+
+        input.position = input.value.length;
+
+        expect(input.textView.viewportStartRow, 2);
+        final view = Ansi.stripAnsi(input.view() as String);
+        expect(view, contains('line3'));
+        expect(view, contains('line4'));
       });
 
       test('shift+up/down extends multiline selection', () {
@@ -600,6 +744,20 @@ void main() {
           const KeyMsg(Key(KeyType.down, shift: true)),
         );
         expect(downSelected.getSelectedText(), isNotEmpty);
+        expect(downSelected.editorState.hasSelection, isTrue);
+      });
+
+      test('home and end follow wrapped visual line boundaries', () {
+        var input = TextInputModel(multiline: true, width: 4);
+        input.focus();
+        input.value = 'abcdef';
+        input.position = 5;
+
+        final (lineStart, _) = input.update(const KeyMsg(Key(KeyType.home)));
+        expect(lineStart.position, 4);
+
+        final (lineEnd, _) = lineStart.update(const KeyMsg(Key(KeyType.end)));
+        expect(lineEnd.position, 6);
       });
 
       test('clicking far past line end moves cursor to end', () {
@@ -711,6 +869,45 @@ void main() {
       final msg = PasteMsg('hello');
       expect(msg.content, 'hello');
     });
+
+    test('inline paste sanitizes content and respects char limit', () {
+      final input = TextInputModel(charLimit: 4)..focus();
+
+      final (next, cmd) = input.update(PasteMsg('ab\tcd'));
+
+      expect(cmd, isNull);
+      expect(next.value, 'ab c');
+      expect(next.position, 4);
+    });
+
+    test('large paste can collapse into a reference token', () {
+      final input = TextInputModel(
+        collapseLargePaste: true,
+        collapsedPasteMinChars: 999,
+        collapsedPasteMinLines: 2,
+      )..focus();
+
+      final (next, cmd) = input.update(PasteMsg('alpha\nbeta'));
+
+      expect(cmd, isNull);
+      expect(next.value, '[Pasted ~2 lines]');
+      expect(next.lastPasteRef, isNotNull);
+      expect(next.pasteBuffer[next.lastPasteRef], 'alpha\nbeta');
+    });
+
+    test(
+      'very large paste starts chunked insertion and schedules follow-up',
+      () {
+        final input = TextInputModel()..focus();
+        final content = 'a' * 1200;
+
+        final (next, cmd) = input.update(PasteMsg(content));
+
+        expect(cmd, isNotNull);
+        expect(next.value, 'a' * 300);
+        expect(next.position, 300);
+      },
+    );
   });
 
   group('PasteErrorMsg', () {
