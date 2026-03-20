@@ -60,6 +60,22 @@ final class RemotePluginGuestServices {
     String selection = 'c',
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    if (session.hostHello.capabilities.contains('services')) {
+      final result = await call(
+        'clipboard',
+        'read',
+        params: <String, Object?>{'selection': selection},
+        timeout: timeout,
+      );
+      final text = result['text'];
+      if (text is! String) {
+        throw const RemotePluginServiceException(
+          'Clipboard read response did not include a string "text" result.',
+        );
+      }
+      return text;
+    }
+
     final requestId = _requestId('clipboard-read');
     final future = session.messages
         .where(
@@ -88,6 +104,16 @@ final class RemotePluginGuestServices {
     String selection = 'c',
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    if (session.hostHello.capabilities.contains('services')) {
+      await call(
+        'clipboard',
+        'write',
+        params: <String, Object?>{'selection': selection, 'text': text},
+        timeout: timeout,
+      );
+      return;
+    }
+
     final requestId = _requestId('clipboard-write');
     final future = session.messages
         .where(

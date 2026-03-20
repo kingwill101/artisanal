@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_protocol.dart';
 
@@ -55,6 +56,32 @@ final class RemotePluginGenericHostService {
     methods.remove(method);
     if (methods.isEmpty) {
       _handlers.remove(service);
+    }
+  }
+
+  void registerClipboard({
+    RemotePluginClipboardReader? readClipboard,
+    RemotePluginClipboardWriter? writeClipboard,
+  }) {
+    if (readClipboard != null) {
+      register('clipboard', 'read', (request) async {
+        final selection = _stringParam(request.params, 'selection') ?? 'c';
+        final text = await readClipboard(selection);
+        return <String, Object?>{'text': text ?? ''};
+      });
+    }
+
+    if (writeClipboard != null) {
+      register('clipboard', 'write', (request) async {
+        final selection = _stringParam(request.params, 'selection') ?? 'c';
+        final text =
+            _stringParam(request.params, 'text') ??
+            (throw FormatException(
+              'clipboard.write requires a string "text" param.',
+            ));
+        await writeClipboard(selection, text);
+        return const <String, Object?>{};
+      });
     }
   }
 
@@ -117,4 +144,9 @@ final class RemotePluginGenericHostService {
     _disposed = true;
     await _subscription?.cancel();
   }
+}
+
+String? _stringParam(JsonObject params, String key) {
+  final value = params[key];
+  return value is String ? value : null;
 }

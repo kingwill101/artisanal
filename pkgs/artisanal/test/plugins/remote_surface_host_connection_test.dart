@@ -92,6 +92,59 @@ void main() {
     expect(clipboard, 'plugin-copy');
   });
 
+  test(
+    'host connection can answer clipboard requests through the generic service registry',
+    () async {
+      final scriptPath = p.join(
+        io.Directory.current.path,
+        'pkgs',
+        'artisanal',
+        'test',
+        'plugins',
+        'fixtures',
+        'clipboard_plugin.dart',
+      );
+
+      var clipboard = 'host clipboard';
+      final connection = await plugins.RemotePluginHostConnection.startProcess(
+        io.Platform.resolvedExecutable,
+        <String>[scriptPath],
+        hostHello: const plugins.RemotePluginHostHello(
+          hostName: 'artisanal',
+          hostVersion: '0.2.0',
+          capabilities: <String>['services'],
+        ),
+        timeout: const Duration(seconds: 10),
+      );
+      addTearDown(() => connection.dispose(kill: true));
+
+      final genericService = connection.bindGenericService();
+      genericService.registerClipboard(
+        readClipboard: (_) => clipboard,
+        writeClipboard: (_, text) {
+          clipboard = text;
+        },
+      );
+      addTearDown(genericService.dispose);
+
+      await connection.surfaceMessages
+          .where((message) => message is plugins.RemotePluginFrame)
+          .cast<plugins.RemotePluginFrame>()
+          .firstWhere((_) {
+            final surface = connection.surfaces['clipboard.panel'];
+            if (surface == null) {
+              return false;
+            }
+            final text = _surfaceText(surface);
+            return text.contains('read:host clipboard') &&
+                text.contains('write:ok');
+          })
+          .timeout(const Duration(seconds: 5));
+
+      expect(clipboard, 'plugin-copy');
+    },
+  );
+
   test('host connection can answer open-url requests', () async {
     final scriptPath = p.join(
       io.Directory.current.path,
