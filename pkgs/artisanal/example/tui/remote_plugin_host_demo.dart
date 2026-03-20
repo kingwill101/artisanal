@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/uv.dart' as uv;
 
 const _surfaceId = 'demo.panel';
+const _connectTimeout = Duration(seconds: 15);
 
 Future<void> main(List<String> args) async {
   final pluginPath = _parsePluginPath(args);
@@ -21,6 +23,7 @@ Future<void> main(List<String> args) async {
         hostVersion: '0.2.0',
         capabilities: <String>['surfaces'],
       ),
+      timeout: _connectTimeout,
     );
 
     controller = plugins.RemotePluginSurfaceController.bind(session);
@@ -53,13 +56,9 @@ Future<void> main(List<String> args) async {
 }
 
 List<String> _renderSurface(plugins.RemotePluginSurfaceState surface) {
-  return List<String>.generate(surface.height, (row) {
-    final buffer = StringBuffer();
-    for (var column = 0; column < surface.width; column++) {
-      buffer.write(surface.cellAt(column, row).symbol);
-    }
-    return buffer.toString().replaceFirst(RegExp(r'\s+$'), '');
-  });
+  final canvas = uv.Canvas(surface.width, surface.height);
+  canvas.compose(plugins.RemotePluginSurfaceDrawable(surface));
+  return canvas.render().split('\n');
 }
 
 String _parsePluginPath(List<String> args) {

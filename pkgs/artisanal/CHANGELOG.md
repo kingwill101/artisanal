@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `RemotePluginSurfaceDrawable` so remote plugin surface state can be rendered directly through the existing UV `Drawable`/`Canvas` stack instead of requiring hosts to reimplement cell translation by hand.
 - Added `RemotePluginSurfaceController` so plugin hosts can bind a `RemotePluginSession` directly to host-side surface state updates instead of wiring lifecycle and frame routing by hand.
 - Added a runnable remote-surface host/guest example pair that launches a plugin process, completes the hello handshake, applies plugin frames into host surface state, and prints the resulting rendered panel.
 - Added `RemotePluginGuestSession` plus a stdio binding helper so plugin processes can complete the host/plugin hello handshake and speak the remote-surface protocol without rebuilding channel setup by hand.
