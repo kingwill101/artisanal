@@ -2,24 +2,25 @@ import 'dart:async';
 import 'dart:io' as io;
 
 import 'package:artisanal/plugins.dart' as plugins;
-import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-void main() {
-  test('process wrapper exchanges typed messages over stdio', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'echo_plugin.dart',
-    );
+import 'fixture_compiler.dart';
 
+void main() {
+  late CompiledPluginFixtures fixtures;
+
+  setUpAll(() async {
+    fixtures = await compilePluginFixtures(<String>['echo_plugin.dart']);
+  });
+
+  tearDownAll(() async {
+    await fixtures.dispose();
+  });
+
+  test('process wrapper exchanges typed messages over stdio', () async {
     final plugin = await plugins.RemotePluginProcess.start(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('echo_plugin.dart')],
     );
 
     addTearDown(() async {
@@ -47,19 +48,9 @@ void main() {
   });
 
   test('process wrapper can complete the plugin hello handshake', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'echo_plugin.dart',
-    );
-
     final plugin = await plugins.RemotePluginProcess.start(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('echo_plugin.dart')],
     );
 
     addTearDown(() async {
@@ -76,9 +67,7 @@ void main() {
 
     expect(session.pluginHello, isA<plugins.RemotePluginHello>());
 
-    await session.send(
-      const plugins.RemotePluginFocusInput(surfaceId: 'side'),
-    );
+    await session.send(const plugins.RemotePluginFocusInput(surfaceId: 'side'));
 
     final echoed = await session.messages
         .firstWhere((message) => message is plugins.RemotePluginFocusInput)

@@ -2,26 +2,34 @@ import 'dart:io' as io;
 
 import 'package:artisanal/plugins.dart' as plugins;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
-import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'fixture_compiler.dart';
+
 void main() {
+  late CompiledPluginFixtures fixtures;
+
+  setUpAll(() async {
+    fixtures = await compilePluginFixtures(<String>[
+      'echo_plugin.dart',
+      'clipboard_plugin.dart',
+      'open_url_plugin.dart',
+      'notification_plugin.dart',
+      'file_picker_plugin.dart',
+      'generic_service_plugin.dart',
+    ]);
+  });
+
+  tearDownAll(() async {
+    await fixtures.dispose();
+  });
+
   test(
     'host connection starts a plugin process and forwards other messages',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'echo_plugin.dart',
-      );
-
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('echo_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -45,20 +53,10 @@ void main() {
   );
 
   test('host connection can answer clipboard requests', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'clipboard_plugin.dart',
-    );
-
     var clipboard = 'host clipboard';
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('clipboard_plugin.dart')],
       hostHello: const plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
@@ -96,20 +94,10 @@ void main() {
   test(
     'host connection can answer clipboard requests through the generic service registry',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'clipboard_plugin.dart',
-      );
-
       var clipboard = 'host clipboard';
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('clipboard_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -147,20 +135,10 @@ void main() {
   );
 
   test('host connection can answer open-url requests', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'open_url_plugin.dart',
-    );
-
     Uri? openedUrl;
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('open_url_plugin.dart')],
       hostHello: const plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
@@ -196,20 +174,10 @@ void main() {
   test(
     'host connection can answer open-url requests through the generic service registry',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'open_url_plugin.dart',
-      );
-
       Uri? openedUrl;
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('open_url_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -245,20 +213,10 @@ void main() {
   );
 
   test('host connection can answer notification requests', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'notification_plugin.dart',
-    );
-
     plugins.RemotePluginNotificationRequest? notification;
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('notification_plugin.dart')],
       hostHello: const plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
@@ -297,20 +255,10 @@ void main() {
   test(
     'host connection can answer notification requests through the generic service registry',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'notification_plugin.dart',
-      );
-
       plugins.RemotePluginNotificationRequest? notification;
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('notification_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -352,20 +300,10 @@ void main() {
   );
 
   test('host connection can answer file-picker requests', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'file_picker_plugin.dart',
-    );
-
     plugins.RemotePluginFilePickerRequest? pickerRequest;
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('file_picker_plugin.dart')],
       hostHello: const plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
@@ -405,20 +343,10 @@ void main() {
   test(
     'host connection can answer file-picker requests through the generic service registry',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'file_picker_plugin.dart',
-      );
-
       plugins.RemotePluginFilePickerRequest? pickerRequest;
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('file_picker_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
@@ -458,16 +386,6 @@ void main() {
   );
 
   test('host connection can answer generic service requests', () async {
-    final scriptPath = p.join(
-      io.Directory.current.path,
-      'pkgs',
-      'artisanal',
-      'test',
-      'plugins',
-      'fixtures',
-      'generic_service_plugin.dart',
-    );
-
     plugins.RemotePluginServiceRequest? serviceRequest;
     final genericCatalog = plugins.RemotePluginGenericServiceCatalog()
       ..register('host', 'ping', (request) {
@@ -476,7 +394,7 @@ void main() {
       }, description: 'Ping the host test service.');
     final connection = await plugins.RemotePluginHostConnection.startProcess(
       io.Platform.resolvedExecutable,
-      <String>[scriptPath],
+      <String>[fixtures.path('generic_service_plugin.dart')],
       hostHello: plugins.RemotePluginHostHello(
         hostName: 'artisanal',
         hostVersion: '0.2.0',
@@ -512,20 +430,10 @@ void main() {
   test(
     'host connection validates generic service params before calling the handler',
     () async {
-      final scriptPath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
-        'test',
-        'plugins',
-        'fixtures',
-        'generic_service_plugin.dart',
-      );
-
       var callCount = 0;
       final connection = await plugins.RemotePluginHostConnection.startProcess(
         io.Platform.resolvedExecutable,
-        <String>[scriptPath],
+        <String>[fixtures.path('generic_service_plugin.dart')],
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
