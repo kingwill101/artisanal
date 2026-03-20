@@ -1095,6 +1095,13 @@ class Program<M extends Model> {
   /// Whether a graceful quit should happen immediately after the first render.
   bool _quitAfterInitialRender = false;
 
+  /// Messages deferred until after the first frame is painted.
+  ///
+  /// This is mainly for async init-time exec completions: the process may
+  /// finish before the first render, but the initialized view should still
+  /// paint once before completion logic runs.
+  final List<Msg> _deferredUntilAfterInitialRender = <Msg>[];
+
   /// Whether cleanup has already been performed (prevents double cleanup).
   bool _cleanedUp = false;
 
@@ -1540,6 +1547,12 @@ class Program<M extends Model> {
     // user sees content without waiting for startup probes.
     _initializing = false;
     _render();
+    _drainDeferredUntilAfterInitialRender();
+    if (!_running || _backendShutdownRequested) {
+      _startupProbes = null;
+      _startupProbeContext = null;
+      return;
+    }
 
     if (skipPostRenderStartupProbes) {
       _syncModelOptionalTimers();
@@ -2751,14 +2764,19 @@ class Program<M extends Model> {
         stderr: process.stderr.toString(),
       );
 
-      // Route completion through the normal send/queue path so interceptors,
-      // coalescing, and ordering semantics are consistent with all other
-      // runtime messages.
-      final renderGenerationBeforeCompletion = _renderGeneration;
-      send(onComplete(result));
-      if (!restoreSizeChanged &&
-          _renderGeneration == renderGenerationBeforeCompletion) {
-        _schedulePostRestoreRender(skipSizeDispatch: true);
+      final deferCompletionUntilAfterInitialRender = _initializing;
+      if (!restoreSizeChanged && !deferCompletionUntilAfterInitialRender) {
+        _renderAfterTerminalRestore(skipSizeDispatch: true);
+      }
+
+      final completionMsg = onComplete(result);
+      if (deferCompletionUntilAfterInitialRender) {
+        _deferredUntilAfterInitialRender.add(completionMsg);
+      } else {
+        // Route completion through the normal send/queue path so interceptors,
+        // coalescing, and ordering semantics are consistent with all other
+        // runtime messages.
+        send(completionMsg);
       }
     } catch (e) {
       // Restore terminal even on error
@@ -2769,14 +2787,19 @@ class Program<M extends Model> {
       // Send error result
       final result = ExecResult(exitCode: -1, stdout: '', stderr: e.toString());
 
-      // Route completion through the normal send/queue path so interceptors,
-      // coalescing, and ordering semantics are consistent with all other
-      // runtime messages.
-      final renderGenerationBeforeCompletion = _renderGeneration;
-      send(onComplete(result));
-      if (!restoreSizeChanged &&
-          _renderGeneration == renderGenerationBeforeCompletion) {
-        _schedulePostRestoreRender(skipSizeDispatch: true);
+      final deferCompletionUntilAfterInitialRender = _initializing;
+      if (!restoreSizeChanged && !deferCompletionUntilAfterInitialRender) {
+        _renderAfterTerminalRestore(skipSizeDispatch: true);
+      }
+
+      final completionMsg = onComplete(result);
+      if (deferCompletionUntilAfterInitialRender) {
+        _deferredUntilAfterInitialRender.add(completionMsg);
+      } else {
+        // Route completion through the normal send/queue path so interceptors,
+        // coalescing, and ordering semantics are consistent with all other
+        // runtime messages.
+        send(completionMsg);
       }
     }
   }
@@ -2867,6 +2890,16 @@ class Program<M extends Model> {
         _renderAfterTerminalRestore(skipSizeDispatch: skipSizeDispatch);
       }),
     );
+  }
+
+  void _drainDeferredUntilAfterInitialRender() {
+    if (_deferredUntilAfterInitialRender.isEmpty) return;
+    final pending = List<Msg>.from(_deferredUntilAfterInitialRender);
+    _deferredUntilAfterInitialRender.clear();
+    for (final msg in pending) {
+      send(msg);
+    }
+    _drainMessageQueue();
   }
 
   bool _dispatchRestoreSizeIfChanged() {
@@ -3129,6 +3162,7 @@ class Program<M extends Model> {
 
   /// Suspends the program temporarily.
   void _suspend() {
+    final restoringDuringInitialization = _initializing;
     final restoreDynamicAltScreen = _appliedDynamicAltScreen;
     _terminalReleased = true;
     _releasedWindowTitle = null;
@@ -3203,7 +3237,9 @@ class Program<M extends Model> {
 
     // Send resume message
     _processMessage(const ResumeMsg(), deferRender: true);
-    _schedulePostRestoreRender();
+    if (!restoringDuringInitialization) {
+      _schedulePostRestoreRender();
+    }
   }
 
   /// Renders the current view.
@@ -3434,6 +3470,7 @@ class Program<M extends Model> {
     if (!_running) return;
     _running = false; // Stop accepting new messages immediately
     _startupProbes?.abort();
+    _deferredUntilAfterInitialRender.clear();
     _messageQueue.clear(); // Clear any pending messages
     final completer = _runCompleter;
     if (completer == null || completer.isCompleted) return;
