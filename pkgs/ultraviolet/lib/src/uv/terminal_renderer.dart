@@ -1281,13 +1281,20 @@ final class UvTerminalRenderer {
     // `terminal_renderer_output_test.go` "scroll one line").
     if (firstCell > 0 && _canClearWith(blank)) {
       var allBlank = true;
+      var oldBlank = true;
       for (var x = 0; x < firstCell; x++) {
         if (!_cellEqual(newLine.at(x), blank)) {
           allBlank = false;
           break;
         }
+        if (!_cellEqual(oldLine?.at(x), blank)) {
+          oldBlank = false;
+          break;
+        }
       }
-      if (allBlank) {
+      if (allBlank &&
+          oldBlank &&
+          _cellEqual(oldLine?.at(firstCell), blank)) {
         final isRelative = (_flags & _Flag.relativeCursor) != 0;
         final assumeHomeForInlineRelative =
             isRelative &&

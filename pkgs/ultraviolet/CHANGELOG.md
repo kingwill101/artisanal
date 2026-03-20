@@ -23,6 +23,7 @@
 - Added direct `Terminal` coverage for mouse click, release, motion, and wheel events plus standard and in-band resize report handling.
 - Added direct `Terminal` coverage for cursor-position, ModifyOtherKeys, and primary/secondary/tertiary device-attribute reports, including capability-state updates from DA1.
 - Added direct `Terminal` coverage for clipboard, terminal-version, XTGETTCAP, background-color, and palette report handling.
+- Fixed `UvTerminalRenderer` leading-blank overwrite fallback so it only emits blanks for truly blank old-line regions instead of using spaces to move across existing content.
 
 ## 0.1.1+1
 - fix documentation + missing assets
