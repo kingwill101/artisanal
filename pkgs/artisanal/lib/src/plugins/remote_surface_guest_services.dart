@@ -227,6 +227,38 @@ final class RemotePluginGuestServices {
     String? initialPath,
     Duration timeout = const Duration(seconds: 5),
   }) async {
+    if (session.hostHello.capabilities.contains('services')) {
+      final result = await call(
+        'filePicker',
+        'open',
+        params: <String, Object?>{
+          'kind': kind.wireName,
+          'allowMultiple': allowMultiple,
+          if (title != null) 'title': title,
+          if (initialPath != null) 'initialPath': initialPath,
+        },
+        timeout: timeout,
+      );
+      final pathsValue = result['paths'];
+      final canceledValue = result['canceled'];
+      if (pathsValue is! List) {
+        throw const RemotePluginServiceException(
+          'File picker response did not include a list "paths" result.',
+        );
+      }
+      final paths = <String>[
+        for (final path in pathsValue)
+          if (path is String)
+            path
+          else
+            throw const RemotePluginServiceException(
+              'File picker result paths must all be strings.',
+            ),
+      ];
+      final canceled = canceledValue is bool ? canceledValue : false;
+      return canceled ? const <String>[] : paths;
+    }
+
     final requestId = _requestId('file-picker');
     final future = session.messages
         .where(

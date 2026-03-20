@@ -527,6 +527,89 @@ void main() {
       expect(await pickerFuture, const <String>['/tmp/demo.txt']);
     });
 
+    test(
+      'guest services prefer the generic envelope for file picker when available',
+      () async {
+        final hostToPlugin = StreamController<String>();
+        final pluginToHost = StreamController<String>();
+
+        final hostChannel = plugins.RemotePluginJsonChannel(
+          sendLine: hostToPlugin.add,
+        );
+        final pluginChannel = plugins.RemotePluginJsonChannel(
+          sendLine: pluginToHost.add,
+        );
+
+        hostChannel.bindLines(pluginToHost.stream);
+        pluginChannel.bindLines(hostToPlugin.stream);
+
+        addTearDown(() async {
+          await hostChannel.dispose();
+          await pluginChannel.dispose();
+          await hostToPlugin.close();
+          await pluginToHost.close();
+        });
+
+        await hostChannel.send(
+          const plugins.RemotePluginHostHello(
+            hostName: 'artisanal',
+            hostVersion: '0.2.0',
+            capabilities: <String>['services'],
+          ),
+        );
+
+        final session = await plugins.RemotePluginGuestSession.connect(
+          channel: pluginChannel,
+          pluginHello: const plugins.RemotePluginHello(
+            pluginId: 'service-plugin',
+            pluginVersion: '0.0.1',
+          ),
+        );
+        addTearDown(session.dispose);
+
+        final hostMessages = StreamIterator(hostChannel.messages.skip(1));
+        addTearDown(hostMessages.cancel);
+
+        final pickerFuture = session.services.pickPaths(
+          title: 'Pick demo file',
+          initialPath: '/tmp',
+        );
+
+        final sawRequest = await hostMessages.moveNext().timeout(
+          const Duration(seconds: 1),
+        );
+        expect(sawRequest, isTrue);
+        final request = hostMessages.current;
+        expect(
+          request,
+          isA<plugins.RemotePluginServiceRequest>()
+              .having((m) => m.service, 'service', 'filePicker')
+              .having((m) => m.method, 'method', 'open')
+              .having((m) => m.params, 'params', <String, Object?>{
+                'kind': 'file',
+                'allowMultiple': false,
+                'title': 'Pick demo file',
+                'initialPath': '/tmp',
+              }),
+        );
+
+        await hostChannel.send(
+          plugins.RemotePluginServiceResponse(
+            requestId:
+                (request as plugins.RemotePluginServiceRequest).requestId,
+            service: request.service,
+            method: request.method,
+            result: const <String, Object?>{
+              'paths': <String>['/tmp/demo.txt'],
+              'canceled': false,
+            },
+          ),
+        );
+
+        expect(await pickerFuture, const <String>['/tmp/demo.txt']);
+      },
+    );
+
     test('guest services support generic service calls', () async {
       final hostToPlugin = StreamController<String>();
       final pluginToHost = StreamController<String>();

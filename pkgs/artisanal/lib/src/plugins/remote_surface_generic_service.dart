@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'remote_surface_clipboard_service.dart';
+import 'remote_surface_file_picker_service.dart';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_notification_service.dart';
 import 'remote_surface_protocol.dart';
@@ -126,6 +127,31 @@ final class RemotePluginGenericHostService {
     });
   }
 
+  void registerFilePicker({RemotePluginFilePickerHandler? pickPaths}) {
+    if (pickPaths == null) {
+      return;
+    }
+
+    register('filePicker', 'open', (request) async {
+      final result = await pickPaths(
+        RemotePluginFilePickerRequest(
+          requestId: request.requestId,
+          kind: RemotePluginFilePickerKind.parse(
+            _stringParam(request.params, 'kind') ??
+                RemotePluginFilePickerKind.file.wireName,
+          ),
+          allowMultiple: _boolParam(request.params, 'allowMultiple'),
+          title: _stringParam(request.params, 'title'),
+          initialPath: _stringParam(request.params, 'initialPath'),
+        ),
+      );
+      return <String, Object?>{
+        'paths': result ?? const <String>[],
+        'canceled': result == null,
+      };
+    });
+  }
+
   Future<void> _handle(RemotePluginServiceRequest request) async {
     if (_disposed) {
       return;
@@ -190,4 +216,9 @@ final class RemotePluginGenericHostService {
 String? _stringParam(JsonObject params, String key) {
   final value = params[key];
   return value is String ? value : null;
+}
+
+bool _boolParam(JsonObject params, String key) {
+  final value = params[key];
+  return value is bool ? value : false;
 }
