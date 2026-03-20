@@ -488,7 +488,7 @@ final class _WorkspaceRuntime {
     required this.connections,
     required this.router,
     required this.pluginIdBySurfaceId,
-    required this.clipboardServices,
+    required this.genericServices,
   });
 
   final List<plugins.RemotePluginManifest> manifests;
@@ -496,10 +496,10 @@ final class _WorkspaceRuntime {
   final Map<String, plugins.RemotePluginHostConnection> connections;
   final plugins.RemotePluginSurfaceInputRouter router;
   final Map<String, String> pluginIdBySurfaceId;
-  final List<plugins.RemotePluginClipboardHostService> clipboardServices;
+  final List<plugins.RemotePluginGenericHostService> genericServices;
 
   Future<void> dispose({bool kill = false}) async {
-    for (final service in clipboardServices) {
+    for (final service in genericServices) {
       await service.dispose();
     }
     for (final connection in connections.values) {
@@ -512,7 +512,7 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
   final manifests = await _loadWorkspaceManifests();
   final surfaces = plugins.RemotePluginSurfaceStore();
   final connections = <String, plugins.RemotePluginHostConnection>{};
-  final clipboardServices = <plugins.RemotePluginClipboardHostService>[];
+  final genericServices = <plugins.RemotePluginGenericHostService>[];
   try {
     for (final manifest in manifests) {
       final connection = await plugins.RemotePluginHostConnection.startProcess(
@@ -521,16 +521,16 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         hostHello: const plugins.RemotePluginHostHello(
           hostName: 'artisanal',
           hostVersion: '0.2.0',
-          capabilities: <String>['surfaces'],
+          capabilities: <String>['surfaces', 'services'],
         ),
         surfaces: surfaces,
         timeout: _connectTimeout,
       );
-      clipboardServices.add(
-        connection.bindClipboardService(
-          readClipboard: (_) => 'workspace clipboard',
-        ),
+      final genericService = connection.bindGenericService();
+      genericService.registerClipboard(
+        readClipboard: (_) => 'workspace clipboard',
       );
+      genericServices.add(genericService);
       connections[manifest.id] = connection;
     }
 
@@ -561,13 +561,13 @@ Future<_WorkspaceRuntime> _startWorkspace(String selectedPluginId) async {
         ),
       ),
       pluginIdBySurfaceId: pluginIdBySurfaceId,
-      clipboardServices: clipboardServices,
+      genericServices: genericServices,
     );
     await _applyFocus(runtime, selectedPluginId);
     await Future<void>.delayed(_snapshotSettleDelay);
     return runtime;
   } catch (_) {
-    for (final service in clipboardServices) {
+    for (final service in genericServices) {
       await service.dispose();
     }
     for (final connection in connections.values) {
