@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added stable `package:artisanal/plugins.dart` with a typed remote-surface plugin protocol, JSON schema definitions, and message validation helpers for future out-of-process plugin hosts.
 - Added `withoutStartupTitle()`, `withoutStartupProbeOverride()`, `withoutInput()`, `withoutOutput()`, `withoutCancelSignal()`, and `withoutMovementCapsOverride()` helpers so `ProgramOptions` can clear nullable overrides without rebuilding options manually.
 - Added `ColorPaletteMsg` and `Cmd.requestColorPalette()` so OSC 4 palette replies are exposed through the TUI runtime instead of staying UV-internal.
 - Added `CursorPositionMsg` and `Cmd.requestCursorPositionReport()` so cursor-position reports are exposed through the TUI runtime instead of staying UV-internal.

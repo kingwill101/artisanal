@@ -1,6 +1,7 @@
 import 'package:artisanal/app.dart' as app;
 import 'package:artisanal/editors.dart' as editors;
 import 'package:artisanal/hosts.dart' as hosts;
+import 'package:artisanal/plugins.dart' as plugins;
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/selection.dart' as selection;
 import 'package:artisanal/testing.dart' as testing;
@@ -73,6 +74,25 @@ void main() {
       isA<Function>(),
     );
   });
+
+  test(
+    'stable plugins entrypoint exposes the remote plugin protocol surface',
+    () async {
+      const validator = plugins.RemotePluginProtocolValidator();
+      const message = plugins.RemotePluginBlurInput(surfaceId: 'sidebar');
+
+      final errors = await validator.validateMessage(message);
+
+      expect(plugins.remotePluginProtocolVersion, isNotEmpty);
+      expect(
+        plugins.RemotePluginProtocolSchemas.schemaForType(
+          plugins.RemotePluginMessageType.hostInputBlur,
+        ),
+        isA<plugins.Schema>(),
+      );
+      expect(errors, isEmpty);
+    },
+  );
 
   test('stable widget re-export entrypoints stay available from artisanal', () {
     final shell = app.ArtisanalApp(

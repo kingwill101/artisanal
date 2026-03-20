@@ -42,6 +42,7 @@
 /// - `package:artisanal/charting.dart`: Terminal-native charting primitives.
 /// - `package:artisanal/liquid.dart`: Liquify template adapters.
 /// - `package:artisanal/widgets.dart`: Stable re-export of the widget framework.
+/// - `package:artisanal/plugins.dart`: Stable remote plugin protocol surface.
 ///
 /// {@template artisanal_io_overview}
 /// The [Console] class is the primary entry point for high-level CLI output.
@@ -115,3 +116,6 @@ export 'charting.dart';
 
 // Liquify adapters
 export 'liquid.dart';
+
+// Remote plugin protocol
+export 'plugins.dart';
