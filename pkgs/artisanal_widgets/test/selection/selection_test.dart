@@ -413,6 +413,45 @@ void main() {
       }
     });
 
+    test('Text.selectable() adapts plain text widgets', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          Text('alpha beta').selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('MarkdownText.selectable() adapts markdown widgets', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          MarkdownText(
+            data: '- alpha\n- beta',
+            maxWidth: 40,
+          ).selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseMove(7, 0);
+        tester.mouseUp(7, 0);
+
+        expect(ctrl.getSelectedText(['- alpha', '- beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('SelectableText inside Container respects layout', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
       try {

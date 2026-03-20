@@ -36,6 +36,7 @@ import '../theme/theme_scope.dart' show ThemeScope;
 import 'selection_text_utils.dart';
 
 part 'selection_controller.dart';
+part 'selection_adapters.dart';
 part 'selectable_text.dart';
 part 'selectable_rich_text.dart';
 part 'selectable_markdown_text.dart';

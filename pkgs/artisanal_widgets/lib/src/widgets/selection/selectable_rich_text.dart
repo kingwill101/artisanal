@@ -7,6 +7,7 @@ class SelectableRichText extends StatelessWidget {
   SelectableRichText({
     required this.text,
     super.key,
+    this.style,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -15,6 +16,7 @@ class SelectableRichText extends StatelessWidget {
   });
 
   final TextSpan text;
+  final Style? style;
   final TextAlign textAlign;
   final bool softWrap;
   final TextOverflow overflow;
@@ -26,6 +28,7 @@ class SelectableRichText extends StatelessWidget {
     return _SelectableRenderedText(
       text: _renderRichSpanText(
         text,
+        baseStyle: style,
         textAlign: textAlign,
         softWrap: softWrap,
         overflow: overflow,
