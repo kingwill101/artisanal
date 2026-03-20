@@ -832,7 +832,11 @@ class EmbeddedTerminalBackend implements TerminalBackend {
     _shutdownStreamSubscription?.cancel();
     _inputController.close();
     _resizeController.close();
-    _shutdownController.close();
+    scheduleMicrotask(() {
+      if (!_shutdownController.isClosed) {
+        _shutdownController.close();
+      }
+    });
   }
 }
 
