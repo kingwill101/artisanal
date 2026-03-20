@@ -65,6 +65,8 @@ class TextAreaStyleState {
     Style? base,
     Style? cursorLine,
     Style? cursorLineNumber,
+    Map<String, Style>? decorationStyles,
+    Map<String, Style>? lineDecorationStyles,
     Style? endOfBuffer,
     Style? lineNumber,
     Style? placeholder,
@@ -74,6 +76,50 @@ class TextAreaStyleState {
   }) : base = base ?? Style(),
        cursorLine = cursorLine ?? Style(),
        cursorLineNumber = cursorLineNumber ?? Style(),
+       decorationStyles = Map<String, Style>.unmodifiable(
+         decorationStyles ??
+             <String, Style>{
+               textSearchMatchDecorationKey: Style().underline(),
+               textSearchActiveMatchDecorationKey: Style()
+                   .background(const AnsiColor(7))
+                   .foreground(const AnsiColor(0)),
+               textDiagnosticErrorDecorationKey: Style()
+                   .underline()
+                   .underlineColor(const AnsiColor(1)),
+               textDiagnosticWarningDecorationKey: Style()
+                   .underline()
+                   .underlineColor(const AnsiColor(3)),
+               textDiagnosticInfoDecorationKey: Style()
+                   .underline()
+                   .underlineColor(const AnsiColor(6)),
+               textDiagnosticHintDecorationKey: Style()
+                   .underline()
+                   .underlineColor(const AnsiColor(4)),
+             },
+       ),
+       lineDecorationStyles = Map<String, Style>.unmodifiable(
+         lineDecorationStyles ??
+             <String, Style>{
+               textActiveLineDecorationKey: cursorLine ?? Style(),
+               textActiveLineNumberDecorationKey: cursorLineNumber ?? Style(),
+               textDiagnosticErrorLineDecorationKey: Style(),
+               textDiagnosticWarningLineDecorationKey: Style(),
+               textDiagnosticInfoLineDecorationKey: Style(),
+               textDiagnosticHintLineDecorationKey: Style(),
+               textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+                 const AnsiColor(1),
+               ),
+               textDiagnosticWarningLineNumberDecorationKey: Style().foreground(
+                 const AnsiColor(3),
+               ),
+               textDiagnosticInfoLineNumberDecorationKey: Style().foreground(
+                 const AnsiColor(6),
+               ),
+               textDiagnosticHintLineNumberDecorationKey: Style().foreground(
+                 const AnsiColor(4),
+               ),
+             },
+       ),
        endOfBuffer = endOfBuffer ?? Style(),
        lineNumber = lineNumber ?? Style(),
        placeholder = placeholder ?? Style(),
@@ -88,6 +134,8 @@ class TextAreaStyleState {
   Style base;
   Style cursorLine;
   Style cursorLineNumber;
+  Map<String, Style> decorationStyles;
+  Map<String, Style> lineDecorationStyles;
   Style endOfBuffer;
   Style lineNumber;
   Style placeholder;
@@ -98,6 +146,40 @@ class TextAreaStyleState {
   Style get computedCursorLine => cursorLine.inherit(base).inline(true);
   Style get computedCursorLineNumber =>
       cursorLineNumber.inherit(computedCursorLine).inherit(base).inline(true);
+  Style? computedDecorationStyle(String styleKey) {
+    final style = decorationStyles[styleKey];
+    if (style == null) {
+      return null;
+    }
+    return style.inherit(computedText).inline(true);
+  }
+
+  Style? computedLineDecorationStyle(String styleKey) {
+    final style = lineDecorationStyles[styleKey];
+    if (style == null) {
+      return null;
+    }
+    return style.inherit(base).inline(true);
+  }
+
+  Style? computedLineNumberDecorationStyle(
+    String styleKey, {
+    String? lineStyleKey,
+  }) {
+    final style = lineDecorationStyles[styleKey];
+    if (style == null) {
+      return null;
+    }
+    final lineStyle = lineStyleKey == null
+        ? null
+        : lineDecorationStyles[lineStyleKey];
+    var resolved = style;
+    if (lineStyle != null) {
+      resolved = resolved.inherit(lineStyle);
+    }
+    return resolved.inherit(base).inline(true);
+  }
+
   Style get computedEndOfBuffer => endOfBuffer.inherit(base).inline(true);
   Style get computedLineNumber => lineNumber.inherit(base).inline(true);
   Style get computedPlaceholder => placeholder.inherit(base).inline(true);
@@ -109,6 +191,8 @@ class TextAreaStyleState {
     Style? base,
     Style? cursorLine,
     Style? cursorLineNumber,
+    Map<String, Style>? decorationStyles,
+    Map<String, Style>? lineDecorationStyles,
     Style? endOfBuffer,
     Style? lineNumber,
     Style? placeholder,
@@ -120,6 +204,8 @@ class TextAreaStyleState {
       base: base ?? this.base,
       cursorLine: cursorLine ?? this.cursorLine,
       cursorLineNumber: cursorLineNumber ?? this.cursorLineNumber,
+      decorationStyles: decorationStyles ?? this.decorationStyles,
+      lineDecorationStyles: lineDecorationStyles ?? this.lineDecorationStyles,
       endOfBuffer: endOfBuffer ?? this.endOfBuffer,
       lineNumber: lineNumber ?? this.lineNumber,
       placeholder: placeholder ?? this.placeholder,
@@ -156,6 +242,18 @@ class TextAreaStyles {
   TextAreaStyleState focused;
   TextAreaStyleState blurred;
   TextAreaCursorStyle cursor;
+
+  TextAreaStyles copyWith({
+    TextAreaStyleState? focused,
+    TextAreaStyleState? blurred,
+    TextAreaCursorStyle? cursor,
+  }) {
+    return TextAreaStyles(
+      focused: focused ?? this.focused,
+      blurred: blurred ?? this.blurred,
+      cursor: cursor ?? this.cursor,
+    );
+  }
 }
 
 TextAreaStyles defaultTextAreaStyles() {
@@ -163,6 +261,46 @@ TextAreaStyles defaultTextAreaStyles() {
     focused: TextAreaStyleState(
       cursorLine: Style().background(const AnsiColor(0)),
       cursorLineNumber: Style().foreground(const AnsiColor(240)),
+      decorationStyles: <String, Style>{
+        textSearchMatchDecorationKey: Style().underline(),
+        textSearchActiveMatchDecorationKey: Style()
+            .background(const AnsiColor(7))
+            .foreground(const AnsiColor(0)),
+        textDiagnosticErrorDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(1),
+        ),
+        textDiagnosticWarningDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(3),
+        ),
+        textDiagnosticInfoDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(6),
+        ),
+        textDiagnosticHintDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(4),
+        ),
+      },
+      lineDecorationStyles: <String, Style>{
+        textActiveLineDecorationKey: Style().background(const AnsiColor(0)),
+        textActiveLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(240),
+        ),
+        textDiagnosticErrorLineDecorationKey: Style(),
+        textDiagnosticWarningLineDecorationKey: Style(),
+        textDiagnosticInfoLineDecorationKey: Style(),
+        textDiagnosticHintLineDecorationKey: Style(),
+        textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(1),
+        ),
+        textDiagnosticWarningLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(3),
+        ),
+        textDiagnosticInfoLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(6),
+        ),
+        textDiagnosticHintLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(4),
+        ),
+      },
       endOfBuffer: Style().foreground(const AnsiColor(0)),
       lineNumber: Style().foreground(const AnsiColor(249)),
       placeholder: Style().foreground(const AnsiColor(240)),
@@ -175,6 +313,46 @@ TextAreaStyles defaultTextAreaStyles() {
     blurred: TextAreaStyleState(
       cursorLine: Style().foreground(const AnsiColor(245)),
       cursorLineNumber: Style().foreground(const AnsiColor(249)),
+      decorationStyles: <String, Style>{
+        textSearchMatchDecorationKey: Style().underline(),
+        textSearchActiveMatchDecorationKey: Style()
+            .background(const AnsiColor(7))
+            .foreground(const AnsiColor(0)),
+        textDiagnosticErrorDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(1),
+        ),
+        textDiagnosticWarningDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(3),
+        ),
+        textDiagnosticInfoDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(6),
+        ),
+        textDiagnosticHintDecorationKey: Style().underline().underlineColor(
+          const AnsiColor(4),
+        ),
+      },
+      lineDecorationStyles: <String, Style>{
+        textActiveLineDecorationKey: Style().foreground(const AnsiColor(245)),
+        textActiveLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(249),
+        ),
+        textDiagnosticErrorLineDecorationKey: Style(),
+        textDiagnosticWarningLineDecorationKey: Style(),
+        textDiagnosticInfoLineDecorationKey: Style(),
+        textDiagnosticHintLineDecorationKey: Style(),
+        textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(1),
+        ),
+        textDiagnosticWarningLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(3),
+        ),
+        textDiagnosticInfoLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(6),
+        ),
+        textDiagnosticHintLineNumberDecorationKey: Style().foreground(
+          const AnsiColor(4),
+        ),
+      },
       endOfBuffer: Style().foreground(const AnsiColor(0)),
       lineNumber: Style().foreground(const AnsiColor(249)),
       placeholder: Style().foreground(const AnsiColor(240)),
@@ -570,6 +748,29 @@ class TextAreaModel extends ViewComponent {
   >
   _history;
   final TextPasteController _pasteController = TextPasteController();
+  final Map<
+    String,
+    ({List<TextDecorationRange> decorations, int order, int priority})
+  >
+  _decorationLayers =
+      <
+        String,
+        ({List<TextDecorationRange> decorations, int order, int priority})
+      >{};
+  final Map<
+    String,
+    ({List<TextLineDecoration> decorations, int order, int priority})
+  >
+  _lineDecorationLayers =
+      <
+        String,
+        ({List<TextLineDecoration> decorations, int order, int priority})
+      >{};
+  List<TextDiagnosticRange> _diagnostics = const [];
+  List<TextDecorationRange> _decorations = const [];
+  List<TextLineDecoration> _lineDecorations = const [];
+  int _nextDecorationLayerOrder = 0;
+  int _nextLineDecorationLayerOrder = 0;
 
   (int, int)? _selectionStart;
   (int, int)? _selectionEnd;
@@ -591,6 +792,23 @@ class TextAreaModel extends ViewComponent {
   bool get hasSelection => _hasSelection();
   TextDocument get document => _document;
   EditorState get editorState => _editorState;
+  List<TextDiagnosticRange> get diagnostics => List.unmodifiable(_diagnostics);
+  TextDiagnosticRange? get activeDiagnostic => _activeDiagnostic();
+  List<TextDecorationRange> get decorations => List.unmodifiable(_decorations);
+  List<TextLineDecoration> get lineDecorations =>
+      List.unmodifiable(_lineDecorations);
+  List<TextDecorationRange> decorationsForLayer(String layerKey) {
+    return List.unmodifiable(
+      _decorationLayers[layerKey]?.decorations ?? const <TextDecorationRange>[],
+    );
+  }
+
+  List<TextLineDecoration> lineDecorationsForLayer(String layerKey) {
+    return List.unmodifiable(
+      _lineDecorationLayers[layerKey]?.decorations ??
+          const <TextLineDecoration>[],
+    );
+  }
 
   /// Anchor position of the current selection, if any.
   ({int line, int column})? get selectionBase => _selectionStart == null
@@ -696,6 +914,359 @@ class TextAreaModel extends ViewComponent {
     _syncCoreState();
   }
 
+  bool setDecorations(Iterable<TextDecorationRange> decorations) {
+    return setDecorationLayer(
+      textDefaultDecorationLayerKey,
+      decorations,
+      priority: textDefaultDecorationLayerPriority,
+    );
+  }
+
+  bool setDecorationLayer(
+    String layerKey,
+    Iterable<TextDecorationRange> decorations, {
+    int priority = textDefaultDecorationLayerPriority,
+  }) {
+    _refreshDocumentSnapshot();
+    final normalized = decorations
+        .map((range) => range.normalized().clamp(_document.length))
+        .where((range) => !range.isEmpty)
+        .toList(growable: false);
+
+    final existingLayer = _decorationLayers[layerKey];
+    if (normalized.isEmpty) {
+      if (existingLayer == null) {
+        return false;
+      }
+      _decorationLayers.remove(layerKey);
+      _rebuildDecorations();
+      return true;
+    }
+
+    if (existingLayer != null &&
+        existingLayer.priority == priority &&
+        _decorationListsEqual(existingLayer.decorations, normalized)) {
+      return false;
+    }
+
+    _decorationLayers[layerKey] = (
+      decorations: normalized,
+      order: existingLayer?.order ?? _nextDecorationLayerOrder++,
+      priority: priority,
+    );
+    _rebuildDecorations();
+    return true;
+  }
+
+  bool clearDecorations() {
+    if (_decorationLayers.isEmpty) {
+      return false;
+    }
+    _decorationLayers.clear();
+    _rebuildDecorations();
+    return true;
+  }
+
+  bool clearDecorationLayer(String layerKey) {
+    if (!_decorationLayers.containsKey(layerKey)) {
+      return false;
+    }
+    _decorationLayers.remove(layerKey);
+    _rebuildDecorations();
+    return true;
+  }
+
+  bool setHighlights(
+    Iterable<TextHighlightRange> highlights, {
+    int activeIndex = -1,
+  }) {
+    return setDecorationLayer(
+      textSearchDecorationLayerKey,
+      textSearchDecorations(highlights, activeIndex: activeIndex),
+      priority: textSearchDecorationLayerPriority,
+    );
+  }
+
+  bool clearHighlights() {
+    return clearDecorationLayer(textSearchDecorationLayerKey);
+  }
+
+  bool setDiagnostics(Iterable<TextDiagnosticRange> diagnostics) {
+    _refreshDocumentSnapshot();
+    final normalizedDiagnostics = normalizeTextDiagnostics(
+      diagnostics,
+      maxLength: _document.length,
+    );
+    _diagnostics = normalizedDiagnostics;
+    final changedRanges = setDecorationLayer(
+      textDiagnosticsDecorationLayerKey,
+      textDiagnosticDecorations(normalizedDiagnostics),
+      priority: textDiagnosticsDecorationLayerPriority,
+    );
+    final changedLines = setLineDecorationLayer(
+      textDiagnosticsLineDecorationLayerKey,
+      textDiagnosticLineDecorations(
+        text: value,
+        diagnostics: normalizedDiagnostics,
+      ),
+      priority: textDiagnosticsLineDecorationLayerPriority,
+    );
+    return changedRanges || changedLines;
+  }
+
+  bool setDiagnosticsFromPositions(
+    Iterable<TextPositionDiagnosticRange> diagnostics,
+  ) {
+    _refreshDocumentSnapshot();
+    return setDiagnostics(
+      textDiagnosticsFromPositions(
+        document: _document,
+        diagnostics: diagnostics,
+      ),
+    );
+  }
+
+  bool clearDiagnostics() {
+    _diagnostics = const [];
+    final clearedRanges = clearDecorationLayer(
+      textDiagnosticsDecorationLayerKey,
+    );
+    final clearedLines = clearLineDecorationLayer(
+      textDiagnosticsLineDecorationLayerKey,
+    );
+    return clearedRanges || clearedLines;
+  }
+
+  bool selectNextDiagnostic({bool wrap = true}) {
+    return _selectRelativeDiagnostic(forward: true, wrap: wrap);
+  }
+
+  bool selectPreviousDiagnostic({bool wrap = true}) {
+    return _selectRelativeDiagnostic(forward: false, wrap: wrap);
+  }
+
+  bool selectDiagnosticAtLine(int lineIndex) {
+    _refreshDocumentSnapshot();
+    if (_diagnostics.isEmpty) {
+      return false;
+    }
+
+    final state = _currentOffsetStateSnapshot();
+    final index = _diagnosticIndexForLine(
+      lineIndex,
+      activeIndex: _currentDiagnosticIndex(state),
+    );
+    if (index == null) {
+      return false;
+    }
+    _selectDiagnosticAtIndex(index);
+    return true;
+  }
+
+  bool setLineDecorations(Iterable<TextLineDecoration> decorations) {
+    return setLineDecorationLayer(
+      textDefaultLineDecorationLayerKey,
+      decorations,
+      priority: textDefaultLineDecorationLayerPriority,
+    );
+  }
+
+  bool setLineDecorationLayer(
+    String layerKey,
+    Iterable<TextLineDecoration> decorations, {
+    int priority = textDefaultLineDecorationLayerPriority,
+  }) {
+    final normalized = decorations
+        .map((decoration) => decoration.clamp(_lines.length))
+        .toList(growable: false);
+
+    final existingLayer = _lineDecorationLayers[layerKey];
+    if (normalized.isEmpty) {
+      if (existingLayer == null) {
+        return false;
+      }
+      _lineDecorationLayers.remove(layerKey);
+      _syncImplicitLineDecorations();
+      return true;
+    }
+
+    if (existingLayer != null &&
+        existingLayer.priority == priority &&
+        _lineDecorationListsEqual(existingLayer.decorations, normalized)) {
+      return false;
+    }
+
+    _lineDecorationLayers[layerKey] = (
+      decorations: normalized,
+      order: existingLayer?.order ?? _nextLineDecorationLayerOrder++,
+      priority: priority,
+    );
+    _syncImplicitLineDecorations();
+    return true;
+  }
+
+  bool clearLineDecorations() {
+    if (_lineDecorationLayers.isEmpty) {
+      return false;
+    }
+    _lineDecorationLayers.clear();
+    _syncImplicitLineDecorations();
+    return true;
+  }
+
+  bool clearLineDecorationLayer(String layerKey) {
+    if (!_lineDecorationLayers.containsKey(layerKey)) {
+      return false;
+    }
+    _lineDecorationLayers.remove(layerKey);
+    _syncImplicitLineDecorations();
+    return true;
+  }
+
+  bool _selectRelativeDiagnostic({required bool forward, bool wrap = true}) {
+    _refreshDocumentSnapshot();
+    if (_diagnostics.isEmpty) {
+      return false;
+    }
+
+    final state = _currentOffsetStateSnapshot();
+    final index = textDiagnosticNavigationIndex(
+      diagnostics: _diagnostics,
+      cursorOffset: state.cursorOffset,
+      activeIndex: _currentDiagnosticIndex(state),
+      forward: forward,
+      wrap: wrap,
+    );
+    if (index == null) {
+      return false;
+    }
+    return _selectDiagnosticAtIndex(index);
+  }
+
+  bool _selectDiagnosticAtIndex(int index) {
+    if (index < 0 || index >= _diagnostics.length) {
+      return false;
+    }
+
+    _refreshDocumentSnapshot();
+    final before = _currentOffsetStateSnapshot();
+    final diagnostic = _diagnostics[index];
+    final startOffset = diagnostic.startOffset.clamp(0, _document.length);
+    final endOffset = diagnostic.endOffset.clamp(startOffset, _document.length);
+    final start = _document.positionForOffset(startOffset);
+
+    if (endOffset > startOffset) {
+      final end = _document.positionForOffset(endOffset);
+      setSelection(
+        baseLine: start.line,
+        baseColumn: start.column,
+        extentLine: end.line,
+        extentColumn: end.column,
+      );
+    } else {
+      setCursor(start.line, start.column);
+    }
+
+    final after = _currentOffsetStateSnapshot();
+    return before.cursorOffset != after.cursorOffset ||
+        before.selectionBaseOffset != after.selectionBaseOffset ||
+        before.selectionExtentOffset != after.selectionExtentOffset;
+  }
+
+  int? _currentDiagnosticIndex(TextOffsetStateSnapshot state) {
+    final selection = state.normalizedSelectionRange;
+    if (selection == null) {
+      return null;
+    }
+
+    for (var index = 0; index < _diagnostics.length; index++) {
+      final diagnostic = _diagnostics[index];
+      if (diagnostic.startOffset == selection.start &&
+          diagnostic.endOffset == selection.end) {
+        return index;
+      }
+    }
+    return null;
+  }
+
+  int? _diagnosticIndexForLine(int lineIndex, {int? activeIndex}) {
+    if (lineIndex < 0 || lineIndex >= _lines.length) {
+      return null;
+    }
+
+    if (activeIndex != null &&
+        activeIndex >= 0 &&
+        activeIndex < _diagnostics.length &&
+        _diagnosticSpansLine(_diagnostics[activeIndex], lineIndex)) {
+      return activeIndex;
+    }
+
+    int? bestIndex;
+    for (var index = 0; index < _diagnostics.length; index++) {
+      final diagnostic = _diagnostics[index];
+      if (!_diagnosticSpansLine(diagnostic, lineIndex)) {
+        continue;
+      }
+
+      if (bestIndex == null) {
+        bestIndex = index;
+        continue;
+      }
+
+      final best = _diagnostics[bestIndex];
+      final severityComparison = _diagnosticSeverityRank(
+        diagnostic.severity,
+      ).compareTo(_diagnosticSeverityRank(best.severity));
+      if (severityComparison > 0 ||
+          (severityComparison == 0 &&
+              (diagnostic.startOffset < best.startOffset ||
+                  (diagnostic.startOffset == best.startOffset &&
+                      diagnostic.endOffset < best.endOffset)))) {
+        bestIndex = index;
+      }
+    }
+
+    return bestIndex;
+  }
+
+  bool _diagnosticSpansLine(TextDiagnosticRange diagnostic, int lineIndex) {
+    final normalized = diagnostic.normalized();
+    final startOffset = normalized.startOffset.clamp(0, _document.length);
+    final endOffset = normalized.endOffset.clamp(startOffset, _document.length);
+    final startLine = _document.positionForOffset(startOffset).line;
+    final endLine = endOffset <= startOffset
+        ? startLine
+        : _document.positionForOffset(endOffset - 1).line;
+    return lineIndex >= startLine && lineIndex <= endLine;
+  }
+
+  int _diagnosticSeverityRank(TextDiagnosticSeverity severity) {
+    return switch (severity) {
+      TextDiagnosticSeverity.error => 4,
+      TextDiagnosticSeverity.warning => 3,
+      TextDiagnosticSeverity.info => 2,
+      TextDiagnosticSeverity.hint => 1,
+    };
+  }
+
+  TextDiagnosticRange? _activeDiagnostic() {
+    _refreshDocumentSnapshot();
+    if (_diagnostics.isEmpty) {
+      return null;
+    }
+
+    final state = _currentOffsetStateSnapshot();
+    final activeIndex = _currentDiagnosticIndex(state);
+    if (activeIndex != null) {
+      return _diagnostics[activeIndex];
+    }
+
+    return textDiagnosticAtOffset(
+      diagnostics: _diagnostics,
+      offset: state.cursorOffset,
+    );
+  }
+
   /// Returns the current cursor line (0-indexed).
   int cursorLine() => _row;
 
@@ -724,6 +1295,31 @@ class TextAreaModel extends ViewComponent {
   /// Returns the appropriate style state based on focus.
   TextAreaStyleState activeStyle() =>
       _focused ? styles.focused : styles.blurred;
+
+  Style _textCellStyle(
+    TextAreaStyleState style, {
+    Style? lineDecorationStyle,
+    Style? decorationStyle,
+    required bool isSelected,
+    bool useCursorStyle = false,
+  }) {
+    final cellStyle = style.computedText.copy();
+    if (lineDecorationStyle != null) {
+      cellStyle.inherit(lineDecorationStyle);
+    }
+    if (decorationStyle != null) {
+      cellStyle.inherit(decorationStyle);
+    }
+    if (isSelected) {
+      cellStyle.inherit(style.computedSelection);
+    }
+    if (useCursorStyle && cursor.visible && cursor.mode != CursorMode.hide) {
+      cellStyle
+        ..inherit(cursor.style.copy()..inline(true))
+        ..inverse();
+    }
+    return cellStyle;
+  }
 
   T _runEditFrame<T>(T Function() body) {
     return _history.runFrame(
@@ -874,6 +1470,7 @@ class TextAreaModel extends ViewComponent {
       ..softWrap = softWrap
       ..leadingColumns = _leadingColumnsForView();
     _textView.ensureCursorVisible(_document, _editorState);
+    _syncImplicitLineDecorations();
   }
 
   int _leadingColumnsForView() {
@@ -1008,6 +1605,243 @@ class TextAreaModel extends ViewComponent {
 
   void _recordUndoSnapshot() {
     _history.recordUndoSnapshot(_captureEditState);
+  }
+
+  bool _decorationListsEqual(
+    List<TextDecorationRange> a,
+    List<TextDecorationRange> b,
+  ) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _lineDecorationListsEqual(
+    List<TextLineDecoration> a,
+    List<TextLineDecoration> b,
+  ) {
+    if (identical(a, b)) {
+      return true;
+    }
+    if (a.length != b.length) {
+      return false;
+    }
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  void _rebuildDecorations() {
+    if (_decorationLayers.isEmpty) {
+      _decorations = const [];
+      return;
+    }
+
+    final sortedLayers = _decorationLayers.values.toList(growable: false)
+      ..sort((a, b) {
+        final priorityComparison = a.priority.compareTo(b.priority);
+        if (priorityComparison != 0) {
+          return priorityComparison;
+        }
+        return a.order.compareTo(b.order);
+      });
+
+    _decorations = List<TextDecorationRange>.unmodifiable([
+      for (final layer in sortedLayers) ...layer.decorations,
+    ]);
+  }
+
+  void _rebuildLineDecorations() {
+    if (_lineDecorationLayers.isEmpty) {
+      _lineDecorations = const [];
+      return;
+    }
+
+    final sortedLayers = _lineDecorationLayers.values.toList(growable: false)
+      ..sort((a, b) {
+        final priorityComparison = a.priority.compareTo(b.priority);
+        if (priorityComparison != 0) {
+          return priorityComparison;
+        }
+        return a.order.compareTo(b.order);
+      });
+
+    _lineDecorations = List<TextLineDecoration>.unmodifiable([
+      for (final layer in sortedLayers) ...layer.decorations,
+    ]);
+  }
+
+  void _syncImplicitLineDecorations() {
+    if (useVirtualCursor) {
+      _lineDecorationLayers.remove(textActiveLineDecorationLayerKey);
+      _rebuildLineDecorations();
+      return;
+    }
+
+    _lineDecorationLayers[textActiveLineDecorationLayerKey] = (
+      decorations: <TextLineDecoration>[
+        TextLineDecoration(
+          lineIndex: _row.clamp(0, math.max(_lines.length - 1, 0)),
+          styleKey: textActiveLineDecorationKey,
+          lineNumberStyleKey: textActiveLineNumberDecorationKey,
+        ),
+      ],
+      order:
+          _lineDecorationLayers[textActiveLineDecorationLayerKey]?.order ??
+          _nextLineDecorationLayerOrder++,
+      priority: textActiveLineDecorationLayerPriority,
+    );
+    _rebuildLineDecorations();
+  }
+
+  List<TextLineDecoration> _lineDecorationsForRow(int rowIndex) {
+    final matches = <TextLineDecoration>[];
+    for (final decoration in _lineDecorations) {
+      if (decoration.lineIndex == rowIndex) {
+        matches.add(decoration);
+      }
+    }
+    return List<TextLineDecoration>.unmodifiable(matches);
+  }
+
+  Style? _lineDecorationStyleForDecorations(
+    TextAreaStyleState style,
+    Iterable<TextLineDecoration> decorations,
+  ) {
+    Style? mergedStyle;
+    for (final decoration in decorations) {
+      final nextStyle = style.computedLineDecorationStyle(decoration.styleKey);
+      if (nextStyle == null || nextStyle.isEmpty) {
+        continue;
+      }
+      mergedStyle ??= Style();
+      mergedStyle.inherit(nextStyle);
+    }
+    return mergedStyle;
+  }
+
+  Style? _lineNumberDecorationStyleForDecorations(
+    TextAreaStyleState style,
+    Iterable<TextLineDecoration> decorations,
+  ) {
+    Style? mergedStyle;
+    for (final decoration in decorations) {
+      final nextStyle = decoration.lineNumberStyleKey == null
+          ? style.computedLineDecorationStyle(decoration.styleKey)
+          : style.computedLineNumberDecorationStyle(
+              decoration.lineNumberStyleKey!,
+              lineStyleKey: decoration.styleKey,
+            );
+      if (nextStyle == null || nextStyle.isEmpty) {
+        continue;
+      }
+      mergedStyle ??= Style();
+      mergedStyle.inherit(nextStyle);
+    }
+    return mergedStyle;
+  }
+
+  String? _lineNumberMarkerForDecorations(
+    Iterable<TextLineDecoration> decorations,
+  ) {
+    String? marker;
+    for (final decoration in decorations) {
+      if (decoration.lineNumberMarker != null &&
+          decoration.lineNumberMarker!.isNotEmpty) {
+        marker = decoration.lineNumberMarker;
+      }
+    }
+    return marker;
+  }
+
+  String _normalizedLineNumberMarker(String? marker) {
+    if (marker == null || marker.isEmpty) {
+      return ' ';
+    }
+    final graphemes = uni.graphemes(marker).toList(growable: false);
+    if (graphemes.isEmpty) {
+      return ' ';
+    }
+    return graphemes.first;
+  }
+
+  List<({int start, int end, String styleKey})> _segmentDecorationRanges(
+    int rowIndex,
+    int segmentStart,
+    int segmentEnd,
+  ) {
+    if (_decorations.isEmpty || segmentStart >= segmentEnd) {
+      return const [];
+    }
+
+    final ranges = <({int start, int end, String styleKey})>[];
+    for (final decoration in _decorations) {
+      final range = decoration.clamp(_document.length);
+      if (range.isEmpty) {
+        continue;
+      }
+      final start = _document.positionForOffset(range.startOffset);
+      final end = _document.positionForOffset(range.endOffset);
+      if (rowIndex < start.line || rowIndex > end.line) {
+        continue;
+      }
+
+      int rowStart;
+      int rowEnd;
+      if (start.line == end.line) {
+        rowStart = start.column;
+        rowEnd = end.column;
+      } else if (rowIndex == start.line) {
+        rowStart = start.column;
+        rowEnd = _lines[rowIndex].length;
+      } else if (rowIndex == end.line) {
+        rowStart = 0;
+        rowEnd = end.column;
+      } else {
+        rowStart = 0;
+        rowEnd = _lines[rowIndex].length;
+      }
+
+      final overlapStart = math.max(rowStart, segmentStart);
+      final overlapEnd = math.min(rowEnd, segmentEnd);
+      if (overlapStart >= overlapEnd) {
+        continue;
+      }
+
+      ranges.add((
+        start: overlapStart - segmentStart,
+        end: overlapEnd - segmentStart,
+        styleKey: range.styleKey,
+      ));
+    }
+
+    return ranges;
+  }
+
+  String? _decorationStyleKeyForColumn(
+    List<({int start, int end, String styleKey})> ranges,
+    int column,
+  ) {
+    for (var index = ranges.length - 1; index >= 0; index--) {
+      final range = ranges[index];
+      if (column < range.start || column >= range.end) {
+        continue;
+      }
+      return range.styleKey;
+    }
+    return null;
   }
 
   /// Returns a [Cursor] for rendering a real cursor in a TUI program.
@@ -1926,6 +2760,17 @@ class TextAreaModel extends ViewComponent {
           _focused = true;
           final promptW = _getPromptWidth(y);
           final lineNumberW = showLineNumbers ? (lineNumberDigits + 1) : 0;
+          final displayLine = displayLines[y];
+          final inLineNumberGutter =
+              showLineNumbers &&
+              x >= promptW &&
+              x < promptW + lineNumberW &&
+              displayLine.charOffset == 0;
+          if (inLineNumberGutter &&
+              selectDiagnosticAtLine(displayLine.rowIndex)) {
+            _mouseSelecting = false;
+            return (this, null);
+          }
           final hit = _textView.hitTestContent(
             _document,
             _editorState,
@@ -2077,6 +2922,18 @@ class TextAreaModel extends ViewComponent {
     } else {
       for (var i = 0; i < displayLines.length; i++) {
         final displayLine = displayLines[i];
+        final lineDecorations = _lineDecorationsForRow(displayLine.rowIndex);
+        final lineDecorationStyle = _lineDecorationStyleForDecorations(
+          style,
+          lineDecorations,
+        );
+        final lineNumberDecorationStyle =
+            _lineNumberDecorationStyleForDecorations(style, lineDecorations);
+        final lineNumberMarker = _normalizedLineNumberMarker(
+          displayLine.charOffset == 0
+              ? _lineNumberMarkerForDecorations(lineDecorations)
+              : null,
+        );
         final p =
             promptFunc?.call((
               lineIndex: i,
@@ -2089,9 +2946,10 @@ class TextAreaModel extends ViewComponent {
         String lnNumber = '';
         if (showLineNumbers) {
           final lnText = displayLine.charOffset == 0
-              ? '${(displayLine.rowIndex + 1).toString().padLeft(lineNumberDigits)} '
+              ? '${(displayLine.rowIndex + 1).toString().padLeft(lineNumberDigits)}$lineNumberMarker'
               : ' ' * (lineNumberDigits + 1);
-          lnNumber = style.computedLineNumber.render(lnText);
+          lnNumber = (lineNumberDecorationStyle ?? style.computedLineNumber)
+              .render(lnText);
         }
         // Compute selection overlap for this visual segment.
         int? selStart;
@@ -2140,6 +2998,11 @@ class TextAreaModel extends ViewComponent {
         }
 
         final gs = uni.graphemes(displayLine.text).toList(growable: false);
+        final decorationRanges = _segmentDecorationRanges(
+          displayLine.rowIndex,
+          displayLine.charOffset,
+          displayLine.charOffset + gs.length,
+        );
         final cursorCol = displayLine.hasCursor
             ? (_col - displayLine.charOffset)
             : -1;
@@ -2148,36 +3011,39 @@ class TextAreaModel extends ViewComponent {
         for (var j = 0; j < gs.length; j++) {
           final isSelected =
               selStart != null && selEnd != null && j >= selStart && j < selEnd;
-          String part;
-          if (displayLine.hasCursor && useVirtualCursor && j == cursorCol) {
-            cursor = cursor.setChar(gs[j]);
-            part = cursor.view();
-            if (isSelected) {
-              part = style.computedSelection.render(part);
-            }
-          } else {
-            part = isSelected
-                ? style.computedSelection.render(gs[j])
-                : style.computedText.render(gs[j]);
-          }
+          final decorationStyleKey = _decorationStyleKeyForColumn(
+            decorationRanges,
+            j,
+          );
+          final decorationStyle = decorationStyleKey == null
+              ? null
+              : style.computedDecorationStyle(decorationStyleKey);
+          final partStyle = _textCellStyle(
+            style,
+            lineDecorationStyle: lineDecorationStyle,
+            decorationStyle: decorationStyle,
+            isSelected: isSelected,
+            useCursorStyle:
+                displayLine.hasCursor && useVirtualCursor && j == cursorCol,
+          );
+          final part = partStyle.render(gs[j]);
           renderedBody += part;
         }
 
         if (displayLine.hasCursor &&
             useVirtualCursor &&
             cursorCol >= gs.length) {
-          cursor = cursor.setChar(' ');
-          var part = cursor.view();
-          // If the selection is anchored past EOL (rare), don't attempt to style it.
-          renderedBody += part;
+          final partStyle = _textCellStyle(
+            style,
+            lineDecorationStyle: lineDecorationStyle,
+            isSelected: false,
+            useCursorStyle: true,
+          );
+          renderedBody += partStyle.render(' ');
         }
 
-        final renderedLine = displayLine.hasCursor && !useVirtualCursor
-            ? style.computedCursorLine.render(renderedBody)
-            : renderedBody;
-
         buffer.writeln(
-          '${style.computedPrompt.render(p)}$lnNumber$renderedLine',
+          '${style.computedPrompt.render(p)}$lnNumber$renderedBody',
         );
       }
 

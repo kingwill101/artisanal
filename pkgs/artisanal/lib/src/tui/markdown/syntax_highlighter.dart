@@ -8,6 +8,7 @@ import 'package:highlight/highlight.dart' show highlight, Node;
 
 import '../../style/style.dart';
 import '../../style/color.dart' show BasicColor;
+import '../../unicode/grapheme.dart' as uni;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chroma-Style Color Theme
@@ -663,6 +664,58 @@ class AdaptiveChromaTheme {
 /// );
 /// print(highlighted);
 /// ```
+const String codeSyntaxDecorationPrefix = 'syntax';
+
+String codeSyntaxDecorationStyleKey(
+  String slot, {
+  String prefix = codeSyntaxDecorationPrefix,
+}) {
+  return '$prefix.$slot';
+}
+
+final class SyntaxHighlightSpan {
+  const SyntaxHighlightSpan({
+    required this.startOffset,
+    required this.endOffset,
+    required this.styleKey,
+  });
+
+  final int startOffset;
+  final int endOffset;
+  final String styleKey;
+
+  int get length => endOffset - startOffset;
+  bool get isEmpty => startOffset >= endOffset;
+
+  SyntaxHighlightSpan copyWith({
+    int? startOffset,
+    int? endOffset,
+    String? styleKey,
+  }) {
+    return SyntaxHighlightSpan(
+      startOffset: startOffset ?? this.startOffset,
+      endOffset: endOffset ?? this.endOffset,
+      styleKey: styleKey ?? this.styleKey,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SyntaxHighlightSpan &&
+        other.startOffset == startOffset &&
+        other.endOffset == endOffset &&
+        other.styleKey == styleKey;
+  }
+
+  @override
+  int get hashCode => Object.hash(startOffset, endOffset, styleKey);
+
+  @override
+  String toString() {
+    return 'SyntaxHighlightSpan($startOffset, $endOffset, $styleKey)';
+  }
+}
+
 class SyntaxHighlighter {
   /// Creates a syntax highlighter with the given theme.
   SyntaxHighlighter({ChromaTheme? theme}) : theme = theme ?? ChromaTheme.dark;
@@ -691,11 +744,104 @@ class SyntaxHighlighter {
   /// The color theme to use for highlighting.
   final ChromaTheme theme;
 
+  /// Highlights code and returns grapheme-aware decoration spans.
+  ///
+  /// Spans use theme-independent style keys that can be resolved later through
+  /// [decorationStyles].
+  List<SyntaxHighlightSpan> highlightSpans(String code, {String? language}) {
+    final nodes = _parseHighlightedNodes(code, language: language);
+    if (nodes == null || nodes.isEmpty) {
+      return const [];
+    }
+    return _nodesToSpans(nodes);
+  }
+
+  /// Returns decoration styles keyed for use with editable code overlays.
+  Map<String, Style> decorationStyles({
+    String prefix = codeSyntaxDecorationPrefix,
+  }) {
+    return Map<String, Style>.unmodifiable({
+      if (theme.comment != null)
+        codeSyntaxDecorationStyleKey('comment', prefix: prefix): theme.comment!,
+      if (theme.commentPreproc != null)
+        codeSyntaxDecorationStyleKey('comment.preproc', prefix: prefix):
+            theme.commentPreproc!,
+      if (theme.keyword != null)
+        codeSyntaxDecorationStyleKey('keyword', prefix: prefix): theme.keyword!,
+      if (theme.keywordType != null)
+        codeSyntaxDecorationStyleKey('keyword.type', prefix: prefix):
+            theme.keywordType!,
+      if (theme.literal != null)
+        codeSyntaxDecorationStyleKey('literal', prefix: prefix): theme.literal!,
+      if (theme.literalNumber != null)
+        codeSyntaxDecorationStyleKey('literal.number', prefix: prefix):
+            theme.literalNumber!,
+      if (theme.literalString != null)
+        codeSyntaxDecorationStyleKey('literal.string', prefix: prefix):
+            theme.literalString!,
+      if (theme.name != null)
+        codeSyntaxDecorationStyleKey('name', prefix: prefix): theme.name!,
+      if (theme.nameAttribute != null)
+        codeSyntaxDecorationStyleKey('name.attribute', prefix: prefix):
+            theme.nameAttribute!,
+      if (theme.nameBuiltin != null)
+        codeSyntaxDecorationStyleKey('name.builtin', prefix: prefix):
+            theme.nameBuiltin!,
+      if (theme.nameClass != null)
+        codeSyntaxDecorationStyleKey('name.class', prefix: prefix):
+            theme.nameClass!,
+      if (theme.nameConstant != null)
+        codeSyntaxDecorationStyleKey('name.constant', prefix: prefix):
+            theme.nameConstant!,
+      if (theme.nameFunction != null)
+        codeSyntaxDecorationStyleKey('name.function', prefix: prefix):
+            theme.nameFunction!,
+      if (theme.nameTag != null)
+        codeSyntaxDecorationStyleKey('name.tag', prefix: prefix):
+            theme.nameTag!,
+      if (theme.operator != null)
+        codeSyntaxDecorationStyleKey('operator', prefix: prefix):
+            theme.operator!,
+      if (theme.punctuation != null)
+        codeSyntaxDecorationStyleKey('punctuation', prefix: prefix):
+            theme.punctuation!,
+      if (theme.genericDeleted != null)
+        codeSyntaxDecorationStyleKey('generic.deleted', prefix: prefix):
+            theme.genericDeleted!,
+      if (theme.genericEmph != null)
+        codeSyntaxDecorationStyleKey('generic.emphasis', prefix: prefix):
+            theme.genericEmph!,
+      if (theme.genericInserted != null)
+        codeSyntaxDecorationStyleKey('generic.inserted', prefix: prefix):
+            theme.genericInserted!,
+      if (theme.genericStrong != null)
+        codeSyntaxDecorationStyleKey('generic.strong', prefix: prefix):
+            theme.genericStrong!,
+      if (theme.genericSubheading != null)
+        codeSyntaxDecorationStyleKey('generic.subheading', prefix: prefix):
+            theme.genericSubheading!,
+    });
+  }
+
   /// Highlights code and returns ANSI-styled output.
   ///
   /// If [language] is not specified or not recognized, attempts auto-detection.
   /// Falls back to plain text styling if highlighting fails.
   String highlightCode(String code, {String? language}) {
+    final nodes = _parseHighlightedNodes(code, language: language);
+    if (nodes != null && nodes.isNotEmpty) {
+      return _nodesToAnsi(nodes);
+    }
+
+    // Default: return with text style
+    final textStyle = theme.text;
+    if (textStyle != null) {
+      return textStyle.inline(true).render(code);
+    }
+    return code;
+  }
+
+  List<Node>? _parseHighlightedNodes(String code, {String? language}) {
     // Normalize the language name
     final lang = _normalizeLanguage(language);
 
@@ -704,7 +850,7 @@ class SyntaxHighlighter {
       try {
         final result = highlight.parse(code, language: lang);
         if (result.nodes != null && result.nodes!.isNotEmpty) {
-          return _nodesToAnsi(result.nodes!);
+          return result.nodes!;
         }
       } catch (e) {
         // Language not recognized, fall through to auto-detection
@@ -718,18 +864,13 @@ class SyntaxHighlighter {
           result.nodes!.isNotEmpty &&
           result.language != null &&
           result.language != 'plaintext') {
-        return _nodesToAnsi(result.nodes!);
+        return result.nodes!;
       }
     } catch (e) {
       // Auto-detection failed
     }
 
-    // Default: return with text style
-    final textStyle = theme.text;
-    if (textStyle != null) {
-      return textStyle.inline(true).render(code);
-    }
-    return code;
+    return null;
   }
 
   /// Normalizes language name to match highlight.dart's expectations.
@@ -767,6 +908,63 @@ class SyntaxHighlighter {
     return buffer.toString();
   }
 
+  List<SyntaxHighlightSpan> _nodesToSpans(List<Node> nodes) {
+    final spans = <SyntaxHighlightSpan>[];
+    var offset = 0;
+    for (final node in nodes) {
+      offset = _collectNodeSpans(node, spans, offset: offset);
+    }
+    return List<SyntaxHighlightSpan>.unmodifiable(spans);
+  }
+
+  int _collectNodeSpans(
+    Node node,
+    List<SyntaxHighlightSpan> spans, {
+    required int offset,
+    String? parentClass,
+  }) {
+    final effectiveClass = node.className ?? parentClass;
+
+    if (node.value != null) {
+      final value = node.value!;
+      final length = uni.graphemes(value).length;
+      final styleKey = _getDecorationStyleKeyForClass(effectiveClass);
+      if (styleKey != null && length > 0) {
+        if (spans.isNotEmpty &&
+            spans.last.styleKey == styleKey &&
+            spans.last.endOffset == offset) {
+          spans[spans.length - 1] = spans.last.copyWith(
+            endOffset: offset + length,
+          );
+        } else {
+          spans.add(
+            SyntaxHighlightSpan(
+              startOffset: offset,
+              endOffset: offset + length,
+              styleKey: styleKey,
+            ),
+          );
+        }
+      }
+      return offset + length;
+    }
+
+    if (node.children != null) {
+      var currentOffset = offset;
+      for (final child in node.children!) {
+        currentOffset = _collectNodeSpans(
+          child,
+          spans,
+          offset: currentOffset,
+          parentClass: effectiveClass,
+        );
+      }
+      return currentOffset;
+    }
+
+    return offset;
+  }
+
   /// Renders a single node to the buffer.
   ///
   /// [parentClass] is passed down from parent nodes so that children
@@ -802,6 +1000,21 @@ class SyntaxHighlighter {
       if (style != null) return style;
     }
     return theme.text;
+  }
+
+  String? _getDecorationStyleKeyForClass(String? className) {
+    if (className == null) {
+      return null;
+    }
+
+    final classes = className.split(' ');
+    for (final cls in classes) {
+      final styleKey = _getDecorationStyleKeyForSingleClass(cls);
+      if (styleKey != null) {
+        return styleKey;
+      }
+    }
+    return null;
   }
 
   /// Maps a single class name to a style.
@@ -871,6 +1084,76 @@ class SyntaxHighlighter {
       // Links/references
       'hljs-link' || 'link' => theme.literalString,
 
+      _ => null,
+    };
+  }
+
+  String? _getDecorationStyleKeyForSingleClass(String className) {
+    return switch (className) {
+      'hljs-comment' ||
+      'comment' ||
+      'hljs-doctag' => codeSyntaxDecorationStyleKey('comment'),
+      'hljs-meta' || 'meta' => codeSyntaxDecorationStyleKey('comment.preproc'),
+      'hljs-keyword' ||
+      'keyword' ||
+      'hljs-selector-tag' => codeSyntaxDecorationStyleKey('keyword'),
+      'hljs-type' || 'type' => codeSyntaxDecorationStyleKey('keyword.type'),
+      'hljs-string' ||
+      'string' ||
+      'hljs-regexp' ||
+      'hljs-link' ||
+      'link' => codeSyntaxDecorationStyleKey('literal.string'),
+      'hljs-number' ||
+      'number' => codeSyntaxDecorationStyleKey('literal.number'),
+      'hljs-literal' || 'literal' => codeSyntaxDecorationStyleKey('literal'),
+      'hljs-title' ||
+      'title' ||
+      'hljs-title.function_' ||
+      'title function_' ||
+      'hljs-function' ||
+      'function' => codeSyntaxDecorationStyleKey('name.function'),
+      'hljs-title.class_' ||
+      'title class_' ||
+      'hljs-class' ||
+      'class' => codeSyntaxDecorationStyleKey('name.class'),
+      'hljs-params' ||
+      'params' ||
+      'hljs-variable' ||
+      'variable' ||
+      'hljs-template-variable' ||
+      'hljs-subst' => codeSyntaxDecorationStyleKey('name'),
+      'hljs-attr' ||
+      'attr' ||
+      'hljs-attribute' ||
+      'attribute' => codeSyntaxDecorationStyleKey('name.attribute'),
+      'hljs-name' ||
+      'name' ||
+      'hljs-tag' ||
+      'tag' ||
+      'hljs-template-tag' => codeSyntaxDecorationStyleKey('name.tag'),
+      'hljs-built_in' ||
+      'built_in' ||
+      'hljs-builtin-name' => codeSyntaxDecorationStyleKey('name.builtin'),
+      'hljs-symbol' ||
+      'symbol' ||
+      'hljs-selector-id' => codeSyntaxDecorationStyleKey('name.constant'),
+      'hljs-selector-class' => codeSyntaxDecorationStyleKey('name.class'),
+      'hljs-selector-attr' => codeSyntaxDecorationStyleKey('name.attribute'),
+      'hljs-selector-pseudo' => codeSyntaxDecorationStyleKey('name.builtin'),
+      'hljs-operator' || 'operator' => codeSyntaxDecorationStyleKey('operator'),
+      'hljs-punctuation' ||
+      'punctuation' => codeSyntaxDecorationStyleKey('punctuation'),
+      'hljs-addition' ||
+      'addition' => codeSyntaxDecorationStyleKey('generic.inserted'),
+      'hljs-deletion' ||
+      'deletion' => codeSyntaxDecorationStyleKey('generic.deleted'),
+      'hljs-emphasis' ||
+      'emphasis' => codeSyntaxDecorationStyleKey('generic.emphasis'),
+      'hljs-strong' ||
+      'strong' => codeSyntaxDecorationStyleKey('generic.strong'),
+      'hljs-section' ||
+      'section' => codeSyntaxDecorationStyleKey('generic.subheading'),
+      'hljs-quote' || 'quote' => codeSyntaxDecorationStyleKey('comment'),
       _ => null,
     };
   }

@@ -1195,6 +1195,24 @@ class TextInputModel extends ViewComponent {
   TextInputStyleState activeStyle() =>
       _focused ? styles.focused : styles.blurred;
 
+  Style _textCellStyle(
+    TextInputStyleState styles, {
+    Style? textStyle,
+    required bool isSelected,
+    bool useCursorStyle = false,
+  }) {
+    final cellStyle = (textStyle ?? styles.text).copy()..inline(true);
+    if (isSelected) {
+      cellStyle.inherit(styles.selection.copy()..inline(true));
+    }
+    if (useCursorStyle && cursor.visible && cursor.mode != CursorMode.hide) {
+      cellStyle
+        ..inherit(cursor.style.copy()..inline(true))
+        ..inverse();
+    }
+    return cellStyle;
+  }
+
   /// Returns a [Cursor] for rendering a real cursor in a TUI program.
   /// This requires that [useVirtualCursor] is set to false.
   Cursor? get terminalCursor {
@@ -2557,9 +2575,6 @@ class TextInputModel extends ViewComponent {
     }
 
     final styles = activeStyle();
-    final textInlineStyle = styles.text.inline(true);
-    String styleText(String s) => textInlineStyle.render(s);
-
     final visibleValue = _value.sublist(_offset, _offsetRight);
     final pos = math.max(0, _pos - _offset);
 
@@ -2579,7 +2594,6 @@ class TextInputModel extends ViewComponent {
     }
 
     final v = StringBuffer();
-    final selectionStyle = styles.selection;
     final normalEcho = echoMode == EchoMode.normal;
     final hasSelection = selStart != null && selEnd != null;
     final visibleSelStart = selStart ?? -1;
@@ -2595,33 +2609,40 @@ class TextInputModel extends ViewComponent {
       final isSelected =
           hasSelection && i >= visibleSelStart && i < visibleSelEnd;
 
-      if (i == pos) {
-        cursor = cursor.setChar(char);
-        var cv = cursor.view();
-        if (isSelected) {
-          cv = selectionStyle.render(cv);
-        }
-        v.write(cv);
-      } else {
-        final rendered = styleText(char);
-        v.write(isSelected ? selectionStyle.render(rendered) : rendered);
-      }
+      final cellStyle = _textCellStyle(
+        styles,
+        isSelected: isSelected,
+        useCursorStyle: i == pos,
+      );
+      v.write(cellStyle.render(char));
     }
 
     if (pos >= visibleValue.length) {
       if (_focused && _canAcceptSuggestion()) {
         final suggestion = _matchedSuggestions[_currentSuggestionIndex];
         if (_value.length < suggestion.length) {
-          cursor = cursor.setChar(_echoTransform(suggestion[_value.length]));
-          v.write(cursor.view());
+          final cellStyle = _textCellStyle(
+            styles,
+            isSelected: false,
+            useCursorStyle: true,
+          );
+          v.write(cellStyle.render(_echoTransform(suggestion[_value.length])));
           v.write(_completionView(1));
         } else {
-          cursor = cursor.setChar(' ');
-          v.write(cursor.view());
+          final cellStyle = _textCellStyle(
+            styles,
+            isSelected: false,
+            useCursorStyle: true,
+          );
+          v.write(cellStyle.render(' '));
         }
       } else {
-        cursor = cursor.setChar(' ');
-        v.write(cursor.view());
+        final cellStyle = _textCellStyle(
+          styles,
+          isSelected: false,
+          useCursorStyle: true,
+        );
+        v.write(cellStyle.render(' '));
       }
     }
 
@@ -2776,9 +2797,6 @@ class TextInputModel extends ViewComponent {
   /// and joins them with newlines.
   Object _multilineView() {
     final styles = activeStyle();
-    final textInlineStyle = styles.text.inline(true);
-    String styleText(String s) => textInlineStyle.render(s);
-    final selectionStyle = styles.selection;
     final normalEcho = echoMode == EchoMode.normal;
     final lines = _visibleTextViewLines();
     final promptWidth = stringWidth(prompt);
@@ -2819,25 +2837,24 @@ class TextInputModel extends ViewComponent {
             flatIndex < absSelEnd!;
         final isCursorPos = line.hasCursor && (_pos - line.charOffset) == i;
 
-        if (isCursorPos) {
-          cursor = cursor.setChar(char);
-          var cv = cursor.view();
-          if (isSelected) {
-            cv = selectionStyle.render(cv);
-          }
-          rowStr.write(cv);
-        } else {
-          final rendered = styleText(char);
-          rowStr.write(isSelected ? selectionStyle.render(rendered) : rendered);
-        }
+        final cellStyle = _textCellStyle(
+          styles,
+          isSelected: isSelected,
+          useCursorStyle: isCursorPos,
+        );
+        rowStr.write(cellStyle.render(char));
       }
 
       // If cursor is at end of this line (past last char).
       final cursorAtLineEnd =
           line.hasCursor && (_pos - line.charOffset) == graphemes.length;
       if (cursorAtLineEnd) {
-        cursor = cursor.setChar(' ');
-        rowStr.write(cursor.view());
+        final cellStyle = _textCellStyle(
+          styles,
+          isSelected: false,
+          useCursorStyle: true,
+        );
+        rowStr.write(cellStyle.render(' '));
       }
 
       // Pad line to width.

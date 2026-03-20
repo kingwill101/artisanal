@@ -55,6 +55,355 @@ void main() {
     });
   });
 
+  group('TextHighlighting', () {
+    test('finds grapheme-aware query highlights by offset', () {
+      final document = TextDocument(text: 'Cafe\u0301\ncafe\u0301\ntea');
+
+      final ranges = findTextQueryHighlights(
+        document: document,
+        query: 'CAFE\u0301',
+      );
+
+      expect(ranges, const [
+        TextHighlightRange(startOffset: 0, endOffset: 4),
+        TextHighlightRange(startOffset: 5, endOffset: 9),
+      ]);
+    });
+
+    test('maps query matches onto reusable search decorations', () {
+      final decorations = textSearchDecorations(const [
+        TextHighlightRange(startOffset: 2, endOffset: 5),
+        TextHighlightRange(startOffset: 8, endOffset: 11),
+      ], activeIndex: 1);
+
+      expect(decorations, const [
+        TextDecorationRange(
+          startOffset: 2,
+          endOffset: 5,
+          styleKey: textSearchMatchDecorationKey,
+        ),
+        TextDecorationRange(
+          startOffset: 8,
+          endOffset: 11,
+          styleKey: textSearchActiveMatchDecorationKey,
+        ),
+      ]);
+    });
+
+    test('maps diagnostic severities onto reusable diagnostic decorations', () {
+      final decorations = textDiagnosticDecorations(const [
+        TextDiagnosticRange(
+          startOffset: 1,
+          endOffset: 4,
+          severity: TextDiagnosticSeverity.error,
+        ),
+        TextDiagnosticRange(
+          startOffset: 6,
+          endOffset: 9,
+          severity: TextDiagnosticSeverity.warning,
+        ),
+        TextDiagnosticRange(
+          startOffset: 12,
+          endOffset: 15,
+          severity: TextDiagnosticSeverity.info,
+        ),
+        TextDiagnosticRange(
+          startOffset: 18,
+          endOffset: 21,
+          severity: TextDiagnosticSeverity.hint,
+        ),
+      ]);
+
+      expect(decorations, const [
+        TextDecorationRange(
+          startOffset: 1,
+          endOffset: 4,
+          styleKey: textDiagnosticErrorDecorationKey,
+        ),
+        TextDecorationRange(
+          startOffset: 6,
+          endOffset: 9,
+          styleKey: textDiagnosticWarningDecorationKey,
+        ),
+        TextDecorationRange(
+          startOffset: 12,
+          endOffset: 15,
+          styleKey: textDiagnosticInfoDecorationKey,
+        ),
+        TextDecorationRange(
+          startOffset: 18,
+          endOffset: 21,
+          styleKey: textDiagnosticHintDecorationKey,
+        ),
+      ]);
+    });
+
+    test(
+      'maps diagnostics onto whole-line decorations across spanned lines',
+      () {
+        final decorations = textDiagnosticLineDecorations(
+          text: 'aa\nbb\ncc',
+          diagnostics: const [
+            TextDiagnosticRange(
+              startOffset: 1,
+              endOffset: 5,
+              severity: TextDiagnosticSeverity.warning,
+            ),
+          ],
+        );
+
+        expect(decorations, const [
+          TextLineDecoration(
+            lineIndex: 0,
+            styleKey: textDiagnosticWarningLineDecorationKey,
+            lineNumberMarker: '~',
+            lineNumberStyleKey: textDiagnosticWarningLineNumberDecorationKey,
+          ),
+          TextLineDecoration(
+            lineIndex: 1,
+            styleKey: textDiagnosticWarningLineDecorationKey,
+            lineNumberMarker: '~',
+            lineNumberStyleKey: textDiagnosticWarningLineNumberDecorationKey,
+          ),
+        ]);
+      },
+    );
+
+    test('prefers the highest-severity line diagnostic style per row', () {
+      final decorations = textDiagnosticLineDecorations(
+        text: 'aa\nbb',
+        diagnostics: const [
+          TextDiagnosticRange(
+            startOffset: 0,
+            endOffset: 5,
+            severity: TextDiagnosticSeverity.warning,
+          ),
+          TextDiagnosticRange(
+            startOffset: 3,
+            endOffset: 5,
+            severity: TextDiagnosticSeverity.error,
+          ),
+        ],
+      );
+
+      expect(decorations, const [
+        TextLineDecoration(
+          lineIndex: 0,
+          styleKey: textDiagnosticWarningLineDecorationKey,
+          lineNumberMarker: '~',
+          lineNumberStyleKey: textDiagnosticWarningLineNumberDecorationKey,
+        ),
+        TextLineDecoration(
+          lineIndex: 1,
+          styleKey: textDiagnosticErrorLineDecorationKey,
+          lineNumberMarker: '!',
+          lineNumberStyleKey: textDiagnosticErrorLineNumberDecorationKey,
+        ),
+      ]);
+    });
+
+    test('navigates diagnostics relative to the current cursor offset', () {
+      final diagnostics = normalizeTextDiagnostics(const [
+        TextDiagnosticRange(
+          startOffset: 8,
+          endOffset: 12,
+          severity: TextDiagnosticSeverity.warning,
+        ),
+        TextDiagnosticRange(
+          startOffset: 2,
+          endOffset: 6,
+          severity: TextDiagnosticSeverity.error,
+        ),
+      ]);
+
+      expect(
+        textDiagnosticNavigationIndex(
+          diagnostics: diagnostics,
+          cursorOffset: 0,
+        ),
+        0,
+      );
+      expect(
+        textDiagnosticNavigationIndex(
+          diagnostics: diagnostics,
+          cursorOffset: 3,
+        ),
+        1,
+      );
+      expect(
+        textDiagnosticNavigationIndex(
+          diagnostics: diagnostics,
+          cursorOffset: 20,
+          wrap: false,
+        ),
+        isNull,
+      );
+      expect(
+        textDiagnosticNavigationIndex(
+          diagnostics: diagnostics,
+          cursorOffset: 20,
+          forward: false,
+        ),
+        1,
+      );
+      expect(
+        textDiagnosticNavigationIndex(
+          diagnostics: diagnostics,
+          cursorOffset: 9,
+          forward: false,
+        ),
+        0,
+      );
+    });
+
+    test('preserves diagnostic metadata while normalizing and querying', () {
+      final diagnostics = normalizeTextDiagnostics(const [
+        TextDiagnosticRange(
+          startOffset: 7,
+          endOffset: 3,
+          severity: TextDiagnosticSeverity.warning,
+          code: 'TODO001',
+          message: 'Address TODO markers before shipping this sample.',
+          source: 'playground',
+        ),
+      ]);
+
+      expect(diagnostics, const [
+        TextDiagnosticRange(
+          startOffset: 3,
+          endOffset: 7,
+          severity: TextDiagnosticSeverity.warning,
+          code: 'TODO001',
+          message: 'Address TODO markers before shipping this sample.',
+          source: 'playground',
+        ),
+      ]);
+      expect(
+        textDiagnosticAtOffset(diagnostics: diagnostics, offset: 4)?.message,
+        'Address TODO markers before shipping this sample.',
+      );
+      expect(
+        textDiagnosticContainingIndex(diagnostics: diagnostics, offset: 4),
+        0,
+      );
+    });
+
+    test('converts line and column diagnostics into normalized offsets', () {
+      final document = TextDocument(text: 'aa\nbb\ncc');
+      final diagnostics = textDiagnosticsFromPositions(
+        document: document,
+        diagnostics: const [
+          TextPositionDiagnosticRange(
+            startLine: 2,
+            startColumn: 1,
+            endLine: 1,
+            endColumn: 1,
+            severity: TextDiagnosticSeverity.error,
+            code: 'E1',
+            message: 'Cross-line diagnostic',
+            source: 'lsp',
+          ),
+        ],
+      );
+
+      expect(diagnostics, const [
+        TextDiagnosticRange(
+          startOffset: 4,
+          endOffset: 7,
+          severity: TextDiagnosticSeverity.error,
+          code: 'E1',
+          message: 'Cross-line diagnostic',
+          source: 'lsp',
+        ),
+      ]);
+    });
+
+    test('resolves the displayed start position for a diagnostic', () {
+      expect(
+        textDiagnosticStartPosition(
+          text: 'zero\nTODO here',
+          diagnostic: const TextDiagnosticRange(
+            startOffset: 5,
+            endOffset: 9,
+            severity: TextDiagnosticSeverity.warning,
+          ),
+        ),
+        const TextPosition(line: 1, column: 0),
+      );
+    });
+
+    test('formats a shared diagnostic summary label', () {
+      expect(
+        textDiagnosticSummaryLabel(
+          text: 'zero\nTODO here',
+          diagnostic: const TextDiagnosticRange(
+            startOffset: 5,
+            endOffset: 9,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+        ),
+        'warning [playground/TODO001] L2:C1 '
+        'Address TODO markers before shipping this sample.',
+      );
+    });
+
+    test('builds positional diagnostics from shared pattern rules', () {
+      expect(
+        textPatternDiagnostics(
+          text: 'TODO todoer\nnote TODO\nhint',
+          rules: const [
+            TextPatternDiagnosticRule(
+              pattern: 'TODO',
+              severity: TextDiagnosticSeverity.warning,
+              code: 'TODO001',
+              source: 'demo',
+              wholeWord: true,
+            ),
+            TextPatternDiagnosticRule(
+              pattern: 'NOTE',
+              severity: TextDiagnosticSeverity.info,
+              code: 'NOTE001',
+              source: 'demo',
+              wholeWord: true,
+            ),
+          ],
+        ),
+        const [
+          TextPositionDiagnosticRange(
+            startLine: 0,
+            startColumn: 0,
+            endLine: 0,
+            endColumn: 4,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            source: 'demo',
+          ),
+          TextPositionDiagnosticRange(
+            startLine: 1,
+            startColumn: 0,
+            endLine: 1,
+            endColumn: 4,
+            severity: TextDiagnosticSeverity.info,
+            code: 'NOTE001',
+            source: 'demo',
+          ),
+          TextPositionDiagnosticRange(
+            startLine: 1,
+            startColumn: 5,
+            endLine: 1,
+            endColumn: 9,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            source: 'demo',
+          ),
+        ],
+      );
+    });
+  });
+
   group('TextSelection', () {
     test('normalizes start and end positions', () {
       const selection = TextSelection(

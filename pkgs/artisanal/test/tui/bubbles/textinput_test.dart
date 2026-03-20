@@ -2,6 +2,7 @@ import 'package:artisanal/src/tui/bubbles/textinput.dart';
 import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:artisanal/src/tui/component.dart';
 import 'package:artisanal/src/terminal/ansi.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart'
     show Key, KeyMsg, KeyType, MouseAction, MouseButton, MouseMsg;
 import 'package:test/test.dart';
@@ -294,6 +295,46 @@ void main() {
         final view = input.view() as String;
         expect(Ansi.stripAnsi(view), contains('hello'));
       });
+
+      test(
+        'selected cursor grapheme does not leak raw ansi fragments in single-line view',
+        () {
+          final styles = TextInputStyles(
+            focused: TextInputStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+            ),
+            blurred: TextInputStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+            ),
+            cursor: TextInputCursorStyle(
+              color: const AnsiColor(6),
+              blink: false,
+            ),
+          );
+          final input = TextInputModel(
+            prompt: '',
+            useVirtualCursor: true,
+            styles: styles,
+          )..focus();
+          input.value = 'TODO';
+          input.selectionStart = 0;
+          input.selectionEnd = 4;
+          input.position = 0;
+
+          final stripped = Ansi.stripAnsi(input.view() as String);
+
+          expect(stripped, contains('TODO'));
+          expect(stripped, isNot(contains('[7m')));
+          expect(stripped, isNot(contains('[27m')));
+          expect(stripped, isNot(contains('[38;5;')));
+        },
+      );
     });
 
     group('Grapheme Editing', () {
@@ -759,6 +800,49 @@ void main() {
         final (lineEnd, _) = lineStart.update(const KeyMsg(Key(KeyType.end)));
         expect(lineEnd.position, 6);
       });
+
+      test(
+        'selected cursor grapheme does not leak raw ansi fragments in multiline view',
+        () {
+          final styles = TextInputStyles(
+            focused: TextInputStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+            ),
+            blurred: TextInputStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+            ),
+            cursor: TextInputCursorStyle(
+              color: const AnsiColor(6),
+              blink: false,
+            ),
+          );
+          final input = TextInputModel(
+            prompt: '',
+            multiline: true,
+            width: 8,
+            maxHeight: 2,
+            useVirtualCursor: true,
+            styles: styles,
+          )..focus();
+          input.value = 'TODO';
+          input.selectionStart = 0;
+          input.selectionEnd = 4;
+          input.position = 0;
+
+          final stripped = Ansi.stripAnsi(input.view() as String);
+
+          expect(stripped, contains('TODO'));
+          expect(stripped, isNot(contains('[7m')));
+          expect(stripped, isNot(contains('[27m')));
+          expect(stripped, isNot(contains('[38;5;')));
+        },
+      );
 
       test('clicking far past line end moves cursor to end', () {
         var input = TextInputModel(multiline: true, prompt: ' ');
