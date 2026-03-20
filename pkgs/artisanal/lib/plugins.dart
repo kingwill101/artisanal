@@ -26,16 +26,25 @@ export 'src/plugins/remote_surface_protocol.dart'
         RemotePluginSurfaceResize,
         RemotePluginSurfaceClose,
         RemotePluginFrame,
+        RemotePluginClipboardReadRequest,
+        RemotePluginClipboardWriteRequest,
         RemotePluginKeyInput,
         RemotePluginMouseInput,
         RemotePluginFocusInput,
         RemotePluginBlurInput,
+        RemotePluginClipboardReadResponse,
+        RemotePluginClipboardWriteResponse,
         RemotePluginProtocolSchemas,
         RemotePluginProtocolValidator,
         RemotePluginProtocolValidationException;
 export 'src/plugins/remote_surface_transport.dart'
     show RemotePluginJsonTransport;
 export 'src/plugins/remote_surface_channel.dart' show RemotePluginJsonChannel;
+export 'src/plugins/remote_surface_clipboard_service.dart'
+    show
+        RemotePluginClipboardReader,
+        RemotePluginClipboardWriter,
+        RemotePluginClipboardHostService;
 export 'src/plugins/remote_surface_controller.dart'
     show RemotePluginSurfaceController;
 export 'src/plugins/remote_surface_drawable.dart'

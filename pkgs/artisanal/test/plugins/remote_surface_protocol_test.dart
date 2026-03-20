@@ -58,6 +58,40 @@ void main() {
     );
   });
 
+  test('clipboard request and response messages round-trip and validate', () async {
+    const readRequest = plugins.RemotePluginClipboardReadRequest(
+      requestId: 'req-1',
+    );
+    const writeRequest = plugins.RemotePluginClipboardWriteRequest(
+      requestId: 'req-2',
+      text: '',
+    );
+    const readResponse = plugins.RemotePluginClipboardReadResponse(
+      requestId: 'req-1',
+      text: '',
+    );
+    const writeResponse = plugins.RemotePluginClipboardWriteResponse(
+      requestId: 'req-2',
+    );
+
+    final parsedReadRequest = plugins.RemotePluginMessage.fromJson(
+      readRequest.toJson(),
+    );
+    final parsedWriteRequest = plugins.RemotePluginMessage.fromJson(
+      writeRequest.toJson(),
+    );
+    final readErrors = await validator.validateMessage(readResponse);
+    final writeErrors = await validator.validateMessage(writeResponse);
+
+    expect(parsedReadRequest, isA<plugins.RemotePluginClipboardReadRequest>());
+    expect(
+      parsedWriteRequest,
+      isA<plugins.RemotePluginClipboardWriteRequest>(),
+    );
+    expect(readErrors, isEmpty);
+    expect(writeErrors, isEmpty);
+  });
+
   test('validator rejects unsupported message types', () async {
     final errors = await validator.validateJson(<String, Object?>{
       'protocol': plugins.remotePluginProtocolVersion,

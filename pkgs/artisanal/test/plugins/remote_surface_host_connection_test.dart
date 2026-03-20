@@ -39,4 +39,65 @@ void main() {
         .timeout(const Duration(seconds: 2));
     expect(echoed, isA<plugins.RemotePluginFocusInput>());
   });
+
+  test('host connection can answer clipboard requests', () async {
+    final scriptPath = p.join(
+      io.Directory.current.path,
+      'pkgs',
+      'artisanal',
+      'test',
+      'plugins',
+      'fixtures',
+      'clipboard_plugin.dart',
+    );
+
+    var clipboard = 'host clipboard';
+    final connection = await plugins.RemotePluginHostConnection.startProcess(
+      io.Platform.resolvedExecutable,
+      <String>[scriptPath],
+      hostHello: const plugins.RemotePluginHostHello(
+        hostName: 'artisanal',
+        hostVersion: '0.2.0',
+        capabilities: <String>['clipboard'],
+      ),
+      timeout: const Duration(seconds: 10),
+    );
+    addTearDown(() => connection.dispose(kill: true));
+
+    final clipboardService = connection.bindClipboardService(
+      readClipboard: (_) => clipboard,
+      writeClipboard: (_, text) {
+        clipboard = text;
+      },
+    );
+    addTearDown(clipboardService.dispose);
+
+    await connection.surfaceMessages
+        .where((message) => message is plugins.RemotePluginFrame)
+        .cast<plugins.RemotePluginFrame>()
+        .firstWhere((_) {
+          final surface = connection.surfaces['clipboard.panel'];
+          if (surface == null) {
+            return false;
+          }
+          final text = _surfaceText(surface);
+          return text.contains('read:host clipboard') &&
+              text.contains('write:ok');
+        })
+        .timeout(const Duration(seconds: 5));
+
+    expect(clipboard, 'plugin-copy');
+  });
+}
+
+String _surfaceText(plugins.RemotePluginSurfaceState surface) {
+  final lines = <String>[];
+  for (var row = 0; row < surface.height; row++) {
+    final buffer = StringBuffer();
+    for (var column = 0; column < surface.width; column++) {
+      buffer.write(surface.cellAt(column, row).symbol);
+    }
+    lines.add(buffer.toString().trimRight());
+  }
+  return lines.join('\n');
 }

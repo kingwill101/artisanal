@@ -14,10 +14,14 @@ enum RemotePluginMessageType {
   pluginSurfaceResize('plugin.surface.resize'),
   pluginSurfaceClose('plugin.surface.close'),
   pluginSurfaceFrame('plugin.surface.frame'),
+  pluginClipboardRead('plugin.clipboard.read'),
+  pluginClipboardWrite('plugin.clipboard.write'),
   hostInputKey('host.input.key'),
   hostInputMouse('host.input.mouse'),
   hostInputFocus('host.input.focus'),
-  hostInputBlur('host.input.blur');
+  hostInputBlur('host.input.blur'),
+  hostClipboardRead('host.clipboard.read'),
+  hostClipboardWrite('host.clipboard.write');
 
   const RemotePluginMessageType(this.wireName);
 
@@ -305,6 +309,10 @@ sealed class RemotePluginMessage {
         RemotePluginSurfaceClose.fromPayload(payload),
       RemotePluginMessageType.pluginSurfaceFrame =>
         RemotePluginFrame.fromPayload(payload),
+      RemotePluginMessageType.pluginClipboardRead =>
+        RemotePluginClipboardReadRequest.fromPayload(payload),
+      RemotePluginMessageType.pluginClipboardWrite =>
+        RemotePluginClipboardWriteRequest.fromPayload(payload),
       RemotePluginMessageType.hostInputKey => RemotePluginKeyInput.fromPayload(
         payload,
       ),
@@ -314,6 +322,10 @@ sealed class RemotePluginMessage {
         RemotePluginFocusInput.fromPayload(payload),
       RemotePluginMessageType.hostInputBlur =>
         RemotePluginBlurInput.fromPayload(payload),
+      RemotePluginMessageType.hostClipboardRead =>
+        RemotePluginClipboardReadResponse.fromPayload(payload),
+      RemotePluginMessageType.hostClipboardWrite =>
+        RemotePluginClipboardWriteResponse.fromPayload(payload),
     };
   }
 
@@ -600,6 +612,64 @@ final class RemotePluginKeyInput extends RemotePluginMessage {
   };
 }
 
+final class RemotePluginClipboardReadRequest extends RemotePluginMessage {
+  const RemotePluginClipboardReadRequest({
+    required this.requestId,
+    this.selection = 'c',
+  });
+
+  final String requestId;
+  final String selection;
+
+  factory RemotePluginClipboardReadRequest.fromPayload(JsonObject payload) {
+    return RemotePluginClipboardReadRequest(
+      requestId: _requireString(payload, 'requestId'),
+      selection: _readStringOrNull(payload, 'selection') ?? 'c',
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginClipboardRead;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (selection != 'c') 'selection': selection,
+  };
+}
+
+final class RemotePluginClipboardWriteRequest extends RemotePluginMessage {
+  const RemotePluginClipboardWriteRequest({
+    required this.requestId,
+    required this.text,
+    this.selection = 'c',
+  });
+
+  final String requestId;
+  final String text;
+  final String selection;
+
+  factory RemotePluginClipboardWriteRequest.fromPayload(JsonObject payload) {
+    return RemotePluginClipboardWriteRequest(
+      requestId: _requireString(payload, 'requestId'),
+      text: _requireString(payload, 'text', allowEmpty: true),
+      selection: _readStringOrNull(payload, 'selection') ?? 'c',
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.pluginClipboardWrite;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    'text': text,
+    if (selection != 'c') 'selection': selection,
+  };
+}
+
 final class RemotePluginMouseInput extends RemotePluginMessage {
   const RemotePluginMouseInput({
     required this.surfaceId,
@@ -691,6 +761,76 @@ final class RemotePluginBlurInput extends RemotePluginMessage {
 
   @override
   JsonObject get payloadJson => <String, Object?>{'surfaceId': surfaceId};
+}
+
+final class RemotePluginClipboardReadResponse extends RemotePluginMessage {
+  const RemotePluginClipboardReadResponse({
+    required this.requestId,
+    this.selection = 'c',
+    this.text,
+    this.error,
+  });
+
+  final String requestId;
+  final String selection;
+  final String? text;
+  final String? error;
+
+  factory RemotePluginClipboardReadResponse.fromPayload(JsonObject payload) {
+    return RemotePluginClipboardReadResponse(
+      requestId: _requireString(payload, 'requestId'),
+      selection: _readStringOrNull(payload, 'selection') ?? 'c',
+      text: _readStringOrNull(payload, 'text', allowEmpty: true),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.hostClipboardRead;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (selection != 'c') 'selection': selection,
+    if (text != null) 'text': text,
+    if (error != null) 'error': error,
+  };
+}
+
+final class RemotePluginClipboardWriteResponse extends RemotePluginMessage {
+  const RemotePluginClipboardWriteResponse({
+    required this.requestId,
+    this.selection = 'c',
+    this.accepted = true,
+    this.error,
+  });
+
+  final String requestId;
+  final String selection;
+  final bool accepted;
+  final String? error;
+
+  factory RemotePluginClipboardWriteResponse.fromPayload(JsonObject payload) {
+    return RemotePluginClipboardWriteResponse(
+      requestId: _requireString(payload, 'requestId'),
+      selection: _readStringOrNull(payload, 'selection') ?? 'c',
+      accepted: _readBool(payload, 'accepted', fallback: true),
+      error: _readStringOrNull(payload, 'error'),
+    );
+  }
+
+  @override
+  RemotePluginMessageType get messageType =>
+      RemotePluginMessageType.hostClipboardWrite;
+
+  @override
+  JsonObject get payloadJson => <String, Object?>{
+    'requestId': requestId,
+    if (selection != 'c') 'selection': selection,
+    if (!accepted) 'accepted': accepted,
+    if (error != null) 'error': error,
+  };
 }
 
 final class RemotePluginProtocolSchemas {
@@ -815,6 +955,25 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema pluginClipboardReadPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'selection': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
+  static final Schema pluginClipboardWritePayload = S.object(
+    required: const ['requestId', 'text'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'text': S.string(),
+      'selection': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Schema hostInputKeyPayload = S.object(
     required: const ['surfaceId', 'key'],
     properties: <String, Schema>{
@@ -861,6 +1020,28 @@ final class RemotePluginProtocolSchemas {
     additionalProperties: false,
   );
 
+  static final Schema hostClipboardReadPayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'selection': S.string(minLength: 1),
+      'text': S.string(),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
+  static final Schema hostClipboardWritePayload = S.object(
+    required: const ['requestId'],
+    properties: <String, Schema>{
+      'requestId': S.string(minLength: 1),
+      'selection': S.string(minLength: 1),
+      'accepted': S.boolean(),
+      'error': S.string(minLength: 1),
+    },
+    additionalProperties: false,
+  );
+
   static final Map<RemotePluginMessageType, Schema> byType =
       <RemotePluginMessageType, Schema>{
         RemotePluginMessageType.hostHello: _typedEnvelope(
@@ -887,6 +1068,14 @@ final class RemotePluginProtocolSchemas {
           RemotePluginMessageType.pluginSurfaceFrame,
           pluginSurfaceFramePayload,
         ),
+        RemotePluginMessageType.pluginClipboardRead: _typedEnvelope(
+          RemotePluginMessageType.pluginClipboardRead,
+          pluginClipboardReadPayload,
+        ),
+        RemotePluginMessageType.pluginClipboardWrite: _typedEnvelope(
+          RemotePluginMessageType.pluginClipboardWrite,
+          pluginClipboardWritePayload,
+        ),
         RemotePluginMessageType.hostInputKey: _typedEnvelope(
           RemotePluginMessageType.hostInputKey,
           hostInputKeyPayload,
@@ -902,6 +1091,14 @@ final class RemotePluginProtocolSchemas {
         RemotePluginMessageType.hostInputBlur: _typedEnvelope(
           RemotePluginMessageType.hostInputBlur,
           hostInputBlurPayload,
+        ),
+        RemotePluginMessageType.hostClipboardRead: _typedEnvelope(
+          RemotePluginMessageType.hostClipboardRead,
+          hostClipboardReadPayload,
+        ),
+        RemotePluginMessageType.hostClipboardWrite: _typedEnvelope(
+          RemotePluginMessageType.hostClipboardWrite,
+          hostClipboardWritePayload,
         ),
       };
 
@@ -997,17 +1194,23 @@ JsonObject _requireObject(JsonObject json, String key) {
   throw FormatException('Expected "$key" to be a JSON object');
 }
 
-String _requireString(JsonObject json, String key) {
+String _requireString(JsonObject json, String key, {bool allowEmpty = false}) {
   final value = json[key];
-  if (value is String && value.isNotEmpty) {
+  if (value is String && (allowEmpty || value.isNotEmpty)) {
     return value;
   }
-  throw FormatException('Expected "$key" to be a non-empty string');
+  throw FormatException(
+    'Expected "$key" to be ${allowEmpty ? 'a string' : 'a non-empty string'}',
+  );
 }
 
-String? _readStringOrNull(JsonObject json, String key) {
+String? _readStringOrNull(
+  JsonObject json,
+  String key, {
+  bool allowEmpty = false,
+}) {
   final value = json[key];
-  return value is String && value.isNotEmpty ? value : null;
+  return value is String && (allowEmpty || value.isNotEmpty) ? value : null;
 }
 
 int _requireInt(JsonObject json, String key) {

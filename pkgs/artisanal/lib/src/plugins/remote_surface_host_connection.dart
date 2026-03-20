@@ -1,5 +1,6 @@
 import 'dart:io' as io;
 
+import 'remote_surface_clipboard_service.dart';
 import 'remote_surface_controller.dart';
 import 'remote_surface_process.dart';
 import 'remote_surface_protocol.dart';
@@ -70,6 +71,18 @@ final class RemotePluginHostConnection {
 
   /// Sends one host message to the plugin.
   Future<void> send(RemotePluginMessage message) => session.send(message);
+
+  /// Binds a clipboard request/response service to this plugin connection.
+  RemotePluginClipboardHostService bindClipboardService({
+    RemotePluginClipboardReader? readClipboard,
+    RemotePluginClipboardWriter? writeClipboard,
+  }) {
+    return RemotePluginClipboardHostService.bind(
+      this,
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+    );
+  }
 
   /// Disposes controller, session, and process resources.
   Future<void> dispose({
