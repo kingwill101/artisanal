@@ -130,6 +130,17 @@ Future<void> main() async {
 }
 ```
 
+`TextAreaModel` and `TextInputModel` now share the same mouse-selection
+semantics used by the widget editors:
+
+- single click places the cursor
+- double click selects the current word
+- triple click selects the current logical line
+
+Under the hood, editor-core text navigation uses `TextDocument`, which now
+caches line-start offsets so repeated offset-to-position and
+position-to-offset mapping stays cheap even as the buffer changes.
+
 ### Password Prompts
 
 ```dart

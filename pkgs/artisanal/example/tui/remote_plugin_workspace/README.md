@@ -6,10 +6,11 @@ workspace.
 
 The host discovers plugins from the `plugins/` directory by loading each
 `*.plugin.json` manifest, validating it, and launching it through
-`RemotePluginHostConnection.startManifest(...)`.
+`RemotePluginWorkspace.startManifestDirectory(...)`.
 
 The host passes one `RemotePluginGenericServiceCatalog` into
-`RemotePluginHostConnection.startProcess(..., genericServices: ...)`, which
+`RemotePluginWorkspace.startManifestDirectory(...)`, which reuses that shared
+catalog across all plugin connections. The bundled host startup path
 automatically advertises the shared `services` capability, exposes the
 catalog's descriptors in `host.hello`, and binds the shared
 `plugin.service.request` / `host.service.response` lane for clipboard, URL,

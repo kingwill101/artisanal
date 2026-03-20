@@ -2,15 +2,26 @@ part of 'selection_widgets.dart';
 
 /// A render object that paints text with optional selection highlighting.
 class RenderSelectableText extends RenderBox {
-  RenderSelectableText({required this.text, this.controller});
+  RenderSelectableText({
+    required this.text,
+    required this.selectionHighlightStyle,
+    this.selectionHighlightRangesByLine,
+    this.selectionStart,
+    this.selectionEnd,
+  });
 
   String text;
-  SelectionController? controller;
+  Style selectionHighlightStyle;
+  List<List<StyleRange>>? selectionHighlightRangesByLine;
+  SelectionPoint? selectionStart;
+  SelectionPoint? selectionEnd;
 
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    final width = Layout.getWidth(text).toDouble();
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : Layout.getWidth(text).toDouble();
     final height = Layout.getHeight(text).toDouble();
     size = constraints.constrain(Size(width, height));
   }
@@ -19,18 +30,45 @@ class RenderSelectableText extends RenderBox {
   String paint() {
     final maxW = size.width.toInt();
 
-    // Truncate lines to constrained width.
     var lines = text.split('\n');
-    lines = lines.map((l) {
-      final w = Style.visibleLength(l);
-      if (w <= maxW) return l;
-      return Layout.truncate(l, maxW, ellipsis: '');
+    lines = lines.map((line) {
+      final width = Style.visibleLength(line);
+      if (width <= maxW) return line;
+      return Layout.truncate(line, maxW, ellipsis: '');
     }).toList();
 
-    // Apply selection highlighting if controller has active selection.
-    final ctrl = controller;
-    if (ctrl != null && ctrl.hasSelection) {
-      lines = _applySelectionHighlighting(lines, 0, ctrl);
+    final start = selectionStart;
+    final end = selectionEnd;
+    if (start != null && end != null) {
+      final customRanges = selectionHighlightRangesByLine;
+      lines = customRanges == null
+          ? applySelectionHighlighting(
+              lines,
+              offset: 0,
+              selectionStart: start,
+              selectionEnd: end,
+              highlightStyle: selectionHighlightStyle,
+            )
+          : applySelectionHighlightingWithRanges(
+              lines,
+              offset: 0,
+              selectionStart: start,
+              selectionEnd: end,
+              highlightStyle: selectionHighlightStyle,
+              lineHighlightRanges: [
+                for (var i = 0; i < lines.length; i++)
+                  i < customRanges.length
+                      ? [
+                          for (final range in customRanges[i])
+                            StyleRange(
+                              range.start.clamp(0, maxW),
+                              range.end.clamp(0, maxW),
+                              range.style,
+                            ),
+                        ]
+                      : const <StyleRange>[],
+              ],
+            );
     }
 
     return lines.join('\n');
@@ -41,19 +79,16 @@ class RenderSelectableText extends RenderBox {
 ///
 /// This is a drop-in replacement for [Text] with the same parameters plus
 /// selection support. When selection is active, highlighted text is rendered
-/// with a white-on-black style and Ctrl+C copies to clipboard.
+/// with the current theme's highlight colors and Ctrl+C copies to clipboard.
 ///
 /// Can be used standalone or inside a [SelectionArea] for cross-widget
 /// selection.
-///
-/// ```dart
-/// SelectableText('Click and drag to select me')
-/// ```
-class SelectableText extends StatefulWidget {
+class SelectableText extends StatelessWidget {
   SelectableText(
     this.data, {
     super.key,
     this.style,
+    this.selectionHighlightStyle,
     this.textAlign = TextAlign.left,
     this.softWrap = true,
     this.overflow = TextOverflow.clip,
@@ -61,130 +96,241 @@ class SelectableText extends StatefulWidget {
     this.controller,
   });
 
-  /// The text to display.
   final String data;
-
-  /// Style applied to the text.
   final Style? style;
-
-  /// How the text should be aligned horizontally.
+  final Style? selectionHighlightStyle;
   final TextAlign textAlign;
-
-  /// Whether the text should wrap at soft line breaks.
   final bool softWrap;
-
-  /// How visual overflow should be handled.
   final TextOverflow overflow;
-
-  /// Maximum width in columns for text truncation.
   final int? maxWidth;
-
-  /// Optional external [SelectionController].
-  ///
-  /// If null, a private controller is created. If this widget is inside a
-  /// [SelectionArea], the area's controller is used instead.
   final SelectionController? controller;
 
   @override
-  State createState() => _SelectableTextState();
+  Widget build(BuildContext context) {
+    return _SelectableRenderedText(
+      text: _renderPlainText(
+        data,
+        style: style,
+        textAlign: textAlign,
+        softWrap: softWrap,
+        overflow: overflow,
+        maxWidth: maxWidth,
+      ),
+      controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
+  }
 }
 
-class _SelectableTextState extends State<SelectableText> {
+class _SelectableRenderedText extends StatefulWidget {
+  _SelectableRenderedText({
+    required this.text,
+    this.selectionHighlightRangesByLine,
+    this.controller,
+    this.selectionHighlightStyle,
+  });
+
+  final String text;
+  final List<List<StyleRange>>? selectionHighlightRangesByLine;
+  final SelectionController? controller;
+  final Style? selectionHighlightStyle;
+
+  @override
+  State createState() => _SelectableRenderedTextState();
+}
+
+class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
   SelectionController? _ownController;
+  SelectionController? _registeredController;
+  SelectionController? _listeningController;
   bool _hitTestedThisFrame = false;
-
-  /// Whether THIS widget instance initiated the current drag.
-  /// Guards against sibling SelectableText widgets handling raw MouseMsg
-  /// events when they share a SelectionController via SelectionArea.
   bool _isDragging = false;
-
-  /// Set to `true` by [_handleRawMouse] when a release ends a drag.
-  /// Prevents the outside-click detection from misinterpreting a
-  /// legitimate drag-end release as a click outside.
   bool _justFinishedDrag = false;
-
-  /// Screen-to-local coordinate offsets, captured at press time.
-  /// Used to convert raw [MouseMsg] screen coordinates to the render
-  /// object's local coordinate space during drag. This correctly accounts
-  /// for scroll offset because the values are derived from the hit-test
-  /// coordinates which already include scroll adjustment.
   double _screenToLocalDx = 0;
   double _screenToLocalDy = 0;
 
   SelectionController get _effectiveController {
-    // If widget provides a controller, use it.
     if (widget.controller != null) return widget.controller!;
-    // Check for ancestor SelectionArea.
     final area = _SelectionScope.maybeOf(context);
     if (area != null) return area;
-    // Create our own.
     _ownController ??= SelectionController();
     return _ownController!;
   }
 
-  /// Resolves the rendered text content the same way [Text] does.
-  String _renderText() {
-    String content = widget.data;
-    final style = widget.style;
-    if (style != null) {
-      final s = style.copy();
-      content = s.render(content);
-    }
-
-    if (widget.softWrap) {
-      final wrapWidth = Layout.getWidth(content);
-      content = Layout.wrapLines(content, wrapWidth);
-    }
-
-    if (widget.overflow == TextOverflow.ellipsis && widget.maxWidth != null) {
-      content = Layout.truncateLines(
-        content,
-        widget.maxWidth!,
-        ellipsis: '...',
-      );
-    }
-
-    final lines = content.split('\n');
-    final renderedWidth = lines.isEmpty
-        ? 0
-        : lines.map(Layout.visibleLength).reduce(math.max);
-
-    final aligned = switch (widget.textAlign) {
-      TextAlign.left => lines,
-      TextAlign.center => Layout.alignLines(
-        lines,
-        renderedWidth,
-        HorizontalAlign.center,
-      ),
-      TextAlign.right => Layout.alignLines(
-        lines,
-        renderedWidth,
-        HorizontalAlign.right,
-      ),
-      TextAlign.justify => lines,
-    };
-
-    return aligned.join('\n');
+  bool get _usingSharedController {
+    final area = _SelectionScope.maybeOf(context);
+    return area != null && identical(area, _effectiveController);
   }
 
-  /// Returns the content lines for selection operations.
-  List<String> _getContentLines() {
-    return _renderText().split('\n');
-  }
+  ScrollController? get _sharedScrollController =>
+      _SelectionScope.maybeScrollController(context);
+
+  int get _sharedSelectionYOffset => _sharedScrollController?.offset ?? 0;
+
+  List<String> _getContentLines() => widget.text.split('\n');
 
   void _markNeedsPaint() {
+    if (mounted) {
+      setState(() {});
+    }
     elementOf(widget)?.markNeedsPaint();
   }
 
-  /// Clears selection when a click completes outside this widget.
-  ///
-  /// Only acts on standalone controllers ([_ownController]). Shared
-  /// controllers from [SelectionArea] are cleared by the area itself.
+  void _handleControllerChanged() {
+    _markNeedsPaint();
+  }
+
+  void _syncControllerListener() {
+    final ctrl = _effectiveController;
+    if (identical(ctrl, _listeningController)) return;
+    _listeningController?.removeListener(_handleControllerChanged);
+    _listeningController = ctrl;
+    ctrl.addListener(_handleControllerChanged);
+  }
+
+  void _emitSelectionChanged(SelectionController ctrl) {
+    if (_usingSharedController) {
+      ctrl._notifyListeners();
+    } else {
+      _markNeedsPaint();
+    }
+  }
+
   void _clearSelectionOnOutsideClick() {
     if (_ownController != null && _ownController!.hasSelection) {
       _ownController!.clearSelection();
       _markNeedsPaint();
     }
+  }
+
+  SelectionPoint _globalOrigin() {
+    final ro = _firstRenderObjectForWidget(widget);
+    if (ro == null) return (x: 0, y: 0);
+    final globalY = _renderObjectGlobalY(ro).toInt();
+    return (
+      x: _renderObjectGlobalX(ro).toInt(),
+      y: globalY + (_usingSharedController ? _sharedSelectionYOffset : 0),
+    );
+  }
+
+  SelectionPoint? _localSelectionPoint(SelectionPoint? point) {
+    if (point == null) return null;
+    if (!_usingSharedController) return point;
+    final origin = _globalOrigin();
+    return (x: point.x - origin.x, y: point.y - origin.y);
+  }
+
+  void _refreshParticipantRegistration() {
+    final ctrl = _effectiveController;
+    if (!_usingSharedController) {
+      _registeredController?._unregisterParticipant(this);
+      _registeredController = null;
+      return;
+    }
+
+    ctrl._registerParticipant(
+      _SelectionParticipant(
+        owner: this,
+        getGlobalOrigin: _globalOrigin,
+        getContentLines: _getContentLines,
+      ),
+    );
+    _registeredController = ctrl;
+  }
+
+  SelectionPoint _selectionPointForLocal(int localX, int localY) {
+    if (!_usingSharedController) {
+      return (x: localX, y: localY);
+    }
+    final origin = _globalOrigin();
+    return (x: origin.x + localX, y: origin.y + localY);
+  }
+
+  SelectionPoint _selectionPointForEvent(MouseMsg event) {
+    if (!_usingSharedController) {
+      return (x: event.x.toInt(), y: event.y.toInt());
+    }
+    return (x: event.x.toInt(), y: event.y.toInt() + _sharedSelectionYOffset);
+  }
+
+  int _updateClickCount(
+    SelectionController ctrl,
+    DateTime now,
+    SelectionPoint screenPos,
+  ) {
+    final isSequential =
+        ctrl._lastClickTime != null &&
+        now.difference(ctrl._lastClickTime!) <
+            const Duration(milliseconds: 500) &&
+        ctrl._lastClickPos == screenPos;
+    final count = isSequential ? math.min(ctrl._lastClickCount + 1, 3) : 1;
+    ctrl
+      .._lastClickTime = now
+      .._lastClickPos = screenPos
+      .._lastClickCount = count;
+    return count;
+  }
+
+  void _selectWordAt(SelectionController ctrl, int localX, int localY) {
+    final lines = _getContentLines();
+    final (startX, endX) = findWordAt(lines, localX, localY);
+    ctrl._selectionStart = _selectionPointForLocal(startX, localY);
+    ctrl._selectionEnd = _selectionPointForLocal(endX, localY);
+    ctrl._selecting = false;
+    _emitSelectionChanged(ctrl);
+  }
+
+  void _selectLineAt(SelectionController ctrl, int localY) {
+    final lines = _getContentLines();
+    final (startX, endX) = findLineAt(lines, localY);
+    ctrl._selectionStart = _selectionPointForLocal(startX, localY);
+    ctrl._selectionEnd = _selectionPointForLocal(endX, localY);
+    ctrl._selecting = false;
+    _emitSelectionChanged(ctrl);
+  }
+
+  void _maybeAutoScrollSharedSelection(MouseMsg event) {
+    if (!_usingSharedController) return;
+    final scrollController = _sharedScrollController;
+    if (scrollController == null) return;
+
+    final ro = _findSelectionViewport();
+    if (ro == null) return;
+
+    final viewportLocalY = (event.y - _renderObjectScreenY(ro)).toInt();
+    final viewportHeight = ro.size.height.toInt();
+    final delta = _selectionAreaAutoScrollDelta(
+      localY: viewportLocalY,
+      viewportHeight: viewportHeight,
+    );
+    if (delta != 0) {
+      scrollController.scrollBy(delta);
+    }
+  }
+
+  RenderObject? _findSelectionViewport() {
+    final el = elementOf(widget);
+    Element? current = el?.parent;
+    while (current != null) {
+      if (current is RenderObjectElement) {
+        final ro = current.renderObject;
+        if (ro is RenderSingleChildViewport ||
+            ro is RenderListViewScrollViewport ||
+            ro is RenderListViewport ||
+            ro is RenderViewport) {
+          return ro;
+        }
+      }
+      current = current.parent;
+    }
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _listeningController?.removeListener(_handleControllerChanged);
+    _registeredController?._unregisterParticipant(this);
+    super.dispose();
   }
 
   @override
@@ -201,29 +347,14 @@ class _SelectableTextState extends State<SelectableText> {
       if (cmd != null) return cmd;
     }
 
-    // Handle raw mouse events (not dispatched via hit-test).
     if (msg is MouseMsg) {
       if (_hitTestedThisFrame && !_isDragging) {
-        // Same event already processed via HitTestMouseMsg in this frame.
-        // Skip re-processing, but allow through when dragging — during
-        // mouse capture the raw MouseMsg is the ONLY delivery path for
-        // motion/release, so the guard must not block it.
         _hitTestedThisFrame = false;
       } else if (msg.action == MouseAction.motion ||
           msg.action == MouseAction.release) {
         _hitTestedThisFrame = false;
         final cmd = _handleRawMouse(msg);
         if (cmd != null) return cmd;
-        // If we're not dragging and a release arrived via broadcast (not
-        // from capture), it means a click completed outside this widget.
-        // Clear selection for standalone controllers. Press events are not
-        // broadcast by WidgetApp (to avoid breaking scroll thumbs), so we
-        // detect outside clicks on release instead.
-        //
-        // Guard: _handleRawMouse handles releases during active drag
-        // (_isDragging was true on entry). If _handleRawMouse returned null
-        // but _isDragging was just cleared (drag finished), do NOT treat
-        // that as an outside click — track via _justFinishedDrag.
         if (!_isDragging &&
             !_justFinishedDrag &&
             msg.action == MouseAction.release &&
@@ -233,9 +364,6 @@ class _SelectableTextState extends State<SelectableText> {
         _justFinishedDrag = false;
       } else if (msg.action == MouseAction.press &&
           msg.button == MouseButton.left) {
-        // Click landed outside this widget. Only clear if we own the
-        // controller (standalone mode). Shared controllers from
-        // SelectionArea are cleared by the area itself.
         _clearSelectionOnOutsideClick();
       }
     }
@@ -248,22 +376,18 @@ class _SelectableTextState extends State<SelectableText> {
     return null;
   }
 
-  /// Handles mouse events for selection (via hit-test dispatch).
   Cmd? _handleSelectionMouse(HitTestMouseMsg msg) {
     final ctrl = _effectiveController;
     final event = msg.event;
-
-    // Use localX/localY from the hit-test result. These are already in the
-    // render object's local coordinate space and correctly account for scroll
-    // offset (RenderSingleChildViewport.hitTest adds scroll offset when
-    // testing children).
     final localX = msg.localX.toInt();
     final localY = msg.localY.toInt();
 
-    // Motion/release during active selection from THIS widget.
     if (event.action == MouseAction.motion && _isDragging) {
-      ctrl._selectionEnd = (x: localX, y: localY);
-      _markNeedsPaint();
+      _maybeAutoScrollSharedSelection(event);
+      ctrl._selectionEnd = _usingSharedController
+          ? _selectionPointForEvent(event)
+          : (x: localX, y: localY);
+      _emitSelectionChanged(ctrl);
       return null;
     }
     if (event.action == MouseAction.release && _isDragging) {
@@ -271,68 +395,55 @@ class _SelectableTextState extends State<SelectableText> {
       _isDragging = false;
       _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
+      _emitSelectionChanged(ctrl);
       return null;
     }
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
-      final pos = (x: localX, y: localY);
-      // Use screen-space coordinates for double-click detection so that
-      // clicks on different widgets at the same local position don't
-      // register as double-clicks.
-      final screenPos = (x: event.x.toInt(), y: event.y.toInt());
+      final screenPos = _selectionPointForEvent(event);
+      final clickCount = _updateClickCount(ctrl, now, screenPos);
 
-      // Double-click: select word.
-      if (ctrl._lastClickTime != null &&
-          now.difference(ctrl._lastClickTime!) <
-              const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == screenPos) {
-        final lines = _getContentLines();
-        final (wordStart, wordEnd) = _findWordAt(lines, localX, localY);
-        ctrl._selectionStart = (x: wordStart, y: localY);
-        ctrl._selectionEnd = (x: wordEnd, y: localY);
-        ctrl._selecting = false;
-        ctrl._lastClickTime = now;
-        ctrl._lastClickPos = screenPos;
+      if (clickCount == 2) {
+        _selectWordAt(ctrl, localX, localY);
+        _markNeedsPaint();
+        return null;
+      }
+      if (clickCount >= 3) {
+        _selectLineAt(ctrl, localY);
         _markNeedsPaint();
         return null;
       }
 
-      // Start new selection.
       ctrl.clearSelection();
-      ctrl._selectionStart = pos;
-      ctrl._selectionEnd = pos;
+      ctrl._selectionStart = _usingSharedController
+          ? screenPos
+          : (x: localX, y: localY);
+      ctrl._selectionEnd = ctrl._selectionStart;
       ctrl._selecting = true;
       _isDragging = true;
-      // Store the screen-to-local offset for raw MouseMsg coordinate
-      // conversion during drag. This captures the scroll-adjusted mapping.
       _screenToLocalDx = event.x.toDouble() - localX;
       _screenToLocalDy = event.y.toDouble() - localY;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = screenPos;
-
-      // Capture mouse so we get motion/release even outside bounds.
       elementOf(widget)?.captureMouse();
-      _markNeedsPaint();
+      _emitSelectionChanged(ctrl);
       return null;
     }
 
     return null;
   }
 
-  /// Handles raw mouse events during captured drag.
   Cmd? _handleRawMouse(MouseMsg msg) {
     if (!_isDragging) return null;
     final ctrl = _effectiveController;
-
-    // Convert screen coordinates to local space using the offset captured
-    // at press time. This correctly accounts for scroll offset.
     final localX = (msg.x - _screenToLocalDx).toInt();
     final localY = (msg.y - _screenToLocalDy).toInt();
 
     if (msg.action == MouseAction.motion) {
-      ctrl._selectionEnd = (x: localX, y: localY);
-      _markNeedsPaint();
+      _maybeAutoScrollSharedSelection(msg);
+      ctrl._selectionEnd = _usingSharedController
+          ? _selectionPointForEvent(msg)
+          : (x: localX, y: localY);
+      _emitSelectionChanged(ctrl);
       return null;
     }
     if (msg.action == MouseAction.release) {
@@ -340,46 +451,72 @@ class _SelectableTextState extends State<SelectableText> {
       _isDragging = false;
       _justFinishedDrag = true;
       elementOf(widget)?.releaseMouse();
+      _emitSelectionChanged(ctrl);
       return null;
     }
     return null;
   }
 
-  /// Handles Ctrl+C for copying selection to clipboard.
   Cmd? _handleSelectionKey(KeyMsg msg) {
     final ctrl = _effectiveController;
-
-    if (msg.key.char == 'c' && msg.key.ctrl) {
-      if (ctrl.hasSelection) {
-        final lines = _getContentLines();
-        final text = ctrl.getSelectedText(lines);
-        if (text.isNotEmpty) {
-          return Cmd.setClipboard(text);
-        }
-      }
+    if (msg.key.char != 'c' || !msg.key.ctrl || !ctrl.hasSelection) {
+      return null;
     }
-    return null;
+
+    if (_usingSharedController) {
+      return null;
+    }
+
+    final text = ctrl.getSelectedText(_getContentLines());
+    if (text.isEmpty) return null;
+    return Cmd.setClipboard(text);
   }
 
   @override
   Widget build(BuildContext context) {
-    final rendered = _renderText();
-    final ctrl = _effectiveController;
+    _syncControllerListener();
+    _refreshParticipantRegistration();
 
-    return _SelectableTextRender(text: rendered, controller: ctrl);
+    final ctrl = _effectiveController;
+    final selectionHighlightStyle =
+        widget.selectionHighlightStyle ??
+        selectionHighlightStyleForTheme(ThemeScope.of(context));
+
+    return _SelectableTextRender(
+      text: widget.text,
+      selectionHighlightRangesByLine: widget.selectionHighlightRangesByLine,
+      selectionStart: _localSelectionPoint(ctrl.selectionStart),
+      selectionEnd: _localSelectionPoint(ctrl.selectionEnd),
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
   }
 }
 
 /// Internal widget that creates the [RenderSelectableText].
 class _SelectableTextRender extends LeafRenderObjectWidget {
-  _SelectableTextRender({required this.text, required this.controller});
+  _SelectableTextRender({
+    required this.text,
+    required this.selectionHighlightStyle,
+    this.selectionHighlightRangesByLine,
+    this.selectionStart,
+    this.selectionEnd,
+  });
 
   final String text;
-  final SelectionController controller;
+  final Style selectionHighlightStyle;
+  final List<List<StyleRange>>? selectionHighlightRangesByLine;
+  final SelectionPoint? selectionStart;
+  final SelectionPoint? selectionEnd;
 
   @override
   RenderObject createRenderObject() {
-    return RenderSelectableText(text: text, controller: controller);
+    return RenderSelectableText(
+      text: text,
+      selectionHighlightStyle: selectionHighlightStyle,
+      selectionHighlightRangesByLine: selectionHighlightRangesByLine,
+      selectionStart: selectionStart,
+      selectionEnd: selectionEnd,
+    );
   }
 
   @override
@@ -387,9 +524,352 @@ class _SelectableTextRender extends LeafRenderObjectWidget {
     final ro = renderObject as RenderSelectableText;
     ro
       ..text = text
-      ..controller = controller;
+      ..selectionHighlightStyle = selectionHighlightStyle
+      ..selectionHighlightRangesByLine = selectionHighlightRangesByLine
+      ..selectionStart = selectionStart
+      ..selectionEnd = selectionEnd;
   }
 
   @override
   Object view() => text;
+}
+
+String _renderPlainText(
+  String data, {
+  Style? style,
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  var content = data;
+  if (style != null) {
+    final resolved = style.copy();
+    content = resolved.render(content);
+  }
+  return _finalizeRenderedText(
+    content,
+    textAlign: textAlign,
+    softWrap: softWrap,
+    overflow: overflow,
+    maxWidth: maxWidth,
+  );
+}
+
+_SelectableRenderedContent _renderRichSpanContent(
+  TextSpan text, {
+  Style? baseStyle,
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  return _finalizeRenderedContent(
+    _renderSelectableSpanContent(text, baseStyle),
+    textAlign: textAlign,
+    softWrap: softWrap,
+    overflow: overflow,
+    maxWidth: maxWidth,
+  );
+}
+
+String _renderSelectableView(
+  Object content, {
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  return _finalizeRenderedText(
+    _viewToSelectableString(content),
+    textAlign: textAlign,
+    softWrap: softWrap,
+    overflow: overflow,
+    maxWidth: maxWidth,
+  );
+}
+
+String _finalizeRenderedText(
+  String content, {
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  if (softWrap) {
+    final wrapWidth = Layout.getWidth(content);
+    content = Layout.wrapLines(content, wrapWidth);
+  }
+
+  if (overflow == TextOverflow.ellipsis && maxWidth != null) {
+    content = Layout.truncateLines(content, maxWidth, ellipsis: '...');
+  }
+
+  final lines = content.split('\n');
+  final renderedWidth = lines.isEmpty
+      ? 0
+      : lines.map(Layout.visibleLength).reduce(math.max);
+
+  final aligned = switch (textAlign) {
+    TextAlign.left => lines,
+    TextAlign.center => Layout.alignLines(
+      lines,
+      renderedWidth,
+      HorizontalAlign.center,
+    ),
+    TextAlign.right => Layout.alignLines(
+      lines,
+      renderedWidth,
+      HorizontalAlign.right,
+    ),
+    TextAlign.justify => lines,
+  };
+
+  return aligned.join('\n');
+}
+
+String _viewToSelectableString(Object content) {
+  if (content is String) return content;
+  if (content is View) return content.content;
+  return content.toString();
+}
+
+final class _SelectableRenderedContent {
+  const _SelectableRenderedContent({
+    required this.text,
+    required this.selectionHighlightRangesByLine,
+  });
+
+  final String text;
+  final List<List<StyleRange>> selectionHighlightRangesByLine;
+}
+
+final class _SelectableRenderedContentBuilder {
+  _SelectableRenderedContentBuilder()
+    : _lineBuffers = <StringBuffer>[StringBuffer()],
+      _selectionRangesByLine = <List<StyleRange>>[<StyleRange>[]],
+      _lineWidths = <int>[0];
+
+  final List<StringBuffer> _lineBuffers;
+  final List<List<StyleRange>> _selectionRangesByLine;
+  final List<int> _lineWidths;
+
+  void addText(String text, {Style? renderStyle, Style? selectionStyle}) {
+    final parts = text.split('\n');
+    for (var i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      if (part.isNotEmpty) {
+        final lineIndex = _lineBuffers.length - 1;
+        final start = _lineWidths[lineIndex];
+        final rendered = renderStyle != null ? renderStyle.render(part) : part;
+        _lineBuffers[lineIndex].write(rendered);
+        final width = Layout.visibleLength(part);
+        if (selectionStyle != null && width > 0) {
+          _selectionRangesByLine[lineIndex].add(
+            StyleRange(start, start + width, selectionStyle),
+          );
+        }
+        _lineWidths[lineIndex] = start + width;
+      }
+      if (i < parts.length - 1) {
+        _lineBuffers.add(StringBuffer());
+        _selectionRangesByLine.add(<StyleRange>[]);
+        _lineWidths.add(0);
+      }
+    }
+  }
+
+  _SelectableRenderedContent build() {
+    return _SelectableRenderedContent(
+      text: _lineBuffers.map((buffer) => buffer.toString()).join('\n'),
+      selectionHighlightRangesByLine: [
+        for (final ranges in _selectionRangesByLine)
+          List<StyleRange>.unmodifiable(ranges),
+      ],
+    );
+  }
+}
+
+_SelectableRenderedContent _renderSelectableSpanContent(
+  TextSpan span,
+  Style? baseStyle, {
+  Style? inheritedSelectionStyle,
+  _SelectableRenderedContentBuilder? builder,
+}) {
+  final contentBuilder = builder ?? _SelectableRenderedContentBuilder();
+  Style? resolvedStyle;
+  if (baseStyle != null || span.style != null) {
+    resolvedStyle = (baseStyle ?? Style()).copy();
+    if (span.style != null) {
+      resolvedStyle.inherit(span.style!);
+    }
+  }
+
+  final resolvedSelectionStyle =
+      span.selectionHighlightStyle ?? inheritedSelectionStyle;
+
+  final text = span.text;
+  if (text != null && text.isNotEmpty) {
+    contentBuilder.addText(
+      text,
+      renderStyle: resolvedStyle,
+      selectionStyle: resolvedSelectionStyle,
+    );
+  }
+
+  for (final child in span.children) {
+    _renderSelectableSpanContent(
+      child,
+      resolvedStyle ?? baseStyle,
+      inheritedSelectionStyle: resolvedSelectionStyle,
+      builder: contentBuilder,
+    );
+  }
+
+  return contentBuilder.build();
+}
+
+_SelectableRenderedContent _finalizeRenderedContent(
+  _SelectableRenderedContent content, {
+  required TextAlign textAlign,
+  required bool softWrap,
+  required TextOverflow overflow,
+  int? maxWidth,
+}) {
+  var lines = content.text.split('\n');
+  var rangesByLine = [
+    for (final ranges in content.selectionHighlightRangesByLine)
+      List<StyleRange>.from(ranges),
+  ];
+
+  if (softWrap) {
+    final wrapWidth = Layout.getWidth(content.text);
+    if (wrapWidth > 0) {
+      // Current selectable rich text preserves line structure; wrapping to the
+      // widest line matches the existing no-op behavior.
+      lines = lines;
+    }
+  }
+
+  if (overflow == TextOverflow.ellipsis && maxWidth != null) {
+    for (var i = 0; i < lines.length; i++) {
+      lines[i] = Layout.truncate(lines[i], maxWidth, ellipsis: '...');
+      rangesByLine[i] = [
+        for (final range in rangesByLine[i])
+          if (range.start < maxWidth && range.end > 0)
+            StyleRange(
+              range.start.clamp(0, maxWidth),
+              range.end.clamp(0, maxWidth),
+              range.style,
+            ),
+      ];
+    }
+  }
+
+  final renderedWidth = lines.isEmpty
+      ? 0
+      : lines.map(Layout.visibleLength).reduce(math.max);
+
+  if (textAlign != TextAlign.left) {
+    for (var i = 0; i < lines.length; i++) {
+      final lineWidth = Layout.visibleLength(lines[i]);
+      final shortAmount = renderedWidth - lineWidth;
+      if (shortAmount <= 0) continue;
+      final padLeft = switch (textAlign) {
+        TextAlign.center => shortAmount ~/ 2,
+        TextAlign.right => shortAmount,
+        _ => 0,
+      };
+      final padRight = switch (textAlign) {
+        TextAlign.center => shortAmount - padLeft,
+        TextAlign.right => 0,
+        _ => shortAmount,
+      };
+      if (padLeft > 0 || padRight > 0) {
+        lines[i] = '${' ' * padLeft}${lines[i]}${' ' * padRight}';
+        if (padLeft > 0) {
+          rangesByLine[i] = [
+            for (final range in rangesByLine[i])
+              StyleRange(
+                range.start + padLeft,
+                range.end + padLeft,
+                range.style,
+              ),
+          ];
+        }
+      }
+    }
+  }
+
+  return _SelectableRenderedContent(
+    text: lines.join('\n'),
+    selectionHighlightRangesByLine: [
+      for (final ranges in rangesByLine) List<StyleRange>.unmodifiable(ranges),
+    ],
+  );
+}
+
+RenderObject? _firstRenderObjectForWidget(Widget widget) {
+  final element = elementOf(widget);
+  if (element == null) return null;
+
+  RenderObject? visit(Element current) {
+    if (current is RenderObjectElement) {
+      return current.renderObject;
+    }
+    for (final child in current.children) {
+      final found = visit(child);
+      if (found != null) return found;
+    }
+    return null;
+  }
+
+  return visit(element);
+}
+
+double _renderObjectGlobalX(RenderObject ro) {
+  double x = 0;
+  RenderObject? current = ro;
+  while (current != null) {
+    x += current.offset.dx;
+    current = current.parent;
+  }
+  return x;
+}
+
+double _renderObjectGlobalY(RenderObject ro) {
+  double y = 0;
+  RenderObject? current = ro;
+  while (current != null) {
+    y += current.offset.dy;
+    y -= _renderObjectScrollYOffset(current);
+    current = current.parent;
+  }
+  return y;
+}
+
+double _renderObjectScreenY(RenderObject ro) {
+  double y = 0;
+  RenderObject? current = ro;
+  while (current != null) {
+    y += current.offset.dy;
+    current = current.parent;
+  }
+  return y;
+}
+
+double _renderObjectScrollYOffset(RenderObject ro) {
+  if (ro is RenderSingleChildViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderListViewScrollViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderListViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  if (ro is RenderViewport) {
+    return ro.controller.offset.toDouble();
+  }
+  return 0;
 }

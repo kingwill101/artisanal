@@ -470,6 +470,9 @@ The current stable layers are:
 - `RemotePluginGenericServiceCatalog`, `RemotePluginGenericHostService`, and
   `RemotePluginGuestServices` for schema-backed host-owned RPCs over the shared
   `plugin.service.request` / `host.service.response` envelope
+- `RemotePluginWorkspace` for the common multi-plugin host case, including
+  manifest-directory startup, shared surface state, shared generic services,
+  plugin-id lookup, and a ready-to-use input router
 - `RemotePluginManifest`, `loadRemotePluginManifest(...)`, and
   `RemotePluginHostConnection.startManifest(...)` /
   `startManifestFile(...)` for manifest-backed discovery and launch
@@ -479,8 +482,9 @@ The current stable layers are:
 The intended flow is:
 
 1. Host launches one plugin with `RemotePluginHostConnection.startProcess(...)`
-   or a manifest-backed plugin with `startManifest(...)` /
-   `startManifestFile(...)`.
+   or a manifest-backed multi-plugin workspace with
+   `RemotePluginWorkspace.startManifestDirectory(...)` /
+   `RemotePluginWorkspace.startManifests(...)`.
 2. Plugin binds stdin/stdout with `RemotePluginGuestSession.bindStdio(...)`.
 3. Plugin emits `RemotePluginSurfaceOpen` / `RemotePluginFrame` lifecycle
    messages for one or more remote-rendered surfaces.
@@ -508,6 +512,10 @@ Manifest-backed multi-plugin workspace:
 ```bash
 dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 ```
+
+That example now uses `RemotePluginWorkspace.startManifestDirectory(...)`
+instead of rebuilding manifest loading, shared surfaces, connection maps, and
+router wiring inside app code.
 
 Schema dump helper for non-Dart host/plugin tooling:
 

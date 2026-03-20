@@ -1,5 +1,11 @@
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/style.dart' show Layout;
+import 'package:artisanal/bubbles.dart'
+    show
+        TextPositionDiagnosticRange,
+        TextDiagnosticSeverity,
+        textSearchActiveMatchDecorationKey;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
@@ -13,7 +19,7 @@ void main() {
     });
 
     test('renders title, stats, and help bar', () async {
-      final tester = WidgetTester(screenWidth: 144, screenHeight: 24);
+      final tester = WidgetTester(screenWidth: 144, screenHeight: 36);
       addTearDown(() => tester.dispose());
 
       final controller = TextAreaController(text: 'hello');
@@ -924,14 +930,78 @@ void main() {
 
       expect(tester.view, contains('1/2 matches'));
       expect(tester.view, contains('Ln 2, Col 1'));
+      expect(controller.decorations.length, 2);
+      expect(
+        controller.decorations
+            .where(
+              (decoration) =>
+                  decoration.styleKey == textSearchActiveMatchDecorationKey,
+            )
+            .length,
+        1,
+      );
 
       tester.sendSpecialKey(terminal_keys.KeyType.enter);
       expect(tester.view, contains('2/2 matches'));
       expect(tester.view, contains('Ln 4, Col 1'));
+      expect(
+        controller.decorations
+            .where(
+              (decoration) =>
+                  decoration.styleKey == textSearchActiveMatchDecorationKey,
+            )
+            .single
+            .startOffset,
+        17,
+      );
 
       tester.sendMsg(const tui.KeyMsg(tui.Key(terminal_keys.KeyType.escape)));
       expect(tester.view, isNot(contains('Find in document')));
+      expect(controller.decorations, isEmpty);
     });
+
+    test(
+      'search utility focus keeps the editor body visually active',
+      () async {
+        final tester = WidgetTester(screenWidth: 96, screenHeight: 28);
+        addTearDown(() => tester.dispose());
+
+        final controller = TextAreaController(
+          text: 'alpha\nworld\nbeta\nworld',
+        );
+        await tester.pumpWidget(
+          FocusScope(
+            controller: focusController,
+            child: Container(
+              width: 72,
+              child: TextEditor(
+                title: 'Search.md',
+                controller: controller,
+                focusController: focusController,
+                focusId: 'editor',
+                height: 6,
+                autofocus: true,
+              ),
+            ),
+          ),
+        );
+
+        String renderedLineContaining(String needle) {
+          return tester.viewLines.firstWhere(
+            (line) => Layout.stripAnsi(line).contains(needle),
+          );
+        }
+
+        final before = renderedLineContaining('alpha');
+
+        tester.sendMsg(tui.KeyMsg(tui.Key.char('f', ctrl: true)));
+
+        final after = renderedLineContaining('alpha');
+
+        expect(after, equals(before));
+        expect(tester.view, contains('Find'));
+      },
+    );
 
     test('ctrl+g opens go to line and moves the cursor', () async {
       final tester = WidgetTester(screenWidth: 96, screenHeight: 28);
@@ -968,5 +1038,127 @@ void main() {
       tester.sendSpecialKey(terminal_keys.KeyType.enter);
       expect(tester.view, isNot(contains('Go to line')));
     });
+
+    test('f8 and shift+f8 navigate typed diagnostics', () async {
+      final tester = WidgetTester(screenWidth: 96, screenHeight: 28);
+      addTearDown(() => tester.dispose());
+
+      final controller = TextAreaController(text: 'TODO one\nok\nFIXME two');
+      controller.setDiagnosticsFromPositions(const [
+        TextPositionDiagnosticRange(
+          startLine: 0,
+          startColumn: 0,
+          endLine: 0,
+          endColumn: 4,
+          severity: TextDiagnosticSeverity.warning,
+          code: 'TODO001',
+          message: 'Address TODO markers before shipping this sample.',
+          source: 'playground',
+        ),
+        TextPositionDiagnosticRange(
+          startLine: 2,
+          startColumn: 0,
+          endLine: 2,
+          endColumn: 5,
+          severity: TextDiagnosticSeverity.error,
+          code: 'FIX001',
+          message: 'Resolve FIXME markers before treating this draft as ready.',
+          source: 'playground',
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        FocusScope(
+          controller: focusController,
+          child: Container(
+            width: 72,
+            child: TextEditor(
+              title: 'Diagnostics.md',
+              controller: controller,
+              focusController: focusController,
+              focusId: 'editor',
+              height: 6,
+              autofocus: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.view, contains('f8'));
+      expect(tester.view, contains('shift+f8'));
+
+      tester.sendSpecialKey(terminal_keys.KeyType.f8);
+      expect(controller.selectedText, equals('TODO'));
+      expect(controller.selectionBase, equals((line: 0, column: 0)));
+      expect(tester.view, contains('warning [playground/TODO001] L1:C1'));
+      expect(tester.view, contains('Address TODO markers before'));
+      expect(tester.view, contains('shipping this sample.'));
+
+      tester.sendSpecialKey(terminal_keys.KeyType.f8);
+      expect(controller.selectedText, equals('FIXME'));
+      expect(controller.selectionBase, equals((line: 2, column: 0)));
+
+      tester.sendMsg(
+        tui.KeyMsg(tui.Key(terminal_keys.KeyType.f8, shift: true)),
+      );
+      expect(controller.selectedText, equals('TODO'));
+      expect(controller.selectionBase, equals((line: 0, column: 0)));
+    });
+
+    test(
+      'clicking a diagnostic gutter marker selects that diagnostic',
+      () async {
+        final tester = WidgetTester(screenWidth: 96, screenHeight: 28);
+        addTearDown(() => tester.dispose());
+
+        final controller = TextAreaController(text: 'TODO one\nok\nFIXME two');
+        controller.setDiagnosticsFromPositions(const [
+          TextPositionDiagnosticRange(
+            startLine: 0,
+            startColumn: 0,
+            endLine: 0,
+            endColumn: 4,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+          TextPositionDiagnosticRange(
+            startLine: 2,
+            startColumn: 0,
+            endLine: 2,
+            endColumn: 5,
+            severity: TextDiagnosticSeverity.error,
+            code: 'FIX001',
+            message:
+                'Resolve FIXME markers before treating this draft as ready.',
+            source: 'playground',
+          ),
+        ]);
+
+        await tester.pumpWidget(
+          FocusScope(
+            controller: focusController,
+            child: Container(
+              width: 72,
+              child: TextEditor(
+                title: 'Diagnostics.md',
+                controller: controller,
+                focusController: focusController,
+                focusId: 'editor',
+                height: 6,
+                autofocus: true,
+              ),
+            ),
+          ),
+        );
+
+        tester.tap(tester.find.textLocation('3!'));
+
+        expect(controller.selectedText, equals('FIXME'));
+        expect(controller.selectionBase, equals((line: 2, column: 0)));
+        expect(tester.view, contains('error [playground/FIX001] L3:C1'));
+      },
+    );
   });
 }

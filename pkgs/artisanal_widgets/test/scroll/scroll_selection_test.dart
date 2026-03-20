@@ -1,8 +1,27 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+
+RegExp _highlightedTextPattern({
+  required int foreground,
+  required int background,
+  required String text,
+}) {
+  final esc = RegExp.escape('\x1b[');
+  final reset = RegExp.escape('\x1b[m');
+  final literalText = RegExp.escape(text);
+  return RegExp(
+    '(?:'
+    '$esc[^m]*38;5;$foreground[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    '|$esc[^m]*38;5;$foreground[^m]*m$esc[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*m$esc[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    ')',
+  );
+}
 
 /// Builds a scrollable widget with selection enabled.
 ///
@@ -35,6 +54,24 @@ Widget _buildScrollable({
     child = Scrollbar(controller: controller, child: child);
   }
   return Container(width: width, height: height, child: child);
+}
+
+Widget _buildVirtualScrollable({
+  required WidgetScrollController controller,
+  int lineCount = 30,
+  int height = 10,
+  int width = 40,
+}) {
+  final lines = List.generate(lineCount, (i) => Text('Line $i'));
+  return Container(
+    width: width,
+    height: height,
+    child: VirtualListView(
+      controller: controller,
+      enableSelection: true,
+      children: lines,
+    ),
+  );
 }
 
 void main() {
@@ -99,6 +136,117 @@ void main() {
       }
     });
 
+    test('triple click selects the entire content line', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 0)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('reverse drag selection works with scrolled content', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        ctrl.jumpTo(8);
+
+        tester.mouseDown(0, 4);
+        tester.mouseMove(6, 2);
+        tester.mouseUp(6, 2);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 12)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 10)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection remains correct after viewport resize', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true),
+        );
+
+        tester.resize(28, 6);
+        ctrl.jumpTo(6);
+
+        tester.mouseDown(0, 3);
+        tester.mouseMove(6, 2);
+        tester.mouseUp(6, 2);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 9)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 8)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('dragging at viewport bottom auto-scrolls downward', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true, height: 6),
+        );
+
+        tester.mouseDown(0, 1);
+        for (var i = 0; i < 4; i++) {
+          tester.mouseMove(4, 4);
+        }
+        tester.mouseUp(4, 4);
+
+        expect(ctrl.offset, equals(4));
+        expect(ctrl.selectionStart, equals((x: 0, y: 1)));
+        expect(ctrl.selectionEnd, equals((x: 4, y: 8)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('dragging at viewport top auto-scrolls upward', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, useScrollView: true, height: 6),
+        );
+
+        ctrl.jumpTo(10);
+
+        tester.mouseDown(0, 4);
+        for (var i = 0; i < 4; i++) {
+          tester.mouseMove(6, 0);
+        }
+        tester.mouseUp(6, 0);
+
+        expect(ctrl.offset, equals(6));
+        expect(ctrl.selectionStart, equals((x: 0, y: 14)));
+        expect(ctrl.selectionEnd, equals((x: 6, y: 6)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('selection works with scrolled content', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
@@ -117,14 +265,14 @@ void main() {
             y: -1,
           ),
         );
-        // Force a repaint so the view updates.
-        tester.mouseDown(0, 0);
-        tester.mouseMove(4, 0);
-        tester.mouseUp(4, 0);
+        // Use a non-edge row so the drag does not trigger auto-scroll.
+        tester.mouseDown(0, 2);
+        tester.mouseMove(4, 2);
+        tester.mouseUp(4, 2);
 
-        // With scroll offset 5, clicking row 0 should map to content line 5.
-        expect(ctrl.selectionStart!.y, equals(5));
-        expect(ctrl.selectionEnd!.y, equals(5));
+        // With scroll offset 5, row 2 maps to content line 7.
+        expect(ctrl.selectionStart!.y, equals(7));
+        expect(ctrl.selectionEnd!.y, equals(7));
       } finally {
         await tester.dispose();
       }
@@ -162,6 +310,17 @@ void main() {
       // Multi-line selection: from (4, 0) to (3, 1)
       ctrl.setSelection(start: (x: 4, y: 0), end: (x: 3, y: 1));
       expect(ctrl.getSelectedText(lines), equals('o World\nFoo'));
+    });
+
+    test('getSelectedText strips ANSI decoration before slicing', () async {
+      final ctrl = WidgetScrollController();
+      final styled = Style()
+          .foreground(const AnsiColor(4))
+          .render('Hello World');
+
+      ctrl.setSelection(start: (x: 6, y: 0), end: (x: 11, y: 0));
+
+      expect(ctrl.getSelectedText([styled]), equals('World'));
     });
 
     test('clearSelection removes selection', () async {
@@ -224,6 +383,44 @@ void main() {
       }
     });
 
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(124),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 124,
+        text: 'Line',
+      );
+      final hardcodedSelection = _highlightedTextPattern(
+        foreground: 0,
+        background: 7,
+        text: 'Line',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: _buildScrollable(controller: ctrl, useScrollView: false),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(4, 0);
+        tester.mouseUp(4, 0);
+
+        final output = tester.view;
+        expect(themedSelection.hasMatch(output), isTrue);
+        expect(hardcodedSelection.hasMatch(output), isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('selection does not interfere with scrollbar track clicks', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
@@ -264,6 +461,27 @@ void main() {
         // Row 2 with scroll offset 10 → content line 12.
         expect(ctrl.selectionStart!.y, equals(12));
         expect(ctrl.selectionEnd!.y, equals(12));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('dragging at viewport edge auto-scrolls while selecting', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(controller: ctrl, height: 6, useScrollView: false),
+        );
+
+        tester.mouseDown(0, 1);
+        for (var i = 0; i < 3; i++) {
+          tester.mouseMove(0, 5);
+        }
+        tester.mouseUp(0, 5);
+
+        expect(ctrl.offset, equals(3));
+        expect(ctrl.selectionEnd, equals((x: 0, y: 8)));
       } finally {
         await tester.dispose();
       }
@@ -436,6 +654,39 @@ void main() {
 
         // Selection should NOT be created.
         expect(ctrl.hasSelection, isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+  });
+
+  group('VirtualListView selection', () {
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final ctrl = WidgetScrollController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(28),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 28,
+        text: 'Line',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: _buildVirtualScrollable(controller: ctrl),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(4, 0);
+        tester.mouseUp(4, 0);
+
+        expect(themedSelection.hasMatch(tester.view), isTrue);
       } finally {
         await tester.dispose();
       }

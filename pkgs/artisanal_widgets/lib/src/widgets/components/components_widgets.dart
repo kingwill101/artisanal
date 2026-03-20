@@ -13,6 +13,7 @@ import 'package:artisanal/markdown.dart'
         AdaptiveChromaTheme,
         AnsiRendererOptions,
         ChromaTheme,
+        SyntaxHighlighter,
         highlightCodeString;
 
 import 'dart:math' as math;
@@ -25,6 +26,7 @@ import 'package:artisanal/bubbles.dart'
         TextAreaKeyMap,
         TextAreaModel,
         TextAreaStyles;
+import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
@@ -48,6 +50,7 @@ export 'package:artisanal/bubbles.dart'
     show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
 
 part '_component_utils.dart';
+part '_text_area_controller_core_bridge.dart';
 part 'frame.dart';
 part 'button.dart';
 part 'badge.dart';

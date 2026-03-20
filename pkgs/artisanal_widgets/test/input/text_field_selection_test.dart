@@ -1,5 +1,6 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/style.dart' show AnsiColor;
 import 'package:artisanal/terminal.dart' show Key, KeyType;
 import 'package:artisanal/tui.dart' show KeyMsg;
 import 'package:test/test.dart';
@@ -208,6 +209,41 @@ void main() {
         expect(controller.text, 'llo');
         expect(controller.model.position, 0);
         expect(controller.model.getSelectedText(), '');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final controller = w.TextEditingController(text: 'hello world');
+      final theme = w.Theme.light().copyWith(
+        primary: const AnsiColor(33),
+        onPrimary: const AnsiColor(15),
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+
+      try {
+        await tester.pumpWidget(
+          w.ThemeScope(
+            theme: theme,
+            child: w.FocusScope(
+              child: w.TextField(controller: controller, autofocus: true),
+            ),
+          ),
+        );
+
+        controller.selection = const w.TextSelection(
+          baseOffset: 0,
+          extentOffset: 5,
+        );
+        tester.pump();
+
+        final output = tester.view;
+        expect(output, contains('\x1b[48;5;160m'));
+        expect(output, contains('\x1b[38;5;231m'));
+        expect(output, isNot(contains('\x1b[48;5;33m')));
       } finally {
         await tester.dispose();
       }

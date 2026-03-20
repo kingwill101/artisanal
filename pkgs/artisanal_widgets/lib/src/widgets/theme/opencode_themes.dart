@@ -153,22 +153,25 @@ class OpenCodeThemes {
     const borderActive = BasicColor('#6d6d6d');
     const borderSubtle = BasicColor('#2d2d2d');
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBackground: background,
     );
   }
 
@@ -190,22 +193,25 @@ class OpenCodeThemes {
     const borderActive = BasicColor('#6C7380');
     const borderSubtle = BasicColor('#11151C');
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBorderColor: borderSubtle,
     );
   }
 
@@ -592,22 +598,32 @@ class OpenCodeThemes {
       light: BasicColor('#e0e0e0'),
     );
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBackground: background,
+      inactiveShellBorderColor: borderSubtle,
+      utilityBackground: backgroundElement,
+      blurredTextForeground: text.dim,
+      blurredPromptForeground: text.dim,
+      blurredPlaceholderForeground: text.dim,
+      blurredLineNumberForeground: text.dim,
+      blurredCursorLineNumberForeground: text.dim,
     );
   }
 
@@ -1094,22 +1110,50 @@ class OpenCodeThemes {
       light: BasicColor('#d4d4d4'),
     );
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    const editorShellBackground = AdaptiveColor(
+      dark: BasicColor('#161210'),
+      light: BasicColor('#fff4ec'),
+    );
+    const editorInactiveShellBackground = AdaptiveColor(
+      dark: BasicColor('#100d0b'),
+      light: BasicColor('#fffaf6'),
+    );
+    const editorBodyBackground = AdaptiveColor(
+      dark: BasicColor('#1d1714'),
+      light: BasicColor('#fffdfb'),
+    );
+    const editorInactiveBodyBackground = AdaptiveColor(
+      dark: BasicColor('#171210'),
+      light: BasicColor('#fff7f1'),
+    );
+    const editorUtilityBackground = AdaptiveColor(
+      dark: BasicColor('#241b16'),
+      light: BasicColor('#fff0e6'),
+    );
+
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      shellBackground: editorShellBackground,
+      inactiveShellBackground: editorInactiveShellBackground,
+      bodyBackground: editorBodyBackground,
+      inactiveBodyBackground: editorInactiveBodyBackground,
+      utilityBackground: editorUtilityBackground,
     );
   }
 
@@ -1325,22 +1369,34 @@ class OpenCodeThemes {
       light: BasicColor('#707393'),
     );
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBorderColor: textMuted,
+      inactiveBodyBorderColor: backgroundElement,
+      utilityBackground: backgroundElement,
+      inactiveMetaForeground: textMuted,
+      blurredPromptForeground: textMuted,
+      blurredTextForeground: textMuted,
+      blurredPlaceholderForeground: textMuted,
+      focusedLineNumberForeground: text,
+      blurredLineNumberForeground: textMuted,
+      blurredCursorLineNumberForeground: textMuted,
     );
   }
 
@@ -1420,22 +1476,34 @@ class OpenCodeThemes {
     const borderActive = BasicColor('#82AAFF');
     const borderSubtle = BasicColor('#5f7e97');
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBackground: background,
+      inactiveShellBorderColor: backgroundPanel,
+      inactiveBodyBorderColor: backgroundPanel,
+      blurredTextForeground: textMuted,
+      blurredPromptForeground: textMuted,
+      blurredPlaceholderForeground: textMuted,
+      focusedLineNumberForeground: text,
+      blurredLineNumberForeground: textMuted,
+      blurredCursorLineBackground: background,
+      blurredCursorLineNumberForeground: textMuted,
     );
   }
 
@@ -2025,22 +2093,34 @@ class OpenCodeThemes {
       light: BasicColor('#eee8d5'),
     );
 
-    return _buildTheme(
-      primary: primary,
-      secondary: secondary,
-      accent: accent,
-      error: error,
-      warning: warning,
-      success: success,
-      info: info,
-      text: text,
-      textMuted: textMuted,
-      background: background,
-      backgroundPanel: backgroundPanel,
-      backgroundElement: backgroundElement,
-      border: border,
-      borderActive: borderActive,
-      borderSubtle: borderSubtle,
+    return _withEditorThemeOverrides(
+      _buildTheme(
+        primary: primary,
+        secondary: secondary,
+        accent: accent,
+        error: error,
+        warning: warning,
+        success: success,
+        info: info,
+        text: text,
+        textMuted: textMuted,
+        background: background,
+        backgroundPanel: backgroundPanel,
+        backgroundElement: backgroundElement,
+        border: border,
+        borderActive: borderActive,
+        borderSubtle: borderSubtle,
+      ),
+      inactiveShellBackground: background,
+      inactiveShellBorderColor: backgroundPanel,
+      inactiveBodyBorderColor: backgroundPanel,
+      blurredTextForeground: textMuted,
+      blurredPromptForeground: textMuted,
+      blurredPlaceholderForeground: textMuted,
+      focusedLineNumberForeground: text,
+      blurredLineNumberForeground: textMuted,
+      blurredCursorLineBackground: background,
+      blurredCursorLineNumberForeground: textMuted,
     );
   }
 
@@ -2439,6 +2519,9 @@ class OpenCodeThemes {
     required Color borderActive,
     required Color borderSubtle,
   }) {
+    final textDim = text.dim;
+    final mutedDim = textMuted.dim;
+
     return Theme(
       primary: primary,
       secondary: secondary,
@@ -2492,6 +2575,75 @@ class OpenCodeThemes {
         headerForeground: textMuted,
         shortcutForeground: textMuted,
         borderColor: border,
+      ),
+      editorTheme: EditorThemeData(
+        shellBackground: backgroundElement,
+        inactiveShellBackground: backgroundPanel,
+        activeShellBorderColor: borderActive,
+        inactiveShellBorderColor: border,
+        bodyBackground: background,
+        inactiveBodyBackground: backgroundPanel,
+        activeBodyBorderColor: border,
+        inactiveBodyBorderColor: borderSubtle,
+        utilityBackground: backgroundPanel,
+        utilityBorderColor: border,
+        titleForeground: text,
+        inactiveTitleForeground: textDim,
+        metaForeground: textMuted,
+        inactiveMetaForeground: mutedDim,
+        focusedPromptForeground: text,
+        blurredPromptForeground: textMuted,
+        focusedTextForeground: text,
+        blurredTextForeground: textDim,
+        focusedPlaceholderForeground: textMuted,
+        blurredPlaceholderForeground: mutedDim,
+        focusedLineNumberForeground: textMuted,
+        blurredLineNumberForeground: mutedDim,
+        focusedCursorLineBackground: backgroundElement,
+        blurredCursorLineBackground: backgroundPanel,
+        focusedCursorLineNumberForeground: primary,
+        blurredCursorLineNumberForeground: textMuted,
+        searchMatchBackground: backgroundPanel,
+        searchMatchUnderlineColor: primary,
+      ),
+    );
+  }
+
+  static Theme _withEditorThemeOverrides(
+    Theme theme, {
+    Color? shellBackground,
+    Color? inactiveShellBackground,
+    Color? bodyBackground,
+    Color? inactiveBodyBackground,
+    Color? inactiveShellBorderColor,
+    Color? inactiveBodyBorderColor,
+    Color? utilityBackground,
+    Color? inactiveMetaForeground,
+    Color? blurredPromptForeground,
+    Color? blurredTextForeground,
+    Color? blurredPlaceholderForeground,
+    Color? focusedLineNumberForeground,
+    Color? blurredLineNumberForeground,
+    Color? blurredCursorLineBackground,
+    Color? blurredCursorLineNumberForeground,
+  }) {
+    return theme.copyWith(
+      editorTheme: theme.editorTheme?.copyWith(
+        shellBackground: shellBackground,
+        inactiveShellBackground: inactiveShellBackground,
+        bodyBackground: bodyBackground,
+        inactiveBodyBackground: inactiveBodyBackground,
+        inactiveShellBorderColor: inactiveShellBorderColor,
+        inactiveBodyBorderColor: inactiveBodyBorderColor,
+        utilityBackground: utilityBackground,
+        inactiveMetaForeground: inactiveMetaForeground,
+        blurredPromptForeground: blurredPromptForeground,
+        blurredTextForeground: blurredTextForeground,
+        blurredPlaceholderForeground: blurredPlaceholderForeground,
+        focusedLineNumberForeground: focusedLineNumberForeground,
+        blurredLineNumberForeground: blurredLineNumberForeground,
+        blurredCursorLineBackground: blurredCursorLineBackground,
+        blurredCursorLineNumberForeground: blurredCursorLineNumberForeground,
       ),
     );
   }

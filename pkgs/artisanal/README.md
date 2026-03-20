@@ -229,6 +229,9 @@ The current model is host-rendered composition with plugin-rendered content:
 - `RemotePluginGenericServiceCatalog` lets hosts register those generic
   services once, reuse the derived descriptors in `host.hello`, and then bind
   the same handlers to a `RemotePluginHostConnection`
+- `RemotePluginWorkspace` turns a manifest directory or manifest list into one
+  shared multi-plugin host with reused generic services, shared surface state,
+  plugin-id lookup, and an input router
 - `RemotePluginProtocolSchemas` and `RemotePluginManifestSchemas` expose
   `json_schema_builder` schemas for the full message protocol, per-message
   envelopes, and manifest files so non-Dart tooling can validate the same
@@ -252,8 +255,9 @@ dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart
 ```
 
 That example discovers plugin manifests, launches several plugin processes,
-routes focus/input across composed surfaces, and dogfoods the generic host
-service registry through the shared `services` capability.
+routes focus/input across composed surfaces, and dogfoods
+`RemotePluginWorkspace.startManifestDirectory(...)` plus the shared generic
+host service registry through the `services` capability.
 
 Dump the current JSON schemas:
 

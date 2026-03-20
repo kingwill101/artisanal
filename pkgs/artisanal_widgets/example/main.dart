@@ -3,10 +3,66 @@
 //
 // Run with: dart run example/main.dart
 
+import 'package:artisanal/bubbles.dart' as b;
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/runtime.dart' show TuiTrace;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/widgets.dart' as tui;
+
+import '_editor_demo_theme.dart' as demo_theme;
+
+const List<b.TextPatternDiagnosticRule>
+_showcaseDiagnosticRules = <b.TextPatternDiagnosticRule>[
+  b.TextPatternDiagnosticRule(
+    pattern: 'FIXME',
+    severity: b.TextDiagnosticSeverity.error,
+    code: 'FIX001',
+    message:
+        'Replace the placeholder host runner with the real hosted bootstrap flow.',
+    source: 'showcase',
+    wholeWord: true,
+  ),
+  b.TextPatternDiagnosticRule(
+    pattern: 'TODO',
+    severity: b.TextDiagnosticSeverity.warning,
+    code: 'TODO001',
+    message: 'Finish the pending editor-core showcase work.',
+    source: 'showcase',
+    wholeWord: true,
+  ),
+  b.TextPatternDiagnosticRule(
+    pattern: 'NOTE',
+    severity: b.TextDiagnosticSeverity.info,
+    code: 'NOTE001',
+    message: 'Review the release-notes callout for extra context.',
+    source: 'showcase',
+    wholeWord: true,
+  ),
+];
+
+const String _initialEditorBodyText =
+    'Build the widget showcase\n'
+    'Refine hosted runners\n'
+    'TODO: surface live editor diagnostics in the root demo';
+
+const String _initialCodeEditorText = '''
+Future<void> bootHostedApp() async {
+  // TODO: sync diagnostics in the root showcase
+  await runArtisanalApp(
+    ArtisanalApp(title: 'Hosted Demo', home: DemoScreen()),
+  ); // FIXME: replace placeholder bootstrap wiring
+}
+''';
+
+const String _initialMarkdownEditorText = '''
+# Release Notes
+
+- Shipped `TextEditor`
+- Shipped `CodeEditor`
+- Drafting `MarkdownEditor`
+
+> NOTE: Shared editor transforms now live in the base surface.
+''';
 
 void _trace(String msg) {
   TuiTrace.log('EXAMPLE $msg');
@@ -57,31 +113,17 @@ class _AppWidgetState extends tui.State<AppWidget> {
   final tui.TextFieldController _editorTitleController =
       tui.TextFieldController();
   final tui.TextAreaController _editorBodyController = tui.TextAreaController(
-    text: 'Build the widget showcase\nRefine hosted runners',
+    text: _initialEditorBodyText,
   );
   final tui.TextAreaController _codeEditorController = tui.TextAreaController(
-    text: '''
-Future<void> bootHostedApp() async {
-  await runArtisanalApp(
-    ArtisanalApp(title: 'Hosted Demo', home: DemoScreen()),
-  );
-}
-''',
+    text: _initialCodeEditorText,
   );
   final tui.TextAreaController _markdownEditorController =
-      tui.TextAreaController(
-        text: '''
-# Release Notes
-
-- Shipped `TextEditor`
-- Shipped `CodeEditor`
-- Drafting `MarkdownEditor`
-
-> Shared editor transforms now live in the base surface.
-''',
-      );
+      tui.TextAreaController(text: _initialMarkdownEditorText);
+  late final List<tui.TextPositionDiagnosticsSource> _diagnosticsSources;
+  late final List<tui.TextDiagnosticsBinding> _diagnosticsBindings;
   String _editorTitle = '';
-  String _editorBody = 'Build the widget showcase\nRefine hosted runners';
+  String _editorBody = _initialEditorBodyText;
   String _editorStatus = 'Press Ctrl+S to save';
   String _codeEditorStatus = 'Press Ctrl+S to save code changes';
   String _markdownEditorStatus = 'Press Ctrl+S to save markdown changes';
@@ -92,6 +134,7 @@ Future<void> bootHostedApp() async {
   bool _drawerOpen = false;
   double _progressValue = 0.35;
   String _lastAction = 'None';
+  String _themePresetName = 'adaptive';
   final _helpKeyMap = _ComponentHelpKeyMap();
 
   final List<tui.TabItem> _componentTabs = const [
@@ -107,7 +150,51 @@ Future<void> bootHostedApp() async {
     tui.SelectOption(label: 'Gamma', value: 'Gamma'),
   ];
 
-  tui.Theme get theme => widget.theme;
+  tui.Theme get theme => demo_theme.resolveEditorDemoTheme(_themePresetName);
+
+  @override
+  void initState() {
+    super.initState();
+    _diagnosticsSources = <tui.TextPositionDiagnosticsSource>[
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _editorBodyController,
+        rules: _showcaseDiagnosticRules,
+      ),
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _codeEditorController,
+        rules: _showcaseDiagnosticRules,
+      ),
+      tui.TextPositionDiagnosticsSource.patternRules(
+        text: _markdownEditorController,
+        rules: _showcaseDiagnosticRules,
+      ),
+    ];
+    _diagnosticsBindings = <tui.TextDiagnosticsBinding>[
+      tui.TextDiagnosticsBinding.fromPositionListenable(
+        controller: _editorBodyController,
+        diagnostics: _diagnosticsSources[0],
+      ),
+      tui.TextDiagnosticsBinding.fromPositionListenable(
+        controller: _codeEditorController,
+        diagnostics: _diagnosticsSources[1],
+      ),
+      tui.TextDiagnosticsBinding.fromPositionListenable(
+        controller: _markdownEditorController,
+        diagnostics: _diagnosticsSources[2],
+      ),
+    ];
+  }
+
+  @override
+  void dispose() {
+    for (final binding in _diagnosticsBindings) {
+      binding.dispose();
+    }
+    for (final source in _diagnosticsSources) {
+      source.dispose();
+    }
+    super.dispose();
+  }
 
   @override
   tui.Widget build(tui.BuildContext context) {
@@ -118,15 +205,18 @@ Future<void> bootHostedApp() async {
     final width = media.size.width.round();
     media.size.height.round();
 
-    return tui.Column(
-      gap: 1,
-      children: [
-        _buildHeader(width),
-        _buildTabs(),
-        _buildBody(width),
-        tui.Divider(width: width > 0 ? width : 72),
-        _buildFooter(),
-      ],
+    return tui.ThemeScope(
+      theme: theme,
+      child: tui.Column(
+        gap: 1,
+        children: [
+          _buildHeader(width),
+          _buildTabs(),
+          _buildBody(width),
+          tui.Divider(width: width > 0 ? width : 72),
+          _buildFooter(),
+        ],
+      ),
     );
   }
 
@@ -147,7 +237,16 @@ Future<void> bootHostedApp() async {
                 tui.Text('Widget + Zone Demo', style: theme.titleLarge),
               ],
             ),
-            tui.Text('Counter: $_counter', style: theme.bodyMedium),
+            tui.Row(
+              gap: 2,
+              children: [
+                tui.Text(
+                  'Preset: ${demo_theme.editorDemoThemeLabel(_themePresetName)}',
+                  style: theme.labelSmall,
+                ),
+                tui.Text('Counter: $_counter', style: theme.bodyMedium),
+              ],
+            ),
           ],
         ),
       ),
@@ -993,10 +1092,7 @@ Future<void> bootHostedApp() async {
       child: layeredPreview,
     );
 
-    return tui.PanelBox(
-      title: 'Overlays + Tooltip',
-      child: layeredPreview,
-    );
+    return tui.PanelBox(title: 'Overlays + Tooltip', child: layeredPreview);
   }
 
   tui.Widget _buildTips() {
@@ -1025,9 +1121,32 @@ Future<void> bootHostedApp() async {
       children: [
         tui.Text('1-4: tabs', style: theme.labelSmall),
         tui.Text('+/-: counter', style: theme.labelSmall),
+        tui.TextButton(
+          child: tui.Text('Palette prev'),
+          onPressed: () {
+            _cycleThemePreset(forward: false);
+            return null;
+          },
+        ),
+        tui.TextButton(
+          child: tui.Text('Palette next'),
+          onPressed: () {
+            _cycleThemePreset(forward: true);
+            return null;
+          },
+        ),
         tui.Text('q: quit', style: theme.labelSmall),
       ],
     );
+  }
+
+  void _cycleThemePreset({required bool forward}) {
+    setState(() {
+      _themePresetName = demo_theme.nextEditorDemoThemePreset(
+        _themePresetName,
+        forward: forward,
+      );
+    });
   }
 
   @override
@@ -1051,6 +1170,13 @@ Future<void> bootHostedApp() async {
         final before = _counter;
         setState(() => _counter--);
         _trace('handleUpdate - _counter $before -> $_counter');
+      }
+
+      if (key.char == '[') {
+        _cycleThemePreset(forward: false);
+      }
+      if (key.char == ']') {
+        _cycleThemePreset(forward: true);
       }
 
       if (key.char == '1') {

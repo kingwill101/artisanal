@@ -1,5 +1,6 @@
 library;
 
+import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
@@ -123,6 +124,26 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test('preserves internal scroll offset across rebuilds', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 12);
+      try {
+        await tester.pumpWidget(_ScrollAreaRebuildHarness());
+
+        tester.sendSpecialKey(terminal_keys.KeyType.pageDown);
+
+        expect(tester.find.text('Item 0'), isFalse);
+        expect(tester.find.text('Item 4'), isTrue);
+
+        tester.tap(tester.find.textLocation('Toggle'));
+
+        expect(tester.find.text('Flipped'), isTrue);
+        expect(tester.find.text('Item 0'), isFalse);
+        expect(tester.find.text('Item 4'), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -165,4 +186,38 @@ void main() {
       }
     });
   });
+}
+
+class _ScrollAreaRebuildHarness extends StatefulWidget {
+  _ScrollAreaRebuildHarness();
+
+  @override
+  State createState() => _ScrollAreaRebuildHarnessState();
+}
+
+class _ScrollAreaRebuildHarnessState extends State<_ScrollAreaRebuildHarness> {
+  bool _flipped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = List<String>.generate(
+      16,
+      (int index) => 'Item $index',
+    ).join('\n');
+    return Column(
+      children: <Widget>[
+        TextButton(
+          child: Text('Toggle'),
+          onPressed: () {
+            setState(() {
+              _flipped = !_flipped;
+            });
+            return null;
+          },
+        ),
+        Text(_flipped ? 'Flipped' : 'Initial'),
+        ScrollArea(width: 20, height: 4, child: Text(content)),
+      ],
+    );
+  }
 }

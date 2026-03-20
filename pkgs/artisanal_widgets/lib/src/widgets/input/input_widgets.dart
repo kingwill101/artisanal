@@ -12,13 +12,17 @@ import 'package:artisanal/tui.dart'
         View,
         TuiTrace;
 import 'package:artisanal/style.dart' show Layout, Style;
+import '../animation/animated_builder.dart' show ListenableBuilder;
 import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
-import '../core/framework.dart' show BuildContext, State, StatefulWidget;
-import '../layout/layout_widgets.dart' show Text, TextOverflow;
+import '../core/framework.dart'
+    show BuildContext, State, StatefulWidget, StatelessWidget;
+import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
+import '../selection/selection_widgets.dart'
+    show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../core/widget.dart';
@@ -36,7 +40,29 @@ import 'package:artisanal/bubbles.dart'
         TextInputStyleState,
         TextInputStyles,
         CursorModel,
-        CursorMode;
+        CursorMode,
+        TextDecorationRange,
+        TextDiagnosticRange,
+        TextPositionDiagnosticRange,
+        TextLineDecoration,
+        textActiveLineDecorationKey,
+        textActiveLineNumberDecorationKey,
+        textDefaultDecorationLayerPriority,
+        textDefaultLineDecorationLayerPriority,
+        textDiagnosticErrorDecorationKey,
+        textDiagnosticErrorLineDecorationKey,
+        textDiagnosticErrorLineNumberDecorationKey,
+        textDiagnosticHintDecorationKey,
+        textDiagnosticHintLineDecorationKey,
+        textDiagnosticHintLineNumberDecorationKey,
+        textDiagnosticInfoDecorationKey,
+        textDiagnosticInfoLineDecorationKey,
+        textDiagnosticInfoLineNumberDecorationKey,
+        textDiagnosticWarningDecorationKey,
+        textDiagnosticWarningLineDecorationKey,
+        textDiagnosticWarningLineNumberDecorationKey,
+        textSearchActiveMatchDecorationKey,
+        textSearchMatchDecorationKey;
 import 'package:artisanal/uv.dart' show CursorShape;
 
 /// Signature for text change notifications from [TextField].
@@ -304,20 +330,23 @@ String _modelViewString(Object view) {
 }
 
 TextInputStyles _textInputStylesFromTheme(Theme theme) {
+  final selection = Style()
+      .background(theme.resolvedHighlight)
+      .foreground(theme.resolvedOnHighlight);
   return TextInputStyles(
     focused: TextInputStyleState(
       prompt: theme.labelLarge.copy(),
       text: theme.bodyMedium.copy(),
       placeholder: theme.labelSmall.copy(),
       suggestion: theme.labelSmall.copy(),
-      selection: Style().background(theme.primary).foreground(theme.onPrimary),
+      selection: selection,
     ),
     blurred: TextInputStyleState(
       prompt: theme.labelSmall.copy(),
       text: theme.bodySmall.copy(),
       placeholder: theme.labelSmall.copy(),
       suggestion: theme.labelSmall.copy(),
-      selection: Style().background(theme.muted).foreground(theme.onSurface),
+      selection: selection,
     ),
     cursor: TextInputCursorStyle(
       color: theme.primary,
@@ -327,25 +356,144 @@ TextInputStyles _textInputStylesFromTheme(Theme theme) {
   );
 }
 
-TextAreaStyles _textAreaStylesFromTheme(Theme theme) {
+TextAreaStyles textAreaStylesFromTheme(Theme theme) {
+  final editorTheme = theme.editorTheme;
+  final selection = Style()
+      .background(theme.resolvedHighlight)
+      .foreground(theme.resolvedOnHighlight);
+  final focusedPrompt = theme.labelLarge.copy()
+    ..foreground(editorTheme?.focusedPromptForeground ?? theme.onSurface)
+    ..bold();
+  final focusedText = theme.bodyMedium.copy().foreground(
+    editorTheme?.focusedTextForeground ?? theme.onSurface,
+  );
+  final focusedPlaceholder = theme.labelMedium.copy().foreground(
+    editorTheme?.focusedPlaceholderForeground ?? theme.resolvedOnSurfaceVariant,
+  );
+  final focusedLineNumber = theme.labelMedium.copy().foreground(
+    editorTheme?.focusedLineNumberForeground ?? theme.resolvedOutline,
+  );
+  final blurredPrompt = theme.labelMedium.copy().foreground(
+    editorTheme?.blurredPromptForeground ?? theme.resolvedOnSurfaceVariant,
+  );
+  final blurredText = theme.bodyMedium.copy().foreground(
+    editorTheme?.blurredTextForeground ?? theme.resolvedOnSurfaceVariant,
+  );
+  final blurredPlaceholder = theme.labelSmall.copy()
+    ..foreground(editorTheme?.blurredPlaceholderForeground ?? theme.muted);
+  final blurredLineNumber = theme.labelSmall.copy().foreground(
+    editorTheme?.blurredLineNumberForeground ?? theme.resolvedOutline,
+  );
+  final searchMatch = Style()
+      .background(
+        editorTheme?.searchMatchBackground ?? theme.resolvedSurfaceVariant,
+      )
+      .underline()
+      .underlineColor(editorTheme?.searchMatchUnderlineColor ?? theme.primary);
+  final errorLineNumber = theme.labelSmall.copy().foreground(theme.error);
+  final warningLineNumber = theme.labelSmall.copy().foreground(theme.warning);
+  final infoLineNumber = theme.labelSmall.copy().foreground(theme.resolvedInfo);
+  final hintLineNumber = theme.labelSmall.copy().foreground(theme.muted);
   return TextAreaStyles(
     focused: TextAreaStyleState(
-      prompt: theme.labelLarge.copy(),
-      text: theme.bodyMedium.copy(),
-      placeholder: theme.labelSmall.copy(),
-      lineNumber: theme.labelSmall.copy(),
-      cursorLine: Style().background(theme.resolvedSurfaceVariant),
-      cursorLineNumber: theme.labelSmall.copy().foreground(theme.primary),
+      decorationStyles: <String, Style>{
+        textSearchMatchDecorationKey: searchMatch,
+        textSearchActiveMatchDecorationKey: Style()
+            .background(theme.resolvedHighlight)
+            .foreground(theme.resolvedOnHighlight),
+        textDiagnosticErrorDecorationKey: Style().underline().underlineColor(
+          theme.error,
+        ),
+        textDiagnosticWarningDecorationKey: Style().underline().underlineColor(
+          theme.warning,
+        ),
+        textDiagnosticInfoDecorationKey: Style().underline().underlineColor(
+          theme.resolvedInfo,
+        ),
+        textDiagnosticHintDecorationKey: Style().underline().underlineColor(
+          theme.muted,
+        ),
+      },
+      lineDecorationStyles: <String, Style>{
+        textActiveLineDecorationKey: Style().background(
+          theme.resolvedSurfaceVariant,
+        ),
+        textActiveLineNumberDecorationKey: theme.labelSmall.copy().foreground(
+          theme.primary,
+        ),
+        textDiagnosticErrorLineDecorationKey: Style(),
+        textDiagnosticWarningLineDecorationKey: Style(),
+        textDiagnosticInfoLineDecorationKey: Style(),
+        textDiagnosticHintLineDecorationKey: Style(),
+        textDiagnosticErrorLineNumberDecorationKey: errorLineNumber,
+        textDiagnosticWarningLineNumberDecorationKey: warningLineNumber,
+        textDiagnosticInfoLineNumberDecorationKey: infoLineNumber,
+        textDiagnosticHintLineNumberDecorationKey: hintLineNumber,
+      },
+      prompt: focusedPrompt,
+      text: focusedText,
+      placeholder: focusedPlaceholder,
+      lineNumber: focusedLineNumber,
+      cursorLine: Style().background(
+        editorTheme?.focusedCursorLineBackground ??
+            theme.resolvedSurfaceVariant,
+      ),
+      cursorLineNumber: theme.labelMedium.copy()
+        ..foreground(
+          editorTheme?.focusedCursorLineNumberForeground ?? theme.primary,
+        )
+        ..bold(),
       endOfBuffer: theme.labelSmall.copy().foreground(theme.resolvedOutline),
+      selection: selection,
     ),
     blurred: TextAreaStyleState(
-      prompt: theme.labelSmall.copy(),
-      text: theme.bodySmall.copy(),
-      placeholder: theme.labelSmall.copy(),
-      lineNumber: theme.labelSmall.copy(),
-      cursorLine: Style().background(theme.surface),
-      cursorLineNumber: theme.labelSmall.copy().foreground(theme.primary),
+      decorationStyles: <String, Style>{
+        textSearchMatchDecorationKey: searchMatch,
+        textSearchActiveMatchDecorationKey: Style()
+            .background(theme.resolvedHighlight)
+            .foreground(theme.resolvedOnHighlight),
+        textDiagnosticErrorDecorationKey: Style().underline().underlineColor(
+          theme.error,
+        ),
+        textDiagnosticWarningDecorationKey: Style().underline().underlineColor(
+          theme.warning,
+        ),
+        textDiagnosticInfoDecorationKey: Style().underline().underlineColor(
+          theme.resolvedInfo,
+        ),
+        textDiagnosticHintDecorationKey: Style().underline().underlineColor(
+          theme.muted,
+        ),
+      },
+      lineDecorationStyles: <String, Style>{
+        textActiveLineDecorationKey: Style().background(theme.surface),
+        textActiveLineNumberDecorationKey: theme.labelSmall.copy().foreground(
+          theme.primary,
+        ),
+        textDiagnosticErrorLineDecorationKey: Style(),
+        textDiagnosticWarningLineDecorationKey: Style(),
+        textDiagnosticInfoLineDecorationKey: Style(),
+        textDiagnosticHintLineDecorationKey: Style(),
+        textDiagnosticErrorLineNumberDecorationKey: errorLineNumber,
+        textDiagnosticWarningLineNumberDecorationKey: warningLineNumber,
+        textDiagnosticInfoLineNumberDecorationKey: infoLineNumber,
+        textDiagnosticHintLineNumberDecorationKey: hintLineNumber,
+      },
+      prompt: blurredPrompt,
+      text: blurredText,
+      placeholder: blurredPlaceholder,
+      lineNumber: blurredLineNumber,
+      cursorLine: Style().background(
+        editorTheme?.blurredCursorLineBackground ??
+            theme.resolvedSurfaceVariant,
+      ),
+      cursorLineNumber: blurredLineNumber.copy()
+        ..foreground(
+          editorTheme?.blurredCursorLineNumberForeground ??
+              theme.resolvedOutline,
+        ),
       endOfBuffer: theme.labelSmall.copy().foreground(theme.resolvedOutline),
+      selection: selection,
     ),
     cursor: TextAreaCursorStyle(
       color: theme.primary,
@@ -407,6 +555,19 @@ class TextAreaController extends ChangeNotifier
 
   /// Current selected text, if any.
   String get selectedText => _model.getSelectedText();
+
+  /// Current non-selection decoration ranges in flat document offsets.
+  List<TextDiagnosticRange> get diagnostics => _model.diagnostics;
+  TextDiagnosticRange? get activeDiagnostic => _model.activeDiagnostic;
+  List<TextDecorationRange> get decorations => _model.decorations;
+  List<TextLineDecoration> get lineDecorations => _model.lineDecorations;
+  List<TextDecorationRange> decorationsForLayer(String layerKey) {
+    return _model.decorationsForLayer(layerKey);
+  }
+
+  List<TextLineDecoration> lineDecorationsForLayer(String layerKey) {
+    return _model.lineDecorationsForLayer(layerKey);
+  }
 
   /// Whether there is an edit available to undo.
   bool get canUndo => _model.canUndo;
@@ -492,6 +653,142 @@ class TextAreaController extends ChangeNotifier
     final before = _TextAreaControllerSnapshot.capture(_model);
     _model.insertString(text);
     if (!before.matches(_model)) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies document decoration ranges used for search or other overlays.
+  void setDecorations(Iterable<TextDecorationRange> decorations) {
+    final changed = _model.setDecorations(decorations);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies decoration ranges to a named layer.
+  void setDecorationLayer(
+    String layerKey,
+    Iterable<TextDecorationRange> decorations, {
+    int priority = textDefaultDecorationLayerPriority,
+  }) {
+    final changed = _model.setDecorationLayer(
+      layerKey,
+      decorations,
+      priority: priority,
+    );
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Clears non-selection decoration ranges.
+  void clearDecorations() {
+    final changed = _model.clearDecorations();
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Clears one named decoration layer.
+  void clearDecorationLayer(String layerKey) {
+    final changed = _model.clearDecorationLayer(layerKey);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies typed diagnostic range and line overlays.
+  void setDiagnostics(Iterable<TextDiagnosticRange> diagnostics) {
+    final changed = _model.setDiagnostics(diagnostics);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies typed diagnostic overlays from line/column positions.
+  void setDiagnosticsFromPositions(
+    Iterable<TextPositionDiagnosticRange> diagnostics,
+  ) {
+    final changed = _model.setDiagnosticsFromPositions(diagnostics);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Clears typed diagnostic overlays.
+  void clearDiagnostics() {
+    final changed = _model.clearDiagnostics();
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Selects the next diagnostic range.
+  bool selectNextDiagnostic({bool wrap = true}) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    final changed = _model.selectNextDiagnostic(wrap: wrap);
+    if (changed && !before.matches(_model)) {
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  /// Selects the previous diagnostic range.
+  bool selectPreviousDiagnostic({bool wrap = true}) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    final changed = _model.selectPreviousDiagnostic(wrap: wrap);
+    if (changed && !before.matches(_model)) {
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  /// Selects the diagnostic that covers [lineIndex], if any.
+  bool selectDiagnosticAtLine(int lineIndex) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    final changed = _model.selectDiagnosticAtLine(lineIndex);
+    if (changed && !before.matches(_model)) {
+      notifyListeners();
+    }
+    return changed;
+  }
+
+  /// Applies whole-line decorations to the default line layer.
+  void setLineDecorations(Iterable<TextLineDecoration> decorations) {
+    final changed = _model.setLineDecorations(decorations);
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies whole-line decorations to a named layer.
+  void setLineDecorationLayer(
+    String layerKey,
+    Iterable<TextLineDecoration> decorations, {
+    int priority = textDefaultLineDecorationLayerPriority,
+  }) {
+    final changed = _model.setLineDecorationLayer(
+      layerKey,
+      decorations,
+      priority: priority,
+    );
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Clears whole-line decorations across all layers.
+  void clearLineDecorations() {
+    final changed = _model.clearLineDecorations();
+    if (changed) {
+      notifyListeners();
+    }
+  }
+
+  /// Clears one named whole-line decoration layer.
+  void clearLineDecorationLayer(String layerKey) {
+    final changed = _model.clearLineDecorationLayer(layerKey);
+    if (changed) {
       notifyListeners();
     }
   }
@@ -800,6 +1097,86 @@ class _TextAreaControllerSnapshot {
         selectionBase == model.selectionBase &&
         selectionExtent == model.selectionExtent &&
         selectedText == model.getSelectedText();
+  }
+}
+
+/// A read-only selectable view of a [TextEditingController].
+///
+/// This bridges controller-backed editor content into [SelectionArea] without
+/// participating in the live editing selection model.
+class SelectableTextFieldView extends StatelessWidget {
+  SelectableTextFieldView({
+    required this.controller,
+    this.selectionController,
+    this.textAlign = TextAlign.left,
+    this.softWrap = true,
+    this.overflow = TextOverflow.clip,
+    this.maxWidth,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final SelectionController? selectionController;
+  final TextAlign textAlign;
+  final bool softWrap;
+  final TextOverflow overflow;
+  final int? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (BuildContext context, Widget? child) {
+        return SelectableView(
+          _modelViewString(controller.model.view()),
+          controller: selectionController,
+          textAlign: textAlign,
+          softWrap: softWrap,
+          overflow: overflow,
+          maxWidth: maxWidth,
+        );
+      },
+    );
+  }
+}
+
+/// A read-only selectable view of a [TextAreaController].
+///
+/// This exposes textarea-backed content to [SelectionArea] as a shared
+/// selectable fragment while keeping editing selection and focus separate.
+class SelectableTextAreaView extends StatelessWidget {
+  SelectableTextAreaView({
+    required this.controller,
+    this.selectionController,
+    this.textAlign = TextAlign.left,
+    this.softWrap = true,
+    this.overflow = TextOverflow.clip,
+    this.maxWidth,
+    super.key,
+  });
+
+  final TextAreaController controller;
+  final SelectionController? selectionController;
+  final TextAlign textAlign;
+  final bool softWrap;
+  final TextOverflow overflow;
+  final int? maxWidth;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (BuildContext context, Widget? child) {
+        return SelectableView(
+          _modelViewString(controller.model.view()),
+          controller: selectionController,
+          textAlign: textAlign,
+          softWrap: softWrap,
+          overflow: overflow,
+          maxWidth: maxWidth,
+        );
+      },
+    );
   }
 }
 
@@ -1678,7 +2055,7 @@ class _TextAreaState extends State<TextArea> {
     if (_themeResolved && identical(theme, _themeFromContext)) return;
     _themeResolved = true;
     _themeFromContext = theme;
-    _model.styles = _textAreaStylesFromTheme(theme);
+    _model.styles = textAreaStylesFromTheme(theme);
     if (_model.focused) {
       _model.focus();
     } else {

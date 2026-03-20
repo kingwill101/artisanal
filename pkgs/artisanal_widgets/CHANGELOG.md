@@ -8,6 +8,9 @@
 - Added stable `package:artisanal_widgets/charting.dart` and `package:artisanal_widgets/selection.dart` entrypoints for the supported charting and text-selection surfaces.
 - Added `ImageAutoMode.sessionCapabilities` so `Image(renderMode: auto)` can follow terminal version and device-attribute reports from the active session instead of only using the local process environment.
 - Added a dedicated `example/tooltip_trace` demo with `TuiTrace` instrumentation and built-in replay/trace conversion flags so tooltip hover behavior can be recorded, converted, and replayed during debugging.
+- Added external diagnostics sources and listenable diagnostics bindings for editor widgets, so demos and downstream apps can drive diagnostics without custom text-pattern glue.
+- Added per-widget selection highlight overrides for the shared read-only selection surfaces, so mixed documents can use different selection palettes within one `SelectionArea`.
+- Added span-level selection highlight overrides for `SelectableRichText`, so one shared rich-text selection can mix palettes within a single widget.
 
 ### Changed
 
@@ -19,6 +22,7 @@
 - Clarified the package guidance so `artisanal_widgets` remains the primary widget dependency, while the `package:artisanal/...` widget entrypoints are documented as optional umbrella convenience re-exports.
 - Hosted browser/socket runner helpers now default `Image(renderMode: auto)` to `ImageAutoMode.sessionCapabilities` instead of forcing the portable fallback, so remote terminals can upgrade image rendering from live session capability reports.
 - Added hosted-runner regression coverage for session-capability image probing by default and for portable-fallback mode suppressing those extra image capability requests.
+- Improved shared read-only selection in scrollable mixed views, including upward and downward edge auto-scroll, mouse-wheel scrolling during drag selection, and row-wide drag starts from surrounding whitespace.
 - Kept `package:artisanal_widgets/artisanal_widgets.dart` as the broader experimental compatibility surface while stabilizing the primary widget/app/layout/input/navigation APIs.
 - Updated the widget docs to prefer the stable `package:artisanal_widgets/widgets.dart` import path.
 - Updated the package README and focused examples to prefer the stable top-level entrypoints over the broad compatibility import.

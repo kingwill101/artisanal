@@ -85,6 +85,7 @@
 - Reoriented remote plugin surface lifecycle messages to the `plugin.surface.*` wire family so the protocol matches the current model where plugins announce the surfaces they want hosts to render.
 - Clarified the widget import guidance so `package:artisanal/...` widget entrypoints are documented as umbrella convenience re-exports, while `artisanal_widgets` remains the primary widget package for widget-first apps.
 - Clarified the `ProgramOptions.mouse` and `mouseMode` docs so passive hover behavior explicitly points callers to `MouseMode.allMotion` instead of the `mouse: true` cell-motion default.
+- Improved editor text-document offset mapping with cached line starts, and added triple-click whole-line selection across the shared text input surfaces.
 - Prevented late external-process completion from restoring the terminal or delivering completion messages after the program has already quit, been killed, or lost its backend host session.
 - Made direct `Program.kill()` abort active startup probes immediately, so kill behaves like quit/backend shutdown during pre-render and emoji probing.
 - Deferred renders and stateful terminal control writes while `Program` temporarily releases the terminal for exec/suspend, then reapplied deferred titles and inline alt-screen/mode state on restore.

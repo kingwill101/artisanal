@@ -25,12 +25,29 @@ import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../layout/layout_widgets.dart' show EdgeInsets, Padding;
+import '../selection/selection_text_utils.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart' show Canvas, StyledString;
 
 void _traceScroll(String message) {
   if (!TuiTrace.enabled) return;
   TuiTrace.log(message, tag: TraceTag.scroll);
+}
+
+int _selectionAutoScrollDelta({
+  required int localY,
+  required int viewportHeight,
+}) {
+  if (viewportHeight <= 0) return 0;
+  final edgeThreshold = viewportHeight <= 2 ? 0 : 1;
+  if (localY <= edgeThreshold) return -1;
+  if (localY >= viewportHeight - 1 - edgeThreshold) return 1;
+  return 0;
+}
+
+int _clampSelectionViewportY(int localY, int viewportHeight) {
+  if (viewportHeight <= 0) return 0;
+  return localY.clamp(0, viewportHeight - 1);
 }
 
 /// Scroll controller interface for scrollable widgets.
@@ -103,6 +120,9 @@ class WidgetScrollController implements ScrollController {
   /// Position of the last click, for double-click detection.
   ({int x, int y})? _lastClickPos;
 
+  /// Sequential click count at the last click position.
+  int _lastClickCount = 0;
+
   /// The selection start point, or null.
   ({int x, int y})? get selectionStart => _selectionStart;
 
@@ -164,49 +184,11 @@ class WidgetScrollController implements ScrollController {
   /// [lines] should be the full content lines (not just visible), in order.
   /// Selection coordinates are in content space.
   String getSelectedText(List<String> lines) {
-    if (!hasSelection) return '';
-
-    final s = _selectionStart!;
-    final e = _selectionEnd!;
-
-    final startY = math.min(s.y, e.y);
-    final endY = math.max(s.y, e.y);
-
-    if (startY < 0 || endY >= lines.length) return '';
-
-    final sb = StringBuffer();
-    for (var y = startY; y <= endY; y++) {
-      final line = lines[y];
-      final plain = Style.stripAnsi(line);
-
-      int startX, endX;
-      if (startY == endY) {
-        startX = math.min(s.x, e.x);
-        endX = math.max(s.x, e.x);
-      } else if (y == startY) {
-        startX = s.y < e.y ? s.x : e.x;
-        endX = Style.visibleLength(plain);
-      } else if (y == endY) {
-        startX = 0;
-        endX = s.y < e.y ? e.x : s.x;
-      } else {
-        startX = 0;
-        endX = Style.visibleLength(plain);
-      }
-
-      final maxX = Style.visibleLength(plain);
-      startX = startX.clamp(0, maxX);
-      endX = endX.clamp(0, maxX);
-
-      if (startX < endX) {
-        sb.write(cutAnsiByCells(plain, startX, endX));
-      }
-      if (y < endY) {
-        sb.write('\n');
-      }
-    }
-
-    return sb.toString();
+    return extractSelectedText(
+      lines,
+      selectionStart: _selectionStart,
+      selectionEnd: _selectionEnd,
+    );
   }
 
   @override
@@ -938,13 +920,26 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     // Motion and release events may have button == none (terminal motion
     // packets don't always re-report the held button). Handle them based on
     // the _selecting flag rather than requiring button == left.
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = ctrl.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -956,22 +951,39 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      // Double-click detection.
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
-        // Double-click: select word.
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = _getPaintedContentLines(ro);
-          final (wordStart, wordEnd) = _findWordAt(lines, contentX, contentY);
+          final (wordStart, wordEnd) = findWordAt(lines, contentX, contentY);
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = _getPaintedContentLines(ro);
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -981,8 +993,6 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
@@ -1045,7 +1055,13 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     if (pad != null && !pad.isZero) {
       child = Padding(padding: pad, child: child);
     }
-    return _SingleChildViewport(controller: _effectiveController, child: child);
+    return _SingleChildViewport(
+      controller: _effectiveController,
+      selectionHighlightStyle: selectionHighlightStyleForTheme(
+        ThemeScope.of(context),
+      ),
+      child: child,
+    );
   }
 }
 
@@ -1055,19 +1071,29 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
 /// out with unconstrained height, then clips its paint output to the
 /// viewport window.
 class _SingleChildViewport extends SingleChildRenderObjectWidget {
-  _SingleChildViewport({required this.controller, required super.child});
+  _SingleChildViewport({
+    required this.controller,
+    required this.selectionHighlightStyle,
+    required super.child,
+  });
 
   final ScrollController controller;
+  final Style selectionHighlightStyle;
 
   @override
   RenderObject createRenderObject() {
-    return RenderSingleChildViewport(controller: controller);
+    return RenderSingleChildViewport(
+      controller: controller,
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
   }
 
   @override
   void updateRenderObject(RenderObject renderObject) {
     final ro = renderObject as RenderSingleChildViewport;
-    ro.controller = controller;
+    ro
+      ..controller = controller
+      ..selectionHighlightStyle = selectionHighlightStyle;
     // The widget tree rebuilt — child content may have changed.
     ro.invalidateChildPaintCache();
   }
@@ -1082,10 +1108,13 @@ class _SingleChildViewport extends SingleChildRenderObjectWidget {
 /// than the viewport). On paint, it takes the child's rendered string,
 /// skips [offset] lines, and returns only [viewportHeight] lines.
 class RenderSingleChildViewport extends RenderBox {
-  RenderSingleChildViewport({required ScrollController controller})
-    : _controller = controller;
+  RenderSingleChildViewport({
+    required ScrollController controller,
+    required this.selectionHighlightStyle,
+  }) : _controller = controller;
 
   ScrollController _controller;
+  Style selectionHighlightStyle;
 
   ScrollController get controller => _controller;
   set controller(ScrollController value) {
@@ -1199,7 +1228,13 @@ class RenderSingleChildViewport extends RenderBox {
     if (_controller is WidgetScrollController) {
       final ctrl = _controller as WidgetScrollController;
       if (ctrl.hasSelection) {
-        visible = _applySelectionHighlighting(visible, scrollOffset, ctrl);
+        visible = applySelectionHighlighting(
+          visible,
+          offset: scrollOffset,
+          selectionStart: ctrl.selectionStart,
+          selectionEnd: ctrl.selectionEnd,
+          highlightStyle: selectionHighlightStyle,
+        );
       }
     }
 
@@ -1452,13 +1487,26 @@ class _ScrollViewState extends State<ScrollView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     // Motion and release events may have button == none (terminal motion
     // packets don't always re-report the held button). Handle them based on
     // the _selecting flag rather than requiring button == left.
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = ctrl.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -1475,21 +1523,39 @@ class _ScrollViewState extends State<ScrollView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      // Double-click detection.
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = _getPaintedContentLines(ro);
-          final (wordStart, wordEnd) = _findWordAt(lines, contentX, contentY);
+          final (wordStart, wordEnd) = findWordAt(lines, contentX, contentY);
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = _getPaintedContentLines(ro);
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -1498,8 +1564,6 @@ class _ScrollViewState extends State<ScrollView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
@@ -1579,6 +1643,9 @@ class _ScrollViewState extends State<ScrollView> {
   Widget build(BuildContext context) {
     return _SingleChildViewport(
       controller: _effectiveController,
+      selectionHighlightStyle: selectionHighlightStyleForTheme(
+        ThemeScope.of(context),
+      ),
       child: widget.child,
     );
   }
@@ -3527,6 +3594,9 @@ class _VirtualListViewState extends State<VirtualListView> {
 
   @override
   Widget build(BuildContext context) {
+    final selectionHighlightStyle = selectionHighlightStyleForTheme(
+      ThemeScope.of(context),
+    );
     return _VirtualListViewport(
       controller: _controller,
       zoneId: _zoneId,
@@ -3536,6 +3606,7 @@ class _VirtualListViewState extends State<VirtualListView> {
       estimatedItemExtent: widget.estimatedItemExtent,
       variableHeight: widget.variableHeight,
       separator: widget.separator,
+      selectionHighlightStyle: selectionHighlightStyle,
       children: widget.children,
     );
   }
@@ -3613,10 +3684,23 @@ class _VirtualListViewState extends State<VirtualListView> {
     final vpGlobalY = ro != null ? _roGlobalY(ro) : 0.0;
     final vpGlobalX = ro != null ? _roGlobalX(ro) : 0.0;
     final contentX = (event.x - vpGlobalX).toInt();
-    final contentY = (event.y - vpGlobalY).toInt() + ctrl.offset;
+    final viewportLocalY = (event.y - vpGlobalY).toInt();
+    final contentY = viewportLocalY + ctrl.offset;
 
     if (event.action == MouseAction.motion && ctrl._selecting) {
-      ctrl._selectionEnd = (x: contentX, y: contentY);
+      final viewportHeight = _controller.viewportExtent;
+      final scrollDelta = _selectionAutoScrollDelta(
+        localY: viewportLocalY,
+        viewportHeight: viewportHeight,
+      );
+      if (scrollDelta != 0) {
+        _scrollBy(scrollDelta);
+      }
+      final clampedLocalY = _clampSelectionViewportY(
+        viewportLocalY,
+        viewportHeight,
+      );
+      ctrl._selectionEnd = (x: contentX, y: clampedLocalY + ctrl.offset);
       _markNeedsPaint();
       return null;
     }
@@ -3633,20 +3717,39 @@ class _VirtualListViewState extends State<VirtualListView> {
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
       final now = DateTime.now();
       final pos = (x: contentX, y: contentY);
-
-      if (ctrl._lastClickTime != null &&
+      final isSequential =
+          ctrl._lastClickTime != null &&
           now.difference(ctrl._lastClickTime!) <
               const Duration(milliseconds: 500) &&
-          ctrl._lastClickPos == pos) {
+          ctrl._lastClickPos == pos;
+      final clickCount = isSequential
+          ? math.min(ctrl._lastClickCount + 1, 3)
+          : 1;
+      ctrl
+        .._lastClickTime = now
+        .._lastClickPos = pos
+        .._lastClickCount = clickCount;
+
+      if (clickCount == 2) {
         final ro = _findRenderViewport();
         if (ro != null) {
           final lines = ro.allContentLinesForSelection();
-          final (wordStart, wordEnd) = _findWordAt(lines, contentX, contentY);
+          final (wordStart, wordEnd) = findWordAt(lines, contentX, contentY);
           ctrl._selectionStart = (x: wordStart, y: contentY);
           ctrl._selectionEnd = (x: wordEnd, y: contentY);
           ctrl._selecting = false;
-          ctrl._lastClickTime = now;
-          ctrl._lastClickPos = pos;
+          _markNeedsPaint();
+        }
+        return null;
+      }
+      if (clickCount >= 3) {
+        final ro = _findRenderViewport();
+        if (ro != null) {
+          final lines = ro.allContentLinesForSelection();
+          final (lineStart, lineEnd) = findLineAt(lines, contentY);
+          ctrl._selectionStart = (x: lineStart, y: contentY);
+          ctrl._selectionEnd = (x: lineEnd, y: contentY);
+          ctrl._selecting = false;
           _markNeedsPaint();
         }
         return null;
@@ -3655,8 +3758,6 @@ class _VirtualListViewState extends State<VirtualListView> {
       ctrl._selectionStart = pos;
       ctrl._selectionEnd = pos;
       ctrl._selecting = true;
-      ctrl._lastClickTime = now;
-      ctrl._lastClickPos = pos;
       _markNeedsPaint();
       return null;
     }
@@ -3728,6 +3829,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     required this.estimatedItemExtent,
     required this.variableHeight,
     required this.separator,
+    required this.selectionHighlightStyle,
     required super.children,
   });
 
@@ -3739,6 +3841,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
   final int? estimatedItemExtent;
   final bool variableHeight;
   final String separator;
+  final Style selectionHighlightStyle;
 
   @override
   RenderObject createRenderObject() {
@@ -3751,6 +3854,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
       estimatedItemExtent: estimatedItemExtent,
       variableHeight: variableHeight,
       separator: separator,
+      selectionHighlightStyle: selectionHighlightStyle,
     );
   }
 
@@ -3765,7 +3869,8 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
       ..itemExtent = itemExtent
       ..estimatedItemExtent = estimatedItemExtent
       ..variableHeight = variableHeight
-      ..separator = separator;
+      ..separator = separator
+      ..selectionHighlightStyle = selectionHighlightStyle;
   }
 
   @override
@@ -3794,6 +3899,7 @@ class RenderListViewport extends RenderBox {
     required this.estimatedItemExtent,
     required this.variableHeight,
     required this.separator,
+    required this.selectionHighlightStyle,
   });
 
   ScrollController controller;
@@ -3804,6 +3910,7 @@ class RenderListViewport extends RenderBox {
   int? estimatedItemExtent;
   bool variableHeight;
   String separator;
+  Style selectionHighlightStyle;
 
   final Map<int, int> _measuredHeights = <int, int>{};
   final Map<int, _ChildPaintSnapshot> _childPaintCache =
@@ -4414,7 +4521,13 @@ class RenderListViewport extends RenderBox {
     final c = controller;
     if (c is! WidgetScrollController || !c.hasSelection) return visible;
     final lines = visible.split('\n');
-    final highlighted = _applySelectionHighlighting(lines, offset, c);
+    final highlighted = applySelectionHighlighting(
+      lines,
+      offset: offset,
+      selectionStart: c.selectionStart,
+      selectionEnd: c.selectionEnd,
+      highlightStyle: selectionHighlightStyle,
+    );
     return highlighted.join('\n');
   }
 }
@@ -4519,112 +4632,6 @@ double _roGlobalY(RenderObject ro) {
     current = current.parent;
   }
   return y;
-}
-
-/// Returns `(startX, endX)` for the word at the given position.
-/// Mirrors `ViewportModel._findWordAt`.
-(int, int) _findWordAt(List<String> lines, int x, int y) {
-  if (y < 0 || y >= lines.length) return (x, x);
-  final line = Style.stripAnsi(lines[y]);
-  if (x < 0 || x >= line.length) return (x, x);
-
-  if (_isWhitespaceChar(line[x])) {
-    var start = x;
-    while (start > 0 && _isWhitespaceChar(line[start - 1])) {
-      start--;
-    }
-    var end = x;
-    while (end < line.length && _isWhitespaceChar(line[end])) {
-      end++;
-    }
-    return (start, end);
-  } else {
-    var start = x;
-    while (start > 0 && !_isWhitespaceChar(line[start - 1])) {
-      start--;
-    }
-    var end = x;
-    while (end < line.length && !_isWhitespaceChar(line[end])) {
-      end++;
-    }
-    return (start, end);
-  }
-}
-
-bool _isWhitespaceChar(String char) {
-  return char == ' ' || char == '\t' || char == '\n' || char == '\r';
-}
-
-/// Selection highlight style: white background, black foreground.
-final Style _selectionStyle = Style()
-    .background(const AnsiColor(7))
-    .foreground(const AnsiColor(0));
-
-/// Applies selection highlighting to [lines] based on the controller's
-/// selection state. [offset] is the content-line index of the first visible
-/// line (i.e. the scroll offset).
-///
-/// Selection coordinates in [ctrl] are in content space (Y includes scroll).
-/// This mirrors `ViewportModel._applySelection`.
-List<String> _applySelectionHighlighting(
-  List<String> lines,
-  int offset,
-  WidgetScrollController ctrl,
-) {
-  if (!ctrl.hasSelection) return lines;
-
-  final s = ctrl.selectionStart!;
-  final e = ctrl.selectionEnd!;
-
-  final startY = math.min(s.y, e.y);
-  final endY = math.max(s.y, e.y);
-
-  // If the selection is entirely outside the visible range, return as-is.
-  if (endY < offset) return lines;
-  if (startY >= offset + lines.length) return lines;
-
-  final result = <String>[];
-
-  for (var i = 0; i < lines.length; i++) {
-    final lineIdx = i + offset;
-    var line = lines[i];
-
-    if (lineIdx < startY || lineIdx > endY) {
-      result.add(line);
-      continue;
-    }
-
-    final maxX = Style.visibleLength(line);
-
-    int startX;
-    int endX;
-
-    if (startY == endY) {
-      startX = math.min(s.x, e.x);
-      endX = math.max(s.x, e.x);
-    } else if (lineIdx == startY) {
-      startX = s.y < e.y ? s.x : e.x;
-      endX = maxX;
-    } else if (lineIdx == endY) {
-      startX = 0;
-      endX = s.y < e.y ? e.x : s.x;
-    } else {
-      startX = 0;
-      endX = maxX;
-    }
-
-    startX = startX.clamp(0, maxX);
-    endX = endX.clamp(0, maxX);
-    if (startX >= endX) {
-      result.add(line);
-      continue;
-    }
-
-    line = styleRanges(line, [StyleRange(startX, endX, _selectionStyle)]);
-    result.add(line);
-  }
-
-  return result;
 }
 
 class _ViewportRender extends LeafRenderObjectWidget {

@@ -1,8 +1,27 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:test/test.dart';
+
+RegExp _highlightedTextPattern({
+  required int foreground,
+  required int background,
+  required String text,
+}) {
+  final esc = RegExp.escape('\x1b[');
+  final reset = RegExp.escape('\x1b[m');
+  final literalText = RegExp.escape(text);
+  return RegExp(
+    '(?:'
+    '$esc[^m]*38;5;$foreground[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    '|$esc[^m]*38;5;$foreground[^m]*m$esc[^m]*48;5;$background[^m]*m$literalText$reset'
+    '|$esc[^m]*48;5;$background[^m]*m$esc[^m]*38;5;$foreground[^m]*m$literalText$reset'
+    ')',
+  );
+}
 
 void main() {
   // -------------------------------------------------------
@@ -99,6 +118,17 @@ void main() {
       expect(text, 'World');
     });
 
+    test('getSelectedText strips ANSI decoration before slicing', () {
+      final ctrl = SelectionController();
+      final styled = Style()
+          .foreground(const AnsiColor(2))
+          .render('Hello World');
+
+      ctrl.setSelection(start: (x: 6, y: 0), end: (x: 11, y: 0));
+
+      expect(ctrl.getSelectedText([styled]), 'World');
+    });
+
     test('getSelectedText single char', () {
       final ctrl = SelectionController();
       ctrl.setSelection(start: (x: 0, y: 0), end: (x: 1, y: 0));
@@ -109,6 +139,12 @@ void main() {
     test('getSelectedText empty when no selection', () {
       final ctrl = SelectionController();
       expect(ctrl.getSelectedText(['Hello']), '');
+    });
+
+    test('getSelectedText clamps partial overlap to available lines', () {
+      final ctrl = SelectionController();
+      ctrl.setSelection(start: (x: 2, y: -1), end: (x: 3, y: 1));
+      expect(ctrl.getSelectedText(['Hello', 'World']), 'Hello\nWor');
     });
   });
 
@@ -164,6 +200,142 @@ void main() {
         // The output should contain ANSI escape codes for highlighting.
         final output = tester.view;
         expect(output.contains('\x1b['), isTrue);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 160,
+        text: 'Hello',
+      );
+      final hardcodedSelection = _highlightedTextPattern(
+        foreground: 0,
+        background: 7,
+        text: 'Hello',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: SelectableText('Hello World', controller: ctrl),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        final output = tester.view;
+        expect(themedSelection.hasMatch(output), isTrue);
+        expect(hardcodedSelection.hasMatch(output), isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('selection highlighting can use an explicit override style', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+      final overrideStyle = Style()
+        ..background(const AnsiColor(27))
+        ..foreground(const AnsiColor(230));
+      final overriddenSelection = _highlightedTextPattern(
+        foreground: 230,
+        background: 27,
+        text: 'Hello',
+      );
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 160,
+        text: 'Hello',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: SelectableText(
+              'Hello World',
+              controller: ctrl,
+              selectionHighlightStyle: overrideStyle,
+            ),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        final output = tester.view;
+        expect(overriddenSelection.hasMatch(output), isTrue);
+        expect(themedSelection.hasMatch(output), isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('rich text can override selection highlight per span', () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 5);
+      final ctrl = SelectionController();
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+      final spanOverride = Style()
+        ..background(const AnsiColor(27))
+        ..foreground(const AnsiColor(230));
+      final themedSelection = _highlightedTextPattern(
+        foreground: 231,
+        background: 160,
+        text: 'alpha ',
+      );
+      final overriddenSelection = _highlightedTextPattern(
+        foreground: 230,
+        background: 27,
+        text: 'beta',
+      );
+
+      try {
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: theme,
+            child: SelectableRichText(
+              controller: ctrl,
+              text: TextSpan(
+                children: [
+                  const TextSpan(text: 'alpha '),
+                  TextSpan(
+                    text: 'beta',
+                    style: Style()..bold(),
+                    selectionHighlightStyle: spanOverride,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(10, 0);
+        tester.mouseUp(10, 0);
+        final output = tester.view;
+
+        expect(themedSelection.hasMatch(output), isTrue);
+        expect(overriddenSelection.hasMatch(output), isTrue);
       } finally {
         await tester.dispose();
       }
@@ -250,6 +422,219 @@ void main() {
 
         // No crash, no selection.
         expect(ctrl.hasSelection, isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('triple click selects the entire line', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          SelectableText('Hello World', controller: ctrl),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+        expect(ctrl.selectionEnd, equals((x: 11, y: 0)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableRichText participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          SelectableRichText(
+            controller: ctrl,
+            text: const TextSpan(
+              text: 'Hello ',
+              children: [TextSpan(text: 'world')],
+            ),
+          ),
+        );
+
+        tester.mouseDown(6, 0);
+        tester.mouseMove(11, 0);
+        tester.mouseUp(11, 0);
+
+        expect(ctrl.getSelectedText(['Hello world']), 'world');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableView participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(SelectableView('alpha beta', controller: ctrl));
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableMarkdownText participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          SelectableMarkdownText(
+            data: '- alpha\n- beta',
+            controller: ctrl,
+            maxWidth: 40,
+          ),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseMove(7, 0);
+        tester.mouseUp(7, 0);
+
+        expect(ctrl.getSelectedText(['- alpha', '- beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('Text.selectable() adapts plain text widgets', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          Text('alpha beta').selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('MarkdownText.selectable() adapts markdown widgets', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 8);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          MarkdownText(
+            data: '- alpha\n- beta',
+            maxWidth: 40,
+          ).selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseMove(7, 0);
+        tester.mouseUp(7, 0);
+
+        expect(ctrl.getSelectedText(['- alpha', '- beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('RichText.selectable() adapts rich text widgets', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          RichText(
+            text: const TextSpan(
+              text: 'Hello ',
+              children: [TextSpan(text: 'world')],
+            ),
+          ).selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(6, 0);
+        tester.mouseMove(11, 0);
+        tester.mouseUp(11, 0);
+
+        expect(ctrl.getSelectedText(['Hello world']), 'world');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('View.selectable() adapts generic view widgets', () async {
+      final tester = WidgetTester(screenWidth: 50, screenHeight: 5);
+      final ctrl = SelectionController();
+      try {
+        await tester.pumpWidget(
+          tui.View(content: 'alpha beta').selectable(controller: ctrl),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableTextFieldView participates in selection', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final ctrl = SelectionController();
+      final textController = TextEditingController(text: 'alpha beta');
+      addTearDown(textController.dispose);
+      try {
+        await tester.pumpWidget(
+          SelectableTextFieldView(
+            controller: textController,
+            selectionController: ctrl,
+          ),
+        );
+
+        tester.mouseDown(0, 0);
+        tester.mouseMove(5, 0);
+        tester.mouseUp(5, 0);
+
+        expect(ctrl.getSelectedText(['alpha beta']), 'alpha');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('SelectableTextAreaView updates when controller text changes', () async {
+      final tester = WidgetTester(screenWidth: 70, screenHeight: 8);
+      final ctrl = SelectionController();
+      final textController = TextAreaController(text: 'alpha\nbeta');
+      addTearDown(textController.dispose);
+      try {
+        await tester.pumpWidget(
+          SelectionArea(
+            controller: ctrl,
+            child: SelectableTextAreaView(
+              controller: textController,
+              selectionController: ctrl,
+              maxWidth: 60,
+            ),
+          ),
+        );
+
+        textController.text = 'gamma\ndelta';
+        tester.pump();
+
+        expect(tester.locateText('gamma'), isNotNull);
       } finally {
         await tester.dispose();
       }
@@ -359,6 +744,96 @@ void main() {
 
           // Controller should have selection.
           expect(ctrl.hasSelection, isTrue);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
+
+    test(
+      'SelectionArea copies combined text across multiple widgets',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+        final ctrl = SelectionController();
+        try {
+          await tester.pumpWidget(
+            SelectionArea(
+              controller: ctrl,
+              child: Column(
+                children: [
+                  SelectableText('First line'),
+                  SelectableRichText(text: const TextSpan(text: 'Second line')),
+                  SelectableMarkdownText(data: '- Third line', maxWidth: 40),
+                  SelectableView('Third line'),
+                ],
+              ),
+            ),
+          );
+
+          tester.mouseDown(0, 0);
+          tester.mouseMove(5, 3);
+          tester.mouseUp(5, 3);
+
+          expect(
+            ctrl.getSelectedRegisteredText(),
+            equals('First line\nSecond line\n• Third line\n'),
+          );
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
+
+    test(
+      'SelectionArea highlights text across multiple widgets while dragging',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 8);
+        final ctrl = SelectionController();
+        final theme = Theme.light().copyWith(
+          highlight: const AnsiColor(160),
+          onHighlight: const AnsiColor(231),
+        );
+        final firstLineHighlight = _highlightedTextPattern(
+          foreground: 231,
+          background: 160,
+          text: 'First line',
+        );
+        final secondLineHighlight = _highlightedTextPattern(
+          foreground: 231,
+          background: 160,
+          text: 'Second',
+        );
+
+        try {
+          await tester.pumpWidget(
+            ThemeScope(
+              theme: theme,
+              child: SelectionArea(
+                controller: ctrl,
+                child: Column(
+                  children: [
+                    SelectableText('First line'),
+                    SelectableRichText(
+                      text: const TextSpan(text: 'Second line'),
+                    ),
+                    SelectableView('Third line'),
+                  ],
+                ),
+              ),
+            ),
+          );
+
+          tester.mouseDown(0, 0);
+          tester.mouseMove(6, 1);
+          tester.mouseUp(6, 1);
+
+          final output = tester.view;
+          expect(firstLineHighlight.hasMatch(output), isTrue);
+          expect(secondLineHighlight.hasMatch(output), isTrue);
+          expect(
+            ctrl.getSelectedRegisteredText(),
+            equals('First line\nSecond'),
+          );
         } finally {
           await tester.dispose();
         }

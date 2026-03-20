@@ -1,8 +1,11 @@
 import 'package:artisanal/src/tui/bubbles/textarea.dart';
 import 'package:artisanal/src/tui/component.dart';
+import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:artisanal/src/tui/key.dart';
 import 'package:artisanal/src/tui/msg.dart';
+import 'package:artisanal/src/tui/view.dart';
 import 'package:artisanal/src/terminal/ansi.dart';
+import 'package:artisanal/style.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -67,6 +70,33 @@ void main() {
         final textarea = TextAreaModel();
         textarea.setValue('parity');
         expect(textarea.value, 'parity');
+      });
+
+      test('accepts PasteTextMsg through the shared paste path', () {
+        final textarea = TextAreaModel()..focus();
+
+        final (next, cmd) = textarea.update(const PasteTextMsg('alpha\nbeta'));
+
+        expect(cmd, isNull);
+        expect(next.value, 'alpha\nbeta');
+      });
+
+      test('chunked PasteMsg inserts in scheduled steps', () async {
+        final textarea = TextAreaModel()..focus();
+        final content = 'a' * 1200;
+
+        final (next, cmd) = textarea.update(PasteMsg(content));
+
+        expect(cmd, isNotNull);
+        expect(next.value, 'a' * 300);
+
+        final firstChunkMsg = await cmd!.execute();
+        expect(firstChunkMsg, isNotNull);
+
+        final (afterFirstTick, nextCmd) = next.update(firstChunkMsg!);
+
+        expect(afterFirstTick.value, 'a' * 600);
+        expect(nextCmd, isNotNull);
       });
     });
 
@@ -325,6 +355,37 @@ void main() {
         expect(textarea.cursorLine(), 1);
         expect(textarea.cursorColumn(), 0);
       });
+
+      test(
+        'delete keys remove the active selection before cursor-relative edits',
+        () {
+          final textarea = TextAreaModel();
+
+          textarea.setValue('alpha beta');
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 2,
+            extentLine: 0,
+            extentColumn: 7,
+          );
+
+          textarea.update(KeyMsg(Key(KeyType.backspace)));
+          expect(textarea.value, 'aleta');
+          expect(textarea.hasSelection, isFalse);
+          expect(textarea.cursorLine(), 0);
+          expect(textarea.cursorColumn(), 2);
+
+          textarea.undo();
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 2,
+            extentLine: 0,
+            extentColumn: 7,
+          );
+          textarea.update(KeyMsg(Key(KeyType.delete)));
+          expect(textarea.value, 'aleta');
+        },
+      );
 
       test(
         'indentLines and outdentLines transform selected lines as one step',
@@ -843,6 +904,28 @@ void main() {
         expect(textarea.column, 0);
       });
 
+      test('character and document navigation cross line boundaries', () {
+        final textarea = TextAreaModel();
+        textarea.value = 'ab\ncd';
+        textarea.setCursor(0, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.right)));
+        expect(textarea.line, 1);
+        expect(textarea.column, 0);
+
+        textarea.update(const KeyMsg(Key(KeyType.left)));
+        expect(textarea.line, 0);
+        expect(textarea.column, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.end, ctrl: true)));
+        expect(textarea.line, 1);
+        expect(textarea.column, 2);
+
+        textarea.update(const KeyMsg(Key(KeyType.home, ctrl: true)));
+        expect(textarea.line, 0);
+        expect(textarea.column, 0);
+      });
+
       test('delete word backward', () {
         final textarea = TextAreaModel();
         textarea.value = 'hello world';
@@ -1036,6 +1119,518 @@ void main() {
         expect(view, contains('\x1b[48;5;7m'));
       });
 
+      test('renders configured non-selection highlights', () {
+        final highlightStyles = TextAreaStyles(
+          focused: TextAreaStyleState(
+            text: Style(),
+            decorationStyles: <String, Style>{
+              textSearchMatchDecorationKey: Style().underline(),
+              textSearchActiveMatchDecorationKey: Style()
+                  .background(const AnsiColor(1))
+                  .foreground(const AnsiColor(15)),
+            },
+          ),
+          blurred: TextAreaStyleState(
+            text: Style(),
+            decorationStyles: <String, Style>{
+              textSearchMatchDecorationKey: Style().underline(),
+              textSearchActiveMatchDecorationKey: Style()
+                  .background(const AnsiColor(1))
+                  .foreground(const AnsiColor(15)),
+            },
+          ),
+          cursor: TextAreaCursorStyle(color: const AnsiColor(7), blink: false),
+        );
+        final textarea = TextAreaModel(
+          prompt: '',
+          showLineNumbers: false,
+          softWrap: true,
+          width: 16,
+          height: 4,
+          styles: highlightStyles,
+        );
+        textarea.value = 'alpha world beta world';
+        final highlights = findTextQueryHighlights(
+          document: textarea.document,
+          query: 'world',
+        );
+
+        textarea.setHighlights(highlights, activeIndex: 1);
+
+        final view = textarea.view() as String;
+        expect(view, contains('\x1b[4m'));
+        expect(view, contains('\x1b[48;5;1m'));
+      });
+
+      test(
+        'renders configured whole-line decorations and active-line layer',
+        () {
+          final decoratedStyles = TextAreaStyles(
+            focused: TextAreaStyleState(
+              text: Style(),
+              cursorLine: Style().background(const AnsiColor(2)),
+              cursorLineNumber: Style().foreground(const AnsiColor(15)),
+              lineDecorationStyles: <String, Style>{
+                textActiveLineDecorationKey: Style().background(
+                  const AnsiColor(2),
+                ),
+                textActiveLineNumberDecorationKey: Style().foreground(
+                  const AnsiColor(15),
+                ),
+                'line.warning': Style().background(const AnsiColor(3)),
+                'line.warning.number': Style().foreground(const AnsiColor(1)),
+              },
+            ),
+            blurred: TextAreaStyleState(
+              text: Style(),
+              cursorLine: Style().background(const AnsiColor(2)),
+              cursorLineNumber: Style().foreground(const AnsiColor(15)),
+              lineDecorationStyles: <String, Style>{
+                textActiveLineDecorationKey: Style().background(
+                  const AnsiColor(2),
+                ),
+                textActiveLineNumberDecorationKey: Style().foreground(
+                  const AnsiColor(15),
+                ),
+                'line.warning': Style().background(const AnsiColor(3)),
+                'line.warning.number': Style().foreground(const AnsiColor(1)),
+              },
+            ),
+            cursor: TextAreaCursorStyle(
+              color: const AnsiColor(7),
+              blink: false,
+            ),
+          );
+          final textarea = TextAreaModel(
+            prompt: '',
+            showLineNumbers: true,
+            softWrap: true,
+            width: 16,
+            height: 4,
+            useVirtualCursor: false,
+            styles: decoratedStyles,
+          );
+          textarea.value = 'alpha\nbeta';
+          textarea.setCursor(1, 1);
+          textarea.setLineDecorationLayer('diagnostics', const [
+            TextLineDecoration(
+              lineIndex: 0,
+              styleKey: 'line.warning',
+              lineNumberStyleKey: 'line.warning.number',
+            ),
+          ]);
+
+          expect(
+            textarea.lineDecorationsForLayer(textActiveLineDecorationLayerKey),
+            const [
+              TextLineDecoration(
+                lineIndex: 1,
+                styleKey: textActiveLineDecorationKey,
+                lineNumberStyleKey: textActiveLineNumberDecorationKey,
+              ),
+            ],
+          );
+
+          final view = textarea.view() as String;
+          expect(view, contains('\x1b[48;5;3m'));
+          expect(view, contains('\x1b[48;5;2m'));
+          expect(view, contains('\x1b[38;5;1m'));
+          expect(view, contains('\x1b[38;5;15m'));
+        },
+      );
+
+      test('applies typed diagnostics to both range and line layers', () {
+        final diagnosticStyles = TextAreaStyles(
+          focused: TextAreaStyleState(
+            text: Style(),
+            decorationStyles: <String, Style>{
+              textDiagnosticErrorDecorationKey: Style()
+                  .underline()
+                  .underlineColor(const AnsiColor(1)),
+            },
+            lineDecorationStyles: <String, Style>{
+              textActiveLineDecorationKey: Style(),
+              textActiveLineNumberDecorationKey: Style(),
+              textDiagnosticErrorLineDecorationKey: Style(),
+              textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+                const AnsiColor(1),
+              ),
+            },
+          ),
+          blurred: TextAreaStyleState(
+            text: Style(),
+            decorationStyles: <String, Style>{
+              textDiagnosticErrorDecorationKey: Style()
+                  .underline()
+                  .underlineColor(const AnsiColor(1)),
+            },
+            lineDecorationStyles: <String, Style>{
+              textActiveLineDecorationKey: Style(),
+              textActiveLineNumberDecorationKey: Style(),
+              textDiagnosticErrorLineDecorationKey: Style(),
+              textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+                const AnsiColor(1),
+              ),
+            },
+          ),
+          cursor: TextAreaCursorStyle(color: const AnsiColor(7), blink: false),
+        );
+        final textarea = TextAreaModel(
+          prompt: '',
+          showLineNumbers: true,
+          softWrap: false,
+          width: 16,
+          height: 4,
+          useVirtualCursor: true,
+          styles: diagnosticStyles,
+        );
+        textarea.value = 'alpha\nFIXME';
+
+        textarea.setDiagnostics(const [
+          TextDiagnosticRange(
+            startOffset: 6,
+            endOffset: 11,
+            severity: TextDiagnosticSeverity.error,
+          ),
+        ]);
+
+        expect(
+          textarea.decorationsForLayer(textDiagnosticsDecorationLayerKey),
+          const [
+            TextDecorationRange(
+              startOffset: 6,
+              endOffset: 11,
+              styleKey: textDiagnosticErrorDecorationKey,
+            ),
+          ],
+        );
+        expect(
+          textarea.lineDecorationsForLayer(
+            textDiagnosticsLineDecorationLayerKey,
+          ),
+          const [
+            TextLineDecoration(
+              lineIndex: 1,
+              styleKey: textDiagnosticErrorLineDecorationKey,
+              lineNumberMarker: '!',
+              lineNumberStyleKey: textDiagnosticErrorLineNumberDecorationKey,
+            ),
+          ],
+        );
+
+        final view = textarea.view() as String;
+        expect(view, contains('2!'));
+      });
+
+      test('accepts typed diagnostics from line and column positions', () {
+        final textarea = TextAreaModel(
+          prompt: '',
+          showLineNumbers: true,
+          softWrap: false,
+          width: 16,
+          height: 4,
+        );
+        textarea.value = 'alpha\nFIXME';
+
+        textarea.setDiagnosticsFromPositions(const [
+          TextPositionDiagnosticRange(
+            startLine: 1,
+            startColumn: 0,
+            endLine: 1,
+            endColumn: 5,
+            severity: TextDiagnosticSeverity.error,
+            code: 'FIX001',
+            message:
+                'Resolve FIXME markers before treating this draft as ready.',
+            source: 'playground',
+          ),
+        ]);
+
+        expect(
+          textarea.decorationsForLayer(textDiagnosticsDecorationLayerKey),
+          const [
+            TextDecorationRange(
+              startOffset: 6,
+              endOffset: 11,
+              styleKey: textDiagnosticErrorDecorationKey,
+            ),
+          ],
+        );
+        expect(textarea.diagnostics, const [
+          TextDiagnosticRange(
+            startOffset: 6,
+            endOffset: 11,
+            severity: TextDiagnosticSeverity.error,
+            code: 'FIX001',
+            message:
+                'Resolve FIXME markers before treating this draft as ready.',
+            source: 'playground',
+          ),
+        ]);
+        textarea.setCursor(1, 0);
+        expect(
+          textarea.activeDiagnostic,
+          const TextDiagnosticRange(
+            startOffset: 6,
+            endOffset: 11,
+            severity: TextDiagnosticSeverity.error,
+            code: 'FIX001',
+            message:
+                'Resolve FIXME markers before treating this draft as ready.',
+            source: 'playground',
+          ),
+        );
+      });
+
+      test('navigates typed diagnostics and wraps between matches', () {
+        final textarea = TextAreaModel(
+          prompt: '',
+          showLineNumbers: false,
+          softWrap: false,
+          width: 24,
+          height: 4,
+        );
+        textarea.value = 'TODO one\nok\nFIXME two';
+        textarea.setDiagnostics(const [
+          TextDiagnosticRange(
+            startOffset: 0,
+            endOffset: 4,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+          TextDiagnosticRange(
+            startOffset: 12,
+            endOffset: 17,
+            severity: TextDiagnosticSeverity.error,
+            code: 'FIX001',
+            message:
+                'Resolve FIXME markers before treating this draft as ready.',
+            source: 'playground',
+          ),
+        ]);
+
+        expect(textarea.selectNextDiagnostic(), isTrue);
+        expect(textarea.getSelectedText(), equals('TODO'));
+        expect(textarea.selectionBase, equals((line: 0, column: 0)));
+        expect(
+          textarea.activeDiagnostic,
+          const TextDiagnosticRange(
+            startOffset: 0,
+            endOffset: 4,
+            severity: TextDiagnosticSeverity.warning,
+            code: 'TODO001',
+            message: 'Address TODO markers before shipping this sample.',
+            source: 'playground',
+          ),
+        );
+
+        expect(textarea.selectNextDiagnostic(), isTrue);
+        expect(textarea.getSelectedText(), equals('FIXME'));
+        expect(textarea.selectionBase, equals((line: 2, column: 0)));
+
+        expect(textarea.selectNextDiagnostic(), isTrue);
+        expect(textarea.getSelectedText(), equals('TODO'));
+
+        expect(textarea.selectPreviousDiagnostic(), isTrue);
+        expect(textarea.getSelectedText(), equals('FIXME'));
+      });
+
+      test(
+        'clicking a diagnostic gutter marker selects the line diagnostic',
+        () {
+          final textarea = TextAreaModel(
+            prompt: '│ ',
+            showLineNumbers: true,
+            softWrap: false,
+            width: 24,
+            height: 4,
+          );
+          textarea.value = 'ok\nTODO FIXME';
+          textarea.setDiagnostics(const [
+            TextDiagnosticRange(
+              startOffset: 3,
+              endOffset: 7,
+              severity: TextDiagnosticSeverity.warning,
+              code: 'TODO001',
+              message: 'Address TODO markers before shipping this sample.',
+              source: 'playground',
+            ),
+            TextDiagnosticRange(
+              startOffset: 8,
+              endOffset: 13,
+              severity: TextDiagnosticSeverity.error,
+              code: 'FIX001',
+              message:
+                  'Resolve FIXME markers before treating this draft as ready.',
+              source: 'playground',
+            ),
+          ]);
+
+          final (selected, _) = textarea.update(
+            const MouseMsg(
+              action: MouseAction.press,
+              button: MouseButton.left,
+              x: 2,
+              y: 1,
+            ),
+          );
+
+          expect(selected.getSelectedText(), equals('FIXME'));
+          expect(
+            selected.activeDiagnostic,
+            const TextDiagnosticRange(
+              startOffset: 8,
+              endOffset: 13,
+              severity: TextDiagnosticSeverity.error,
+              code: 'FIX001',
+              message:
+                  'Resolve FIXME markers before treating this draft as ready.',
+              source: 'playground',
+            ),
+          );
+
+          final (reselected, _) = selected.update(
+            const MouseMsg(
+              action: MouseAction.press,
+              button: MouseButton.left,
+              x: 2,
+              y: 1,
+            ),
+          );
+
+          expect(reselected.getSelectedText(), equals('FIXME'));
+        },
+      );
+
+      test(
+        'merges active-line styling with diagnostic line-number styling',
+        () {
+          final diagnosticStyles = TextAreaStyles(
+            focused: TextAreaStyleState(
+              text: Style(),
+              cursorLine: Style().background(const AnsiColor(2)),
+              cursorLineNumber: Style().foreground(const AnsiColor(15)),
+              decorationStyles: <String, Style>{
+                textDiagnosticErrorDecorationKey: Style()
+                    .underline()
+                    .underlineColor(const AnsiColor(1)),
+              },
+              lineDecorationStyles: <String, Style>{
+                textActiveLineDecorationKey: Style().background(
+                  const AnsiColor(2),
+                ),
+                textActiveLineNumberDecorationKey: Style().foreground(
+                  const AnsiColor(15),
+                ),
+                textDiagnosticErrorLineDecorationKey: Style(),
+                textDiagnosticErrorLineNumberDecorationKey: Style().foreground(
+                  const AnsiColor(1),
+                ),
+              },
+            ),
+            blurred: TextAreaStyleState(text: Style()),
+            cursor: TextAreaCursorStyle(
+              color: const AnsiColor(7),
+              blink: false,
+            ),
+          );
+          final textarea = TextAreaModel(
+            prompt: '',
+            showLineNumbers: true,
+            softWrap: false,
+            width: 16,
+            height: 4,
+            useVirtualCursor: false,
+            styles: diagnosticStyles,
+          );
+          textarea.value = 'alpha\nFIXME';
+          textarea.focus();
+          textarea.setCursor(1, 1);
+
+          textarea.setDiagnostics(const [
+            TextDiagnosticRange(
+              startOffset: 6,
+              endOffset: 11,
+              severity: TextDiagnosticSeverity.error,
+            ),
+          ]);
+
+          final rendered = textarea.view();
+          final view = rendered is View ? rendered.content : rendered as String;
+          expect(view, contains('\x1b[48;5;2m'));
+          expect(view, contains('\x1b[38;5;1m'));
+          expect(view, contains('2!'));
+        },
+      );
+
+      test(
+        'selected decorated cursor grapheme does not leak raw ansi fragments',
+        () {
+          final overlapStyles = TextAreaStyles(
+            focused: TextAreaStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+              decorationStyles: <String, Style>{
+                'search': Style()
+                    .background(const AnsiColor(3))
+                    .foreground(const AnsiColor(0)),
+              },
+            ),
+            blurred: TextAreaStyleState(
+              text: Style().foreground(const AnsiColor(15)),
+              selection: Style()
+                  .background(const AnsiColor(4))
+                  .foreground(const AnsiColor(15)),
+              decorationStyles: <String, Style>{
+                'search': Style()
+                    .background(const AnsiColor(3))
+                    .foreground(const AnsiColor(0)),
+              },
+            ),
+            cursor: TextAreaCursorStyle(
+              color: const AnsiColor(6),
+              blink: false,
+            ),
+          );
+          final textarea = TextAreaModel(
+            prompt: '',
+            showLineNumbers: false,
+            softWrap: false,
+            width: 12,
+            height: 2,
+            useVirtualCursor: true,
+            styles: overlapStyles,
+          );
+          textarea.focus();
+          textarea.value = 'TODO';
+          textarea.setDecorationLayer('search', const [
+            TextDecorationRange(
+              startOffset: 0,
+              endOffset: 4,
+              styleKey: 'search',
+            ),
+          ]);
+          textarea.setSelection(
+            baseLine: 0,
+            baseColumn: 0,
+            extentLine: 0,
+            extentColumn: 4,
+          );
+          textarea.setCursor(0, 0);
+
+          final stripped = Ansi.stripAnsi(textarea.view() as String);
+
+          expect(stripped, contains('TODO'));
+          expect(stripped, isNot(contains('[7m')));
+          expect(stripped, isNot(contains('[27m')));
+          expect(stripped, isNot(contains('[38;5;')));
+        },
+      );
+
       test('selects wrapped continuation when line numbers are enabled', () {
         var textarea = TextAreaModel(
           prompt: '│ ',
@@ -1092,6 +1687,114 @@ void main() {
         );
 
         expect(v2.getSelectedText(), equals('Hello'));
+      });
+
+      test('triple click selects entire line', () {
+        var textarea = TextAreaModel(prompt: '> ', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 4,
+            y: 0,
+          ),
+        );
+
+        expect(v3.getSelectedText(), equals('Hello World'));
+      });
+
+      test('mouse release stops extending the current selection', () {
+        var textarea = TextAreaModel(prompt: '', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.left,
+            x: 5,
+            y: 0,
+          ),
+        );
+        expect(v2.getSelectedText(), equals('Hello'));
+
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.release,
+            button: MouseButton.left,
+            x: 5,
+            y: 0,
+          ),
+        );
+        var (v4, _) = v3.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: 4,
+            y: 1,
+          ),
+        );
+
+        expect(v4.getSelectedText(), equals('Hello'));
+      });
+
+      test('click without drag does not leave selection armed', () {
+        var textarea = TextAreaModel(prompt: '', showLineNumbers: false);
+        textarea.value = 'Hello World\nLine 2';
+
+        var (v1, _) = textarea.update(
+          const MouseMsg(
+            action: MouseAction.press,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        var (v2, _) = v1.update(
+          const MouseMsg(
+            action: MouseAction.release,
+            button: MouseButton.left,
+            x: 0,
+            y: 0,
+          ),
+        );
+        expect(v2.getSelectedText(), isEmpty);
+
+        var (v3, _) = v2.update(
+          const MouseMsg(
+            action: MouseAction.motion,
+            button: MouseButton.none,
+            x: 5,
+            y: 0,
+          ),
+        );
+
+        expect(v3.getSelectedText(), isEmpty);
       });
 
       test('click outside bounds clears selection and blurs', () {

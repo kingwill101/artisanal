@@ -1,9 +1,15 @@
 part of 'layout_widgets.dart';
 
 class TextSpan {
-  const TextSpan({this.style, this.text, this.children = const []});
+  const TextSpan({
+    this.style,
+    this.selectionHighlightStyle,
+    this.text,
+    this.children = const [],
+  });
 
   final Style? style;
+  final Style? selectionHighlightStyle;
   final String? text;
   final List<TextSpan> children;
 }

@@ -194,7 +194,8 @@ The remote-plugin examples now follow the same bundled host path the package
 documents:
 
 - one-off hosts use `RemotePluginHostConnection.startProcess(...)`
-- manifest-backed hosts use `RemotePluginHostConnection.startManifest(...)`
+- manifest-backed multi-plugin hosts use
+  `RemotePluginWorkspace.startManifestDirectory(...)`
 - generic clipboard/URL/notification/file-picker capabilities travel through
   the schema-backed `plugin.service.request` / `host.service.response` lane
 - `example/tui/remote_plugin_schema_dump.dart` prints the exact JSON schemas

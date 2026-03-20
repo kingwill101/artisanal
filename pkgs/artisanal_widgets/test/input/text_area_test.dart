@@ -1,4 +1,5 @@
 import 'package:artisanal/bubbles.dart' show TextAreaModel;
+import 'package:artisanal/style.dart' show AnsiColor;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart' as tui;
@@ -495,6 +496,72 @@ void main() {
 
       tester.sendMsg(tui.KeyMsg(tui.Key.char('y', ctrl: true)));
       expect(ctrl.text, 'hi');
+    });
+
+    test('mouse selection only extends while the button is held', () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 12);
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextAreaController(text: 'Hello World');
+      await tester.pumpWidget(
+        Container(
+          width: 40,
+          height: 6,
+          child: TextArea(
+            controller: ctrl,
+            prompt: '',
+            showLineNumbers: false,
+            autofocus: true,
+          ),
+        ),
+      );
+
+      tester.mouseDown(0, 0);
+      tester.mouseUp(0, 0);
+      tester.mouseMove(5, 0);
+
+      expect(ctrl.hasSelection, isFalse);
+      expect(ctrl.selectedText, isEmpty);
+    });
+
+    test('selection highlighting uses theme highlight colors', () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 12);
+      addTearDown(() => tester.dispose());
+
+      final ctrl = TextAreaController(text: 'Hello World');
+      final theme = Theme.light().copyWith(
+        highlight: const AnsiColor(160),
+        onHighlight: const AnsiColor(231),
+      );
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: theme,
+          child: Container(
+            width: 40,
+            height: 6,
+            child: TextArea(
+              controller: ctrl,
+              prompt: '',
+              showLineNumbers: false,
+              autofocus: true,
+            ),
+          ),
+        ),
+      );
+
+      ctrl.setSelection(
+        baseLine: 0,
+        baseColumn: 0,
+        extentLine: 0,
+        extentColumn: 5,
+      );
+      tester.pump();
+
+      final output = tester.view;
+      expect(output, contains('48;5;160'));
+      expect(output, contains('38;5;231'));
+      expect(output, isNot(contains('48;5;7')));
     });
   });
 }

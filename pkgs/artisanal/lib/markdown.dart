@@ -68,5 +68,8 @@ export 'src/tui/markdown/syntax_highlighter.dart'
     show
         AdaptiveChromaTheme,
         ChromaTheme,
+        codeSyntaxDecorationPrefix,
+        codeSyntaxDecorationStyleKey,
+        SyntaxHighlightSpan,
         SyntaxHighlighter,
         highlightCodeString;
