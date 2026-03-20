@@ -173,5 +173,63 @@ void main() {
       expect(controller.surfaces['panel'], isNull);
       expect(controller.surfaces.surfaces, isEmpty);
     });
+
+    test(
+      'buffers early non-surface messages until a host listener attaches',
+      () async {
+        final hostToPlugin = StreamController<String>();
+        final pluginToHost = StreamController<String>();
+
+        final hostChannel = plugins.RemotePluginJsonChannel(
+          sendLine: hostToPlugin.add,
+        );
+        final pluginChannel = plugins.RemotePluginJsonChannel(
+          sendLine: pluginToHost.add,
+        );
+
+        hostChannel.bindLines(pluginToHost.stream);
+        pluginChannel.bindLines(hostToPlugin.stream);
+
+        addTearDown(() async {
+          await hostChannel.dispose();
+          await pluginChannel.dispose();
+          await hostToPlugin.close();
+          await pluginToHost.close();
+        });
+
+        await pluginChannel.send(
+          const plugins.RemotePluginHello(
+            pluginId: 'controller-test-plugin',
+            pluginVersion: '0.0.1',
+          ),
+        );
+
+        final session = await plugins.RemotePluginSession.connect(
+          channel: hostChannel,
+          hostHello: const plugins.RemotePluginHostHello(
+            hostName: 'artisanal',
+            hostVersion: '0.2.0',
+          ),
+        );
+        addTearDown(session.dispose);
+
+        final controller = plugins.RemotePluginSurfaceController.bind(session);
+        addTearDown(controller.dispose);
+
+        await pluginChannel.send(
+          const plugins.RemotePluginClipboardReadRequest(requestId: 'req-1'),
+        );
+
+        final forwarded = await controller.otherMessages
+            .take(1)
+            .toList()
+            .timeout(const Duration(seconds: 1));
+
+        expect(
+          forwarded.single,
+          isA<plugins.RemotePluginClipboardReadRequest>(),
+        );
+      },
+    );
   });
 }

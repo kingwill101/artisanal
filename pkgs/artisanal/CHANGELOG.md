@@ -67,6 +67,7 @@
 
 ### Fixed
 
+- Buffered early non-surface `RemotePluginSurfaceController` traffic until the first host listener attaches, so startup clipboard/URL/notification/file-picker requests are not dropped before host service binders subscribe.
 - Buffered post-handshake host/plugin session traffic until the first listener so eager surface frames are not dropped when callers attach `messages` just after `connect(...)`.
 - Fixed `ProgramOptions.withoutFilter()` so it preserves `mouseMode` instead of silently resetting it to `MouseMode.none`.
 - Taught the default browser host page to answer terminal color-scheme, foreground/background/cursor color, DA1, and XTVERSION queries and to forward browser focus changes and bracketed paste while those modes are enabled, so hosted browser sessions can participate in startup probing and runtime input delivery without leaking those control sequences into visible output.
