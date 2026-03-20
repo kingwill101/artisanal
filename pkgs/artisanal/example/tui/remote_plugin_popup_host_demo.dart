@@ -4,6 +4,8 @@ import 'dart:io' as io;
 import 'package:artisanal/plugins.dart' as plugins;
 import 'package:artisanal/uv.dart' as uv;
 
+import '../_path_utils.dart';
+
 const _panelId = 'demo.panel';
 const _connectTimeout = Duration(seconds: 15);
 
@@ -70,7 +72,9 @@ String _parsePluginPath(List<String> args) {
     }
   }
 
-  return io.Directory.current.uri
-      .resolve('pkgs/artisanal/example/tui/remote_plugin_popup_guest_demo.dart')
-      .toFilePath();
+  return resolveArtisanalPath(<String>[
+    'example',
+    'tui',
+    'remote_plugin_popup_guest_demo.dart',
+  ]);
 }

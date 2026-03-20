@@ -2,11 +2,20 @@ import 'dart:io' as io;
 
 import 'package:test/test.dart';
 
+import '_path_utils.dart';
+
 void main() {
   test('remote plugin host demo renders the guest surface', () async {
     final result = await io.Process.run(
       io.Platform.resolvedExecutable,
-      <String>['run', 'pkgs/artisanal/example/tui/remote_plugin_host_demo.dart'],
+      <String>[
+        'run',
+        resolveArtisanalPath(<String>[
+          'example',
+          'tui',
+          'remote_plugin_host_demo.dart',
+        ]),
+      ],
       workingDirectory: io.Directory.current.path,
     );
 

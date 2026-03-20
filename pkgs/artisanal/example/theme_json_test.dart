@@ -3,8 +3,12 @@ import 'dart:io';
 
 import 'package:artisanal/glamour.dart';
 
+import '_path_utils.dart';
+
 void main() {
-  final file = File('glamour_styles/dark.json');
+  final file = File(
+    resolveArtisanalPath(<String>['example', 'glamour_styles', 'dark.json']),
+  );
   if (!file.existsSync()) {
     print('Error: dark.json not found at ${file.path}');
     return;

@@ -2,13 +2,19 @@ import 'dart:io' as io;
 
 import 'package:test/test.dart';
 
+import '_path_utils.dart';
+
 void main() {
   test('remote plugin popup host demo renders anchored child surfaces', () async {
     final result = await io.Process.run(
       io.Platform.resolvedExecutable,
       <String>[
         'run',
-        'pkgs/artisanal/example/tui/remote_plugin_popup_host_demo.dart',
+        resolveArtisanalPath(<String>[
+          'example',
+          'tui',
+          'remote_plugin_popup_host_demo.dart',
+        ]),
       ],
       workingDirectory: io.Directory.current.path,
     );
