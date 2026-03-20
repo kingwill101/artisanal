@@ -181,16 +181,13 @@ final class _CompiledWorkspaceHarness {
       'artisanal-workspace-harness-',
     );
     try {
-      final hostSource = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
+      final hostSource = _resolveArtisanalPath(<String>[
         'example',
         'tui',
         'remote_plugin_workspace',
         'host',
         'main.dart',
-      );
+      ]);
       final hostKernelPath = p.join(tempDirectory.path, 'workspace_host.dill');
       await _compileKernel(hostSource, hostKernelPath);
 
@@ -204,16 +201,13 @@ final class _CompiledWorkspaceHarness {
         ('alerts', 'alerts_plugin.dart'),
         ('overview', 'overview_plugin.dart'),
       ]) {
-        final sourcePath = p.join(
-          io.Directory.current.path,
-          'pkgs',
-          'artisanal',
+        final sourcePath = _resolveArtisanalPath(<String>[
           'example',
           'tui',
           'remote_plugin_workspace',
           'plugins',
           plugin.$2,
-        );
+        ]);
         final outputPath = p.join(
           compiledPluginDirectory.path,
           '${plugin.$1}.dill',
@@ -221,16 +215,13 @@ final class _CompiledWorkspaceHarness {
         await _compileKernel(sourcePath, outputPath);
 
         final manifestSource = io.File(
-          p.join(
-            io.Directory.current.path,
-            'pkgs',
-            'artisanal',
+          _resolveArtisanalPath(<String>[
             'example',
             'tui',
             'remote_plugin_workspace',
             'plugins',
             '${plugin.$1}.plugin.json',
-          ),
+          ]),
         );
         final manifestJson =
             jsonDecode(await manifestSource.readAsString())
@@ -282,4 +273,26 @@ Future<void> _compileKernel(String sourcePath, String outputPath) async {
       'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',
     );
   }
+}
+
+String _resolveArtisanalPath(List<String> relativeSegments) {
+  final currentDirectory = io.Directory.current.path;
+  final candidates = <String>[
+    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[
+      currentDirectory,
+      'pkgs',
+      'artisanal',
+      ...relativeSegments,
+    ]),
+  ];
+  for (final candidate in candidates) {
+    if (io.FileSystemEntity.typeSync(candidate) !=
+        io.FileSystemEntityType.notFound) {
+      return candidate;
+    }
+  }
+  throw StateError(
+    'Could not resolve artisanal path: ${p.joinAll(relativeSegments)}',
+  );
 }

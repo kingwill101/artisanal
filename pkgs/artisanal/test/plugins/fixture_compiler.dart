@@ -32,15 +32,12 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
   final compiledPaths = <String, String>{};
   try {
     for (final fixtureFileName in fixtureFileNames.toSet()) {
-      final sourcePath = p.join(
-        io.Directory.current.path,
-        'pkgs',
-        'artisanal',
+      final sourcePath = _resolveArtisanalPath(<String>[
         'test',
         'plugins',
         'fixtures',
         fixtureFileName,
-      );
+      ]);
       final outputPath = p.join(
         tempDirectory.path,
         '${p.basenameWithoutExtension(fixtureFileName)}.dill',
@@ -63,4 +60,26 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
     await tempDirectory.delete(recursive: true);
     rethrow;
   }
+}
+
+String _resolveArtisanalPath(List<String> relativeSegments) {
+  final currentDirectory = io.Directory.current.path;
+  final candidates = <String>[
+    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[
+      currentDirectory,
+      'pkgs',
+      'artisanal',
+      ...relativeSegments,
+    ]),
+  ];
+  for (final candidate in candidates) {
+    if (io.FileSystemEntity.typeSync(candidate) !=
+        io.FileSystemEntityType.notFound) {
+      return candidate;
+    }
+  }
+  throw StateError(
+    'Could not resolve artisanal path: ${p.joinAll(relativeSegments)}',
+  );
 }
