@@ -20,6 +20,7 @@ Keys:
 - `2` focus the activity plugin
 - `3` focus the alerts plugin
 - mouse click focus the clicked plugin surface
+- other keys route into the focused plugin surface
 - `r` reload the workspace
 - `q` quit
 
@@ -40,4 +41,13 @@ You can also inject one synthetic click before the snapshot is rendered:
 dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
   --snapshot \
   --snapshot-click=37,6
+```
+
+And you can send one synthetic key into the focused plugin surface:
+
+```bash
+dart run pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart \
+  --snapshot \
+  --snapshot-click=37,6 \
+  --snapshot-key=a
 ```

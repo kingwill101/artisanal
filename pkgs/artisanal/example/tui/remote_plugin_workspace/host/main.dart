@@ -18,6 +18,7 @@ Future<void> main(List<String> args) async {
     final runtime = await _startWorkspace(_primaryPluginId);
     var selectedPluginId = _primaryPluginId;
     final click = _parseSnapshotClick(args);
+    final key = _parseSnapshotKey(args);
     try {
       if (click case final point?) {
         selectedPluginId = await _routeWorkspaceMousePress(
@@ -30,16 +31,34 @@ Future<void> main(List<String> args) async {
           ),
           selectedPluginId: selectedPluginId,
         );
-        await _waitForSnapshotFocus(runtime, selectedPluginId);
+        await _waitForSnapshotSurfaceText(
+          runtime,
+          selectedPluginId,
+          contains:
+              '${_pluginDisplayName(runtime, selectedPluginId)} [focused]',
+        );
+      }
+      if (key case final value?) {
+        await _routeWorkspaceKey(runtime, value);
+        await _waitForSnapshotSurfaceText(
+          runtime,
+          selectedPluginId,
+          contains: 'Last key: ${value.label}',
+        );
       }
       io.stdout.writeln(
         _renderWorkspace(
           loading: false,
           selectedPluginId: selectedPluginId,
-          status: click == null ? 'Snapshot render' : 'Snapshot click render',
+          status: switch ((click, key)) {
+            (null, null) => 'Snapshot render',
+            (_, null) => 'Snapshot click render',
+            _ => 'Snapshot input render',
+          },
           log: <String>[
             'Snapshot mode',
             if (click != null) 'click ${click.$1},${click.$2}',
+            if (key != null) 'key ${key.label}',
             'Loaded 3 plugin processes',
           ],
           revision: 0,
@@ -123,6 +142,14 @@ final class _RemotePluginWorkspaceModel implements Model {
         ),
         null,
       ),
+      _HostKeyRoutedMsg(:final label) => (
+        copyWith(
+          status: 'Sent key $label to $selectedPluginId',
+          revision: revision + 1,
+          log: _appendLog(log, 'key $label'),
+        ),
+        null,
+      ),
       _PluginSurfaceChangedMsg(:final pluginId, :final message) => (
         copyWith(
           status: '$pluginId updated ${message.messageType.wireName}',
@@ -160,6 +187,7 @@ final class _RemotePluginWorkspaceModel implements Model {
       ),
       MouseMsg(action: MouseAction.press) => _handleMousePress(msg),
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x72])) => _reload(),
+      KeyMsg(:final key) => _handlePluginKey(key),
       _ => (this, null),
     };
   }
@@ -268,6 +296,24 @@ final class _RemotePluginWorkspaceModel implements Model {
     );
   }
 
+  (Model, Cmd?) _handlePluginKey(Key key) {
+    final activeRuntime = runtime;
+    if (activeRuntime == null || loading) {
+      return (this, null);
+    }
+
+    final snapshotKey = _snapshotKeyFromKey(key);
+    final keyLabel = snapshotKey.label;
+    return (
+      copyWith(status: 'Routing key $keyLabel', revision: revision + 1),
+      Cmd.perform(
+        () => _routeWorkspaceKey(activeRuntime, snapshotKey),
+        onSuccess: (value) => _HostKeyRoutedMsg(value.label),
+        onError: (error, _) => _WorkspaceLoadFailedMsg('key failed: $error'),
+      ),
+    );
+  }
+
   (Model, Cmd?) _quit() {
     final activeRuntime = runtime;
     return (
@@ -371,6 +417,12 @@ final class _HostMouseRoutedMsg extends Msg {
   const _HostMouseRoutedMsg(this.pluginId);
 
   final String pluginId;
+}
+
+final class _HostKeyRoutedMsg extends Msg {
+  const _HostKeyRoutedMsg(this.label);
+
+  final String label;
 }
 
 final class _WorkspaceRuntime {
@@ -488,21 +540,41 @@ Future<String> _routeWorkspaceMousePress(
   return selectedPluginId;
 }
 
-Future<void> _waitForSnapshotFocus(
+Future<_SnapshotKey> _routeWorkspaceKey(
+  _WorkspaceRuntime runtime,
+  _SnapshotKey key,
+) async {
+  await runtime.router.sendKey(
+    key: key.value,
+    code: key.code,
+    ctrl: key.ctrl,
+    alt: key.alt,
+    shift: key.shift,
+    meta: key.meta,
+  );
+  return key;
+}
+
+Future<void> _waitForSnapshotSurfaceText(
   _WorkspaceRuntime runtime,
   String pluginId, {
+  required String contains,
   Duration timeout = const Duration(seconds: 2),
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
-    if (_surfaceIsFocused(runtime, pluginId)) {
+    if (_surfaceContainsText(runtime, pluginId, contains)) {
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 25));
   }
 }
 
-bool _surfaceIsFocused(_WorkspaceRuntime runtime, String pluginId) {
+bool _surfaceContainsText(
+  _WorkspaceRuntime runtime,
+  String pluginId,
+  String contains,
+) {
   plugins.RemotePluginManifest? manifest;
   for (final candidate in runtime.manifests) {
     if (candidate.id == pluginId) {
@@ -519,11 +591,16 @@ bool _surfaceIsFocused(_WorkspaceRuntime runtime, String pluginId) {
     return false;
   }
 
-  final title = <String>[
-    for (var column = 0; column < surface.width; column++)
-      surface.cellAt(column, 1).symbol,
-  ].join();
-  return title.contains('${manifest.displayName} [focused]');
+  for (var row = 0; row < surface.height; row++) {
+    final line = <String>[
+      for (var column = 0; column < surface.width; column++)
+        surface.cellAt(column, row).symbol,
+    ].join();
+    if (line.contains(contains)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 Future<void> _waitForSurfaceIds(
@@ -557,6 +634,15 @@ Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
   );
 }
 
+String _pluginDisplayName(_WorkspaceRuntime runtime, String pluginId) {
+  for (final manifest in runtime.manifests) {
+    if (manifest.id == pluginId) {
+      return manifest.displayName ?? manifest.id;
+    }
+  }
+  return pluginId;
+}
+
 (int, int)? _parseSnapshotClick(List<String> args) {
   for (final arg in args) {
     if (!arg.startsWith('--snapshot-click=')) {
@@ -573,6 +659,73 @@ Future<List<plugins.RemotePluginManifest>> _loadWorkspaceManifests() {
     return (int.parse(parts[0]), int.parse(parts[1]));
   }
   return null;
+}
+
+_SnapshotKey? _parseSnapshotKey(List<String> args) {
+  for (final arg in args) {
+    if (!arg.startsWith('--snapshot-key=')) {
+      continue;
+    }
+
+    final value = arg.substring('--snapshot-key='.length);
+    return _pluginHostKey(value);
+  }
+  return null;
+}
+
+_SnapshotKey _snapshotKeyFromKey(Key key) {
+  return _SnapshotKey(
+    value: key.char ?? key.type.name,
+    code: key.char == null ? key.type.name : null,
+    ctrl: key.ctrl,
+    alt: key.alt,
+    shift: key.shift,
+    meta: key.meta,
+  );
+}
+
+_SnapshotKey _pluginHostKey(String value) {
+  return switch (value) {
+    'Enter' => const _SnapshotKey(value: 'Enter', code: 'Enter'),
+    'Tab' => const _SnapshotKey(value: 'Tab', code: 'Tab'),
+    'Escape' => const _SnapshotKey(value: 'Escape', code: 'Escape'),
+    'ArrowUp' => const _SnapshotKey(value: 'ArrowUp', code: 'ArrowUp'),
+    'ArrowDown' => const _SnapshotKey(value: 'ArrowDown', code: 'ArrowDown'),
+    'ArrowLeft' => const _SnapshotKey(value: 'ArrowLeft', code: 'ArrowLeft'),
+    'ArrowRight' => const _SnapshotKey(value: 'ArrowRight', code: 'ArrowRight'),
+    _ => _SnapshotKey(value: value, code: null),
+  };
+}
+
+final class _SnapshotKey {
+  const _SnapshotKey({
+    required this.value,
+    required this.code,
+    this.ctrl = false,
+    this.alt = false,
+    this.shift = false,
+    this.meta = false,
+  });
+
+  final String value;
+  final String? code;
+  final bool ctrl;
+  final bool alt;
+  final bool shift;
+  final bool meta;
+
+  String get label {
+    final modifiers = <String>[
+      if (ctrl) 'Ctrl',
+      if (alt) 'Alt',
+      if (shift) 'Shift',
+      if (meta) 'Meta',
+    ];
+    if (modifiers.isEmpty) {
+      return value;
+    }
+    return '${modifiers.join('+')}+$value';
+  }
 }
 
 String _renderWorkspace({

@@ -24,6 +24,7 @@ Future<void> main() async {
 
   var ticks = 0;
   var focused = false;
+  var lastKey = 'none';
 
   Future<void> publish() async {
     final current = _messages[ticks % _messages.length];
@@ -37,8 +38,8 @@ Future<void> main() async {
         bodyLines: <String>[
           'Current: $current',
           'Heartbeat: ${ticks + 1}',
-          'Host: ${session.hostHello.hostVersion}',
           focused ? 'Input: active routing' : 'Input: passive',
+          'Last key: $lastKey',
           'Plugin: workspace-activity',
         ],
       ),
@@ -71,6 +72,22 @@ Future<void> main() async {
         case plugins.RemotePluginBlurInput(surfaceId: _surfaceId):
           focused = false;
           await publish();
+        case plugins.RemotePluginKeyInput(
+          surfaceId: _surfaceId,
+          :final key,
+          :final ctrl,
+          :final alt,
+          :final shift,
+          :final meta,
+        ):
+          lastKey = _formatKey(
+            key,
+            ctrl: ctrl,
+            alt: alt,
+            shift: shift,
+            meta: meta,
+          );
+          await publish();
         default:
           continue;
       }
@@ -79,4 +96,23 @@ Future<void> main() async {
     timer.cancel();
     await session.dispose();
   }
+}
+
+String _formatKey(
+  String key, {
+  required bool ctrl,
+  required bool alt,
+  required bool shift,
+  required bool meta,
+}) {
+  final modifiers = <String>[
+    if (ctrl) 'Ctrl',
+    if (alt) 'Alt',
+    if (shift) 'Shift',
+    if (meta) 'Meta',
+  ];
+  if (modifiers.isEmpty) {
+    return key;
+  }
+  return '${modifiers.join('+')}+$key';
 }
