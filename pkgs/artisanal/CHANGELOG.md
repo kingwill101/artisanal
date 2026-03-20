@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `RemotePluginSurfaceStore` so hosts can apply remote-surface open/resize/frame/close messages into concrete per-surface cell state before later compositing.
 - Added `RemotePluginSession` and pre-listener channel buffering so host/plugin hello handshakes can complete reliably even when plugins emit `plugin.hello` immediately on startup.
 - Added stable `package:artisanal/plugins.dart` with a typed remote-surface plugin protocol, JSON schema definitions, and message validation helpers for future out-of-process plugin hosts.
 - Added newline-delimited JSON transport helpers for the remote-surface plugin protocol so plugin hosts can speak the wire format over stdio or sockets without rebuilding framing logic.

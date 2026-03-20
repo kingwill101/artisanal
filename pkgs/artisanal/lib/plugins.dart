@@ -38,3 +38,8 @@ export 'src/plugins/remote_surface_transport.dart'
 export 'src/plugins/remote_surface_channel.dart' show RemotePluginJsonChannel;
 export 'src/plugins/remote_surface_session.dart' show RemotePluginSession;
 export 'src/plugins/remote_surface_process.dart' show RemotePluginProcess;
+export 'src/plugins/remote_surface_state.dart'
+    show
+        RemotePluginSurfaceCell,
+        RemotePluginSurfaceState,
+        RemotePluginSurfaceStore;
