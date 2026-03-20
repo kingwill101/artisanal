@@ -7,6 +7,7 @@
 - Added a stable `package:artisanal_widgets/widgets.dart` entrypoint for the high-level widget framework surface.
 - Added stable `package:artisanal_widgets/charting.dart` and `package:artisanal_widgets/selection.dart` entrypoints for the supported charting and text-selection surfaces.
 - Added `ImageAutoMode.sessionCapabilities` so `Image(renderMode: auto)` can follow terminal version and device-attribute reports from the active session instead of only using the local process environment.
+- Added a dedicated `example/tooltip_trace` demo with `TuiTrace` instrumentation and built-in replay/trace conversion flags so tooltip hover behavior can be recorded, converted, and replayed during debugging.
 
 ### Changed
 
