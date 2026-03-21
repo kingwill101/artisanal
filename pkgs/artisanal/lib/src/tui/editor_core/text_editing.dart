@@ -818,9 +818,15 @@ TextCursorCommandResult textMoveByCharacter({
   bool extendSelection = false,
   bool clearSelection = false,
 }) {
-  return state.moveByCharacterCommand(
-    document.flattenWithNewlines(),
-    forward: forward,
+  final targetOffset = forward
+      ? (state.cursorOffset + 1).clamp(0, document.length)
+      : (state.cursorOffset - 1).clamp(0, document.length);
+  return moveCursorToOffset(
+    textLength: document.length,
+    cursorOffset: state.cursorOffset,
+    selectionBaseOffset: state.selectionBaseOffset,
+    selectionExtentOffset: state.selectionExtentOffset,
+    targetOffset: targetOffset,
     extendSelection: extendSelection,
     clearSelection: clearSelection,
   );
@@ -834,10 +840,25 @@ TextCursorCommandResult textMoveByWord({
   bool extendSelection = false,
   bool clearSelection = false,
 }) {
-  return state.moveByWordCommand(
-    document.flattenWithNewlines(),
-    forward: forward,
-    isWord: isWord,
+  final targetOffset = forward
+      ? nav.moveWordForwardFromReader(
+          document.length,
+          state.cursorOffset,
+          isWord: isWord,
+          graphemeAt: document.graphemeAt,
+        )
+      : nav.moveWordBackwardFromReader(
+          document.length,
+          state.cursorOffset,
+          isWord: isWord,
+          graphemeAt: document.graphemeAt,
+        );
+  return moveCursorToOffset(
+    textLength: document.length,
+    cursorOffset: state.cursorOffset,
+    selectionBaseOffset: state.selectionBaseOffset,
+    selectionExtentOffset: state.selectionExtentOffset,
+    targetOffset: targetOffset,
     extendSelection: extendSelection,
     clearSelection: clearSelection,
   );
@@ -850,9 +871,12 @@ TextCursorCommandResult textMoveToDocumentBoundary({
   bool extendSelection = false,
   bool clearSelection = false,
 }) {
-  return state.moveToDocumentBoundaryCommand(
-    document.flattenWithNewlines(),
-    forward: forward,
+  return moveCursorToOffset(
+    textLength: document.length,
+    cursorOffset: state.cursorOffset,
+    selectionBaseOffset: state.selectionBaseOffset,
+    selectionExtentOffset: state.selectionExtentOffset,
+    targetOffset: forward ? document.length : 0,
     extendSelection: extendSelection,
     clearSelection: clearSelection,
   );
