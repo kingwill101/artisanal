@@ -8,10 +8,7 @@ import 'text_change.dart';
 
 final class TextDocument {
   TextDocument({String text = ''}) {
-    _storage = _TextDocumentStorage.fromLineTexts(
-      _parseLineTexts(text),
-      revision: 0,
-    );
+    _storage = _TextDocumentStorage.fromText(text, revision: 0);
   }
 
   TextDocument._raw();
@@ -61,7 +58,7 @@ final class TextDocument {
         position.line < _storage.lineCount - 1) {
       return '\n';
     }
-    return lineGraphemesAt(position.line)[position.column];
+    return _storage.graphemeInLineAt(position.line, position.column);
   }
 
   TextDocument copy() {
@@ -214,12 +211,37 @@ final class TextDocument {
       return false;
     }
 
-    for (var index = 0; index < graphemes.length; index++) {
-      if (graphemeAt(start + index) != graphemes[index]) {
-        return false;
+    var matched = 0;
+    final startPosition = positionForOffset(start);
+    var line = startPosition.line;
+    var column = startPosition.column;
+
+    while (matched < graphemes.length && line < _storage.lineCount) {
+      final lineLength = this.lineLength(line);
+      while (column < lineLength && matched < graphemes.length) {
+        if (_storage.graphemeInLineAt(line, column) != graphemes[matched]) {
+          return false;
+        }
+        column += 1;
+        matched += 1;
+      }
+
+      if (matched < graphemes.length &&
+          column == lineLength &&
+          line < _storage.lineCount - 1) {
+        if (graphemes[matched] != '\n') {
+          return false;
+        }
+        matched += 1;
+        line += 1;
+        column = 0;
+      } else if (column == lineLength) {
+        line += 1;
+        column = 0;
       }
     }
-    return true;
+
+    return matched == graphemes.length;
   }
 
   ({TextPosition start, TextPosition end}) wordBoundaryAt(
@@ -265,8 +287,8 @@ final class TextDocument {
   }
 
   void replaceText(String text) {
-    _storage = _TextDocumentStorage.fromLineTexts(
-      _parseLineTexts(text),
+    _storage = _TextDocumentStorage.fromText(
+      text,
       revision: _storage.revision + 1,
     );
   }
@@ -572,6 +594,25 @@ final class _TextDocumentStorage {
     );
   }
 
+  factory _TextDocumentStorage.fromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    if (text.isEmpty) {
+      return _leafFromLineTexts(
+        const <String>[''],
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _buildStorageFromText(
+      text,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
   factory _TextDocumentStorage.fromParsedLines(
     List<List<String>> lines, {
     required int revision,
@@ -779,6 +820,21 @@ final class _TextDocumentStorage {
     );
   }
 
+  String? graphemeInLineAt(int index, int column) {
+    if (index < 0 || index >= lineCount) {
+      return null;
+    }
+    final lineLength = this.lineLength(index);
+    if (column < 0 || column >= lineLength) {
+      return null;
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      return cached[column];
+    }
+    return lineAt(index).characters.skip(column).first;
+  }
+
   String lineTextPrefix(int index, int graphemeCount) {
     if (index < 0 || index >= lineCount) {
       return '';
@@ -837,8 +893,7 @@ final class _TextDocumentStorage {
         cached.sublist(normalizedStart, normalizedEnd),
       );
     }
-    return lineAt(index)
-        .characters
+    return lineAt(index).characters
         .skip(normalizedStart)
         .take(normalizedEnd - normalizedStart)
         .toList(growable: false);
@@ -865,8 +920,7 @@ final class _TextDocumentStorage {
     if (cached != null) {
       return cached.sublist(normalizedStart, normalizedEnd).join();
     }
-    return lineAt(index)
-        .characters
+    return lineAt(index).characters
         .skip(normalizedStart)
         .take(normalizedEnd - normalizedStart)
         .toString();
@@ -1056,6 +1110,52 @@ final class _TextDocumentStorage {
         for (var index = 0; index < normalizedLines.length; index++)
           index: normalizedLines[index],
       },
+    );
+  }
+
+  static _TextDocumentStorage _buildStorageFromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final segments = <_TextDocumentStorageSegment>[];
+    var currentLines = <String>[];
+
+    void flushChunk() {
+      if (currentLines.isEmpty) {
+        return;
+      }
+      final storage = _leafFromLineTexts(currentLines, revision: 0);
+      segments.add(storage.slice(0, storage.lineCount));
+      currentLines = <String>[];
+    }
+
+    var start = 0;
+    while (true) {
+      final newline = text.indexOf('\n', start);
+      if (newline == -1) {
+        currentLines.add(text.substring(start));
+        break;
+      }
+      currentLines.add(text.substring(start, newline));
+      if (currentLines.length >= _maxLeafLineCount) {
+        flushChunk();
+      }
+      start = newline + 1;
+    }
+
+    if (segments.isEmpty) {
+      return _leafFromLineTexts(
+        currentLines,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    flushChunk();
+    return _buildBalancedComposite(
+      segments,
+      revision: revision,
+      storageIdentity: storageIdentity,
     );
   }
 

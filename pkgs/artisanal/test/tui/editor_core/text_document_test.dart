@@ -109,6 +109,28 @@ void main() {
     });
 
     test(
+      'replaceText builds large documents through chunked storage directly',
+      () {
+        final lineTexts = List<String>.generate(
+          600,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: 'seed');
+
+        document.replaceText(lineTexts.join('\n'));
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
+        expect(document.debugHasTextCache, isFalse);
+        expect(document.lineCount, lineTexts.length);
+        expect(document.lineAt(0), lineTexts.first);
+        expect(document.lineAt(511), lineTexts[511]);
+        expect(document.lineAt(599), lineTexts.last);
+      },
+    );
+
+    test(
       'composite text reads do not materialize line text caches just to assemble text',
       () {
         final lineTexts = List<String>.generate(
@@ -155,6 +177,31 @@ void main() {
     });
 
     test(
+      'composite range matching does not materialize every touched line cache',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+        final start = document.lineStartOffset(120) + 2;
+        final expected = lineTexts.sublist(120, 181).join('\n').substring(2);
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugLineGraphemeCacheCount, 0);
+
+        final matches = document.matchesOffsetRange(
+          startOffset: start,
+          graphemes: expected.characters.toList(growable: false),
+        );
+
+        expect(matches, isTrue);
+        expect(document.debugLineGraphemeCacheCount, 0);
+      },
+    );
+
+    test(
       'composite grapheme range reads do not materialize every touched line cache',
       () {
         final lineTexts = List<String>.generate(
@@ -174,7 +221,10 @@ void main() {
           endOffset: end,
         );
 
-        expect(graphemes.join(), lineTexts.sublist(120, 181).join('\n').substring(2));
+        expect(
+          graphemes.join(),
+          lineTexts.sublist(120, 181).join('\n').substring(2),
+        );
         expect(document.debugLineGraphemeCacheCount, 0);
       },
     );
