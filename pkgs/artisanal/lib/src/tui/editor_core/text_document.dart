@@ -7,6 +7,8 @@ import 'editor_state.dart';
 import 'text_change.dart';
 
 final class TextDocument {
+  static const int _sourceBackedReplacementTextThreshold = 8192;
+
   TextDocument({String text = ''}) {
     _storage = _TextDocumentStorage.fromText(text, revision: 0);
   }
@@ -299,10 +301,57 @@ final class TextDocument {
     required int endOffset,
     String replacement = '',
   }) {
-    return replaceOffsetRange(
-      startOffset: startOffset,
-      endOffset: endOffset,
-      replacement: replacement.characters.toList(growable: false),
+    final normalizedStart = startOffset.clamp(0, length);
+    final normalizedEnd = endOffset.clamp(normalizedStart, length);
+    final startPosition = positionForOffset(normalizedStart);
+    final oldEndPosition = positionForOffset(normalizedEnd);
+    final replacementLength = replacement.characters.length;
+    if (normalizedStart + replacementLength == normalizedEnd &&
+        textInRange(startOffset: normalizedStart, endOffset: normalizedEnd) ==
+            replacement) {
+      return TextDocumentChange(
+        startOffset: normalizedStart,
+        oldEndOffset: normalizedEnd,
+        newEndOffset: normalizedEnd,
+        startPosition: startPosition,
+        oldEndPosition: oldEndPosition,
+        newEndPosition: oldEndPosition,
+      );
+    }
+
+    final prefixText = _storage.lineTextPrefix(
+      startPosition.line,
+      startPosition.column,
+    );
+    final suffixText = _storage.lineTextSuffix(
+      oldEndPosition.line,
+      oldEndPosition.column,
+    );
+    final mergedReplacementText = prefixText.isEmpty && suffixText.isEmpty
+        ? replacement
+        : '$prefixText$replacement$suffixText';
+    final replacementStorage = _replacementStorageFromText(
+      mergedReplacementText,
+    );
+    final nextSegments = <_TextDocumentStorageSegment>[
+      if (startPosition.line > 0) _storage.slice(0, startPosition.line),
+      replacementStorage.slice(0, replacementStorage.lineCount),
+      if (oldEndPosition.line + 1 < _storage.lineCount)
+        _storage.slice(oldEndPosition.line + 1, _storage.lineCount),
+    ];
+    _storage = _TextDocumentStorage.fromSegments(
+      nextSegments,
+      revision: _storage.revision + 1,
+    );
+
+    final newEndOffset = normalizedStart + replacementLength;
+    return TextDocumentChange(
+      startOffset: normalizedStart,
+      oldEndOffset: normalizedEnd,
+      newEndOffset: newEndOffset,
+      startPosition: startPosition,
+      oldEndPosition: oldEndPosition,
+      newEndPosition: positionForOffset(newEndOffset),
     );
   }
 
@@ -347,9 +396,8 @@ final class TextDocument {
     mergedLineTexts[mergedLineTexts.length - 1] =
         '${mergedLineTexts.last}$suffixText';
 
-    final replacementStorage = _TextDocumentStorage.fromLineTexts(
+    final replacementStorage = _replacementStorageFromLineTexts(
       mergedLineTexts,
-      revision: 0,
     );
     final nextSegments = <_TextDocumentStorageSegment>[
       if (startPosition.line > 0) _storage.slice(0, startPosition.line),
@@ -432,10 +480,7 @@ final class TextDocument {
     } else {
       final replacementStorage = normalizedReplacement.isEmpty
           ? null
-          : _TextDocumentStorage.fromLineTexts(
-              normalizedReplacement,
-              revision: 0,
-            );
+          : _replacementStorageFromLineTexts(normalizedReplacement);
       final nextSegments = <_TextDocumentStorageSegment>[
         if (normalizedStart > 0) _storage.slice(0, normalizedStart),
         if (replacementStorage != null)
@@ -541,6 +586,31 @@ final class TextDocument {
         grapheme == '\t' ||
         grapheme == '\n' ||
         grapheme == '\r';
+  }
+
+  static _TextDocumentStorage _replacementStorageFromLineTexts(
+    List<String> lineTexts,
+  ) {
+    final totalTextLength = lineTexts.fold<int>(
+      lineTexts.length > 1 ? lineTexts.length - 1 : 0,
+      (total, line) => total + line.length,
+    );
+    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount ||
+        totalTextLength >= _sourceBackedReplacementTextThreshold) {
+      return _TextDocumentStorage.fromText(lineTexts.join('\n'), revision: 0);
+    }
+    return _TextDocumentStorage.fromLineTexts(lineTexts, revision: 0);
+  }
+
+  static _TextDocumentStorage _replacementStorageFromText(String text) {
+    if (text.length >= _sourceBackedReplacementTextThreshold) {
+      return _TextDocumentStorage.fromText(text, revision: 0);
+    }
+    final lineTexts = _parseLineTexts(text);
+    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount) {
+      return _TextDocumentStorage.fromText(text, revision: 0);
+    }
+    return _TextDocumentStorage.fromLineTexts(lineTexts, revision: 0);
   }
 }
 

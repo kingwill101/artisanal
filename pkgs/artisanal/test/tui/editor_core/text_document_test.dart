@@ -132,6 +132,30 @@ void main() {
     );
 
     test(
+      'replaceTextRange builds large multiline replacements through source-backed storage',
+      () {
+        final lineTexts = List<String>.generate(
+          600,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: 'seed');
+
+        document.replaceTextRange(
+          startOffset: 0,
+          endOffset: document.length,
+          replacement: lineTexts.join('\n'),
+        );
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.lineCount, lineTexts.length);
+        expect(document.lineAt(0), lineTexts.first);
+        expect(document.lineAt(599), lineTexts.last);
+      },
+    );
+
+    test(
       'composite text reads do not materialize line text caches just to assemble text',
       () {
         final lineTexts = List<String>.generate(
@@ -371,6 +395,28 @@ void main() {
       },
     );
 
+    test(
+      'replaceTextRange leaves revision and storage identity stable on no-op string edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
+
+        final change = document.replaceTextRange(
+          startOffset: 6,
+          endOffset: 10,
+          replacement: 'beta',
+        );
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta');
+        expect(change.startOffset, 6);
+        expect(change.oldEndOffset, 10);
+        expect(change.newEndOffset, 10);
+      },
+    );
+
     test('replaceOffsetRange keeps long-line grapheme caches cold', () {
       final prefix = List<String>.filled(4096, 'a').join();
       final emoji = '👩‍👩‍👧‍👦';
@@ -423,6 +469,30 @@ void main() {
         expect(change.startPosition, const TextPosition(line: 1, column: 0));
         expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
         expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
+      },
+    );
+
+    test(
+      'replaceLineTextRange builds large replacements through source-backed storage',
+      () {
+        final replacementLineTexts = List<String>.generate(
+          600,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: 'alpha\nbeta');
+
+        document.replaceLineTextRange(
+          startLine: 0,
+          endLine: document.lineCount,
+          replacementLineTexts: replacementLineTexts,
+        );
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.lineCount, replacementLineTexts.length);
+        expect(document.lineAt(0), replacementLineTexts.first);
+        expect(document.lineAt(599), replacementLineTexts.last);
       },
     );
 
