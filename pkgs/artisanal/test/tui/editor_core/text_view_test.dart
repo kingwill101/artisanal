@@ -99,10 +99,12 @@ void main() {
       expect(document.graphemeAt(4), 'd');
       expect(document.graphemeAt(6), isNull);
 
-      expect(
-        document.graphemesInRange(startOffset: 1, endOffset: 5),
-        const ['b', '\n', 'c', 'd'],
-      );
+      expect(document.graphemesInRange(startOffset: 1, endOffset: 5), const [
+        'b',
+        '\n',
+        'c',
+        'd',
+      ]);
       expect(
         document.matchesOffsetRange(
           startOffset: 2,
@@ -125,21 +127,24 @@ void main() {
       expect(document.lineViews[0], const ['a', 'b']);
     });
 
-    test('copy isolates later edits without rebuilding untouched text eagerly', () {
-      final original = TextDocument(text: 'alpha\nbeta\ngamma');
-      final copy = original.copy();
+    test(
+      'copy isolates later edits without rebuilding untouched text eagerly',
+      () {
+        final original = TextDocument(text: 'alpha\nbeta\ngamma');
+        final copy = original.copy();
 
-      copy.replaceOffsetRange(
-        startOffset: 6,
-        endOffset: 10,
-        replacement: 'better'.characters.toList(growable: false),
-      );
+        copy.replaceOffsetRange(
+          startOffset: 6,
+          endOffset: 10,
+          replacement: 'better'.characters.toList(growable: false),
+        );
 
-      expect(original.text, 'alpha\nbeta\ngamma');
-      expect(copy.text, 'alpha\nbetter\ngamma');
-      expect(original.lineViews[0], const ['a', 'l', 'p', 'h', 'a']);
-      expect(copy.lineViews[2], const ['g', 'a', 'm', 'm', 'a']);
-    });
+        expect(original.text, 'alpha\nbeta\ngamma');
+        expect(copy.text, 'alpha\nbetter\ngamma');
+        expect(original.lineViews[0], const ['a', 'l', 'p', 'h', 'a']);
+        expect(copy.lineViews[2], const ['g', 'a', 'm', 'm', 'a']);
+      },
+    );
   });
 
   group('TextHighlighting', () {
@@ -434,6 +439,55 @@ void main() {
         ),
         'warning [playground/TODO001] L2:C1 '
         'Address TODO markers before shipping this sample.',
+      );
+    });
+
+    test('supports document-aware diagnostic helper variants', () {
+      final document = TextDocument(text: 'zero\nTODO here');
+      const diagnostic = TextDiagnosticRange(
+        startOffset: 5,
+        endOffset: 9,
+        severity: TextDiagnosticSeverity.warning,
+        code: 'TODO001',
+        message: 'Address TODO markers before shipping this sample.',
+        source: 'playground',
+      );
+
+      expect(
+        textDiagnosticStartPositionForDocument(
+          document: document,
+          diagnostic: diagnostic,
+        ),
+        const TextPosition(line: 1, column: 0),
+      );
+      expect(
+        textDiagnosticLocationLabelForDocument(
+          document: document,
+          diagnostic: diagnostic,
+        ),
+        'L2:C1',
+      );
+      expect(
+        textDiagnosticSummaryLabelForDocument(
+          document: document,
+          diagnostic: diagnostic,
+        ),
+        'warning [playground/TODO001] L2:C1 '
+        'Address TODO markers before shipping this sample.',
+      );
+      expect(
+        textDiagnosticLineDecorationsForDocument(
+          document: document,
+          diagnostics: const [diagnostic],
+        ),
+        const [
+          TextLineDecoration(
+            lineIndex: 1,
+            styleKey: textDiagnosticWarningLineDecorationKey,
+            lineNumberMarker: '~',
+            lineNumberStyleKey: textDiagnosticWarningLineNumberDecorationKey,
+          ),
+        ],
       );
     });
 
@@ -855,17 +909,20 @@ void main() {
       expect(scrolled.last.charOffset, 3);
     });
 
-    test('resolves a cursor-visible horizontal viewport for non-wrapped content', () {
-      final document = TextDocument(text: 'abcdefghij');
-      final state = EditorState(line: 0, column: 8);
-      final view = TextView(width: 4, height: 2, softWrap: false);
+    test(
+      'resolves a cursor-visible horizontal viewport for non-wrapped content',
+      () {
+        final document = TextDocument(text: 'abcdefghij');
+        final state = EditorState(line: 0, column: 8);
+        final view = TextView(width: 4, height: 2, softWrap: false);
 
-      final viewport = view.resolveViewport(document, state);
+        final viewport = view.resolveViewport(document, state);
 
-      expect(viewport.startColumn, 5);
-      expect(viewport.endColumn, 9);
-      expect(viewport.totalColumns, 10);
-    });
+        expect(viewport.startColumn, 5);
+        expect(viewport.endColumn, 9);
+        expect(viewport.totalColumns, 10);
+      },
+    );
 
     test('hit testing uses the horizontal viewport offset', () {
       final document = TextDocument(text: 'abcdefghij');
@@ -880,23 +937,26 @@ void main() {
       expect(hit.column, 4);
     });
 
-    test('ensureCursorVisible updates the horizontal viewport with scroll margin', () {
-      final document = TextDocument(text: 'abcdefghij');
-      final state = EditorState(line: 0, column: 8);
-      final view = TextView(
-        width: 4,
-        height: 2,
-        softWrap: false,
-        scrollMargin: 1,
-      );
+    test(
+      'ensureCursorVisible updates the horizontal viewport with scroll margin',
+      () {
+        final document = TextDocument(text: 'abcdefghij');
+        final state = EditorState(line: 0, column: 8);
+        final view = TextView(
+          width: 4,
+          height: 2,
+          softWrap: false,
+          scrollMargin: 1,
+        );
 
-      view.scrollToColumn(0, document, state);
-      final startRow = view.ensureCursorVisible(document, state);
+        view.scrollToColumn(0, document, state);
+        final startRow = view.ensureCursorVisible(document, state);
 
-      expect(startRow, 0);
-      expect(view.viewportStartColumn, 6);
-      expect(view.isCursorVisible(document, state), isTrue);
-    });
+        expect(startRow, 0);
+        expect(view.viewportStartColumn, 6);
+        expect(view.isCursorVisible(document, state), isTrue);
+      },
+    );
 
     test(
       'resolves soft-wrap boundary cursors to the continuation visual row',

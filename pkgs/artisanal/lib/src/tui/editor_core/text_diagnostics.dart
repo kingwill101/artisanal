@@ -27,7 +27,16 @@ List<TextPositionDiagnosticRange> textPatternDiagnostics({
   required String text,
   required Iterable<TextPatternDiagnosticRule> rules,
 }) {
-  final document = TextDocument(text: text);
+  return textPatternDiagnosticsForDocument(
+    document: TextDocument(text: text),
+    rules: rules,
+  );
+}
+
+List<TextPositionDiagnosticRange> textPatternDiagnosticsForDocument({
+  required TextDocument document,
+  required Iterable<TextPatternDiagnosticRule> rules,
+}) {
   final diagnostics = <TextPositionDiagnosticRange>[];
   final lines = document.lineTexts;
 

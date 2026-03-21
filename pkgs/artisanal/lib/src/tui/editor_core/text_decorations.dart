@@ -348,7 +348,16 @@ TextPosition textDiagnosticStartPosition({
   required String text,
   required TextDiagnosticRange diagnostic,
 }) {
-  final document = TextDocument(text: text);
+  return textDiagnosticStartPositionForDocument(
+    document: TextDocument(text: text),
+    diagnostic: diagnostic,
+  );
+}
+
+TextPosition textDiagnosticStartPositionForDocument({
+  required TextDocument document,
+  required TextDiagnosticRange diagnostic,
+}) {
   final normalized = diagnostic.normalized();
   final startOffset = normalized.startOffset.clamp(0, document.length);
   return document.positionForOffset(startOffset);
@@ -367,12 +376,35 @@ String textDiagnosticLocationLabel({
   required String text,
   required TextDiagnosticRange diagnostic,
 }) {
-  final start = textDiagnosticStartPosition(text: text, diagnostic: diagnostic);
+  return textDiagnosticLocationLabelForDocument(
+    document: TextDocument(text: text),
+    diagnostic: diagnostic,
+  );
+}
+
+String textDiagnosticLocationLabelForDocument({
+  required TextDocument document,
+  required TextDiagnosticRange diagnostic,
+}) {
+  final start = textDiagnosticStartPositionForDocument(
+    document: document,
+    diagnostic: diagnostic,
+  );
   return 'L${start.line + 1}:C${start.column + 1}';
 }
 
 String textDiagnosticSummaryLabel({
   required String text,
+  required TextDiagnosticRange diagnostic,
+}) {
+  return textDiagnosticSummaryLabelForDocument(
+    document: TextDocument(text: text),
+    diagnostic: diagnostic,
+  );
+}
+
+String textDiagnosticSummaryLabelForDocument({
+  required TextDocument document,
   required TextDiagnosticRange diagnostic,
 }) {
   final code = switch ((diagnostic.source, diagnostic.code)) {
@@ -384,7 +416,10 @@ String textDiagnosticSummaryLabel({
   return [
     textDiagnosticSeverityLabel(diagnostic.severity),
     ?code,
-    textDiagnosticLocationLabel(text: text, diagnostic: diagnostic),
+    textDiagnosticLocationLabelForDocument(
+      document: document,
+      diagnostic: diagnostic,
+    ),
     if (message != null && message.isNotEmpty) message else 'diagnostic',
   ].join(' ');
 }
@@ -553,12 +588,20 @@ List<TextLineDecoration> textDiagnosticLineDecorations({
   required String text,
   required Iterable<TextDiagnosticRange> diagnostics,
 }) {
+  return textDiagnosticLineDecorationsForDocument(
+    document: TextDocument(text: text),
+    diagnostics: diagnostics,
+  );
+}
+
+List<TextLineDecoration> textDiagnosticLineDecorationsForDocument({
+  required TextDocument document,
+  required Iterable<TextDiagnosticRange> diagnostics,
+}) {
   final normalizedDiagnostics = normalizeTextDiagnostics(diagnostics);
   if (normalizedDiagnostics.isEmpty) {
     return const [];
   }
-
-  final document = TextDocument(text: text);
   final lineSeverities = <int, TextDiagnosticSeverity>{};
 
   for (final diagnostic in normalizedDiagnostics) {
