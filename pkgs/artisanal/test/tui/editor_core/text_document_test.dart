@@ -199,6 +199,38 @@ void main() {
     );
 
     test(
+      'replaceOffsetRange keeps grapheme-heavy multiline replacement lengths correct',
+      () {
+        const family = '👩‍👩‍👧‍👦';
+        final replacement = <String>[];
+        for (var index = 0; index < 600; index++) {
+          replacement.addAll(family.characters);
+          if (index < 599) {
+            replacement.add('\n');
+          }
+        }
+        final document = TextDocument(text: 'seed');
+
+        document.replaceOffsetRange(
+          startOffset: 0,
+          endOffset: document.length,
+          replacement: replacement,
+        );
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(1));
+        expect(document.debugDistinctSourceCount, 1);
+        expect(document.lineCount, 600);
+        expect(document.lineLength(0), 1);
+        expect(document.lineLength(255), 1);
+        expect(document.lineLength(256), 1);
+        expect(document.lineLength(599), 1);
+        expect(document.lineAt(0), family);
+        expect(document.lineAt(599), family);
+      },
+    );
+
+    test(
       'replaceLines builds large parsed documents through shared source-backed storage',
       () {
         final parsedLines = List<List<String>>.generate(

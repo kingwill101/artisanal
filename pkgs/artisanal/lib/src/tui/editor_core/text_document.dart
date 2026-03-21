@@ -392,7 +392,8 @@ final class TextDocument {
       );
     }
 
-    final replacementLineTexts = _parseFlatLineTexts(replacement);
+    final parsedReplacement = _parseFlatLineTextsWithLengths(replacement);
+    final replacementLineTexts = parsedReplacement.lineTexts;
     final prefixText = _storage.lineTextPrefix(
       startPosition.line,
       startPosition.column,
@@ -408,9 +409,17 @@ final class TextDocument {
     mergedLineTexts[0] = '$prefixText${mergedLineTexts.first}';
     mergedLineTexts[mergedLineTexts.length - 1] =
         '${mergedLineTexts.last}$suffixText';
+    final mergedLineLengths = List<int>.from(
+      parsedReplacement.lineLengths,
+      growable: true,
+    );
+    mergedLineLengths[0] += startPosition.column;
+    mergedLineLengths[mergedLineLengths.length - 1] +=
+        lineLength(oldEndPosition.line) - oldEndPosition.column;
 
     final replacementStorage = _replacementStorageFromLineTexts(
       mergedLineTexts,
+      lineLengths: mergedLineLengths,
     );
     final nextSegments = <_TextDocumentStorageSegment>[
       if (startPosition.line > 0) _storage.slice(0, startPosition.line),
@@ -546,7 +555,7 @@ final class TextDocument {
       _parseFlatGraphemes(graphemes);
 
   static List<String> parseFlatLineTexts(Iterable<String> graphemes) =>
-      _parseFlatLineTexts(graphemes);
+      _parseFlatLineTextsWithLengths(graphemes).lineTexts;
 
   static List<String> _parseLineTexts(String text) {
     if (text.isEmpty) {
@@ -573,17 +582,24 @@ final class TextDocument {
     return lines;
   }
 
-  static List<String> _parseFlatLineTexts(Iterable<String> graphemes) {
+  static ({List<String> lineTexts, List<int> lineLengths})
+  _parseFlatLineTextsWithLengths(Iterable<String> graphemes) {
     final lines = <StringBuffer>[StringBuffer()];
+    final lineLengths = <int>[0];
     for (final grapheme in graphemes) {
       if (grapheme == '\n') {
         lines.add(StringBuffer());
+        lineLengths.add(0);
         continue;
       }
       lines.last.write(grapheme);
+      lineLengths[lineLengths.length - 1] += 1;
     }
-    return List<String>.unmodifiable(
-      lines.map((line) => line.toString()).toList(growable: false),
+    return (
+      lineTexts: List<String>.unmodifiable(
+        lines.map((line) => line.toString()).toList(growable: false),
+      ),
+      lineLengths: List<int>.unmodifiable(lineLengths),
     );
   }
 
@@ -631,8 +647,9 @@ final class TextDocument {
   }
 
   static _TextDocumentStorage _replacementStorageFromLineTexts(
-    List<String> lineTexts,
-  ) {
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+  }) {
     final totalTextLength = lineTexts.fold<int>(
       lineTexts.length > 1 ? lineTexts.length - 1 : 0,
       (total, line) => total + line.length,
@@ -641,10 +658,15 @@ final class TextDocument {
         totalTextLength >= _sourceBackedReplacementTextThreshold) {
       return _TextDocumentStorage._buildStorageFromLineTextsSource(
         lineTexts,
+        lineLengths: lineLengths,
         revision: 0,
       );
     }
-    return _TextDocumentStorage.fromLineTexts(lineTexts, revision: 0);
+    return _TextDocumentStorage.fromLineTexts(
+      lineTexts,
+      lineLengths: lineLengths,
+      revision: 0,
+    );
   }
 
   static _TextDocumentStorage _replacementStorageFromText(String text) {
@@ -951,18 +973,21 @@ final class _TextDocumentStorage {
 
   factory _TextDocumentStorage.fromLineTexts(
     List<String> lineTexts, {
+    List<int>? lineLengths,
     required int revision,
     Object? storageIdentity,
   }) {
     if (lineTexts.length > _maxLeafLineCount) {
       return _buildStorageFromLineTextsSource(
         lineTexts,
+        lineLengths: lineLengths,
         revision: revision,
         storageIdentity: storageIdentity,
       );
     }
     return _leafFromLineTexts(
       lineTexts,
+      lineLengths: lineLengths,
       revision: revision,
       storageIdentity: storageIdentity,
     );
@@ -1649,19 +1674,25 @@ final class _TextDocumentStorage {
 
   static _TextDocumentStorage _leafFromLineTexts(
     List<String> lineTexts, {
+    List<int>? lineLengths,
     required int revision,
     Object? storageIdentity,
   }) {
     final normalizedLineTexts = List<String>.unmodifiable(
       List<String>.from(lineTexts, growable: false),
     );
-    final lineLengths = normalizedLineTexts
-        .map((line) => line.characters.length)
-        .toList(growable: false);
+    final normalizedLineLengths =
+        lineLengths == null
+            ? normalizedLineTexts
+                .map((line) => line.characters.length)
+                .toList(growable: false)
+            : List<int>.unmodifiable(lineLengths);
     return _TextDocumentStorage._leaf(
       lineTexts: normalizedLineTexts,
-      lineLengths: lineLengths,
-      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      lineLengths: normalizedLineLengths,
+      length: _TextDocumentStorage._documentLengthForLineLengths(
+        normalizedLineLengths,
+      ),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
     );
@@ -1785,10 +1816,14 @@ final class _TextDocumentStorage {
 
   static _TextDocumentStorage _buildStorageFromLineTextsSource(
     List<String> lineTexts, {
+    List<int>? lineLengths,
     required int revision,
     Object? storageIdentity,
   }) {
-    final source = _TextDocumentSource.fromLineTexts(lineTexts);
+    final source = _TextDocumentSource.fromLineTexts(
+      lineTexts,
+      lineLengths: lineLengths,
+    );
     if (source.lineCount <= _maxLeafLineCount) {
       return _leafFromTextSource(
         source: source,
