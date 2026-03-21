@@ -186,6 +186,16 @@ void main() {
         expect(textarea.document.text, 'abc');
       });
 
+      test('setText eagerly syncs the backing document', () {
+        final textarea = TextAreaModel();
+
+        textarea.setText('alpha\nbeta');
+
+        expect(textarea.document.text, 'alpha\nbeta');
+        expect(textarea.document.lineTexts, const ['alpha', 'beta']);
+        expect(textarea.lineCount, 2);
+      });
+
       test('setPromptFunc parity', () {
         final textarea = TextAreaModel();
         textarea.setPromptFunc(4, (info) => '[${info.lineIndex}] ');
