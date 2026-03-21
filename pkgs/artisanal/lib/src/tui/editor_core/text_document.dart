@@ -19,6 +19,7 @@ final class TextDocument {
   late int _length;
   String? _cachedText;
   List<String>? _cachedFlattenedGraphemes;
+  List<String>? _cachedLineTexts;
   List<List<String>>? _cachedLineViews;
 
   List<List<String>> get lines => _lines
@@ -26,6 +27,10 @@ final class TextDocument {
       .toList(growable: false);
 
   List<List<String>> get lineViews => _cachedLineViews ??= _lines;
+
+  List<String> get lineTexts => _cachedLineTexts ??= List<String>.unmodifiable(
+    _lines.map((line) => line.join()),
+  );
 
   int get lineCount => _lines.length;
 
@@ -53,6 +58,7 @@ final class TextDocument {
     next._length = _length;
     next._cachedText = _cachedText;
     next._cachedFlattenedGraphemes = _cachedFlattenedGraphemes;
+    next._cachedLineTexts = _cachedLineTexts;
     next._cachedLineViews = _cachedLineViews;
     return next;
   }
@@ -377,6 +383,7 @@ final class TextDocument {
     _length = length;
     _cachedText = null;
     _cachedFlattenedGraphemes = null;
+    _cachedLineTexts = null;
     _cachedLineViews = null;
   }
 

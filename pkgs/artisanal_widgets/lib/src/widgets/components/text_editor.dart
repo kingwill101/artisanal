@@ -892,7 +892,7 @@ class _TextEditorState extends State<TextEditor> {
     )
     edit,
   ) {
-    final lines = _controller.text.split('\n');
+    final lines = List<String>.from(_controller.document.lineTexts);
     final result = edit(lines, _coreBridge.currentLineStateSnapshot());
     if (!result.changed) {
       return;
@@ -965,7 +965,7 @@ class _TextEditorState extends State<TextEditor> {
 
   Widget _buildGotoBar(Theme theme, int width) {
     final editorTheme = theme.editorTheme;
-    final totalLines = _controller.text.split('\n').length;
+    final totalLines = _controller.document.lineCount;
     final requested = int.tryParse(_gotoController.text.trim());
     final statusText = switch (requested) {
       null => 'Enter a line number',

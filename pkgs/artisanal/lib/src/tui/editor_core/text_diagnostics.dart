@@ -29,7 +29,7 @@ List<TextPositionDiagnosticRange> textPatternDiagnostics({
 }) {
   final document = TextDocument(text: text);
   final diagnostics = <TextPositionDiagnosticRange>[];
-  final lines = text.split('\n');
+  final lines = document.lineTexts;
 
   for (final rule in rules) {
     final needle = uni.graphemes(rule.pattern).toList(growable: false);

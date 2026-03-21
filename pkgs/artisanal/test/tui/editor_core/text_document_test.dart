@@ -91,5 +91,20 @@ void main() {
         expect(change.newEndPosition, const TextPosition(line: 0, column: 3));
       },
     );
+
+    test('lineTexts caches line projections and invalidates after edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      expect(document.lineTexts, const ['alpha', 'beta']);
+      expect(document.lineTexts, same(document.lineTexts));
+
+      document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'B',
+      );
+
+      expect(document.lineTexts, const ['alpha', 'B']);
+    });
   });
 }
