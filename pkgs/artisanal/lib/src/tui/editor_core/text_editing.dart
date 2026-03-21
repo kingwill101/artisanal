@@ -9,6 +9,7 @@ import 'editor_state.dart';
 import 'state_bridge.dart';
 import 'text_commands.dart';
 import 'text_document.dart';
+import 'text_edit_ops.dart' as edit_ops;
 import 'text_navigation.dart' as nav;
 
 bool _isWordGrapheme(String grapheme) {
@@ -339,10 +340,30 @@ TextCommandResult textInsertGraphemes({
     );
   }
 
-  return state.replaceSelectionOrInsertCommand(
-    document.flattenWithNewlines(),
-    replacement: graphemes,
-    replaceSelection: replaceSelection,
+  final working = document.copy();
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  final hasSelection = selection != null && selection.start != selection.end;
+
+  final result = replaceSelection && hasSelection
+      ? edit_ops.replaceDocumentRange(
+          working,
+          start: selection.start,
+          end: selection.end,
+          replacement: graphemes,
+        )
+      : edit_ops.insertIntoDocument(
+          working,
+          state.cursorOffset,
+          graphemes,
+        );
+
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
@@ -364,21 +385,83 @@ TextCommandResult textDeleteSelection({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  return state.deleteSelectionCommand(document.flattenWithNewlines());
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  if (selection == null || selection.start == selection.end) {
+    return TextCommandResult(
+      graphemes: document.flattenWithNewlines(),
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: selection.start,
+    end: selection.end,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
+  );
 }
 
 TextCommandResult textDeletePrevious({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  return state.deletePreviousCommand(document.flattenWithNewlines());
+  if (state.cursorOffset <= 0) {
+    return TextCommandResult(
+      graphemes: document.flattenWithNewlines(),
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.deletePreviousDocumentGrapheme(
+    working,
+    state.cursorOffset,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
+  );
 }
 
 TextCommandResult textDeleteNext({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  return state.deleteNextCommand(document.flattenWithNewlines());
+  if (state.cursorOffset >= document.length) {
+    return TextCommandResult(
+      graphemes: document.flattenWithNewlines(),
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.deleteNextDocumentGrapheme(
+    working,
+    state.cursorOffset,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
+  );
 }
 
 TextCommandResult textDeleteWordBackward({
