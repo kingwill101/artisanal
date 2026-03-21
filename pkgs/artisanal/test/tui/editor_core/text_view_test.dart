@@ -910,6 +910,29 @@ void main() {
     });
 
     test(
+      'builds non-wrapped viewport lines without warming grapheme caches',
+      () {
+        final document = TextDocument(
+          text: List<String>.generate(
+            12,
+            (index) => 'line-$index-abcdefghij',
+          ).join('\n'),
+        );
+        final state = EditorState(line: 0, column: 0);
+        final view = TextView(width: 6, height: 3, softWrap: false);
+
+        final lines = view.buildLinesForCurrentViewport(document, state);
+
+        expect(lines.map((line) => line.text).toList(), [
+          'line-0',
+          'line-1',
+          'line-2',
+        ]);
+        expect(document.debugLineGraphemeCacheCount, 0);
+      },
+    );
+
+    test(
       'resolves a cursor-visible horizontal viewport for non-wrapped content',
       () {
         final document = TextDocument(text: 'abcdefghij');

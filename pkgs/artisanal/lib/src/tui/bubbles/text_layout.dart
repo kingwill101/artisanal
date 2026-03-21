@@ -43,24 +43,41 @@ List<VisualLine> buildVisualLines(
   required bool softWrap,
   required int wrapWidthCells,
 }) {
+  return buildVisualLinesFromReader(
+    lineCount: lines.length,
+    lineTextAt: (index) => lines[index].join(),
+    lineLengthAt: (index) => lines[index].length,
+    lineGraphemesAt: (index) => lines[index],
+    softWrap: softWrap,
+    wrapWidthCells: wrapWidthCells,
+  );
+}
+
+List<VisualLine> buildVisualLinesFromReader({
+  required int lineCount,
+  required String Function(int index) lineTextAt,
+  required int Function(int index) lineLengthAt,
+  List<String> Function(int index)? lineGraphemesAt,
+  required bool softWrap,
+  required int wrapWidthCells,
+}) {
   final out = <VisualLine>[];
 
-  for (var rowIndex = 0; rowIndex < lines.length; rowIndex++) {
-    final line = lines[rowIndex];
-
+  for (var rowIndex = 0; rowIndex < lineCount; rowIndex++) {
     if (!softWrap || wrapWidthCells <= 0) {
-      final text = line.join();
+      final text = lineTextAt(rowIndex);
       out.add(
         VisualLine(
           rowIndex: rowIndex,
           charOffset: 0,
           text: text,
-          graphemeCount: uni.graphemes(text).length,
+          graphemeCount: lineLengthAt(rowIndex),
         ),
       );
       continue;
     }
 
+    final line = lineGraphemesAt!(rowIndex);
     var start = 0;
     while (start < line.length) {
       var width = 0;

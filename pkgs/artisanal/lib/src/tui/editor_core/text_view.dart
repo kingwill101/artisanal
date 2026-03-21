@@ -106,12 +106,7 @@ final class TextView {
   }
 
   List<TextViewLine> buildLines(TextDocument document, EditorState state) {
-    final wrapWidth = effectiveWrapWidth();
-    final visual = layout.buildVisualLines(
-      document.lineViews,
-      softWrap: softWrap,
-      wrapWidthCells: wrapWidth,
-    );
+    final visual = _buildVisualLines(document);
 
     final result = <TextViewLine>[];
     for (var i = 0; i < visual.length; i++) {
@@ -143,14 +138,7 @@ final class TextView {
   }
 
   int totalVisualRows(TextDocument document) {
-    final wrapWidth = effectiveWrapWidth();
-    return layout
-        .buildVisualLines(
-          document.lineViews,
-          softWrap: softWrap,
-          wrapWidthCells: wrapWidth,
-        )
-        .length;
+    return _buildVisualLines(document).length;
   }
 
   int maxViewportStartRow(TextDocument document) {
@@ -166,9 +154,7 @@ final class TextView {
     if (lines.isEmpty) {
       return 0;
     }
-    return lines
-        .map((line) => _displayWidth(line.text))
-        .fold<int>(0, math.max);
+    return lines.map((line) => _displayWidth(line.text)).fold<int>(0, math.max);
   }
 
   int maxViewportStartColumn(TextDocument document, EditorState state) {
@@ -202,14 +188,13 @@ final class TextView {
   }
 
   void scrollToColumn(int column, TextDocument document, EditorState state) {
-    viewportStartColumn = column.clamp(0, maxViewportStartColumn(document, state));
+    viewportStartColumn = column.clamp(
+      0,
+      maxViewportStartColumn(document, state),
+    );
   }
 
-  void scrollByColumns(
-    int delta,
-    TextDocument document,
-    EditorState state,
-  ) {
+  void scrollByColumns(int delta, TextDocument document, EditorState state) {
     scrollToColumn(viewportStartColumn + delta, document, state);
   }
 
@@ -248,7 +233,9 @@ final class TextView {
     final cursorRow = cursor?.visualRow ?? 0;
     final cursorColumn = cursor?.displayColumn ?? 0;
     final verticalMargin = _resolvedScrollMargin(height);
-    final horizontalMargin = softWrap ? 0 : _resolvedScrollMargin(viewportWidth);
+    final horizontalMargin = softWrap
+        ? 0
+        : _resolvedScrollMargin(viewportWidth);
 
     final resolvedStartColumn = switch ((softWrap, viewportWidth > 0)) {
       (true, _) || (_, false) => 0,
@@ -552,12 +539,7 @@ final class TextView {
     );
   }
 
-  ({
-    String text,
-    int skippedGraphemes,
-    int graphemeCount,
-  })
-  _clipLineToViewport(
+  ({String text, int skippedGraphemes, int graphemeCount}) _clipLineToViewport(
     String text, {
     required int startColumn,
     required int width,
@@ -645,7 +627,10 @@ final class TextView {
     return clampedStart;
   }
 
-  TextViewport _resolveCurrentViewport(TextDocument document, EditorState state) {
+  TextViewport _resolveCurrentViewport(
+    TextDocument document,
+    EditorState state,
+  ) {
     final lines = buildLines(document, state);
     final totalRows = lines.length;
     final totalColumns = totalVisualColumns(document, state);
@@ -658,7 +643,10 @@ final class TextView {
         : (startRow + height).clamp(0, totalRows);
     final startColumn = switch ((softWrap, viewportWidth > 0)) {
       (true, _) || (_, false) => 0,
-      _ => viewportStartColumn.clamp(0, maxViewportStartColumn(document, state)),
+      _ => viewportStartColumn.clamp(
+        0,
+        maxViewportStartColumn(document, state),
+      ),
     };
     final endColumn = switch ((softWrap, viewportWidth > 0)) {
       (true, _) || (_, false) => totalColumns,
@@ -672,6 +660,17 @@ final class TextView {
       startColumn: startColumn,
       endColumn: endColumn,
       totalColumns: totalColumns,
+    );
+  }
+
+  List<layout.VisualLine> _buildVisualLines(TextDocument document) {
+    return layout.buildVisualLinesFromReader(
+      lineCount: document.lineCount,
+      lineTextAt: document.lineAt,
+      lineLengthAt: document.lineLength,
+      lineGraphemesAt: softWrap ? document.lineGraphemesAt : null,
+      softWrap: softWrap,
+      wrapWidthCells: effectiveWrapWidth(),
     );
   }
 }
