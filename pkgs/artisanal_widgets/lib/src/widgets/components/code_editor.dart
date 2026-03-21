@@ -638,8 +638,12 @@ final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
         previousDocument == null ||
         change == null ||
         change.isNoop) {
+      final fullText = document.textBetweenLines(
+        startLine: 0,
+        endLine: document.lineCount,
+      );
       return TextSyntaxBuildResult<void>(
-        decorations: _highlightDecorations(document.text, language: language),
+        decorations: _highlightDecorations(fullText, language: language),
       );
     }
 

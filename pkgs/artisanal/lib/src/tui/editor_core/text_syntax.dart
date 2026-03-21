@@ -52,7 +52,7 @@ abstract class TextSyntaxProvider<State> {
     TextDocumentChange? change,
   }) {
     return build(
-      document.text,
+      document.textBetweenLines(startLine: 0, endLine: document.lineCount),
       document: document,
       language: language,
       previous: previous,
@@ -259,7 +259,13 @@ final class TextSyntaxSession<State> {
                       previousDocument: previous.document!,
                       nextDocument: document,
                     )
-                  : computeTextDocumentChange(previous.text, document.text))
+                  : computeTextDocumentChange(
+                      previous.text,
+                      document.textBetweenLines(
+                        startLine: 0,
+                        endLine: document.lineCount,
+                      ),
+                    ))
         : null;
     final result = provider.buildDocument(
       document,

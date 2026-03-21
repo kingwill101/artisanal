@@ -197,6 +197,29 @@ void main() {
       expect(provider.calls.single.documentText, 'alpha\nbeta');
     });
 
+    test(
+      'default buildDocument can read composite documents without warming text cache',
+      () {
+        final provider = _DefaultBuildSyntaxProvider();
+        final document = TextDocument(
+          text: List<String>.generate(
+            300,
+            (index) => 'line-$index',
+            growable: false,
+          ).join('\n'),
+        );
+
+        expect(document.debugHasTextCache, isFalse);
+
+        final result = provider.buildDocument(document);
+
+        expect(result.decorations, isNotEmpty);
+        expect(document.debugHasTextCache, isFalse);
+        expect(provider.calls, hasLength(1));
+        expect(provider.calls.single.documentText, isNotNull);
+      },
+    );
+
     test('syncDocument reuses snapshots for unchanged document copies', () {
       final provider = _RecordingSyntaxProvider();
       final session = TextSyntaxSession<int>(provider: provider);
@@ -405,6 +428,59 @@ final class _RecordingSyntaxProvider implements TextSyntaxProvider<int> {
               ),
             ],
       state: calls.length,
+    );
+  }
+}
+
+final class _DefaultBuildSyntaxProvider implements TextSyntaxProvider<void> {
+  final List<_RecordingSyntaxCall> calls = <_RecordingSyntaxCall>[];
+
+  @override
+  TextSyntaxBuildResult<void> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<void>? previous,
+    TextDocumentChange? change,
+  }) {
+    return build(
+      document.textBetweenLines(startLine: 0, endLine: document.lineCount),
+      document: document,
+      language: language,
+      previous: previous,
+      change: change,
+    );
+  }
+
+  @override
+  TextSyntaxBuildResult<void> build(
+    String text, {
+    TextDocument? document,
+    String? language,
+    TextSyntaxSnapshot<void>? previous,
+    TextDocumentChange? change,
+  }) {
+    calls.add(
+      _RecordingSyntaxCall(
+        text: text,
+        language: language,
+        documentText: document?.textBetweenLines(
+          startLine: 0,
+          endLine: document.lineCount,
+        ),
+        previousText: previous?.text,
+        change: change,
+      ),
+    );
+    return TextSyntaxBuildResult<void>(
+      decorations: text.isEmpty
+          ? const <TextDecorationRange>[]
+          : const <TextDecorationRange>[
+              TextDecorationRange(
+                startOffset: 0,
+                endOffset: 1,
+                styleKey: 'syntax.token',
+              ),
+            ],
     );
   }
 }
