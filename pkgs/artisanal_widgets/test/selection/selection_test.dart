@@ -1,8 +1,11 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/testing.dart';
+import 'package:artisanal/markdown.dart'
+    show AnsiRendererOptions, markdownToAnsi;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as terminal show Key;
+import 'package:artisanal_widgets/src/widgets/selection/selection_text_utils.dart';
 import 'package:test/test.dart';
 
 RegExp _highlightedTextPattern({
@@ -288,9 +291,7 @@ void main() {
       }
     });
 
-    test('rich text can override selection highlight per span', () async {
-      final tester = WidgetTester(screenWidth: 60, screenHeight: 5);
-      final ctrl = SelectionController();
+    test('rich text can override selection highlight per span', () {
       final theme = Theme.light().copyWith(
         highlight: const AnsiColor(160),
         onHighlight: const AnsiColor(231),
@@ -298,47 +299,73 @@ void main() {
       final spanOverride = Style()
         ..background(const AnsiColor(27))
         ..foreground(const AnsiColor(230));
-      final themedSelection = _highlightedTextPattern(
-        foreground: 231,
-        background: 160,
-        text: 'alpha ',
+
+      final line =
+          '${Style().foreground(const AnsiColor(45)).render('alpha ')}'
+          '${Style().foreground(const AnsiColor(208)).bold().render('beta')}';
+      final output = applySelectionHighlightingWithRanges(
+        [line],
+        offset: 0,
+        selectionStart: (x: 0, y: 0),
+        selectionEnd: (x: 10, y: 0),
+        highlightStyle: selectionHighlightStyleForTheme(theme),
+        lineHighlightRanges: [
+          [StyleRange(6, 10, spanOverride)],
+        ],
+      ).single;
+
+      expect(output, contains('38;5;45'));
+      expect(output, contains('48;5;160m'));
+      expect(output, contains('38;5;230'));
+      expect(output, contains('48;5;27mbeta'));
+    });
+
+    test(
+      'rich text line selection preserves span styling outside explicit overrides',
+      () {
+        final selectionStyle = Style()
+          ..background(const AnsiColor(160))
+          ..foreground(const AnsiColor(231));
+        final line =
+            '${Style().foreground(const AnsiColor(45)).render('alpha ')}'
+            '${Style().foreground(const AnsiColor(208)).render('beta')}';
+        final output = applySelectionHighlighting(
+          [line],
+          offset: 0,
+          selectionStart: (x: 0, y: 0),
+          selectionEnd: (x: 10, y: 0),
+          highlightStyle: selectionStyle,
+        ).single;
+
+        expect(output, contains('38;5;45'));
+        expect(output, contains('38;5;208'));
+        expect(output, contains('48;5;160m'));
+        expect(output, isNot(contains('38;5;231')));
+      },
+    );
+
+    test('markdown line selection preserves inline markdown styling', () {
+      final selectionStyle = Style()
+        ..background(const AnsiColor(160))
+        ..foreground(const AnsiColor(231));
+      final markdownLine = markdownToAnsi(
+        'Shared `code`',
+        options: AnsiRendererOptions(
+          textStyle: Style().foreground(const AnsiColor(45)),
+          codeStyle: Style().foreground(const AnsiColor(208)).bold(),
+        ),
       );
-      final overriddenSelection = _highlightedTextPattern(
-        foreground: 230,
-        background: 27,
-        text: 'beta',
-      );
+      final output = applySelectionHighlighting(
+        [markdownLine],
+        offset: 0,
+        selectionStart: (x: 0, y: 0),
+        selectionEnd: (x: 13, y: 0),
+        highlightStyle: selectionStyle,
+      ).single;
 
-      try {
-        await tester.pumpWidget(
-          ThemeScope(
-            theme: theme,
-            child: SelectableRichText(
-              controller: ctrl,
-              text: TextSpan(
-                children: [
-                  const TextSpan(text: 'alpha '),
-                  TextSpan(
-                    text: 'beta',
-                    style: Style()..bold(),
-                    selectionHighlightStyle: spanOverride,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-
-        tester.mouseDown(0, 0);
-        tester.mouseMove(10, 0);
-        tester.mouseUp(10, 0);
-        final output = tester.view;
-
-        expect(themedSelection.hasMatch(output), isTrue);
-        expect(overriddenSelection.hasMatch(output), isTrue);
-      } finally {
-        await tester.dispose();
-      }
+      expect(output, contains('38;5;208'));
+      expect(output, contains('48;5;160m'));
+      expect(output, isNot(contains('38;5;231')));
     });
 
     test('click clears previous selection', () async {
@@ -614,31 +641,34 @@ void main() {
       }
     });
 
-    test('SelectableTextAreaView updates when controller text changes', () async {
-      final tester = WidgetTester(screenWidth: 70, screenHeight: 8);
-      final ctrl = SelectionController();
-      final textController = TextAreaController(text: 'alpha\nbeta');
-      addTearDown(textController.dispose);
-      try {
-        await tester.pumpWidget(
-          SelectionArea(
-            controller: ctrl,
-            child: SelectableTextAreaView(
-              controller: textController,
-              selectionController: ctrl,
-              maxWidth: 60,
+    test(
+      'SelectableTextAreaView updates when controller text changes',
+      () async {
+        final tester = WidgetTester(screenWidth: 70, screenHeight: 8);
+        final ctrl = SelectionController();
+        final textController = TextAreaController(text: 'alpha\nbeta');
+        addTearDown(textController.dispose);
+        try {
+          await tester.pumpWidget(
+            SelectionArea(
+              controller: ctrl,
+              child: SelectableTextAreaView(
+                controller: textController,
+                selectionController: ctrl,
+                maxWidth: 60,
+              ),
             ),
-          ),
-        );
+          );
 
-        textController.text = 'gamma\ndelta';
-        tester.pump();
+          textController.text = 'gamma\ndelta';
+          tester.pump();
 
-        expect(tester.locateText('gamma'), isNotNull);
-      } finally {
-        await tester.dispose();
-      }
-    });
+          expect(tester.locateText('gamma'), isNotNull);
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
 
     test('SelectableText inside Container respects layout', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 5);

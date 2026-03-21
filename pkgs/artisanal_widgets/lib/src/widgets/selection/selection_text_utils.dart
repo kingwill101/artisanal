@@ -114,6 +114,8 @@ List<String> applySelectionHighlighting(
   required SelectionPoint? selectionStart,
   required SelectionPoint? selectionEnd,
   Style? highlightStyle,
+  List<int>? lineWidths,
+  List<bool>? lineHasAnsi,
 }) {
   if (selectionStart == null || selectionEnd == null) return lines;
 
@@ -137,7 +139,9 @@ List<String> applySelectionHighlighting(
       continue;
     }
 
-    final maxX = Style.visibleLength(line);
+    final maxX = lineWidths != null && i < lineWidths.length
+        ? lineWidths[i]
+        : Style.visibleLength(line);
 
     int startX;
     int endX;
@@ -162,7 +166,14 @@ List<String> applySelectionHighlighting(
       continue;
     }
 
-    line = styleRanges(line, [StyleRange(startX, endX, style)]);
+    final hasAnsi = lineHasAnsi != null && i < lineHasAnsi.length
+        ? lineHasAnsi[i]
+        : line.contains('\x1b');
+    line = !hasAnsi
+        ? styleRanges(line, [StyleRange(startX, endX, style)])
+        : overlayBackgroundRangesPreservingAnsi(line, [
+            StyleRange(startX, endX, style),
+          ]);
     result.add(line);
   }
 
@@ -178,6 +189,8 @@ List<String> applySelectionHighlightingWithRanges(
   required SelectionPoint? selectionEnd,
   required List<List<StyleRange>> lineHighlightRanges,
   Style? highlightStyle,
+  List<int>? lineWidths,
+  List<bool>? lineHasAnsi,
 }) {
   if (selectionStart == null || selectionEnd == null) return lines;
 
@@ -201,7 +214,9 @@ List<String> applySelectionHighlightingWithRanges(
       continue;
     }
 
-    final maxX = Style.visibleLength(line);
+    final maxX = lineWidths != null && i < lineWidths.length
+        ? lineWidths[i]
+        : Style.visibleLength(line);
 
     int startX;
     int endX;
@@ -226,26 +241,30 @@ List<String> applySelectionHighlightingWithRanges(
       continue;
     }
 
-    final mergedRanges = <StyleRange>[];
     final overrides = i < lineHighlightRanges.length
         ? lineHighlightRanges[i]
         : const <StyleRange>[];
-    var cursor = startX;
-    for (final range in overrides) {
-      final rangeStart = math.max(startX, range.start);
-      final rangeEnd = math.min(endX, range.end);
-      if (rangeEnd <= rangeStart) continue;
-      if (cursor < rangeStart) {
-        mergedRanges.add(StyleRange(cursor, rangeStart, defaultStyle));
-      }
-      mergedRanges.add(StyleRange(rangeStart, rangeEnd, range.style));
-      cursor = rangeEnd;
-    }
-    if (cursor < endX) {
-      mergedRanges.add(StyleRange(cursor, endX, defaultStyle));
-    }
+    final hasAnsi = lineHasAnsi != null && i < lineHasAnsi.length
+        ? lineHasAnsi[i]
+        : line.contains('\x1b');
+    line = !hasAnsi
+        ? styleRanges(line, [StyleRange(startX, endX, defaultStyle)])
+        : overlayBackgroundRangesPreservingAnsi(line, [
+            StyleRange(startX, endX, defaultStyle),
+          ]);
 
-    line = styleRanges(line, mergedRanges);
+    final clippedOverrides = <StyleRange>[
+      for (final range in overrides)
+        if (math.min(endX, range.end) > math.max(startX, range.start))
+          StyleRange(
+            math.max(startX, range.start),
+            math.min(endX, range.end),
+            range.style,
+          ),
+    ];
+    if (clippedOverrides.isNotEmpty) {
+      line = styleRanges(line, clippedOverrides);
+    }
     result.add(line);
   }
 

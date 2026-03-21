@@ -110,7 +110,12 @@ export 'src/style/list.dart'
         ListIndenterFunc;
 export 'src/layout/layout.dart' show Layout, WhitespaceOptions;
 export 'src/style/ranges.dart'
-    show StyleRange, styleRanges, Ranges, cutAnsiByCells;
+    show
+        StyleRange,
+        styleRanges,
+        overlayBackgroundRangesPreservingAnsi,
+        Ranges,
+        cutAnsiByCells;
 export 'src/style/blending.dart' show blend1D, blend2D, blendColor;
 export 'src/style/writer.dart'
     show

@@ -15,6 +15,43 @@ class RenderSelectableText extends RenderBox {
   List<List<StyleRange>>? selectionHighlightRangesByLine;
   SelectionPoint? selectionStart;
   SelectionPoint? selectionEnd;
+  int _cachedMaxWidth = -1;
+  String? _cachedTextKey;
+  List<String>? _cachedBaseLines;
+  List<int>? _cachedBaseLineWidths;
+  List<bool>? _cachedBaseLineHasAnsi;
+  String? _cachedBaseText;
+
+  void _ensureBaseCache(int maxWidth) {
+    if (_cachedBaseLines != null &&
+        _cachedMaxWidth == maxWidth &&
+        _cachedTextKey == text) {
+      return;
+    }
+
+    _cachedMaxWidth = maxWidth;
+    _cachedTextKey = text;
+    final baseLines = <String>[];
+    final baseLineWidths = <int>[];
+    final baseLineHasAnsi = <bool>[];
+
+    for (final rawLine in text.split('\n')) {
+      var line = rawLine;
+      var width = Style.visibleLength(line);
+      if (width > maxWidth) {
+        line = Layout.truncate(line, maxWidth, ellipsis: '');
+        width = Style.visibleLength(line);
+      }
+      baseLines.add(line);
+      baseLineWidths.add(width);
+      baseLineHasAnsi.add(line.contains('\x1b'));
+    }
+
+    _cachedBaseLines = List.unmodifiable(baseLines);
+    _cachedBaseLineWidths = List.unmodifiable(baseLineWidths);
+    _cachedBaseLineHasAnsi = List.unmodifiable(baseLineHasAnsi);
+    _cachedBaseText = baseLines.join('\n');
+  }
 
   @override
   void layout(BoxConstraints constraints) {
@@ -29,34 +66,35 @@ class RenderSelectableText extends RenderBox {
   @override
   String paint() {
     final maxW = size.width.toInt();
+    _ensureBaseCache(maxW);
 
-    var lines = text.split('\n');
-    lines = lines.map((line) {
-      final width = Style.visibleLength(line);
-      if (width <= maxW) return line;
-      return Layout.truncate(line, maxW, ellipsis: '');
-    }).toList();
-
+    final baseLines = _cachedBaseLines!;
+    final baseLineWidths = _cachedBaseLineWidths!;
+    final baseLineHasAnsi = _cachedBaseLineHasAnsi!;
     final start = selectionStart;
     final end = selectionEnd;
     if (start != null && end != null) {
       final customRanges = selectionHighlightRangesByLine;
-      lines = customRanges == null
+      final lines = customRanges == null
           ? applySelectionHighlighting(
-              lines,
+              baseLines,
               offset: 0,
               selectionStart: start,
               selectionEnd: end,
               highlightStyle: selectionHighlightStyle,
+              lineWidths: baseLineWidths,
+              lineHasAnsi: baseLineHasAnsi,
             )
           : applySelectionHighlightingWithRanges(
-              lines,
+              baseLines,
               offset: 0,
               selectionStart: start,
               selectionEnd: end,
               highlightStyle: selectionHighlightStyle,
+              lineWidths: baseLineWidths,
+              lineHasAnsi: baseLineHasAnsi,
               lineHighlightRanges: [
-                for (var i = 0; i < lines.length; i++)
+                for (var i = 0; i < baseLines.length; i++)
                   i < customRanges.length
                       ? [
                           for (final range in customRanges[i])
@@ -69,9 +107,9 @@ class RenderSelectableText extends RenderBox {
                       : const <StyleRange>[],
               ],
             );
+      return lines.join('\n');
     }
-
-    return lines.join('\n');
+    return _cachedBaseText!;
   }
 }
 

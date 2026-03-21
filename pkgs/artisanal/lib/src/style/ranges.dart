@@ -68,6 +68,37 @@ String styleRanges(String s, Iterable<StyleRange> ranges) {
   return buf.toString();
 }
 
+/// Applies range backgrounds to an ANSI string while preserving existing text
+/// styling inside those ranges.
+///
+/// This is useful for selection-style overlays where the selected content
+/// should keep its original foreground and inline styling, but still show a
+/// shared selection background. If a token already carries its own background,
+/// that background is preserved.
+String overlayBackgroundRangesPreservingAnsi(
+  String s,
+  Iterable<StyleRange> ranges,
+) {
+  final rs = ranges.toList(growable: false);
+  if (rs.isEmpty) return s;
+
+  final buf = StringBuffer();
+  var lastIdx = 0;
+
+  for (final r in rs) {
+    if (r.start > lastIdx) {
+      buf.write(_cutAnsiByCells(s, lastIdx, r.start));
+    }
+
+    final segment = _cutAnsiByCells(s, r.start, r.end);
+    buf.write(_overlaySelectionBackground(segment, r.style));
+    lastIdx = r.end;
+  }
+
+  buf.write(_truncateLeftAnsiByCells(s, lastIdx));
+  return buf.toString();
+}
+
 /// Cuts an ANSI string by visible cell indices, preserving any active SGR/OSC 8
 /// state at the start boundary.
 ///
@@ -78,6 +109,57 @@ String cutAnsiByCells(String s, int start, int end) =>
 /// Truncates an ANSI string from the left by visible cell indices.
 String truncateLeftAnsiByCells(String s, int start) =>
     _truncateLeftAnsiByCells(s, start);
+
+String _overlaySelectionBackground(String segment, Style style) {
+  if (segment.isEmpty) return segment;
+
+  final background = style.getBackground;
+  if (background == null) return segment;
+
+  final backgroundAnsi = background.toAnsi(
+    style.colorProfile,
+    background: true,
+    hasDarkBackground: style.hasDarkBackground,
+  );
+  if (backgroundAnsi.isEmpty) return segment;
+
+  final tokens = _tokenizeAnsi(segment);
+  var currentStyle = const uv.UvStyle();
+  final out = StringBuffer();
+  var selectionBackgroundApplied = false;
+  var usedSelectionBackground = false;
+
+  for (final token in tokens) {
+    switch (token.kind) {
+      case _TokenKind.csi:
+        out.write(token.raw);
+        if (token.csiFinal == 'm') {
+          currentStyle = _applySgr(token.csiParams, currentStyle);
+          selectionBackgroundApplied = false;
+        }
+
+      case _TokenKind.osc || _TokenKind.newline:
+        out.write(token.raw);
+
+      case _TokenKind.text:
+        if (currentStyle.bg == null) {
+          if (!selectionBackgroundApplied) {
+            out.write(backgroundAnsi);
+            selectionBackgroundApplied = true;
+            usedSelectionBackground = true;
+          }
+        } else {
+          selectionBackgroundApplied = false;
+        }
+        out.write(token.raw);
+    }
+  }
+
+  if (usedSelectionBackground) {
+    out.write('\x1b[m');
+  }
+  return out.toString();
+}
 
 // --- Plain (no-ANSI) slicing -------------------------------------------------
 
