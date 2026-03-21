@@ -781,7 +781,7 @@ class TextInputModel extends ViewComponent {
 
   // Internal state
   List<String> _value = <String>[];
-  late final TextDocument _document;
+  late TextDocument _document;
   late final EditorState _editorState;
   late final TextView _textView;
   bool _focused = false;
@@ -1021,7 +1021,6 @@ class TextInputModel extends ViewComponent {
         breakChain: !coalesce || action == _TextInputHistoryAction.replace,
       );
       _resetDesiredCol();
-      _refreshDocumentSnapshot();
       final result = textInsertText(
         document: _document,
         state: _currentOffsetStateSnapshot(),
@@ -1042,7 +1041,6 @@ class TextInputModel extends ViewComponent {
     _runEditFrame(() {
       _beginHistoryAction(_TextInputHistoryAction.replace, breakChain: true);
       _resetDesiredCol();
-      _refreshDocumentSnapshot();
       final result = textInsertText(
         document: _document,
         state: _currentOffsetStateSnapshot(),
@@ -1095,7 +1093,6 @@ class TextInputModel extends ViewComponent {
       if (word) {
         _deleteWordBackward();
       } else {
-        _refreshDocumentSnapshot();
         final result = textDeletePrevious(
           document: _document,
           state: _currentOffsetStateSnapshot(),
@@ -1135,7 +1132,6 @@ class TextInputModel extends ViewComponent {
       if (word) {
         _deleteWordForward();
       } else {
-        _refreshDocumentSnapshot();
         final result = textDeleteNext(
           document: _document,
           state: _currentOffsetStateSnapshot(),
@@ -1169,7 +1165,6 @@ class TextInputModel extends ViewComponent {
   void _scrollMultilineRows(int delta) {
     if (maxHeight <= 0) return;
     _followMultilineCursor = false;
-    _refreshDocumentSnapshot();
     _textView
       ..width = width
       ..height = maxHeight
@@ -1278,8 +1273,7 @@ class TextInputModel extends ViewComponent {
     _runEditFrame(() {
       _beginHistoryAction(_TextInputHistoryAction.reset, breakChain: true);
       _recordUndoSnapshot();
-      _value = <String>[];
-      _invalidateWrappedLines();
+      _replaceValueAndDocument(const <String>[]);
       error = _validate(_value);
       _applyOffsetStateSnapshot(const TextOffsetStateSnapshot(cursorOffset: 0));
       _resetDesiredCol();
@@ -1389,7 +1383,6 @@ class TextInputModel extends ViewComponent {
   /// Inserts a newline character at the cursor position.
   void _insertNewline() {
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
     final result = textInsertText(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -1466,7 +1459,6 @@ class TextInputModel extends ViewComponent {
   }
 
   void _syncCoreState() {
-    _document.replaceText(value);
     syncEditorStateFromOffsets(
       _document,
       _editorState,
@@ -1488,10 +1480,6 @@ class TextInputModel extends ViewComponent {
       _scrollRow = 0;
       _textView.viewportStartRow = 0;
     }
-  }
-
-  void _refreshDocumentSnapshot() {
-    _document.replaceText(value);
   }
 
   void _configureTextView() {
@@ -1562,8 +1550,12 @@ class TextInputModel extends ViewComponent {
   }
 
   void _applyEditCommandResult(commands.TextCommandResult result) {
-    _value = result.graphemes;
-    _invalidateWrappedLines();
+    final nextDocument = result.document;
+    if (nextDocument != null) {
+      _replaceDocumentSnapshot(nextDocument, graphemes: result.graphemes);
+    } else {
+      _replaceValueAndDocument(result.graphemes);
+    }
     error = _validate(_value);
     _applyOffsetStateSnapshot(
       TextOffsetStateSnapshot(
@@ -1579,7 +1571,6 @@ class TextInputModel extends ViewComponent {
     bool extendSelection = false,
     bool clearSelection = false,
   }) {
-    _refreshDocumentSnapshot();
     _applyCursorCommandResult(
       textMoveByCharacter(
         document: _document,
@@ -1596,7 +1587,6 @@ class TextInputModel extends ViewComponent {
     bool extendSelection = false,
     bool clearSelection = false,
   }) {
-    _refreshDocumentSnapshot();
     _applyCursorCommandResult(
       textMoveToDocumentBoundary(
         document: _document,
@@ -1613,7 +1603,6 @@ class TextInputModel extends ViewComponent {
     bool extendSelection = false,
     bool clearSelection = true,
   }) {
-    _refreshDocumentSnapshot();
     _configureTextView();
     final cursor = _document.positionForOffset(_pos);
     if (_desiredCol < 0) {
@@ -1645,7 +1634,6 @@ class TextInputModel extends ViewComponent {
     bool extendSelection = false,
     bool clearSelection = true,
   }) {
-    _refreshDocumentSnapshot();
     _configureTextView();
     _applyCursorCommandResult(
       _currentOffsetStateSnapshot().moveToVisualLineBoundaryCommand(
@@ -1660,7 +1648,6 @@ class TextInputModel extends ViewComponent {
   }
 
   List<TextViewLine> _visibleTextViewLines() {
-    _refreshDocumentSnapshot();
     _configureTextView();
     if (!multiline) {
       return _textView.buildLines(_document, _editorState);
@@ -1673,8 +1660,7 @@ class TextInputModel extends ViewComponent {
   }
 
   void _restoreEditState(_TextInputEditState state) {
-    _value = List<String>.of(state.value);
-    _invalidateWrappedLines();
+    _replaceValueAndDocument(List<String>.of(state.value));
     _pos = state.position.clamp(0, _value.length);
     selectionStart = state.selectionStart?.clamp(0, _value.length);
     selectionEnd = state.selectionEnd?.clamp(0, _value.length);
@@ -1726,12 +1712,11 @@ class TextInputModel extends ViewComponent {
     error = err;
     final empty = wasEmpty ?? _value.isEmpty;
 
-    if (charLimit > 0 && graphemes.length > charLimit) {
-      _value = graphemes.sublist(0, charLimit);
-    } else {
-      _value = graphemes;
-    }
-    _invalidateWrappedLines();
+    final limitedGraphemes =
+        charLimit > 0 && graphemes.length > charLimit
+        ? graphemes.sublist(0, charLimit)
+        : graphemes;
+    _replaceValueAndDocument(limitedGraphemes);
 
     if ((position == 0 && empty) || position > _value.length) {
       position = _value.length;
@@ -1856,8 +1841,6 @@ class TextInputModel extends ViewComponent {
   void _insertLimited(List<String> paste) {
     if (paste.isEmpty) return;
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
-
     final wasEmpty = _value.isEmpty;
     final oldLen = _value.length;
     final fastWrapAppend = _tryFastAppendWrapCache(paste, oldLen);
@@ -1868,7 +1851,15 @@ class TextInputModel extends ViewComponent {
       graphemes: paste,
       replaceSelection: false,
     );
-    _value = result.graphemes;
+    final nextDocument = result.document;
+    if (nextDocument != null && fastWrapAppend) {
+      _document = nextDocument;
+      _value = <String>[..._value, ...paste];
+    } else if (nextDocument != null) {
+      _replaceDocumentSnapshot(nextDocument, graphemes: result.graphemes);
+    } else {
+      _replaceValueAndDocument(result.graphemes);
+    }
 
     final err = _validate(_value);
     if (fastWrapAppend) {
@@ -1943,8 +1934,28 @@ class TextInputModel extends ViewComponent {
     }
   }
 
+  void _replaceValueAndDocument(List<String> graphemes) {
+    final normalized = List<String>.of(graphemes, growable: false);
+    final nextDocument = TextDocument();
+    nextDocument.replaceLines(TextDocument.parseFlatGraphemes(normalized));
+    _value = normalized;
+    _document = nextDocument;
+    _invalidateWrappedLines();
+  }
+
+  void _replaceDocumentSnapshot(
+    TextDocument document, {
+    List<String>? graphemes,
+  }) {
+    _document = document;
+    _value =
+        graphemes == null
+        ? document.flattenWithNewlines()
+        : List<String>.of(graphemes, growable: false);
+    _invalidateWrappedLines();
+  }
+
   bool _deleteSelection() {
-    _refreshDocumentSnapshot();
     final result = textDeleteSelection(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -1961,7 +1972,6 @@ class TextInputModel extends ViewComponent {
   void _deleteBeforeCursor() {
     if (_pos <= 0) return;
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
     final result = textDeletePrevious(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -1973,7 +1983,6 @@ class TextInputModel extends ViewComponent {
   void _deleteAfterCursor() {
     if (_pos >= _value.length) return;
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
     final result = textDeleteNext(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -1990,7 +1999,6 @@ class TextInputModel extends ViewComponent {
     }
 
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
     final result = textDeleteWordBackward(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -2008,7 +2016,6 @@ class TextInputModel extends ViewComponent {
     }
 
     _recordUndoSnapshot();
-    _refreshDocumentSnapshot();
     final result = textDeleteWordForward(
       document: _document,
       state: _currentOffsetStateSnapshot(),
@@ -2073,7 +2080,6 @@ class TextInputModel extends ViewComponent {
 
   (int, int) _findWordAt(int x) {
     if (_value.isEmpty) return (0, 0);
-    _refreshDocumentSnapshot();
     final boundary = _document.wordBoundaryAt(_document.positionForOffset(x));
     return (
       _document.offsetForPosition(boundary.start),
@@ -2083,7 +2089,6 @@ class TextInputModel extends ViewComponent {
 
   (int, int) _findLineAt(int offset) {
     if (_value.isEmpty) return (0, 0);
-    _refreshDocumentSnapshot();
     final position = _document.positionForOffset(offset);
     final start = _document.offsetForPosition(
       TextPosition(line: position.line, column: 0),

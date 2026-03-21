@@ -75,6 +75,18 @@ void main() {
         );
       });
 
+      test('cursor and selection sync do not change document revision', () {
+        final input = TextInputModel(multiline: true);
+        input.setText('alpha\nbeta');
+        final revision = input.document.revision;
+
+        input.position = 1;
+        expect(input.document.revision, revision);
+
+        input.selectAll();
+        expect(input.document.revision, revision);
+      });
+
       test('syncs editor core selection state', () {
         final input = TextInputModel(multiline: true);
         input.setTextState(
