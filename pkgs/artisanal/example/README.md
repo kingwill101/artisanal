@@ -176,6 +176,9 @@ dart run example/tui/remote_plugin_host_demo.dart
 # Remote plugin popup/compositor demo
 dart run example/tui/remote_plugin_popup_host_demo.dart
 
+# Remote plugin generic service demo
+dart run example/tui/remote_plugin_generic_service_host_demo.dart
+
 # Dump remote plugin protocol and manifest schemas
 dart run example/tui/remote_plugin_schema_dump.dart
 dart run example/tui/remote_plugin_schema_dump.dart --manifest
@@ -198,6 +201,9 @@ documents:
   `RemotePluginWorkspace.startManifestDirectory(...)`
 - generic clipboard/URL/notification/file-picker capabilities travel through
   the schema-backed `plugin.service.request` / `host.service.response` lane
+- custom generic services can attach their own request/result schemas with
+  `RemotePluginGenericServiceCatalog.register(...)`, as shown in
+  `example/tui/remote_plugin_generic_service_host_demo.dart`
 - `example/tui/remote_plugin_schema_dump.dart` prints the exact JSON schemas
   exposed by `RemotePluginProtocolSchemas` and `RemotePluginManifestSchemas`
   for non-Dart plugin tooling

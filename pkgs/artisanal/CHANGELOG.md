@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added `example/tui/remote_plugin_generic_service_host_demo.dart` plus a
+  matching guest plugin demo, showing how to register a custom schema-backed
+  `host.ping` generic service and call it from an out-of-process plugin.
 - Fixed init-time exec restore ordering so the first visible frame is only marked complete after a real paint, preserving the initial restored frame before exec-completion updates run.
 - Wired the `remote_plugin_workspace` example through the new remote-surface input router, including click-to-focus behavior and a `--snapshot-click=` test mode for deterministic example coverage.
 - Extended the `remote_plugin_workspace` example to route keyboard input into the focused plugin surface, including a `--snapshot-key=` path so the example regression can assert focused-plugin key handling deterministically.
