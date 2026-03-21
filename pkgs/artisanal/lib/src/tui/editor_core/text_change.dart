@@ -1,7 +1,5 @@
 library;
 
-import 'package:characters/characters.dart';
-
 import 'editor_state.dart';
 import 'text_document.dart';
 
@@ -27,27 +25,41 @@ final class TextDocumentChange {
   bool get isNoop => deletedLength == 0 && insertedLength == 0;
 }
 
-TextDocumentChange computeTextDocumentChange(String previousText, String nextText) {
-  final previous = previousText.characters.toList(growable: false);
-  final next = nextText.characters.toList(growable: false);
+TextDocumentChange computeTextDocumentChange(
+  String previousText,
+  String nextText,
+) {
+  final previousDocument = TextDocument(text: previousText);
+  final nextDocument = TextDocument(text: nextText);
+  return computeTextDocumentChangeForDocuments(
+    previousDocument: previousDocument,
+    nextDocument: nextDocument,
+  );
+}
 
+TextDocumentChange computeTextDocumentChangeForDocuments({
+  required TextDocument previousDocument,
+  required TextDocument nextDocument,
+}) {
   var prefix = 0;
-  final maxPrefix = previous.length < next.length ? previous.length : next.length;
-  while (prefix < maxPrefix && previous[prefix] == next[prefix]) {
+  final maxPrefix = previousDocument.length < nextDocument.length
+      ? previousDocument.length
+      : nextDocument.length;
+  while (prefix < maxPrefix &&
+      previousDocument.graphemeAt(prefix) == nextDocument.graphemeAt(prefix)) {
     prefix += 1;
   }
 
-  var previousSuffix = previous.length;
-  var nextSuffix = next.length;
+  var previousSuffix = previousDocument.length;
+  var nextSuffix = nextDocument.length;
   while (previousSuffix > prefix &&
       nextSuffix > prefix &&
-      previous[previousSuffix - 1] == next[nextSuffix - 1]) {
+      previousDocument.graphemeAt(previousSuffix - 1) ==
+          nextDocument.graphemeAt(nextSuffix - 1)) {
     previousSuffix -= 1;
     nextSuffix -= 1;
   }
 
-  final previousDocument = TextDocument(text: previousText);
-  final nextDocument = TextDocument(text: nextText);
   return TextDocumentChange(
     startOffset: prefix,
     oldEndOffset: previousSuffix,

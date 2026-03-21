@@ -28,6 +28,23 @@ void main() {
       expect(change.newEndOffset, 4);
       expect(change.isNoop, isTrue);
     });
+
+    test('supports document-aware change computation', () {
+      final previousDocument = TextDocument(text: 'alpha\nbeta\ngamma');
+      final nextDocument = TextDocument(text: 'alpha\nbetter\ngamma');
+
+      final change = computeTextDocumentChangeForDocuments(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+      );
+
+      expect(change.startOffset, 9);
+      expect(change.oldEndOffset, 10);
+      expect(change.newEndOffset, 12);
+      expect(change.startPosition, const TextPosition(line: 1, column: 3));
+      expect(change.oldEndPosition, const TextPosition(line: 1, column: 4));
+      expect(change.newEndPosition, const TextPosition(line: 1, column: 6));
+    });
   });
 
   group('TextSyntaxSession', () {
@@ -82,10 +99,7 @@ void main() {
       );
 
       session.sync('alpha\nbeta');
-      final updated = session.sync(
-        'alpha\nbetter',
-        change: explicitChange,
-      );
+      final updated = session.sync('alpha\nbetter', change: explicitChange);
 
       expect(provider.calls, hasLength(2));
       expect(identical(provider.calls.last.change, explicitChange), isTrue);
@@ -109,6 +123,30 @@ void main() {
       expect(identical(provider.calls.last.change, change), isTrue);
       expect(updated.text, 'alpha\nbetter');
       expect(updated.change, same(change));
+    });
+
+    test('syncDocument computes document-aware changes from snapshots', () {
+      final provider = _RecordingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      session.syncDocument(document);
+      document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'better',
+      );
+      final updated = session.syncDocument(document);
+
+      expect(provider.calls, hasLength(2));
+      expect(provider.calls.last.previousText, 'alpha\nbeta');
+      expect(provider.calls.last.change, isNotNull);
+      expect(
+        provider.calls.last.change!.startPosition,
+        const TextPosition(line: 1, column: 3),
+      );
+      expect(updated.document!.text, 'alpha\nbetter');
+      expect(updated.change, isNotNull);
     });
 
     test('rebuilds when the language changes even if text does not', () {
