@@ -176,6 +176,38 @@ TextLineCommandResult _lineResultFromSnapshot(
   return (startLine: selection.start.line, endLine: selection.end.line);
 }
 
+TextLineStateSnapshot _clampLineStateSnapshotToDocument(
+  TextLineStateSnapshot state,
+  TextDocument document, {
+  bool preserveCollapsedSelection = true,
+}) {
+  return state.clamp(
+    lineCount: document.lineCount,
+    lineLength: document.lineLength,
+    preserveCollapsedSelection: preserveCollapsedSelection,
+  );
+}
+
+TextPosition _shiftTextPosition(TextPosition position, int lineDelta) {
+  return TextPosition(line: position.line + lineDelta, column: position.column);
+}
+
+TextLineStateSnapshot _shiftLineStateSnapshot(
+  TextLineStateSnapshot state,
+  int lineDelta,
+) {
+  final cursor = _shiftTextPosition(state.cursor, lineDelta);
+  if (state.selectionBase == null || state.selectionExtent == null) {
+    return TextLineStateSnapshot.collapsed(cursor: cursor);
+  }
+  return TextLineStateSnapshot.selection(
+    base: _shiftTextPosition(state.selectionBase!, lineDelta),
+    extent: _shiftTextPosition(state.selectionExtent!, lineDelta),
+    cursor: cursor,
+    preserveCollapsedSelection: true,
+  );
+}
+
 int _leadingIndentRemovalCount(String line, int width) {
   if (line.isEmpty || width < 1) return 0;
   if (line.startsWith('\t')) return 1;
@@ -350,6 +382,57 @@ TextCommandResult _documentResultFromLineCommand(
         : nextDocument.offsetForPosition(result.selectionExtent!),
     documentChange: documentChange,
     changed: result.changed,
+  );
+}
+
+TextCommandResult _documentResultFromWindowedLineCommand({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  required int startLine,
+  required int endLine,
+  required TextLineCommandResult Function(
+    List<String> lines,
+    TextLineStateSnapshot state,
+  )
+  apply,
+}) {
+  final normalizedStart = startLine.clamp(0, document.lineCount);
+  final normalizedEnd = endLine.clamp(normalizedStart, document.lineCount);
+  final windowLines = <String>[
+    for (var index = normalizedStart; index < normalizedEnd; index++)
+      document.lineAt(index),
+  ];
+  final localState = _shiftLineStateSnapshot(state, -normalizedStart);
+  final localResult = apply(windowLines, localState);
+  final nextDocument = localResult.changed ? document.copy() : document;
+  TextDocumentChange? documentChange;
+  if (localResult.changed) {
+    documentChange = nextDocument.replaceLineTextRange(
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+      replacementLineTexts: localResult.lines,
+    );
+  }
+
+  final globalCursor = _shiftTextPosition(localResult.cursor, normalizedStart);
+  final globalSelectionBase = localResult.selectionBase == null
+      ? null
+      : _shiftTextPosition(localResult.selectionBase!, normalizedStart);
+  final globalSelectionExtent = localResult.selectionExtent == null
+      ? null
+      : _shiftTextPosition(localResult.selectionExtent!, normalizedStart);
+
+  return _documentCommandResult(
+    nextDocument,
+    cursorOffset: nextDocument.offsetForPosition(globalCursor),
+    selectionBaseOffset: globalSelectionBase == null
+        ? null
+        : nextDocument.offsetForPosition(globalSelectionBase),
+    selectionExtentOffset: globalSelectionExtent == null
+        ? null
+        : nextDocument.offsetForPosition(globalSelectionExtent),
+    documentChange: documentChange,
+    changed: localResult.changed,
   );
 }
 
@@ -1173,11 +1256,16 @@ TextCommandResult textToggleLinePrefixDocument({
   bool addSpaceWhenNonEmpty = true,
   bool skipBlankLinesWhenChecking = true,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textToggleLinePrefix(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textToggleLinePrefix(
+      lines: lines,
+      state: localState,
       prefix: prefix,
       addSpaceWhenNonEmpty: addSpaceWhenNonEmpty,
       skipBlankLinesWhenChecking: skipBlankLinesWhenChecking,
@@ -1198,11 +1286,16 @@ TextCommandResult textToggleNumberedListDocument({
   required TextLineStateSnapshot state,
   int startAt = 1,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textToggleNumberedList(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textToggleNumberedList(
+      lines: lines,
+      state: localState,
       startAt: startAt,
     ),
   );
@@ -1221,11 +1314,16 @@ TextCommandResult textRenumberNumberedListDocument({
   required TextLineStateSnapshot state,
   int startAt = 1,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textRenumberNumberedList(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textRenumberNumberedList(
+      lines: lines,
+      state: localState,
       startAt: startAt,
     ),
   );
@@ -1244,11 +1342,16 @@ TextCommandResult textToggleHeadingPrefixDocument({
   required TextLineStateSnapshot state,
   int level = 1,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textToggleHeadingPrefix(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textToggleHeadingPrefix(
+      lines: lines,
+      state: localState,
       level: level,
     ),
   );
@@ -1267,11 +1370,16 @@ TextCommandResult textToggleChecklistStateDocument({
   required TextLineStateSnapshot state,
   String checkedMarker = 'x',
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textToggleChecklistState(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textToggleChecklistState(
+      lines: lines,
+      state: localState,
       checkedMarker: checkedMarker,
     ),
   );
@@ -1321,9 +1429,15 @@ TextCommandResult textIndentLinesDocument({
   required TextLineStateSnapshot state,
   int width = 2,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textIndentLines(lines: document.lineTexts, state: state, width: width),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) =>
+        textIndentLines(lines: lines, state: localState, width: width),
   );
 }
 
@@ -1388,9 +1502,15 @@ TextCommandResult textOutdentLinesDocument({
   required TextLineStateSnapshot state,
   int width = 2,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textOutdentLines(lines: document.lineTexts, state: state, width: width),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) =>
+        textOutdentLines(lines: lines, state: localState, width: width),
   );
 }
 
@@ -1459,11 +1579,19 @@ TextCommandResult textCleanupWhitespaceDocument({
   required TextLineStateSnapshot state,
   bool trimTrailingBlankLines = true,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textCleanupWhitespace(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final hasSelection = clampedState.hasSelection;
+  final span = hasSelection
+      ? _selectedLineSpan(clampedState)
+      : (startLine: 0, endLine: document.lineCount - 1);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textCleanupWhitespace(
+      lines: lines,
+      state: localState,
       trimTrailingBlankLines: trimTrailingBlankLines,
     ),
   );
@@ -1551,9 +1679,17 @@ TextCommandResult textJoinLinesDocument({
   required TextDocument document,
   required TextLineStateSnapshot state,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textJoinLines(lines: document.lineTexts, state: state),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final selectedSpan = _selectedLineSpan(clampedState);
+  final endLine = clampedState.hasSelection
+      ? selectedSpan.endLine
+      : (selectedSpan.startLine + 1).clamp(0, document.lineCount - 1);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: selectedSpan.startLine,
+    endLine: endLine + 1,
+    apply: (lines, localState) => textJoinLines(lines: lines, state: localState),
   );
 }
 
@@ -1597,11 +1733,19 @@ TextCommandResult textSortSelectedLinesDocument({
   bool descending = false,
   bool caseSensitive = false,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textSortSelectedLines(
-      lines: document.lineTexts,
-      state: state,
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final hasSelection = clampedState.hasSelection;
+  final span = hasSelection
+      ? _selectedLineSpan(clampedState)
+      : (startLine: 0, endLine: document.lineCount - 1);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) => textSortSelectedLines(
+      lines: lines,
+      state: localState,
       descending: descending,
       caseSensitive: caseSensitive,
     ),
