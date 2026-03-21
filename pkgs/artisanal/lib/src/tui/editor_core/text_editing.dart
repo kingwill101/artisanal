@@ -264,9 +264,10 @@ TextCommandResult textSplitLine({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  return state.replaceSelectionOrInsertCommand(
-    document.flattenWithNewlines(),
-    replacement: const ['\n'],
+  return textInsertGraphemes(
+    document: document,
+    state: state,
+    graphemes: const ['\n'],
   );
 }
 
@@ -347,10 +348,51 @@ TextCommandResult textWrapSelection({
   required String before,
   String? after,
 }) {
-  return state.wrapSelectionCommand(
-    document.flattenWithNewlines(),
-    before: before.characters.toList(growable: false),
-    after: (after ?? before).characters.toList(growable: false),
+  final graphemes = document.flattenWithNewlines();
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  if (selection == null || selection.start == selection.end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final beforeGraphemes = before.characters.toList(growable: false);
+  final afterGraphemes = (after ?? before).characters.toList(growable: false);
+  if (beforeGraphemes.isEmpty && afterGraphemes.isEmpty) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final selected = graphemes.sublist(selection.start, selection.end);
+  final replacement = <String>[...beforeGraphemes, ...selected, ...afterGraphemes];
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: selection.start,
+    end: selection.end,
+    replacement: replacement,
+  );
+  final nextSelectionStart = selection.start + beforeGraphemes.length;
+  final nextSelectionEnd = nextSelectionStart + selected.length;
+
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: nextSelectionEnd,
+    selectionBaseOffset: nextSelectionStart,
+    selectionExtentOffset: nextSelectionEnd,
+    changed: result.changed,
   );
 }
 
@@ -359,9 +401,60 @@ TextCommandResult textUnwrapSelection({
   required TextOffsetStateSnapshot state,
   required Map<String, String> surroundPairs,
 }) {
-  return state.unwrapSelectionCommand(
-    document.flattenWithNewlines(),
-    surroundPairs: surroundPairs,
+  final graphemes = document.flattenWithNewlines();
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  if (selection == null || selection.start == selection.end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  if (selection.start < 1 || selection.end >= graphemes.length) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final leading = graphemes[selection.start - 1];
+  final trailing = graphemes[selection.end];
+  if (surroundPairs[leading] != trailing) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final selected = graphemes.sublist(selection.start, selection.end);
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: selection.start - 1,
+    end: selection.end + 1,
+    replacement: selected,
+  );
+  final nextSelectionStart = selection.start - 1;
+  final nextSelectionEnd = nextSelectionStart + selected.length;
+
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: nextSelectionEnd,
+    selectionBaseOffset: nextSelectionStart,
+    selectionExtentOffset: nextSelectionEnd,
+    changed: result.changed,
   );
 }
 
