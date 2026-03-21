@@ -1945,7 +1945,11 @@ class TextInputModel extends ViewComponent {
   void _replaceValueAndDocument(List<String> graphemes) {
     final normalized = List<String>.of(graphemes, growable: false);
     final nextDocument = TextDocument();
-    nextDocument.replaceLineTexts(TextDocument.parseFlatLineTexts(normalized));
+    nextDocument.replaceOffsetRange(
+      startOffset: 0,
+      endOffset: 0,
+      replacement: normalized,
+    );
     _value = normalized;
     _document = nextDocument;
     _invalidateWrappedLines();

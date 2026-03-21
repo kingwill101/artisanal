@@ -1512,7 +1512,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _applyLineCommandResult(commands.TextLineCommandResult result) {
-    _replaceParsedLines(TextDocument.parseLineTexts(result.lines));
+    _document.replaceLineTexts(List<String>.from(result.lines, growable: false));
     _lastDocumentChange = null;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
@@ -1542,8 +1542,10 @@ class TextAreaModel extends ViewComponent {
     if (nextDocument != null) {
       _replaceDocumentSnapshot(nextDocument);
     } else {
-      _document.replaceLineTexts(
-        TextDocument.parseFlatLineTexts(result.graphemes),
+      _document.replaceOffsetRange(
+        startOffset: 0,
+        endOffset: _document.length,
+        replacement: result.graphemes,
       );
     }
     _lastDocumentChange = result.documentChange;
@@ -3412,12 +3414,6 @@ class TextAreaModel extends ViewComponent {
 
   void _replaceText(String text) {
     _document.replaceText(text);
-  }
-
-  void _replaceParsedLines(List<List<String>> lines) {
-    _document.replaceLineTexts(
-      lines.map((line) => line.join()).toList(growable: false),
-    );
   }
 
   void _enforceCharLimit() {
