@@ -392,34 +392,34 @@ final class TextDocument {
       );
     }
 
-    final parsedReplacement = _parseFlatLineTextsWithLengths(replacement);
-    final replacementLineTexts = parsedReplacement.lineTexts;
-    final prefixText = _storage.lineTextPrefix(
-      startPosition.line,
-      startPosition.column,
-    );
-    final suffixText = _storage.lineTextSuffix(
-      oldEndPosition.line,
-      oldEndPosition.column,
-    );
-    final mergedLineTexts = List<String>.from(
-      replacementLineTexts,
+    final replacementLines = _parseFlatGraphemes(replacement);
+    final prefixGraphemes = startPosition.column <= 0
+        ? const <String>[]
+        : _storage.graphemesInLineRange(
+            startPosition.line,
+            startColumn: 0,
+            endColumn: startPosition.column,
+          );
+    final endLineLength = lineLength(oldEndPosition.line);
+    final suffixGraphemes = oldEndPosition.column >= endLineLength
+        ? const <String>[]
+        : _storage.graphemesInLineRange(
+            oldEndPosition.line,
+            startColumn: oldEndPosition.column,
+            endColumn: endLineLength,
+          );
+    final mergedLines = List<List<String>>.generate(
+      replacementLines.length,
+      (index) => List<String>.from(replacementLines[index], growable: true),
       growable: true,
     );
-    mergedLineTexts[0] = '$prefixText${mergedLineTexts.first}';
-    mergedLineTexts[mergedLineTexts.length - 1] =
-        '${mergedLineTexts.last}$suffixText';
-    final mergedLineLengths = List<int>.from(
-      parsedReplacement.lineLengths,
-      growable: true,
-    );
-    mergedLineLengths[0] += startPosition.column;
-    mergedLineLengths[mergedLineLengths.length - 1] +=
-        lineLength(oldEndPosition.line) - oldEndPosition.column;
+    mergedLines.first.insertAll(0, prefixGraphemes);
+    mergedLines.last.addAll(suffixGraphemes);
 
-    final replacementStorage = _replacementStorageFromLineTexts(
-      mergedLineTexts,
-      lineLengths: mergedLineLengths,
+    final replacementStorage = _TextDocumentStorage.fromParsedLines(
+      mergedLines,
+      revision: 0,
+      seedLineGraphemeCaches: false,
     );
     final nextSegments = <_TextDocumentStorageSegment>[
       if (startPosition.line > 0) _storage.slice(0, startPosition.line),
@@ -1036,18 +1036,21 @@ final class _TextDocumentStorage {
     List<List<String>> lines, {
     required int revision,
     Object? storageIdentity,
+    bool seedLineGraphemeCaches = true,
   }) {
     if (lines.length > _maxLeafLineCount) {
       return _buildStorageFromParsedLinesSource(
         lines,
         revision: revision,
         storageIdentity: storageIdentity,
+        seedLineGraphemeCaches: seedLineGraphemeCaches,
       );
     }
     return _leafFromParsedLines(
       lines,
       revision: revision,
       storageIdentity: storageIdentity,
+      seedLineGraphemeCaches: seedLineGraphemeCaches,
     );
   }
 
@@ -1294,6 +1297,10 @@ final class _TextDocumentStorage {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineGraphemesAt(localIndex);
     }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return _lineGraphemeCaches[index] ??= sourceParsedLine;
+    }
     return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
       lineAt(index).characters.toList(growable: false),
     );
@@ -1314,6 +1321,10 @@ final class _TextDocumentStorage {
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
       return cached[column];
+    }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return sourceParsedLine[column];
     }
     return lineAt(index).characters.skip(column).first;
   }
@@ -1338,6 +1349,10 @@ final class _TextDocumentStorage {
     if (cached != null) {
       return cached.take(clampedCount).join();
     }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return sourceParsedLine.take(clampedCount).join();
+    }
     return line.characters.take(clampedCount).toString();
   }
 
@@ -1360,6 +1375,10 @@ final class _TextDocumentStorage {
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
       return cached.skip(clampedStart).join();
+    }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return sourceParsedLine.skip(clampedStart).join();
     }
     return line.characters.skip(clampedStart).toString();
   }
@@ -1390,6 +1409,12 @@ final class _TextDocumentStorage {
     if (cached != null) {
       return List<String>.unmodifiable(
         cached.sublist(normalizedStart, normalizedEnd),
+      );
+    }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return List<String>.unmodifiable(
+        sourceParsedLine.sublist(normalizedStart, normalizedEnd),
       );
     }
     return lineAt(index).characters
@@ -1426,6 +1451,10 @@ final class _TextDocumentStorage {
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
       return cached.sublist(normalizedStart, normalizedEnd).join();
+    }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      return sourceParsedLine.sublist(normalizedStart, normalizedEnd).join();
     }
     return lineAt(index).characters
         .skip(normalizedStart)
@@ -1472,6 +1501,16 @@ final class _TextDocumentStorage {
       }
       return true;
     }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      for (var offset = 0; offset < normalizedCount; offset++) {
+        if (sourceParsedLine[normalizedStart + offset] !=
+            graphemes[graphemeStart + offset]) {
+          return false;
+        }
+      }
+      return true;
+    }
     final iterator = lineAt(index).characters.skip(normalizedStart).iterator;
     for (var offset = 0; offset < normalizedCount; offset++) {
       if (!iterator.moveNext() ||
@@ -1490,6 +1529,18 @@ final class _TextDocumentStorage {
           growable: false,
         ),
       );
+
+  List<String>? _sourceParsedLineAt(int index) {
+    final source = _source;
+    final parsedLines = source?._parsedLines;
+    final sourceLineStartIndex = _sourceLineStartIndex;
+    if (source == null ||
+        parsedLines == null ||
+        sourceLineStartIndex == null) {
+      return null;
+    }
+    return parsedLines[sourceLineStartIndex + index];
+  }
 
   List<String> flattenWithNewlines() {
     final flattened = _cachedFlattenedGraphemes ??= () {
@@ -1722,6 +1773,7 @@ final class _TextDocumentStorage {
     List<List<String>> lines, {
     required int revision,
     Object? storageIdentity,
+    bool seedLineGraphemeCaches = true,
   }) {
     final normalizedLines = List<List<String>>.generate(
       lines.length,
@@ -1740,10 +1792,12 @@ final class _TextDocumentStorage {
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
-      lineGraphemeCaches: <int, List<String>>{
-        for (var index = 0; index < normalizedLines.length; index++)
-          index: normalizedLines[index],
-      },
+      lineGraphemeCaches: seedLineGraphemeCaches
+          ? <int, List<String>>{
+              for (var index = 0; index < normalizedLines.length; index++)
+                index: normalizedLines[index],
+            }
+          : null,
     );
   }
 
@@ -1876,6 +1930,7 @@ final class _TextDocumentStorage {
     List<List<String>> lines, {
     required int revision,
     Object? storageIdentity,
+    bool seedLineGraphemeCaches = true,
   }) {
     final normalizedLines = List<List<String>>.generate(
       lines.length,
@@ -1904,10 +1959,12 @@ final class _TextDocumentStorage {
         sourceLineStartIndex: start,
         sourceLineEndIndex: end,
         revision: 0,
-        lineGraphemeCaches: <int, List<String>>{
-          for (var index = start; index < end; index++)
-            index - start: normalizedLines[index],
-        },
+        lineGraphemeCaches: seedLineGraphemeCaches
+            ? <int, List<String>>{
+                for (var index = start; index < end; index++)
+                  index - start: normalizedLines[index],
+              }
+            : null,
       );
       segments.add(storage.slice(0, storage.lineCount));
     }

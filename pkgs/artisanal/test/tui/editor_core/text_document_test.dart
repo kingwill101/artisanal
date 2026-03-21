@@ -220,13 +220,23 @@ void main() {
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(1));
         expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugJoinedSourceTextCount, 0);
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.debugLineGraphemeCacheCount, 0);
         expect(document.lineCount, 600);
         expect(document.lineLength(0), 1);
         expect(document.lineLength(255), 1);
         expect(document.lineLength(256), 1);
         expect(document.lineLength(599), 1);
+        expect(document.lineGraphemesAt(0), family.characters.toList());
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.debugLineGraphemeCacheCount, 1);
         expect(document.lineAt(0), family);
+        expect(document.debugMaterializedSourceLineTextCount, 1);
+        expect(document.debugLineGraphemeCacheCount, 1);
         expect(document.lineAt(599), family);
+        expect(document.debugMaterializedSourceLineTextCount, 2);
+        expect(document.debugLineGraphemeCacheCount, 1);
       },
     );
 
