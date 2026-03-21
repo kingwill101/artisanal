@@ -34,6 +34,7 @@ import 'package:artisanal/bubbles.dart'
         TextAreaModel,
         TextAreaStyleState,
         TextAreaStyles,
+        TextDocument,
         TextDocumentChange,
         TextInputCursorStyle,
         TextInputKeyMap,
@@ -558,6 +559,7 @@ class TextAreaController extends ChangeNotifier
   String get selectedText => _model.getSelectedText();
 
   /// Current non-selection decoration ranges in flat document offsets.
+  TextDocument get document => _model.document;
   List<TextDiagnosticRange> get diagnostics => _model.diagnostics;
   TextDiagnosticRange? get activeDiagnostic => _model.activeDiagnostic;
   List<TextDecorationRange> get decorations => _model.decorations;

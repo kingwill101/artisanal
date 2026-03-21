@@ -70,6 +70,7 @@ export '../editor_core/text_decorations.dart';
 export '../editor_core/text_diagnostics.dart';
 export '../editor_core/text_highlighting.dart';
 export '../editor_core/text_change.dart';
+export '../editor_core/text_document.dart';
 export 'textinput.dart';
 export 'textarea.dart';
 export 'table.dart';

@@ -213,12 +213,14 @@ class _CodeEditorState extends State<CodeEditor> {
     );
   }
 
-  List<TextDecorationRange> _buildSyntaxDecorations(String text) {
-    return _syntaxSession.sync(
-      text,
-      language: widget.language,
-      change: _controller.consumeLastDocumentChange(),
-    ).decorations;
+  List<TextDecorationRange> _buildSyntaxDecorations(String _) {
+    return _syntaxSession
+        .syncDocument(
+          _controller.document,
+          language: widget.language,
+          change: _controller.consumeLastDocumentChange(),
+        )
+        .decorations;
   }
 
   Cmd? _handleCodeEditorKey(KeyMsg msg) {
@@ -372,7 +374,7 @@ class _CodeEditorState extends State<CodeEditor> {
     }
 
     final typed = String.fromCharCode(key.runes.first);
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = codeHandleClosingDelimiterAlignment(
       document: document,
       state: _coreBridge.currentOffsetStateSnapshot(document: document),
@@ -398,7 +400,7 @@ class _CodeEditorState extends State<CodeEditor> {
       return false;
     }
 
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = codeHandlePairBackspace(
       document: document,
       state: _coreBridge.currentOffsetStateSnapshot(document: document),
@@ -422,7 +424,7 @@ class _CodeEditorState extends State<CodeEditor> {
     }
 
     final typed = String.fromCharCode(key.runes.first);
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = codeHandleAutoPair(
       document: document,
       state: _coreBridge.currentOffsetStateSnapshot(document: document),
@@ -438,7 +440,7 @@ class _CodeEditorState extends State<CodeEditor> {
   }
 
   void _insertIndentedNewline({required int indentWidth}) {
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = codeInsertIndentedNewline(
       document: document,
       state: _coreBridge.currentOffsetStateSnapshot(document: document),
@@ -454,12 +456,11 @@ class _CodeEditorState extends State<CodeEditor> {
       return;
     }
 
-    final text = _controller.text;
-    if (text.isEmpty) {
+    final document = _controller.document;
+    if (document.length == 0) {
       return;
     }
 
-    final document = TextDocument(text: text);
     final result = codeToggleBlockComments(
       document: document,
       state: _coreBridge.currentOffsetStateSnapshot(document: document),
@@ -599,7 +600,9 @@ final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
     TextDocumentChange? change,
   }) {
     if (text.isEmpty) {
-      return const TextSyntaxBuildResult<void>(decorations: <TextDecorationRange>[]);
+      return const TextSyntaxBuildResult<void>(
+        decorations: <TextDecorationRange>[],
+      );
     }
 
     final spans = _highlighter.highlightSpans(text, language: language);
