@@ -400,6 +400,34 @@ void main() {
     );
 
     test(
+      'replaceLineTextRange stays lazy on no-op parsed line text edits',
+      () {
+        final document = TextDocument.fromParsedLines(const [
+          ['a', 'l', 'p', 'h', 'a'],
+          ['b', 'e', 't', 'a'],
+          ['g', 'a', 'm', 'm', 'a'],
+        ]);
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
+
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+
+        final change = document.replaceLineTextRange(
+          startLine: 1,
+          endLine: 2,
+          replacementLineTexts: const ['beta'],
+        );
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(change.startOffset, 6);
+        expect(change.oldEndOffset, 11);
+        expect(change.newEndOffset, 11);
+      },
+    );
+
+    test(
       'composite text reads do not materialize line text caches just to assemble text',
       () {
         final lineTexts = List<String>.generate(

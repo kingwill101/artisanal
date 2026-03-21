@@ -629,7 +629,16 @@ final class TextDocument {
       return false;
     }
     for (var index = 0; index < expectedLength; index++) {
-      if (lineAt(startLine + index) != replacementLineTexts[index]) {
+      final lineIndex = startLine + index;
+      final replacementGraphemes = replacementLineTexts[index].characters
+          .toList(growable: false);
+      if (replacementGraphemes.length != lineLength(lineIndex)) {
+        return false;
+      }
+      if (!matchesOffsetRange(
+        startOffset: lineStartOffset(lineIndex),
+        graphemes: replacementGraphemes,
+      )) {
         return false;
       }
     }
