@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:test/test.dart';
 
@@ -142,64 +143,104 @@ void main() {
       expect(copy.revision, 0);
     });
 
-    test('replaceOffsetRange leaves revision and storage identity stable on no-op edits', () {
-      final document = TextDocument(text: 'alpha\nbeta');
-      final revision = document.revision;
-      final storageIdentity = document.storageIdentity;
+    test(
+      'replaceOffsetRange leaves revision and storage identity stable on no-op edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
 
-      final change = document.replaceOffsetRange(
-        startOffset: 6,
-        endOffset: 10,
-        replacement: const ['b', 'e', 't', 'a'],
+        final change = document.replaceOffsetRange(
+          startOffset: 6,
+          endOffset: 10,
+          replacement: const ['b', 'e', 't', 'a'],
+        );
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta');
+        expect(change.startOffset, 6);
+        expect(change.oldEndOffset, 10);
+        expect(change.newEndOffset, 10);
+      },
+    );
+
+    test('replaceOffsetRange keeps long-line grapheme caches cold', () {
+      final prefix = List<String>.filled(4096, 'a').join();
+      final emoji = '👩‍👩‍👧‍👦';
+      final suffix = List<String>.filled(4096, 'b').join();
+      final document = TextDocument(text: '$prefix$emoji$suffix');
+      final emojiOffset = prefix.characters.length;
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      final change = document.replaceTextRange(
+        startOffset: emojiOffset,
+        endOffset: emojiOffset + emoji.characters.length,
+        replacement: 'X',
       );
 
-      expect(document.revision, revision);
-      expect(document.storageIdentity, same(storageIdentity));
-      expect(document.text, 'alpha\nbeta');
-      expect(change.startOffset, 6);
-      expect(change.oldEndOffset, 10);
-      expect(change.newEndOffset, 10);
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.text, '${prefix}X$suffix');
+      expect(change.startPosition, TextPosition(line: 0, column: emojiOffset));
+      expect(
+        change.oldEndPosition,
+        TextPosition(line: 0, column: emojiOffset + emoji.characters.length),
+      );
+      expect(
+        change.newEndPosition,
+        TextPosition(line: 0, column: emojiOffset + 1),
+      );
     });
 
     test(
       'replaceLineTextRange rewrites only the targeted line window with change metadata',
       () {
-      final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
+        final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
 
-      final change = document.replaceLineTextRange(
-        startLine: 1,
-        endLine: 3,
-        replacementLineTexts: const ['bravo', 'charlie'],
-      );
+        final change = document.replaceLineTextRange(
+          startLine: 1,
+          endLine: 3,
+          replacementLineTexts: const ['bravo', 'charlie'],
+        );
 
-      expect(document.lineTexts, const ['alpha', 'bravo', 'charlie', 'delta']);
-      expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
-      expect(change.startOffset, 6);
-      expect(change.oldEndOffset, 17);
-      expect(change.newEndOffset, 20);
-      expect(change.startPosition, const TextPosition(line: 1, column: 0));
-      expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
-      expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
-    });
+        expect(document.lineTexts, const [
+          'alpha',
+          'bravo',
+          'charlie',
+          'delta',
+        ]);
+        expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
+        expect(change.startOffset, 6);
+        expect(change.oldEndOffset, 17);
+        expect(change.newEndOffset, 20);
+        expect(change.startPosition, const TextPosition(line: 1, column: 0));
+        expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
+        expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
+      },
+    );
 
-    test('replaceLineTextRange leaves revision and storage identity stable on no-op edits', () {
-      final document = TextDocument(text: 'alpha\nbeta\ngamma');
-      final revision = document.revision;
-      final storageIdentity = document.storageIdentity;
+    test(
+      'replaceLineTextRange leaves revision and storage identity stable on no-op edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta\ngamma');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
 
-      final change = document.replaceLineTextRange(
-        startLine: 1,
-        endLine: 2,
-        replacementLineTexts: const ['beta'],
-      );
+        final change = document.replaceLineTextRange(
+          startLine: 1,
+          endLine: 2,
+          replacementLineTexts: const ['beta'],
+        );
 
-      expect(document.revision, revision);
-      expect(document.storageIdentity, same(storageIdentity));
-      expect(document.text, 'alpha\nbeta\ngamma');
-      expect(change.startOffset, 6);
-      expect(change.oldEndOffset, 11);
-      expect(change.newEndOffset, 11);
-    });
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta\ngamma');
+        expect(change.startOffset, 6);
+        expect(change.oldEndOffset, 11);
+        expect(change.newEndOffset, 11);
+      },
+    );
 
     test('replaceLineTextRange can delete lines down to one empty line', () {
       final document = TextDocument(text: 'alpha');
@@ -219,29 +260,32 @@ void main() {
       expect(change.newEndOffset, 0);
     });
 
-    test('chained range edits keep composite line reads and offsets coherent', () {
-      final document = TextDocument(text: 'zero\none\ntwo\nthree');
+    test(
+      'chained range edits keep composite line reads and offsets coherent',
+      () {
+        final document = TextDocument(text: 'zero\none\ntwo\nthree');
 
-      document.replaceLineTextRange(
-        startLine: 1,
-        endLine: 2,
-        replacementLineTexts: const ['ONE'],
-      );
-      document.replaceTextRange(
-        startOffset: document.lineStartOffset(2),
-        endOffset: document.lineEndOffset(2),
-        replacement: 'TWO',
-      );
+        document.replaceLineTextRange(
+          startLine: 1,
+          endLine: 2,
+          replacementLineTexts: const ['ONE'],
+        );
+        document.replaceTextRange(
+          startOffset: document.lineStartOffset(2),
+          endOffset: document.lineEndOffset(2),
+          replacement: 'TWO',
+        );
 
-      expect(document.lineAt(0), 'zero');
-      expect(document.lineAt(1), 'ONE');
-      expect(document.lineAt(2), 'TWO');
-      expect(document.lineAt(3), 'three');
-      expect(document.text, 'zero\nONE\nTWO\nthree');
-      expect(document.textBetweenLines(startLine: 1, endLine: 3), 'ONE\nTWO');
-      expect(document.lineStartOffset(2), 9);
-      expect(document.lineEndOffset(2), 12);
-    });
+        expect(document.lineAt(0), 'zero');
+        expect(document.lineAt(1), 'ONE');
+        expect(document.lineAt(2), 'TWO');
+        expect(document.lineAt(3), 'three');
+        expect(document.text, 'zero\nONE\nTWO\nthree');
+        expect(document.textBetweenLines(startLine: 1, endLine: 3), 'ONE\nTWO');
+        expect(document.lineStartOffset(2), 9);
+        expect(document.lineEndOffset(2), 12);
+      },
+    );
 
     test('repeated edits normalize storage depth back to a flat composite', () {
       final document = TextDocument(text: 'zero\none\ntwo\nthree');
@@ -281,7 +325,10 @@ void main() {
       expect(document.lineAt(255), 'line-255');
       expect(document.lineAt(256), 'line-256');
       expect(document.lineAt(599), 'line-599');
-      expect(document.lineStartOffset(256), greaterThan(document.lineEndOffset(255)));
+      expect(
+        document.lineStartOffset(256),
+        greaterThan(document.lineEndOffset(255)),
+      );
     });
 
     test('repeated line edits keep composite segment count bounded', () {

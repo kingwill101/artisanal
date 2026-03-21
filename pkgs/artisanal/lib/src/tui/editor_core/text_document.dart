@@ -42,6 +42,9 @@ final class TextDocument {
   @visibleForTesting
   int get debugStorageSegmentCount => _storage.debugSegmentCount;
 
+  @visibleForTesting
+  int get debugLineGraphemeCacheCount => _storage.debugLineGraphemeCacheCount;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
@@ -272,7 +275,10 @@ final class TextDocument {
     final normalizedEnd = endOffset.clamp(normalizedStart, length);
     final startPosition = positionForOffset(normalizedStart);
     final oldEndPosition = positionForOffset(normalizedEnd);
-    if (matchesOffsetRange(startOffset: normalizedStart, graphemes: replacement) &&
+    if (matchesOffsetRange(
+          startOffset: normalizedStart,
+          graphemes: replacement,
+        ) &&
         normalizedStart + replacement.length == normalizedEnd) {
       return TextDocumentChange(
         startOffset: normalizedStart,
@@ -284,24 +290,25 @@ final class TextDocument {
       );
     }
 
-    final replacementLines = _parseFlatGraphemes(replacement);
-    final prefix = List<String>.from(
-      lineGraphemesAt(startPosition.line).take(startPosition.column),
+    final replacementLineTexts = _parseFlatLineTexts(replacement);
+    final prefixText = _storage.lineTextPrefix(
+      startPosition.line,
+      startPosition.column,
+    );
+    final suffixText = _storage.lineTextSuffix(
+      oldEndPosition.line,
+      oldEndPosition.column,
+    );
+    final mergedLineTexts = List<String>.from(
+      replacementLineTexts,
       growable: true,
     );
-    final suffix = List<String>.from(
-      lineGraphemesAt(oldEndPosition.line).skip(oldEndPosition.column),
-      growable: true,
-    );
+    mergedLineTexts[0] = '$prefixText${mergedLineTexts.first}';
+    mergedLineTexts[mergedLineTexts.length - 1] =
+        '${mergedLineTexts.last}$suffixText';
 
-    final mergedLines = replacementLines
-        .map((line) => List<String>.from(line, growable: true))
-        .toList(growable: true);
-    mergedLines.first.insertAll(0, prefix);
-    mergedLines.last.addAll(suffix);
-
-    final replacementStorage = _TextDocumentStorage.fromParsedLines(
-      mergedLines,
+    final replacementStorage = _TextDocumentStorage.fromLineTexts(
+      mergedLineTexts,
       revision: 0,
     );
     final nextSegments = <_TextDocumentStorageSegment>[
@@ -329,9 +336,7 @@ final class TextDocument {
   void replaceLines(List<List<String>> lines) {
     final parsedLines = lines.isEmpty
         ? <List<String>>[<String>[]]
-        : lines
-              .map((line) => List<String>.from(line))
-              .toList(growable: false);
+        : lines.map((line) => List<String>.from(line)).toList(growable: false);
     _storage = _TextDocumentStorage.fromParsedLines(
       parsedLines,
       revision: _storage.revision + 1,
@@ -377,15 +382,20 @@ final class TextDocument {
         newEndPosition: oldEndPosition,
       );
     }
-    if (_storage.lineCount - (normalizedEnd - normalizedStart) + normalizedReplacement.length == 0) {
-      _storage = _TextDocumentStorage.fromLineTexts(
-        const <String>[''],
-        revision: _storage.revision + 1,
-      );
+    if (_storage.lineCount -
+            (normalizedEnd - normalizedStart) +
+            normalizedReplacement.length ==
+        0) {
+      _storage = _TextDocumentStorage.fromLineTexts(const <String>[
+        '',
+      ], revision: _storage.revision + 1);
     } else {
       final replacementStorage = normalizedReplacement.isEmpty
           ? null
-          : _TextDocumentStorage.fromLineTexts(normalizedReplacement, revision: 0);
+          : _TextDocumentStorage.fromLineTexts(
+              normalizedReplacement,
+              revision: 0,
+            );
       final nextSegments = <_TextDocumentStorageSegment>[
         if (normalizedStart > 0) _storage.slice(0, normalizedStart),
         if (replacementStorage != null)
@@ -399,7 +409,9 @@ final class TextDocument {
       );
     }
 
-    final newEndOffset = lineStartOffset(normalizedStart + normalizedReplacement.length);
+    final newEndOffset = lineStartOffset(
+      normalizedStart + normalizedReplacement.length,
+    );
     return TextDocumentChange(
       startOffset: startOffset,
       oldEndOffset: oldEndOffset,
@@ -448,6 +460,20 @@ final class TextDocument {
       lines.last.add(grapheme);
     }
     return lines;
+  }
+
+  static List<String> _parseFlatLineTexts(Iterable<String> graphemes) {
+    final lines = <StringBuffer>[StringBuffer()];
+    for (final grapheme in graphemes) {
+      if (grapheme == '\n') {
+        lines.add(StringBuffer());
+        continue;
+      }
+      lines.last.write(grapheme);
+    }
+    return List<String>.unmodifiable(
+      lines.map((line) => line.toString()).toList(growable: false),
+    );
   }
 
   bool _matchesLineTextRange({
@@ -606,6 +632,9 @@ final class _TextDocumentStorage {
 
   int get debugSegmentCount => _segments?.length ?? 1;
 
+  int get debugLineGraphemeCacheCount =>
+      _debugLineGraphemeCacheCount(<_TextDocumentStorage>{});
+
   List<String> get lineTexts =>
       _cachedLineTexts ??= _baseLineTexts ?? _materializeLineTexts();
 
@@ -660,7 +689,8 @@ final class _TextDocumentStorage {
       return lineStartOffsets[index];
     }
     final (segment, localIndex, segmentIndex) = _segmentForLineWithIndex(index);
-    return _segmentStartOffsets![segmentIndex] + segment.lineStartOffset(localIndex);
+    return _segmentStartOffsets![segmentIndex] +
+        segment.lineStartOffset(localIndex);
   }
 
   int lineEndOffset(int index, {bool includeTrailingNewline = false}) {
@@ -704,10 +734,7 @@ final class _TextDocumentStorage {
         }
       }
       final line = low;
-      return TextPosition(
-        line: line,
-        column: clamped - lineStartOffsets[line],
-      );
+      return TextPosition(line: line, column: clamped - lineStartOffsets[line]);
     }
 
     final (segment, segmentIndex) = _segmentForOffset(clamped);
@@ -726,6 +753,44 @@ final class _TextDocumentStorage {
     return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
       lineAt(index).characters.toList(growable: false),
     );
+  }
+
+  String lineTextPrefix(int index, int graphemeCount) {
+    if (index < 0 || index >= lineCount) {
+      return '';
+    }
+    final line = lineAt(index);
+    final clampedCount = graphemeCount.clamp(0, lineLength(index));
+    if (clampedCount <= 0) {
+      return '';
+    }
+    if (clampedCount >= lineLength(index)) {
+      return line;
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      return cached.take(clampedCount).join();
+    }
+    return line.characters.take(clampedCount).toString();
+  }
+
+  String lineTextSuffix(int index, int graphemeStart) {
+    if (index < 0 || index >= lineCount) {
+      return '';
+    }
+    final line = lineAt(index);
+    final clampedStart = graphemeStart.clamp(0, lineLength(index));
+    if (clampedStart <= 0) {
+      return line;
+    }
+    if (clampedStart >= lineLength(index)) {
+      return '';
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      return cached.skip(clampedStart).join();
+    }
+    return line.characters.skip(clampedStart).toString();
   }
 
   List<List<String>> get lineViews =>
@@ -885,9 +950,9 @@ final class _TextDocumentStorage {
         .map((line) => line.length)
         .toList(growable: false);
     return _TextDocumentStorage._leaf(
-      lineTexts: normalizedLines.map((line) => line.join()).toList(
-        growable: false,
-      ),
+      lineTexts: normalizedLines
+          .map((line) => line.join())
+          .toList(growable: false),
       lineLengths: lineLengths,
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
@@ -1069,6 +1134,21 @@ final class _TextDocumentStorage {
 
     out.add(segment);
   }
+
+  int _debugLineGraphemeCacheCount(Set<_TextDocumentStorage> visited) {
+    if (!visited.add(this)) {
+      return 0;
+    }
+    final segments = _segments;
+    if (segments == null || segments.isEmpty) {
+      return _lineGraphemeCaches.length;
+    }
+    var total = _lineGraphemeCaches.length;
+    for (final segment in segments) {
+      total += segment.storage._debugLineGraphemeCacheCount(visited);
+    }
+    return total;
+  }
 }
 
 final class _TextDocumentStorageSegment {
@@ -1088,7 +1168,8 @@ final class _TextDocumentStorageSegment {
     if (lineCount <= 0) {
       return 0;
     }
-    return storage.lineEndOffset(endLine - 1) - storage.lineStartOffset(startLine);
+    return storage.lineEndOffset(endLine - 1) -
+        storage.lineStartOffset(startLine);
   }
 
   String lineAt(int localIndex) => storage.lineAt(startLine + localIndex);
