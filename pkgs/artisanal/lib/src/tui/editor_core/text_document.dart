@@ -6,10 +6,11 @@ import 'package:meta/meta.dart' show visibleForTesting;
 import 'editor_state.dart';
 import 'text_change.dart';
 
+const _TextDocumentStorageBuilder _storageBuilder =
+    _ChunkedTextDocumentStorageBuilder();
+
 final class TextDocument {
   static const int _sourceBackedReplacementTextThreshold = 8192;
-  static const _TextDocumentStorageBuilder _storageBuilder =
-      _ChunkedTextDocumentStorageBuilder();
 
   TextDocument({String text = ''}) {
     _storage = _storageBuilder.fromText(text, revision: 0);
@@ -784,7 +785,14 @@ final class _ChunkedTextDocumentStorageBuilder
     required int revision,
     Object? storageIdentity,
   }) {
-    return _TextDocumentStorage.fromText(
+    if (text.isEmpty) {
+      return _TextDocumentStorage._leafFromLineTexts(
+        const <String>[''],
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _TextDocumentStorage._buildStorageFromText(
       text,
       revision: revision,
       storageIdentity: storageIdentity,
@@ -798,7 +806,15 @@ final class _ChunkedTextDocumentStorageBuilder
     required int revision,
     Object? storageIdentity,
   }) {
-    return _TextDocumentStorage.fromLineTexts(
+    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount) {
+      return _TextDocumentStorage._buildStorageFromLineTextsSource(
+        lineTexts,
+        lineLengths: lineLengths,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _TextDocumentStorage._leafFromLineTexts(
       lineTexts,
       lineLengths: lineLengths,
       revision: revision,
@@ -813,7 +829,15 @@ final class _ChunkedTextDocumentStorageBuilder
     Object? storageIdentity,
     bool seedLineGraphemeCaches = true,
   }) {
-    return _TextDocumentStorage.fromParsedLines(
+    if (lines.length > _TextDocumentStorage._maxLeafLineCount) {
+      return _TextDocumentStorage._buildStorageFromParsedLinesSource(
+        lines,
+        revision: revision,
+        storageIdentity: storageIdentity,
+        seedLineGraphemeCaches: seedLineGraphemeCaches,
+      );
+    }
+    return _TextDocumentStorage._leafFromParsedLines(
       lines,
       revision: revision,
       storageIdentity: storageIdentity,
@@ -827,8 +851,30 @@ final class _ChunkedTextDocumentStorageBuilder
     required int revision,
     Object? storageIdentity,
   }) {
-    return _TextDocumentStorage.fromSegments(
-      segments,
+    final nonEmpty = _TextDocumentStorage._normalizeSegments(segments);
+    if (nonEmpty.isEmpty) {
+      return fromLineTexts(
+        const <String>[''],
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    if (nonEmpty.length == 1) {
+      return _TextDocumentStorage._storageFromSingleNormalizedSegment(
+        nonEmpty.single,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    if (nonEmpty.length > _TextDocumentStorage._maxCompositeSegmentCount) {
+      return _TextDocumentStorage._buildBalancedComposite(
+        nonEmpty,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _TextDocumentStorage._buildComposite(
+      nonEmpty,
       revision: revision,
       storageIdentity: storageIdentity,
     );
@@ -1523,103 +1569,6 @@ final class _TextDocumentStorage {
   }) : _leafBacking = null,
        _compositeBacking = _TextDocumentCompositeBacking(segments: segments),
        _lineGraphemeCaches = <int, List<String>>{};
-
-  factory _TextDocumentStorage.fromLineTexts(
-    List<String> lineTexts, {
-    List<int>? lineLengths,
-    required int revision,
-    Object? storageIdentity,
-  }) {
-    if (lineTexts.length > _maxLeafLineCount) {
-      return _buildStorageFromLineTextsSource(
-        lineTexts,
-        lineLengths: lineLengths,
-        revision: revision,
-        storageIdentity: storageIdentity,
-      );
-    }
-    return _leafFromLineTexts(
-      lineTexts,
-      lineLengths: lineLengths,
-      revision: revision,
-      storageIdentity: storageIdentity,
-    );
-  }
-
-  factory _TextDocumentStorage.fromText(
-    String text, {
-    required int revision,
-    Object? storageIdentity,
-  }) {
-    if (text.isEmpty) {
-      return _leafFromLineTexts(
-        const <String>[''],
-        revision: revision,
-        storageIdentity: storageIdentity,
-      );
-    }
-    return _buildStorageFromText(
-      text,
-      revision: revision,
-      storageIdentity: storageIdentity,
-    );
-  }
-
-  factory _TextDocumentStorage.fromParsedLines(
-    List<List<String>> lines, {
-    required int revision,
-    Object? storageIdentity,
-    bool seedLineGraphemeCaches = true,
-  }) {
-    if (lines.length > _maxLeafLineCount) {
-      return _buildStorageFromParsedLinesSource(
-        lines,
-        revision: revision,
-        storageIdentity: storageIdentity,
-        seedLineGraphemeCaches: seedLineGraphemeCaches,
-      );
-    }
-    return _leafFromParsedLines(
-      lines,
-      revision: revision,
-      storageIdentity: storageIdentity,
-      seedLineGraphemeCaches: seedLineGraphemeCaches,
-    );
-  }
-
-  factory _TextDocumentStorage.fromSegments(
-    List<_TextDocumentStorageSegment> segments, {
-    required int revision,
-    Object? storageIdentity,
-  }) {
-    final nonEmpty = _normalizeSegments(segments);
-    if (nonEmpty.isEmpty) {
-      return _TextDocumentStorage.fromLineTexts(
-        const <String>[''],
-        revision: revision,
-        storageIdentity: storageIdentity,
-      );
-    }
-    if (nonEmpty.length == 1) {
-      return _storageFromSingleNormalizedSegment(
-        nonEmpty.single,
-        revision: revision,
-        storageIdentity: storageIdentity,
-      );
-    }
-    if (nonEmpty.length > _maxCompositeSegmentCount) {
-      return _buildBalancedComposite(
-        nonEmpty,
-        revision: revision,
-        storageIdentity: storageIdentity,
-      );
-    }
-    return _buildComposite(
-      nonEmpty,
-      revision: revision,
-      storageIdentity: storageIdentity,
-    );
-  }
 
   final int lineCount;
   final int length;
