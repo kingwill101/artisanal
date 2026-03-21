@@ -112,6 +112,7 @@ class _CodeEditorState extends State<CodeEditor> {
   );
   TextAreaController? _internalController;
   late final TextDecorationLayerBinding _syntaxDecorationBinding;
+  late final TextSyntaxSession<void> _syntaxSession;
   TextAreaController get _controller =>
       widget.controller ??
       (_internalController ??= TextAreaController(model: widget.model));
@@ -121,6 +122,9 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void initState() {
     super.initState();
+    _syntaxSession = TextSyntaxSession<void>(
+      provider: _CodeEditorSyntaxProvider(),
+    );
     _syntaxDecorationBinding = TextDecorationLayerBinding(
       controller: _controller,
       layerKey: textSyntaxDecorationLayerKey,
@@ -150,6 +154,7 @@ class _CodeEditorState extends State<CodeEditor> {
     if (oldWidget.controller != widget.controller ||
         oldWidget.model != widget.model ||
         oldWidget.language != widget.language) {
+      _syntaxSession.clear();
       _syntaxDecorationBinding.sync(force: true);
     }
     return null;
@@ -209,26 +214,10 @@ class _CodeEditorState extends State<CodeEditor> {
   }
 
   List<TextDecorationRange> _buildSyntaxDecorations(String text) {
-    if (text.isEmpty) {
-      return const [];
-    }
-
-    final spans = SyntaxHighlighter().highlightSpans(
+    return _syntaxSession.sync(
       text,
       language: widget.language,
-    );
-    if (spans.isEmpty) {
-      return const [];
-    }
-
-    return [
-      for (final span in spans)
-        TextDecorationRange(
-          startOffset: span.startOffset,
-          endOffset: span.endOffset,
-          styleKey: span.styleKey,
-        ),
-    ];
+    ).decorations;
   }
 
   Cmd? _handleCodeEditorKey(KeyMsg msg) {
@@ -590,6 +579,37 @@ class _CodeEditorState extends State<CodeEditor> {
           indentWidth: widget.indentWidth,
         ),
         if (widget.showPreview) _buildPreviewPane(theme, previewTitle),
+      ],
+    );
+  }
+}
+
+final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
+  _CodeEditorSyntaxProvider({SyntaxHighlighter? highlighter})
+    : _highlighter = highlighter ?? SyntaxHighlighter();
+
+  final SyntaxHighlighter _highlighter;
+
+  @override
+  TextSyntaxBuildResult<void> build(
+    String text, {
+    String? language,
+    TextSyntaxSnapshot<void>? previous,
+    TextDocumentChange? change,
+  }) {
+    if (text.isEmpty) {
+      return const TextSyntaxBuildResult<void>(decorations: <TextDecorationRange>[]);
+    }
+
+    final spans = _highlighter.highlightSpans(text, language: language);
+    return TextSyntaxBuildResult<void>(
+      decorations: <TextDecorationRange>[
+        for (final span in spans)
+          TextDecorationRange(
+            startOffset: span.startOffset,
+            endOffset: span.endOffset,
+            styleKey: span.styleKey,
+          ),
       ],
     );
   }
