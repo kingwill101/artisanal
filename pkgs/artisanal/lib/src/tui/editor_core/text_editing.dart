@@ -292,6 +292,178 @@ TextCommandResult _unchangedDocumentCommandResult(
   );
 }
 
+extension TextOffsetStateDocumentEditingExtensions
+    on TextOffsetStateSnapshot {
+  TextCommandResult splitLineDocumentCommand(TextDocument document) {
+    return textSplitLine(document: document, state: this);
+  }
+
+  TextCommandResult replaceSelectionOrInsertDocumentCommand(
+    TextDocument document, {
+    List<String> replacement = const <String>[],
+    bool replaceSelection = true,
+  }) {
+    return textInsertGraphemes(
+      document: document,
+      state: this,
+      graphemes: replacement,
+      replaceSelection: replaceSelection,
+    );
+  }
+
+  TextCommandResult insertTextDocumentCommand(
+    TextDocument document, {
+    required String text,
+    bool replaceSelection = true,
+  }) {
+    return textInsertText(
+      document: document,
+      state: this,
+      text: text,
+      replaceSelection: replaceSelection,
+    );
+  }
+
+  TextCommandResult deleteSelectionDocumentCommand(TextDocument document) {
+    return textDeleteSelection(document: document, state: this);
+  }
+
+  TextCommandResult deletePreviousDocumentCommand(TextDocument document) {
+    return textDeletePrevious(document: document, state: this);
+  }
+
+  TextCommandResult deleteNextDocumentCommand(TextDocument document) {
+    return textDeleteNext(document: document, state: this);
+  }
+
+  TextCommandResult deleteWordBackwardDocumentCommand(
+    TextDocument document, {
+    nav.GraphemePredicate isWord = _isWordGrapheme,
+  }) {
+    return textDeleteWordBackward(
+      document: document,
+      state: this,
+      isWord: isWord,
+    );
+  }
+
+  TextCommandResult deleteWordForwardDocumentCommand(
+    TextDocument document, {
+    nav.GraphemePredicate isWord = _isWordGrapheme,
+  }) {
+    return textDeleteWordForward(
+      document: document,
+      state: this,
+      isWord: isWord,
+    );
+  }
+
+  TextCommandResult deleteToLineStartDocumentCommand(TextDocument document) {
+    return textDeleteToLineStart(document: document, state: this);
+  }
+
+  TextCommandResult deleteToLineEndDocumentCommand(TextDocument document) {
+    return textDeleteToLineEnd(document: document, state: this);
+  }
+
+  TextCommandResult transformSelectionOrLineDocumentCommand(
+    TextDocument document, {
+    required String Function(String text) transform,
+  }) {
+    return textTransformSelectionOrLine(
+      document: document,
+      state: this,
+      transform: transform,
+    );
+  }
+
+  TextCommandResult transformWordOrAdjacentDocumentCommand(
+    TextDocument document, {
+    required String Function(String text) transform,
+  }) {
+    return textTransformWordOrAdjacent(
+      document: document,
+      state: this,
+      transform: transform,
+    );
+  }
+
+  TextCommandResult wrapSelectionDocumentCommand(
+    TextDocument document, {
+    required String before,
+    String? after,
+  }) {
+    return textWrapSelection(
+      document: document,
+      state: this,
+      before: before,
+      after: after,
+    );
+  }
+
+  TextCommandResult unwrapSelectionDocumentCommand(
+    TextDocument document, {
+    required Map<String, String> surroundPairs,
+  }) {
+    return textUnwrapSelection(
+      document: document,
+      state: this,
+      surroundPairs: surroundPairs,
+    );
+  }
+
+  TextCursorCommandResult moveByCharacterDocumentCommand(
+    TextDocument document, {
+    required bool forward,
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
+    return textMoveByCharacter(
+      document: document,
+      state: this,
+      forward: forward,
+      extendSelection: extendSelection,
+      clearSelection: clearSelection,
+    );
+  }
+
+  TextCursorCommandResult moveByWordDocumentCommand(
+    TextDocument document, {
+    required bool forward,
+    nav.GraphemePredicate isWord = _isWordGrapheme,
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
+    return textMoveByWord(
+      document: document,
+      state: this,
+      forward: forward,
+      isWord: isWord,
+      extendSelection: extendSelection,
+      clearSelection: clearSelection,
+    );
+  }
+
+  TextCursorCommandResult moveToDocumentBoundaryDocumentCommand(
+    TextDocument document, {
+    required bool forward,
+    bool extendSelection = false,
+    bool clearSelection = false,
+  }) {
+    return textMoveToDocumentBoundary(
+      document: document,
+      state: this,
+      forward: forward,
+      extendSelection: extendSelection,
+      clearSelection: clearSelection,
+    );
+  }
+
+  TextCommandResult transposeBackwardDocumentCommand(TextDocument document) {
+    return textTransposeBackward(document: document, state: this);
+  }
+}
+
 TextCommandResult textSplitLine({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
