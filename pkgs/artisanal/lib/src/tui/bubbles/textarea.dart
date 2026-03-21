@@ -1542,7 +1542,9 @@ class TextAreaModel extends ViewComponent {
     if (nextDocument != null) {
       _replaceDocumentSnapshot(nextDocument);
     } else {
-      _replaceParsedLines(TextDocument.parseFlatGraphemes(result.graphemes));
+      _document.replaceLineTexts(
+        TextDocument.parseFlatLineTexts(result.graphemes),
+      );
     }
     _lastDocumentChange = result.documentChange;
     _applyLineStateSnapshot(

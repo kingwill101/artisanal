@@ -134,6 +134,29 @@ void main() {
       ]);
     });
 
+    test('grapheme-only TextCommandResult keeps textarea storage lazy', () {
+      final lines = List<String>.generate(
+        300,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final text = lines.join('\n');
+      final ctrl = TextAreaController(text: text);
+
+      expect(ctrl.document.debugStorageDepth, greaterThan(1));
+      expect(ctrl.document.debugLineGraphemeCacheCount, lessThan(10));
+
+      ctrl.applyTextCommandResult(
+        TextCommandResult(
+          cursorOffset: text.length,
+          graphemes: text.split(''),
+        ),
+      );
+
+      expect(ctrl.text, text);
+      expect(ctrl.document.debugLineGraphemeCacheCount, lessThan(10));
+    });
+
     test('undo and redo track programmatic text changes', () {
       final ctrl = TextAreaController();
 
