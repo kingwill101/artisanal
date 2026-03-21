@@ -24,6 +24,32 @@ void main() {
     });
 
     test(
+      'raw-text documents index grapheme-heavy lines in one pass',
+      () {
+        const family = '👩‍👩‍👧‍👦';
+        const rocket = '🚀';
+        final document = TextDocument(text: '$family\n$rocket\n');
+
+        expect(document.lineCount, 3);
+        expect(document.lineLength(0), 1);
+        expect(document.lineLength(1), 1);
+        expect(document.lineLength(2), 0);
+        expect(document.lineAt(0), family);
+        expect(document.lineAt(1), rocket);
+        expect(document.lineAt(2), '');
+        expect(document.lineStartOffset(1), family.characters.length + 1);
+        expect(
+          document.lineStartOffset(2),
+          family.characters.length + rocket.characters.length + 2,
+        );
+        expect(
+          document.length,
+          family.characters.length + rocket.characters.length + 2,
+        );
+      },
+    );
+
+    test(
       'replaceTextRange mutates a single-line span with change metadata',
       () {
         final document = TextDocument(text: 'alpha beta');

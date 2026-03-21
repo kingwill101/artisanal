@@ -672,20 +672,36 @@ final class _TextDocumentSource {
     final lineStarts = <int>[];
     final lineEnds = <int>[];
     final lineLengths = <int>[];
-    var start = 0;
-    while (true) {
-      final newline = text.indexOf('\n', start);
-      if (newline == -1) {
-        lineStarts.add(start);
-        lineEnds.add(text.length);
-        lineLengths.add(text.substring(start).characters.length);
-        break;
-      }
-      lineStarts.add(start);
-      lineEnds.add(newline);
-      lineLengths.add(text.substring(start, newline).characters.length);
-      start = newline + 1;
+    if (text.isEmpty) {
+      lineStarts.add(0);
+      lineEnds.add(0);
+      lineLengths.add(0);
+      return _TextDocumentSource._(
+        rawText: text,
+        lineStarts: List<int>.unmodifiable(lineStarts),
+        lineEnds: List<int>.unmodifiable(lineEnds),
+        lineLengths: List<int>.unmodifiable(lineLengths),
+      );
     }
+    var lineStart = 0;
+    var graphemeLength = 0;
+    var offset = 0;
+    for (final grapheme in text.characters) {
+      final graphemeWidth = grapheme.length;
+      if (grapheme == '\n') {
+        lineStarts.add(lineStart);
+        lineEnds.add(offset);
+        lineLengths.add(graphemeLength);
+        lineStart = offset + graphemeWidth;
+        graphemeLength = 0;
+      } else {
+        graphemeLength += 1;
+      }
+      offset += graphemeWidth;
+    }
+    lineStarts.add(lineStart);
+    lineEnds.add(text.length);
+    lineLengths.add(graphemeLength);
     return _TextDocumentSource._(
       rawText: text,
       lineStarts: List<int>.unmodifiable(lineStarts),
