@@ -95,6 +95,9 @@ final class TextDocument {
   int get debugPieceBackedLeafCount => _storage.debugPieceBackedLeafCount;
 
   @visibleForTesting
+  int get debugPieceCount => _storage.debugPieceCount;
+
+  @visibleForTesting
   int get debugDistinctSourceCount => _storage.debugDistinctSourceCount;
 
   @visibleForTesting
@@ -752,15 +755,15 @@ final class TextDocument {
     );
 
     if (startPosition.column > 0) {
-      final prefixPiece = storage.sourcePieceForLineRange(
+      final prefixPieces = storage.sourcePiecesForLineRange(
         startPosition.line,
         startColumn: 0,
         endColumn: startPosition.column,
       );
-      if (prefixPiece == null) {
+      if (prefixPieces == null) {
         return null;
       }
-      linePieces.first.add(prefixPiece);
+      linePieces.first.addAll(prefixPieces);
     }
 
     final replacementSource = _TextDocumentSource.fromLineTexts(
@@ -784,15 +787,15 @@ final class TextDocument {
 
     final endLineLength = storage.lineLength(oldEndPosition.line);
     if (oldEndPosition.column < endLineLength) {
-      final suffixPiece = storage.sourcePieceForLineRange(
+      final suffixPieces = storage.sourcePiecesForLineRange(
         oldEndPosition.line,
         startColumn: oldEndPosition.column,
         endColumn: endLineLength,
       );
-      if (suffixPiece == null) {
+      if (suffixPieces == null) {
         return null;
       }
-      linePieces.last.add(suffixPiece);
+      linePieces.last.addAll(suffixPieces);
     }
 
     return _storageBuilder.fromLinePieces(
@@ -1112,6 +1115,28 @@ final class _TextDocumentSourcePiece {
       ),
     );
   }
+}
+
+List<_TextDocumentSourcePiece> _flattenSourcePieceRange(
+  _TextDocumentSourcePiece piece, {
+  required int startColumn,
+  required int endColumn,
+}) {
+  if (piece.source case final _PieceTableTextDocumentSource pieceSource) {
+    return pieceSource.piecesInLineRange(
+      piece.sourceLine,
+      startColumn: piece.startColumn + startColumn,
+      endColumn: piece.startColumn + endColumn,
+    );
+  }
+  return <_TextDocumentSourcePiece>[
+    _TextDocumentSourcePiece(
+      source: piece.source,
+      sourceLine: piece.sourceLine,
+      startColumn: piece.startColumn + startColumn,
+      endColumn: piece.startColumn + endColumn,
+    ),
+  ];
 }
 
 abstract base class _TextDocumentSource {
@@ -1847,6 +1872,54 @@ final class _PieceTableTextDocumentSource extends _TextDocumentSource {
   int get debugMaterializedLineTextCount =>
       _materializedLineTexts?.whereType<String>().length ?? 0;
 
+  int get debugPieceCount {
+    var total = 0;
+    for (final line in _linePieces) {
+      for (final piece in line) {
+        if (piece.source case final _PieceTableTextDocumentSource pieceSource) {
+          total += pieceSource.debugPieceCount;
+        } else {
+          total += 1;
+        }
+      }
+    }
+    return total;
+  }
+
+  List<_TextDocumentSourcePiece> piecesInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    if (startColumn >= endColumn) {
+      return const <_TextDocumentSourcePiece>[];
+    }
+    final result = <_TextDocumentSourcePiece>[];
+    var remainingStart = startColumn;
+    var remainingCount = endColumn - startColumn;
+    for (final piece in _linePieces[index]) {
+      if (remainingCount <= 0) {
+        break;
+      }
+      if (remainingStart >= piece.lineLength) {
+        remainingStart -= piece.lineLength;
+        continue;
+      }
+      final localStart = remainingStart;
+      final localEnd = (localStart + remainingCount).clamp(0, piece.lineLength);
+      result.addAll(
+        _flattenSourcePieceRange(
+          piece,
+          startColumn: localStart,
+          endColumn: localEnd,
+        ),
+      );
+      remainingCount -= localEnd - localStart;
+      remainingStart = 0;
+    }
+    return List<_TextDocumentSourcePiece>.unmodifiable(result);
+  }
+
   @override
   String lineAt(int index) {
     final cache = _materializedLineTexts ??= List<String?>.filled(
@@ -2395,6 +2468,8 @@ final class _TextDocumentStorage {
   int get debugPieceBackedLeafCount =>
       _debugPieceBackedLeafCount(<_TextDocumentStorage>{});
 
+  int get debugPieceCount => _debugPieceCount(<_TextDocumentStorage>{});
+
   int get debugDistinctSourceCount => _debugDistinctSourceCount(
     <_TextDocumentStorage>{},
     <_TextDocumentSource>{},
@@ -2610,7 +2685,7 @@ final class _TextDocumentStorage {
     return lineAt(index).characters.skip(column).first;
   }
 
-  _TextDocumentSourcePiece? sourcePieceForLineRange(
+  List<_TextDocumentSourcePiece>? sourcePiecesForLineRange(
     int index, {
     required int startColumn,
     required int endColumn,
@@ -2626,7 +2701,7 @@ final class _TextDocumentStorage {
     }
     if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
-      return segment.sourcePieceForLineRange(
+      return segment.sourcePiecesForLineRange(
         localIndex,
         startColumn: normalizedStart,
         endColumn: normalizedEnd,
@@ -2636,12 +2711,22 @@ final class _TextDocumentStorage {
     if (sourceSlice == null) {
       return null;
     }
-    return _TextDocumentSourcePiece(
-      source: sourceSlice.source,
-      sourceLine: sourceSlice.startLine + index,
-      startColumn: normalizedStart,
-      endColumn: normalizedEnd,
-    );
+    final source = sourceSlice.source;
+    if (source case final _PieceTableTextDocumentSource pieceSource) {
+      return pieceSource.piecesInLineRange(
+        sourceSlice.startLine + index,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      );
+    }
+    return <_TextDocumentSourcePiece>[
+      _TextDocumentSourcePiece(
+        source: source,
+        sourceLine: sourceSlice.startLine + index,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      ),
+    ];
   }
 
   String lineTextPrefix(int index, int graphemeCount) {
@@ -3643,6 +3728,22 @@ final class _TextDocumentStorage {
     return total;
   }
 
+  int _debugPieceCount(Set<_TextDocumentStorage> visited) {
+    if (!visited.add(this)) {
+      return 0;
+    }
+    final segments = _compositeBacking?.segments;
+    if (segments == null || segments.isEmpty) {
+      final source = _leafBacking?.source;
+      return source is _PieceTableTextDocumentSource ? source.debugPieceCount : 0;
+    }
+    var total = 0;
+    for (final segment in segments) {
+      total += segment.storage._debugPieceCount(visited);
+    }
+    return total;
+  }
+
   int _debugDistinctSourceCount(
     Set<_TextDocumentStorage> visited,
     Set<_TextDocumentSource> sources,
@@ -3746,11 +3847,11 @@ final class _TextDocumentStorageSegment {
   String? graphemeInLineAt(int localIndex, int column) =>
       storage.graphemeInLineAt(startLine + localIndex, column);
 
-  _TextDocumentSourcePiece? sourcePieceForLineRange(
+  List<_TextDocumentSourcePiece>? sourcePiecesForLineRange(
     int localIndex, {
     required int startColumn,
     required int endColumn,
-  }) => storage.sourcePieceForLineRange(
+  }) => storage.sourcePiecesForLineRange(
     startLine + localIndex,
     startColumn: startColumn,
     endColumn: endColumn,

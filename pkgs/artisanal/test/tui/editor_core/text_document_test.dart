@@ -190,6 +190,32 @@ void main() {
       },
     );
 
+    test('repeated piece-backed edits flatten nested source pieces', () {
+      final document = TextDocument(text: 'alpha beta gamma');
+
+      document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'delta',
+      );
+
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceCount, 3);
+
+      document.replaceTextRange(
+        startOffset: 0,
+        endOffset: 5,
+        replacement: 'omega',
+      );
+
+      expect(
+        document.textInRange(startOffset: 0, endOffset: document.length),
+        'omega delta gamma',
+      );
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceCount, 4);
+    });
+
     test(
       'replaceOffsetRange deletes across lines and rejoins surrounding text',
       () {
