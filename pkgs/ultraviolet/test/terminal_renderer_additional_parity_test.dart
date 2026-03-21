@@ -231,6 +231,64 @@ void main() {
       r.flush();
     });
 
+    test('TestRendererSparseTileDiffAcrossTileBoundaries', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+
+      final base = Buffer.create(48, 16);
+      r.erase();
+      r.render(base);
+      r.flush();
+
+      final updated = base.clone();
+      updated.setCell(15, 1, Cell(content: 'A', width: 1));
+      updated.setCell(16, 1, Cell(content: 'B', width: 1));
+      updated.setCell(31, 5, Cell(content: 'C', width: 1));
+      updated.setCell(32, 9, Cell(content: 'D', width: 1));
+      updated.setCell(47, 13, Cell(content: 'E', width: 1));
+
+      out.reset();
+      r.render(updated);
+      r.flush();
+
+      expect(out.value, contains('AB'));
+      expect(out.value, contains('C'));
+      expect(out.value, contains('D'));
+      expect(out.value, contains('E'));
+      expect(out.value, isNot(contains(UvAnsi.eraseEntireScreen)));
+    });
+
+    test('TestRendererDenseRowsFallbackToWholeLineDiff', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+      r.setFullscreen(true);
+
+      final base = Buffer.create(48, 16);
+      r.erase();
+      r.render(base);
+      r.flush();
+
+      final updated = base.clone();
+      for (var x = 0; x < 48; x++) {
+        updated.setCell(
+          x,
+          3,
+          Cell(content: String.fromCharCode(65 + (x % 26)), width: 1),
+        );
+      }
+
+      out.reset();
+      r.render(updated);
+      r.flush();
+
+      expect(
+        out.value,
+        contains('ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUV'),
+      );
+      expect(out.value, isNot(contains(UvAnsi.cursorPosition(17, 4))));
+      expect(out.value, isNot(contains(UvAnsi.cursorPosition(33, 4))));
+    });
+
     test('TestRendererLogger', () {
       final out = _TestSink();
       final r = _newRenderer(out);

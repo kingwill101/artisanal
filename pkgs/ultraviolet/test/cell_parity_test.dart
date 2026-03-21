@@ -10,6 +10,65 @@ import 'package:test/test.dart';
 
 void main() {
   group('Cell parity', () {
+    test('canonicalizes equivalent styles and links across cells', () {
+      final cellA = Cell(
+        content: 'A',
+        width: 1,
+        style: UvStyle(
+          fg: const UvRgb(1, 2, 3),
+          bg: const UvRgb(4, 5, 6),
+          attrs: Attr.bold,
+        ),
+        link: Link(url: 'https://example.com', params: 'id=1'),
+      );
+      final cellB = Cell(
+        content: 'B',
+        width: 1,
+        style: UvStyle(
+          fg: const UvRgb(1, 2, 3),
+          bg: const UvRgb(4, 5, 6),
+          attrs: Attr.bold,
+        ),
+        link: Link(url: 'https://example.com', params: 'id=1'),
+      );
+
+      expect(identical(cellA.style, cellB.style), isTrue);
+      expect(identical(cellA.link, cellB.link), isTrue);
+    });
+
+    test('preserves equality semantics for simple and complex graphemes', () {
+      final asciiA = Cell(content: 'A', width: 1);
+      final asciiB = Cell(content: 'A', width: 1);
+      final asciiC = Cell(content: 'A', width: 2);
+      final emojiA = Cell(content: '👩‍💻', width: 2);
+      final emojiB = Cell(content: '👩‍💻', width: 2);
+      final emojiC = Cell(content: '👩‍💻', width: 1);
+
+      expect(asciiA, asciiB);
+      expect(asciiA.hashCode, asciiB.hashCode);
+      expect(asciiA, isNot(asciiC));
+
+      expect(emojiA, emojiB);
+      expect(emojiA.hashCode, emojiB.hashCode);
+      expect(emojiA, isNot(emojiC));
+    });
+
+    test('empty keeps style and link while rewriting content to space', () {
+      final cell = Cell(
+        content: 'X',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(255, 0, 0)),
+        link: const Link(url: 'https://example.com'),
+      );
+
+      cell.empty();
+
+      expect(cell.content, ' ');
+      expect(cell.width, 1);
+      expect(cell.style, const UvStyle(fg: UvRgb(255, 0, 0)));
+      expect(cell.link, const Link(url: 'https://example.com'));
+    });
+
     test('ConvertStyle', () {
       final s = UvStyle(
         fg: const UvRgb(0, 0, 0),

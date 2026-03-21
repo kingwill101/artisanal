@@ -406,20 +406,96 @@ void main() {
     test('touchLine updates touched metadata', () {
       final b = Buffer.create(10, 3);
       expect(b.touched[1], isNull);
+      expect(b.dirtyRows[1], isFalse);
 
       b.touchLine(2, 1, 3);
       expect(b.touched[1], isNotNull);
       expect(b.touched[1]!.firstCell, 2);
       expect(b.touched[1]!.lastCell, 5);
+      expect(b.touched[1]!.spans, const [DirtySpan(start: 2, end: 5)]);
+      expect(b.dirtyRows[1], isTrue);
 
       // merge range
       b.touchLine(1, 1, 10);
       expect(b.touched[1]!.firstCell, 1);
       expect(b.touched[1]!.lastCell, 11);
+      expect(b.touched[1]!.spans, const [DirtySpan(start: 1, end: 11)]);
 
       // out-of-bounds should not throw
       b.touchLine(0, -1, 1);
       b.touchLine(0, 3, 1);
+    });
+
+    test('touchLine keeps multiple disjoint spans until overflow', () {
+      final b = Buffer.create(40, 2);
+
+      b.touchLine(1, 0, 1);
+      b.touchLine(5, 0, 1);
+      b.touchLine(9, 0, 1);
+      b.touchLine(13, 0, 1);
+
+      expect(b.touched[0]!.spans, const [
+        DirtySpan(start: 1, end: 2),
+        DirtySpan(start: 5, end: 6),
+        DirtySpan(start: 9, end: 10),
+        DirtySpan(start: 13, end: 14),
+      ]);
+      expect(b.touched[0]!.overflowed, isFalse);
+
+      b.touchLine(17, 0, 1);
+
+      expect(b.touched[0]!.overflowed, isTrue);
+      expect(b.touched[0]!.spans, const [DirtySpan(start: 1, end: 18)]);
+    });
+
+    test('clearDirtyLine and clearDirtyTracking reset row metadata', () {
+      final b = Buffer.create(10, 3);
+      b.touchLine(2, 1, 3);
+      b.touchLine(1, 2, 1);
+
+      b.clearDirtyLine(1);
+      expect(b.dirtyRows[1], isFalse);
+      expect(b.touched[1], LineData.clean);
+      expect(b.dirtyRows[2], isTrue);
+
+      b.clearDirtyTracking();
+      expect(b.dirtyRows, everyElement(isFalse));
+      expect(b.touched, everyElement(LineData.clean));
+    });
+
+    test('dirty bitsets track individual dirty cells and spans', () {
+      final b = Buffer.create(40, 2);
+      b.touchLine(2, 0, 2);
+      b.touchLine(7, 0, 1);
+
+      expect(b.isCellDirty(1, 0), isFalse);
+      expect(b.isCellDirty(2, 0), isTrue);
+      expect(b.isCellDirty(3, 0), isTrue);
+      expect(b.isCellDirty(4, 0), isFalse);
+      expect(b.isCellDirty(7, 0), isTrue);
+      expect(b.dirtyBitSpans(0), const [
+        DirtySpan(start: 2, end: 4),
+        DirtySpan(start: 7, end: 8),
+      ]);
+
+      b.clearDirtyLine(0);
+      expect(b.isCellDirty(2, 0), isFalse);
+      expect(b.dirtyBitSpans(0), isEmpty);
+    });
+
+    test('DirtyDensityMap reports summed dirty counts for rectangles', () {
+      final b = Buffer.create(40, 12);
+      b.touchLine(2, 1, 2);
+      b.touchLine(15, 1, 1);
+      b.touchLine(18, 7, 3);
+
+      final density = DirtyDensityMap.fromBuffer(b);
+
+      expect(density.count(rect(0, 0, 40, 12)), 6);
+      expect(density.count(rect(0, 0, 10, 4)), 2);
+      expect(density.count(rect(14, 0, 4, 4)), 1);
+      expect(density.count(rect(16, 6, 8, 3)), 3);
+      expect(density.hasAny(rect(0, 8, 10, 2)), isFalse);
     });
 
     test('ScreenBuffer defaults to wcwidth method', () {

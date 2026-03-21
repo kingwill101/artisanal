@@ -27,6 +27,8 @@
 /// ```
 library;
 
+import 'dart:typed_data';
+
 import 'ansi.dart';
 import 'cell.dart';
 import 'drawable.dart';
@@ -39,11 +41,109 @@ import '../unicode/width.dart';
 /// Metadata for a touched line.
 ///
 /// Upstream: `third_party/ultraviolet/terminal_renderer.go` (`LineData`).
+final class DirtyDensityMap {
+  DirtyDensityMap._(this.width, this.height, this._prefixSums);
+
+  factory DirtyDensityMap.fromBuffer(Buffer buffer) {
+    final width = buffer.width();
+    final height = buffer.height();
+    final prefix = Int32List((width + 1) * (height + 1));
+
+    for (var y = 0; y < height; y++) {
+      var rowSum = 0;
+      for (var x = 0; x < width; x++) {
+        if (buffer.isCellDirty(x, y)) rowSum++;
+        final idx = (y + 1) * (width + 1) + (x + 1);
+        prefix[idx] = prefix[idx - (width + 1)] + rowSum;
+      }
+    }
+
+    return DirtyDensityMap._(width, height, prefix);
+  }
+
+  final int width;
+  final int height;
+  final Int32List _prefixSums;
+
+  int count(Rectangle area) {
+    final clipped = _clipRect(area);
+    if (clipped.isEmpty) return 0;
+    final stride = width + 1;
+    final x0 = clipped.minX;
+    final y0 = clipped.minY;
+    final x1 = clipped.maxX;
+    final y1 = clipped.maxY;
+    return _prefixSums[y1 * stride + x1] -
+        _prefixSums[y0 * stride + x1] -
+        _prefixSums[y1 * stride + x0] +
+        _prefixSums[y0 * stride + x0];
+  }
+
+  bool hasAny(Rectangle area) => count(area) > 0;
+
+  Rectangle _clipRect(Rectangle area) {
+    final x0 = area.minX < 0 ? 0 : area.minX;
+    final y0 = area.minY < 0 ? 0 : area.minY;
+    final x1 = area.maxX > width ? width : area.maxX;
+    final y1 = area.maxY > height ? height : area.maxY;
+    if (x0 >= x1 || y0 >= y1) {
+      return rect(0, 0, 0, 0);
+    }
+    return rect(x0, y0, x1 - x0, y1 - y0);
+  }
+}
+
+final class DirtySpan {
+  const DirtySpan({required this.start, required this.end});
+
+  final int start;
+  final int end;
+
+  bool overlapsOrTouches(DirtySpan other) =>
+      start <= other.end && end >= other.start;
+
+  @override
+  bool operator ==(Object other) =>
+      other is DirtySpan && other.start == start && other.end == end;
+
+  @override
+  int get hashCode => Object.hash(start, end);
+}
+
+/// Metadata for one dirty line.
+///
+/// [firstCell] and [lastCell] preserve the historical coarse range used by the
+/// current renderer. [spans] keeps up to a small number of disjoint dirty
+/// ranges so future diff passes can skip unchanged islands without losing the
+/// existing fast path.
 final class LineData {
-  const LineData({required this.firstCell, required this.lastCell});
+  const LineData({
+    required this.firstCell,
+    required this.lastCell,
+    this.spans = const <DirtySpan>[],
+    this.overflowed = false,
+  });
+
+  static const LineData clean = LineData(firstCell: -1, lastCell: -1);
 
   final int firstCell;
   final int lastCell;
+  final List<DirtySpan> spans;
+  final bool overflowed;
+
+  bool get isDirty => firstCell != -1 || lastCell != -1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LineData &&
+      other.firstCell == firstCell &&
+      other.lastCell == lastCell &&
+      other.overflowed == overflowed &&
+      _listEquals(other.spans, spans);
+
+  @override
+  int get hashCode =>
+      Object.hash(firstCell, lastCell, Object.hashAll(spans), overflowed);
 }
 
 /// A line is a fixed-width list of cells.
@@ -178,7 +278,10 @@ final class Line {
 ///
 /// Upstream: `third_party/ultraviolet/buffer.go` (`Buffer`).
 final class Buffer {
-  Buffer._(this.lines) : touched = List<LineData?>.filled(lines.length, null);
+  Buffer._(this.lines)
+    : touched = List<LineData?>.filled(lines.length, null),
+      dirtyRows = List<bool>.filled(lines.length, false),
+      dirtyBits = List<Uint32List>.generate(lines.length, (_) => Uint32List(0));
 
   factory Buffer.create(int width, int height) {
     final lines = List<Line>.generate(height, (_) => Line.filled(width));
@@ -199,6 +302,8 @@ final class Buffer {
   final List<Line> lines;
 
   List<LineData?> touched;
+  List<bool> dirtyRows;
+  List<Uint32List> dirtyBits;
 
   /// The buffer width in cells.
   int width() => lines.isEmpty ? 0 : lines[0].length;
@@ -242,6 +347,8 @@ final class Buffer {
     if (width < 0 || height <= 0) {
       lines.clear();
       touched = <LineData?>[];
+      dirtyRows = <bool>[];
+      dirtyBits = <Uint32List>[];
       return;
     }
 
@@ -270,6 +377,11 @@ final class Buffer {
     }
 
     touched = List<LineData?>.filled(lines.length, null);
+    dirtyRows = List<bool>.filled(lines.length, false);
+    dirtyBits = List<Uint32List>.generate(
+      lines.length,
+      (_) => Uint32List(_dirtyWordCount(width)),
+    );
   }
 
   /// Fills the buffer with [cell] over its full bounds.
@@ -467,6 +579,7 @@ final class Buffer {
 
   void touchLine(int x, int y, int width) {
     if (y < 0 || y >= lines.length) return;
+    if (width <= 0) return;
 
     if (y >= touched.length) {
       touched = [
@@ -474,19 +587,121 @@ final class Buffer {
         ...List<LineData?>.filled(y - touched.length + 1, null),
       ];
     }
+    if (y >= dirtyRows.length) {
+      dirtyRows = [
+        ...dirtyRows,
+        ...List<bool>.filled(y - dirtyRows.length + 1, false),
+      ];
+    }
+    if (y >= dirtyBits.length) {
+      final width = this.width();
+      dirtyBits = [
+        ...dirtyBits,
+        ...List<Uint32List>.generate(
+          y - dirtyBits.length + 1,
+          (_) => Uint32List(_dirtyWordCount(width)),
+        ),
+      ];
+    }
 
     final ch = touched[y];
     final first = x;
     final last = x + width;
+    dirtyRows[y] = true;
+    _markDirtyBits(y, first, last);
     if (ch == null) {
-      touched[y] = LineData(firstCell: first, lastCell: last);
+      touched[y] = LineData(
+        firstCell: first,
+        lastCell: last,
+        spans: <DirtySpan>[DirtySpan(start: first, end: last)],
+      );
     } else {
       final prevFirst = ch.firstCell == -1 ? first : ch.firstCell;
       final prevLast = ch.lastCell == -1 ? last : ch.lastCell;
+      final spans = _mergeDirtySpans(
+        ch.spans,
+        DirtySpan(start: first, end: last),
+      );
       touched[y] = LineData(
         firstCell: first < prevFirst ? first : prevFirst,
         lastCell: last > prevLast ? last : prevLast,
+        spans: spans.spans,
+        overflowed: spans.overflowed || ch.overflowed,
       );
+    }
+  }
+
+  void clearDirtyLine(int y) {
+    if (y < 0 || y >= lines.length) return;
+    if (y < touched.length) {
+      touched[y] = LineData.clean;
+    }
+    if (y < dirtyRows.length) {
+      dirtyRows[y] = false;
+    }
+    if (y < dirtyBits.length) {
+      dirtyBits[y].fillRange(0, dirtyBits[y].length, 0);
+    }
+  }
+
+  void clearDirtyTracking() {
+    touched = List<LineData?>.filled(lines.length, LineData.clean);
+    dirtyRows = List<bool>.filled(lines.length, false);
+    dirtyBits = List<Uint32List>.generate(
+      lines.length,
+      (_) => Uint32List(_dirtyWordCount(width())),
+    );
+  }
+
+  bool isCellDirty(int x, int y) {
+    if (x < 0 || y < 0 || y >= dirtyBits.length) return false;
+    final bits = dirtyBits[y];
+    if (bits.isEmpty) return false;
+    final word = x >> 5;
+    if (word >= bits.length) return false;
+    final mask = 1 << (x & 31);
+    return (bits[word] & mask) != 0;
+  }
+
+  List<DirtySpan> dirtyBitSpans(int y) {
+    if (y < 0 || y >= dirtyBits.length) return const <DirtySpan>[];
+    final bits = dirtyBits[y];
+    if (bits.isEmpty) return const <DirtySpan>[];
+    final spans = <DirtySpan>[];
+    final rowWidth = width();
+    var start = -1;
+    for (var x = 0; x < rowWidth; x++) {
+      final dirty = isCellDirty(x, y);
+      if (dirty) {
+        start = start == -1 ? x : start;
+      } else if (start != -1) {
+        spans.add(DirtySpan(start: start, end: x));
+        start = -1;
+      }
+    }
+    if (start != -1) {
+      spans.add(DirtySpan(start: start, end: rowWidth));
+    }
+    return spans;
+  }
+
+  void _markDirtyBits(int y, int start, int end) {
+    if (y < 0 || y >= dirtyBits.length) return;
+    final bits = dirtyBits[y];
+    if (bits.isEmpty) return;
+    final width = this.width();
+    var x0 = start < 0 ? 0 : start;
+    var x1 = end > width ? width : end;
+    if (x0 >= x1) return;
+    final startWord = x0 >> 5;
+    final endWord = (x1 - 1) >> 5;
+    for (var word = startWord; word <= endWord; word++) {
+      final wordStart = word << 5;
+      final wordEnd = wordStart + 32;
+      final from = x0 > wordStart ? x0 - wordStart : 0;
+      final to = x1 < wordEnd ? x1 - wordStart : 32;
+      final mask = _bitMask(from, to);
+      bits[word] |= mask;
     }
   }
 
@@ -526,6 +741,65 @@ final class Buffer {
     }
     return out.toString();
   }
+}
+
+({List<DirtySpan> spans, bool overflowed}) _mergeDirtySpans(
+  List<DirtySpan> existing,
+  DirtySpan next,
+) {
+  const maxTrackedSpans = 4;
+  if (existing.isEmpty) {
+    return (spans: <DirtySpan>[next], overflowed: false);
+  }
+
+  final spans = <DirtySpan>[...existing, next]
+    ..sort((a, b) => a.start.compareTo(b.start));
+  final merged = <DirtySpan>[];
+  for (final span in spans) {
+    if (merged.isEmpty) {
+      merged.add(span);
+      continue;
+    }
+    final last = merged.last;
+    if (last.overlapsOrTouches(span)) {
+      merged[merged.length - 1] = DirtySpan(
+        start: last.start < span.start ? last.start : span.start,
+        end: last.end > span.end ? last.end : span.end,
+      );
+      continue;
+    }
+    merged.add(span);
+  }
+
+  if (merged.length <= maxTrackedSpans) {
+    return (spans: merged, overflowed: false);
+  }
+
+  final first = merged.first.start;
+  final last = merged.last.end;
+  return (
+    spans: <DirtySpan>[DirtySpan(start: first, end: last)],
+    overflowed: true,
+  );
+}
+
+bool _listEquals<T>(List<T> a, List<T> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
+
+int _dirtyWordCount(int width) => width <= 0 ? 0 : ((width - 1) >> 5) + 1;
+
+int _bitMask(int from, int to) {
+  var mask = 0;
+  for (var bit = from; bit < to; bit++) {
+    mask |= 1 << bit;
+  }
+  return mask;
 }
 
 void _renderLine(StringSink out, Line line) {

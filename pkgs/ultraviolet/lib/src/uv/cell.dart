@@ -147,6 +147,12 @@ final class UvStyle {
   final UnderlineStyle underline;
   final int attrs;
 
+  /// A packed metadata key for this style.
+  ///
+  /// This folds colors, underline mode, and attributes into one stable integer
+  /// so callers can cheaply compare and cache style state.
+  int get packedKey => Object.hash(fg, bg, underlineColor, underline, attrs);
+
   /// Whether this style has no attributes or colors set.
   bool get isZero =>
       fg == null &&
@@ -180,6 +186,7 @@ final class UvStyle {
   @override
   bool operator ==(Object other) =>
       other is UvStyle &&
+      other.packedKey == packedKey &&
       other.fg == fg &&
       other.bg == bg &&
       other.underlineColor == underlineColor &&
@@ -187,61 +194,114 @@ final class UvStyle {
       other.attrs == attrs;
 
   @override
-  int get hashCode => Object.hash(fg, bg, underlineColor, underline, attrs);
+  int get hashCode => packedKey.hashCode;
 }
 
 /// A single cell in a terminal [Buffer].
 ///
-/// A cell contains a character (or string for multi-byte characters), a [UvStyle],
-/// an optional [Link], and its display width. It can also hold a [drawable]
-/// for rendering images or complex graphics.
+/// A cell contains one grapheme, a [UvStyle], an optional [Link], and its
+/// display width. This Dart port keeps the public mutable API but also caches a
+/// packed metadata signature so equality and hashing stay fast for the common
+/// case of plain single-rune cells.
 ///
 /// Upstream: `third_party/ultraviolet/cell.go` (`Cell`, `EmptyCell`).
-/// A single cell in a terminal [Buffer].
 final class Cell {
   Cell({
-    this.content = '',
-    this.style = const UvStyle(),
-    this.link = const Link(),
+    String content = '',
+    UvStyle style = const UvStyle(),
+    Link link = const Link(),
     this.drawable,
     int? width,
-  }) : width = width ?? (content.isEmpty ? 0 : 1);
+  }) {
+    _width = width ?? (content.isEmpty ? 0 : 1);
+    _setContent(content);
+    _setStyle(style);
+    _setLink(link);
+  }
 
-  String content;
-  UvStyle style;
-  Link link;
-  int width;
+  Cell._packed({
+    required String content,
+    required UvStyle style,
+    required Link link,
+    required int width,
+    required int contentKind,
+    required int contentValue,
+    required int styleId,
+    required int linkId,
+    this.drawable,
+  }) : _content = content,
+       _style = style,
+       _link = link,
+       _width = width,
+       _contentKind = contentKind,
+       _contentValue = contentValue,
+       _styleId = styleId,
+       _linkId = linkId;
+
+  String _content = '';
+  UvStyle _style = const UvStyle();
+  Link _link = const Link();
+  int _width = 0;
+  int _contentKind = _CellContentKind.empty;
+  int _contentValue = 0;
+  int _styleId = 0;
+  int _linkId = 0;
+
+  /// The grapheme content stored in this cell.
+  String get content => _content;
+  set content(String value) => _setContent(value);
+
+  /// The canonicalized style for this cell.
+  UvStyle get style => _style;
+  set style(UvStyle value) => _setStyle(value);
+
+  /// The canonicalized hyperlink metadata for this cell.
+  Link get link => _link;
+  set link(Link value) => _setLink(value);
+
+  /// The display width of this cell in terminal columns.
+  int get width => _width;
+  set width(int value) {
+    _width = value;
+    _updatePackedContent();
+  }
+
   Object? drawable;
 
   /// Whether this cell has no content, style, link, or drawable.
   bool get isZero =>
-      content.isEmpty &&
-      width == 0 &&
-      style.isZero &&
-      link.isZero &&
+      _contentKind == _CellContentKind.empty &&
+      _width == 0 &&
+      _styleId == 0 &&
+      _linkId == 0 &&
       drawable == null;
 
   /// Whether this cell represents a plain space with no attributes.
   bool get isEmpty =>
-      content == ' ' &&
-      width == 1 &&
-      style.isZero &&
-      link.isZero &&
+      _contentKind == _CellContentKind.space &&
+      _width == 1 &&
+      _styleId == 0 &&
+      _linkId == 0 &&
       drawable == null;
 
   /// Returns a copy of this cell.
-  Cell clone() => Cell(
-    content: content,
-    style: style,
-    link: link,
-    width: width,
+  Cell clone() => Cell._packed(
+    content: _content,
+    style: _style,
+    link: _link,
+    width: _width,
+    contentKind: _contentKind,
+    contentValue: _contentValue,
+    styleId: _styleId,
+    linkId: _linkId,
     drawable: drawable,
   );
 
   /// Sets this cell to a space with width 1.
   void empty() {
-    content = ' ';
-    width = 1;
+    _content = ' ';
+    _width = 1;
+    _updatePackedContent();
   }
 
   /// Creates a space cell with width 1.
@@ -257,11 +317,99 @@ final class Cell {
   @override
   bool operator ==(Object other) =>
       other is Cell &&
-      other.content == content &&
-      other.width == width &&
-      other.style == style &&
-      other.link == link;
+      other._contentKind == _contentKind &&
+      other._contentValue == _contentValue &&
+      other._width == _width &&
+      other._styleId == _styleId &&
+      other._linkId == _linkId &&
+      (_contentKind != _CellContentKind.complex || other._content == _content);
 
   @override
-  int get hashCode => Object.hash(content, width, style, link);
+  int get hashCode => Object.hash(
+    _contentKind,
+    _contentValue,
+    _width,
+    _styleId,
+    _linkId,
+    _contentKind == _CellContentKind.complex ? _content : null,
+  );
+
+  void _setContent(String value) {
+    _content = value;
+    _updatePackedContent();
+  }
+
+  void _setStyle(UvStyle value) {
+    final interned = _stylePool.intern(value);
+    _style = interned.value;
+    _styleId = interned.id;
+  }
+
+  void _setLink(Link value) {
+    final interned = _linkPool.intern(value);
+    _link = interned.value;
+    _linkId = interned.id;
+  }
+
+  void _updatePackedContent() {
+    if (_content.isEmpty) {
+      _contentKind = _CellContentKind.empty;
+      _contentValue = 0;
+      return;
+    }
+    if (_content == ' ' && _width == 1) {
+      _contentKind = _CellContentKind.space;
+      _contentValue = 0;
+      return;
+    }
+    final scalar = _trySingleScalar(_content);
+    if (scalar != null) {
+      _contentKind = _CellContentKind.singleScalar;
+      _contentValue = scalar;
+      return;
+    }
+    _contentKind = _CellContentKind.complex;
+    _contentValue = 0;
+  }
+}
+
+abstract final class _CellContentKind {
+  static const int empty = 0;
+  static const int space = 1;
+  static const int singleScalar = 2;
+  static const int complex = 3;
+}
+
+final class _CanonicalPool<T> {
+  _CanonicalPool(T zero) {
+    _ids[zero] = 0;
+    _values.add(zero);
+  }
+
+  final Map<T, int> _ids = <T, int>{};
+  final List<T> _values = <T>[];
+
+  ({T value, int id}) intern(T value) {
+    final existing = _ids[value];
+    if (existing != null) {
+      return (value: _values[existing], id: existing);
+    }
+    final id = _values.length;
+    _ids[value] = id;
+    _values.add(value);
+    return (value: value, id: id);
+  }
+}
+
+final _CanonicalPool<UvStyle> _stylePool = _CanonicalPool<UvStyle>(
+  const UvStyle(),
+);
+final _CanonicalPool<Link> _linkPool = _CanonicalPool<Link>(const Link());
+
+int? _trySingleScalar(String value) {
+  if (value.isEmpty) return null;
+  final iterator = value.runes.iterator;
+  if (!iterator.moveNext()) return null;
+  final scalar = iterator.current;
+  return iterator.moveNext() ? null : scalar;
 }

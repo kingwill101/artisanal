@@ -23,9 +23,15 @@ edge cases, and regression guards.
     - `ScreenMode` enum (`fullScreen`, `inline`, `inlineAuto`)
     - `UiAnchor` enum (`bottom`, `top`)
     - `ProgramOptions.screenMode`, `.inlineHeight`, `.uiAnchor`
-    - `UltravioletTuiRenderer` inline mode with cursor save/restore,
-      scroll region (DECSTBM), UI region clearing, synchronized output
-    - 17 tests in `inline_renderer_test.dart`
+    - `UltravioletTuiRenderer` inline mode with captured UV output,
+      absolute row-offset rewriting, cursor save/restore, and bounded
+      inline-region clearing
+    - Startup probes skipped by default in inline mode to avoid visible
+      primary-screen probe traffic
+    - Inline examples in `bottom_status.dart` and `top_panel.dart`
+    - Runtime and renderer docs updated in `docs/TUI.md` and
+      `docs/RENDERER.md`
+    - 17 regression tests in `inline_renderer_test.dart`
 
 ---
 
@@ -41,8 +47,14 @@ edge cases, and regression guards.
   - **Tests:** Cell size assertion, equality correctness for all
     content types (char, grapheme, continuation), packed equality
     vs field-by-field comparison.
+  - **Progress:**
+    - Added packed cell metadata caching for equality and hashing in
+      `pkgs/ultraviolet/lib/src/uv/cell.dart`
+    - Canonicalized repeated `UvStyle` and `Link` instances across cells
+    - Added regression tests for canonicalization, equality semantics,
+      and `empty()` preservation behavior in `cell_parity_test.dart`
 
-- [ ] Multi-level dirty tracking (rows + spans + per-cell bits)
+- [x] Multi-level dirty tracking (rows + spans + per-cell bits)
   - **Where:** ultraviolet
   - **Gap:** Only per-line `touched` with first/last cell range.
     FrankenTUI tracks dirty_rows, dirty_spans (SmallVec<4>), and
@@ -52,8 +64,15 @@ edge cases, and regression guards.
   - **Tests:** Dirty region correctness after set/fill/insert/delete,
     span merging logic, fallback to full-row at overflow, bitmap
     consistency.
+  - **Progress:**
+    - Added `dirtyRows` alongside coarse `touched` metadata
+    - Extended `LineData` with tracked dirty spans and overflow markers
+    - Added per-row dirty bitsets plus `isCellDirty()` and `dirtyBitSpans()`
+    - Added row/span reset helpers used by the renderer
+    - Added regression tests for span merging, overflow fallback, and
+      dirty-state clearing in `buffer_parity_test.dart`
 
-- [ ] Block-based diff with summed-area table tile-skip
+- [x] Block-based diff with summed-area table tile-skip
   - **Where:** ultraviolet
   - **Gap:** Per-line left+right scan diff. FrankenTUI compares
     4-cell quads via bitwise AND and uses SAT for O(1) tile density
@@ -63,6 +82,16 @@ edge cases, and regression guards.
   - **Tests:** Diff correctness matches naive diff, tile boundaries
     handled correctly, SAT query accuracy, dense buffer fallback
     triggers correctly.
+  - **Progress:**
+    - Added an initial segmented incremental diff path for disjoint dirty
+      spans so unchanged islands on one line can be skipped independently
+    - Added 4-cell forward/backward equality skipping inside segmented line
+      transforms as a first step toward block-based diffing
+    - Added `DirtyDensityMap` summed-area tables for O(1) dirty-rectangle
+      queries across tile regions
+    - Added sparse tile traversal with dense-buffer and dense-row fallback
+    - Preserved full-clear output parity by only enabling segmented block
+      transforms on incremental updates
 
 - [ ] Grapheme pool (interned IDs, deduped, ref-counted)
   - **Where:** ultraviolet
