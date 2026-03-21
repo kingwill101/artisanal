@@ -2,6 +2,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'text_document.dart';
+
 String codeLeadingIndent(String line) {
   final buffer = StringBuffer();
   for (final rune in line.runes) {
@@ -78,6 +80,26 @@ bool codeShouldAutoPairSymmetricDelimiter(
 
   final before = offset > 0 ? text[offset - 1] : '';
   final after = offset < text.length ? text[offset] : '';
+  final beforeBlocksPair =
+      before.isNotEmpty && RegExp(r'[\w\\]').hasMatch(before);
+  if (beforeBlocksPair) {
+    return false;
+  }
+
+  return after.isEmpty || RegExp(r'[\s\]\)\}\>,.;:]').hasMatch(after);
+}
+
+bool codeShouldAutoPairSymmetricDelimiterInDocument(
+  TextDocument document,
+  int offset, {
+  bool hasSelection = false,
+}) {
+  if (hasSelection) {
+    return true;
+  }
+
+  final before = offset > 0 ? document.graphemeAt(offset - 1) ?? '' : '';
+  final after = offset < document.length ? document.graphemeAt(offset) ?? '' : '';
   final beforeBlocksPair =
       before.isNotEmpty && RegExp(r'[\w\\]').hasMatch(before);
   if (beforeBlocksPair) {

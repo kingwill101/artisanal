@@ -178,8 +178,8 @@ TextCommandResult codeHandleAutoPair({
   final matching = profile.autoPairs[typed];
   if (matching != null) {
     if (typed == matching &&
-        !codeShouldAutoPairSymmetricDelimiter(
-          document.text,
+        !codeShouldAutoPairSymmetricDelimiterInDocument(
+          document,
           state.cursorOffset,
           hasSelection: state.hasSelection,
         )) {
@@ -308,7 +308,7 @@ TextCommandResult codeToggleBlockComments({
   required CodeLanguageProfile profile,
 }) {
   final delimiters = profile.blockCommentDelimiters;
-  if (delimiters == null || document.text.isEmpty) {
+  if (delimiters == null || document.length == 0) {
     return _unchangedCodeResultFromDocument(document, state);
   }
 

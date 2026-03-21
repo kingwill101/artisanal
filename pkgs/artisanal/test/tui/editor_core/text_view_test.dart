@@ -1072,6 +1072,20 @@ void main() {
         codeShouldAutoPairSymmetricDelimiter('word', 4, hasSelection: true),
         isTrue,
       );
+      expect(
+        codeShouldAutoPairSymmetricDelimiterInDocument(
+          TextDocument(text: 'word'),
+          4,
+        ),
+        isFalse,
+      );
+      expect(
+        codeShouldAutoPairSymmetricDelimiterInDocument(
+          TextDocument(text: ' '),
+          1,
+        ),
+        isTrue,
+      );
 
       expect(codeOutdentedIndent('    ', 2), '  ');
       expect(codeOutdentedIndent('\t', 2), '');
