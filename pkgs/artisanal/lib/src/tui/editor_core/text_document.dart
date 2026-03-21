@@ -444,6 +444,9 @@ final class TextDocument {
   static List<List<String>> parseFlatGraphemes(Iterable<String> graphemes) =>
       _parseFlatGraphemes(graphemes);
 
+  static List<String> parseFlatLineTexts(Iterable<String> graphemes) =>
+      _parseFlatLineTexts(graphemes);
+
   static List<String> _parseLineTexts(String text) {
     if (text.isEmpty) {
       return const <String>[''];

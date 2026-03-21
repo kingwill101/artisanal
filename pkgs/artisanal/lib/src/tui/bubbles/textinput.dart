@@ -1552,7 +1552,11 @@ class TextInputModel extends ViewComponent {
   void _applyEditCommandResult(commands.TextCommandResult result) {
     final nextDocument = result.document;
     if (nextDocument != null) {
-      _replaceDocumentSnapshot(nextDocument, graphemes: result.graphemes);
+      _replaceDocumentSnapshot(
+        nextDocument,
+        graphemes: result.explicitGraphemes,
+        change: result.documentChange,
+      );
     } else {
       _replaceValueAndDocument(result.graphemes);
     }
@@ -1856,7 +1860,11 @@ class TextInputModel extends ViewComponent {
       _document = nextDocument;
       _value = <String>[..._value, ...paste];
     } else if (nextDocument != null) {
-      _replaceDocumentSnapshot(nextDocument, graphemes: result.graphemes);
+      _replaceDocumentSnapshot(
+        nextDocument,
+        graphemes: result.explicitGraphemes,
+        change: result.documentChange,
+      );
     } else {
       _replaceValueAndDocument(result.graphemes);
     }
@@ -1937,7 +1945,7 @@ class TextInputModel extends ViewComponent {
   void _replaceValueAndDocument(List<String> graphemes) {
     final normalized = List<String>.of(graphemes, growable: false);
     final nextDocument = TextDocument();
-    nextDocument.replaceLines(TextDocument.parseFlatGraphemes(normalized));
+    nextDocument.replaceLineTexts(TextDocument.parseFlatLineTexts(normalized));
     _value = normalized;
     _document = nextDocument;
     _invalidateWrappedLines();
@@ -1946,13 +1954,35 @@ class TextInputModel extends ViewComponent {
   void _replaceDocumentSnapshot(
     TextDocument document, {
     List<String>? graphemes,
+    TextDocumentChange? change,
   }) {
     _document = document;
-    _value =
-        graphemes == null
-        ? document.flattenWithNewlines()
-        : List<String>.of(graphemes, growable: false);
+    _value = graphemes != null
+        ? List<String>.of(graphemes, growable: false)
+        : change != null
+        ? _patchValueForDocumentChange(document, change)
+        : document.flattenWithNewlines();
     _invalidateWrappedLines();
+  }
+
+  List<String> _patchValueForDocumentChange(
+    TextDocument document,
+    TextDocumentChange change,
+  ) {
+    if (change.isNoop) {
+      return List<String>.of(_value, growable: false);
+    }
+    final start = change.startOffset.clamp(0, _value.length);
+    final oldEnd = change.oldEndOffset.clamp(start, _value.length);
+    final replacement = document.graphemesInRange(
+      startOffset: change.startOffset,
+      endOffset: change.newEndOffset,
+    );
+    return List<String>.unmodifiable(<String>[
+      ..._value.sublist(0, start),
+      ...replacement,
+      ..._value.sublist(oldEnd),
+    ]);
   }
 
   bool _deleteSelection() {

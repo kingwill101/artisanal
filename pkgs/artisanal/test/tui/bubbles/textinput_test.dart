@@ -361,6 +361,30 @@ void main() {
         expect(input.position, 0);
       });
 
+      test(
+        'document-backed multiline backspace patches value without warming every line cache',
+        () {
+          final lines = List<String>.generate(
+            300,
+            (index) => 'line-$index',
+            growable: false,
+          );
+          final input = TextInputModel(multiline: true)..focus();
+          input.value = lines.join('\n');
+          input.position =
+              input.document.lineStartOffset(150) +
+              input.document.lineLength(150);
+
+          expect(input.document.debugStorageDepth, greaterThan(1));
+          expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
+
+          input.update(KeyMsg(const Key(KeyType.backspace)));
+
+          expect(input.document.lineAt(150), 'line-15');
+          expect(input.document.debugLineGraphemeCacheCount, lessThan(10));
+        },
+      );
+
       test('delete removes a full grapheme cluster', () {
         final input = TextInputModel()..focus();
         input.value = 'e\u0301x'; // 2 graphemes: "é" + "x"

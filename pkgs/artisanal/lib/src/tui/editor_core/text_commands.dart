@@ -28,6 +28,7 @@ final class TextCommandResult {
   final TextDocument? document;
   final TextDocumentChange? documentChange;
   final bool changed;
+  List<String>? get explicitGraphemes => _graphemes;
 
   List<String> get graphemes =>
       _graphemes ?? document?.flattenWithNewlines() ?? const <String>[];
