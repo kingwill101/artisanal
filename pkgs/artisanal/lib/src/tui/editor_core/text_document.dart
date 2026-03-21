@@ -57,6 +57,9 @@ final class TextDocument {
   @visibleForTesting
   int get debugDistinctSourceCount => _storage.debugDistinctSourceCount;
 
+  @visibleForTesting
+  int get debugJoinedSourceTextCount => _storage.debugJoinedSourceTextCount;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
@@ -654,11 +657,16 @@ final class TextDocument {
 
 final class _TextDocumentSource {
   _TextDocumentSource._({
-    required this.text,
+    String? rawText,
+    List<String>? lineTexts,
     required this.lineStarts,
     required this.lineEnds,
     required this.lineLengths,
-  });
+  }) : assert((rawText != null) != (lineTexts != null)),
+       _rawText = rawText,
+       _lineTexts = lineTexts == null
+           ? null
+           : List<String>.unmodifiable(lineTexts);
 
   factory _TextDocumentSource.fromText(String text) {
     final lineStarts = <int>[];
@@ -679,7 +687,7 @@ final class _TextDocumentSource {
       start = newline + 1;
     }
     return _TextDocumentSource._(
-      text: text,
+      rawText: text,
       lineStarts: List<int>.unmodifiable(lineStarts),
       lineEnds: List<int>.unmodifiable(lineEnds),
       lineLengths: List<int>.unmodifiable(lineLengths),
@@ -700,35 +708,95 @@ final class _TextDocumentSource {
             : List<int>.unmodifiable(lineLengths);
     final lineStarts = <int>[];
     final lineEnds = <int>[];
-    final buffer = StringBuffer();
     var offset = 0;
     for (var index = 0; index < lineTexts.length; index++) {
       final line = lineTexts[index];
       lineStarts.add(offset);
-      buffer.write(line);
       offset += line.length;
       lineEnds.add(offset);
       if (index < lineTexts.length - 1) {
-        buffer.write('\n');
         offset += 1;
       }
     }
     return _TextDocumentSource._(
-      text: buffer.toString(),
+      lineTexts: lineTexts,
       lineStarts: List<int>.unmodifiable(lineStarts),
       lineEnds: List<int>.unmodifiable(lineEnds),
       lineLengths: normalizedLineLengths,
     );
   }
 
-  final String text;
+  String get text => _rawText ??= _lineTexts!.join('\n');
+
+  bool get debugHasJoinedTextCache => _lineTexts != null && _rawText != null;
+
   final List<int> lineStarts;
   final List<int> lineEnds;
   final List<int> lineLengths;
+  String? _rawText;
+  final List<String>? _lineTexts;
 
   int get lineCount => lineLengths.length;
 
-  String lineAt(int index) => text.substring(lineStarts[index], lineEnds[index]);
+  String lineAt(int index) =>
+      _lineTexts?[index] ?? text.substring(lineStarts[index], lineEnds[index]);
+
+  String textBetweenLines({required int startLine, required int endLine}) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return '';
+    }
+    if (normalizedStart == 0 && normalizedEnd == lineCount) {
+      return text;
+    }
+    final buffer = StringBuffer();
+    writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+      leadingNewline: false,
+    );
+    return buffer.toString();
+  }
+
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return;
+    }
+    if (_lineTexts case final lineTexts?) {
+      for (var index = normalizedStart; index < normalizedEnd; index++) {
+        if (leadingNewline || index > normalizedStart) {
+          buffer.write('\n');
+        }
+        buffer.write(lineTexts[index]);
+      }
+      return;
+    }
+    if (leadingNewline) {
+      buffer.write('\n');
+    }
+    buffer.write(
+      text.substring(
+        lineStarts[normalizedStart],
+        _textEndForLineWindow(normalizedEnd),
+      ),
+    );
+  }
+
+  int _textEndForLineWindow(int endLine) {
+    if (endLine >= lineCount) {
+      return lineEnds.last;
+    }
+    return lineStarts[endLine] - 1;
+  }
 }
 
 final class _TextDocumentStorage {
@@ -917,6 +985,11 @@ final class _TextDocumentStorage {
   int get debugDistinctSourceCount =>
       _debugDistinctSourceCount(<_TextDocumentStorage>{}, <_TextDocumentSource>{});
 
+  int get debugJoinedSourceTextCount => _debugJoinedSourceTextCount(
+    <_TextDocumentStorage>{},
+    <_TextDocumentSource>{},
+  );
+
   bool get debugHasMaterializedLineTextCache => _cachedLineTexts != null;
 
   bool get debugHasTextCache => _cachedText != null;
@@ -943,9 +1016,9 @@ final class _TextDocumentStorage {
     }
     if (_source case final source?) {
       final sourceStartLine = _sourceLineStartIndex!;
-      return source.text.substring(
-        source.lineStarts[sourceStartLine + normalizedStart],
-        _sourceTextEndForLocalLineWindow(normalizedEnd),
+      return source.textBetweenLines(
+        startLine: sourceStartLine + normalizedStart,
+        endLine: sourceStartLine + normalizedEnd,
       );
     }
     final buffer = StringBuffer();
@@ -1250,9 +1323,13 @@ final class _TextDocumentStorage {
     }
     if (_source case final source?) {
       final sourceStartLine = _sourceLineStartIndex!;
-      return source.text.substring(
-        source.lineStarts[sourceStartLine],
-        _sourceTextEndForLocalLineWindow(lineCount),
+      final sourceEndLine = _sourceLineEndIndex!;
+      if (sourceStartLine == 0 && sourceEndLine == source.lineCount) {
+        return source.text;
+      }
+      return source.textBetweenLines(
+        startLine: sourceStartLine,
+        endLine: sourceEndLine,
       );
     }
     final buffer = StringBuffer();
@@ -1287,14 +1364,11 @@ final class _TextDocumentStorage {
     }
     if (_source case final source?) {
       final sourceStartLine = _sourceLineStartIndex!;
-      if (leadingNewline) {
-        buffer.write('\n');
-      }
-      buffer.write(
-        source.text.substring(
-          source.lineStarts[sourceStartLine + normalizedStart],
-          _sourceTextEndForLocalLineWindow(normalizedEnd),
-        ),
+      source.writeTextBetweenLinesToBuffer(
+        buffer,
+        startLine: sourceStartLine + normalizedStart,
+        endLine: sourceStartLine + normalizedEnd,
+        leadingNewline: leadingNewline,
       );
       return;
     }
@@ -1883,15 +1957,28 @@ final class _TextDocumentStorage {
     return total;
   }
 
-  int _sourceTextEndForLocalLineWindow(int endLine) {
-    final source = _source!;
-    final sourceLineStartIndex = _sourceLineStartIndex!;
-    final sourceLineEndIndex = _sourceLineEndIndex!;
-    final sourceEndLine = sourceLineStartIndex + endLine;
-    if (sourceEndLine >= sourceLineEndIndex) {
-      return source.lineEnds[sourceLineEndIndex - 1];
+  int _debugJoinedSourceTextCount(
+    Set<_TextDocumentStorage> visited,
+    Set<_TextDocumentSource> sources,
+  ) {
+    if (!visited.add(this)) {
+      return 0;
     }
-    return source.lineStarts[sourceEndLine] - 1;
+    final segments = _segments;
+    if (segments == null || segments.isEmpty) {
+      final source = _source;
+      if (source == null ||
+          !source.debugHasJoinedTextCache ||
+          !sources.add(source)) {
+        return 0;
+      }
+      return 1;
+    }
+    var total = 0;
+    for (final segment in segments) {
+      total += segment.storage._debugJoinedSourceTextCount(visited, sources);
+    }
+    return total;
   }
 }
 

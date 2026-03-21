@@ -187,6 +187,7 @@ void main() {
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(1));
         expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugJoinedSourceTextCount, 0);
         expect(document.debugLineGraphemeCacheCount, parsedLines.length);
         expect(document.lineCount, parsedLines.length);
         expect(document.lineAt(0), 'line-0-abcdefghij');
@@ -549,9 +550,38 @@ void main() {
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
         expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugJoinedSourceTextCount, 0);
         expect(document.lineCount, replacementLineTexts.length);
         expect(document.lineAt(0), replacementLineTexts.first);
         expect(document.lineAt(599), replacementLineTexts.last);
+      },
+    );
+
+    test(
+      'line-text-backed sources stay unjoined through composite full-text reads',
+      () {
+        final replacementLineTexts = List<String>.generate(
+          600,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: 'alpha\nbeta');
+
+        document.replaceLineTextRange(
+          startLine: 0,
+          endLine: document.lineCount,
+          replacementLineTexts: replacementLineTexts,
+        );
+
+        expect(document.debugJoinedSourceTextCount, 0);
+        expect(
+          document.textBetweenLines(startLine: 120, endLine: 181),
+          replacementLineTexts.sublist(120, 181).join('\n'),
+        );
+        expect(document.debugJoinedSourceTextCount, 0);
+
+        expect(document.text, replacementLineTexts.join('\n'));
+        expect(document.debugJoinedSourceTextCount, 0);
       },
     );
 
