@@ -307,20 +307,50 @@ final class TextDocument {
     }
 
     final column = clamped.column.clamp(0, lineLength - 1);
-    final graphemeAtCursor = _storage.graphemeInLineAt(clamped.line, column)!;
-    if (_isWhitespace(graphemeAtCursor)) {
+    final cachedLine =
+        _storage._lineGraphemeCaches[clamped.line] ??
+        _storage._sourceParsedLineAt(clamped.line);
+    if (cachedLine != null) {
+      if (_isWhitespace(cachedLine[column])) {
+        var start = column;
+        while (start > 0 && _isWhitespace(cachedLine[start - 1])) {
+          start--;
+        }
+        var end = column;
+        while (end < lineLength && _isWhitespace(cachedLine[end])) {
+          end++;
+        }
+        return (
+          start: TextPosition(line: clamped.line, column: start),
+          end: TextPosition(line: clamped.line, column: end),
+        );
+      }
+
       var start = column;
-      while (
-        start > 0 &&
-        _isWhitespace(_storage.graphemeInLineAt(clamped.line, start - 1)!)
-      ) {
+      while (start > 0 && !_isWhitespace(cachedLine[start - 1])) {
         start--;
       }
       var end = column;
-      while (
-        end < lineLength &&
-        _isWhitespace(_storage.graphemeInLineAt(clamped.line, end)!)
-      ) {
+      while (end < lineLength && !_isWhitespace(cachedLine[end])) {
+        end++;
+      }
+      return (
+        start: TextPosition(line: clamped.line, column: start),
+        end: TextPosition(line: clamped.line, column: end),
+      );
+    }
+
+    final lineText = _storage.lineAt(clamped.line);
+    final prefix = lineText.characters.take(column + 1).toList(growable: false);
+    final graphemeAtCursor = prefix.last;
+    if (_isWhitespace(graphemeAtCursor)) {
+      var start = column;
+      while (start > 0 && _isWhitespace(prefix[start - 1])) {
+        start--;
+      }
+      var end = column;
+      final suffix = lineText.characters.skip(column).iterator;
+      while (suffix.moveNext() && _isWhitespace(suffix.current)) {
         end++;
       }
       return (
@@ -330,17 +360,12 @@ final class TextDocument {
     }
 
     var start = column;
-    while (
-      start > 0 &&
-      !_isWhitespace(_storage.graphemeInLineAt(clamped.line, start - 1)!)
-    ) {
+    while (start > 0 && !_isWhitespace(prefix[start - 1])) {
       start--;
     }
     var end = column;
-    while (
-      end < lineLength &&
-      !_isWhitespace(_storage.graphemeInLineAt(clamped.line, end)!)
-    ) {
+    final suffix = lineText.characters.skip(column).iterator;
+    while (suffix.moveNext() && !_isWhitespace(suffix.current)) {
       end++;
     }
     return (
