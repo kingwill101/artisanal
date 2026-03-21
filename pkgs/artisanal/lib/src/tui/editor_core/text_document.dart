@@ -49,6 +49,9 @@ final class TextDocument {
   @visibleForTesting
   bool get debugHasTextCache => _storage.debugHasTextCache;
 
+  @visibleForTesting
+  int get debugSourceBackedLeafCount => _storage.debugSourceBackedLeafCount;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
@@ -536,18 +539,42 @@ final class _TextDocumentStorage {
   static const int _maxCompositeSegmentCount = 32;
 
   _TextDocumentStorage._leaf({
-    required List<String> lineTexts,
+    List<String>? lineTexts,
+    String? sourceText,
+    List<int>? sourceLineStarts,
+    List<int>? sourceLineEnds,
+    int? sourceStartOffset,
+    int? sourceEndOffset,
     required List<int> lineLengths,
     required this.length,
     required this.revision,
     required this.storageIdentity,
     Map<int, List<String>>? lineGraphemeCaches,
-  }) : _baseLineTexts = List<String>.unmodifiable(lineTexts),
+  }) : assert(
+         (lineTexts != null) !=
+             (sourceText != null &&
+                 sourceLineStarts != null &&
+                 sourceLineEnds != null &&
+                 sourceStartOffset != null &&
+                 sourceEndOffset != null),
+       ),
+       _baseLineTexts = lineTexts == null
+           ? null
+           : List<String>.unmodifiable(lineTexts),
        _baseLineLengths = List<int>.unmodifiable(lineLengths),
+       _sourceText = sourceText,
+       _sourceLineStarts = sourceLineStarts == null
+           ? null
+           : List<int>.unmodifiable(sourceLineStarts),
+       _sourceLineEnds = sourceLineEnds == null
+           ? null
+           : List<int>.unmodifiable(sourceLineEnds),
+       _sourceStartOffset = sourceStartOffset,
+       _sourceEndOffset = sourceEndOffset,
        _segments = null,
        _segmentLineStarts = null,
        _segmentStartOffsets = null,
-       lineCount = lineTexts.length,
+       lineCount = lineLengths.length,
        _lineGraphemeCaches = lineGraphemeCaches ?? <int, List<String>>{};
 
   _TextDocumentStorage._composite({
@@ -558,6 +585,11 @@ final class _TextDocumentStorage {
     required this.storageIdentity,
   }) : _baseLineTexts = null,
        _baseLineLengths = null,
+       _sourceText = null,
+       _sourceLineStarts = null,
+       _sourceLineEnds = null,
+       _sourceStartOffset = null,
+       _sourceEndOffset = null,
        _segments = List<_TextDocumentStorageSegment>.unmodifiable(segments),
        _segmentLineStarts = _computeSegmentLineStarts(segments),
        _segmentStartOffsets = _computeSegmentStartOffsets(segments),
@@ -653,6 +685,11 @@ final class _TextDocumentStorage {
   final Object storageIdentity;
   final List<String>? _baseLineTexts;
   final List<int>? _baseLineLengths;
+  final String? _sourceText;
+  final List<int>? _sourceLineStarts;
+  final List<int>? _sourceLineEnds;
+  final int? _sourceStartOffset;
+  final int? _sourceEndOffset;
   final List<_TextDocumentStorageSegment>? _segments;
   final List<int>? _segmentLineStarts;
   final List<int>? _segmentStartOffsets;
@@ -683,6 +720,9 @@ final class _TextDocumentStorage {
 
   int get debugLineGraphemeCacheCount =>
       _debugLineGraphemeCacheCount(<_TextDocumentStorage>{});
+
+  int get debugSourceBackedLeafCount =>
+      _debugSourceBackedLeafCount(<_TextDocumentStorage>{});
 
   bool get debugHasMaterializedLineTextCache => _cachedLineTexts != null;
 
@@ -734,6 +774,12 @@ final class _TextDocumentStorage {
     }
     if (_baseLineTexts != null) {
       return _baseLineTexts[index];
+    }
+    if (_sourceText case final sourceText?) {
+      return sourceText.substring(
+        _sourceLineStarts![index],
+        _sourceLineEnds![index],
+      );
     }
     final (segment, localIndex) = _segmentForLine(index);
     return segment.lineAt(localIndex);
@@ -966,6 +1012,9 @@ final class _TextDocumentStorage {
     if (_baseLineTexts case final baseLineTexts?) {
       return baseLineTexts.join('\n');
     }
+    if (_sourceText case final sourceText?) {
+      return sourceText.substring(_sourceStartOffset!, _sourceEndOffset!);
+    }
     final buffer = StringBuffer();
     writeTextBetweenLinesToBuffer(
       buffer,
@@ -993,6 +1042,15 @@ final class _TextDocumentStorage {
           buffer.write('\n');
         }
         buffer.write(baseLineTexts[index]);
+      }
+      return;
+    }
+    if (_sourceText != null) {
+      for (var index = normalizedStart; index < normalizedEnd; index++) {
+        if (leadingNewline || index > normalizedStart) {
+          buffer.write('\n');
+        }
+        buffer.write(lineAt(index));
       }
       return;
     }
@@ -1170,40 +1228,78 @@ final class _TextDocumentStorage {
     );
   }
 
+  static _TextDocumentStorage _leafFromTextSource({
+    required String sourceText,
+    required List<int> sourceLineStarts,
+    required List<int> sourceLineEnds,
+    required List<int> lineLengths,
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    return _TextDocumentStorage._leaf(
+      sourceText: sourceText,
+      sourceLineStarts: sourceLineStarts,
+      sourceLineEnds: sourceLineEnds,
+      sourceStartOffset: sourceLineStarts.first,
+      sourceEndOffset: sourceLineEnds.last,
+      lineLengths: lineLengths,
+      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+    );
+  }
+
   static _TextDocumentStorage _buildStorageFromText(
     String text, {
     required int revision,
     Object? storageIdentity,
   }) {
     final segments = <_TextDocumentStorageSegment>[];
-    var currentLines = <String>[];
+    var currentLineStarts = <int>[];
+    var currentLineEnds = <int>[];
+    var currentLineLengths = <int>[];
 
     void flushChunk() {
-      if (currentLines.isEmpty) {
+      if (currentLineStarts.isEmpty) {
         return;
       }
-      final storage = _leafFromLineTexts(currentLines, revision: 0);
+      final storage = _leafFromTextSource(
+        sourceText: text,
+        sourceLineStarts: currentLineStarts,
+        sourceLineEnds: currentLineEnds,
+        lineLengths: currentLineLengths,
+        revision: 0,
+      );
       segments.add(storage.slice(0, storage.lineCount));
-      currentLines = <String>[];
+      currentLineStarts = <int>[];
+      currentLineEnds = <int>[];
+      currentLineLengths = <int>[];
     }
 
     var start = 0;
     while (true) {
       final newline = text.indexOf('\n', start);
       if (newline == -1) {
-        currentLines.add(text.substring(start));
+        currentLineStarts.add(start);
+        currentLineEnds.add(text.length);
+        currentLineLengths.add(text.substring(start).characters.length);
         break;
       }
-      currentLines.add(text.substring(start, newline));
-      if (currentLines.length >= _maxLeafLineCount) {
+      currentLineStarts.add(start);
+      currentLineEnds.add(newline);
+      currentLineLengths.add(text.substring(start, newline).characters.length);
+      if (currentLineStarts.length >= _maxLeafLineCount) {
         flushChunk();
       }
       start = newline + 1;
     }
 
     if (segments.isEmpty) {
-      return _leafFromLineTexts(
-        currentLines,
+      return _leafFromTextSource(
+        sourceText: text,
+        sourceLineStarts: currentLineStarts,
+        sourceLineEnds: currentLineEnds,
+        lineLengths: currentLineLengths,
         revision: revision,
         storageIdentity: storageIdentity,
       );
@@ -1398,6 +1494,21 @@ final class _TextDocumentStorage {
     var total = _lineGraphemeCaches.length;
     for (final segment in segments) {
       total += segment.storage._debugLineGraphemeCacheCount(visited);
+    }
+    return total;
+  }
+
+  int _debugSourceBackedLeafCount(Set<_TextDocumentStorage> visited) {
+    if (!visited.add(this)) {
+      return 0;
+    }
+    final segments = _segments;
+    if (segments == null || segments.isEmpty) {
+      return _sourceText == null ? 0 : 1;
+    }
+    var total = 0;
+    for (final segment in segments) {
+      total += segment.storage._debugSourceBackedLeafCount(visited);
     }
     return total;
   }

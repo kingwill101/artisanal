@@ -121,6 +121,7 @@ void main() {
         document.replaceText(lineTexts.join('\n'));
 
         expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(0));
         expect(document.debugHasMaterializedLineTextCache, isFalse);
         expect(document.debugHasTextCache, isFalse);
         expect(document.lineCount, lineTexts.length);
@@ -141,6 +142,7 @@ void main() {
         final document = TextDocument(text: lineTexts.join('\n'));
 
         expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(0));
         expect(document.debugHasMaterializedLineTextCache, isFalse);
         expect(document.debugHasTextCache, isFalse);
 
