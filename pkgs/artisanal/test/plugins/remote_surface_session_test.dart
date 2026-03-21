@@ -95,10 +95,8 @@ void main() {
         await pluginToHost.close();
       });
 
-      unawaited(
-        pluginChannel.send(
-          const plugins.RemotePluginFocusInput(surfaceId: 'sidebar'),
-        ),
+      await pluginChannel.send(
+        const plugins.RemotePluginFocusInput(surfaceId: 'sidebar'),
       );
 
       await expectLater(

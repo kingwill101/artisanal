@@ -48,6 +48,7 @@ Future<void> main(List<String> args) async {
           runtime,
           selectedPluginId,
           contains: _snapshotKeyExpectation(value.label),
+          timeout: _snapshotKeyTimeout(value.label),
         );
       }
       if (motion case final point?) {
@@ -112,6 +113,13 @@ String _snapshotKeyExpectation(String label) {
     'n' => 'Notice: sent',
     'p' => 'Picker: /tmp/workspace.txt',
     _ => 'Last key: $label',
+  };
+}
+
+Duration _snapshotKeyTimeout(String label) {
+  return switch (label) {
+    'c' || 'o' || 'n' || 'p' => const Duration(seconds: 10),
+    _ => const Duration(seconds: 2),
   };
 }
 
