@@ -10,6 +10,7 @@ export 'text_commands.dart';
 export 'text_decorations.dart';
 export 'text_diagnostics.dart';
 export 'text_document.dart';
+export 'text_extmarks.dart';
 export 'text_editing.dart';
 export 'text_edit_ops.dart';
 export 'text_highlighting.dart';
