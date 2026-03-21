@@ -112,6 +112,8 @@ export 'src/tui/tui.dart'
         ProgramReplayStep,
         Program,
         ProgramOptions,
+        ScreenMode,
+        UiAnchor,
         MessageFilter,
         ProgramCancelledError,
         runProgram,
