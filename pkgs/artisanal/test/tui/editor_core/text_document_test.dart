@@ -538,6 +538,38 @@ void main() {
       expect(document.debugLineGraphemeCacheCount, 0);
     });
 
+    test('graphemeAt keeps long raw-text lines cache-cold', () {
+      final prefix = List<String>.filled(4096, 'a', growable: false).join();
+      const emoji = '👩‍👩‍👧‍👦';
+      final suffix = List<String>.filled(4096, 'b', growable: false).join();
+      final document = TextDocument(text: '$prefix$emoji$suffix');
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.graphemeAt(prefix.characters.length), emoji);
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
+
+    test('single-line raw-text range reads keep grapheme caches cold', () {
+      const emoji = '👩‍👩‍👧‍👦';
+      final prefix = List<String>.filled(2048, 'a', growable: false).join();
+      final middle = List<String>.filled(256, emoji, growable: false).join();
+      final suffix = List<String>.filled(2048, 'b', growable: false).join();
+      final document = TextDocument(text: '$prefix$middle$suffix');
+      final start = prefix.characters.length + 32;
+      final end = prefix.characters.length + 96;
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      final graphemes = document.graphemesInRange(
+        startOffset: start,
+        endOffset: end,
+      );
+      final text = document.textInRange(startOffset: start, endOffset: end);
+
+      expect(graphemes.join(), text);
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
+
     test('wordBoundaryAt keeps long-line grapheme caches cold', () {
       final prefix = List<String>.filled(4096, 'a', growable: false).join();
       final gap = List<String>.filled(32, ' ', growable: false).join();

@@ -1107,6 +1107,35 @@ abstract base class _TextDocumentSource {
 
   List<String>? parsedLineAt(int index) => null;
 
+  String? graphemeInLineAt(int index, int column) => null;
+
+  String textInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final line = lineAt(index);
+    if (startColumn <= 0 && endColumn >= lineLengths[index]) {
+      return line;
+    }
+    return line.characters.skip(startColumn).take(endColumn - startColumn).toString();
+  }
+
+  String lineTextPrefix(int index, int graphemeCount) {
+    final line = lineAt(index);
+    if (graphemeCount >= lineLengths[index]) {
+      return line;
+    }
+    return line.characters.take(graphemeCount).toString();
+  }
+
+  String lineTextSuffix(int index, int graphemeStart) {
+    if (graphemeStart <= 0) {
+      return lineAt(index);
+    }
+    return lineAt(index).characters.skip(graphemeStart).toString();
+  }
+
   String textBetweenLines({required int startLine, required int endLine}) {
     final normalizedStart = startLine.clamp(0, lineCount);
     final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
@@ -1162,6 +1191,7 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
        super._();
 
   final String _rawText;
+  List<List<int>?>? _graphemeOffsetsByLine;
 
   @override
   String get text => _rawText;
@@ -1175,6 +1205,79 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
   @override
   String lineAt(int index) {
     return _rawText.substring(lineStarts[index], lineEnds[index]);
+  }
+
+  List<int> _graphemeOffsetsForLine(int index) {
+    final cache = _graphemeOffsetsByLine ??= List<List<int>?>.filled(
+      lineCount,
+      null,
+      growable: false,
+    );
+    final existing = cache[index];
+    if (existing != null) {
+      return existing;
+    }
+    final start = lineStarts[index];
+    final end = lineEnds[index];
+    final line = _rawText.substring(start, end);
+    final offsets = <int>[0];
+    var offset = 0;
+    for (final grapheme in line.characters) {
+      offset += grapheme.length;
+      offsets.add(offset);
+    }
+    final normalized = List<int>.unmodifiable(offsets);
+    cache[index] = normalized;
+    return normalized;
+  }
+
+  @override
+  String? graphemeInLineAt(int index, int column) {
+    if (column < 0 || column >= lineLengths[index]) {
+      return null;
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    final start = lineStarts[index] + offsets[column];
+    final end = lineStarts[index] + offsets[column + 1];
+    return _rawText.substring(start, end);
+  }
+
+  @override
+  String textInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final start = lineStarts[index] + offsets[startColumn];
+    final end = lineStarts[index] + offsets[endColumn];
+    return _rawText.substring(start, end);
+  }
+
+  @override
+  String lineTextPrefix(int index, int graphemeCount) {
+    if (graphemeCount <= 0) {
+      return '';
+    }
+    if (graphemeCount >= lineLengths[index]) {
+      return lineAt(index);
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    final end = lineStarts[index] + offsets[graphemeCount];
+    return _rawText.substring(lineStarts[index], end);
+  }
+
+  @override
+  String lineTextSuffix(int index, int graphemeStart) {
+    if (graphemeStart <= 0) {
+      return lineAt(index);
+    }
+    if (graphemeStart >= lineLengths[index]) {
+      return '';
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    final start = lineStarts[index] + offsets[graphemeStart];
+    return _rawText.substring(start, lineEnds[index]);
   }
 
   @override
@@ -1333,6 +1436,25 @@ final class _TextDocumentSourceSlice {
 
   List<String>? parsedLineAt(int localIndex) =>
       source.parsedLineAt(startLine + localIndex);
+
+  String? graphemeInLineAt(int localIndex, int column) =>
+      source.graphemeInLineAt(startLine + localIndex, column);
+
+  String textInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required int endColumn,
+  }) => source.textInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  );
+
+  String lineTextPrefix(int localIndex, int graphemeCount) =>
+      source.lineTextPrefix(startLine + localIndex, graphemeCount);
+
+  String lineTextSuffix(int localIndex, int graphemeStart) =>
+      source.lineTextSuffix(startLine + localIndex, graphemeStart);
 
   void writeTextBetweenLinesToBuffer(
     StringBuffer buffer, {
@@ -1845,6 +1967,10 @@ final class _TextDocumentStorage {
     if (sourceParsedLine != null) {
       return sourceParsedLine[column];
     }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.graphemeInLineAt(index, column);
+    }
     return lineAt(index).characters.skip(column).first;
   }
 
@@ -1874,6 +2000,10 @@ final class _TextDocumentStorage {
         return sourceParsedLine.join();
       }
       return sourceParsedLine.take(clampedCount).join();
+    }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.lineTextPrefix(index, clampedCount);
     }
     final line = lineAt(index);
     if (clampedCount >= totalLineLength) {
@@ -1914,6 +2044,10 @@ final class _TextDocumentStorage {
     if (sourceParsedLine != null) {
       return sourceParsedLine.skip(clampedStart).join();
     }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.lineTextSuffix(index, clampedStart);
+    }
     final line = lineAt(index);
     return line.characters.skip(clampedStart).toString();
   }
@@ -1951,6 +2085,17 @@ final class _TextDocumentStorage {
       return List<String>.unmodifiable(
         sourceParsedLine.sublist(normalizedStart, normalizedEnd),
       );
+    }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice
+          .textInLineRange(
+            index,
+            startColumn: normalizedStart,
+            endColumn: normalizedEnd,
+          )
+          .characters
+          .toList(growable: false);
     }
     return lineAt(index).characters
         .skip(normalizedStart)
@@ -1993,6 +2138,14 @@ final class _TextDocumentStorage {
         return sourceParsedLine.join();
       }
       return sourceParsedLine.sublist(normalizedStart, normalizedEnd).join();
+    }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.textInLineRange(
+        index,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      );
     }
     if (normalizedStart == 0 && normalizedEnd == lineLength) {
       return lineAt(index);
