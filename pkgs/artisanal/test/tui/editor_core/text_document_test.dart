@@ -122,6 +122,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugDistinctSourceCount, 1);
         expect(document.debugHasMaterializedLineTextCache, isFalse);
         expect(document.debugHasTextCache, isFalse);
         expect(document.lineCount, lineTexts.length);
@@ -149,6 +150,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugDistinctSourceCount, 1);
         expect(document.lineCount, lineTexts.length);
         expect(document.lineAt(0), lineTexts.first);
         expect(document.lineAt(599), lineTexts.last);
@@ -167,6 +169,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugDistinctSourceCount, 1);
         expect(document.debugHasMaterializedLineTextCache, isFalse);
         expect(document.debugHasTextCache, isFalse);
 
@@ -490,6 +493,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugDistinctSourceCount, 1);
         expect(document.lineCount, replacementLineTexts.length);
         expect(document.lineAt(0), replacementLineTexts.first);
         expect(document.lineAt(599), replacementLineTexts.last);
@@ -597,6 +601,8 @@ void main() {
 
       expect(document.debugStorageDepth, greaterThan(1));
       expect(document.debugStorageSegmentCount, greaterThan(1));
+      expect(document.debugSourceBackedLeafCount, greaterThan(1));
+      expect(document.debugDistinctSourceCount, 1);
       expect(document.lineAt(0), 'line-0');
       expect(document.lineAt(255), 'line-255');
       expect(document.lineAt(256), 'line-256');
@@ -649,6 +655,7 @@ void main() {
         expect(document.debugStorageDepth, 1);
         expect(document.debugStorageSegmentCount, 1);
         expect(document.debugSourceBackedLeafCount, 1);
+        expect(document.debugDistinctSourceCount, 1);
         expect(document.lineCount, 200);
         expect(document.lineAt(0), 'line-100');
         expect(document.lineAt(155), 'line-255');
