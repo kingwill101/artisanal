@@ -1372,6 +1372,7 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
 
   final List<String> _lineTexts;
   String? _joinedText;
+  List<List<int>?>? _graphemeOffsetsByLine;
 
   @override
   String get text => _joinedText ??= _lineTexts.join('\n');
@@ -1384,6 +1385,119 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
 
   @override
   String lineAt(int index) => _lineTexts[index];
+
+  List<int> _graphemeOffsetsForLine(int index) {
+    final cache = _graphemeOffsetsByLine ??= List<List<int>?>.filled(
+      lineCount,
+      null,
+      growable: false,
+    );
+    final existing = cache[index];
+    if (existing != null) {
+      return existing;
+    }
+    final line = _lineTexts[index];
+    final offsets = <int>[0];
+    var offset = 0;
+    for (final grapheme in line.characters) {
+      offset += grapheme.length;
+      offsets.add(offset);
+    }
+    final normalized = List<int>.unmodifiable(offsets);
+    cache[index] = normalized;
+    return normalized;
+  }
+
+  @override
+  String? graphemeInLineAt(int index, int column) {
+    if (column < 0 || column >= lineLengths[index]) {
+      return null;
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    final line = _lineTexts[index];
+    return line.substring(offsets[column], offsets[column + 1]);
+  }
+
+  @override
+  List<String> graphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final line = _lineTexts[index];
+    final graphemes = List<String>.filled(
+      endColumn - startColumn,
+      '',
+      growable: false,
+    );
+    for (var offset = 0; offset < graphemes.length; offset++) {
+      graphemes[offset] = line.substring(
+        offsets[startColumn + offset],
+        offsets[startColumn + offset + 1],
+      );
+    }
+    return List<String>.unmodifiable(graphemes);
+  }
+
+  @override
+  String textInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final line = _lineTexts[index];
+    return line.substring(offsets[startColumn], offsets[endColumn]);
+  }
+
+  @override
+  String lineTextPrefix(int index, int graphemeCount) {
+    if (graphemeCount <= 0) {
+      return '';
+    }
+    final line = _lineTexts[index];
+    if (graphemeCount >= lineLengths[index]) {
+      return line;
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    return line.substring(0, offsets[graphemeCount]);
+  }
+
+  @override
+  String lineTextSuffix(int index, int graphemeStart) {
+    if (graphemeStart <= 0) {
+      return _lineTexts[index];
+    }
+    if (graphemeStart >= lineLengths[index]) {
+      return '';
+    }
+    final offsets = _graphemeOffsetsForLine(index);
+    final line = _lineTexts[index];
+    return line.substring(offsets[graphemeStart]);
+  }
+
+  @override
+  bool matchesGraphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final line = _lineTexts[index];
+    for (var offset = 0; offset < graphemeCount; offset++) {
+      if (line.substring(
+            offsets[startColumn + offset],
+            offsets[startColumn + offset + 1],
+          ) !=
+          graphemes[graphemeStart + offset]) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   @override
   void writeTextBetweenLinesToBuffer(
@@ -1458,7 +1572,9 @@ final class _ParsedLineDocumentSource extends _TextDocumentSource {
       if (leadingNewline || index > normalizedStart) {
         buffer.write('\n');
       }
-      buffer.write(lineAt(index));
+      for (final grapheme in _parsedLines[index]) {
+        buffer.write(grapheme);
+      }
     }
   }
 }

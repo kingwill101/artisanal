@@ -364,6 +364,23 @@ void main() {
       },
     );
 
+    test('parsed-line textBetweenLines stays lazy for partial windows', () {
+      final document = TextDocument.fromParsedLines(const [
+        ['a', 'b', 'c'],
+        ['d', 'e', 'f'],
+        ['g', 'h', 'i'],
+      ]);
+
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+
+      final text = document.textBetweenLines(startLine: 1, endLine: 3);
+
+      expect(text, 'def\nghi');
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+    });
+
     test(
       'replaceLines leaves revision and storage identity stable on no-op parsed edits',
       () {
@@ -569,6 +586,30 @@ void main() {
         List<String>.filled(64, emoji, growable: false),
       );
       expect(document.debugLineGraphemeCacheCount, 1);
+      expect(document.debugHasTextCache, isFalse);
+    });
+
+    test('line-text-backed grapheme probes keep joined text cache cold', () {
+      const emoji = '👩‍👩‍👧‍👦';
+      final prefix = List<String>.filled(2048, 'a', growable: false).join();
+      final middle = List<String>.filled(64, emoji, growable: false).join();
+      final suffix = List<String>.filled(2048, 'b', growable: false).join();
+      final document = TextDocument.fromLineTexts(<String>[
+        '$prefix$middle$suffix',
+      ]);
+
+      expect(document.debugHasTextCache, isFalse);
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      expect(document.graphemeAt(prefix.characters.length), emoji);
+      expect(document.debugHasTextCache, isFalse);
+
+      final graphemes = document.graphemesInRange(
+        startOffset: prefix.characters.length + 8,
+        endOffset: prefix.characters.length + 24,
+      );
+
+      expect(graphemes, List<String>.filled(16, emoji, growable: false));
       expect(document.debugHasTextCache, isFalse);
     });
 
