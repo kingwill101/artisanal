@@ -2,6 +2,7 @@ import 'package:artisanal/src/tui/editor_core/editor_core.dart';
 import 'package:artisanal/src/tui/editor_core/editor_core.dart' as commands;
 import 'package:artisanal/src/tui/editor_core/editor_core.dart' as edit_ops;
 import 'package:artisanal/src/tui/editor_core/editor_core.dart' as nav;
+import 'package:characters/characters.dart';
 import 'package:test/test.dart';
 
 typedef _HistoryState = ({String text, int cursor});
@@ -122,6 +123,22 @@ void main() {
         throwsUnsupportedError,
       );
       expect(document.lineViews[0], const ['a', 'b']);
+    });
+
+    test('copy isolates later edits without rebuilding untouched text eagerly', () {
+      final original = TextDocument(text: 'alpha\nbeta\ngamma');
+      final copy = original.copy();
+
+      copy.replaceOffsetRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'better'.characters.toList(growable: false),
+      );
+
+      expect(original.text, 'alpha\nbeta\ngamma');
+      expect(copy.text, 'alpha\nbetter\ngamma');
+      expect(original.lineViews[0], const ['a', 'l', 'p', 'h', 'a']);
+      expect(copy.lineViews[2], const ['g', 'a', 'm', 'm', 'a']);
     });
   });
 

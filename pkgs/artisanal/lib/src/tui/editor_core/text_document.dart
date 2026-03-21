@@ -12,6 +12,8 @@ final class TextDocument {
     _replaceLines(_parseLines(text));
   }
 
+  TextDocument._raw();
+
   late List<List<String>> _lines;
   late List<int> _lineStartOffsets;
   late int _length;
@@ -24,9 +26,7 @@ final class TextDocument {
       .toList(growable: false);
 
   List<List<String>> get lineViews =>
-      _cachedLineViews ??= List<List<String>>.unmodifiable(
-        _lines.map((line) => UnmodifiableListView(line)),
-      );
+      _cachedLineViews ??= _lines;
 
   int get lineCount => _lines.length;
 
@@ -48,12 +48,13 @@ final class TextDocument {
   }
 
   TextDocument copy() {
-    final next = TextDocument();
-    next._replaceLines(
-      _lines
-          .map((line) => List<String>.from(line, growable: true))
-          .toList(growable: true),
-    );
+    final next = TextDocument._raw();
+    next._lines = _lines;
+    next._lineStartOffsets = _lineStartOffsets;
+    next._length = _length;
+    next._cachedText = _cachedText;
+    next._cachedFlattenedGraphemes = _cachedFlattenedGraphemes;
+    next._cachedLineViews = _cachedLineViews;
     return next;
   }
 
@@ -246,15 +247,12 @@ final class TextDocument {
     final oldEndPosition = positionForOffset(normalizedEnd);
 
     final replacementLines = _parseFlatGraphemes(replacement);
-    final nextLines = _lines
-        .map((line) => List<String>.from(line, growable: true))
-        .toList(growable: true);
     final prefix = List<String>.from(
-      nextLines[startPosition.line].take(startPosition.column),
+      _lines[startPosition.line].take(startPosition.column),
       growable: true,
     );
     final suffix = List<String>.from(
-      nextLines[oldEndPosition.line].skip(oldEndPosition.column),
+      _lines[oldEndPosition.line].skip(oldEndPosition.column),
       growable: true,
     );
 
@@ -264,11 +262,11 @@ final class TextDocument {
     mergedLines.first.insertAll(0, prefix);
     mergedLines.last.addAll(suffix);
 
-    nextLines.replaceRange(
-      startPosition.line,
-      oldEndPosition.line + 1,
-      mergedLines,
-    );
+    final nextLines = <List<String>>[
+      ..._lines.take(startPosition.line),
+      ...mergedLines,
+      ..._lines.skip(oldEndPosition.line + 1),
+    ];
     _replaceLines(nextLines);
 
     final newEndOffset = normalizedStart + replacement.length;
@@ -318,7 +316,9 @@ final class TextDocument {
   }
 
   void _replaceLines(List<List<String>> lines) {
-    _lines = lines;
+    _lines = List<List<String>>.unmodifiable(
+      lines.map((line) => UnmodifiableListView(line)),
+    );
     _lineStartOffsets = List<int>.filled(lines.length, 0, growable: false);
     var offset = 0;
     for (var index = 0; index < lines.length; index++) {
