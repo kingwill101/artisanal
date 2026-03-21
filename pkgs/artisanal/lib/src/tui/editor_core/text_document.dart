@@ -1407,6 +1407,28 @@ final class _SourceSliceTextDocumentLeafBacking extends _TextDocumentLeafBacking
   }
 }
 
+final class _TextDocumentCompositeBacking {
+  _TextDocumentCompositeBacking({
+    required List<_TextDocumentStorageSegment> segments,
+  }) : _segments = List<_TextDocumentStorageSegment>.unmodifiable(segments),
+       _segmentLineStarts = _TextDocumentStorage._computeSegmentLineStarts(
+         segments,
+       ),
+       _segmentStartOffsets = _TextDocumentStorage._computeSegmentStartOffsets(
+         segments,
+       );
+
+  final List<_TextDocumentStorageSegment> _segments;
+  final List<int> _segmentLineStarts;
+  final List<int> _segmentStartOffsets;
+
+  List<_TextDocumentStorageSegment> get segments => _segments;
+
+  List<int> get segmentLineStarts => _segmentLineStarts;
+
+  List<int> get segmentStartOffsets => _segmentStartOffsets;
+}
+
 final class _TextDocumentStorage {
   static const int _maxLeafLineCount = 256;
   static const int _maxCompositeSegmentCount = 32;
@@ -1418,9 +1440,7 @@ final class _TextDocumentStorage {
     required this.storageIdentity,
     Map<int, List<String>>? lineGraphemeCaches,
   }) : _leafBacking = leafBacking,
-       _segments = null,
-       _segmentLineStarts = null,
-       _segmentStartOffsets = null,
+       _compositeBacking = null,
        lineCount = leafBacking.lineCount,
        _lineGraphemeCaches = lineGraphemeCaches ?? <int, List<String>>{};
 
@@ -1431,9 +1451,7 @@ final class _TextDocumentStorage {
     required this.revision,
     required this.storageIdentity,
   }) : _leafBacking = null,
-       _segments = List<_TextDocumentStorageSegment>.unmodifiable(segments),
-       _segmentLineStarts = _computeSegmentLineStarts(segments),
-       _segmentStartOffsets = _computeSegmentStartOffsets(segments),
+       _compositeBacking = _TextDocumentCompositeBacking(segments: segments),
        _lineGraphemeCaches = <int, List<String>>{};
 
   factory _TextDocumentStorage.fromLineTexts(
@@ -1538,9 +1556,7 @@ final class _TextDocumentStorage {
   final int revision;
   final Object storageIdentity;
   final _TextDocumentLeafBacking? _leafBacking;
-  final List<_TextDocumentStorageSegment>? _segments;
-  final List<int>? _segmentLineStarts;
-  final List<int>? _segmentStartOffsets;
+  final _TextDocumentCompositeBacking? _compositeBacking;
   final Map<int, List<String>> _lineGraphemeCaches;
   List<String>? _cachedLineTexts;
   List<int>? _cachedLineLengths;
@@ -1550,7 +1566,7 @@ final class _TextDocumentStorage {
   List<List<String>>? _cachedLineViews;
 
   int get debugDepth {
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       return 1;
     }
@@ -1564,7 +1580,7 @@ final class _TextDocumentStorage {
     return maxChildDepth + 1;
   }
 
-  int get debugSegmentCount => _segments?.length ?? 1;
+  int get debugSegmentCount => _compositeBacking?.segments.length ?? 1;
 
   int get debugLineGraphemeCacheCount =>
       _debugLineGraphemeCacheCount(<_TextDocumentStorage>{});
@@ -1673,8 +1689,9 @@ final class _TextDocumentStorage {
     if (_leafBacking != null) {
       return lineStartOffsets[index];
     }
+    final compositeBacking = _compositeBacking!;
     final (segment, localIndex, segmentIndex) = _segmentForLineWithIndex(index);
-    return _segmentStartOffsets![segmentIndex] +
+    return compositeBacking.segmentStartOffsets[segmentIndex] +
         segment.lineStartOffset(localIndex);
   }
 
@@ -1722,11 +1739,14 @@ final class _TextDocumentStorage {
       return TextPosition(line: line, column: clamped - lineStartOffsets[line]);
     }
 
+    final compositeBacking = _compositeBacking!;
     final (segment, segmentIndex) = _segmentForOffset(clamped);
-    final localOffset = clamped - _segmentStartOffsets![segmentIndex];
+    final localOffset =
+        clamped - compositeBacking.segmentStartOffsets[segmentIndex];
     final localPosition = segment.positionForOffset(localOffset);
     return TextPosition(
-      line: _segmentLineStarts![segmentIndex] + localPosition.line,
+      line: compositeBacking.segmentLineStarts[segmentIndex] +
+          localPosition.line,
       column: localPosition.column,
     );
   }
@@ -1735,7 +1755,7 @@ final class _TextDocumentStorage {
     if (index < 0 || index >= lineCount) {
       return const <String>[];
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineGraphemesAt(localIndex);
     }
@@ -1756,7 +1776,7 @@ final class _TextDocumentStorage {
     if (column < 0 || column >= lineLength) {
       return null;
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.graphemeInLineAt(localIndex, column);
     }
@@ -1780,7 +1800,7 @@ final class _TextDocumentStorage {
     if (clampedCount <= 0) {
       return '';
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineTextPrefix(localIndex, clampedCount);
     }
@@ -1825,7 +1845,7 @@ final class _TextDocumentStorage {
     if (clampedStart >= totalLineLength) {
       return '';
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineTextSuffix(localIndex, clampedStart);
     }
@@ -1855,7 +1875,7 @@ final class _TextDocumentStorage {
     if (normalizedStart == normalizedEnd) {
       return const <String>[];
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.graphemesInLineRange(
         localIndex,
@@ -1895,7 +1915,7 @@ final class _TextDocumentStorage {
     if (normalizedStart == normalizedEnd) {
       return '';
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.textInLineRange(
         localIndex,
@@ -1945,7 +1965,7 @@ final class _TextDocumentStorage {
     if (normalizedCount == 0) {
       return true;
     }
-    if (_segments != null) {
+    if (_compositeBacking != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.matchesGraphemesInLineRange(
         localIndex,
@@ -2057,8 +2077,9 @@ final class _TextDocumentStorage {
       return;
     }
 
-    final segments = _segments!;
-    final segmentLineStarts = _segmentLineStarts!;
+    final compositeBacking = _compositeBacking!;
+    final segments = compositeBacking.segments;
+    final segmentLineStarts = compositeBacking.segmentLineStarts;
     final (_, _, startSegmentIndex) = _segmentForLineWithIndex(normalizedStart);
     var segmentIndex = startSegmentIndex;
     var wroteAnyLine = false;
@@ -2100,8 +2121,9 @@ final class _TextDocumentStorage {
   }
 
   (_TextDocumentStorageSegment, int, int) _segmentForLineWithIndex(int index) {
-    final segments = _segments!;
-    final segmentLineStarts = _segmentLineStarts!;
+    final compositeBacking = _compositeBacking!;
+    final segments = compositeBacking.segments;
+    final segmentLineStarts = compositeBacking.segmentLineStarts;
     var low = 0;
     var high = segments.length - 1;
     while (low < high) {
@@ -2118,8 +2140,9 @@ final class _TextDocumentStorage {
   }
 
   (_TextDocumentStorageSegment, int) _segmentForOffset(int offset) {
-    final segments = _segments!;
-    final segmentStartOffsets = _segmentStartOffsets!;
+    final compositeBacking = _compositeBacking!;
+    final segments = compositeBacking.segments;
+    final segmentStartOffsets = compositeBacking.segmentStartOffsets;
     var low = 0;
     var high = segments.length - 1;
     while (low < high) {
@@ -2493,13 +2516,13 @@ final class _TextDocumentStorage {
       return;
     }
 
-    final childSegments = segment.storage._segments;
+    final childSegments = segment.storage._compositeBacking?.segments;
     if (childSegments == null) {
       _appendMergedLeafSegment(out, segment);
       return;
     }
 
-    final childLineStarts = segment.storage._segmentLineStarts!;
+    final childLineStarts = segment.storage._compositeBacking!.segmentLineStarts;
     for (var index = 0; index < childSegments.length; index++) {
       final child = childSegments[index];
       final childGlobalStart = childLineStarts[index];
@@ -2607,7 +2630,7 @@ final class _TextDocumentStorage {
     if (!visited.add(this)) {
       return 0;
     }
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       return _lineGraphemeCaches.length;
     }
@@ -2622,7 +2645,7 @@ final class _TextDocumentStorage {
     if (!visited.add(this)) {
       return 0;
     }
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       return _leafBacking?.sourceSlice == null ? 0 : 1;
     }
@@ -2640,7 +2663,7 @@ final class _TextDocumentStorage {
     if (!visited.add(this)) {
       return 0;
     }
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       final source = _leafBacking?.source;
       if (source == null || !sources.add(source)) {
@@ -2662,7 +2685,7 @@ final class _TextDocumentStorage {
     if (!visited.add(this)) {
       return 0;
     }
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       final source = _leafBacking?.source;
       if (source == null ||
@@ -2686,7 +2709,7 @@ final class _TextDocumentStorage {
     if (!visited.add(this)) {
       return 0;
     }
-    final segments = _segments;
+    final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       final source = _leafBacking?.source;
       if (source == null || !sources.add(source)) {
