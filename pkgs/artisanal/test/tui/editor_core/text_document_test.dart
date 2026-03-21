@@ -177,6 +177,31 @@ void main() {
     });
 
     test(
+      'full-range textBetweenLines reuses the composite text cache path',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
+        expect(document.debugHasTextCache, isFalse);
+
+        final text = document.textBetweenLines(
+          startLine: 0,
+          endLine: document.lineCount,
+        );
+
+        expect(text, lineTexts.join('\n'));
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
+        expect(document.debugHasTextCache, isTrue);
+      },
+    );
+
+    test(
       'composite range matching does not materialize every touched line cache',
       () {
         final lineTexts = List<String>.generate(

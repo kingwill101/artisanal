@@ -198,7 +198,7 @@ void main() {
     });
 
     test(
-      'default buildDocument can read composite documents without warming text cache',
+      'default buildDocument can read composite documents through the text cache path',
       () {
         final provider = _DefaultBuildSyntaxProvider();
         final document = TextDocument(
@@ -210,11 +210,13 @@ void main() {
         );
 
         expect(document.debugHasTextCache, isFalse);
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
 
         final result = provider.buildDocument(document);
 
         expect(result.decorations, isNotEmpty);
-        expect(document.debugHasTextCache, isFalse);
+        expect(document.debugHasTextCache, isTrue);
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
         expect(provider.calls, hasLength(1));
         expect(provider.calls.single.documentText, isNotNull);
       },
@@ -356,7 +358,8 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
       );
     }
 
-    final previousDocument = previous.document ?? TextDocument(text: previous.text);
+    final previousDocument =
+        previous.document ?? TextDocument(text: previous.text);
     final nextDocument = document ?? TextDocument(text: text);
     final window = textSyntaxChangeWindow(
       previousDocument: previousDocument,

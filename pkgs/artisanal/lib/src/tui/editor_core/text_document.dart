@@ -188,6 +188,9 @@ final class TextDocument {
     if (start == end) {
       return '';
     }
+    if (start == 0 && end == lineCount) {
+      return text;
+    }
     final buffer = StringBuffer();
     for (var line = start; line < end; line++) {
       if (line > start) {
