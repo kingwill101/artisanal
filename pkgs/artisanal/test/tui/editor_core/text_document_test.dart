@@ -538,6 +538,37 @@ void main() {
       expect(document.debugLineGraphemeCacheCount, 0);
     });
 
+    test('wordBoundaryAt keeps long-line grapheme caches cold', () {
+      final prefix = List<String>.filled(4096, 'a', growable: false).join();
+      final gap = List<String>.filled(32, ' ', growable: false).join();
+      final suffix = List<String>.filled(4096, 'b', growable: false).join();
+      final document = TextDocument(text: '$prefix$gap$suffix');
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      final word = document.wordBoundaryAt(
+        const TextPosition(line: 0, column: 5000),
+      );
+      final whitespace = document.wordBoundaryAt(
+        TextPosition(line: 0, column: prefix.length + 4),
+      );
+
+      expect(word.start, TextPosition(line: 0, column: prefix.length + gap.length));
+      expect(
+        word.end,
+        TextPosition(
+          line: 0,
+          column: prefix.length + gap.length + suffix.length,
+        ),
+      );
+      expect(whitespace.start, TextPosition(line: 0, column: prefix.length));
+      expect(
+        whitespace.end,
+        TextPosition(line: 0, column: prefix.length + gap.length),
+      );
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
+
     test(
       'composite grapheme range reads do not materialize every touched line cache',
       () {

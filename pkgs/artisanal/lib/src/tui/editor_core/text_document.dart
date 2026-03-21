@@ -298,22 +298,29 @@ final class TextDocument {
     TextPosition position,
   ) {
     final clamped = clampPosition(position);
-    final line = lineGraphemesAt(clamped.line);
-    if (line.isEmpty) {
+    final lineLength = this.lineLength(clamped.line);
+    if (lineLength == 0) {
       return (
         start: TextPosition(line: clamped.line, column: 0),
         end: TextPosition(line: clamped.line, column: 0),
       );
     }
 
-    final column = clamped.column.clamp(0, line.length - 1);
-    if (_isWhitespace(line[column])) {
+    final column = clamped.column.clamp(0, lineLength - 1);
+    final graphemeAtCursor = _storage.graphemeInLineAt(clamped.line, column)!;
+    if (_isWhitespace(graphemeAtCursor)) {
       var start = column;
-      while (start > 0 && _isWhitespace(line[start - 1])) {
+      while (
+        start > 0 &&
+        _isWhitespace(_storage.graphemeInLineAt(clamped.line, start - 1)!)
+      ) {
         start--;
       }
       var end = column;
-      while (end < line.length && _isWhitespace(line[end])) {
+      while (
+        end < lineLength &&
+        _isWhitespace(_storage.graphemeInLineAt(clamped.line, end)!)
+      ) {
         end++;
       }
       return (
@@ -323,11 +330,17 @@ final class TextDocument {
     }
 
     var start = column;
-    while (start > 0 && !_isWhitespace(line[start - 1])) {
+    while (
+      start > 0 &&
+      !_isWhitespace(_storage.graphemeInLineAt(clamped.line, start - 1)!)
+    ) {
       start--;
     }
     var end = column;
-    while (end < line.length && !_isWhitespace(line[end])) {
+    while (
+      end < lineLength &&
+      !_isWhitespace(_storage.graphemeInLineAt(clamped.line, end)!)
+    ) {
       end++;
     }
     return (
