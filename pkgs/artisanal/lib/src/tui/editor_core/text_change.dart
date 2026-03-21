@@ -41,31 +41,101 @@ TextDocumentChange computeTextDocumentChangeForDocuments({
   required TextDocument previousDocument,
   required TextDocument nextDocument,
 }) {
-  var prefix = 0;
-  final maxPrefix = previousDocument.length < nextDocument.length
-      ? previousDocument.length
+  if (identical(previousDocument, nextDocument) ||
+      (previousDocument.storageIdentity == nextDocument.storageIdentity &&
+          previousDocument.revision == nextDocument.revision)) {
+    return TextDocumentChange(
+      startOffset: previousDocument.length,
+      oldEndOffset: previousDocument.length,
+      newEndOffset: nextDocument.length,
+      startPosition: previousDocument.positionForOffset(previousDocument.length),
+      oldEndPosition: previousDocument.positionForOffset(previousDocument.length),
+      newEndPosition: nextDocument.positionForOffset(nextDocument.length),
+    );
+  }
+
+  var prefixLineCount = 0;
+  final maxSharedPrefixLines = previousDocument.lineCount < nextDocument.lineCount
+      ? previousDocument.lineCount
+      : nextDocument.lineCount;
+  while (prefixLineCount < maxSharedPrefixLines &&
+      previousDocument.lineAt(prefixLineCount) ==
+          nextDocument.lineAt(prefixLineCount)) {
+    prefixLineCount += 1;
+  }
+
+  if (prefixLineCount == previousDocument.lineCount &&
+      prefixLineCount == nextDocument.lineCount) {
+    return TextDocumentChange(
+      startOffset: previousDocument.length,
+      oldEndOffset: previousDocument.length,
+      newEndOffset: nextDocument.length,
+      startPosition: previousDocument.positionForOffset(previousDocument.length),
+      oldEndPosition: previousDocument.positionForOffset(previousDocument.length),
+      newEndPosition: nextDocument.positionForOffset(nextDocument.length),
+    );
+  }
+
+  var suffixLineCount = 0;
+  while (previousDocument.lineCount - suffixLineCount - 1 >= prefixLineCount &&
+      nextDocument.lineCount - suffixLineCount - 1 >= prefixLineCount &&
+      previousDocument.lineAt(previousDocument.lineCount - suffixLineCount - 1) ==
+          nextDocument.lineAt(nextDocument.lineCount - suffixLineCount - 1)) {
+    suffixLineCount += 1;
+  }
+
+  final previousWindowStartOffset = prefixLineCount < previousDocument.lineCount
+      ? previousDocument.lineStartOffset(prefixLineCount)
+      : previousDocument.length;
+  final nextWindowStartOffset = prefixLineCount < nextDocument.lineCount
+      ? nextDocument.lineStartOffset(prefixLineCount)
       : nextDocument.length;
-  while (prefix < maxPrefix &&
-      previousDocument.graphemeAt(prefix) == nextDocument.graphemeAt(prefix)) {
+  final previousWindowEndLine = previousDocument.lineCount - suffixLineCount;
+  final nextWindowEndLine = nextDocument.lineCount - suffixLineCount;
+  final previousWindowEndOffset =
+      previousWindowEndLine < previousDocument.lineCount
+      ? previousDocument.lineStartOffset(previousWindowEndLine)
+      : previousDocument.length;
+  final nextWindowEndOffset = nextWindowEndLine < nextDocument.lineCount
+      ? nextDocument.lineStartOffset(nextWindowEndLine)
+      : nextDocument.length;
+
+  final previousWindow = previousDocument.graphemesInRange(
+    startOffset: previousWindowStartOffset,
+    endOffset: previousWindowEndOffset,
+  );
+  final nextWindow = nextDocument.graphemesInRange(
+    startOffset: nextWindowStartOffset,
+    endOffset: nextWindowEndOffset,
+  );
+
+  var prefix = 0;
+  final maxPrefix = previousWindow.length < nextWindow.length
+      ? previousWindow.length
+      : nextWindow.length;
+  while (prefix < maxPrefix && previousWindow[prefix] == nextWindow[prefix]) {
     prefix += 1;
   }
 
-  var previousSuffix = previousDocument.length;
-  var nextSuffix = nextDocument.length;
+  var previousSuffix = previousWindow.length;
+  var nextSuffix = nextWindow.length;
   while (previousSuffix > prefix &&
       nextSuffix > prefix &&
-      previousDocument.graphemeAt(previousSuffix - 1) ==
-          nextDocument.graphemeAt(nextSuffix - 1)) {
+      previousWindow[previousSuffix - 1] == nextWindow[nextSuffix - 1]) {
     previousSuffix -= 1;
     nextSuffix -= 1;
   }
 
+  final startOffset = previousWindowStartOffset + prefix;
+  final oldEndOffset = previousWindowStartOffset + previousSuffix;
+  final newEndOffset = nextWindowStartOffset + nextSuffix;
+
   return TextDocumentChange(
-    startOffset: prefix,
-    oldEndOffset: previousSuffix,
-    newEndOffset: nextSuffix,
-    startPosition: previousDocument.positionForOffset(prefix),
-    oldEndPosition: previousDocument.positionForOffset(previousSuffix),
-    newEndPosition: nextDocument.positionForOffset(nextSuffix),
+    startOffset: startOffset,
+    oldEndOffset: oldEndOffset,
+    newEndOffset: newEndOffset,
+    startPosition: previousDocument.positionForOffset(startOffset),
+    oldEndPosition: previousDocument.positionForOffset(oldEndOffset),
+    newEndPosition: nextDocument.positionForOffset(newEndOffset),
   );
 }

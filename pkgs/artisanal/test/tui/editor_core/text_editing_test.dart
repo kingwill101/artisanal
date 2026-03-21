@@ -93,6 +93,8 @@ void main() {
       expect(result.changed, isTrue);
       expect(result.document, isNotNull);
       expect(result.document!.text, '> alpha\n> beta');
+      expect(result.documentChange, isNotNull);
+      expect(result.documentChange!.startPosition, const TextPosition(line: 0, column: 0));
       expect(result.selectionBaseOffset, 0);
       expect(result.selectionExtentOffset, result.document!.length);
     });

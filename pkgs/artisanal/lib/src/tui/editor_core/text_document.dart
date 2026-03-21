@@ -381,7 +381,7 @@ final class TextDocument {
     );
   }
 
-  void replaceLineTextRange({
+  TextDocumentChange replaceLineTextRange({
     required int startLine,
     required int endLine,
     required List<String> replacementLineTexts,
@@ -426,6 +426,11 @@ final class TextDocument {
       nextLineGraphemeCaches = <List<String>?>[null];
     }
 
+    final startOffset = lineStartOffset(normalizedStart);
+    final oldEndOffset = lineStartOffset(normalizedEnd);
+    final startPosition = positionForOffset(startOffset);
+    final oldEndPosition = positionForOffset(oldEndOffset);
+
     _storage = _TextDocumentStorage(
       lineTexts: nextLineTexts,
       lineLengths: nextLineLengths,
@@ -438,6 +443,16 @@ final class TextDocument {
       revision: _storage.revision + 1,
       storageIdentity: Object(),
       lineGraphemeCaches: nextLineGraphemeCaches,
+    );
+
+    final newEndOffset = lineStartOffset(normalizedStart + normalizedReplacement.length);
+    return TextDocumentChange(
+      startOffset: startOffset,
+      oldEndOffset: oldEndOffset,
+      newEndOffset: newEndOffset,
+      startPosition: startPosition,
+      oldEndPosition: oldEndPosition,
+      newEndPosition: positionForOffset(newEndOffset),
     );
   }
 

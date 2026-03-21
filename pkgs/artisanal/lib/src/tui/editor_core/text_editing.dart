@@ -327,10 +327,11 @@ TextCommandResult _documentResultFromLineCommand(
   TextLineCommandResult result,
 ) {
   final nextDocument = result.changed ? document.copy() : document;
+  TextDocumentChange? documentChange;
   if (result.changed) {
     final diff = _differingLineWindow(document.lineTexts, result.lines);
     if (diff != null) {
-      nextDocument.replaceLineTextRange(
+      documentChange = nextDocument.replaceLineTextRange(
         startLine: diff.previousStart,
         endLine: diff.previousEnd,
         replacementLineTexts: result.lines.sublist(diff.nextStart, diff.nextEnd),
@@ -347,6 +348,7 @@ TextCommandResult _documentResultFromLineCommand(
     selectionExtentOffset: result.selectionExtent == null
         ? null
         : nextDocument.offsetForPosition(result.selectionExtent!),
+    documentChange: documentChange,
     changed: result.changed,
   );
 }

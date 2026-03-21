@@ -142,10 +142,12 @@ void main() {
       expect(copy.revision, 0);
     });
 
-    test('replaceLineTextRange rewrites only the targeted line window', () {
+    test(
+      'replaceLineTextRange rewrites only the targeted line window with change metadata',
+      () {
       final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
 
-      document.replaceLineTextRange(
+      final change = document.replaceLineTextRange(
         startLine: 1,
         endLine: 3,
         replacementLineTexts: const ['bravo', 'charlie'],
@@ -153,12 +155,18 @@ void main() {
 
       expect(document.lineTexts, const ['alpha', 'bravo', 'charlie', 'delta']);
       expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 17);
+      expect(change.newEndOffset, 20);
+      expect(change.startPosition, const TextPosition(line: 1, column: 0));
+      expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
+      expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
     });
 
     test('replaceLineTextRange can delete lines down to one empty line', () {
       final document = TextDocument(text: 'alpha');
 
-      document.replaceLineTextRange(
+      final change = document.replaceLineTextRange(
         startLine: 0,
         endLine: 1,
         replacementLineTexts: const <String>[],
@@ -168,6 +176,9 @@ void main() {
       expect(document.text, '');
       expect(document.lineCount, 1);
       expect(document.length, 0);
+      expect(change.startOffset, 0);
+      expect(change.oldEndOffset, 5);
+      expect(change.newEndOffset, 0);
     });
   });
 }

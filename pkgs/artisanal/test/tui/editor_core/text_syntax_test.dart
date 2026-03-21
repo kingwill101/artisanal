@@ -46,6 +46,42 @@ void main() {
       expect(change.newEndPosition, const TextPosition(line: 1, column: 6));
     });
 
+    test('skips unchanged prefix and suffix line runs before diffing', () {
+      final previousDocument = TextDocument(
+        text: 'keep\nalpha\nbeta\ngamma\ntail',
+      );
+      final nextDocument = TextDocument(
+        text: 'keep\nalpha\nbetter\ngamma\ntail',
+      );
+
+      final change = computeTextDocumentChangeForDocuments(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+      );
+
+      expect(change.startOffset, 14);
+      expect(change.oldEndOffset, 15);
+      expect(change.newEndOffset, 17);
+      expect(change.startPosition, const TextPosition(line: 2, column: 3));
+      expect(change.oldEndPosition, const TextPosition(line: 2, column: 4));
+      expect(change.newEndPosition, const TextPosition(line: 2, column: 6));
+    });
+
+    test('returns a no-op for unchanged shared document storage', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+      final copy = document.copy();
+
+      final change = computeTextDocumentChangeForDocuments(
+        previousDocument: document,
+        nextDocument: copy,
+      );
+
+      expect(change.startOffset, document.length);
+      expect(change.oldEndOffset, document.length);
+      expect(change.newEndOffset, document.length);
+      expect(change.isNoop, isTrue);
+    });
+
     test('computes syntax line windows around a document change', () {
       final previousDocument = TextDocument(text: 'alpha\nbeta\ngamma');
       final nextDocument = TextDocument(text: 'alpha\nbetter\ngamma');
