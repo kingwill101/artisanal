@@ -108,6 +108,30 @@ void main() {
       expect(document.lineTexts, const ['alpha', 'B']);
     });
 
+    test(
+      'composite text reads do not materialize line text caches just to assemble text',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
+        expect(document.debugHasTextCache, isFalse);
+
+        expect(document.text, lineTexts.join('\n'));
+
+        expect(document.debugHasMaterializedLineTextCache, isFalse);
+        expect(document.debugHasTextCache, isTrue);
+
+        expect(document.lineTexts, lineTexts);
+        expect(document.debugHasMaterializedLineTextCache, isTrue);
+      },
+    );
+
     test('line boundary offset helpers expose full-line ranges', () {
       final document = TextDocument(text: 'alpha\nbeta');
 

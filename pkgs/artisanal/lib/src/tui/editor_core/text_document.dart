@@ -45,6 +45,13 @@ final class TextDocument {
   @visibleForTesting
   int get debugLineGraphemeCacheCount => _storage.debugLineGraphemeCacheCount;
 
+  @visibleForTesting
+  bool get debugHasMaterializedLineTextCache =>
+      _storage.debugHasMaterializedLineTextCache;
+
+  @visibleForTesting
+  bool get debugHasTextCache => _storage.debugHasTextCache;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
@@ -635,6 +642,10 @@ final class _TextDocumentStorage {
   int get debugLineGraphemeCacheCount =>
       _debugLineGraphemeCacheCount(<_TextDocumentStorage>{});
 
+  bool get debugHasMaterializedLineTextCache => _cachedLineTexts != null;
+
+  bool get debugHasTextCache => _cachedText != null;
+
   List<String> get lineTexts =>
       _cachedLineTexts ??= _baseLineTexts ?? _materializeLineTexts();
 
@@ -644,7 +655,7 @@ final class _TextDocumentStorage {
   List<int> get lineStartOffsets =>
       _cachedLineStartOffsets ??= _computeLineStartOffsets(lineLengths);
 
-  String get text => _cachedText ??= lineTexts.join('\n');
+  String get text => _cachedText ??= _buildText();
 
   _TextDocumentStorageSegment slice(int startLine, int endLine) {
     final normalizedStart = startLine.clamp(0, lineCount);
@@ -820,6 +831,22 @@ final class _TextDocumentStorage {
     return List<String>.unmodifiable(
       List<String>.generate(lineCount, lineAt, growable: false),
     );
+  }
+
+  String _buildText() {
+    if (_baseLineTexts case final baseLineTexts?) {
+      return baseLineTexts.join('\n');
+    }
+    final buffer = StringBuffer();
+    var wroteAnyLine = false;
+    for (final segment in _segments!) {
+      if (segment.lineCount <= 0) {
+        continue;
+      }
+      segment.writeTextToBuffer(buffer, leadingNewline: wroteAnyLine);
+      wroteAnyLine = true;
+    }
+    return buffer.toString();
   }
 
   List<int> _materializeLineLengths() {
@@ -1198,5 +1225,14 @@ final class _TextDocumentStorageSegment {
       line: position.line - startLine,
       column: position.column,
     );
+  }
+
+  void writeTextToBuffer(StringBuffer buffer, {required bool leadingNewline}) {
+    for (var localIndex = 0; localIndex < lineCount; localIndex++) {
+      if (leadingNewline || localIndex > 0) {
+        buffer.write('\n');
+      }
+      buffer.write(lineAt(localIndex));
+    }
   }
 }
