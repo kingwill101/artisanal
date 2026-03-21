@@ -216,6 +216,29 @@ void main() {
       expect(document.debugPieceCount, 4);
     });
 
+    test('repeated line-range edits flatten nested source pieces', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+
+      document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 2,
+        replacementLineTexts: const ['delta'],
+      );
+
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceCount, 3);
+
+      document.replaceLineTextRange(
+        startLine: 0,
+        endLine: 1,
+        replacementLineTexts: const ['omega'],
+      );
+
+      expect(document.text, 'omega\ndelta\ngamma');
+      expect(document.debugPieceBackedLeafCount, greaterThan(0));
+      expect(document.debugPieceCount, 3);
+    });
+
     test(
       'replaceOffsetRange deletes across lines and rejoins surrounding text',
       () {

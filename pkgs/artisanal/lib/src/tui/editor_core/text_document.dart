@@ -982,6 +982,15 @@ final class _ChunkedTextDocumentStorageBuilder
         storageIdentity: storageIdentity,
       );
     }
+    final pieceBacked =
+        _TextDocumentStorage._buildStorageFromNormalizedSegmentPieces(
+          nonEmpty,
+          revision: revision,
+          storageIdentity: storageIdentity,
+        );
+    if (pieceBacked != null) {
+      return pieceBacked;
+    }
     if (nonEmpty.length > _TextDocumentStorage._maxCompositeSegmentCount) {
       return _TextDocumentStorage._buildBalancedComposite(
         nonEmpty,
@@ -3495,6 +3504,42 @@ final class _TextDocumentStorage {
     }
     return _buildBalancedComposite(
       segments,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  static _TextDocumentStorage? _buildStorageFromNormalizedSegmentPieces(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final linePieces = <List<_TextDocumentSourcePiece>>[];
+    for (final segment in segments) {
+      for (var localIndex = 0; localIndex < segment.lineCount; localIndex++) {
+        final lineLength = segment.lineLength(localIndex);
+        if (lineLength <= 0) {
+          linePieces.add(const <_TextDocumentSourcePiece>[]);
+          continue;
+        }
+        final pieces = segment.sourcePiecesForLineRange(
+          localIndex,
+          startColumn: 0,
+          endColumn: lineLength,
+        );
+        if (pieces == null) {
+          return null;
+        }
+        linePieces.add(List<_TextDocumentSourcePiece>.unmodifiable(pieces));
+      }
+    }
+
+    if (linePieces.isEmpty) {
+      return null;
+    }
+
+    return _buildStorageFromLinePiecesSource(
+      List<List<_TextDocumentSourcePiece>>.unmodifiable(linePieces),
       revision: revision,
       storageIdentity: storageIdentity,
     );
