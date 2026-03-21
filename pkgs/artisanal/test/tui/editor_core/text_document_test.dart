@@ -133,6 +133,21 @@ void main() {
     );
 
     test(
+      'replaceText leaves revision and storage identity stable on no-op whole-document edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
+
+        document.replaceText('alpha\nbeta');
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta');
+      },
+    );
+
+    test(
       'replaceTextRange builds large multiline replacements through source-backed storage',
       () {
         final lineTexts = List<String>.generate(
@@ -176,6 +191,24 @@ void main() {
         expect(document.lineCount, parsedLines.length);
         expect(document.lineAt(0), 'line-0-abcdefghij');
         expect(document.lineAt(599), 'line-599-abcdefghij');
+      },
+    );
+
+    test(
+      'replaceLines leaves revision and storage identity stable on no-op parsed edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
+
+        document.replaceLines(const [
+          ['a', 'l', 'p', 'h', 'a'],
+          ['b', 'e', 't', 'a'],
+        ]);
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta');
       },
     );
 
@@ -541,6 +574,21 @@ void main() {
         expect(change.startOffset, 6);
         expect(change.oldEndOffset, 11);
         expect(change.newEndOffset, 11);
+      },
+    );
+
+    test(
+      'replaceLineTexts leaves revision and storage identity stable on no-op edits',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta\ngamma');
+        final revision = document.revision;
+        final storageIdentity = document.storageIdentity;
+
+        document.replaceLineTexts(const ['alpha', 'beta', 'gamma']);
+
+        expect(document.revision, revision);
+        expect(document.storageIdentity, same(storageIdentity));
+        expect(document.text, 'alpha\nbeta\ngamma');
       },
     );
 

@@ -293,6 +293,9 @@ final class TextDocument {
   }
 
   void replaceText(String text) {
+    if (text == this.text) {
+      return;
+    }
     _storage = _TextDocumentStorage.fromText(
       text,
       revision: _storage.revision + 1,
@@ -428,6 +431,9 @@ final class TextDocument {
     final parsedLines = lines.isEmpty
         ? <List<String>>[<String>[]]
         : lines.map((line) => List<String>.from(line)).toList(growable: false);
+    if (_matchesParsedLines(parsedLines)) {
+      return;
+    }
     _storage = _TextDocumentStorage.fromParsedLines(
       parsedLines,
       revision: _storage.revision + 1,
@@ -438,6 +444,13 @@ final class TextDocument {
     final normalizedLineTexts = lineTexts.isEmpty
         ? const <String>['']
         : List<String>.from(lineTexts, growable: false);
+    if (_matchesLineTextRange(
+      startLine: 0,
+      endLine: _storage.lineCount,
+      replacementLineTexts: normalizedLineTexts,
+    )) {
+      return;
+    }
     _storage = _TextDocumentStorage.fromLineTexts(
       normalizedLineTexts,
       revision: _storage.revision + 1,
@@ -578,6 +591,25 @@ final class TextDocument {
     }
     for (var index = 0; index < expectedLength; index++) {
       if (lineAt(startLine + index) != replacementLineTexts[index]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _matchesParsedLines(List<List<String>> replacementLines) {
+    if (replacementLines.length != lineCount) {
+      return false;
+    }
+    for (var line = 0; line < replacementLines.length; line++) {
+      final replacementLine = replacementLines[line];
+      if (replacementLine.length != lineLength(line)) {
+        return false;
+      }
+      if (!matchesOffsetRange(
+        startOffset: lineStartOffset(line),
+        graphemes: replacementLine,
+      )) {
         return false;
       }
     }
