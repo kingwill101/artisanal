@@ -154,6 +154,53 @@ void main() {
       );
     });
 
+    test(
+      'composite grapheme range reads do not materialize every touched line cache',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+        final start = document.lineStartOffset(120) + 2;
+        final end = document.lineEndOffset(180);
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugLineGraphemeCacheCount, 0);
+
+        final graphemes = document.graphemesInRange(
+          startOffset: start,
+          endOffset: end,
+        );
+
+        expect(graphemes.join(), lineTexts.sublist(120, 181).join('\n').substring(2));
+        expect(document.debugLineGraphemeCacheCount, 0);
+      },
+    );
+
+    test(
+      'composite text range reads do not materialize every touched line cache',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+        final start = document.lineStartOffset(120) + 2;
+        final end = document.lineEndOffset(180);
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugLineGraphemeCacheCount, 0);
+
+        final text = document.textInRange(startOffset: start, endOffset: end);
+
+        expect(text, lineTexts.sublist(120, 181).join('\n').substring(2));
+        expect(document.debugLineGraphemeCacheCount, 0);
+      },
+    );
+
     test('revision is preserved on copies and increments on edits', () {
       final document = TextDocument(text: 'alpha');
       final copy = document.copy();

@@ -131,7 +131,11 @@ final class TextDocument {
       final takeCount = (lineLength - column).clamp(0, remaining);
       if (takeCount > 0) {
         result.addAll(
-          lineGraphemesAt(line).sublist(column, column + takeCount),
+          _storage.graphemesInLineRange(
+            line,
+            startColumn: column,
+            endColumn: column + takeCount,
+          ),
         );
         remaining -= takeCount;
         column += takeCount;
@@ -166,7 +170,13 @@ final class TextDocument {
           ? endPosition.column
           : lineLength(line);
       if (lineEnd > lineStart) {
-        buffer.write(lineGraphemesAt(line).sublist(lineStart, lineEnd).join());
+        buffer.write(
+          _storage.textInLineRange(
+            line,
+            startColumn: lineStart,
+            endColumn: lineEnd,
+          ),
+        );
       }
       if (line < endPosition.line) {
         buffer.write('\n');
@@ -805,6 +815,61 @@ final class _TextDocumentStorage {
       return cached.skip(clampedStart).join();
     }
     return line.characters.skip(clampedStart).toString();
+  }
+
+  List<String> graphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    if (index < 0 || index >= lineCount) {
+      return const <String>[];
+    }
+    final lineLength = this.lineLength(index);
+    final normalizedStart = startColumn.clamp(0, lineLength);
+    final normalizedEnd = endColumn.clamp(normalizedStart, lineLength);
+    if (normalizedStart == normalizedEnd) {
+      return const <String>[];
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      return List<String>.unmodifiable(
+        cached.sublist(normalizedStart, normalizedEnd),
+      );
+    }
+    return lineAt(index)
+        .characters
+        .skip(normalizedStart)
+        .take(normalizedEnd - normalizedStart)
+        .toList(growable: false);
+  }
+
+  String textInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    if (index < 0 || index >= lineCount) {
+      return '';
+    }
+    final lineLength = this.lineLength(index);
+    final normalizedStart = startColumn.clamp(0, lineLength);
+    final normalizedEnd = endColumn.clamp(normalizedStart, lineLength);
+    if (normalizedStart == normalizedEnd) {
+      return '';
+    }
+    if (normalizedStart == 0 && normalizedEnd == lineLength) {
+      return lineAt(index);
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      return cached.sublist(normalizedStart, normalizedEnd).join();
+    }
+    return lineAt(index)
+        .characters
+        .skip(normalizedStart)
+        .take(normalizedEnd - normalizedStart)
+        .toString();
   }
 
   List<List<String>> get lineViews =>
