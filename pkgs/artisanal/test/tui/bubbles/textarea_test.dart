@@ -193,6 +193,7 @@ void main() {
 
         expect(textarea.document.text, 'alpha\nbeta');
         expect(textarea.document.lineTexts, const ['alpha', 'beta']);
+        expect(textarea.document.debugLineGraphemeCacheCount, 0);
         expect(textarea.lineCount, 2);
       });
 

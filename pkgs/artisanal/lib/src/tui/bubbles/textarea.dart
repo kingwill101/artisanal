@@ -859,7 +859,7 @@ class TextAreaModel extends ViewComponent {
         _recordUndoSnapshot();
       }
       final limited = _applyCharLimit(v);
-      _replaceParsedLines(_parseLines(limited));
+      _replaceText(limited);
       _collapseLineState(
         TextPosition(
           line: lineCount - 1,
@@ -1558,7 +1558,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _restoreEditState(_TextAreaEditState state) {
-    _replaceParsedLines(_parseLines(state.value));
+    _replaceText(state.value);
     _lastDocumentChange = null;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
@@ -1918,7 +1918,7 @@ class TextAreaModel extends ViewComponent {
     _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.reset, breakChain: true);
       _recordUndoSnapshot();
-      _replaceParsedLines(const [<String>[]]);
+      _replaceText('');
       _collapseLineState(const TextPosition(line: 0, column: 0));
       _lastDocumentChange = null;
     });
@@ -3406,12 +3406,12 @@ class TextAreaModel extends ViewComponent {
     return _document.length;
   }
 
-  List<List<String>> _parseLines(String s) {
-    return TextDocument.parseLines(s);
-  }
-
   void _replaceDocumentSnapshot(TextDocument document) {
     _document = document;
+  }
+
+  void _replaceText(String text) {
+    _document.replaceText(text);
   }
 
   void _replaceParsedLines(List<List<String>> lines) {
@@ -3425,7 +3425,7 @@ class TextAreaModel extends ViewComponent {
     final cursorPos = _globalOffset();
     final limited = _applyCharLimit(value);
     if (limited == value) return;
-    _replaceParsedLines(_parseLines(limited));
+    _replaceText(limited);
     _setCursorFromGlobal(cursorPos.clamp(0, _totalGraphemeLength()));
   }
 
