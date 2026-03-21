@@ -12,6 +12,14 @@ part of 'chart_widgets.dart';
 ///   height: 1,
 ///   style: UvStyle(fg: UvColor.rgb(0, 200, 100)),
 /// )
+///
+/// // With gradient coloring:
+/// SparklineChart(
+///   values: [1, 5, 3, 8, 2],
+///   width: 20,
+///   gradientLow: UvStyle(fg: UvColor.rgb(0, 0, 200)),
+///   gradientHigh: UvStyle(fg: UvColor.rgb(200, 0, 0)),
+/// )
 /// ```
 class SparklineChart extends LeafRenderObjectWidget {
   /// Creates a [SparklineChart] with the given data and dimensions.
@@ -21,6 +29,13 @@ class SparklineChart extends LeafRenderObjectWidget {
   ///
   /// Set [crosshairX] and [crosshairY] to draw a crosshair overlay at
   /// that position (e.g. from mouse hover).
+  ///
+  /// [baseline] controls the value below which columns render as empty
+  /// (default: 0.0). [minValue]/[maxValue] allow explicit bounds for
+  /// consistent scaling across multiple sparklines.
+  ///
+  /// [gradientLow] and [gradientHigh] enable per-column color
+  /// interpolation based on value.
   SparklineChart({
     required this.values,
     this.width,
@@ -36,6 +51,11 @@ class SparklineChart extends LeafRenderObjectWidget {
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
+    this.baseline = 0.0,
+    this.minValue,
+    this.maxValue,
+    this.gradientLow,
+    this.gradientHigh,
     super.key,
   });
 
@@ -81,6 +101,21 @@ class SparklineChart extends LeafRenderObjectWidget {
   /// Style for the crosshair lines.
   final UvStyle? crosshairStyle;
 
+  /// Values at or below this render as empty columns (default: 0.0).
+  final double baseline;
+
+  /// Explicit minimum bound for scaling. Auto-detected when null.
+  final double? minValue;
+
+  /// Explicit maximum bound for scaling. Auto-detected when null.
+  final double? maxValue;
+
+  /// Low-end style for gradient coloring (paired with [gradientHigh]).
+  final UvStyle? gradientLow;
+
+  /// High-end style for gradient coloring (paired with [gradientLow]).
+  final UvStyle? gradientHigh;
+
   @override
   RenderObject createRenderObject() {
     return _RenderSparklineChart(
@@ -98,6 +133,11 @@ class SparklineChart extends LeafRenderObjectWidget {
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
+      baseline: baseline,
+      minValue: minValue,
+      maxValue: maxValue,
+      gradientLow: gradientLow,
+      gradientHigh: gradientHigh,
     );
   }
 
@@ -118,7 +158,12 @@ class SparklineChart extends LeafRenderObjectWidget {
       ..legendPadding = legendPadding
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
-      ..crosshairStyle = crosshairStyle;
+      ..crosshairStyle = crosshairStyle
+      ..baseline = baseline
+      ..minValue = minValue
+      ..maxValue = maxValue
+      ..gradientLow = gradientLow
+      ..gradientHigh = gradientHigh;
   }
 
   @override
@@ -134,6 +179,11 @@ class SparklineChart extends LeafRenderObjectWidget {
     legendRowGap,
     legendPosition,
     legendPadding,
+    baseline: baseline,
+    minValue: minValue,
+    maxValue: maxValue,
+    gradientLow: gradientLow,
+    gradientHigh: gradientHigh,
   );
 }
 
@@ -153,6 +203,11 @@ class _RenderSparklineChart extends RenderBox {
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
+    required this.baseline,
+    required this.minValue,
+    required this.maxValue,
+    required this.gradientLow,
+    required this.gradientHigh,
   });
 
   List<double> values;
@@ -169,6 +224,11 @@ class _RenderSparklineChart extends RenderBox {
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
+  double baseline;
+  double? minValue;
+  double? maxValue;
+  UvStyle? gradientLow;
+  UvStyle? gradientHigh;
   String? _lastPaint;
 
   @override
@@ -201,6 +261,11 @@ class _RenderSparklineChart extends RenderBox {
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
+      baseline: baseline,
+      minValue: minValue,
+      maxValue: maxValue,
+      gradientLow: gradientLow,
+      gradientHigh: gradientHigh,
     );
     size = constraints.constrain(Size(w.toDouble(), h.toDouble()));
   }
@@ -223,6 +288,11 @@ class _RenderSparklineChart extends RenderBox {
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
+          baseline: baseline,
+          minValue: minValue,
+          maxValue: maxValue,
+          gradientLow: gradientLow,
+          gradientHigh: gradientHigh,
         );
   }
 }
@@ -242,6 +312,11 @@ String _renderSparkline(
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
+  double baseline = 0.0,
+  double? minValue,
+  double? maxValue,
+  UvStyle? gradientLow,
+  UvStyle? gradientHigh,
 }) {
   if (width <= 0 || height <= 0) return '';
   final canvas = Canvas(width, height);
@@ -253,6 +328,11 @@ String _renderSparkline(
     style: style,
     showGrid: showGrid,
     gridStyle: gridStyle,
+    baseline: baseline,
+    minValue: minValue,
+    maxValue: maxValue,
+    gradientLow: gradientLow,
+    gradientHigh: gradientHigh,
   );
   if (crosshairX != null && crosshairY != null) {
     drawCrosshair(

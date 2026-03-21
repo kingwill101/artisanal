@@ -11,6 +11,9 @@ import 'core.dart';
 /// Index 0 is the lowest fraction, index 7 is a full block.
 const _sparkChars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
+/// Block characters for sparkline rendering (9 levels: empty + 8 bars).
+const sparkChars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
 /// Draws a compact sparkline of [values] into [area] on [screen].
 ///
 /// When [area] has a height of 1, each column uses a single block character
@@ -20,6 +23,14 @@ const _sparkChars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 /// vertical extent: full-block (`█`) cells below the value level, and a
 /// fractional block character at the top of each column for sub-cell
 /// precision.  This gives 8× the vertical resolution of the cell grid.
+///
+/// [baseline] controls the value below which columns render as empty
+/// (default: 0.0).  [minValue] and [maxValue] allow explicit bounds;
+/// when null, they are auto-detected from the data.
+///
+/// [gradientLow] and [gradientHigh] enable per-column color interpolation
+/// based on value: low values get [gradientLow], high values get
+/// [gradientHigh], with linear interpolation between.
 void drawSparkline(
   Screen screen,
   Rectangle area,
@@ -27,6 +38,11 @@ void drawSparkline(
   UvStyle style = const UvStyle(),
   bool showGrid = false,
   UvStyle gridStyle = const UvStyle(),
+  double baseline = 0.0,
+  double? minValue,
+  double? maxValue,
+  UvStyle? gradientLow,
+  UvStyle? gradientHigh,
 }) {
   final width = area.width;
   final height = area.height;
@@ -34,7 +50,17 @@ void drawSparkline(
 
   final samples = sampleSeries(values, width);
   if (samples.isEmpty) return;
-  final maxValue = samples.reduce((a, b) => a > b ? a : b);
+
+  // Resolve bounds.
+  var dataMin = minValue ?? samples.reduce((a, b) => a < b ? a : b);
+  var dataMax = maxValue ?? samples.reduce((a, b) => a > b ? a : b);
+  if (!dataMin.isFinite) dataMin = 0;
+  if (!dataMax.isFinite) dataMax = 1;
+  if (dataMin >= dataMax) {
+    dataMin -= 0.5;
+    dataMax += 0.5;
+  }
+  final range = dataMax - dataMin;
 
   if (showGrid) {
     drawGrid(
@@ -49,54 +75,79 @@ void drawSparkline(
     );
   }
 
+  final useGradient = gradientLow != null && gradientHigh != null;
+
   if (height == 1) {
     // Single-row mode: one character per column from the 8-level set.
-    // Normalize against 0 (not minValue) so the baseline is zero.
     final row = area.minY;
     for (var x = 0; x < width; x++) {
-      final normalized = normalize(samples[x], 0, maxValue);
-      final idx = (normalized * (_sparkChars.length - 1)).round();
-      if (idx <= 0) continue; // truly zero → no glyph
-      final glyph = _sparkChars[idx.clamp(0, _sparkChars.length - 1)];
-      putCell(screen, area.minX + x, row, glyph, style);
+      if (samples[x] <= baseline) continue; // at or below baseline → empty
+      final normalized = clamp01((samples[x] - dataMin) / range);
+      final idx = (normalized * 8).round();
+      if (idx <= 0) continue;
+      final glyph = sparkChars[idx.clamp(0, 8)];
+      var cellStyle = style;
+      if (useGradient) {
+        cellStyle = _lerpStyle(gradientLow!, gradientHigh!, normalized);
+      }
+      putCell(screen, area.minX + x, row, glyph, cellStyle);
     }
     return;
   }
 
-  // Multi-row mode: fill columns from the bottom using full blocks, with
-  // a fractional block at the top of each column.
-  //
-  // Total sub-cell height is height * 8 (each cell has 8 block levels).
-  // Normalize against 0 (not minValue) so the chart baseline is at zero.
+  // Multi-row mode: fill columns from the bottom using full blocks.
   final totalSubCells = height * 8;
 
   for (var x = 0; x < width; x++) {
-    final normalized = normalize(samples[x], 0, maxValue);
-    // How many sub-cell units this value occupies (0..totalSubCells).
-    // Zero values produce 0 sub-cells (empty column).
+    if (samples[x] <= baseline) continue;
+    final normalized = clamp01((samples[x] - dataMin) / range);
     final subCellHeight = (normalized * totalSubCells).round().clamp(
       0,
       totalSubCells,
     );
     if (subCellHeight <= 0) continue;
 
+    var cellStyle = style;
+    if (useGradient) {
+      cellStyle = _lerpStyle(gradientLow!, gradientHigh!, normalized);
+    }
+
     final fullRows = subCellHeight ~/ 8;
     final remainder = subCellHeight % 8;
 
-    // Draw full-block cells from the bottom.
     for (var r = 0; r < fullRows; r++) {
       final cellY = area.maxY - 1 - r;
       if (cellY < area.minY) break;
-      putCell(screen, area.minX + x, cellY, '█', style);
+      putCell(screen, area.minX + x, cellY, '█', cellStyle);
     }
 
-    // Draw fractional top cell.
     if (remainder > 0) {
       final cellY = area.maxY - 1 - fullRows;
       if (cellY >= area.minY) {
-        final glyph = _sparkChars[remainder - 1];
-        putCell(screen, area.minX + x, cellY, glyph, style);
+        final glyph = sparkChars[remainder];
+        putCell(screen, area.minX + x, cellY, glyph, cellStyle);
       }
     }
   }
+}
+
+/// Linearly interpolate between two [UvStyle]s based on [t] (0.0–1.0).
+UvStyle _lerpStyle(UvStyle low, UvStyle high, double t) {
+  final fg = _lerpUvColor(low.fg, high.fg, t);
+  final bg = _lerpUvColor(low.bg, high.bg, t);
+  return UvStyle(fg: fg, bg: bg);
+}
+
+UvColor? _lerpUvColor(UvColor? low, UvColor? high, double t) {
+  if (low == null || high == null) return t < 0.5 ? low : high;
+  if (low is UvRgb && high is UvRgb) {
+    final t0 = t.clamp(0.0, 1.0);
+    return UvColor.rgb(
+      (low.r + (high.r - low.r) * t0).round().clamp(0, 255),
+      (low.g + (high.g - low.g) * t0).round().clamp(0, 255),
+      (low.b + (high.b - low.b) * t0).round().clamp(0, 255),
+    );
+  }
+  // For non-RGB colors, step at the midpoint.
+  return t < 0.5 ? low : high;
 }

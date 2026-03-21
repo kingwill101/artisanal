@@ -175,6 +175,58 @@ void main() {
       expect(b.id, equals('badge-key'));
     });
 
+    test('width includes label and padding', () {
+      final b = Badge('OK');
+      // "OK" = 2 + left 1 + right 1 = 4
+      expect(b.width, equals(4));
+    });
+
+    test('width with per-side padding', () {
+      final b = Badge('AB', paddingLeft: 3, paddingRight: 2);
+      // "AB" = 2 + 3 + 2 = 7
+      expect(b.width, equals(7));
+    });
+
+    test('width with empty label', () {
+      final b = Badge('');
+      expect(b.width, equals(2)); // 0 + 1 + 1
+    });
+
+    test('width with zero padding via EdgeInsets', () {
+      final b = Badge('X', padding: EdgeInsets.zero);
+      expect(b.width, equals(1)); // 1 + 0 + 0
+    });
+
+    test('paddingLeft overrides padding left side', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Badge(
+          'X',
+          paddingLeft: 3,
+          padding: EdgeInsets.symmetric(horizontal: 1),
+        ),
+      );
+
+      expect(tester.locateText('X'), isNotNull);
+    });
+
+    test('paddingRight overrides padding right side', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Badge(
+          'X',
+          paddingRight: 3,
+          padding: EdgeInsets.symmetric(horizontal: 1),
+        ),
+      );
+
+      expect(tester.locateText('X'), isNotNull);
+    });
+
     test('renders inside a Row', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
