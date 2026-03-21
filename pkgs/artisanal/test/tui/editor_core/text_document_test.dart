@@ -559,15 +559,13 @@ void main() {
       final end = prefix.characters.length + 96;
 
       expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
 
-      final graphemes = document.graphemesInRange(
-        startOffset: start,
-        endOffset: end,
-      );
-      final text = document.textInRange(startOffset: start, endOffset: end);
+      final graphemes = document.graphemesInRange(startOffset: start, endOffset: end);
 
-      expect(graphemes.join(), text);
+      expect(graphemes, List<String>.filled(64, emoji, growable: false));
       expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
     });
 
     test('single-line raw-text range matches keep grapheme caches cold', () {

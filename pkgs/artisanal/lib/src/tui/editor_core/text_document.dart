@@ -1049,6 +1049,17 @@ abstract base class _TextDocumentSource {
 
   String? graphemeInLineAt(int index, int column) => null;
 
+  List<String> graphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    return lineAt(index).characters
+        .skip(startColumn)
+        .take(endColumn - startColumn)
+        .toList(growable: false);
+  }
+
   String textInLineRange(
     int index, {
     required int startColumn,
@@ -1244,6 +1255,27 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
     final start = lineStarts[index] + offsets[column];
     final end = lineStarts[index] + offsets[column + 1];
     return _rawText.substring(start, end);
+  }
+
+  @override
+  List<String> graphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final lineStart = lineStarts[index];
+    final graphemes = List<String>.filled(
+      endColumn - startColumn,
+      '',
+      growable: false,
+    );
+    for (var offset = 0; offset < graphemes.length; offset++) {
+      final sourceStart = lineStart + offsets[startColumn + offset];
+      final sourceEnd = lineStart + offsets[startColumn + offset + 1];
+      graphemes[offset] = _rawText.substring(sourceStart, sourceEnd);
+    }
+    return List<String>.unmodifiable(graphemes);
   }
 
   @override
@@ -1464,6 +1496,16 @@ final class _TextDocumentSourceSlice {
 
   String? graphemeInLineAt(int localIndex, int column) =>
       source.graphemeInLineAt(startLine + localIndex, column);
+
+  List<String> graphemesInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required int endColumn,
+  }) => source.graphemesInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  );
 
   String textInLineRange(
     int localIndex, {
@@ -2130,14 +2172,11 @@ final class _TextDocumentStorage {
     }
     final sourceSlice = _leafBacking?.sourceSlice;
     if (sourceSlice != null) {
-      return sourceSlice
-          .textInLineRange(
-            index,
-            startColumn: normalizedStart,
-            endColumn: normalizedEnd,
-          )
-          .characters
-          .toList(growable: false);
+      return sourceSlice.graphemesInLineRange(
+        index,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      );
     }
     return lineAt(index).characters
         .skip(normalizedStart)
