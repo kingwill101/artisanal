@@ -293,36 +293,6 @@ bool _listStringEquals(List<String> a, List<String> b) {
   return true;
 }
 
-({int previousStart, int previousEnd, int nextStart, int nextEnd})?
-_differingLineWindow(List<String> previousLines, List<String> nextLines) {
-  final sharedLength = math.min(previousLines.length, nextLines.length);
-  var start = 0;
-  while (start < sharedLength && previousLines[start] == nextLines[start]) {
-    start++;
-  }
-
-  if (start == previousLines.length && start == nextLines.length) {
-    return null;
-  }
-
-  var sharedSuffix = 0;
-  final previousRemaining = previousLines.length - start;
-  final nextRemaining = nextLines.length - start;
-  while (sharedSuffix < previousRemaining &&
-      sharedSuffix < nextRemaining &&
-      previousLines[previousLines.length - 1 - sharedSuffix] ==
-          nextLines[nextLines.length - 1 - sharedSuffix]) {
-    sharedSuffix++;
-  }
-
-  return (
-    previousStart: start,
-    previousEnd: previousLines.length - sharedSuffix,
-    nextStart: start,
-    nextEnd: nextLines.length - sharedSuffix,
-  );
-}
-
 TextCommandResult _documentCommandResult(
   TextDocument document, {
   required int cursorOffset,
@@ -351,37 +321,6 @@ TextCommandResult _unchangedDocumentCommandResult(
     selectionBaseOffset: state.selectionBaseOffset,
     selectionExtentOffset: state.selectionExtentOffset,
     changed: false,
-  );
-}
-
-TextCommandResult _documentResultFromLineCommand(
-  TextDocument document,
-  TextLineCommandResult result,
-) {
-  final nextDocument = result.changed ? document.copy() : document;
-  TextDocumentChange? documentChange;
-  if (result.changed) {
-    final diff = _differingLineWindow(document.lineTexts, result.lines);
-    if (diff != null) {
-      documentChange = nextDocument.replaceLineTextRange(
-        startLine: diff.previousStart,
-        endLine: diff.previousEnd,
-        replacementLineTexts: result.lines.sublist(diff.nextStart, diff.nextEnd),
-      );
-    }
-  }
-
-  return _documentCommandResult(
-    nextDocument,
-    cursorOffset: nextDocument.offsetForPosition(result.cursor),
-    selectionBaseOffset: result.selectionBase == null
-        ? null
-        : nextDocument.offsetForPosition(result.selectionBase!),
-    selectionExtentOffset: result.selectionExtent == null
-        ? null
-        : nextDocument.offsetForPosition(result.selectionExtent!),
-    documentChange: documentChange,
-    changed: result.changed,
   );
 }
 
@@ -1190,13 +1129,21 @@ TextCommandResult textMoveSelectedLinesDocument({
   required TextLineStateSnapshot state,
   required int direction,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textMoveSelectedLines(
-      lines: document.lineTexts,
-      state: state,
-      direction: direction,
-    ),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  final startLine = direction < 0
+      ? math.max(0, span.startLine - 1)
+      : span.startLine;
+  final endLine = direction > 0
+      ? math.min(document.lineCount, span.endLine + 2)
+      : span.endLine + 1;
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: startLine,
+    endLine: endLine,
+    apply: (lines, localState) =>
+        textMoveSelectedLines(lines: lines, state: localState, direction: direction),
   );
 }
 
@@ -1211,9 +1158,15 @@ TextCommandResult textDuplicateSelectedLinesAboveDocument({
   required TextDocument document,
   required TextLineStateSnapshot state,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textDuplicateSelectedLinesAbove(lines: document.lineTexts, state: state),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) =>
+        textDuplicateSelectedLinesAbove(lines: lines, state: localState),
   );
 }
 
@@ -1228,9 +1181,15 @@ TextCommandResult textDuplicateSelectedLinesBelowDocument({
   required TextDocument document,
   required TextLineStateSnapshot state,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textDuplicateSelectedLinesBelow(lines: document.lineTexts, state: state),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: span.startLine,
+    endLine: span.endLine + 1,
+    apply: (lines, localState) =>
+        textDuplicateSelectedLinesBelow(lines: lines, state: localState),
   );
 }
 
@@ -1631,9 +1590,20 @@ TextCommandResult textDeleteLinesDocument({
   required TextDocument document,
   required TextLineStateSnapshot state,
 }) {
-  return _documentResultFromLineCommand(
-    document,
-    textDeleteLines(lines: document.lineTexts, state: state),
+  final clampedState = _clampLineStateSnapshotToDocument(state, document);
+  final span = _selectedLineSpan(clampedState);
+  final startLine = span.endLine < document.lineCount - 1
+      ? span.startLine
+      : math.max(0, span.startLine - 1);
+  final endLine = span.endLine < document.lineCount - 1
+      ? span.endLine + 2
+      : document.lineCount;
+  return _documentResultFromWindowedLineCommand(
+    document: document,
+    state: clampedState,
+    startLine: startLine,
+    endLine: endLine,
+    apply: (lines, localState) => textDeleteLines(lines: lines, state: localState),
   );
 }
 
