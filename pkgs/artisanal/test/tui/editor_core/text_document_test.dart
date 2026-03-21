@@ -549,6 +549,29 @@ void main() {
       expect(document.debugLineGraphemeCacheCount, 0);
     });
 
+    test('lineGraphemesAt keeps long raw-text lines text-cache cold', () {
+      const emoji = '👩‍👩‍👧‍👦';
+      final prefix = List<String>.filled(2048, 'a', growable: false).join();
+      final middle = List<String>.filled(64, emoji, growable: false).join();
+      final suffix = List<String>.filled(2048, 'b', growable: false).join();
+      final document = TextDocument(text: '$prefix$middle$suffix');
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
+
+      final graphemes = document.lineGraphemesAt(0);
+
+      expect(
+        graphemes.sublist(
+          prefix.characters.length,
+          prefix.characters.length + 64,
+        ),
+        List<String>.filled(64, emoji, growable: false),
+      );
+      expect(document.debugLineGraphemeCacheCount, 1);
+      expect(document.debugHasTextCache, isFalse);
+    });
+
     test('single-line raw-text range reads keep grapheme caches cold', () {
       const emoji = '👩‍👩‍👧‍👦';
       final prefix = List<String>.filled(2048, 'a', growable: false).join();

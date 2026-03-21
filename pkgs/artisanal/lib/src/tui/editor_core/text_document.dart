@@ -2026,6 +2026,14 @@ final class _TextDocumentStorage {
     if (sourceParsedLine != null) {
       return _lineGraphemeCaches[index] ??= sourceParsedLine;
     }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return _lineGraphemeCaches[index] ??= sourceSlice.graphemesInLineRange(
+        index,
+        startColumn: 0,
+        endColumn: lineLength(index),
+      );
+    }
     return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
       lineAt(index).characters.toList(growable: false),
     );
