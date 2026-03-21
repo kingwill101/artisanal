@@ -659,10 +659,9 @@ TextCommandResult textDeleteWordBackward({
   required TextOffsetStateSnapshot state,
   nav.GraphemePredicate isWord = _isWordGrapheme,
 }) {
-  final graphemes = document.flattenWithNewlines();
   if (state.cursorOffset <= 0) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -670,14 +669,15 @@ TextCommandResult textDeleteWordBackward({
     );
   }
 
-  final range = nav.deleteWordBackwardRange(
-    graphemes,
+  final range = nav.deleteWordBackwardRangeFromReader(
+    document.length,
     state.cursorOffset,
     isWord: isWord,
+    graphemeAt: document.graphemeAt,
   );
   if (range.start >= state.cursorOffset) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -703,10 +703,9 @@ TextCommandResult textDeleteWordForward({
   required TextOffsetStateSnapshot state,
   nav.GraphemePredicate isWord = _isWordGrapheme,
 }) {
-  final graphemes = document.flattenWithNewlines();
-  if (state.cursorOffset >= graphemes.length) {
+  if (state.cursorOffset >= document.length) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -714,14 +713,15 @@ TextCommandResult textDeleteWordForward({
     );
   }
 
-  final range = nav.deleteWordForwardRange(
-    graphemes,
+  final range = nav.deleteWordForwardRangeFromReader(
+    document.length,
     state.cursorOffset,
     isWord: isWord,
+    graphemeAt: document.graphemeAt,
   );
   if (range.end <= state.cursorOffset) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,

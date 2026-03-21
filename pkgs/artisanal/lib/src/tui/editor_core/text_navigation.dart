@@ -41,6 +41,62 @@ int moveWordForward(
   return position.clamp(0, graphemes.length);
 }
 
+int moveWordBackwardFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  if (offset <= 0 || length <= 0) {
+    return 0;
+  }
+
+  var position = offset - 1;
+  while (position > 0) {
+    final grapheme = graphemeAt(position);
+    if (grapheme != null && isWord(grapheme)) {
+      break;
+    }
+    position--;
+  }
+  while (position > 0) {
+    final grapheme = graphemeAt(position - 1);
+    if (grapheme == null || !isWord(grapheme)) {
+      break;
+    }
+    position--;
+  }
+  return position.clamp(0, length);
+}
+
+int moveWordForwardFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  if (offset >= length || length <= 0) {
+    return length;
+  }
+
+  var position = offset + 1;
+  while (position < length) {
+    final grapheme = graphemeAt(position);
+    if (grapheme != null && isWord(grapheme)) {
+      break;
+    }
+    position++;
+  }
+  while (position < length) {
+    final grapheme = graphemeAt(position);
+    if (grapheme == null || !isWord(grapheme)) {
+      break;
+    }
+    position++;
+  }
+  return position.clamp(0, length);
+}
+
 ({int start, int end})? nextWordRange(
   List<String> graphemes,
   int offset, {
@@ -193,6 +249,21 @@ int moveWordForward(
   return (start: start, end: offset.clamp(0, graphemes.length));
 }
 
+({int start, int end}) deleteWordBackwardRangeFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  final start = moveWordBackwardFromReader(
+    length,
+    offset,
+    isWord: isWord,
+    graphemeAt: graphemeAt,
+  );
+  return (start: start, end: offset.clamp(0, length));
+}
+
 ({int start, int end}) deleteWordForwardRange(
   List<String> graphemes,
   int offset, {
@@ -218,4 +289,45 @@ int moveWordForward(
   }
 
   return (start: offset, end: end.clamp(0, graphemes.length));
+}
+
+({int start, int end}) deleteWordForwardRangeFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  if (offset < 0 || offset >= length) {
+    final clamped = offset.clamp(0, length);
+    return (start: clamped, end: clamped);
+  }
+
+  var end = offset;
+  final current = graphemeAt(offset);
+  if (current != null && isWord(current)) {
+    while (end < length) {
+      final grapheme = graphemeAt(end);
+      if (grapheme == null || !isWord(grapheme)) {
+        break;
+      }
+      end++;
+    }
+  } else {
+    while (end < length) {
+      final grapheme = graphemeAt(end);
+      if (grapheme != null && isWord(grapheme)) {
+        break;
+      }
+      end++;
+    }
+    while (end < length) {
+      final grapheme = graphemeAt(end);
+      if (grapheme == null || !isWord(grapheme)) {
+        break;
+      }
+      end++;
+    }
+  }
+
+  return (start: offset, end: end.clamp(0, length));
 }

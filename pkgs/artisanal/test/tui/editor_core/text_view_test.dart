@@ -916,6 +916,26 @@ void main() {
         start: 5,
         end: 11,
       ));
+
+      final document = TextDocument(text: 'alpha  beta');
+      expect(
+        nav.deleteWordBackwardRangeFromReader(
+          document.length,
+          7,
+          isWord: isWord,
+          graphemeAt: document.graphemeAt,
+        ),
+        (start: 0, end: 7),
+      );
+      expect(
+        nav.deleteWordForwardRangeFromReader(
+          document.length,
+          5,
+          isWord: isWord,
+          graphemeAt: document.graphemeAt,
+        ),
+        (start: 5, end: 11),
+      );
     });
 
     test('finds forward and fallback word ranges for transforms', () {
