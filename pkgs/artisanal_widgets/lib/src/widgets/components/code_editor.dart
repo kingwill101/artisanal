@@ -600,44 +600,69 @@ final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
     TextSyntaxSnapshot<void>? previous,
     TextDocumentChange? change,
   }) {
+    if (document != null) {
+      return buildDocument(
+        document,
+        language: language,
+        previous: previous,
+        change: change,
+      );
+    }
+
     if (text.isEmpty) {
       return const TextSyntaxBuildResult<void>(
         decorations: <TextDecorationRange>[],
       );
     }
 
-    final currentDocument = document;
+    return TextSyntaxBuildResult<void>(
+      decorations: _highlightDecorations(text, language: language),
+    );
+  }
+
+  @override
+  TextSyntaxBuildResult<void> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<void>? previous,
+    TextDocumentChange? change,
+  }) {
+    if (document.length == 0) {
+      return const TextSyntaxBuildResult<void>(
+        decorations: <TextDecorationRange>[],
+      );
+    }
+
     final previousDocument = previous?.document;
-    if (currentDocument == null ||
-        previous == null ||
+    if (previous == null ||
         previousDocument == null ||
         change == null ||
         change.isNoop) {
       return TextSyntaxBuildResult<void>(
-        decorations: _highlightDecorations(text, language: language),
+        decorations: _highlightDecorations(document.text, language: language),
       );
     }
 
     final window = textSyntaxChangeWindow(
       previousDocument: previousDocument,
-      nextDocument: currentDocument,
+      nextDocument: document,
       change: change,
       lookBehindLines: 1,
       lookAheadLines: 1,
     );
-    final windowText = currentDocument.textBetweenLines(
+    final windowText = document.textBetweenLines(
       startLine: window.nextLines.startLine,
       endLine: window.nextLines.endLine,
     );
     return TextSyntaxBuildResult<void>.patch(
       patch: TextSyntaxDecorationPatch.forChangeWindow(
         previousDocument: previousDocument,
-        nextDocument: currentDocument,
+        nextDocument: document,
         window: window,
         decorations: _highlightDecorations(
           windowText,
           language: language,
-          offsetBase: window.nextLines.startOffsetIn(currentDocument),
+          offsetBase: window.nextLines.startOffsetIn(document),
         ),
       ),
     );

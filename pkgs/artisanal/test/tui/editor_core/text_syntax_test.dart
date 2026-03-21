@@ -254,6 +254,22 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
   final List<_RecordingSyntaxCall> calls = <_RecordingSyntaxCall>[];
 
   @override
+  TextSyntaxBuildResult<int> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<int>? previous,
+    TextDocumentChange? change,
+  }) {
+    return build(
+      document.text,
+      document: document,
+      language: language,
+      previous: previous,
+      change: change,
+    );
+  }
+
+  @override
   TextSyntaxBuildResult<int> build(
     String text, {
     TextDocument? document,
@@ -308,6 +324,22 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
 
 final class _RecordingSyntaxProvider implements TextSyntaxProvider<int> {
   final List<_RecordingSyntaxCall> calls = <_RecordingSyntaxCall>[];
+
+  @override
+  TextSyntaxBuildResult<int> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<int>? previous,
+    TextDocumentChange? change,
+  }) {
+    return build(
+      document.text,
+      document: document,
+      language: language,
+      previous: previous,
+      change: change,
+    );
+  }
 
   @override
   TextSyntaxBuildResult<int> build(

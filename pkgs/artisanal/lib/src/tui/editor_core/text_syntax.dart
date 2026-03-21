@@ -17,16 +17,18 @@ final class TextSyntaxBuildResult<State> {
 }
 
 final class TextSyntaxSnapshot<State> {
-  const TextSyntaxSnapshot({
-    required this.text,
+  TextSyntaxSnapshot({
+    String? text,
     required this.decorations,
     required this.language,
     this.document,
     this.state,
     this.change,
-  });
+  }) : _text = text;
 
-  final String text;
+  String get text => _text ??= document?.text ?? '';
+
+  String? _text;
   final List<TextDecorationRange> decorations;
   final String? language;
   final TextDocument? document;
@@ -34,7 +36,7 @@ final class TextSyntaxSnapshot<State> {
   final TextDocumentChange? change;
 }
 
-abstract interface class TextSyntaxProvider<State> {
+abstract class TextSyntaxProvider<State> {
   TextSyntaxBuildResult<State> build(
     String text, {
     TextDocument? document,
@@ -42,6 +44,21 @@ abstract interface class TextSyntaxProvider<State> {
     TextSyntaxSnapshot<State>? previous,
     TextDocumentChange? change,
   });
+
+  TextSyntaxBuildResult<State> buildDocument(
+    TextDocument document, {
+    String? language,
+    TextSyntaxSnapshot<State>? previous,
+    TextDocumentChange? change,
+  }) {
+    return build(
+      document.text,
+      document: document,
+      language: language,
+      previous: previous,
+      change: change,
+    );
+  }
 }
 
 final class TextSyntaxLineWindow {
@@ -244,10 +261,8 @@ final class TextSyntaxSession<State> {
                     )
                   : computeTextDocumentChange(previous.text, document.text))
         : null;
-    final text = document.text;
-    final result = provider.build(
-      text,
-      document: document,
+    final result = provider.buildDocument(
+      document,
       language: resolvedLanguage,
       previous: resolvedChange == null ? null : previous,
       change: resolvedChange,
@@ -256,7 +271,6 @@ final class TextSyntaxSession<State> {
         ? mergeTextSyntaxDecorationPatch(previous.decorations, result.patch!)
         : result.decorations;
     final snapshot = TextSyntaxSnapshot<State>(
-      text: text,
       decorations: List<TextDecorationRange>.unmodifiable(decorations),
       language: resolvedLanguage,
       document: document.copy(),
