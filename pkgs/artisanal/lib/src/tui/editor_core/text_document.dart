@@ -1427,6 +1427,76 @@ final class _TextDocumentCompositeBacking {
   List<int> get segmentLineStarts => _segmentLineStarts;
 
   List<int> get segmentStartOffsets => _segmentStartOffsets;
+
+  (_TextDocumentStorageSegment, int) segmentForLine(int index) {
+    final (segment, localIndex, _) = segmentForLineWithIndex(index);
+    return (segment, localIndex);
+  }
+
+  (_TextDocumentStorageSegment, int, int) segmentForLineWithIndex(int index) {
+    var low = 0;
+    var high = _segments.length - 1;
+    while (low < high) {
+      final mid = (low + high + 1) >> 1;
+      if (_segmentLineStarts[mid] <= index) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    final segmentIndex = low;
+    final segment = _segments[segmentIndex];
+    return (segment, index - _segmentLineStarts[segmentIndex], segmentIndex);
+  }
+
+  (_TextDocumentStorageSegment, int) segmentForOffset(int offset) {
+    var low = 0;
+    var high = _segments.length - 1;
+    while (low < high) {
+      final mid = (low + high + 1) >> 1;
+      if (_segmentStartOffsets[mid] <= offset) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return (_segments[low], low);
+  }
+
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final (_, _, startSegmentIndex) = segmentForLineWithIndex(startLine);
+    var segmentIndex = startSegmentIndex;
+    var wroteAnyLine = false;
+    while (segmentIndex < _segments.length) {
+      final segment = _segments[segmentIndex];
+      final segmentStartLine = _segmentLineStarts[segmentIndex];
+      if (segmentStartLine >= endLine) {
+        break;
+      }
+      final segmentEndLine = segmentStartLine + segment.lineCount;
+      final localStart = startLine > segmentStartLine
+          ? startLine - segmentStartLine
+          : 0;
+      final localEnd = endLine < segmentEndLine
+          ? endLine - segmentStartLine
+          : segment.lineCount;
+      if (localStart < localEnd) {
+        segment.writeTextRangeToBuffer(
+          buffer,
+          startLocalLine: localStart,
+          endLocalLine: localEnd,
+          leadingNewline: leadingNewline || wroteAnyLine,
+        );
+        wroteAnyLine = true;
+      }
+      segmentIndex += 1;
+    }
+  }
 }
 
 final class _TextDocumentStorage {
@@ -2077,36 +2147,12 @@ final class _TextDocumentStorage {
       return;
     }
 
-    final compositeBacking = _compositeBacking!;
-    final segments = compositeBacking.segments;
-    final segmentLineStarts = compositeBacking.segmentLineStarts;
-    final (_, _, startSegmentIndex) = _segmentForLineWithIndex(normalizedStart);
-    var segmentIndex = startSegmentIndex;
-    var wroteAnyLine = false;
-    while (segmentIndex < segments.length) {
-      final segment = segments[segmentIndex];
-      final segmentStartLine = segmentLineStarts[segmentIndex];
-      if (segmentStartLine >= normalizedEnd) {
-        break;
-      }
-      final segmentEndLine = segmentStartLine + segment.lineCount;
-      final localStart = normalizedStart > segmentStartLine
-          ? normalizedStart - segmentStartLine
-          : 0;
-      final localEnd = normalizedEnd < segmentEndLine
-          ? normalizedEnd - segmentStartLine
-          : segment.lineCount;
-      if (localStart < localEnd) {
-        segment.writeTextRangeToBuffer(
-          buffer,
-          startLocalLine: localStart,
-          endLocalLine: localEnd,
-          leadingNewline: leadingNewline || wroteAnyLine,
-        );
-        wroteAnyLine = true;
-      }
-      segmentIndex += 1;
-    }
+    _compositeBacking!.writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+      leadingNewline: leadingNewline,
+    );
   }
 
   List<int> _materializeLineLengths() {
@@ -2116,44 +2162,15 @@ final class _TextDocumentStorage {
   }
 
   (_TextDocumentStorageSegment, int) _segmentForLine(int index) {
-    final (segment, localIndex, _) = _segmentForLineWithIndex(index);
-    return (segment, localIndex);
+    return _compositeBacking!.segmentForLine(index);
   }
 
   (_TextDocumentStorageSegment, int, int) _segmentForLineWithIndex(int index) {
-    final compositeBacking = _compositeBacking!;
-    final segments = compositeBacking.segments;
-    final segmentLineStarts = compositeBacking.segmentLineStarts;
-    var low = 0;
-    var high = segments.length - 1;
-    while (low < high) {
-      final mid = (low + high + 1) >> 1;
-      if (segmentLineStarts[mid] <= index) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-    final segmentIndex = low;
-    final segment = segments[segmentIndex];
-    return (segment, index - segmentLineStarts[segmentIndex], segmentIndex);
+    return _compositeBacking!.segmentForLineWithIndex(index);
   }
 
   (_TextDocumentStorageSegment, int) _segmentForOffset(int offset) {
-    final compositeBacking = _compositeBacking!;
-    final segments = compositeBacking.segments;
-    final segmentStartOffsets = compositeBacking.segmentStartOffsets;
-    var low = 0;
-    var high = segments.length - 1;
-    while (low < high) {
-      final mid = (low + high + 1) >> 1;
-      if (segmentStartOffsets[mid] <= offset) {
-        low = mid;
-      } else {
-        high = mid - 1;
-      }
-    }
-    return (segments[low], low);
+    return _compositeBacking!.segmentForOffset(offset);
   }
 
   static List<int> _computeSegmentLineStarts(
