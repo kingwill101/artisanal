@@ -6,8 +6,10 @@ import 'code_edit_policy.dart';
 import 'code_language_profile.dart';
 import 'editor_state.dart';
 import 'state_bridge.dart';
+import 'text_edit_ops.dart' as edit_ops;
 import 'text_commands.dart';
 import 'text_document.dart';
+import 'text_editing.dart';
 
 TextCommandResult _unchangedCodeResult(
   List<String> graphemes,
@@ -57,14 +59,9 @@ TextCommandResult codeHandleClosingDelimiterAlignment({
   }
 
   final nextIndent = codeOutdentedIndent(beforeCursor, indentWidth);
-  return state.transformSelectionOrLineCommand(
-    graphemes,
-    lineStartOffset: document.offsetForPosition(
-      TextPosition(line: lineIndex, column: 0),
-    ),
-    lineEndOffset: document.offsetForPosition(
-      TextPosition(line: lineIndex, column: document.lineLength(lineIndex)),
-    ),
+  return textTransformSelectionOrLine(
+    document: document,
+    state: state,
     transform: (_) => '$nextIndent$typed',
   );
 }
@@ -78,9 +75,28 @@ TextCommandResult codeHandlePairBackspace({
   if (state.hasSelection) {
     return _unchangedCodeResult(graphemes, state);
   }
-  return state.deleteSurroundingPairCommand(
-    graphemes,
-    surroundPairs: profile.autoPairs,
+  final cursorOffset = state.cursorOffset;
+  if (cursorOffset <= 0 || cursorOffset >= graphemes.length) {
+    return _unchangedCodeResult(graphemes, state);
+  }
+
+  final opening = graphemes[cursorOffset - 1];
+  final closing = graphemes[cursorOffset];
+  if (profile.autoPairs[opening] != closing) {
+    return _unchangedCodeResult(graphemes, state);
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: cursorOffset - 1,
+    end: cursorOffset + 1,
+    cursorOffset: cursorOffset - 1,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
@@ -102,10 +118,25 @@ TextCommandResult codeHandleAutoPair({
       return _unchangedCodeResult(graphemes, state);
     }
 
-    return state.insertAutoPairCommand(
-      graphemes,
-      opening: [typed],
-      closing: [matching],
+    if (state.hasSelection) {
+      return textWrapSelection(
+        document: document,
+        state: state,
+        before: typed,
+        after: matching,
+      );
+    }
+
+    final working = document.copy();
+    final result = edit_ops.insertIntoDocument(
+      working,
+      state.cursorOffset,
+      <String>[typed, matching],
+    );
+    return TextCommandResult(
+      graphemes: working.flattenWithNewlines(),
+      cursorOffset: state.cursorOffset.clamp(0, document.length) + 1,
+      changed: result.changed,
     );
   }
 
@@ -147,19 +178,50 @@ TextCommandResult codeInsertIndentedNewline({
           baseIndent: baseIndent,
         );
 
-  return state.insertIndentedNewlineCommand(
-    graphemes,
-    baseIndent: baseIndent.characters.toList(growable: false),
-    additionalIndent:
-        codeShouldIncreaseIndentAfter(trimmedBefore, language: language)
-        ? (' ' * (indentWidth < 1 ? 1 : indentWidth)).characters.toList(
-            growable: false,
-          )
-        : const <String>[],
-    trailingSuffix:
-        blockSuffix?.text.characters.toList(growable: false) ??
-        const <String>[],
-    trailingSuffixReplaceCount: blockSuffix?.consumedColumns ?? 0,
+  final baseIndentGraphemes = baseIndent.characters.toList(growable: false);
+  final additionalIndent =
+      codeShouldIncreaseIndentAfter(trimmedBefore, language: language)
+      ? (' ' * (indentWidth < 1 ? 1 : indentWidth)).characters.toList(
+          growable: false,
+        )
+      : const <String>[];
+  final trailingSuffix =
+      blockSuffix?.text.characters.toList(growable: false) ?? const <String>[];
+  final trailingSuffixReplaceCount = blockSuffix?.consumedColumns ?? 0;
+  final cursorInsertion = <String>[
+    '\n',
+    ...baseIndentGraphemes,
+    ...additionalIndent,
+  ];
+  final replacement = <String>[
+    ...cursorInsertion,
+    ...trailingSuffix,
+  ];
+
+  final start = state.hasSelection ? normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  )?.start ?? state.cursorOffset : state.cursorOffset;
+  final endBase = state.hasSelection ? normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  )?.end ?? state.cursorOffset : state.cursorOffset;
+  final end = state.hasSelection
+      ? endBase
+      : (endBase + trailingSuffixReplaceCount).clamp(endBase, graphemes.length);
+
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: start,
+    end: end,
+    replacement: replacement,
+    cursorOffset: start + cursorInsertion.length,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
