@@ -90,6 +90,30 @@ final class TextDocument {
     return _lineLengths[index];
   }
 
+  int lineStartOffset(int index) {
+    if (index <= 0) {
+      return 0;
+    }
+    if (index >= _lineStartOffsets.length) {
+      return length;
+    }
+    return _lineStartOffsets[index];
+  }
+
+  int lineEndOffset(int index, {bool includeTrailingNewline = false}) {
+    if (index < 0) {
+      return 0;
+    }
+    if (index >= _lineLengths.length) {
+      return length;
+    }
+    final end = _lineStartOffsets[index] + _lineLengths[index];
+    if (includeTrailingNewline && index < _lineLengths.length - 1) {
+      return end + 1;
+    }
+    return end;
+  }
+
   TextPosition clampPosition(TextPosition position) {
     final line = position.line.clamp(0, _lineTexts.length - 1);
     final column = position.column.clamp(0, _lineLengths[line]);

@@ -106,5 +106,17 @@ void main() {
 
       expect(document.lineTexts, const ['alpha', 'B']);
     });
+
+    test('line boundary offset helpers expose full-line ranges', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      expect(document.lineStartOffset(0), 0);
+      expect(document.lineEndOffset(0), 5);
+      expect(document.lineEndOffset(0, includeTrailingNewline: true), 6);
+      expect(document.lineStartOffset(1), 6);
+      expect(document.lineEndOffset(1), 10);
+      expect(document.lineStartOffset(2), 10);
+      expect(document.lineEndOffset(2), 10);
+    });
   });
 }

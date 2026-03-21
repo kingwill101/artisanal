@@ -45,6 +45,31 @@ void main() {
       expect(change.oldEndPosition, const TextPosition(line: 1, column: 4));
       expect(change.newEndPosition, const TextPosition(line: 1, column: 6));
     });
+
+    test('computes syntax line windows around a document change', () {
+      final previousDocument = TextDocument(text: 'alpha\nbeta\ngamma');
+      final nextDocument = TextDocument(text: 'alpha\nbetter\ngamma');
+      final change = computeTextDocumentChangeForDocuments(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+      );
+
+      final window = textSyntaxChangeWindow(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+        change: change,
+        lookBehindLines: 1,
+        lookAheadLines: 1,
+      );
+
+      expect(window.previousLines.startLine, 0);
+      expect(window.previousLines.endLine, 3);
+      expect(window.nextLines.startLine, 0);
+      expect(window.nextLines.endLine, 3);
+      expect(window.previousLines.startOffsetIn(previousDocument), 0);
+      expect(window.previousLines.endOffsetIn(previousDocument), 16);
+      expect(window.nextLines.endOffsetIn(nextDocument), 18);
+    });
   });
 
   group('TextSyntaxSession', () {
@@ -149,6 +174,31 @@ void main() {
       expect(updated.change, isNotNull);
     });
 
+    test('merges syntax decoration patches from incremental providers', () {
+      final provider = _PatchingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+
+      final first = session.syncDocument(TextDocument(text: 'aa\nbb\ncc'));
+      final updated = session.syncDocument(TextDocument(text: 'aa\nbbbb\ncc'));
+
+      expect(first.decorations, const [
+        TextDecorationRange(startOffset: 0, endOffset: 2, styleKey: 'line.0'),
+        TextDecorationRange(startOffset: 3, endOffset: 5, styleKey: 'line.1'),
+        TextDecorationRange(startOffset: 6, endOffset: 8, styleKey: 'line.2'),
+      ]);
+      expect(updated.decorations, const [
+        TextDecorationRange(startOffset: 0, endOffset: 2, styleKey: 'line.0'),
+        TextDecorationRange(
+          startOffset: 3,
+          endOffset: 7,
+          styleKey: 'line.1.patched',
+        ),
+        TextDecorationRange(startOffset: 8, endOffset: 10, styleKey: 'line.2'),
+      ]);
+      expect(provider.calls, hasLength(2));
+      expect(provider.calls.last.change, isNotNull);
+    });
+
     test('rebuilds when the language changes even if text does not', () {
       final provider = _RecordingSyntaxProvider();
       final session = TextSyntaxSession<int>(provider: provider);
@@ -175,6 +225,60 @@ void main() {
       expect(provider.calls.last.change, isNull);
     });
   });
+}
+
+final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
+  final List<_RecordingSyntaxCall> calls = <_RecordingSyntaxCall>[];
+
+  @override
+  TextSyntaxBuildResult<int> build(
+    String text, {
+    String? language,
+    TextSyntaxSnapshot<int>? previous,
+    TextDocumentChange? change,
+  }) {
+    calls.add(
+      _RecordingSyntaxCall(
+        text: text,
+        language: language,
+        previousText: previous?.text,
+        change: change,
+      ),
+    );
+    if (previous == null || change == null) {
+      return TextSyntaxBuildResult<int>(
+        decorations: const [
+          TextDecorationRange(startOffset: 0, endOffset: 2, styleKey: 'line.0'),
+          TextDecorationRange(startOffset: 3, endOffset: 5, styleKey: 'line.1'),
+          TextDecorationRange(startOffset: 6, endOffset: 8, styleKey: 'line.2'),
+        ],
+        state: calls.length,
+      );
+    }
+
+    final previousDocument = TextDocument(text: previous.text);
+    final nextDocument = TextDocument(text: text);
+    final window = textSyntaxChangeWindow(
+      previousDocument: previousDocument,
+      nextDocument: nextDocument,
+      change: change,
+    );
+    return TextSyntaxBuildResult<int>.patch(
+      patch: TextSyntaxDecorationPatch.forChangeWindow(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+        window: window,
+        decorations: const [
+          TextDecorationRange(
+            startOffset: 3,
+            endOffset: 7,
+            styleKey: 'line.1.patched',
+          ),
+        ],
+      ),
+      state: calls.length,
+    );
+  }
 }
 
 final class _RecordingSyntaxProvider implements TextSyntaxProvider<int> {
