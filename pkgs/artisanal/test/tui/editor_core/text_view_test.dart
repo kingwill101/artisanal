@@ -116,6 +116,12 @@ void main() {
         ),
         isFalse,
       );
+      expect(document.lineGraphemesAt(1), const ['c', 'd', 'e']);
+      expect(
+        () => document.lineGraphemesAt(1).add('!'),
+        throwsUnsupportedError,
+      );
+      expect(document.lineViews[0], const ['a', 'b']);
     });
   });
 

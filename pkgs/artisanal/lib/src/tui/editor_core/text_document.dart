@@ -1,5 +1,7 @@
 library;
 
+import 'dart:collection';
+
 import 'package:characters/characters.dart';
 
 import 'editor_state.dart';
@@ -17,6 +19,10 @@ final class TextDocument {
   List<List<String>> get lines => _lines
       .map((line) => List<String>.unmodifiable(line))
       .toList(growable: false);
+
+  List<List<String>> get lineViews => List<List<String>>.unmodifiable(
+    _lines.map((line) => UnmodifiableListView(line)),
+  );
 
   int get lineCount => _lines.length;
 
@@ -51,6 +57,13 @@ final class TextDocument {
       return '';
     }
     return _lines[index].join();
+  }
+
+  List<String> lineGraphemesAt(int index) {
+    if (index < 0 || index >= _lines.length) {
+      return const <String>[];
+    }
+    return UnmodifiableListView(_lines[index]);
   }
 
   int lineLength(int index) {

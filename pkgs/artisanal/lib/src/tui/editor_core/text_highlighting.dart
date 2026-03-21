@@ -64,7 +64,7 @@ List<TextHighlightRange> findTextQueryHighlights({
   var lineOffset = 0;
 
   for (var lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
-    final line = document.lines[lineIndex];
+    final line = document.lineGraphemesAt(lineIndex);
     final normalizedLine = line
         .map((token) => _normalizeHighlightToken(token, caseSensitive))
         .toList(growable: false);

@@ -108,7 +108,7 @@ final class TextView {
   List<TextViewLine> buildLines(TextDocument document, EditorState state) {
     final wrapWidth = effectiveWrapWidth();
     final visual = layout.buildVisualLines(
-      document.lines,
+      document.lineViews,
       softWrap: softWrap,
       wrapWidthCells: wrapWidth,
     );
@@ -146,7 +146,7 @@ final class TextView {
     final wrapWidth = effectiveWrapWidth();
     return layout
         .buildVisualLines(
-          document.lines,
+          document.lineViews,
           softWrap: softWrap,
           wrapWidthCells: wrapWidth,
         )

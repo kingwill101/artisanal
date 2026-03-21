@@ -108,7 +108,7 @@ TextCommandResult codeHandleClosingDelimiterAlignment({
 
   final cursor = document.positionForOffset(state.cursorOffset);
   final lineIndex = cursor.line.clamp(0, document.lineCount - 1);
-  final lineGraphemes = document.lines[lineIndex];
+  final lineGraphemes = document.lineGraphemesAt(lineIndex);
   final beforeCursor = lineGraphemes.take(cursor.column).join();
   final line = lineGraphemes.join();
   if (beforeCursor.trim().isNotEmpty || line.trim().isNotEmpty) {
@@ -223,7 +223,7 @@ TextCommandResult codeInsertIndentedNewline({
   String? language,
 }) {
   final cursor = document.positionForOffset(state.cursorOffset);
-  final lineGraphemes = document.lines[cursor.line];
+  final lineGraphemes = document.lineGraphemesAt(cursor.line);
   final beforeCursor = lineGraphemes.take(cursor.column).join();
   final afterCursor = lineGraphemes.skip(cursor.column).join();
   final currentLine = lineGraphemes.join();
