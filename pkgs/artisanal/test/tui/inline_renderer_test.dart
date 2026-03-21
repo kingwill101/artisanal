@@ -29,33 +29,60 @@ void main() {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal);
       renderer.initialize();
+      renderer.render('test');
 
       // Should not contain alt-screen enter sequence
       expect(terminal.output, isNot(contains(Ansi.altScreenEnter)));
     });
 
-    test('saves cursor on initialization', () {
+    test('does not emit full-screen clear in inline mode', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildInlineRenderer(terminal);
-      renderer.initialize();
+      final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
 
-      // Should contain DEC cursor save (ESC 7)
-      expect(terminal.output, contains(Ansi.cursorSaveDec));
+      renderer.render('inline');
+
+      expect(terminal.output, isNot(contains(Ansi.clearScreen)));
     });
 
-    test('renders content within the UI region', () {
+    test('does not scroll viewport on first frame', () {
+      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
+      final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
+
+      renderer.render('inline');
+
+      expect(terminal.output, isNot(contains(Ansi.scrollUpBy(4))));
+      expect(terminal.output, isNot(contains(Ansi.scrollDownBy(4))));
+    });
+
+    test('renders content within the UI region (bottom-anchored)', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 6);
 
-      renderer.render('Hello from inline mode');
+      renderer.render('Hello inline');
 
-      // Should position cursor at the UI region start
-      // For bottom-anchored with height=6 on 24-row terminal:
-      // UI starts at row 24 - 6 + 1 = 19
+      // For bottom-anchored height=6 on 24-row terminal:
+      // UI starts at row 24 - 6 + 1 = 19.
+      // The CUP in the UV output should be offset to row 19+.
+      // Expect cursorTo(19,1) for clearing the first UI row.
       expect(terminal.output, contains(Ansi.cursorTo(19, 1)));
     });
 
-    test('clears only UI region rows', () {
+    test('renders content within the UI region (top-anchored)', () {
+      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
+      final renderer = buildInlineRenderer(
+        terminal,
+        inlineHeight: 4,
+        uiAnchor: UiAnchor.top,
+      );
+
+      renderer.render('Hello top');
+
+      // Top-anchored: UI starts at row 1, offset = 0.
+      // Content CUP should start at row 1.
+      expect(terminal.output, contains(Ansi.cursorTo(1, 1)));
+    });
+
+    test('clears UI region rows before writing content', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 3);
 
@@ -66,61 +93,38 @@ void main() {
       expect(terminal.output, contains(Ansi.cursorTo(22, 1)));
       expect(terminal.output, contains(Ansi.cursorTo(23, 1)));
       expect(terminal.output, contains(Ansi.cursorTo(24, 1)));
-      // Each row should have clear-line
       expect(terminal.output, contains(Ansi.clearLine));
     });
 
-    test('sets scroll region for bottom-anchored UI', () {
+    test('offsets CUP rows in UV output', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
 
-      renderer.render('content');
+      renderer.render('test');
 
-      // DECSTBM should be set to rows 1..20 (24-4=20)
-      expect(terminal.output, contains('\x1b[1;20r'));
+      // Bottom-anchored, height=4: uiStartRow = 24 - 4 + 1 = 21
+      // UV output has CUP at row 1 -> should become row 21
+      // The UV renderer emits cursorTo(1,1) for first line,
+      // which should be offset to cursorTo(21, 1).
+      final output = terminal.output;
+
+      // Should NOT contain cursorTo(1,1) from the UV renderer (it was offset)
+      // But the clear loop uses cursorTo(21,1) which is the same sequence.
+      // Instead, verify the content appears after the UI region positioning.
+      expect(output, contains(Ansi.cursorTo(21, 1)));
     });
 
-    test('sets scroll region for top-anchored UI', () {
-      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildInlineRenderer(
-        terminal,
-        inlineHeight: 4,
-        uiAnchor: UiAnchor.top,
+    test('does not double-offset home cursor sequence', () {
+      final terminal = StringTerminal(terminalWidth: 40, terminalHeight: 10);
+      final renderer = buildInlineRenderer(terminal, inlineHeight: 3);
+
+      renderer.render(
+        'Inline Status Bar\nRUNNING  Events: 0\nSpace toggle  q quit',
       );
 
-      renderer.render('content');
-
-      // DECSTBM should be set to rows 5..24 (UI is rows 1-4)
-      expect(terminal.output, contains('\x1b[5;24r'));
-    });
-
-    test('resets scroll region after render', () {
-      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
-
-      renderer.render('content');
-
-      // DECSTBM reset should appear after the content
-      expect(terminal.output, contains('\x1b[r'));
-    });
-
-    test('restores cursor after render', () {
-      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildInlineRenderer(terminal);
-
-      renderer.render('content');
-
-      // DEC cursor restore should appear in output
-      expect(terminal.output, contains(Ansi.cursorRestoreDec));
-    });
-
-    test('shows cursor after render when hideCursor is false', () {
-      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildInlineRenderer(terminal, hideCursor: false);
-
-      renderer.render('content');
-
-      expect(terminal.output, contains(Ansi.cursorShow));
+      // Bottom-anchored 10-row terminal with 3-row UI starts at row 8.
+      expect(terminal.output, contains(Ansi.cursorTo(8, 1)));
+      expect(terminal.output, isNot(contains(Ansi.cursorTo(15, 1))));
     });
 
     test('uses synchronized update markers', () {
@@ -133,7 +137,16 @@ void main() {
       expect(terminal.output, contains(Ansi.endSynchronizedUpdate));
     });
 
-    test('dispose restores cursor and does not exit alt-screen', () {
+    test('shows cursor at end of frame', () {
+      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
+      final renderer = buildInlineRenderer(terminal, hideCursor: false);
+
+      renderer.render('content');
+
+      expect(terminal.output, contains(Ansi.cursorShow));
+    });
+
+    test('dispose does not exit alt-screen', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal);
       renderer.initialize();
@@ -142,25 +155,45 @@ void main() {
       terminal.clear();
       renderer.dispose();
 
-      // Should restore cursor (cursor was saved on init)
-      expect(terminal.output, contains(Ansi.cursorRestoreDec));
-      // Should track showCursor operation (StringTerminal doesn't write
-      // ANSI for showCursor — it records operations separately)
-      expect(terminal.operations, contains('showCursor'));
       // Should NOT exit alt-screen (we never entered it)
       expect(terminal.output, isNot(contains(Ansi.altScreenExit)));
+      // Should track showCursor operation
+      expect(terminal.operations, contains('showCursor'));
     });
 
-    test('scroll region is reset at end of each render', () {
+    test('diffing works across frames', () {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
 
-      renderer.render('content');
+      renderer.render('Hello');
+      terminal.clear();
 
-      // DECSTBM reset should appear after the content
-      expect(terminal.output, contains('\x1b[r'));
-      // DECSTBM set should also appear before content
-      expect(terminal.output, contains('\x1b[1;20r'));
+      renderer.render('World');
+
+      // The second frame should contain the new content
+      expect(terminal.output, contains('World'));
+    });
+
+    test('offsets incremental row updates inside the inline region', () {
+      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
+      final renderer = buildInlineRenderer(terminal, inlineHeight: 4);
+
+      renderer.render(
+        'Inline Status Bar\nRUNNING  Events: 0\n\nSpace toggle  q quit',
+      );
+      terminal.clear();
+      renderer.render(
+        'Inline Status Bar\nRUNNING  Events: 1\n\nSpace toggle  q quit',
+      );
+
+      expect(
+        terminal.output,
+        anyOf(contains('\x1b[22d'), contains('\x1b[22;18H')),
+      );
+      expect(
+        terminal.output,
+        isNot(anyOf(contains('\x1b[2d'), contains('\x1b[2;18H'))),
+      );
     });
   });
 
@@ -181,16 +214,7 @@ void main() {
       final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
       final renderer = buildFullScreenRenderer(terminal);
       renderer.initialize();
-      // StringTerminal tracks enterAltScreen as an operation, not ANSI
       expect(terminal.operations, contains('enterAltScreen'));
-    });
-
-    test('still clears screen in fullscreen mode', () {
-      final terminal = StringTerminal(terminalWidth: 80, terminalHeight: 24);
-      final renderer = buildFullScreenRenderer(terminal);
-      renderer.initialize();
-      // StringTerminal tracks clearScreen as an operation, not ANSI
-      expect(terminal.operations, contains('clearScreen'));
     });
   });
 

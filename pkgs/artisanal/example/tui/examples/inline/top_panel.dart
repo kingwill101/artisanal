@@ -67,6 +67,11 @@ void main() async {
   // Print some initial log lines to demonstrate scrollback preservation.
   print('Starting system monitor...');
   print('Scrollback is preserved below the info panel.');
+  for (var i = 1; i <= 12; i++) {
+    print(
+      'seed log line $i: visible content should remain below the top panel',
+    );
+  }
   print('');
 
   await runProgram(
@@ -77,6 +82,7 @@ void main() async {
       uiAnchor: UiAnchor.top,
       fps: 5,
       hideCursor: true,
+      startupProbes: false,
     ),
   );
 

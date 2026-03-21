@@ -96,6 +96,14 @@ class _LogMsg extends Msg {
 }
 
 void main() async {
+  print('Preparing inline status demo...');
+  print('These lines should remain visible above the bottom status bar.');
+  print('If inline mode is working, only the bottom 4 rows become the UI.');
+  for (var i = 1; i <= 12; i++) {
+    print('seed log line $i: preserved visible content above the inline UI');
+  }
+  print('');
+
   await runProgram(
     const InlineStatusModel(),
     options: const ProgramOptions(
@@ -103,6 +111,10 @@ void main() async {
       inlineHeight: 4,
       uiAnchor: UiAnchor.bottom,
       fps: 30,
+      startupProbes: false,
     ),
   );
+
+  print('');
+  print('Inline status demo exited. Scrollback above should still be intact.');
 }

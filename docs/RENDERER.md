@@ -16,6 +16,25 @@ void main() {
 
 ## Renderer Types
 
+### TUI Renderer Modes
+
+The TUI runtime can drive renderers in either full-screen or inline mode.
+
+```dart
+await runProgram(
+  const MyModel(),
+  options: const ProgramOptions(
+    screenMode: ScreenMode.inline,
+    inlineHeight: 4,
+    uiAnchor: UiAnchor.bottom,
+  ),
+);
+```
+
+Inline mode keeps the terminal on the primary screen, captures UV renderer
+output, and remaps absolute row-addressing sequences into the anchored inline
+region. Full-screen mode continues to use the alternate screen buffer.
+
 ### TerminalRenderer
 
 Auto-detects terminal capabilities and applies ANSI styling.

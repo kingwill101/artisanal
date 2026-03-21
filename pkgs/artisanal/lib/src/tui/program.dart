@@ -163,8 +163,9 @@ final class ProgramReplay {
 
 /// Controls how the TUI renders relative to the terminal's primary screen.
 ///
-/// [FullScreen] takes over the entire terminal via the alternate screen
-/// buffer. [Inline] and [InlineAuto] preserve scrollback and render the
+/// [ScreenMode.fullScreen] takes over the entire terminal via the alternate
+/// screen buffer. [ScreenMode.inline] and [ScreenMode.inlineAuto] preserve
+/// scrollback and render the
 /// UI within a region anchored to the top or bottom of the visible
 /// viewport.
 enum ScreenMode {
@@ -176,8 +177,10 @@ enum ScreenMode {
   /// above or below the UI region.
   inline,
 
-  /// Inline mode with automatic height based on rendered content.
-  /// The UI region grows and shrinks between [minHeight] and [maxHeight].
+  /// Inline mode reserved for content-aware height selection.
+  ///
+  /// This currently behaves the same as [ScreenMode.inline] and uses
+  /// [ProgramOptions.inlineHeight] until automatic sizing lands.
   inlineAuto,
 }
 
@@ -250,6 +253,7 @@ class ProgramOptions {
   /// Height of the inline UI region in rows when using [ScreenMode.inline].
   ///
   /// Ignored when the effective mode is [ScreenMode.fullScreen].
+  /// [ScreenMode.inlineAuto] currently uses this same fixed height.
   final int inlineHeight;
 
   /// Which edge of the viewport the inline UI region is anchored to.
@@ -447,6 +451,10 @@ class ProgramOptions {
   /// When `null` (default), the runtime only auto-runs startup probes for the
   /// built-in terminal implementations that it knows how to interrogate
   /// safely. Arbitrary injected terminals are skipped unless they opt in.
+  ///
+  /// Inline modes skip auto-probing unless this is explicitly set to `true`
+  /// because cursor-report and emoji-width probes can visibly disturb the
+  /// primary screen.
   final bool? startupProbes;
 
   /// Optional cancellation signal. When this completes, the program exits with cancellation.
@@ -2301,6 +2309,10 @@ class Program<M extends Model> {
     if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
     if (!_options.useUltravioletInputDecoder) return;
+    if (_options.effectiveScreenMode != ScreenMode.fullScreen &&
+        _options.startupProbes != true) {
+      return;
+    }
     final term = _terminal;
     if (term == null) return;
     if (!_shouldRunStartupProbes(term)) return;
@@ -2309,7 +2321,7 @@ class Program<M extends Model> {
 
     // Avoid messing with normal terminal output in inline mode. Users can
     // always override via UV_EMOJI_WIDTH/EMOJI_WIDTH if needed.
-    if (_options.altScreen) {
+    if (_options.effectiveScreenMode == ScreenMode.fullScreen) {
       final override =
           io.Platform.environment['UV_EMOJI_WIDTH'] ??
           io.Platform.environment['EMOJI_WIDTH'];

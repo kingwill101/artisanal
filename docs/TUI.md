@@ -8,6 +8,7 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Quick Start](#quick-start)
 - [Model Interface](#model-interface)
 - [Program Class](#program-class)
+- [Inline Mode](#inline-mode)
 - [Program Hosts](#program-hosts)
 - [Remote Plugin Surfaces](#remote-plugin-surfaces)
 - [Command System (Cmd)](#command-system-cmd)
@@ -150,7 +151,7 @@ The `Program` class manages the runtime lifecycle:
 final program = Program(
   MyModel(),
   options: ProgramOptions(
-    altScreen: true,        // Use alternate screen buffer
+    screenMode: ScreenMode.fullScreen,
     mouseMode: MouseMode.allMotion, // Enable passive hover tracking
     fps: 60,                // Maximum frames per second
     frameTick: true,        // Auto-send FrameTickMsg
@@ -168,6 +169,9 @@ await program.run();
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `altScreen` | `bool` | `true` | Use alternate screen buffer (fullscreen mode) |
+| `screenMode` | `ScreenMode?` | `null` | Explicitly choose `fullScreen`, `inline`, or `inlineAuto`; takes precedence over `altScreen` |
+| `inlineHeight` | `int` | `4` | Height of the inline UI region when using inline modes |
+| `uiAnchor` | `UiAnchor` | `bottom` | Anchor the inline UI to the top or bottom of the viewport |
 | `mouse` | `bool` | `false` | Enable mouse tracking |
 | `mouseMode` | `MouseMode` | `none` | Mouse tracking mode (`none`, `cellMotion`, `allMotion`) |
 | `fps` | `int` | `60` | Maximum frames per second (1-120) |
@@ -191,6 +195,10 @@ await program.run();
 wheel input, and pointer motion while a button is pressed. Use
 `MouseMode.allMotion` for passive hover behavior such as tooltips and
 `MouseRegion` enter/exit callbacks.
+
+`screenMode` is the preferred way to select between full-screen and inline
+presentation. `altScreen` remains for backward compatibility and resolves to
+`ScreenMode.fullScreen` when `true` and `ScreenMode.inline` when `false`.
 
 Convenience helpers are available on `ProgramOptions`:
 
@@ -216,6 +224,49 @@ await program.run();
 final compressed = compressAnsi('\x1b[1mBold\x1b[0m');
 print(compressed);
 ```
+
+### Inline Mode
+
+Inline mode renders a bounded TUI region on the terminal's primary screen
+instead of switching to the alternate screen buffer.
+
+```dart
+await runProgram(
+  const StatusModel(),
+  options: const ProgramOptions(
+    screenMode: ScreenMode.inline,
+    inlineHeight: 4,
+    uiAnchor: UiAnchor.bottom,
+  ),
+);
+```
+
+Use `UiAnchor.bottom` for status bars and command palettes that should stay
+near the prompt, or `UiAnchor.top` for dashboards and monitors that should pin
+to the top of the viewport.
+
+```dart
+await runProgram(
+  const MonitorModel(),
+  options: const ProgramOptions(
+    screenMode: ScreenMode.inline,
+    inlineHeight: 4,
+    uiAnchor: UiAnchor.top,
+    startupProbes: false,
+  ),
+);
+```
+
+Inline-mode behavior:
+
+- preserves scrollback because it never enters the alternate screen buffer
+- redraws only the configured inline rows instead of clearing the full screen
+- restores the surrounding CLI cursor position after each frame
+- skips startup probes by default because cursor-report and emoji-width probes
+  can visibly disturb the primary screen
+
+`ScreenMode.inlineAuto` is reserved for future content-aware sizing. Today it
+behaves the same as `ScreenMode.inline` and still uses `inlineHeight`.
 
 ### Terminal Integration
 
@@ -253,6 +304,10 @@ By default, this auto-runs only for the built-in terminal implementations
 you inject a custom terminal, probes are skipped unless you opt in with
 `ProgramOptions(startupProbes: true)` or
 `ProgramOptions().withStartupProbes(true)`.
+
+Inline programs skip auto-probing by default even when UV rendering is enabled.
+Set `startupProbes: true` only if you explicitly want probe traffic on the
+primary screen and have verified your terminal handles it cleanly.
 
 These probes are intentionally short-lived and do not block forever. Critical
 lifecycle events abort the active probe immediately and skip the remaining
