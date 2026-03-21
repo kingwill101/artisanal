@@ -15,20 +15,25 @@ final class TextDocument {
   late List<List<String>> _lines;
   late List<int> _lineStartOffsets;
   late int _length;
+  String? _cachedText;
+  List<String>? _cachedFlattenedGraphemes;
+  List<List<String>>? _cachedLineViews;
 
   List<List<String>> get lines => _lines
       .map((line) => List<String>.unmodifiable(line))
       .toList(growable: false);
 
-  List<List<String>> get lineViews => List<List<String>>.unmodifiable(
-    _lines.map((line) => UnmodifiableListView(line)),
-  );
+  List<List<String>> get lineViews =>
+      _cachedLineViews ??= List<List<String>>.unmodifiable(
+        _lines.map((line) => UnmodifiableListView(line)),
+      );
 
   int get lineCount => _lines.length;
 
   int get length => _length;
 
-  String get text => _lines.map((line) => line.join()).join('\n');
+  String get text =>
+      _cachedText ??= _lines.map((line) => line.join()).join('\n');
 
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
@@ -63,7 +68,7 @@ final class TextDocument {
     if (index < 0 || index >= _lines.length) {
       return const <String>[];
     }
-    return UnmodifiableListView(_lines[index]);
+    return lineViews[index];
   }
 
   int lineLength(int index) {
@@ -102,14 +107,17 @@ final class TextDocument {
   }
 
   List<String> flattenWithNewlines() {
-    final result = <String>[];
-    for (var index = 0; index < _lines.length; index++) {
-      result.addAll(_lines[index]);
-      if (index < _lines.length - 1) {
-        result.add('\n');
+    final flattened = _cachedFlattenedGraphemes ??= () {
+      final result = <String>[];
+      for (var index = 0; index < _lines.length; index++) {
+        result.addAll(_lines[index]);
+        if (index < _lines.length - 1) {
+          result.add('\n');
+        }
       }
-    }
-    return result;
+      return List<String>.unmodifiable(result);
+    }();
+    return List<String>.from(flattened, growable: true);
   }
 
   List<String> graphemesInRange({
@@ -321,6 +329,9 @@ final class TextDocument {
       }
     }
     _length = offset;
+    _cachedText = null;
+    _cachedFlattenedGraphemes = null;
+    _cachedLineViews = null;
   }
 
   bool _isWhitespace(String grapheme) {
