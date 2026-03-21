@@ -60,6 +60,10 @@ final class TextDocument {
   @visibleForTesting
   int get debugJoinedSourceTextCount => _storage.debugJoinedSourceTextCount;
 
+  @visibleForTesting
+  int get debugMaterializedSourceLineTextCount =>
+      _storage.debugMaterializedSourceLineTextCount;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
@@ -659,14 +663,23 @@ final class _TextDocumentSource {
   _TextDocumentSource._({
     String? rawText,
     List<String>? lineTexts,
+    List<List<String>>? parsedLines,
     required this.lineStarts,
     required this.lineEnds,
     required this.lineLengths,
-  }) : assert((rawText != null) != (lineTexts != null)),
+  }) : assert(
+         ((rawText != null) ? 1 : 0) +
+                 ((lineTexts != null) ? 1 : 0) +
+                 ((parsedLines != null) ? 1 : 0) ==
+             1,
+       ),
        _rawText = rawText,
        _lineTexts = lineTexts == null
            ? null
-           : List<String>.unmodifiable(lineTexts);
+           : List<String>.unmodifiable(lineTexts),
+       _parsedLines = parsedLines == null
+           ? null
+           : List<List<String>>.unmodifiable(parsedLines);
 
   factory _TextDocumentSource.fromText(String text) {
     final lineStarts = <int>[];
@@ -742,20 +755,59 @@ final class _TextDocumentSource {
     );
   }
 
-  String get text => _rawText ??= _lineTexts!.join('\n');
+  factory _TextDocumentSource.fromParsedLines(List<List<String>> parsedLines) {
+    final normalizedParsedLines = List<List<String>>.unmodifiable(
+      parsedLines
+          .map((line) => List<String>.unmodifiable(line))
+          .toList(growable: false),
+    );
+    final lineStarts = <int>[];
+    final lineEnds = <int>[];
+    final lineLengths = <int>[];
+    var offset = 0;
+    for (var index = 0; index < normalizedParsedLines.length; index++) {
+      final line = normalizedParsedLines[index];
+      lineStarts.add(offset);
+      for (final grapheme in line) {
+        offset += grapheme.length;
+      }
+      lineEnds.add(offset);
+      lineLengths.add(line.length);
+      if (index < normalizedParsedLines.length - 1) {
+        offset += 1;
+      }
+    }
+    return _TextDocumentSource._(
+      parsedLines: normalizedParsedLines,
+      lineStarts: List<int>.unmodifiable(lineStarts),
+      lineEnds: List<int>.unmodifiable(lineEnds),
+      lineLengths: List<int>.unmodifiable(lineLengths),
+    );
+  }
 
-  bool get debugHasJoinedTextCache => _lineTexts != null && _rawText != null;
+  String get text => _rawText ??= switch ((_lineTexts, _parsedLines)) {
+    (final lineTexts?, _) => lineTexts.join('\n'),
+    (_, final parsedLines?) => _joinParsedLines(parsedLines),
+    _ => _rawText!,
+  };
+
+  bool get debugHasJoinedTextCache =>
+      (_lineTexts != null || _parsedLines != null) && _rawText != null;
+
+  int get debugMaterializedLineTextCount =>
+      _materializedParsedLineTexts?.whereType<String>().length ?? 0;
 
   final List<int> lineStarts;
   final List<int> lineEnds;
   final List<int> lineLengths;
   String? _rawText;
   final List<String>? _lineTexts;
+  final List<List<String>>? _parsedLines;
+  List<String?>? _materializedParsedLineTexts;
 
   int get lineCount => lineLengths.length;
 
-  String lineAt(int index) =>
-      _lineTexts?[index] ?? text.substring(lineStarts[index], lineEnds[index]);
+  String lineAt(int index) => _lineTextAt(index);
 
   String textBetweenLines({required int startLine, required int endLine}) {
     final normalizedStart = startLine.clamp(0, lineCount);
@@ -796,6 +848,15 @@ final class _TextDocumentSource {
       }
       return;
     }
+    if (_parsedLines != null) {
+      for (var index = normalizedStart; index < normalizedEnd; index++) {
+        if (leadingNewline || index > normalizedStart) {
+          buffer.write('\n');
+        }
+        buffer.write(_lineTextAt(index));
+      }
+      return;
+    }
     if (leadingNewline) {
       buffer.write('\n');
     }
@@ -812,6 +873,30 @@ final class _TextDocumentSource {
       return lineEnds.last;
     }
     return lineStarts[endLine] - 1;
+  }
+
+  String _lineTextAt(int index) {
+    if (_lineTexts case final lineTexts?) {
+      return lineTexts[index];
+    }
+    if (_parsedLines case final parsedLines?) {
+      final cache =
+          _materializedParsedLineTexts ??=
+              List<String?>.filled(parsedLines.length, null, growable: false);
+      return cache[index] ??= parsedLines[index].join();
+    }
+    return _rawText!.substring(lineStarts[index], lineEnds[index]);
+  }
+
+  String _joinParsedLines(List<List<String>> parsedLines) {
+    final buffer = StringBuffer();
+    for (var index = 0; index < parsedLines.length; index++) {
+      if (index > 0) {
+        buffer.write('\n');
+      }
+      buffer.write(_lineTextAt(index));
+    }
+    return buffer.toString();
   }
 }
 
@@ -1006,6 +1091,12 @@ final class _TextDocumentStorage {
     <_TextDocumentSource>{},
   );
 
+  int get debugMaterializedSourceLineTextCount =>
+      _debugMaterializedSourceLineTextCount(
+        <_TextDocumentStorage>{},
+        <_TextDocumentSource>{},
+      );
+
   bool get debugHasMaterializedLineTextCache => _cachedLineTexts != null;
 
   bool get debugHasTextCache => _cachedText != null;
@@ -1154,6 +1245,10 @@ final class _TextDocumentStorage {
     if (index < 0 || index >= lineCount) {
       return const <String>[];
     }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.lineGraphemesAt(localIndex);
+    }
     return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
       lineAt(index).characters.toList(growable: false),
     );
@@ -1166,6 +1261,10 @@ final class _TextDocumentStorage {
     final lineLength = this.lineLength(index);
     if (column < 0 || column >= lineLength) {
       return null;
+    }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.graphemeInLineAt(localIndex, column);
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
@@ -1186,6 +1285,10 @@ final class _TextDocumentStorage {
     if (clampedCount >= lineLength(index)) {
       return line;
     }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.lineTextPrefix(localIndex, clampedCount);
+    }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
       return cached.take(clampedCount).join();
@@ -1204,6 +1307,10 @@ final class _TextDocumentStorage {
     }
     if (clampedStart >= lineLength(index)) {
       return '';
+    }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.lineTextSuffix(localIndex, clampedStart);
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
@@ -1225,6 +1332,14 @@ final class _TextDocumentStorage {
     final normalizedEnd = endColumn.clamp(normalizedStart, lineLength);
     if (normalizedStart == normalizedEnd) {
       return const <String>[];
+    }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.graphemesInLineRange(
+        localIndex,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      );
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
@@ -1255,6 +1370,14 @@ final class _TextDocumentStorage {
     if (normalizedStart == 0 && normalizedEnd == lineLength) {
       return lineAt(index);
     }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.textInLineRange(
+        localIndex,
+        startColumn: normalizedStart,
+        endColumn: normalizedEnd,
+      );
+    }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
       return cached.sublist(normalizedStart, normalizedEnd).join();
@@ -1283,6 +1406,16 @@ final class _TextDocumentStorage {
     );
     if (normalizedCount == 0) {
       return true;
+    }
+    if (_baseLineTexts == null && _source == null && _segments != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.matchesGraphemesInLineRange(
+        localIndex,
+        startColumn: normalizedStart,
+        graphemes: graphemes,
+        graphemeStart: graphemeStart,
+        graphemeCount: normalizedCount,
+      );
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
@@ -1693,20 +1826,7 @@ final class _TextDocumentStorage {
       (index) => List<String>.unmodifiable(List<String>.from(lines[index])),
       growable: false,
     );
-    final lineTexts = List<String>.generate(
-      normalizedLines.length,
-      (index) => normalizedLines[index].join(),
-      growable: false,
-    );
-    final lineLengths = List<int>.generate(
-      normalizedLines.length,
-      (index) => normalizedLines[index].length,
-      growable: false,
-    );
-    final source = _TextDocumentSource.fromLineTexts(
-      lineTexts,
-      lineLengths: lineLengths,
-    );
+    final source = _TextDocumentSource.fromParsedLines(normalizedLines);
     if (source.lineCount <= _maxLeafLineCount) {
       return _leafFromTextSource(
         source: source,
@@ -1996,6 +2116,31 @@ final class _TextDocumentStorage {
     }
     return total;
   }
+
+  int _debugMaterializedSourceLineTextCount(
+    Set<_TextDocumentStorage> visited,
+    Set<_TextDocumentSource> sources,
+  ) {
+    if (!visited.add(this)) {
+      return 0;
+    }
+    final segments = _segments;
+    if (segments == null || segments.isEmpty) {
+      final source = _source;
+      if (source == null || !sources.add(source)) {
+        return 0;
+      }
+      return source.debugMaterializedLineTextCount;
+    }
+    var total = 0;
+    for (final segment in segments) {
+      total += segment.storage._debugMaterializedSourceLineTextCount(
+        visited,
+        sources,
+      );
+    }
+    return total;
+  }
 }
 
 final class _TextDocumentStorageSegment {
@@ -2022,6 +2167,52 @@ final class _TextDocumentStorageSegment {
   String lineAt(int localIndex) => storage.lineAt(startLine + localIndex);
 
   int lineLength(int localIndex) => storage.lineLength(startLine + localIndex);
+
+  List<String> lineGraphemesAt(int localIndex) =>
+      storage.lineGraphemesAt(startLine + localIndex);
+
+  String? graphemeInLineAt(int localIndex, int column) =>
+      storage.graphemeInLineAt(startLine + localIndex, column);
+
+  String lineTextPrefix(int localIndex, int graphemeCount) =>
+      storage.lineTextPrefix(startLine + localIndex, graphemeCount);
+
+  String lineTextSuffix(int localIndex, int graphemeStart) =>
+      storage.lineTextSuffix(startLine + localIndex, graphemeStart);
+
+  List<String> graphemesInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required int endColumn,
+  }) => storage.graphemesInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  );
+
+  String textInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required int endColumn,
+  }) => storage.textInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  );
+
+  bool matchesGraphemesInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) => storage.matchesGraphemesInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    graphemes: graphemes,
+    graphemeStart: graphemeStart,
+    graphemeCount: graphemeCount,
+  );
 
   int lineStartOffset(int localIndex) {
     if (localIndex <= 0) {

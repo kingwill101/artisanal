@@ -214,10 +214,15 @@ void main() {
         expect(document.debugSourceBackedLeafCount, greaterThan(1));
         expect(document.debugDistinctSourceCount, 1);
         expect(document.debugJoinedSourceTextCount, 0);
+        expect(document.debugMaterializedSourceLineTextCount, 0);
         expect(document.debugLineGraphemeCacheCount, parsedLines.length);
         expect(document.lineCount, parsedLines.length);
+        expect(document.lineGraphemesAt(0), parsedLines.first);
+        expect(document.debugMaterializedSourceLineTextCount, 0);
         expect(document.lineAt(0), 'line-0-abcdefghij');
+        expect(document.debugMaterializedSourceLineTextCount, 1);
         expect(document.lineAt(599), 'line-599-abcdefghij');
+        expect(document.debugMaterializedSourceLineTextCount, 2);
       },
     );
 
