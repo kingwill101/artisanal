@@ -650,21 +650,25 @@ final class TextDocument {
     List<String> lineTexts, {
     List<int>? lineLengths,
   }) {
-    final totalTextLength = lineTexts.fold<int>(
-      lineTexts.length > 1 ? lineTexts.length - 1 : 0,
-      (total, line) => total + line.length,
-    );
+    final replacementStats =
+        lineLengths == null ? _computeLineTextStats(lineTexts) : null;
+    final normalizedLineLengths = lineLengths ?? replacementStats!.lineLengths;
+    final totalTextLength = replacementStats?.totalTextLength ??
+        lineTexts.fold<int>(
+          lineTexts.length > 1 ? lineTexts.length - 1 : 0,
+          (total, line) => total + line.length,
+        );
     if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount ||
         totalTextLength >= _sourceBackedReplacementTextThreshold) {
       return _TextDocumentStorage._buildStorageFromLineTextsSource(
         lineTexts,
-        lineLengths: lineLengths,
+        lineLengths: normalizedLineLengths,
         revision: 0,
       );
     }
     return _TextDocumentStorage.fromLineTexts(
       lineTexts,
-      lineLengths: lineLengths,
+      lineLengths: normalizedLineLengths,
       revision: 0,
     );
   }
@@ -678,6 +682,22 @@ final class TextDocument {
       return _TextDocumentStorage.fromText(text, revision: 0);
     }
     return _TextDocumentStorage.fromLineTexts(lineTexts, revision: 0);
+  }
+
+  static ({List<int> lineLengths, int totalTextLength}) _computeLineTextStats(
+    List<String> lineTexts,
+  ) {
+    final lineLengths = List<int>.filled(lineTexts.length, 0, growable: false);
+    var totalTextLength = lineTexts.length > 1 ? lineTexts.length - 1 : 0;
+    for (var index = 0; index < lineTexts.length; index++) {
+      final line = lineTexts[index];
+      totalTextLength += line.length;
+      lineLengths[index] = line.characters.length;
+    }
+    return (
+      lineLengths: List<int>.unmodifiable(lineLengths),
+      totalTextLength: totalTextLength,
+    );
   }
 }
 

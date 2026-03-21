@@ -621,6 +621,36 @@ void main() {
     );
 
     test(
+      'replaceLineTextRange keeps grapheme-heavy large replacement lengths correct',
+      () {
+        const family = '👩‍👩‍👧‍👦';
+        final replacementLineTexts = List<String>.generate(
+          600,
+          (_) => family,
+          growable: false,
+        );
+        final document = TextDocument(text: 'alpha\nbeta');
+
+        document.replaceLineTextRange(
+          startLine: 0,
+          endLine: document.lineCount,
+          replacementLineTexts: replacementLineTexts,
+        );
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugDistinctSourceCount, 1);
+        expect(document.lineCount, replacementLineTexts.length);
+        expect(document.lineLength(0), 1);
+        expect(document.lineLength(255), 1);
+        expect(document.lineLength(256), 1);
+        expect(document.lineLength(599), 1);
+        expect(document.lineAt(0), family);
+        expect(document.lineAt(599), family);
+      },
+    );
+
+    test(
       'line-text-backed sources stay unjoined through composite full-text reads',
       () {
         final replacementLineTexts = List<String>.generate(
