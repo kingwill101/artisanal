@@ -597,6 +597,7 @@ void main() {
       final document = TextDocument(text: '$prefix$gap$suffix');
 
       expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
 
       final word = document.wordBoundaryAt(
         const TextPosition(line: 0, column: 5000),
@@ -619,6 +620,7 @@ void main() {
         TextPosition(line: 0, column: prefix.length + gap.length),
       );
       expect(document.debugLineGraphemeCacheCount, 0);
+      expect(document.debugHasTextCache, isFalse);
     });
 
     test(

@@ -307,70 +307,10 @@ final class TextDocument {
     }
 
     final column = clamped.column.clamp(0, lineLength - 1);
-    final cachedLine =
-        _storage._lineGraphemeCaches[clamped.line] ??
-        _storage._sourceParsedLineAt(clamped.line);
-    if (cachedLine != null) {
-      if (_isWhitespace(cachedLine[column])) {
-        var start = column;
-        while (start > 0 && _isWhitespace(cachedLine[start - 1])) {
-          start--;
-        }
-        var end = column;
-        while (end < lineLength && _isWhitespace(cachedLine[end])) {
-          end++;
-        }
-        return (
-          start: TextPosition(line: clamped.line, column: start),
-          end: TextPosition(line: clamped.line, column: end),
-        );
-      }
-
-      var start = column;
-      while (start > 0 && !_isWhitespace(cachedLine[start - 1])) {
-        start--;
-      }
-      var end = column;
-      while (end < lineLength && !_isWhitespace(cachedLine[end])) {
-        end++;
-      }
-      return (
-        start: TextPosition(line: clamped.line, column: start),
-        end: TextPosition(line: clamped.line, column: end),
-      );
-    }
-
-    final lineText = _storage.lineAt(clamped.line);
-    final prefix = lineText.characters.take(column + 1).toList(growable: false);
-    final graphemeAtCursor = prefix.last;
-    if (_isWhitespace(graphemeAtCursor)) {
-      var start = column;
-      while (start > 0 && _isWhitespace(prefix[start - 1])) {
-        start--;
-      }
-      var end = column;
-      final suffix = lineText.characters.skip(column).iterator;
-      while (suffix.moveNext() && _isWhitespace(suffix.current)) {
-        end++;
-      }
-      return (
-        start: TextPosition(line: clamped.line, column: start),
-        end: TextPosition(line: clamped.line, column: end),
-      );
-    }
-
-    var start = column;
-    while (start > 0 && !_isWhitespace(prefix[start - 1])) {
-      start--;
-    }
-    var end = column;
-    final suffix = lineText.characters.skip(column).iterator;
-    while (suffix.moveNext() && !_isWhitespace(suffix.current)) {
-      end++;
-    }
+    final boundary = _storage.wordBoundaryAtInLine(clamped.line, column);
     return (
-      start: TextPosition(line: clamped.line, column: start),
-      end: TextPosition(line: clamped.line, column: end),
+      start: TextPosition(line: clamped.line, column: boundary.start),
+      end: TextPosition(line: clamped.line, column: boundary.end),
     );
   }
 
@@ -715,7 +655,7 @@ final class TextDocument {
     return true;
   }
 
-  bool _isWhitespace(String grapheme) {
+  static bool _isWhitespace(String grapheme) {
     return grapheme == ' ' ||
         grapheme == '\t' ||
         grapheme == '\n' ||
@@ -1136,6 +1076,53 @@ abstract base class _TextDocumentSource {
     return lineAt(index).characters.skip(graphemeStart).toString();
   }
 
+  ({int start, int end}) wordBoundaryAt(int index, int column) {
+    final graphemeAtCursor = graphemeInLineAt(index, column);
+    if (graphemeAtCursor == null) {
+      return (start: column, end: column);
+    }
+
+    if (TextDocument._isWhitespace(graphemeAtCursor)) {
+      var start = column;
+      while (start > 0) {
+        final previous = graphemeInLineAt(index, start - 1);
+        if (previous == null || !TextDocument._isWhitespace(previous)) {
+          break;
+        }
+        start--;
+      }
+
+      var end = column;
+      while (end < lineLengths[index]) {
+        final current = graphemeInLineAt(index, end);
+        if (current == null || !TextDocument._isWhitespace(current)) {
+          break;
+        }
+        end++;
+      }
+      return (start: start, end: end);
+    }
+
+    var start = column;
+    while (start > 0) {
+      final previous = graphemeInLineAt(index, start - 1);
+      if (previous == null || TextDocument._isWhitespace(previous)) {
+        break;
+      }
+      start--;
+    }
+
+    var end = column;
+    while (end < lineLengths[index]) {
+      final current = graphemeInLineAt(index, end);
+      if (current == null || TextDocument._isWhitespace(current)) {
+        break;
+      }
+      end++;
+    }
+    return (start: start, end: end);
+  }
+
   bool matchesGraphemesInLineRange(
     int index, {
     required int startColumn,
@@ -1507,6 +1494,9 @@ final class _TextDocumentSourceSlice {
     graphemeStart: graphemeStart,
     graphemeCount: graphemeCount,
   );
+
+  ({int start, int end}) wordBoundaryAt(int localIndex, int column) =>
+      source.wordBoundaryAt(startLine + localIndex, column);
 
   void writeTextBetweenLinesToBuffer(
     StringBuffer buffer, {
@@ -2206,6 +2196,114 @@ final class _TextDocumentStorage {
         .skip(normalizedStart)
         .take(normalizedEnd - normalizedStart)
         .toString();
+  }
+
+  ({int start, int end}) wordBoundaryAtInLine(int index, int column) {
+    if (index < 0 || index >= lineCount) {
+      return (start: column, end: column);
+    }
+    final totalLineLength = lineLength(index);
+    if (totalLineLength == 0) {
+      return (start: 0, end: 0);
+    }
+    final normalizedColumn = column.clamp(0, totalLineLength - 1);
+    if (_compositeBacking != null) {
+      final (segment, localIndex) = _segmentForLine(index);
+      return segment.wordBoundaryAtInLine(localIndex, normalizedColumn);
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      if (TextDocument._isWhitespace(cached[normalizedColumn])) {
+        var start = normalizedColumn;
+        while (start > 0 &&
+            TextDocument._isWhitespace(cached[start - 1])) {
+          start--;
+        }
+        var end = normalizedColumn;
+        while (end < totalLineLength &&
+            TextDocument._isWhitespace(cached[end])) {
+          end++;
+        }
+        return (start: start, end: end);
+      }
+
+      var start = normalizedColumn;
+      while (start > 0 &&
+          !TextDocument._isWhitespace(cached[start - 1])) {
+        start--;
+      }
+      var end = normalizedColumn;
+      while (end < totalLineLength &&
+          !TextDocument._isWhitespace(cached[end])) {
+        end++;
+      }
+      return (start: start, end: end);
+    }
+    final sourceParsedLine = _sourceParsedLineAt(index);
+    if (sourceParsedLine != null) {
+      if (TextDocument._isWhitespace(sourceParsedLine[normalizedColumn])) {
+        var start = normalizedColumn;
+        while (start > 0 &&
+            TextDocument._isWhitespace(sourceParsedLine[start - 1])) {
+          start--;
+        }
+        var end = normalizedColumn;
+        while (end < totalLineLength &&
+            TextDocument._isWhitespace(sourceParsedLine[end])) {
+          end++;
+        }
+        return (start: start, end: end);
+      }
+
+      var start = normalizedColumn;
+      while (start > 0 &&
+          !TextDocument._isWhitespace(sourceParsedLine[start - 1])) {
+        start--;
+      }
+      var end = normalizedColumn;
+      while (end < totalLineLength &&
+          !TextDocument._isWhitespace(sourceParsedLine[end])) {
+        end++;
+      }
+      return (start: start, end: end);
+    }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.wordBoundaryAt(index, normalizedColumn);
+    }
+
+    final lineText = lineAt(index);
+    final prefix = lineText.characters
+        .take(normalizedColumn + 1)
+        .toList(growable: false);
+    final graphemeAtCursor = prefix.last;
+    if (TextDocument._isWhitespace(graphemeAtCursor)) {
+      var start = normalizedColumn;
+      while (start > 0 &&
+          TextDocument._isWhitespace(prefix[start - 1])) {
+        start--;
+      }
+      var end = normalizedColumn;
+      final suffix = lineText.characters.skip(normalizedColumn).iterator;
+      while (suffix.moveNext() &&
+          TextDocument._isWhitespace(suffix.current)) {
+        end++;
+      }
+      return (start: start, end: end);
+    }
+
+    var start = normalizedColumn;
+    while (start > 0 &&
+        !TextDocument._isWhitespace(prefix[start - 1])) {
+      start--;
+    }
+    var end = normalizedColumn;
+    final suffix = lineText.characters.skip(normalizedColumn).iterator;
+    while (suffix.moveNext() &&
+        !TextDocument._isWhitespace(suffix.current)) {
+      end++;
+    }
+    return (start: start, end: end);
   }
 
   bool matchesGraphemesInLineRange(
@@ -3010,6 +3108,9 @@ final class _TextDocumentStorageSegment {
     graphemeStart: graphemeStart,
     graphemeCount: graphemeCount,
   );
+
+  ({int start, int end}) wordBoundaryAtInLine(int localIndex, int column) =>
+      storage.wordBoundaryAtInLine(startLine + localIndex, column);
 
   int lineStartOffset(int localIndex) {
     if (localIndex <= 0) {
