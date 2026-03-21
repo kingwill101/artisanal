@@ -118,6 +118,30 @@ void main() {
     );
 
     test(
+      'replaceTextRange uses piece-backed storage for source-backed single-line edits',
+      () {
+        final document = TextDocument(text: 'alpha beta gamma');
+
+        expect(document.debugPieceBackedLeafCount, 0);
+        expect(document.debugHasTextCache, isFalse);
+
+        document.replaceTextRange(
+          startOffset: 6,
+          endOffset: 10,
+          replacement: 'delta',
+        );
+
+        expect(document.debugPieceBackedLeafCount, greaterThan(0));
+        expect(document.debugHasTextCache, isFalse);
+        expect(
+          document.textInRange(startOffset: 0, endOffset: document.length),
+          'alpha delta gamma',
+        );
+        expect(document.debugHasTextCache, isFalse);
+      },
+    );
+
+    test(
       'replaceOffsetRange supports multiline replacement without reparsing text',
       () {
         final document = TextDocument(text: 'ab\ncdef\ngh');
@@ -140,6 +164,28 @@ void main() {
         expect(change.startPosition, const TextPosition(line: 0, column: 1));
         expect(change.oldEndPosition, const TextPosition(line: 1, column: 4));
         expect(change.newEndPosition, const TextPosition(line: 1, column: 2));
+      },
+    );
+
+    test(
+      'replaceOffsetRange uses piece-backed storage for source-backed single-line edits',
+      () {
+        final document = TextDocument(text: 'alpha beta gamma');
+
+        expect(document.debugPieceBackedLeafCount, 0);
+
+        document.replaceOffsetRange(
+          startOffset: 6,
+          endOffset: 10,
+          replacement: 'delta'.characters.toList(growable: false),
+        );
+
+        expect(document.debugPieceBackedLeafCount, greaterThan(0));
+        expect(
+          document.textInRange(startOffset: 0, endOffset: document.length),
+          'alpha delta gamma',
+        );
+        expect(document.debugHasTextCache, isFalse);
       },
     );
 
