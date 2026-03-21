@@ -1,6 +1,7 @@
 library;
 
 import 'package:characters/characters.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 
 import 'editor_state.dart';
 import 'text_change.dart';
@@ -35,12 +36,18 @@ final class TextDocument {
 
   String get text => _storage.text;
 
+  @visibleForTesting
+  int get debugStorageDepth => _storage.debugDepth;
+
+  @visibleForTesting
+  int get debugStorageSegmentCount => _storage.debugSegmentCount;
+
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
     }
     final position = positionForOffset(offset);
-    if (position.column == _storage.lineLengths[position.line] &&
+    if (position.column == lineLength(position.line) &&
         position.line < _storage.lineCount - 1) {
       return '\n';
     }
@@ -66,58 +73,29 @@ final class TextDocument {
   }
 
   int lineStartOffset(int index) {
-    if (index <= 0) {
-      return 0;
-    }
-    if (index >= _storage.lineStartOffsets.length) {
-      return length;
-    }
-    return _storage.lineStartOffsets[index];
+    return _storage.lineStartOffset(index);
   }
 
   int lineEndOffset(int index, {bool includeTrailingNewline = false}) {
-    if (index < 0) {
-      return 0;
-    }
-    if (index >= _storage.lineLengths.length) {
-      return length;
-    }
-    final end = _storage.lineStartOffsets[index] + _storage.lineLengths[index];
-    if (includeTrailingNewline && index < _storage.lineLengths.length - 1) {
-      return end + 1;
-    }
-    return end;
+    return _storage.lineEndOffset(
+      index,
+      includeTrailingNewline: includeTrailingNewline,
+    );
   }
 
   TextPosition clampPosition(TextPosition position) {
     final line = position.line.clamp(0, _storage.lineCount - 1);
-    final column = position.column.clamp(0, _storage.lineLengths[line]);
+    final column = position.column.clamp(0, lineLength(line));
     return TextPosition(line: line, column: column);
   }
 
   int offsetForPosition(TextPosition position) {
     final clamped = clampPosition(position);
-    return _storage.lineStartOffsets[clamped.line] + clamped.column;
+    return _storage.offsetForPosition(clamped);
   }
 
   TextPosition positionForOffset(int offset) {
-    final clamped = offset.clamp(0, length);
-    var low = 0;
-    var high = _storage.lineCount - 1;
-    while (low < high) {
-      final mid = (low + high) >> 1;
-      final lineEnd = _storage.lineStartOffsets[mid] + _storage.lineLengths[mid];
-      if (clamped <= lineEnd) {
-        high = mid;
-      } else {
-        low = mid + 1;
-      }
-    }
-    final line = low;
-    return TextPosition(
-      line: line,
-      column: clamped - _storage.lineStartOffsets[line],
-    );
+    return _storage.positionForOffset(offset.clamp(0, length));
   }
 
   List<String> flattenWithNewlines() => _storage.flattenWithNewlines();
@@ -139,7 +117,7 @@ final class TextDocument {
     var column = start.column;
 
     while (remaining > 0 && line < _storage.lineCount) {
-      final lineLength = _storage.lineLengths[line];
+      final lineLength = this.lineLength(line);
       final takeCount = (lineLength - column).clamp(0, remaining);
       if (takeCount > 0) {
         result.addAll(
@@ -193,7 +171,14 @@ final class TextDocument {
     if (start == end) {
       return '';
     }
-    return _storage.lineTexts.sublist(start, end).join('\n');
+    final buffer = StringBuffer();
+    for (var line = start; line < end; line++) {
+      if (line > start) {
+        buffer.write('\n');
+      }
+      buffer.write(lineAt(line));
+    }
+    return buffer.toString();
   }
 
   bool matchesOffsetRange({
@@ -304,48 +289,19 @@ final class TextDocument {
     mergedLines.first.insertAll(0, prefix);
     mergedLines.last.addAll(suffix);
 
-    final nextLineTexts = <String>[
-      ..._storage.lineTexts.take(startPosition.line),
-      ...mergedLines.map((line) => line.join()),
-      ..._storage.lineTexts.skip(oldEndPosition.line + 1),
-    ];
-    final nextLineLengths = <int>[
-      ..._storage.lineLengths.take(startPosition.line),
-      ...mergedLines.map((line) => line.length),
-      ..._storage.lineLengths.skip(oldEndPosition.line + 1),
-    ];
-    final nextLineGraphemeCaches = <List<String>?>[
-      ..._storage.lineGraphemeCaches.take(startPosition.line),
-      ...mergedLines.map(
-        (line) => List<String>.unmodifiable(List<String>.from(line)),
-      ),
-      ..._storage.lineGraphemeCaches.skip(oldEndPosition.line + 1),
-    ];
-    final offsetDelta = replacement.length - (normalizedEnd - normalizedStart);
-    final nextLineStartOffsets = <int>[
-      ..._storage.lineStartOffsets.take(startPosition.line),
-    ];
-    var nextOffset = _storage.lineStartOffsets[startPosition.line];
-    for (var index = 0; index < mergedLines.length; index++) {
-      nextLineStartOffsets.add(nextOffset);
-      nextOffset += nextLineLengths[startPosition.line + index];
-      if (index < mergedLines.length - 1) {
-        nextOffset += 1;
-      }
-    }
-    nextLineStartOffsets.addAll(
-      _storage.lineStartOffsets
-          .skip(oldEndPosition.line + 1)
-          .map((offset) => offset + offsetDelta),
+    final replacementStorage = _TextDocumentStorage.fromParsedLines(
+      mergedLines,
+      revision: 0,
     );
-    _storage = _TextDocumentStorage(
-      lineTexts: nextLineTexts,
-      lineLengths: nextLineLengths,
-      lineStartOffsets: nextLineStartOffsets,
-      length: _storage.length + offsetDelta,
+    final nextSegments = <_TextDocumentStorageSegment>[
+      if (startPosition.line > 0) _storage.slice(0, startPosition.line),
+      replacementStorage.slice(0, replacementStorage.lineCount),
+      if (oldEndPosition.line + 1 < _storage.lineCount)
+        _storage.slice(oldEndPosition.line + 1, _storage.lineCount),
+    ];
+    _storage = _TextDocumentStorage.fromSegments(
+      nextSegments,
       revision: _storage.revision + 1,
-      storageIdentity: Object(),
-      lineGraphemeCaches: nextLineGraphemeCaches,
     );
 
     final newEndOffset = normalizedStart + replacement.length;
@@ -392,58 +348,31 @@ final class TextDocument {
         ? const <String>[]
         : List<String>.from(replacementLineTexts, growable: false);
 
-    var nextLineTexts = <String>[
-      ..._storage.lineTexts.take(normalizedStart),
-      ...normalizedReplacement,
-      ..._storage.lineTexts.skip(normalizedEnd),
-    ];
-    if (nextLineTexts.isEmpty) {
-      nextLineTexts = <String>[''];
-    }
-
-    final replacementLineLengths = normalizedReplacement
-        .map((line) => line.characters.length)
-        .toList(growable: false);
-    var nextLineLengths = <int>[
-      ..._storage.lineLengths.take(normalizedStart),
-      ...replacementLineLengths,
-      ..._storage.lineLengths.skip(normalizedEnd),
-    ];
-    if (nextLineLengths.isEmpty) {
-      nextLineLengths = <int>[0];
-    }
-
-    var nextLineGraphemeCaches = <List<String>?>[
-      ..._storage.lineGraphemeCaches.take(normalizedStart),
-      ...List<List<String>?>.filled(
-        normalizedReplacement.length,
-        null,
-        growable: false,
-      ),
-      ..._storage.lineGraphemeCaches.skip(normalizedEnd),
-    ];
-    if (nextLineGraphemeCaches.isEmpty) {
-      nextLineGraphemeCaches = <List<String>?>[null];
-    }
-
     final startOffset = lineStartOffset(normalizedStart);
     final oldEndOffset = lineStartOffset(normalizedEnd);
     final startPosition = positionForOffset(startOffset);
     final oldEndPosition = positionForOffset(oldEndOffset);
-
-    _storage = _TextDocumentStorage(
-      lineTexts: nextLineTexts,
-      lineLengths: nextLineLengths,
-      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
-        nextLineLengths,
-      ),
-      length: _TextDocumentStorage._documentLengthForLineLengths(
-        nextLineLengths,
-      ),
-      revision: _storage.revision + 1,
-      storageIdentity: Object(),
-      lineGraphemeCaches: nextLineGraphemeCaches,
-    );
+    if (_storage.lineCount - (normalizedEnd - normalizedStart) + normalizedReplacement.length == 0) {
+      _storage = _TextDocumentStorage.fromLineTexts(
+        const <String>[''],
+        revision: _storage.revision + 1,
+      );
+    } else {
+      final replacementStorage = normalizedReplacement.isEmpty
+          ? null
+          : _TextDocumentStorage.fromLineTexts(normalizedReplacement, revision: 0);
+      final nextSegments = <_TextDocumentStorageSegment>[
+        if (normalizedStart > 0) _storage.slice(0, normalizedStart),
+        if (replacementStorage != null)
+          replacementStorage.slice(0, replacementStorage.lineCount),
+        if (normalizedEnd < _storage.lineCount)
+          _storage.slice(normalizedEnd, _storage.lineCount),
+      ];
+      _storage = _TextDocumentStorage.fromSegments(
+        nextSegments,
+        revision: _storage.revision + 1,
+      );
+    }
 
     final newEndOffset = lineStartOffset(normalizedStart + normalizedReplacement.length);
     return TextDocumentChange(
@@ -505,20 +434,33 @@ final class TextDocument {
 }
 
 final class _TextDocumentStorage {
-  _TextDocumentStorage({
+  _TextDocumentStorage._leaf({
     required List<String> lineTexts,
     required List<int> lineLengths,
-    required List<int> lineStartOffsets,
     required this.length,
     required this.revision,
     required this.storageIdentity,
-    List<List<String>?>? lineGraphemeCaches,
-  }) : lineTexts = List<String>.unmodifiable(lineTexts),
-       lineLengths = List<int>.unmodifiable(lineLengths),
-       lineStartOffsets = List<int>.unmodifiable(lineStartOffsets),
-       lineGraphemeCaches = lineGraphemeCaches == null
-           ? List<List<String>?>.filled(lineTexts.length, null, growable: false)
-           : List<List<String>?>.from(lineGraphemeCaches, growable: false);
+    Map<int, List<String>>? lineGraphemeCaches,
+  }) : _baseLineTexts = List<String>.unmodifiable(lineTexts),
+       _baseLineLengths = List<int>.unmodifiable(lineLengths),
+       _segments = null,
+       _segmentLineStarts = null,
+       _segmentStartOffsets = null,
+       lineCount = lineTexts.length,
+       _lineGraphemeCaches = lineGraphemeCaches ?? <int, List<String>>{};
+
+  _TextDocumentStorage._composite({
+    required List<_TextDocumentStorageSegment> segments,
+    required this.lineCount,
+    required this.length,
+    required this.revision,
+    required this.storageIdentity,
+  }) : _baseLineTexts = null,
+       _baseLineLengths = null,
+       _segments = List<_TextDocumentStorageSegment>.unmodifiable(segments),
+       _segmentLineStarts = _computeSegmentLineStarts(segments),
+       _segmentStartOffsets = _computeSegmentStartOffsets(segments),
+       _lineGraphemeCaches = <int, List<String>>{};
 
   factory _TextDocumentStorage.fromLineTexts(
     List<String> lineTexts, {
@@ -528,12 +470,9 @@ final class _TextDocumentStorage {
     final lineLengths = lineTexts
         .map((line) => line.characters.length)
         .toList(growable: false);
-    return _TextDocumentStorage(
+    return _TextDocumentStorage._leaf(
       lineTexts: lineTexts,
       lineLengths: lineLengths,
-      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
-        lineLengths,
-      ),
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
@@ -546,63 +485,208 @@ final class _TextDocumentStorage {
     Object? storageIdentity,
   }) {
     final lineLengths = lines.map((line) => line.length).toList(growable: false);
-    return _TextDocumentStorage(
+    return _TextDocumentStorage._leaf(
       lineTexts: lines.map((line) => line.join()).toList(growable: false),
       lineLengths: lineLengths,
-      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
-        lineLengths,
-      ),
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
-      lineGraphemeCaches: lines
-          .map((line) => List<String>.unmodifiable(List<String>.from(line)))
-          .toList(growable: false),
+      lineGraphemeCaches: <int, List<String>>{
+        for (var index = 0; index < lines.length; index++)
+          index: List<String>.unmodifiable(List<String>.from(lines[index])),
+      },
     );
   }
 
-  final List<String> lineTexts;
-  final List<int> lineLengths;
-  final List<int> lineStartOffsets;
+  factory _TextDocumentStorage.fromSegments(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final nonEmpty = _normalizeSegments(segments);
+    if (nonEmpty.isEmpty) {
+      return _TextDocumentStorage.fromLineTexts(
+        const <String>[''],
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    final lineCount = nonEmpty.fold<int>(
+      0,
+      (total, segment) => total + segment.lineCount,
+    );
+    final length =
+        nonEmpty.fold<int>(0, (total, segment) => total + segment.length) +
+        (nonEmpty.length > 1 ? nonEmpty.length - 1 : 0);
+    return _TextDocumentStorage._composite(
+      segments: nonEmpty,
+      lineCount: lineCount,
+      length: length,
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+    );
+  }
+
+  final int lineCount;
   final int length;
   final int revision;
   final Object storageIdentity;
-  final List<List<String>?> lineGraphemeCaches;
+  final List<String>? _baseLineTexts;
+  final List<int>? _baseLineLengths;
+  final List<_TextDocumentStorageSegment>? _segments;
+  final List<int>? _segmentLineStarts;
+  final List<int>? _segmentStartOffsets;
+  final Map<int, List<String>> _lineGraphemeCaches;
+  List<String>? _cachedLineTexts;
+  List<int>? _cachedLineLengths;
+  List<int>? _cachedLineStartOffsets;
   String? _cachedText;
   List<String>? _cachedFlattenedGraphemes;
   List<List<String>>? _cachedLineViews;
 
-  int get lineCount => lineTexts.length;
+  int get debugDepth {
+    final segments = _segments;
+    if (segments == null || segments.isEmpty) {
+      return 1;
+    }
+    var maxChildDepth = 0;
+    for (final segment in segments) {
+      final childDepth = segment.storage.debugDepth;
+      if (childDepth > maxChildDepth) {
+        maxChildDepth = childDepth;
+      }
+    }
+    return maxChildDepth + 1;
+  }
+
+  int get debugSegmentCount => _segments?.length ?? 1;
+
+  List<String> get lineTexts =>
+      _cachedLineTexts ??= _baseLineTexts ?? _materializeLineTexts();
+
+  List<int> get lineLengths =>
+      _cachedLineLengths ??= _baseLineLengths ?? _materializeLineLengths();
+
+  List<int> get lineStartOffsets =>
+      _cachedLineStartOffsets ??= _computeLineStartOffsets(lineLengths);
 
   String get text => _cachedText ??= lineTexts.join('\n');
 
+  _TextDocumentStorageSegment slice(int startLine, int endLine) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    return _TextDocumentStorageSegment(
+      storage: this,
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+    );
+  }
+
   String lineAt(int index) {
-    if (index < 0 || index >= lineTexts.length) {
+    if (index < 0 || index >= lineCount) {
       return '';
     }
-    return lineTexts[index];
+    if (_baseLineTexts != null) {
+      return _baseLineTexts[index];
+    }
+    final (segment, localIndex) = _segmentForLine(index);
+    return segment.lineAt(localIndex);
   }
 
   int lineLength(int index) {
-    if (index < 0 || index >= lineLengths.length) {
+    if (index < 0 || index >= lineCount) {
       return 0;
     }
-    return lineLengths[index];
+    if (_baseLineLengths != null) {
+      return _baseLineLengths[index];
+    }
+    final (segment, localIndex) = _segmentForLine(index);
+    return segment.lineLength(localIndex);
+  }
+
+  int lineStartOffset(int index) {
+    if (index <= 0) {
+      return 0;
+    }
+    if (index >= lineCount) {
+      return length;
+    }
+    if (_baseLineLengths != null) {
+      return lineStartOffsets[index];
+    }
+    final (segment, localIndex, segmentIndex) = _segmentForLineWithIndex(index);
+    return _segmentStartOffsets![segmentIndex] + segment.lineStartOffset(localIndex);
+  }
+
+  int lineEndOffset(int index, {bool includeTrailingNewline = false}) {
+    if (index < 0) {
+      return 0;
+    }
+    if (index >= lineCount) {
+      return length;
+    }
+    final end = lineStartOffset(index) + lineLength(index);
+    if (includeTrailingNewline && index < lineCount - 1) {
+      return end + 1;
+    }
+    return end;
+  }
+
+  int offsetForPosition(TextPosition position) {
+    final line = position.line.clamp(0, lineCount - 1);
+    final column = position.column.clamp(0, lineLength(line));
+    return lineStartOffset(line) + column;
+  }
+
+  TextPosition positionForOffset(int offset) {
+    final clamped = offset.clamp(0, length);
+    if (clamped == length) {
+      return TextPosition(
+        line: lineCount - 1,
+        column: lineLength(lineCount - 1),
+      );
+    }
+    if (_baseLineLengths != null) {
+      var low = 0;
+      var high = lineCount - 1;
+      while (low < high) {
+        final mid = (low + high) >> 1;
+        final lineEnd = lineStartOffsets[mid] + lineLengths[mid];
+        if (clamped <= lineEnd) {
+          high = mid;
+        } else {
+          low = mid + 1;
+        }
+      }
+      final line = low;
+      return TextPosition(
+        line: line,
+        column: clamped - lineStartOffsets[line],
+      );
+    }
+
+    final (segment, segmentIndex) = _segmentForOffset(clamped);
+    final localOffset = clamped - _segmentStartOffsets![segmentIndex];
+    final localPosition = segment.positionForOffset(localOffset);
+    return TextPosition(
+      line: _segmentLineStarts![segmentIndex] + localPosition.line,
+      column: localPosition.column,
+    );
   }
 
   List<String> lineGraphemesAt(int index) {
-    if (index < 0 || index >= lineTexts.length) {
+    if (index < 0 || index >= lineCount) {
       return const <String>[];
     }
-    return lineGraphemeCaches[index] ??= List<String>.unmodifiable(
-      lineTexts[index].characters.toList(growable: false),
+    return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
+      lineAt(index).characters.toList(growable: false),
     );
   }
 
   List<List<String>> get lineViews =>
       _cachedLineViews ??= List<List<String>>.unmodifiable(
         List<List<String>>.generate(
-          lineTexts.length,
+          lineCount,
           lineGraphemesAt,
           growable: false,
         ),
@@ -611,15 +695,93 @@ final class _TextDocumentStorage {
   List<String> flattenWithNewlines() {
     final flattened = _cachedFlattenedGraphemes ??= () {
       final result = <String>[];
-      for (var index = 0; index < lineTexts.length; index++) {
+      for (var index = 0; index < lineCount; index++) {
         result.addAll(lineGraphemesAt(index));
-        if (index < lineTexts.length - 1) {
+        if (index < lineCount - 1) {
           result.add('\n');
         }
       }
       return List<String>.unmodifiable(result);
     }();
     return List<String>.from(flattened, growable: true);
+  }
+
+  List<String> _materializeLineTexts() {
+    return List<String>.unmodifiable(
+      List<String>.generate(lineCount, lineAt, growable: false),
+    );
+  }
+
+  List<int> _materializeLineLengths() {
+    return List<int>.unmodifiable(
+      List<int>.generate(lineCount, lineLength, growable: false),
+    );
+  }
+
+  (_TextDocumentStorageSegment, int) _segmentForLine(int index) {
+    final (segment, localIndex, _) = _segmentForLineWithIndex(index);
+    return (segment, localIndex);
+  }
+
+  (_TextDocumentStorageSegment, int, int) _segmentForLineWithIndex(int index) {
+    final segments = _segments!;
+    final segmentLineStarts = _segmentLineStarts!;
+    var low = 0;
+    var high = segments.length - 1;
+    while (low < high) {
+      final mid = (low + high + 1) >> 1;
+      if (segmentLineStarts[mid] <= index) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    final segmentIndex = low;
+    final segment = segments[segmentIndex];
+    return (segment, index - segmentLineStarts[segmentIndex], segmentIndex);
+  }
+
+  (_TextDocumentStorageSegment, int) _segmentForOffset(int offset) {
+    final segments = _segments!;
+    final segmentStartOffsets = _segmentStartOffsets!;
+    var low = 0;
+    var high = segments.length - 1;
+    while (low < high) {
+      final mid = (low + high + 1) >> 1;
+      if (segmentStartOffsets[mid] <= offset) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return (segments[low], low);
+  }
+
+  static List<int> _computeSegmentLineStarts(
+    List<_TextDocumentStorageSegment> segments,
+  ) {
+    final starts = List<int>.filled(segments.length, 0, growable: false);
+    var lineIndex = 0;
+    for (var index = 0; index < segments.length; index++) {
+      starts[index] = lineIndex;
+      lineIndex += segments[index].lineCount;
+    }
+    return starts;
+  }
+
+  static List<int> _computeSegmentStartOffsets(
+    List<_TextDocumentStorageSegment> segments,
+  ) {
+    final starts = List<int>.filled(segments.length, 0, growable: false);
+    var offset = 0;
+    for (var index = 0; index < segments.length; index++) {
+      starts[index] = offset;
+      offset += segments[index].length;
+      if (index < segments.length - 1) {
+        offset += 1;
+      }
+    }
+    return starts;
   }
 
   static List<int> _computeLineStartOffsets(List<int> lineLengths) {
@@ -642,5 +804,128 @@ final class _TextDocumentStorage {
   static int _documentLengthForLineLengths(List<int> lineLengths) {
     return lineLengths.fold<int>(0, (total, line) => total + line) +
         (lineLengths.length > 1 ? lineLengths.length - 1 : 0);
+  }
+
+  static List<_TextDocumentStorageSegment> _normalizeSegments(
+    List<_TextDocumentStorageSegment> segments,
+  ) {
+    final normalized = <_TextDocumentStorageSegment>[];
+    for (final segment in segments) {
+      _appendNormalizedSegment(normalized, segment);
+    }
+    return List<_TextDocumentStorageSegment>.unmodifiable(normalized);
+  }
+
+  static void _appendNormalizedSegment(
+    List<_TextDocumentStorageSegment> out,
+    _TextDocumentStorageSegment segment,
+  ) {
+    if (segment.lineCount <= 0) {
+      return;
+    }
+
+    final childSegments = segment.storage._segments;
+    if (childSegments == null) {
+      _appendMergedLeafSegment(out, segment);
+      return;
+    }
+
+    final childLineStarts = segment.storage._segmentLineStarts!;
+    for (var index = 0; index < childSegments.length; index++) {
+      final child = childSegments[index];
+      final childGlobalStart = childLineStarts[index];
+      final childGlobalEnd = childGlobalStart + child.lineCount;
+      final overlapStart = segment.startLine > childGlobalStart
+          ? segment.startLine
+          : childGlobalStart;
+      final overlapEnd = segment.endLine < childGlobalEnd
+          ? segment.endLine
+          : childGlobalEnd;
+      if (overlapStart >= overlapEnd) {
+        continue;
+      }
+      final localStart = child.startLine + (overlapStart - childGlobalStart);
+      final localEnd = child.startLine + (overlapEnd - childGlobalStart);
+      _appendNormalizedSegment(
+        out,
+        _TextDocumentStorageSegment(
+          storage: child.storage,
+          startLine: localStart,
+          endLine: localEnd,
+        ),
+      );
+    }
+  }
+
+  static void _appendMergedLeafSegment(
+    List<_TextDocumentStorageSegment> out,
+    _TextDocumentStorageSegment segment,
+  ) {
+    if (out.isEmpty) {
+      out.add(segment);
+      return;
+    }
+
+    final previous = out.last;
+    if (identical(previous.storage, segment.storage) &&
+        previous.endLine == segment.startLine) {
+      out[out.length - 1] = _TextDocumentStorageSegment(
+        storage: previous.storage,
+        startLine: previous.startLine,
+        endLine: segment.endLine,
+      );
+      return;
+    }
+
+    out.add(segment);
+  }
+}
+
+final class _TextDocumentStorageSegment {
+  const _TextDocumentStorageSegment({
+    required this.storage,
+    required this.startLine,
+    required this.endLine,
+  });
+
+  final _TextDocumentStorage storage;
+  final int startLine;
+  final int endLine;
+
+  int get lineCount => endLine - startLine;
+
+  int get length {
+    if (lineCount <= 0) {
+      return 0;
+    }
+    return storage.lineEndOffset(endLine - 1) - storage.lineStartOffset(startLine);
+  }
+
+  String lineAt(int localIndex) => storage.lineAt(startLine + localIndex);
+
+  int lineLength(int localIndex) => storage.lineLength(startLine + localIndex);
+
+  int lineStartOffset(int localIndex) {
+    if (localIndex <= 0) {
+      return 0;
+    }
+    return storage.lineStartOffset(startLine + localIndex) -
+        storage.lineStartOffset(startLine);
+  }
+
+  TextPosition positionForOffset(int offset) {
+    final clamped = offset.clamp(0, length);
+    if (clamped == length) {
+      return TextPosition(
+        line: lineCount - 1,
+        column: lineLength(lineCount - 1),
+      );
+    }
+    final absoluteOffset = storage.lineStartOffset(startLine) + clamped;
+    final position = storage.positionForOffset(absoluteOffset);
+    return TextPosition(
+      line: position.line - startLine,
+      column: position.column,
+    );
   }
 }

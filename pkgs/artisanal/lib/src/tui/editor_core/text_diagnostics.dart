@@ -38,7 +38,6 @@ List<TextPositionDiagnosticRange> textPatternDiagnosticsForDocument({
   required Iterable<TextPatternDiagnosticRule> rules,
 }) {
   final diagnostics = <TextPositionDiagnosticRange>[];
-  final lines = document.lineTexts;
 
   for (final rule in rules) {
     final needle = uni.graphemes(rule.pattern).toList(growable: false);
@@ -50,8 +49,8 @@ List<TextPositionDiagnosticRange> textPatternDiagnosticsForDocument({
         ? needle
         : needle.map((token) => token.toLowerCase()).toList(growable: false);
 
-    for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      final haystack = uni.graphemes(lines[lineIndex]).toList(growable: false);
+    for (var lineIndex = 0; lineIndex < document.lineCount; lineIndex++) {
+      final haystack = document.lineGraphemesAt(lineIndex);
       final normalizedHaystack = rule.caseSensitive
           ? haystack
           : haystack

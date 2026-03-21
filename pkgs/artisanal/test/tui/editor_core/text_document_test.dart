@@ -180,5 +180,53 @@ void main() {
       expect(change.oldEndOffset, 5);
       expect(change.newEndOffset, 0);
     });
+
+    test('chained range edits keep composite line reads and offsets coherent', () {
+      final document = TextDocument(text: 'zero\none\ntwo\nthree');
+
+      document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 2,
+        replacementLineTexts: const ['ONE'],
+      );
+      document.replaceTextRange(
+        startOffset: document.lineStartOffset(2),
+        endOffset: document.lineEndOffset(2),
+        replacement: 'TWO',
+      );
+
+      expect(document.lineAt(0), 'zero');
+      expect(document.lineAt(1), 'ONE');
+      expect(document.lineAt(2), 'TWO');
+      expect(document.lineAt(3), 'three');
+      expect(document.text, 'zero\nONE\nTWO\nthree');
+      expect(document.textBetweenLines(startLine: 1, endLine: 3), 'ONE\nTWO');
+      expect(document.lineStartOffset(2), 9);
+      expect(document.lineEndOffset(2), 12);
+    });
+
+    test('repeated edits normalize storage depth back to a flat composite', () {
+      final document = TextDocument(text: 'zero\none\ntwo\nthree');
+
+      for (var index = 0; index < 8; index++) {
+        document.replaceLineTextRange(
+          startLine: 1,
+          endLine: 2,
+          replacementLineTexts: ['ONE$index'],
+        );
+        document.replaceTextRange(
+          startOffset: document.lineStartOffset(2),
+          endOffset: document.lineEndOffset(2),
+          replacement: 'TWO$index',
+        );
+      }
+
+      expect(document.debugStorageDepth, lessThanOrEqualTo(2));
+      expect(document.lineAt(0), 'zero');
+      expect(document.lineAt(1), 'ONE7');
+      expect(document.lineAt(2), 'TWO7');
+      expect(document.lineAt(3), 'three');
+      expect(document.text, 'zero\nONE7\nTWO7\nthree');
+    });
   });
 }
