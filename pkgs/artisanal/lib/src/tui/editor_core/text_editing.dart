@@ -747,15 +747,14 @@ TextCommandResult textDeleteToLineStart({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
   final start = document.offsetForPosition(
     TextPosition(line: cursor.line, column: 0),
   );
-  final end = state.cursorOffset.clamp(0, graphemes.length);
+  final end = state.cursorOffset.clamp(0, document.length);
   if (start >= end) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -781,15 +780,14 @@ TextCommandResult textDeleteToLineEnd({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
-  final start = state.cursorOffset.clamp(0, graphemes.length);
+  final start = state.cursorOffset.clamp(0, document.length);
   final end = document.offsetForPosition(
     TextPosition(line: cursor.line, column: document.lineLength(cursor.line)),
   );
   if (start >= end) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -886,12 +884,11 @@ TextCommandResult textTransposeBackward({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
   final lineLength = document.lineLength(cursor.line);
   if (lineLength == 0 || cursor.column == 0) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -903,7 +900,7 @@ TextCommandResult textTransposeBackward({
   final beforeColumn = atColumn - 1;
   if (beforeColumn < 0) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -916,16 +913,33 @@ TextCommandResult textTransposeBackward({
   );
   final beforeOffset = lineStartOffset + beforeColumn;
   final atOffset = lineStartOffset + atColumn;
-  final nextGraphemes = List<String>.from(graphemes, growable: true);
-  final tmp = nextGraphemes[beforeOffset];
-  nextGraphemes[beforeOffset] = nextGraphemes[atOffset];
-  nextGraphemes[atOffset] = tmp;
+  final beforeGrapheme = document.graphemeAt(beforeOffset);
+  final atGrapheme = document.graphemeAt(atOffset);
+  if (beforeGrapheme == null || atGrapheme == null) {
+    return TextCommandResult(
+      graphemes: document.flattenWithNewlines(),
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: beforeOffset,
+    end: atOffset + 1,
+    replacement: [atGrapheme, beforeGrapheme],
+    cursorOffset: lineStartOffset + math.min(atColumn + 1, lineLength),
+  );
 
   return TextCommandResult(
-    graphemes: nextGraphemes,
-    cursorOffset: lineStartOffset + math.min(atColumn + 1, lineLength),
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
     selectionBaseOffset: state.selectionBaseOffset,
     selectionExtentOffset: state.selectionExtentOffset,
+    changed: result.changed,
   );
 }
 
