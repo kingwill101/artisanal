@@ -24,6 +24,16 @@ final class TextDocument {
 
   String get text => _lines.map((line) => line.join()).join('\n');
 
+  TextDocument copy() {
+    final next = TextDocument();
+    next._replaceLines(
+      _lines
+          .map((line) => List<String>.from(line, growable: true))
+          .toList(growable: true),
+    );
+    return next;
+  }
+
   String lineAt(int index) {
     if (index < 0 || index >= _lines.length) {
       return '';
