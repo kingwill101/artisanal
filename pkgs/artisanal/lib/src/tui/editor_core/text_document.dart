@@ -53,6 +53,7 @@ final class TextDocument {
   TextDocument._raw();
 
   late _TextDocumentStorage _storage;
+  _LineTextDocumentSource? _appendSource;
 
   List<List<String>> get lines => lineViews
       .map((line) => List<String>.unmodifiable(line))
@@ -101,6 +102,9 @@ final class TextDocument {
   int get debugDistinctSourceCount => _storage.debugDistinctSourceCount;
 
   @visibleForTesting
+  int get debugReferencedSourceCount => _storage.debugReferencedSourceCount;
+
+  @visibleForTesting
   int get debugJoinedSourceTextCount => _storage.debugJoinedSourceTextCount;
 
   @visibleForTesting
@@ -122,6 +126,7 @@ final class TextDocument {
   TextDocument copy() {
     final next = TextDocument._raw();
     next._storage = _storage;
+    next._appendSource = _appendSource;
     return next;
   }
 
@@ -325,6 +330,7 @@ final class TextDocument {
       return;
     }
     _storage = _storageBuilder.fromText(text, revision: _storage.revision + 1);
+    _appendSource = null;
   }
 
   TextDocumentChange replaceTextRange({
@@ -501,6 +507,7 @@ final class TextDocument {
       parsedLines,
       revision: _storage.revision + 1,
     );
+    _appendSource = null;
   }
 
   void replaceLineTexts(List<String> lineTexts) {
@@ -518,6 +525,7 @@ final class TextDocument {
       normalizedLineTexts,
       revision: _storage.revision + 1,
     );
+    _appendSource = null;
   }
 
   TextDocumentChange replaceLineTextRange({
@@ -559,9 +567,8 @@ final class TextDocument {
     } else {
       final replacementStorage = normalizedReplacement.isEmpty
           ? null
-          : _replacementStorageFromLineTexts(
+          : _appendBackedStorageFromLineTexts(
               normalizedReplacement,
-              revision: 0,
             );
       final nextSegments = <_TextDocumentStorageSegment>[
         if (normalizedStart > 0) _storage.slice(0, normalizedStart),
@@ -705,16 +712,36 @@ final class TextDocument {
         grapheme == '\r';
   }
 
-  static _TextDocumentStorage _replacementStorageFromLineTexts(
+  _TextDocumentStorage _appendBackedStorageFromLineTexts(
     List<String> lineTexts, {
     List<int>? lineLengths,
-    required int revision,
   }) {
-    return _optimizedStorageFromLineTexts(
+    final normalizedLineLengths =
+        lineLengths ?? _computeLineTextStats(lineTexts).lineLengths;
+    final replacementSource = _appendSource ??= _LineTextDocumentSource._appendable();
+    final replacementStartLine = replacementSource.appendLineTexts(
       lineTexts,
-      lineLengths: lineLengths,
-      revision: revision,
+      lineLengths: normalizedLineLengths,
     );
+    final linePieces = List<List<_TextDocumentSourcePiece>>.generate(
+      lineTexts.length,
+      (index) {
+        final lineLength = normalizedLineLengths[index];
+        if (lineLength <= 0) {
+          return const <_TextDocumentSourcePiece>[];
+        }
+        return <_TextDocumentSourcePiece>[
+          _TextDocumentSourcePiece(
+            source: replacementSource,
+            sourceLine: replacementStartLine + index,
+            startColumn: 0,
+            endColumn: lineLength,
+          ),
+        ];
+      },
+      growable: false,
+    );
+    return _storageBuilder.fromLinePieces(linePieces, revision: 0);
   }
 
   static _TextDocumentStorage _replacementStorageFromText(
@@ -736,7 +763,7 @@ final class TextDocument {
     );
   }
 
-  static _TextDocumentStorage? _pieceBackedReplacementStorageFromLineTexts({
+  _TextDocumentStorage? _pieceBackedReplacementStorageFromLineTexts({
     required _TextDocumentStorage storage,
     required TextPosition startPosition,
     required TextPosition oldEndPosition,
@@ -766,7 +793,8 @@ final class TextDocument {
       linePieces.first.addAll(prefixPieces);
     }
 
-    final replacementSource = _TextDocumentSource.fromLineTexts(
+    final replacementSource = _appendSource ??= _LineTextDocumentSource._appendable();
+    final replacementStartLine = replacementSource.appendLineTexts(
       replacementLineTexts,
       lineLengths: replacementLineLengths,
     );
@@ -778,7 +806,7 @@ final class TextDocument {
       linePieces[lineIndex].add(
         _TextDocumentSourcePiece(
           source: replacementSource,
-          sourceLine: lineIndex,
+          sourceLine: replacementStartLine + lineIndex,
           startColumn: 0,
           endColumn: lineLength,
         ),
@@ -1313,6 +1341,13 @@ abstract base class _TextDocumentSource {
 
   int get debugMaterializedLineTextCount;
 
+  int debugReferencedSourceCount(Set<_TextDocumentSource> sources) {
+    if (!sources.add(this)) {
+      return 0;
+    }
+    return 1;
+  }
+
   String lineAt(int index);
 
   List<String>? parsedLineAt(int index) => null;
@@ -1640,6 +1675,10 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
   }) : _lineTexts = lineTexts,
        super._();
 
+  _LineTextDocumentSource._appendable()
+    : _lineTexts = <String>[],
+      super._(lineStarts: <int>[], lineEnds: <int>[], lineLengths: <int>[]);
+
   final List<String> _lineTexts;
   String? _joinedText;
   List<List<int>?>? _graphemeOffsetsByLine;
@@ -1660,7 +1699,7 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
     final cache = _graphemeOffsetsByLine ??= List<List<int>?>.filled(
       lineCount,
       null,
-      growable: false,
+      growable: true,
     );
     final existing = cache[index];
     if (existing != null) {
@@ -1676,6 +1715,33 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
     final normalized = List<int>.unmodifiable(offsets);
     cache[index] = normalized;
     return normalized;
+  }
+
+  int appendLineTexts(
+    List<String> lineTexts, {
+    required List<int> lineLengths,
+  }) {
+    if (lineTexts.isEmpty) {
+      return _lineTexts.length;
+    }
+    final startLine = _lineTexts.length;
+    var offset = lineEnds.isEmpty ? 0 : lineEnds.last + 1;
+    for (var index = 0; index < lineTexts.length; index++) {
+      final line = lineTexts[index];
+      _lineTexts.add(line);
+      lineStarts.add(offset);
+      offset += line.length;
+      lineEnds.add(offset);
+      this.lineLengths.add(lineLengths[index]);
+      if (index < lineTexts.length - 1) {
+        offset += 1;
+      }
+    }
+    _joinedText = null;
+    _graphemeOffsetsByLine?.addAll(
+      List<List<int>?>.filled(lineTexts.length, null, growable: false),
+    );
+    return startLine;
   }
 
   @override
@@ -1880,6 +1946,20 @@ final class _PieceTableTextDocumentSource extends _TextDocumentSource {
   @override
   int get debugMaterializedLineTextCount =>
       _materializedLineTexts?.whereType<String>().length ?? 0;
+
+  @override
+  int debugReferencedSourceCount(Set<_TextDocumentSource> sources) {
+    if (!sources.add(this)) {
+      return 0;
+    }
+    var total = 1;
+    for (final line in _linePieces) {
+      for (final piece in line) {
+        total += piece.source.debugReferencedSourceCount(sources);
+      }
+    }
+    return total;
+  }
 
   int get debugPieceCount {
     var total = 0;
@@ -2480,6 +2560,11 @@ final class _TextDocumentStorage {
   int get debugPieceCount => _debugPieceCount(<_TextDocumentStorage>{});
 
   int get debugDistinctSourceCount => _debugDistinctSourceCount(
+    <_TextDocumentStorage>{},
+    <_TextDocumentSource>{},
+  );
+
+  int get debugReferencedSourceCount => _debugReferencedSourceCount(
     <_TextDocumentStorage>{},
     <_TextDocumentSource>{},
   );
@@ -3807,6 +3892,28 @@ final class _TextDocumentStorage {
     var total = 0;
     for (final segment in segments) {
       total += segment.storage._debugDistinctSourceCount(visited, sources);
+    }
+    return total;
+  }
+
+  int _debugReferencedSourceCount(
+    Set<_TextDocumentStorage> visited,
+    Set<_TextDocumentSource> sources,
+  ) {
+    if (!visited.add(this)) {
+      return 0;
+    }
+    final segments = _compositeBacking?.segments;
+    if (segments == null || segments.isEmpty) {
+      final source = _leafBacking?.source;
+      if (source == null) {
+        return 0;
+      }
+      return source.debugReferencedSourceCount(sources);
+    }
+    var total = 0;
+    for (final segment in segments) {
+      total += segment.storage._debugReferencedSourceCount(visited, sources);
     }
     return total;
   }

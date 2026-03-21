@@ -201,6 +201,7 @@ void main() {
 
       expect(document.debugPieceBackedLeafCount, greaterThan(0));
       expect(document.debugPieceCount, 3);
+      expect(document.debugReferencedSourceCount, 3);
 
       document.replaceTextRange(
         startOffset: 0,
@@ -214,6 +215,7 @@ void main() {
       );
       expect(document.debugPieceBackedLeafCount, greaterThan(0));
       expect(document.debugPieceCount, 4);
+      expect(document.debugReferencedSourceCount, 3);
     });
 
     test('repeated line-range edits flatten nested source pieces', () {
@@ -227,6 +229,7 @@ void main() {
 
       expect(document.debugPieceBackedLeafCount, greaterThan(0));
       expect(document.debugPieceCount, 3);
+      expect(document.debugReferencedSourceCount, 3);
 
       document.replaceLineTextRange(
         startLine: 0,
@@ -237,6 +240,7 @@ void main() {
       expect(document.text, 'omega\ndelta\ngamma');
       expect(document.debugPieceBackedLeafCount, greaterThan(0));
       expect(document.debugPieceCount, 3);
+      expect(document.debugReferencedSourceCount, 3);
     });
 
     test(
