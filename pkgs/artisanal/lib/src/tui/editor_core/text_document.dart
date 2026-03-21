@@ -267,7 +267,28 @@ final class TextDocument {
       ...mergedLines,
       ..._lines.skip(oldEndPosition.line + 1),
     ];
-    _replaceLines(nextLines);
+    final offsetDelta = replacement.length - (normalizedEnd - normalizedStart);
+    final nextLineStartOffsets = <int>[
+      ..._lineStartOffsets.take(startPosition.line),
+    ];
+    var nextOffset = _lineStartOffsets[startPosition.line];
+    for (var index = 0; index < mergedLines.length; index++) {
+      nextLineStartOffsets.add(nextOffset);
+      nextOffset += mergedLines[index].length;
+      if (index < mergedLines.length - 1) {
+        nextOffset += 1;
+      }
+    }
+    nextLineStartOffsets.addAll(
+      _lineStartOffsets
+          .skip(oldEndPosition.line + 1)
+          .map((offset) => offset + offsetDelta),
+    );
+    _replaceState(
+      lines: nextLines,
+      lineStartOffsets: nextLineStartOffsets,
+      length: _length + offsetDelta,
+    );
 
     final newEndOffset = normalizedStart + replacement.length;
     return TextDocumentChange(
@@ -316,19 +337,32 @@ final class TextDocument {
   }
 
   void _replaceLines(List<List<String>> lines) {
-    _lines = List<List<String>>.unmodifiable(
-      lines.map((line) => UnmodifiableListView(line)),
-    );
-    _lineStartOffsets = List<int>.filled(lines.length, 0, growable: false);
+    final lineStartOffsets = List<int>.filled(lines.length, 0, growable: false);
     var offset = 0;
     for (var index = 0; index < lines.length; index++) {
-      _lineStartOffsets[index] = offset;
+      lineStartOffsets[index] = offset;
       offset += lines[index].length;
       if (index < lines.length - 1) {
         offset += 1;
       }
     }
-    _length = offset;
+    _replaceState(
+      lines: lines,
+      lineStartOffsets: lineStartOffsets,
+      length: offset,
+    );
+  }
+
+  void _replaceState({
+    required List<List<String>> lines,
+    required List<int> lineStartOffsets,
+    required int length,
+  }) {
+    _lines = List<List<String>>.unmodifiable(
+      lines.map((line) => UnmodifiableListView(line)),
+    );
+    _lineStartOffsets = List<int>.unmodifiable(lineStartOffsets);
+    _length = length;
     _cachedText = null;
     _cachedFlattenedGraphemes = null;
     _cachedLineViews = null;
