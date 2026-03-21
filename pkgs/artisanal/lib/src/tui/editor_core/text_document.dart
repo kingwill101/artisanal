@@ -675,6 +675,13 @@ final class _TextDocumentStorage {
         storageIdentity: storageIdentity,
       );
     }
+    if (nonEmpty.length == 1) {
+      return _storageFromSingleNormalizedSegment(
+        nonEmpty.single,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
     if (nonEmpty.length > _maxCompositeSegmentCount) {
       return _buildBalancedComposite(
         nonEmpty,
@@ -1304,6 +1311,46 @@ final class _TextDocumentStorage {
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
+    );
+  }
+
+  static _TextDocumentStorage _storageFromSingleNormalizedSegment(
+    _TextDocumentStorageSegment segment, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final storage = segment.storage;
+    final nextStorageIdentity = storageIdentity ?? Object();
+    if (storage._baseLineTexts case final lineTexts?) {
+      return _leafFromLineTexts(
+        lineTexts.sublist(segment.startLine, segment.endLine),
+        revision: revision,
+        storageIdentity: nextStorageIdentity,
+      );
+    }
+    if (storage._sourceText case final sourceText?) {
+      return _leafFromTextSource(
+        sourceText: sourceText,
+        sourceLineStarts: storage._sourceLineStarts!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+        sourceLineEnds: storage._sourceLineEnds!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+        lineLengths: storage._baseLineLengths!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+        revision: revision,
+        storageIdentity: nextStorageIdentity,
+      );
+    }
+    return _buildComposite(
+      <_TextDocumentStorageSegment>[segment],
+      revision: revision,
+      storageIdentity: nextStorageIdentity,
     );
   }
 

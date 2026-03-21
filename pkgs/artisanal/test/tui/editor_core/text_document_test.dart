@@ -576,6 +576,7 @@ void main() {
           replacementLineTexts: const <String>[],
         );
 
+        expect(document.debugStorageDepth, 1);
         expect(document.debugStorageSegmentCount, 1);
         expect(document.debugSourceBackedLeafCount, 1);
         expect(document.lineCount, 200);
