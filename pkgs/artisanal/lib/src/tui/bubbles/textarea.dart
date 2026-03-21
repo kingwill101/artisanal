@@ -732,7 +732,7 @@ class TextAreaModel extends ViewComponent {
 
   bool _focused = false;
   late List<List<String>> _lines;
-  late final TextDocument _document;
+  late TextDocument _document;
   late final EditorState _editorState;
   late final TextView _textView;
   int _row = 0;
@@ -796,8 +796,16 @@ class TextAreaModel extends ViewComponent {
   bool get canUndo => _history.canUndo;
   bool get canRedo => _history.canRedo;
   bool get hasSelection => _hasSelection();
-  TextDocument get document => _document;
-  EditorState get editorState => _editorState;
+  TextDocument get document {
+    _refreshDocumentSnapshot();
+    return _document;
+  }
+
+  EditorState get editorState {
+    _refreshEditorStateSnapshot();
+    return _editorState;
+  }
+
   List<TextDiagnosticRange> get diagnostics => List.unmodifiable(_diagnostics);
   TextDiagnosticRange? get activeDiagnostic => _activeDiagnostic();
   List<TextDecorationRange> get decorations => List.unmodifiable(_decorations);
@@ -1543,9 +1551,16 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _applyOffsetCommandResult(commands.TextCommandResult result) {
-    _lines = TextDocument.parseFlatGraphemes(result.graphemes);
-    _documentSnapshotDirty = true;
-    _refreshDocumentSnapshot();
+    final nextDocument = result.document;
+    if (nextDocument != null) {
+      _document = nextDocument;
+      _lines = nextDocument.lineViews;
+      _documentSnapshotDirty = false;
+    } else {
+      _lines = TextDocument.parseFlatGraphemes(result.graphemes);
+      _documentSnapshotDirty = true;
+      _refreshDocumentSnapshot();
+    }
     _lastDocumentChange = result.documentChange;
     _applyLineStateSnapshot(
       lineSnapshotFromOffsets(

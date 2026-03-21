@@ -6,17 +6,18 @@ import 'code_edit_policy.dart';
 import 'code_language_profile.dart';
 import 'editor_state.dart';
 import 'state_bridge.dart';
+import 'text_change.dart';
 import 'text_edit_ops.dart' as edit_ops;
 import 'text_commands.dart';
 import 'text_document.dart';
 import 'text_editing.dart';
 
-TextCommandResult _unchangedCodeResult(
-  List<String> graphemes,
+TextCommandResult _unchangedCodeResultFromDocument(
+  TextDocument document,
   TextOffsetStateSnapshot state,
 ) {
-  return TextCommandResult(
-    graphemes: List<String>.from(graphemes),
+  return _codeResultFromDocument(
+    document,
     cursorOffset: state.cursorOffset,
     selectionBaseOffset: state.selectionBaseOffset,
     selectionExtentOffset: state.selectionExtentOffset,
@@ -24,11 +25,23 @@ TextCommandResult _unchangedCodeResult(
   );
 }
 
-TextCommandResult _unchangedCodeResultFromDocument(
-  TextDocument document,
-  TextOffsetStateSnapshot state,
-) {
-  return _unchangedCodeResult(document.flattenWithNewlines(), state);
+TextCommandResult _codeResultFromDocument(
+  TextDocument document, {
+  required int cursorOffset,
+  int? selectionBaseOffset,
+  int? selectionExtentOffset,
+  TextDocumentChange? documentChange,
+  bool changed = true,
+}) {
+  return TextCommandResult(
+    graphemes: document.flattenWithNewlines(),
+    cursorOffset: cursorOffset,
+    selectionBaseOffset: selectionBaseOffset,
+    selectionExtentOffset: selectionExtentOffset,
+    document: document,
+    documentChange: documentChange,
+    changed: changed,
+  );
 }
 
 bool _listStringEquals(List<String> left, List<String> right) {
@@ -149,11 +162,11 @@ TextCommandResult codeHandlePairBackspace({
     end: cursorOffset + 1,
     cursorOffset: cursorOffset - 1,
   );
-  return TextCommandResult(
-    graphemes: working.flattenWithNewlines(),
+  return _codeResultFromDocument(
+    working,
     cursorOffset: result.cursorOffset,
-    changed: result.changed,
     documentChange: result.change,
+    changed: result.changed,
   );
 }
 
@@ -189,11 +202,11 @@ TextCommandResult codeHandleAutoPair({
       state.cursorOffset,
       <String>[typed, matching],
     );
-    return TextCommandResult(
-      graphemes: working.flattenWithNewlines(),
+    return _codeResultFromDocument(
+      working,
       cursorOffset: state.cursorOffset.clamp(0, document.length) + 1,
-      changed: result.changed,
       documentChange: result.change,
+      changed: result.changed,
     );
   }
 
@@ -206,8 +219,8 @@ TextCommandResult codeHandleAutoPair({
     startOffset: offset,
     graphemes: <String>[typed],
   )) {
-    return TextCommandResult(
-      graphemes: document.flattenWithNewlines(),
+    return _codeResultFromDocument(
+      document,
       cursorOffset: offset + 1,
       selectionBaseOffset: state.selectionBaseOffset,
       selectionExtentOffset: state.selectionExtentOffset,
@@ -254,19 +267,22 @@ TextCommandResult codeInsertIndentedNewline({
     ...baseIndentGraphemes,
     ...additionalIndent,
   ];
-  final replacement = <String>[
-    ...cursorInsertion,
-    ...trailingSuffix,
-  ];
+  final replacement = <String>[...cursorInsertion, ...trailingSuffix];
 
-  final start = state.hasSelection ? normalizedSelectionRange(
-    state.selectionBaseOffset,
-    state.selectionExtentOffset,
-  )?.start ?? state.cursorOffset : state.cursorOffset;
-  final endBase = state.hasSelection ? normalizedSelectionRange(
-    state.selectionBaseOffset,
-    state.selectionExtentOffset,
-  )?.end ?? state.cursorOffset : state.cursorOffset;
+  final start = state.hasSelection
+      ? normalizedSelectionRange(
+              state.selectionBaseOffset,
+              state.selectionExtentOffset,
+            )?.start ??
+            state.cursorOffset
+      : state.cursorOffset;
+  final endBase = state.hasSelection
+      ? normalizedSelectionRange(
+              state.selectionBaseOffset,
+              state.selectionExtentOffset,
+            )?.end ??
+            state.cursorOffset
+      : state.cursorOffset;
   final end = state.hasSelection
       ? endBase
       : (endBase + trailingSuffixReplaceCount).clamp(endBase, document.length);
@@ -279,11 +295,11 @@ TextCommandResult codeInsertIndentedNewline({
     replacement: replacement,
     cursorOffset: start + cursorInsertion.length,
   );
-  return TextCommandResult(
-    graphemes: working.flattenWithNewlines(),
+  return _codeResultFromDocument(
+    working,
     cursorOffset: result.cursorOffset,
-    changed: result.changed,
     documentChange: result.change,
+    changed: result.changed,
   );
 }
 
@@ -393,16 +409,13 @@ TextCommandResult codeToggleBlockComments({
   final nextSelectionEnd = clampedStart + selectionEnd;
 
   if (hasSelection) {
-    return TextCommandResult(
-      graphemes: working.flattenWithNewlines(),
+    return _codeResultFromDocument(
+      working,
       cursorOffset: nextSelectionEnd,
       selectionBaseOffset: nextSelectionStart,
       selectionExtentOffset: nextSelectionEnd,
     );
   }
 
-  return TextCommandResult(
-    graphemes: working.flattenWithNewlines(),
-    cursorOffset: nextSelectionEnd,
-  );
+  return _codeResultFromDocument(working, cursorOffset: nextSelectionEnd);
 }

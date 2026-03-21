@@ -16,6 +16,7 @@ final class TextCommandResult {
     required this.cursorOffset,
     this.selectionBaseOffset,
     this.selectionExtentOffset,
+    this.document,
     this.documentChange,
     this.changed = true,
   });
@@ -24,6 +25,7 @@ final class TextCommandResult {
   final int cursorOffset;
   final int? selectionBaseOffset;
   final int? selectionExtentOffset;
+  final TextDocument? document;
   final TextDocumentChange? documentChange;
   final bool changed;
 }
