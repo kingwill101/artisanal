@@ -392,11 +392,11 @@ TextCommandResult codeToggleBlockComments({
   }
 
   final working = document.copy();
-  edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: clampedStart,
     end: clampedEnd,
-    replacement: replacement,
+    replacement: replacement.join(),
   );
   final nextSelectionStart = clampedStart + selectionStart;
   final nextSelectionEnd = clampedStart + selectionEnd;
@@ -407,8 +407,15 @@ TextCommandResult codeToggleBlockComments({
       cursorOffset: nextSelectionEnd,
       selectionBaseOffset: nextSelectionStart,
       selectionExtentOffset: nextSelectionEnd,
+      documentChange: result.change,
+      changed: result.changed,
     );
   }
 
-  return _codeResultFromDocument(working, cursorOffset: nextSelectionEnd);
+  return _codeResultFromDocument(
+    working,
+    cursorOffset: nextSelectionEnd,
+    documentChange: result.change,
+    changed: result.changed,
+  );
 }
