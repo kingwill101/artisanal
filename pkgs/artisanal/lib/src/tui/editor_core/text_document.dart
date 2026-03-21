@@ -793,15 +793,14 @@ final class _ChunkedTextDocumentStorageBuilder
     required int revision,
     Object? storageIdentity,
   }) {
-    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount) {
-      return _TextDocumentStorage._buildStorageFromLineTextsSource(
-        lineTexts,
-        lineLengths: lineLengths,
+    if (lineTexts.isEmpty) {
+      return _TextDocumentStorage._leafFromLineTexts(
+        const <String>[''],
         revision: revision,
         storageIdentity: storageIdentity,
       );
     }
-    return _TextDocumentStorage._leafFromLineTexts(
+    return _TextDocumentStorage._buildStorageFromLineTextsSource(
       lineTexts,
       lineLengths: lineLengths,
       revision: revision,

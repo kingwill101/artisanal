@@ -60,6 +60,19 @@ void main() {
       expect(fromFlatGraphemes.lineCount, 3);
     });
 
+    test('small line-text documents use source-backed lazy storage', () {
+      final document = TextDocument.fromLineTexts(const ['alpha', 'beta']);
+
+      expect(document.debugSourceBackedLeafCount, 1);
+      expect(document.debugDistinctSourceCount, 1);
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugHasTextCache, isFalse);
+
+      expect(document.lineAt(0), 'alpha');
+      expect(document.debugJoinedSourceTextCount, 0);
+      expect(document.debugHasTextCache, isFalse);
+    });
+
     test('raw-text documents index grapheme-heavy lines in one pass', () {
       const family = '👩‍👩‍👧‍👦';
       const rocket = '🚀';
