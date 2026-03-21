@@ -595,8 +595,8 @@ class _TextEditorState extends State<TextEditor> {
         !key.meta) {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
       _applyLineEdit(
-        (lines, state) =>
-            textOutdentLines(lines: lines, state: state, width: width),
+        (document, state) =>
+            textOutdentLinesDocument(document: document, state: state, width: width),
       );
       return Cmd.none();
     }
@@ -609,8 +609,8 @@ class _TextEditorState extends State<TextEditor> {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
       if (_controller.hasSelection) {
         _applyLineEdit(
-          (lines, state) =>
-              textIndentLines(lines: lines, state: state, width: width),
+          (document, state) =>
+              textIndentLinesDocument(document: document, state: state, width: width),
         );
         return Cmd.none();
       }
@@ -620,7 +620,7 @@ class _TextEditorState extends State<TextEditor> {
 
     if (keyMatchesSingle(key, _joinLinesBinding)) {
       _applyLineEdit(
-        (lines, state) => textJoinLines(lines: lines, state: state),
+        (document, state) => textJoinLinesDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -633,7 +633,7 @@ class _TextEditorState extends State<TextEditor> {
         key.runes.isNotEmpty &&
         String.fromCharCode(key.runes.first).toLowerCase() == 'k') {
       _applyLineEdit(
-        (lines, state) => textDeleteLines(lines: lines, state: state),
+        (document, state) => textDeleteLinesDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -646,8 +646,10 @@ class _TextEditorState extends State<TextEditor> {
         key.runes.isNotEmpty &&
         String.fromCharCode(key.runes.first).toLowerCase() == 'd') {
       _applyLineEdit(
-        (lines, state) =>
-            textDuplicateSelectedLinesBelow(lines: lines, state: state),
+        (document, state) => textDuplicateSelectedLinesBelowDocument(
+          document: document,
+          state: state,
+        ),
       );
       return Cmd.none();
     }
@@ -658,8 +660,10 @@ class _TextEditorState extends State<TextEditor> {
         !key.ctrl &&
         !key.meta) {
       _applyLineEdit(
-        (lines, state) =>
-            textDuplicateSelectedLinesAbove(lines: lines, state: state),
+        (document, state) => textDuplicateSelectedLinesAboveDocument(
+          document: document,
+          state: state,
+        ),
       );
       return Cmd.none();
     }
@@ -670,8 +674,10 @@ class _TextEditorState extends State<TextEditor> {
         !key.ctrl &&
         !key.meta) {
       _applyLineEdit(
-        (lines, state) =>
-            textDuplicateSelectedLinesBelow(lines: lines, state: state),
+        (document, state) => textDuplicateSelectedLinesBelowDocument(
+          document: document,
+          state: state,
+        ),
       );
       return Cmd.none();
     }
@@ -682,8 +688,11 @@ class _TextEditorState extends State<TextEditor> {
         !key.ctrl &&
         !key.meta) {
       _applyLineEdit(
-        (lines, state) =>
-            textMoveSelectedLines(lines: lines, state: state, direction: -1),
+        (document, state) => textMoveSelectedLinesDocument(
+          document: document,
+          state: state,
+          direction: -1,
+        ),
       );
       return Cmd.none();
     }
@@ -694,8 +703,11 @@ class _TextEditorState extends State<TextEditor> {
         !key.ctrl &&
         !key.meta) {
       _applyLineEdit(
-        (lines, state) =>
-            textMoveSelectedLines(lines: lines, state: state, direction: 1),
+        (document, state) => textMoveSelectedLinesDocument(
+          document: document,
+          state: state,
+          direction: 1,
+        ),
       );
       return Cmd.none();
     }
@@ -742,66 +754,85 @@ class _TextEditorState extends State<TextEditor> {
 
     if (keyMatchesSingle(key, _sortLinesBinding)) {
       _applyLineEdit(
-        (lines, state) => textSortSelectedLines(lines: lines, state: state),
+        (document, state) =>
+            textSortSelectedLinesDocument(document: document, state: state),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _quoteLinesBinding)) {
       _applyLineEdit(
-        (lines, state) =>
-            textToggleLinePrefix(lines: lines, state: state, prefix: '>'),
+        (document, state) => textToggleLinePrefixDocument(
+          document: document,
+          state: state,
+          prefix: '>',
+        ),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _bulletListBinding)) {
       _applyLineEdit(
-        (lines, state) =>
-            textToggleLinePrefix(lines: lines, state: state, prefix: '-'),
+        (document, state) => textToggleLinePrefixDocument(
+          document: document,
+          state: state,
+          prefix: '-',
+        ),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _checklistBinding)) {
       _applyLineEdit(
-        (lines, state) =>
-            textToggleLinePrefix(lines: lines, state: state, prefix: '- [ ]'),
+        (document, state) => textToggleLinePrefixDocument(
+          document: document,
+          state: state,
+          prefix: '- [ ]',
+        ),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _numberedListBinding)) {
       _applyLineEdit(
-        (lines, state) => textToggleNumberedList(lines: lines, state: state),
+        (document, state) =>
+            textToggleNumberedListDocument(document: document, state: state),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _toggleChecklistStateBinding)) {
       _applyLineEdit(
-        (lines, state) => textToggleChecklistState(lines: lines, state: state),
+        (document, state) => textToggleChecklistStateDocument(
+          document: document,
+          state: state,
+        ),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _renumberListBinding)) {
       _applyLineEdit(
-        (lines, state) => textRenumberNumberedList(lines: lines, state: state),
+        (document, state) => textRenumberNumberedListDocument(
+          document: document,
+          state: state,
+        ),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _headingBinding)) {
       _applyLineEdit(
-        (lines, state) => textToggleHeadingPrefix(lines: lines, state: state),
+        (document, state) =>
+            textToggleHeadingPrefixDocument(document: document, state: state),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _cleanupBinding)) {
       _applyLineEdit(
-        (lines, state) => textCleanupWhitespace(lines: lines, state: state),
+        (document, state) =>
+            textCleanupWhitespaceDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -886,18 +917,18 @@ class _TextEditorState extends State<TextEditor> {
   }
 
   void _applyLineEdit(
-    TextLineCommandResult Function(
-      List<String> lines,
+    TextCommandResult Function(
+      TextDocument document,
       TextLineStateSnapshot state,
     )
     edit,
   ) {
-    final lines = List<String>.from(_controller.document.lineTexts);
-    final result = edit(lines, _coreBridge.currentLineStateSnapshot());
+    final document = _controller.document;
+    final result = edit(document, _coreBridge.currentLineStateSnapshot());
     if (!result.changed) {
       return;
     }
-    _coreBridge.applyTextLineCommandResult(result);
+    _coreBridge.applyTextCommandResult(result);
   }
 
   Widget _buildSearchBar(Theme theme, int width) {
