@@ -570,6 +570,26 @@ void main() {
       expect(document.debugLineGraphemeCacheCount, 0);
     });
 
+    test('single-line raw-text range matches keep grapheme caches cold', () {
+      const emoji = '👩‍👩‍👧‍👦';
+      final prefix = List<String>.filled(2048, 'a', growable: false).join();
+      final middle = List<String>.filled(256, emoji, growable: false).join();
+      final suffix = List<String>.filled(2048, 'b', growable: false).join();
+      final document = TextDocument(text: '$prefix$middle$suffix');
+      final start = prefix.characters.length + 32;
+      final graphemes = List<String>.filled(64, emoji, growable: false);
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      final matches = document.matchesOffsetRange(
+        startOffset: start,
+        graphemes: graphemes,
+      );
+
+      expect(matches, isTrue);
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
+
     test('wordBoundaryAt keeps long-line grapheme caches cold', () {
       final prefix = List<String>.filled(4096, 'a', growable: false).join();
       final gap = List<String>.filled(32, ' ', growable: false).join();

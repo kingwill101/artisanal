@@ -1136,6 +1136,23 @@ abstract base class _TextDocumentSource {
     return lineAt(index).characters.skip(graphemeStart).toString();
   }
 
+  bool matchesGraphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) {
+    final iterator = lineAt(index).characters.skip(startColumn).iterator;
+    for (var offset = 0; offset < graphemeCount; offset++) {
+      if (!iterator.moveNext() ||
+          iterator.current != graphemes[graphemeStart + offset]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   String textBetweenLines({required int startLine, required int endLine}) {
     final normalizedStart = startLine.clamp(0, lineCount);
     final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
@@ -1278,6 +1295,27 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
     final offsets = _graphemeOffsetsForLine(index);
     final start = lineStarts[index] + offsets[graphemeStart];
     return _rawText.substring(start, lineEnds[index]);
+  }
+
+  @override
+  bool matchesGraphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    final lineStart = lineStarts[index];
+    for (var offset = 0; offset < graphemeCount; offset++) {
+      final sourceStart = lineStart + offsets[startColumn + offset];
+      final sourceEnd = lineStart + offsets[startColumn + offset + 1];
+      if (_rawText.substring(sourceStart, sourceEnd) !=
+          graphemes[graphemeStart + offset]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override
@@ -1455,6 +1493,20 @@ final class _TextDocumentSourceSlice {
 
   String lineTextSuffix(int localIndex, int graphemeStart) =>
       source.lineTextSuffix(startLine + localIndex, graphemeStart);
+
+  bool matchesGraphemesInLineRange(
+    int localIndex, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) => source.matchesGraphemesInLineRange(
+    startLine + localIndex,
+    startColumn: startColumn,
+    graphemes: graphemes,
+    graphemeStart: graphemeStart,
+    graphemeCount: graphemeCount,
+  );
 
   void writeTextBetweenLinesToBuffer(
     StringBuffer buffer, {
@@ -2204,6 +2256,16 @@ final class _TextDocumentStorage {
         }
       }
       return true;
+    }
+    final sourceSlice = _leafBacking?.sourceSlice;
+    if (sourceSlice != null) {
+      return sourceSlice.matchesGraphemesInLineRange(
+        index,
+        startColumn: normalizedStart,
+        graphemes: graphemes,
+        graphemeStart: graphemeStart,
+        graphemeCount: normalizedCount,
+      );
     }
     final iterator = lineAt(index).characters.skip(normalizedStart).iterator;
     for (var offset = 0; offset < normalizedCount; offset++) {
