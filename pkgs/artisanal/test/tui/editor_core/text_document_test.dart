@@ -158,6 +158,28 @@ void main() {
     );
 
     test(
+      'replaceLines builds large parsed documents through shared source-backed storage',
+      () {
+        final parsedLines = List<List<String>>.generate(
+          600,
+          (index) => 'line-$index-abcdefghij'.characters.toList(growable: false),
+          growable: false,
+        );
+        final document = TextDocument(text: 'seed');
+
+        document.replaceLines(parsedLines);
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(1));
+        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugLineGraphemeCacheCount, parsedLines.length);
+        expect(document.lineCount, parsedLines.length);
+        expect(document.lineAt(0), 'line-0-abcdefghij');
+        expect(document.lineAt(599), 'line-599-abcdefghij');
+      },
+    );
+
+    test(
       'composite text reads do not materialize line text caches just to assemble text',
       () {
         final lineTexts = List<String>.generate(

@@ -792,7 +792,7 @@ final class _TextDocumentStorage {
     Object? storageIdentity,
   }) {
     if (lines.length > _maxLeafLineCount) {
-      return _buildChunkedLeafCompositeFromParsedLines(
+      return _buildStorageFromParsedLinesSource(
         lines,
         revision: revision,
         storageIdentity: storageIdentity,
@@ -1446,6 +1446,7 @@ final class _TextDocumentStorage {
     required int sourceLineEndIndex,
     required int revision,
     Object? storageIdentity,
+    Map<int, List<String>>? lineGraphemeCaches,
   }) {
     final lineLengths = source.lineLengths.sublist(
       sourceLineStartIndex,
@@ -1459,6 +1460,7 @@ final class _TextDocumentStorage {
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
+      lineGraphemeCaches: lineGraphemeCaches,
     );
   }
 
@@ -1559,17 +1561,55 @@ final class _TextDocumentStorage {
     );
   }
 
-  static _TextDocumentStorage _buildChunkedLeafCompositeFromParsedLines(
+  static _TextDocumentStorage _buildStorageFromParsedLinesSource(
     List<List<String>> lines, {
     required int revision,
     Object? storageIdentity,
   }) {
+    final normalizedLines = List<List<String>>.generate(
+      lines.length,
+      (index) => List<String>.unmodifiable(List<String>.from(lines[index])),
+      growable: false,
+    );
+    final lineTexts = List<String>.generate(
+      normalizedLines.length,
+      (index) => normalizedLines[index].join(),
+      growable: false,
+    );
+    final lineLengths = List<int>.generate(
+      normalizedLines.length,
+      (index) => normalizedLines[index].length,
+      growable: false,
+    );
+    final source = _TextDocumentSource.fromLineTexts(
+      lineTexts,
+      lineLengths: lineLengths,
+    );
+    if (source.lineCount <= _maxLeafLineCount) {
+      return _leafFromTextSource(
+        source: source,
+        sourceLineStartIndex: 0,
+        sourceLineEndIndex: source.lineCount,
+        revision: revision,
+        storageIdentity: storageIdentity,
+        lineGraphemeCaches: <int, List<String>>{
+          for (var index = 0; index < normalizedLines.length; index++)
+            index: normalizedLines[index],
+        },
+      );
+    }
     final segments = <_TextDocumentStorageSegment>[];
-    for (var start = 0; start < lines.length; start += _maxLeafLineCount) {
-      final end = (start + _maxLeafLineCount).clamp(0, lines.length);
-      final storage = _leafFromParsedLines(
-        lines.sublist(start, end),
+    for (var start = 0; start < normalizedLines.length; start += _maxLeafLineCount) {
+      final end = (start + _maxLeafLineCount).clamp(0, normalizedLines.length);
+      final storage = _leafFromTextSource(
+        source: source,
+        sourceLineStartIndex: start,
+        sourceLineEndIndex: end,
         revision: 0,
+        lineGraphemeCaches: <int, List<String>>{
+          for (var index = start; index < end; index++)
+            index - start: normalizedLines[index],
+        },
       );
       segments.add(storage.slice(0, storage.lineCount));
     }
