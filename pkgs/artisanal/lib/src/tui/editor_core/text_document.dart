@@ -7,60 +7,41 @@ import 'text_change.dart';
 
 final class TextDocument {
   TextDocument({String text = ''}) {
-    _storageIdentity = Object();
-    _revision = 0;
-    _replaceLineTexts(
+    _storage = _TextDocumentStorage.fromLineTexts(
       _parseLineTexts(text),
       revision: 0,
-      storageIdentity: _storageIdentity,
     );
   }
 
   TextDocument._raw();
 
-  late List<String> _lineTexts;
-  late List<int> _lineLengths;
-  late List<int> _lineStartOffsets;
-  late int _length;
-  late int _revision;
-  late Object _storageIdentity;
-  String? _cachedText;
-  List<String>? _cachedFlattenedGraphemes;
-  late List<List<String>?> _lineGraphemeCaches;
-  List<List<String>>? _cachedLineViews;
+  late _TextDocumentStorage _storage;
 
   List<List<String>> get lines => lineViews
       .map((line) => List<String>.unmodifiable(line))
       .toList(growable: false);
 
-  List<List<String>> get lineViews =>
-      _cachedLineViews ??= List<List<String>>.unmodifiable(
-        List<List<String>>.generate(
-          _lineTexts.length,
-          lineGraphemesAt,
-          growable: false,
-        ),
-      );
+  List<List<String>> get lineViews => _storage.lineViews;
 
-  List<String> get lineTexts => _lineTexts;
+  List<String> get lineTexts => _storage.lineTexts;
 
-  int get lineCount => _lineTexts.length;
+  int get lineCount => _storage.lineCount;
 
-  int get length => _length;
+  int get length => _storage.length;
 
-  int get revision => _revision;
+  int get revision => _storage.revision;
 
-  Object get storageIdentity => _storageIdentity;
+  Object get storageIdentity => _storage.storageIdentity;
 
-  String get text => _cachedText ??= _lineTexts.join('\n');
+  String get text => _storage.text;
 
   String? graphemeAt(int offset) {
     if (offset < 0 || offset >= length) {
       return null;
     }
     final position = positionForOffset(offset);
-    if (position.column == _lineLengths[position.line] &&
-        position.line < _lineTexts.length - 1) {
+    if (position.column == _storage.lineLengths[position.line] &&
+        position.line < _storage.lineCount - 1) {
       return '\n';
     }
     return lineGraphemesAt(position.line)[position.column];
@@ -68,84 +49,64 @@ final class TextDocument {
 
   TextDocument copy() {
     final next = TextDocument._raw();
-    next._lineTexts = _lineTexts;
-    next._lineLengths = _lineLengths;
-    next._lineStartOffsets = _lineStartOffsets;
-    next._length = _length;
-    next._revision = _revision;
-    next._storageIdentity = _storageIdentity;
-    next._cachedText = _cachedText;
-    next._cachedFlattenedGraphemes = _cachedFlattenedGraphemes;
-    next._lineGraphemeCaches = _lineGraphemeCaches;
-    next._cachedLineViews = _cachedLineViews;
+    next._storage = _storage;
     return next;
   }
 
   String lineAt(int index) {
-    if (index < 0 || index >= _lineTexts.length) {
-      return '';
-    }
-    return _lineTexts[index];
+    return _storage.lineAt(index);
   }
 
   List<String> lineGraphemesAt(int index) {
-    if (index < 0 || index >= _lineTexts.length) {
-      return const <String>[];
-    }
-    return _lineGraphemeCaches[index] ??= List<String>.unmodifiable(
-      _lineTexts[index].characters.toList(growable: false),
-    );
+    return _storage.lineGraphemesAt(index);
   }
 
   int lineLength(int index) {
-    if (index < 0 || index >= _lineLengths.length) {
-      return 0;
-    }
-    return _lineLengths[index];
+    return _storage.lineLength(index);
   }
 
   int lineStartOffset(int index) {
     if (index <= 0) {
       return 0;
     }
-    if (index >= _lineStartOffsets.length) {
+    if (index >= _storage.lineStartOffsets.length) {
       return length;
     }
-    return _lineStartOffsets[index];
+    return _storage.lineStartOffsets[index];
   }
 
   int lineEndOffset(int index, {bool includeTrailingNewline = false}) {
     if (index < 0) {
       return 0;
     }
-    if (index >= _lineLengths.length) {
+    if (index >= _storage.lineLengths.length) {
       return length;
     }
-    final end = _lineStartOffsets[index] + _lineLengths[index];
-    if (includeTrailingNewline && index < _lineLengths.length - 1) {
+    final end = _storage.lineStartOffsets[index] + _storage.lineLengths[index];
+    if (includeTrailingNewline && index < _storage.lineLengths.length - 1) {
       return end + 1;
     }
     return end;
   }
 
   TextPosition clampPosition(TextPosition position) {
-    final line = position.line.clamp(0, _lineTexts.length - 1);
-    final column = position.column.clamp(0, _lineLengths[line]);
+    final line = position.line.clamp(0, _storage.lineCount - 1);
+    final column = position.column.clamp(0, _storage.lineLengths[line]);
     return TextPosition(line: line, column: column);
   }
 
   int offsetForPosition(TextPosition position) {
     final clamped = clampPosition(position);
-    return _lineStartOffsets[clamped.line] + clamped.column;
+    return _storage.lineStartOffsets[clamped.line] + clamped.column;
   }
 
   TextPosition positionForOffset(int offset) {
     final clamped = offset.clamp(0, length);
     var low = 0;
-    var high = _lineTexts.length - 1;
+    var high = _storage.lineCount - 1;
     while (low < high) {
       final mid = (low + high) >> 1;
-      final lineEnd = _lineStartOffsets[mid] + _lineLengths[mid];
+      final lineEnd = _storage.lineStartOffsets[mid] + _storage.lineLengths[mid];
       if (clamped <= lineEnd) {
         high = mid;
       } else {
@@ -153,22 +114,13 @@ final class TextDocument {
       }
     }
     final line = low;
-    return TextPosition(line: line, column: clamped - _lineStartOffsets[line]);
+    return TextPosition(
+      line: line,
+      column: clamped - _storage.lineStartOffsets[line],
+    );
   }
 
-  List<String> flattenWithNewlines() {
-    final flattened = _cachedFlattenedGraphemes ??= () {
-      final result = <String>[];
-      for (var index = 0; index < _lineTexts.length; index++) {
-        result.addAll(lineGraphemesAt(index));
-        if (index < _lineTexts.length - 1) {
-          result.add('\n');
-        }
-      }
-      return List<String>.unmodifiable(result);
-    }();
-    return List<String>.from(flattened, growable: true);
-  }
+  List<String> flattenWithNewlines() => _storage.flattenWithNewlines();
 
   List<String> graphemesInRange({
     required int startOffset,
@@ -186,8 +138,8 @@ final class TextDocument {
     var line = start.line;
     var column = start.column;
 
-    while (remaining > 0 && line < _lineTexts.length) {
-      final lineLength = _lineLengths[line];
+    while (remaining > 0 && line < _storage.lineCount) {
+      final lineLength = _storage.lineLengths[line];
       final takeCount = (lineLength - column).clamp(0, remaining);
       if (takeCount > 0) {
         result.addAll(
@@ -199,7 +151,7 @@ final class TextDocument {
 
       if (remaining > 0 &&
           column == lineLength &&
-          line < _lineTexts.length - 1) {
+          line < _storage.lineCount - 1) {
         result.add('\n');
         remaining -= 1;
         line += 1;
@@ -241,7 +193,7 @@ final class TextDocument {
     if (start == end) {
       return '';
     }
-    return _lineTexts.sublist(start, end).join('\n');
+    return _storage.lineTexts.sublist(start, end).join('\n');
   }
 
   bool matchesOffsetRange({
@@ -308,7 +260,10 @@ final class TextDocument {
   }
 
   void replaceText(String text) {
-    _replaceLineTexts(_parseLineTexts(text));
+    _storage = _TextDocumentStorage.fromLineTexts(
+      _parseLineTexts(text),
+      revision: _storage.revision + 1,
+    );
   }
 
   TextDocumentChange replaceTextRange({
@@ -350,27 +305,27 @@ final class TextDocument {
     mergedLines.last.addAll(suffix);
 
     final nextLineTexts = <String>[
-      ..._lineTexts.take(startPosition.line),
+      ..._storage.lineTexts.take(startPosition.line),
       ...mergedLines.map((line) => line.join()),
-      ..._lineTexts.skip(oldEndPosition.line + 1),
+      ..._storage.lineTexts.skip(oldEndPosition.line + 1),
     ];
     final nextLineLengths = <int>[
-      ..._lineLengths.take(startPosition.line),
+      ..._storage.lineLengths.take(startPosition.line),
       ...mergedLines.map((line) => line.length),
-      ..._lineLengths.skip(oldEndPosition.line + 1),
+      ..._storage.lineLengths.skip(oldEndPosition.line + 1),
     ];
     final nextLineGraphemeCaches = <List<String>?>[
-      ..._lineGraphemeCaches.take(startPosition.line),
+      ..._storage.lineGraphemeCaches.take(startPosition.line),
       ...mergedLines.map(
         (line) => List<String>.unmodifiable(List<String>.from(line)),
       ),
-      ..._lineGraphemeCaches.skip(oldEndPosition.line + 1),
+      ..._storage.lineGraphemeCaches.skip(oldEndPosition.line + 1),
     ];
     final offsetDelta = replacement.length - (normalizedEnd - normalizedStart);
     final nextLineStartOffsets = <int>[
-      ..._lineStartOffsets.take(startPosition.line),
+      ..._storage.lineStartOffsets.take(startPosition.line),
     ];
-    var nextOffset = _lineStartOffsets[startPosition.line];
+    var nextOffset = _storage.lineStartOffsets[startPosition.line];
     for (var index = 0; index < mergedLines.length; index++) {
       nextLineStartOffsets.add(nextOffset);
       nextOffset += nextLineLengths[startPosition.line + index];
@@ -379,15 +334,17 @@ final class TextDocument {
       }
     }
     nextLineStartOffsets.addAll(
-      _lineStartOffsets
+      _storage.lineStartOffsets
           .skip(oldEndPosition.line + 1)
           .map((offset) => offset + offsetDelta),
     );
-    _replaceState(
+    _storage = _TextDocumentStorage(
       lineTexts: nextLineTexts,
       lineLengths: nextLineLengths,
       lineStartOffsets: nextLineStartOffsets,
-      length: _length + offsetDelta,
+      length: _storage.length + offsetDelta,
+      revision: _storage.revision + 1,
+      storageIdentity: Object(),
       lineGraphemeCaches: nextLineGraphemeCaches,
     );
 
@@ -403,12 +360,24 @@ final class TextDocument {
   }
 
   void replaceLines(List<List<String>> lines) {
-    _replaceParsedLines(
-      lines.isEmpty
-          ? <List<String>>[<String>[]]
-          : lines
-                .map((line) => List<String>.from(line))
-                .toList(growable: false),
+    final parsedLines = lines.isEmpty
+        ? <List<String>>[<String>[]]
+        : lines
+              .map((line) => List<String>.from(line))
+              .toList(growable: false);
+    _storage = _TextDocumentStorage.fromParsedLines(
+      parsedLines,
+      revision: _storage.revision + 1,
+    );
+  }
+
+  void replaceLineTexts(List<String> lineTexts) {
+    final normalizedLineTexts = lineTexts.isEmpty
+        ? const <String>['']
+        : List<String>.from(lineTexts, growable: false);
+    _storage = _TextDocumentStorage.fromLineTexts(
+      normalizedLineTexts,
+      revision: _storage.revision + 1,
     );
   }
 
@@ -452,55 +421,133 @@ final class TextDocument {
     return lines;
   }
 
-  void _replaceLineTexts(
+  bool _isWhitespace(String grapheme) {
+    return grapheme == ' ' ||
+        grapheme == '\t' ||
+        grapheme == '\n' ||
+        grapheme == '\r';
+  }
+}
+
+final class _TextDocumentStorage {
+  _TextDocumentStorage({
+    required List<String> lineTexts,
+    required List<int> lineLengths,
+    required List<int> lineStartOffsets,
+    required this.length,
+    required this.revision,
+    required this.storageIdentity,
+    List<List<String>?>? lineGraphemeCaches,
+  }) : lineTexts = List<String>.unmodifiable(lineTexts),
+       lineLengths = List<int>.unmodifiable(lineLengths),
+       lineStartOffsets = List<int>.unmodifiable(lineStartOffsets),
+       lineGraphemeCaches = lineGraphemeCaches == null
+           ? List<List<String>?>.filled(lineTexts.length, null, growable: false)
+           : List<List<String>?>.from(lineGraphemeCaches, growable: false);
+
+  factory _TextDocumentStorage.fromLineTexts(
     List<String> lineTexts, {
-    int? revision,
+    required int revision,
     Object? storageIdentity,
   }) {
     final lineLengths = lineTexts
         .map((line) => line.characters.length)
         .toList(growable: false);
-    final lineStartOffsets = List<int>.filled(
-      lineTexts.length,
-      0,
-      growable: false,
-    );
-    var offset = 0;
-    for (var index = 0; index < lineTexts.length; index++) {
-      lineStartOffsets[index] = offset;
-      offset += lineLengths[index];
-      if (index < lineTexts.length - 1) {
-        offset += 1;
-      }
-    }
-    _replaceState(
+    return _TextDocumentStorage(
       lineTexts: lineTexts,
       lineLengths: lineLengths,
-      lineStartOffsets: lineStartOffsets,
-      length: offset,
+      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
+        lineLengths,
+      ),
+      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
-      storageIdentity: storageIdentity,
+      storageIdentity: storageIdentity ?? Object(),
     );
   }
 
-  void _replaceParsedLines(List<List<String>> lines) {
-    _replaceState(
-      lineTexts: List<String>.unmodifiable(lines.map((line) => line.join())),
-      lineLengths: List<int>.unmodifiable(lines.map((line) => line.length)),
-      lineStartOffsets: _computeLineStartOffsetsFromLengths(
-        lines.map((line) => line.length).toList(growable: false),
+  factory _TextDocumentStorage.fromParsedLines(
+    List<List<String>> lines, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final lineLengths = lines.map((line) => line.length).toList(growable: false);
+    return _TextDocumentStorage(
+      lineTexts: lines.map((line) => line.join()).toList(growable: false),
+      lineLengths: lineLengths,
+      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
+        lineLengths,
       ),
-      length:
-          lines.fold<int>(0, (total, line) => total + line.length) +
-          (lines.length > 1 ? lines.length - 1 : 0),
-      lineGraphemeCaches: List<List<String>?>.unmodifiable(
-        lines.map((line) => List<String>.unmodifiable(List<String>.from(line))),
-      ),
-      revision: null,
+      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+      lineGraphemeCaches: lines
+          .map((line) => List<String>.unmodifiable(List<String>.from(line)))
+          .toList(growable: false),
     );
   }
 
-  List<int> _computeLineStartOffsetsFromLengths(List<int> lineLengths) {
+  final List<String> lineTexts;
+  final List<int> lineLengths;
+  final List<int> lineStartOffsets;
+  final int length;
+  final int revision;
+  final Object storageIdentity;
+  final List<List<String>?> lineGraphemeCaches;
+  String? _cachedText;
+  List<String>? _cachedFlattenedGraphemes;
+  List<List<String>>? _cachedLineViews;
+
+  int get lineCount => lineTexts.length;
+
+  String get text => _cachedText ??= lineTexts.join('\n');
+
+  String lineAt(int index) {
+    if (index < 0 || index >= lineTexts.length) {
+      return '';
+    }
+    return lineTexts[index];
+  }
+
+  int lineLength(int index) {
+    if (index < 0 || index >= lineLengths.length) {
+      return 0;
+    }
+    return lineLengths[index];
+  }
+
+  List<String> lineGraphemesAt(int index) {
+    if (index < 0 || index >= lineTexts.length) {
+      return const <String>[];
+    }
+    return lineGraphemeCaches[index] ??= List<String>.unmodifiable(
+      lineTexts[index].characters.toList(growable: false),
+    );
+  }
+
+  List<List<String>> get lineViews =>
+      _cachedLineViews ??= List<List<String>>.unmodifiable(
+        List<List<String>>.generate(
+          lineTexts.length,
+          lineGraphemesAt,
+          growable: false,
+        ),
+      );
+
+  List<String> flattenWithNewlines() {
+    final flattened = _cachedFlattenedGraphemes ??= () {
+      final result = <String>[];
+      for (var index = 0; index < lineTexts.length; index++) {
+        result.addAll(lineGraphemesAt(index));
+        if (index < lineTexts.length - 1) {
+          result.add('\n');
+        }
+      }
+      return List<String>.unmodifiable(result);
+    }();
+    return List<String>.from(flattened, growable: true);
+  }
+
+  static List<int> _computeLineStartOffsets(List<int> lineLengths) {
     final lineStartOffsets = List<int>.filled(
       lineLengths.length,
       0,
@@ -517,33 +564,8 @@ final class TextDocument {
     return lineStartOffsets;
   }
 
-  void _replaceState({
-    required List<String> lineTexts,
-    required List<int> lineLengths,
-    required List<int> lineStartOffsets,
-    required int length,
-    List<List<String>?>? lineGraphemeCaches,
-    int? revision,
-    Object? storageIdentity,
-  }) {
-    _lineTexts = List<String>.unmodifiable(lineTexts);
-    _lineLengths = List<int>.unmodifiable(lineLengths);
-    _lineStartOffsets = List<int>.unmodifiable(lineStartOffsets);
-    _lineGraphemeCaches = lineGraphemeCaches == null
-        ? List<List<String>?>.filled(lineTexts.length, null, growable: false)
-        : List<List<String>?>.from(lineGraphemeCaches, growable: false);
-    _length = length;
-    _revision = revision ?? (_revision + 1);
-    _storageIdentity = storageIdentity ?? Object();
-    _cachedText = null;
-    _cachedFlattenedGraphemes = null;
-    _cachedLineViews = null;
-  }
-
-  bool _isWhitespace(String grapheme) {
-    return grapheme == ' ' ||
-        grapheme == '\t' ||
-        grapheme == '\n' ||
-        grapheme == '\r';
+  static int _documentLengthForLineLengths(List<int> lineLengths) {
+    return lineLengths.fold<int>(0, (total, line) => total + line) +
+        (lineLengths.length > 1 ? lineLengths.length - 1 : 0);
   }
 }

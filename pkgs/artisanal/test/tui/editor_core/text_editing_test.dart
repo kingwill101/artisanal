@@ -75,4 +75,60 @@ void main() {
       expect(result.cursorOffset, lessThanOrEqualTo(document.length));
     });
   });
+
+  group('document-backed line transforms', () {
+    test('toggleLinePrefixDocument rewrites the document and keeps selection', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final state = TextLineStateSnapshot.selection(
+        base: TextPosition(line: 0, column: 0),
+        extent: TextPosition(line: 1, column: 4),
+      );
+
+      final result = textToggleLinePrefixDocument(
+        document: document,
+        state: state,
+        prefix: '>',
+      );
+
+      expect(result.changed, isTrue);
+      expect(result.document, isNotNull);
+      expect(result.document!.text, '> alpha\n> beta');
+      expect(result.selectionBaseOffset, 0);
+      expect(result.selectionExtentOffset, result.document!.length);
+    });
+
+    test('moveSelectedLinesDocument reorders the backing document', () {
+      final document = TextDocument(text: 'one\ntwo\nthree');
+      final state = TextLineStateSnapshot.collapsed(
+        cursor: TextPosition(line: 1, column: 0),
+      );
+
+      final result = textMoveSelectedLinesDocument(
+        document: document,
+        state: state,
+        direction: -1,
+      );
+
+      expect(result.changed, isTrue);
+      expect(result.document, isNotNull);
+      expect(result.document!.text, 'two\none\nthree');
+      expect(result.cursorOffset, 0);
+    });
+
+    test('cleanupWhitespaceDocument trims the live document in place', () {
+      final document = TextDocument(text: 'alpha  \nbeta\t\n\n');
+      final state = TextLineStateSnapshot.collapsed(
+        cursor: TextPosition(line: 0, column: 0),
+      );
+
+      final result = textCleanupWhitespaceDocument(
+        document: document,
+        state: state,
+      );
+
+      expect(result.changed, isTrue);
+      expect(result.document, isNotNull);
+      expect(result.document!.text, 'alpha\nbeta');
+    });
+  });
 }

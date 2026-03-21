@@ -1394,10 +1394,6 @@ class TextAreaModel extends ViewComponent {
     );
   }
 
-  List<String> _lineTexts() {
-    return _document.lineTexts;
-  }
-
   void _applyLineStateSnapshot(TextLineStateSnapshot snapshot) {
     final clamped = snapshot.clamp(
       lineCount: _lines.length,
@@ -1981,8 +1977,8 @@ class TextAreaModel extends ViewComponent {
   bool indentLines({int width = 2}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textIndentLines(
-        lines: _lineTexts(),
+      final result = textIndentLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         width: width,
       );
@@ -1991,7 +1987,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2000,8 +1996,8 @@ class TextAreaModel extends ViewComponent {
   bool outdentLines({int width = 2}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textOutdentLines(
-        lines: _lineTexts(),
+      final result = textOutdentLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         width: width,
       );
@@ -2010,7 +2006,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2019,8 +2015,8 @@ class TextAreaModel extends ViewComponent {
   bool moveLinesUp() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textMoveSelectedLines(
-        lines: _lineTexts(),
+      final result = textMoveSelectedLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         direction: -1,
       );
@@ -2029,7 +2025,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2038,8 +2034,8 @@ class TextAreaModel extends ViewComponent {
   bool moveLinesDown() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textMoveSelectedLines(
-        lines: _lineTexts(),
+      final result = textMoveSelectedLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         direction: 1,
       );
@@ -2048,7 +2044,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2058,13 +2054,15 @@ class TextAreaModel extends ViewComponent {
   bool duplicateLinesAbove() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textDuplicateSelectedLinesAbove(
-        lines: _lineTexts(),
+      final result = textDuplicateSelectedLinesAboveDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
       );
-
+      if (!result.changed) {
+        return false;
+      }
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2074,13 +2072,15 @@ class TextAreaModel extends ViewComponent {
   bool duplicateLinesBelow() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textDuplicateSelectedLinesBelow(
-        lines: _lineTexts(),
+      final result = textDuplicateSelectedLinesBelowDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
       );
-
+      if (!result.changed) {
+        return false;
+      }
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2093,8 +2093,8 @@ class TextAreaModel extends ViewComponent {
   bool cleanupWhitespace({bool trimTrailingBlankLines = true}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textCleanupWhitespace(
-        lines: _lineTexts(),
+      final result = textCleanupWhitespaceDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         trimTrailingBlankLines: trimTrailingBlankLines,
       );
@@ -2103,7 +2103,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2112,8 +2112,8 @@ class TextAreaModel extends ViewComponent {
   bool deleteLines() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textDeleteLines(
-        lines: _lineTexts(),
+      final result = textDeleteLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
       );
       if (!result.changed) {
@@ -2121,7 +2121,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2131,8 +2131,8 @@ class TextAreaModel extends ViewComponent {
   bool joinLines() {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textJoinLines(
-        lines: _lineTexts(),
+      final result = textJoinLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
       );
       if (!result.changed) {
@@ -2140,7 +2140,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2191,8 +2191,8 @@ class TextAreaModel extends ViewComponent {
   }) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textSortSelectedLines(
-        lines: _lineTexts(),
+      final result = textSortSelectedLinesDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         descending: descending,
         caseSensitive: caseSensitive,
@@ -2202,7 +2202,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2219,8 +2219,8 @@ class TextAreaModel extends ViewComponent {
     if (prefix.isEmpty) return false;
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textToggleLinePrefix(
-        lines: _lineTexts(),
+      final result = textToggleLinePrefixDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         prefix: prefix,
         addSpaceWhenNonEmpty: addSpaceWhenNonEmpty,
@@ -2231,7 +2231,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2243,8 +2243,8 @@ class TextAreaModel extends ViewComponent {
   bool toggleNumberedList({int startAt = 1}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textToggleNumberedList(
-        lines: _lineTexts(),
+      final result = textToggleNumberedListDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         startAt: startAt,
       );
@@ -2253,7 +2253,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2266,8 +2266,8 @@ class TextAreaModel extends ViewComponent {
   bool renumberNumberedList({int startAt = 1}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textRenumberNumberedList(
-        lines: _lineTexts(),
+      final result = textRenumberNumberedListDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         startAt: startAt,
       );
@@ -2276,7 +2276,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2289,8 +2289,8 @@ class TextAreaModel extends ViewComponent {
   bool toggleHeadingPrefix({int level = 1}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textToggleHeadingPrefix(
-        lines: _lineTexts(),
+      final result = textToggleHeadingPrefixDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         level: level,
       );
@@ -2299,7 +2299,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }
@@ -2312,8 +2312,8 @@ class TextAreaModel extends ViewComponent {
   bool toggleChecklistState({String checkedMarker = 'x'}) {
     return _runEditFrame(() {
       _beginHistoryAction(_TextAreaHistoryAction.transform, breakChain: true);
-      final result = textToggleChecklistState(
-        lines: _lineTexts(),
+      final result = textToggleChecklistStateDocument(
+        document: _document,
         state: _currentLineStateSnapshot(),
         checkedMarker: checkedMarker,
       );
@@ -2322,7 +2322,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       _recordUndoSnapshot();
-      _applyLineCommandResult(result);
+      _applyOffsetCommandResult(result);
       return true;
     });
   }

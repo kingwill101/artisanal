@@ -292,6 +292,28 @@ TextCommandResult _unchangedDocumentCommandResult(
   );
 }
 
+TextCommandResult _documentResultFromLineCommand(
+  TextDocument document,
+  TextLineCommandResult result,
+) {
+  final nextDocument = result.changed ? document.copy() : document;
+  if (result.changed) {
+    nextDocument.replaceLineTexts(result.lines);
+  }
+
+  return _documentCommandResult(
+    nextDocument,
+    cursorOffset: nextDocument.offsetForPosition(result.cursor),
+    selectionBaseOffset: result.selectionBase == null
+        ? null
+        : nextDocument.offsetForPosition(result.selectionBase!),
+    selectionExtentOffset: result.selectionExtent == null
+        ? null
+        : nextDocument.offsetForPosition(result.selectionExtent!),
+    changed: result.changed,
+  );
+}
+
 extension TextOffsetStateDocumentEditingExtensions
     on TextOffsetStateSnapshot {
   TextCommandResult splitLineDocumentCommand(TextDocument document) {
@@ -1041,6 +1063,21 @@ TextLineCommandResult textMoveSelectedLines({
   return state.moveSelectedLinesCommand(lines, direction: direction);
 }
 
+TextCommandResult textMoveSelectedLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  required int direction,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textMoveSelectedLines(
+      lines: document.lineTexts,
+      state: state,
+      direction: direction,
+    ),
+  );
+}
+
 TextLineCommandResult textDuplicateSelectedLinesAbove({
   required List<String> lines,
   required TextLineStateSnapshot state,
@@ -1048,11 +1085,31 @@ TextLineCommandResult textDuplicateSelectedLinesAbove({
   return state.duplicateSelectedLinesAboveCommand(lines);
 }
 
+TextCommandResult textDuplicateSelectedLinesAboveDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textDuplicateSelectedLinesAbove(lines: document.lineTexts, state: state),
+  );
+}
+
 TextLineCommandResult textDuplicateSelectedLinesBelow({
   required List<String> lines,
   required TextLineStateSnapshot state,
 }) {
   return state.duplicateSelectedLinesBelowCommand(lines);
+}
+
+TextCommandResult textDuplicateSelectedLinesBelowDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textDuplicateSelectedLinesBelow(lines: document.lineTexts, state: state),
+  );
 }
 
 TextLineCommandResult textToggleLinePrefix({
@@ -1070,12 +1127,46 @@ TextLineCommandResult textToggleLinePrefix({
   );
 }
 
+TextCommandResult textToggleLinePrefixDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  required String prefix,
+  bool addSpaceWhenNonEmpty = true,
+  bool skipBlankLinesWhenChecking = true,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textToggleLinePrefix(
+      lines: document.lineTexts,
+      state: state,
+      prefix: prefix,
+      addSpaceWhenNonEmpty: addSpaceWhenNonEmpty,
+      skipBlankLinesWhenChecking: skipBlankLinesWhenChecking,
+    ),
+  );
+}
+
 TextLineCommandResult textToggleNumberedList({
   required List<String> lines,
   required TextLineStateSnapshot state,
   int startAt = 1,
 }) {
   return state.toggleNumberedListCommand(lines, startAt: startAt);
+}
+
+TextCommandResult textToggleNumberedListDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  int startAt = 1,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textToggleNumberedList(
+      lines: document.lineTexts,
+      state: state,
+      startAt: startAt,
+    ),
+  );
 }
 
 TextLineCommandResult textRenumberNumberedList({
@@ -1086,6 +1177,21 @@ TextLineCommandResult textRenumberNumberedList({
   return state.renumberNumberedListCommand(lines, startAt: startAt);
 }
 
+TextCommandResult textRenumberNumberedListDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  int startAt = 1,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textRenumberNumberedList(
+      lines: document.lineTexts,
+      state: state,
+      startAt: startAt,
+    ),
+  );
+}
+
 TextLineCommandResult textToggleHeadingPrefix({
   required List<String> lines,
   required TextLineStateSnapshot state,
@@ -1094,12 +1200,42 @@ TextLineCommandResult textToggleHeadingPrefix({
   return state.toggleHeadingPrefixCommand(lines, level: level);
 }
 
+TextCommandResult textToggleHeadingPrefixDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  int level = 1,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textToggleHeadingPrefix(
+      lines: document.lineTexts,
+      state: state,
+      level: level,
+    ),
+  );
+}
+
 TextLineCommandResult textToggleChecklistState({
   required List<String> lines,
   required TextLineStateSnapshot state,
   String checkedMarker = 'x',
 }) {
   return state.toggleChecklistStateCommand(lines, checkedMarker: checkedMarker);
+}
+
+TextCommandResult textToggleChecklistStateDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  String checkedMarker = 'x',
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textToggleChecklistState(
+      lines: document.lineTexts,
+      state: state,
+      checkedMarker: checkedMarker,
+    ),
+  );
 }
 
 TextLineCommandResult textIndentLines({
@@ -1138,6 +1274,17 @@ TextLineCommandResult textIndentLines({
       lineLength: (line) => nextLines[line].length,
       preserveCollapsedSelection: true,
     ),
+  );
+}
+
+TextCommandResult textIndentLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  int width = 2,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textIndentLines(lines: document.lineTexts, state: state, width: width),
   );
 }
 
@@ -1194,6 +1341,17 @@ TextLineCommandResult textOutdentLines({
       lineLength: (line) => nextLines[line].length,
       preserveCollapsedSelection: true,
     ),
+  );
+}
+
+TextCommandResult textOutdentLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  int width = 2,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textOutdentLines(lines: document.lineTexts, state: state, width: width),
   );
 }
 
@@ -1257,6 +1415,21 @@ TextLineCommandResult textCleanupWhitespace({
   return _lineResultFromSnapshot(nextLines, nextState);
 }
 
+TextCommandResult textCleanupWhitespaceDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  bool trimTrailingBlankLines = true,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textCleanupWhitespace(
+      lines: document.lineTexts,
+      state: state,
+      trimTrailingBlankLines: trimTrailingBlankLines,
+    ),
+  );
+}
+
 TextLineCommandResult textDeleteLines({
   required List<String> lines,
   required TextLineStateSnapshot state,
@@ -1284,6 +1457,16 @@ TextLineCommandResult textDeleteLines({
     TextLineStateSnapshot.collapsed(
       cursor: TextPosition(line: nextRow, column: clampedState.cursor.column),
     ),
+  );
+}
+
+TextCommandResult textDeleteLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textDeleteLines(lines: document.lineTexts, state: state),
   );
 }
 
@@ -1325,6 +1508,16 @@ TextLineCommandResult textJoinLines({
   );
 }
 
+TextCommandResult textJoinLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textJoinLines(lines: document.lineTexts, state: state),
+  );
+}
+
 TextLineCommandResult textSortSelectedLines({
   required List<String> lines,
   required TextLineStateSnapshot state,
@@ -1357,4 +1550,21 @@ TextLineCommandResult textSortSelectedLines({
 
   nextLines.replaceRange(span.startLine, span.endLine + 1, sortedTexts);
   return _lineResultFromSnapshot(nextLines, clampedState);
+}
+
+TextCommandResult textSortSelectedLinesDocument({
+  required TextDocument document,
+  required TextLineStateSnapshot state,
+  bool descending = false,
+  bool caseSensitive = false,
+}) {
+  return _documentResultFromLineCommand(
+    document,
+    textSortSelectedLines(
+      lines: document.lineTexts,
+      state: state,
+      descending: descending,
+      caseSensitive: caseSensitive,
+    ),
+  );
 }
