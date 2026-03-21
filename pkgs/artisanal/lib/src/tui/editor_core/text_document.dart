@@ -209,12 +209,22 @@ final class TextDocument {
 
     while (matched < graphemes.length && line < _storage.lineCount) {
       final lineLength = this.lineLength(line);
-      while (column < lineLength && matched < graphemes.length) {
-        if (_storage.graphemeInLineAt(line, column) != graphemes[matched]) {
+      final takeCount = (lineLength - column).clamp(
+        0,
+        graphemes.length - matched,
+      );
+      if (takeCount > 0) {
+        if (!_storage.matchesGraphemesInLineRange(
+          line,
+          startColumn: column,
+          graphemes: graphemes,
+          graphemeStart: matched,
+          graphemeCount: takeCount,
+        )) {
           return false;
         }
-        column += 1;
-        matched += 1;
+        column += takeCount;
+        matched += takeCount;
       }
 
       if (matched < graphemes.length &&
@@ -748,6 +758,12 @@ final class _TextDocumentStorage {
     if (normalizedStart == 0 && normalizedEnd == lineCount) {
       return text;
     }
+    if (_sourceText case final sourceText?) {
+      return sourceText.substring(
+        _sourceLineStarts![normalizedStart],
+        _sourceTextEndForLineWindow(normalizedEnd),
+      );
+    }
     final buffer = StringBuffer();
     writeTextBetweenLinesToBuffer(
       buffer,
@@ -979,6 +995,45 @@ final class _TextDocumentStorage {
         .toString();
   }
 
+  bool matchesGraphemesInLineRange(
+    int index, {
+    required int startColumn,
+    required List<String> graphemes,
+    required int graphemeStart,
+    required int graphemeCount,
+  }) {
+    if (index < 0 || index >= lineCount) {
+      return graphemeCount == 0;
+    }
+    final lineLength = this.lineLength(index);
+    final normalizedStart = startColumn.clamp(0, lineLength);
+    final normalizedCount = graphemeCount.clamp(
+      0,
+      lineLength - normalizedStart,
+    );
+    if (normalizedCount == 0) {
+      return true;
+    }
+    final cached = _lineGraphemeCaches[index];
+    if (cached != null) {
+      for (var offset = 0; offset < normalizedCount; offset++) {
+        if (cached[normalizedStart + offset] !=
+            graphemes[graphemeStart + offset]) {
+          return false;
+        }
+      }
+      return true;
+    }
+    final iterator = lineAt(index).characters.skip(normalizedStart).iterator;
+    for (var offset = 0; offset < normalizedCount; offset++) {
+      if (!iterator.moveNext() ||
+          iterator.current != graphemes[graphemeStart + offset]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   List<List<String>> get lineViews =>
       _cachedLineViews ??= List<List<String>>.unmodifiable(
         List<List<String>>.generate(
@@ -1046,12 +1101,15 @@ final class _TextDocumentStorage {
       return;
     }
     if (_sourceText != null) {
-      for (var index = normalizedStart; index < normalizedEnd; index++) {
-        if (leadingNewline || index > normalizedStart) {
-          buffer.write('\n');
-        }
-        buffer.write(lineAt(index));
+      if (leadingNewline) {
+        buffer.write('\n');
       }
+      buffer.write(
+        _sourceText!.substring(
+          _sourceLineStarts![normalizedStart],
+          _sourceTextEndForLineWindow(normalizedEnd),
+        ),
+      );
       return;
     }
 
@@ -1511,6 +1569,13 @@ final class _TextDocumentStorage {
       total += segment.storage._debugSourceBackedLeafCount(visited);
     }
     return total;
+  }
+
+  int _sourceTextEndForLineWindow(int endLine) {
+    if (endLine >= lineCount) {
+      return _sourceEndOffset!;
+    }
+    return _sourceLineStarts![endLine] - 1;
   }
 }
 

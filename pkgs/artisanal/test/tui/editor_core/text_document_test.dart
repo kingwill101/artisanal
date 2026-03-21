@@ -222,6 +222,26 @@ void main() {
       expect(document.debugHasTextCache, isFalse);
     });
 
+    test('partial textBetweenLines keeps source-backed leaf caches cold', () {
+      final lineTexts = List<String>.generate(
+        32,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument(text: lineTexts.join('\n'));
+
+      expect(document.debugStorageDepth, 1);
+      expect(document.debugSourceBackedLeafCount, 1);
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
+
+      final text = document.textBetweenLines(startLine: 7, endLine: 18);
+
+      expect(text, lineTexts.sublist(7, 18).join('\n'));
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
+    });
+
     test(
       'composite range matching does not materialize every touched line cache',
       () {
@@ -246,6 +266,25 @@ void main() {
         expect(document.debugLineGraphemeCacheCount, 0);
       },
     );
+
+    test('long-line range matching keeps grapheme caches cold', () {
+      final longLine = List<String>.filled(10000, 'a', growable: false).join();
+      final document = TextDocument(text: '$longLine\nsuffix');
+      final graphemes = longLine
+          .substring(2500, 7500)
+          .characters
+          .toList(growable: false);
+
+      expect(document.debugLineGraphemeCacheCount, 0);
+
+      final matches = document.matchesOffsetRange(
+        startOffset: 2500,
+        graphemes: graphemes,
+      );
+
+      expect(matches, isTrue);
+      expect(document.debugLineGraphemeCacheCount, 0);
+    });
 
     test(
       'composite grapheme range reads do not materialize every touched line cache',
