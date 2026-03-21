@@ -6,6 +6,7 @@ export 'code_language_profile.dart';
 export 'edit_history.dart';
 export 'editor_state.dart';
 export 'state_bridge.dart';
+export 'text_change.dart';
 export 'text_commands.dart';
 export 'text_decorations.dart';
 export 'text_diagnostics.dart';

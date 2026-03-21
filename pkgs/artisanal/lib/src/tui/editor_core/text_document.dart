@@ -3,6 +3,7 @@ library;
 import 'package:characters/characters.dart';
 
 import 'editor_state.dart';
+import 'text_change.dart';
 
 final class TextDocument {
   TextDocument({String text = ''}) {
@@ -122,6 +123,65 @@ final class TextDocument {
     _replaceLines(_parseLines(text));
   }
 
+  TextDocumentChange replaceTextRange({
+    required int startOffset,
+    required int endOffset,
+    String replacement = '',
+  }) {
+    return replaceOffsetRange(
+      startOffset: startOffset,
+      endOffset: endOffset,
+      replacement: replacement.characters.toList(growable: false),
+    );
+  }
+
+  TextDocumentChange replaceOffsetRange({
+    required int startOffset,
+    required int endOffset,
+    List<String> replacement = const <String>[],
+  }) {
+    final normalizedStart = startOffset.clamp(0, length);
+    final normalizedEnd = endOffset.clamp(normalizedStart, length);
+    final startPosition = positionForOffset(normalizedStart);
+    final oldEndPosition = positionForOffset(normalizedEnd);
+
+    final replacementLines = _parseFlatGraphemes(replacement);
+    final nextLines = _lines
+        .map((line) => List<String>.from(line, growable: true))
+        .toList(growable: true);
+    final prefix = List<String>.from(
+      nextLines[startPosition.line].take(startPosition.column),
+      growable: true,
+    );
+    final suffix = List<String>.from(
+      nextLines[oldEndPosition.line].skip(oldEndPosition.column),
+      growable: true,
+    );
+
+    final mergedLines = replacementLines
+        .map((line) => List<String>.from(line, growable: true))
+        .toList(growable: true);
+    mergedLines.first.insertAll(0, prefix);
+    mergedLines.last.addAll(suffix);
+
+    nextLines.replaceRange(
+      startPosition.line,
+      oldEndPosition.line + 1,
+      mergedLines,
+    );
+    _replaceLines(nextLines);
+
+    final newEndOffset = normalizedStart + replacement.length;
+    return TextDocumentChange(
+      startOffset: normalizedStart,
+      oldEndOffset: normalizedEnd,
+      newEndOffset: newEndOffset,
+      startPosition: startPosition,
+      oldEndPosition: oldEndPosition,
+      newEndPosition: positionForOffset(newEndOffset),
+    );
+  }
+
   void replaceLines(List<List<String>> lines) {
     _replaceLines(
       lines.isEmpty
@@ -143,6 +203,18 @@ final class TextDocument {
         .split('\n')
         .map((line) => line.characters.toList(growable: true))
         .toList(growable: true);
+  }
+
+  static List<List<String>> _parseFlatGraphemes(List<String> graphemes) {
+    final lines = <List<String>>[<String>[]];
+    for (final grapheme in graphemes) {
+      if (grapheme == '\n') {
+        lines.add(<String>[]);
+        continue;
+      }
+      lines.last.add(grapheme);
+    }
+    return lines;
   }
 
   void _replaceLines(List<List<String>> lines) {
