@@ -839,13 +839,12 @@ class _TextEditorState extends State<TextEditor> {
     final closing = _selectionWrapPairs[opening];
     if (closing == null) return false;
     final document = _controller.document;
-    final result = _coreBridge
-        .currentOffsetStateSnapshot(document: document)
-        .wrapSelectionCommand(
-          document.flattenWithNewlines(),
-          before: [opening],
-          after: [closing],
-        );
+    final result = textWrapSelection(
+      document: document,
+      state: _coreBridge.currentOffsetStateSnapshot(document: document),
+      before: opening,
+      after: closing,
+    );
     if (!result.changed) {
       return false;
     }
@@ -856,12 +855,11 @@ class _TextEditorState extends State<TextEditor> {
   bool _handleUnwrapSelectionKey() {
     if (!_controller.hasSelection) return false;
     final document = _controller.document;
-    final result = _coreBridge
-        .currentOffsetStateSnapshot(document: document)
-        .unwrapSelectionCommand(
-          document.flattenWithNewlines(),
-          surroundPairs: _selectionWrapPairs,
-        );
+    final result = textUnwrapSelection(
+      document: document,
+      state: _coreBridge.currentOffsetStateSnapshot(document: document),
+      surroundPairs: _selectionWrapPairs,
+    );
     if (!result.changed) {
       return false;
     }
