@@ -272,6 +272,17 @@ final class TextDocument {
     final normalizedEnd = endOffset.clamp(normalizedStart, length);
     final startPosition = positionForOffset(normalizedStart);
     final oldEndPosition = positionForOffset(normalizedEnd);
+    if (matchesOffsetRange(startOffset: normalizedStart, graphemes: replacement) &&
+        normalizedStart + replacement.length == normalizedEnd) {
+      return TextDocumentChange(
+        startOffset: normalizedStart,
+        oldEndOffset: normalizedEnd,
+        newEndOffset: normalizedEnd,
+        startPosition: startPosition,
+        oldEndPosition: oldEndPosition,
+        newEndPosition: oldEndPosition,
+      );
+    }
 
     final replacementLines = _parseFlatGraphemes(replacement);
     final prefix = List<String>.from(
@@ -352,6 +363,20 @@ final class TextDocument {
     final oldEndOffset = lineStartOffset(normalizedEnd);
     final startPosition = positionForOffset(startOffset);
     final oldEndPosition = positionForOffset(oldEndOffset);
+    if (_matchesLineTextRange(
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+      replacementLineTexts: normalizedReplacement,
+    )) {
+      return TextDocumentChange(
+        startOffset: startOffset,
+        oldEndOffset: oldEndOffset,
+        newEndOffset: oldEndOffset,
+        startPosition: startPosition,
+        oldEndPosition: oldEndPosition,
+        newEndPosition: oldEndPosition,
+      );
+    }
     if (_storage.lineCount - (normalizedEnd - normalizedStart) + normalizedReplacement.length == 0) {
       _storage = _TextDocumentStorage.fromLineTexts(
         const <String>[''],
@@ -423,6 +448,23 @@ final class TextDocument {
       lines.last.add(grapheme);
     }
     return lines;
+  }
+
+  bool _matchesLineTextRange({
+    required int startLine,
+    required int endLine,
+    required List<String> replacementLineTexts,
+  }) {
+    final expectedLength = endLine - startLine;
+    if (replacementLineTexts.length != expectedLength) {
+      return false;
+    }
+    for (var index = 0; index < expectedLength; index++) {
+      if (lineAt(startLine + index) != replacementLineTexts[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool _isWhitespace(String grapheme) {

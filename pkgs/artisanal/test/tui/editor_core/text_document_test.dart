@@ -142,6 +142,25 @@ void main() {
       expect(copy.revision, 0);
     });
 
+    test('replaceOffsetRange leaves revision and storage identity stable on no-op edits', () {
+      final document = TextDocument(text: 'alpha\nbeta');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
+
+      final change = document.replaceOffsetRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: const ['b', 'e', 't', 'a'],
+      );
+
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 10);
+      expect(change.newEndOffset, 10);
+    });
+
     test(
       'replaceLineTextRange rewrites only the targeted line window with change metadata',
       () {
@@ -161,6 +180,25 @@ void main() {
       expect(change.startPosition, const TextPosition(line: 1, column: 0));
       expect(change.oldEndPosition, const TextPosition(line: 3, column: 0));
       expect(change.newEndPosition, const TextPosition(line: 3, column: 0));
+    });
+
+    test('replaceLineTextRange leaves revision and storage identity stable on no-op edits', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
+
+      final change = document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 2,
+        replacementLineTexts: const ['beta'],
+      );
+
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.text, 'alpha\nbeta\ngamma');
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 11);
+      expect(change.newEndOffset, 11);
     });
 
     test('replaceLineTextRange can delete lines down to one empty line', () {
