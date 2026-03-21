@@ -1219,33 +1219,80 @@ final class _ParsedLineDocumentSource extends _TextDocumentSource {
   }
 }
 
+final class _TextDocumentSourceSlice {
+  _TextDocumentSourceSlice({
+    required this.source,
+    required this.startLine,
+    required this.endLine,
+  }) : assert(startLine >= 0),
+       assert(endLine >= startLine),
+       assert(endLine <= source.lineCount),
+       lineLengths = List<int>.unmodifiable(
+         source.lineLengths.sublist(startLine, endLine),
+       );
+
+  final _TextDocumentSource source;
+  final int startLine;
+  final int endLine;
+  final List<int> lineLengths;
+
+  int get lineCount => endLine - startLine;
+
+  int get length =>
+      _TextDocumentStorage._documentLengthForLineLengths(lineLengths);
+
+  String get text => startLine == 0 && endLine == source.lineCount
+      ? source.text
+      : source.textBetweenLines(startLine: startLine, endLine: endLine);
+
+  String lineAt(int localIndex) => source.lineAt(startLine + localIndex);
+
+  List<String>? parsedLineAt(int localIndex) =>
+      source.parsedLineAt(startLine + localIndex);
+
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    source.writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: this.startLine + startLine,
+      endLine: this.startLine + endLine,
+      leadingNewline: leadingNewline,
+    );
+  }
+
+  _TextDocumentSourceSlice slice(int startLine, int endLine) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    return _TextDocumentSourceSlice(
+      source: source,
+      startLine: this.startLine + normalizedStart,
+      endLine: this.startLine + normalizedEnd,
+    );
+  }
+}
+
 final class _TextDocumentStorage {
   static const int _maxLeafLineCount = 256;
   static const int _maxCompositeSegmentCount = 32;
 
   _TextDocumentStorage._leaf({
     List<String>? lineTexts,
-    _TextDocumentSource? source,
-    int? sourceLineStartIndex,
-    int? sourceLineEndIndex,
+    _TextDocumentSourceSlice? sourceSlice,
     required List<int> lineLengths,
     required this.length,
     required this.revision,
     required this.storageIdentity,
     Map<int, List<String>>? lineGraphemeCaches,
-  }) : assert(
-         (lineTexts != null) !=
-             (source != null &&
-                 sourceLineStartIndex != null &&
-                 sourceLineEndIndex != null),
-       ),
+  }) : assert((lineTexts != null) != (sourceSlice != null)),
        _baseLineTexts = lineTexts == null
            ? null
            : List<String>.unmodifiable(lineTexts),
        _baseLineLengths = List<int>.unmodifiable(lineLengths),
-       _source = source,
-       _sourceLineStartIndex = sourceLineStartIndex,
-       _sourceLineEndIndex = sourceLineEndIndex,
+       _sourceSlice = sourceSlice,
        _segments = null,
        _segmentLineStarts = null,
        _segmentStartOffsets = null,
@@ -1260,9 +1307,7 @@ final class _TextDocumentStorage {
     required this.storageIdentity,
   }) : _baseLineTexts = null,
        _baseLineLengths = null,
-       _source = null,
-       _sourceLineStartIndex = null,
-       _sourceLineEndIndex = null,
+       _sourceSlice = null,
        _segments = List<_TextDocumentStorageSegment>.unmodifiable(segments),
        _segmentLineStarts = _computeSegmentLineStarts(segments),
        _segmentStartOffsets = _computeSegmentStartOffsets(segments),
@@ -1371,9 +1416,7 @@ final class _TextDocumentStorage {
   final Object storageIdentity;
   final List<String>? _baseLineTexts;
   final List<int>? _baseLineLengths;
-  final _TextDocumentSource? _source;
-  final int? _sourceLineStartIndex;
-  final int? _sourceLineEndIndex;
+  final _TextDocumentSourceSlice? _sourceSlice;
   final List<_TextDocumentStorageSegment>? _segments;
   final List<int>? _segmentLineStarts;
   final List<int>? _segmentStartOffsets;
@@ -1448,11 +1491,10 @@ final class _TextDocumentStorage {
     if (normalizedStart == 0 && normalizedEnd == lineCount) {
       return text;
     }
-    if (_source case final source?) {
-      final sourceStartLine = _sourceLineStartIndex!;
-      return source.textBetweenLines(
-        startLine: sourceStartLine + normalizedStart,
-        endLine: sourceStartLine + normalizedEnd,
+    if (_sourceSlice case final sourceSlice?) {
+      return sourceSlice.source.textBetweenLines(
+        startLine: sourceSlice.startLine + normalizedStart,
+        endLine: sourceSlice.startLine + normalizedEnd,
       );
     }
     final buffer = StringBuffer();
@@ -1482,8 +1524,8 @@ final class _TextDocumentStorage {
     if (_baseLineTexts != null) {
       return _baseLineTexts[index];
     }
-    if (_source case final source?) {
-      return source.lineAt(_sourceLineStartIndex! + index);
+    if (_sourceSlice case final sourceSlice?) {
+      return sourceSlice.lineAt(index);
     }
     final (segment, localIndex) = _segmentForLine(index);
     return segment.lineAt(localIndex);
@@ -1572,7 +1614,7 @@ final class _TextDocumentStorage {
     if (index < 0 || index >= lineCount) {
       return const <String>[];
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineGraphemesAt(localIndex);
     }
@@ -1593,7 +1635,7 @@ final class _TextDocumentStorage {
     if (column < 0 || column >= lineLength) {
       return null;
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.graphemeInLineAt(localIndex, column);
     }
@@ -1617,7 +1659,7 @@ final class _TextDocumentStorage {
     if (clampedCount <= 0) {
       return '';
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineTextPrefix(localIndex, clampedCount);
     }
@@ -1662,7 +1704,7 @@ final class _TextDocumentStorage {
     if (clampedStart >= totalLineLength) {
       return '';
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.lineTextSuffix(localIndex, clampedStart);
     }
@@ -1692,7 +1734,7 @@ final class _TextDocumentStorage {
     if (normalizedStart == normalizedEnd) {
       return const <String>[];
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.graphemesInLineRange(
         localIndex,
@@ -1732,7 +1774,7 @@ final class _TextDocumentStorage {
     if (normalizedStart == normalizedEnd) {
       return '';
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.textInLineRange(
         localIndex,
@@ -1782,7 +1824,7 @@ final class _TextDocumentStorage {
     if (normalizedCount == 0) {
       return true;
     }
-    if (_baseLineTexts == null && _source == null && _segments != null) {
+    if (_baseLineTexts == null && _sourceSlice == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.matchesGraphemesInLineRange(
         localIndex,
@@ -1832,12 +1874,11 @@ final class _TextDocumentStorage {
       );
 
   List<String>? _sourceParsedLineAt(int index) {
-    final source = _source;
-    final sourceLineStartIndex = _sourceLineStartIndex;
-    if (source == null || sourceLineStartIndex == null) {
+    final sourceSlice = _sourceSlice;
+    if (sourceSlice == null) {
       return null;
     }
-    return source.parsedLineAt(sourceLineStartIndex + index);
+    return sourceSlice.parsedLineAt(index);
   }
 
   List<String> flattenWithNewlines() {
@@ -1864,16 +1905,8 @@ final class _TextDocumentStorage {
     if (_baseLineTexts case final baseLineTexts?) {
       return baseLineTexts.join('\n');
     }
-    if (_source case final source?) {
-      final sourceStartLine = _sourceLineStartIndex!;
-      final sourceEndLine = _sourceLineEndIndex!;
-      if (sourceStartLine == 0 && sourceEndLine == source.lineCount) {
-        return source.text;
-      }
-      return source.textBetweenLines(
-        startLine: sourceStartLine,
-        endLine: sourceEndLine,
-      );
+    if (_sourceSlice case final sourceSlice?) {
+      return sourceSlice.text;
     }
     final buffer = StringBuffer();
     writeTextBetweenLinesToBuffer(
@@ -1905,12 +1938,11 @@ final class _TextDocumentStorage {
       }
       return;
     }
-    if (_source case final source?) {
-      final sourceStartLine = _sourceLineStartIndex!;
-      source.writeTextBetweenLinesToBuffer(
+    if (_sourceSlice case final sourceSlice?) {
+      sourceSlice.writeTextBetweenLinesToBuffer(
         buffer,
-        startLine: sourceStartLine + normalizedStart,
-        endLine: sourceStartLine + normalizedEnd,
+        startLine: normalizedStart,
+        endLine: normalizedEnd,
         leadingNewline: leadingNewline,
       );
       return;
@@ -2082,9 +2114,11 @@ final class _TextDocumentStorage {
         .toList(growable: false);
     final source = _TextDocumentSource.fromParsedLines(normalizedLines);
     return _TextDocumentStorage._leaf(
-      source: source,
-      sourceLineStartIndex: 0,
-      sourceLineEndIndex: source.lineCount,
+      sourceSlice: _TextDocumentSourceSlice(
+        source: source,
+        startLine: 0,
+        endLine: source.lineCount,
+      ),
       lineLengths: lineLengths,
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
@@ -2099,23 +2133,15 @@ final class _TextDocumentStorage {
   }
 
   static _TextDocumentStorage _leafFromTextSource({
-    required _TextDocumentSource source,
-    required int sourceLineStartIndex,
-    required int sourceLineEndIndex,
+    required _TextDocumentSourceSlice sourceSlice,
     required int revision,
     Object? storageIdentity,
     Map<int, List<String>>? lineGraphemeCaches,
   }) {
-    final lineLengths = source.lineLengths.sublist(
-      sourceLineStartIndex,
-      sourceLineEndIndex,
-    );
     return _TextDocumentStorage._leaf(
-      source: source,
-      sourceLineStartIndex: sourceLineStartIndex,
-      sourceLineEndIndex: sourceLineEndIndex,
-      lineLengths: lineLengths,
-      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      sourceSlice: sourceSlice,
+      lineLengths: sourceSlice.lineLengths,
+      length: sourceSlice.length,
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
       lineGraphemeCaches: lineGraphemeCaches,
@@ -2136,12 +2162,9 @@ final class _TextDocumentStorage {
         storageIdentity: nextStorageIdentity,
       );
     }
-    if (storage._source case final source?) {
-      final sourceLineStartIndex = storage._sourceLineStartIndex!;
+    if (storage._sourceSlice case final sourceSlice?) {
       return _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: sourceLineStartIndex + segment.startLine,
-        sourceLineEndIndex: sourceLineStartIndex + segment.endLine,
+        sourceSlice: sourceSlice.slice(segment.startLine, segment.endLine),
         revision: revision,
         storageIdentity: nextStorageIdentity,
       );
@@ -2161,9 +2184,11 @@ final class _TextDocumentStorage {
     final source = _TextDocumentSource.fromText(text);
     if (source.lineCount <= _maxLeafLineCount) {
       return _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: 0,
-        sourceLineEndIndex: source.lineCount,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: 0,
+          endLine: source.lineCount,
+        ),
         revision: revision,
         storageIdentity: storageIdentity,
       );
@@ -2172,9 +2197,11 @@ final class _TextDocumentStorage {
     for (var start = 0; start < source.lineCount; start += _maxLeafLineCount) {
       final end = (start + _maxLeafLineCount).clamp(0, source.lineCount);
       final storage = _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: start,
-        sourceLineEndIndex: end,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: start,
+          endLine: end,
+        ),
         revision: 0,
       );
       segments.add(storage.slice(0, storage.lineCount));
@@ -2198,9 +2225,11 @@ final class _TextDocumentStorage {
     );
     if (source.lineCount <= _maxLeafLineCount) {
       return _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: 0,
-        sourceLineEndIndex: source.lineCount,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: 0,
+          endLine: source.lineCount,
+        ),
         revision: revision,
         storageIdentity: storageIdentity,
       );
@@ -2209,9 +2238,11 @@ final class _TextDocumentStorage {
     for (var start = 0; start < source.lineCount; start += _maxLeafLineCount) {
       final end = (start + _maxLeafLineCount).clamp(0, source.lineCount);
       final storage = _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: start,
-        sourceLineEndIndex: end,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: start,
+          endLine: end,
+        ),
         revision: 0,
       );
       segments.add(storage.slice(0, storage.lineCount));
@@ -2237,9 +2268,11 @@ final class _TextDocumentStorage {
     final source = _TextDocumentSource.fromParsedLines(normalizedLines);
     if (source.lineCount <= _maxLeafLineCount) {
       return _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: 0,
-        sourceLineEndIndex: source.lineCount,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: 0,
+          endLine: source.lineCount,
+        ),
         revision: revision,
         storageIdentity: storageIdentity,
         lineGraphemeCaches: <int, List<String>>{
@@ -2256,9 +2289,11 @@ final class _TextDocumentStorage {
     ) {
       final end = (start + _maxLeafLineCount).clamp(0, normalizedLines.length);
       final storage = _leafFromTextSource(
-        source: source,
-        sourceLineStartIndex: start,
-        sourceLineEndIndex: end,
+        sourceSlice: _TextDocumentSourceSlice(
+          source: source,
+          startLine: start,
+          endLine: end,
+        ),
         revision: 0,
         lineGraphemeCaches: seedLineGraphemeCaches
             ? <int, List<String>>{
@@ -2420,8 +2455,10 @@ final class _TextDocumentStorage {
   ) {
     final previousStorage = previous.storage;
     final nextStorage = segment.storage;
-    final previousSource = previousStorage._source;
-    final nextSource = nextStorage._source;
+    final previousSourceSlice = previousStorage._sourceSlice;
+    final nextSourceSlice = nextStorage._sourceSlice;
+    final previousSource = previousSourceSlice?.source;
+    final nextSource = nextSourceSlice?.source;
     if (previousSource == null ||
         nextSource == null ||
         !identical(previousSource, nextSource)) {
@@ -2433,8 +2470,8 @@ final class _TextDocumentStorage {
       return null;
     }
 
-    final previousSourceStart = previousStorage._sourceLineStartIndex!;
-    final nextSourceStart = nextStorage._sourceLineStartIndex!;
+    final previousSourceStart = previousSourceSlice!.startLine;
+    final nextSourceStart = nextSourceSlice!.startLine;
     final mergedStartLine = previousSourceStart + previous.startLine;
     final mergedMiddleLine = previousSourceStart + previous.endLine;
     final mergedEndLine = nextSourceStart + segment.endLine;
@@ -2443,9 +2480,11 @@ final class _TextDocumentStorage {
     }
 
     final mergedStorage = _leafFromTextSource(
-      source: previousSource,
-      sourceLineStartIndex: mergedStartLine,
-      sourceLineEndIndex: mergedEndLine,
+      sourceSlice: _TextDocumentSourceSlice(
+        source: previousSource,
+        startLine: mergedStartLine,
+        endLine: mergedEndLine,
+      ),
       revision: 0,
     );
     return _TextDocumentStorageSegment(
@@ -2476,7 +2515,7 @@ final class _TextDocumentStorage {
     }
     final segments = _segments;
     if (segments == null || segments.isEmpty) {
-      return _source == null ? 0 : 1;
+      return _sourceSlice == null ? 0 : 1;
     }
     var total = 0;
     for (final segment in segments) {
@@ -2494,7 +2533,7 @@ final class _TextDocumentStorage {
     }
     final segments = _segments;
     if (segments == null || segments.isEmpty) {
-      final source = _source;
+      final source = _sourceSlice?.source;
       if (source == null || !sources.add(source)) {
         return 0;
       }
@@ -2516,7 +2555,7 @@ final class _TextDocumentStorage {
     }
     final segments = _segments;
     if (segments == null || segments.isEmpty) {
-      final source = _source;
+      final source = _sourceSlice?.source;
       if (source == null ||
           !source.debugHasJoinedTextCache ||
           !sources.add(source)) {
@@ -2540,7 +2579,7 @@ final class _TextDocumentStorage {
     }
     final segments = _segments;
     if (segments == null || segments.isEmpty) {
-      final source = _source;
+      final source = _sourceSlice?.source;
       if (source == null || !sources.add(source)) {
         return 0;
       }
