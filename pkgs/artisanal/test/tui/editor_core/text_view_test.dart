@@ -787,6 +787,66 @@ void main() {
       expect(view.isCursorVisible(document, state), isTrue);
     });
 
+    test('clips non-wrapped lines to the visible column window', () {
+      final document = TextDocument(text: 'abcdefghij\nklmnopqrst');
+      final state = EditorState(line: 0, column: 0);
+      final view = TextView(width: 4, height: 4, softWrap: false);
+
+      final lines = view.buildLinesForCurrentViewport(document, state);
+
+      expect(lines.map((line) => line.text).toList(), ['abcd', 'klmn']);
+
+      view.scrollToColumn(3, document, state);
+      final scrolled = view.buildLinesForCurrentViewport(document, state);
+
+      expect(scrolled.map((line) => line.text).toList(), ['defg', 'nopq']);
+      expect(scrolled.first.charOffset, 3);
+      expect(scrolled.last.charOffset, 3);
+    });
+
+    test('resolves a cursor-visible horizontal viewport for non-wrapped content', () {
+      final document = TextDocument(text: 'abcdefghij');
+      final state = EditorState(line: 0, column: 8);
+      final view = TextView(width: 4, height: 2, softWrap: false);
+
+      final viewport = view.resolveViewport(document, state);
+
+      expect(viewport.startColumn, 5);
+      expect(viewport.endColumn, 9);
+      expect(viewport.totalColumns, 10);
+    });
+
+    test('hit testing uses the horizontal viewport offset', () {
+      final document = TextDocument(text: 'abcdefghij');
+      final state = EditorState(line: 0, column: 0);
+      final view = TextView(width: 4, height: 2, softWrap: false);
+
+      view.scrollToColumn(3, document, state);
+      final hit = view.hitTestContent(document, state, localX: 1, visualRow: 0);
+
+      expect(hit, isNotNull);
+      expect(hit!.line, 0);
+      expect(hit.column, 4);
+    });
+
+    test('ensureCursorVisible updates the horizontal viewport with scroll margin', () {
+      final document = TextDocument(text: 'abcdefghij');
+      final state = EditorState(line: 0, column: 8);
+      final view = TextView(
+        width: 4,
+        height: 2,
+        softWrap: false,
+        scrollMargin: 1,
+      );
+
+      view.scrollToColumn(0, document, state);
+      final startRow = view.ensureCursorVisible(document, state);
+
+      expect(startRow, 0);
+      expect(view.viewportStartColumn, 6);
+      expect(view.isCursorVisible(document, state), isTrue);
+    });
+
     test(
       'resolves soft-wrap boundary cursors to the continuation visual row',
       () {
