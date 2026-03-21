@@ -330,6 +330,41 @@ void main() {
     );
 
     test(
+      'parsed-line range helpers stay lazy until line text is read explicitly',
+      () {
+        final document = TextDocument.fromParsedLines(const [
+          ['a', 'b', 'c'],
+          ['d', 'e', 'f'],
+        ]);
+
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.textInRange(startOffset: 0, endOffset: 2), 'ab');
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.textInRange(startOffset: 0, endOffset: 3), 'abc');
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(
+          document.matchesOffsetRange(
+            startOffset: 1,
+            graphemes: const ['b', 'c'],
+          ),
+          isTrue,
+        );
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(
+          document.matchesOffsetRange(
+            startOffset: 0,
+            graphemes: const ['a', 'b', 'c'],
+          ),
+          isTrue,
+        );
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+
+        expect(document.lineAt(0), 'abc');
+        expect(document.debugMaterializedSourceLineTextCount, 1);
+      },
+    );
+
+    test(
       'replaceLines leaves revision and storage identity stable on no-op parsed edits',
       () {
         final document = TextDocument(text: 'alpha\nbeta');

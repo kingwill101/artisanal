@@ -1612,13 +1612,10 @@ final class _TextDocumentStorage {
     if (index < 0 || index >= lineCount) {
       return '';
     }
-    final line = lineAt(index);
-    final clampedCount = graphemeCount.clamp(0, lineLength(index));
+    final totalLineLength = lineLength(index);
+    final clampedCount = graphemeCount.clamp(0, totalLineLength);
     if (clampedCount <= 0) {
       return '';
-    }
-    if (clampedCount >= lineLength(index)) {
-      return line;
     }
     if (_baseLineTexts == null && _source == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
@@ -1626,11 +1623,21 @@ final class _TextDocumentStorage {
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
+      if (clampedCount >= totalLineLength) {
+        return cached.join();
+      }
       return cached.take(clampedCount).join();
     }
     final sourceParsedLine = _sourceParsedLineAt(index);
     if (sourceParsedLine != null) {
+      if (clampedCount >= totalLineLength) {
+        return sourceParsedLine.join();
+      }
       return sourceParsedLine.take(clampedCount).join();
+    }
+    final line = lineAt(index);
+    if (clampedCount >= totalLineLength) {
+      return line;
     }
     return line.characters.take(clampedCount).toString();
   }
@@ -1639,12 +1646,20 @@ final class _TextDocumentStorage {
     if (index < 0 || index >= lineCount) {
       return '';
     }
-    final line = lineAt(index);
-    final clampedStart = graphemeStart.clamp(0, lineLength(index));
+    final totalLineLength = lineLength(index);
+    final clampedStart = graphemeStart.clamp(0, totalLineLength);
     if (clampedStart <= 0) {
-      return line;
+      final cached = _lineGraphemeCaches[index];
+      if (cached != null) {
+        return cached.join();
+      }
+      final sourceParsedLine = _sourceParsedLineAt(index);
+      if (sourceParsedLine != null) {
+        return sourceParsedLine.join();
+      }
+      return lineAt(index);
     }
-    if (clampedStart >= lineLength(index)) {
+    if (clampedStart >= totalLineLength) {
       return '';
     }
     if (_baseLineTexts == null && _source == null && _segments != null) {
@@ -1659,6 +1674,7 @@ final class _TextDocumentStorage {
     if (sourceParsedLine != null) {
       return sourceParsedLine.skip(clampedStart).join();
     }
+    final line = lineAt(index);
     return line.characters.skip(clampedStart).toString();
   }
 
@@ -1716,9 +1732,6 @@ final class _TextDocumentStorage {
     if (normalizedStart == normalizedEnd) {
       return '';
     }
-    if (normalizedStart == 0 && normalizedEnd == lineLength) {
-      return lineAt(index);
-    }
     if (_baseLineTexts == null && _source == null && _segments != null) {
       final (segment, localIndex) = _segmentForLine(index);
       return segment.textInLineRange(
@@ -1729,11 +1742,20 @@ final class _TextDocumentStorage {
     }
     final cached = _lineGraphemeCaches[index];
     if (cached != null) {
+      if (normalizedStart == 0 && normalizedEnd == lineLength) {
+        return cached.join();
+      }
       return cached.sublist(normalizedStart, normalizedEnd).join();
     }
     final sourceParsedLine = _sourceParsedLineAt(index);
     if (sourceParsedLine != null) {
+      if (normalizedStart == 0 && normalizedEnd == lineLength) {
+        return sourceParsedLine.join();
+      }
       return sourceParsedLine.sublist(normalizedStart, normalizedEnd).join();
+    }
+    if (normalizedStart == 0 && normalizedEnd == lineLength) {
+      return lineAt(index);
     }
     return lineAt(index).characters
         .skip(normalizedStart)
