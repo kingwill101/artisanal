@@ -1838,15 +1838,11 @@ final class _TextDocumentStorageSegment {
   }) {
     final normalizedStart = startLocalLine.clamp(0, lineCount);
     final normalizedEnd = endLocalLine.clamp(normalizedStart, lineCount);
-    for (
-      var localIndex = normalizedStart;
-      localIndex < normalizedEnd;
-      localIndex++
-    ) {
-      if (leadingNewline || localIndex > normalizedStart) {
-        buffer.write('\n');
-      }
-      buffer.write(lineAt(localIndex));
-    }
+    storage.writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: startLine + normalizedStart,
+      endLine: startLine + normalizedEnd,
+      leadingNewline: leadingNewline,
+    );
   }
 }
