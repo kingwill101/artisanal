@@ -2,6 +2,7 @@ library;
 
 import 'text_change.dart';
 import 'text_decorations.dart';
+import 'text_document.dart';
 
 final class TextSyntaxBuildResult<State> {
   const TextSyntaxBuildResult({
@@ -55,36 +56,52 @@ final class TextSyntaxSession<State> {
     String text, {
     String? language,
     bool force = false,
+    TextDocumentChange? change,
   }) {
     final resolvedLanguage = language ?? this.language;
     final previous = _snapshot;
     if (!force &&
         previous != null &&
         previous.text == text &&
-        previous.language == resolvedLanguage) {
+        previous.language == resolvedLanguage &&
+        (change == null || change.isNoop)) {
       return previous;
     }
 
-    final change = !force &&
+    final resolvedChange = !force &&
             previous != null &&
             previous.language == resolvedLanguage
-        ? computeTextDocumentChange(previous.text, text)
+        ? (change ?? computeTextDocumentChange(previous.text, text))
         : null;
     final result = provider.build(
       text,
       language: resolvedLanguage,
-      previous: change == null ? null : previous,
-      change: change,
+      previous: resolvedChange == null ? null : previous,
+      change: resolvedChange,
     );
     final snapshot = TextSyntaxSnapshot<State>(
       text: text,
       decorations: List<TextDecorationRange>.unmodifiable(result.decorations),
       language: resolvedLanguage,
       state: result.state,
-      change: change,
+      change: resolvedChange,
     );
     _snapshot = snapshot;
     return snapshot;
+  }
+
+  TextSyntaxSnapshot<State> syncDocument(
+    TextDocument document, {
+    String? language,
+    bool force = false,
+    TextDocumentChange? change,
+  }) {
+    return sync(
+      document.text,
+      language: language,
+      force: force,
+      change: change,
+    );
   }
 
   void clear() {

@@ -69,6 +69,48 @@ void main() {
       expect(updated.state, 2);
     });
 
+    test('accepts explicit change metadata from callers', () {
+      final provider = _RecordingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+      const explicitChange = TextDocumentChange(
+        startOffset: 6,
+        oldEndOffset: 10,
+        newEndOffset: 12,
+        startPosition: TextPosition(line: 1, column: 0),
+        oldEndPosition: TextPosition(line: 1, column: 4),
+        newEndPosition: TextPosition(line: 1, column: 6),
+      );
+
+      session.sync('alpha\nbeta');
+      final updated = session.sync(
+        'alpha\nbetter',
+        change: explicitChange,
+      );
+
+      expect(provider.calls, hasLength(2));
+      expect(identical(provider.calls.last.change, explicitChange), isTrue);
+      expect(identical(updated.change, explicitChange), isTrue);
+    });
+
+    test('syncDocument reuses explicit document changes', () {
+      final provider = _RecordingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      session.syncDocument(document);
+      final change = document.replaceTextRange(
+        startOffset: 6,
+        endOffset: 10,
+        replacement: 'better',
+      );
+      final updated = session.syncDocument(document, change: change);
+
+      expect(provider.calls, hasLength(2));
+      expect(identical(provider.calls.last.change, change), isTrue);
+      expect(updated.text, 'alpha\nbetter');
+      expect(updated.change, same(change));
+    });
+
     test('rebuilds when the language changes even if text does not', () {
       final provider = _RecordingSyntaxProvider();
       final session = TextSyntaxSession<int>(provider: provider);
