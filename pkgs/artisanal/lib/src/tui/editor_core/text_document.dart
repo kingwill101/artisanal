@@ -1014,7 +1014,11 @@ final class _ChunkedTextDocumentStorageBuilder
       0,
       (total, segment) => total + segment.lineCount,
     );
-    if (totalLineCount <= _TextDocumentStorage._maxLeafLineCount) {
+    final shouldCollapseIntoPieceBacked =
+        totalLineCount <= _TextDocumentStorage._maxLeafLineCount ||
+        nonEmpty.length >
+            _TextDocumentStorage._pieceBackedCollapseSegmentThreshold;
+    if (shouldCollapseIntoPieceBacked) {
       final pieceBacked =
           _TextDocumentStorage._buildStorageFromNormalizedSegmentPieces(
             nonEmpty,
@@ -2501,6 +2505,7 @@ final class _TextDocumentCompositeBacking {
 final class _TextDocumentStorage {
   static const int _maxLeafLineCount = 256;
   static const int _maxCompositeSegmentCount = 32;
+  static const int _pieceBackedCollapseSegmentThreshold = 4;
 
   _TextDocumentStorage._leaf({
     required _TextDocumentLeafBacking leafBacking,
@@ -3605,32 +3610,69 @@ final class _TextDocumentStorage {
     required int revision,
     Object? storageIdentity,
   }) {
+    final totalLineCount = segments.fold<int>(
+      0,
+      (total, segment) => total + segment.lineCount,
+    );
+    if (totalLineCount <= 0) {
+      return null;
+    }
+
     final linePieces = <List<_TextDocumentSourcePiece>>[];
+    final chunkSegments = <_TextDocumentStorageSegment>[];
+
+    void flushChunk() {
+      if (linePieces.isEmpty) {
+        return;
+      }
+      final storage = _buildStorageFromLinePiecesSource(
+        List<List<_TextDocumentSourcePiece>>.unmodifiable(linePieces),
+        revision: 0,
+      );
+      chunkSegments.add(storage.slice(0, storage.lineCount));
+      linePieces.clear();
+    }
+
     for (final segment in segments) {
       for (var localIndex = 0; localIndex < segment.lineCount; localIndex++) {
         final lineLength = segment.lineLength(localIndex);
         if (lineLength <= 0) {
           linePieces.add(const <_TextDocumentSourcePiece>[]);
-          continue;
+        } else {
+          final pieces = segment.sourcePiecesForLineRange(
+            localIndex,
+            startColumn: 0,
+            endColumn: lineLength,
+          );
+          if (pieces == null) {
+            return null;
+          }
+          linePieces.add(List<_TextDocumentSourcePiece>.unmodifiable(pieces));
         }
-        final pieces = segment.sourcePiecesForLineRange(
-          localIndex,
-          startColumn: 0,
-          endColumn: lineLength,
-        );
-        if (pieces == null) {
-          return null;
+
+        if (totalLineCount > _maxLeafLineCount &&
+            linePieces.length >= _maxLeafLineCount) {
+          flushChunk();
         }
-        linePieces.add(List<_TextDocumentSourcePiece>.unmodifiable(pieces));
       }
     }
 
     if (linePieces.isEmpty) {
-      return null;
+      if (chunkSegments.isEmpty) {
+        return null;
+      }
+    } else if (chunkSegments.isEmpty && totalLineCount <= _maxLeafLineCount) {
+      return _buildStorageFromLinePiecesSource(
+        List<List<_TextDocumentSourcePiece>>.unmodifiable(linePieces),
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
     }
 
-    return _buildStorageFromLinePiecesSource(
-      List<List<_TextDocumentSourcePiece>>.unmodifiable(linePieces),
+    flushChunk();
+
+    return _buildBalancedComposite(
+      List<_TextDocumentStorageSegment>.unmodifiable(chunkSegments),
       revision: revision,
       storageIdentity: storageIdentity,
     );

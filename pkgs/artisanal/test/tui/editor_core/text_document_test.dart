@@ -338,8 +338,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugPieceBackedLeafCount, greaterThan(0));
-        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugPieceBackedLeafCount, greaterThan(1));
         expect(document.lineCount, lineTexts.length);
         expect(document.lineAt(0), lineTexts.first);
         expect(document.lineAt(599), lineTexts.last);
@@ -367,7 +366,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(1));
-        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugPieceBackedLeafCount, greaterThan(1));
         expect(document.debugJoinedSourceTextCount, 0);
         expect(document.debugMaterializedSourceLineTextCount, 0);
         expect(document.debugLineGraphemeCacheCount, 0);
@@ -1029,7 +1028,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugPieceBackedLeafCount, greaterThan(1));
         expect(document.debugJoinedSourceTextCount, 0);
         expect(document.lineCount, replacementLineTexts.length);
         expect(document.lineAt(0), replacementLineTexts.first);
@@ -1056,7 +1055,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
-        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugPieceBackedLeafCount, greaterThan(1));
         expect(document.lineCount, replacementLineTexts.length);
         expect(document.lineLength(0), 1);
         expect(document.lineLength(255), 1);
@@ -1068,7 +1067,7 @@ void main() {
     );
 
     test(
-      'large adjacent line-range edits stay segment-backed instead of rebuilding a full piece table',
+      'fragmented large line-range edits collapse into chunked piece-backed leaves',
       () {
         final lineTexts = List<String>.generate(
           300,
@@ -1077,25 +1076,23 @@ void main() {
         );
         final document = TextDocument.fromLineTexts(lineTexts);
 
-        document.replaceLineTextRange(
-          startLine: 100,
-          endLine: 101,
-          replacementLineTexts: const ['middle'],
-        );
-        document.replaceLineTextRange(
-          startLine: 101,
-          endLine: 102,
-          replacementLineTexts: const ['middle2'],
-        );
+        for (final line in [20, 60, 100, 140, 180]) {
+          document.replaceLineTextRange(
+            startLine: line,
+            endLine: line + 1,
+            replacementLineTexts: ['edit-$line'],
+          );
+        }
 
-        expect(document.lineAt(99), 'line-99');
-        expect(document.lineAt(100), 'middle');
-        expect(document.lineAt(101), 'middle2');
-        expect(document.lineAt(102), 'line-102');
+        expect(document.lineAt(20), 'edit-20');
+        expect(document.lineAt(60), 'edit-60');
+        expect(document.lineAt(100), 'edit-100');
+        expect(document.lineAt(140), 'edit-140');
+        expect(document.lineAt(180), 'edit-180');
         expect(document.debugStorageSegmentCount, lessThanOrEqualTo(4));
-        expect(document.debugPieceCount, lessThanOrEqualTo(2));
-        expect(document.debugPieceBackedLeafCount, lessThanOrEqualTo(2));
-        expect(document.debugSourceBackedLeafCount, greaterThanOrEqualTo(1));
+        expect(document.debugPieceCount, lessThanOrEqualTo(document.lineCount + 1));
+        expect(document.debugPieceBackedLeafCount, greaterThan(1));
+        expect(document.debugSourceBackedLeafCount, greaterThan(1));
       },
     );
 
