@@ -12,22 +12,25 @@ import 'text_view.dart';
 
 final class TextCommandResult {
   const TextCommandResult({
-    required this.graphemes,
+    List<String>? graphemes,
     required this.cursorOffset,
     this.selectionBaseOffset,
     this.selectionExtentOffset,
     this.document,
     this.documentChange,
     this.changed = true,
-  });
+  }) : _graphemes = graphemes;
 
-  final List<String> graphemes;
+  final List<String>? _graphemes;
   final int cursorOffset;
   final int? selectionBaseOffset;
   final int? selectionExtentOffset;
   final TextDocument? document;
   final TextDocumentChange? documentChange;
   final bool changed;
+
+  List<String> get graphemes =>
+      _graphemes ?? document?.flattenWithNewlines() ?? const <String>[];
 }
 
 final class TextCursorCommandResult {

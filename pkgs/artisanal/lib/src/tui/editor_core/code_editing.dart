@@ -34,7 +34,6 @@ TextCommandResult _codeResultFromDocument(
   bool changed = true,
 }) {
   return TextCommandResult(
-    graphemes: document.flattenWithNewlines(),
     cursorOffset: cursorOffset,
     selectionBaseOffset: selectionBaseOffset,
     selectionExtentOffset: selectionExtentOffset,

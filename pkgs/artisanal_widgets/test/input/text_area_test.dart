@@ -104,7 +104,6 @@ void main() {
 
       ctrl.applyTextCommandResult(
         TextCommandResult(
-          graphemes: const <String>[],
           cursorOffset: 6,
           document: document,
           documentChange: change,
@@ -114,6 +113,25 @@ void main() {
       expect(ctrl.text, 'hello!');
       expect(ctrl.document, same(document));
       expect(ctrl.consumeLastDocumentChange(), same(change));
+    });
+
+    test('document-backed TextCommandResult exposes graphemes lazily', () {
+      final document = TextAreaController(text: 'hello\nworld').document;
+      final result = TextCommandResult(cursorOffset: 0, document: document);
+
+      expect(result.graphemes, const [
+        'h',
+        'e',
+        'l',
+        'l',
+        'o',
+        '\n',
+        'w',
+        'o',
+        'r',
+        'l',
+        'd',
+      ]);
     });
 
     test('undo and redo track programmatic text changes', () {
