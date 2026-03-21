@@ -201,6 +201,25 @@ void main() {
       },
     );
 
+    test('partial textBetweenLines keeps composite caches cold', () {
+      final lineTexts = List<String>.generate(
+        300,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument(text: lineTexts.join('\n'));
+
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
+
+      final text = document.textBetweenLines(startLine: 120, endLine: 181);
+
+      expect(text, lineTexts.sublist(120, 181).join('\n'));
+      expect(document.debugHasMaterializedLineTextCache, isFalse);
+      expect(document.debugHasTextCache, isFalse);
+    });
+
     test(
       'composite range matching does not materialize every touched line cache',
       () {

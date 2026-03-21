@@ -183,22 +183,7 @@ final class TextDocument {
   }
 
   String textBetweenLines({required int startLine, required int endLine}) {
-    final start = startLine.clamp(0, lineCount);
-    final end = endLine.clamp(start, lineCount);
-    if (start == end) {
-      return '';
-    }
-    if (start == 0 && end == lineCount) {
-      return text;
-    }
-    final buffer = StringBuffer();
-    for (var line = start; line < end; line++) {
-      if (line > start) {
-        buffer.write('\n');
-      }
-      buffer.write(lineAt(line));
-    }
-    return buffer.toString();
+    return _storage.textBetweenLines(startLine: startLine, endLine: endLine);
   }
 
   bool matchesOffsetRange({
@@ -714,6 +699,25 @@ final class _TextDocumentStorage {
 
   String get text => _cachedText ??= _buildText();
 
+  String textBetweenLines({required int startLine, required int endLine}) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return '';
+    }
+    if (normalizedStart == 0 && normalizedEnd == lineCount) {
+      return text;
+    }
+    final buffer = StringBuffer();
+    writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: normalizedStart,
+      endLine: normalizedEnd,
+      leadingNewline: false,
+    );
+    return buffer.toString();
+  }
+
   _TextDocumentStorageSegment slice(int startLine, int endLine) {
     final normalizedStart = startLine.clamp(0, lineCount);
     final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
@@ -963,15 +967,65 @@ final class _TextDocumentStorage {
       return baseLineTexts.join('\n');
     }
     final buffer = StringBuffer();
-    var wroteAnyLine = false;
-    for (final segment in _segments!) {
-      if (segment.lineCount <= 0) {
-        continue;
-      }
-      segment.writeTextToBuffer(buffer, leadingNewline: wroteAnyLine);
-      wroteAnyLine = true;
-    }
+    writeTextBetweenLinesToBuffer(
+      buffer,
+      startLine: 0,
+      endLine: lineCount,
+      leadingNewline: false,
+    );
     return buffer.toString();
+  }
+
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return;
+    }
+    if (_baseLineTexts case final baseLineTexts?) {
+      for (var index = normalizedStart; index < normalizedEnd; index++) {
+        if (leadingNewline || index > normalizedStart) {
+          buffer.write('\n');
+        }
+        buffer.write(baseLineTexts[index]);
+      }
+      return;
+    }
+
+    final segments = _segments!;
+    final segmentLineStarts = _segmentLineStarts!;
+    final (_, _, startSegmentIndex) = _segmentForLineWithIndex(normalizedStart);
+    var segmentIndex = startSegmentIndex;
+    var wroteAnyLine = false;
+    while (segmentIndex < segments.length) {
+      final segment = segments[segmentIndex];
+      final segmentStartLine = segmentLineStarts[segmentIndex];
+      if (segmentStartLine >= normalizedEnd) {
+        break;
+      }
+      final segmentEndLine = segmentStartLine + segment.lineCount;
+      final localStart = normalizedStart > segmentStartLine
+          ? normalizedStart - segmentStartLine
+          : 0;
+      final localEnd = normalizedEnd < segmentEndLine
+          ? normalizedEnd - segmentStartLine
+          : segment.lineCount;
+      if (localStart < localEnd) {
+        segment.writeTextRangeToBuffer(
+          buffer,
+          startLocalLine: localStart,
+          endLocalLine: localEnd,
+          leadingNewline: leadingNewline || wroteAnyLine,
+        );
+        wroteAnyLine = true;
+      }
+      segmentIndex += 1;
+    }
   }
 
   List<int> _materializeLineLengths() {
@@ -1399,8 +1453,28 @@ final class _TextDocumentStorageSegment {
   }
 
   void writeTextToBuffer(StringBuffer buffer, {required bool leadingNewline}) {
-    for (var localIndex = 0; localIndex < lineCount; localIndex++) {
-      if (leadingNewline || localIndex > 0) {
+    writeTextRangeToBuffer(
+      buffer,
+      startLocalLine: 0,
+      endLocalLine: lineCount,
+      leadingNewline: leadingNewline,
+    );
+  }
+
+  void writeTextRangeToBuffer(
+    StringBuffer buffer, {
+    required int startLocalLine,
+    required int endLocalLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLocalLine.clamp(0, lineCount);
+    final normalizedEnd = endLocalLine.clamp(normalizedStart, lineCount);
+    for (
+      var localIndex = normalizedStart;
+      localIndex < normalizedEnd;
+      localIndex++
+    ) {
+      if (leadingNewline || localIndex > normalizedStart) {
         buffer.write('\n');
       }
       buffer.write(lineAt(localIndex));
