@@ -259,6 +259,32 @@ void main() {
     );
 
     test(
+      'replaceLines keeps small parsed documents lazy until line text is read',
+      () {
+        const family = '👩‍👩‍👧‍👦';
+        const rocket = '🚀';
+        final parsedLines = <List<String>>[
+          family.characters.toList(growable: false),
+          rocket.characters.toList(growable: false),
+        ];
+        final document = TextDocument(text: 'seed');
+
+        document.replaceLines(parsedLines);
+
+        expect(document.debugSourceBackedLeafCount, 1);
+        expect(document.debugDistinctSourceCount, 1);
+        expect(document.debugJoinedSourceTextCount, 0);
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.lineGraphemesAt(0), parsedLines.first);
+        expect(document.debugMaterializedSourceLineTextCount, 0);
+        expect(document.lineAt(0), family);
+        expect(document.debugMaterializedSourceLineTextCount, 1);
+        expect(document.lineAt(1), rocket);
+        expect(document.debugMaterializedSourceLineTextCount, 2);
+      },
+    );
+
+    test(
       'replaceLines leaves revision and storage identity stable on no-op parsed edits',
       () {
         final document = TextDocument(text: 'alpha\nbeta');

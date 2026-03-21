@@ -1731,10 +1731,11 @@ final class _TextDocumentStorage {
     final lineLengths = normalizedLines
         .map((line) => line.length)
         .toList(growable: false);
+    final source = _TextDocumentSource.fromParsedLines(normalizedLines);
     return _TextDocumentStorage._leaf(
-      lineTexts: normalizedLines
-          .map((line) => line.join())
-          .toList(growable: false),
+      source: source,
+      sourceLineStartIndex: 0,
+      sourceLineEndIndex: source.lineCount,
       lineLengths: lineLengths,
       length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
       revision: revision,
