@@ -276,15 +276,68 @@ TextCommandResult textTransformSelectionOrLine({
   required String Function(String text) transform,
 }) {
   final cursor = document.positionForOffset(state.cursorOffset);
-  return state.transformSelectionOrLineCommand(
-    document.flattenWithNewlines(),
-    lineStartOffset: document.offsetForPosition(
-      TextPosition(line: cursor.line, column: 0),
-    ),
-    lineEndOffset: document.offsetForPosition(
-      TextPosition(line: cursor.line, column: document.lineLength(cursor.line)),
-    ),
-    transform: transform,
+  final graphemes = document.flattenWithNewlines();
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  final hasSelection = selection != null && selection.start != selection.end;
+  final start = hasSelection
+      ? selection.start
+      : document.offsetForPosition(TextPosition(line: cursor.line, column: 0));
+  final end = hasSelection
+      ? selection.end
+      : document.offsetForPosition(
+          TextPosition(line: cursor.line, column: document.lineLength(cursor.line)),
+        );
+
+  if (start == end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final original = graphemes.sublist(start, end).join();
+  final transformed = transform(original);
+  if (transformed == original) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final replacement = transformed.characters.toList(growable: false);
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: start,
+    end: end,
+    replacement: replacement,
+  );
+  final nextExtent = start + replacement.length;
+
+  if (hasSelection) {
+    return TextCommandResult(
+      graphemes: working.flattenWithNewlines(),
+      cursorOffset: nextExtent,
+      selectionBaseOffset: start,
+      selectionExtentOffset: nextExtent,
+      changed: result.changed,
+    );
+  }
+
+  final relativeCursor = (state.cursorOffset - start).clamp(0, replacement.length);
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: start + relativeCursor,
+    changed: result.changed,
   );
 }
 
@@ -317,10 +370,42 @@ TextCommandResult textTransformWordOrAdjacent({
   required TextOffsetStateSnapshot state,
   required String Function(String text) transform,
 }) {
-  return state.transformWordOrAdjacentCommand(
-    document.flattenWithNewlines(),
+  final graphemes = document.flattenWithNewlines();
+  final range = nav.wordRangeForTransform(
+    graphemes,
+    state.cursorOffset,
     isWord: _isWordGrapheme,
-    transform: transform,
+  );
+  if (range == null || range.start == range.end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      changed: false,
+    );
+  }
+
+  final original = graphemes.sublist(range.start, range.end).join();
+  final transformed = transform(original);
+  if (transformed == original) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      changed: false,
+    );
+  }
+
+  final replacement = transformed.characters.toList(growable: false);
+  final working = document.copy();
+  final result = edit_ops.replaceDocumentRange(
+    working,
+    start: range.start,
+    end: range.end,
+    replacement: replacement,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: range.start + replacement.length,
+    changed: result.changed,
   );
 }
 
@@ -469,9 +554,42 @@ TextCommandResult textDeleteWordBackward({
   required TextOffsetStateSnapshot state,
   nav.GraphemePredicate isWord = _isWordGrapheme,
 }) {
-  return state.deleteWordBackwardCommand(
-    document.flattenWithNewlines(),
+  final graphemes = document.flattenWithNewlines();
+  if (state.cursorOffset <= 0) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final range = nav.deleteWordBackwardRange(
+    graphemes,
+    state.cursorOffset,
     isWord: isWord,
+  );
+  if (range.start >= state.cursorOffset) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: range.start,
+    end: state.cursorOffset,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
@@ -480,9 +598,43 @@ TextCommandResult textDeleteWordForward({
   required TextOffsetStateSnapshot state,
   nav.GraphemePredicate isWord = _isWordGrapheme,
 }) {
-  return state.deleteWordForwardCommand(
-    document.flattenWithNewlines(),
+  final graphemes = document.flattenWithNewlines();
+  if (state.cursorOffset >= graphemes.length) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final range = nav.deleteWordForwardRange(
+    graphemes,
+    state.cursorOffset,
     isWord: isWord,
+  );
+  if (range.end <= state.cursorOffset) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: state.cursorOffset,
+    end: range.end,
+    cursorOffset: state.cursorOffset,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
@@ -490,12 +642,33 @@ TextCommandResult textDeleteToLineStart({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
+  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
-  return state.deleteToLineStartCommand(
-    document.flattenWithNewlines(),
-    lineStartOffset: document.offsetForPosition(
-      TextPosition(line: cursor.line, column: 0),
-    ),
+  final start = document.offsetForPosition(
+    TextPosition(line: cursor.line, column: 0),
+  );
+  final end = state.cursorOffset.clamp(0, graphemes.length);
+  if (start >= end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: start,
+    end: end,
+    cursorOffset: start,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
@@ -503,12 +676,33 @@ TextCommandResult textDeleteToLineEnd({
   required TextDocument document,
   required TextOffsetStateSnapshot state,
 }) {
+  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
-  return state.deleteToLineEndCommand(
-    document.flattenWithNewlines(),
-    lineEndOffset: document.offsetForPosition(
-      TextPosition(line: cursor.line, column: document.lineLength(cursor.line)),
-    ),
+  final start = state.cursorOffset.clamp(0, graphemes.length);
+  final end = document.offsetForPosition(
+    TextPosition(line: cursor.line, column: document.lineLength(cursor.line)),
+  );
+  if (start >= end) {
+    return TextCommandResult(
+      graphemes: graphemes,
+      cursorOffset: state.cursorOffset,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: false,
+    );
+  }
+
+  final working = document.copy();
+  final result = edit_ops.removeDocumentRange(
+    working,
+    start: start,
+    end: end,
+    cursorOffset: start,
+  );
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: result.cursorOffset,
+    changed: result.changed,
   );
 }
 
