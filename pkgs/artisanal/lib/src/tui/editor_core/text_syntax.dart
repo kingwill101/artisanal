@@ -222,13 +222,14 @@ final class TextSyntaxSession<State> {
     bool force = false,
     TextDocumentChange? change,
   }) {
-    final text = document.text;
     final resolvedLanguage = language ?? this.language;
     final previous = _snapshot;
     if (!force &&
         previous != null &&
-        previous.text == text &&
         previous.language == resolvedLanguage &&
+        previous.document != null &&
+        previous.document!.storageIdentity == document.storageIdentity &&
+        previous.document!.revision == document.revision &&
         (change == null || change.isNoop)) {
       return previous;
     }
@@ -241,8 +242,9 @@ final class TextSyntaxSession<State> {
                       previousDocument: previous.document!,
                       nextDocument: document,
                     )
-                  : computeTextDocumentChange(previous.text, text))
+                  : computeTextDocumentChange(previous.text, document.text))
         : null;
+    final text = document.text;
     final result = provider.build(
       text,
       document: document,

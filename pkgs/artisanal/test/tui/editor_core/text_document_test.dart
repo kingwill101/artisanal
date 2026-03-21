@@ -128,5 +128,18 @@ void main() {
         'beta\ngamma',
       );
     });
+
+    test('revision is preserved on copies and increments on edits', () {
+      final document = TextDocument(text: 'alpha');
+      final copy = document.copy();
+
+      expect(document.revision, 0);
+      expect(copy.revision, 0);
+
+      document.replaceTextRange(startOffset: 5, endOffset: 5, replacement: '!');
+
+      expect(document.revision, 1);
+      expect(copy.revision, 0);
+    });
   });
 }

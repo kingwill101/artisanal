@@ -161,6 +161,18 @@ void main() {
       expect(provider.calls.single.documentText, 'alpha\nbeta');
     });
 
+    test('syncDocument reuses snapshots for unchanged document copies', () {
+      final provider = _RecordingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+      final firstDocument = TextDocument(text: 'alpha\nbeta');
+
+      final first = session.syncDocument(firstDocument);
+      final second = session.syncDocument(firstDocument.copy());
+
+      expect(identical(first, second), isTrue);
+      expect(provider.calls, hasLength(1));
+    });
+
     test('syncDocument computes document-aware changes from snapshots', () {
       final provider = _RecordingSyntaxProvider();
       final session = TextSyntaxSession<int>(provider: provider);

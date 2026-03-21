@@ -7,7 +7,13 @@ import 'text_change.dart';
 
 final class TextDocument {
   TextDocument({String text = ''}) {
-    _replaceLineTexts(_parseLineTexts(text));
+    _storageIdentity = Object();
+    _revision = 0;
+    _replaceLineTexts(
+      _parseLineTexts(text),
+      revision: 0,
+      storageIdentity: _storageIdentity,
+    );
   }
 
   TextDocument._raw();
@@ -16,6 +22,8 @@ final class TextDocument {
   late List<int> _lineLengths;
   late List<int> _lineStartOffsets;
   late int _length;
+  late int _revision;
+  late Object _storageIdentity;
   String? _cachedText;
   List<String>? _cachedFlattenedGraphemes;
   late List<List<String>?> _lineGraphemeCaches;
@@ -40,6 +48,10 @@ final class TextDocument {
 
   int get length => _length;
 
+  int get revision => _revision;
+
+  Object get storageIdentity => _storageIdentity;
+
   String get text => _cachedText ??= _lineTexts.join('\n');
 
   String? graphemeAt(int offset) {
@@ -60,6 +72,8 @@ final class TextDocument {
     next._lineLengths = _lineLengths;
     next._lineStartOffsets = _lineStartOffsets;
     next._length = _length;
+    next._revision = _revision;
+    next._storageIdentity = _storageIdentity;
     next._cachedText = _cachedText;
     next._cachedFlattenedGraphemes = _cachedFlattenedGraphemes;
     next._lineGraphemeCaches = _lineGraphemeCaches;
@@ -438,7 +452,11 @@ final class TextDocument {
     return lines;
   }
 
-  void _replaceLineTexts(List<String> lineTexts) {
+  void _replaceLineTexts(
+    List<String> lineTexts, {
+    int? revision,
+    Object? storageIdentity,
+  }) {
     final lineLengths = lineTexts
         .map((line) => line.characters.length)
         .toList(growable: false);
@@ -460,6 +478,8 @@ final class TextDocument {
       lineLengths: lineLengths,
       lineStartOffsets: lineStartOffsets,
       length: offset,
+      revision: revision,
+      storageIdentity: storageIdentity,
     );
   }
 
@@ -476,6 +496,7 @@ final class TextDocument {
       lineGraphemeCaches: List<List<String>?>.unmodifiable(
         lines.map((line) => List<String>.unmodifiable(List<String>.from(line))),
       ),
+      revision: null,
     );
   }
 
@@ -502,6 +523,8 @@ final class TextDocument {
     required List<int> lineStartOffsets,
     required int length,
     List<List<String>?>? lineGraphemeCaches,
+    int? revision,
+    Object? storageIdentity,
   }) {
     _lineTexts = List<String>.unmodifiable(lineTexts);
     _lineLengths = List<int>.unmodifiable(lineLengths);
@@ -510,6 +533,8 @@ final class TextDocument {
         ? List<List<String>?>.filled(lineTexts.length, null, growable: false)
         : List<List<String>?>.from(lineGraphemeCaches, growable: false);
     _length = length;
+    _revision = revision ?? (_revision + 1);
+    _storageIdentity = storageIdentity ?? Object();
     _cachedText = null;
     _cachedFlattenedGraphemes = null;
     _cachedLineViews = null;
