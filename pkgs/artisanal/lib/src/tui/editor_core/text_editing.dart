@@ -302,7 +302,10 @@ TextCommandResult textTransformSelectionOrLine({
     );
   }
 
-  final original = graphemes.sublist(start, end).join();
+  final original = document.graphemesInRange(
+    startOffset: start,
+    endOffset: end,
+  ).join();
   final transformed = transform(original);
   if (transformed == original) {
     return TextCommandResult(
@@ -375,7 +378,10 @@ TextCommandResult textWrapSelection({
     );
   }
 
-  final selected = graphemes.sublist(selection.start, selection.end);
+  final selected = document.graphemesInRange(
+    startOffset: selection.start,
+    endOffset: selection.end,
+  );
   final replacement = <String>[...beforeGraphemes, ...selected, ...afterGraphemes];
   final working = document.copy();
   final result = edit_ops.replaceDocumentRange(
@@ -416,7 +422,7 @@ TextCommandResult textUnwrapSelection({
     );
   }
 
-  if (selection.start < 1 || selection.end >= graphemes.length) {
+  if (selection.start < 1 || selection.end >= document.length) {
     return TextCommandResult(
       graphemes: graphemes,
       cursorOffset: state.cursorOffset,
@@ -426,8 +432,8 @@ TextCommandResult textUnwrapSelection({
     );
   }
 
-  final leading = graphemes[selection.start - 1];
-  final trailing = graphemes[selection.end];
+  final leading = document.graphemeAt(selection.start - 1);
+  final trailing = document.graphemeAt(selection.end);
   if (surroundPairs[leading] != trailing) {
     return TextCommandResult(
       graphemes: graphemes,
@@ -438,7 +444,10 @@ TextCommandResult textUnwrapSelection({
     );
   }
 
-  final selected = graphemes.sublist(selection.start, selection.end);
+  final selected = document.graphemesInRange(
+    startOffset: selection.start,
+    endOffset: selection.end,
+  );
   final working = document.copy();
   final result = edit_ops.replaceDocumentRange(
     working,
