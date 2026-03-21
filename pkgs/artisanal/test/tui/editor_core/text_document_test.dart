@@ -1068,6 +1068,38 @@ void main() {
     );
 
     test(
+      'large adjacent line-range edits stay segment-backed instead of rebuilding a full piece table',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        );
+        final document = TextDocument.fromLineTexts(lineTexts);
+
+        document.replaceLineTextRange(
+          startLine: 100,
+          endLine: 101,
+          replacementLineTexts: const ['middle'],
+        );
+        document.replaceLineTextRange(
+          startLine: 101,
+          endLine: 102,
+          replacementLineTexts: const ['middle2'],
+        );
+
+        expect(document.lineAt(99), 'line-99');
+        expect(document.lineAt(100), 'middle');
+        expect(document.lineAt(101), 'middle2');
+        expect(document.lineAt(102), 'line-102');
+        expect(document.debugStorageSegmentCount, lessThanOrEqualTo(4));
+        expect(document.debugPieceCount, lessThanOrEqualTo(2));
+        expect(document.debugPieceBackedLeafCount, lessThanOrEqualTo(2));
+        expect(document.debugSourceBackedLeafCount, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
       'line-text-backed sources stay unjoined through composite full-text reads',
       () {
         final replacementLineTexts = List<String>.generate(

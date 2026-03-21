@@ -1010,14 +1010,20 @@ final class _ChunkedTextDocumentStorageBuilder
         storageIdentity: storageIdentity,
       );
     }
-    final pieceBacked =
-        _TextDocumentStorage._buildStorageFromNormalizedSegmentPieces(
-          nonEmpty,
-          revision: revision,
-          storageIdentity: storageIdentity,
-        );
-    if (pieceBacked != null) {
-      return pieceBacked;
+    final totalLineCount = nonEmpty.fold<int>(
+      0,
+      (total, segment) => total + segment.lineCount,
+    );
+    if (totalLineCount <= _TextDocumentStorage._maxLeafLineCount) {
+      final pieceBacked =
+          _TextDocumentStorage._buildStorageFromNormalizedSegmentPieces(
+            nonEmpty,
+            revision: revision,
+            storageIdentity: storageIdentity,
+          );
+      if (pieceBacked != null) {
+        return pieceBacked;
+      }
     }
     if (nonEmpty.length > _TextDocumentStorage._maxCompositeSegmentCount) {
       return _TextDocumentStorage._buildBalancedComposite(
