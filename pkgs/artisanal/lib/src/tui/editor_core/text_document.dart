@@ -24,6 +24,18 @@ final class TextDocument {
 
   String get text => _lines.map((line) => line.join()).join('\n');
 
+  String? graphemeAt(int offset) {
+    if (offset < 0 || offset >= length) {
+      return null;
+    }
+    final position = positionForOffset(offset);
+    if (position.column == _lines[position.line].length &&
+        position.line < _lines.length - 1) {
+      return '\n';
+    }
+    return _lines[position.line][position.column];
+  }
+
   TextDocument copy() {
     final next = TextDocument();
     next._replaceLines(
@@ -85,6 +97,63 @@ final class TextDocument {
       }
     }
     return result;
+  }
+
+  List<String> graphemesInRange({
+    required int startOffset,
+    required int endOffset,
+  }) {
+    final normalizedStart = startOffset.clamp(0, length);
+    final normalizedEnd = endOffset.clamp(normalizedStart, length);
+    if (normalizedStart == normalizedEnd) {
+      return const <String>[];
+    }
+
+    final result = <String>[];
+    var remaining = normalizedEnd - normalizedStart;
+    final start = positionForOffset(normalizedStart);
+    var line = start.line;
+    var column = start.column;
+
+    while (remaining > 0 && line < _lines.length) {
+      final lineLength = _lines[line].length;
+      final takeCount = (lineLength - column).clamp(0, remaining);
+      if (takeCount > 0) {
+        result.addAll(_lines[line].sublist(column, column + takeCount));
+        remaining -= takeCount;
+        column += takeCount;
+      }
+
+      if (remaining > 0 && column == lineLength && line < _lines.length - 1) {
+        result.add('\n');
+        remaining -= 1;
+        line += 1;
+        column = 0;
+      }
+    }
+
+    return result;
+  }
+
+  bool matchesOffsetRange({
+    required int startOffset,
+    required List<String> graphemes,
+  }) {
+    if (graphemes.isEmpty) {
+      return true;
+    }
+
+    final start = startOffset.clamp(0, length);
+    if (start + graphemes.length > length) {
+      return false;
+    }
+
+    for (var index = 0; index < graphemes.length; index++) {
+      if (graphemeAt(start + index) != graphemes[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   ({TextPosition start, TextPosition end}) wordBoundaryAt(

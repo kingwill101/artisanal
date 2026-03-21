@@ -89,6 +89,34 @@ void main() {
       expect(gap.start, const TextPosition(line: 0, column: 5));
       expect(gap.end, const TextPosition(line: 0, column: 7));
     });
+
+    test('reads graphemes and offset slices without flattening first', () {
+      final document = TextDocument(text: 'ab\ncde');
+
+      expect(document.graphemeAt(0), 'a');
+      expect(document.graphemeAt(2), '\n');
+      expect(document.graphemeAt(4), 'd');
+      expect(document.graphemeAt(6), isNull);
+
+      expect(
+        document.graphemesInRange(startOffset: 1, endOffset: 5),
+        const ['b', '\n', 'c', 'd'],
+      );
+      expect(
+        document.matchesOffsetRange(
+          startOffset: 2,
+          graphemes: const ['\n', 'c'],
+        ),
+        isTrue,
+      );
+      expect(
+        document.matchesOffsetRange(
+          startOffset: 3,
+          graphemes: const ['\n', 'c'],
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('TextHighlighting', () {

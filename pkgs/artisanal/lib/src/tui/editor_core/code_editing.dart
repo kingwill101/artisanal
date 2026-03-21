@@ -24,17 +24,75 @@ TextCommandResult _unchangedCodeResult(
   );
 }
 
-TextCommandResult _textResultFromCursorResult(
-  List<String> graphemes,
-  TextCursorCommandResult result,
+TextCommandResult _unchangedCodeResultFromDocument(
+  TextDocument document,
+  TextOffsetStateSnapshot state,
 ) {
-  return TextCommandResult(
-    graphemes: List<String>.from(graphemes),
-    cursorOffset: result.cursorOffset,
-    selectionBaseOffset: result.selectionBaseOffset,
-    selectionExtentOffset: result.selectionExtentOffset,
-    changed: result.changed,
-  );
+  return _unchangedCodeResult(document.flattenWithNewlines(), state);
+}
+
+bool _listStringEquals(List<String> left, List<String> right) {
+  if (identical(left, right)) {
+    return true;
+  }
+  if (left.length != right.length) {
+    return false;
+  }
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _isWhitespaceGrapheme(String grapheme) {
+  return grapheme == ' ' ||
+      grapheme == '\t' ||
+      grapheme == '\n' ||
+      grapheme == '\r';
+}
+
+int _leadingWhitespaceCount(List<String> graphemes) {
+  var count = 0;
+  while (count < graphemes.length && _isWhitespaceGrapheme(graphemes[count])) {
+    count++;
+  }
+  return count;
+}
+
+int _trailingWhitespaceCount(List<String> graphemes) {
+  var count = 0;
+  while (count < graphemes.length &&
+      _isWhitespaceGrapheme(graphemes[graphemes.length - 1 - count])) {
+    count++;
+  }
+  return count;
+}
+
+bool _startsWithGraphemeSequence(List<String> text, List<String> prefix) {
+  if (prefix.length > text.length) {
+    return false;
+  }
+  for (var index = 0; index < prefix.length; index++) {
+    if (text[index] != prefix[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _endsWithGraphemeSequence(List<String> text, List<String> suffix) {
+  if (suffix.length > text.length) {
+    return false;
+  }
+  final offset = text.length - suffix.length;
+  for (var index = 0; index < suffix.length; index++) {
+    if (text[offset + index] != suffix[index]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 TextCommandResult codeHandleClosingDelimiterAlignment({
@@ -44,9 +102,8 @@ TextCommandResult codeHandleClosingDelimiterAlignment({
   required String typed,
   required int indentWidth,
 }) {
-  final graphemes = document.flattenWithNewlines();
   if (state.hasSelection || !profile.closingToOpening.containsKey(typed)) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
   final cursor = document.positionForOffset(state.cursorOffset);
@@ -55,7 +112,7 @@ TextCommandResult codeHandleClosingDelimiterAlignment({
   final beforeCursor = lineGraphemes.take(cursor.column).join();
   final line = lineGraphemes.join();
   if (beforeCursor.trim().isNotEmpty || line.trim().isNotEmpty) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
   final nextIndent = codeOutdentedIndent(beforeCursor, indentWidth);
@@ -71,19 +128,18 @@ TextCommandResult codeHandlePairBackspace({
   required TextOffsetStateSnapshot state,
   required CodeLanguageProfile profile,
 }) {
-  final graphemes = document.flattenWithNewlines();
   if (state.hasSelection) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
   final cursorOffset = state.cursorOffset;
-  if (cursorOffset <= 0 || cursorOffset >= graphemes.length) {
-    return _unchangedCodeResult(graphemes, state);
+  if (cursorOffset <= 0 || cursorOffset >= document.length) {
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
-  final opening = graphemes[cursorOffset - 1];
-  final closing = graphemes[cursorOffset];
+  final opening = document.graphemeAt(cursorOffset - 1);
+  final closing = document.graphemeAt(cursorOffset);
   if (profile.autoPairs[opening] != closing) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
   final working = document.copy();
@@ -106,7 +162,6 @@ TextCommandResult codeHandleAutoPair({
   required CodeLanguageProfile profile,
   required String typed,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final matching = profile.autoPairs[typed];
   if (matching != null) {
     if (typed == matching &&
@@ -115,7 +170,7 @@ TextCommandResult codeHandleAutoPair({
           state.cursorOffset,
           hasSelection: state.hasSelection,
         )) {
-      return _unchangedCodeResult(graphemes, state);
+      return _unchangedCodeResultFromDocument(document, state);
     }
 
     if (state.hasSelection) {
@@ -141,19 +196,24 @@ TextCommandResult codeHandleAutoPair({
   }
 
   if (!profile.autoPairs.containsValue(typed) || state.hasSelection) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
   final offset = state.cursorOffset;
-  if (offset < graphemes.length && graphemes[offset] == typed) {
-    final result = state.skipClosingDelimiterCommand(
-      graphemes,
-      closing: [typed],
+  if (document.matchesOffsetRange(
+    startOffset: offset,
+    graphemes: <String>[typed],
+  )) {
+    return TextCommandResult(
+      graphemes: document.flattenWithNewlines(),
+      cursorOffset: offset + 1,
+      selectionBaseOffset: state.selectionBaseOffset,
+      selectionExtentOffset: state.selectionExtentOffset,
+      changed: true,
     );
-    return _textResultFromCursorResult(graphemes, result);
   }
 
-  return _unchangedCodeResult(graphemes, state);
+  return _unchangedCodeResultFromDocument(document, state);
 }
 
 TextCommandResult codeInsertIndentedNewline({
@@ -162,7 +222,6 @@ TextCommandResult codeInsertIndentedNewline({
   required int indentWidth,
   String? language,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final cursor = document.positionForOffset(state.cursorOffset);
   final lineGraphemes = document.lines[cursor.line];
   final beforeCursor = lineGraphemes.take(cursor.column).join();
@@ -208,7 +267,7 @@ TextCommandResult codeInsertIndentedNewline({
   )?.end ?? state.cursorOffset : state.cursorOffset;
   final end = state.hasSelection
       ? endBase
-      : (endBase + trailingSuffixReplaceCount).clamp(endBase, graphemes.length);
+      : (endBase + trailingSuffixReplaceCount).clamp(endBase, document.length);
 
   final working = document.copy();
   final result = edit_ops.replaceDocumentRange(
@@ -230,23 +289,117 @@ TextCommandResult codeToggleBlockComments({
   required TextOffsetStateSnapshot state,
   required CodeLanguageProfile profile,
 }) {
-  final graphemes = document.flattenWithNewlines();
   final delimiters = profile.blockCommentDelimiters;
   if (delimiters == null || document.text.isEmpty) {
-    return _unchangedCodeResult(graphemes, state);
+    return _unchangedCodeResultFromDocument(document, state);
   }
 
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  final hasSelection = selection != null && selection.start != selection.end;
   final cursor = document.positionForOffset(state.cursorOffset);
   final line = cursor.line.clamp(0, document.lineCount - 1);
-  return state.toggleDelimitedSegmentCommand(
-    graphemes,
-    rangeStartOffset: document.offsetForPosition(
-      TextPosition(line: line, column: 0),
-    ),
-    rangeEndOffset: document.offsetForPosition(
-      TextPosition(line: line, column: document.lineLength(line)),
-    ),
-    startDelimiter: delimiters.start,
-    endDelimiter: delimiters.end,
+  final start = hasSelection
+      ? selection.start
+      : document.offsetForPosition(TextPosition(line: line, column: 0));
+  final end = hasSelection
+      ? selection.end
+      : document.offsetForPosition(
+          TextPosition(line: line, column: document.lineLength(line)),
+        );
+  if (start >= end) {
+    return _unchangedCodeResultFromDocument(document, state);
+  }
+
+  final clampedStart = start < 0
+      ? 0
+      : (start > document.length ? document.length : start);
+  final clampedEnd = end < clampedStart
+      ? clampedStart
+      : (end > document.length ? document.length : end);
+  if (clampedStart >= clampedEnd) {
+    return _unchangedCodeResultFromDocument(document, state);
+  }
+
+  final startGraphemes = delimiters.start.characters.toList(growable: false);
+  final endGraphemes = delimiters.end.characters.toList(growable: false);
+  final segment = document.graphemesInRange(
+    startOffset: clampedStart,
+    endOffset: clampedEnd,
+  );
+  final leadingWhitespace = _leadingWhitespaceCount(segment);
+  final trailingWhitespace = _trailingWhitespaceCount(segment);
+  final coreEnd = segment.length - trailingWhitespace;
+  final core = segment.sublist(leadingWhitespace, coreEnd);
+
+  List<String> replacement;
+  var selectionStart = leadingWhitespace;
+  late int selectionEnd;
+
+  if (_startsWithGraphemeSequence(core, startGraphemes) &&
+      _endsWithGraphemeSequence(core, endGraphemes)) {
+    var innerStart = leadingWhitespace + startGraphemes.length;
+    var innerEnd = coreEnd - endGraphemes.length;
+    if (innerStart < innerEnd && segment[innerStart] == ' ') {
+      innerStart++;
+    }
+    if (innerStart < innerEnd && segment[innerEnd - 1] == ' ') {
+      innerEnd--;
+    }
+
+    replacement = <String>[
+      ...segment.sublist(0, leadingWhitespace),
+      ...segment.sublist(innerStart, innerEnd),
+      ...segment.sublist(coreEnd),
+    ];
+    selectionEnd = selectionStart + (innerEnd - innerStart);
+  } else {
+    final separator = core.isEmpty ? const <String>[] : const <String>[' '];
+    replacement = <String>[
+      ...segment.sublist(0, leadingWhitespace),
+      ...startGraphemes,
+      ...separator,
+      ...core,
+      ...separator,
+      ...endGraphemes,
+      ...segment.sublist(coreEnd),
+    ];
+    selectionEnd =
+        selectionStart +
+        startGraphemes.length +
+        separator.length +
+        core.length +
+        separator.length +
+        endGraphemes.length;
+  }
+
+  if (_listStringEquals(replacement, segment)) {
+    return _unchangedCodeResultFromDocument(document, state);
+  }
+
+  final working = document.copy();
+  edit_ops.replaceDocumentRange(
+    working,
+    start: clampedStart,
+    end: clampedEnd,
+    replacement: replacement,
+  );
+  final nextSelectionStart = clampedStart + selectionStart;
+  final nextSelectionEnd = clampedStart + selectionEnd;
+
+  if (hasSelection) {
+    return TextCommandResult(
+      graphemes: working.flattenWithNewlines(),
+      cursorOffset: nextSelectionEnd,
+      selectionBaseOffset: nextSelectionStart,
+      selectionExtentOffset: nextSelectionEnd,
+    );
+  }
+
+  return TextCommandResult(
+    graphemes: working.flattenWithNewlines(),
+    cursorOffset: nextSelectionEnd,
   );
 }
