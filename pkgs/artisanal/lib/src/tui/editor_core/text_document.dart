@@ -347,12 +347,16 @@ final class TextDocument {
       );
     }
 
+    final replacementLineTexts = _parseLineTexts(replacement);
+    final replacementLineLengths =
+        _computeLineTextStats(replacementLineTexts).lineLengths;
     final replacementStorage =
-        _pieceBackedSingleLineReplacementStorage(
+        _pieceBackedReplacementStorageFromLineTexts(
           storage: _storage,
           startPosition: startPosition,
           oldEndPosition: oldEndPosition,
-          replacementText: replacement,
+          replacementLineTexts: replacementLineTexts,
+          replacementLineLengths: replacementLineLengths,
         ) ??
         (() {
           final prefixText = _storage.lineTextPrefix(
@@ -441,15 +445,19 @@ final class TextDocument {
     mergedLines.first.insertAll(0, prefixGraphemes);
     mergedLines.last.addAll(suffixGraphemes);
 
-    final replacementStorage =
-        mergedLines.length == 1
-            ? _pieceBackedSingleLineReplacementStorage(
-                storage: _storage,
-                startPosition: startPosition,
-                oldEndPosition: oldEndPosition,
-                replacementText: replacementLines.first.join(),
-              )
-            : null;
+    final replacementLineTexts = replacementLines
+        .map((line) => line.join())
+        .toList(growable: false);
+    final replacementLineLengths = replacementLines
+        .map((line) => line.length)
+        .toList(growable: false);
+    final replacementStorage = _pieceBackedReplacementStorageFromLineTexts(
+      storage: _storage,
+      startPosition: startPosition,
+      oldEndPosition: oldEndPosition,
+      replacementLineTexts: replacementLineTexts,
+      replacementLineLengths: replacementLineLengths,
+    );
     final nextReplacementStorage =
         replacementStorage ??
         _storageBuilder.fromParsedLines(
@@ -725,62 +733,72 @@ final class TextDocument {
     );
   }
 
-  static _TextDocumentStorage? _pieceBackedSingleLineReplacementStorage({
+  static _TextDocumentStorage? _pieceBackedReplacementStorageFromLineTexts({
     required _TextDocumentStorage storage,
     required TextPosition startPosition,
     required TextPosition oldEndPosition,
-    required String replacementText,
+    required List<String> replacementLineTexts,
+    required List<int> replacementLineLengths,
   }) {
-    if (startPosition.line != oldEndPosition.line ||
-        replacementText.contains('\n')) {
+    if (replacementLineTexts.isEmpty ||
+        replacementLineTexts.length != replacementLineLengths.length) {
       return null;
     }
 
-    final lineIndex = startPosition.line;
-    final lineLength = storage.lineLength(lineIndex);
-    final pieces = <_TextDocumentSourcePiece>[];
+    final linePieces = List<List<_TextDocumentSourcePiece>>.generate(
+      replacementLineTexts.length,
+      (_) => <_TextDocumentSourcePiece>[],
+      growable: false,
+    );
 
     if (startPosition.column > 0) {
       final prefixPiece = storage.sourcePieceForLineRange(
-        lineIndex,
+        startPosition.line,
         startColumn: 0,
         endColumn: startPosition.column,
       );
       if (prefixPiece == null) {
         return null;
       }
-      pieces.add(prefixPiece);
+      linePieces.first.add(prefixPiece);
     }
 
-    final replacementLength = replacementText.characters.length;
-    if (replacementLength > 0) {
-      final replacementSource = _TextDocumentSource.fromText(replacementText);
-      pieces.add(
+    final replacementSource = _TextDocumentSource.fromLineTexts(
+      replacementLineTexts,
+      lineLengths: replacementLineLengths,
+    );
+    for (var lineIndex = 0; lineIndex < replacementLineTexts.length; lineIndex++) {
+      final lineLength = replacementLineLengths[lineIndex];
+      if (lineLength <= 0) {
+        continue;
+      }
+      linePieces[lineIndex].add(
         _TextDocumentSourcePiece(
           source: replacementSource,
-          sourceLine: 0,
+          sourceLine: lineIndex,
           startColumn: 0,
-          endColumn: replacementLength,
+          endColumn: lineLength,
         ),
       );
     }
 
-    if (oldEndPosition.column < lineLength) {
+    final endLineLength = storage.lineLength(oldEndPosition.line);
+    if (oldEndPosition.column < endLineLength) {
       final suffixPiece = storage.sourcePieceForLineRange(
-        lineIndex,
+        oldEndPosition.line,
         startColumn: oldEndPosition.column,
-        endColumn: lineLength,
+        endColumn: endLineLength,
       );
       if (suffixPiece == null) {
         return null;
       }
-      pieces.add(suffixPiece);
+      linePieces.last.add(suffixPiece);
     }
 
     return _storageBuilder.fromLinePieces(
-      <List<_TextDocumentSourcePiece>>[
-        List<_TextDocumentSourcePiece>.unmodifiable(pieces),
-      ],
+      linePieces
+          .map(List<_TextDocumentSourcePiece>.unmodifiable)
+          .toList(growable: false),
       revision: 0,
     );
   }

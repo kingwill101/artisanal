@@ -153,6 +153,7 @@ void main() {
         );
 
         expect(document.text, 'aX\nYZ\ngh');
+        expect(document.debugPieceBackedLeafCount, greaterThan(0));
         expect(document.lines, const [
           ['a', 'X'],
           ['Y', 'Z'],
@@ -284,6 +285,7 @@ void main() {
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
+        expect(document.debugPieceBackedLeafCount, greaterThan(0));
         expect(document.debugDistinctSourceCount, 1);
         expect(document.lineCount, lineTexts.length);
         expect(document.lineAt(0), lineTexts.first);
