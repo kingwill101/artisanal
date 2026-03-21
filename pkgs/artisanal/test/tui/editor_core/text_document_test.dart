@@ -559,5 +559,35 @@ void main() {
       expect(document.lineCount, 600);
       expect(document.text, contains('edit-95'));
     });
+
+    test(
+      'editing into a chunked document coalesces adjacent source-backed slices',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index',
+          growable: false,
+        );
+        final document = TextDocument(text: lineTexts.join('\n'));
+
+        document.replaceLineTextRange(
+          startLine: 0,
+          endLine: 100,
+          replacementLineTexts: const <String>[],
+        );
+
+        expect(document.debugStorageSegmentCount, 1);
+        expect(document.debugSourceBackedLeafCount, 1);
+        expect(document.lineCount, 200);
+        expect(document.lineAt(0), 'line-100');
+        expect(document.lineAt(155), 'line-255');
+        expect(document.lineAt(156), 'line-256');
+        expect(document.lineAt(199), 'line-299');
+        expect(
+          document.textBetweenLines(startLine: 150, endLine: 160),
+          lineTexts.sublist(250, 260).join('\n'),
+        );
+      },
+    );
   });
 }

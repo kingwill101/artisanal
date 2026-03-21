@@ -1538,7 +1538,83 @@ final class _TextDocumentStorage {
       return;
     }
 
+    final mergedSourceBacked = _mergeAdjacentSourceBackedLeafSegments(
+      previous,
+      segment,
+    );
+    if (mergedSourceBacked != null) {
+      out[out.length - 1] = mergedSourceBacked;
+      return;
+    }
+
     out.add(segment);
+  }
+
+  static _TextDocumentStorageSegment? _mergeAdjacentSourceBackedLeafSegments(
+    _TextDocumentStorageSegment previous,
+    _TextDocumentStorageSegment segment,
+  ) {
+    final previousStorage = previous.storage;
+    final nextStorage = segment.storage;
+    final previousSourceText = previousStorage._sourceText;
+    final nextSourceText = nextStorage._sourceText;
+    if (previousSourceText == null ||
+        nextSourceText == null ||
+        !identical(previousSourceText, nextSourceText)) {
+      return null;
+    }
+
+    final combinedLineCount = previous.lineCount + segment.lineCount;
+    if (combinedLineCount > _maxLeafLineCount) {
+      return null;
+    }
+
+    final previousLineEnds = previousStorage._sourceLineEnds!;
+    final nextLineStarts = nextStorage._sourceLineStarts!;
+    if (previousLineEnds[previous.endLine - 1] + 1 !=
+        nextLineStarts[segment.startLine]) {
+      return null;
+    }
+
+    final mergedStorage = _leafFromTextSource(
+      sourceText: previousSourceText,
+      sourceLineStarts: <int>[
+        ...previousStorage._sourceLineStarts!.sublist(
+          previous.startLine,
+          previous.endLine,
+        ),
+        ...nextStorage._sourceLineStarts!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+      ],
+      sourceLineEnds: <int>[
+        ...previousStorage._sourceLineEnds!.sublist(
+          previous.startLine,
+          previous.endLine,
+        ),
+        ...nextStorage._sourceLineEnds!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+      ],
+      lineLengths: <int>[
+        ...previousStorage._baseLineLengths!.sublist(
+          previous.startLine,
+          previous.endLine,
+        ),
+        ...nextStorage._baseLineLengths!.sublist(
+          segment.startLine,
+          segment.endLine,
+        ),
+      ],
+      revision: 0,
+    );
+    return _TextDocumentStorageSegment(
+      storage: mergedStorage,
+      startLine: 0,
+      endLine: mergedStorage.lineCount,
+    );
   }
 
   int _debugLineGraphemeCacheCount(Set<_TextDocumentStorage> visited) {
