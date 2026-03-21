@@ -29,8 +29,11 @@ import '../core/widget.dart';
 import 'package:artisanal/bubbles.dart'
     show
         EchoMode,
+        TextCommandResult,
         TextAreaCursorStyle,
         TextAreaKeyMap,
+        TextCursorCommandResult,
+        TextLineCommandResult,
         TextAreaModel,
         TextAreaStyleState,
         TextAreaStyles,
@@ -575,6 +578,51 @@ class TextAreaController extends ChangeNotifier
   /// Returns and clears the most recent document-aware text change, if any.
   TextDocumentChange? consumeLastDocumentChange() {
     return _model.consumeLastDocumentChange();
+  }
+
+  /// Applies an offset-based editor-core command result.
+  void applyTextCommandResult(
+    TextCommandResult result, {
+    bool pushHistoryBoundary = true,
+  }) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    _model.applyTextCommandResult(
+      result,
+      pushHistoryBoundary: pushHistoryBoundary,
+    );
+    if (!before.matches(_model)) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies an offset-cursor editor-core command result.
+  void applyTextCursorCommandResult(
+    TextCursorCommandResult result, {
+    bool pushHistoryBoundary = true,
+  }) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    _model.applyTextCursorCommandResult(
+      result,
+      pushHistoryBoundary: pushHistoryBoundary,
+    );
+    if (!before.matches(_model)) {
+      notifyListeners();
+    }
+  }
+
+  /// Applies a line-based editor-core command result.
+  void applyTextLineCommandResult(
+    TextLineCommandResult result, {
+    bool pushHistoryBoundary = true,
+  }) {
+    final before = _TextAreaControllerSnapshot.capture(_model);
+    _model.applyTextLineCommandResult(
+      result,
+      pushHistoryBoundary: pushHistoryBoundary,
+    );
+    if (!before.matches(_model)) {
+      notifyListeners();
+    }
   }
 
   /// Whether there is an edit available to undo.

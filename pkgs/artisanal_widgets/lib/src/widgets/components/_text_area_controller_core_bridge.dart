@@ -6,7 +6,7 @@ final class _TextAreaControllerCoreBridge {
   final TextAreaController _controller;
 
   TextOffsetStateSnapshot currentOffsetStateSnapshot({TextDocument? document}) {
-    final resolvedDocument = document ?? TextDocument(text: _controller.text);
+    final resolvedDocument = document ?? _controller.document;
     final cursorOffset = resolvedDocument.offsetForPosition(
       TextPosition(line: _controller.line, column: _controller.column),
     );
@@ -68,11 +68,8 @@ final class _TextAreaControllerCoreBridge {
     TextCommandResult result, {
     bool pushHistoryBoundary = true,
   }) {
-    applyOffsets(
-      text: result.graphemes.join(),
-      cursorOffset: result.cursorOffset,
-      selectionBaseOffset: result.selectionBaseOffset,
-      selectionExtentOffset: result.selectionExtentOffset,
+    _controller.applyTextCommandResult(
+      result,
       pushHistoryBoundary: pushHistoryBoundary,
     );
   }
@@ -81,95 +78,9 @@ final class _TextAreaControllerCoreBridge {
     TextLineCommandResult result, {
     bool pushHistoryBoundary = true,
   }) {
-    applyLineState(
-      lines: result.lines,
-      cursor: result.cursor,
-      selectionBase: result.selectionBase,
-      selectionExtent: result.selectionExtent,
+    _controller.applyTextLineCommandResult(
+      result,
       pushHistoryBoundary: pushHistoryBoundary,
     );
-  }
-
-  void applyOffsets({
-    required String text,
-    required int cursorOffset,
-    int? selectionBaseOffset,
-    int? selectionExtentOffset,
-    bool pushHistoryBoundary = false,
-  }) {
-    final document = TextDocument(text: text);
-    final nextState = TextOffsetStateSnapshot(
-      cursorOffset: cursorOffset,
-      selectionBaseOffset: selectionBaseOffset,
-      selectionExtentOffset: selectionExtentOffset,
-    ).clamp(document.length);
-
-    if (pushHistoryBoundary) {
-      _controller.pushHistoryBoundary();
-    }
-
-    _controller.text = text;
-    if (nextState.hasSelection) {
-      final base = document.positionForOffset(nextState.selectionBaseOffset!);
-      final extent = document.positionForOffset(
-        nextState.selectionExtentOffset!,
-      );
-      _controller.setSelection(
-        baseLine: base.line,
-        baseColumn: base.column,
-        extentLine: extent.line,
-        extentColumn: extent.column,
-      );
-    } else {
-      final cursor = document.positionForOffset(nextState.cursorOffset);
-      _controller.clearSelection();
-      _controller.setCursor(cursor.line, cursor.column);
-    }
-
-    if (pushHistoryBoundary) {
-      _controller.pushHistoryBoundary();
-    }
-  }
-
-  void applyLineState({
-    required List<String> lines,
-    required TextPosition cursor,
-    TextPosition? selectionBase,
-    TextPosition? selectionExtent,
-    bool pushHistoryBoundary = false,
-  }) {
-    final nextLines = lines.isEmpty
-        ? const <String>['']
-        : List<String>.from(lines);
-    final nextState =
-        TextLineStateSnapshot(
-          cursor: cursor,
-          selectionBase: selectionBase,
-          selectionExtent: selectionExtent,
-        ).clamp(
-          lineCount: nextLines.length,
-          lineLength: (line) => nextLines[line].length,
-        );
-
-    if (pushHistoryBoundary) {
-      _controller.pushHistoryBoundary();
-    }
-
-    _controller.text = nextLines.join('\n');
-    if (nextState.hasSelection) {
-      _controller.setSelection(
-        baseLine: nextState.selectionBase!.line,
-        baseColumn: nextState.selectionBase!.column,
-        extentLine: nextState.selectionExtent!.line,
-        extentColumn: nextState.selectionExtent!.column,
-      );
-    } else {
-      _controller.clearSelection();
-      _controller.setCursor(nextState.cursor.line, nextState.cursor.column);
-    }
-
-    if (pushHistoryBoundary) {
-      _controller.pushHistoryBoundary();
-    }
   }
 }

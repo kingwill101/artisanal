@@ -468,7 +468,7 @@ class _TextEditorState extends State<TextEditor> {
     bool jumpToFirst = false,
     bool forceDecorationSync = false,
   }) {
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final matches = findTextQueryHighlights(
       document: document,
       query: _searchController.text,
@@ -498,7 +498,7 @@ class _TextEditorState extends State<TextEditor> {
 
   void _jumpToSearchMatch(int index, {TextDocument? document}) {
     final match = _searchMatches[index];
-    final searchDocument = document ?? TextDocument(text: _controller.text);
+    final searchDocument = document ?? _controller.document;
     final position = searchDocument.positionForOffset(match.startOffset);
     _controller.setCursor(position.line, position.column);
   }
@@ -535,7 +535,7 @@ class _TextEditorState extends State<TextEditor> {
   void _applyGotoLine() {
     final requested = int.tryParse(_gotoController.text.trim());
     if (requested == null) return;
-    final totalLines = _controller.text.split('\n').length;
+    final totalLines = _controller.document.lineCount;
     final clamped = requested.clamp(1, totalLines);
     _controller.setCursor(clamped - 1, 0);
   }
@@ -838,7 +838,7 @@ class _TextEditorState extends State<TextEditor> {
     final opening = String.fromCharCode(key.runes.single);
     final closing = _selectionWrapPairs[opening];
     if (closing == null) return false;
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = _coreBridge
         .currentOffsetStateSnapshot(document: document)
         .wrapSelectionCommand(
@@ -855,7 +855,7 @@ class _TextEditorState extends State<TextEditor> {
 
   bool _handleUnwrapSelectionKey() {
     if (!_controller.hasSelection) return false;
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = _coreBridge
         .currentOffsetStateSnapshot(document: document)
         .unwrapSelectionCommand(
@@ -876,7 +876,7 @@ class _TextEditorState extends State<TextEditor> {
     )
     edit,
   ) {
-    final document = TextDocument(text: _controller.text);
+    final document = _controller.document;
     final result = edit(
       document,
       _coreBridge.currentOffsetStateSnapshot(document: document),

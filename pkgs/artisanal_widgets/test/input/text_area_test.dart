@@ -1,4 +1,4 @@
-import 'package:artisanal/bubbles.dart' show TextAreaModel;
+import 'package:artisanal/bubbles.dart' show TextAreaModel, TextCommandResult;
 import 'package:artisanal/style.dart' show AnsiColor;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/testing.dart';
@@ -91,6 +91,29 @@ void main() {
 
       ctrl.setCursor(0, 2);
       expect(ctrl.consumeLastDocumentChange(), isNull);
+    });
+
+    test('applyTextCommandResult reuses the provided document', () {
+      final ctrl = TextAreaController(text: 'hello');
+      final document = ctrl.document.copy();
+      final change = document.replaceOffsetRange(
+        startOffset: 5,
+        endOffset: 5,
+        replacement: const ['!'],
+      );
+
+      ctrl.applyTextCommandResult(
+        TextCommandResult(
+          graphemes: const <String>[],
+          cursorOffset: 6,
+          document: document,
+          documentChange: change,
+        ),
+      );
+
+      expect(ctrl.text, 'hello!');
+      expect(ctrl.document, same(document));
+      expect(ctrl.consumeLastDocumentChange(), same(change));
     });
 
     test('undo and redo track programmatic text changes', () {

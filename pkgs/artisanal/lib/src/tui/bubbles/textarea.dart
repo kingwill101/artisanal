@@ -1951,6 +1951,51 @@ class TextAreaModel extends ViewComponent {
     _history.breakCoalescing();
   }
 
+  /// Applies an offset-based command result to the live document state.
+  void applyTextCommandResult(
+    commands.TextCommandResult result, {
+    bool pushHistoryBoundary = false,
+  }) {
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+    _applyOffsetCommandResult(result);
+    _syncCoreState();
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+  }
+
+  /// Applies an offset cursor command result to the live document state.
+  void applyTextCursorCommandResult(
+    commands.TextCursorCommandResult result, {
+    bool pushHistoryBoundary = false,
+  }) {
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+    _applyOffsetCursorCommandResult(result);
+    _syncCoreState();
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+  }
+
+  /// Applies a line-based command result to the live document state.
+  void applyTextLineCommandResult(
+    commands.TextLineCommandResult result, {
+    bool pushHistoryBoundary = false,
+  }) {
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+    _applyLineCommandResult(result);
+    _syncCoreState();
+    if (pushHistoryBoundary) {
+      this.pushHistoryBoundary();
+    }
+  }
+
   /// Indents the selected lines, or the current line if there is no selection.
   bool indentLines({int width = 2}) {
     return _runEditFrame(() {
