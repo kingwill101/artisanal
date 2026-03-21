@@ -196,14 +196,16 @@ TextCommandResult codeHandleAutoPair({
     }
 
     final working = document.copy();
-    final result = edit_ops.insertIntoDocument(
+    final result = edit_ops.insertTextIntoDocument(
       working,
       state.cursorOffset,
-      <String>[typed, matching],
+      '$typed$matching',
     );
     return _codeResultFromDocument(
       working,
-      cursorOffset: state.cursorOffset.clamp(0, document.length) + 1,
+      cursorOffset:
+          state.cursorOffset.clamp(0, document.length) +
+          typed.characters.length,
       documentChange: result.change,
       changed: result.changed,
     );
@@ -251,22 +253,14 @@ TextCommandResult codeInsertIndentedNewline({
           baseIndent: baseIndent,
         );
 
-  final baseIndentGraphemes = baseIndent.characters.toList(growable: false);
   final additionalIndent =
       codeShouldIncreaseIndentAfter(trimmedBefore, language: language)
-      ? (' ' * (indentWidth < 1 ? 1 : indentWidth)).characters.toList(
-          growable: false,
-        )
-      : const <String>[];
-  final trailingSuffix =
-      blockSuffix?.text.characters.toList(growable: false) ?? const <String>[];
+      ? ' ' * (indentWidth < 1 ? 1 : indentWidth)
+      : '';
+  final trailingSuffix = blockSuffix?.text ?? '';
   final trailingSuffixReplaceCount = blockSuffix?.consumedColumns ?? 0;
-  final cursorInsertion = <String>[
-    '\n',
-    ...baseIndentGraphemes,
-    ...additionalIndent,
-  ];
-  final replacement = <String>[...cursorInsertion, ...trailingSuffix];
+  final cursorInsertion = '\n$baseIndent$additionalIndent';
+  final replacement = '$cursorInsertion$trailingSuffix';
 
   final start = state.hasSelection
       ? normalizedSelectionRange(
@@ -287,12 +281,12 @@ TextCommandResult codeInsertIndentedNewline({
       : (endBase + trailingSuffixReplaceCount).clamp(endBase, document.length);
 
   final working = document.copy();
-  final result = edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: start,
     end: end,
     replacement: replacement,
-    cursorOffset: start + cursorInsertion.length,
+    cursorOffset: start + cursorInsertion.characters.length,
   );
   return _codeResultFromDocument(
     working,
