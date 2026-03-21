@@ -110,6 +110,44 @@ void main() {
       expect(decoded, isA<plugins.RemotePluginHello>());
     });
 
+    test('connect rejects a non-hello message before handshake', () async {
+      final hostToPlugin = StreamController<String>();
+      final pluginToHost = StreamController<String>();
+
+      final hostChannel = plugins.RemotePluginJsonChannel(
+        sendLine: hostToPlugin.add,
+      );
+      final pluginChannel = plugins.RemotePluginJsonChannel(
+        sendLine: pluginToHost.add,
+      );
+
+      hostChannel.bindLines(pluginToHost.stream);
+      pluginChannel.bindLines(hostToPlugin.stream);
+
+      addTearDown(() async {
+        await hostChannel.dispose();
+        await pluginChannel.dispose();
+        await hostToPlugin.close();
+        await pluginToHost.close();
+      });
+
+      await hostChannel.send(
+        const plugins.RemotePluginFocusInput(surfaceId: 'sidebar'),
+      );
+
+      await expectLater(
+        plugins.RemotePluginGuestSession.connect(
+          channel: pluginChannel,
+          pluginHello: const plugins.RemotePluginHello(
+            pluginId: 'echo-plugin',
+            pluginVersion: '0.0.1',
+          ),
+          timeout: const Duration(milliseconds: 250),
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
     test('guest services read clipboard and send matching request', () async {
       final hostToPlugin = StreamController<String>();
       final pluginToHost = StreamController<String>();

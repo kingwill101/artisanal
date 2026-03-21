@@ -22,10 +22,12 @@ final class RemotePluginSession {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final session = RemotePluginSession._(channel);
+    final pluginHelloFuture = session._pluginHello.future;
+    unawaited(_ignoreHandshakeError(pluginHelloFuture));
     session._bind();
     try {
       await channel.send(hostHello);
-      session.pluginHello = await session._pluginHello.future.timeout(
+      session.pluginHello = await pluginHelloFuture.timeout(
         timeout,
         onTimeout: () => throw TimeoutException(
           'Timed out waiting for plugin.hello.',
@@ -144,6 +146,12 @@ final class RemotePluginSession {
     await _messages.close();
     await channel.dispose();
   }
+}
+
+Future<void> _ignoreHandshakeError<T>(Future<T> future) async {
+  try {
+    await future;
+  } catch (_) {}
 }
 
 sealed class _PendingSessionEvent {

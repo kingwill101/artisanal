@@ -24,10 +24,12 @@ final class RemotePluginGuestSession {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final session = RemotePluginGuestSession._(channel);
+    final hostHelloFuture = session._hostHello.future;
+    unawaited(_ignoreHandshakeError(hostHelloFuture));
     session._bind();
     try {
       await channel.send(pluginHello);
-      session.hostHello = await session._hostHello.future.timeout(
+      session.hostHello = await hostHelloFuture.timeout(
         timeout,
         onTimeout: () => throw TimeoutException(
           'Timed out waiting for host.hello.',
@@ -174,6 +176,12 @@ final class RemotePluginGuestSession {
     await _messages.close();
     await channel.dispose();
   }
+}
+
+Future<void> _ignoreHandshakeError<T>(Future<T> future) async {
+  try {
+    await future;
+  } catch (_) {}
 }
 
 sealed class _PendingGuestSessionEvent {
