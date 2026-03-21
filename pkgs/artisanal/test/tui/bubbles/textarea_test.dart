@@ -175,6 +175,17 @@ void main() {
         expect(textarea.charLimit, 10);
       });
 
+      test('setCharLimit keeps document-derived getters in sync', () {
+        final textarea = TextAreaModel();
+        textarea.setText('abcdef');
+
+        textarea.setCharLimit(3);
+
+        expect(textarea.value, 'abc');
+        expect(textarea.length, 3);
+        expect(textarea.document.text, 'abc');
+      });
+
       test('setPromptFunc parity', () {
         final textarea = TextAreaModel();
         textarea.setPromptFunc(4, (info) => '[${info.lineIndex}] ');

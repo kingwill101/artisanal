@@ -25,8 +25,7 @@ final class TextDocument {
       .map((line) => List<String>.unmodifiable(line))
       .toList(growable: false);
 
-  List<List<String>> get lineViews =>
-      _cachedLineViews ??= _lines;
+  List<List<String>> get lineViews => _cachedLineViews ??= _lines;
 
   int get lineCount => _lines.length;
 
@@ -313,6 +312,19 @@ final class TextDocument {
 
   static List<List<String>> parseLines(String text) => _parseLines(text);
 
+  static List<List<String>> parseLineTexts(Iterable<String> lines) {
+    final parsed = lines
+        .map((line) => line.characters.toList(growable: true))
+        .toList(growable: true);
+    if (parsed.isEmpty) {
+      return <List<String>>[<String>[]];
+    }
+    return parsed;
+  }
+
+  static List<List<String>> parseFlatGraphemes(Iterable<String> graphemes) =>
+      _parseFlatGraphemes(graphemes);
+
   static List<List<String>> _parseLines(String text) {
     if (text.isEmpty) {
       return <List<String>>[<String>[]];
@@ -324,7 +336,7 @@ final class TextDocument {
         .toList(growable: true);
   }
 
-  static List<List<String>> _parseFlatGraphemes(List<String> graphemes) {
+  static List<List<String>> _parseFlatGraphemes(Iterable<String> graphemes) {
     final lines = <List<String>>[<String>[]];
     for (final grapheme in graphemes) {
       if (grapheme == '\n') {

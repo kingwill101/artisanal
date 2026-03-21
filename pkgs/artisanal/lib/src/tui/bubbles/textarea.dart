@@ -706,6 +706,8 @@ class TextAreaModel extends ViewComponent {
             length: uni.graphemes(state.value).length,
           ),
         );
+    _documentSnapshotDirty = true;
+    _editorStateDirty = true;
     _syncCoreState();
     _updateVirtualCursorStyle();
   }
@@ -770,6 +772,8 @@ class TextAreaModel extends ViewComponent {
   List<TextDecorationRange> _decorations = const [];
   List<TextLineDecoration> _lineDecorations = const [];
   TextDocumentChange? _lastDocumentChange;
+  bool _documentSnapshotDirty = false;
+  bool _editorStateDirty = false;
   int _nextDecorationLayerOrder = 0;
   int _nextLineDecorationLayerOrder = 0;
 
@@ -853,6 +857,7 @@ class TextAreaModel extends ViewComponent {
       }
       final limited = _applyCharLimit(v);
       _lines = _parseLines(limited);
+      _documentSnapshotDirty = true;
       _collapseLineState(
         TextPosition(
           line: _lines.length - 1,
@@ -1403,6 +1408,7 @@ class TextAreaModel extends ViewComponent {
     _selectionEnd = clamped.selectionExtent == null
         ? null
         : (clamped.selectionExtent!.column, clamped.selectionExtent!.line);
+    _editorStateDirty = true;
   }
 
   void _collapseLineState(TextPosition cursor) {
@@ -1470,13 +1476,8 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _syncCoreState() {
-    _document.replaceLines(_lines);
-    syncEditorStateFromLineSnapshot(
-      _editorState,
-      _currentLineStateSnapshot(),
-      lineCount: _lines.length,
-      lineLength: (line) => _lines[line].length,
-    );
+    _refreshDocumentSnapshot();
+    _refreshEditorStateSnapshot();
 
     _textView
       ..width = _width
@@ -1493,21 +1494,30 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _refreshDocumentSnapshot() {
+    if (!_documentSnapshotDirty) {
+      return;
+    }
     _document.replaceLines(_lines);
+    _documentSnapshotDirty = false;
   }
 
   void _refreshEditorStateSnapshot() {
+    if (!_editorStateDirty) {
+      return;
+    }
     syncEditorStateFromLineSnapshot(
       _editorState,
       _currentLineStateSnapshot(),
       lineCount: _lines.length,
       lineLength: (line) => _lines[line].length,
     );
+    _editorStateDirty = false;
   }
 
   void _applyLineCommandResult(commands.TextLineCommandResult result) {
-    _lines = _parseLines(result.lines.join('\n'));
+    _lines = TextDocument.parseLineTexts(result.lines);
     _lastDocumentChange = null;
+    _documentSnapshotDirty = true;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
         cursor: result.cursor,
@@ -1533,7 +1543,8 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _applyOffsetCommandResult(commands.TextCommandResult result) {
-    _setValueAndCursor(result.graphemes.join(), result.cursorOffset);
+    _lines = TextDocument.parseFlatGraphemes(result.graphemes);
+    _documentSnapshotDirty = true;
     _refreshDocumentSnapshot();
     _lastDocumentChange = result.documentChange;
     _applyLineStateSnapshot(
@@ -1549,6 +1560,7 @@ class TextAreaModel extends ViewComponent {
   void _restoreEditState(_TextAreaEditState state) {
     _lines = _parseLines(state.value);
     _lastDocumentChange = null;
+    _documentSnapshotDirty = true;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
         cursor: TextPosition(line: state.row, column: state.col),
@@ -1908,6 +1920,7 @@ class TextAreaModel extends ViewComponent {
       _beginHistoryAction(_TextAreaHistoryAction.reset, breakChain: true);
       _recordUndoSnapshot();
       _lines = [[]];
+      _documentSnapshotDirty = true;
       _collapseLineState(const TextPosition(line: 0, column: 0));
       _lastDocumentChange = null;
     });
@@ -3337,13 +3350,6 @@ class TextAreaModel extends ViewComponent {
     _moveLineCursor(position);
   }
 
-  void _setValueAndCursor(String newValue, int cursorPos) {
-    final limited = _applyCharLimit(newValue);
-    _lines = _parseLines(limited);
-    _setCursorFromGlobal(cursorPos.clamp(0, _totalGraphemeLength()));
-    _clearLineSelection();
-  }
-
   (int, int) _selectedLineRange() {
     _refreshEditorStateSnapshot();
     final range = _editorState.selectedLineRange();
@@ -3365,6 +3371,7 @@ class TextAreaModel extends ViewComponent {
     final limited = _applyCharLimit(value);
     if (limited == value) return;
     _lines = _parseLines(limited);
+    _documentSnapshotDirty = true;
     _setCursorFromGlobal(cursorPos.clamp(0, _totalGraphemeLength()));
   }
 
