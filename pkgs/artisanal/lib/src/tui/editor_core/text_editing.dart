@@ -472,25 +472,28 @@ TextCommandResult textTransformWordOrAdjacent({
   required TextOffsetStateSnapshot state,
   required String Function(String text) transform,
 }) {
-  final graphemes = document.flattenWithNewlines();
-  final range = nav.wordRangeForTransform(
-    graphemes,
+  final range = nav.wordRangeForTransformFromReader(
+    document.length,
     state.cursorOffset,
     isWord: _isWordGrapheme,
+    graphemeAt: document.graphemeAt,
   );
   if (range == null || range.start == range.end) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       changed: false,
     );
   }
 
-  final original = graphemes.sublist(range.start, range.end).join();
+  final original = document.graphemesInRange(
+    startOffset: range.start,
+    endOffset: range.end,
+  ).join();
   final transformed = transform(original);
   if (transformed == original) {
     return TextCommandResult(
-      graphemes: graphemes,
+      graphemes: document.flattenWithNewlines(),
       cursorOffset: state.cursorOffset,
       changed: false,
     );

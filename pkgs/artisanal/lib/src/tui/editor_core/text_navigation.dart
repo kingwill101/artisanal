@@ -1,6 +1,7 @@
 library;
 
 typedef GraphemePredicate = bool Function(String grapheme);
+typedef GraphemeReader = String? Function(int offset);
 
 int moveWordBackward(
   List<String> graphemes,
@@ -95,6 +96,92 @@ int moveWordForward(
 }) {
   return nextWordRange(graphemes, offset, isWord: isWord) ??
       previousWordRange(graphemes, offset, isWord: isWord);
+}
+
+({int start, int end})? nextWordRangeFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  if (length <= 0) {
+    return null;
+  }
+
+  var position = offset.clamp(0, length);
+  while (position < length) {
+    final grapheme = graphemeAt(position);
+    if (grapheme != null && isWord(grapheme)) {
+      break;
+    }
+    position++;
+  }
+  if (position >= length) {
+    return null;
+  }
+
+  var end = position;
+  while (end < length) {
+    final grapheme = graphemeAt(end);
+    if (grapheme == null || !isWord(grapheme)) {
+      break;
+    }
+    end++;
+  }
+  return (start: position, end: end);
+}
+
+({int start, int end})? previousWordRangeFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  if (offset <= 0 || length <= 0) {
+    return null;
+  }
+
+  var position = offset.clamp(0, length) - 1;
+  while (position >= 0) {
+    final grapheme = graphemeAt(position);
+    if (grapheme != null && isWord(grapheme)) {
+      break;
+    }
+    position--;
+  }
+  if (position < 0) {
+    return null;
+  }
+
+  final end = position + 1;
+  while (position >= 0) {
+    final grapheme = graphemeAt(position);
+    if (grapheme == null || !isWord(grapheme)) {
+      break;
+    }
+    position--;
+  }
+  return (start: position + 1, end: end);
+}
+
+({int start, int end})? wordRangeForTransformFromReader(
+  int length,
+  int offset, {
+  required GraphemePredicate isWord,
+  required GraphemeReader graphemeAt,
+}) {
+  return nextWordRangeFromReader(
+        length,
+        offset,
+        isWord: isWord,
+        graphemeAt: graphemeAt,
+      ) ??
+      previousWordRangeFromReader(
+        length,
+        offset,
+        isWord: isWord,
+        graphemeAt: graphemeAt,
+      );
 }
 
 ({int start, int end}) deleteWordBackwardRange(

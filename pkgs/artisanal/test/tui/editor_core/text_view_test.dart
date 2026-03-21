@@ -934,6 +934,17 @@ void main() {
         nav.wordRangeForTransform(graphemes, graphemes.length, isWord: isWord),
         (start: 8, end: 12),
       );
+
+      final document = TextDocument(text: '  alpha beta');
+      expect(
+        nav.wordRangeForTransformFromReader(
+          document.length,
+          document.length,
+          isWord: isWord,
+          graphemeAt: document.graphemeAt,
+        ),
+        (start: 8, end: 12),
+      );
     });
   });
 
