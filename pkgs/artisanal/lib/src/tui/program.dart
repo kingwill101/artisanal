@@ -161,13 +161,49 @@ final class ProgramReplay {
   }
 }
 
+/// Controls how the TUI renders relative to the terminal's primary screen.
+///
+/// [FullScreen] takes over the entire terminal via the alternate screen
+/// buffer. [Inline] and [InlineAuto] preserve scrollback and render the
+/// UI within a region anchored to the top or bottom of the visible
+/// viewport.
+enum ScreenMode {
+  /// Full-screen alternate-screen mode. Restores previous terminal content
+  /// on exit.
+  fullScreen,
+
+  /// Inline mode with a fixed UI height in rows. Scrollback is preserved
+  /// above or below the UI region.
+  inline,
+
+  /// Inline mode with automatic height based on rendered content.
+  /// The UI region grows and shrinks between [minHeight] and [maxHeight].
+  inlineAuto,
+}
+
+/// Which edge of the terminal the inline UI region is anchored to.
+enum UiAnchor {
+  /// UI region is at the bottom of the viewport. Log output scrolls above it.
+  bottom,
+
+  /// UI region is at the top of the viewport. Log output scrolls below it.
+  top,
+}
+
 /// Options for configuring the TUI program.
 class ProgramOptions {
   static const Object _retainValue = Object();
 
   /// Creates program configuration options.
+  ///
+  /// When [screenMode] is provided it takes precedence over [altScreen].
+  /// The [altScreen] field is retained for backward compatibility and
+  /// resolves to `true` when [screenMode] is [ScreenMode.fullScreen].
   const ProgramOptions({
     this.altScreen = true,
+    this.screenMode,
+    this.inlineHeight = 4,
+    this.uiAnchor = UiAnchor.bottom,
     this.mouse = false,
     this.mouseMode = MouseMode.none,
     this.fps = 60,
@@ -202,9 +238,31 @@ class ProgramOptions {
 
   /// Whether to use the alternate screen buffer (fullscreen mode).
   ///
-  /// When true, the application takes over the entire terminal and
-  /// restores the original content on exit.
+  /// When [screenMode] is set, this field is ignored in favour of the
+  /// resolved mode. Prefer [effectiveScreenMode] when deciding which
+  /// renderer to create.
   final bool altScreen;
+
+  /// Explicit screen mode. When non-null this takes precedence over
+  /// [altScreen].
+  final ScreenMode? screenMode;
+
+  /// Height of the inline UI region in rows when using [ScreenMode.inline].
+  ///
+  /// Ignored when the effective mode is [ScreenMode.fullScreen].
+  final int inlineHeight;
+
+  /// Which edge of the viewport the inline UI region is anchored to.
+  ///
+  /// Only meaningful when the effective mode is [ScreenMode.inline] or
+  /// [ScreenMode.inlineAuto].
+  final UiAnchor uiAnchor;
+
+  /// Resolves the effective [ScreenMode] from [screenMode] and [altScreen].
+  ScreenMode get effectiveScreenMode {
+    if (screenMode != null) return screenMode!;
+    return altScreen ? ScreenMode.fullScreen : ScreenMode.inline;
+  }
 
   /// Whether to enable mouse tracking.
   ///
@@ -641,52 +699,43 @@ class ProgramOptions {
       inputTimeout: inputTimeout,
       catchPanics: catchPanics,
       maxStackFrames: maxStackFrames,
-      filter:
-          identical(filter, _retainValue)
-              ? this.filter
-              : filter as MessageFilter?,
-      interceptor:
-          identical(interceptor, _retainValue)
-              ? this.interceptor
-              : interceptor as ProgramInterceptor?,
-      replay:
-          identical(replay, _retainValue)
-              ? this.replay
-              : replay as ProgramReplay?,
+      filter: identical(filter, _retainValue)
+          ? this.filter
+          : filter as MessageFilter?,
+      interceptor: identical(interceptor, _retainValue)
+          ? this.interceptor
+          : interceptor as ProgramInterceptor?,
+      replay: identical(replay, _retainValue)
+          ? this.replay
+          : replay as ProgramReplay?,
       blockInputWhileReplay: blockInputWhileReplay,
       signalHandlers: signalHandlers,
       sendInterrupt: sendInterrupt,
       sendSuspendSignal: sendSuspendSignal,
-      startupTitle:
-          identical(startupTitle, _retainValue)
-              ? this.startupTitle
-              : startupTitle as String?,
-      input:
-          identical(input, _retainValue)
-              ? this.input
-              : input as Stream<List<int>>?,
-      output:
-          identical(output, _retainValue)
-              ? this.output
-              : output as void Function(String)?,
+      startupTitle: identical(startupTitle, _retainValue)
+          ? this.startupTitle
+          : startupTitle as String?,
+      input: identical(input, _retainValue)
+          ? this.input
+          : input as Stream<List<int>>?,
+      output: identical(output, _retainValue)
+          ? this.output
+          : output as void Function(String)?,
       disableRenderer: disableRenderer,
       ansiCompress: ansiCompress,
       useUltravioletRenderer: useUltravioletRenderer,
       useUltravioletInputDecoder: useUltravioletInputDecoder,
-      startupProbes:
-          identical(startupProbes, _retainValue)
-              ? this.startupProbes
-              : startupProbes as bool?,
-      cancelSignal:
-          identical(cancelSignal, _retainValue)
-              ? this.cancelSignal
-              : cancelSignal as Future<void>?,
+      startupProbes: identical(startupProbes, _retainValue)
+          ? this.startupProbes
+          : startupProbes as bool?,
+      cancelSignal: identical(cancelSignal, _retainValue)
+          ? this.cancelSignal
+          : cancelSignal as Future<void>?,
       environment: environment,
       inputTTY: inputTTY,
-      movementCapsOverride:
-          identical(movementCapsOverride, _retainValue)
-              ? this.movementCapsOverride
-              : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
+      movementCapsOverride: identical(movementCapsOverride, _retainValue)
+          ? this.movementCapsOverride
+          : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
       shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval,
     );
@@ -913,7 +962,10 @@ ProgramHostBinding _resolveProgramHost({
     return ProgramHostBinding(options: options, terminal: terminal);
   }
   final binding = host.resolve(options);
-  return ProgramHostBinding(options: binding.options, terminal: binding.terminal);
+  return ProgramHostBinding(
+    options: binding.options,
+    terminal: binding.terminal,
+  );
 }
 
 /// Error thrown when a program is cancelled via an external signal.
@@ -1425,11 +1477,16 @@ class Program<M extends Model> {
     }
 
     // Set up renderer based on options
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
 
     _createRenderer(rendererOptions);
@@ -1461,25 +1518,16 @@ class Program<M extends Model> {
 
   void _createRenderer(TuiRendererOptions options) {
     if (_options.disableRenderer) {
-      _renderer = SimpleTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+      _renderer = SimpleTuiRenderer(terminal: _terminal!, options: options);
     } else if (_options.useUltravioletRenderer) {
       _renderer = UltravioletTuiRenderer(
         terminal: _terminal!,
         options: options,
       );
-    } else if (_options.altScreen) {
-      _renderer = FullScreenTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+    } else if (options.screenMode == ScreenMode.fullScreen) {
+      _renderer = FullScreenTuiRenderer(terminal: _terminal!, options: options);
     } else {
-      _renderer = InlineTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+      _renderer = InlineTuiRenderer(terminal: _terminal!, options: options);
     }
     _renderer!.initialize();
   }
@@ -2902,11 +2950,16 @@ class Program<M extends Model> {
     // Re-enable raw mode
     _terminal?.enableRawMode();
 
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
@@ -3069,7 +3122,9 @@ class Program<M extends Model> {
       _appliedKeyboardEnhancementFlags = 0;
     }
     if (_desiredKeyboardEnhancementFlags != 0) {
-      terminal.write(Ansi.kittyKeyboard(_desiredKeyboardEnhancementFlags, mode: 1));
+      terminal.write(
+        Ansi.kittyKeyboard(_desiredKeyboardEnhancementFlags, mode: 1),
+      );
       terminal.write(Ansi.requestKittyKeyboard);
       _appliedKeyboardEnhancementFlags = _desiredKeyboardEnhancementFlags;
     }
@@ -3261,11 +3316,16 @@ class Program<M extends Model> {
       _appliedDynamicAltScreen = true;
     }
 
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
@@ -3860,7 +3920,10 @@ bool _isTerminalReportRequest(String data) {
     }
     if (remaining.startsWith('\x1b]4;')) {
       final belLen = _consumePaletteColorRequest(remaining, terminator: '\x07');
-      final stLen = _consumePaletteColorRequest(remaining, terminator: '\x1b\\');
+      final stLen = _consumePaletteColorRequest(
+        remaining,
+        terminator: '\x1b\\',
+      );
       final consumed = belLen > 0 ? belLen : stLen;
       if (consumed > 0) {
         remaining = remaining.substring(consumed);
@@ -3869,7 +3932,9 @@ bool _isTerminalReportRequest(String data) {
       }
     }
     if (remaining.startsWith(Ansi.requestPrimaryDeviceAttributes)) {
-      remaining = remaining.substring(Ansi.requestPrimaryDeviceAttributes.length);
+      remaining = remaining.substring(
+        Ansi.requestPrimaryDeviceAttributes.length,
+      );
       matchedAny = true;
       continue;
     }
@@ -3974,7 +4039,9 @@ int _consumeXtGetTcapRequest(String text) {
   if (payload.isEmpty) return 0;
   final parts = payload.split(';');
   final hexPart = RegExp(r'^[0-9a-fA-F]+$');
-  if (parts.any((part) => part.isEmpty || part.length.isOdd || !hexPart.hasMatch(part))) {
+  if (parts.any(
+    (part) => part.isEmpty || part.length.isOdd || !hexPart.hasMatch(part),
+  )) {
     return 0;
   }
   return end + '\x1b\\'.length;

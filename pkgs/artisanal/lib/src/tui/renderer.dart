@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:io' as io;
 
+import 'program.dart' show ScreenMode, UiAnchor;
 import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
@@ -58,6 +59,9 @@ class TuiRendererOptions {
     this.altScreen = true,
     this.hideCursor = true,
     this.ansiCompress = false,
+    this.screenMode = ScreenMode.fullScreen,
+    this.inlineHeight = 4,
+    this.uiAnchor = UiAnchor.bottom,
   });
 
   /// Maximum frames per second for rendering.
@@ -77,6 +81,21 @@ class TuiRendererOptions {
 
   /// Whether to compress redundant ANSI sequences.
   final bool ansiCompress;
+
+  /// The effective screen mode for the renderer.
+  final ScreenMode screenMode;
+
+  /// Height of the inline UI region in rows.
+  ///
+  /// Only meaningful when [screenMode] is [ScreenMode.inline].
+  final int inlineHeight;
+
+  /// Which edge of the viewport the inline UI region is anchored to.
+  final UiAnchor uiAnchor;
+
+  /// Whether the renderer operates in inline (non-alt-screen) mode.
+  bool get isInline =>
+      screenMode == ScreenMode.inline || screenMode == ScreenMode.inlineAuto;
 
   /// The minimum time between renders.
   Duration get frameTime => Duration(milliseconds: 1000 ~/ fps);
@@ -693,6 +712,11 @@ class UltravioletTuiRenderer implements TuiRenderer {
   uv_buffer.ScreenBuffer? _screen;
   uv_term.UvTerminalRenderer? _renderer;
 
+  // Inline mode state.
+  bool _scrollRegionActive = false;
+  bool _cursorSaved = false;
+  int _lastInlineHeight = 0;
+
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
 
@@ -741,13 +765,20 @@ class UltravioletTuiRenderer implements TuiRenderer {
   void _initialize() {
     if (_initialized) return;
 
-    if (_options.altScreen) {
+    final isInline = _options.isInline;
+
+    if (!isInline && _options.altScreen) {
       terminal.enterAltScreen();
     }
     if (_options.hideCursor) {
       terminal.hideCursor();
     }
-    if (_options.altScreen) {
+    if (isInline && terminal.supportsAnsi) {
+      // Save cursor position so we can restore it after inline rendering.
+      terminal.write(Ansi.cursorSaveDec);
+      _cursorSaved = true;
+    }
+    if (!isInline && _options.altScreen) {
       terminal.clearScreen();
     }
 
@@ -771,12 +802,12 @@ class UltravioletTuiRenderer implements TuiRenderer {
       env.add('TERM=xterm-256color');
     }
     _renderer = uv_term.UvTerminalRenderer(sink, env: env);
-    _renderer!.setFullscreen(_options.altScreen);
-    _renderer!.setRelativeCursor(!_options.altScreen);
+    _renderer!.setFullscreen(!isInline);
+    _renderer!.setRelativeCursor(isInline);
     final mapNewline =
-        !io.Platform.isWindows && (terminal.isTerminal || _options.altScreen);
+        !io.Platform.isWindows && (terminal.isTerminal || !isInline);
     _renderer!.setMapNewline(mapNewline);
-    _renderer!.setScrollOptim(_options.altScreen);
+    _renderer!.setScrollOptim(!isInline);
 
     // Apply terminal movement optimizations. Allow a compatibility override so
     // callers can provide capability bits without probing the terminal.
@@ -787,7 +818,7 @@ class UltravioletTuiRenderer implements TuiRenderer {
       _renderer!.setTabStops(w);
     }
 
-    if (_options.altScreen) {
+    if (!isInline) {
       _renderer!.saveCursor();
       _renderer!.erase();
     }
@@ -885,6 +916,8 @@ class UltravioletTuiRenderer implements TuiRenderer {
       return;
     }
 
+    final isInline = _options.isInline;
+
     // Phase 1: ANSI parse → StyledString
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
     final ss = uv_styled.newStyledString(
@@ -904,14 +937,18 @@ class UltravioletTuiRenderer implements TuiRenderer {
 
     // Phase 4: Flush to terminal
     final Stopwatch? writeSw = tracing ? (Stopwatch()..start()) : null;
-    // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
-    // terminal buffers all changes and paints them atomically.  This prevents
-    // visible flashes when scroll optimization emits DL/IL before the
-    // replacement content arrives.  Terminals that don't support mode 2026
-    // silently ignore the sequences.
-    terminal.write(UvAnsi.beginSynchronizedUpdate);
-    r.flush();
-    terminal.write(UvAnsi.endSynchronizedUpdate);
+    if (isInline) {
+      _flushInline();
+    } else {
+      // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
+      // terminal buffers all changes and paints them atomically.  This prevents
+      // visible flashes when scroll optimization emits DL/IL before the
+      // replacement content arrives.  Terminals that don't support mode 2026
+      // silently ignore these sequences.
+      terminal.write(UvAnsi.beginSynchronizedUpdate);
+      r.flush();
+      terminal.write(UvAnsi.endSynchronizedUpdate);
+    }
     writeSw?.stop();
     _dirty = false;
 
@@ -927,13 +964,127 @@ class UltravioletTuiRenderer implements TuiRenderer {
     }
   }
 
+  /// Flushes the current frame in inline mode.
+  ///
+  /// Inline mode preserves scrollback and renders the UI within a bounded
+  /// region at the top or bottom of the viewport.  The algorithm mirrors
+  /// FrankenTUI's approach:
+  ///
+  /// 1. Save cursor (DEC ESC 7)
+  /// 2. Hide cursor to prevent speckling
+  /// 3. Set scroll region (DECSTBM) to exclude the UI region
+  /// 4. Clear the UI region rows
+  /// 5. Emit diff output within the UI region
+  /// 6. Reset scroll region
+  /// 7. Restore cursor (DEC ESC 8)
+  /// 8. Position cursor for input if requested
+  void _flushInline() {
+    final r = _renderer;
+    if (r == null) return;
+
+    final buf = StringBuffer();
+    final termHeight = terminal.height;
+    final uiHeight = _options.inlineHeight.clamp(1, termHeight);
+
+    // 1. Begin synchronized update
+    buf.write(UvAnsi.beginSynchronizedUpdate);
+
+    // 2. Save cursor position
+    buf.write(Ansi.cursorSaveDec);
+
+    // 3. Hide cursor during redraw
+    buf.write(Ansi.cursorHide);
+
+    // 4. Calculate UI region boundaries
+    final int uiStartRow;
+    final int logBottom;
+    if (_options.uiAnchor == UiAnchor.bottom) {
+      uiStartRow = termHeight - uiHeight + 1; // 1-based
+      logBottom = termHeight - uiHeight; // last row of log region
+    } else {
+      uiStartRow = 1;
+      logBottom = termHeight - uiHeight; // not used for scroll region calc
+    }
+
+    // 5. Activate scroll region to keep log output out of the UI area
+    if (_options.uiAnchor == UiAnchor.bottom) {
+      // Log region is rows 1..(termHeight - uiHeight)
+      final logEnd = termHeight - uiHeight;
+      if (logEnd > 0 && logEnd < termHeight) {
+        buf.write('\x1b[1;${logEnd}r'); // DECSTBM: top=1, bottom=logEnd
+        _scrollRegionActive = true;
+      }
+    } else {
+      // Log region is rows (uiHeight + 1)..termHeight
+      final logStart = uiHeight + 1;
+      if (logStart <= termHeight) {
+        buf.write('\x1b[${logStart};${termHeight}r'); // DECSTBM
+        // Position cursor at start of log region below UI
+        buf.write(Ansi.cursorTo(logStart, 1));
+        _scrollRegionActive = true;
+      }
+    }
+
+    // 6. Clear the UI region rows
+    for (var row = 0; row < uiHeight; row++) {
+      final absRow = _options.uiAnchor == UiAnchor.bottom
+          ? termHeight - uiHeight + 1 + row
+          : 1 + row;
+      buf.write(Ansi.cursorTo(absRow, 1));
+      buf.write(Ansi.clearLine);
+    }
+
+    // 7. Position cursor at UI start for rendering
+    buf.write(Ansi.cursorTo(uiStartRow, 1));
+
+    terminal.write(buf.toString());
+
+    // 8. Emit the diff output (UV renderer writes directly to terminal)
+    r.flush();
+
+    // 9. Finalize: reset scroll region, restore cursor, show cursor
+    final finalize = StringBuffer();
+    if (_scrollRegionActive) {
+      finalize.write('\x1b[r'); // Reset DECSTBM
+      _scrollRegionActive = false;
+    }
+    finalize.write(Ansi.cursorRestoreDec);
+    finalize.write(Ansi.cursorShow);
+    finalize.write(UvAnsi.endSynchronizedUpdate);
+
+    terminal.write(finalize.toString());
+
+    _lastInlineHeight = uiHeight;
+  }
+
   @override
   void dispose() {
     if (!_initialized) return;
+
+    final isInline = _options.isInline;
+
+    // Best-effort cleanup: restore terminal state even if errors occur.
+    if (isInline) {
+      // Reset scroll region if it was left active
+      if (_scrollRegionActive) {
+        try {
+          terminal.write('\x1b[r'); // Reset DECSTBM
+        } catch (_) {}
+        _scrollRegionActive = false;
+      }
+      // Restore cursor if it was saved
+      if (_cursorSaved) {
+        try {
+          terminal.write(Ansi.cursorRestoreDec);
+        } catch (_) {}
+        _cursorSaved = false;
+      }
+    }
+
     if (_options.hideCursor) {
       terminal.showCursor();
     }
-    if (_options.altScreen) {
+    if (!isInline && _options.altScreen) {
       terminal.exitAltScreen();
     }
     _initialized = false;

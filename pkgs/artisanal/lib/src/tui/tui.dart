@@ -240,6 +240,8 @@ export 'renderer.dart'
 // Program runtime
 export 'program.dart'
     show
+        ScreenMode,
+        UiAnchor,
         ProgramHostResolver,
         ProgramHostBinding,
         ProgramHost,

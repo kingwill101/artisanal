@@ -10,7 +10,7 @@ edge cases, and regression guards.
 
 ## Inline Mode (Top Priority)
 
-- [ ] Inline scrollback-preserving terminal mode
+- [x] Inline scrollback-preserving terminal mode
   - **Where:** artisanal (tui runtime)
   - **Gap:** TUI runtime only supports alt-screen mode. FrankenTUI has
     kernel-level inline mode that preserves terminal scrollback while
@@ -19,6 +19,13 @@ edge cases, and regression guards.
     bars) inline in a build log or pipeline output.
   - **Tests:** Verify scrollback is preserved, cursor positioning in
     inline region, resize behavior, cleanup on exit.
+  - **Implemented:**
+    - `ScreenMode` enum (`fullScreen`, `inline`, `inlineAuto`)
+    - `UiAnchor` enum (`bottom`, `top`)
+    - `ProgramOptions.screenMode`, `.inlineHeight`, `.uiAnchor`
+    - `UltravioletTuiRenderer` inline mode with cursor save/restore,
+      scroll region (DECSTBM), UI region clearing, synchronized output
+    - 17 tests in `inline_renderer_test.dart`
 
 ---
 
