@@ -37,6 +37,7 @@ final class TextSyntaxSnapshot<State> {
 abstract interface class TextSyntaxProvider<State> {
   TextSyntaxBuildResult<State> build(
     String text, {
+    TextDocument? document,
     String? language,
     TextSyntaxSnapshot<State>? previous,
     TextDocumentChange? change,
@@ -195,6 +196,7 @@ final class TextSyntaxSession<State> {
         : null;
     final result = provider.build(
       text,
+      document: null,
       language: resolvedLanguage,
       previous: resolvedChange == null ? null : previous,
       change: resolvedChange,
@@ -243,6 +245,7 @@ final class TextSyntaxSession<State> {
         : null;
     final result = provider.build(
       text,
+      document: document,
       language: resolvedLanguage,
       previous: resolvedChange == null ? null : previous,
       change: resolvedChange,

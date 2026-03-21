@@ -118,5 +118,15 @@ void main() {
       expect(document.lineStartOffset(2), 10);
       expect(document.lineEndOffset(2), 10);
     });
+
+    test('text range helpers read direct slices without flattening first', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma');
+
+      expect(document.textInRange(startOffset: 2, endOffset: 9), 'pha\nbet');
+      expect(
+        document.textBetweenLines(startLine: 1, endLine: 3),
+        'beta\ngamma',
+      );
+    });
   });
 }

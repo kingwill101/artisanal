@@ -196,6 +196,40 @@ final class TextDocument {
     return result;
   }
 
+  String textInRange({required int startOffset, required int endOffset}) {
+    final start = startOffset.clamp(0, length);
+    final end = endOffset.clamp(start, length);
+    if (start == end) {
+      return '';
+    }
+
+    final startPosition = positionForOffset(start);
+    final endPosition = positionForOffset(end);
+    final buffer = StringBuffer();
+    for (var line = startPosition.line; line <= endPosition.line; line++) {
+      final lineStart = line == startPosition.line ? startPosition.column : 0;
+      final lineEnd = line == endPosition.line
+          ? endPosition.column
+          : lineLength(line);
+      if (lineEnd > lineStart) {
+        buffer.write(lineGraphemesAt(line).sublist(lineStart, lineEnd).join());
+      }
+      if (line < endPosition.line) {
+        buffer.write('\n');
+      }
+    }
+    return buffer.toString();
+  }
+
+  String textBetweenLines({required int startLine, required int endLine}) {
+    final start = startLine.clamp(0, lineCount);
+    final end = endLine.clamp(start, lineCount);
+    if (start == end) {
+      return '';
+    }
+    return _lineTexts.sublist(start, end).join('\n');
+  }
+
   bool matchesOffsetRange({
     required int startOffset,
     required List<String> graphemes,

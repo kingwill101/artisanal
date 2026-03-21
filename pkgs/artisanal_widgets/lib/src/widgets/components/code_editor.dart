@@ -595,6 +595,7 @@ final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
   @override
   TextSyntaxBuildResult<void> build(
     String text, {
+    TextDocument? document,
     String? language,
     TextSyntaxSnapshot<void>? previous,
     TextDocumentChange? change,
@@ -605,16 +606,56 @@ final class _CodeEditorSyntaxProvider implements TextSyntaxProvider<void> {
       );
     }
 
-    final spans = _highlighter.highlightSpans(text, language: language);
-    return TextSyntaxBuildResult<void>(
-      decorations: <TextDecorationRange>[
-        for (final span in spans)
-          TextDecorationRange(
-            startOffset: span.startOffset,
-            endOffset: span.endOffset,
-            styleKey: span.styleKey,
-          ),
-      ],
+    final currentDocument = document;
+    final previousDocument = previous?.document;
+    if (currentDocument == null ||
+        previous == null ||
+        previousDocument == null ||
+        change == null ||
+        change.isNoop) {
+      return TextSyntaxBuildResult<void>(
+        decorations: _highlightDecorations(text, language: language),
+      );
+    }
+
+    final window = textSyntaxChangeWindow(
+      previousDocument: previousDocument,
+      nextDocument: currentDocument,
+      change: change,
+      lookBehindLines: 1,
+      lookAheadLines: 1,
     );
+    final windowText = currentDocument.textBetweenLines(
+      startLine: window.nextLines.startLine,
+      endLine: window.nextLines.endLine,
+    );
+    return TextSyntaxBuildResult<void>.patch(
+      patch: TextSyntaxDecorationPatch.forChangeWindow(
+        previousDocument: previousDocument,
+        nextDocument: currentDocument,
+        window: window,
+        decorations: _highlightDecorations(
+          windowText,
+          language: language,
+          offsetBase: window.nextLines.startOffsetIn(currentDocument),
+        ),
+      ),
+    );
+  }
+
+  List<TextDecorationRange> _highlightDecorations(
+    String text, {
+    String? language,
+    int offsetBase = 0,
+  }) {
+    final spans = _highlighter.highlightSpans(text, language: language);
+    return <TextDecorationRange>[
+      for (final span in spans)
+        TextDecorationRange(
+          startOffset: span.startOffset + offsetBase,
+          endOffset: span.endOffset + offsetBase,
+          styleKey: span.styleKey,
+        ),
+    ];
   }
 }

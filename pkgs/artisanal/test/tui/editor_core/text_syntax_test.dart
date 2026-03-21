@@ -150,6 +150,17 @@ void main() {
       expect(updated.change, same(change));
     });
 
+    test('syncDocument passes the current document to providers', () {
+      final provider = _RecordingSyntaxProvider();
+      final session = TextSyntaxSession<int>(provider: provider);
+      final document = TextDocument(text: 'alpha\nbeta');
+
+      session.syncDocument(document);
+
+      expect(provider.calls, hasLength(1));
+      expect(provider.calls.single.documentText, 'alpha\nbeta');
+    });
+
     test('syncDocument computes document-aware changes from snapshots', () {
       final provider = _RecordingSyntaxProvider();
       final session = TextSyntaxSession<int>(provider: provider);
@@ -233,6 +244,7 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
   @override
   TextSyntaxBuildResult<int> build(
     String text, {
+    TextDocument? document,
     String? language,
     TextSyntaxSnapshot<int>? previous,
     TextDocumentChange? change,
@@ -241,6 +253,7 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
       _RecordingSyntaxCall(
         text: text,
         language: language,
+        documentText: document?.text,
         previousText: previous?.text,
         change: change,
       ),
@@ -256,8 +269,8 @@ final class _PatchingSyntaxProvider implements TextSyntaxProvider<int> {
       );
     }
 
-    final previousDocument = TextDocument(text: previous.text);
-    final nextDocument = TextDocument(text: text);
+    final previousDocument = previous.document ?? TextDocument(text: previous.text);
+    final nextDocument = document ?? TextDocument(text: text);
     final window = textSyntaxChangeWindow(
       previousDocument: previousDocument,
       nextDocument: nextDocument,
@@ -287,6 +300,7 @@ final class _RecordingSyntaxProvider implements TextSyntaxProvider<int> {
   @override
   TextSyntaxBuildResult<int> build(
     String text, {
+    TextDocument? document,
     String? language,
     TextSyntaxSnapshot<int>? previous,
     TextDocumentChange? change,
@@ -295,6 +309,7 @@ final class _RecordingSyntaxProvider implements TextSyntaxProvider<int> {
       _RecordingSyntaxCall(
         text: text,
         language: language,
+        documentText: document?.text,
         previousText: previous?.text,
         change: change,
       ),
@@ -318,12 +333,14 @@ final class _RecordingSyntaxCall {
   const _RecordingSyntaxCall({
     required this.text,
     required this.language,
+    required this.documentText,
     required this.previousText,
     required this.change,
   });
 
   final String text;
   final String? language;
+  final String? documentText;
   final String? previousText;
   final TextDocumentChange? change;
 }

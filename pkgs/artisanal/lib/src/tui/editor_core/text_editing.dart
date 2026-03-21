@@ -330,9 +330,7 @@ TextCommandResult textTransformSelectionOrLine({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final original = document
-      .graphemesInRange(startOffset: start, endOffset: end)
-      .join();
+  final original = document.textInRange(startOffset: start, endOffset: end);
   final transformed = transform(original);
   if (transformed == original) {
     return _unchangedDocumentCommandResult(document, state);
@@ -482,9 +480,10 @@ TextCommandResult textTransformWordOrAdjacent({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final original = document
-      .graphemesInRange(startOffset: range.start, endOffset: range.end)
-      .join();
+  final original = document.textInRange(
+    startOffset: range.start,
+    endOffset: range.end,
+  );
   final transformed = transform(original);
   if (transformed == original) {
     return _unchangedDocumentCommandResult(document, state);
