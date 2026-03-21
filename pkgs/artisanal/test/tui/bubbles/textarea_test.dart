@@ -196,6 +196,21 @@ void main() {
         expect(textarea.lineCount, 2);
       });
 
+      test('view keeps non-wrapped document grapheme caches cold', () {
+        final textarea = TextAreaModel(softWrap: false, width: 8, height: 3);
+
+        textarea.setText(
+          List<String>.generate(
+            12,
+            (index) => 'line-$index-abcdefghij',
+          ).join('\n'),
+        );
+
+        textarea.view();
+
+        expect(textarea.document.debugLineGraphemeCacheCount, 0);
+      });
+
       test('setPromptFunc parity', () {
         final textarea = TextAreaModel();
         textarea.setPromptFunc(4, (info) => '[${info.lineIndex}] ');

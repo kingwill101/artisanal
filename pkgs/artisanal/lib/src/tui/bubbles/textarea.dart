@@ -688,7 +688,6 @@ class TextAreaModel extends ViewComponent {
        _width = width,
        _height = height {
     _document = TextDocument();
-    _lines = _document.lineViews;
     _editorState = EditorState();
     _textView = TextView(width: width, height: height, softWrap: softWrap);
     _history =
@@ -730,7 +729,6 @@ class TextAreaModel extends ViewComponent {
   TextAreaStyles styles;
 
   bool _focused = false;
-  late List<List<String>> _lines;
   late TextDocument _document;
   late final EditorState _editorState;
   late final TextView _textView;
@@ -789,7 +787,7 @@ class TextAreaModel extends ViewComponent {
   int get column => _col;
   int get width => _width;
   int get height => _height;
-  int get lineCount => _lines.length;
+  int get lineCount => _document.lineCount;
   int get length => _totalGraphemeLength();
   bool get canUndo => _history.canUndo;
   bool get canRedo => _history.canRedo;
@@ -838,7 +836,7 @@ class TextAreaModel extends ViewComponent {
       : (line: _selectionEnd!.$2, column: _selectionEnd!.$1);
 
   /// Returns the current value of the textarea.
-  String get value => _lines.map((l) => l.join()).join('\n');
+  String get value => _document.text;
 
   /// Sets the value of the textarea.
   set value(String v) {
@@ -864,8 +862,8 @@ class TextAreaModel extends ViewComponent {
       _replaceParsedLines(_parseLines(limited));
       _collapseLineState(
         TextPosition(
-          line: _lines.length - 1,
-          column: _lines.isNotEmpty ? _lines.last.length : 0,
+          line: lineCount - 1,
+          column: _document.lineLength(lineCount - 1),
         ),
       );
       _lastDocumentChange = null;
@@ -880,8 +878,8 @@ class TextAreaModel extends ViewComponent {
 
   /// Returns the text of the line at the given index.
   String lineAt(int i) {
-    if (i < 0 || i >= _lines.length) return '';
-    return _lines[i].join();
+    if (i < 0 || i >= lineCount) return '';
+    return _document.lineAt(i);
   }
 
   /// Sets the cursor position.
@@ -917,10 +915,13 @@ class TextAreaModel extends ViewComponent {
 
   /// Selects the entire textarea contents.
   void selectAll() {
-    final lastLine = _lines.length - 1;
+    final lastLine = lineCount - 1;
     _selectLineState(
       base: const TextPosition(line: 0, column: 0),
-      extent: TextPosition(line: lastLine, column: _lines[lastLine].length),
+      extent: TextPosition(
+        line: lastLine,
+        column: _document.lineLength(lastLine),
+      ),
     );
     _lastDocumentChange = null;
     _syncCoreState();
@@ -931,7 +932,10 @@ class TextAreaModel extends ViewComponent {
     final (startLine, endLine) = _selectedLineRange();
     _selectLineState(
       base: TextPosition(line: startLine, column: 0),
-      extent: TextPosition(line: endLine, column: _lines[endLine].length),
+      extent: TextPosition(
+        line: endLine,
+        column: _document.lineLength(endLine),
+      ),
     );
     _lastDocumentChange = null;
     _syncCoreState();
@@ -1100,7 +1104,7 @@ class TextAreaModel extends ViewComponent {
     int priority = textDefaultLineDecorationLayerPriority,
   }) {
     final normalized = decorations
-        .map((decoration) => decoration.clamp(_lines.length))
+        .map((decoration) => decoration.clamp(lineCount))
         .toList(growable: false);
 
     final existingLayer = _lineDecorationLayers[layerKey];
@@ -1213,7 +1217,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   int? _diagnosticIndexForLine(int lineIndex, {int? activeIndex}) {
-    if (lineIndex < 0 || lineIndex >= _lines.length) {
+    if (lineIndex < 0 || lineIndex >= lineCount) {
       return null;
     }
 
@@ -1396,8 +1400,8 @@ class TextAreaModel extends ViewComponent {
 
   void _applyLineStateSnapshot(TextLineStateSnapshot snapshot) {
     final clamped = snapshot.clamp(
-      lineCount: _lines.length,
-      lineLength: (line) => _lines[line].length,
+      lineCount: lineCount,
+      lineLength: (line) => _document.lineLength(line),
       preserveCollapsedSelection: true,
     );
     _row = clamped.cursor.line;
@@ -1490,7 +1494,7 @@ class TextAreaModel extends ViewComponent {
   void _refreshDocumentSnapshot() {}
 
   int _leadingColumnsForView() {
-    final lineNumberDigits = showLineNumbers ? '${_lines.length}'.length : 0;
+    final lineNumberDigits = showLineNumbers ? '$lineCount'.length : 0;
     return _getPromptWidth(_row) + (showLineNumbers ? lineNumberDigits + 1 : 0);
   }
 
@@ -1501,8 +1505,8 @@ class TextAreaModel extends ViewComponent {
     syncEditorStateFromLineSnapshot(
       _editorState,
       _currentLineStateSnapshot(),
-      lineCount: _lines.length,
-      lineLength: (line) => _lines[line].length,
+      lineCount: lineCount,
+      lineLength: (line) => _document.lineLength(line),
     );
     _editorStateDirty = false;
   }
@@ -1702,7 +1706,7 @@ class TextAreaModel extends ViewComponent {
     _lineDecorationLayers[textActiveLineDecorationLayerKey] = (
       decorations: <TextLineDecoration>[
         TextLineDecoration(
-          lineIndex: _row.clamp(0, math.max(_lines.length - 1, 0)),
+          lineIndex: _row.clamp(0, math.max(lineCount - 1, 0)),
           styleKey: textActiveLineDecorationKey,
           lineNumberStyleKey: textActiveLineNumberDecorationKey,
         ),
@@ -1814,13 +1818,13 @@ class TextAreaModel extends ViewComponent {
         rowEnd = end.column;
       } else if (rowIndex == start.line) {
         rowStart = start.column;
-        rowEnd = _lines[rowIndex].length;
+        rowEnd = _document.lineLength(rowIndex);
       } else if (rowIndex == end.line) {
         rowStart = 0;
         rowEnd = end.column;
       } else {
         rowStart = 0;
-        rowEnd = _lines[rowIndex].length;
+        rowEnd = _document.lineLength(rowIndex);
       }
 
       final overlapStart = math.max(rowStart, segmentStart);
@@ -2533,7 +2537,9 @@ class TextAreaModel extends ViewComponent {
   }
 
   void cursorEnd() {
-    _moveLineCursor(TextPosition(line: _row, column: _lines[_row].length));
+    _moveLineCursor(
+      TextPosition(line: _row, column: _document.lineLength(_row)),
+    );
     _syncCoreState();
   }
 
@@ -2789,9 +2795,7 @@ class TextAreaModel extends ViewComponent {
       }
 
       if (msg is MouseMsg) {
-        final lineNumberDigits = showLineNumbers
-            ? '${_lines.length}'.length
-            : 0;
+        final lineNumberDigits = showLineNumbers ? '$lineCount'.length : 0;
         final displayLines = _softWrappedLines(lineNumberDigits);
         final action = msg.action;
         final button = msg.button;
@@ -2871,7 +2875,7 @@ class TextAreaModel extends ViewComponent {
               base: TextPosition(line: contentY, column: 0),
               extent: TextPosition(
                 line: contentY,
-                column: _lines[contentY].length,
+                column: _document.lineLength(contentY),
               ),
             );
             _syncCoreState();
@@ -2940,11 +2944,11 @@ class TextAreaModel extends ViewComponent {
     final startY = math.min(y1, y2);
     final endY = math.max(y1, y2);
 
-    if (startY < 0 || endY >= _lines.length) return '';
+    if (startY < 0 || endY >= lineCount) return '';
 
     final sb = StringBuffer();
     for (var y = startY; y <= endY; y++) {
-      final line = _lines[y];
+      final line = _document.lineGraphemesAt(y);
       int startX, endX;
 
       if (startY == endY) {
@@ -2978,7 +2982,7 @@ class TextAreaModel extends ViewComponent {
   @override
   Object view() {
     final style = activeStyle();
-    final lineNumberDigits = showLineNumbers ? '${_lines.length}'.length : 0;
+    final lineNumberDigits = showLineNumbers ? '$lineCount'.length : 0;
     final displayLines = _softWrappedLines(lineNumberDigits);
     final buffer = StringBuffer();
 
@@ -3044,17 +3048,17 @@ class TextAreaModel extends ViewComponent {
               rowEnd = math.max(x1, x2);
             } else if (rowIdx == startY) {
               rowStart = y1 < y2 ? x1 : x2;
-              rowEnd = _lines[rowIdx].length;
+              rowEnd = _document.lineLength(rowIdx);
             } else if (rowIdx == endY) {
               rowStart = 0;
               rowEnd = y1 < y2 ? x2 : x1;
             } else {
               rowStart = 0;
-              rowEnd = _lines[rowIdx].length;
+              rowEnd = _document.lineLength(rowIdx);
             }
 
-            rowStart = rowStart.clamp(0, _lines[rowIdx].length);
-            rowEnd = rowEnd.clamp(0, _lines[rowIdx].length);
+            rowStart = rowStart.clamp(0, _document.lineLength(rowIdx));
+            rowEnd = rowEnd.clamp(0, _document.lineLength(rowIdx));
 
             // Map to this segment via charOffset.
             final segStart = displayLine.charOffset;
@@ -3198,8 +3202,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _deleteToLineEnd() {
-    final line = _lines[_row];
-    if (_col >= line.length) return;
+    if (_col >= _document.lineLength(_row)) return;
     _recordUndoSnapshot();
     _refreshDocumentSnapshot();
     final result = textDeleteToLineEnd(
@@ -3369,7 +3372,7 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _lineNext() {
-    if (_row < _lines.length - 1) {
+    if (_row < lineCount - 1) {
       _moveLineCursor(TextPosition(line: _row + 1, column: _col));
     }
   }
@@ -3407,12 +3410,12 @@ class TextAreaModel extends ViewComponent {
 
   void _replaceDocumentSnapshot(TextDocument document) {
     _document = document;
-    _lines = document.lineViews;
   }
 
   void _replaceParsedLines(List<List<String>> lines) {
-    _document.replaceLines(lines);
-    _lines = _document.lineViews;
+    _document.replaceLineTexts(
+      lines.map((line) => line.join()).toList(growable: false),
+    );
   }
 
   void _enforceCharLimit() {
