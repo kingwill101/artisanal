@@ -375,8 +375,7 @@ TextCommandResult _documentResultFromWindowedLineCommand({
   );
 }
 
-extension TextOffsetStateDocumentEditingExtensions
-    on TextOffsetStateSnapshot {
+extension TextOffsetStateDocumentEditingExtensions on TextOffsetStateSnapshot {
   TextCommandResult splitLineDocumentCommand(TextDocument document) {
     return textSplitLine(document: document, state: this);
   }
@@ -591,15 +590,14 @@ TextCommandResult textTransformSelectionOrLine({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final replacement = transformed.characters.toList(growable: false);
   final working = document.copy();
-  final result = edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: start,
     end: end,
-    replacement: replacement,
+    replacement: transformed,
   );
-  final nextExtent = start + replacement.length;
+  final nextExtent = result.change.newEndOffset;
 
   if (hasSelection) {
     return _documentCommandResult(
@@ -614,7 +612,7 @@ TextCommandResult textTransformSelectionOrLine({
 
   final relativeCursor = (state.cursorOffset - start).clamp(
     0,
-    replacement.length,
+    transformed.characters.length,
   );
   return _documentCommandResult(
     working,
@@ -638,30 +636,24 @@ TextCommandResult textWrapSelection({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final beforeGraphemes = before.characters.toList(growable: false);
-  final afterGraphemes = (after ?? before).characters.toList(growable: false);
-  if (beforeGraphemes.isEmpty && afterGraphemes.isEmpty) {
+  final suffix = after ?? before;
+  if (before.isEmpty && suffix.isEmpty) {
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final selected = document.graphemesInRange(
+  final selected = document.textInRange(
     startOffset: selection.start,
     endOffset: selection.end,
   );
-  final replacement = <String>[
-    ...beforeGraphemes,
-    ...selected,
-    ...afterGraphemes,
-  ];
   final working = document.copy();
-  final result = edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: selection.start,
     end: selection.end,
-    replacement: replacement,
+    replacement: '$before$selected$suffix',
   );
-  final nextSelectionStart = selection.start + beforeGraphemes.length;
-  final nextSelectionEnd = nextSelectionStart + selected.length;
+  final nextSelectionStart = selection.start + before.characters.length;
+  final nextSelectionEnd = nextSelectionStart + selected.characters.length;
 
   return _documentCommandResult(
     working,
@@ -696,19 +688,19 @@ TextCommandResult textUnwrapSelection({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final selected = document.graphemesInRange(
+  final selected = document.textInRange(
     startOffset: selection.start,
     endOffset: selection.end,
   );
   final working = document.copy();
-  final result = edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: selection.start - 1,
     end: selection.end + 1,
     replacement: selected,
   );
   final nextSelectionStart = selection.start - 1;
-  final nextSelectionEnd = nextSelectionStart + selected.length;
+  final nextSelectionEnd = nextSelectionStart + selected.characters.length;
 
   return _documentCommandResult(
     working,
@@ -744,17 +736,16 @@ TextCommandResult textTransformWordOrAdjacent({
     return _unchangedDocumentCommandResult(document, state);
   }
 
-  final replacement = transformed.characters.toList(growable: false);
   final working = document.copy();
-  final result = edit_ops.replaceDocumentRange(
+  final result = edit_ops.replaceDocumentTextRange(
     working,
     start: range.start,
     end: range.end,
-    replacement: replacement,
+    replacement: transformed,
   );
   return _documentCommandResult(
     working,
-    cursorOffset: range.start + replacement.length,
+    cursorOffset: result.change.newEndOffset,
     documentChange: result.change,
     changed: result.changed,
   );
@@ -800,11 +791,31 @@ TextCommandResult textInsertText({
   required String text,
   bool replaceSelection = true,
 }) {
-  return textInsertGraphemes(
-    document: document,
-    state: state,
-    graphemes: text.characters.toList(growable: false),
-    replaceSelection: replaceSelection,
+  if (text.isEmpty) {
+    return _unchangedDocumentCommandResult(document, state);
+  }
+
+  final working = document.copy();
+  final selection = normalizedSelectionRange(
+    state.selectionBaseOffset,
+    state.selectionExtentOffset,
+  );
+  final hasSelection = selection != null && selection.start != selection.end;
+
+  final result = replaceSelection && hasSelection
+      ? edit_ops.replaceDocumentTextRange(
+          working,
+          start: selection.start,
+          end: selection.end,
+          replacement: text,
+        )
+      : edit_ops.insertTextIntoDocument(working, state.cursorOffset, text);
+
+  return _documentCommandResult(
+    working,
+    cursorOffset: result.cursorOffset,
+    documentChange: result.change,
+    changed: result.changed,
   );
 }
 
@@ -1142,8 +1153,11 @@ TextCommandResult textMoveSelectedLinesDocument({
     state: clampedState,
     startLine: startLine,
     endLine: endLine,
-    apply: (lines, localState) =>
-        textMoveSelectedLines(lines: lines, state: localState, direction: direction),
+    apply: (lines, localState) => textMoveSelectedLines(
+      lines: lines,
+      state: localState,
+      direction: direction,
+    ),
   );
 }
 
@@ -1308,11 +1322,8 @@ TextCommandResult textToggleHeadingPrefixDocument({
     state: clampedState,
     startLine: span.startLine,
     endLine: span.endLine + 1,
-    apply: (lines, localState) => textToggleHeadingPrefix(
-      lines: lines,
-      state: localState,
-      level: level,
-    ),
+    apply: (lines, localState) =>
+        textToggleHeadingPrefix(lines: lines, state: localState, level: level),
   );
 }
 
@@ -1603,7 +1614,8 @@ TextCommandResult textDeleteLinesDocument({
     state: clampedState,
     startLine: startLine,
     endLine: endLine,
-    apply: (lines, localState) => textDeleteLines(lines: lines, state: localState),
+    apply: (lines, localState) =>
+        textDeleteLines(lines: lines, state: localState),
   );
 }
 
@@ -1659,7 +1671,8 @@ TextCommandResult textJoinLinesDocument({
     state: clampedState,
     startLine: selectedSpan.startLine,
     endLine: endLine + 1,
-    apply: (lines, localState) => textJoinLines(lines: lines, state: localState),
+    apply: (lines, localState) =>
+        textJoinLines(lines: lines, state: localState),
   );
 }
 

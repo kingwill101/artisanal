@@ -128,7 +128,31 @@ TextDocumentEditResult replaceDocumentRange(
   );
   return TextDocumentEditResult(
     change: change,
-    cursorOffset: (cursorOffset ?? change.newEndOffset).clamp(0, document.length),
+    cursorOffset: (cursorOffset ?? change.newEndOffset).clamp(
+      0,
+      document.length,
+    ),
+  );
+}
+
+TextDocumentEditResult replaceDocumentTextRange(
+  TextDocument document, {
+  required int start,
+  required int end,
+  String replacement = '',
+  int? cursorOffset,
+}) {
+  final change = document.replaceTextRange(
+    startOffset: start,
+    endOffset: end,
+    replacement: replacement,
+  );
+  return TextDocumentEditResult(
+    change: change,
+    cursorOffset: (cursorOffset ?? change.newEndOffset).clamp(
+      0,
+      document.length,
+    ),
   );
 }
 
@@ -138,6 +162,19 @@ TextDocumentEditResult insertIntoDocument(
   List<String> inserted,
 ) {
   return replaceDocumentRange(
+    document,
+    start: cursorOffset,
+    end: cursorOffset,
+    replacement: inserted,
+  );
+}
+
+TextDocumentEditResult insertTextIntoDocument(
+  TextDocument document,
+  int cursorOffset,
+  String inserted,
+) {
+  return replaceDocumentTextRange(
     document,
     start: cursorOffset,
     end: cursorOffset,
