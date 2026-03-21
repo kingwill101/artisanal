@@ -357,8 +357,9 @@ final class TextDocument {
     }
 
     final replacementLineTexts = _parseLineTexts(replacement);
-    final replacementLineLengths =
-        _computeLineTextStats(replacementLineTexts).lineLengths;
+    final replacementLineLengths = _computeLineTextStats(
+      replacementLineTexts,
+    ).lineLengths;
     final replacementStorage =
         _pieceBackedReplacementStorageFromLineTexts(
           storage: _storage,
@@ -567,9 +568,7 @@ final class TextDocument {
     } else {
       final replacementStorage = normalizedReplacement.isEmpty
           ? null
-          : _appendBackedStorageFromLineTexts(
-              normalizedReplacement,
-            );
+          : _appendBackedStorageFromLineTexts(normalizedReplacement);
       final nextSegments = <_TextDocumentStorageSegment>[
         if (normalizedStart > 0) _storage.slice(0, normalizedStart),
         if (replacementStorage != null)
@@ -718,7 +717,8 @@ final class TextDocument {
   }) {
     final normalizedLineLengths =
         lineLengths ?? _computeLineTextStats(lineTexts).lineLengths;
-    final replacementSource = _appendSource ??= _LineTextDocumentSource._appendable();
+    final replacementSource = _appendSource ??=
+        _LineTextDocumentSource._appendable();
     final replacementStartLine = replacementSource.appendLineTexts(
       lineTexts,
       lineLengths: normalizedLineLengths,
@@ -793,12 +793,17 @@ final class TextDocument {
       linePieces.first.addAll(prefixPieces);
     }
 
-    final replacementSource = _appendSource ??= _LineTextDocumentSource._appendable();
+    final replacementSource = _appendSource ??=
+        _LineTextDocumentSource._appendable();
     final replacementStartLine = replacementSource.appendLineTexts(
       replacementLineTexts,
       lineLengths: replacementLineLengths,
     );
-    for (var lineIndex = 0; lineIndex < replacementLineTexts.length; lineIndex++) {
+    for (
+      var lineIndex = 0;
+      lineIndex < replacementLineTexts.length;
+      lineIndex++
+    ) {
       final lineLength = replacementLineLengths[lineIndex];
       if (lineLength <= 0) {
         continue;
@@ -1120,6 +1125,11 @@ final class _TextDocumentSourcePiece {
   final int endColumn;
 
   int get lineLength => endColumn - startColumn;
+  int get textLength => source.textLengthInLineRange(
+    sourceLine,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  );
 
   String? graphemeAt(int localColumn) =>
       source.graphemeInLineAt(sourceLine, startColumn + localColumn);
@@ -1299,11 +1309,12 @@ abstract base class _TextDocumentSource {
   factory _TextDocumentSource.fromLinePieces(
     List<List<_TextDocumentSourcePiece>> linePieces,
   ) {
-    final normalizedLinePieces = List<List<_TextDocumentSourcePiece>>.unmodifiable(
-      linePieces
-          .map((line) => List<_TextDocumentSourcePiece>.unmodifiable(line))
-          .toList(growable: false),
-    );
+    final normalizedLinePieces =
+        List<List<_TextDocumentSourcePiece>>.unmodifiable(
+          linePieces
+              .map((line) => List<_TextDocumentSourcePiece>.unmodifiable(line))
+              .toList(growable: false),
+        );
     final lineStarts = <int>[];
     final lineEnds = <int>[];
     final lineLengths = <int>[];
@@ -1315,16 +1326,7 @@ abstract base class _TextDocumentSource {
         0,
         (total, piece) => total + piece.lineLength,
       );
-      offset += pieces.fold<int>(
-        0,
-        (total, piece) =>
-            total +
-            piece.source.textInLineRange(
-              piece.sourceLine,
-              startColumn: piece.startColumn,
-              endColumn: piece.endColumn,
-            ).length,
-      );
+      offset += pieces.fold<int>(0, (total, piece) => total + piece.textLength);
       lineEnds.add(offset);
       lineLengths.add(lineLength);
       if (index < normalizedLinePieces.length - 1) {
@@ -1384,8 +1386,21 @@ abstract base class _TextDocumentSource {
     if (startColumn <= 0 && endColumn >= lineLengths[index]) {
       return line;
     }
-    return line.characters.skip(startColumn).take(endColumn - startColumn).toString();
+    return line.characters
+        .skip(startColumn)
+        .take(endColumn - startColumn)
+        .toString();
   }
+
+  int textLengthInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) => textInLineRange(
+    index,
+    startColumn: startColumn,
+    endColumn: endColumn,
+  ).length;
 
   String lineTextPrefix(int index, int graphemeCount) {
     final line = lineAt(index);
@@ -1606,6 +1621,16 @@ final class _RawTextDocumentSource extends _TextDocumentSource {
   }
 
   @override
+  int textLengthInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    return offsets[endColumn] - offsets[startColumn];
+  }
+
+  @override
   String lineTextPrefix(int index, int graphemeCount) {
     if (graphemeCount <= 0) {
       return '';
@@ -1798,6 +1823,16 @@ final class _LineTextDocumentSource extends _TextDocumentSource {
   }
 
   @override
+  int textLengthInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    final offsets = _graphemeOffsetsForLine(index);
+    return offsets[endColumn] - offsets[startColumn];
+  }
+
+  @override
   String lineTextPrefix(int index, int graphemeCount) {
     if (graphemeCount <= 0) {
       return '';
@@ -1901,6 +1936,19 @@ final class _ParsedLineDocumentSource extends _TextDocumentSource {
 
   @override
   List<String>? parsedLineAt(int index) => _parsedLines[index];
+
+  @override
+  int textLengthInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    var total = 0;
+    for (var column = startColumn; column < endColumn; column++) {
+      total += _parsedLines[index][column].length;
+    }
+    return total;
+  }
 
   @override
   void writeTextBetweenLinesToBuffer(
@@ -2114,6 +2162,39 @@ final class _PieceTableTextDocumentSource extends _TextDocumentSource {
       remainingStart = 0;
     }
     return buffer.toString();
+  }
+
+  @override
+  int textLengthInLineRange(
+    int index, {
+    required int startColumn,
+    required int endColumn,
+  }) {
+    if (startColumn >= endColumn) {
+      return 0;
+    }
+    var total = 0;
+    var remainingStart = startColumn;
+    var remainingCount = endColumn - startColumn;
+    for (final piece in _linePieces[index]) {
+      if (remainingCount <= 0) {
+        break;
+      }
+      if (remainingStart >= piece.lineLength) {
+        remainingStart -= piece.lineLength;
+        continue;
+      }
+      final localStart = remainingStart;
+      final localEnd = (localStart + remainingCount).clamp(0, piece.lineLength);
+      total += piece.source.textLengthInLineRange(
+        piece.sourceLine,
+        startColumn: piece.startColumn + localStart,
+        endColumn: piece.startColumn + localEnd,
+      );
+      remainingCount -= localEnd - localStart;
+      remainingStart = 0;
+    }
+    return total;
   }
 
   @override
@@ -2364,7 +2445,8 @@ final class _InlineTextDocumentLeafBacking extends _TextDocumentLeafBacking {
   }
 }
 
-final class _SourceSliceTextDocumentLeafBacking extends _TextDocumentLeafBacking {
+final class _SourceSliceTextDocumentLeafBacking
+    extends _TextDocumentLeafBacking {
   _SourceSliceTextDocumentLeafBacking({
     required _TextDocumentSourceSlice sourceSlice,
   }) : _sourceSlice = sourceSlice,
@@ -2595,11 +2677,11 @@ final class _TextDocumentStorage {
 
   bool get debugHasTextCache => _cachedText != null;
 
-  List<String> get lineTexts =>
-      _cachedLineTexts ??= _leafBacking?.inlineLineTexts ?? _materializeLineTexts();
+  List<String> get lineTexts => _cachedLineTexts ??=
+      _leafBacking?.inlineLineTexts ?? _materializeLineTexts();
 
-  List<int> get lineLengths =>
-      _cachedLineLengths ??= _leafBacking?.lineLengths ?? _materializeLineLengths();
+  List<int> get lineLengths => _cachedLineLengths ??=
+      _leafBacking?.lineLengths ?? _materializeLineLengths();
 
   List<int> get lineStartOffsets =>
       _cachedLineStartOffsets ??= _computeLineStartOffsets(lineLengths);
@@ -2732,8 +2814,8 @@ final class _TextDocumentStorage {
         clamped - compositeBacking.segmentStartOffsets[segmentIndex];
     final localPosition = segment.positionForOffset(localOffset);
     return TextPosition(
-      line: compositeBacking.segmentLineStarts[segmentIndex] +
-          localPosition.line,
+      line:
+          compositeBacking.segmentLineStarts[segmentIndex] + localPosition.line,
       column: localPosition.column,
     );
   }
@@ -3030,8 +3112,7 @@ final class _TextDocumentStorage {
     if (cached != null) {
       if (TextDocument._isWhitespace(cached[normalizedColumn])) {
         var start = normalizedColumn;
-        while (start > 0 &&
-            TextDocument._isWhitespace(cached[start - 1])) {
+        while (start > 0 && TextDocument._isWhitespace(cached[start - 1])) {
           start--;
         }
         var end = normalizedColumn;
@@ -3043,8 +3124,7 @@ final class _TextDocumentStorage {
       }
 
       var start = normalizedColumn;
-      while (start > 0 &&
-          !TextDocument._isWhitespace(cached[start - 1])) {
+      while (start > 0 && !TextDocument._isWhitespace(cached[start - 1])) {
         start--;
       }
       var end = normalizedColumn;
@@ -3094,28 +3174,24 @@ final class _TextDocumentStorage {
     final graphemeAtCursor = prefix.last;
     if (TextDocument._isWhitespace(graphemeAtCursor)) {
       var start = normalizedColumn;
-      while (start > 0 &&
-          TextDocument._isWhitespace(prefix[start - 1])) {
+      while (start > 0 && TextDocument._isWhitespace(prefix[start - 1])) {
         start--;
       }
       var end = normalizedColumn;
       final suffix = lineText.characters.skip(normalizedColumn).iterator;
-      while (suffix.moveNext() &&
-          TextDocument._isWhitespace(suffix.current)) {
+      while (suffix.moveNext() && TextDocument._isWhitespace(suffix.current)) {
         end++;
       }
       return (start: start, end: end);
     }
 
     var start = normalizedColumn;
-    while (start > 0 &&
-        !TextDocument._isWhitespace(prefix[start - 1])) {
+    while (start > 0 && !TextDocument._isWhitespace(prefix[start - 1])) {
       start--;
     }
     var end = normalizedColumn;
     final suffix = lineText.characters.skip(normalizedColumn).iterator;
-    while (suffix.moveNext() &&
-        !TextDocument._isWhitespace(suffix.current)) {
+    while (suffix.moveNext() && !TextDocument._isWhitespace(suffix.current)) {
       end++;
     }
     return (start: start, end: end);
@@ -3208,9 +3284,9 @@ final class _TextDocumentStorage {
   }
 
   List<String> flattenWithNewlines() {
-    final flattened =
-        _cachedFlattenedGraphemes ??=
-            List<String>.unmodifiable(text.characters.toList(growable: false));
+    final flattened = _cachedFlattenedGraphemes ??= List<String>.unmodifiable(
+      text.characters.toList(growable: false),
+    );
     return List<String>.from(flattened, growable: true);
   }
 
@@ -3399,7 +3475,9 @@ final class _TextDocumentStorage {
     Map<int, List<String>>? lineGraphemeCaches,
   }) {
     return _TextDocumentStorage._leaf(
-      leafBacking: _SourceSliceTextDocumentLeafBacking(sourceSlice: sourceSlice),
+      leafBacking: _SourceSliceTextDocumentLeafBacking(
+        sourceSlice: sourceSlice,
+      ),
       length: sourceSlice.length,
       revision: revision,
       storageIdentity: storageIdentity ?? Object(),
@@ -3757,7 +3835,8 @@ final class _TextDocumentStorage {
       return;
     }
 
-    final childLineStarts = segment.storage._compositeBacking!.segmentLineStarts;
+    final childLineStarts =
+        segment.storage._compositeBacking!.segmentLineStarts;
     for (var index = 0; index < childSegments.length; index++) {
       final child = childSegments[index];
       final childGlobalStart = childLineStarts[index];
@@ -3913,7 +3992,9 @@ final class _TextDocumentStorage {
     final segments = _compositeBacking?.segments;
     if (segments == null || segments.isEmpty) {
       final source = _leafBacking?.source;
-      return source is _PieceTableTextDocumentSource ? source.debugPieceCount : 0;
+      return source is _PieceTableTextDocumentSource
+          ? source.debugPieceCount
+          : 0;
     }
     var total = 0;
     for (final segment in segments) {
