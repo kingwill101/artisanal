@@ -8,9 +8,45 @@ import 'text_change.dart';
 
 final class TextDocument {
   static const int _sourceBackedReplacementTextThreshold = 8192;
+  static const _TextDocumentStorageBuilder _storageBuilder =
+      _ChunkedTextDocumentStorageBuilder();
 
   TextDocument({String text = ''}) {
-    _storage = _TextDocumentStorage.fromText(text, revision: 0);
+    _storage = _storageBuilder.fromText(text, revision: 0);
+  }
+
+  TextDocument.fromLineTexts(List<String> lineTexts, {List<int>? lineLengths}) {
+    final normalizedLineTexts = lineTexts.isEmpty
+        ? const <String>['']
+        : List<String>.from(lineTexts, growable: false);
+    _storage = _optimizedStorageFromLineTexts(
+      normalizedLineTexts,
+      lineLengths: lineLengths,
+      revision: 0,
+    );
+  }
+
+  TextDocument.fromParsedLines(
+    List<List<String>> lines, {
+    bool seedLineGraphemeCaches = true,
+  }) {
+    final parsedLines = lines.isEmpty
+        ? <List<String>>[<String>[]]
+        : lines.map((line) => List<String>.from(line)).toList(growable: false);
+    _storage = _storageBuilder.fromParsedLines(
+      parsedLines,
+      revision: 0,
+      seedLineGraphemeCaches: seedLineGraphemeCaches,
+    );
+  }
+
+  TextDocument.fromFlatGraphemes(Iterable<String> graphemes) {
+    final parsed = _parseFlatLineTextsWithLengths(graphemes);
+    _storage = _optimizedStorageFromLineTexts(
+      parsed.lineTexts,
+      lineLengths: parsed.lineLengths,
+      revision: 0,
+    );
   }
 
   TextDocument._raw();
@@ -303,10 +339,7 @@ final class TextDocument {
     if (text == this.text) {
       return;
     }
-    _storage = _TextDocumentStorage.fromText(
-      text,
-      revision: _storage.revision + 1,
-    );
+    _storage = _storageBuilder.fromText(text, revision: _storage.revision + 1);
   }
 
   TextDocumentChange replaceTextRange({
@@ -345,6 +378,7 @@ final class TextDocument {
         : '$prefixText$replacement$suffixText';
     final replacementStorage = _replacementStorageFromText(
       mergedReplacementText,
+      revision: 0,
     );
     final nextSegments = <_TextDocumentStorageSegment>[
       if (startPosition.line > 0) _storage.slice(0, startPosition.line),
@@ -352,7 +386,7 @@ final class TextDocument {
       if (oldEndPosition.line + 1 < _storage.lineCount)
         _storage.slice(oldEndPosition.line + 1, _storage.lineCount),
     ];
-    _storage = _TextDocumentStorage.fromSegments(
+    _storage = _storageBuilder.fromSegments(
       nextSegments,
       revision: _storage.revision + 1,
     );
@@ -416,7 +450,7 @@ final class TextDocument {
     mergedLines.first.insertAll(0, prefixGraphemes);
     mergedLines.last.addAll(suffixGraphemes);
 
-    final replacementStorage = _TextDocumentStorage.fromParsedLines(
+    final replacementStorage = _storageBuilder.fromParsedLines(
       mergedLines,
       revision: 0,
       seedLineGraphemeCaches: false,
@@ -427,7 +461,7 @@ final class TextDocument {
       if (oldEndPosition.line + 1 < _storage.lineCount)
         _storage.slice(oldEndPosition.line + 1, _storage.lineCount),
     ];
-    _storage = _TextDocumentStorage.fromSegments(
+    _storage = _storageBuilder.fromSegments(
       nextSegments,
       revision: _storage.revision + 1,
     );
@@ -450,7 +484,7 @@ final class TextDocument {
     if (_matchesParsedLines(parsedLines)) {
       return;
     }
-    _storage = _TextDocumentStorage.fromParsedLines(
+    _storage = _storageBuilder.fromParsedLines(
       parsedLines,
       revision: _storage.revision + 1,
     );
@@ -467,7 +501,7 @@ final class TextDocument {
     )) {
       return;
     }
-    _storage = _TextDocumentStorage.fromLineTexts(
+    _storage = _optimizedStorageFromLineTexts(
       normalizedLineTexts,
       revision: _storage.revision + 1,
     );
@@ -506,13 +540,16 @@ final class TextDocument {
             (normalizedEnd - normalizedStart) +
             normalizedReplacement.length ==
         0) {
-      _storage = _TextDocumentStorage.fromLineTexts(const <String>[
+      _storage = _optimizedStorageFromLineTexts(const <String>[
         '',
       ], revision: _storage.revision + 1);
     } else {
       final replacementStorage = normalizedReplacement.isEmpty
           ? null
-          : _replacementStorageFromLineTexts(normalizedReplacement);
+          : _replacementStorageFromLineTexts(
+              normalizedReplacement,
+              revision: 0,
+            );
       final nextSegments = <_TextDocumentStorageSegment>[
         if (normalizedStart > 0) _storage.slice(0, normalizedStart),
         if (replacementStorage != null)
@@ -520,7 +557,7 @@ final class TextDocument {
         if (normalizedEnd < _storage.lineCount)
           _storage.slice(normalizedEnd, _storage.lineCount),
       ];
-      _storage = _TextDocumentStorage.fromSegments(
+      _storage = _storageBuilder.fromSegments(
         nextSegments,
         revision: _storage.revision + 1,
       );
@@ -649,39 +686,32 @@ final class TextDocument {
   static _TextDocumentStorage _replacementStorageFromLineTexts(
     List<String> lineTexts, {
     List<int>? lineLengths,
+    required int revision,
   }) {
-    final replacementStats =
-        lineLengths == null ? _computeLineTextStats(lineTexts) : null;
-    final normalizedLineLengths = lineLengths ?? replacementStats!.lineLengths;
-    final totalTextLength = replacementStats?.totalTextLength ??
-        lineTexts.fold<int>(
-          lineTexts.length > 1 ? lineTexts.length - 1 : 0,
-          (total, line) => total + line.length,
-        );
-    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount ||
-        totalTextLength >= _sourceBackedReplacementTextThreshold) {
-      return _TextDocumentStorage._buildStorageFromLineTextsSource(
-        lineTexts,
-        lineLengths: normalizedLineLengths,
-        revision: 0,
-      );
-    }
-    return _TextDocumentStorage.fromLineTexts(
+    return _optimizedStorageFromLineTexts(
       lineTexts,
-      lineLengths: normalizedLineLengths,
-      revision: 0,
+      lineLengths: lineLengths,
+      revision: revision,
     );
   }
 
-  static _TextDocumentStorage _replacementStorageFromText(String text) {
-    if (text.length >= _sourceBackedReplacementTextThreshold) {
-      return _TextDocumentStorage.fromText(text, revision: 0);
-    }
-    final lineTexts = _parseLineTexts(text);
-    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount) {
-      return _TextDocumentStorage.fromText(text, revision: 0);
-    }
-    return _TextDocumentStorage.fromLineTexts(lineTexts, revision: 0);
+  static _TextDocumentStorage _replacementStorageFromText(
+    String text, {
+    required int revision,
+  }) {
+    return _storageBuilder.optimizedFromText(text, revision: revision);
+  }
+
+  static _TextDocumentStorage _optimizedStorageFromLineTexts(
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+    required int revision,
+  }) {
+    return _storageBuilder.optimizedFromLineTexts(
+      lineTexts,
+      lineLengths: lineLengths,
+      revision: revision,
+    );
   }
 
   static ({List<int> lineLengths, int totalTextLength}) _computeLineTextStats(
@@ -697,6 +727,172 @@ final class TextDocument {
     return (
       lineLengths: List<int>.unmodifiable(lineLengths),
       totalTextLength: totalTextLength,
+    );
+  }
+}
+
+abstract interface class _TextDocumentStorageBuilder {
+  const _TextDocumentStorageBuilder();
+
+  _TextDocumentStorage fromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  });
+
+  _TextDocumentStorage fromLineTexts(
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+    required int revision,
+    Object? storageIdentity,
+  });
+
+  _TextDocumentStorage fromParsedLines(
+    List<List<String>> lines, {
+    required int revision,
+    Object? storageIdentity,
+    bool seedLineGraphemeCaches = true,
+  });
+
+  _TextDocumentStorage fromSegments(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  });
+
+  _TextDocumentStorage optimizedFromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  });
+
+  _TextDocumentStorage optimizedFromLineTexts(
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+    required int revision,
+    Object? storageIdentity,
+  });
+}
+
+final class _ChunkedTextDocumentStorageBuilder
+    implements _TextDocumentStorageBuilder {
+  const _ChunkedTextDocumentStorageBuilder();
+
+  @override
+  _TextDocumentStorage fromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    return _TextDocumentStorage.fromText(
+      text,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  @override
+  _TextDocumentStorage fromLineTexts(
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    return _TextDocumentStorage.fromLineTexts(
+      lineTexts,
+      lineLengths: lineLengths,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  @override
+  _TextDocumentStorage fromParsedLines(
+    List<List<String>> lines, {
+    required int revision,
+    Object? storageIdentity,
+    bool seedLineGraphemeCaches = true,
+  }) {
+    return _TextDocumentStorage.fromParsedLines(
+      lines,
+      revision: revision,
+      storageIdentity: storageIdentity,
+      seedLineGraphemeCaches: seedLineGraphemeCaches,
+    );
+  }
+
+  @override
+  _TextDocumentStorage fromSegments(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    return _TextDocumentStorage.fromSegments(
+      segments,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  @override
+  _TextDocumentStorage optimizedFromText(
+    String text, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    if (text.length >= TextDocument._sourceBackedReplacementTextThreshold) {
+      return fromText(
+        text,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    final lineTexts = TextDocument._parseLineTexts(text);
+    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount) {
+      return fromText(
+        text,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return fromLineTexts(
+      lineTexts,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  @override
+  _TextDocumentStorage optimizedFromLineTexts(
+    List<String> lineTexts, {
+    List<int>? lineLengths,
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final replacementStats = lineLengths == null
+        ? TextDocument._computeLineTextStats(lineTexts)
+        : null;
+    final normalizedLineLengths = lineLengths ?? replacementStats!.lineLengths;
+    final totalTextLength =
+        replacementStats?.totalTextLength ??
+        lineTexts.fold<int>(
+          lineTexts.length > 1 ? lineTexts.length - 1 : 0,
+          (total, line) => total + line.length,
+        );
+    if (lineTexts.length > _TextDocumentStorage._maxLeafLineCount ||
+        totalTextLength >= TextDocument._sourceBackedReplacementTextThreshold) {
+      return _TextDocumentStorage._buildStorageFromLineTextsSource(
+        lineTexts,
+        lineLengths: normalizedLineLengths,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return fromLineTexts(
+      lineTexts,
+      lineLengths: normalizedLineLengths,
+      revision: revision,
+      storageIdentity: storageIdentity,
     );
   }
 }
@@ -769,14 +965,13 @@ final class _TextDocumentSource {
     List<String> lineTexts, {
     List<int>? lineLengths,
   }) {
-    final normalizedLineLengths =
-        lineLengths == null
-            ? List<int>.unmodifiable(
-                lineTexts
-                    .map((line) => line.characters.length)
-                    .toList(growable: false),
-              )
-            : List<int>.unmodifiable(lineLengths);
+    final normalizedLineLengths = lineLengths == null
+        ? List<int>.unmodifiable(
+            lineTexts
+                .map((line) => line.characters.length)
+                .toList(growable: false),
+          )
+        : List<int>.unmodifiable(lineLengths);
     final lineStarts = <int>[];
     final lineEnds = <int>[];
     var offset = 0;
@@ -922,9 +1117,11 @@ final class _TextDocumentSource {
       return lineTexts[index];
     }
     if (_parsedLines case final parsedLines?) {
-      final cache =
-          _materializedParsedLineTexts ??=
-              List<String?>.filled(parsedLines.length, null, growable: false);
+      final cache = _materializedParsedLineTexts ??= List<String?>.filled(
+        parsedLines.length,
+        null,
+        growable: false,
+      );
       return cache[index] ??= parsedLines[index].join();
     }
     return _rawText!.substring(lineStarts[index], lineEnds[index]);
@@ -1131,8 +1328,10 @@ final class _TextDocumentStorage {
   int get debugSourceBackedLeafCount =>
       _debugSourceBackedLeafCount(<_TextDocumentStorage>{});
 
-  int get debugDistinctSourceCount =>
-      _debugDistinctSourceCount(<_TextDocumentStorage>{}, <_TextDocumentSource>{});
+  int get debugDistinctSourceCount => _debugDistinctSourceCount(
+    <_TextDocumentStorage>{},
+    <_TextDocumentSource>{},
+  );
 
   int get debugJoinedSourceTextCount => _debugJoinedSourceTextCount(
     <_TextDocumentStorage>{},
@@ -1534,9 +1733,7 @@ final class _TextDocumentStorage {
     final source = _source;
     final parsedLines = source?._parsedLines;
     final sourceLineStartIndex = _sourceLineStartIndex;
-    if (source == null ||
-        parsedLines == null ||
-        sourceLineStartIndex == null) {
+    if (source == null || parsedLines == null || sourceLineStartIndex == null) {
       return null;
     }
     return parsedLines[sourceLineStartIndex + index];
@@ -1752,12 +1949,11 @@ final class _TextDocumentStorage {
     final normalizedLineTexts = List<String>.unmodifiable(
       List<String>.from(lineTexts, growable: false),
     );
-    final normalizedLineLengths =
-        lineLengths == null
-            ? normalizedLineTexts
-                .map((line) => line.characters.length)
-                .toList(growable: false)
-            : List<int>.unmodifiable(lineLengths);
+    final normalizedLineLengths = lineLengths == null
+        ? normalizedLineTexts
+              .map((line) => line.characters.length)
+              .toList(growable: false)
+        : List<int>.unmodifiable(lineLengths);
     return _TextDocumentStorage._leaf(
       lineTexts: normalizedLineTexts,
       lineLengths: normalizedLineLengths,
@@ -1952,7 +2148,11 @@ final class _TextDocumentStorage {
       );
     }
     final segments = <_TextDocumentStorageSegment>[];
-    for (var start = 0; start < normalizedLines.length; start += _maxLeafLineCount) {
+    for (
+      var start = 0;
+      start < normalizedLines.length;
+      start += _maxLeafLineCount
+    ) {
       final end = (start + _maxLeafLineCount).clamp(0, normalizedLines.length);
       final storage = _leafFromTextSource(
         source: source,

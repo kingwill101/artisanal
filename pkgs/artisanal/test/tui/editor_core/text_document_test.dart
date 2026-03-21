@@ -23,31 +23,65 @@ void main() {
       );
     });
 
-    test(
-      'raw-text documents index grapheme-heavy lines in one pass',
-      () {
-        const family = '👩‍👩‍👧‍👦';
-        const rocket = '🚀';
-        final document = TextDocument(text: '$family\n$rocket\n');
+    test('native constructors build documents from line and grapheme data', () {
+      final fromLineTexts = TextDocument.fromLineTexts(const [
+        'alpha',
+        '',
+        'beta',
+      ]);
+      final fromParsedLines = TextDocument.fromParsedLines(const [
+        ['a', 'l', 'p', 'h', 'a'],
+        <String>[],
+        ['b', 'e', 't', 'a'],
+      ]);
+      final fromFlatGraphemes = TextDocument.fromFlatGraphemes(const [
+        'a',
+        'l',
+        'p',
+        'h',
+        'a',
+        '\n',
+        '\n',
+        'b',
+        'e',
+        't',
+        'a',
+      ]);
 
-        expect(document.lineCount, 3);
-        expect(document.lineLength(0), 1);
-        expect(document.lineLength(1), 1);
-        expect(document.lineLength(2), 0);
-        expect(document.lineAt(0), family);
-        expect(document.lineAt(1), rocket);
-        expect(document.lineAt(2), '');
-        expect(document.lineStartOffset(1), family.characters.length + 1);
-        expect(
-          document.lineStartOffset(2),
-          family.characters.length + rocket.characters.length + 2,
-        );
-        expect(
-          document.length,
-          family.characters.length + rocket.characters.length + 2,
-        );
-      },
-    );
+      expect(fromLineTexts.text, 'alpha\n\nbeta');
+      expect(fromParsedLines.text, 'alpha\n\nbeta');
+      expect(fromFlatGraphemes.text, 'alpha\n\nbeta');
+      expect(fromLineTexts.lineTexts, const ['alpha', '', 'beta']);
+      expect(fromParsedLines.lines, const [
+        ['a', 'l', 'p', 'h', 'a'],
+        <String>[],
+        ['b', 'e', 't', 'a'],
+      ]);
+      expect(fromFlatGraphemes.lineCount, 3);
+    });
+
+    test('raw-text documents index grapheme-heavy lines in one pass', () {
+      const family = '👩‍👩‍👧‍👦';
+      const rocket = '🚀';
+      final document = TextDocument(text: '$family\n$rocket\n');
+
+      expect(document.lineCount, 3);
+      expect(document.lineLength(0), 1);
+      expect(document.lineLength(1), 1);
+      expect(document.lineLength(2), 0);
+      expect(document.lineAt(0), family);
+      expect(document.lineAt(1), rocket);
+      expect(document.lineAt(2), '');
+      expect(document.lineStartOffset(1), family.characters.length + 1);
+      expect(
+        document.lineStartOffset(2),
+        family.characters.length + rocket.characters.length + 2,
+      );
+      expect(
+        document.length,
+        family.characters.length + rocket.characters.length + 2,
+      );
+    });
 
     test(
       'replaceTextRange mutates a single-line span with change metadata',
@@ -245,7 +279,8 @@ void main() {
       () {
         final parsedLines = List<List<String>>.generate(
           600,
-          (index) => 'line-$index-abcdefghij'.characters.toList(growable: false),
+          (index) =>
+              'line-$index-abcdefghij'.characters.toList(growable: false),
           growable: false,
         );
         final document = TextDocument(text: 'seed');
@@ -320,7 +355,7 @@ void main() {
           (index) => 'line-$index',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugSourceBackedLeafCount, greaterThan(0));
@@ -368,7 +403,7 @@ void main() {
           (index) => 'line-$index',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
 
         expect(document.debugStorageDepth, greaterThan(1));
         expect(document.debugHasMaterializedLineTextCache, isFalse);
@@ -432,7 +467,7 @@ void main() {
           (index) => 'line-$index-abcdefghij',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
         final start = document.lineStartOffset(120) + 2;
         final expected = lineTexts.sublist(120, 181).join('\n').substring(2);
 
@@ -476,7 +511,7 @@ void main() {
           (index) => 'line-$index-abcdefghij',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
         final start = document.lineStartOffset(120) + 2;
         final end = document.lineEndOffset(180);
 
@@ -504,7 +539,7 @@ void main() {
           (index) => 'line-$index-abcdefghij',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
         final start = document.lineStartOffset(120) + 2;
         final end = document.lineEndOffset(180);
 
@@ -826,7 +861,7 @@ void main() {
         (index) => 'line-$index',
         growable: false,
       );
-      final document = TextDocument(text: lineTexts.join('\n'));
+      final document = TextDocument.fromLineTexts(lineTexts);
 
       expect(document.debugStorageDepth, greaterThan(1));
       expect(document.debugStorageSegmentCount, greaterThan(1));
@@ -848,7 +883,7 @@ void main() {
         (index) => 'line-$index',
         growable: false,
       );
-      final document = TextDocument(text: lineTexts.join('\n'));
+      final document = TextDocument.fromLineTexts(lineTexts);
 
       for (var index = 0; index < 96; index++) {
         final line = (index * 7) % document.lineCount;
@@ -873,7 +908,7 @@ void main() {
           (index) => 'line-$index',
           growable: false,
         );
-        final document = TextDocument(text: lineTexts.join('\n'));
+        final document = TextDocument.fromLineTexts(lineTexts);
 
         document.replaceLineTextRange(
           startLine: 0,

@@ -1716,8 +1716,7 @@ class TextInputModel extends ViewComponent {
     error = err;
     final empty = wasEmpty ?? _value.isEmpty;
 
-    final limitedGraphemes =
-        charLimit > 0 && graphemes.length > charLimit
+    final limitedGraphemes = charLimit > 0 && graphemes.length > charLimit
         ? graphemes.sublist(0, charLimit)
         : graphemes;
     _replaceValueAndDocument(limitedGraphemes);
@@ -1944,12 +1943,7 @@ class TextInputModel extends ViewComponent {
 
   void _replaceValueAndDocument(List<String> graphemes) {
     final normalized = List<String>.of(graphemes, growable: false);
-    final nextDocument = TextDocument();
-    nextDocument.replaceOffsetRange(
-      startOffset: 0,
-      endOffset: 0,
-      replacement: normalized,
-    );
+    final nextDocument = TextDocument.fromFlatGraphemes(normalized);
     _value = normalized;
     _document = nextDocument;
     _invalidateWrappedLines();
