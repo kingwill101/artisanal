@@ -34,6 +34,7 @@ import 'package:artisanal/bubbles.dart'
         TextAreaModel,
         TextAreaStyleState,
         TextAreaStyles,
+        TextDocumentChange,
         TextInputCursorStyle,
         TextInputKeyMap,
         TextInputModel,
@@ -567,6 +568,11 @@ class TextAreaController extends ChangeNotifier
 
   List<TextLineDecoration> lineDecorationsForLayer(String layerKey) {
     return _model.lineDecorationsForLayer(layerKey);
+  }
+
+  /// Returns and clears the most recent document-aware text change, if any.
+  TextDocumentChange? consumeLastDocumentChange() {
+    return _model.consumeLastDocumentChange();
   }
 
   /// Whether there is an edit available to undo.

@@ -4,6 +4,7 @@ import 'package:characters/characters.dart';
 
 import 'editor_state.dart';
 import 'state_bridge.dart';
+import 'text_change.dart';
 import 'text_document.dart';
 import 'text_edit_ops.dart' as edit_ops;
 import 'text_navigation.dart' as nav;
@@ -15,6 +16,7 @@ final class TextCommandResult {
     required this.cursorOffset,
     this.selectionBaseOffset,
     this.selectionExtentOffset,
+    this.documentChange,
     this.changed = true,
   });
 
@@ -22,6 +24,7 @@ final class TextCommandResult {
   final int cursorOffset;
   final int? selectionBaseOffset;
   final int? selectionExtentOffset;
+  final TextDocumentChange? documentChange;
   final bool changed;
 }
 

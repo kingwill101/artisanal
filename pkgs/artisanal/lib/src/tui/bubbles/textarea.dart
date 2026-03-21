@@ -769,6 +769,7 @@ class TextAreaModel extends ViewComponent {
   List<TextDiagnosticRange> _diagnostics = const [];
   List<TextDecorationRange> _decorations = const [];
   List<TextLineDecoration> _lineDecorations = const [];
+  TextDocumentChange? _lastDocumentChange;
   int _nextDecorationLayerOrder = 0;
   int _nextLineDecorationLayerOrder = 0;
 
@@ -798,6 +799,12 @@ class TextAreaModel extends ViewComponent {
   List<TextDecorationRange> get decorations => List.unmodifiable(_decorations);
   List<TextLineDecoration> get lineDecorations =>
       List.unmodifiable(_lineDecorations);
+  TextDocumentChange? consumeLastDocumentChange() {
+    final change = _lastDocumentChange;
+    _lastDocumentChange = null;
+    return change;
+  }
+
   List<TextDecorationRange> decorationsForLayer(String layerKey) {
     return List.unmodifiable(
       _decorationLayers[layerKey]?.decorations ?? const <TextDecorationRange>[],
@@ -852,6 +859,7 @@ class TextAreaModel extends ViewComponent {
           column: _lines.isNotEmpty ? _lines.last.length : 0,
         ),
       );
+      _lastDocumentChange = null;
     });
   }
 
@@ -870,6 +878,7 @@ class TextAreaModel extends ViewComponent {
   /// Sets the cursor position.
   void setCursor(int row, int col) {
     _moveLineCursor(TextPosition(line: row, column: col));
+    _lastDocumentChange = null;
     _syncCoreState();
   }
 
@@ -886,12 +895,14 @@ class TextAreaModel extends ViewComponent {
       cursor: TextPosition(line: extentLine, column: extentColumn),
       preserveCollapsedSelection: true,
     );
+    _lastDocumentChange = null;
     _syncCoreState();
   }
 
   /// Clears the current selection.
   void clearSelection() {
     _clearLineSelection();
+    _lastDocumentChange = null;
     _syncCoreState();
   }
 
@@ -902,6 +913,7 @@ class TextAreaModel extends ViewComponent {
       base: const TextPosition(line: 0, column: 0),
       extent: TextPosition(line: lastLine, column: _lines[lastLine].length),
     );
+    _lastDocumentChange = null;
     _syncCoreState();
   }
 
@@ -912,6 +924,7 @@ class TextAreaModel extends ViewComponent {
       base: TextPosition(line: startLine, column: 0),
       extent: TextPosition(line: endLine, column: _lines[endLine].length),
     );
+    _lastDocumentChange = null;
     _syncCoreState();
   }
 
@@ -1494,6 +1507,7 @@ class TextAreaModel extends ViewComponent {
 
   void _applyLineCommandResult(commands.TextLineCommandResult result) {
     _lines = _parseLines(result.lines.join('\n'));
+    _lastDocumentChange = null;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
         cursor: result.cursor,
@@ -1507,6 +1521,7 @@ class TextAreaModel extends ViewComponent {
     commands.TextCursorCommandResult result,
   ) {
     _refreshDocumentSnapshot();
+    _lastDocumentChange = null;
     _applyLineStateSnapshot(
       lineSnapshotFromOffsets(
         _document,
@@ -1520,6 +1535,7 @@ class TextAreaModel extends ViewComponent {
   void _applyOffsetCommandResult(commands.TextCommandResult result) {
     _setValueAndCursor(result.graphemes.join(), result.cursorOffset);
     _refreshDocumentSnapshot();
+    _lastDocumentChange = result.documentChange;
     _applyLineStateSnapshot(
       lineSnapshotFromOffsets(
         _document,
@@ -1532,6 +1548,7 @@ class TextAreaModel extends ViewComponent {
 
   void _restoreEditState(_TextAreaEditState state) {
     _lines = _parseLines(state.value);
+    _lastDocumentChange = null;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(
         cursor: TextPosition(line: state.row, column: state.col),
@@ -1892,6 +1909,7 @@ class TextAreaModel extends ViewComponent {
       _recordUndoSnapshot();
       _lines = [[]];
       _collapseLineState(const TextPosition(line: 0, column: 0));
+      _lastDocumentChange = null;
     });
   }
 

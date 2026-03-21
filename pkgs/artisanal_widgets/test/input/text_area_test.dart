@@ -76,6 +76,23 @@ void main() {
       expect(ctrl.column, 6);
     });
 
+    test('consumeLastDocumentChange exposes one-shot edit metadata', () {
+      final ctrl = TextAreaController(text: 'hello');
+
+      ctrl.setCursor(0, 5);
+      ctrl.insertText('!');
+
+      final change = ctrl.consumeLastDocumentChange();
+      expect(change, isNotNull);
+      expect(change!.startOffset, 5);
+      expect(change.oldEndOffset, 5);
+      expect(change.newEndOffset, 6);
+      expect(ctrl.consumeLastDocumentChange(), isNull);
+
+      ctrl.setCursor(0, 2);
+      expect(ctrl.consumeLastDocumentChange(), isNull);
+    });
+
     test('undo and redo track programmatic text changes', () {
       final ctrl = TextAreaController();
 

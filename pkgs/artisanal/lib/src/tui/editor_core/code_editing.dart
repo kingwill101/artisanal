@@ -153,6 +153,7 @@ TextCommandResult codeHandlePairBackspace({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -192,6 +193,7 @@ TextCommandResult codeHandleAutoPair({
       graphemes: working.flattenWithNewlines(),
       cursorOffset: state.cursorOffset.clamp(0, document.length) + 1,
       changed: result.changed,
+      documentChange: result.change,
     );
   }
 
@@ -281,6 +283,7 @@ TextCommandResult codeInsertIndentedNewline({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 

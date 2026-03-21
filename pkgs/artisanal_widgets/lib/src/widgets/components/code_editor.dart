@@ -217,6 +217,7 @@ class _CodeEditorState extends State<CodeEditor> {
     return _syntaxSession.sync(
       text,
       language: widget.language,
+      change: _controller.consumeLastDocumentChange(),
     ).decorations;
   }
 

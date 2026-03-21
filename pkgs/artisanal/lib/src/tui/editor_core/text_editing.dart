@@ -334,6 +334,7 @@ TextCommandResult textTransformSelectionOrLine({
       selectionBaseOffset: start,
       selectionExtentOffset: nextExtent,
       changed: result.changed,
+      documentChange: result.change,
     );
   }
 
@@ -342,6 +343,7 @@ TextCommandResult textTransformSelectionOrLine({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: start + relativeCursor,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -399,6 +401,7 @@ TextCommandResult textWrapSelection({
     selectionBaseOffset: nextSelectionStart,
     selectionExtentOffset: nextSelectionEnd,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -464,6 +467,7 @@ TextCommandResult textUnwrapSelection({
     selectionBaseOffset: nextSelectionStart,
     selectionExtentOffset: nextSelectionEnd,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -511,6 +515,7 @@ TextCommandResult textTransformWordOrAdjacent({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: range.start + replacement.length,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -554,6 +559,7 @@ TextCommandResult textInsertGraphemes({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -599,6 +605,7 @@ TextCommandResult textDeleteSelection({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -625,6 +632,7 @@ TextCommandResult textDeletePrevious({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -651,6 +659,7 @@ TextCommandResult textDeleteNext({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -695,6 +704,7 @@ TextCommandResult textDeleteWordBackward({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -740,6 +750,7 @@ TextCommandResult textDeleteWordForward({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -773,6 +784,7 @@ TextCommandResult textDeleteToLineStart({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -806,6 +818,7 @@ TextCommandResult textDeleteToLineEnd({
     graphemes: working.flattenWithNewlines(),
     cursorOffset: result.cursorOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
@@ -940,6 +953,7 @@ TextCommandResult textTransposeBackward({
     selectionBaseOffset: state.selectionBaseOffset,
     selectionExtentOffset: state.selectionExtentOffset,
     changed: result.changed,
+    documentChange: result.change,
   );
 }
 
