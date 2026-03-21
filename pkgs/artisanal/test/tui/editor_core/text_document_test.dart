@@ -141,5 +141,33 @@ void main() {
       expect(document.revision, 1);
       expect(copy.revision, 0);
     });
+
+    test('replaceLineTextRange rewrites only the targeted line window', () {
+      final document = TextDocument(text: 'alpha\nbeta\ngamma\ndelta');
+
+      document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 3,
+        replacementLineTexts: const ['bravo', 'charlie'],
+      );
+
+      expect(document.lineTexts, const ['alpha', 'bravo', 'charlie', 'delta']);
+      expect(document.text, 'alpha\nbravo\ncharlie\ndelta');
+    });
+
+    test('replaceLineTextRange can delete lines down to one empty line', () {
+      final document = TextDocument(text: 'alpha');
+
+      document.replaceLineTextRange(
+        startLine: 0,
+        endLine: 1,
+        replacementLineTexts: const <String>[],
+      );
+
+      expect(document.lineTexts, const ['']);
+      expect(document.text, '');
+      expect(document.lineCount, 1);
+      expect(document.length, 0);
+    });
   });
 }

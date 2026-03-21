@@ -261,6 +261,36 @@ bool _listStringEquals(List<String> a, List<String> b) {
   return true;
 }
 
+({int previousStart, int previousEnd, int nextStart, int nextEnd})?
+_differingLineWindow(List<String> previousLines, List<String> nextLines) {
+  final sharedLength = math.min(previousLines.length, nextLines.length);
+  var start = 0;
+  while (start < sharedLength && previousLines[start] == nextLines[start]) {
+    start++;
+  }
+
+  if (start == previousLines.length && start == nextLines.length) {
+    return null;
+  }
+
+  var sharedSuffix = 0;
+  final previousRemaining = previousLines.length - start;
+  final nextRemaining = nextLines.length - start;
+  while (sharedSuffix < previousRemaining &&
+      sharedSuffix < nextRemaining &&
+      previousLines[previousLines.length - 1 - sharedSuffix] ==
+          nextLines[nextLines.length - 1 - sharedSuffix]) {
+    sharedSuffix++;
+  }
+
+  return (
+    previousStart: start,
+    previousEnd: previousLines.length - sharedSuffix,
+    nextStart: start,
+    nextEnd: nextLines.length - sharedSuffix,
+  );
+}
+
 TextCommandResult _documentCommandResult(
   TextDocument document, {
   required int cursorOffset,
@@ -298,7 +328,14 @@ TextCommandResult _documentResultFromLineCommand(
 ) {
   final nextDocument = result.changed ? document.copy() : document;
   if (result.changed) {
-    nextDocument.replaceLineTexts(result.lines);
+    final diff = _differingLineWindow(document.lineTexts, result.lines);
+    if (diff != null) {
+      nextDocument.replaceLineTextRange(
+        startLine: diff.previousStart,
+        endLine: diff.previousEnd,
+        replacementLineTexts: result.lines.sublist(diff.nextStart, diff.nextEnd),
+      );
+    }
   }
 
   return _documentCommandResult(

@@ -381,6 +381,66 @@ final class TextDocument {
     );
   }
 
+  void replaceLineTextRange({
+    required int startLine,
+    required int endLine,
+    required List<String> replacementLineTexts,
+  }) {
+    final normalizedStart = startLine.clamp(0, _storage.lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, _storage.lineCount);
+    final normalizedReplacement = replacementLineTexts.isEmpty
+        ? const <String>[]
+        : List<String>.from(replacementLineTexts, growable: false);
+
+    var nextLineTexts = <String>[
+      ..._storage.lineTexts.take(normalizedStart),
+      ...normalizedReplacement,
+      ..._storage.lineTexts.skip(normalizedEnd),
+    ];
+    if (nextLineTexts.isEmpty) {
+      nextLineTexts = <String>[''];
+    }
+
+    final replacementLineLengths = normalizedReplacement
+        .map((line) => line.characters.length)
+        .toList(growable: false);
+    var nextLineLengths = <int>[
+      ..._storage.lineLengths.take(normalizedStart),
+      ...replacementLineLengths,
+      ..._storage.lineLengths.skip(normalizedEnd),
+    ];
+    if (nextLineLengths.isEmpty) {
+      nextLineLengths = <int>[0];
+    }
+
+    var nextLineGraphemeCaches = <List<String>?>[
+      ..._storage.lineGraphemeCaches.take(normalizedStart),
+      ...List<List<String>?>.filled(
+        normalizedReplacement.length,
+        null,
+        growable: false,
+      ),
+      ..._storage.lineGraphemeCaches.skip(normalizedEnd),
+    ];
+    if (nextLineGraphemeCaches.isEmpty) {
+      nextLineGraphemeCaches = <List<String>?>[null];
+    }
+
+    _storage = _TextDocumentStorage(
+      lineTexts: nextLineTexts,
+      lineLengths: nextLineLengths,
+      lineStartOffsets: _TextDocumentStorage._computeLineStartOffsets(
+        nextLineLengths,
+      ),
+      length: _TextDocumentStorage._documentLengthForLineLengths(
+        nextLineLengths,
+      ),
+      revision: _storage.revision + 1,
+      storageIdentity: Object(),
+      lineGraphemeCaches: nextLineGraphemeCaches,
+    );
+  }
+
   static List<List<String>> parseLines(String text) => _parseLines(text);
 
   static List<List<String>> parseLineTexts(Iterable<String> lines) {
