@@ -228,5 +228,45 @@ void main() {
       expect(document.lineAt(3), 'three');
       expect(document.text, 'zero\nONE7\nTWO7\nthree');
     });
+
+    test('large documents are chunked into composite storage', () {
+      final lineTexts = List<String>.generate(
+        600,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument(text: lineTexts.join('\n'));
+
+      expect(document.debugStorageDepth, greaterThan(1));
+      expect(document.debugStorageSegmentCount, greaterThan(1));
+      expect(document.lineAt(0), 'line-0');
+      expect(document.lineAt(255), 'line-255');
+      expect(document.lineAt(256), 'line-256');
+      expect(document.lineAt(599), 'line-599');
+      expect(document.lineStartOffset(256), greaterThan(document.lineEndOffset(255)));
+    });
+
+    test('repeated line edits keep composite segment count bounded', () {
+      final lineTexts = List<String>.generate(
+        600,
+        (index) => 'line-$index',
+        growable: false,
+      );
+      final document = TextDocument(text: lineTexts.join('\n'));
+
+      for (var index = 0; index < 96; index++) {
+        final line = (index * 7) % document.lineCount;
+        document.replaceLineTextRange(
+          startLine: line,
+          endLine: line + 1,
+          replacementLineTexts: <String>['edit-$index'],
+        );
+      }
+
+      expect(document.debugStorageSegmentCount, lessThanOrEqualTo(32));
+      expect(document.debugStorageDepth, lessThanOrEqualTo(3));
+      expect(document.lineCount, 600);
+      expect(document.text, contains('edit-95'));
+    });
   });
 }

@@ -434,6 +434,9 @@ final class TextDocument {
 }
 
 final class _TextDocumentStorage {
+  static const int _maxLeafLineCount = 256;
+  static const int _maxCompositeSegmentCount = 32;
+
   _TextDocumentStorage._leaf({
     required List<String> lineTexts,
     required List<int> lineLengths,
@@ -467,15 +470,17 @@ final class _TextDocumentStorage {
     required int revision,
     Object? storageIdentity,
   }) {
-    final lineLengths = lineTexts
-        .map((line) => line.characters.length)
-        .toList(growable: false);
-    return _TextDocumentStorage._leaf(
-      lineTexts: lineTexts,
-      lineLengths: lineLengths,
-      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+    if (lineTexts.length > _maxLeafLineCount) {
+      return _buildChunkedLeafCompositeFromLineTexts(
+        lineTexts,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _leafFromLineTexts(
+      lineTexts,
       revision: revision,
-      storageIdentity: storageIdentity ?? Object(),
+      storageIdentity: storageIdentity,
     );
   }
 
@@ -484,17 +489,17 @@ final class _TextDocumentStorage {
     required int revision,
     Object? storageIdentity,
   }) {
-    final lineLengths = lines.map((line) => line.length).toList(growable: false);
-    return _TextDocumentStorage._leaf(
-      lineTexts: lines.map((line) => line.join()).toList(growable: false),
-      lineLengths: lineLengths,
-      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+    if (lines.length > _maxLeafLineCount) {
+      return _buildChunkedLeafCompositeFromParsedLines(
+        lines,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _leafFromParsedLines(
+      lines,
       revision: revision,
-      storageIdentity: storageIdentity ?? Object(),
-      lineGraphemeCaches: <int, List<String>>{
-        for (var index = 0; index < lines.length; index++)
-          index: List<String>.unmodifiable(List<String>.from(lines[index])),
-      },
+      storageIdentity: storageIdentity,
     );
   }
 
@@ -511,19 +516,17 @@ final class _TextDocumentStorage {
         storageIdentity: storageIdentity,
       );
     }
-    final lineCount = nonEmpty.fold<int>(
-      0,
-      (total, segment) => total + segment.lineCount,
-    );
-    final length =
-        nonEmpty.fold<int>(0, (total, segment) => total + segment.length) +
-        (nonEmpty.length > 1 ? nonEmpty.length - 1 : 0);
-    return _TextDocumentStorage._composite(
-      segments: nonEmpty,
-      lineCount: lineCount,
-      length: length,
+    if (nonEmpty.length > _maxCompositeSegmentCount) {
+      return _buildBalancedComposite(
+        nonEmpty,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+    return _buildComposite(
+      nonEmpty,
       revision: revision,
-      storageIdentity: storageIdentity ?? Object(),
+      storageIdentity: storageIdentity,
     );
   }
 
@@ -804,6 +807,151 @@ final class _TextDocumentStorage {
   static int _documentLengthForLineLengths(List<int> lineLengths) {
     return lineLengths.fold<int>(0, (total, line) => total + line) +
         (lineLengths.length > 1 ? lineLengths.length - 1 : 0);
+  }
+
+  static _TextDocumentStorage _leafFromLineTexts(
+    List<String> lineTexts, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final normalizedLineTexts = List<String>.unmodifiable(
+      List<String>.from(lineTexts, growable: false),
+    );
+    final lineLengths = normalizedLineTexts
+        .map((line) => line.characters.length)
+        .toList(growable: false);
+    return _TextDocumentStorage._leaf(
+      lineTexts: normalizedLineTexts,
+      lineLengths: lineLengths,
+      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+    );
+  }
+
+  static _TextDocumentStorage _leafFromParsedLines(
+    List<List<String>> lines, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final normalizedLines = List<List<String>>.generate(
+      lines.length,
+      (index) => List<String>.unmodifiable(List<String>.from(lines[index])),
+      growable: false,
+    );
+    final lineLengths = normalizedLines
+        .map((line) => line.length)
+        .toList(growable: false);
+    return _TextDocumentStorage._leaf(
+      lineTexts: normalizedLines.map((line) => line.join()).toList(
+        growable: false,
+      ),
+      lineLengths: lineLengths,
+      length: _TextDocumentStorage._documentLengthForLineLengths(lineLengths),
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+      lineGraphemeCaches: <int, List<String>>{
+        for (var index = 0; index < normalizedLines.length; index++)
+          index: normalizedLines[index],
+      },
+    );
+  }
+
+  static _TextDocumentStorage _buildChunkedLeafCompositeFromLineTexts(
+    List<String> lineTexts, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final segments = <_TextDocumentStorageSegment>[];
+    for (var start = 0; start < lineTexts.length; start += _maxLeafLineCount) {
+      final end = (start + _maxLeafLineCount).clamp(0, lineTexts.length);
+      final storage = _leafFromLineTexts(
+        lineTexts.sublist(start, end),
+        revision: 0,
+      );
+      segments.add(storage.slice(0, storage.lineCount));
+    }
+    return _buildBalancedComposite(
+      segments,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  static _TextDocumentStorage _buildChunkedLeafCompositeFromParsedLines(
+    List<List<String>> lines, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final segments = <_TextDocumentStorageSegment>[];
+    for (var start = 0; start < lines.length; start += _maxLeafLineCount) {
+      final end = (start + _maxLeafLineCount).clamp(0, lines.length);
+      final storage = _leafFromParsedLines(
+        lines.sublist(start, end),
+        revision: 0,
+      );
+      segments.add(storage.slice(0, storage.lineCount));
+    }
+    return _buildBalancedComposite(
+      segments,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
+  }
+
+  static _TextDocumentStorage _buildComposite(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    final lineCount = segments.fold<int>(
+      0,
+      (total, segment) => total + segment.lineCount,
+    );
+    final length =
+        segments.fold<int>(0, (total, segment) => total + segment.length) +
+        (segments.length > 1 ? segments.length - 1 : 0);
+    return _TextDocumentStorage._composite(
+      segments: segments,
+      lineCount: lineCount,
+      length: length,
+      revision: revision,
+      storageIdentity: storageIdentity ?? Object(),
+    );
+  }
+
+  static _TextDocumentStorage _buildBalancedComposite(
+    List<_TextDocumentStorageSegment> segments, {
+    required int revision,
+    Object? storageIdentity,
+  }) {
+    if (segments.length <= _maxCompositeSegmentCount) {
+      return _buildComposite(
+        segments,
+        revision: revision,
+        storageIdentity: storageIdentity,
+      );
+    }
+
+    final grouped = <_TextDocumentStorageSegment>[];
+    for (
+      var start = 0;
+      start < segments.length;
+      start += _maxCompositeSegmentCount
+    ) {
+      final end = (start + _maxCompositeSegmentCount).clamp(0, segments.length);
+      final childStorage = _buildComposite(
+        segments.sublist(start, end),
+        revision: 0,
+      );
+      grouped.add(childStorage.slice(0, childStorage.lineCount));
+    }
+
+    return _buildBalancedComposite(
+      grouped,
+      revision: revision,
+      storageIdentity: storageIdentity,
+    );
   }
 
   static List<_TextDocumentStorageSegment> _normalizeSegments(
