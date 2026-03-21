@@ -897,27 +897,12 @@ final class _ChunkedTextDocumentStorageBuilder
   }
 }
 
-final class _TextDocumentSource {
-  _TextDocumentSource._({
-    String? rawText,
-    List<String>? lineTexts,
-    List<List<String>>? parsedLines,
+abstract base class _TextDocumentSource {
+  const _TextDocumentSource._({
     required this.lineStarts,
     required this.lineEnds,
     required this.lineLengths,
-  }) : assert(
-         ((rawText != null) ? 1 : 0) +
-                 ((lineTexts != null) ? 1 : 0) +
-                 ((parsedLines != null) ? 1 : 0) ==
-             1,
-       ),
-       _rawText = rawText,
-       _lineTexts = lineTexts == null
-           ? null
-           : List<String>.unmodifiable(lineTexts),
-       _parsedLines = parsedLines == null
-           ? null
-           : List<List<String>>.unmodifiable(parsedLines);
+  });
 
   factory _TextDocumentSource.fromText(String text) {
     final lineStarts = <int>[];
@@ -927,7 +912,7 @@ final class _TextDocumentSource {
       lineStarts.add(0);
       lineEnds.add(0);
       lineLengths.add(0);
-      return _TextDocumentSource._(
+      return _RawTextDocumentSource._(
         rawText: text,
         lineStarts: List<int>.unmodifiable(lineStarts),
         lineEnds: List<int>.unmodifiable(lineEnds),
@@ -953,7 +938,7 @@ final class _TextDocumentSource {
     lineStarts.add(lineStart);
     lineEnds.add(text.length);
     lineLengths.add(graphemeLength);
-    return _TextDocumentSource._(
+    return _RawTextDocumentSource._(
       rawText: text,
       lineStarts: List<int>.unmodifiable(lineStarts),
       lineEnds: List<int>.unmodifiable(lineEnds),
@@ -984,8 +969,8 @@ final class _TextDocumentSource {
         offset += 1;
       }
     }
-    return _TextDocumentSource._(
-      lineTexts: lineTexts,
+    return _LineTextDocumentSource._(
+      lineTexts: List<String>.unmodifiable(lineTexts),
       lineStarts: List<int>.unmodifiable(lineStarts),
       lineEnds: List<int>.unmodifiable(lineEnds),
       lineLengths: normalizedLineLengths,
@@ -1014,7 +999,7 @@ final class _TextDocumentSource {
         offset += 1;
       }
     }
-    return _TextDocumentSource._(
+    return _ParsedLineDocumentSource._(
       parsedLines: normalizedParsedLines,
       lineStarts: List<int>.unmodifiable(lineStarts),
       lineEnds: List<int>.unmodifiable(lineEnds),
@@ -1022,29 +1007,21 @@ final class _TextDocumentSource {
     );
   }
 
-  String get text => _rawText ??= switch ((_lineTexts, _parsedLines)) {
-    (final lineTexts?, _) => lineTexts.join('\n'),
-    (_, final parsedLines?) => _joinParsedLines(parsedLines),
-    _ => _rawText!,
-  };
-
-  bool get debugHasJoinedTextCache =>
-      (_lineTexts != null || _parsedLines != null) && _rawText != null;
-
-  int get debugMaterializedLineTextCount =>
-      _materializedParsedLineTexts?.whereType<String>().length ?? 0;
-
   final List<int> lineStarts;
   final List<int> lineEnds;
   final List<int> lineLengths;
-  String? _rawText;
-  final List<String>? _lineTexts;
-  final List<List<String>>? _parsedLines;
-  List<String?>? _materializedParsedLineTexts;
 
   int get lineCount => lineLengths.length;
 
-  String lineAt(int index) => _lineTextAt(index);
+  String get text;
+
+  bool get debugHasJoinedTextCache;
+
+  int get debugMaterializedLineTextCount;
+
+  String lineAt(int index);
+
+  List<String>? parsedLineAt(int index) => null;
 
   String textBetweenLines({required int startLine, required int endLine}) {
     final normalizedStart = startLine.clamp(0, lineCount);
@@ -1070,72 +1047,175 @@ final class _TextDocumentSource {
     required int startLine,
     required int endLine,
     required bool leadingNewline,
-  }) {
-    final normalizedStart = startLine.clamp(0, lineCount);
-    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
-    if (normalizedStart == normalizedEnd) {
-      return;
-    }
-    if (_lineTexts case final lineTexts?) {
-      for (var index = normalizedStart; index < normalizedEnd; index++) {
-        if (leadingNewline || index > normalizedStart) {
-          buffer.write('\n');
-        }
-        buffer.write(lineTexts[index]);
-      }
-      return;
-    }
-    if (_parsedLines != null) {
-      for (var index = normalizedStart; index < normalizedEnd; index++) {
-        if (leadingNewline || index > normalizedStart) {
-          buffer.write('\n');
-        }
-        buffer.write(_lineTextAt(index));
-      }
-      return;
-    }
-    if (leadingNewline) {
-      buffer.write('\n');
-    }
-    buffer.write(
-      text.substring(
-        lineStarts[normalizedStart],
-        _textEndForLineWindow(normalizedEnd),
-      ),
-    );
-  }
+  });
 
-  int _textEndForLineWindow(int endLine) {
+  int textEndForLineWindow(int endLine) {
     if (endLine >= lineCount) {
       return lineEnds.last;
     }
     return lineStarts[endLine] - 1;
   }
 
-  String _lineTextAt(int index) {
-    if (_lineTexts case final lineTexts?) {
-      return lineTexts[index];
-    }
-    if (_parsedLines case final parsedLines?) {
-      final cache = _materializedParsedLineTexts ??= List<String?>.filled(
-        parsedLines.length,
-        null,
-        growable: false,
-      );
-      return cache[index] ??= parsedLines[index].join();
-    }
-    return _rawText!.substring(lineStarts[index], lineEnds[index]);
-  }
-
-  String _joinParsedLines(List<List<String>> parsedLines) {
+  String joinParsedLines(List<List<String>> parsedLines) {
     final buffer = StringBuffer();
     for (var index = 0; index < parsedLines.length; index++) {
       if (index > 0) {
         buffer.write('\n');
       }
-      buffer.write(_lineTextAt(index));
+      buffer.write(lineAt(index));
     }
     return buffer.toString();
+  }
+}
+
+final class _RawTextDocumentSource extends _TextDocumentSource {
+  _RawTextDocumentSource._({
+    required String rawText,
+    required super.lineStarts,
+    required super.lineEnds,
+    required super.lineLengths,
+  }) : _rawText = rawText,
+       super._();
+
+  final String _rawText;
+
+  @override
+  String get text => _rawText;
+
+  @override
+  bool get debugHasJoinedTextCache => false;
+
+  @override
+  int get debugMaterializedLineTextCount => 0;
+
+  @override
+  String lineAt(int index) {
+    return _rawText.substring(lineStarts[index], lineEnds[index]);
+  }
+
+  @override
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return;
+    }
+    if (leadingNewline) {
+      buffer.write('\n');
+    }
+    buffer.write(
+      _rawText.substring(
+        lineStarts[normalizedStart],
+        textEndForLineWindow(normalizedEnd),
+      ),
+    );
+  }
+}
+
+final class _LineTextDocumentSource extends _TextDocumentSource {
+  _LineTextDocumentSource._({
+    required List<String> lineTexts,
+    required super.lineStarts,
+    required super.lineEnds,
+    required super.lineLengths,
+  }) : _lineTexts = lineTexts,
+       super._();
+
+  final List<String> _lineTexts;
+  String? _joinedText;
+
+  @override
+  String get text => _joinedText ??= _lineTexts.join('\n');
+
+  @override
+  bool get debugHasJoinedTextCache => _joinedText != null;
+
+  @override
+  int get debugMaterializedLineTextCount => 0;
+
+  @override
+  String lineAt(int index) => _lineTexts[index];
+
+  @override
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return;
+    }
+    for (var index = normalizedStart; index < normalizedEnd; index++) {
+      if (leadingNewline || index > normalizedStart) {
+        buffer.write('\n');
+      }
+      buffer.write(_lineTexts[index]);
+    }
+  }
+}
+
+final class _ParsedLineDocumentSource extends _TextDocumentSource {
+  _ParsedLineDocumentSource._({
+    required List<List<String>> parsedLines,
+    required super.lineStarts,
+    required super.lineEnds,
+    required super.lineLengths,
+  }) : _parsedLines = parsedLines,
+       super._();
+
+  final List<List<String>> _parsedLines;
+  List<String?>? _materializedParsedLineTexts;
+  String? _joinedText;
+
+  @override
+  String get text => _joinedText ??= joinParsedLines(_parsedLines);
+
+  @override
+  bool get debugHasJoinedTextCache => _joinedText != null;
+
+  @override
+  int get debugMaterializedLineTextCount =>
+      _materializedParsedLineTexts?.whereType<String>().length ?? 0;
+
+  @override
+  String lineAt(int index) {
+    final cache = _materializedParsedLineTexts ??= List<String?>.filled(
+      _parsedLines.length,
+      null,
+      growable: false,
+    );
+    return cache[index] ??= _parsedLines[index].join();
+  }
+
+  @override
+  List<String>? parsedLineAt(int index) => _parsedLines[index];
+
+  @override
+  void writeTextBetweenLinesToBuffer(
+    StringBuffer buffer, {
+    required int startLine,
+    required int endLine,
+    required bool leadingNewline,
+  }) {
+    final normalizedStart = startLine.clamp(0, lineCount);
+    final normalizedEnd = endLine.clamp(normalizedStart, lineCount);
+    if (normalizedStart == normalizedEnd) {
+      return;
+    }
+    for (var index = normalizedStart; index < normalizedEnd; index++) {
+      if (leadingNewline || index > normalizedStart) {
+        buffer.write('\n');
+      }
+      buffer.write(lineAt(index));
+    }
   }
 }
 
@@ -1731,12 +1811,11 @@ final class _TextDocumentStorage {
 
   List<String>? _sourceParsedLineAt(int index) {
     final source = _source;
-    final parsedLines = source?._parsedLines;
     final sourceLineStartIndex = _sourceLineStartIndex;
-    if (source == null || parsedLines == null || sourceLineStartIndex == null) {
+    if (source == null || sourceLineStartIndex == null) {
       return null;
     }
-    return parsedLines[sourceLineStartIndex + index];
+    return source.parsedLineAt(sourceLineStartIndex + index);
   }
 
   List<String> flattenWithNewlines() {
