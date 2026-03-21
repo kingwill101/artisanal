@@ -2055,16 +2055,9 @@ final class _TextDocumentStorage {
   }
 
   List<String> flattenWithNewlines() {
-    final flattened = _cachedFlattenedGraphemes ??= () {
-      final result = <String>[];
-      for (var index = 0; index < lineCount; index++) {
-        result.addAll(lineGraphemesAt(index));
-        if (index < lineCount - 1) {
-          result.add('\n');
-        }
-      }
-      return List<String>.unmodifiable(result);
-    }();
+    final flattened =
+        _cachedFlattenedGraphemes ??=
+            List<String>.unmodifiable(text.characters.toList(growable: false));
     return List<String>.from(flattened, growable: true);
   }
 

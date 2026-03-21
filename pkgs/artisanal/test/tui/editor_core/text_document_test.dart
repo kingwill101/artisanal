@@ -619,6 +619,28 @@ void main() {
       },
     );
 
+    test(
+      'flattenWithNewlines reuses the text cache path without warming line caches',
+      () {
+        final lineTexts = List<String>.generate(
+          300,
+          (index) => 'line-$index-abcdefghij',
+          growable: false,
+        );
+        final document = TextDocument.fromLineTexts(lineTexts);
+
+        expect(document.debugStorageDepth, greaterThan(1));
+        expect(document.debugLineGraphemeCacheCount, 0);
+        expect(document.debugHasTextCache, isFalse);
+
+        final flattened = document.flattenWithNewlines();
+
+        expect(flattened.join(), lineTexts.join('\n'));
+        expect(document.debugLineGraphemeCacheCount, 0);
+        expect(document.debugHasTextCache, isTrue);
+      },
+    );
+
     test('revision is preserved on copies and increments on edits', () {
       final document = TextDocument(text: 'alpha');
       final copy = document.copy();
