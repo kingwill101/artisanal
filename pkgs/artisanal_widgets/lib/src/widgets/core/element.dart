@@ -9,6 +9,7 @@ import 'package:artisanal/tui.dart'
         BackgroundColorMsg,
         Cmd,
         EveryCmd,
+        DegradationLevel,
         HitTestMouseMsg,
         MouseAction,
         ParallelCmd,
@@ -37,6 +38,7 @@ import '../layout/layout_widgets.dart'
 import '../theme/theme.dart' show updateThemeFromBackground;
 import 'widget.dart';
 import '../app/performance.dart';
+import 'accessibility.dart';
 
 final Expando<Element> _elementForWidget = Expando<Element>('widgetElement');
 
@@ -231,6 +233,25 @@ abstract class Element {
   /// The render object hosted by this element, or `null`.
   RenderObject? get renderObject => null;
 
+  bool _shouldRender(DegradationLevel degradationLevel) {
+    return widget.shouldRenderAt(
+      degradationLevel,
+      subtreeHasFocusedWidget: _subtreeHasFocusedWidget(),
+    );
+  }
+
+  bool _subtreeHasFocusedWidget() {
+    if (widget is FocusableWidget && (widget as FocusableWidget).focused) {
+      return true;
+    }
+    for (final child in children) {
+      if (child._subtreeHasFocusedWidget()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Builds this element's child widget list.
   List<Widget> build() => widget.children;
 
@@ -362,7 +383,13 @@ abstract class Element {
   }
 
   /// Renders this element subtree to a terminal string.
-  String render({BoxConstraints? constraints}) {
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
     if (_dirty) {
       _owner?.buildScopeFor(_rootOfTree(this), this);
     }
@@ -739,12 +766,21 @@ class StatelessElement extends Element {
   }
 
   @override
-  String render({BoxConstraints? constraints}) {
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
     if (_dirty) {
       _owner?.buildScopeFor(_rootOfTree(this), this);
     }
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
     if (_children.isEmpty) return '';
-    return _children.first.render(constraints: constraints);
+    return _children.first.render(
+      constraints: constraints,
+      degradationLevel: degradationLevel,
+    );
   }
 }
 
@@ -760,10 +796,19 @@ class InheritedElement extends Element {
   }
 
   @override
-  String render({BoxConstraints? constraints}) {
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
     ensureBuilt();
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
     if (children.isEmpty) return '';
-    return children.first.render(constraints: constraints);
+    return children.first.render(
+      constraints: constraints,
+      degradationLevel: degradationLevel,
+    );
   }
 
   @override
@@ -824,12 +869,21 @@ class StatefulElement extends Element implements StateSetter {
   }
 
   @override
-  String render({BoxConstraints? constraints}) {
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
     if (_dirty) {
       _owner?.buildScopeFor(_rootOfTree(this), this);
     }
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
     if (_children.isEmpty) return '';
-    return _children.first.render(constraints: constraints);
+    return _children.first.render(
+      constraints: constraints,
+      degradationLevel: degradationLevel,
+    );
   }
 
   @override
@@ -838,8 +892,8 @@ class StatefulElement extends Element implements StateSetter {
     final pending = _drainPendingCmds();
     final baseCmd = super.dispatch(msg);
     return _coalesceCommands([
-      if (pending != null) pending,
-      if (baseCmd != null) baseCmd,
+      ?pending,
+      ?baseCmd,
     ]);
   }
 
@@ -884,15 +938,23 @@ class RenderObjectElement extends Element {
   @override
   void rebuild() {
     super.rebuild();
-    _buildDescendants();
-    _syncRenderChildren();
+    _buildDescendants(degradationLevel: DegradationLevel.full);
+    _syncRenderChildren(degradationLevel: DegradationLevel.full);
   }
 
   @override
-  String render({BoxConstraints? constraints}) {
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
     if (_dirty) {
       _owner?.buildScopeFor(_rootOfTree(this), this);
     }
+    _buildDescendants(degradationLevel: degradationLevel);
+    _syncRenderChildren(degradationLevel: degradationLevel);
     final roType = TuiTrace.enabled ? renderObject.runtimeType.toString() : '';
     final span = TuiTrace.begin(
       'ro.render',
@@ -934,7 +996,7 @@ class RenderObjectElement extends Element {
     super.unmount();
   }
 
-  void _syncRenderChildren() {
+  void _syncRenderChildren({required DegradationLevel degradationLevel}) {
     for (final child in List<RenderObject>.from(renderObject.children)) {
       renderObject.detach(child);
     }
@@ -944,7 +1006,10 @@ class RenderObjectElement extends Element {
 
       for (final child in children) {
         final info = _flexInfoFor(child.widget);
-        for (final renderChild in _collectRenderChildren(child)) {
+        for (final renderChild in _collectRenderChildren(
+          child,
+          degradationLevel: degradationLevel,
+        )) {
           flexChildren.add(renderChild);
           if (info != null) {
             flexData[renderChild] = info;
@@ -967,7 +1032,10 @@ class RenderObjectElement extends Element {
 
       for (final child in children) {
         final info = _stackInfoFor(child.widget);
-        for (final renderChild in _collectRenderChildren(child)) {
+        for (final renderChild in _collectRenderChildren(
+          child,
+          degradationLevel: degradationLevel,
+        )) {
           stackChildren.add(renderChild);
           if (info != null) {
             stackData[renderChild] = info;
@@ -983,26 +1051,41 @@ class RenderObjectElement extends Element {
     }
 
     for (final child in children) {
-      for (final renderChild in _collectRenderChildren(child)) {
+      for (final renderChild in _collectRenderChildren(
+        child,
+        degradationLevel: degradationLevel,
+      )) {
         renderObject.attach(renderChild);
       }
     }
   }
 
-  void _buildDescendants() {
+  void _buildDescendants({required DegradationLevel degradationLevel}) {
     for (final child in children) {
-      _ensureSubtreeBuilt(child);
+      _ensureSubtreeBuilt(child, degradationLevel: degradationLevel);
     }
   }
 
-  void _ensureSubtreeBuilt(Element element) {
+  void _ensureSubtreeBuilt(
+    Element element, {
+    required DegradationLevel degradationLevel,
+  }) {
+    if (!element._shouldRender(degradationLevel)) {
+      return;
+    }
     element.ensureBuilt();
     for (final child in element.children) {
-      _ensureSubtreeBuilt(child);
+      _ensureSubtreeBuilt(child, degradationLevel: degradationLevel);
     }
   }
 
-  Iterable<RenderObject> _collectRenderChildren(Element element) sync* {
+  Iterable<RenderObject> _collectRenderChildren(
+    Element element, {
+    required DegradationLevel degradationLevel,
+  }) sync* {
+    if (!element._shouldRender(degradationLevel)) {
+      return;
+    }
     if (element is RenderObjectElement) {
       yield element.renderObject;
       return;
@@ -1023,7 +1106,7 @@ class RenderObjectElement extends Element {
     }
 
     for (final child in element.children) {
-      yield* _collectRenderChildren(child);
+      yield* _collectRenderChildren(child, degradationLevel: degradationLevel);
     }
   }
 
@@ -1083,6 +1166,7 @@ class ElementTree {
   Widget rootWidget;
   late final Element _root;
   BoxConstraints? _rootConstraints;
+  DegradationLevel _degradationLevel = DegradationLevel.full;
   final BuildOwner _owner;
 
   /// The mounted root element.
@@ -1100,14 +1184,19 @@ class ElementTree {
   /// The element currently capturing mouse input.
   Element? get mouseCapture => _owner.mouseCapture;
 
+  /// Sets the render-time degradation level used by this tree.
+  void setDegradationLevel(DegradationLevel level) {
+    _degradationLevel = level;
+  }
+
   /// Dispatches [msg] directly to [element].
   Cmd? dispatchTo(Element element, Msg msg) {
     final cmd = element.dispatch(msg);
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
     return _coalesceCommands([
-      if (cmd != null) cmd,
-      if (mountInit != null) mountInit,
+      ?cmd,
+      ?mountInit,
     ]);
   }
 
@@ -1158,10 +1247,7 @@ class ElementTree {
     }
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
-    return _coalesceCommands([
-      ...bubbleCmds,
-      if (mountInit != null) mountInit,
-    ]);
+    return _coalesceCommands([...bubbleCmds, ?mountInit]);
   }
 
   /// Overrides constraints used when rendering the root.
@@ -1181,8 +1267,8 @@ class ElementTree {
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
     return _coalesceCommands([
-      if (cmd != null) cmd,
-      if (mountInit != null) mountInit,
+      ?cmd,
+      ?mountInit,
     ]);
   }
 
@@ -1223,7 +1309,10 @@ class ElementTree {
     final buildSw = Stopwatch()..start();
     _owner.beginFrame(_root);
     buildSw.stop();
-    final output = _root.render(constraints: _rootConstraints);
+    final output = _root.render(
+      constraints: _rootConstraints,
+      degradationLevel: _degradationLevel,
+    );
     totalSw.stop();
     _owner.endFrame(
       totalDuration: totalSw.elapsed,
@@ -1284,6 +1373,66 @@ class ElementTree {
 
   /// Unmounts the entire element tree.
   void unmount() => _root.unmount();
+
+  /// Builds a deterministic accessibility tree from the current widget tree.
+  ///
+  /// Returns a best-effort snapshot used for diagnostics and parity testing.
+  A11yTree buildA11yTree() {
+    if (_owner.hasDirty) {
+      _owner.buildScope(_root);
+    }
+
+    final nodes = <int, A11yNode>{};
+    final widgetToNodeId = <Widget, int>{};
+
+    int build(Element element, int? parentId, int childIndex, int depth) {
+      final local = _a11yDescriptor(element.widget, childIndex);
+      final id = _computeA11yId(
+        parentId: parentId ?? -1,
+        token: local,
+        depth: depth,
+      );
+
+      final children = <int>[];
+      for (var i = 0; i < element.children.length; i++) {
+        final childId = build(element.children[i], id, i, depth + 1);
+        children.add(childId);
+      }
+
+      final node = A11yNode(
+        id: id,
+        widget: element.widget,
+        parentId: parentId,
+        children: children,
+        role: element.widget.accessibilityRole,
+        label: element.widget.accessibilityLabel,
+      );
+      nodes[id] = node;
+      widgetToNodeId[element.widget] = id;
+      return id;
+    }
+
+    final rootId = build(_root, null, 0, 0);
+    return A11yTree(
+      rootId: rootId,
+      nodes: Map<int, A11yNode>.unmodifiable(nodes),
+      widgetToNodeId: Map<Widget, int>.unmodifiable(widgetToNodeId),
+    );
+  }
+}
+
+String _a11yDescriptor(Widget widget, int siblingIndex) {
+  final key = widget.key;
+  final keyPart = key == null ? 'idx:$siblingIndex' : 'key:$key';
+  return '${widget.runtimeType}#$keyPart';
+}
+
+int _computeA11yId({
+  required int parentId,
+  required String token,
+  required int depth,
+}) {
+  return fnv1a32('depth=$depth|parent=$parentId|$token');
 }
 
 /// Result of an element-level hit test — pairs an [Element] with the
