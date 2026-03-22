@@ -88,7 +88,7 @@ void drawSparkline(
       final glyph = sparkChars[idx.clamp(0, 8)];
       var cellStyle = style;
       if (useGradient) {
-        cellStyle = _lerpStyle(gradientLow!, gradientHigh!, normalized);
+        cellStyle = _lerpStyle(gradientLow, gradientHigh, normalized);
       }
       putCell(screen, area.minX + x, row, glyph, cellStyle);
     }
@@ -109,7 +109,7 @@ void drawSparkline(
 
     var cellStyle = style;
     if (useGradient) {
-      cellStyle = _lerpStyle(gradientLow!, gradientHigh!, normalized);
+      cellStyle = _lerpStyle(gradientLow, gradientHigh, normalized);
     }
 
     final fullRows = subCellHeight ~/ 8;

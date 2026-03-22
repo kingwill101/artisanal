@@ -252,12 +252,12 @@ void main() {
           actionLabel: 'OK',
           level: DisclosureLevel.evidenceTerms,
           evidence: [
-            const EvidenceTerm(
+            EvidenceTerm(
               label: 'e1',
               factor: 1.0,
               direction: EvidenceDirection.supporting,
             ),
-            const EvidenceTerm(
+            EvidenceTerm(
               label: 'e2',
               factor: 2.0,
               direction: EvidenceDirection.opposing,
@@ -275,7 +275,7 @@ void main() {
           signal: DecisionSignal.green,
           actionLabel: 'OK',
           level: DisclosureLevel.fullDetails,
-          details: const DecisionDetails(
+          details: DecisionDetails(
             logPosterior: 1.0,
             confidenceLow: 0.5,
             confidenceHigh: 0.9,
