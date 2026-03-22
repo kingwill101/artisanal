@@ -6,6 +6,7 @@ import 'package:artisanal/terminal.dart';
 
 import '../unicode/width.dart' as uni_width;
 import 'cmd.dart';
+import 'degradation.dart';
 import 'emoji_width_probe.dart';
 import 'key.dart' show Key, KeyParser, KeyResult, KeyType, MsgResult;
 import 'model.dart';
@@ -14,6 +15,7 @@ import 'renderer.dart';
 import 'startup_probe.dart';
 import 'terminal.dart';
 import 'trace.dart';
+import 'resize_coalescer.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
 import '../style/color.dart' show Color, ColorProfile;
@@ -161,6 +163,19 @@ final class ProgramReplay {
   }
 }
 
+/// Recorded user-input macro that can be replayed later.
+final class ProgramMacro {
+  /// Creates a macro from timed replay steps.
+  const ProgramMacro(this.steps);
+
+  /// The recorded timed steps.
+  final List<ProgramReplayStep> steps;
+
+  /// Converts this macro into a [ProgramReplay].
+  ProgramReplay toReplay({bool loop = false}) =>
+      ProgramReplay.script(steps, loop: loop);
+}
+
 /// Controls how the TUI renders relative to the terminal's primary screen.
 ///
 /// [ScreenMode.fullScreen] takes over the entire terminal via the alternate
@@ -237,6 +252,7 @@ class ProgramOptions {
     this.movementCapsOverride,
     this.shutdownSharedStdinOnExit = true,
     this.metricsInterval = const Duration(seconds: 1),
+    this.renderBudget = const RenderBudgetOptions(),
   }) : assert(fps >= 1 && fps <= 120, 'fps must be between 1 and 120');
 
   /// Whether to use the alternate screen buffer (fullscreen mode).
@@ -294,6 +310,9 @@ class ProgramOptions {
   /// Limits how often the screen can be redrawn.
   /// Value is clamped to the range 1-120.
   final int fps;
+
+  /// Budget-aware render degradation configuration.
+  final RenderBudgetOptions renderBudget;
 
   /// Whether to automatically send [FrameTickMsg] at the configured [fps].
   ///
@@ -527,9 +546,13 @@ class ProgramOptions {
     ({bool useTabs, bool useBackspace})? movementCapsOverride,
     bool? shutdownSharedStdinOnExit,
     Duration? metricsInterval,
+    RenderBudgetOptions? renderBudget,
   }) {
     return ProgramOptions(
       altScreen: altScreen ?? this.altScreen,
+      screenMode: screenMode,
+      inlineHeight: inlineHeight,
+      uiAnchor: uiAnchor,
       mouse: mouse ?? this.mouse,
       mouseMode: mouseMode ?? this.mouseMode,
       fps: fps ?? this.fps,
@@ -564,6 +587,7 @@ class ProgramOptions {
       shutdownSharedStdinOnExit:
           shutdownSharedStdinOnExit ?? this.shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval ?? this.metricsInterval,
+      renderBudget: renderBudget ?? this.renderBudget,
     );
   }
 
@@ -698,6 +722,9 @@ class ProgramOptions {
   }) {
     return ProgramOptions(
       altScreen: altScreen,
+      screenMode: screenMode,
+      inlineHeight: inlineHeight,
+      uiAnchor: uiAnchor,
       mouse: mouse,
       mouseMode: mouseMode,
       fps: fps,
@@ -746,6 +773,7 @@ class ProgramOptions {
           : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
       shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval,
+      renderBudget: renderBudget,
     );
   }
 }
@@ -1079,6 +1107,12 @@ class Program<M extends Model> {
   final ProgramOptions _options;
   TuiTerminal? _terminal;
 
+  /// The current render-budget state.
+  ///
+  /// This is primarily useful for tests, diagnostics, and host integrations
+  /// that want to observe whether runtime degradation is active.
+  RenderBudgetState get renderBudgetState => _renderBudgetController.state;
+
   /// The current model state.
   M? _model;
 
@@ -1110,6 +1144,18 @@ class Program<M extends Model> {
   Timer? _uvInputTimeoutTimer;
   Timer? _metricsTimer;
   Timer? _frameTickTimer;
+  Timer? _resizeCoalesceTimer;
+  int? _pendingResizeWidth;
+  int? _pendingResizeHeight;
+  ResizeCoalescerState _resizeCoalescerState = const ResizeCoalescerState();
+  static const ResizeCoalescer _resizeCoalescer = ResizeCoalescer();
+  bool _degradationRepaintScheduled = false;
+  DegradationLevel? _lastRenderedDegradationLevel;
+  late final RenderBudgetController _renderBudgetController =
+      RenderBudgetController(
+        options: _options.renderBudget,
+        frameBudget: Duration(milliseconds: 1000 ~/ _options.fps),
+      );
 
   /// Frame tick state for FrameTickMsg.
   int _frameNumber = 0;
@@ -1121,8 +1167,11 @@ class Program<M extends Model> {
   /// Stream subscription for input.
   StreamSubscription<List<int>>? _inputSubscription;
   StreamSubscription<Msg>? _replaySubscription;
-  bool _replayActive = false;
+  int _replayDepth = 0;
   StreamSubscription<void>? _cancelSubscription;
+  bool _macroRecording = false;
+  final List<ProgramReplayStep> _macroSteps = <ProgramReplayStep>[];
+  DateTime? _lastMacroEventAt;
 
   /// Active stream commands.
   final List<StreamCmd> _streamCommands = [];
@@ -1542,7 +1591,7 @@ class Program<M extends Model> {
 
   /// Initializes the model and renders initial view.
   Future<void> _initialize() async {
-    _replayActive = false;
+    _replayDepth = 0;
     _model = _initialModel;
 
     // Suppress renders during initialization to avoid visual flash of pre-init state
@@ -1666,38 +1715,62 @@ class Program<M extends Model> {
   void _startReplay() {
     final replay = _options.replay;
     if (replay == null || _replaySubscription != null) return;
+    _startReplayStream(replay.toStream(), parser: 'replay');
+  }
 
-    _replayActive = true;
+  void _startReplayStream(Stream<Msg> stream, {required String parser}) {
+    unawaited(_cancelReplayStream());
+    _replayDepth += 1;
     if (TuiTrace.enabled) {
       _trace(
-        'replay stream start blockInputWhileReplay=${_options.blockInputWhileReplay}',
+        'replay stream start parser=$parser '
+        'blockInputWhileReplay=${_options.blockInputWhileReplay}',
         tag: TraceTag.input,
       );
     }
-    _replaySubscription = replay.toStream().listen(
+    late final StreamSubscription<Msg> subscription;
+    subscription = stream.listen(
       (msg) {
         if (!_running) return;
         _traceInputBatch(
-          parser: 'replay',
+          parser: parser,
           flush: false,
           messages: <Msg>[msg],
           dropped: 0,
         );
-        send(msg);
+        _runWithReplayDepth(() => send(msg));
       },
       onError: (error, stackTrace) {
-        _replayActive = false;
+        if (_replaySubscription == subscription) {
+          _replaySubscription = null;
+        }
+        _replayDepth = 0;
         if (TuiTrace.enabled) {
-          _trace('replay stream error: $error', tag: TraceTag.input);
+          _trace(
+            'replay stream error parser=$parser: $error',
+            tag: TraceTag.input,
+          );
         }
       },
       onDone: () {
-        _replayActive = false;
+        if (_replaySubscription == subscription) {
+          _replaySubscription = null;
+        }
+        _replayDepth = 0;
         if (TuiTrace.enabled) {
-          _trace('replay stream done', tag: TraceTag.input);
+          _trace('replay stream done parser=$parser', tag: TraceTag.input);
         }
       },
     );
+    _replaySubscription = subscription;
+  }
+
+  Future<void> _cancelReplayStream() async {
+    final subscription = _replaySubscription;
+    if (subscription == null) return;
+    _replaySubscription = null;
+    _replayDepth = 0;
+    await subscription.cancel();
   }
 
   /// Starts a periodic timer to send render metrics to the model.
@@ -1769,6 +1842,15 @@ class Program<M extends Model> {
     _frameTickTimer = null;
   }
 
+  void _stopResizeCoalesceTimer() {
+    try {
+      _resizeCoalesceTimer?.cancel();
+    } catch (_) {}
+    _resizeCoalesceTimer = null;
+    _pendingResizeWidth = null;
+    _pendingResizeHeight = null;
+  }
+
   void _syncModelOptionalTimers() {
     // Render metrics timer.
     if (_options.metricsInterval <= Duration.zero) {
@@ -1808,7 +1890,7 @@ class Program<M extends Model> {
     final resizeStream = terminal.resizeStream;
     if (resizeStream != null) {
       _backendResizeSubscription = resizeStream.listen((size) {
-        _sendWindowSizeIfChanged(size.width, size.height);
+        _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
       });
     }
 
@@ -1860,7 +1942,7 @@ class Program<M extends Model> {
       try {
         _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
           final size = _terminal!.size;
-          _sendWindowSizeIfChanged(size.width, size.height);
+          _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
         });
       } catch (_) {
         // SIGWINCH not available on this platform
@@ -1868,10 +1950,40 @@ class Program<M extends Model> {
     }
   }
 
-  void _sendWindowSizeIfChanged(int width, int height) {
-    if (_lastWindowSizeWidth == width && _lastWindowSizeHeight == height) {
+  void _sendWindowSizeIfChanged(
+    int width,
+    int height, {
+    bool coalesce = false,
+  }) {
+    final sameAsLast =
+        _lastWindowSizeWidth == width && _lastWindowSizeHeight == height;
+    final sameAsPending =
+        _pendingResizeWidth == width && _pendingResizeHeight == height;
+    if (sameAsLast || sameAsPending) {
       return;
     }
+    if (coalesce) {
+      final next = _resizeCoalescer.next(_resizeCoalescerState, DateTime.now());
+      _resizeCoalescerState = next;
+      if (next.delay > Duration.zero) {
+        _pendingResizeWidth = width;
+        _pendingResizeHeight = height;
+        _resizeCoalesceTimer?.cancel();
+        _resizeCoalesceTimer = Timer(next.delay, () {
+          final pendingWidth = _pendingResizeWidth;
+          final pendingHeight = _pendingResizeHeight;
+          _pendingResizeWidth = null;
+          _pendingResizeHeight = null;
+          if (pendingWidth == null || pendingHeight == null) return;
+          _dispatchWindowSize(pendingWidth, pendingHeight);
+        });
+        return;
+      }
+    }
+    _dispatchWindowSize(width, height);
+  }
+
+  void _dispatchWindowSize(int width, int height) {
     _lastWindowSizeWidth = width;
     _lastWindowSizeHeight = height;
     send(WindowSizeMsg(width, height));
@@ -2024,7 +2136,7 @@ class Program<M extends Model> {
       );
     }
 
-    if (_options.blockInputWhileReplay && _replayActive) {
+    if (_options.blockInputWhileReplay && _isReplayActive) {
       if (TuiTrace.enabled) {
         _trace(
           'input dropped while replay active bytes=${bytes.length}',
@@ -2386,6 +2498,15 @@ class Program<M extends Model> {
       msg = intercepted;
     }
 
+    if (_macroRecording && !_isReplayActive && _isMacroRecordable(msg)) {
+      final now = DateTime.now();
+      final delay = _lastMacroEventAt == null
+          ? Duration.zero
+          : now.difference(_lastMacroEventAt!);
+      _lastMacroEventAt = now;
+      _macroSteps.add(ProgramReplayStep(after: delay, msg: msg));
+    }
+
     // Coalesce: when a key arrives, drop all pending mouse messages.
     // Also drop pending frame ticks so input is not blocked by stale animation
     // updates. When a motion/wheel arrives, drop prior events of the same
@@ -2451,6 +2572,76 @@ class Program<M extends Model> {
     }
     _drainMessageQueue();
   }
+
+  /// Whether user-input macro recording is active.
+  bool get isMacroRecording => _macroRecording;
+
+  /// Whether macro replay is currently in-flight.
+  bool get isMacroPlaying => _replaySubscription != null;
+
+  bool get _isReplayActive => _replayDepth > 0;
+
+  void _runWithReplayDepth(void Function() action) {
+    _replayDepth++;
+    try {
+      action();
+    } finally {
+      _replayDepth -= 1;
+      if (_replayDepth < 0) {
+        _replayDepth = 0;
+      }
+    }
+  }
+
+  /// Starts recording user-input messages into a macro.
+  void startMacroRecording() {
+    if (_macroRecording) {
+      throw StateError('Macro recording is already active.');
+    }
+    if (isMacroPlaying) {
+      throw StateError(
+        'Cannot start macro recording while macro playback is active.',
+      );
+    }
+    _macroRecording = true;
+    _macroSteps.clear();
+    _lastMacroEventAt = null;
+  }
+
+  /// Stops recording and returns the captured macro.
+  ProgramMacro stopMacroRecording() {
+    if (!_macroRecording) {
+      throw StateError('Macro recording is not active.');
+    }
+    _macroRecording = false;
+    _lastMacroEventAt = null;
+    return ProgramMacro(
+      List<ProgramReplayStep>.from(_macroSteps, growable: false),
+    );
+  }
+
+  /// Plays back a previously recorded [macro].
+  StreamSubscription<Msg> playMacro(ProgramMacro macro, {bool loop = false}) {
+    final stream = macro.toReplay(loop: loop).toStream();
+    return _startMacroReplay(stream);
+  }
+
+  /// Stops the currently running replay/macro playback stream, if any.
+  Future<void> stopMacroPlayback() async {
+    await _cancelReplayStream();
+  }
+
+  StreamSubscription<Msg> _startMacroReplay(Stream<Msg> stream) {
+    _startReplayStream(stream, parser: 'macro');
+    return _replaySubscription!;
+  }
+
+  bool _isMacroRecordable(Msg msg) =>
+      msg is KeyMsg ||
+      msg is PasteTextMsg ||
+      msg is MouseMsg ||
+      msg is FocusMsg ||
+      msg is UvEventMsg;
 
   /// Removes messages from the queue that don't pass [keep].
   ///
@@ -2928,6 +3119,7 @@ class Program<M extends Model> {
     _uvInputTimeoutTimer = null;
     _stopMetricsTimer();
     _stopFrameTickTimer();
+    _stopResizeCoalesceTimer();
     _uvInputParser.clear();
 
     try {
@@ -3293,6 +3485,7 @@ class Program<M extends Model> {
     _uvInputTimeoutTimer = null;
     _stopMetricsTimer();
     _stopFrameTickTimer();
+    _stopResizeCoalesceTimer();
     _uvInputParser.clear();
     unawaited(_inputSubscription?.cancel());
     _inputSubscription = null;
@@ -3381,6 +3574,8 @@ class Program<M extends Model> {
     final Stopwatch? viewSw = renderId == null ? null : Stopwatch();
     viewSw?.start();
     final view = _model!.view();
+    final degradationLevel = _renderBudgetController.level;
+    final effectiveView = _applyRenderDegradation(view, degradationLevel);
     viewSw?.stop();
     if (renderId != null && viewSw != null) {
       _trace(
@@ -3392,32 +3587,39 @@ class Program<M extends Model> {
     // (e.g. WidgetApp returning its _cachedView when !_dirty), skip the
     // entire renderer pipeline.  This avoids ANSI parsing, buffer drawing,
     // and diffing for no-op frames (e.g. RenderMetricsMsg with overlay off).
-    if (!sizeChangedSinceLastRender && identical(view, _lastRenderedView)) {
+    if (!sizeChangedSinceLastRender &&
+        identical(view, _lastRenderedView) &&
+        degradationLevel == _lastRenderedDegradationLevel) {
       if (renderId != null) {
         _trace('render#$renderId skip (identical view)', tag: TraceTag.render);
       }
       return;
     }
     _lastRenderedView = view;
+    _lastRenderedDegradationLevel = degradationLevel;
     if (termSize != null) {
       _lastRenderWidth = termSize.width;
       _lastRenderHeight = termSize.height;
     }
 
-    if (view is View) {
-      _lastView = view;
-      _applyViewMetadata(view);
+    if (effectiveView is View) {
+      _lastView = effectiveView;
+      _applyViewMetadata(effectiveView);
     } else {
       _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
-    final Stopwatch? renderSw = renderId == null ? null : Stopwatch();
-    renderSw?.start();
-    _renderer!.render(view);
+    final renderSw = Stopwatch()..start();
+    _renderer!.render(effectiveView);
     _renderGeneration += 1;
-    renderSw?.stop();
-    if (renderId != null && renderSw != null) {
+    renderSw.stop();
+    final changed = _renderBudgetController.recordFrame(renderSw.elapsed);
+    if (changed) {
+      send(RenderBudgetMsg(_renderBudgetController.state));
+      _scheduleDegradationRepaint();
+    }
+    if (renderId != null) {
       _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
     }
     // Emit per-frame Layout operation counters before flushing.
@@ -3523,24 +3725,42 @@ class Program<M extends Model> {
     // Clear the renderer's cached view to force a full redraw
     _renderer!.clear();
     final view = _model!.view();
+    final degradationLevel = _renderBudgetController.level;
+    final effectiveView = _applyRenderDegradation(view, degradationLevel);
 
-    if (view is View) {
-      _lastView = view;
-      _applyViewMetadata(view);
+    if (effectiveView is View) {
+      _lastView = effectiveView;
+      _applyViewMetadata(effectiveView);
     } else {
       _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
-    _renderer!.render(view);
+    _renderer!.render(effectiveView);
     _renderGeneration += 1;
     _lastRenderedView = view;
+    _lastRenderedDegradationLevel = degradationLevel;
     final termSize = _terminal?.size;
     if (termSize != null) {
       _lastRenderWidth = termSize.width;
       _lastRenderHeight = termSize.height;
     }
     unawaited(_renderer!.flush());
+  }
+
+  Object _applyRenderDegradation(Object view, DegradationLevel level) {
+    if (view is! View) return view;
+    return view.degraded(level);
+  }
+
+  void _scheduleDegradationRepaint() {
+    if (_degradationRepaintScheduled || !_running || _terminalReleased) return;
+    _degradationRepaintScheduled = true;
+    scheduleMicrotask(() {
+      _degradationRepaintScheduled = false;
+      if (!_running || _terminalReleased) return;
+      send(const RepaintMsg());
+    });
   }
 
   /// Executes a command.
@@ -3747,15 +3967,17 @@ class Program<M extends Model> {
     _metricsTimer = null;
     trySync(() => _frameTickTimer?.cancel());
     _frameTickTimer = null;
+    trySync(() => _resizeCoalesceTimer?.cancel());
+    _resizeCoalesceTimer = null;
+    _pendingResizeWidth = null;
+    _pendingResizeHeight = null;
     _frameNumber = 0;
     _lastFrameTime = null;
 
     // Cancel input subscription
     await tryAsync(() async => _inputSubscription?.cancel());
     _inputSubscription = null;
-    await tryAsync(() async => _replaySubscription?.cancel());
-    _replaySubscription = null;
-    _replayActive = false;
+    await tryAsync(() async => _cancelReplayStream());
     await tryAsync(() async => _cancelSubscription?.cancel());
     _cancelSubscription = null;
 
