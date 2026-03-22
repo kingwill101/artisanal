@@ -1,30 +1,30 @@
 part of 'chart_widgets.dart';
 
-/// A multi-point line chart widget with optional markers, grid, and axis labels.
+/// A line chart widget supporting single or multi-series data.
 ///
-/// Renders data as a connected series of points within the
-/// [width]×[height] area.
+/// Renders data as connected points using Braille sub-cell resolution.
+/// Supports optional markers, grid, axis labels, and per-series styling.
 ///
 /// ```dart
+/// // Single-series (backward-compatible)
+/// LineChart(values: [10, 20, 15, 30, 25], width: 60, height: 12)
+///
+/// // Multi-series with per-line colors
 /// LineChart(
-///   values: [10, 20, 15, 30, 25],
-///   width: 60,
-///   height: 12,
-///   showGrid: true,
-///   showMarkers: true,
-///   lineStyle: UvStyle(fg: UvColor.rgb(80, 180, 255)),
+///   series: [sineValues, cosineValues, noiseValues],
+///   lineStyles: [style1, style2, style3],
+///   legendEntries: [
+///     ChartLegendEntry('sin(t)', style1),
+///     ChartLegendEntry('cos(t)', style2),
+///     ChartLegendEntry('noise', style3),
+///   ],
 /// )
 /// ```
 class LineChart extends LeafRenderObjectWidget {
-  /// Creates a [LineChart] with the given data and display options.
-  ///
-  /// When [width] or [height] is null the chart fills the available
-  /// constraint space (responsive mode).
-  ///
-  /// Set [crosshairX] and [crosshairY] to draw a crosshair overlay at
-  /// that position (e.g. from mouse hover).
   LineChart({
-    required this.values,
+    this.values,
+    this.series,
+    this.lineStyles,
     this.width,
     this.height,
     this.lineStyle,
@@ -38,6 +38,8 @@ class LineChart extends LeafRenderObjectWidget {
     this.lineChar = '•',
     this.xLabels,
     this.yLabels,
+    this.minValue,
+    this.maxValue,
     this.legendEntries,
     this.legendColumns = 1,
     this.legendRowGap = 0,
@@ -47,81 +49,62 @@ class LineChart extends LeafRenderObjectWidget {
     this.crosshairY,
     this.crosshairStyle,
     super.key,
-  });
+  }) : assert(
+         values != null || series != null,
+         'Either values or series must be provided',
+       );
 
-  /// The data values to plot.
-  final List<double> values;
+  /// Single-series data values (backward-compatible).
+  final List<double>? values;
 
-  /// The chart width in terminal columns, or null to fill available space.
+  /// Multi-series data: list of value lists (one per series).
+  final List<List<double>>? series;
+
+  /// Per-series line styles (cycled if shorter than series count).
+  final List<UvStyle>? lineStyles;
+
   final int? width;
-
-  /// The chart height in terminal rows, or null to fill available space.
   final int? height;
-
-  /// Style for the line and marker characters.
   final UvStyle? lineStyle;
-
-  /// Style for grid lines.
   final UvStyle? gridStyle;
-
-  /// Style for axis labels.
   final UvStyle? labelStyle;
-
-  /// Whether to draw background grid lines.
   final bool showGrid;
-
-  /// Number of horizontal grid lines.
   final int gridRows;
-
-  /// Number of vertical grid lines.
   final int gridCols;
-
-  /// Whether to draw markers at each data point.
   final bool showMarkers;
-
-  /// Character used for data point markers.
   final String markerChar;
-
-  /// Character used for interpolated line segments.
   final String lineChar;
-
-  /// Labels along the bottom (X) axis.
   final List<String>? xLabels;
-
-  /// Labels along the left (Y) axis.
   final List<String>? yLabels;
-
-  /// Optional legend entries rendered inside chart bounds.
+  final double? minValue;
+  final double? maxValue;
   final List<ChartLegendEntry>? legendEntries;
-
-  /// Number of legend columns.
   final int legendColumns;
-
-  /// Empty rows inserted between legend rows.
   final int legendRowGap;
-
-  /// Legend placement within chart bounds.
   final ChartLegendPosition legendPosition;
-
-  /// Inner padding from chart edges to legend area.
   final int legendPadding;
-
-  /// X coordinate for crosshair overlay, or null to hide.
   final int? crosshairX;
-
-  /// Y coordinate for crosshair overlay, or null to hide.
   final int? crosshairY;
-
-  /// Style for the crosshair lines.
   final UvStyle? crosshairStyle;
+
+  List<List<double>> get _effectiveSeries {
+    if (series != null) return series!;
+    if (values != null) return [values!];
+    return [[]];
+  }
+
+  List<UvStyle> get _effectiveStyles {
+    if (lineStyles != null) return lineStyles!;
+    return [lineStyle ?? const UvStyle()];
+  }
 
   @override
   RenderObject createRenderObject() {
     return _RenderLineChart(
-      values: values,
+      series: _effectiveSeries,
+      styles: _effectiveStyles,
       chartWidth: width,
       chartHeight: height,
-      lineStyle: lineStyle ?? const UvStyle(),
       gridStyle: gridStyle ?? const UvStyle(),
       labelStyle: labelStyle ?? const UvStyle(),
       showGrid: showGrid,
@@ -132,6 +115,8 @@ class LineChart extends LeafRenderObjectWidget {
       lineChar: lineChar,
       xLabels: xLabels,
       yLabels: yLabels,
+      minValue: minValue,
+      maxValue: maxValue,
       legendEntries: legendEntries,
       legendColumns: legendColumns,
       legendRowGap: legendRowGap,
@@ -147,10 +132,10 @@ class LineChart extends LeafRenderObjectWidget {
   void updateRenderObject(RenderObject renderObject) {
     final ro = renderObject as _RenderLineChart;
     ro
-      ..values = values
+      ..series = _effectiveSeries
+      ..styles = _effectiveStyles
       ..chartWidth = width
       ..chartHeight = height
-      ..lineStyle = lineStyle ?? const UvStyle()
       ..gridStyle = gridStyle ?? const UvStyle()
       ..labelStyle = labelStyle ?? const UvStyle()
       ..showGrid = showGrid
@@ -161,6 +146,8 @@ class LineChart extends LeafRenderObjectWidget {
       ..lineChar = lineChar
       ..xLabels = xLabels
       ..yLabels = yLabels
+      ..minValue = minValue
+      ..maxValue = maxValue
       ..legendEntries = legendEntries
       ..legendColumns = legendColumns
       ..legendRowGap = legendRowGap
@@ -173,10 +160,10 @@ class LineChart extends LeafRenderObjectWidget {
 
   @override
   Object view() => _renderLineChartString(
-    values,
+    _effectiveSeries,
+    _effectiveStyles,
     width ?? 60,
     height ?? 12,
-    lineStyle ?? const UvStyle(),
     gridStyle ?? const UvStyle(),
     labelStyle ?? const UvStyle(),
     showGrid,
@@ -187,6 +174,8 @@ class LineChart extends LeafRenderObjectWidget {
     lineChar,
     xLabels,
     yLabels,
+    minValue,
+    maxValue,
     legendEntries,
     legendColumns,
     legendRowGap,
@@ -197,10 +186,10 @@ class LineChart extends LeafRenderObjectWidget {
 
 class _RenderLineChart extends RenderBox {
   _RenderLineChart({
-    required this.values,
+    required this.series,
+    required this.styles,
     required this.chartWidth,
     required this.chartHeight,
-    required this.lineStyle,
     required this.gridStyle,
     required this.labelStyle,
     required this.showGrid,
@@ -211,6 +200,8 @@ class _RenderLineChart extends RenderBox {
     required this.lineChar,
     required this.xLabels,
     required this.yLabels,
+    required this.minValue,
+    required this.maxValue,
     required this.legendEntries,
     required this.legendColumns,
     required this.legendRowGap,
@@ -221,10 +212,10 @@ class _RenderLineChart extends RenderBox {
     required this.crosshairStyle,
   });
 
-  List<double> values;
+  List<List<double>> series;
+  List<UvStyle> styles;
   int? chartWidth;
   int? chartHeight;
-  UvStyle lineStyle;
   UvStyle gridStyle;
   UvStyle labelStyle;
   bool showGrid;
@@ -235,6 +226,8 @@ class _RenderLineChart extends RenderBox {
   String lineChar;
   List<String>? xLabels;
   List<String>? yLabels;
+  double? minValue;
+  double? maxValue;
   List<ChartLegendEntry>? legendEntries;
   int legendColumns;
   int legendRowGap;
@@ -261,10 +254,10 @@ class _RenderLineChart extends RenderBox {
       12,
     );
     _lastPaint = _renderLineChartString(
-      values,
+      series,
+      styles,
       w,
       h,
-      lineStyle,
       gridStyle,
       labelStyle,
       showGrid,
@@ -275,6 +268,8 @@ class _RenderLineChart extends RenderBox {
       lineChar,
       xLabels,
       yLabels,
+      minValue,
+      maxValue,
       legendEntries,
       legendColumns,
       legendRowGap,
@@ -291,10 +286,10 @@ class _RenderLineChart extends RenderBox {
   String paint() {
     return _lastPaint ??
         _renderLineChartString(
-          values,
+          series,
+          styles,
           chartWidth ?? 60,
           chartHeight ?? 12,
-          lineStyle,
           gridStyle,
           labelStyle,
           showGrid,
@@ -305,6 +300,8 @@ class _RenderLineChart extends RenderBox {
           lineChar,
           xLabels,
           yLabels,
+          minValue,
+          maxValue,
           legendEntries,
           legendColumns,
           legendRowGap,
@@ -318,10 +315,10 @@ class _RenderLineChart extends RenderBox {
 }
 
 String _renderLineChartString(
-  List<double> values,
+  List<List<double>> series,
+  List<UvStyle> styles,
   int width,
   int height,
-  UvStyle lineStyle,
   UvStyle gridStyle,
   UvStyle labelStyle,
   bool showGrid,
@@ -332,6 +329,8 @@ String _renderLineChartString(
   String lineChar,
   List<String>? xLabels,
   List<String>? yLabels,
+  double? minValue,
+  double? maxValue,
   List<ChartLegendEntry>? legendEntries,
   int legendColumns,
   int legendRowGap,
@@ -344,22 +343,47 @@ String _renderLineChartString(
   if (width <= 0 || height <= 0) return '';
   final canvas = Canvas(width, height);
   final area = rect(0, 0, width, height);
-  drawLineChart(
-    canvas,
-    area,
-    values,
-    lineStyle: lineStyle,
-    gridStyle: gridStyle,
-    labelStyle: labelStyle,
-    showGrid: showGrid,
-    gridRows: gridRows,
-    gridCols: gridCols,
-    showMarkers: showMarkers,
-    markerChar: markerChar,
-    lineChar: lineChar,
-    xLabels: xLabels,
-    yLabels: yLabels,
-  );
+
+  if (series.length <= 1) {
+    // Single-series backward-compatible path
+    drawLineChart(
+      canvas,
+      area,
+      series.isNotEmpty ? series[0] : [],
+      lineStyle: styles.isNotEmpty ? styles[0] : const UvStyle(),
+      gridStyle: gridStyle,
+      labelStyle: labelStyle,
+      showGrid: showGrid,
+      gridRows: gridRows,
+      gridCols: gridCols,
+      showMarkers: showMarkers,
+      markerChar: markerChar,
+      lineChar: lineChar,
+      xLabels: xLabels,
+      yLabels: yLabels,
+      minValue: minValue,
+      maxValue: maxValue,
+    );
+  } else {
+    drawMultiSeriesLineChart(
+      canvas,
+      area,
+      series,
+      styles: styles,
+      gridStyle: gridStyle,
+      labelStyle: labelStyle,
+      showGrid: showGrid,
+      gridRows: gridRows,
+      gridCols: gridCols,
+      showMarkers: showMarkers,
+      markerChar: markerChar,
+      xLabels: xLabels,
+      yLabels: yLabels,
+      minValue: minValue,
+      maxValue: maxValue,
+    );
+  }
+
   if (crosshairX != null && crosshairY != null) {
     drawCrosshair(
       canvas,

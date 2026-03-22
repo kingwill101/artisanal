@@ -8,6 +8,14 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:artisanal/widgets.dart';
+import 'package:artisanal/scoring.dart'
+    show
+        BayesianScorer,
+        IncrementalScorer,
+        MatchResult,
+        MatchType,
+        ConformalRanker,
+        RankedItem;
 import 'package:artisanal/markdown.dart'
     show
         AdaptiveChromaTheme,

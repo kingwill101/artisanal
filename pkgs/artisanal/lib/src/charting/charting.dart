@@ -10,12 +10,19 @@ export 'core.dart'
         drawGrid,
         drawLegend,
         renderChartLines;
+export 'braille.dart' show BrailleCanvas;
 export 'core.dart'
     show clamp01, drawCrosshair, normalize, putText, sampleSeries;
 export 'palette.dart' show ChartRamp, uvColorFromHex, uvStyleFromHex;
 export 'sparkline.dart' show drawSparkline;
-export 'histogram.dart' show drawHistogram;
+export 'histogram.dart'
+    show
+        drawHistogram,
+        drawGroupedHistogram,
+        drawStackedHistogram,
+        drawHorizontalGroupedHistogram,
+        drawHorizontalStackedHistogram;
 export 'heatmap.dart' show drawHeatmap;
 export 'ribbon.dart' show drawRibbonChart;
-export 'line.dart' show drawLineChart;
+export 'line.dart' show drawLineChart, drawMultiSeriesLineChart;
 export 'pie.dart' show drawPieChart;

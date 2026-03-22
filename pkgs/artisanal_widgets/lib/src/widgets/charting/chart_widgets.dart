@@ -16,13 +16,19 @@ import 'dart:math' as math;
 
 import 'package:artisanal/charting.dart'
     show
+        ChartPainter,
         ChartLegendEntry,
         ChartRamp,
         drawCrosshair,
         drawLegend,
         drawSparkline,
         drawLineChart,
+        drawMultiSeriesLineChart,
         drawHistogram,
+        drawGroupedHistogram,
+        drawStackedHistogram,
+        drawHorizontalGroupedHistogram,
+        drawHorizontalStackedHistogram,
         drawHeatmap,
         drawPieChart,
         drawRibbonChart;
@@ -36,6 +42,7 @@ import '../layout/geometry.dart' show BoxConstraints, Size;
 
 part 'chart_model.dart';
 part 'chart_builder.dart';
+part 'custom_chart.dart';
 part 'sparkline_chart.dart';
 part 'line_chart.dart';
 part 'bar_chart.dart';

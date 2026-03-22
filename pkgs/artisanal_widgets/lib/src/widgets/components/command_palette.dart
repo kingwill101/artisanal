@@ -7,6 +7,7 @@ class CommandPaletteItem {
     this.description,
     this.shortcut,
     this.group,
+    this.tags = const [],
     this.onSelect,
     this.enabled = true,
   });
@@ -24,6 +25,9 @@ class CommandPaletteItem {
   /// displayed under a shared header.
   final String? group;
 
+  /// Searchable tags that boost match score when query matches.
+  final List<String> tags;
+
   /// Callback when this item is selected. Returns a [Cmd] or null.
   final CmdCallback? onSelect;
 
@@ -34,7 +38,10 @@ class CommandPaletteItem {
 /// A searchable, grouped list displayed in a modal overlay.
 ///
 /// Modeled after VS Code's command palette / Ctrl+P picker. Supports:
-/// - Fuzzy text filtering via a search input
+/// - Bayesian scoring with match types (exact > prefix > word-start > substring > fuzzy)
+/// - Incremental scoring for query-as-you-type performance
+/// - Conformal rank confidence (stable/marginal/unstable)
+/// - Searchable tags that boost match scores
 /// - Grouped items with section headers
 /// - Keyboard navigation (up/down arrows, enter to select, esc to dismiss)
 /// - Mouse click selection
@@ -45,9 +52,9 @@ class CommandPaletteItem {
 ///   open: _showPalette,
 ///   title: 'Commands',
 ///   items: [
-///     CommandPaletteItem(label: 'Open File', shortcut: 'ctrl+o', group: 'File'),
-///     CommandPaletteItem(label: 'Save', shortcut: 'ctrl+s', group: 'File'),
-///     CommandPaletteItem(label: 'Find', shortcut: 'ctrl+f', group: 'Edit'),
+///     CommandPaletteItem(label: 'Open File', shortcut: 'ctrl+o', group: 'File', tags: ['open', 'load']),
+///     CommandPaletteItem(label: 'Save', shortcut: 'ctrl+s', group: 'File', tags: ['write', 'persist']),
+///     CommandPaletteItem(label: 'Find', shortcut: 'ctrl+f', group: 'Edit', tags: ['search']),
 ///   ],
 ///   onDismiss: () { setState(() => _showPalette = false); return null; },
 ///   child: myAppContent,
@@ -125,17 +132,39 @@ class CommandPalette extends StatefulWidget {
 class _CommandPaletteState extends State<CommandPalette> {
   String _query = '';
   int _selectedIndex = 0;
+  final _scorer = IncrementalScorer();
+  final _ranker = const ConformalRanker();
+  List<CommandPaletteItem> _cachedItems = [];
+  List<MatchResult> _cachedResults = [];
 
   List<CommandPaletteItem> get _filteredItems {
+    final enabled = widget.items.where((item) => item.enabled).toList();
+
     if (_query.isEmpty) {
-      return widget.items.where((item) => item.enabled).toList();
+      _cachedItems = enabled;
+      _cachedResults = [];
+      return _cachedItems;
     }
-    final lower = _query.toLowerCase();
-    return widget.items
-        .where(
-          (item) => item.enabled && item.label.toLowerCase().contains(lower),
-        )
-        .toList();
+
+    final titles = enabled.map((item) => item.label).toList();
+    final tags = enabled.map((item) => item.tags).toList();
+    final results = _scorer.scoreCorpusWithTags(_query, titles, tags);
+
+    // Rank results and filter to those that matched
+    final ranked = _ranker.rank(results);
+    final filtered = <CommandPaletteItem>[];
+    final matchResults = <MatchResult>[];
+
+    for (final item in ranked.items) {
+      if (item.result.matchType != MatchType.noMatch) {
+        filtered.add(enabled[item.originalIndex]);
+        matchResults.add(item.result);
+      }
+    }
+
+    _cachedItems = filtered;
+    _cachedResults = matchResults;
+    return _cachedItems;
   }
 
   void _onSearchChanged(String value) {

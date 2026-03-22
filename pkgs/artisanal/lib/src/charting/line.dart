@@ -6,6 +6,10 @@ import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
 
+// ---------------------------------------------------------------------------
+// Single-series line chart (backward-compatible)
+// ---------------------------------------------------------------------------
+
 /// Draws a line chart of [values] into [area] on [screen].
 ///
 /// The line is rendered using Braille dot patterns (U+2800–U+28FF) which
@@ -28,10 +32,66 @@ void drawLineChart(
   String lineChar = '•',
   List<String>? xLabels,
   List<String>? yLabels,
+  double? minValue,
+  double? maxValue,
+}) {
+  drawMultiSeriesLineChart(
+    screen,
+    area,
+    [values],
+    styles: [lineStyle],
+    gridStyle: gridStyle,
+    labelStyle: labelStyle,
+    showGrid: showGrid,
+    gridRows: gridRows,
+    gridCols: gridCols,
+    showMarkers: showMarkers,
+    markerChar: markerChar,
+    xLabels: xLabels,
+    yLabels: yLabels,
+    minValue: minValue,
+    maxValue: maxValue,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Multi-series line chart
+// ---------------------------------------------------------------------------
+
+/// Draws a multi-series line chart into [area] on [screen].
+///
+/// Each series in [seriesList] is drawn with its corresponding [UvStyle]
+/// from [styles] (cycled if shorter). All series share the same Y bounds
+/// (auto-computed from the union of all values).
+///
+/// ```dart
+/// drawMultiSeriesLineChart(
+///   screen, area,
+///   [sineValues, cosineValues, noiseValues],
+///   styles: [uvStyle1, uvStyle2, uvStyle3],
+///   showGrid: true,
+/// );
+/// ```
+void drawMultiSeriesLineChart(
+  Screen screen,
+  Rectangle area,
+  List<List<double>> seriesList, {
+  List<UvStyle> styles = const [UvStyle()],
+  UvStyle gridStyle = const UvStyle(),
+  UvStyle labelStyle = const UvStyle(),
+  bool showGrid = false,
+  int gridRows = 3,
+  int gridCols = 3,
+  bool showMarkers = true,
+  String markerChar = '●',
+  List<String>? xLabels,
+  List<String>? yLabels,
+  double? minValue,
+  double? maxValue,
 }) {
   final width = area.width;
   final height = area.height;
-  if (width <= 1 || height <= 1 || values.isEmpty) return;
+  if (width <= 1 || height <= 1 || seriesList.isEmpty) return;
 
   if (showGrid) {
     drawGrid(
@@ -46,68 +106,74 @@ void drawLineChart(
     );
   }
 
-  // --- Braille sub-pixel canvas ---
-  // Each cell is 2 dots wide × 4 dots tall.
+  // Compute global min/max across all series.
+  var globalMin = minValue ?? double.infinity;
+  var globalMax = maxValue ?? double.negativeInfinity;
+  for (final values in seriesList) {
+    for (final v in values) {
+      if (minValue == null && v < globalMin) globalMin = v;
+      if (maxValue == null && v > globalMax) globalMax = v;
+    }
+  }
+  if (globalMin >= globalMax) {
+    globalMin -= 0.5;
+    globalMax += 0.5;
+  }
+
   final bWidth = width * 2;
   final bHeight = height * 4;
 
-  // Allocate the Braille dot grid (false = empty).
-  final dots = List<List<bool>>.generate(
-    bHeight,
-    (_) => List<bool>.filled(bWidth, false),
-  );
+  // Draw each series with its own color.
+  for (var si = 0; si < seriesList.length; si++) {
+    final values = seriesList[si];
+    if (values.isEmpty) continue;
+    final style = styles[si % styles.length];
 
-  // Compute min/max from the original values.
-  final minValue = values.reduce((a, b) => a < b ? a : b);
-  final maxValue = values.reduce((a, b) => a > b ? a : b);
-
-  // Map each original data point to a Braille-space coordinate.
-  // N data points are evenly spaced across the Braille width.
-  final n = values.length;
-  final bPoints = List<({int x, int y})>.generate(n, (i) {
-    // Evenly distribute data points across Braille-space X axis.
-    final bx = n <= 1 ? 0 : (i * (bWidth - 1) / (n - 1)).round();
-    final normalized = normalize(values[i], minValue, maxValue);
-    // y=0 is top in Braille grid; invert so high values are at the top.
-    final by = (bHeight - 1) - (normalized * (bHeight - 1)).round();
-    return (x: bx.clamp(0, bWidth - 1), y: by.clamp(0, bHeight - 1));
-  });
-
-  // Rasterize lines between successive Braille-space points.
-  for (var i = 0; i < bPoints.length - 1; i++) {
-    _brailleLine(
-      dots,
-      bPoints[i].x,
-      bPoints[i].y,
-      bPoints[i + 1].x,
-      bPoints[i + 1].y,
+    // Allocate Braille dot grid for this series.
+    final dots = List<List<bool>>.generate(
+      bHeight,
+      (_) => List<bool>.filled(bWidth, false),
     );
-  }
-  // If there's only one point, plot it as a single dot.
-  if (bPoints.length == 1) {
-    final p = bPoints[0];
-    if (p.x >= 0 && p.x < bWidth && p.y >= 0 && p.y < bHeight) {
-      dots[p.y][p.x] = true;
-    }
-  }
 
-  // Convert the dot grid to Braille characters.
-  _renderBraille(screen, area, dots, lineStyle);
+    final n = values.length;
+    final bPoints = List<({int x, int y})>.generate(n, (i) {
+      final bx = n <= 1 ? 0 : (i * (bWidth - 1) / (n - 1)).round();
+      final normalized = normalize(values[i], globalMin, globalMax);
+      final by = (bHeight - 1) - (normalized * (bHeight - 1)).round();
+      return (x: bx.clamp(0, bWidth - 1), y: by.clamp(0, bHeight - 1));
+    });
 
-  // --- Markers at the original (cell-resolution) data-point positions ---
-  if (showMarkers) {
-    for (var i = 0; i < n; i++) {
-      // Same X mapping as Braille-space, but in cell coordinates.
-      final cellX = n <= 1 ? 0 : (i * (width - 1) / (n - 1)).round();
-      final normalized = normalize(values[i], minValue, maxValue);
-      final cellY = area.maxY - 1 - (normalized * (height - 1)).round();
-      putCell(
-        screen,
-        (area.minX + cellX).clamp(area.minX, area.maxX - 1),
-        cellY.clamp(area.minY, area.maxY - 1),
-        markerChar,
-        lineStyle,
+    for (var i = 0; i < bPoints.length - 1; i++) {
+      _brailleLine(
+        dots,
+        bPoints[i].x,
+        bPoints[i].y,
+        bPoints[i + 1].x,
+        bPoints[i + 1].y,
       );
+    }
+    if (bPoints.length == 1) {
+      final p = bPoints[0];
+      if (p.x >= 0 && p.x < bWidth && p.y >= 0 && p.y < bHeight) {
+        dots[p.y][p.x] = true;
+      }
+    }
+
+    _renderBraille(screen, area, dots, style);
+
+    if (showMarkers) {
+      for (var i = 0; i < n; i++) {
+        final cellX = n <= 1 ? 0 : (i * (width - 1) / (n - 1)).round();
+        final normalized = normalize(values[i], globalMin, globalMax);
+        final cellY = area.maxY - 1 - (normalized * (height - 1)).round();
+        putCell(
+          screen,
+          (area.minX + cellX).clamp(area.minX, area.maxX - 1),
+          cellY.clamp(area.minY, area.maxY - 1),
+          markerChar,
+          style,
+        );
+      }
     }
   }
 

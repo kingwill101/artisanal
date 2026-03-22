@@ -1,29 +1,54 @@
 part of 'chart_widgets.dart';
 
-/// A vertical bar chart (histogram) widget.
+/// Bar chart direction.
+enum BarChartDirection {
+  /// Bars grow upward from the bottom.
+  vertical,
+
+  /// Bars grow rightward from the left.
+  horizontal,
+}
+
+/// Bar chart mode for multi-series data.
+enum BarChartMode {
+  /// Bars are placed side-by-side within each group.
+  grouped,
+
+  /// Bars are stacked on top of each other.
+  stacked,
+}
+
+/// A bar chart widget supporting single or multi-series data.
 ///
-/// Each value is rendered as a column whose height is proportional to its
-/// magnitude within the [width]×[height] area.
+/// Supports vertical/horizontal direction, grouped/stacked modes,
+/// per-series styling, and group labels.
 ///
 /// ```dart
+/// // Single-series (backward-compatible)
+/// BarChart(values: [5, 12, 8, 20], xLabels: ['A', 'B', 'C', 'D'])
+///
+/// // Multi-series grouped
 /// BarChart(
-///   values: [5, 12, 8, 20, 15],
-///   width: 40,
-///   height: 10,
-///   showAxis: true,
-///   barStyle: UvStyle(fg: UvColor.rgb(100, 200, 50)),
+///   series: [[42, 58, 35], [38, 45, 52], [55, 62, 48]],
+///   barStyles: [style1, style2, style3],
+///   xLabels: ['Q1', 'Q2', 'Q3'],
+///   mode: BarChartMode.grouped,
+/// )
+///
+/// // Horizontal stacked
+/// BarChart(
+///   series: [[10, 20], [15, 25]],
+///   direction: BarChartDirection.horizontal,
+///   mode: BarChartMode.stacked,
 /// )
 /// ```
 class BarChart extends LeafRenderObjectWidget {
-  /// Creates a [BarChart] with the given data and display options.
-  ///
-  /// When [width] or [height] is null the chart fills the available
-  /// constraint space (responsive mode).
-  ///
-  /// Set [crosshairX] and [crosshairY] to draw a crosshair overlay at
-  /// that position (e.g. from mouse hover).
   BarChart({
-    required this.values,
+    this.values,
+    this.series,
+    this.barStyles,
+    this.direction = BarChartDirection.vertical,
+    this.mode = BarChartMode.grouped,
     this.width,
     this.height,
     this.barStyle,
@@ -42,89 +67,80 @@ class BarChart extends LeafRenderObjectWidget {
     this.legendPosition = ChartLegendPosition.topRight,
     this.legendPadding = 1,
     this.barChar = '█',
+    this.barWidth,
     this.barGap = 1,
+    this.groupGap = 1,
+    this.drawAxisLine = true,
     this.crosshairX,
     this.crosshairY,
     this.crosshairStyle,
     super.key,
-  });
+  }) : assert(
+         values != null || series != null,
+         'Either values or series must be provided',
+       );
 
-  /// The data values to render as bars.
-  final List<double> values;
+  /// Single-series data values (backward-compatible).
+  final List<double>? values;
 
-  /// The chart width in terminal columns, or null to fill available space.
+  /// Multi-series data: list of value lists (one per series).
+  final List<List<double>>? series;
+
+  /// Per-series bar styles (cycled if shorter than series count).
+  final List<UvStyle>? barStyles;
+
+  /// Bar direction (vertical or horizontal).
+  final BarChartDirection direction;
+
+  /// Bar mode for multi-series data (grouped or stacked).
+  final BarChartMode mode;
+
   final int? width;
-
-  /// The chart height in terminal rows, or null to fill available space.
   final int? height;
-
-  /// Style for the bar fill characters.
   final UvStyle? barStyle;
-
-  /// Style for the bottom axis line.
   final UvStyle? axisStyle;
-
-  /// Style for grid lines.
   final UvStyle? gridStyle;
-
-  /// Style for axis labels.
   final UvStyle? labelStyle;
-
-  /// Whether to draw a horizontal axis at the bottom.
   final bool showAxis;
-
-  /// Whether to draw background grid lines.
   final bool showGrid;
-
-  /// Number of horizontal grid lines.
   final int gridRows;
-
-  /// Number of vertical grid lines.
   final int gridCols;
-
-  /// Labels along the bottom (X) axis.
   final List<String>? xLabels;
-
-  /// Labels along the left (Y) axis.
   final List<String>? yLabels;
-
-  /// Optional legend entries rendered inside chart bounds.
   final List<ChartLegendEntry>? legendEntries;
-
-  /// Number of legend columns.
   final int legendColumns;
-
-  /// Empty rows inserted between legend rows.
   final int legendRowGap;
-
-  /// Legend placement within chart bounds.
   final ChartLegendPosition legendPosition;
-
-  /// Inner padding from chart edges to legend area.
   final int legendPadding;
-
-  /// Character used to fill bar columns.
   final String barChar;
-
-  /// Number of empty columns between adjacent bars.
+  final int? barWidth;
   final int barGap;
-
-  /// X coordinate for crosshair overlay, or null to hide.
+  final int groupGap;
+  final bool drawAxisLine;
   final int? crosshairX;
-
-  /// Y coordinate for crosshair overlay, or null to hide.
   final int? crosshairY;
-
-  /// Style for the crosshair lines.
   final UvStyle? crosshairStyle;
+
+  List<List<double>> get _effectiveSeries {
+    if (series != null) return series!;
+    if (values != null) return [values!];
+    return [[]];
+  }
+
+  List<UvStyle> get _effectiveStyles {
+    if (barStyles != null) return barStyles!;
+    return [barStyle ?? const UvStyle()];
+  }
 
   @override
   RenderObject createRenderObject() {
     return _RenderBarChart(
-      values: values,
+      series: _effectiveSeries,
+      styles: _effectiveStyles,
+      direction: direction,
+      mode: mode,
       chartWidth: width,
       chartHeight: height,
-      barStyle: barStyle ?? const UvStyle(),
       axisStyle: axisStyle ?? const UvStyle(),
       gridStyle: gridStyle ?? const UvStyle(),
       labelStyle: labelStyle ?? const UvStyle(),
@@ -140,7 +156,10 @@ class BarChart extends LeafRenderObjectWidget {
       legendPosition: legendPosition,
       legendPadding: legendPadding,
       barChar: barChar,
+      barWidth: barWidth,
       barGap: barGap,
+      groupGap: groupGap,
+      drawAxisLine: drawAxisLine,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -151,10 +170,12 @@ class BarChart extends LeafRenderObjectWidget {
   void updateRenderObject(RenderObject renderObject) {
     final ro = renderObject as _RenderBarChart;
     ro
-      ..values = values
+      ..series = _effectiveSeries
+      ..styles = _effectiveStyles
+      ..direction = direction
+      ..mode = mode
       ..chartWidth = width
       ..chartHeight = height
-      ..barStyle = barStyle ?? const UvStyle()
       ..axisStyle = axisStyle ?? const UvStyle()
       ..gridStyle = gridStyle ?? const UvStyle()
       ..labelStyle = labelStyle ?? const UvStyle()
@@ -170,7 +191,10 @@ class BarChart extends LeafRenderObjectWidget {
       ..legendPosition = legendPosition
       ..legendPadding = legendPadding
       ..barChar = barChar
+      ..barWidth = barWidth
       ..barGap = barGap
+      ..groupGap = groupGap
+      ..drawAxisLine = drawAxisLine
       ..crosshairX = crosshairX
       ..crosshairY = crosshairY
       ..crosshairStyle = crosshairStyle;
@@ -178,10 +202,12 @@ class BarChart extends LeafRenderObjectWidget {
 
   @override
   Object view() => _renderBarChartString(
-    values,
+    _effectiveSeries,
+    _effectiveStyles,
+    direction,
+    mode,
     width ?? 40,
     height ?? 10,
-    barStyle ?? const UvStyle(),
     axisStyle ?? const UvStyle(),
     gridStyle ?? const UvStyle(),
     labelStyle ?? const UvStyle(),
@@ -197,16 +223,21 @@ class BarChart extends LeafRenderObjectWidget {
     legendPosition,
     legendPadding,
     barChar,
+    barWidth,
     barGap,
+    groupGap,
+    drawAxisLine: drawAxisLine,
   );
 }
 
 class _RenderBarChart extends RenderBox {
   _RenderBarChart({
-    required this.values,
+    required this.series,
+    required this.styles,
+    required this.direction,
+    required this.mode,
     required this.chartWidth,
     required this.chartHeight,
-    required this.barStyle,
     required this.axisStyle,
     required this.gridStyle,
     required this.labelStyle,
@@ -222,16 +253,21 @@ class _RenderBarChart extends RenderBox {
     required this.legendPosition,
     required this.legendPadding,
     required this.barChar,
+    required this.barWidth,
     required this.barGap,
+    required this.groupGap,
+    required this.drawAxisLine,
     required this.crosshairX,
     required this.crosshairY,
     required this.crosshairStyle,
   });
 
-  List<double> values;
+  List<List<double>> series;
+  List<UvStyle> styles;
+  BarChartDirection direction;
+  BarChartMode mode;
   int? chartWidth;
   int? chartHeight;
-  UvStyle barStyle;
   UvStyle axisStyle;
   UvStyle gridStyle;
   UvStyle labelStyle;
@@ -247,7 +283,10 @@ class _RenderBarChart extends RenderBox {
   ChartLegendPosition legendPosition;
   int legendPadding;
   String barChar;
+  int? barWidth;
   int barGap;
+  int groupGap;
+  bool drawAxisLine;
   int? crosshairX;
   int? crosshairY;
   UvStyle? crosshairStyle;
@@ -269,10 +308,12 @@ class _RenderBarChart extends RenderBox {
       10,
     );
     _lastPaint = _renderBarChartString(
-      values,
+      series,
+      styles,
+      direction,
+      mode,
       w,
       h,
-      barStyle,
       axisStyle,
       gridStyle,
       labelStyle,
@@ -288,7 +329,10 @@ class _RenderBarChart extends RenderBox {
       legendPosition,
       legendPadding,
       barChar,
+      barWidth,
       barGap,
+      groupGap,
+      drawAxisLine: drawAxisLine,
       crosshairX: crosshairX,
       crosshairY: crosshairY,
       crosshairStyle: crosshairStyle,
@@ -300,10 +344,12 @@ class _RenderBarChart extends RenderBox {
   String paint() {
     return _lastPaint ??
         _renderBarChartString(
-          values,
+          series,
+          styles,
+          direction,
+          mode,
           chartWidth ?? 40,
           chartHeight ?? 10,
-          barStyle,
           axisStyle,
           gridStyle,
           labelStyle,
@@ -319,7 +365,10 @@ class _RenderBarChart extends RenderBox {
           legendPosition,
           legendPadding,
           barChar,
+          barWidth,
           barGap,
+          groupGap,
+          drawAxisLine: drawAxisLine,
           crosshairX: crosshairX,
           crosshairY: crosshairY,
           crosshairStyle: crosshairStyle,
@@ -328,10 +377,12 @@ class _RenderBarChart extends RenderBox {
 }
 
 String _renderBarChartString(
-  List<double> values,
+  List<List<double>> series,
+  List<UvStyle> styles,
+  BarChartDirection direction,
+  BarChartMode mode,
   int width,
   int height,
-  UvStyle barStyle,
   UvStyle axisStyle,
   UvStyle gridStyle,
   UvStyle labelStyle,
@@ -347,7 +398,10 @@ String _renderBarChartString(
   ChartLegendPosition legendPosition,
   int legendPadding,
   String barChar,
-  int barGap, {
+  int? barWidth,
+  int barGap,
+  int groupGap, {
+  bool drawAxisLine = true,
   int? crosshairX,
   int? crosshairY,
   UvStyle? crosshairStyle,
@@ -355,23 +409,117 @@ String _renderBarChartString(
   if (width <= 0 || height <= 0) return '';
   final canvas = Canvas(width, height);
   final area = rect(0, 0, width, height);
-  drawHistogram(
-    canvas,
-    area,
-    values,
-    barStyle: barStyle,
-    axisStyle: axisStyle,
-    gridStyle: gridStyle,
-    labelStyle: labelStyle,
-    showAxis: showAxis,
-    showGrid: showGrid,
-    gridRows: gridRows,
-    gridCols: gridCols,
-    xLabels: xLabels,
-    yLabels: yLabels,
-    barChar: barChar,
-    barGap: barGap,
-  );
+
+  if (series.length <= 1 && direction == BarChartDirection.vertical) {
+    // Single-series vertical — use original drawHistogram for backward compat.
+    drawHistogram(
+      canvas,
+      area,
+      series.isNotEmpty ? series[0] : [],
+      barStyle: styles.isNotEmpty ? styles[0] : const UvStyle(),
+      axisStyle: axisStyle,
+      gridStyle: gridStyle,
+      labelStyle: labelStyle,
+      showAxis: showAxis,
+      showGrid: showGrid,
+      gridRows: gridRows,
+      gridCols: gridCols,
+      xLabels: xLabels,
+      yLabels: yLabels,
+      barChar: barChar,
+      barWidth: barWidth,
+      barGap: barGap,
+      drawAxisLine: drawAxisLine,
+    );
+  } else if (direction == BarChartDirection.vertical) {
+    if (mode == BarChartMode.stacked) {
+      drawStackedHistogram(
+        canvas,
+        area,
+        series,
+        styles: styles,
+        axisStyle: axisStyle,
+        gridStyle: gridStyle,
+        labelStyle: labelStyle,
+        showAxis: showAxis,
+        showGrid: showGrid,
+        gridRows: gridRows,
+        gridCols: gridCols,
+        xLabels: xLabels,
+        yLabels: yLabels,
+        barChar: barChar,
+        barWidth: barWidth,
+        barGap: barGap,
+        groupGap: groupGap,
+        drawAxisLine: drawAxisLine,
+      );
+    } else {
+      drawGroupedHistogram(
+        canvas,
+        area,
+        series,
+        styles: styles,
+        axisStyle: axisStyle,
+        gridStyle: gridStyle,
+        labelStyle: labelStyle,
+        showAxis: showAxis,
+        showGrid: showGrid,
+        gridRows: gridRows,
+        gridCols: gridCols,
+        xLabels: xLabels,
+        yLabels: yLabels,
+        barChar: barChar,
+        barWidth: barWidth,
+        barGap: barGap,
+        groupGap: groupGap,
+        drawAxisLine: drawAxisLine,
+      );
+    }
+  } else {
+    // Horizontal
+    if (mode == BarChartMode.stacked) {
+      drawHorizontalStackedHistogram(
+        canvas,
+        area,
+        series,
+        styles: styles,
+        axisStyle: axisStyle,
+        gridStyle: gridStyle,
+        labelStyle: labelStyle,
+        showAxis: showAxis,
+        showGrid: showGrid,
+        gridRows: gridRows,
+        gridCols: gridCols,
+        yLabels: yLabels,
+        barChar: barChar,
+        barWidth: barWidth,
+        barGap: barGap,
+        groupGap: groupGap,
+        drawAxisLine: drawAxisLine,
+      );
+    } else {
+      drawHorizontalGroupedHistogram(
+        canvas,
+        area,
+        series,
+        styles: styles,
+        axisStyle: axisStyle,
+        gridStyle: gridStyle,
+        labelStyle: labelStyle,
+        showAxis: showAxis,
+        showGrid: showGrid,
+        gridRows: gridRows,
+        gridCols: gridCols,
+        yLabels: yLabels,
+        barChar: barChar,
+        barWidth: barWidth,
+        barGap: barGap,
+        groupGap: groupGap,
+        drawAxisLine: drawAxisLine,
+      );
+    }
+  }
+
   if (crosshairX != null && crosshairY != null) {
     drawCrosshair(
       canvas,

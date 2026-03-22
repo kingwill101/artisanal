@@ -14,3 +14,5 @@ library;
 
 export 'widgets.dart';
 export 'src/widgets/charting/chart_widgets.dart';
+export 'package:artisanal/charting.dart'
+    show ChartLegendEntry, ChartRamp, ChartPainter, BrailleCanvas;
