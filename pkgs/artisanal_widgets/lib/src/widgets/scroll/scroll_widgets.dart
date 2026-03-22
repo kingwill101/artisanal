@@ -64,7 +64,7 @@ abstract class ScrollController {
   /// Maximum scroll offset.
   int get maxOffset => math.max(0, contentExtent - viewportExtent);
 
-  /// Scroll percentage in the range [0, 1].
+  /// Scroll percentage in the range `0` to `1`.
   double get scrollPercent => maxOffset == 0 ? 0 : offset / maxOffset;
 
   /// Jumps to an absolute offset. Returns true if the offset changed.
@@ -1106,7 +1106,7 @@ class _SingleChildViewport extends SingleChildRenderObjectWidget {
 ///
 /// Lays out the child with unconstrained height (so the child can be taller
 /// than the viewport). On paint, it takes the child's rendered string,
-/// skips [offset] lines, and returns only [viewportHeight] lines.
+/// skips `offset` lines, and returns only `viewportHeight` lines.
 class RenderSingleChildViewport extends RenderBox {
   RenderSingleChildViewport({
     required ScrollController controller,
@@ -2799,7 +2799,7 @@ void _drawStyledContent(
 /// Provide a [ScrollController] to share scroll state with a [Scrollbar].
 ///
 /// Flutter-like constructors are available:
-/// - [ListView] for an explicit [children] list
+/// - [ListView] for an explicit `children` list
 /// - [ListView.builder] for index-based item generation
 /// - [ListView.separated] for generated separators between items
 typedef IndexedWidgetBuilder = Widget Function(BuildContext context, int index);
@@ -3890,6 +3890,8 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
 /// It virtualizes painting to only include visible items and supports both
 /// fixed-height and variable-height modes.
 class RenderListViewport extends RenderBox {
+  static const int _smallListExactResolutionLimit = 20_000;
+
   RenderListViewport({
     required this.controller,
     required this.zoneId,
@@ -3915,11 +3917,10 @@ class RenderListViewport extends RenderBox {
   final Map<int, int> _measuredHeights = <int, int>{};
   final Map<int, _ChildPaintSnapshot> _childPaintCache =
       <int, _ChildPaintSnapshot>{};
-  List<int>? _cachedPrefix;
+  final _FenwickTree _strideTree = _FenwickTree(0);
   int _cachedItemCount = -1;
   int _cachedSeparatorBreaks = -1;
   int _cachedEstimated = -1;
-  int? _cachedContentHeight;
   int? _lastMaxWidth;
   bool _needsRepaint = false;
   int _lastPaintOffset = -1;
@@ -3974,8 +3975,8 @@ class RenderListViewport extends RenderBox {
   }
 
   void _invalidateMeasurements() {
-    _cachedPrefix = null;
-    _cachedContentHeight = null;
+    // Keep the measured-height cache valid; prefix queries now read directly
+    // from the Fenwick tree.
   }
 
   void _clearMeasurements() {
@@ -3983,6 +3984,7 @@ class RenderListViewport extends RenderBox {
     _measuredHeights.clear();
     _childPaintCache.clear();
     _invalidateVisiblePaintCache();
+    _strideTree.resize(0);
   }
 
   @override
@@ -4045,10 +4047,14 @@ class RenderListViewport extends RenderBox {
       _cachedItemCount = itemCount;
       _cachedSeparatorBreaks = separatorBreaks;
       _cachedEstimated = estimate;
-      _cachedPrefix = null;
-      _cachedContentHeight = null;
       _measuredHeights.removeWhere((index, _) => index >= itemCount);
       _childPaintCache.removeWhere((index, _) => index >= itemCount);
+      _strideTree.setAll(itemCount, 0);
+      for (var i = 0; i < itemCount; i++) {
+        final height = _resolveItemHeight(i, estimate);
+        final stride = height + (i < itemCount - 1 ? separatorBreaks : 0);
+        _strideTree.set(i, stride);
+      }
     }
   }
 
@@ -4090,57 +4096,129 @@ class RenderListViewport extends RenderBox {
     return math.max(1, blended);
   }
 
-  int _estimateHeight(int index, int estimate) {
+  int _resolveItemHeight(int index, int estimate) {
     final measured = _measuredHeights[index];
     return measured ?? estimate;
   }
 
-  int _estimatedContentHeight(
+  int _resolveStride(
+    int index,
     int itemCount,
-    int separatorBreaks,
     int estimate,
+    int separatorBreaks,
   ) {
-    if (itemCount == 0) return 0;
-    final cached = _cachedContentHeight;
-    if (cached != null) return cached;
-    var total = 0;
-    for (var i = 0; i < itemCount; i++) {
-      total += _estimateHeight(i, estimate);
-      if (i < itemCount - 1) total += separatorBreaks;
-    }
-    _cachedContentHeight = total;
-    return total;
+    final height = _resolveItemHeight(index, estimate);
+    return height + (index < itemCount - 1 ? separatorBreaks : 0);
   }
 
-  List<int> _prefixHeights(int itemCount, int separatorBreaks, int estimate) {
-    final cached = _cachedPrefix;
-    if (cached != null && cached.length == itemCount + 1) {
-      return cached;
-    }
-    final prefix = List<int>.filled(itemCount + 1, 0);
-    var total = 0;
-    for (var i = 0; i < itemCount; i++) {
-      prefix[i] = total;
-      total += _estimateHeight(i, estimate);
-      if (i < itemCount - 1) total += separatorBreaks;
-    }
-    prefix[itemCount] = total;
-    _cachedPrefix = prefix;
-    return prefix;
+  int _estimatedContentHeight() {
+    return _strideTree.total;
   }
 
-  int _findStartIndex(List<int> prefix, int offset) {
-    var low = 0;
-    var high = prefix.length - 1;
-    while (low < high) {
-      final mid = (low + high + 1) >> 1;
-      if (prefix[mid] <= offset) {
-        low = mid;
-      } else {
-        high = mid - 1;
+  int _itemStartOffset(int index) {
+    return _strideTree.prefixSum(index);
+  }
+
+  int _findStartIndexForOffset(int targetOffset) {
+    if (_strideTree.total <= 0) return 0;
+    final clampedOffset = targetOffset.clamp(0, _strideTree.total);
+    final index = _strideTree.lowerBoundForCount(clampedOffset);
+    return index == _strideTree.total
+        ? math.max(0, _cachedItemCount - 1)
+        : index;
+  }
+
+  ({int index, int offsetInItem}) debugResolveOffsetForContentOffset(
+    int contentOffset,
+  ) {
+    if (_cachedItemCount <= 0) return (index: 0, offsetInItem: 0);
+
+    final rawOffset = contentOffset.toInt();
+    final targetOffset = _cachedItemCount <= _smallListExactResolutionLimit
+        ? rawOffset.clamp(0, 0x7fffffff)
+        : contentOffset.clamp(0, math.max(0, _strideTree.total - 1)).toInt();
+
+    if (size.width <= 0) {
+      final index = _findStartIndexForOffset(targetOffset);
+      return (
+        index: index,
+        offsetInItem: targetOffset - _itemStartOffset(index),
+      );
+    }
+
+    if (_cachedItemCount <= _smallListExactResolutionLimit) {
+      return _resolveOffsetForContentOffsetByMeasuring(
+        contentOffset: targetOffset,
+      );
+    }
+
+    final index = _findStartIndexForOffset(targetOffset);
+    return (index: index, offsetInItem: targetOffset - _itemStartOffset(index));
+  }
+
+  ({int index, int offsetInItem}) _resolveOffsetForContentOffsetByMeasuring({
+    required int contentOffset,
+  }) {
+    final itemCount = _cachedItemCount;
+    if (itemCount <= 0) return (index: 0, offsetInItem: 0);
+
+    final maxWidth = size.width.round();
+    if (maxWidth <= 0) {
+      final index = _findStartIndexForOffset(
+        contentOffset.clamp(0, math.max(0, _strideTree.total - 1)),
+      );
+      return (
+        index: index,
+        offsetInItem: contentOffset - _itemStartOffset(index),
+      );
+    }
+
+    final separatorBreaks = _separatorBreaks(separator);
+    final estimate = math.max(1, estimatedItemExtent ?? itemExtent).toInt();
+    var remainingOffset = contentOffset.clamp(0, 0x7fffffff);
+    for (var i = 0; i < itemCount; i++) {
+      final height = _resolveItemHeight(i, estimate);
+      var stride = height + (i < itemCount - 1 ? separatorBreaks : 0);
+
+      final hasMeasured = _measuredHeights.containsKey(i);
+      if (!hasMeasured) {
+        final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+        final measured = resolved.measured;
+        if (_measuredHeights[i] != measured) {
+          _storeMeasuredHeight(
+            index: i,
+            measured: measured,
+            itemCount: itemCount,
+            estimate: estimate,
+            separatorBreaks: separatorBreaks,
+          );
+        }
+        stride = measured + (i < itemCount - 1 ? separatorBreaks : 0);
       }
+
+      if (remainingOffset < stride) {
+        return (index: i, offsetInItem: remainingOffset);
+      }
+      remainingOffset -= stride;
     }
-    return low.clamp(0, prefix.length - 1);
+
+    return (index: itemCount - 1, offsetInItem: 0);
+  }
+
+  void _storeMeasuredHeight({
+    required int index,
+    required int measured,
+    required int itemCount,
+    required int estimate,
+    required int separatorBreaks,
+  }) {
+    if (_measuredHeights[index] == measured) return;
+    _measuredHeights[index] = measured;
+    _strideTree.set(
+      index,
+      measured + (index < itemCount - 1 ? separatorBreaks : 0),
+    );
+    _invalidateMeasurements();
   }
 
   int _offsetForAnchor({
@@ -4152,13 +4230,12 @@ class RenderListViewport extends RenderBox {
   }) {
     if (itemCount <= 0) return 0;
     final idx = anchorIndex.clamp(0, itemCount - 1);
-    final prefix = _prefixHeights(itemCount, separatorBreaks, estimate);
-    final itemHeight = _estimateHeight(idx, estimate);
-    final stride = itemHeight + (idx < itemCount - 1 ? separatorBreaks : 0);
+    final itemStart = _itemStartOffset(idx);
+    final stride = _resolveStride(idx, itemCount, estimate, separatorBreaks);
     final clampedInItem = stride <= 0
         ? 0
         : anchorOffsetInItem.clamp(0, stride - 1);
-    return prefix[idx] + clampedInItem;
+    return itemStart + clampedInItem;
   }
 
   @override
@@ -4207,13 +4284,18 @@ class RenderListViewport extends RenderBox {
       }
     }
 
-    // Variable-height hit testing favors correctness over speed.
-    // Walk rows in order using measured heights where available.
+    // Variable-height hit testing favors correctness, with a Fenwick seed.
     final estimate = math.max(1, estimatedItemExtent ?? itemExtent).toInt();
     _syncCache(children.length, separatorBreaks, estimate);
-    var top = 0;
-    for (var i = 0; i < children.length; i++) {
-      final childHeight = _estimateHeight(i, estimate);
+    final resolved = debugResolveOffsetForContentOffset(contentY.toInt());
+    var i = resolved.index;
+    var top = _itemStartOffset(i);
+    while (i > 0 && top > contentY) {
+      i--;
+      top = _itemStartOffset(i);
+    }
+    for (; i < children.length; i++) {
+      final childHeight = _resolveItemHeight(i, estimate);
       final bottom = top + childHeight;
       if (contentY >= top && contentY < bottom) {
         final child = children[i];
@@ -4255,11 +4337,7 @@ class RenderListViewport extends RenderBox {
           .toInt();
       final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
-      final contentHeight = _estimatedContentHeight(
-        itemCount,
-        separatorBreaks,
-        estimate,
-      );
+      final contentHeight = _estimatedContentHeight();
       final layoutHeight = viewportHeight ?? contentHeight;
       _setMetrics(
         viewportExtent: layoutHeight.toInt(),
@@ -4332,9 +4410,9 @@ class RenderListViewport extends RenderBox {
       })
       buildVisibleForOffset(int target) {
         _resetVisibleHitCache();
-        final prefix = _prefixHeights(itemCount, separatorBreaks, estimate);
-        var startIndex = _findStartIndex(prefix, target).clamp(0, itemCount);
-        var offsetInItem = target - prefix[startIndex];
+        final resolved = debugResolveOffsetForContentOffset(target);
+        var startIndex = resolved.index;
+        var offsetInItem = resolved.offsetInItem;
         if (startIndex >= itemCount) {
           startIndex = itemCount - 1;
           offsetInItem = 0;
@@ -4358,9 +4436,14 @@ class RenderListViewport extends RenderBox {
           final text = resolved.text;
           final measured = resolved.measured;
           if (_measuredHeights[i] != measured) {
-            _measuredHeights[i] = measured;
+            _storeMeasuredHeight(
+              index: i,
+              measured: measured,
+              itemCount: itemCount,
+              estimate: estimate,
+              separatorBreaks: separatorBreaks,
+            );
             measuredHeightsChanged = true;
-            _invalidateMeasurements();
           }
           buffer.write(text);
           lineCount += measured;
@@ -4398,11 +4481,7 @@ class RenderListViewport extends RenderBox {
           'zone=$zoneId items=$itemCount estimate=$estimate '
           'offset=$workingOffset max=${controller.maxOffset}',
         );
-        final contentHeight = _estimatedContentHeight(
-          itemCount,
-          separatorBreaks,
-          estimate,
-        );
+        final contentHeight = _estimatedContentHeight();
         _setContentExtent(contentHeight);
 
         // Stabilize viewport anchor when measured heights change: keep the
@@ -4529,6 +4608,96 @@ class RenderListViewport extends RenderBox {
       highlightStyle: selectionHighlightStyle,
     );
     return highlighted.join('\n');
+  }
+}
+
+class _FenwickTree {
+  _FenwickTree(int length) : _size = length {
+    _tree = List<int>.filled(_size + 1, 0);
+  }
+
+  int _size;
+  late List<int> _tree;
+
+  void resize(int length) {
+    if (_size == length) return;
+    _size = length;
+    _tree = List<int>.filled(_size + 1, 0);
+  }
+
+  int get total => _prefixSum(_size);
+
+  void setAll(int length, int value) {
+    resize(length);
+    if (_size == 0) return;
+    _tree = List<int>.filled(_size + 1, 0);
+    for (var i = 0; i < _size; i++) {
+      _add(i, value);
+    }
+  }
+
+  void set(int index, int value) {
+    if (index < 0 || index >= _size) return;
+    final current = _valueAt(index);
+    _add(index, value - current);
+  }
+
+  int _valueAt(int index) {
+    if (_size == 0) return 0;
+    return prefixSum(index + 1) - prefixSum(index);
+  }
+
+  void _add(int index, int delta) {
+    var i = index + 1;
+    while (i <= _size) {
+      _tree[i] += delta;
+      i += i & -i;
+    }
+  }
+
+  int _prefixSum(int exclusive) {
+    var i = exclusive;
+    var sum = 0;
+    while (i > 0) {
+      sum += _tree[i];
+      i -= i & -i;
+    }
+    return sum;
+  }
+
+  int prefixSum(int exclusive) {
+    if (exclusive <= 0) return 0;
+    if (exclusive >= _size) return total;
+    return _prefixSum(exclusive);
+  }
+
+  int rangeSum(int startExclusive, int endExclusive) {
+    if (startExclusive < 0) startExclusive = 0;
+    if (endExclusive < startExclusive) return 0;
+    return prefixSum(endExclusive) - prefixSum(startExclusive);
+  }
+
+  int lowerBoundForCount(int target) {
+    if (_size == 0) return 0;
+    if (target < 0) return 0;
+    if (target >= total) return _size;
+
+    var idx = 0;
+    var bit = 1;
+    while (bit << 1 <= _size) {
+      bit <<= 1;
+    }
+
+    var sum = 0;
+    while (bit != 0) {
+      final next = idx + bit;
+      if (next <= _size && sum + _tree[next] <= target) {
+        idx = next;
+        sum += _tree[next];
+      }
+      bit >>= 1;
+    }
+    return idx;
   }
 }
 

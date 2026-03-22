@@ -32,6 +32,27 @@ class _CountingLeaf extends LeafRenderObjectWidget {
   }
 }
 
+class _EmptyLeaf extends LeafRenderObjectWidget {
+  _EmptyLeaf();
+
+  @override
+  RenderObject createRenderObject() => _EmptyRenderLeaf();
+
+  @override
+  Object view() => 'empty';
+}
+
+class _EmptyRenderLeaf extends RenderBox {
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    size = constraints.constrain(const Size(1, 1));
+  }
+
+  @override
+  String paint() => '';
+}
+
 class _CountingRenderBox extends RenderBox {
   _CountingRenderBox({required this.label, required this.counter});
 
@@ -49,6 +70,108 @@ class _CountingRenderBox extends RenderBox {
     counter.count++;
     return label;
   }
+}
+
+({int index, int offsetInItem}) _resolveOffsetForDebugViewport(
+  dynamic renderViewport,
+  int offset,
+) {
+  final value = (renderViewport as dynamic).debugResolveOffsetForContentOffset(
+    offset,
+  );
+  return (
+    index: (value as dynamic).index as int,
+    offsetInItem: (value as dynamic).offsetInItem as int,
+  );
+}
+
+dynamic _findRenderListViewport(Widget listViewWidget) {
+  final start = elementOf(listViewWidget);
+  if (start == null) {
+    fail('VirtualListView element should be mounted');
+  }
+
+  Element current = start;
+  final seen = <Element>{};
+  while (true) {
+    if (!seen.add(current)) {
+      fail('Detected element cycle while locating RenderListViewport');
+    }
+
+    final ro = current.renderObject;
+    if (ro != null) {
+      final typeName = ro.runtimeType.toString();
+      if (typeName.contains('RenderListViewport')) return ro;
+    }
+
+    final nextChild = current.children.isNotEmpty
+        ? current.children.first
+        : null;
+    if (nextChild == null) {
+      if (ro == null) {
+        fail('VirtualListView render object should exist');
+      }
+
+      // Fallback if type-name matching changes.
+      try {
+        (ro as dynamic).debugResolveOffsetForContentOffset(0);
+      } catch (_) {
+        fail(
+          'VirtualListView render object with debugResolveOffsetForContentOffset should exist',
+        );
+      }
+
+      return ro;
+    }
+    current = nextChild;
+  }
+}
+
+String _variableHeightItem(int index, int lines) {
+  return List.generate(
+    lines,
+    (line) => 'Item $index line ${line + 1}',
+  ).join('\n');
+}
+
+int _variableItemHeightOffset(
+  List<int> heights,
+  int index,
+  int separatorBreaks,
+) {
+  var offset = 0;
+  final lastIndex = index - 1;
+  for (var i = 0; i <= lastIndex; i++) {
+    offset += heights[i];
+    if (i < heights.length - 1) {
+      offset += separatorBreaks;
+    }
+  }
+  return offset;
+}
+
+int _contentHeightFromHeights(List<int> heights, int separatorBreaks) {
+  var total = 0;
+  for (var i = 0; i < heights.length; i++) {
+    total += heights[i];
+    if (i < heights.length - 1) total += separatorBreaks;
+  }
+  return total;
+}
+
+int _resolveExpectedItemIndex(
+  List<int> heights,
+  int separatorBreaks,
+  int offset,
+) {
+  if (heights.isEmpty) return 0;
+  var remaining = offset.clamp(0, 0x7fffffff).toInt();
+  for (var i = 0; i < heights.length; i++) {
+    final stride = heights[i] + (i < heights.length - 1 ? separatorBreaks : 0);
+    if (remaining < stride) return i;
+    remaining -= stride;
+  }
+  return heights.length - 1;
 }
 
 void main() {
@@ -794,6 +917,168 @@ void main() {
       expect(controller.offset, equals(0));
       expect(controller.viewportHeight, greaterThan(0));
     });
+
+    test(
+      'large variable-height list resolves offsets via fenwick lookup',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        final separatorBreaks = 1;
+        final itemHeights = List<int>.generate(10_000, (i) => (i % 4) + 1);
+        final children = List<Text>.generate(
+          itemHeights.length,
+          (i) => Text(_variableHeightItem(i, itemHeights[i])),
+        );
+        final controller = ListViewController();
+        final listView = VirtualListView(
+          width: 80,
+          height: 12,
+          controller: controller,
+          variableHeight: true,
+          estimatedItemExtent: 1,
+          separator: '\n',
+          children: children,
+        );
+        await tester.pumpWidget(listView);
+
+        final viewport = _findRenderListViewport(listView);
+        final totalHeight = _contentHeightFromHeights(
+          itemHeights,
+          separatorBreaks,
+        );
+        final checks = <int>[
+          0,
+          10,
+          123,
+          1_000,
+          totalHeight ~/ 3,
+          totalHeight ~/ 2,
+          totalHeight - 1,
+        ];
+
+        final resolvedIndices = <int>[];
+        for (final offset in checks) {
+          final resolved = _resolveOffsetForDebugViewport(viewport, offset);
+          final expected = _resolveExpectedItemIndex(
+            itemHeights,
+            separatorBreaks,
+            offset,
+          );
+          expect(resolved.index, equals(expected));
+          expect(resolved.index, greaterThanOrEqualTo(0));
+          expect(resolved.index, lessThan(itemHeights.length));
+          expect(resolved.offsetInItem, greaterThanOrEqualTo(0));
+          resolvedIndices.add(resolved.index);
+        }
+
+        for (var i = 0; i < resolvedIndices.length - 1; i++) {
+          expect(
+            resolvedIndices[i + 1],
+            greaterThanOrEqualTo(resolvedIndices[i]),
+          );
+        }
+      },
+    );
+
+    test(
+      'large variable-height list resolves offsets with 100K+ item count',
+      timeout: const Timeout(Duration(minutes: 6)),
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        const itemCount = 100_000;
+        final children = List<Widget>.generate(itemCount, (_) => _EmptyLeaf());
+        final controller = ListViewController();
+        final listView = VirtualListView(
+          width: 80,
+          height: 12,
+          controller: controller,
+          variableHeight: true,
+          estimatedItemExtent: 1,
+          separator: '\n',
+          children: children,
+        );
+        await tester.pumpWidget(listView);
+        tester.pump();
+
+        final viewport = _findRenderListViewport(listView);
+        final contentHeight = _contentHeightFromHeights(
+          List<int>.filled(itemCount, 1),
+          1,
+        );
+        final checks = <int>[
+          0,
+          10,
+          1_000,
+          20_000,
+          50_000,
+          150_000,
+          contentHeight - 1,
+        ];
+
+        var previousIndex = 0;
+        for (final offset in checks) {
+          final resolved = _resolveOffsetForDebugViewport(viewport, offset);
+          expect(resolved.index, greaterThanOrEqualTo(previousIndex));
+          expect(resolved.index, lessThan(itemCount));
+          expect(resolved.offsetInItem, greaterThanOrEqualTo(0));
+          previousIndex = resolved.index;
+        }
+      },
+    );
+
+    test(
+      'variable-height content extent converges after visiting items',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        final separatorBreaks = 1;
+        final itemHeights = List<int>.generate(120, (i) => (i % 5) + 3);
+        final children = List<Text>.generate(
+          itemHeights.length,
+          (i) => Text(_variableHeightItem(i, itemHeights[i])),
+        );
+        final expectedTotal = _contentHeightFromHeights(
+          itemHeights,
+          separatorBreaks,
+        );
+        final controller = ListViewController();
+        final listView = VirtualListView(
+          width: 80,
+          height: 10,
+          controller: controller,
+          variableHeight: true,
+          estimatedItemExtent: 1,
+          separator: '\n',
+          children: children,
+        );
+        await tester.pumpWidget(listView);
+
+        final viewport = _findRenderListViewport(listView);
+        final contentHeights = <int>[controller.contentHeight];
+        for (var i = 0; i < itemHeights.length; i++) {
+          final targetOffset = _variableItemHeightOffset(
+            itemHeights,
+            i,
+            separatorBreaks,
+          );
+          final resolved = _resolveOffsetForDebugViewport(
+            viewport,
+            targetOffset,
+          );
+          expect(resolved.index, equals(i));
+          controller.jumpTo(targetOffset);
+          tester.pump();
+          contentHeights.add(controller.contentHeight);
+        }
+
+        expect(contentHeights.last, equals(expectedTotal));
+        expect(contentHeights.any((value) => value < expectedTotal), isTrue);
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
