@@ -509,33 +509,30 @@ void main() {
       },
     );
 
-    test(
-      'replaceLineTextRange stays lazy on no-op parsed line text edits',
-      () {
-        final document = TextDocument.fromParsedLines(const [
-          ['a', 'l', 'p', 'h', 'a'],
-          ['b', 'e', 't', 'a'],
-          ['g', 'a', 'm', 'm', 'a'],
-        ]);
-        final revision = document.revision;
-        final storageIdentity = document.storageIdentity;
+    test('replaceLineTextRange stays lazy on no-op parsed line text edits', () {
+      final document = TextDocument.fromParsedLines(const [
+        ['a', 'l', 'p', 'h', 'a'],
+        ['b', 'e', 't', 'a'],
+        ['g', 'a', 'm', 'm', 'a'],
+      ]);
+      final revision = document.revision;
+      final storageIdentity = document.storageIdentity;
 
-        expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(document.debugMaterializedSourceLineTextCount, 0);
 
-        final change = document.replaceLineTextRange(
-          startLine: 1,
-          endLine: 2,
-          replacementLineTexts: const ['beta'],
-        );
+      final change = document.replaceLineTextRange(
+        startLine: 1,
+        endLine: 2,
+        replacementLineTexts: const ['beta'],
+      );
 
-        expect(document.revision, revision);
-        expect(document.storageIdentity, same(storageIdentity));
-        expect(document.debugMaterializedSourceLineTextCount, 0);
-        expect(change.startOffset, 6);
-        expect(change.oldEndOffset, 11);
-        expect(change.newEndOffset, 11);
-      },
-    );
+      expect(document.revision, revision);
+      expect(document.storageIdentity, same(storageIdentity));
+      expect(document.debugMaterializedSourceLineTextCount, 0);
+      expect(change.startOffset, 6);
+      expect(change.oldEndOffset, 11);
+      expect(change.newEndOffset, 11);
+    });
 
     test(
       'composite text reads do not materialize line text caches just to assemble text',
@@ -763,7 +760,10 @@ void main() {
       expect(document.debugLineGraphemeCacheCount, 0);
       expect(document.debugHasTextCache, isFalse);
 
-      final graphemes = document.graphemesInRange(startOffset: start, endOffset: end);
+      final graphemes = document.graphemesInRange(
+        startOffset: start,
+        endOffset: end,
+      );
 
       expect(graphemes, List<String>.filled(64, emoji, growable: false));
       expect(document.debugLineGraphemeCacheCount, 0);
@@ -806,7 +806,10 @@ void main() {
         TextPosition(line: 0, column: prefix.length + 4),
       );
 
-      expect(word.start, TextPosition(line: 0, column: prefix.length + gap.length));
+      expect(
+        word.start,
+        TextPosition(line: 0, column: prefix.length + gap.length),
+      );
       expect(
         word.end,
         TextPosition(

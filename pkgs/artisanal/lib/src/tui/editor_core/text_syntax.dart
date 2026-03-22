@@ -69,7 +69,8 @@ final class TextSyntaxLineWindow {
 
   bool get isEmpty => startLine >= endLine;
 
-  int startOffsetIn(TextDocument document) => document.lineStartOffset(startLine);
+  int startOffsetIn(TextDocument document) =>
+      document.lineStartOffset(startLine);
 
   int endOffsetIn(TextDocument document) => document.lineStartOffset(endLine);
 }
@@ -156,28 +157,29 @@ List<TextDecorationRange> mergeTextSyntaxDecorationPatch(
   List<TextDecorationRange> previousDecorations,
   TextSyntaxDecorationPatch patch,
 ) {
-  final merged = <TextDecorationRange>[
-    for (final decoration in previousDecorations)
-      if (decoration.endOffset <= patch.previousStartOffset)
-        decoration
-      else if (decoration.startOffset >= patch.previousEndOffset)
-        TextDecorationRange(
-          startOffset: decoration.startOffset + patch.offsetDelta,
-          endOffset: decoration.endOffset + patch.offsetDelta,
-          styleKey: decoration.styleKey,
-        ),
-    ...patch.decorations,
-  ]..sort((a, b) {
-      final startComparison = a.startOffset.compareTo(b.startOffset);
-      if (startComparison != 0) {
-        return startComparison;
-      }
-      final endComparison = a.endOffset.compareTo(b.endOffset);
-      if (endComparison != 0) {
-        return endComparison;
-      }
-      return a.styleKey.compareTo(b.styleKey);
-    });
+  final merged =
+      <TextDecorationRange>[
+        for (final decoration in previousDecorations)
+          if (decoration.endOffset <= patch.previousStartOffset)
+            decoration
+          else if (decoration.startOffset >= patch.previousEndOffset)
+            TextDecorationRange(
+              startOffset: decoration.startOffset + patch.offsetDelta,
+              endOffset: decoration.endOffset + patch.offsetDelta,
+              styleKey: decoration.styleKey,
+            ),
+        ...patch.decorations,
+      ]..sort((a, b) {
+        final startComparison = a.startOffset.compareTo(b.startOffset);
+        if (startComparison != 0) {
+          return startComparison;
+        }
+        final endComparison = a.endOffset.compareTo(b.endOffset);
+        if (endComparison != 0) {
+          return endComparison;
+        }
+        return a.styleKey.compareTo(b.styleKey);
+      });
   return List<TextDecorationRange>.unmodifiable(merged);
 }
 

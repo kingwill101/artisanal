@@ -1,5 +1,6 @@
 import '../style/color.dart';
 import '../uv/terminal_renderer.dart' show RenderMetrics;
+import 'degradation.dart' show RenderBudgetState;
 import 'key.dart';
 
 /// Base class for all messages in the TUI runtime.
@@ -219,7 +220,7 @@ class CellSizeMsg extends Msg {
 
 /// Message sent when a timer tick occurs.
 ///
-/// Created by [Cmd.tick] or [Cmd.every] commands.
+/// Created by [Cmd.tick] commands.
 /// Contains the time when the tick occurred and an optional
 /// identifier for distinguishing between multiple timers.
 ///
@@ -1045,6 +1046,22 @@ class RenderMetricsMsg extends Msg {
   @override
   String toString() =>
       'RenderMetricsMsg(fps: ${metrics.averageFps.toStringAsFixed(1)})';
+}
+
+/// Message sent when the runtime changes render-budget degradation state.
+///
+/// This is emitted when budget-aware degradation is enabled and the controller
+/// transitions to a different degradation level.
+class RenderBudgetMsg extends Msg {
+  /// Creates a render-budget message.
+  const RenderBudgetMsg(this.state);
+
+  /// The current render-budget controller state.
+  final RenderBudgetState state;
+
+  @override
+  String toString() =>
+      'RenderBudgetMsg(level: ${state.level}, budget: ${state.frameBudget.inMicroseconds}us)';
 }
 
 /// Message wrapper for custom user-defined messages.

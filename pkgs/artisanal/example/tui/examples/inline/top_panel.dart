@@ -19,14 +19,15 @@ class TopPanelModel implements Model {
   final int tick;
 
   @override
-  Cmd? init() {
-    return every(const Duration(seconds: 1), (_) => const _Tick());
-  }
+  Cmd? init() => Cmd.tick(Duration(seconds: 1), (_) => TickMsg(DateTime.now()));
 
   @override
   (Model, Cmd?) update(Msg msg) {
     return switch (msg) {
-      _Tick() => (TopPanelModel(tick: tick + 1), null),
+      TickMsg() => (
+        TopPanelModel(tick: tick + 1),
+        Cmd.tick(Duration(seconds: 1), (t) => TickMsg(t)),
+      ),
 
       // Quit.
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x71])) ||
@@ -57,10 +58,6 @@ class TopPanelModel implements Model {
 ''',
     );
   }
-}
-
-class _Tick extends Msg {
-  const _Tick();
 }
 
 void main() async {

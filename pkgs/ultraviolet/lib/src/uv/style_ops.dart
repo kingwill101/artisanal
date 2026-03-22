@@ -92,6 +92,8 @@ UvBasic16 _basic16FromIdx16(int idx16) {
 /// Upstream: `third_party/ultraviolet/cell.go` (`UvStyle.String`).
 String styleToSgr(UvStyle style) {
   if (style.isZero) return UvAnsi.resetStyle;
+  final simple = _simpleRgbStyleToSgr(style);
+  if (simple != null) return simple;
 
   final codes = <String>[];
 
@@ -138,6 +140,9 @@ String styleDiff(UvStyle? from, UvStyle? to) {
   if (from == null && to == null) return '';
   if (from != null && to != null && from == to) return '';
   if (from == null) return styleToSgr(to ?? const UvStyle());
+
+  final simple = _simpleRgbStyleDiff(from, to);
+  if (simple != null) return simple;
 
   if (to == null || to.isZero) {
     // Resetting all styles is cheaper than calculating diffs.
@@ -253,7 +258,83 @@ String styleDiff(UvStyle? from, UvStyle? to) {
   return '\x1b[${codes.join(';')}m';
 }
 
+/// Returns the cheaper SGR transition from [from] to [to].
+///
+/// This compares the delta sequence from [styleDiff] with a full reset plus
+/// [styleToSgr] reapply and returns whichever emits fewer bytes.
+String styleTransitionSgr(UvStyle? from, UvStyle? to) {
+  final delta = styleDiff(from, to);
+  if (to == null || to.isZero) {
+    return delta.isEmpty ? UvAnsi.resetStyle : delta;
+  }
+  if (from == null || from.isZero) {
+    return styleToSgr(to);
+  }
+
+  final resetThenApply = '${UvAnsi.resetStyle}${styleToSgr(to)}';
+  if (delta.isEmpty) return '';
+  return delta.length <= resetThenApply.length ? delta : resetThenApply;
+}
+
 enum _ColorTarget { fg, bg, underline }
+
+String? _simpleRgbStyleToSgr(UvStyle style) {
+  if (!_isSimpleRgbStyle(style)) return null;
+  final fg = style.fg as UvRgb?;
+  final bg = style.bg as UvRgb?;
+  if (fg == null && bg == null) return UvAnsi.resetStyle;
+  if (fg != null && bg != null) {
+    return '\x1b[38;2;${fg.r};${fg.g};${fg.b};48;2;${bg.r};${bg.g};${bg.b}m';
+  }
+  if (fg != null) {
+    return '\x1b[38;2;${fg.r};${fg.g};${fg.b}m';
+  }
+  return '\x1b[48;2;${bg!.r};${bg.g};${bg.b}m';
+}
+
+String? _simpleRgbStyleDiff(UvStyle from, UvStyle? to) {
+  if (to == null || to.isZero) return null;
+  if (!_isSimpleRgbStyle(from) || !_isSimpleRgbStyle(to)) return null;
+
+  final fromFg = from.fg as UvRgb?;
+  final fromBg = from.bg as UvRgb?;
+  final toFg = to.fg as UvRgb?;
+  final toBg = to.bg as UvRgb?;
+  final fgChanged = fromFg != toFg;
+  final bgChanged = fromBg != toBg;
+  if (!fgChanged && !bgChanged) return '';
+
+  final fgCode = fgChanged ? _simpleRgbDiffCode(toFg, _ColorTarget.fg) : null;
+  final bgCode = bgChanged ? _simpleRgbDiffCode(toBg, _ColorTarget.bg) : null;
+  if (fgCode != null && bgCode != null) {
+    return '\x1b[$fgCode;$bgCode'
+        'm';
+  }
+  if (fgCode != null) {
+    return '\x1b[$fgCode'
+        'm';
+  }
+  return '\x1b[$bgCode'
+      'm';
+}
+
+bool _isSimpleRgbStyle(UvStyle style) =>
+    style.attrs == 0 &&
+    style.underline == UnderlineStyle.none &&
+    style.underlineColor == null &&
+    (style.fg == null || style.fg is UvRgb) &&
+    (style.bg == null || style.bg is UvRgb);
+
+String _simpleRgbDiffCode(UvRgb? color, _ColorTarget target) {
+  if (color == null) {
+    return target == _ColorTarget.fg ? '39' : '49';
+  }
+  return switch (target) {
+    _ColorTarget.fg => '38;2;${color.r};${color.g};${color.b}',
+    _ColorTarget.bg => '48;2;${color.r};${color.g};${color.b}',
+    _ColorTarget.underline => '59',
+  };
+}
 
 String _colorDiffCode(UvColor? c, _ColorTarget target) {
   if (c == null) {

@@ -117,7 +117,6 @@ final class StartupProbeRunner {
     _aborted = true;
     _active?.abort();
   }
-
 }
 
 bool isCriticalStartupProbeMsg(Msg msg) =>

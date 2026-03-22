@@ -1512,7 +1512,9 @@ class TextAreaModel extends ViewComponent {
   }
 
   void _applyLineCommandResult(commands.TextLineCommandResult result) {
-    _document.replaceLineTexts(List<String>.from(result.lines, growable: false));
+    _document.replaceLineTexts(
+      List<String>.from(result.lines, growable: false),
+    );
     _lastDocumentChange = null;
     _applyLineStateSnapshot(
       TextLineStateSnapshot(

@@ -1804,7 +1804,7 @@ class _TextFieldRender extends LeafRenderObjectWidget {
 ///   2. Sets [TextInputModel.width] so wrapped-line computation uses the
 ///      correct column count.
 ///   3. Calls [TextInputModel.view()] to get rendered content.
-///   4. Measures the content and reports [size].
+///   4. Measures the content and reports the `size`.
 ///
 /// Paint:
 ///   Returns the cached content string.

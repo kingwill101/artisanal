@@ -45,13 +45,17 @@ void main() {
     Style().foreground(Colors.yellow).background(Colors.black).bold(),
   );
   console.writeln('<brand>This uses the custom brand style</brand>');
-  console.writeln('<highlight>This uses the custom highlight style</highlight>');
+  console.writeln(
+    '<highlight>This uses the custom highlight style</highlight>',
+  );
   console.newLine();
 
   // Using tags in message block methods
   console.section('Tags in Message Blocks');
   console.info('This is <fg=yellow>info</> with <options=bold>tags</>');
-  console.success('This is <fg=cyan>success</> with <options=underline>tags</>');
+  console.success(
+    'This is <fg=cyan>success</> with <options=underline>tags</>',
+  );
   console.warn('This is <fg=red>warning</> with <options=bold>tags</>');
   console.error('This is <fg=white>error</> with <options=bold>tags</>');
   console.newLine();

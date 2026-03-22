@@ -95,28 +95,22 @@ void main() {
   final piePanelWidth = midBase + (midRemainder > 1 ? 1 : 0);
   final nodePanelWidth = midTotal - histoWidth - piePanelWidth;
 
-  final teleInnerWidth =
-      math.max(12, teleWidth - 2 - panelPadding * 2);
-  final lineInnerWidth =
-      math.max(20, linePanelWidth - 2 - panelPadding * 2);
-  final lineInnerHeight =
-      math.max(3, topHeight - 2 - panelPadding * 2);
-  final histoInnerWidth =
-      math.max(12, histoWidth - 2 - panelPadding * 2);
-  final histoInnerHeight =
-      math.max(3, midHeight - 2 - panelPadding * 2);
-  final pieInnerWidth =
-      math.max(8, piePanelWidth - 2 - panelPadding * 2);
-  final pieInnerHeight =
-      math.max(4, midHeight - 2 - panelPadding * 2);
+  final teleInnerWidth = math.max(12, teleWidth - 2 - panelPadding * 2);
+  final lineInnerWidth = math.max(20, linePanelWidth - 2 - panelPadding * 2);
+  final lineInnerHeight = math.max(3, topHeight - 2 - panelPadding * 2);
+  final histoInnerWidth = math.max(12, histoWidth - 2 - panelPadding * 2);
+  final histoInnerHeight = math.max(3, midHeight - 2 - panelPadding * 2);
+  final pieInnerWidth = math.max(8, piePanelWidth - 2 - panelPadding * 2);
+  final pieInnerHeight = math.max(4, midHeight - 2 - panelPadding * 2);
   final pieSize = math.max(4, math.min(pieInnerWidth, pieInnerHeight));
 
-  final nodeInnerWidth =
-      math.max(10, nodePanelWidth - 2 - panelPadding * 2);
+  final nodeInnerWidth = math.max(10, nodePanelWidth - 2 - panelPadding * 2);
   final nodeColumns = nodeInnerWidth >= 30 ? 2 : 1;
   final nodeGap = 1;
-  final nodeCellWidth =
-      math.max(6, (nodeInnerWidth - nodeGap * (nodeColumns - 1)) ~/ nodeColumns);
+  final nodeCellWidth = math.max(
+    6,
+    (nodeInnerWidth - nodeGap * (nodeColumns - 1)) ~/ nodeColumns,
+  );
 
   final data = <String, Object?>{
     'cpu': cpu,
@@ -127,12 +121,7 @@ void main() {
       'Telemetry\nCPU $cpu%\nMEM $mem%\nGPU $gpu%\nTMP ${temp}C',
       'Network\nIN  148 mb/s\nOUT 305 mb/s\nPPS 1.2m\nLAT 18ms',
     ],
-    'metrics': [
-      'CPU $cpu%',
-      'MEM $mem%',
-      'GPU $gpu%',
-      'TMP ${temp}C',
-    ],
+    'metrics': ['CPU $cpu%', 'MEM $mem%', 'GPU $gpu%', 'TMP ${temp}C'],
     'cpuSeries': List<double>.generate(
       24,
       (i) => 40 + 20 * math.sin(i / 3) + rng.nextInt(12),
@@ -145,7 +134,12 @@ void main() {
       32,
       (i) => 50 + 30 * math.sin(i / 6) + rng.nextInt(20),
     ),
-    'pieValues': [cpu.toDouble(), mem.toDouble(), gpu.toDouble(), temp.toDouble()],
+    'pieValues': [
+      cpu.toDouble(),
+      mem.toDouble(),
+      gpu.toDouble(),
+      temp.toDouble(),
+    ],
     'pieColors': ['#9b5de5', '#00bbf9', '#00f5d4', '#f15bb5'],
     'nodes': [
       'edge-1 us-e 72%',

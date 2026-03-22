@@ -133,8 +133,8 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   /// Starts animating forward (toward [upperBound]).
   ///
   /// Returns a [Cmd] that schedules the first animation frame tick.
-  /// The hosting State must return this Cmd from [handleInit] or
-  /// [handleUpdate].
+  /// The hosting State must return this Cmd from `handleInit` or
+  /// `handleUpdate`.
   ///
   /// If [from] is provided the controller jumps to that value before
   /// animating. The optional [curve] defaults to [Curves.linear].
@@ -285,8 +285,8 @@ class AnimationController extends Animation<double> with ChangeNotifier {
 
   // ── API: Process Frame Ticks ──────────────────────────────────────────────
 
-  /// Processes a frame tick. Call this from [State.handleUpdate] when an
-  /// [AnimationTickMsg] with a matching [controllerId] is received.
+  /// Processes a frame tick. Call this from `handleUpdate` when an
+  /// [AnimationTickMsg] with a matching `controllerId` is received.
   ///
   /// Returns a [Cmd] to schedule the next tick if the animation is still
   /// running, or `null` if the animation has completed (or was stopped).

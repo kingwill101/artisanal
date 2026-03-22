@@ -278,14 +278,13 @@ final class RemotePluginGenericServiceCatalog {
     RemotePluginNotifier? notify,
     RemotePluginFilePickerHandler? pickPaths,
   }) {
-    return RemotePluginGenericServiceCatalog()
-      ..registerBuiltIns(
-        readClipboard: readClipboard,
-        writeClipboard: writeClipboard,
-        openUrl: openUrl,
-        notify: notify,
-        pickPaths: pickPaths,
-      );
+    return RemotePluginGenericServiceCatalog()..registerBuiltIns(
+      readClipboard: readClipboard,
+      writeClipboard: writeClipboard,
+      openUrl: openUrl,
+      notify: notify,
+      pickPaths: pickPaths,
+    );
   }
 
   void register(

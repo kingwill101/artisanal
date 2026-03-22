@@ -63,18 +63,12 @@ final class BrowserTerminalHostServer {
       webSocketPath: normalizedWebSocketPath,
       pageHtml:
           pageHtml ??
-          defaultPageHtml(
-            title: title,
-            webSocketPath: normalizedWebSocketPath,
-          ),
+          defaultPageHtml(title: title, webSocketPath: normalizedWebSocketPath),
       onSession: onSession,
     );
-    host._subscription = server.listen(
-      (request) {
-        unawaited(host._handleRequestSafely(request));
-      },
-      cancelOnError: false,
-    );
+    host._subscription = server.listen((request) {
+      unawaited(host._handleRequestSafely(request));
+    }, cancelOnError: false);
     return host;
   }
 
@@ -157,10 +151,9 @@ final class BrowserTerminalHostServer {
     } catch (error) {
       final response = request.response;
       try {
-        response.statusCode =
-            error is io.WebSocketException
-                ? io.HttpStatus.badRequest
-                : io.HttpStatus.internalServerError;
+        response.statusCode = error is io.WebSocketException
+            ? io.HttpStatus.badRequest
+            : io.HttpStatus.internalServerError;
         response.write(
           error is io.WebSocketException
               ? 'Bad websocket upgrade'
@@ -240,8 +233,9 @@ final class BrowserTerminalHostServer {
     String lightCursor = '#2563eb',
     String lightSelectionBackground = '#cbd5e1',
   }) {
-    final cssColorScheme =
-        _prefersDarkColorScheme(background) ? 'dark light' : 'light dark';
+    final cssColorScheme = _prefersDarkColorScheme(background)
+        ? 'dark light'
+        : 'light dark';
     final darkToolbarStart =
         _blendHexColor(background, foreground, 0.08) ?? '#161c25';
     final darkToolbarEnd =
@@ -1617,8 +1611,8 @@ String? _normalizedHexColor(String color) {
   final hex = switch (normalized.length) {
     4 when normalized.startsWith('#') =>
       '${normalized[1]}${normalized[1]}'
-      '${normalized[2]}${normalized[2]}'
-      '${normalized[3]}${normalized[3]}',
+          '${normalized[2]}${normalized[2]}'
+          '${normalized[3]}${normalized[3]}',
     7 when normalized.startsWith('#') => normalized.substring(1),
     _ => null,
   };
@@ -1643,10 +1637,8 @@ String? _blendHexColor(String start, String end, double amount) {
 
   int channel(String hex, int offset) =>
       int.parse(hex.substring(offset, offset + 2), radix: 16);
-  int mix(int from, int to) => (from + ((to - from) * amount)).round().clamp(
-    0,
-    255,
-  );
+  int mix(int from, int to) =>
+      (from + ((to - from) * amount)).round().clamp(0, 255);
   final red = mix(channel(left, 0), channel(right, 0));
   final green = mix(channel(left, 2), channel(right, 2));
   final blue = mix(channel(left, 4), channel(right, 4));

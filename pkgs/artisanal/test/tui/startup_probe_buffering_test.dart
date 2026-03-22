@@ -283,19 +283,22 @@ void main() {
     expect(drained[1] is MouseMsg, true);
   });
 
-  test('StartupProbeRunner aborts active probes on critical messages', () async {
-    final started = Completer<void>();
-    final probe = _GatingProbe(started);
-    final runner = StartupProbeRunner([probe]);
-    final ctx = StartupProbeContext(terminal: _TestTerminal());
+  test(
+    'StartupProbeRunner aborts active probes on critical messages',
+    () async {
+      final started = Completer<void>();
+      final probe = _GatingProbe(started);
+      final runner = StartupProbeRunner([probe]);
+      final ctx = StartupProbeContext(terminal: _TestTerminal());
 
-    final runAll = runner.runAll(ctx);
-    await started.future;
+      final runAll = runner.runAll(ctx);
+      await started.future;
 
-    expect(runner.intercept(const InterruptMsg(), ctx), false);
-    await runAll.timeout(const Duration(seconds: 1));
-    expect(probe.isActive, isFalse);
-  });
+      expect(runner.intercept(const InterruptMsg(), ctx), false);
+      await runAll.timeout(const Duration(seconds: 1));
+      expect(probe.isActive, isFalse);
+    },
+  );
 
   test('StartupProbeRunner aborts on legacy ctrl+c key messages', () async {
     final started = Completer<void>();
@@ -307,29 +310,8 @@ void main() {
     await started.future;
 
     expect(
-      runner.intercept(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)), ctx),
-      false,
-    );
-    await runAll.timeout(const Duration(seconds: 1));
-    expect(probe.isActive, isFalse);
-  });
-
-  test('StartupProbeRunner aborts on ExecProcessMsg lifecycle messages', () async {
-    final started = Completer<void>();
-    final probe = _GatingProbe(started);
-    final runner = StartupProbeRunner([probe]);
-    final ctx = StartupProbeContext(terminal: _TestTerminal());
-
-    final runAll = runner.runAll(ctx);
-    await started.future;
-
-    expect(
       runner.intercept(
-        ExecProcessMsg(
-          executable: 'echo',
-          arguments: const ['probe'],
-          onComplete: (_) => const QuitMsg(),
-        ),
+        const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)),
         ctx,
       ),
       false,
@@ -337,6 +319,33 @@ void main() {
     await runAll.timeout(const Duration(seconds: 1));
     expect(probe.isActive, isFalse);
   });
+
+  test(
+    'StartupProbeRunner aborts on ExecProcessMsg lifecycle messages',
+    () async {
+      final started = Completer<void>();
+      final probe = _GatingProbe(started);
+      final runner = StartupProbeRunner([probe]);
+      final ctx = StartupProbeContext(terminal: _TestTerminal());
+
+      final runAll = runner.runAll(ctx);
+      await started.future;
+
+      expect(
+        runner.intercept(
+          ExecProcessMsg(
+            executable: 'echo',
+            arguments: const ['probe'],
+            onComplete: (_) => const QuitMsg(),
+          ),
+          ctx,
+        ),
+        false,
+      );
+      await runAll.timeout(const Duration(seconds: 1));
+      expect(probe.isActive, isFalse);
+    },
+  );
 
   test('StartupProbeRunner can be aborted directly', () async {
     final started = Completer<void>();

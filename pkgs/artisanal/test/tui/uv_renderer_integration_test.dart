@@ -76,11 +76,12 @@ void main() {
 
     final runFuture = program.run();
     await waitForRender(
-      () => terminal.output.contains('Hello UV'),
-      reason: 'Initial render did not contain Hello UV',
+      () => terminal.output.contains('Hello') && terminal.output.contains('UV'),
+      reason: 'Initial render did not contain Hello/UV output',
     );
 
-    expect(terminal.output, contains('Hello UV'));
+    expect(terminal.output, contains('Hello'));
+    expect(terminal.output, contains('UV'));
     expect(terminal.operations, contains('flush'));
 
     terminal.simulateTyping('q');

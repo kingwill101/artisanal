@@ -154,7 +154,9 @@ class Terminal
   Future<void> start({bool handleSignals = true}) async {
     if (_running) return;
     if (_stopped) {
-      throw StateError('Terminal cannot be restarted after stop(); create a new instance.');
+      throw StateError(
+        'Terminal cannot be restarted after stop(); create a new instance.',
+      );
     }
     _running = true;
 
@@ -403,6 +405,9 @@ class Terminal
   void flush() {
     _renderer.flush();
   }
+
+  /// The exact ANSI/content string emitted by the most recent [draw] or [flush].
+  String get lastDrawOutput => _renderer.lastFlushedOutput;
 
   /// Draws the current buffer state to the terminal.
   void draw() {

@@ -289,6 +289,96 @@ void main() {
       expect(out.value, isNot(contains(UvAnsi.cursorPosition(33, 4))));
     });
 
+    test('TestRendererScratchArenaResetsBetweenSparseFrames', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+
+      final base = Buffer.create(48, 16);
+      r.erase();
+      r.render(base);
+      r.flush();
+
+      final first = base.clone();
+      first.setCell(2, 1, Cell(content: 'A', width: 1));
+      first.setCell(33, 9, Cell(content: 'B', width: 1));
+      out.reset();
+      r.render(first);
+      r.flush();
+      expect(out.value, contains('A'));
+      expect(out.value, contains('B'));
+
+      final second = first.clone();
+      second.setCell(10, 1, Cell(content: 'C', width: 1));
+      second.setCell(40, 9, Cell(content: 'D', width: 1));
+      out.reset();
+      r.render(second);
+      r.flush();
+
+      expect(out.value, contains('C'));
+      expect(out.value, contains('D'));
+    });
+
+    test('TestRendererDpCursorPlanCanChooseWriteThrough', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+      final buf = Buffer.create(8, 1);
+      buf.setCell(0, 0, Cell(content: 'a', width: 1));
+      buf.setCell(1, 0, Cell(content: 'b', width: 1));
+      buf.setCell(2, 0, Cell(content: 'c', width: 1));
+
+      final seq = debugDpOverwriteMoveSeq(r, buf, 0, 0, 3, 0);
+
+      expect(seq, 'abc');
+    });
+
+    test('TestRendererDpCursorPlanBeatsDirectMoveWhenGapIsWritable', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+      final buf = Buffer.create(8, 1);
+      buf.setCell(0, 0, Cell(content: 'a', width: 1));
+      buf.setCell(1, 0, Cell(content: 'b', width: 1));
+      buf.setCell(2, 0, Cell(content: 'c', width: 1));
+
+      final dp = debugDpOverwriteMoveSeq(r, buf, 0, 0, 3, 0)!;
+      final direct = debugDirectRelativeMoveSeq(r, buf, 0, 0, 3, 0);
+
+      expect(dp.length, lessThanOrEqualTo(direct.length));
+    });
+
+    test('TestRendererDpCursorPlanFallsBackWhenGapIsNotOverwritable', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+      final buf = Buffer.create(8, 1);
+      buf.setCell(
+        0,
+        0,
+        Cell(
+          content: 'x',
+          width: 1,
+          style: const UvStyle(attrs: Attr.bold),
+        ),
+      );
+
+      final dp = debugDpOverwriteMoveSeq(r, buf, 0, 0, 1, 0)!;
+      final direct = debugDirectRelativeMoveSeq(r, buf, 0, 0, 1, 0);
+
+      expect(dp, direct);
+    });
+
+    test('TestRendererDpCursorPlanAvoidsLastColumnWriteThrough', () {
+      final out = _TestSink();
+      final r = _newRenderer(out);
+      final buf = Buffer.create(8, 1);
+      for (var x = 0; x < 7; x++) {
+        buf.setCell(x, 0, Cell(content: '.', width: 1));
+      }
+
+      final dp = debugDpOverwriteMoveSeq(r, buf, 0, 0, 7, 0);
+      final direct = debugDirectRelativeMoveSeq(r, buf, 0, 0, 7, 0);
+
+      expect(dp, direct);
+    });
+
     test('TestRendererLogger', () {
       final out = _TestSink();
       final r = _newRenderer(out);

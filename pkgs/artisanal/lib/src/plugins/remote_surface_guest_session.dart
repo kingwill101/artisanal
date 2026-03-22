@@ -53,7 +53,8 @@ final class RemotePluginGuestSession {
     Duration timeout = const Duration(seconds: 5),
   }) async {
     final channel = RemotePluginJsonChannel(
-      sendLine: sendLine ??
+      sendLine:
+          sendLine ??
           (line) async {
             io.stdout.write(line);
             await io.stdout.flush();

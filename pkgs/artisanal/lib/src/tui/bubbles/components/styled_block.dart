@@ -151,7 +151,7 @@ class CommentComponent extends DisplayComponent {
 
 /// Display style for styled blocks.
 enum StyledBlockDisplayStyle {
-  /// Simple inline: [PREFIX] message
+  /// Simple inline: `PREFIX message`
   inline,
 
   /// Full-width background block

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:ultraviolet/ultraviolet.dart';
@@ -18,7 +19,7 @@ final class Metaball {
   double vy;
   double radius;
 
-  void step(double dt, double worldWidth, double worldHeight) {
+  bool step(double dt, double worldWidth, double worldHeight) {
     x += vx * dt;
     y += vy * dt;
 
@@ -27,9 +28,12 @@ final class Metaball {
     final maxX = math.max(0.0, worldWidth - 1);
     final maxY = math.max(0.0, worldHeight - 1);
 
+    var hitLeftWall = false;
+
     if (x < minX) {
       x = minX;
       vx = vx.abs();
+      hitLeftWall = true;
     } else if (x > maxX) {
       x = maxX;
       vx = -vx.abs();
@@ -42,6 +46,8 @@ final class Metaball {
       y = maxY;
       vy = -vy.abs();
     }
+
+    return hitLeftWall;
   }
 }
 
@@ -109,6 +115,29 @@ Metaball _spawnMetaball(math.Random rng, double width, double height) {
   );
 }
 
+String _sanitizeTimestamp(DateTime timestamp) =>
+    timestamp.toIso8601String().replaceAll(RegExp(r'[^0-9A-Za-z_-]'), '-');
+
+String _visualizeBuffer(Buffer buffer) {
+  final rows = <String>[];
+  for (var y = 0; y < buffer.height(); y++) {
+    final line = buffer.line(y);
+    if (line == null) {
+      rows.add('');
+      continue;
+    }
+    final row = StringBuffer();
+    for (var x = 0; x < line.length; x++) {
+      final cell = line.at(x);
+      if (cell == null || cell.width == 0) continue;
+      final glyph = cell.content.isEmpty ? ' ' : cell.content;
+      row.write(glyph == ' ' ? '_' : glyph);
+    }
+    rows.add(row.toString());
+  }
+  return rows.join('\n');
+}
+
 void main() async {
   final terminal = Terminal();
   await terminal.start();
@@ -125,6 +154,9 @@ void main() async {
   var paused = false;
   var contourMode = true;
   var hardClear = true;
+  var frameNumber = 0;
+  var dumpOnNextLeftWall = false;
+  String? lastDumpPath;
 
   final metaballs = <Metaball>[
     for (var i = 0; i < 6; i++) _spawnMetaball(rng, worldWidth, worldHeight),
@@ -168,7 +200,49 @@ void main() async {
     );
   }
 
-  void render() {
+  String writeAsciiDump(String reason) {
+    final snapshot = terminal.clone();
+    final emitted = terminal.lastDrawOutput;
+    final stamp = _sanitizeTimestamp(DateTime.now());
+    final file = File('metaballs_ascii_dump_$stamp.txt');
+    final payload = StringBuffer()
+      ..writeln('reason: $reason')
+      ..writeln('frame: $frameNumber')
+      ..writeln('mode: ${contourMode ? "contour" : "density"}')
+      ..writeln('threshold: ${threshold.toStringAsFixed(2)}')
+      ..writeln('size: ${snapshot.width()}x${snapshot.height()}')
+      ..writeln('balls: ${metaballs.length}')
+      ..writeln('')
+      ..writeln('metaballs:')
+      ..writeln(
+        [
+          for (var i = 0; i < metaballs.length; i++)
+            '  [$i] x=${metaballs[i].x.toStringAsFixed(2)} '
+                'y=${metaballs[i].y.toStringAsFixed(2)} '
+                'vx=${metaballs[i].vx.toStringAsFixed(2)} '
+                'vy=${metaballs[i].vy.toStringAsFixed(2)} '
+                'r=${metaballs[i].radius.toStringAsFixed(2)}',
+        ].join('\n'),
+      )
+      ..writeln('')
+      ..writeln('ascii (spaces shown as _):')
+      ..writeln(_visualizeBuffer(snapshot))
+      ..writeln('')
+      ..writeln('ansi render:')
+      ..write(snapshot.render())
+      ..writeln('')
+      ..writeln('')
+      ..writeln('last draw output escaped:')
+      ..write(emitted.replaceAll('\x1b', '<ESC>'))
+      ..writeln('')
+      ..writeln('')
+      ..writeln('last draw output raw:')
+      ..write(emitted);
+    file.writeAsStringSync(payload.toString());
+    return file.absolute.path;
+  }
+
+  void render({String? dumpReason}) {
     final bounds = terminal.bounds();
     final playWidth = math.max(1, bounds.width);
     final playHeight = math.max(1, bounds.height - 2);
@@ -230,9 +304,10 @@ void main() async {
     );
     final status =
         'Metaballs Marching Squares  balls:${metaballs.length}  threshold:${threshold.toStringAsFixed(2)}'
-        '  mode:${contourMode ? "contour" : "density"}  ${paused ? "paused" : "running"}';
+        '  mode:${contourMode ? "contour" : "density"}  ${paused ? "paused" : "running"}'
+        '  dump:${dumpOnNextLeftWall ? "armed" : (lastDumpPath == null ? "off" : "ready")}';
     const help =
-        'q/esc/ctrl+c quit  [ ] threshold  b add  n remove  m mode  p pause';
+        'q/esc/ctrl+c quit  [ ] threshold  b add  n remove  m mode  p pause  d arm-left-dump  D dump-now';
 
     if (bounds.height >= 2) {
       terminal.fillArea(
@@ -264,6 +339,11 @@ void main() async {
     }
 
     terminal.draw();
+    frameNumber++;
+
+    if (dumpReason != null) {
+      lastDumpPath = writeAsciiDump(dumpReason);
+    }
   }
 
   final clock = Stopwatch()..start();
@@ -275,8 +355,14 @@ void main() async {
     lastTick = now;
 
     if (!paused) {
+      var hitLeftWall = false;
       for (final ball in metaballs) {
-        ball.step(dt, worldWidth, worldHeight);
+        hitLeftWall = ball.step(dt, worldWidth, worldHeight) || hitLeftWall;
+      }
+      if (dumpOnNextLeftWall && hitLeftWall) {
+        dumpOnNextLeftWall = false;
+        render(dumpReason: 'left-wall-hit');
+        return;
       }
     }
     render();
@@ -312,6 +398,11 @@ void main() async {
         contourMode = !contourMode;
       } else if (event.matchString('p', ' ')) {
         paused = !paused;
+      } else if (event.matchString('d')) {
+        dumpOnNextLeftWall = true;
+      } else if (event.matchString('D')) {
+        render(dumpReason: 'manual-dump');
+        continue;
       }
 
       render();
@@ -321,5 +412,8 @@ void main() async {
     terminal.showCursor();
     terminal.exitAltScreen();
     await terminal.stop();
+    if (lastDumpPath != null) {
+      stdout.writeln('Metaballs ASCII dump written to $lastDumpPath');
+    }
   }
 }

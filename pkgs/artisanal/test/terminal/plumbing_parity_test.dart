@@ -106,27 +106,30 @@ void main() {
       expect(caps.useBackspace, isFalse);
     });
 
-    test('BackendTerminal emits ANSI sequences through embedded backend', () async {
-      final writes = <String>[];
-      final backend = EmbeddedTerminalBackend(output: writes.add);
-      final terminal = BackendTerminal(backend);
+    test(
+      'BackendTerminal emits ANSI sequences through embedded backend',
+      () async {
+        final writes = <String>[];
+        final backend = EmbeddedTerminalBackend(output: writes.add);
+        final terminal = BackendTerminal(backend);
 
-      terminal.hideCursor();
-      terminal.enterAltScreen();
-      terminal.setTitle('Embedded');
-      terminal.enableBracketedPaste();
-      terminal.disableBracketedPaste();
-      await terminal.flush();
+        terminal.hideCursor();
+        terminal.enterAltScreen();
+        terminal.setTitle('Embedded');
+        terminal.enableBracketedPaste();
+        terminal.disableBracketedPaste();
+        await terminal.flush();
 
-      final output = writes.join();
-      expect(output, contains(Ansi.cursorHide));
-      expect(output, contains(Ansi.altScreenEnter));
-      expect(output, contains(Ansi.setTitle('Embedded')));
-      expect(output, contains(Ansi.bracketedPasteEnable));
-      expect(output, contains(Ansi.bracketedPasteDisable));
+        final output = writes.join();
+        expect(output, contains(Ansi.cursorHide));
+        expect(output, contains(Ansi.altScreenEnter));
+        expect(output, contains(Ansi.setTitle('Embedded')));
+        expect(output, contains(Ansi.bracketedPasteEnable));
+        expect(output, contains(Ansi.bracketedPasteDisable));
 
-      terminal.dispose();
-    });
+        terminal.dispose();
+      },
+    );
 
     test('TerminalBridge captures output and forwards input/resize', () async {
       final bridge = TerminalBridge();
@@ -153,34 +156,37 @@ void main() {
       bridge.dispose();
     });
 
-    test('SocketTerminalBackend strips OSC 9999 resize messages from input', () async {
-      final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-      final accepted = server.first;
-      final client = await Socket.connect(
-        InternetAddress.loopbackIPv4,
-        server.port,
-      );
-      final serverSocket = await accepted;
+    test(
+      'SocketTerminalBackend strips OSC 9999 resize messages from input',
+      () async {
+        final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+        final accepted = server.first;
+        final client = await Socket.connect(
+          InternetAddress.loopbackIPv4,
+          server.port,
+        );
+        final serverSocket = await accepted;
 
-      final backend = SocketTerminalBackend(serverSocket);
-      final inputFuture = backend.inputStream!.first;
-      final resizeFuture = backend.resizeStream!.first;
+        final backend = SocketTerminalBackend(serverSocket);
+        final inputFuture = backend.inputStream!.first;
+        final resizeFuture = backend.resizeStream!.first;
 
-      client.add(utf8.encode('ab\x1b]9999;120;40\x07cd'));
-      await client.flush();
+        client.add(utf8.encode('ab\x1b]9999;120;40\x07cd'));
+        await client.flush();
 
-      final input = await inputFuture;
-      final resize = await resizeFuture;
+        final input = await inputFuture;
+        final resize = await resizeFuture;
 
-      expect(utf8.decode(input), 'abcd');
-      expect(resize.width, 120);
-      expect(resize.height, 40);
-      expect(backend.size.width, 120);
-      expect(backend.size.height, 40);
+        expect(utf8.decode(input), 'abcd');
+        expect(resize.width, 120);
+        expect(resize.height, 40);
+        expect(backend.size.width, 120);
+        expect(backend.size.height, 40);
 
-      backend.dispose();
-      await client.close();
-      await server.close();
-    });
+        backend.dispose();
+        await client.close();
+        await server.close();
+      },
+    );
   });
 }

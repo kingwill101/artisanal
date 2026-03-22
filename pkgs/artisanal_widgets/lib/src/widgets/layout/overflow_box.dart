@@ -125,9 +125,9 @@ class _RenderOverflowBox extends RenderBox {
 /// through to its child, which may then overflow.
 ///
 /// Unlike [OverflowBox] which lets you override the child's constraints,
-/// [SizedOverflowBox] has a fixed [size] for its own layout, but the child
+/// [SizedOverflowBox] has a fixed `size` for its own layout, but the child
 /// receives the incoming parent constraints unmodified. The child is
-/// positioned within the [SizedOverflowBox] according to [alignment].
+/// positioned within the [SizedOverflowBox] according to `alignment`.
 ///
 /// ```dart
 /// SizedOverflowBox(

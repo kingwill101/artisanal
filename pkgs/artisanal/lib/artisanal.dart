@@ -106,7 +106,8 @@ export 'src/renderer/renderer.dart'
         resetDefaultRenderer;
 
 // Layout
-export 'src/layout/layout.dart' show Layout;
+export 'src/layout/layout.dart'
+    show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
 
 // Args Aliases
 export 'args.dart' show Command, CommandRunner;

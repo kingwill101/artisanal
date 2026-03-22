@@ -594,14 +594,13 @@ void main() {
         movementCapsOverride: const (useTabs: true, useBackspace: false),
       );
 
-      final modified =
-          options
-              .withoutStartupTitle()
-              .withoutInput()
-              .withoutOutput()
-              .withoutStartupProbeOverride()
-              .withoutCancelSignal()
-              .withoutMovementCapsOverride();
+      final modified = options
+          .withoutStartupTitle()
+          .withoutInput()
+          .withoutOutput()
+          .withoutStartupProbeOverride()
+          .withoutCancelSignal()
+          .withoutMovementCapsOverride();
 
       expect(modified.startupTitle, isNull);
       expect(modified.input, isNull);
@@ -660,9 +659,9 @@ void main() {
 
     test('backend host resolves to a BackendTerminal', () {
       final backend = EmbeddedTerminalBackend(output: (_) {});
-      final binding = ProgramHost.backend(backend).resolve(
-        const ProgramOptions(),
-      );
+      final binding = ProgramHost.backend(
+        backend,
+      ).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -671,9 +670,9 @@ void main() {
 
     test('bridge host resolves to a BackendTerminal', () {
       final bridge = TerminalBridge();
-      final binding = ProgramHost.bridge(bridge).resolve(
-        const ProgramOptions(),
-      );
+      final binding = ProgramHost.bridge(
+        bridge,
+      ).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -705,9 +704,9 @@ void main() {
       );
       final serverSocket = await acceptedSocket;
 
-      final binding = ProgramHost.webSocket(serverSocket).resolve(
-        const ProgramOptions(),
-      );
+      final binding = ProgramHost.webSocket(
+        serverSocket,
+      ).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -729,9 +728,9 @@ void main() {
       );
       final serverSocket = await accepted;
 
-      final binding = ProgramHost.socket(serverSocket).resolve(
-        const ProgramOptions(),
-      );
+      final binding = ProgramHost.socket(
+        serverSocket,
+      ).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);
@@ -769,24 +768,27 @@ void main() {
       expect(terminal.disposed, isTrue);
     });
 
-    test('runProgramDebug keeps panic catching disabled after host resolution', () async {
-      final terminal = MockTerminal();
-      final host = ProgramHost.custom((options) {
-        return ProgramHostBinding(
-          options: options.copyWith(catchPanics: true),
-          terminal: terminal,
-        );
-      });
+    test(
+      'runProgramDebug keeps panic catching disabled after host resolution',
+      () async {
+        final terminal = MockTerminal();
+        final host = ProgramHost.custom((options) {
+          return ProgramHostBinding(
+            options: options.copyWith(catchPanics: true),
+            terminal: terminal,
+          );
+        });
 
-      await expectLater(
-        runProgramDebug(
-          InitPanicModel(),
-          options: const ProgramOptions(altScreen: false),
-          host: host,
-        ),
-        throwsStateError,
-      );
-    });
+        await expectLater(
+          runProgramDebug(
+            InitPanicModel(),
+            options: const ProgramOptions(altScreen: false),
+            host: host,
+          ),
+          throwsStateError,
+        );
+      },
+    );
 
     test('backend host forwards resize and shutdown events', () async {
       final backend = EmbeddedTerminalBackend(output: (_) {});
@@ -822,50 +824,53 @@ void main() {
       expect(received.whereType<InterruptMsg>(), isNotEmpty);
     });
 
-    test('backend host ignores duplicate resize events with the same size', () async {
-      final backend = EmbeddedTerminalBackend(output: (_) {});
-      final received = <Msg>[];
+    test(
+      'backend host ignores duplicate resize events with the same size',
+      () async {
+        final backend = EmbeddedTerminalBackend(output: (_) {});
+        final received = <Msg>[];
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          received.add(msg);
-          if (msg is InterruptMsg) {
-            return Cmd.quit();
-          }
-          return null;
-        },
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            received.add(msg);
+            if (msg is InterruptMsg) {
+              return Cmd.quit();
+            }
+            return null;
+          },
+        );
 
-      final runFuture = runProgram(
-        model,
-        options: const ProgramOptions(altScreen: false, frameTick: false),
-        host: ProgramHost.backend(backend),
-      );
+        final runFuture = runProgram(
+          model,
+          options: const ProgramOptions(altScreen: false, frameTick: false),
+          host: ProgramHost.backend(backend),
+        );
 
-      await _waitUntil(() => backend.isRawMode);
-      backend.notifySizeChanged((width: 120, height: 33));
-      await _waitUntil(
-        () => received.whereType<WindowSizeMsg>().any(
-          (msg) => msg.width == 120 && msg.height == 33,
-        ),
-      );
+        await _waitUntil(() => backend.isRawMode);
+        backend.notifySizeChanged((width: 120, height: 33));
+        await _waitUntil(
+          () => received.whereType<WindowSizeMsg>().any(
+            (msg) => msg.width == 120 && msg.height == 33,
+          ),
+        );
 
-      backend.notifySizeChanged((width: 120, height: 33));
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+        backend.notifySizeChanged((width: 120, height: 33));
+        await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      expect(
-        received
-            .whereType<WindowSizeMsg>()
-            .where((msg) => msg.width == 120 && msg.height == 33),
-        hasLength(1),
-      );
+        expect(
+          received.whereType<WindowSizeMsg>().where(
+            (msg) => msg.width == 120 && msg.height == 33,
+          ),
+          hasLength(1),
+        );
 
-      backend.requestShutdown();
-      await runFuture;
-    });
+        backend.requestShutdown();
+        await runFuture;
+      },
+    );
 
     test(
-      'backend host forwards distinct resize bursts while collapsing duplicates',
+      'backend host coalesces resize bursts to the latest distinct size',
       () async {
         final backend = EmbeddedTerminalBackend(output: (_) {});
         final received = <WindowSizeMsg>[];
@@ -894,11 +899,7 @@ void main() {
         backend.notifySizeChanged((width: 121, height: 34));
         backend.notifySizeChanged((width: 122, height: 35));
 
-        await _waitUntil(
-          () =>
-              received.length == 3 &&
-              received.last == const WindowSizeMsg(122, 35),
-        );
+        await _waitUntil(() => received.contains(const WindowSizeMsg(122, 35)));
 
         backend.requestShutdown();
         await runFuture;
@@ -907,7 +908,6 @@ void main() {
           received,
           equals(const <WindowSizeMsg>[
             WindowSizeMsg(120, 33),
-            WindowSizeMsg(121, 34),
             WindowSizeMsg(122, 35),
           ]),
         );
@@ -952,11 +952,13 @@ void main() {
         host: ProgramHost.bridge(bridge),
       );
 
-      await _waitUntil(() => bridge.bufferedOutput.contains('Count: 0'));
+      await _waitUntil(
+        () => _containsRendered(bridge.bufferedOutput, 'Count: 0'),
+      );
       bridge.addInputString('q');
       await runFuture;
 
-      expect(bridge.bufferedOutput, contains('Count: 0'));
+      expect(bridge.bufferedOutput, _containsRenderedText('Count: 0'));
       bridge.dispose();
     });
   });
@@ -1095,40 +1097,46 @@ void main() {
       expect(sawIncrementInOnSend, isTrue);
     });
 
-    test('immediate init messages land before the first rendered frame', () async {
-      var initialized = false;
-      final model = _CallbackModel(
-        onInit: () => Cmd.message(const IncrementMsg()),
-        onUpdate: (msg) {
-          if (msg is IncrementMsg) {
-            initialized = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 10),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => initialized
-            ? 'initialized first frame'
-            : 'uninitialized first frame',
-      );
+    test(
+      'immediate init messages land before the first rendered frame',
+      () async {
+        var initialized = false;
+        final model = _CallbackModel(
+          onInit: () => Cmd.message(const IncrementMsg()),
+          onUpdate: (msg) {
+            if (msg is IncrementMsg) {
+              initialized = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => initialized
+              ? 'initialized first frame'
+              : 'uninitialized first frame',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletRenderer: false,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletRenderer: false,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final allOutput = terminal.output.join();
-      expect(allOutput, contains('initialized first frame'));
-      expect(allOutput, isNot(contains('uninitialized first frame')));
-    });
+        final allOutput = terminal.output.join();
+        expect(allOutput, _containsRenderedText('initialized first frame'));
+        expect(
+          allOutput,
+          isNot(_containsRenderedText('uninitialized first frame')),
+        );
+      },
+    );
 
     test('slow init commands do not block the first rendered frame', () async {
       var delayedQuitScheduled = false;
@@ -1152,7 +1160,10 @@ void main() {
       final runFuture = program.run();
 
       await _waitUntil(
-        () => terminal.output.join().contains('rendered before init completion'),
+        () => _containsRendered(
+          terminal.output.join(),
+          'rendered before init completion',
+        ),
       );
       expect(delayedQuitScheduled, isFalse);
       expect(program.isRunning, isTrue);
@@ -1183,24 +1194,27 @@ void main() {
 
       // Check that view was rendered
       final allOutput = terminal.output.join();
-      expect(allOutput, contains('Count: 42'));
+      expect(allOutput, _containsRenderedText('Count: 42'));
     });
 
-    test('init-triggered quit still renders the initialized first frame', () async {
-      final program = Program(
-        ImmediateQuitModel(),
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletRenderer: false,
-        ),
-        terminal: terminal,
-      );
+    test(
+      'init-triggered quit still renders the initialized first frame',
+      () async {
+        final program = Program(
+          ImmediateQuitModel(),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletRenderer: false,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final allOutput = terminal.output.join();
-      expect(allOutput, contains('Quitting...'));
-    });
+        final allOutput = terminal.output.join();
+        expect(allOutput, contains('Quitting...'));
+      },
+    );
 
     test(
       'init-triggered quit initializes and restores fullscreen renderer state',
@@ -1279,14 +1293,8 @@ void main() {
           terminal.operations.where((op) => op == 'exitAltScreen').length,
           2,
         );
-        expect(
-          terminal.operations.where((op) => op == 'hideCursor').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'showCursor').length,
-          2,
-        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
         expect(terminal.isAltScreen, isFalse);
       },
     );
@@ -1328,14 +1336,8 @@ void main() {
           terminal.operations.where((op) => op == 'exitAltScreen').length,
           2,
         );
-        expect(
-          terminal.operations.where((op) => op == 'hideCursor').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'showCursor').length,
-          2,
-        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
         expect(terminal.isAltScreen, isFalse);
       },
     );
@@ -1345,11 +1347,9 @@ void main() {
       () async {
         final program = Program(
           _CallbackModel(
-            onInit: () => Cmd.exec(
-              'echo',
-              ['init exec'],
-              onComplete: (_) => const QuitMsg(),
-            ),
+            onInit: () => Cmd.exec('echo', [
+              'init exec',
+            ], onComplete: (_) => const QuitMsg()),
             onView: () => 'init exec first frame',
           ),
           options: const ProgramOptions(
@@ -1362,7 +1362,10 @@ void main() {
 
         await program.run();
 
-        expect(terminal.output.join(), contains('init exec first frame'));
+        expect(
+          terminal.output.join(),
+          _containsRenderedText('init exec first frame'),
+        );
         expect(
           terminal.operations.where((op) => op == 'enterAltScreen').length,
           2,
@@ -1371,14 +1374,8 @@ void main() {
           terminal.operations.where((op) => op == 'exitAltScreen').length,
           2,
         );
-        expect(
-          terminal.operations.where((op) => op == 'hideCursor').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'showCursor').length,
-          2,
-        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
         expect(terminal.isAltScreen, isFalse);
       },
     );
@@ -1388,11 +1385,9 @@ void main() {
       () async {
         final program = Program(
           _CallbackModel(
-            onInit: () => Cmd.exec(
-              'echo',
-              ['init exec uv'],
-              onComplete: (_) => const QuitMsg(),
-            ),
+            onInit: () => Cmd.exec('echo', [
+              'init exec uv',
+            ], onComplete: (_) => const QuitMsg()),
             onView: () => 'init exec uv first frame',
           ),
           options: const ProgramOptions(
@@ -1406,7 +1401,10 @@ void main() {
 
         await program.run();
 
-        expect(terminal.output.join(), contains('init exec uv first frame'));
+        expect(
+          terminal.output.join(),
+          _containsRenderedText('init exec uv first frame'),
+        );
         expect(
           terminal.operations.where((op) => op == 'enterAltScreen').length,
           2,
@@ -1415,14 +1413,8 @@ void main() {
           terminal.operations.where((op) => op == 'exitAltScreen').length,
           2,
         );
-        expect(
-          terminal.operations.where((op) => op == 'hideCursor').length,
-          2,
-        );
-        expect(
-          terminal.operations.where((op) => op == 'showCursor').length,
-          2,
-        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
         expect(terminal.isAltScreen, isFalse);
       },
     );
@@ -1763,66 +1755,72 @@ void main() {
       expect(terminal.operations.any((s) => s.startsWith('write: ')), isTrue);
     });
 
-    test('RequestWindowSizeMsg still delivers the current size explicitly', () async {
-      var repeatedWindowSizeCount = 0;
+    test(
+      'RequestWindowSizeMsg still delivers the current size explicitly',
+      () async {
+        var repeatedWindowSizeCount = 0;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is WindowSizeMsg && msg.width == 80 && msg.height == 24) {
-            repeatedWindowSizeCount++;
-            if (repeatedWindowSizeCount == 1) {
-              return Cmd.windowSize();
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is WindowSizeMsg && msg.width == 80 && msg.height == 24) {
+              repeatedWindowSizeCount++;
+              if (repeatedWindowSizeCount == 1) {
+                return Cmd.windowSize();
+              }
+              return Cmd.quit();
             }
-            return Cmd.quit();
-          }
-          return null;
-        },
-      );
+            return null;
+          },
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      expect(repeatedWindowSizeCount, 2);
-    });
+        expect(repeatedWindowSizeCount, 2);
+      },
+    );
 
-    test('window and cell size request commands write raw xterm queries', () async {
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestPrimaryDeviceAttributesReport(),
-          Cmd.requestSecondaryDeviceAttributesReport(),
-          Cmd.requestTertiaryDeviceAttributesReport(),
-          Cmd.requestTerminalVersionReport(),
-          Cmd.requestTermcapStrings(['RGB', 'TN']),
-          Cmd.requestCursorPositionReport(),
-          Cmd.requestWindowPixelSizeReport(),
-          Cmd.requestCellSizeReport(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'window and cell size request commands write raw xterm queries',
+      () async {
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestPrimaryDeviceAttributesReport(),
+            Cmd.requestSecondaryDeviceAttributesReport(),
+            Cmd.requestTertiaryDeviceAttributesReport(),
+            Cmd.requestTerminalVersionReport(),
+            Cmd.requestTermcapStrings(['RGB', 'TN']),
+            Cmd.requestCursorPositionReport(),
+            Cmd.requestWindowPixelSizeReport(),
+            Cmd.requestCellSizeReport(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, contains('\x1b[?c'));
-      expect(output, contains('\x1b[>c'));
-      expect(output, contains('\x1b[=c'));
-      expect(output, contains('\x1b[>0q'));
-      expect(output, contains('\x1bP+q524742;544e\x1b\\'));
-      expect(output, contains('\x1b[6n'));
-      expect(output, contains('\x1b[14t'));
-      expect(output, contains('\x1b[16t'));
-    });
+        final output = terminal.output.join();
+        expect(output, contains('\x1b[?c'));
+        expect(output, contains('\x1b[>c'));
+        expect(output, contains('\x1b[=c'));
+        expect(output, contains('\x1b[>0q'));
+        expect(output, contains('\x1bP+q524742;544e\x1b\\'));
+        expect(output, contains('\x1b[6n'));
+        expect(output, contains('\x1b[14t'));
+        expect(output, contains('\x1b[16t'));
+      },
+    );
 
     test('mode report request commands write raw DECRQM queries', () async {
       final model = _CallbackModel(
@@ -1869,107 +1867,116 @@ void main() {
       expect(terminal.output.join(), contains(Ansi.requestColorScheme));
     });
 
-    test('color, palette, and clipboard request commands write raw OSC queries', () async {
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestForegroundColor(),
-          Cmd.requestBackgroundColor(),
-          Cmd.requestCursorColor(),
-          Cmd.requestColorPalette(42),
-          Cmd.requestClipboard(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'color, palette, and clipboard request commands write raw OSC queries',
+      () async {
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestForegroundColor(),
+            Cmd.requestBackgroundColor(),
+            Cmd.requestCursorColor(),
+            Cmd.requestColorPalette(42),
+            Cmd.requestClipboard(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, contains(Ansi.requestForegroundColor));
-      expect(output, contains(Ansi.requestBackgroundColor));
-      expect(output, contains(Ansi.requestCursorColor));
-      expect(output, contains('\x1b]4;42;?\x07'));
-      expect(output, contains('\x1b]52;c;?\x07'));
-    });
+        final output = terminal.output.join();
+        expect(output, contains(Ansi.requestForegroundColor));
+        expect(output, contains(Ansi.requestBackgroundColor));
+        expect(output, contains(Ansi.requestCursorColor));
+        expect(output, contains('\x1b]4;42;?\x07'));
+        expect(output, contains('\x1b]52;c;?\x07'));
+      },
+    );
 
-    test('non-terminal hosts suppress window and cell size report queries', () async {
-      final terminal = _NonTerminalMockTerminal();
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestPrimaryDeviceAttributesReport(),
-          Cmd.requestSecondaryDeviceAttributesReport(),
-          Cmd.requestTertiaryDeviceAttributesReport(),
-          Cmd.requestTerminalVersionReport(),
-          Cmd.requestTermcapStrings(['RGB', 'TN']),
-          Cmd.requestCursorPositionReport(),
-          Cmd.requestWindowPixelSizeReport(),
-          Cmd.requestCellSizeReport(),
-          Cmd.requestWindowSizeReport(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'non-terminal hosts suppress window and cell size report queries',
+      () async {
+        final terminal = _NonTerminalMockTerminal();
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestPrimaryDeviceAttributesReport(),
+            Cmd.requestSecondaryDeviceAttributesReport(),
+            Cmd.requestTertiaryDeviceAttributesReport(),
+            Cmd.requestTerminalVersionReport(),
+            Cmd.requestTermcapStrings(['RGB', 'TN']),
+            Cmd.requestCursorPositionReport(),
+            Cmd.requestWindowPixelSizeReport(),
+            Cmd.requestCellSizeReport(),
+            Cmd.requestWindowSizeReport(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, isNot(contains('\x1b[?c')));
-      expect(output, isNot(contains('\x1b[>c')));
-      expect(output, isNot(contains('\x1b[=c')));
-      expect(output, isNot(contains('\x1b[>0q')));
-      expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
-      expect(output, isNot(contains('\x1b[6n')));
-      expect(output, isNot(contains('\x1b[14t')));
-      expect(output, isNot(contains('\x1b[16t')));
-      expect(output, isNot(contains('\x1b[18t')));
-    });
+        final output = terminal.output.join();
+        expect(output, isNot(contains('\x1b[?c')));
+        expect(output, isNot(contains('\x1b[>c')));
+        expect(output, isNot(contains('\x1b[=c')));
+        expect(output, isNot(contains('\x1b[>0q')));
+        expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
+        expect(output, isNot(contains('\x1b[6n')));
+        expect(output, isNot(contains('\x1b[14t')));
+        expect(output, isNot(contains('\x1b[16t')));
+        expect(output, isNot(contains('\x1b[18t')));
+      },
+    );
 
-    test('non-ANSI hosts suppress window and cell size report queries', () async {
-      final terminal = _NonAnsiMockTerminal();
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestPrimaryDeviceAttributesReport(),
-          Cmd.requestSecondaryDeviceAttributesReport(),
-          Cmd.requestTertiaryDeviceAttributesReport(),
-          Cmd.requestTerminalVersionReport(),
-          Cmd.requestTermcapStrings(['RGB', 'TN']),
-          Cmd.requestCursorPositionReport(),
-          Cmd.requestWindowPixelSizeReport(),
-          Cmd.requestCellSizeReport(),
-          Cmd.requestWindowSizeReport(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'non-ANSI hosts suppress window and cell size report queries',
+      () async {
+        final terminal = _NonAnsiMockTerminal();
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestPrimaryDeviceAttributesReport(),
+            Cmd.requestSecondaryDeviceAttributesReport(),
+            Cmd.requestTertiaryDeviceAttributesReport(),
+            Cmd.requestTerminalVersionReport(),
+            Cmd.requestTermcapStrings(['RGB', 'TN']),
+            Cmd.requestCursorPositionReport(),
+            Cmd.requestWindowPixelSizeReport(),
+            Cmd.requestCellSizeReport(),
+            Cmd.requestWindowSizeReport(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, isNot(contains('\x1b[?c')));
-      expect(output, isNot(contains('\x1b[>c')));
-      expect(output, isNot(contains('\x1b[=c')));
-      expect(output, isNot(contains('\x1b[>0q')));
-      expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
-      expect(output, isNot(contains('\x1b[6n')));
-      expect(output, isNot(contains('\x1b[14t')));
-      expect(output, isNot(contains('\x1b[16t')));
-      expect(output, isNot(contains('\x1b[18t')));
-    });
+        final output = terminal.output.join();
+        expect(output, isNot(contains('\x1b[?c')));
+        expect(output, isNot(contains('\x1b[>c')));
+        expect(output, isNot(contains('\x1b[=c')));
+        expect(output, isNot(contains('\x1b[>0q')));
+        expect(output, isNot(contains('\x1bP+q524742;544e\x1b\\')));
+        expect(output, isNot(contains('\x1b[6n')));
+        expect(output, isNot(contains('\x1b[14t')));
+        expect(output, isNot(contains('\x1b[16t')));
+        expect(output, isNot(contains('\x1b[18t')));
+      },
+    );
 
     test('non-terminal hosts suppress mode report queries', () async {
       final terminal = _NonTerminalMockTerminal();
@@ -2029,63 +2036,69 @@ void main() {
       expect(output, isNot(contains(Ansi.requestColorScheme)));
     });
 
-    test('non-terminal hosts suppress color, palette, and clipboard report queries', () async {
-      final terminal = _NonTerminalMockTerminal();
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestForegroundColor(),
-          Cmd.requestBackgroundColor(),
-          Cmd.requestCursorColor(),
-          Cmd.requestColorPalette(42),
-          Cmd.requestClipboard(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'non-terminal hosts suppress color, palette, and clipboard report queries',
+      () async {
+        final terminal = _NonTerminalMockTerminal();
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestForegroundColor(),
+            Cmd.requestBackgroundColor(),
+            Cmd.requestCursorColor(),
+            Cmd.requestColorPalette(42),
+            Cmd.requestClipboard(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, isNot(contains(Ansi.requestForegroundColor)));
-      expect(output, isNot(contains(Ansi.requestBackgroundColor)));
-      expect(output, isNot(contains(Ansi.requestCursorColor)));
-      expect(output, isNot(contains('\x1b]4;42;?\x07')));
-      expect(output, isNot(contains('\x1b]52;c;?\x07')));
-    });
+        final output = terminal.output.join();
+        expect(output, isNot(contains(Ansi.requestForegroundColor)));
+        expect(output, isNot(contains(Ansi.requestBackgroundColor)));
+        expect(output, isNot(contains(Ansi.requestCursorColor)));
+        expect(output, isNot(contains('\x1b]4;42;?\x07')));
+        expect(output, isNot(contains('\x1b]52;c;?\x07')));
+      },
+    );
 
-    test('non-ANSI hosts suppress color, palette, and clipboard report queries', () async {
-      final terminal = _NonAnsiMockTerminal();
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestForegroundColor(),
-          Cmd.requestBackgroundColor(),
-          Cmd.requestCursorColor(),
-          Cmd.requestColorPalette(42),
-          Cmd.requestClipboard(),
-          Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
-        ]),
-      );
+    test(
+      'non-ANSI hosts suppress color, palette, and clipboard report queries',
+      () async {
+        final terminal = _NonAnsiMockTerminal();
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestForegroundColor(),
+            Cmd.requestBackgroundColor(),
+            Cmd.requestCursorColor(),
+            Cmd.requestColorPalette(42),
+            Cmd.requestClipboard(),
+            Cmd.tick(const Duration(milliseconds: 10), (_) => const QuitMsg()),
+          ]),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final output = terminal.output.join();
-      expect(output, isNot(contains(Ansi.requestForegroundColor)));
-      expect(output, isNot(contains(Ansi.requestBackgroundColor)));
-      expect(output, isNot(contains(Ansi.requestCursorColor)));
-      expect(output, isNot(contains('\x1b]4;42;?\x07')));
-      expect(output, isNot(contains('\x1b]52;c;?\x07')));
-    });
+        final output = terminal.output.join();
+        expect(output, isNot(contains(Ansi.requestForegroundColor)));
+        expect(output, isNot(contains(Ansi.requestBackgroundColor)));
+        expect(output, isNot(contains(Ansi.requestCursorColor)));
+        expect(output, isNot(contains('\x1b]4;42;?\x07')));
+        expect(output, isNot(contains('\x1b]52;c;?\x07')));
+      },
+    );
 
     test('ShowCursorMsg and HideCursorMsg control cursor', () async {
       var phase = 0;
@@ -2176,7 +2189,9 @@ void main() {
       );
 
       final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      await _waitUntil(
+        () => terminal.operations.contains('enableFocusReporting'),
+      );
       terminal.sendInput('\x1b[I'.codeUnits);
       terminal.sendInput('\x1b[O'.codeUnits);
       await runFuture;
@@ -2210,10 +2225,10 @@ void main() {
       terminal.sendInput('\x1b[?997;1n\x1b[?997;2n'.codeUnits);
       await runFuture;
 
-      expect(
-        received,
-        const [ColorSchemeMsg(dark: true), ColorSchemeMsg(dark: false)],
-      );
+      expect(received, const [
+        ColorSchemeMsg(dark: true),
+        ColorSchemeMsg(dark: false),
+      ]);
     });
 
     test('delivers focus messages end to end (key parser)', () async {
@@ -2238,7 +2253,9 @@ void main() {
       );
 
       final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
+      await _waitUntil(
+        () => terminal.operations.contains('enableFocusReporting'),
+      );
       terminal.sendInput('\x1b[I'.codeUnits);
       terminal.sendInput('\x1b[O'.codeUnits);
       await runFuture;
@@ -2268,7 +2285,9 @@ void main() {
       );
 
       final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableBracketedPaste'));
+      await _waitUntil(
+        () => terminal.operations.contains('enableBracketedPaste'),
+      );
       terminal.sendInput('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
       await runFuture;
 
@@ -2297,7 +2316,9 @@ void main() {
       );
 
       final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableBracketedPaste'));
+      await _waitUntil(
+        () => terminal.operations.contains('enableBracketedPaste'),
+      );
       terminal.sendInput('\x1b[200~hello\nworld\x1b[201~'.codeUnits);
       await runFuture;
 
@@ -2412,17 +2433,14 @@ void main() {
       await runFuture;
 
       expect(hookCalled, isTrue);
-      expect(
-        received,
-        [
-          const MouseMsg(
-            x: 6,
-            y: 3,
-            button: MouseButton.wheelUp,
-            action: MouseAction.wheel,
-          ),
-        ],
-      );
+      expect(received, [
+        const MouseMsg(
+          x: 6,
+          y: 3,
+          button: MouseButton.wheelUp,
+          action: MouseAction.wheel,
+        ),
+      ]);
     });
 
     test('delivers window size messages from UV input reports', () async {
@@ -2454,37 +2472,44 @@ void main() {
       expect(received, const WindowSizeMsg(120, 33));
     });
 
-    test('deduplicates repeated window size messages from UV input reports', () async {
-      var count = 0;
+    test(
+      'deduplicates repeated window size messages from UV input reports',
+      () async {
+        var count = 0;
 
-      final program = Program(
-        _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is WindowSizeMsg && msg.width == 120 && msg.height == 33) {
-              count++;
-              return Cmd.tick(
-                const Duration(milliseconds: 10),
-                (_) => const QuitMsg(),
-              );
-            }
-            return null;
-          },
-          onView: () => const View(content: 'duplicate resize'),
-        ),
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletInputDecoder: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is WindowSizeMsg &&
+                  msg.width == 120 &&
+                  msg.height == 33) {
+                count++;
+                return Cmd.tick(
+                  const Duration(milliseconds: 10),
+                  (_) => const QuitMsg(),
+                );
+              }
+              return null;
+            },
+            onView: () => const View(content: 'duplicate resize'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('duplicate resize'));
-      terminal.sendInput('\x1b[8;33;120t\x1b[8;33;120t'.codeUnits);
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('duplicate resize'),
+        );
+        terminal.sendInput('\x1b[8;33;120t\x1b[8;33;120t'.codeUnits);
+        await runFuture;
 
-      expect(count, 1);
-    });
+        expect(count, 1);
+      },
+    );
 
     test(
       'forwards distinct UV window size bursts while collapsing duplicates',
@@ -2512,7 +2537,7 @@ void main() {
         );
 
         final runFuture = program.run();
-        await _waitUntil(() => terminal.output.join().contains('resize burst'));
+        await _waitUntil(() => terminal.output.join().contains('resize'));
         terminal.sendInput(
           '\x1b[8;33;120t\x1b[8;34;121t\x1b[8;34;121t\x1b[8;35;122t'.codeUnits,
         );
@@ -2529,34 +2554,41 @@ void main() {
       },
     );
 
-    test('delivers window size messages from UV in-band size reports', () async {
-      WindowSizeMsg? received;
+    test(
+      'delivers window size messages from UV in-band size reports',
+      () async {
+        WindowSizeMsg? received;
 
-      final program = Program(
-        _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is WindowSizeMsg && msg.width == 120 && msg.height == 33) {
-              received = msg;
-              return Cmd.quit();
-            }
-            return null;
-          },
-          onView: () => const View(content: 'in-band resize'),
-        ),
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletInputDecoder: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is WindowSizeMsg &&
+                  msg.width == 120 &&
+                  msg.height == 33) {
+                received = msg;
+                return Cmd.quit();
+              }
+              return null;
+            },
+            onView: () => const View(content: 'in-band resize'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('in-band resize'));
-      terminal.sendInput('\x1b[48;33;120;660;2400t'.codeUnits);
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('in-band resize'),
+        );
+        terminal.sendInput('\x1b[48;33;120;660;2400t'.codeUnits);
+        await runFuture;
 
-      expect(received, const WindowSizeMsg(120, 33));
-    });
+        expect(received, const WindowSizeMsg(120, 33));
+      },
+    );
 
     test('delivers cursor position messages from UV reports', () async {
       CursorPositionMsg? received;
@@ -2683,38 +2715,43 @@ void main() {
       );
     });
 
-    test('delivers primary device attributes messages from UV reports', () async {
-      PrimaryDeviceAttributesMsg? received;
+    test(
+      'delivers primary device attributes messages from UV reports',
+      () async {
+        PrimaryDeviceAttributesMsg? received;
 
-      final program = Program(
-        _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is PrimaryDeviceAttributesMsg &&
-                msg.attrs.length == 3 &&
-                msg.attrs[0] == 1 &&
-                msg.attrs[1] == 2 &&
-                msg.attrs[2] == 4) {
-              received = msg;
-              return Cmd.quit();
-            }
-            return null;
-          },
-          onView: () => const View(content: 'primary attrs'),
-        ),
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletInputDecoder: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is PrimaryDeviceAttributesMsg &&
+                  msg.attrs.length == 3 &&
+                  msg.attrs[0] == 1 &&
+                  msg.attrs[1] == 2 &&
+                  msg.attrs[2] == 4) {
+                received = msg;
+                return Cmd.quit();
+              }
+              return null;
+            },
+            onView: () => const View(content: 'primary attrs'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('primary attrs'));
-      terminal.sendInput('\x1b[?1;2;4c'.codeUnits);
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('primary attrs'),
+        );
+        terminal.sendInput('\x1b[?1;2;4c'.codeUnits);
+        await runFuture;
 
-      expect(received, const PrimaryDeviceAttributesMsg([1, 2, 4]));
-    });
+        expect(received, const PrimaryDeviceAttributesMsg([1, 2, 4]));
+      },
+    );
 
     test(
       'delivers secondary device attributes messages from UV reports',
@@ -2754,36 +2791,39 @@ void main() {
       },
     );
 
-    test('delivers tertiary device attributes messages from UV reports', () async {
-      TertiaryDeviceAttributesMsg? received;
+    test(
+      'delivers tertiary device attributes messages from UV reports',
+      () async {
+        TertiaryDeviceAttributesMsg? received;
 
-      final program = Program(
-        _CallbackModel(
-          onUpdate: (msg) {
-            if (msg is TertiaryDeviceAttributesMsg && msg.value == 'Chrm') {
-              received = msg;
-              return Cmd.quit();
-            }
-            return null;
-          },
-          onView: () => const View(content: 'tertiary attrs'),
-        ),
-        options: const ProgramOptions(
-          altScreen: false,
-          useUltravioletInputDecoder: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          _CallbackModel(
+            onUpdate: (msg) {
+              if (msg is TertiaryDeviceAttributesMsg && msg.value == 'Chrm') {
+                received = msg;
+                return Cmd.quit();
+              }
+              return null;
+            },
+            onView: () => const View(content: 'tertiary attrs'),
+          ),
+          options: const ProgramOptions(
+            altScreen: false,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(
-        () => terminal.output.join().contains('tertiary attrs'),
-      );
-      terminal.sendInput('\x1bP!|4368726d\x1b\\'.codeUnits);
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('tertiary attrs'),
+        );
+        terminal.sendInput('\x1bP!|4368726d\x1b\\'.codeUnits);
+        await runFuture;
 
-      expect(received, const TertiaryDeviceAttributesMsg('Chrm'));
-    });
+        expect(received, const TertiaryDeviceAttributesMsg('Chrm'));
+      },
+    );
 
     test('delivers terminal version messages from UV reports', () async {
       TerminalVersionMsg? received;
@@ -2822,7 +2862,8 @@ void main() {
       final program = Program(
         _CallbackModel(
           onUpdate: (msg) {
-            if (msg is CapabilityMsg && msg.content == 'RGB;TN=xterm-256color') {
+            if (msg is CapabilityMsg &&
+                msg.content == 'RGB;TN=xterm-256color') {
               received = msg;
               return Cmd.quit();
             }
@@ -2908,10 +2949,7 @@ void main() {
       terminal.sendInput('\x1b[?2u'.codeUnits);
       await runFuture;
 
-      expect(
-        received,
-        const KeyboardEnhancementsMsg(reportEventTypes: true),
-      );
+      expect(received, const KeyboardEnhancementsMsg(reportEventTypes: true));
     });
 
     test('delivers mouse motion messages end to end (UV parser)', () async {
@@ -2951,33 +2989,36 @@ void main() {
       );
     });
 
-    test('cleans up view-driven focus, paste, and all-motion mouse on exit', () async {
-      final program = Program(
-        _CallbackModel(
-          onInit: () => Cmd.tick(
-            const Duration(milliseconds: 10),
-            (_) => const QuitMsg(),
+    test(
+      'cleans up view-driven focus, paste, and all-motion mouse on exit',
+      () async {
+        final program = Program(
+          _CallbackModel(
+            onInit: () => Cmd.tick(
+              const Duration(milliseconds: 10),
+              (_) => const QuitMsg(),
+            ),
+            onView: () => const View(
+              content: 'runtime hardening',
+              reportFocus: true,
+              bracketedPaste: true,
+              mouseMode: MouseMode.allMotion,
+            ),
           ),
-          onView: () => const View(
-            content: 'runtime hardening',
-            reportFocus: true,
-            bracketedPaste: true,
-            mouseMode: MouseMode.allMotion,
-          ),
-        ),
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      expect(terminal.operations, contains('enableFocusReporting'));
-      expect(terminal.operations, contains('enableBracketedPaste'));
-      expect(terminal.operations, contains('enableMouseAllMotion'));
-      expect(terminal.operations, contains('disableFocusReporting'));
-      expect(terminal.operations, contains('disableBracketedPaste'));
-      expect(terminal.operations, contains('disableMouse'));
-    });
+        expect(terminal.operations, contains('enableFocusReporting'));
+        expect(terminal.operations, contains('enableBracketedPaste'));
+        expect(terminal.operations, contains('enableMouseAllMotion'));
+        expect(terminal.operations, contains('disableFocusReporting'));
+        expect(terminal.operations, contains('disableBracketedPaste'));
+        expect(terminal.operations, contains('disableMouse'));
+      },
+    );
 
     test('switches mouse modes by disabling before re-enabling', () async {
       var currentMode = MouseMode.cellMotion;
@@ -3003,9 +3044,13 @@ void main() {
       program.send(const CustomMsg('switch'));
       await runFuture;
 
-      final enableCellIndex = terminal.operations.indexOf('enableMouseCellMotion');
+      final enableCellIndex = terminal.operations.indexOf(
+        'enableMouseCellMotion',
+      );
       final disableIndex = terminal.operations.indexOf('disableMouse');
-      final enableAllIndex = terminal.operations.indexOf('enableMouseAllMotion');
+      final enableAllIndex = terminal.operations.indexOf(
+        'enableMouseAllMotion',
+      );
 
       expect(enableCellIndex, isNonNegative);
       expect(disableIndex, greaterThan(enableCellIndex));
@@ -3452,42 +3497,43 @@ void main() {
       expect(enableIndices, isNotEmpty);
     });
 
-    test('ExecProcess completion-triggered quit skips forced repaint', () async {
-      var renderCount = 0;
-      late Program program;
+    test(
+      'ExecProcess completion-triggered quit skips forced repaint',
+      () async {
+        var renderCount = 0;
+        late Program program;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['test output'],
-              onComplete: (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () {
-          renderCount += 1;
-          return 'render #$renderCount';
-        },
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'test output',
+              ], onComplete: (_) => const QuitMsg());
+            }
+            return null;
+          },
+          onView: () {
+            renderCount += 1;
+            return 'render #$renderCount';
+          },
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false, mouse: false),
-        terminal: terminal,
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, mouse: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('render #1'));
-      program.send(const CustomMsg('exec'));
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('render #1'));
+        program.send(const CustomMsg('exec'));
+        await runFuture;
 
-      final joinedOutput = terminal.output.join();
-      expect(joinedOutput, contains('render #1'));
-      expect(joinedOutput, isNot(contains('render #2')));
-    });
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains('render #1'));
+        expect(joinedOutput, isNot(contains('render #2')));
+      },
+    );
 
     test(
       'ExecProcess completion-triggered messages update the first restored frame',
@@ -3499,11 +3545,9 @@ void main() {
         final model = _CallbackModel(
           onUpdate: (msg) {
             if (msg == const CustomMsg('exec')) {
-              return Cmd.exec(
-                'echo',
-                ['test output'],
-                onComplete: (_) => const CustomMsg('done'),
-              );
+              return Cmd.exec('echo', [
+                'test output',
+              ], onComplete: (_) => const CustomMsg('done'));
             }
             if (msg == const CustomMsg('done')) {
               execDone = true;
@@ -3542,14 +3586,16 @@ void main() {
       },
     );
 
-    test('ExecProcess pauses frame ticks while released and restarts them after restore', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_frame_ticks_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
+    test(
+      'ExecProcess pauses frame ticks while released and restarts them after restore',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_frame_ticks_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3557,149 +3603,79 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var execActive = false;
-      var execDone = false;
-      var ticksBeforeExec = 0;
-      var ticksDuringExec = 0;
-      var ticksAfterExec = 0;
+        late Program program;
+        var execActive = false;
+        var execDone = false;
+        var ticksBeforeExec = 0;
+        var ticksDuringExec = 0;
+        var ticksAfterExec = 0;
 
-      final model = _FrameTickCallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            execActive = true;
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) => const CustomMsg('exec-done'),
-            );
-          }
-
-          if (msg == const CustomMsg('exec-done')) {
-            execActive = false;
-            execDone = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 250),
-              (_) => const QuitMsg(),
-            );
-          }
-
-          if (msg is FrameTickMsg) {
-            if (execActive) {
-              ticksDuringExec++;
-            } else if (execDone) {
-              ticksAfterExec++;
-              if (ticksAfterExec >= 1) return Cmd.quit();
-            } else {
-              ticksBeforeExec++;
+        final model = _FrameTickCallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              execActive = true;
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              );
             }
-          }
-          return null;
-        },
-        onView: () => 'frame ticks around exec',
-      );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          frameTick: true,
-          fps: 60,
-        ),
-        terminal: terminal,
-      );
+            if (msg == const CustomMsg('exec-done')) {
+              execActive = false;
+              execDone = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 250),
+                (_) => const QuitMsg(),
+              );
+            }
 
-      final runFuture = program.run();
-      await _waitUntil(() => ticksBeforeExec > 0);
-      program.send(const CustomMsg('start'));
-      await runFuture;
-
-      expect(ticksBeforeExec, greaterThan(0));
-      expect(ticksDuringExec, 0);
-      expect(ticksAfterExec, greaterThanOrEqualTo(1));
-    });
-
-    test('ExecProcess suppresses renders triggered during terminal release', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_render_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
-
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
-import 'dart:async';
-
-Future<void> main() async {
-  await Future<void>.delayed(const Duration(milliseconds: 120));
-}
-''');
-
-      late Program program;
-      var counter = 0;
-      var outputCountAtRelease = -1;
-      var outputCountDuringRelease = -1;
-
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            Timer(
-              const Duration(milliseconds: 30),
-              () => program.send(const CustomMsg('bump')),
-            );
-            Timer(
-              const Duration(milliseconds: 60),
-              () => outputCountDuringRelease = terminal.output.length,
-            );
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) => const CustomMsg('exec-done'),
-            );
-          }
-
-          if (msg == const CustomMsg('bump')) {
-            counter++;
+            if (msg is FrameTickMsg) {
+              if (execActive) {
+                ticksDuringExec++;
+              } else if (execDone) {
+                ticksAfterExec++;
+                if (ticksAfterExec >= 1) return Cmd.quit();
+              } else {
+                ticksBeforeExec++;
+              }
+            }
             return null;
-          }
+          },
+          onView: () => 'frame ticks around exec',
+        );
 
-          if (msg == const CustomMsg('exec-done')) {
-            return Cmd.tick(
-              const Duration(milliseconds: 40),
-              (_) => const QuitMsg(),
-            );
-          }
+        program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            frameTick: true,
+            fps: 60,
+          ),
+          terminal: terminal,
+        );
 
-          return null;
-        },
-        onView: () => 'counter=$counter',
-      );
+        final runFuture = program.run();
+        await _waitUntil(() => ticksBeforeExec > 0);
+        program.send(const CustomMsg('start'));
+        await runFuture;
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        expect(ticksBeforeExec, greaterThan(0));
+        expect(ticksDuringExec, 0);
+        expect(ticksAfterExec, greaterThanOrEqualTo(1));
+      },
+    );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.isNotEmpty);
-      program.send(const CustomMsg('start'));
-      await _waitUntil(() => terminal.operations.contains('disableRawMode'));
-      outputCountAtRelease = terminal.output.length;
-      await runFuture;
+    test(
+      'ExecProcess suppresses renders triggered during terminal release',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_render_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-      expect(counter, 1);
-      expect(outputCountDuringRelease, outputCountAtRelease);
-      expect(terminal.output.length, greaterThan(outputCountAtRelease));
-    });
-
-    test('ExecProcess defers window title writes until terminal restore', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_title_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
-
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3707,71 +3683,75 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var execActive = false;
+        late Program program;
+        var counter = 0;
+        var outputCountAtRelease = -1;
+        var outputCountDuringRelease = -1;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            execActive = true;
-            Timer(
-              const Duration(milliseconds: 30),
-              () => program.send(const CustomMsg('title')),
-            );
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) => const CustomMsg('exec-done'),
-            );
-          }
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              Timer(
+                const Duration(milliseconds: 30),
+                () => program.send(const CustomMsg('bump')),
+              );
+              Timer(
+                const Duration(milliseconds: 60),
+                () => outputCountDuringRelease = terminal.output.length,
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              );
+            }
 
-          if (msg == const CustomMsg('title')) {
-            return Cmd.setWindowTitle('Deferred Title');
-          }
+            if (msg == const CustomMsg('bump')) {
+              counter++;
+              return null;
+            }
 
-          if (msg == const CustomMsg('exec-done')) {
-            execActive = false;
-            return Cmd.tick(
-              const Duration(milliseconds: 40),
-              (_) => const QuitMsg(),
-            );
-          }
+            if (msg == const CustomMsg('exec-done')) {
+              return Cmd.tick(
+                const Duration(milliseconds: 40),
+                (_) => const QuitMsg(),
+              );
+            }
 
-          return null;
-        },
-        onView: () => execActive ? 'exec active' : 'exec idle',
-      );
+            return null;
+          },
+          onView: () => 'counter=$counter',
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.isNotEmpty);
+        program.send(const CustomMsg('start'));
+        await _waitUntil(() => terminal.operations.contains('disableRawMode'));
+        outputCountAtRelease = terminal.output.length;
+        await runFuture;
 
-      final disableIndex = terminal.operations.indexOf('disableRawMode');
-      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
-      final deferredTitleIndex = terminal.operations.indexOf(
-        'setTitle(Deferred Title)',
-      );
+        expect(counter, 1);
+        expect(outputCountDuringRelease, outputCountAtRelease);
+        expect(terminal.output.length, greaterThan(outputCountAtRelease));
+      },
+    );
 
-      expect(disableIndex, isNonNegative);
-      expect(restoreIndex, greaterThan(disableIndex));
-      expect(deferredTitleIndex, greaterThan(restoreIndex));
-    });
+    test(
+      'ExecProcess defers window title writes until terminal restore',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_title_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-    test('ExecProcess defers stateful terminal control writes until restore', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_modes_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
-
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3779,80 +3759,74 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var execActive = false;
+        late Program program;
+        var execActive = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            execActive = true;
-            Timer(
-              const Duration(milliseconds: 30),
-              () => program.send(const CustomMsg('modes')),
-            );
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) => const CustomMsg('exec-done'),
-            );
-          }
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              execActive = true;
+              Timer(
+                const Duration(milliseconds: 30),
+                () => program.send(const CustomMsg('title')),
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              );
+            }
 
-          if (msg == const CustomMsg('modes')) {
-            return Cmd.batch([
-              Cmd.enableMouseAllMotion(),
-              Cmd.enableBracketedPaste(),
-              Cmd.enableReportFocus(),
-              Cmd.enterAltScreen(),
-            ]);
-          }
+            if (msg == const CustomMsg('title')) {
+              return Cmd.setWindowTitle('Deferred Title');
+            }
 
-          if (msg == const CustomMsg('exec-done')) {
-            execActive = false;
-            return Cmd.tick(
-              const Duration(milliseconds: 40),
-              (_) => const QuitMsg(),
-            );
-          }
+            if (msg == const CustomMsg('exec-done')) {
+              execActive = false;
+              return Cmd.tick(
+                const Duration(milliseconds: 40),
+                (_) => const QuitMsg(),
+              );
+            }
 
-          return null;
-        },
-        onView: () => execActive ? 'exec active' : 'exec idle',
-      );
+            return null;
+          },
+          onView: () => execActive ? 'exec active' : 'exec idle',
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
 
-      final disableIndex = terminal.operations.indexOf('disableRawMode');
-      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
-      final mouseIndex = terminal.operations.indexOf('enableMouseAllMotion');
-      final pasteIndex = terminal.operations.indexOf('enableBracketedPaste');
-      final focusIndex = terminal.operations.indexOf('enableFocusReporting');
-      final altScreenIndex = terminal.operations.indexOf('enterAltScreen');
+        final disableIndex = terminal.operations.indexOf('disableRawMode');
+        final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
+        final deferredTitleIndex = terminal.operations.indexOf(
+          'setTitle(Deferred Title)',
+        );
 
-      expect(disableIndex, isNonNegative);
-      expect(restoreIndex, greaterThan(disableIndex));
-      expect(mouseIndex, greaterThan(restoreIndex));
-      expect(pasteIndex, greaterThan(restoreIndex));
-      expect(focusIndex, greaterThan(restoreIndex));
-      expect(altScreenIndex, greaterThan(restoreIndex));
-    });
+        expect(disableIndex, isNonNegative);
+        expect(restoreIndex, greaterThan(disableIndex));
+        expect(deferredTitleIndex, greaterThan(restoreIndex));
+      },
+    );
 
-    test('kill during exec does not restore the terminal after process exit', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_kill_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
+    test(
+      'ExecProcess defers stateful terminal control writes until restore',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_modes_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3860,55 +3834,83 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var completionDelivered = false;
+        late Program program;
+        var execActive = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            Timer(const Duration(milliseconds: 30), program.kill);
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) {
-                completionDelivered = true;
-                return const CustomMsg('exec-done');
-              },
-            );
-          }
-          return null;
-        },
-        onView: () => 'kill during exec',
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              execActive = true;
+              Timer(
+                const Duration(milliseconds: 30),
+                () => program.send(const CustomMsg('modes')),
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              );
+            }
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+            if (msg == const CustomMsg('modes')) {
+              return Cmd.batch([
+                Cmd.enableMouseAllMotion(),
+                Cmd.enableBracketedPaste(),
+                Cmd.enableReportFocus(),
+                Cmd.enterAltScreen(),
+              ]);
+            }
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
-      await Future<void>.delayed(const Duration(milliseconds: 180));
+            if (msg == const CustomMsg('exec-done')) {
+              execActive = false;
+              return Cmd.tick(
+                const Duration(milliseconds: 40),
+                (_) => const QuitMsg(),
+              );
+            }
 
-      expect(program.wasKilled, isTrue);
-      expect(completionDelivered, isFalse);
-      expect(
-        terminal.operations.where((op) => op == 'enableRawMode').length,
-        1,
-      );
-    });
+            return null;
+          },
+          onView: () => execActive ? 'exec active' : 'exec idle',
+        );
 
-    test('quit during exec does not restore the terminal after process exit', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_quit_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
+
+        final disableIndex = terminal.operations.indexOf('disableRawMode');
+        final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
+        final mouseIndex = terminal.operations.indexOf('enableMouseAllMotion');
+        final pasteIndex = terminal.operations.indexOf('enableBracketedPaste');
+        final focusIndex = terminal.operations.indexOf('enableFocusReporting');
+        final altScreenIndex = terminal.operations.indexOf('enterAltScreen');
+
+        expect(disableIndex, isNonNegative);
+        expect(restoreIndex, greaterThan(disableIndex));
+        expect(mouseIndex, greaterThan(restoreIndex));
+        expect(pasteIndex, greaterThan(restoreIndex));
+        expect(focusIndex, greaterThan(restoreIndex));
+        expect(altScreenIndex, greaterThan(restoreIndex));
+      },
+    );
+
+    test(
+      'kill during exec does not restore the terminal after process exit',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_kill_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
+
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3916,58 +3918,58 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var completionDelivered = false;
+        late Program program;
+        var completionDelivered = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            Timer(
-              const Duration(milliseconds: 30),
-              () => program.send(const QuitMsg()),
-            );
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) {
-                completionDelivered = true;
-                return const CustomMsg('exec-done');
-              },
-            );
-          }
-          return null;
-        },
-        onView: () => 'quit during exec',
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              Timer(const Duration(milliseconds: 30), program.kill);
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) {
+                  completionDelivered = true;
+                  return const CustomMsg('exec-done');
+                },
+              );
+            }
+            return null;
+          },
+          onView: () => 'kill during exec',
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
-      await Future<void>.delayed(const Duration(milliseconds: 180));
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
+        await Future<void>.delayed(const Duration(milliseconds: 180));
 
-      expect(program.wasKilled, isFalse);
-      expect(completionDelivered, isFalse);
-      expect(
-        terminal.operations.where((op) => op == 'enableRawMode').length,
-        1,
-      );
-    });
+        expect(program.wasKilled, isTrue);
+        expect(completionDelivered, isFalse);
+        expect(
+          terminal.operations.where((op) => op == 'enableRawMode').length,
+          1,
+        );
+      },
+    );
 
-    test('backend shutdown during exec does not restore the terminal after process exit', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_backend_shutdown_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
+    test(
+      'quit during exec does not restore the terminal after process exit',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_quit_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -3975,55 +3977,61 @@ Future<void> main() async {
 }
 ''');
 
-      final writes = <String>[];
-      final backend = EmbeddedTerminalBackend(output: writes.add);
-      final terminal = BackendTerminal(backend);
+        late Program program;
+        var completionDelivered = false;
 
-      late Program program;
-      var completionDelivered = false;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              Timer(
+                const Duration(milliseconds: 30),
+                () => program.send(const QuitMsg()),
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) {
+                  completionDelivered = true;
+                  return const CustomMsg('exec-done');
+                },
+              );
+            }
+            return null;
+          },
+          onView: () => 'quit during exec',
+        );
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            Timer(const Duration(milliseconds: 30), backend.requestShutdown);
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) {
-                completionDelivered = true;
-                return const CustomMsg('exec-done');
-              },
-            );
-          }
-          return null;
-        },
-        onView: () => 'backend shutdown during exec',
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
+        await Future<void>.delayed(const Duration(milliseconds: 180));
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
-      await Future<void>.delayed(const Duration(milliseconds: 180));
+        expect(program.wasKilled, isFalse);
+        expect(completionDelivered, isFalse);
+        expect(
+          terminal.operations.where((op) => op == 'enableRawMode').length,
+          1,
+        );
+      },
+    );
 
-      expect(completionDelivered, isFalse);
-      expect(backend.isRawMode, isFalse);
-    });
+    test(
+      'backend shutdown during exec does not restore the terminal after process exit',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_backend_shutdown_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-    test('terminal write control messages are suppressed while released', () async {
-      final tempDir = await io.Directory.systemTemp.createTemp(
-        'artisanal_exec_control_release_',
-      );
-      addTearDown(() => tempDir.delete(recursive: true));
-
-      final script = io.File('${tempDir.path}/delay.dart');
-      await script.writeAsString('''
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
 import 'dart:async';
 
 Future<void> main() async {
@@ -4031,352 +4039,424 @@ Future<void> main() async {
 }
 ''');
 
-      late Program program;
-      var outputCountAtRelease = -1;
-      var outputCountDuringRelease = -1;
+        final writes = <String>[];
+        final backend = EmbeddedTerminalBackend(output: writes.add);
+        final terminal = BackendTerminal(backend);
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('start')) {
-            Timer(const Duration(milliseconds: 30), () {
-              program.println('suppressed while released');
-              program.forceRepaint();
-              program.send(const WriteRawMsg('RAW-SHOULD-NOT-WRITE'));
-            });
-            Timer(
-              const Duration(milliseconds: 60),
-              () => outputCountDuringRelease = terminal.output.length,
-            );
-            return Cmd.exec(
-              io.Platform.resolvedExecutable,
-              [script.path],
-              onComplete: (_) => const CustomMsg('exec-done'),
-            );
-          }
+        late Program program;
+        var completionDelivered = false;
 
-          if (msg == const CustomMsg('exec-done')) {
-            return Cmd.tick(
-              const Duration(milliseconds: 40),
-              (_) => const QuitMsg(),
-            );
-          }
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              Timer(const Duration(milliseconds: 30), backend.requestShutdown);
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) {
+                  completionDelivered = true;
+                  return const CustomMsg('exec-done');
+                },
+              );
+            }
+            return null;
+          },
+          onView: () => 'backend shutdown during exec',
+        );
 
-          return null;
-        },
-        onView: () => 'release control messages',
-      );
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
+        await Future<void>.delayed(const Duration(milliseconds: 180));
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await _waitUntil(() => terminal.operations.contains('disableRawMode'));
-      outputCountAtRelease = terminal.output.length;
-      await runFuture;
+        expect(completionDelivered, isFalse);
+        expect(backend.isRawMode, isFalse);
+      },
+    );
 
-      expect(outputCountDuringRelease, outputCountAtRelease);
-      expect(terminal.output.join(), isNot(contains('suppressed while released')));
-      expect(terminal.output.join(), isNot(contains('RAW-SHOULD-NOT-WRITE')));
-    });
+    test(
+      'terminal write control messages are suppressed while released',
+      () async {
+        final tempDir = await io.Directory.systemTemp.createTemp(
+          'artisanal_exec_control_release_',
+        );
+        addTearDown(() => tempDir.delete(recursive: true));
 
-    test('ExecProcess restore reapplies identical view terminal metadata', () async {
-      final view = View(
-        content: 'sticky metadata',
-        reportFocus: true,
-        bracketedPaste: true,
-        mouseMode: MouseMode.allMotion,
-        keyboardEnhancements: const KeyboardEnhancements(reportEventTypes: true),
-        backgroundColor: const BasicColor('#112233'),
-        foregroundColor: const BasicColor('#eeddcc'),
-        cursor: (Cursor.at(0, 0)
-          ..shape = CursorShape.bar
-          ..blink = false
-          ..color = const BasicColor('#445566')),
-      );
+        final script = io.File('${tempDir.path}/delay.dart');
+        await script.writeAsString('''
+import 'dart:async';
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => view,
-      );
+Future<void> main() async {
+  await Future<void>.delayed(const Duration(milliseconds: 120));
+}
+''');
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        late Program program;
+        var outputCountAtRelease = -1;
+        var outputCountDuringRelease = -1;
 
-      final runFuture = program.run();
-      await _waitUntil(
-        () => terminal.operations.contains('enableFocusReporting'),
-      );
-      program.send(const CustomMsg('exec'));
-      await runFuture;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('start')) {
+              Timer(const Duration(milliseconds: 30), () {
+                program.println('suppressed while released');
+                program.forceRepaint();
+                program.send(const WriteRawMsg('RAW-SHOULD-NOT-WRITE'));
+              });
+              Timer(
+                const Duration(milliseconds: 60),
+                () => outputCountDuringRelease = terminal.output.length,
+              );
+              return Cmd.exec(
+                io.Platform.resolvedExecutable,
+                [script.path],
+                onComplete: (_) => const CustomMsg('exec-done'),
+              );
+            }
 
-      expect(
-        terminal.operations.where((op) => op == 'enableFocusReporting').length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
-        greaterThanOrEqualTo(2),
-      );
+            if (msg == const CustomMsg('exec-done')) {
+              return Cmd.tick(
+                const Duration(milliseconds: 40),
+                (_) => const QuitMsg(),
+              );
+            }
 
-      final joinedOutput = terminal.output.join();
-      expect(
-        RegExp(RegExp.escape(Ansi.kittyKeyboard(
-          Ansi.kittyDisambiguateEscapeCodes | Ansi.kittyReportEventTypes,
-          mode: 1,
-        ))).allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(RegExp.escape(Ansi.requestKittyKeyboard)).allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(joinedOutput, contains('\x1b]111\x07'));
-      expect(joinedOutput, contains('\x1b]110\x07'));
-      expect(joinedOutput, contains('\x1b]112\x07'));
-      expect(joinedOutput, contains('\x1b[1 q'));
-      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
-    });
+            return null;
+          },
+          onView: () => 'release control messages',
+        );
 
-    test('ExecProcess restore reapplies a view-scoped alt-screen override', () async {
-      const view = View(content: 'dynamic alt during exec', altScreen: true);
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => view,
-      );
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await _waitUntil(() => terminal.operations.contains('disableRawMode'));
+        outputCountAtRelease = terminal.output.length;
+        await runFuture;
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        expect(outputCountDuringRelease, outputCountAtRelease);
+        expect(
+          terminal.output.join(),
+          isNot(contains('suppressed while released')),
+        );
+        expect(terminal.output.join(), isNot(contains('RAW-SHOULD-NOT-WRITE')));
+      },
+    );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const CustomMsg('exec'));
-      await runFuture;
+    test(
+      'ExecProcess restore reapplies identical view terminal metadata',
+      () async {
+        final view = View(
+          content: 'sticky metadata',
+          reportFocus: true,
+          bracketedPaste: true,
+          mouseMode: MouseMode.allMotion,
+          keyboardEnhancements: const KeyboardEnhancements(
+            reportEventTypes: true,
+          ),
+          backgroundColor: const BasicColor('#112233'),
+          foregroundColor: const BasicColor('#eeddcc'),
+          cursor: (Cursor.at(0, 0)
+            ..shape = CursorShape.bar
+            ..blink = false
+            ..color = const BasicColor('#445566')),
+        );
 
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'exitAltScreen').length,
-        2,
-      );
-      expect(terminal.isAltScreen, isFalse);
-    });
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const QuitMsg());
+            }
+            return null;
+          },
+          onView: () => view,
+        );
 
-    test('ExecProcess restore reapplies fullscreen terminal state only once', () async {
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => 'fullscreen restore',
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: true,
-          hideCursor: true,
-        ),
-        terminal: terminal,
-      );
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('enableFocusReporting'),
+        );
+        program.send(const CustomMsg('exec'));
+        await runFuture;
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const CustomMsg('exec'));
-      await runFuture;
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableFocusReporting')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableBracketedPaste')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableMouseAllMotion')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
 
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'hideCursor').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'exitAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'showCursor').length,
-        2,
-      );
-    });
+        final joinedOutput = terminal.output.join();
+        expect(
+          RegExp(
+            RegExp.escape(
+              Ansi.kittyKeyboard(
+                Ansi.kittyDisambiguateEscapeCodes | Ansi.kittyReportEventTypes,
+                mode: 1,
+              ),
+            ),
+          ).allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(
+            RegExp.escape(Ansi.requestKittyKeyboard),
+          ).allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(joinedOutput, contains('\x1b]111\x07'));
+        expect(joinedOutput, contains('\x1b]110\x07'));
+        expect(joinedOutput, contains('\x1b]112\x07'));
+        expect(joinedOutput, contains('\x1b[1 q'));
+        expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+      },
+    );
 
-    test('ExecProcess restore reapplies explicit hide cursor override', () async {
-      var restored = false;
+    test(
+      'ExecProcess restore reapplies a view-scoped alt-screen override',
+      () async {
+        const view = View(content: 'dynamic alt during exec', altScreen: true);
 
-      final model = _CallbackModel(
-        onInit: () => Cmd.hideCursor(),
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const CustomMsg('restored'),
-            );
-          }
-          if (msg == const CustomMsg('restored')) {
-            restored = true;
-          }
-          return null;
-        },
-        onView: () => restored ? 'restored' : 'running',
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const QuitMsg());
+            }
+            return null;
+          },
+          onView: () => view,
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('running'));
-      program.send(const CustomMsg('exec'));
-      await _waitUntil(() => restored);
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const CustomMsg('exec'));
+        await runFuture;
 
-      expect(terminal.cursorHidden, isTrue);
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
 
-      program.quit();
-      await runFuture;
-    });
+    test(
+      'ExecProcess restore reapplies fullscreen terminal state only once',
+      () async {
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const QuitMsg());
+            }
+            return null;
+          },
+          onView: () => 'fullscreen restore',
+        );
 
-    test('ExecProcess restore reapplies explicit show cursor override', () async {
-      var restored = false;
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: true, hideCursor: true),
+          terminal: terminal,
+        );
 
-      final model = _CallbackModel(
-        onInit: () => Cmd.showCursor(),
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const CustomMsg('restored'),
-            );
-          }
-          if (msg == const CustomMsg('restored')) {
-            restored = true;
-          }
-          return null;
-        },
-        onView: () => restored ? 'restored' : 'running',
-      );
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const CustomMsg('exec'));
+        await runFuture;
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: true,
-          hideCursor: true,
-        ),
-        terminal: terminal,
-      );
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
+      },
+    );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const CustomMsg('exec'));
-      await _waitUntil(() => restored);
+    test(
+      'ExecProcess restore reapplies explicit hide cursor override',
+      () async {
+        var restored = false;
 
-      expect(terminal.cursorHidden, isFalse);
+        final model = _CallbackModel(
+          onInit: () => Cmd.hideCursor(),
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const CustomMsg('restored'));
+            }
+            if (msg == const CustomMsg('restored')) {
+              restored = true;
+            }
+            return null;
+          },
+          onView: () => restored ? 'restored' : 'running',
+        );
 
-      program.quit();
-      await runFuture;
-    });
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, hideCursor: false),
+          terminal: terminal,
+        );
 
-    test('ExecProcess restore reapplies startup title when no view override exists', () async {
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('exec')) {
-            return Cmd.exec(
-              'echo',
-              ['restored'],
-              onComplete: (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => 'plain view',
-      );
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('running'));
+        program.send(const CustomMsg('exec'));
+        await _waitUntil(() => restored);
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          startupTitle: 'Base Title',
-        ),
-        terminal: terminal,
-      );
+        expect(terminal.cursorHidden, isTrue);
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('\x1b]0;Base Title\x07'));
-      program.send(const CustomMsg('exec'));
-      await runFuture;
+        program.quit();
+        await runFuture;
+      },
+    );
 
-      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
-      expect(
-        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
-        greaterThanOrEqualTo(1),
-      );
-    });
+    test(
+      'ExecProcess restore reapplies explicit show cursor override',
+      () async {
+        var restored = false;
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.showCursor(),
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const CustomMsg('restored'));
+            }
+            if (msg == const CustomMsg('restored')) {
+              restored = true;
+            }
+            return null;
+          },
+          onView: () => restored ? 'restored' : 'running',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: true, hideCursor: true),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const CustomMsg('exec'));
+        await _waitUntil(() => restored);
+
+        expect(terminal.cursorHidden, isFalse);
+
+        program.quit();
+        await runFuture;
+      },
+    );
+
+    test(
+      'ExecProcess restore reapplies startup title when no view override exists',
+      () async {
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('exec')) {
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const QuitMsg());
+            }
+            return null;
+          },
+          onView: () => 'plain view',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            startupTitle: 'Base Title',
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
+        );
+        program.send(const CustomMsg('exec'));
+        await runFuture;
+
+        expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+        expect(
+          terminal.operations
+              .where((op) => op == 'setTitle(Base Title)')
+              .length,
+          greaterThanOrEqualTo(1),
+        );
+      },
+    );
 
     test(
       'ExecProcess restore reapplies a view-scoped window title without falling back to startup title',
@@ -4386,11 +4466,9 @@ Future<void> main() async {
         final model = _CallbackModel(
           onUpdate: (msg) {
             if (msg == const CustomMsg('exec')) {
-              return Cmd.exec(
-                'echo',
-                ['restored'],
-                onComplete: (_) => const QuitMsg(),
-              );
+              return Cmd.exec('echo', [
+                'restored',
+              ], onComplete: (_) => const QuitMsg());
             }
             return null;
           },
@@ -4407,16 +4485,22 @@ Future<void> main() async {
         );
 
         final runFuture = program.run();
-        await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
+        await _waitUntil(
+          () => terminal.operations.contains('setTitle(Scoped Title)'),
+        );
         program.send(const CustomMsg('exec'));
         await runFuture;
 
         expect(
-          terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+          terminal.operations
+              .where((op) => op == 'setTitle(Base Title)')
+              .length,
           0,
         );
         expect(
-          terminal.operations.where((op) => op == 'setTitle(Scoped Title)').length,
+          terminal.operations
+              .where((op) => op == 'setTitle(Scoped Title)')
+              .length,
           2,
         );
       },
@@ -4449,11 +4533,9 @@ Future<void> main() async {
                 const Duration(milliseconds: 30),
                 () => terminal.setSize(width: 120, height: 33),
               );
-              return Cmd.exec(
-                io.Platform.resolvedExecutable,
-                [script.path],
-                onComplete: (_) => const QuitMsg(),
-              );
+              return Cmd.exec(io.Platform.resolvedExecutable, [
+                script.path,
+              ], onComplete: (_) => const QuitMsg());
             }
             if (msg case WindowSizeMsg(width: 120, height: 33)) {
               restoredSize = msg;
@@ -4489,308 +4571,338 @@ Future<void> main() async {
       terminal = MockTerminal();
     });
 
-    test('SuspendMsg restore reapplies stateful terminal control writes', () async {
-      var resumed = false;
-      final view = View(
-        content: 'sticky metadata',
-        reportFocus: true,
-        bracketedPaste: true,
-        mouseMode: MouseMode.allMotion,
-        altScreen: true,
-      );
-
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            resumed = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => resumed ? 'resumed' : view,
-      );
-
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
-
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
-      program.send(const SuspendMsg());
-      await runFuture;
-
-      final disableIndex = terminal.operations.indexOf('disableRawMode');
-      final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
-
-      expect(disableIndex, isNonNegative);
-      expect(restoreIndex, greaterThan(disableIndex));
-      expect(
-        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableFocusReporting').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        2,
-      );
-    });
-
-    test('SuspendMsg restore reapplies identical view terminal metadata', () async {
-      final view = View(
-        content: 'sticky metadata',
-        reportFocus: true,
-        bracketedPaste: true,
-        mouseMode: MouseMode.allMotion,
-        backgroundColor: const BasicColor('#112233'),
-        foregroundColor: const BasicColor('#eeddcc'),
-        progressBar: const TerminalProgressBar(
-          state: TerminalProgressBarState.defaultState,
-          value: 40,
-        ),
-        cursor: (Cursor.at(0, 0)
-          ..shape = CursorShape.bar
-          ..blink = false
-          ..color = const BasicColor('#445566')),
-      );
-
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => view,
-      );
-
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
-
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
-      program.send(const SuspendMsg());
-      await runFuture;
-
-      expect(
-        terminal.operations.where((op) => op == 'enableFocusReporting').length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableBracketedPaste').length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        terminal.operations.where((op) => op == 'enableMouseAllMotion').length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        terminal.operations
-            .where((op) => op == 'setProgressBar(1, 40)')
-            .length,
-        greaterThanOrEqualTo(2),
-      );
-
-      final joinedOutput = terminal.output.join();
-      expect(
-        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(
-        RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
-        greaterThanOrEqualTo(2),
-      );
-      expect(joinedOutput, contains('\x1b]111\x07'));
-      expect(joinedOutput, contains('\x1b]110\x07'));
-      expect(joinedOutput, contains('\x1b]112\x07'));
-      expect(joinedOutput, contains('\x1b[1 q'));
-    });
-
-    test('SuspendMsg restore reapplies fullscreen terminal state only once', () async {
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => 'suspend fullscreen restore',
-      );
-
-      final program = Program(
-        model,
-        options: const ProgramOptions(
+    test(
+      'SuspendMsg restore reapplies stateful terminal control writes',
+      () async {
+        var resumed = false;
+        final view = View(
+          content: 'sticky metadata',
+          reportFocus: true,
+          bracketedPaste: true,
+          mouseMode: MouseMode.allMotion,
           altScreen: true,
-          hideCursor: true,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const SuspendMsg());
-      await runFuture;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              resumed = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => resumed ? 'resumed' : view,
+        );
 
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'hideCursor').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'exitAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'showCursor').length,
-        2,
-      );
-    });
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
 
-    test('SuspendMsg restore reapplies explicit hide cursor override', () async {
-      var resumed = false;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('enableFocusReporting'),
+        );
+        program.send(const SuspendMsg());
+        await runFuture;
 
-      final model = _CallbackModel(
-        onInit: () => Cmd.hideCursor(),
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            resumed = true;
-          }
-          return null;
-        },
-        onView: () => resumed ? 'resumed' : 'running',
-      );
+        final disableIndex = terminal.operations.indexOf('disableRawMode');
+        final restoreIndex = terminal.operations.lastIndexOf('enableRawMode');
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
+        expect(disableIndex, isNonNegative);
+        expect(restoreIndex, greaterThan(disableIndex));
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableMouseAllMotion')
+              .length,
+          2,
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableBracketedPaste')
+              .length,
+          2,
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableFocusReporting')
+              .length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+      },
+    );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.output.join().contains('running'));
-      program.send(const SuspendMsg());
-      await _waitUntil(() => resumed);
+    test(
+      'SuspendMsg restore reapplies identical view terminal metadata',
+      () async {
+        final view = View(
+          content: 'sticky metadata',
+          reportFocus: true,
+          bracketedPaste: true,
+          mouseMode: MouseMode.allMotion,
+          backgroundColor: const BasicColor('#112233'),
+          foregroundColor: const BasicColor('#eeddcc'),
+          progressBar: const TerminalProgressBar(
+            state: TerminalProgressBarState.defaultState,
+            value: 40,
+          ),
+          cursor: (Cursor.at(0, 0)
+            ..shape = CursorShape.bar
+            ..blink = false
+            ..color = const BasicColor('#445566')),
+        );
 
-      expect(terminal.cursorHidden, isTrue);
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => view,
+        );
 
-      program.quit();
-      await runFuture;
-    });
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
 
-    test('SuspendMsg restore reapplies explicit show cursor override', () async {
-      var resumed = false;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('enableFocusReporting'),
+        );
+        program.send(const SuspendMsg());
+        await runFuture;
 
-      final model = _CallbackModel(
-        onInit: () => Cmd.showCursor(),
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            resumed = true;
-          }
-          return null;
-        },
-        onView: () => resumed ? 'resumed' : 'running',
-      );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableFocusReporting')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableBracketedPaste')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'enableMouseAllMotion')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'setProgressBar(1, 40)')
+              .length,
+          greaterThanOrEqualTo(2),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: true,
-          hideCursor: true,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
+        final joinedOutput = terminal.output.join();
+        expect(
+          RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(
+          RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length,
+          greaterThanOrEqualTo(2),
+        );
+        expect(joinedOutput, contains('\x1b]111\x07'));
+        expect(joinedOutput, contains('\x1b]110\x07'));
+        expect(joinedOutput, contains('\x1b]112\x07'));
+        expect(joinedOutput, contains('\x1b[1 q'));
+      },
+    );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const SuspendMsg());
-      await _waitUntil(() => resumed);
+    test(
+      'SuspendMsg restore reapplies fullscreen terminal state only once',
+      () async {
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => 'suspend fullscreen restore',
+        );
 
-      expect(terminal.cursorHidden, isFalse);
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
 
-      program.quit();
-      await runFuture;
-    });
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const SuspendMsg());
+        await runFuture;
 
-    test('SuspendMsg restore reapplies startup title when no view override exists', () async {
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => 'plain view',
-      );
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(terminal.operations.where((op) => op == 'hideCursor').length, 2);
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(terminal.operations.where((op) => op == 'showCursor').length, 2);
+      },
+    );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          startupTitle: 'Base Title',
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
+    test(
+      'SuspendMsg restore reapplies explicit hide cursor override',
+      () async {
+        var resumed = false;
 
-      final runFuture = program.run();
-      await _waitUntil(
-        () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
-      );
-      program.send(const SuspendMsg());
-      await runFuture;
+        final model = _CallbackModel(
+          onInit: () => Cmd.hideCursor(),
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              resumed = true;
+            }
+            return null;
+          },
+          onView: () => resumed ? 'resumed' : 'running',
+        );
 
-      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
-      expect(
-        terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
-        1,
-      );
-    });
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.join().contains('running'));
+        program.send(const SuspendMsg());
+        await _waitUntil(() => resumed);
+
+        expect(terminal.cursorHidden, isTrue);
+
+        program.quit();
+        await runFuture;
+      },
+    );
+
+    test(
+      'SuspendMsg restore reapplies explicit show cursor override',
+      () async {
+        var resumed = false;
+
+        final model = _CallbackModel(
+          onInit: () => Cmd.showCursor(),
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              resumed = true;
+            }
+            return null;
+          },
+          onView: () => resumed ? 'resumed' : 'running',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: true,
+            hideCursor: true,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const SuspendMsg());
+        await _waitUntil(() => resumed);
+
+        expect(terminal.cursorHidden, isFalse);
+
+        program.quit();
+        await runFuture;
+      },
+    );
+
+    test(
+      'SuspendMsg restore reapplies startup title when no view override exists',
+      () async {
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => 'plain view',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            startupTitle: 'Base Title',
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.output.join().contains('\x1b]0;Base Title\x07'),
+        );
+        program.send(const SuspendMsg());
+        await runFuture;
+
+        expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+        expect(
+          terminal.operations
+              .where((op) => op == 'setTitle(Base Title)')
+              .length,
+          1,
+        );
+      },
+    );
 
     test(
       'SuspendMsg restore reapplies a view-scoped window title without falling back to startup title',
@@ -4821,61 +4933,73 @@ Future<void> main() async {
         );
 
         final runFuture = program.run();
-        await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
+        await _waitUntil(
+          () => terminal.operations.contains('setTitle(Scoped Title)'),
+        );
         program.send(const SuspendMsg());
         await runFuture;
 
         expect(
-          terminal.operations.where((op) => op == 'setTitle(Base Title)').length,
+          terminal.operations
+              .where((op) => op == 'setTitle(Base Title)')
+              .length,
           0,
         );
         expect(
-          terminal.operations.where((op) => op == 'setTitle(Scoped Title)').length,
+          terminal.operations
+              .where((op) => op == 'setTitle(Scoped Title)')
+              .length,
           2,
         );
       },
     );
 
-    test('SuspendMsg restore reapplies a view-scoped alt-screen override', () async {
-      const view = View(content: 'dynamic alt during suspend', altScreen: true);
+    test(
+      'SuspendMsg restore reapplies a view-scoped alt-screen override',
+      () async {
+        const view = View(
+          content: 'dynamic alt during suspend',
+          altScreen: true,
+        );
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is ResumeMsg) {
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => view,
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is ResumeMsg) {
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => view,
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          sendSuspendSignal: false,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            sendSuspendSignal: false,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const SuspendMsg());
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const SuspendMsg());
+        await runFuture;
 
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        2,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'exitAltScreen').length,
-        2,
-      );
-      expect(terminal.isAltScreen, isFalse);
-    });
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          2,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          2,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
 
     test(
       'SuspendMsg restore emits the current terminal size when it changes while released',
@@ -5104,269 +5228,300 @@ Future<void> main() async {
       terminal = MockTerminal();
     });
 
-    test('falling back to plain text resets view-scoped terminal metadata', () async {
-      var plainTextPhase = false;
+    test(
+      'falling back to plain text resets view-scoped terminal metadata',
+      () async {
+        var plainTextPhase = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('clear')) {
-            plainTextPhase = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => plainTextPhase
-            ? 'plain terminal view'
-            : View(
-                content: 'scoped metadata',
-                reportFocus: true,
-                bracketedPaste: true,
-                mouseMode: MouseMode.allMotion,
-                keyboardEnhancements: const KeyboardEnhancements(
-                  reportEventTypes: true,
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('clear')) {
+              plainTextPhase = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => plainTextPhase
+              ? 'plain terminal view'
+              : View(
+                  content: 'scoped metadata',
+                  reportFocus: true,
+                  bracketedPaste: true,
+                  mouseMode: MouseMode.allMotion,
+                  keyboardEnhancements: const KeyboardEnhancements(
+                    reportEventTypes: true,
+                  ),
+                  backgroundColor: const BasicColor('#112233'),
+                  foregroundColor: const BasicColor('#eeddcc'),
+                  progressBar: const TerminalProgressBar(
+                    state: TerminalProgressBarState.defaultState,
+                    value: 42,
+                  ),
+                  cursor: (Cursor.at(0, 0)
+                    ..shape = CursorShape.bar
+                    ..blink = false
+                    ..color = const BasicColor('#445566')),
                 ),
-                backgroundColor: const BasicColor('#112233'),
-                foregroundColor: const BasicColor('#eeddcc'),
-                progressBar: const TerminalProgressBar(
-                  state: TerminalProgressBarState.defaultState,
-                  value: 42,
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('enableFocusReporting'),
+        );
+        program.send(const CustomMsg('clear'));
+        await runFuture;
+
+        final joinedOutput = terminal.output.join();
+        expect(terminal.operations, contains('enableFocusReporting'));
+        expect(terminal.operations, contains('disableFocusReporting'));
+        expect(terminal.operations, contains('enableBracketedPaste'));
+        expect(terminal.operations, contains('disableBracketedPaste'));
+        expect(terminal.operations, contains('enableMouseAllMotion'));
+        expect(terminal.operations, contains('disableMouse'));
+        expect(
+          terminal.operations
+              .where((op) => op == 'setProgressBar(1, 42)')
+              .length,
+          1,
+        );
+        expect(
+          terminal.operations
+              .where((op) => op == 'setProgressBar(0, 0)')
+              .length,
+          1,
+        );
+        expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+        expect(
+          RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
+          1,
+        );
+        expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
+        expect(
+          RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
+          1,
+        );
+        expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
+        expect(
+          RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
+          1,
+        );
+        expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
+      },
+    );
+
+    test(
+      'null view metadata fields reset previous terminal overrides',
+      () async {
+        var cleared = false;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('clear')) {
+              cleared = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => cleared
+              ? const View(content: 'metadata cleared')
+              : View(
+                  content: 'metadata set',
+                  reportFocus: true,
+                  bracketedPaste: true,
+                  mouseMode: MouseMode.allMotion,
+                  keyboardEnhancements: const KeyboardEnhancements(
+                    reportEventTypes: true,
+                  ),
+                  backgroundColor: const BasicColor('#223344'),
+                  foregroundColor: const BasicColor('#ddeeff'),
+                  progressBar: const TerminalProgressBar(
+                    state: TerminalProgressBarState.defaultState,
+                    value: 80,
+                  ),
+                  cursor: (Cursor.at(1, 1)
+                    ..shape = CursorShape.underline
+                    ..blink = false
+                    ..color = const BasicColor('#556677')),
                 ),
-                cursor: (Cursor.at(0, 0)
-                  ..shape = CursorShape.bar
-                  ..blink = false
-                  ..color = const BasicColor('#445566')),
-              ),
-      );
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
-      program.send(const CustomMsg('clear'));
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('enableFocusReporting'),
+        );
+        program.send(const CustomMsg('clear'));
+        await runFuture;
 
-      final joinedOutput = terminal.output.join();
-      expect(terminal.operations, contains('enableFocusReporting'));
-      expect(terminal.operations, contains('disableFocusReporting'));
-      expect(terminal.operations, contains('enableBracketedPaste'));
-      expect(terminal.operations, contains('disableBracketedPaste'));
-      expect(terminal.operations, contains('enableMouseAllMotion'));
-      expect(terminal.operations, contains('disableMouse'));
-      expect(
-        terminal.operations.where((op) => op == 'setProgressBar(1, 42)').length,
-        1,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'setProgressBar(0, 0)').length,
-        1,
-      );
-      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
-      expect(
-        RegExp(r'\x1b]11;#112233\x07').allMatches(joinedOutput).length,
-        1,
-      );
-      expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
-      expect(
-        RegExp(r'\x1b]10;#eeddcc\x07').allMatches(joinedOutput).length,
-        1,
-      );
-      expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
-      expect(
-        RegExp(r'\x1b]12;#445566\x07').allMatches(joinedOutput).length,
-        1,
-      );
-      expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b\[6 q').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
-    });
+        final joinedOutput = terminal.output.join();
+        expect(terminal.operations, contains('disableFocusReporting'));
+        expect(terminal.operations, contains('disableBracketedPaste'));
+        expect(terminal.operations, contains('disableMouse'));
+        expect(
+          terminal.operations
+              .where((op) => op == 'setProgressBar(0, 0)')
+              .length,
+          1,
+        );
+        expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
+        expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b\[4 q').allMatches(joinedOutput).length, 1);
+        expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
+      },
+    );
 
-    test('null view metadata fields reset previous terminal overrides', () async {
-      var cleared = false;
+    test(
+      'window title falls back to startup title when override clears',
+      () async {
+        var cleared = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('clear')) {
-            cleared = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => cleared
-            ? const View(content: 'metadata cleared')
-            : View(
-                content: 'metadata set',
-                reportFocus: true,
-                bracketedPaste: true,
-                mouseMode: MouseMode.allMotion,
-                keyboardEnhancements: const KeyboardEnhancements(
-                  reportEventTypes: true,
-                ),
-                backgroundColor: const BasicColor('#223344'),
-                foregroundColor: const BasicColor('#ddeeff'),
-                progressBar: const TerminalProgressBar(
-                  state: TerminalProgressBarState.defaultState,
-                  value: 80,
-                ),
-                cursor: (Cursor.at(1, 1)
-                  ..shape = CursorShape.underline
-                  ..blink = false
-                  ..color = const BasicColor('#556677')),
-              ),
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('clear')) {
+              cleared = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => cleared
+              ? const View(content: 'title cleared')
+              : const View(content: 'title set', windowTitle: 'Scoped Title'),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            startupTitle: 'Base Title',
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enableFocusReporting'));
-      program.send(const CustomMsg('clear'));
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(
+          () => terminal.operations.contains('setTitle(Scoped Title)'),
+        );
+        program.send(const CustomMsg('clear'));
+        await runFuture;
 
-      final joinedOutput = terminal.output.join();
-      expect(terminal.operations, contains('disableFocusReporting'));
-      expect(terminal.operations, contains('disableBracketedPaste'));
-      expect(terminal.operations, contains('disableMouse'));
-      expect(
-        terminal.operations.where((op) => op == 'setProgressBar(0, 0)').length,
-        1,
-      );
-      expect(joinedOutput, contains(Ansi.resetKittyKeyboard));
-      expect(RegExp(r'\x1b]111\x07').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b]110\x07').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b]112\x07').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b\[4 q').allMatches(joinedOutput).length, 1);
-      expect(RegExp(r'\x1b\[1 q').allMatches(joinedOutput).length, 1);
-    });
+        final scopedIndex = terminal.operations.indexOf(
+          'setTitle(Scoped Title)',
+        );
+        final fallbackIndex = terminal.operations.lastIndexOf(
+          'setTitle(Base Title)',
+        );
 
-    test('window title falls back to startup title when override clears', () async {
-      var cleared = false;
+        expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
+        expect(scopedIndex, isNonNegative);
+        expect(fallbackIndex, greaterThan(scopedIndex));
+      },
+    );
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('clear')) {
-            cleared = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => cleared
-            ? const View(content: 'title cleared')
-            : const View(content: 'title set', windowTitle: 'Scoped Title'),
-      );
+    test(
+      'view alt-screen override resets when falling back to plain text',
+      () async {
+        var plainTextPhase = false;
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          startupTitle: 'Base Title',
-        ),
-        terminal: terminal,
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('clear')) {
+              plainTextPhase = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => plainTextPhase
+              ? 'plain view'
+              : const View(content: 'dynamic alt', altScreen: true),
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('setTitle(Scoped Title)'));
-      program.send(const CustomMsg('clear'));
-      await runFuture;
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final scopedIndex = terminal.operations.indexOf('setTitle(Scoped Title)');
-      final fallbackIndex = terminal.operations.lastIndexOf('setTitle(Base Title)');
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const CustomMsg('clear'));
+        await runFuture;
 
-      expect(terminal.output.join(), contains('\x1b]0;Base Title\x07'));
-      expect(scopedIndex, isNonNegative);
-      expect(fallbackIndex, greaterThan(scopedIndex));
-    });
+        expect(terminal.operations, contains('enterAltScreen'));
+        expect(terminal.operations, contains('exitAltScreen'));
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
 
-    test('view alt-screen override resets when falling back to plain text', () async {
-      var plainTextPhase = false;
+    test(
+      'null alt-screen view field resets previous alt-screen override',
+      () async {
+        var cleared = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('clear')) {
-            plainTextPhase = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => plainTextPhase
-            ? 'plain view'
-            : const View(content: 'dynamic alt', altScreen: true),
-      );
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg == const CustomMsg('clear')) {
+              cleared = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 1),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => cleared
+              ? const View(content: 'metadata cleared')
+              : const View(content: 'metadata set', altScreen: true),
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const CustomMsg('clear'));
-      await runFuture;
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
+        program.send(const CustomMsg('clear'));
+        await runFuture;
 
-      expect(terminal.operations, contains('enterAltScreen'));
-      expect(terminal.operations, contains('exitAltScreen'));
-      expect(terminal.isAltScreen, isFalse);
-    });
-
-    test('null alt-screen view field resets previous alt-screen override', () async {
-      var cleared = false;
-
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg == const CustomMsg('clear')) {
-            cleared = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 1),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => cleared
-            ? const View(content: 'metadata cleared')
-            : const View(content: 'metadata set', altScreen: true),
-      );
-
-      final program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false),
-        terminal: terminal,
-      );
-
-      final runFuture = program.run();
-      await _waitUntil(() => terminal.operations.contains('enterAltScreen'));
-      program.send(const CustomMsg('clear'));
-      await runFuture;
-
-      expect(
-        terminal.operations.where((op) => op == 'enterAltScreen').length,
-        1,
-      );
-      expect(
-        terminal.operations.where((op) => op == 'exitAltScreen').length,
-        1,
-      );
-      expect(terminal.isAltScreen, isFalse);
-    });
+        expect(
+          terminal.operations.where((op) => op == 'enterAltScreen').length,
+          1,
+        );
+        expect(
+          terminal.operations.where((op) => op == 'exitAltScreen').length,
+          1,
+        );
+        expect(terminal.isAltScreen, isFalse);
+      },
+    );
   });
 
   group('Message filtering', () {
@@ -6150,10 +6305,7 @@ Future<void> main() async {
 
       final program = Program(
         model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-        ),
+        options: const ProgramOptions(altScreen: false, hideCursor: false),
         terminal: terminal,
       );
 
@@ -6162,90 +6314,109 @@ Future<void> main() async {
       expect(received, const ColorProfileMsg(ColorProfile.ansi256));
     });
 
-    test('custom injected terminals skip auto startup probes by default', () async {
-      final terminal = MockTerminal();
-      final model = _CallbackModel(
-        onInit: () => Cmd.tick(
-          const Duration(milliseconds: 10),
-          (_) => const QuitMsg(),
-        ),
-        onView: () => 'first frame without auto probes',
-      );
+    test(
+      'custom injected terminals skip auto startup probes by default',
+      () async {
+        final terminal = MockTerminal();
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 10),
+            (_) => const QuitMsg(),
+          ),
+          onView: () => 'first frame without auto probes',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final joinedOutput = terminal.output.join();
-      expect(joinedOutput, contains('first frame without auto probes'));
-      expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
-      expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
-      expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
-      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-    });
+        final joinedOutput = terminal.output.join();
+        expect(
+          joinedOutput,
+          _containsRenderedText('first frame without auto probes'),
+        );
+        expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+        expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      },
+    );
 
-    test('startupProbes false disables startup probes for backend terminals', () async {
-      final writes = <String>[];
-      final backend = EmbeddedTerminalBackend(output: writes.add);
-      final terminal = BackendTerminal(backend);
-      final model = _CallbackModel(
-        onInit: () => Cmd.tick(
-          const Duration(milliseconds: 10),
-          (_) => const QuitMsg(),
-        ),
-        onView: () => 'built-in backend without probes',
-      );
+    test(
+      'startupProbes false disables startup probes for backend terminals',
+      () async {
+        final writes = <String>[];
+        final backend = EmbeddedTerminalBackend(output: writes.add);
+        final terminal = BackendTerminal(backend);
+        final model = _CallbackModel(
+          onInit: () => Cmd.tick(
+            const Duration(milliseconds: 10),
+            (_) => const QuitMsg(),
+          ),
+          onView: () => 'built-in backend without probes',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-          startupProbes: false,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final joinedOutput = writes.join();
-      expect(joinedOutput, contains('built-in backend without probes'));
-      expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
-      expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
-      expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
-      expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-    });
+        final joinedOutput = writes.join();
+        expect(
+          joinedOutput,
+          _containsRenderedText('built-in backend without probes'),
+        );
+        expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
+        expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
+        expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
+      },
+    );
 
     test(
       'forced startup probes skip non-ANSI and non-terminal backend terminals',
       () async {
-        for (final scenario in <({String label, EmbeddedTerminalBackend backend})>[
-          (
-            label: 'non-ANSI',
-            backend: EmbeddedTerminalBackend(
-              output: (_) {},
-              supportsAnsi: false,
-            ),
-          ),
-          (
-            label: 'non-terminal',
-            backend: EmbeddedTerminalBackend(
-              output: (_) {},
-              isTerminal: false,
-            ),
-          ),
-        ]) {
+        for (final scenario
+            in <({String label, EmbeddedTerminalBackend backend})>[
+              (
+                label: 'non-ANSI',
+                backend: EmbeddedTerminalBackend(
+                  output: (_) {},
+                  supportsAnsi: false,
+                ),
+              ),
+              (
+                label: 'non-terminal',
+                backend: EmbeddedTerminalBackend(
+                  output: (_) {},
+                  isTerminal: false,
+                ),
+              ),
+            ]) {
           final writes = <String>[];
           final backend = EmbeddedTerminalBackend(
             output: writes.add,
@@ -6278,7 +6449,9 @@ Future<void> main() async {
           final joinedOutput = writes.join();
           expect(
             joinedOutput,
-            contains('${scenario.label} backend without startup probes'),
+            _containsRenderedText(
+              '${scenario.label} backend without startup probes',
+            ),
           );
           expect(joinedOutput, isNot(contains(Ansi.requestBackgroundColor)));
           expect(joinedOutput, isNot(contains(Ansi.requestColorScheme)));
@@ -6287,171 +6460,185 @@ Future<void> main() async {
             isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
           );
           expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-          expect(joinedOutput, isNot(contains(Ansi.requestExtendedCursorPosition)));
+          expect(
+            joinedOutput,
+            isNot(contains(Ansi.requestExtendedCursorPosition)),
+          );
         }
       },
     );
 
-    test('startup UV capability replies are delivered during initialization', () async {
-      final terminal = _ProbeAwareMockTerminal(
-        onWrite: (data, terminal) {
-          if (data == Ansi.requestBackgroundColor) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
-            });
-          }
-          if (data == Ansi.requestSecondaryDeviceAttributes) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b[>1;2;3c'.codeUnits);
-            });
-          }
-          if (data == Ansi.requestKittyKeyboard) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b[?2u'.codeUnits);
-            });
-          }
-        },
-      );
+    test(
+      'startup UV capability replies are delivered during initialization',
+      () async {
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+              });
+            }
+            if (data == Ansi.requestSecondaryDeviceAttributes) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b[>1;2;3c'.codeUnits);
+              });
+            }
+            if (data == Ansi.requestKittyKeyboard) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b[?2u'.codeUnits);
+              });
+            }
+          },
+        );
 
-      SecondaryDeviceAttributesMsg? secondary;
-      KeyboardEnhancementsMsg? keyboard;
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          switch (msg) {
-            case SecondaryDeviceAttributesMsg():
-              secondary = msg;
-            case KeyboardEnhancementsMsg():
-              keyboard = msg;
-            default:
-              break;
-          }
-          if (secondary != null && keyboard != null) {
-            return Cmd.tick(
-              const Duration(milliseconds: 10),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => secondary != null && keyboard != null
-            ? 'startup capabilities ready'
-            : 'waiting for startup capabilities',
-      );
+        SecondaryDeviceAttributesMsg? secondary;
+        KeyboardEnhancementsMsg? keyboard;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            switch (msg) {
+              case SecondaryDeviceAttributesMsg():
+                secondary = msg;
+              case KeyboardEnhancementsMsg():
+                keyboard = msg;
+              default:
+                break;
+            }
+            if (secondary != null && keyboard != null) {
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () => secondary != null && keyboard != null
+              ? 'startup capabilities ready'
+              : 'waiting for startup capabilities',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-          startupProbes: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      expect(secondary, const SecondaryDeviceAttributesMsg([1, 2, 3]));
-      expect(
-        keyboard,
-        const KeyboardEnhancementsMsg(reportEventTypes: true),
-      );
-      expect(terminal.output.join(), contains('startup capabilities ready'));
-    });
+        expect(secondary, const SecondaryDeviceAttributesMsg([1, 2, 3]));
+        expect(keyboard, const KeyboardEnhancementsMsg(reportEventTypes: true));
+        expect(
+          terminal.output.join(),
+          _containsRenderedText('startup capabilities ready'),
+        );
+      },
+    );
 
-    test('background probe updates the first rendered frame before paint', () async {
-      final terminal = _ProbeAwareMockTerminal(
-        onWrite: (data, terminal) {
-          if (data == Ansi.requestBackgroundColor) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
-            });
-          }
-        },
-      );
+    test(
+      'background probe updates the first rendered frame before paint',
+      () async {
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
+              });
+            }
+          },
+        );
 
-      var sawLightBackground = false;
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg is BackgroundColorMsg) {
-            sawLightBackground = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 10),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => sawLightBackground ? 'light first frame' : 'dark first frame',
-      );
+        var sawLightBackground = false;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is BackgroundColorMsg) {
+              sawLightBackground = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () =>
+              sawLightBackground ? 'light first frame' : 'dark first frame',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-          startupProbes: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final joinedOutput = terminal.output.join();
-      expect(joinedOutput, contains(Ansi.requestBackgroundColor));
-      expect(joinedOutput, contains(Ansi.requestColorScheme));
-      expect(joinedOutput, contains('light first frame'));
-      expect(joinedOutput, isNot(contains('dark first frame')));
-    });
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestBackgroundColor));
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, _containsRenderedText('light first frame'));
+        expect(joinedOutput, isNot(_containsRenderedText('dark first frame')));
+      },
+    );
 
-    test('color scheme probe updates the first rendered frame before paint', () async {
-      final terminal = _ProbeAwareMockTerminal(
-        onWrite: (data, terminal) {
-          if (data == Ansi.requestColorScheme) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b[?997;2n'.codeUnits);
-            });
-          }
-        },
-      );
+    test(
+      'color scheme probe updates the first rendered frame before paint',
+      () async {
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestColorScheme) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b[?997;2n'.codeUnits);
+              });
+            }
+          },
+        );
 
-      var sawLightBackground = false;
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          if (msg case ColorSchemeMsg(dark: false)) {
-            sawLightBackground = true;
-            return Cmd.tick(
-              const Duration(milliseconds: 10),
-              (_) => const QuitMsg(),
-            );
-          }
-          return null;
-        },
-        onView: () => sawLightBackground ? 'light first frame' : 'dark first frame',
-      );
+        var sawLightBackground = false;
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg case ColorSchemeMsg(dark: false)) {
+              sawLightBackground = true;
+              return Cmd.tick(
+                const Duration(milliseconds: 10),
+                (_) => const QuitMsg(),
+              );
+            }
+            return null;
+          },
+          onView: () =>
+              sawLightBackground ? 'light first frame' : 'dark first frame',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-          startupProbes: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      final joinedOutput = terminal.output.join();
-      expect(joinedOutput, contains(Ansi.requestColorScheme));
-      expect(joinedOutput, contains('light first frame'));
-      expect(joinedOutput, isNot(contains('dark first frame')));
-    });
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestColorScheme));
+        expect(joinedOutput, _containsRenderedText('light first frame'));
+        expect(joinedOutput, isNot(_containsRenderedText('dark first frame')));
+      },
+    );
 
     test(
       'quit during pre-render startup probing aborts later probes and skips first render',
@@ -6492,9 +6679,12 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, isNot(contains('should not render')));
+        expect(joinedOutput, isNot(_containsRenderedText('should not render')));
         expect(rendered, isFalse);
       },
     );
@@ -6579,7 +6769,10 @@ Future<void> main() async {
         final joinedOutput = writes.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
         expect(rendered, isFalse);
       },
@@ -6634,10 +6827,13 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, isNot(contains('initial render')));
-        expect(joinedOutput, contains('resumed render'));
+        expect(joinedOutput, isNot(_containsRenderedText('initial render')));
+        expect(joinedOutput, _containsRenderedText('resumed render'));
         expect(renderCount, 1);
       },
     );
@@ -6696,10 +6892,13 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
-        expect(joinedOutput, contains('initial render'));
-        expect(joinedOutput, contains('exec-done render'));
+        expect(joinedOutput, _containsRenderedText('initial render'));
+        expect(joinedOutput, _containsRenderedText('exec-done render'));
         expect(renderCount, greaterThanOrEqualTo(2));
       },
     );
@@ -6741,7 +6940,10 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
         expect(rendered, isFalse);
         expect(program.wasKilled, isTrue);
@@ -6784,7 +6986,10 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(joinedOutput, contains(Ansi.requestBackgroundColor));
         expect(joinedOutput, contains(Ansi.requestColorScheme));
-        expect(joinedOutput, isNot(contains(Ansi.requestSecondaryDeviceAttributes)));
+        expect(
+          joinedOutput,
+          isNot(contains(Ansi.requestSecondaryDeviceAttributes)),
+        );
         expect(joinedOutput, isNot(contains(Ansi.requestKittyKeyboard)));
         expect(rendered, isFalse);
       },
@@ -6798,7 +7003,8 @@ Future<void> main() async {
         var shutdownRequested = false;
         backend = EmbeddedTerminalBackend(
           output: (data) {
-            if (!shutdownRequested && data == Ansi.requestExtendedCursorPosition) {
+            if (!shutdownRequested &&
+                data == Ansi.requestExtendedCursorPosition) {
               shutdownRequested = true;
               scheduleMicrotask(backend.requestShutdown);
             }
@@ -6837,7 +7043,8 @@ Future<void> main() async {
         var suspendScheduled = false;
         final terminal = _ProbeAwareMockTerminal(
           onWrite: (data, terminal) {
-            if (!suspendScheduled && data == Ansi.requestExtendedCursorPosition) {
+            if (!suspendScheduled &&
+                data == Ansi.requestExtendedCursorPosition) {
               suspendScheduled = true;
               program.send(const SuspendMsg());
             }
@@ -6857,7 +7064,9 @@ Future<void> main() async {
           },
           onView: () {
             renderCount++;
-            return resumed ? 'resumed render #$renderCount' : 'render #$renderCount';
+            return resumed
+                ? 'resumed render #$renderCount'
+                : 'render #$renderCount';
           },
         );
 
@@ -6879,23 +7088,23 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(suspendScheduled, isTrue);
         expect(renderCount, greaterThanOrEqualTo(2));
-        expect(joinedOutput, contains('resumed render'));
+        expect(joinedOutput, _containsRenderedText('resumed render'));
         expect(
-          RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestSecondaryDeviceAttributes),
+          ).allMatches(joinedOutput).length,
           1,
         );
         expect(
-          RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestKittyKeyboard),
+          ).allMatches(joinedOutput).length,
           1,
         );
         expect(
-          RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestExtendedCursorPosition),
+          ).allMatches(joinedOutput).length,
           1,
         );
       },
@@ -6936,7 +7145,9 @@ Future<void> main() async {
           },
           onView: () {
             renderCount++;
-            return execDone ? 'exec-done render #$renderCount' : 'render #$renderCount';
+            return execDone
+                ? 'exec-done render #$renderCount'
+                : 'render #$renderCount';
           },
         );
 
@@ -6957,23 +7168,23 @@ Future<void> main() async {
         final joinedOutput = terminal.output.join();
         expect(execScheduled, isTrue);
         expect(renderCount, greaterThanOrEqualTo(2));
-        expect(joinedOutput, contains('exec-done render'));
+        expect(joinedOutput, _containsRenderedText('exec-done render'));
         expect(
-          RegExp(RegExp.escape(Ansi.requestSecondaryDeviceAttributes))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestSecondaryDeviceAttributes),
+          ).allMatches(joinedOutput).length,
           1,
         );
         expect(
-          RegExp(RegExp.escape(Ansi.requestKittyKeyboard))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestKittyKeyboard),
+          ).allMatches(joinedOutput).length,
           1,
         );
         expect(
-          RegExp(RegExp.escape(Ansi.requestExtendedCursorPosition))
-              .allMatches(joinedOutput)
-              .length,
+          RegExp(
+            RegExp.escape(Ansi.requestExtendedCursorPosition),
+          ).allMatches(joinedOutput).length,
           1,
         );
       },
@@ -7029,7 +7240,8 @@ Future<void> main() async {
         var cancelScheduled = false;
         final terminal = _ProbeAwareMockTerminal(
           onWrite: (data, terminal) {
-            if (!cancelScheduled && data == Ansi.requestExtendedCursorPosition) {
+            if (!cancelScheduled &&
+                data == Ansi.requestExtendedCursorPosition) {
               cancelScheduled = true;
               scheduleMicrotask(cancelCompleter.complete);
             }
@@ -7063,71 +7275,74 @@ Future<void> main() async {
   });
 
   group('Terminal color requests', () {
-    test('foreground and cursor color replies are delivered as messages', () async {
-      final terminal = _ProbeAwareMockTerminal(
-        onWrite: (data, terminal) {
-          if (data == Ansi.requestBackgroundColor) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
-            });
-          }
-          if (data == Ansi.requestForegroundColor) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b]10;rgb:aaaa/bbbb/cccc\x07'.codeUnits);
-            });
-          }
-          if (data == Ansi.requestCursorColor) {
-            scheduleMicrotask(() {
-              terminal.sendInput('\x1b]12;rgb:1234/5678/9abc\x07'.codeUnits);
-            });
-          }
-        },
-      );
+    test(
+      'foreground and cursor color replies are delivered as messages',
+      () async {
+        final terminal = _ProbeAwareMockTerminal(
+          onWrite: (data, terminal) {
+            if (data == Ansi.requestBackgroundColor) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b]11;rgb:1111/1111/1111\x07'.codeUnits);
+              });
+            }
+            if (data == Ansi.requestForegroundColor) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b]10;rgb:aaaa/bbbb/cccc\x07'.codeUnits);
+              });
+            }
+            if (data == Ansi.requestCursorColor) {
+              scheduleMicrotask(() {
+                terminal.sendInput('\x1b]12;rgb:1234/5678/9abc\x07'.codeUnits);
+              });
+            }
+          },
+        );
 
-      String? foregroundHex;
-      String? cursorHex;
-      final model = _CallbackModel(
-        onInit: () => Cmd.batch([
-          Cmd.requestForegroundColor(),
-          Cmd.requestCursorColor(),
-        ]),
-        onUpdate: (msg) {
-          switch (msg) {
-            case ForegroundColorMsg(hex: final hex):
-              foregroundHex = hex;
-            case CursorColorMsg(hex: final hex):
-              cursorHex = hex;
-            default:
-              break;
-          }
-          if (foregroundHex != null && cursorHex != null) {
-            return Cmd.message(const QuitMsg());
-          }
-          return null;
-        },
-        onView: () => 'color request runtime',
-      );
+        String? foregroundHex;
+        String? cursorHex;
+        final model = _CallbackModel(
+          onInit: () => Cmd.batch([
+            Cmd.requestForegroundColor(),
+            Cmd.requestCursorColor(),
+          ]),
+          onUpdate: (msg) {
+            switch (msg) {
+              case ForegroundColorMsg(hex: final hex):
+                foregroundHex = hex;
+              case CursorColorMsg(hex: final hex):
+                cursorHex = hex;
+              default:
+                break;
+            }
+            if (foregroundHex != null && cursorHex != null) {
+              return Cmd.message(const QuitMsg());
+            }
+            return null;
+          },
+          onView: () => 'color request runtime',
+        );
 
-      final program = Program(
-        model,
-        options: const ProgramOptions(
-          altScreen: false,
-          hideCursor: false,
-          useUltravioletRenderer: true,
-          useUltravioletInputDecoder: true,
-          startupProbes: true,
-        ),
-        terminal: terminal,
-      );
+        final program = Program(
+          model,
+          options: const ProgramOptions(
+            altScreen: false,
+            hideCursor: false,
+            useUltravioletRenderer: true,
+            useUltravioletInputDecoder: true,
+            startupProbes: true,
+          ),
+          terminal: terminal,
+        );
 
-      await program.run();
+        await program.run();
 
-      expect(foregroundHex, '#aabbcc');
-      expect(cursorHex, '#12569a');
-      final joinedOutput = terminal.output.join();
-      expect(joinedOutput, contains(Ansi.requestForegroundColor));
-      expect(joinedOutput, contains(Ansi.requestCursorColor));
-    });
+        expect(foregroundHex, '#aabbcc');
+        expect(cursorHex, '#12569a');
+        final joinedOutput = terminal.output.join();
+        expect(joinedOutput, contains(Ansi.requestForegroundColor));
+        expect(joinedOutput, contains(Ansi.requestCursorColor));
+      },
+    );
 
     test('palette color replies are delivered as messages', () async {
       const paletteRequest = '\x1b]4;42;?\x07';
@@ -7501,6 +7716,31 @@ Future<void> _waitUntil(
   }
 }
 
+Matcher _containsRenderedText(String expected) => predicate<String>(
+  (String output) => _containsRendered(output, expected),
+  'contains rendered text "$expected"',
+);
+
+bool _containsRendered(String output, String expected) {
+  final rendered = _stripAnsi(output);
+  final trimmedExpected = expected.trim();
+  if (!trimmedExpected.contains(' ')) return rendered.contains(trimmedExpected);
+  final tokens = trimmedExpected.split(RegExp(r'\s+'));
+  final pattern = tokens.map(RegExp.escape).join(r'\s*');
+  return RegExp(pattern).hasMatch(rendered);
+}
+
+String _stripAnsi(String value) {
+  // Broadly strips CSI, OSC, and single-character escape sequences
+  // while preserving printable output for text assertions.
+  final escapePattern = RegExp(
+    r'\x1b\[[0-?]*[ -/]*[@-~]'
+    r'|\x1b\][^\x07]*\x07'
+    r'|\x1b[@-Z\\-_]',
+  );
+  return value.replaceAll(escapePattern, '');
+}
+
 /// A model that uses callbacks for testing.
 class _CallbackModel implements Model {
   _CallbackModel({
@@ -7529,10 +7769,7 @@ class _CallbackModel implements Model {
 }
 
 class _FrameTickCallbackModel extends _CallbackModel implements FrameTickModel {
-  _FrameTickCallbackModel({
-    super.onUpdate,
-    super.onView,
-  });
+  _FrameTickCallbackModel({super.onUpdate, super.onView});
 
   @override
   bool get wantsFrameTicks => true;

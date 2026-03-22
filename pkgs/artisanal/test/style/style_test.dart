@@ -482,6 +482,62 @@ void main() {
     });
   });
 
+  group('Accessibility', () {
+    test('relativeLuminance returns boundary values', () {
+      expect(relativeLuminance(Colors.black), equals(0.0));
+      expect(relativeLuminance(Colors.white), equals(1.0));
+    });
+
+    test('contrastRatio follows WCAG formula for extremes', () {
+      expect(contrastRatio(Colors.black, Colors.white), equals(21.0));
+      expect(contrastRatio(Colors.blue, Colors.blue), equals(1.0));
+    });
+
+    test('meetsWcagAa and meetsWcagAaa apply expected thresholds', () {
+      final muted = BasicColor('#777777');
+
+      expect(meetsWcagAa(Colors.black, Colors.white), isTrue);
+      expect(meetsWcagAa(Colors.white, Colors.black), isTrue);
+      expect(meetsWcagAa(muted, Colors.white), isFalse);
+      expect(meetsWcagAa(muted, Colors.white, largeText: true), isTrue);
+
+      expect(meetsWcagAaa(Colors.black, Colors.white), isTrue);
+      expect(meetsWcagAaa(muted, Colors.white), isFalse);
+      expect(meetsWcagAaa(muted, Colors.white, largeText: true), isFalse);
+    });
+
+    test('bestTextColor picks the strongest contrast candidate', () {
+      expect(bestTextColor(Colors.black), equals(Colors.white));
+      expect(bestTextColor(Colors.white), equals(Colors.black));
+      expect(bestTextColor(Colors.gray900), equals(Colors.white));
+    });
+
+    test('adaptive colors are resolved against terminal background mode', () {
+      final adaptive = AdaptiveColor(light: Colors.black, dark: Colors.white);
+
+      expect(
+        meetsWcagAa(adaptive, Colors.white, hasDarkBackground: false),
+        isTrue,
+      );
+      expect(
+        meetsWcagAa(adaptive, Colors.black, hasDarkBackground: true),
+        isTrue,
+      );
+      expect(
+        meetsWcagAa(adaptive, Colors.white, hasDarkBackground: true),
+        isFalse,
+      );
+      expect(
+        meetsWcagAa(adaptive, Colors.black, hasDarkBackground: false),
+        isFalse,
+      );
+    });
+
+    test('invalid colors throw in contrast computations', () {
+      expect(() => relativeLuminance(NoColor()), throwsA(isA<ArgumentError>()));
+    });
+  });
+
   group('Padding', () {
     test('all creates uniform padding', () {
       final p = Padding.all(2);
@@ -955,6 +1011,90 @@ void main() {
       // Should keep the existing sides
       expect(style.getBorderSides.top, isTrue);
       expect(style.getBorderSides.right, isTrue);
+    });
+  });
+
+  group('InteractiveStyle', () {
+    test('state resolution follows hover-after-focus precedence', () {
+      final interactive = InteractiveStyle(
+        normal: Style().foreground(Colors.red),
+        focus: Style().foreground(Colors.yellow).underline(),
+        hover: Style().foreground(Colors.blue).bold(),
+      );
+
+      final resolved = interactive.resolve(isFocused: true, isHovered: true);
+
+      expect(resolved.getForeground, equals(Colors.blue));
+      expect(resolved.isBold, isTrue);
+      expect(resolved.isUnderline, isTrue);
+    });
+
+    test('absent interactive state falls back to normal', () {
+      final interactive = InteractiveStyle(
+        normal: Style().foreground(Colors.red).underline(),
+        focus: Style().foreground(Colors.green),
+        hover: Style().foreground(Colors.blue),
+      );
+
+      final resolved = interactive.resolve();
+
+      expect(resolved.getForeground, equals(Colors.red));
+      expect(resolved.isUnderline, isTrue);
+    });
+
+    test('all state combinations resolve without error', () {
+      final interactive = InteractiveStyle(
+        normal: Style().foreground(Colors.red),
+        focus: Style().foreground(Colors.green).underline(),
+        hover: Style().bold(),
+        active: Style().background(Colors.blue),
+        disabled: Style().foreground(Colors.gray).dim(),
+      );
+
+      expect(
+        interactive.resolve(isFocused: true).getForeground,
+        equals(Colors.green),
+      );
+      expect(interactive.resolve(isHovered: true).isBold, isTrue);
+      expect(
+        interactive.resolve(isActive: true).getBackground,
+        equals(Colors.blue),
+      );
+      expect(interactive.resolve(isDisabled: true).isDim, isTrue);
+      expect(
+        interactive
+            .resolve(
+              isFocused: true,
+              isHovered: true,
+              isActive: true,
+              isDisabled: true,
+            )
+            .isDim,
+        isTrue,
+      );
+      expect(
+        interactive
+            .resolve(isFocused: true, isHovered: true, isActive: true)
+            .isDim,
+        isFalse,
+      );
+      expect(
+        interactive
+            .resolve(isFocused: true, isHovered: true, isActive: true)
+            .getForeground,
+        equals(Colors.green),
+      );
+      expect(
+        interactive
+            .resolve(
+              isFocused: true,
+              isHovered: true,
+              isActive: true,
+              isDisabled: true,
+            )
+            .getForeground,
+        equals(Colors.gray),
+      );
     });
   });
 }

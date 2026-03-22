@@ -23,7 +23,9 @@ Future<void> main(List<String> args) async {
     timeout: _connectTimeout,
   );
   try {
-    await connection.send(const plugins.RemotePluginFocusInput(surfaceId: _panelId));
+    await connection.send(
+      const plugins.RemotePluginFocusInput(surfaceId: _panelId),
+    );
     await connection.surfaceMessages.drain<void>();
 
     final layers = plugins.buildRemotePluginSurfaceLayers(
@@ -44,7 +46,9 @@ Future<void> main(List<String> args) async {
       '${connection.pluginHello.pluginId} '
       '${connection.pluginHello.pluginVersion}',
     );
-    io.stdout.writeln('Open surfaces: ${layers.map((layer) => layer.id).join(', ')}');
+    io.stdout.writeln(
+      'Open surfaces: ${layers.map((layer) => layer.id).join(', ')}',
+    );
     for (final line in compositor.render().split('\n')) {
       io.stdout.writeln(line);
     }

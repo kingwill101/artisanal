@@ -7,4 +7,5 @@
 /// thing your app depends on. Use this umbrella entrypoint when you already
 /// want the broader Artisanal toolkit from a single package dependency.
 library;
+
 export 'package:artisanal_widgets/widgets.dart';

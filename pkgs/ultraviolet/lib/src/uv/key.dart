@@ -531,10 +531,10 @@ final class Key {
     String? s5,
   ]) => matchStrings([
     s,
-    if (s2 != null) s2,
-    if (s3 != null) s3,
-    if (s4 != null) s4,
-    if (s5 != null) s5,
+    ?s2,
+    ?s3,
+    ?s4,
+    ?s5,
   ]);
 
   bool matchStrings(Iterable<String> patterns) {

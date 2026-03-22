@@ -718,7 +718,7 @@ class _FilePickerState extends State<FilePicker> {
 
     final trailing = <Widget>[
       if (openButtonVisible) openButton,
-      if (exitButton != null) exitButton,
+      ?exitButton,
       cancelButton,
       primaryButton,
     ];
@@ -736,7 +736,7 @@ class _FilePickerState extends State<FilePicker> {
               upButton,
               if (openButtonVisible) openButton,
               cancelButton,
-              if (exitButton != null) exitButton,
+              ?exitButton,
             ],
           ),
         ],

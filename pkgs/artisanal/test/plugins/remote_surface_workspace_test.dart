@@ -68,24 +68,25 @@ void main() {
         y: 0,
       );
 
-      final workspace = await plugins.RemotePluginWorkspace.startManifestDirectory(
-        manifestDirectory.path,
-        executable: io.Platform.resolvedExecutable,
-        hostHello: const plugins.RemotePluginHostHello(
-          hostName: 'artisanal',
-          hostVersion: '0.2.0',
-        ),
-        genericServices: plugins.RemotePluginGenericServiceCatalog.builtIns(
-          readClipboard: (_) => clipboard,
-          writeClipboard: (_, text) {
-            clipboard = text;
-          },
-          notify: (request) {
-            notification = request;
-          },
-        ),
-        timeout: const Duration(seconds: 20),
-      );
+      final workspace =
+          await plugins.RemotePluginWorkspace.startManifestDirectory(
+            manifestDirectory.path,
+            executable: io.Platform.resolvedExecutable,
+            hostHello: const plugins.RemotePluginHostHello(
+              hostName: 'artisanal',
+              hostVersion: '0.2.0',
+            ),
+            genericServices: plugins.RemotePluginGenericServiceCatalog.builtIns(
+              readClipboard: (_) => clipboard,
+              writeClipboard: (_, text) {
+                clipboard = text;
+              },
+              notify: (request) {
+                notification = request;
+              },
+            ),
+            timeout: const Duration(seconds: 20),
+          );
       addTearDown(() => workspace.dispose(kill: true));
 
       expect(
@@ -93,18 +94,17 @@ void main() {
         <String>['clipboard', 'notification'],
       );
       expect(workspace.pluginIdForSurface('clipboard.panel'), 'clipboard');
-      expect(workspace.pluginIdForSurface('notification.panel'), 'notification');
+      expect(
+        workspace.pluginIdForSurface('notification.panel'),
+        'notification',
+      );
 
       await _waitForSurfaceText(
         workspace,
         'clipboard',
         contains: 'read:workspace clipboard',
       );
-      await _waitForSurfaceText(
-        workspace,
-        'clipboard',
-        contains: 'write:ok',
-      );
+      await _waitForSurfaceText(workspace, 'clipboard', contains: 'write:ok');
       await _waitForSurfaceText(
         workspace,
         'notification',
@@ -118,7 +118,8 @@ void main() {
       await workspace.focusPlugin('notification');
       expect(workspace.router.focusedSurfaceId, 'notification.panel');
       expect(
-        workspace.manifestForPlugin('notification')?.displayName ?? 'notification',
+        workspace.manifestForPlugin('notification')?.displayName ??
+            'notification',
         'notification',
       );
     },

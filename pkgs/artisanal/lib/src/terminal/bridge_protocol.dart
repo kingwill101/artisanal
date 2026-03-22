@@ -55,14 +55,12 @@ final class TerminalBridgeMessage {
   }
 
   /// Creates a resize notification.
-  const TerminalBridgeMessage.resize({
-    required int width,
-    required int height,
-  }) : this._(
-         type: TerminalBridgeMessageType.resize,
-         width: width,
-         height: height,
-       );
+  const TerminalBridgeMessage.resize({required int width, required int height})
+    : this._(
+        type: TerminalBridgeMessageType.resize,
+        width: width,
+        height: height,
+      );
 
   /// Creates a shutdown notification.
   const TerminalBridgeMessage.shutdown()
@@ -93,7 +91,9 @@ final class TerminalBridgeMessage {
       'input.bytes' => TerminalBridgeMessageType.inputBytes,
       'resize' => TerminalBridgeMessageType.resize,
       'shutdown' => TerminalBridgeMessageType.shutdown,
-      _ => throw FormatException('Unknown terminal bridge message type: $rawType'),
+      _ => throw FormatException(
+        'Unknown terminal bridge message type: $rawType',
+      ),
     };
 
     return TerminalBridgeMessage._(
@@ -129,7 +129,9 @@ final class TerminalBridgeMessage {
   static TerminalBridgeMessage decodeJson(String source) {
     final decoded = jsonDecode(source);
     if (decoded is! Map<String, dynamic>) {
-      throw FormatException('Terminal bridge message must decode to a JSON object.');
+      throw FormatException(
+        'Terminal bridge message must decode to a JSON object.',
+      );
     }
     return TerminalBridgeMessage.fromJson(decoded);
   }

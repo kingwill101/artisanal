@@ -166,8 +166,7 @@ List<Msg> _eventToMsgs(uvev.Event ev) {
           uvev.ModeSetting.reset => ModeReportValue.reset,
           uvev.ModeSetting.set => ModeReportValue.set,
           uvev.ModeSetting.permanentlySet => ModeReportValue.permanentlySet,
-          uvev.ModeSetting.permanentlyReset =>
-            ModeReportValue.permanentlyReset,
+          uvev.ModeSetting.permanentlyReset => ModeReportValue.permanentlyReset,
         },
       ),
     ];

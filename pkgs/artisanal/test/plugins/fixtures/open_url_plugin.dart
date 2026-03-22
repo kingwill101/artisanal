@@ -31,10 +31,7 @@ Future<void> main() async {
         surfaceId: _surfaceId,
         width: 30,
         height: 4,
-        cells: _cellsForLines(<String>[
-          'Open URL plugin',
-          status,
-        ]),
+        cells: _cellsForLines(<String>['Open URL plugin', status]),
       ),
     );
   }

@@ -292,7 +292,7 @@ final class RemotePluginGuestServices {
         'show',
         params: <String, Object?>{
           'message': message,
-          if (title != null) 'title': title,
+          'title': ?title,
           'level': level.wireName,
         },
         timeout: timeout,
@@ -342,8 +342,8 @@ final class RemotePluginGuestServices {
         params: <String, Object?>{
           'kind': kind.wireName,
           'allowMultiple': allowMultiple,
-          if (title != null) 'title': title,
-          if (initialPath != null) 'initialPath': initialPath,
+          'title': ?title,
+          'initialPath': ?initialPath,
         },
         timeout: timeout,
         paramsSchema: _filePickerParamsSchema,

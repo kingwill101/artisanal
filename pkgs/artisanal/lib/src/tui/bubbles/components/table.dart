@@ -40,9 +40,13 @@
 library;
 
 import '../../../style/border.dart' as style_border;
+import '../../../style/blending.dart' as blending;
 import '../../../style/color.dart';
 import '../../../style/style.dart';
+import '../../../colorprofile/convert.dart' as cp;
 import 'base.dart';
+
+import 'dart:math' as math;
 
 /// Callback for per-cell styling in tables.
 ///
@@ -52,6 +56,411 @@ import 'base.dart';
 ///
 /// Return a [Style] to apply to the cell, or `null` for no styling.
 typedef TableStyleFunc = Style? Function(int row, int col, String data);
+
+/// Blend mode used by themed table effects.
+enum TableBlendMode {
+  /// Replace the destination color with the source color.
+  normal,
+
+  /// Multiply blend mode.
+  multiply,
+
+  /// Screen blend mode.
+  screen,
+
+  /// Overlay blend mode.
+  overlay,
+}
+
+/// The table section an effect should apply to.
+enum TableThemeSection {
+  /// Applies to all cells, including header and body.
+  all,
+
+  /// Applies to header cells only.
+  header,
+
+  /// Applies to body cells only.
+  body,
+}
+
+/// The axis for sampling gradient colors in a table theme.
+enum TableThemeGradientAxis {
+  /// Uses column index to sample color.
+  horizontal,
+
+  /// Uses row index to sample color.
+  vertical,
+}
+
+/// A composable style rule for table cells.
+///
+/// Rules can target all cells, only headers, only body rows, a specific row,
+/// or a specific column.
+class TableThemeEffect {
+  /// Creates a new table theme effect.
+  TableThemeEffect({
+    this.style,
+    this.section = TableThemeSection.all,
+    this.row,
+    this.column,
+    this.gradient = const [],
+    this.blendMode = TableBlendMode.normal,
+    this.gradientAxis = TableThemeGradientAxis.horizontal,
+  });
+
+  /// Optional style to apply when this effect matches a cell.
+  final Style? style;
+
+  /// Target section for this effect.
+  final TableThemeSection section;
+
+  /// Target row for this effect (`Table.headerRow` allowed).
+  final int? row;
+
+  /// Target column for this effect.
+  final int? column;
+
+  /// Optional gradient to generate foreground color for matched cells.
+  final List<Color> gradient;
+
+  /// Blend mode used when the gradient is combined with theme colors.
+  final TableBlendMode blendMode;
+
+  /// Axis used when sampling the gradient.
+  final TableThemeGradientAxis gradientAxis;
+
+  bool _matchesSection(TableThemeSection activeSection) {
+    return section == TableThemeSection.all || section == activeSection;
+  }
+
+  bool _matchesCoordinates(int row, int column) {
+    if (this.row != null && this.row != row) return false;
+    if (this.column != null && this.column != column) return false;
+    return true;
+  }
+
+  /// Returns a style when the effect applies to the target cell.
+  Style? styleForCell({
+    required int row,
+    required int column,
+    required TableThemeSection section,
+    required int rowCount,
+    required int columnCount,
+    required bool hasHeader,
+    required bool hasDarkBackground,
+  }) {
+    if (!_matchesSection(section) || !_matchesCoordinates(row, column)) {
+      return null;
+    }
+    if (style == null && gradient.isEmpty) return null;
+
+    Style? result = style?.copy();
+    if (gradient.isNotEmpty) {
+      final sampled = _sampleGradientCellColor(
+        row: row,
+        column: column,
+        rowCount: rowCount,
+        columnCount: columnCount,
+        hasHeader: hasHeader,
+        axis: gradientAxis,
+        hasDarkBackground: hasDarkBackground,
+        gradientPalette: gradient,
+      );
+      if (sampled != null) {
+        if (result == null) {
+          result = Style();
+          result.foreground(sampled);
+        } else {
+          final existing = result.foregroundColor;
+          if (existing == null || blendMode == TableBlendMode.normal) {
+            result.foreground(sampled);
+          } else {
+            result.foreground(
+              TableTheme.applyBlendMode(
+                existing,
+                sampled,
+                blendMode,
+                hasDarkBackground: hasDarkBackground,
+              ),
+            );
+          }
+        }
+      }
+    }
+    return result;
+  }
+}
+
+/// A composable table theme with blend-aware effects and presets.
+class TableTheme {
+  /// Creates a table theme.
+  TableTheme([this.effects = const []]);
+
+  /// Theme effects applied in list order.
+  final List<TableThemeEffect> effects;
+
+  /// Default no-op theme.
+  static final TableTheme defaultTheme = TableTheme();
+
+  static final Map<String, TableTheme> _presets = {
+    'neon': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.header,
+        style: Style().bold().foreground(Colors.pink),
+      ),
+      TableThemeEffect(
+        style: Style(),
+        gradient: [Colors.pink, Colors.cyan, Colors.magenta],
+        section: TableThemeSection.all,
+        gradientAxis: TableThemeGradientAxis.horizontal,
+      ),
+    ]),
+    'sunset': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.header,
+        style: Style().bold().foreground(Colors.orange),
+      ),
+      TableThemeEffect(
+        section: TableThemeSection.body,
+        gradient: [Colors.warning, Colors.error, Colors.pink],
+        gradientAxis: TableThemeGradientAxis.vertical,
+      ),
+    ]),
+    'ocean': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.header,
+        style: Style().bold().foreground(Colors.cyan),
+      ),
+      TableThemeEffect(
+        section: TableThemeSection.body,
+        gradient: [Colors.info, Colors.sky, Colors.cyan],
+        gradientAxis: TableThemeGradientAxis.vertical,
+      ),
+    ]),
+    'matrix': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.all,
+        style: Style().foreground(Colors.green),
+      ),
+    ]),
+    'mono': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.all,
+        style: Style().foreground(Colors.gray),
+      ),
+    ]),
+    'fire': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.header,
+        style: Style().bold().foreground(Colors.orange),
+      ),
+      TableThemeEffect(
+        section: TableThemeSection.body,
+        gradient: [Colors.orange, Colors.error, Colors.warning],
+        gradientAxis: TableThemeGradientAxis.horizontal,
+      ),
+    ]),
+    'forest': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.all,
+        gradient: [Colors.green, Colors.teal, Colors.lime],
+        gradientAxis: TableThemeGradientAxis.vertical,
+      ),
+    ]),
+    'violet': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.all,
+        gradient: [Colors.purple, Colors.indigo, Colors.magenta],
+        blendMode: TableBlendMode.overlay,
+      ),
+    ]),
+    'storm': TableTheme([
+      TableThemeEffect(
+        section: TableThemeSection.header,
+        style: Style().bold().foreground(Colors.sky),
+      ),
+      TableThemeEffect(
+        section: TableThemeSection.body,
+        gradient: [Colors.gray900, Colors.gray700, Colors.gray600],
+        blendMode: TableBlendMode.screen,
+        gradientAxis: TableThemeGradientAxis.horizontal,
+      ),
+    ]),
+  };
+
+  /// Preset names in declaration order.
+  static List<String> get names => _presets.keys.toList(growable: false);
+
+  /// All preset values in declaration order.
+  static List<TableTheme> get values => _presets.values.toList(growable: false);
+
+  /// Looks up a preset by case-insensitive name.
+  ///
+  /// Returns [defaultTheme] if [name] is not recognized.
+  static TableTheme byName(String name) {
+    return _presets[name.toLowerCase()] ?? defaultTheme;
+  }
+
+  /// Returns a merged style for the given cell.
+  Style? styleForCell({
+    required int row,
+    required int column,
+    required TableThemeSection section,
+    required int rowCount,
+    required int columnCount,
+    required bool hasHeader,
+    required bool hasDarkBackground,
+  }) {
+    if (effects.isEmpty) return null;
+    Style? styled;
+    for (final effect in effects) {
+      final candidate = effect.styleForCell(
+        row: row,
+        column: column,
+        section: section,
+        rowCount: rowCount,
+        columnCount: columnCount,
+        hasHeader: hasHeader,
+        hasDarkBackground: hasDarkBackground,
+      );
+      if (candidate == null) continue;
+      if (styled == null) {
+        styled = candidate;
+      } else {
+        styled = styled.copy()..inherit(candidate);
+      }
+    }
+    return styled;
+  }
+
+  /// Blends [overlay] onto [base] using [mode].
+  static Color applyBlendMode(
+    Color base,
+    Color overlay,
+    TableBlendMode mode, {
+    required bool hasDarkBackground,
+  }) {
+    final baseRgb = _toRgb(base, hasDarkBackground: hasDarkBackground);
+    final overlayRgb = _toRgb(overlay, hasDarkBackground: hasDarkBackground);
+    if (baseRgb == null || overlayRgb == null) return overlay;
+
+    int blendChannel(int baseChannel, int overlayChannel) => switch (mode) {
+      TableBlendMode.normal => overlayChannel,
+      TableBlendMode.multiply =>
+        ((baseChannel * overlayChannel) / 255.0).round(),
+      TableBlendMode.screen =>
+        (255.0 - (255.0 - baseChannel) * (255.0 - overlayChannel) / 255.0)
+            .round(),
+      TableBlendMode.overlay =>
+        baseChannel < 128
+            ? ((2 * baseChannel * overlayChannel) / 255.0).round()
+            : (255.0 -
+                      (2 * (255 - baseChannel) * (255 - overlayChannel)) /
+                          255.0)
+                  .round(),
+    };
+
+    final rgb = cp.Rgb(
+      blendChannel(baseRgb.r, overlayRgb.r).clamp(0, 255),
+      blendChannel(baseRgb.g, overlayRgb.g).clamp(0, 255),
+      blendChannel(baseRgb.b, overlayRgb.b).clamp(0, 255),
+    );
+    return BasicColor(
+      '#${rgb.r.toRadixString(16).padLeft(2, '0')}'
+      '${rgb.g.toRadixString(16).padLeft(2, '0')}'
+      '${rgb.b.toRadixString(16).padLeft(2, '0')}',
+    );
+  }
+}
+
+Color? _sampleGradientCellColor({
+  required int row,
+  required int column,
+  required int rowCount,
+  required int columnCount,
+  required bool hasHeader,
+  required TableThemeGradientAxis axis,
+  required bool hasDarkBackground,
+  required List<Color> gradientPalette,
+}) {
+  if (gradientPalette.isEmpty) return null;
+
+  final steps = switch (axis) {
+    TableThemeGradientAxis.horizontal => math.max(columnCount, 1),
+    TableThemeGradientAxis.vertical => math.max(rowCount, 1),
+  };
+
+  final index = switch (axis) {
+    TableThemeGradientAxis.horizontal => column,
+    TableThemeGradientAxis.vertical => (hasHeader ? (row + 1) : row).clamp(
+      0,
+      steps - 1,
+    ),
+  };
+
+  final clampedIndex = index.clamp(0, steps - 1);
+  final gradient = blending.blend1D(
+    steps,
+    gradientPalette,
+    hasDarkBackground: hasDarkBackground,
+  );
+  if (gradient.isEmpty) return null;
+
+  return gradient[clampedIndex];
+}
+
+cp.Rgb? _toRgb(Color color, {required bool hasDarkBackground}) {
+  switch (color) {
+    case NoColor():
+      return null;
+    case AnsiColor(:final code):
+      return cp.ansi256ToRgb(code);
+    case BasicColor(:final value):
+      return _toRgbFromBasic(value);
+    case AdaptiveColor(:final light, :final dark):
+      return _toRgb(
+        hasDarkBackground ? dark : light,
+        hasDarkBackground: hasDarkBackground,
+      );
+    case CompleteColor(:final trueColor):
+      return _toRgb(
+        BasicColor(trueColor),
+        hasDarkBackground: hasDarkBackground,
+      );
+    case CompleteAdaptiveColor(:final light, :final dark):
+      return _toRgb(
+        hasDarkBackground ? dark : light,
+        hasDarkBackground: hasDarkBackground,
+      );
+    default:
+      return _toRgbFromBasic(color.toHex());
+  }
+}
+
+cp.Rgb? _toRgbFromBasic(String value) {
+  if (value.startsWith('#')) {
+    final normalized = _normalizeHex(value);
+    final r = _parseHexChannel(normalized.substring(1, 3));
+    final g = _parseHexChannel(normalized.substring(3, 5));
+    final b = _parseHexChannel(normalized.substring(5, 7));
+    return cp.Rgb(r, g, b);
+  }
+
+  final ansiCode = int.tryParse(value);
+  if (ansiCode == null) return null;
+  return cp.ansi256ToRgb(ansiCode);
+}
+
+String _normalizeHex(String value) {
+  var hex = value.startsWith('#') ? value.substring(1) : value;
+  if (hex.length == 3) {
+    hex = hex.split('').map((c) => '$c$c').join('');
+  }
+  return '#$hex';
+}
+
+int _parseHexChannel(String value) => int.tryParse(value, radix: 16) ?? 0;
 
 /// Column alignment options for tables.
 enum TableAlign {
@@ -289,6 +698,7 @@ class Table extends DisplayComponent {
   Style? _borderStyle;
   Style? _cellStyle;
   Style? _baseStyle;
+  TableTheme _theme = TableTheme.defaultTheme;
 
   // Border visibility flags
   bool _borderTop = true;
@@ -299,7 +709,14 @@ class Table extends DisplayComponent {
   bool _borderColumn = true;
   bool _borderRow = false;
 
-  Style? _styleForCell(int row, int col, String raw) {
+  Style? _styleForCell(
+    int row,
+    int col,
+    String raw,
+    int rowCount,
+    int columnCount,
+    bool hasHeader,
+  ) {
     Style? s;
 
     if (_styleFunc != null) {
@@ -323,6 +740,26 @@ class Table extends DisplayComponent {
       }
     }
 
+    final themeStyles = _theme.styleForCell(
+      row: row,
+      column: col,
+      section: row == headerRow
+          ? TableThemeSection.header
+          : TableThemeSection.body,
+      rowCount: rowCount,
+      columnCount: columnCount,
+      hasHeader: hasHeader,
+      hasDarkBackground: _renderConfig.hasDarkBackground,
+    );
+
+    if (themeStyles != null) {
+      if (s == null) {
+        s = themeStyles;
+      } else {
+        s = themeStyles.copy()..inherit(s);
+      }
+    }
+
     if (s != null) {
       return _renderConfig.configureStyle(s);
     }
@@ -330,8 +767,16 @@ class Table extends DisplayComponent {
     return null;
   }
 
-  String _renderCellValue(int row, int col, String raw, [int? width]) {
-    var style = _styleForCell(row, col, raw);
+  String _renderCellValue(
+    int row,
+    int col,
+    String raw,
+    int rowCount,
+    int columnCount,
+    bool hasHeader, {
+    int? width,
+  }) {
+    var style = _styleForCell(row, col, raw, rowCount, columnCount, hasHeader);
     if (width != null && _wrap && row != headerRow) {
       // Headers are never wrapped in lipgloss v2.
       // We wrap at (width - table padding) so the table's own padding
@@ -394,7 +839,7 @@ class Table extends DisplayComponent {
 
   /// Sets the style function for per-cell conditional styling.
   ///
-  /// The function receives [row] (-1 for header), [col], and [data],
+  /// The function receives `row` (-1 for header), `col`, and `data`,
   /// and should return a [Style] or `null`.
   Table styleFunc(TableStyleFunc func) {
     _styleFunc = func;
@@ -422,6 +867,12 @@ class Table extends DisplayComponent {
   /// Sets the base style for the whole table.
   Table baseStyle(Style style) {
     _baseStyle = style;
+    return this;
+  }
+
+  /// Sets a table theme for the table.
+  Table theme(TableTheme theme) {
+    _theme = theme;
     return this;
   }
 
@@ -526,6 +977,8 @@ class Table extends DisplayComponent {
     final columns = _headers.isNotEmpty
         ? _headers.length
         : (_rows.isNotEmpty ? _rows.first.length : 0);
+    final hasHeader = _headers.isNotEmpty;
+    final rowCount = _rows.length + (hasHeader ? 1 : 0);
 
     // Calculate column widths using rendered cell content so width/align styles are respected.
     final widths = List<int>.filled(columns, 0);
@@ -539,7 +992,14 @@ class Table extends DisplayComponent {
       void applyWidths(List<String> cells, int rowIndex) {
         for (var c = 0; c < columns; c++) {
           final raw = c < cells.length ? cells[c] : '';
-          final rendered = _renderCellValue(rowIndex, c, raw);
+          final rendered = _renderCellValue(
+            rowIndex,
+            c,
+            raw,
+            rowCount,
+            columns,
+            hasHeader,
+          );
           for (final line in rendered.split('\n')) {
             final len = Style.visibleLength(line);
             if (len > widths[c]) widths[c] = len;
@@ -606,7 +1066,15 @@ class Table extends DisplayComponent {
 
       for (var c = 0; c < columns; c++) {
         final raw = c < cells.length ? cells[c] : '';
-        final styledContent = _renderCellValue(rowIndex, c, raw, widths[c]);
+        final styledContent = _renderCellValue(
+          rowIndex,
+          c,
+          raw,
+          rowCount,
+          columns,
+          hasHeader,
+          width: widths[c],
+        );
 
         // Split by newlines to handle multi-line content
         final lines = styledContent.split('\n');

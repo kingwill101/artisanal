@@ -121,7 +121,7 @@ mixin AnimationMixin<T extends StatefulWidget> on State<T> {
   /// Intercepts [AnimationTickMsg] and dispatches it to the matching
   /// controller via [AnimationController.processTick].
   ///
-  /// If the message is an [AnimationTickMsg] whose [controllerId] matches
+  /// If the message is an [AnimationTickMsg] whose `controllerId` matches
   /// one of the registered controllers, the tick is processed and the
   /// resulting [Cmd] (which schedules the next tick, or `null` if done)
   /// is returned.

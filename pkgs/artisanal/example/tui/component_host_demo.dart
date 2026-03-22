@@ -19,10 +19,7 @@ class MyModel with tui.ComponentHost implements tui.Model {
 
     return (
       MyModel(searchInput: newInput, spinner: newSpinner),
-      tui.Cmd.batch([
-        if (inputCmd != null) inputCmd,
-        if (spinnerCmd != null) spinnerCmd,
-      ]),
+      tui.Cmd.batch([?inputCmd, ?spinnerCmd]),
     );
   }
 

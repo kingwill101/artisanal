@@ -296,7 +296,7 @@ class _DecelerateCurve extends Curve {
 /// A collection of common animation curves.
 ///
 /// These are the standard curves used in material design and general UI
-/// animation. Each curve maps the unit interval [0, 1] to the unit interval.
+/// animation. Each curve maps the unit interval `0` to `1` to the unit interval.
 abstract final class Curves {
   /// A linear animation curve.
   static const Curve linear = _Linear();

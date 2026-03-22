@@ -31,10 +31,7 @@ Future<void> main() async {
         surfaceId: _surfaceId,
         width: 32,
         height: 4,
-        cells: _cellsForLines(<String>[
-          'Notification plugin',
-          status,
-        ]),
+        cells: _cellsForLines(<String>['Notification plugin', status]),
       ),
     );
   }

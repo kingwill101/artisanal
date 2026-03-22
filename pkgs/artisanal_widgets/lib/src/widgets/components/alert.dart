@@ -42,7 +42,7 @@ class AlertBox extends StatelessWidget {
 
     final body = Column(
       gap: (header != null && (message != null || child != null)) ? 1 : 0,
-      children: [if (header != null) header, content],
+      children: [?header, content],
     );
 
     final row = Row(

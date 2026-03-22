@@ -102,7 +102,7 @@ class ListTile extends StatelessWidget {
     final body = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       gap: subtitleWidget == null ? 0 : 1,
-      children: [titleWidget, if (subtitleWidget != null) subtitleWidget],
+      children: [titleWidget, ?subtitleWidget],
     );
 
     Widget tile = Container(
@@ -119,7 +119,7 @@ class ListTile extends StatelessWidget {
                 ? Container(width: minLeadingWidth, child: leading)
                 : leading!,
           Expanded(child: body),
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

@@ -3,30 +3,23 @@ import 'dart:async';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_protocol.dart';
 
-typedef RemotePluginNotifier = FutureOr<void> Function(
-  RemotePluginNotificationRequest request,
-);
+typedef RemotePluginNotifier =
+    FutureOr<void> Function(RemotePluginNotificationRequest request);
 
 /// Host-side notification responder for one remote plugin connection.
 ///
 /// This binds to [RemotePluginHostConnection.otherMessages] and lets plugins
 /// ask the host to surface notifications using host-owned UI or logging.
 final class RemotePluginNotificationHostService {
-  RemotePluginNotificationHostService.bind(
-    this.connection, {
-    this.notify,
-  }) {
-    _subscription = connection.otherMessages.listen(
-      (message) {
-        switch (message) {
-          case RemotePluginNotificationRequest():
-            unawaited(_handleNotify(message));
-          default:
-            return;
-        }
-      },
-      cancelOnError: false,
-    );
+  RemotePluginNotificationHostService.bind(this.connection, {this.notify}) {
+    _subscription = connection.otherMessages.listen((message) {
+      switch (message) {
+        case RemotePluginNotificationRequest():
+          unawaited(_handleNotify(message));
+        default:
+          return;
+      }
+    }, cancelOnError: false);
   }
 
   final RemotePluginHostConnection connection;

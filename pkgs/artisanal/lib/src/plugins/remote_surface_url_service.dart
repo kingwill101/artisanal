@@ -11,17 +11,14 @@ typedef RemotePluginUrlOpener = FutureOr<void> Function(Uri uri);
 /// URL-open requests so plugins can ask the host to launch external links.
 final class RemotePluginOpenUrlHostService {
   RemotePluginOpenUrlHostService.bind(this.connection, {this.openUrl}) {
-    _subscription = connection.otherMessages.listen(
-      (message) {
-        switch (message) {
-          case RemotePluginOpenUrlRequest():
-            unawaited(_handleOpen(message));
-          default:
-            return;
-        }
-      },
-      cancelOnError: false,
-    );
+    _subscription = connection.otherMessages.listen((message) {
+      switch (message) {
+        case RemotePluginOpenUrlRequest():
+          unawaited(_handleOpen(message));
+        default:
+          return;
+      }
+    }, cancelOnError: false);
   }
 
   final RemotePluginHostConnection connection;

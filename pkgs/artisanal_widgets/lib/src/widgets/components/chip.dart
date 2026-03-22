@@ -27,7 +27,7 @@ class Chip extends StatelessWidget {
     final delete = deleteIcon ?? Text('x', style: theme.labelSmall);
 
     final children = <Widget>[
-      if (avatar != null) avatar!,
+      ?avatar,
       _resolveLabel(theme),
       if (onDeleted != null) GestureDetector(onTap: onDeleted, child: delete),
     ];
@@ -84,7 +84,7 @@ class ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Button(
-      child: Row(gap: 1, children: [if (avatar != null) avatar!, label]),
+      child: Row(gap: 1, children: [?avatar, label]),
       onPressed: onPressed,
       enabled: enabled,
       variant: ButtonVariant.secondary,
@@ -115,7 +115,7 @@ class ChoiceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Button(
-      child: Row(gap: 1, children: [if (avatar != null) avatar!, label]),
+      child: Row(gap: 1, children: [?avatar, label]),
       variant: selected ? ButtonVariant.primary : ButtonVariant.outline,
       size: size,
       enabled: enabled && onSelected != null,
@@ -155,7 +155,7 @@ class FilterChip extends StatelessWidget {
       child: Row(
         gap: 1,
         children: [
-          if (avatar != null) avatar!,
+          ?avatar,
           if (showCheckmark && selected) Text('+'),
           label,
         ],

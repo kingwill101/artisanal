@@ -56,7 +56,7 @@ class PanelBox extends StatelessWidget {
     final content = Column(
       gap: hasHeader ? 1 : 0,
       children: [
-        if (header != null) header,
+        ?header,
         if (header != null) Divider(style: Style().foreground(theme.border)),
         body,
       ],

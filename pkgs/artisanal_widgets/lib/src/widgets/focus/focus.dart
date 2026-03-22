@@ -496,7 +496,10 @@ class _FocusableState extends State<Focusable> {
 
   @override
   Cmd? handleUpdate(Msg msg) {
-    if (!widget.enabled || !_focused) return null;
+    final focused =
+        widget.enabled &&
+        (_controller?.isFocused(_focusId, searchPath: true) ?? _focused);
+    if (!focused) return null;
     if (msg is KeyMsg) {
       return widget.onKey?.call(msg);
     }

@@ -386,5 +386,45 @@ void main() {
       );
       expect(palette.open, isFalse);
     });
+
+    test('ranks exact matches above prefix matches', () {
+      final matches = CommandPalette.matchItems([
+        CommandPaletteItem(label: 'Open Folder'),
+        CommandPaletteItem(label: 'Open'),
+        CommandPaletteItem(label: 'Close'),
+      ], 'open');
+
+      expect(matches, hasLength(2));
+      expect(matches.first.item.label, equals('Open'));
+      expect(matches[1].item.label, equals('Open Folder'));
+      expect(matches.first.evidence, containsPair('label:exact', 10000));
+    });
+
+    test('sorting is deterministic for equal-score matches', () {
+      final matches = CommandPalette.matchItems([
+        CommandPaletteItem(label: 'Alpine'),
+        CommandPaletteItem(label: 'Alpha'),
+        CommandPaletteItem(label: 'Almanac'),
+      ], 'al');
+
+      expect(matches, hasLength(3));
+      final labels = matches.map((match) => match.item.label).toList();
+      expect(labels, equals(['Almanac', 'Alpha', 'Alpine']));
+      expect(matches.first.score, equals(matches[1].score));
+    });
+
+    test(
+      'populates evidence ledger on match and preserves deterministic ordering',
+      () {
+        final typoMatches = CommandPalette.matchItems([
+          CommandPaletteItem(label: 'Save'),
+          CommandPaletteItem(label: 'Close'),
+        ], 'svae');
+
+        expect(typoMatches, hasLength(1));
+        expect(typoMatches.first.item.label, equals('Save'));
+        expect(typoMatches.first.evidence.keys, contains('label:typo'));
+      },
+    );
   });
 }

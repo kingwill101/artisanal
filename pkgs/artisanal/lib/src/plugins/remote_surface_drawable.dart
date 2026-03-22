@@ -13,17 +13,15 @@ final class RemotePluginSurfaceDrawable implements uv.Drawable {
   final RemotePluginSurfaceState surface;
 
   @override
-  uv.Rectangle bounds() => uv.Rectangle(
-    minX: 0,
-    minY: 0,
-    maxX: surface.width,
-    maxY: surface.height,
-  );
+  uv.Rectangle bounds() =>
+      uv.Rectangle(minX: 0, minY: 0, maxX: surface.width, maxY: surface.height);
 
   @override
   void draw(uv.Screen screen, uv.Rectangle area) {
     final clipWidth = area.width < surface.width ? area.width : surface.width;
-    final clipHeight = area.height < surface.height ? area.height : surface.height;
+    final clipHeight = area.height < surface.height
+        ? area.height
+        : surface.height;
     for (var row = 0; row < clipHeight; row++) {
       for (var column = 0; column < clipWidth; column++) {
         final source = surface.cellAt(column, row);

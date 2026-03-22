@@ -38,6 +38,102 @@ import '../unicode/grapheme.dart' as uni;
 import '../unicode/width.dart' show maxLineWidth, runeWidth;
 import '../tui/trace.dart';
 
+/// Breakpoint names for responsive terminal layouts.
+enum LayoutBreakpoint {
+  /// Extra-small viewport bucket.
+  xs,
+
+  /// Small viewport bucket.
+  sm,
+
+  /// Medium viewport bucket.
+  md,
+
+  /// Large viewport bucket.
+  lg,
+
+  /// Extra-large viewport bucket.
+  xl,
+}
+
+/// Configurable responsive thresholds with helpers for breakpoint branching.
+final class ResponsiveBreakpoints {
+  /// Default thresholds for the xs/sm/md/lg/xl breakpoints.
+  ///
+  /// Thresholds are interpreted as minimum widths in terminal cells:
+  /// - [xs] is the minimum width for xs mode.
+  /// - [sm] is the minimum width for sm mode (and above).
+  /// - [md] is the minimum width for md mode (and above).
+  /// - [lg] is the minimum width for lg mode (and above).
+  /// - [xl] is the minimum width for xl mode.
+  ///
+  /// Defaults are tuned for compact terminal UIs where `md` is a safe wide
+  /// single-pane-to-two-column handoff at 80 columns.
+  static const ResponsiveBreakpoints defaults = ResponsiveBreakpoints(
+    xs: 0,
+    sm: 40,
+    md: 80,
+    lg: 120,
+    xl: 160,
+  );
+
+  const ResponsiveBreakpoints({
+    this.xs = 0,
+    this.sm = 40,
+    this.md = 80,
+    this.lg = 120,
+    this.xl = 160,
+  }) : assert(xs >= 0),
+       assert(sm >= xs),
+       assert(md >= sm),
+       assert(lg >= md),
+       assert(xl >= lg);
+
+  /// Minimum width for the extra-small bucket.
+  final int xs;
+
+  /// Minimum width for the small bucket.
+  final int sm;
+
+  /// Minimum width for the medium bucket.
+  final int md;
+
+  /// Minimum width for the large bucket.
+  final int lg;
+
+  /// Minimum width for the extra-large bucket.
+  final int xl;
+
+  /// Returns the current named breakpoint for a given terminal width.
+  LayoutBreakpoint resolve(int width) {
+    if (width >= xl) return LayoutBreakpoint.xl;
+    if (width >= lg) return LayoutBreakpoint.lg;
+    if (width >= md) return LayoutBreakpoint.md;
+    if (width >= sm) return LayoutBreakpoint.sm;
+    return LayoutBreakpoint.xs;
+  }
+
+  /// Whether [width] has reached at least the provided [breakpoint].
+  bool isAtLeast(int width, LayoutBreakpoint breakpoint) {
+    return width >= _threshold(breakpoint);
+  }
+
+  /// Whether [width] is below the provided [breakpoint].
+  bool isBelow(int width, LayoutBreakpoint breakpoint) {
+    return !isAtLeast(width, breakpoint);
+  }
+
+  int _threshold(LayoutBreakpoint breakpoint) {
+    return switch (breakpoint) {
+      LayoutBreakpoint.xs => xs,
+      LayoutBreakpoint.sm => sm,
+      LayoutBreakpoint.md => md,
+      LayoutBreakpoint.lg => lg,
+      LayoutBreakpoint.xl => xl,
+    };
+  }
+}
+
 /// Options for rendering whitespace in layout functions.
 ///
 /// Used with [Layout.place] to customize how empty space is filled.

@@ -139,7 +139,8 @@ final class RemotePluginSurfaceStore {
 
   Iterable<RemotePluginSurfaceState> get surfaces => _surfaces.values;
 
-  RemotePluginSurfaceState? operator [](String surfaceId) => _surfaces[surfaceId];
+  RemotePluginSurfaceState? operator [](String surfaceId) =>
+      _surfaces[surfaceId];
 
   void apply(RemotePluginMessage message) {
     switch (message) {

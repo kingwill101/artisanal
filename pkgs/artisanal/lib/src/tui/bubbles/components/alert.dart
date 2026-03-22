@@ -23,7 +23,7 @@
 /// ## Display Styles
 ///
 /// Alerts support three display styles:
-/// - [AlertDisplayStyle.inline]: Simple `[PREFIX] message` format
+/// - [AlertDisplayStyle.inline]: Simple `PREFIX message` format
 /// - [AlertDisplayStyle.block]: Message in a bordered box
 /// - [AlertDisplayStyle.large]: Padded box with extra spacing
 ///
@@ -91,7 +91,7 @@ class AlertComponent extends DisplayComponent {
 
 /// Alert display style.
 enum AlertDisplayStyle {
-  /// Simple inline alert: [PREFIX] message
+  /// Simple inline alert: `PREFIX message`
   inline,
 
   /// Block alert with border

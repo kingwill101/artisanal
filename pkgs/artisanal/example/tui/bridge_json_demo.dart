@@ -53,13 +53,17 @@ class _JsonBridgeCounterModel implements Model {
         _JsonBridgeCounterModel(count + 1),
         null,
       ),
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x71])) => (this, Cmd.quit()),
+      KeyMsg(key: Key(type: KeyType.runes, runes: [0x71])) => (
+        this,
+        Cmd.quit(),
+      ),
       _ => (this, null),
     };
   }
 
   @override
-  String view() => '''
+  String view() =>
+      '''
 JSON Bridge Demo
 ================
 

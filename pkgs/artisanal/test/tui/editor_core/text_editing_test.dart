@@ -18,57 +18,61 @@ void main() {
       expect(result.documentChange!.newEndOffset, 6);
     });
 
-    test('splitLineDocumentCommand inserts a newline through the document path', () {
-      final document = TextDocument(text: 'helloWorld');
-      final state = TextOffsetStateSnapshot.collapsed(cursorOffset: 5);
+    test(
+      'splitLineDocumentCommand inserts a newline through the document path',
+      () {
+        final document = TextDocument(text: 'helloWorld');
+        final state = TextOffsetStateSnapshot.collapsed(cursorOffset: 5);
 
-      final result = state.splitLineDocumentCommand(document);
+        final result = state.splitLineDocumentCommand(document);
 
-      expect(result.document, isNotNull);
-      expect(result.document!.text, 'hello\nWorld');
-      expect(result.cursorOffset, 6);
-    });
+        expect(result.document, isNotNull);
+        expect(result.document!.text, 'hello\nWorld');
+        expect(result.cursorOffset, 6);
+      },
+    );
 
-    test('wrap and unwrap selection document commands preserve the selection', () {
-      final document = TextDocument(text: 'alpha beta');
-      final state = TextOffsetStateSnapshot.selection(
-        baseOffset: 6,
-        extentOffset: 10,
-      );
+    test(
+      'wrap and unwrap selection document commands preserve the selection',
+      () {
+        final document = TextDocument(text: 'alpha beta');
+        final state = TextOffsetStateSnapshot.selection(
+          baseOffset: 6,
+          extentOffset: 10,
+        );
 
-      final wrapped = state.wrapSelectionDocumentCommand(
-        document,
-        before: '(',
-        after: ')',
-      );
+        final wrapped = state.wrapSelectionDocumentCommand(
+          document,
+          before: '(',
+          after: ')',
+        );
 
-      expect(wrapped.document, isNotNull);
-      expect(wrapped.document!.text, 'alpha (beta)');
-      expect(wrapped.selectionBaseOffset, 7);
-      expect(wrapped.selectionExtentOffset, 11);
+        expect(wrapped.document, isNotNull);
+        expect(wrapped.document!.text, 'alpha (beta)');
+        expect(wrapped.selectionBaseOffset, 7);
+        expect(wrapped.selectionExtentOffset, 11);
 
-      final unwrapped = TextOffsetStateSnapshot.selection(
-        baseOffset: wrapped.selectionBaseOffset!,
-        extentOffset: wrapped.selectionExtentOffset!,
-      ).unwrapSelectionDocumentCommand(
-        wrapped.document!,
-        surroundPairs: const {'(': ')'},
-      );
+        final unwrapped =
+            TextOffsetStateSnapshot.selection(
+              baseOffset: wrapped.selectionBaseOffset!,
+              extentOffset: wrapped.selectionExtentOffset!,
+            ).unwrapSelectionDocumentCommand(
+              wrapped.document!,
+              surroundPairs: const {'(': ')'},
+            );
 
-      expect(unwrapped.document, isNotNull);
-      expect(unwrapped.document!.text, 'alpha beta');
-      expect(unwrapped.selectionBaseOffset, 6);
-      expect(unwrapped.selectionExtentOffset, 10);
-    });
+        expect(unwrapped.document, isNotNull);
+        expect(unwrapped.document!.text, 'alpha beta');
+        expect(unwrapped.selectionBaseOffset, 6);
+        expect(unwrapped.selectionExtentOffset, 10);
+      },
+    );
 
     test('moveByWordDocumentCommand uses document readers', () {
       final document = TextDocument(text: 'alpha beta gamma');
       final state = TextOffsetStateSnapshot.collapsed(cursorOffset: 0);
 
-      final result = state.moveByWordDocumentCommand(
-        document,
-        forward: true,
-      );
+      final result = state.moveByWordDocumentCommand(document, forward: true);
 
       expect(result.changed, isTrue);
       expect(result.cursorOffset, greaterThan(0));
@@ -77,27 +81,33 @@ void main() {
   });
 
   group('document-backed line transforms', () {
-    test('toggleLinePrefixDocument rewrites the document and keeps selection', () {
-      final document = TextDocument(text: 'alpha\nbeta');
-      final state = TextLineStateSnapshot.selection(
-        base: TextPosition(line: 0, column: 0),
-        extent: TextPosition(line: 1, column: 4),
-      );
+    test(
+      'toggleLinePrefixDocument rewrites the document and keeps selection',
+      () {
+        final document = TextDocument(text: 'alpha\nbeta');
+        final state = TextLineStateSnapshot.selection(
+          base: TextPosition(line: 0, column: 0),
+          extent: TextPosition(line: 1, column: 4),
+        );
 
-      final result = textToggleLinePrefixDocument(
-        document: document,
-        state: state,
-        prefix: '>',
-      );
+        final result = textToggleLinePrefixDocument(
+          document: document,
+          state: state,
+          prefix: '>',
+        );
 
-      expect(result.changed, isTrue);
-      expect(result.document, isNotNull);
-      expect(result.document!.text, '> alpha\n> beta');
-      expect(result.documentChange, isNotNull);
-      expect(result.documentChange!.startPosition, const TextPosition(line: 0, column: 0));
-      expect(result.selectionBaseOffset, 0);
-      expect(result.selectionExtentOffset, result.document!.length);
-    });
+        expect(result.changed, isTrue);
+        expect(result.document, isNotNull);
+        expect(result.document!.text, '> alpha\n> beta');
+        expect(result.documentChange, isNotNull);
+        expect(
+          result.documentChange!.startPosition,
+          const TextPosition(line: 0, column: 0),
+        );
+        expect(result.selectionBaseOffset, 0);
+        expect(result.selectionExtentOffset, result.document!.length);
+      },
+    );
 
     test('moveSelectedLinesDocument reorders the backing document', () {
       final document = TextDocument(text: 'one\ntwo\nthree');

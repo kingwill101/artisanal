@@ -75,7 +75,8 @@
 library;
 
 export 'src/style/style.dart';
-export 'src/layout/layout.dart' show Layout;
+export 'src/layout/layout.dart'
+    show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
 export 'src/style/properties.dart'
     show
         UnderlineStyle,
@@ -108,7 +109,6 @@ export 'src/style/list.dart'
         ListStyleFunc,
         ListEnumeratorFunc,
         ListIndenterFunc;
-export 'src/layout/layout.dart' show Layout, WhitespaceOptions;
 export 'src/style/ranges.dart'
     show
         StyleRange,
@@ -117,6 +117,13 @@ export 'src/style/ranges.dart'
         Ranges,
         cutAnsiByCells;
 export 'src/style/blending.dart' show blend1D, blend2D, blendColor;
+export 'src/style/accessibility.dart'
+    show
+        relativeLuminance,
+        contrastRatio,
+        meetsWcagAa,
+        meetsWcagAaa,
+        bestTextColor;
 export 'src/style/writer.dart'
     show
         Writer,

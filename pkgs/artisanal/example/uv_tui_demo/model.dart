@@ -23,6 +23,7 @@ final class NexusTickMsg implements tui.Msg {
 }
 
 enum FocusArea { nodes, logs, console }
+
 enum Page { nexus, physics, charts }
 
 final class ChartPaletteConfig {
@@ -580,7 +581,10 @@ final class NexusModel implements tui.Model {
     if (key.type == tui.KeyType.runes && key.runes.length == 1) {
       final char = String.fromCharCode(key.runes.first);
       if (char == '1') {
-        return (copyWith(page: Page.nexus, debugOverlay: nextDebug), _batch(cmds));
+        return (
+          copyWith(page: Page.nexus, debugOverlay: nextDebug),
+          _batch(cmds),
+        );
       }
       if (char == '2') {
         return (
@@ -748,7 +752,10 @@ final class NexusModel implements tui.Model {
 
   NexusModel? _handlePhysicsKey(tui.Key key, tui.DebugOverlayModel nextDebug) {
     if (key.matchesSingle(keys.physicsGravity)) {
-      return copyWith(physics: physics.toggleGravity(), debugOverlay: nextDebug);
+      return copyWith(
+        physics: physics.toggleGravity(),
+        debugOverlay: nextDebug,
+      );
     }
     if (key.matchesSingle(keys.physicsSpawn)) {
       return copyWith(physics: physics.spawnBurst(3), debugOverlay: nextDebug);
@@ -1097,9 +1104,10 @@ final class NexusModel implements tui.Model {
     final body = switch (page) {
       Page.physics => _renderPhysicsPage(theme, spec),
       Page.charts => _renderChartsPage(theme, spec),
-      _ => spec.compact
-          ? _renderCompactBody(theme, spec)
-          : _renderWideBody(theme, spec),
+      _ =>
+        spec.compact
+            ? _renderCompactBody(theme, spec)
+            : _renderWideBody(theme, spec),
     };
     final helpView = _padBlock(help.view(keys), spec.width);
 
@@ -1126,7 +1134,9 @@ final class NexusModel implements tui.Model {
     final themeLabel = Style()
         .foreground(theme.palette.highlight)
         .render(theme.name);
-    final pageLabel = Style().foreground(theme.palette.accent).render(page.name);
+    final pageLabel = Style()
+        .foreground(theme.palette.accent)
+        .render(page.name);
 
     final line1 = Layout.pad(
       '${accent.render('ARTISANAL NEXUS')}  ${dim.render('UV + TUI')}  $status  page:$pageLabel  focus:$focusLabel  theme:$themeLabel',
@@ -1187,11 +1197,7 @@ final class NexusModel implements tui.Model {
       final rightWidth = math.max(26, spec.width - leftWidth - gap);
       final main = _buildPhysicsPanel(theme, leftWidth, bodyHeight);
       final stats = _buildPhysicsStatsPanel(theme, rightWidth, bodyHeight);
-      return Layout.joinHorizontal(
-        VerticalAlign.top,
-        [main, stats],
-        gap: gap,
-      );
+      return Layout.joinHorizontal(VerticalAlign.top, [main, stats], gap: gap);
     }
 
     return _buildPhysicsPanel(theme, spec.width, bodyHeight);
@@ -1253,19 +1259,20 @@ final class NexusModel implements tui.Model {
       rightStack,
     ], gap: gap);
 
-    return Layout.joinVertical(
-      HorizontalAlign.left,
-      [row1, row2, row3],
-      gap: gap,
-    );
+    return Layout.joinVertical(HorizontalAlign.left, [
+      row1,
+      row2,
+      row3,
+    ], gap: gap);
   }
 
   String _buildChartsRibbonPanel(DemoThemeData theme, int width, int height) {
     final innerWidth = math.max(12, width - 4);
     final innerHeight = math.max(4, height - 2);
     final palette = _chartPalettes[chartPaletteIndex % _chartPalettes.length];
-    final seriesStyles =
-        palette.seriesHex.map(chart.uvStyleFromHex).toList(growable: false);
+    final seriesStyles = palette.seriesHex
+        .map(chart.uvStyleFromHex)
+        .toList(growable: false);
     final legendEntries = [
       chart.ChartLegendEntry(
         label: 'cpu',
@@ -1360,7 +1367,11 @@ final class NexusModel implements tui.Model {
     );
   }
 
-  String _buildChartsHistogramPanel(DemoThemeData theme, int width, int height) {
+  String _buildChartsHistogramPanel(
+    DemoThemeData theme,
+    int width,
+    int height,
+  ) {
     final innerWidth = math.max(12, width - 4);
     final innerHeight = math.max(4, height - 2);
     final palette = _chartPalettes[chartPaletteIndex % _chartPalettes.length];
@@ -1397,7 +1408,11 @@ final class NexusModel implements tui.Model {
     );
   }
 
-  String _buildChartsSparklinePanel(DemoThemeData theme, int width, int height) {
+  String _buildChartsSparklinePanel(
+    DemoThemeData theme,
+    int width,
+    int height,
+  ) {
     final innerWidth = math.max(12, width - 4);
     final innerHeight = math.max(4, height - 2);
     final palette = _chartPalettes[chartPaletteIndex % _chartPalettes.length];
@@ -1481,8 +1496,9 @@ final class NexusModel implements tui.Model {
     final innerWidth = math.max(12, width - 4);
     final innerHeight = math.max(4, height - 2);
     final palette = _chartPalettes[chartPaletteIndex % _chartPalettes.length];
-    final sliceStyles =
-        palette.seriesHex.map(chart.uvStyleFromHex).toList(growable: false);
+    final sliceStyles = palette.seriesHex
+        .map(chart.uvStyleFromHex)
+        .toList(growable: false);
 
     final values = [
       telemetry.cpu,

@@ -41,6 +41,7 @@ library;
 import 'package:meta/meta.dart' show experimental;
 
 export 'core/key.dart';
+export 'core/accessibility.dart';
 export 'core/widget.dart';
 export 'core/framework.dart';
 export 'core/element.dart';

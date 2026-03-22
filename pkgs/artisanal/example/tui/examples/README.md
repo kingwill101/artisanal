@@ -51,6 +51,58 @@ your Bubble Tea application.
   <img width="750" src="./debounce/debounce.gif" />
 </a>
 
+### Layout
+
+The `layout` example shows how to use `Layout.joinVertical` and
+`Layout.joinHorizontal` to build a responsive, width-aware card layout.
+
+<a href="./layout/main.dart">
+  Code
+</a>
+
+### Layout Breakpoints
+
+The `layout-breakpoints` example demonstrates threshold-based layout decisions
+using `ResponsiveBreakpoints` with `isAtLeast`, `isBelow`, and `resolve`.
+
+<a href="./layout-breakpoints/main.dart">
+  Code
+</a>
+
+### Evidence Logging
+
+The `evidence-logging` examples show how to emit runtime `TuiEvidence` records
+to JSONL and how to parse them with `TuiEvidence.tryParseLine`.
+
+<a href="./evidence-logging/main.dart">
+  Code
+</a>
+
+<a href="./evidence-logging/inspect.dart">
+  Inspect log utility
+</a>
+
+<a href="./evidence-logging/summary.dart">
+  Summarize log utility
+</a>
+
+<a href="./evidence-logging/toggle.dart">
+  Toggle logging mode utility
+</a>
+
+<a href="./evidence-logging/render_budget.dart">
+  Render-budget diagnostics demo
+</a>
+
+### Macro Recorder/Player
+
+The `macro-recorder` example records runtime key traffic into a
+`ProgramMacro`, replays it, and demonstrates stopping looped playback.
+
+<a href="./macro-recorder/main.dart">
+  Code
+</a>
+
 ### Exec
 
 The `exec` example shows how to execute a running command during the execution

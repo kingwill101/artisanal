@@ -96,9 +96,7 @@ final class RemotePluginHostConnection {
     return startProcess(
       executable,
       <String>[
-        manifest.resolveEntrypoint(
-          currentWorkingDirectory: workingDirectory,
-        ),
+        manifest.resolveEntrypoint(currentWorkingDirectory: workingDirectory),
       ],
       hostHello: hostHello,
       genericServices: genericServices,

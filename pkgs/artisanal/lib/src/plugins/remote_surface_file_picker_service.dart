@@ -11,21 +11,15 @@ typedef RemotePluginFilePickerHandler =
 /// This binds to [RemotePluginHostConnection.otherMessages] and lets plugins
 /// ask the host to open a file or directory picker using host-owned UI.
 final class RemotePluginFilePickerHostService {
-  RemotePluginFilePickerHostService.bind(
-    this.connection, {
-    this.pickPaths,
-  }) {
-    _subscription = connection.otherMessages.listen(
-      (message) {
-        switch (message) {
-          case RemotePluginFilePickerRequest():
-            unawaited(_handlePick(message));
-          default:
-            return;
-        }
-      },
-      cancelOnError: false,
-    );
+  RemotePluginFilePickerHostService.bind(this.connection, {this.pickPaths}) {
+    _subscription = connection.otherMessages.listen((message) {
+      switch (message) {
+        case RemotePluginFilePickerRequest():
+          unawaited(_handlePick(message));
+        default:
+          return;
+      }
+    }, cancelOnError: false);
   }
 
   final RemotePluginHostConnection connection;

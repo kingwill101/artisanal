@@ -8,8 +8,8 @@ import 'curves.dart';
 /// The [lerp] method defines how values of type [T] are interpolated.
 /// Subclasses override [lerp] for specific types (int, double, Color, etc.).
 ///
-/// A [Tween] is an [Animatable] that maps a double in [0.0, 1.0] to a value
-/// of type [T].
+/// A [Tween] is an [Animatable] that maps a double in the range `0.0` to `1.0`
+/// to a value of type [T].
 class Tween<T extends dynamic> extends Animatable<T> {
   /// Creates a tween that linearly interpolates between [begin] and [end].
   Tween({this.begin, this.end});
@@ -91,8 +91,8 @@ class ConstantTween<T> extends Tween<T> {
 
 /// A tween that evaluates another tween in reverse.
 ///
-/// The value at t=0.0 is [parent.end] and the value at t=1.0 is
-/// [parent.begin].
+/// The value at t=0.0 is `parent.end` and the value at t=1.0 is
+/// `parent.begin`.
 class ReverseTween<T> extends Tween<T> {
   /// Creates a reverse tween.
   ReverseTween(this.parent) : super(begin: parent.end, end: parent.begin);

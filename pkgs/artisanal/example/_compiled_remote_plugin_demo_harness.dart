@@ -43,11 +43,12 @@ final class CompiledRemotePluginDemoHarness {
   }
 
   Future<io.ProcessResult> runHost([List<String> args = const <String>[]]) {
-    return io.Process.run(
-      io.Platform.resolvedExecutable,
-      <String>[hostKernelPath, '--plugin', guestKernelPath, ...args],
-      workingDirectory: io.Directory.current.path,
-    );
+    return io.Process.run(io.Platform.resolvedExecutable, <String>[
+      hostKernelPath,
+      '--plugin',
+      guestKernelPath,
+      ...args,
+    ], workingDirectory: io.Directory.current.path);
   }
 
   Future<void> dispose() => tempDirectory.delete(recursive: true);
