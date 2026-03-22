@@ -190,6 +190,7 @@ await program.run();
 | `startupTitle` | `String?` | `null` | Set window title on startup |
 | `useUltravioletRenderer` | `bool` | `true` | Use UV cell-based renderer |
 | `startupProbes` | `bool?` | `null` | Force startup probes on/off; `null` auto-runs only on built-in terminals |
+| `renderBudget` | `RenderBudgetOptions` | disabled | Enable budget-aware degradation and define frame-pressure thresholds |
 
 `mouse: true` alone enables `MouseMode.cellMotion`, which reports clicks,
 wheel input, and pointer motion while a button is pressed. Use
@@ -267,6 +268,111 @@ Inline-mode behavior:
 
 `ScreenMode.inlineAuto` is reserved for future content-aware sizing. Today it
 behaves the same as `ScreenMode.inline` and still uses `inlineHeight`.
+
+### Budget-Aware Degradation
+
+The runtime can degrade `View` content when render frames stay over budget.
+
+```dart
+final program = Program(
+  const DashboardModel(),
+  options: const ProgramOptions(
+    renderBudget: RenderBudgetOptions(
+      enabled: true,
+      overBudgetFrames: 3,
+      recoveryFrames: 8,
+      maxLevel: DegradationLevel.essentialOnly,
+    ),
+  ),
+);
+```
+
+Attach degraded content stages to a `View` when you want the runtime to swap
+representations under pressure:
+
+```dart
+return const View(
+  content: 'full fidelity dashboard',
+  degradation: ViewDegradation(
+    simpleBordersContent: 'simple border dashboard',
+    noStylingContent: 'unstyled dashboard',
+    skeletonContent: 'loading dashboard skeleton',
+  ),
+);
+```
+
+Current behavior:
+
+- tracks sustained over-budget renders and steps through degradation levels
+- recovers toward full fidelity after sustained within-budget renders
+- preserves all other `View` metadata when swapping degraded content
+- keeps this feature opt-in through `ProgramOptions.renderBudget`
+- emits `RenderBudgetMsg` when the active degradation level changes so models
+  can react directly
+
+### Responsive Breakpoints
+
+The layout system provides `ResponsiveBreakpoints` for terminal-width-aware
+visual decisions.
+
+```dart
+final breakpoints = ResponsiveBreakpoints(
+  xs: 40,  // Extra-small up to 40
+  sm: 80,  // Small up to 80
+  md: 120, // Medium up to 120
+  lg: 160, // Large up to 160
+  xl: 200, // Extra-large above 160
+);
+
+final columnCount = breakpoints.resolve(
+  terminalWidth,
+  {
+    LayoutBreakpoint.xs: 1,
+    LayoutBreakpoint.sm: 2,
+    LayoutBreakpoint.md: 3,
+    LayoutBreakpoint.lg: 4,
+  },
+);
+```
+
+- **Standard Thresholds**: Defaults to (xs: 0, sm: 80, md: 120, lg: 160, xl: 200).
+- **Branching**: Use `isAtLeast(LayoutBreakpoint.md)` or `isBelow(...)` for
+  conditional widget builds.
+- **Auto-Detection**: `ArtisanalApp` and `WidgetApp` provide the current
+  breakpoint in `BuildContext` when a provider is available.
+
+---
+
+### Tiling Pane Manager
+
+The `TilingPaneManager` provides a high-level API for split-view window
+management, similar to `tmux` or `i3`.
+
+```dart
+final manager = TilingPaneManager(
+  root: PaneSplit(
+    direction: PaneSplitDirection.horizontal,
+    children: [
+      PaneLeaf(id: 'editor', flex: 3),
+      PaneLeaf(id: 'sidebar', flex: 1),
+    ],
+  ),
+);
+
+// Programmatically manipulate the tree
+final updated = manager.split('editor', PaneSplitDirection.vertical);
+```
+
+- **Immutable Model**: Tree updates return new manager instances for easy
+  integration with the Elm Architecture (`Model`).
+- **Drag-to-Resize**: Built-in handles with magnetic snap zones and minimum
+  size constraints.
+- **Focus Navigation**: Cycle through panes using directional cues
+  (`left`, `right`, `up`, `down`).
+- **Split/Merge**: Dynamically create new leaf nodes or merge existing
+  neighbors into a single pane.
+
+---
 
 ### Terminal Integration
 
@@ -1217,6 +1323,39 @@ Notes:
   synchronous or asynchronous (`FutureOr`) handlers and decide replay behavior
   (`proceed`, `stop`, or `quit`).
 
+### Macro Recorder/Player
+
+`ProgramMacro` lets you capture live user-input during one run and replay it
+later as deterministic input.
+
+```dart
+final program = Program(
+  MyModel(),
+  options: const ProgramOptions(altScreen: false, frameTick: false),
+);
+
+await program.run();
+
+program.startMacroRecording();
+// User input is recorded here (keys, mouse, paste, focus, UV input events).
+...
+final macro = program.stopMacroRecording();
+
+// Later, replay on another run.
+await Program(
+  MyModel(),
+  options: ProgramOptions(
+    altScreen: false,
+    frameTick: false,
+    replay: macro.toReplay(),
+  ),
+).run();
+```
+
+For a playback started explicitly from a running program, `playMacro(...)`
+returns the underlying replay subscription. Use `isMacroPlaying` and
+`stopMacroPlayback()` to introspect and control in-flight playback.
+
 ## Trace Logging
 
 The TUI runtime includes an opt-in file tracer (`TuiTrace`) for input, queue,
@@ -1269,6 +1408,86 @@ Application config can support extension log routing under
   }
 }
 ```
+
+### Evidence Logging
+
+Use `TuiEvidence` for opt-in, structured JSONL decision logs.
+
+The logger is currently focused on runtime-policy decisions (for example:
+render-budget degradation transitions) and is enabled when either:
+
+- `TuiEvidence.configureForTest(...)` is used with `enabled: true`, or
+- `ARTISANAL_TUI_EVIDENCE=1` (or `true`, `on`, `yes`) is set.
+
+Optional controls:
+
+- `ARTISANAL_TUI_EVIDENCE_PATH=/path/to/file.jsonl` sets a custom file path.
+  If unset, evidence is written to `./evidence/artisanal-<microsecond>-<timestamp>.jsonl`.
+- `ARTISANAL_TUI_EVIDENCE_RUN_ID=<id>` adds a run-level correlation id.
+- `TuiEvidence.configureForTest(...)` supports test-only `path` and `runId` and
+  clears state between tests.
+
+Log lines are strict JSON objects with keys:
+
+- `v` (`1`)
+- `type` (`runtime.decision`)
+- `timestampUs`
+- `decisionType`
+- `result`
+- `factors` (decision context map)
+- optional `runId`
+
+Example patterns:
+
+```bash
+ARTISANAL_TUI_EVIDENCE=1 \
+ARTISANAL_TUI_EVIDENCE_PATH=./traces/artifacts.jsonl \
+dart run bin/my_app.dart
+```
+
+```dart
+import 'package:artisanal/runtime.dart';
+
+void main() async {
+  TuiEvidence.configureForTest(
+    enabled: true,
+    path: 'build/evidence.jsonl',
+    runId: 'run-123',
+  );
+
+  final program = Program(MyModel());
+  await program.run();
+
+  // Always clear overrides when tests finish.
+  TuiEvidence.clearTestOverrides();
+}
+```
+
+```dart
+import 'dart:io';
+
+import 'package:artisanal/runtime.dart';
+
+void main() async {
+  final lines = await File('build/evidence.jsonl').readAsLines();
+  for (final line in lines) {
+    final record = TuiEvidence.tryParseLine(line);
+    if (record == null) continue;
+    print('${record.decisionType} => ${record.result}');
+    print('  frameBudgetUs=${record.factors['frameBudgetUs']}');
+    print('  renderDurationUs=${record.factors['renderDurationUs']}');
+  }
+}
+```
+
+Use `TuiEvidence.tryParseLine(...)` to decode one line and validate schema
+before feeding it into downstream audit tooling.
+
+For a runnable end-to-end example, use
+`pkgs/artisanal/example/tui/examples/evidence-logging/main.dart` and the matching
+`inspect.dart` helper in the same folder.
+For a built-in runtime event example (render-budget transitions), use
+`pkgs/artisanal/example/tui/examples/evidence-logging/render_budget.dart`.
 
 ## Replay + Trace Workflow (OpenCode Example)
 

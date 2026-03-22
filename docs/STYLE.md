@@ -364,6 +364,60 @@ Available unset methods:
 - `unsetPadding()`, `unsetMargin()`, `unsetAlign()`
 - `unsetBorder()`, `unsetTransform()`, `unsetHyperlink()`
 
+### InteractiveStyle
+
+`InteractiveStyle` handles state-based styling for hover, focus, active, and
+disabled states.
+
+```dart
+final style = InteractiveStyle(
+  normal: Style().foreground(Colors.white),
+  hover: Style().foreground(Colors.cyan).bold(),
+  focus: Style().foreground(Colors.yellow).underline(),
+  active: Style().foreground(Colors.brightCyan).inverse(),
+  disabled: Style().foreground(Colors.muted).dim(),
+);
+
+// Resolve the correct style based on current state
+final current = style.resolve(
+  isHovered: true,
+  isFocused: false,
+);
+```
+
+- **Precedence**: Higher-priority states (like `active`) override lower-priority
+  ones (like `hover`) during resolution.
+- **Fallback**: If a specific state style is missing, it falls back to the
+  `normal` style.
+- **Composition**: Easily build interactive widgets that react to user input
+  using a single style definition.
+
+---
+
+### WCAG Contrast Checking
+
+The `accessibility.dart` module provides helpers for ensuring readable color
+combinations.
+
+```dart
+import 'package:artisanal/style.dart';
+
+final bg = Colors.hex('#1e293b');
+final fg = Colors.hex('#f8fafc');
+
+final ratio = contrastRatio(fg, bg);
+final passesAA = meetsWcagAA(fg, bg);
+
+// Automatically pick the best text color for a background
+final bestFg = bestTextColor(bg, dark: Colors.black, light: Colors.white);
+```
+
+- **Contrast Ratio**: Calculates the relative luminance ratio (1:1 to 21:1).
+- **WCAG AA/AAA**: Validates against standard accessibility thresholds (4.5:1
+  for AA, 7:1 for AAA).
+- **Adaptive Resolution**: Correctly handles `AdaptiveColor` by resolving
+  against the terminal's background luminance.
+
 ---
 
 ## Layout Properties
@@ -1145,6 +1199,28 @@ void main() {
   }
 }
 ```
+
+### Advanced Buffer Stacks
+
+The `ultraviolet` buffer supports nested scissor and opacity stacks for complex
+layered UIs.
+
+```dart
+buffer.pushScissor(left, top, width, height);
+// All drawing is clipped to this rect.
+buffer.pushOpacity(0.5);
+// All drawing is blended with 50% opacity.
+
+buffer.popOpacity();
+buffer.popScissor();
+```
+
+- **Monotonic Scissor**: Nested scissors always intersect with the current
+  one, ensuring they never expand outside their parents.
+- **Cumulative Opacity**: Nested opacities are multiplied (0.5 * 0.5 = 0.25).
+- **GPU-Style API**: `push`/`pop` semantics for reliable state restoration.
+
+---
 
 ## UV System Integration
 

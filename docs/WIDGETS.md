@@ -988,12 +988,51 @@ Use `MouseMode.cellMotion` or `MouseMode.allMotion` in `ProgramOptions`.
 | `onDragStart` | `Cmd? Function(DragStartDetails)?` | Drag begins (after slop) |
 | `onDragUpdate` | `Cmd? Function(DragUpdateDetails)?` | Drag movement |
 | `onDragEnd` | `Cmd? Function(DragEndDetails)?` | Drag released |
+| `onKeyboardDrag` | `bool` | Enable keyboard-driven drag via focus + arrows (default: `false`) |
 | `onEnter` | `Cmd? Function(MouseMsg)?` | Pointer enters zone |
 | `onExit` | `Cmd? Function(MouseMsg)?` | Pointer exits zone |
 | `onWheel` | `Cmd? Function(MouseMsg)?` | Scroll wheel event |
 | `behavior` | `HitTestBehavior` | Hit test strategy (default: `deferToChild`) |
 | `enabled` | `bool` | Enable/disable all gestures (default: `true`) |
 | `captureMouse` | `bool` | Capture mouse during drags (default: `false`) |
+
+---
+
+### Keyboard Drag Support
+
+`GestureDetector` supports keyboard-driven drag-and-drop when `onKeyboardDrag: true`
+is set and the widget has keyboard focus.
+
+1. **Activation**: Press `Enter` (or the configured accept key) while focused to
+   begin a drag.
+2. **Movement**: Use arrow keys to move the "drag pointer" by 1 cell increments.
+3. **Completion**: Press `Enter` again to drop at the current position, or `Esc`
+   to cancel.
+
+The `onDragUpdate` callback receives `DragUpdateDetails` with deltas for each
+arrow key step, matching the mouse drag API.
+
+---
+
+### Accessibility Tree (A11yTree)
+
+The widget system builds a semantic accessibility hierarchy that can be used by
+screen readers or audit tools.
+
+```dart
+Text(
+  'Submit',
+  accessibilityRole: 'button',
+  accessibilityLabel: 'Submit form data',
+)
+```
+
+- **Stable IDs**: Each node has a deterministic FNV-1a ID based on its widget
+  key and tree path.
+- **Tree Diffs**: `WidgetApp` can produce semantic diffs between frames to
+  notify assistive technology of relevant updates.
+- **Roles & Labels**: Use the `accessibilityRole` and `accessibilityLabel`
+  properties on any `Widget` to expose semantic metadata.
 
 ---
 
@@ -1644,7 +1683,7 @@ Container(
 ### VirtualListView
 
 Render-object based list that only paints visible rows. Best for long lists
-with fixed-height rows:
+with variable-height rows using Fenwick trees for O(log n) offset lookup.
 
 ```dart
 VirtualListView(
@@ -1657,6 +1696,39 @@ VirtualListView(
   height: 12,
 )
 ```
+
+**Performance & Logic**:
+
+- **O(log n) Lookup**: Uses a binary indexed tree (Fenwick tree) to track
+  item offsets when `variableHeight: true` is set.
+- **Adaptive Convergence**: The list predicts unknown item heights and
+  converges on exact offsets as rows are scrolled into view.
+- **Large List Support**: Efficiently handles 100K+ items without full-list
+  measurements or layout passes.
+
+---
+
+### Budget-Aware Widgets
+
+Widgets can opt-out of rendering during high-pressure frames using the
+`Budgeted<W>` wrapper or the `shouldRenderAt` gate.
+
+```dart
+Budgeted(
+  priority: WidgetDegradationPriority.high,
+  child: MyComplexDashboard(),
+)
+```
+
+- **Degradation Levels**: Widgets are skipped or simplified as the runtime
+  steps through `DegradationLevel` (Normal, Simple, NoStyling, Skeleton,
+  EssentialOnly).
+- **Essential Widgets**: Widgets with `essential: true` or high priority
+  continue to render even at max degradation.
+- **Focus Preservation**: Focused widgets and their ancestors are never
+  skipped by the budget controller.
+
+---
 
 ### Scrollbar
 

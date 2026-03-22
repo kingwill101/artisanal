@@ -8,6 +8,7 @@ The Artisanal Args library provides a polished command-line interface framework 
 - [Quick Start](#quick-start)
 - [CommandRunner](#commandrunner)
   - [Creating a Runner](#creating-a-runner)
+  - [Constructor and I/O Hooks](#constructor-and-io-hooks)
   - [Global Flags](#global-flags)
   - [Command Namespaces](#command-namespaces)
   - [Help Output](#help-output)
@@ -30,10 +31,11 @@ Artisanal's Args library provides:
 
 - **Beautiful Help Output**: Automatically styled with Lip Gloss colors
 - **Command Namespacing**: Group commands with `:` separators (e.g., `db:migrate`, `ui:build`)
-- **Verbosity Management**: `-v`, `-vv`, `-vvv` flags for detailed output
+- **Verbosity Management**: `-v`, `-vv`, and `-vvv` flags plus quiet/silent modes
 - **Interactive Control**: `--no-interaction` flag for non-interactive mode
 - **ANSI Control**: `--ansi`/`--no-ansi` flags to force color output
 - **Seamless Console Integration**: Each command gets automatic access to the [Console](CONSOLE.md)
+- **Deterministic Testing Hooks**: Injectable output, input, and exit-code callbacks
 
 ```dart
 import 'package:artisanal/args.dart';
@@ -52,10 +54,10 @@ class ServeCommand extends Command<void> {
   }
 }
 
-void main(List<String> args) {
+void main(List<String> args) async {
   final runner = CommandRunner('myapp', 'My Application');
   runner.addCommand(ServeCommand());
-  runner.run(args);
+  await runner.run(args);
 }
 ```
 
@@ -86,10 +88,10 @@ class HelloCommand extends Command<void> {
   }
 }
 
-void main(List<String> args) {
+void main(List<String> args) async {
   final runner = CommandRunner('greet', 'A friendly CLI');
   runner.addCommand(HelloCommand());
-  runner.run(args);
+  await runner.run(args);
 }
 ```
 
@@ -110,12 +112,14 @@ Hello, John!
 ### Creating a Runner
 
 ```dart
-final runner = CommandRunner('mycli', 'My CLI application')
-  ..addCommand(ServeCommand())
-  ..addCommand(DbCommand())
-  ..addCommand(DbMigrateCommand());
+void main(List<String> args) async {
+  final runner = CommandRunner('mycli', 'My CLI application')
+    ..addCommand(ServeCommand())
+    ..addCommand(DbCommand())
+    ..addCommand(DbMigrateCommand());
 
-await runner.run(args);
+  await runner.run(args);
+}
 ```
 
 ### Global Flags
@@ -128,7 +132,38 @@ The runner automatically adds these global flags:
 | `--ansi` / `--no-ansi` | Force enable/disable ANSI colors |
 | `--quiet`, `-q` / `--silent` | Suppress all output |
 | `--no-interaction`, `-n` | Disable interactive prompts |
-| `--verbose`, `-v` | Increase verbosity (use multiple times for more detail) |
+| `--verbose`, `-v`, `-vv`, `-vvv` | Increase verbosity (verbose, very verbose, debug) |
+
+### Constructor and I/O Hooks
+
+`CommandRunner` supports dependency injection for tests and hosts:
+
+```dart
+final runner = CommandRunner(
+  'mycli',
+  'My CLI',
+  ansi: false,
+  namespaceSeparator: ':',
+  usageExitCode: 64,
+  out: (line) => output.add(line),
+  err: (line) => errors.add(line),
+  outRaw: (text) => rawOut.add(text),
+  errRaw: (text) => rawErr.add(text),
+  readLine: () => 'input',
+  setExitCode: (code) => exitCode = code,
+  usageLineLength: 80,
+);
+```
+
+Important constructor options:
+
+- `namespaceSeparator`: custom command namespace separator (default `:`).
+- `usageExitCode`: exit code used for argument/usage errors (default `64`).
+- `ansi`: force or disable ANSI behavior globally (`null` = auto-detect).
+- `renderer`: optional renderer override (`StringRenderer`, `TerminalRenderer`, etc.).
+- `out`, `err`, `outRaw`, `errRaw`: output redirection hooks.
+- `readLine`: custom stdin reader for prompts.
+- `setExitCode`: custom exit-code sink.
 
 ### Command Namespaces
 
@@ -185,14 +220,13 @@ My CLI application
 Usage: myapp <command> [arguments]
 
 Options:
-  -h, --help          Print this usage information.
-      --ansi          Force ANSI output.
-      --no-ansi       Disable ANSI output.
-  -q, --quiet         Do not output any message.
-      --silent        Alias for --quiet.
-  -n, --no-interaction
-                      Do not ask any interactive question.
-  -v, --verbose       Increase verbosity of messages.
+  -h, --help              Print this usage information.
+      --[no-]ansi         Force (or disable with --no-ansi) ANSI output.
+  -q, --quiet             Do not output any message.
+      --silent            Alias for --quiet.
+  -n, --no-interaction    Do not ask any interactive question.
+  -v, --verbose           Increase verbosity of messages:
+                          1 for verbose, 2 for very verbose, 3 for debug.
 
 Available commands:
   db        Database operations
@@ -302,6 +336,10 @@ void run() {
 }
 ```
 
+`Command` also exposes convenience forwarding methods (`line`, `info`, `comment`, `question`,
+`warn`, `error`, `alert`) when you only need lightweight formatting without touching
+the full `io` API.
+
 ### Command Help
 
 Commands can override `formatUsage()` to customize their help output:
@@ -404,15 +442,23 @@ class DeployCommand extends Command<void> {
 
 ### Positional Arguments
 
+`package:args` stores trailing positional values in `argResults.rest`. You can
+support both a named `--name` option and a fallback positional value:
+
 ```dart
 class HelloCommand extends Command<void> {
   HelloCommand() {
-    argParser.addPositional('name', help: 'Name to greet');
+    argParser.addOption(
+      'name',
+      abbr: 'n',
+      help: 'Name to greet',
+    );
   }
   
   @override
   void run() {
-    final name = argResults!['name'] as String;
+    final name = argResults!['name'] as String? ??
+        (argResults!.rest.isNotEmpty ? argResults!.rest.first : 'World');
     io.success('Hello, $name!');
   }
 }
@@ -534,7 +580,7 @@ final runner = CommandRunner(
 For testing, you can inject custom I/O callbacks:
 
 ```dart
-void main() {
+void main() async {
   final output = <String>[];
   final runner = CommandRunner(
     'myapp',
@@ -545,7 +591,7 @@ void main() {
   );
   
   runner.addCommand(MyCommand());
-  runner.run(['my-command']);
+  await runner.run(['my-command']);
   
   print(output.join('\n'));
 }

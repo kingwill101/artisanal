@@ -158,6 +158,42 @@ dart run main.dart ui:chalk --ansi
 # Terminal information and utilities
 dart run main.dart ui:terminal --ansi
 
+# Evidence logging example (writes JSONL + parser utility)
+dart run example/tui/examples/evidence-logging/main.dart
+dart run example/tui/examples/evidence-logging/inspect.dart build/evidence-logging.jsonl
+dart run example/tui/examples/evidence-logging/inspect.dart build/evidence-logging.jsonl example.evidence
+dart run example/tui/examples/evidence-logging/summary.dart build/evidence-logging.jsonl
+dart run example/tui/examples/evidence-logging/summary.dart build/evidence-logging.jsonl example.evidence
+# Toggle evidence logging on/off
+dart run example/tui/examples/evidence-logging/toggle.dart
+dart run example/tui/examples/evidence-logging/toggle.dart disabled
+# Render-budget evidence logging example (runtime decision stream)
+dart run example/tui/examples/evidence-logging/render_budget.dart
+dart run example/tui/examples/evidence-logging/inspect.dart build/evidence-logging-budget.jsonl render_budget
+dart run example/tui/examples/evidence-logging/summary.dart build/evidence-logging-budget.jsonl render_budget
+dart run example/tui/examples/evidence-logging/inspect.dart build/evidence-logging-budget.jsonl
+
+# Macro recorder/player example
+dart run example/tui/examples/macro-recorder/main.dart
+
+# Responsive layout examples
+dart run example/tui/examples/layout/main.dart
+dart run example/tui/examples/layout-breakpoints/main.dart
+
+# Editor Subsystem Demos (pkgs/artisanal_widgets)
+dart run pkgs/artisanal_widgets/example/text-field/main.dart
+dart run pkgs/artisanal_widgets/example/text-area/main.dart
+dart run pkgs/artisanal_widgets/example/text-editor/main.dart
+dart run pkgs/artisanal_widgets/example/code-editor/main.dart
+dart run pkgs/artisanal_widgets/example/markdown-editor/main.dart
+dart run pkgs/artisanal_widgets/example/editor-core-playground/main.dart
+
+# Virtualized List (Fenwick Tree) Demo
+dart run pkgs/artisanal_widgets/example/scroll/main.dart
+
+# Responsive Split View (Tiling Pane) Demo
+dart run pkgs/artisanal_widgets/example/splitview_sidebar/main.dart
+
 # Embedded bridge host demo
 dart run example/tui/bridge_host_demo.dart
 
@@ -221,8 +257,9 @@ All commands support these global options:
 | `--ansi` | Force ANSI color output |
 | `--no-ansi` | Disable ANSI colors |
 | `-q, --quiet` | Suppress all output |
+| `--silent` | Alias for `--quiet` |
 | `-n, --no-interaction` | Disable interactive prompts |
-| `-v, --verbose` | Increase verbosity |
+| `-v, --verbose`, `-vv`, `-vvv` | Increase verbosity |
 
 ## Features Demonstrated
 
