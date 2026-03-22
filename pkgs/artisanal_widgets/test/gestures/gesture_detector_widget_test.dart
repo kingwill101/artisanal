@@ -306,6 +306,116 @@ void main() {
       tester.mouseMove(5, 5); // No actual movement.
       expect(started, isFalse);
     });
+
+    test('keyboard drag requires focus', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      var updates = 0;
+      await tester.pumpWidget(
+        w.GestureDetector(
+          onDragUpdate: (_) {
+            updates++;
+            return null;
+          },
+          child: w.Text('keyboard focus target'),
+        ),
+      );
+
+      tester.sendSpecialKey(tui.KeyType.right);
+      expect(updates, equals(0));
+    });
+
+    test(
+      'keyboard drag activates on accept key and moves by arrow steps',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        var started = 0;
+        var ended = 0;
+        final deltas = <String>[];
+        await tester.pumpWidget(
+          w.GestureDetector(
+            onDragStart: (_) {
+              started++;
+              return null;
+            },
+            onDragUpdate: (d) {
+              deltas.add('${d.delta.dx},${d.delta.dy}');
+              return null;
+            },
+            onDragEnd: (_) {
+              ended++;
+              return null;
+            },
+            child: w.Text('keyboard drag target'),
+          ),
+        );
+
+        final pos = tester.locateText('keyboard drag target');
+        expect(pos, isNotNull);
+        tester.tapAt(pos!.x, pos.y);
+
+        tester.sendKey(' ');
+        expect(started, equals(1));
+
+        tester.sendSpecialKey(tui.KeyType.right);
+        tester.sendSpecialKey(tui.KeyType.down);
+        tester.sendSpecialKey(tui.KeyType.left);
+        expect(deltas, equals(['1.0,0.0', '0.0,1.0', '-1.0,0.0']));
+
+        tester.sendKey(' ');
+        expect(ended, equals(1));
+      },
+    );
+
+    test('keyboard drag follows focus changes', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      var firstUpdates = 0;
+      var secondUpdates = 0;
+      await tester.pumpWidget(
+        w.Row(
+          children: [
+            w.GestureDetector(
+              onDragStart: (_) => null,
+              onDragUpdate: (_) {
+                firstUpdates++;
+                return null;
+              },
+              child: w.Text('first drag target'),
+            ),
+            w.GestureDetector(
+              onDragStart: (_) => null,
+              onDragUpdate: (_) {
+                secondUpdates++;
+                return null;
+              },
+              child: w.Text('second drag target'),
+            ),
+          ],
+        ),
+      );
+
+      final first = tester.locateText('first drag target');
+      final second = tester.locateText('second drag target');
+      expect(first, isNotNull);
+      expect(second, isNotNull);
+
+      tester.tapAt(first!.x, first.y);
+      tester.sendKey(' ');
+      tester.sendSpecialKey(tui.KeyType.right);
+      expect(firstUpdates, equals(1));
+      expect(secondUpdates, equals(0));
+
+      tester.tapAt(second!.x, second.y);
+      tester.sendKey(' ');
+      tester.sendSpecialKey(tui.KeyType.right);
+      expect(firstUpdates, equals(1));
+      expect(secondUpdates, equals(1));
+    });
   });
 
   // -------------------------------------------------------------------------

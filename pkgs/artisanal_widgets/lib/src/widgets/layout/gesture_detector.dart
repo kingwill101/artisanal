@@ -72,6 +72,8 @@ class _GestureDetectorState extends State<GestureDetector> {
   bool _hovering = false;
   Offset? _lastPointerGlobal;
   Offset? _lastPointerLocal;
+  bool _keyboardDragging = false;
+  Offset _keyboardDragOffset = Offset.zero;
 
   /// Set to `true` when a [HitTestMouseMsg] is received in the current
   /// update cycle.  The subsequent broadcast [MouseMsg] should NOT trigger
@@ -97,6 +99,10 @@ class _GestureDetectorState extends State<GestureDetector> {
   @override
   Cmd? didUpdateWidget(covariant GestureDetector oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.enabled) {
+      _keyboardDragging = false;
+      _keyboardDragOffset = Offset.zero;
+    }
     _syncRecognizers();
     return null;
   }
@@ -213,13 +219,92 @@ class _GestureDetectorState extends State<GestureDetector> {
     return Cmd.batch(cmds);
   }
 
+  Offset _keyboardDragStep(KeyMsg msg) {
+    return switch (msg.key.type) {
+      KeyType.left => const Offset(-1, 0),
+      KeyType.right => const Offset(1, 0),
+      KeyType.up => const Offset(0, -1),
+      KeyType.down => const Offset(0, 1),
+      _ => Offset.zero,
+    };
+  }
+
+  Cmd? _startKeyboardDrag() {
+    if (TuiTrace.enabled) {
+      TuiTrace.log('gesture_detector.keyboardDrag.start begin');
+    }
+    if (_keyboardDragging) return null;
+    _keyboardDragging = true;
+    _keyboardDragOffset = Offset.zero;
+    if (TuiTrace.enabled) {
+      TuiTrace.log('gesture_detector.keyboardDrag.start active');
+    }
+    return widget.onDragStart?.call(
+      DragStartDetails(
+        globalPosition: Offset.zero,
+        localPosition: Offset.zero,
+        button: MouseButton.left,
+      ),
+    );
+  }
+
+  Cmd? _updateKeyboardDrag(Offset delta) {
+    if (!_keyboardDragging) return null;
+    _keyboardDragOffset += delta;
+    return widget.onDragUpdate?.call(
+      DragUpdateDetails(
+        globalPosition: _keyboardDragOffset,
+        localPosition: _keyboardDragOffset,
+        delta: delta,
+      ),
+    );
+  }
+
+  Cmd? _endKeyboardDrag() {
+    if (!_keyboardDragging) return null;
+    _keyboardDragging = false;
+    final endedOffset = _keyboardDragOffset;
+    _keyboardDragOffset = Offset.zero;
+    return widget.onDragEnd?.call(
+      DragEndDetails(globalPosition: endedOffset, localPosition: endedOffset),
+    );
+  }
+
+  Cmd? _handleKeyboardDrag(KeyMsg msg) {
+    if (TuiTrace.enabled) {
+      TuiTrace.log(
+        'gesture_detector.keyboardDrag key=$msg onDragCallbacks=$_hasDragCallbacks enabled=${widget.enabled}',
+      );
+    }
+    if (!widget.enabled || !_hasDragCallbacks) return null;
+    if (msg.key.isRelease) return null;
+
+    if (msg.key.isAccept) {
+      if (TuiTrace.enabled) {
+        TuiTrace.log('gesture_detector.keyboardDrag accept key');
+      }
+      return _keyboardDragging ? _endKeyboardDrag() : _startKeyboardDrag();
+    }
+
+    if (_keyboardDragging && msg.key.isEscape) {
+      return _endKeyboardDrag();
+    }
+
+    final delta = _keyboardDragStep(msg);
+    if (delta == Offset.zero) return null;
+    if (_keyboardDragging) {
+      return _updateKeyboardDrag(delta);
+    }
+    return null;
+  }
+
   /// Sets up the arena for a new pointer sequence.
   void _startArena() {
     final recognizers = <GestureRecognizer>[
-      if (_tap != null) _tap!,
-      if (_doubleTap != null) _doubleTap!,
-      if (_longPress != null) _longPress!,
-      if (_drag != null) _drag!,
+      ?_tap,
+      ?_doubleTap,
+      ?_longPress,
+      ?_drag,
     ];
 
     if (recognizers.length > 1) {
@@ -414,6 +499,14 @@ class _GestureDetectorState extends State<GestureDetector> {
 
   @override
   Widget build(BuildContext context) {
+    if (_hasDragCallbacks) {
+      return Focusable(
+        focusId: widget.id,
+        enabled: widget.enabled,
+        onKey: _handleKeyboardDrag,
+        child: widget.child,
+      );
+    }
     return widget.child;
   }
 
