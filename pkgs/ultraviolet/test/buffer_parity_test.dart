@@ -3,6 +3,7 @@ import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:ultraviolet/src/unicode/width.dart';
 import 'package:ultraviolet/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
+import 'dart:typed_data';
 
 // Upstream parity (selected cases for the subset we’ve ported):
 // - `third_party/ultraviolet/buffer_test.go`
@@ -135,6 +136,98 @@ void main() {
       expect(out, contains('Link'));
       expect(out, contains(UvAnsi.setHyperlink('http://example.com', '')));
       expect(out, endsWith(UvAnsi.resetHyperlink()));
+    });
+
+    test('Scissor stack clips writes with nested push/pop', () {
+      final b = Buffer.create(8, 2);
+
+      b.pushScissor(rect(1, 0, 6, 2)); // 1..7
+      b.setCell(0, 0, Cell(content: 'A', width: 1));
+      b.setCell(2, 0, Cell(content: 'B', width: 1));
+      expect(b.cellAt(0, 0)!.content, ' ');
+      expect(b.cellAt(2, 0)!.content, 'B');
+
+      b.pushScissor(rect(3, 0, 2, 2)); // 3..5
+      b.setCell(2, 0, Cell(content: 'C', width: 1));
+      b.setCell(4, 0, Cell(content: 'D', width: 1));
+      expect(b.cellAt(2, 0)!.content, 'B');
+      expect(b.cellAt(4, 0)!.content, 'D');
+
+      b.popScissor();
+      b.setCell(2, 0, Cell(content: 'E', width: 1));
+      b.setCell(4, 0, Cell(content: 'F', width: 1));
+      expect(b.cellAt(2, 0)!.content, 'E');
+      expect(b.cellAt(4, 0)!.content, 'F');
+
+      b.popScissor();
+      b.setCell(0, 0, Cell(content: 'Z', width: 1));
+      expect(b.cellAt(0, 0)!.content, 'Z');
+    });
+
+    test('Opacity stack applies multiplicative alpha to RGB channels', () {
+      final b = Buffer.create(6, 1);
+      b.pushOpacity(0.5);
+      b.setCell(
+        0,
+        0,
+        Cell(
+          content: 'A',
+          width: 1,
+          style: const UvStyle(
+            fg: UvRgb(10, 20, 30, a: 255),
+            bg: UvRgb(40, 50, 60, a: 200),
+          ),
+        ),
+      );
+      final fgHalf = b.cellAt(0, 0)!.style.fg!;
+      final bgHalf = b.cellAt(0, 0)!.style.bg!;
+      expect((fgHalf as UvRgb).a, 128);
+      expect((bgHalf as UvRgb).a, 100);
+
+      b.pushOpacity(0.25);
+      b.setCell(
+        1,
+        0,
+        Cell(
+          content: 'B',
+          width: 1,
+          style: const UvStyle(
+            fg: UvRgb(10, 20, 30, a: 255),
+          ),
+        ),
+      );
+      final fgNested = b.cellAt(1, 0)!.style.fg! as UvRgb;
+      expect(fgNested.a, 32);
+
+      b.popOpacity();
+      b.setCell(
+        2,
+        0,
+        Cell(
+          content: 'C',
+          width: 1,
+          style: const UvStyle(
+            fg: UvRgb(100, 110, 120, a: 255),
+          ),
+        ),
+      );
+      final fgRestored = b.cellAt(2, 0)!.style.fg! as UvRgb;
+      expect(fgRestored.a, 128);
+
+      b.popOpacity();
+      b.setCell(
+        3,
+        0,
+        Cell(
+          content: 'D',
+          width: 1,
+          style: const UvStyle(
+            fg: UvRgb(1, 2, 3, a: 10),
+          ),
+        ),
+      );
+      final fgFinal = b.cellAt(3, 0)!.style.fg! as UvRgb;
+      expect(fgFinal.a, 10);
     });
 
     test(
@@ -483,6 +576,20 @@ void main() {
       expect(b.dirtyBitSpans(0), isEmpty);
     });
 
+    test('line overwrite releases pooled graphemes', () {
+      final line = Line.filled(4);
+      final source = Cell(content: '\u007A\u0307', width: 1);
+      line.set(0, source);
+      final pooledId = line.at(0)!.pooledContentId!;
+      expect(debugGraphemeRefCount(pooledId), 2);
+
+      line.set(0, Cell(content: 'A', width: 1));
+      source.dispose();
+
+      expect(debugGraphemeRefCount(pooledId), 0);
+      expect(line.at(0)!.content, 'A');
+    });
+
     test('DirtyDensityMap reports summed dirty counts for rectangles', () {
       final b = Buffer.create(40, 12);
       b.touchLine(2, 1, 2);
@@ -496,6 +603,19 @@ void main() {
       expect(density.count(rect(14, 0, 4, 4)), 1);
       expect(density.count(rect(16, 6, 8, 3)), 3);
       expect(density.hasAny(rect(0, 8, 10, 2)), isFalse);
+    });
+
+    test('DirtyDensityMap can reuse caller-provided scratch storage', () {
+      final b = Buffer.create(8, 4);
+      b.touchLine(1, 1, 2);
+      final scratch = Int32List((b.width() + 1) * (b.height() + 1));
+      scratch.fillRange(0, scratch.length, 123);
+
+      final density = DirtyDensityMap.fromBuffer(b, scratch: scratch);
+
+      expect(density.count(rect(0, 0, 8, 4)), 2);
+      expect(scratch[0], 0);
+      expect(scratch[scratch.length - 1], isNot(123));
     });
 
     test('ScreenBuffer defaults to wcwidth method', () {
