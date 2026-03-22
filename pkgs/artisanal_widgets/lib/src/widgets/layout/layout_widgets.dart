@@ -42,6 +42,8 @@ import 'package:artisanal/tui.dart'
     show
         Cmd,
         Msg,
+        KeyType,
+        KeyMsg,
         MouseMsg,
         MouseAction,
         MouseButton,
@@ -59,6 +61,7 @@ import '../core/framework.dart'
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';
+import '../focus/focus.dart' show Focusable;
 import '../theme/theme.dart' show hasDarkBackground, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../gestures/gestures.dart';

@@ -20,7 +20,9 @@ void main(List<String> args) async {
 
   io.stdout.writeln('Socket host demo listening on ${server.uri}');
   io.stdout.writeln('Connect from another terminal with:');
-  io.stdout.writeln('  nc ${server.server.address.address} ${server.server.port}');
+  io.stdout.writeln(
+    '  nc ${server.server.address.address} ${server.server.port}',
+  );
   io.stdout.writeln('');
   io.stdout.writeln('Clients can report viewport changes by sending:');
   io.stdout.writeln(
@@ -125,7 +127,8 @@ class _SocketDemoModel implements Model {
   }
 
   @override
-  String view() => '''
+  String view() =>
+      '''
 Artisanal Socket Host Demo
 ==========================
 

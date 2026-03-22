@@ -6,16 +6,16 @@ import 'package:artisanal/tui.dart' show Msg;
 /// allowing the controller to compute elapsed duration.
 ///
 /// This message flows through the TEA loop: the animation controller schedules
-/// a [Cmd.tick] that produces an [AnimationTickMsg], which is then dispatched
-/// via [State.handleUpdate] (or [AnimationMixin]) back to the controller's
+/// a `Cmd.tick` that produces an [AnimationTickMsg], which is then dispatched
+/// via `handleUpdate` (or [AnimationMixin]) back to the controller's
 /// [AnimationController.processTick] method.
 class AnimationTickMsg extends Msg {
   const AnimationTickMsg(this.controllerId, this.time);
 
   /// Identifies which [AnimationController] this tick belongs to.
   ///
-  /// Each controller has a unique [id], and when an [AnimationTickMsg] arrives
-  /// in [handleUpdate], we match [controllerId] against the controller's [id]
+  /// Each controller has a unique `id`, and when an [AnimationTickMsg] arrives
+  /// in `handleUpdate`, we match `controllerId` against the controller's `id`
   /// to dispatch the tick to the correct controller.
   final Object controllerId;
 

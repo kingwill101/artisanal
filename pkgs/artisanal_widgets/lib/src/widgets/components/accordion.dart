@@ -32,7 +32,7 @@ class Accordion extends StatelessWidget {
       gap: 1,
       children: [
         Text(expanded ? 'v' : '>', style: chevronStyle),
-        if (leading != null) leading!,
+        ?leading,
         Text(title, style: titleStyle),
       ],
     );

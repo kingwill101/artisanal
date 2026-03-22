@@ -43,8 +43,8 @@ class OverlayEntry {
 
   /// Marks this entry as needing a rebuild.
   ///
-  /// Triggers the overlay's [setState] to schedule a rebuild of the
-  /// overlay stack, which will call this entry's [builder] again.
+  /// Triggers the overlay's state update to schedule a rebuild of the
+  /// overlay stack, which will call this entry's `builder` again.
   void markNeedsBuild() {
     _overlayState?.setState(() {});
   }

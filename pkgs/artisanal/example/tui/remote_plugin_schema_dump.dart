@@ -12,8 +12,7 @@ void main(List<String> args) {
 
   try {
     final schema = _selectSchema(args);
-    final normalized =
-        jsonDecode(jsonEncode(schema)) as Map<String, Object?>;
+    final normalized = jsonDecode(jsonEncode(schema)) as Map<String, Object?>;
     io.stdout.writeln(const JsonEncoder.withIndent('  ').convert(normalized));
   } on FormatException catch (error) {
     io.stderr.writeln(error.message);
@@ -42,16 +41,14 @@ dynamic _selectSchema(List<String> args) {
 
   if (args.contains('--built-in-services')) {
     return <String, Object?>{
-      'services': plugins.RemotePluginGenericHostService
-          .builtInServiceDescriptors(
+      'services':
+          plugins.RemotePluginGenericHostService.builtInServiceDescriptors(
             clipboardRead: true,
             clipboardWrite: true,
             openUrl: true,
             notify: true,
             filePicker: true,
-          )
-          .map((descriptor) => descriptor.toJson())
-          .toList(growable: false),
+          ).map((descriptor) => descriptor.toJson()).toList(growable: false),
     };
   }
 
@@ -83,16 +80,12 @@ void _printUsage() {
   io.stdout.writeln(
     '  --message-type=<wire-name>  Dump one remote plugin message envelope schema.',
   );
-  io.stdout.writeln(
-    '  --manifest                  Dump the manifest schema.',
-  );
+  io.stdout.writeln('  --manifest                  Dump the manifest schema.');
   io.stdout.writeln(
     '  --manifest-placement        Dump the manifest placement schema.',
   );
   io.stdout.writeln(
     '  --built-in-services         Dump built-in generic host service descriptors.',
   );
-  io.stdout.writeln(
-    '  --help                      Show this usage text.',
-  );
+  io.stdout.writeln('  --help                      Show this usage text.');
 }

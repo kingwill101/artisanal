@@ -99,7 +99,9 @@ bool codeShouldAutoPairSymmetricDelimiterInDocument(
   }
 
   final before = offset > 0 ? document.graphemeAt(offset - 1) ?? '' : '';
-  final after = offset < document.length ? document.graphemeAt(offset) ?? '' : '';
+  final after = offset < document.length
+      ? document.graphemeAt(offset) ?? ''
+      : '';
   final beforeBlocksPair =
       before.isNotEmpty && RegExp(r'[\w\\]').hasMatch(before);
   if (beforeBlocksPair) {

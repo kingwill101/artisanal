@@ -93,12 +93,7 @@ void main() {
 
       expect(
         controller.get(beforeId),
-        const TextExtmark(
-          id: 1,
-          type: 'before',
-          startOffset: 0,
-          endOffset: 2,
-        ),
+        const TextExtmark(id: 1, type: 'before', startOffset: 0, endOffset: 2),
       );
       expect(controller.get(insideId), isNull);
       expect(
@@ -111,21 +106,11 @@ void main() {
       );
       expect(
         controller.get(rightOverlapId),
-        const TextExtmark(
-          id: 5,
-          type: 'right',
-          startOffset: 2,
-          endOffset: 5,
-        ),
+        const TextExtmark(id: 5, type: 'right', startOffset: 2, endOffset: 5),
       );
       expect(
         controller.get(afterId),
-        const TextExtmark(
-          id: 6,
-          type: 'after',
-          startOffset: 5,
-          endOffset: 7,
-        ),
+        const TextExtmark(id: 6, type: 'after', startOffset: 5, endOffset: 7),
       );
     });
 

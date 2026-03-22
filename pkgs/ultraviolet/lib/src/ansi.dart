@@ -11,8 +11,6 @@ import 'unicode/width.dart';
 ///
 /// {@category Terminal}
 ///
-/// {@macro artisanal_terminal_ansi_sequences}
-///
 /// ```dart
 /// import 'package:artisanal/terminal.dart';
 ///

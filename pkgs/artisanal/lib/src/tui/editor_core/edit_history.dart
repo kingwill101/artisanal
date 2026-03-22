@@ -105,7 +105,7 @@ final class EditHistoryController<Action, State, Marker> {
     } finally {
       if (!wasActive) {
         _finalizeFrame(
-          beforeState!,
+          beforeState as State,
           captureState: captureState,
           onCommittedChange: onCommittedChange,
         );

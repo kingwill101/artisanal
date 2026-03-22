@@ -397,8 +397,10 @@ class WidgetTester {
     int? width,
     int? height,
   }) async {
+    final start = DateTime.now();
     if (width != null) screenWidth = width;
     if (height != null) screenHeight = height;
+    print('tester.pumpWidget.start');
 
     _app = WidgetApp(
       widget,
@@ -431,13 +433,16 @@ class WidgetTester {
     // Start the program.  run() is a long-lived future that resolves when
     // the program quits; we keep it around for cleanup.
     _runFuture = _program!.run();
+    print('program.run started after ${DateTime.now().difference(start)}');
 
     // Give the async initialisation (_setup + _initialize) a chance to
     // complete.  With the mock terminal this resolves almost immediately.
     await _yieldToEventLoop();
+    print('yield complete after ${DateTime.now().difference(start)}');
 
     // Capture the initial view.
     _syncView();
+    print('syncView complete after ${DateTime.now().difference(start)}');
     _pumpCount++;
   }
 
@@ -445,7 +450,7 @@ class WidgetTester {
   /// latest rendered output.
   ///
   /// With the Program-based harness the update→render cycle happens
-  /// automatically inside [Program._processMessage] after each [send].
+  /// automatically inside `Program._processMessage` after each `send`.
   /// Calling [pump] is still useful if you want to capture the view without
   /// sending an event, or after batching multiple no-pump calls.
   void pump() {

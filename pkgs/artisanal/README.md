@@ -310,10 +310,10 @@ class HelloCommand extends Command {
   }
 }
 
-void main(List<String> args) {
+void main(List<String> args) async {
   final runner = CommandRunner('my-cli', 'A great CLI');
   runner.addCommand(HelloCommand());
-  runner.run(args);
+  await runner.run(args);
 }
 ```
 

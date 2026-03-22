@@ -197,7 +197,7 @@ class ExecResult {
 /// - [Cmd.none] - No-op command
 /// - [Cmd.quit] - Exit the program
 /// - [Cmd.tick] - Single timer
-/// - [Cmd.every] - Repeating timer
+/// - `Cmd.every` - Repeating timer (not yet implemented)
 /// - [Cmd.batch] - Run multiple commands concurrently
 /// - [Cmd.sequence] - Run commands in order
 /// - [Cmd.message] - Immediately send a message
@@ -786,9 +786,8 @@ class Cmd {
   ///
   /// This sends OSC 4 ; [index] ; ? to the terminal. The terminal will respond
   /// with an OSC 4 sequence which is decoded into a [ColorPaletteMsg].
-  static Cmd requestColorPalette(int index) => Cmd(
-    () async => WriteRawMsg('\x1b]4;$index;?\x07'),
-  );
+  static Cmd requestColorPalette(int index) =>
+      Cmd(() async => WriteRawMsg('\x1b]4;$index;?\x07'));
 
   /// A command that sends a message immediately.
   ///

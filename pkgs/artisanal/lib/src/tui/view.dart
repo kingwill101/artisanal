@@ -1,5 +1,6 @@
 import '../style/color.dart';
 import 'cmd.dart';
+import 'degradation.dart';
 import 'msg.dart';
 import '../uv/uv.dart' hide MouseMode;
 
@@ -48,6 +49,7 @@ class View {
     this.bracketedPaste,
     this.mouseMode,
     this.keyboardEnhancements,
+    this.degradation,
   });
 
   /// The screen content of the view.
@@ -88,6 +90,30 @@ class View {
 
   /// Optional keyboard enhancement features to request from the terminal.
   final KeyboardEnhancements? keyboardEnhancements;
+
+  /// Optional degraded content stages used by the runtime when render frames
+  /// exceed the configured budget.
+  final ViewDegradation? degradation;
+
+  /// Returns this view resolved for the given degradation [level].
+  View degraded(DegradationLevel level) {
+    if (level == DegradationLevel.full || degradation == null) return this;
+    return View(
+      content: degradation!.resolve(content, level),
+      onMouse: onMouse,
+      cursor: cursor,
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      windowTitle: windowTitle,
+      progressBar: progressBar,
+      altScreen: altScreen,
+      reportFocus: reportFocus,
+      bracketedPaste: bracketedPaste,
+      mouseMode: mouseMode,
+      keyboardEnhancements: keyboardEnhancements,
+      degradation: degradation,
+    );
+  }
 
   @override
   String toString() => 'View(content: ${content.length} chars)';

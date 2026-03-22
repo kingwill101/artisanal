@@ -13,9 +13,7 @@ import 'startup_probe.dart';
 /// - kitty keyboard enhancement support
 final class UvCapabilityProbe implements StartupProbe {
   /// Creates a UV startup capability probe.
-  UvCapabilityProbe({
-    this.timeout = const Duration(milliseconds: 120),
-  });
+  UvCapabilityProbe({this.timeout = const Duration(milliseconds: 120)});
 
   /// Maximum time to wait for terminal responses.
   final Duration timeout;

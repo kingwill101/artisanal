@@ -25,34 +25,41 @@ void main() {
       expect(caps.hasSixel, isTrue);
     });
 
-    test('tracks primary device attribute changes even without sixel changes', () {
-      final caps = TerminalCapabilities(env: const []);
+    test(
+      'tracks primary device attribute changes even without sixel changes',
+      () {
+        final caps = TerminalCapabilities(env: const []);
 
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
-        isTrue,
-      );
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
-        isFalse,
-      );
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 18])),
-        isTrue,
-      );
-      expect(caps.primaryAttributes, [1, 18]);
-      expect(caps.hasSixel, isFalse);
-    });
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+          isTrue,
+        );
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+          isFalse,
+        );
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 18])),
+          isTrue,
+        );
+        expect(caps.primaryAttributes, [1, 18]);
+        expect(caps.hasSixel, isFalse);
+      },
+    );
 
     test('stores foreground, background, cursor, and palette reports', () {
       final caps = TerminalCapabilities(env: const []);
 
       expect(
-        caps.updateFromEvent(const ForegroundColorEvent(UvRgb(0x44, 0x55, 0x66))),
+        caps.updateFromEvent(
+          const ForegroundColorEvent(UvRgb(0x44, 0x55, 0x66)),
+        ),
         isTrue,
       );
       expect(
-        caps.updateFromEvent(const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33))),
+        caps.updateFromEvent(
+          const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33)),
+        ),
         isTrue,
       );
       expect(
@@ -60,7 +67,9 @@ void main() {
         isTrue,
       );
       expect(
-        caps.updateFromEvent(const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc))),
+        caps.updateFromEvent(
+          const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc)),
+        ),
         isTrue,
       );
 
@@ -109,10 +118,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        caps.updateFromEvent(const KeyboardEnhancementsEvent(0)),
-        isTrue,
-      );
+      expect(caps.updateFromEvent(const KeyboardEnhancementsEvent(0)), isTrue);
       expect(caps.hasKeyboardEnhancements, isFalse);
       expect(caps.keyboardEnhancementFlags, 0);
     });

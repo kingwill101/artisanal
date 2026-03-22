@@ -31,10 +31,7 @@ Future<void> main() async {
         surfaceId: _surfaceId,
         width: 34,
         height: 4,
-        cells: _cellsForLines(<String>[
-          'File picker plugin',
-          status,
-        ]),
+        cells: _cellsForLines(<String>['File picker plugin', status]),
       ),
     );
   }

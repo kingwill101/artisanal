@@ -75,9 +75,7 @@ void main() {
       expect(surface.cellAt(1, 0).isBlank, isTrue);
       expect(surface.cellAt(0, 1).symbol, 'B');
 
-      store.apply(
-        const plugins.RemotePluginSurfaceClose(surfaceId: 'sidebar'),
-      );
+      store.apply(const plugins.RemotePluginSurfaceClose(surfaceId: 'sidebar'));
       expect(store['sidebar'], isNull);
     });
 

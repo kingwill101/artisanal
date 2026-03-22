@@ -3,7 +3,7 @@
 /// This library provides a high-fidelity Markdown renderer mirroring the
 /// capabilities of Charm's Glamour project.
 ///
-/// Note: This is separate from [markdown.dart] which provides a lighter-weight
+/// Note: This is separate from `markdown.dart` which provides a lighter-weight
 /// ANSI renderer.
 library;
 

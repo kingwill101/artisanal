@@ -3,7 +3,7 @@
 /// Provides widget-level frame timing, callbacks, and integration with
 /// the TUI runtime's [RenderMetrics].
 ///
-/// Inspired by nocterm's 3-layer performance model:
+/// Three-layer performance model:
 ///   Layer 1 — Runtime [RenderMetrics] (FPS, frame/render durations)
 ///   Layer 2 — Widget [WidgetFrameTiming] (build/layout/paint breakdown)
 ///   Layer 3 — Combined view via [PerformanceMetricsSnapshot]
@@ -24,8 +24,6 @@ typedef WidgetFrameTimingCallback = void Function(WidgetFrameTiming timing);
 /// - [layoutDuration] — time spent in render object layout
 /// - [paintDuration] — time spent in render object paint
 /// - [totalDuration] — total `ElementTree.render()` time
-///
-/// See also [nocterm's FrameTiming] for the reference design.
 class WidgetFrameTiming {
   const WidgetFrameTiming({
     required this.frameNumber,

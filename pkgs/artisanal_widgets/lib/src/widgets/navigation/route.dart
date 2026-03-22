@@ -53,7 +53,7 @@ abstract class Route<T> {
 
   /// The [Completer] that completes when this route is popped.
   ///
-  /// Set by the navigator during [push].
+  /// Set by the navigator during route push.
   Completer<T?>? completer;
 
   /// Installs this route, creating its overlay entries.

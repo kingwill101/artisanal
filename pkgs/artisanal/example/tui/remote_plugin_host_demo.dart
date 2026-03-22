@@ -23,7 +23,9 @@ Future<void> main(List<String> args) async {
     timeout: _connectTimeout,
   );
   try {
-    await connection.send(const plugins.RemotePluginFocusInput(surfaceId: _surfaceId));
+    await connection.send(
+      const plugins.RemotePluginFocusInput(surfaceId: _surfaceId),
+    );
 
     await connection.surfaceMessages.drain<void>();
 

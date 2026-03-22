@@ -7,9 +7,12 @@ import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
         Cmd,
+        DegradationLevel,
+        ColorProfileMsg,
         PrimaryDeviceAttributesMsg,
         DebugOverlayModel,
         EveryCmd,
+        RenderBudgetMsg,
         FrameTickModel,
         FrameTickMsg,
         HitTestMouseMsg,
@@ -46,6 +49,7 @@ import '../layout/layout_widgets.dart'
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
+import '../core/accessibility.dart';
 import '../components/components_widgets.dart'
     show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
 import '../theme/theme.dart' show hasDarkBackground;
@@ -169,6 +173,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// renderer pipeline when nothing changed.
   Object? _cachedViewObject;
   Color? _cachedBackgroundColor;
+  DegradationLevel _degradationLevel = DegradationLevel.full;
   bool _dirty = true;
 
   /// Current state of the debug overlay (mutable, toggled by F12).
@@ -259,7 +264,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           PrimaryDeviceAttributesEvent(attrs),
         ),
       TerminalVersionMsg(:final version) =>
-        _sessionImageCapabilities.updateFromEvent(TerminalVersionEvent(version)),
+        _sessionImageCapabilities.updateFromEvent(
+          TerminalVersionEvent(version),
+        ),
       _ => false,
     };
   }
@@ -311,6 +318,13 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
       return (this, null);
     }
 
+    if (msg is RenderBudgetMsg) {
+      _degradationLevel = msg.state.level;
+      _tree.setDegradationLevel(_degradationLevel);
+      _dirty = true;
+      return (this, null);
+    }
+
     if (msg is WindowSizeMsg) {
       _tree.setRootConstraints(
         BoxConstraints.tight(Size(msg.width.toDouble(), msg.height.toDouble())),
@@ -335,6 +349,13 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         _overlayDirty = true;
       }
       _dirty = true;
+      return (this, _coalesceCommands(cmds));
+    }
+
+    if (msg is ColorProfileMsg) {
+      // Color profile updates affect renderer strategy outside the widget tree.
+      // Skipping dispatch avoids an O(N) widget-tree traversal during startup.
+      return (this, _coalesceCommands(cmds));
     }
 
     if (msg is MouseMsg) {
@@ -600,6 +621,16 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   /// Intended for test/debug tooling.
   List<Element> debugElementsWhere(bool Function(Element element) predicate) {
     return debugElements().where(predicate).toList(growable: false);
+  }
+
+  /// Builds and returns the current accessibility tree snapshot.
+  A11yTree buildAccessibilityTree() {
+    return _tree.buildA11yTree();
+  }
+
+  /// Diffs the current accessibility tree against [previousTree].
+  A11yTreeDiff diffAccessibilityTree(A11yTree previousTree) {
+    return buildAccessibilityTree().diff(previousTree);
   }
 
   void _recordKeyTimestamp() {

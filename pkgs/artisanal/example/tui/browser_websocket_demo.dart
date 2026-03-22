@@ -119,7 +119,8 @@ class _BrowserDemoModel implements Model {
   }
 
   @override
-  String view() => '''
+  String view() =>
+      '''
 Artisanal Browser Host Demo
 ===========================
 

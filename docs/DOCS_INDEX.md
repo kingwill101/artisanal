@@ -27,7 +27,7 @@ This index links the current primary documentation across the workspace.
 
 ## TUI and Components
 
-- TUI runtime: [TUI.md](TUI.md)
+- TUI runtime and inline mode: [TUI.md](TUI.md)
 - Widget catalog: [WIDGETS.md](WIDGETS.md)
 - Bubbles components: [BUBBLES.md](BUBBLES.md)
 - Console components helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)

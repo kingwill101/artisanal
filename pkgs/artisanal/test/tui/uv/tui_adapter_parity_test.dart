@@ -43,10 +43,10 @@ void main() {
       final p = UvTuiInputParser();
       final msgs = p.parseAll('\x1b[?997;1n\x1b[?997;2n'.codeUnits);
 
-      expect(
-        msgs,
-        const [ColorSchemeMsg(dark: true), ColorSchemeMsg(dark: false)],
-      );
+      expect(msgs, const [
+        ColorSchemeMsg(dark: true),
+        ColorSchemeMsg(dark: false),
+      ]);
     });
 
     test('emits PasteMsg for bracketed paste payloads', () {

@@ -19,16 +19,10 @@ typedef SocketTerminalSessionHandler = Future<void> Function(io.Socket socket);
 /// Resize events are reported out-of-band using
 /// `OSC 9999;<cols>;<rows>` terminated by `BEL`.
 final class SocketTerminalHostServer {
-  SocketTerminalHostServer._({
-    required this.server,
-    required this.onSession,
-  }) {
-    _subscription = server.listen(
-      (socket) {
-        unawaited(_handleSession(socket));
-      },
-      cancelOnError: false,
-    );
+  SocketTerminalHostServer._({required this.server, required this.onSession}) {
+    _subscription = server.listen((socket) {
+      unawaited(_handleSession(socket));
+    }, cancelOnError: false);
   }
 
   /// The underlying TCP server.
@@ -95,11 +89,8 @@ final class SocketTerminalHostServer {
   }
 
   /// URI for connecting remote terminal clients.
-  Uri get uri => Uri(
-    scheme: 'tcp',
-    host: server.address.address,
-    port: server.port,
-  );
+  Uri get uri =>
+      Uri(scheme: 'tcp', host: server.address.address, port: server.port);
 
   /// Encodes a socket-host resize control sequence.
   ///
@@ -115,9 +106,7 @@ final class SocketTerminalHostServer {
     required int width,
     required int height,
     Encoding encoding = utf8,
-  }) => encoding.encode(
-    resizeControlSequence(width: width, height: height),
-  );
+  }) => encoding.encode(resizeControlSequence(width: width, height: height));
 
   Future<void> _handleSession(io.Socket socket) async {
     _activeSockets.add(socket);
@@ -150,9 +139,9 @@ final class SocketTerminalHostServer {
 
     if (force) {
       await Future.wait(
-        _activeSockets.toList(growable: false).map(
-          (socket) => Future.sync(socket.close),
-        ),
+        _activeSockets
+            .toList(growable: false)
+            .map((socket) => Future.sync(socket.close)),
         eagerError: false,
       );
       for (final socket in _activeSockets.toList(growable: false)) {

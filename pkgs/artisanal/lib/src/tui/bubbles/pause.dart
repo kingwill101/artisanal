@@ -61,10 +61,7 @@ class CountdownModel extends ViewComponent {
 
     if (msg is TickMsg) {
       if (msg.id == _startTickId) {
-        return (
-          this,
-          Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)),
-        );
+        return (this, Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)));
       }
 
       if (msg.id == _tickId) {
@@ -74,10 +71,7 @@ class CountdownModel extends ViewComponent {
           return (this, Cmd.quit());
         }
         _remaining = newRemaining;
-        return (
-          this,
-          Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)),
-        );
+        return (this, Cmd.tick(interval, (time) => TickMsg(time, id: _tickId)));
       }
     }
 

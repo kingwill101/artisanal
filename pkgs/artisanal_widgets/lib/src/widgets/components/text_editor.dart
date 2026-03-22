@@ -1235,7 +1235,7 @@ class _TextEditorState extends State<TextEditor> {
     );
     final headerBandChildren = <Widget>[
       header,
-      if (diagnosticBanner != null) diagnosticBanner,
+      ?diagnosticBanner,
     ];
 
     final children = <Widget>[
@@ -1346,21 +1346,21 @@ class _TextEditorHelpKeyMap implements KeyMap {
     if (base is! TextAreaKeyMap) {
       final bindings = base.shortHelp();
       return [
-        if (saveBinding != null) saveBinding!,
-        if (searchBinding != null) searchBinding!,
-        if (gotoBinding != null) gotoBinding!,
+        ?saveBinding,
+        ?searchBinding,
+        ?gotoBinding,
         if (searchActive && searchNextBinding != null) searchNextBinding!,
         if (searchActive && searchPreviousBinding != null)
           searchPreviousBinding!,
         if (searchActive && searchCloseBinding != null) searchCloseBinding!,
-        if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
-        if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
+        ?nextDiagnosticBinding,
+        ?previousDiagnosticBinding,
         if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
         if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
-        if (indentBinding != null) indentBinding!,
-        if (outdentBinding != null) outdentBinding!,
-        if (joinLinesBinding != null) joinLinesBinding!,
-        if (splitLineBinding != null) splitLineBinding!,
+        ?indentBinding,
+        ?outdentBinding,
+        ?joinLinesBinding,
+        ?splitLineBinding,
         ...extraBindings,
         ...bindings,
       ];
@@ -1368,20 +1368,20 @@ class _TextEditorHelpKeyMap implements KeyMap {
 
     final textAreaKeyMap = base as TextAreaKeyMap;
     return [
-      if (saveBinding != null) saveBinding!,
-      if (searchBinding != null) searchBinding!,
-      if (gotoBinding != null) gotoBinding!,
+      ?saveBinding,
+      ?searchBinding,
+      ?gotoBinding,
       if (searchActive && searchNextBinding != null) searchNextBinding!,
       if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
       if (searchActive && searchCloseBinding != null) searchCloseBinding!,
-      if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
-      if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
+      ?nextDiagnosticBinding,
+      ?previousDiagnosticBinding,
       if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
       if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
-      if (indentBinding != null) indentBinding!,
-      if (outdentBinding != null) outdentBinding!,
-      if (joinLinesBinding != null) joinLinesBinding!,
-      if (splitLineBinding != null) splitLineBinding!,
+      ?indentBinding,
+      ?outdentBinding,
+      ?joinLinesBinding,
+      ?splitLineBinding,
       ...extraBindings,
       textAreaKeyMap.selectAll,
       textAreaKeyMap.selectLine,
@@ -1399,20 +1399,20 @@ class _TextEditorHelpKeyMap implements KeyMap {
   List<List<KeyBinding>> fullHelp() {
     final groups = [...base.fullHelp()];
     final editorBindings = <KeyBinding>[
-      if (saveBinding != null) saveBinding!,
-      if (searchBinding != null) searchBinding!,
-      if (gotoBinding != null) gotoBinding!,
+      ?saveBinding,
+      ?searchBinding,
+      ?gotoBinding,
       if (searchActive && searchNextBinding != null) searchNextBinding!,
       if (searchActive && searchPreviousBinding != null) searchPreviousBinding!,
       if (searchActive && searchCloseBinding != null) searchCloseBinding!,
-      if (nextDiagnosticBinding != null) nextDiagnosticBinding!,
-      if (previousDiagnosticBinding != null) previousDiagnosticBinding!,
+      ?nextDiagnosticBinding,
+      ?previousDiagnosticBinding,
       if (gotoActive && gotoApplyBinding != null) gotoApplyBinding!,
       if (gotoActive && gotoCloseBinding != null) gotoCloseBinding!,
-      if (indentBinding != null) indentBinding!,
-      if (outdentBinding != null) outdentBinding!,
-      if (joinLinesBinding != null) joinLinesBinding!,
-      if (splitLineBinding != null) splitLineBinding!,
+      ?indentBinding,
+      ?outdentBinding,
+      ?joinLinesBinding,
+      ?splitLineBinding,
       ...extraBindings,
     ];
     if (editorBindings.isNotEmpty) {

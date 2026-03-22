@@ -65,9 +65,7 @@ void main() {
         final forwarded = await session.messages
             .take(2)
             .toList()
-            .timeout(
-          const Duration(seconds: 1),
-        );
+            .timeout(const Duration(seconds: 1));
         expect(forwarded, hasLength(2));
         expect(forwarded.first, isA<plugins.RemotePluginFocusInput>());
         expect(forwarded.last, isA<plugins.RemotePluginBlurInput>());

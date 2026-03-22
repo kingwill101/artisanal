@@ -90,6 +90,58 @@ void main() {
       expect(res3.right, equals(rect(200, 0, 0, 100)));
     });
 
+    test('splitByLargestRemainder() sums exactly and is deterministic', () {
+      final result = splitByLargestRemainder(10, [1, 1, 2]);
+      expect(result, equals([3, 2, 5]));
+      expect(result.fold(0, (sum, value) => sum + value), equals(10));
+    });
+
+    test('splitByLargestRemainder() prefers previous tie-breaker', () {
+      const previous = [5, 2, 3];
+
+      final tieBroken = splitByLargestRemainder(10, [
+        2,
+        1,
+        1,
+      ], previous: previous);
+      expect(tieBroken, equals(previous));
+    });
+
+    test('splitByLargestRemainder() remains stable at fixed size', () {
+      final first = splitByLargestRemainder(97, [1, 1, 1]);
+      final second = splitByLargestRemainder(97, [1, 1, 1], previous: first);
+      final third = splitByLargestRemainder(97, [1, 1, 1], previous: second);
+
+      expect(first, equals([33, 32, 32]));
+      expect(second, equals(first));
+      expect(third, equals(first));
+    });
+
+    test('splitHorizontalByLargestRemainder() covers a fixed area', () {
+      final area = rect(0, 0, 97, 4);
+      var widths = splitByLargestRemainder(97, [1, 2, 3]);
+      expect(widths, equals([16, 32, 49]));
+
+      final sections = splitHorizontalByLargestRemainder(area, [1, 2, 3]);
+      expect(
+        sections.columns,
+        equals([rect(0, 0, 16, 4), rect(16, 0, 32, 4), rect(48, 0, 49, 4)]),
+      );
+
+      widths = splitByLargestRemainder(97, [1, 2, 3], previous: widths);
+      final stabilized = splitHorizontalByLargestRemainder(area, [
+        1,
+        2,
+        3,
+      ], previousAllocations: widths);
+      expect(
+        stabilized.columns.fold(0, (sum, r) => sum + r.width),
+        equals(area.width),
+      );
+      expect(stabilized.columns.last.maxX, equals(area.maxX));
+      expect(stabilized.columns.last.minX, equals(48));
+    });
+
     test('Rect positioning functions', () {
       final area = rect(10, 10, 100, 100);
       const w = 20;

@@ -3,14 +3,11 @@ import 'dart:async';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_protocol.dart';
 
-typedef RemotePluginClipboardReader = FutureOr<String?> Function(
-  String selection,
-);
+typedef RemotePluginClipboardReader =
+    FutureOr<String?> Function(String selection);
 
-typedef RemotePluginClipboardWriter = FutureOr<void> Function(
-  String selection,
-  String text,
-);
+typedef RemotePluginClipboardWriter =
+    FutureOr<void> Function(String selection, String text);
 
 /// Host-side clipboard responder for one remote plugin connection.
 ///
@@ -23,19 +20,16 @@ final class RemotePluginClipboardHostService {
     this.readClipboard,
     this.writeClipboard,
   }) {
-    _subscription = connection.otherMessages.listen(
-      (message) {
-        switch (message) {
-          case RemotePluginClipboardReadRequest():
-            unawaited(_handleRead(message));
-          case RemotePluginClipboardWriteRequest():
-            unawaited(_handleWrite(message));
-          default:
-            return;
-        }
-      },
-      cancelOnError: false,
-    );
+    _subscription = connection.otherMessages.listen((message) {
+      switch (message) {
+        case RemotePluginClipboardReadRequest():
+          unawaited(_handleRead(message));
+        case RemotePluginClipboardWriteRequest():
+          unawaited(_handleWrite(message));
+        default:
+          return;
+      }
+    }, cancelOnError: false);
   }
 
   final RemotePluginHostConnection connection;

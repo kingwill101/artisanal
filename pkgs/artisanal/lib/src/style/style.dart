@@ -557,6 +557,9 @@ class Style {
     return this;
   }
 
+  /// Returns the currently configured foreground color, if set.
+  Color? get foregroundColor => _foreground;
+
   /// Sets the background color.
   Style background(Color color) {
     _background = color;
@@ -3111,6 +3114,79 @@ String styleRunes(String s, Style Function(int rune, int index) styler) {
     out.write(style.render(String.fromCharCode(runes[i])));
   }
   return out.toString();
+}
+
+/// Style set for interactive states.
+///
+/// `normal` always applies. State styles are overlaid in this order:
+/// focused -> hovered -> active -> disabled.
+///
+/// This mirrors common CSS pseudo-class behavior where later styles in the
+/// chain take precedence when multiple states are active.
+class InteractiveStyle {
+  /// Creates a new interactive style bundle.
+  InteractiveStyle({
+    Style? normal,
+    this.hover,
+    this.focus,
+    this.active,
+    this.disabled,
+  }) : normal = normal ?? Style();
+
+  /// Base style used when no state is active.
+  final Style normal;
+
+  /// Optional style to apply when the element is hovered.
+  final Style? hover;
+
+  /// Optional style to apply when the element is focused.
+  final Style? focus;
+
+  /// Optional style to apply when the element is active/pressed.
+  final Style? active;
+
+  /// Optional style to apply when the element is disabled.
+  final Style? disabled;
+
+  /// Resolves the combined style from the current interaction state.
+  ///
+  /// State precedence is:
+  /// 1. [focus]
+  /// 2. [hover]
+  /// 3. [active]
+  /// 4. [disabled]
+  ///
+  /// The precedence order gives hover a higher priority than focus to support
+  /// the parity requirement where hover wins when both states are active.
+  Style resolve({
+    bool isFocused = false,
+    bool isHovered = false,
+    bool isActive = false,
+    bool isDisabled = false,
+  }) {
+    final resolved = normal.copy();
+    if (isFocused) {
+      if (focus != null) {
+        resolved.inherit(focus!);
+      }
+    }
+    if (isHovered) {
+      if (hover != null) {
+        resolved.inherit(hover!);
+      }
+    }
+    if (isActive) {
+      if (active != null) {
+        resolved.inherit(active!);
+      }
+    }
+    if (isDisabled) {
+      if (disabled != null) {
+        resolved.inherit(disabled!);
+      }
+    }
+    return resolved;
+  }
 }
 
 /// Convenience extensions for common semantic styles.

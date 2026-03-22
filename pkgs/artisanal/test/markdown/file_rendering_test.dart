@@ -24,7 +24,9 @@ void main() {
 
     setUpAll(() {
       // Read the comprehensive markdown test file
-      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile(
+        'test/markdown/fixtures/comprehensive.md',
+      );
       markdownContent = file.readAsStringSync();
       rendered = markdownToAnsi(markdownContent);
     });
@@ -302,7 +304,9 @@ void main() {
 
   group('Markdown file comparison', () {
     test('multiple renders produce identical output', () {
-      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile(
+        'test/markdown/fixtures/comprehensive.md',
+      );
       final content = file.readAsStringSync();
 
       final render1 = markdownToAnsi(content);
@@ -312,7 +316,9 @@ void main() {
     });
 
     test('AnsiRenderer state is properly reset between renders', () {
-      final file = _resolvePackageFile('test/markdown/fixtures/comprehensive.md');
+      final file = _resolvePackageFile(
+        'test/markdown/fixtures/comprehensive.md',
+      );
       final content = file.readAsStringSync();
 
       // Render a complex document

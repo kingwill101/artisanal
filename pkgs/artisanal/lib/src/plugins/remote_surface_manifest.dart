@@ -215,7 +215,7 @@ final class RemotePluginManifestValidationException implements Exception {
   }
 }
 
-/// Loads all `*.plugin.json` manifests from [directoryPath].
+/// Loads all `*.plugin.json` manifests from `directoryPath`.
 Future<RemotePluginManifest> loadRemotePluginManifest(
   String manifestPath, {
   RemotePluginManifestValidator validator =

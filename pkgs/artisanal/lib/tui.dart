@@ -8,10 +8,10 @@
 /// ## Core Components
 ///
 /// - **[Model]**: Represents the state of your application.
-/// - **[Update]**: A function that handles messages and returns a new model and commands.
+/// - **`Update`**: A function that handles messages and returns a new model and commands.
 /// - **[View]**: A function that renders the current model into a string.
 /// - **[Program]**: The runtime that manages the event loop and rendering.
-/// - **[Bubbles]**: Reusable interactive widgets like text inputs, spinners, and lists.
+/// - **`Bubbles`**: Reusable interactive widgets like text inputs, spinners, and lists.
 ///
 /// ## Quick Start
 ///
@@ -99,7 +99,7 @@
 /// - **[Cmd]**: Represents an effect to be performed by the runtime (quitting,
 ///   sending a message, running an external process).
 ///
-/// Use [BatchMsg] to group multiple messages, and [BatchCmd] to group multiple
+/// Use [BatchMsg] to group multiple messages, and `Cmd.batch` to group multiple
 /// commands.
 /// {@endtemplate}
 ///
@@ -126,6 +126,6 @@ library;
 
 export 'src/tui/tui.dart';
 export 'src/tui/bubbles/bubbles.dart'
-    hide ValidateFunc, PasteMsg, Row, Column, Text;
+    hide ValidateFunc, PasteMsg, Row, Column, Text, TextSelection;
 export 'src/tui/markdown/markdown.dart';
 export 'src/tui/markdown/ansi_renderer.dart';

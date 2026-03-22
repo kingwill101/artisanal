@@ -23,10 +23,9 @@ File _resolvePackageFile(String relativePath) {
 }
 
 String _readGolden(String relativePath) {
-  return _resolvePackageFile(relativePath).readAsStringSync().replaceAll(
-    '\r\n',
-    '\n',
-  );
+  return _resolvePackageFile(
+    relativePath,
+  ).readAsStringSync().replaceAll('\r\n', '\n');
 }
 
 void _expectGolden(String relativePath, String actual) {

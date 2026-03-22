@@ -37,6 +37,15 @@ library;
 
 import 'geometry.dart';
 
+/// Internal candidate data for stable fractional allocation.
+final class _LargestRemainderCandidate {
+  _LargestRemainderCandidate(this.index, this.remainder, this.previous);
+
+  final int index;
+  final int remainder;
+  final int previous;
+}
+
 /// Layout constraints.
 ///
 /// Upstream: `third_party/ultraviolet/layout.go`.
@@ -66,6 +75,116 @@ final class Percent implements Constraint {
 Percent ratio(int numerator, int denominator) {
   if (denominator == 0) return const Percent(0);
   return Percent((numerator * 100) ~/ denominator);
+}
+
+/// Splits [size] cells across [weights] using Largest Remainder Method.
+///
+/// The return values always sum to [size] and each segment receives:
+/// - floor(size * weight / totalWeight) cells initially
+/// - remaining cells distributed by descending fractional remainder
+///
+/// If multiple segments have equal remainder, ties prefer the segment that had
+/// more cells on the previous frame for stable rendering across repeated
+/// layouts.
+List<int> splitByLargestRemainder(
+  int size,
+  List<int> weights, {
+  List<int> previous = const [],
+}) {
+  final result = List<int>.filled(weights.length, 0);
+  if (size <= 0 || weights.isEmpty) return result;
+
+  var totalWeight = 0;
+  final normalizedWeights = List<int>.filled(weights.length, 0);
+  for (var i = 0; i < weights.length; i++) {
+    final weight = weights[i];
+    final clampedWeight = weight < 0 ? 0 : weight;
+    normalizedWeights[i] = clampedWeight;
+    totalWeight += clampedWeight;
+  }
+
+  if (totalWeight <= 0) return result;
+
+  var floorSum = 0;
+  final candidates = <_LargestRemainderCandidate>[];
+
+  for (var i = 0; i < normalizedWeights.length; i++) {
+    final weighted = size * normalizedWeights[i];
+    final base = weighted ~/ totalWeight;
+    final remainder = weighted % totalWeight;
+    result[i] = base;
+    floorSum += base;
+
+    final previousShare = i < previous.length ? previous[i] : 0;
+    candidates.add(_LargestRemainderCandidate(i, remainder, previousShare));
+  }
+
+  var remaining = size - floorSum;
+  if (remaining <= 0) return result;
+
+  candidates.sort((a, b) {
+    if (a.remainder != b.remainder) return b.remainder - a.remainder;
+    if (a.previous != b.previous) return b.previous - a.previous;
+    return a.index - b.index;
+  });
+
+  for (var i = 0; i < remaining; i++) {
+    result[candidates[i].index]++;
+  }
+
+  return result;
+}
+
+/// Splits [area] into horizontal segments using stable largest-remainder sizing.
+///
+/// Use [previousAllocations] to stabilize ties across consecutive layout frames.
+({List<Rectangle> columns}) splitHorizontalByLargestRemainder(
+  Rectangle area,
+  List<int> weights, {
+  List<int> previousAllocations = const [],
+}) {
+  final widths = splitByLargestRemainder(
+    area.width,
+    weights,
+    previous: previousAllocations,
+  );
+
+  var x = area.minX;
+  final columns = <Rectangle>[];
+  for (final width in widths) {
+    columns.add(
+      Rectangle(minX: x, minY: area.minY, maxX: x + width, maxY: area.maxY),
+    );
+    x += width;
+  }
+
+  return (columns: columns);
+}
+
+/// Splits [area] into vertical segments using stable largest-remainder sizing.
+///
+/// Use [previousAllocations] to stabilize ties across consecutive layout frames.
+({List<Rectangle> rows}) splitVerticalByLargestRemainder(
+  Rectangle area,
+  List<int> weights, {
+  List<int> previousAllocations = const [],
+}) {
+  final heights = splitByLargestRemainder(
+    area.height,
+    weights,
+    previous: previousAllocations,
+  );
+
+  var y = area.minY;
+  final rows = <Rectangle>[];
+  for (final height in heights) {
+    rows.add(
+      Rectangle(minX: area.minX, minY: y, maxX: area.maxX, maxY: y + height),
+    );
+    y += height;
+  }
+
+  return (rows: rows);
 }
 
 /// A constraint that represents a fixed size.

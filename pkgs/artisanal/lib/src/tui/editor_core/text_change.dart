@@ -48,14 +48,19 @@ TextDocumentChange computeTextDocumentChangeForDocuments({
       startOffset: previousDocument.length,
       oldEndOffset: previousDocument.length,
       newEndOffset: nextDocument.length,
-      startPosition: previousDocument.positionForOffset(previousDocument.length),
-      oldEndPosition: previousDocument.positionForOffset(previousDocument.length),
+      startPosition: previousDocument.positionForOffset(
+        previousDocument.length,
+      ),
+      oldEndPosition: previousDocument.positionForOffset(
+        previousDocument.length,
+      ),
       newEndPosition: nextDocument.positionForOffset(nextDocument.length),
     );
   }
 
   var prefixLineCount = 0;
-  final maxSharedPrefixLines = previousDocument.lineCount < nextDocument.lineCount
+  final maxSharedPrefixLines =
+      previousDocument.lineCount < nextDocument.lineCount
       ? previousDocument.lineCount
       : nextDocument.lineCount;
   while (prefixLineCount < maxSharedPrefixLines &&
@@ -70,8 +75,12 @@ TextDocumentChange computeTextDocumentChangeForDocuments({
       startOffset: previousDocument.length,
       oldEndOffset: previousDocument.length,
       newEndOffset: nextDocument.length,
-      startPosition: previousDocument.positionForOffset(previousDocument.length),
-      oldEndPosition: previousDocument.positionForOffset(previousDocument.length),
+      startPosition: previousDocument.positionForOffset(
+        previousDocument.length,
+      ),
+      oldEndPosition: previousDocument.positionForOffset(
+        previousDocument.length,
+      ),
       newEndPosition: nextDocument.positionForOffset(nextDocument.length),
     );
   }
@@ -79,7 +88,9 @@ TextDocumentChange computeTextDocumentChangeForDocuments({
   var suffixLineCount = 0;
   while (previousDocument.lineCount - suffixLineCount - 1 >= prefixLineCount &&
       nextDocument.lineCount - suffixLineCount - 1 >= prefixLineCount &&
-      previousDocument.lineAt(previousDocument.lineCount - suffixLineCount - 1) ==
+      previousDocument.lineAt(
+            previousDocument.lineCount - suffixLineCount - 1,
+          ) ==
           nextDocument.lineAt(nextDocument.lineCount - suffixLineCount - 1)) {
     suffixLineCount += 1;
   }

@@ -721,7 +721,7 @@ class _WizardState extends State<Wizard> {
             children: [
               backButton,
               cancelButton,
-              if (exitButton != null) exitButton,
+              ?exitButton,
             ],
           ),
         ],
@@ -735,7 +735,7 @@ class _WizardState extends State<Wizard> {
         Row(
           gap: 1,
           children: [
-            if (exitButton != null) exitButton,
+            ?exitButton,
             cancelButton,
             nextButton,
           ],

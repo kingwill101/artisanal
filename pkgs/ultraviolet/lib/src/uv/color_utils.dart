@@ -90,3 +90,41 @@ bool isDarkColor(UvRgb? c) {
   final (_, _, l) = rgbToHsl(c.r, c.g, c.b);
   return l < 0.5;
 }
+
+/// Composites [src] over [dst] using Porter-Duff SourceOver.
+///
+/// When [src] is a translucent [UvRgb], this blends it over [dst] using
+/// integer arithmetic and returns an opaque [UvRgb]. Non-RGB colors fall back
+/// to source replacement semantics.
+UvColor? sourceOver(UvColor? src, UvColor? dst) {
+  if (src == null) return dst;
+  return switch (src) {
+    UvRgb() => _sourceOverRgb(src, dst),
+    _ => src,
+  };
+}
+
+UvColor? _sourceOverRgb(UvRgb src, UvColor? dst) {
+  final sa = src.a.clamp(0, 255);
+  if (sa <= 0) return dst;
+  if (sa >= 255) return UvRgb(src.r, src.g, src.b);
+  if (dst == null) {
+    return UvRgb(src.r, src.g, src.b, a: sa);
+  }
+  if (dst case UvRgb(:final r, :final g, :final b, :final a)) {
+    final da = a.clamp(0, 255);
+    final outA = sa + ((da * (255 - sa) + 127) ~/ 255);
+    if (outA <= 0) return const UvRgb(0, 0, 0, a: 0);
+    final outR =
+        ((src.r * sa * 255) + (r * da * (255 - sa)) + (outA ~/ 2)) ~/
+        (outA * 255);
+    final outG =
+        ((src.g * sa * 255) + (g * da * (255 - sa)) + (outA ~/ 2)) ~/
+        (outA * 255);
+    final outB =
+        ((src.b * sa * 255) + (b * da * (255 - sa)) + (outA ~/ 2)) ~/
+        (outA * 255);
+    return UvRgb(outR, outG, outB, a: outA);
+  }
+  return UvRgb(src.r, src.g, src.b);
+}

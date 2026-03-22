@@ -25,6 +25,7 @@ library;
 
 import 'dart:convert' show jsonEncode;
 import 'dart:io' show Platform;
+import 'dart:typed_data' show Int32List;
 
 import 'ansi.dart';
 import 'buffer.dart';
@@ -378,7 +379,9 @@ final class UvTerminalRenderer {
   final String _term;
 
   final StringBuffer _buf = StringBuffer();
+  final _FrameArena _arena = _FrameArena();
   Buffer? _curbuf;
+  String _lastFlushedOutput = '';
   late final Screen _screen;
 
   /// Render performance metrics (FPS, frame times, render durations).
@@ -648,6 +651,7 @@ final class UvTerminalRenderer {
   /// Writes all pending escape sequences and content, then clears the buffer.
   void flush() {
     final out = _buf.toString();
+    _lastFlushedOutput = out;
     if (out.isNotEmpty) {
       final logger = _logger;
       if (logger != null) {
@@ -657,6 +661,9 @@ final class UvTerminalRenderer {
       _buf.clear();
     }
   }
+
+  /// The exact ANSI/content string emitted by the most recent [flush].
+  String get lastFlushedOutput => _lastFlushedOutput;
 
   /// Sets the debug logger callback.
   ///
@@ -673,25 +680,44 @@ final class UvTerminalRenderer {
   }
 
   int _touched(Buffer buf) {
-    if (buf.touched.isEmpty) return buf.height();
+    if (buf.dirtyRows.isEmpty) return buf.height();
     var n = 0;
-    for (final ch in buf.touched) {
-      if (ch != null) n++;
+    for (final dirty in buf.dirtyRows) {
+      if (dirty) n++;
     }
     return n;
   }
 
   int _dirtyTouched(Buffer buf) {
-    if (buf.touched.isEmpty) return buf.height();
+    if (buf.dirtyRows.isEmpty) return buf.height();
     var n = 0;
-    for (final ch in buf.touched) {
-      if (ch != null && (ch.firstCell != -1 || ch.lastCell != -1)) n++;
+    for (final dirty in buf.dirtyRows) {
+      if (dirty) n++;
     }
     return n;
   }
 
   /// Returns the number of touched (dirty) lines in [buf].
-  int touched(Buffer buf) => _touched(buf);
+  ///
+  /// If dirty line tracking has been explicitly cleared by the renderer, the
+  /// buffer uses `LineData.clean` markers on all rows. In that state we treat
+  /// the buffer as fully touched for parity visibility, matching upstream
+  /// UV's historical semantics for the public `touched` accessor.
+  int touched(Buffer buf) {
+    if (buf.touched.isNotEmpty) {
+      var allClean = true;
+      for (final lineData in buf.touched) {
+        if (lineData != LineData.clean) {
+          allClean = false;
+          break;
+        }
+      }
+      if (allClean) {
+        return buf.height();
+      }
+    }
+    return _touched(buf);
+  }
 
   /// Updates the terminal dimensions.
   ///
@@ -815,6 +841,7 @@ final class UvTerminalRenderer {
   /// [metrics].
   void render(Buffer newbuf) {
     metrics.beginFrame();
+    _arena.reset();
 
     final touchedLines = _dirtyTouched(newbuf);
     if (!_clear && touchedLines == 0) {
@@ -867,22 +894,24 @@ final class UvTerminalRenderer {
           ? (curHeight < newHeight ? curHeight : newHeight)
           : newHeight;
       nonEmpty = _clearBottom(newbuf, nonEmpty);
-      for (var i = 0; i < nonEmpty && i < newHeight; i++) {
-        final ld = (newbuf.touched.isEmpty || i >= newbuf.touched.length)
-            ? null
-            : newbuf.touched[i];
-        final shouldTransform =
-            newbuf.touched.isEmpty ||
-            i >= newbuf.touched.length ||
-            (ld != null && (ld.firstCell != -1 || ld.lastCell != -1));
-        if (shouldTransform) {
-          _transformLine(newbuf, i);
-        }
-        if (i < newbuf.touched.length) {
-          newbuf.touched[i] = const LineData(firstCell: -1, lastCell: -1);
-        }
-        if (i < _curbuf!.touched.length) {
-          _curbuf!.touched[i] = const LineData(firstCell: -1, lastCell: -1);
+      final density = _tileDensityForTransform(newbuf, touchedLines, nonEmpty);
+      if (density != null) {
+        _transformDirtyTiles(newbuf, nonEmpty, density);
+      } else {
+        for (var i = 0; i < nonEmpty && i < newHeight; i++) {
+          final ld = (newbuf.touched.isEmpty || i >= newbuf.touched.length)
+              ? null
+              : newbuf.touched[i];
+          final shouldTransform =
+              newbuf.touched.isEmpty ||
+              i >= newbuf.touched.length ||
+              (ld?.isDirty ?? false) ||
+              (i < newbuf.dirtyRows.length && newbuf.dirtyRows[i]);
+          if (shouldTransform) {
+            _transformLine(newbuf, i);
+          }
+          newbuf.clearDirtyLine(i);
+          _curbuf!.clearDirtyLine(i);
         }
       }
     }
@@ -891,15 +920,9 @@ final class UvTerminalRenderer {
       _move(newbuf, 0, newHeight - 1);
     }
 
-    // Sync touched markers.
-    newbuf.touched = List<LineData?>.generate(
-      newHeight,
-      (_) => const LineData(firstCell: -1, lastCell: -1),
-    );
-    _curbuf!.touched = List<LineData?>.generate(
-      _curbuf!.height(),
-      (_) => const LineData(firstCell: -1, lastCell: -1),
-    );
+    // Sync dirty markers.
+    newbuf.clearDirtyTracking();
+    _curbuf!.clearDirtyTracking();
 
     if (curWidth != newWidth || curHeight != newHeight) {
       _curbuf!.resize(newWidth, newHeight);
@@ -909,9 +932,8 @@ final class UvTerminalRenderer {
         final dstLine = _curbuf!.line(i);
         if (srcLine != null && dstLine != null) {
           final src = srcLine.cells;
-          final dst = dstLine.cells;
-          for (var x = 0; x < dst.length && x < src.length; x++) {
-            dst[x] = src[x].clone();
+          for (var x = 0; x < dstLine.length && x < src.length; x++) {
+            dstLine.replaceWithClone(x, src[x]);
           }
         }
       }
@@ -1006,23 +1028,73 @@ final class UvTerminalRenderer {
       return;
     }
 
-    final newStyle = style_ops.convertStyle(cell.style, _profile);
-    final newLink = style_ops.convertLink(cell.link, _profile);
-    final oldStyle = style_ops.convertStyle(_cur.style, _profile);
-    final oldLink = style_ops.convertLink(_cur.link, _profile);
+    final newStyle = _profile == cp.Profile.trueColor
+        ? cell.style
+        : style_ops.convertStyle(cell.style, _profile);
+    final newLink = _profile == cp.Profile.trueColor
+        ? cell.link
+        : style_ops.convertLink(cell.link, _profile);
+    final oldStyle = _profile == cp.Profile.trueColor
+        ? _cur.style
+        : style_ops.convertStyle(_cur.style, _profile);
+    final oldLink = _profile == cp.Profile.trueColor
+        ? _cur.link
+        : style_ops.convertLink(_cur.link, _profile);
 
     if (newStyle != oldStyle) {
-      var seq = style_ops.styleDiff(oldStyle, newStyle);
-      if (newStyle.isZero && seq.length > UvAnsi.resetStyle.length) {
-        seq = UvAnsi.resetStyle;
+      if (!_writeSimpleRgbTransitionDirect(oldStyle, newStyle)) {
+        final seq = style_ops.styleTransitionSgr(oldStyle, newStyle);
+        _buf.write(seq);
       }
-      _buf.write(seq);
       _cur.style = cell.style;
     }
     if (newLink != oldLink) {
       _buf.write(UvAnsi.setHyperlink(newLink.url, newLink.params));
       _cur.link = cell.link;
     }
+  }
+
+  bool _writeSimpleRgbTransitionDirect(UvStyle oldStyle, UvStyle newStyle) {
+    if (!_isSimpleRgbStyle(oldStyle) || !_isSimpleRgbStyle(newStyle)) {
+      return false;
+    }
+
+    final oldFg = oldStyle.fg as UvRgb?;
+    final oldBg = oldStyle.bg as UvRgb?;
+    final newFg = newStyle.fg as UvRgb?;
+    final newBg = newStyle.bg as UvRgb?;
+    final fgChanged = oldFg != newFg;
+    final bgChanged = oldBg != newBg;
+    if (!fgChanged && !bgChanged) {
+      return true;
+    }
+
+    _buf.write('\x1b[');
+    var wrote = false;
+    if (fgChanged) {
+      _writeSimpleRgbDiffCode(newFg, true);
+      wrote = true;
+    }
+    if (bgChanged) {
+      if (wrote) _buf.write(';');
+      _writeSimpleRgbDiffCode(newBg, false);
+      wrote = true;
+    }
+    _buf.write('m');
+    return true;
+  }
+
+  void _writeSimpleRgbDiffCode(UvRgb? color, bool fg) {
+    if (color == null) {
+      _buf.write(fg ? '39' : '49');
+      return;
+    }
+    _buf.write(fg ? '38;2;' : '48;2;');
+    _buf.write(_sgrByte[color.r]);
+    _buf.write(';');
+    _buf.write(_sgrByte[color.g]);
+    _buf.write(';');
+    _buf.write(_sgrByte[color.b]);
   }
 
   void _wrapCursor() {
@@ -1102,6 +1174,28 @@ final class UvTerminalRenderer {
                 Attr.rapidBlink) ==
         0;
     return style.underline == UnderlineStyle.none && okAttrs && c.link.isZero;
+  }
+
+  static bool _hasStyledLeadingPrefix(Line line, int uptoExclusive) {
+    if (uptoExclusive <= 0) return false;
+    var sawStyledCell = false;
+    for (var x = 0; x < uptoExclusive && x < line.length; x++) {
+      final cell = line.at(x);
+      if (cell == null || cell.width != 1) {
+        return false;
+      }
+      final style = cell.style;
+      if (style.fg == null &&
+          style.bg == null &&
+          style.underlineColor == null &&
+          style.underline == UnderlineStyle.none &&
+          style.attrs == 0 &&
+          cell.link.isZero) {
+        return false;
+      }
+      sawStyledCell = true;
+    }
+    return sawStyledCell;
   }
 
   int _el0Cost() => 0; // prefer EL in xterm-like terminals
@@ -1221,17 +1315,164 @@ final class UvTerminalRenderer {
     }
     nonEmpty = _clearBottom(newbuf, nonEmpty);
     for (var i = 0; i < nonEmpty && i < newbuf.height(); i++) {
-      _transformLine(newbuf, i);
+      _transformLine(newbuf, i, segmented: false);
     }
   }
 
-  void _emitRange(Buffer newbuf, List<Cell> line, int n) {
+  void _emitRange(Buffer newbuf, List<Cell> line, int n, {int start = 0}) {
     for (var i = 0; i < n; i++) {
-      _putCell(newbuf, line[i]);
+      _putCell(newbuf, line[start + i]);
     }
   }
 
-  void _transformLine(Buffer newbuf, int y) {
+  DirtyDensityMap? _tileDensityForTransform(
+    Buffer newbuf,
+    int touchedLines,
+    int nonEmpty,
+  ) {
+    if (_clear) return null;
+    if (newbuf.width() < 32 || nonEmpty < 8) return null;
+    if (touchedLines < 4) return null;
+    final maxY = nonEmpty < newbuf.height() ? nonEmpty : newbuf.height();
+    final density = DirtyDensityMap.fromBuffer(
+      newbuf,
+      scratch: _arena.acquireInt32List(
+        (newbuf.width() + 1) * (newbuf.height() + 1),
+      ),
+    );
+    final dirtyCells = density.count(rect(0, 0, newbuf.width(), maxY));
+    final totalCells = newbuf.width() * maxY;
+    if (dirtyCells <= 0 || totalCells <= 0) return null;
+    // Tile traversal only helps when the dirty surface is sparse.
+    if (dirtyCells * 4 >= totalCells) return null;
+    return density;
+  }
+
+  void _transformDirtyTiles(
+    Buffer newbuf,
+    int nonEmpty,
+    DirtyDensityMap density,
+  ) {
+    const tileWidth = 16;
+    const tileHeight = 8;
+    final maxY = nonEmpty < newbuf.height() ? nonEmpty : newbuf.height();
+    final wholeRowHandled = _arena.acquireBoolList(maxY);
+
+    for (var tileY = 0; tileY < maxY; tileY += tileHeight) {
+      final height = (tileY + tileHeight) > maxY ? maxY - tileY : tileHeight;
+      for (var tileX = 0; tileX < newbuf.width(); tileX += tileWidth) {
+        final width = (tileX + tileWidth) > newbuf.width()
+            ? newbuf.width() - tileX
+            : tileWidth;
+        final tile = rect(tileX, tileY, width, height);
+        if (!density.hasAny(tile)) continue;
+        for (var y = tile.minY; y < tile.maxY; y++) {
+          if (wholeRowHandled[y]) continue;
+          if (y >= newbuf.dirtyRows.length || !newbuf.dirtyRows[y]) continue;
+          if (_shouldTransformWholeRowInTile(newbuf, density, y)) {
+            _transformLine(newbuf, y, segmented: false);
+            wholeRowHandled[y] = true;
+            continue;
+          }
+          final spans = newbuf.dirtyBitSpans(y);
+          if (spans.isEmpty) {
+            _transformLine(newbuf, y, segmented: false);
+            wholeRowHandled[y] = true;
+            continue;
+          }
+          for (final span in spans) {
+            final start = span.start > tile.minX ? span.start : tile.minX;
+            final end = span.end < tile.maxX ? span.end : tile.maxX;
+            if (start >= end) continue;
+            _transformLineRange(
+              newbuf,
+              y,
+              start,
+              end,
+              allowClearToEnd: span.end >= newbuf.width(),
+            );
+          }
+        }
+      }
+    }
+
+    for (var i = 0; i < maxY; i++) {
+      newbuf.clearDirtyLine(i);
+      _curbuf!.clearDirtyLine(i);
+    }
+  }
+
+  bool _shouldTransformWholeRowInTile(
+    Buffer newbuf,
+    DirtyDensityMap density,
+    int y,
+  ) {
+    final lineData = y < newbuf.touched.length ? newbuf.touched[y] : null;
+    if (lineData?.overflowed ?? false) return true;
+    final dirtyInRow = density.count(rect(0, y, newbuf.width(), 1));
+    if (dirtyInRow * 2 >= newbuf.width()) return true;
+    return false;
+  }
+
+  void _transformLine(Buffer newbuf, int y, {bool segmented = true}) {
+    final spans = segmented ? newbuf.dirtyBitSpans(y) : const <DirtySpan>[];
+    if (spans.length > 1) {
+      if (_canMergeAdjacentDirtySpans(newbuf, y, spans)) {
+        _transformLineRange(
+          newbuf,
+          y,
+          spans.first.start,
+          spans.last.end,
+          allowClearToEnd: spans.last.end >= newbuf.width(),
+        );
+        return;
+      }
+      for (final span in spans) {
+        _transformLineRange(
+          newbuf,
+          y,
+          span.start,
+          span.end,
+          allowClearToEnd: span.end >= newbuf.width(),
+        );
+      }
+      return;
+    }
+
+    _transformWholeLine(newbuf, y);
+  }
+
+  bool _canMergeAdjacentDirtySpans(
+    Buffer newbuf,
+    int y,
+    List<DirtySpan> spans,
+  ) {
+    if (spans.length <= 1) return false;
+    if (y < 0 || y >= newbuf.height()) return false;
+    final newLine = newbuf.line(y);
+    final oldLine = _curbuf != null && y < _curbuf!.height() ? _curbuf!.line(y) : null;
+    if (newLine == null || oldLine == null) return false;
+
+    for (var i = 0; i + 1 < spans.length; i++) {
+      final gapStart = spans[i].end;
+      final gapEnd = spans[i + 1].start;
+      for (var x = gapStart; x < gapEnd; x++) {
+        final oldCell = oldLine.at(x);
+        final newCell = newLine.at(x);
+        if (!_cellEqual(oldCell, newCell)) return false;
+        if (newCell == null ||
+            newCell.width != 1 ||
+            newCell.content != ' ' ||
+            newCell.style != const UvStyle()) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  void _transformWholeLine(Buffer newbuf, int y) {
     if (_curbuf == null) return;
     var firstCell = 0;
     final Line? oldLine = y < _curbuf!.height() ? _curbuf!.line(y) : null;
@@ -1273,6 +1514,10 @@ final class UvTerminalRenderer {
 
     if (firstCell >= newbuf.width()) return;
 
+    if (firstCell <= 4 && _hasStyledLeadingPrefix(newLine, firstCell)) {
+      firstCell = 0;
+    }
+
     // If skipping a leading blank run would require a longer cursor movement
     // sequence, prefer emitting the blanks.
     //
@@ -1292,9 +1537,7 @@ final class UvTerminalRenderer {
           break;
         }
       }
-      if (allBlank &&
-          oldBlank &&
-          _cellEqual(oldLine?.at(firstCell), blank)) {
+      if (allBlank && oldBlank && _cellEqual(oldLine?.at(firstCell), blank)) {
         final isRelative = (_flags & _Flag.relativeCursor) != 0;
         final assumeHomeForInlineRelative =
             isRelative &&
@@ -1340,7 +1583,7 @@ final class UvTerminalRenderer {
     }
 
     _move(newbuf, firstCell, y);
-    _emitRange(newbuf, newLine.cells.sublist(firstCell), nLast - firstCell + 1);
+    _emitRange(newbuf, newLine.cells, nLast - firstCell + 1, start: firstCell);
 
     // Clear the rest of the line if it can be cleared with EL.
     if (lastBlank != null && _canClearWith(lastBlank)) {
@@ -1358,11 +1601,117 @@ final class UvTerminalRenderer {
 
     // Update old line.
     if (oldLine != null) {
-      final dst = oldLine.cells;
       final src = newLine.cells;
-      for (var x = firstCell; x < dst.length && x < src.length; x++) {
-        dst[x] = src[x].clone();
+      for (var x = firstCell; x < oldLine.length && x < src.length; x++) {
+        oldLine.replaceWithClone(x, src[x]);
       }
+    }
+  }
+
+  void _transformLineRange(
+    Buffer newbuf,
+    int y,
+    int start,
+    int end, {
+    required bool allowClearToEnd,
+  }) {
+    if (_curbuf == null || start >= end) return;
+    final Line? oldLine = y < _curbuf!.height() ? _curbuf!.line(y) : null;
+    final newLine = newbuf.line(y);
+    if (newLine == null) return;
+
+    var firstCell = _skipEqualQuadsForward(oldLine, newLine, start, end);
+    while (firstCell < end &&
+        _cellEqual(newLine.at(firstCell), oldLine?.at(firstCell))) {
+      firstCell++;
+    }
+    if (firstCell >= end) return;
+
+    if (start == 0 &&
+        firstCell <= 4 &&
+        _hasStyledLeadingPrefix(newLine, firstCell)) {
+      firstCell = 0;
+    }
+
+    var nLast = _skipEqualQuadsBackward(oldLine, newLine, firstCell, end) - 1;
+    while (nLast > firstCell &&
+        _cellEqual(newLine.at(nLast), oldLine?.at(nLast))) {
+      nLast--;
+    }
+
+    final trailingBlank = allowClearToEnd
+        ? newLine.at(newbuf.width() - 1)
+        : null;
+    if (allowClearToEnd &&
+        trailingBlank != null &&
+        _canClearWith(trailingBlank)) {
+      while (nLast > firstCell &&
+          _cellEqual(newLine.at(nLast), trailingBlank)) {
+        nLast--;
+      }
+      if (nLast == firstCell &&
+          _cellEqual(newLine.at(firstCell), trailingBlank)) {
+        _move(newbuf, firstCell, y);
+        _clearToEnd(newbuf, trailingBlank, true);
+        _syncRenderedRange(oldLine, newLine, firstCell, newbuf.width());
+        return;
+      }
+    }
+
+    _move(newbuf, firstCell, y);
+    _emitRange(newbuf, newLine.cells, nLast - firstCell + 1, start: firstCell);
+
+    if (allowClearToEnd &&
+        trailingBlank != null &&
+        _canClearWith(trailingBlank)) {
+      if (nLast + 1 < newbuf.width()) {
+        _move(newbuf, nLast + 1, y);
+      }
+      _clearToEnd(newbuf, trailingBlank, false);
+      _syncRenderedRange(oldLine, newLine, firstCell, newbuf.width());
+      return;
+    }
+
+    _syncRenderedRange(oldLine, newLine, firstCell, nLast + 1);
+  }
+
+  int _skipEqualQuadsForward(Line? oldLine, Line newLine, int start, int end) {
+    var x = start;
+    while (x + 4 <= end) {
+      var equal = true;
+      for (var i = 0; i < 4; i++) {
+        if (!_cellEqual(oldLine?.at(x + i), newLine.at(x + i))) {
+          equal = false;
+          break;
+        }
+      }
+      if (!equal) break;
+      x += 4;
+    }
+    return x;
+  }
+
+  int _skipEqualQuadsBackward(Line? oldLine, Line newLine, int start, int end) {
+    var x = end;
+    while (x - 4 >= start) {
+      var equal = true;
+      for (var i = 1; i <= 4; i++) {
+        if (!_cellEqual(oldLine?.at(x - i), newLine.at(x - i))) {
+          equal = false;
+          break;
+        }
+      }
+      if (!equal) break;
+      x -= 4;
+    }
+    return x;
+  }
+
+  void _syncRenderedRange(Line? oldLine, Line newLine, int start, int end) {
+    if (oldLine == null) return;
+    final src = newLine.cells;
+    for (var x = start; x < end && x < oldLine.length && x < src.length; x++) {
+      oldLine.replaceWithClone(x, src[x]);
     }
   }
 
@@ -1375,7 +1724,7 @@ final class UvTerminalRenderer {
       if (changed) {
         newbuf.touchLine(0, i, width);
       } else {
-        newbuf.touched[i] = null;
+        newbuf.clearDirtyLine(i);
       }
     }
   }
@@ -1385,10 +1734,10 @@ final class UvTerminalRenderer {
     if (n < 0) {
       final limit = top - n;
       for (var line = bot; line >= limit && line >= top; line--) {
-        final dst = b.line(line)!.cells;
         final src = b.line(line + n)!.cells;
-        for (var x = 0; x < dst.length && x < src.length; x++) {
-          dst[x] = src[x].clone();
+        final dstLine = b.line(line)!;
+        for (var x = 0; x < dstLine.length && x < src.length; x++) {
+          dstLine.replaceWithClone(x, src[x]);
         }
       }
       for (var line = top; line < limit && line <= bot; line++) {
@@ -1397,10 +1746,10 @@ final class UvTerminalRenderer {
     } else if (n > 0) {
       final limit = bot - n;
       for (var line = top; line <= limit && line <= bot; line++) {
-        final dst = b.line(line)!.cells;
         final src = b.line(line + n)!.cells;
-        for (var x = 0; x < dst.length && x < src.length; x++) {
-          dst[x] = src[x].clone();
+        final dstLine = b.line(line)!;
+        for (var x = 0; x < dstLine.length && x < src.length; x++) {
+          dstLine.replaceWithClone(x, src[x]);
         }
       }
       for (var line = bot; line > limit && line >= top; line--) {
@@ -1620,24 +1969,115 @@ final class _HashEntry {
   int newindex;
 }
 
-const int _newIndex = -1;
+bool _isSimpleRgbStyle(UvStyle style) =>
+    style.attrs == 0 &&
+    style.underline == UnderlineStyle.none &&
+    style.underlineColor == null &&
+    (style.fg == null || style.fg is UvRgb) &&
+    (style.bg == null || style.bg is UvRgb);
 
-int _fnv1a64(String s) {
-  // 64-bit FNV-1a.
-  var hash = 0xcbf29ce484222325;
-  for (final cu in s.codeUnits) {
-    hash ^= cu;
-    hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+final List<String> _sgrByte = List<String>.generate(256, (i) => '$i');
+
+final class _FrameArena {
+  final List<List<bool>> _boolLists = <List<bool>>[];
+  final List<StringBuffer> _stringBuffers = <StringBuffer>[];
+  final List<List<_HashEntry>> _hashTables = <List<_HashEntry>>[];
+  final List<Int32List> _int32Lists = <Int32List>[];
+
+  int _boolIndex = 0;
+  int _stringIndex = 0;
+  int _hashIndex = 0;
+  int _int32Index = 0;
+
+  void reset() {
+    _boolIndex = 0;
+    _stringIndex = 0;
+    _hashIndex = 0;
+    _int32Index = 0;
   }
-  return hash;
+
+  List<bool> acquireBoolList(int length) {
+    if (_boolIndex >= _boolLists.length) {
+      _boolLists.add(List<bool>.filled(length, false));
+    }
+    final list = _boolLists[_boolIndex++];
+    if (list.length < length) {
+      final replacement = List<bool>.filled(length, false);
+      _boolLists[_boolIndex - 1] = replacement;
+      return replacement;
+    }
+    list.fillRange(0, length, false);
+    return list;
+  }
+
+  StringBuffer acquireStringBuffer() {
+    if (_stringIndex >= _stringBuffers.length) {
+      _stringBuffers.add(StringBuffer());
+    }
+    final buffer = _stringBuffers[_stringIndex++];
+    buffer.clear();
+    return buffer;
+  }
+
+  List<_HashEntry> acquireHashTable(int length) {
+    if (_hashIndex >= _hashTables.length) {
+      _hashTables.add(_newHashTable(length));
+    }
+    var table = _hashTables[_hashIndex++];
+    if (table.length < length) {
+      table = _newHashTable(length);
+      _hashTables[_hashIndex - 1] = table;
+    } else {
+      for (var i = 0; i < length; i++) {
+        final entry = table[i];
+        entry.value = 0;
+        entry.oldcount = 0;
+        entry.newcount = 0;
+        entry.oldindex = 0;
+        entry.newindex = 0;
+      }
+    }
+    return table;
+  }
+
+  Int32List acquireInt32List(int length) {
+    if (_int32Index >= _int32Lists.length) {
+      _int32Lists.add(Int32List(length));
+    }
+    var list = _int32Lists[_int32Index++];
+    if (list.length < length) {
+      list = Int32List(length);
+      _int32Lists[_int32Index - 1] = list;
+    } else {
+      list.fillRange(0, length, 0);
+    }
+    return list;
+  }
+
+  static List<_HashEntry> _newHashTable(int length) =>
+      List<_HashEntry>.generate(
+        length,
+        (_) => _HashEntry(
+          value: 0,
+          oldcount: 0,
+          newcount: 0,
+          oldindex: 0,
+          newindex: 0,
+        ),
+      );
 }
 
+const int _newIndex = -1;
+
 int _hashLine(Line l) {
-  final b = StringBuffer();
+  var hash = 0xcbf29ce484222325;
   for (final c in l.cells) {
-    b.write(c.content);
+    for (final cu in c.content.codeUnits) {
+      hash ^= cu;
+      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+    }
   }
-  return _fnv1a64(b.toString());
+  return hash;
 }
 
 void _updateHashmap(UvTerminalRenderer s, Buffer newbuf) {
@@ -1662,16 +2102,7 @@ void _updateHashmap(UvTerminalRenderer s, Buffer newbuf) {
     }
   }
 
-  final tab = List<_HashEntry>.generate(
-    (height + 1) * 2,
-    (_) => _HashEntry(
-      value: 0,
-      oldcount: 0,
-      newcount: 0,
-      oldindex: 0,
-      newindex: 0,
-    ),
-  );
+  final tab = s._arena.acquireHashTable((height + 1) * 2);
 
   for (var i = 0; i < height; i++) {
     final hashval = s._oldhash[i];
@@ -1792,8 +2223,10 @@ String? _overwriteMoveSeq(
 
   final line = newbuf.line(ty);
   if (line == null) return null;
+  if (tx >= line.cells.length) return null;
+  if (tx - 1 >= line.cells.length - 1) return null;
 
-  final seq = StringBuffer();
+  final seq = s._arena.acquireStringBuffer();
   for (var x = fx; x < tx; x++) {
     if (x < 0 || x >= line.cells.length) return null;
 
@@ -1818,6 +2251,135 @@ String? _overwriteMoveSeq(
   return seq.toString();
 }
 
+String? _overwritableCellText(
+  UvTerminalRenderer s,
+  Buffer? newbuf,
+  int x,
+  int y,
+) {
+  if (newbuf == null || y < 0 || y >= newbuf.height()) return null;
+  final line = newbuf.line(y);
+  if (line == null || x < 0 || x >= line.cells.length) return null;
+
+  final cell = line.cells[x];
+  if (cell.width != 1) return null;
+  if (cell.content.isEmpty) return null;
+  if (cell.content.trim().isEmpty) return null;
+  if (stringWidth(cell.content) != 1) return null;
+  if (cell.content.contains('\n') ||
+      cell.content.contains('\r') ||
+      cell.content.contains('\x1b')) {
+    return null;
+  }
+
+  final style = style_ops.convertStyle(cell.style, s._profile);
+  final link = style_ops.convertLink(cell.link, s._profile);
+  if (style != s._cur.style || link != s._cur.link) return null;
+  return cell.content;
+}
+
+String? _overwriteMoveDpSeq(
+  UvTerminalRenderer s,
+  Buffer? newbuf,
+  int fx,
+  int fy,
+  int tx,
+  int ty,
+  bool useTabs,
+  bool useBackspace,
+) {
+  if (newbuf == null || fy != ty || tx <= fx) return null;
+  final line = newbuf.line(ty);
+  if (line == null) return null;
+  if (tx >= line.cells.length) return null;
+  if (tx - 1 >= line.cells.length - 1) return null;
+  final span = tx - fx;
+  final costs = List<int>.filled(span + 1, 0);
+  final seqs = List<String>.filled(span + 1, '');
+
+  costs[span] = 0;
+  seqs[span] = '';
+  for (var pos = tx - 1; pos >= fx; pos--) {
+    final idx = pos - fx;
+    final direct = _relativeCursorMove(
+      s,
+      newbuf,
+      pos,
+      fy,
+      tx,
+      ty,
+      false,
+      useTabs,
+      useBackspace,
+    ).seq;
+    var bestCost = direct.length;
+    var bestSeq = direct;
+
+    final overwrite = _overwritableCellText(s, newbuf, pos, ty);
+    if (overwrite != null) {
+      final candidateCost = overwrite.length + costs[idx + 1];
+      if (candidateCost < bestCost) {
+        bestCost = candidateCost;
+        bestSeq = '$overwrite${seqs[idx + 1]}';
+      }
+    }
+
+    costs[idx] = bestCost;
+    seqs[idx] = bestSeq;
+  }
+
+  return seqs[0];
+}
+
+/// Returns the same-row DP overwrite/move sequence used by the renderer.
+///
+/// This exists for regression tests that validate cursor-planning behavior.
+String? debugDpOverwriteMoveSeq(
+  UvTerminalRenderer renderer,
+  Buffer newbuf,
+  int fx,
+  int fy,
+  int tx,
+  int ty, {
+  bool useTabs = false,
+  bool useBackspace = false,
+}) {
+  return _overwriteMoveDpSeq(
+    renderer,
+    newbuf,
+    fx,
+    fy,
+    tx,
+    ty,
+    useTabs,
+    useBackspace,
+  );
+}
+
+/// Returns the direct relative move sequence used as the DP baseline.
+String debugDirectRelativeMoveSeq(
+  UvTerminalRenderer renderer,
+  Buffer newbuf,
+  int fx,
+  int fy,
+  int tx,
+  int ty, {
+  bool useTabs = false,
+  bool useBackspace = false,
+}) {
+  return _relativeCursorMove(
+    renderer,
+    newbuf,
+    fx,
+    fy,
+    tx,
+    ty,
+    false,
+    useTabs,
+    useBackspace,
+  ).seq;
+}
+
 ({String seq, int scrollHeight}) _relativeCursorMove(
   UvTerminalRenderer s,
   Buffer? newbuf,
@@ -1829,7 +2391,7 @@ String? _overwriteMoveSeq(
   bool useTabs,
   bool useBackspace,
 ) {
-  final seq = StringBuffer();
+  final seq = s._arena.acquireStringBuffer();
   var scrollHeight = 0;
 
   if (ty != fy) {

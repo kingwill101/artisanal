@@ -10,6 +10,238 @@ import 'package:test/test.dart';
 
 void main() {
   group('Cell parity', () {
+    test('equivalent styles and links compare equally across cells', () {
+      final cellA = Cell(
+        content: 'A',
+        width: 1,
+        style: UvStyle(
+          fg: const UvRgb(1, 2, 3),
+          bg: const UvRgb(4, 5, 6),
+          attrs: Attr.bold,
+        ),
+        link: Link(url: 'https://example.com', params: 'id=1'),
+      );
+      final cellB = Cell(
+        content: 'B',
+        width: 1,
+        style: UvStyle(
+          fg: const UvRgb(1, 2, 3),
+          bg: const UvRgb(4, 5, 6),
+          attrs: Attr.bold,
+        ),
+        link: Link(url: 'https://example.com', params: 'id=1'),
+      );
+
+      expect(cellA.style, cellB.style);
+      expect(cellA.link, cellB.link);
+      expect(cellA, isNot(cellB));
+    });
+
+    test('preserves equality semantics for simple and complex graphemes', () {
+      final asciiA = Cell(content: 'A', width: 1);
+      final asciiB = Cell(content: 'A', width: 1);
+      final asciiC = Cell(content: 'A', width: 2);
+      final emojiA = Cell(content: '👩‍💻', width: 2);
+      final emojiB = Cell(content: '👩‍💻', width: 2);
+      final emojiC = Cell(content: '👩‍💻', width: 1);
+
+      expect(asciiA, asciiB);
+      expect(asciiA.hashCode, asciiB.hashCode);
+      expect(asciiA, isNot(asciiC));
+
+      expect(emojiA, emojiB);
+      expect(emojiA.hashCode, emojiB.hashCode);
+      expect(emojiA, isNot(emojiC));
+    });
+
+    test('pools complex graphemes and tracks refcounts across clones', () {
+      final emoji = Cell(content: '\u0061\u0308', width: 1);
+      final clone = emoji.clone();
+      final pooledId = emoji.pooledContentId!;
+
+      expect(emoji.pooledContentId, isNotNull);
+      expect(clone.pooledContentId, emoji.pooledContentId);
+      expect(debugGraphemeRefCount(pooledId), 2);
+
+      clone.dispose();
+      expect(debugGraphemeRefCount(pooledId), 1);
+
+      emoji.dispose();
+      expect(debugGraphemeRefCount(pooledId), 0);
+    });
+
+    test('mutating complex content releases the previous pooled grapheme', () {
+      final cell = Cell(content: '\u0071\u0323', width: 1);
+      final oldId = cell.pooledContentId!;
+
+      cell.content = '\u0078\u0302';
+      final newId = cell.pooledContentId!;
+
+      expect(cell.pooledContentId, isNot(oldId));
+      expect(debugGraphemeRefCount(oldId), 0);
+      expect(debugGraphemeRefCount(newId), 1);
+
+      cell.empty();
+      expect(debugGraphemeRefCount(newId), 0);
+    });
+
+    test('reuses freed grapheme slots with a new generation', () {
+      final first = Cell(content: '\u006F\u0302', width: 1);
+      final firstId = first.pooledContentId!;
+      final firstSlot = debugGraphemeSlot(firstId);
+      final firstGeneration = debugGraphemeGeneration(firstId);
+
+      first.dispose();
+
+      final second = Cell(content: '\u0075\u0304', width: 1);
+      final secondId = second.pooledContentId!;
+
+      expect(debugGraphemeSlot(secondId), firstSlot);
+      expect(debugGraphemeGeneration(secondId), greaterThan(firstGeneration));
+      expect(debugGraphemeRefCount(firstId), 0);
+      expect(second.content, '\u0075\u0304');
+    });
+
+    test('encodes grapheme width in pooled ids', () {
+      final wide = Cell(content: '👩‍💻', width: 2);
+      final combining = Cell(content: '\u0065\u0301', width: 1);
+
+      expect(debugGraphemeWidth(wide.pooledContentId!), 2);
+      expect(debugGraphemeWidth(combining.pooledContentId!), 1);
+
+      wide.dispose();
+      combining.dispose();
+    });
+
+    test('pools links by URL and params with refcount tracking', () {
+      final first = Cell(
+        content: 'L',
+        width: 1,
+        link: const Link(url: 'https://example-parity-link-registry-a.test', params: 'id=1'),
+      );
+      final second = Cell(
+        content: 'i',
+        width: 1,
+        link: const Link(
+          url: 'https://example-parity-link-registry-a.test',
+          params: 'id=1',
+        ),
+      );
+
+      final firstId = first.linkId;
+      final secondId = second.linkId;
+
+      expect(firstId, isNotNull);
+      expect(firstId, secondId);
+      expect(debugLinkRefCount(firstId!), 2);
+
+      first.dispose();
+      expect(debugLinkRefCount(firstId), 1);
+
+      second.dispose();
+      expect(debugLinkRefCount(firstId), 0);
+    });
+
+    test('link registry reuses freed slots with generation increments', () {
+      final first = Cell(content: 'A', link: const Link(url: 'https://free.example'));
+      final firstId = first.linkId!;
+      final firstSlot = debugLinkSlot(firstId);
+      final firstGeneration = debugLinkGeneration(firstId);
+      first.dispose();
+
+      final second = Cell(
+        content: 'B',
+        link: const Link(url: 'https://example-parity-link-registry-b.test'),
+      );
+      final secondId = second.linkId!;
+
+      expect(debugLinkSlot(secondId), firstSlot);
+      expect(debugLinkGeneration(secondId), greaterThan(firstGeneration));
+      expect(second.link, const Link(url: 'https://example-parity-link-registry-b.test'));
+      second.dispose();
+    });
+
+    test('link links with control characters are rejected', () {
+      expect(
+        () => Cell(link: const Link(url: 'https://bad.example\nx')),
+        throwsArgumentError,
+      );
+      expect(
+        () => Cell(link: const Link(url: 'https://bad.example', params: '\x00x')),
+        throwsArgumentError,
+      );
+    });
+
+    test('Packed cell tuple reflects equality semantics', () {
+      final base = Cell(
+        content: 'A',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(1, 2, 3)),
+        link: const Link(url: 'https://example.com'),
+      );
+      final same = Cell(
+        content: 'A',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(1, 2, 3)),
+        link: const Link(url: 'https://example.com'),
+      );
+      expect(base.packed, equals(same.packed));
+
+      final widthShift = Cell(content: 'A', width: 2);
+      expect(base.packed, isNot(widthShift.packed));
+      final baseWidthReset = Cell(
+        content: base.content,
+        width: base.width,
+        style: base.style,
+        link: base.link,
+      );
+      expect(baseWidthReset.packed, equals(base.packed));
+
+      final contentShift = Cell(content: 'B', width: 1);
+      expect(base.packed, isNot(contentShift.packed));
+
+      final contentKindShift = Cell(content: '👩‍💻', width: 2);
+      expect(base.packed, isNot(contentKindShift.packed));
+      final continuation = Line.filled(3);
+      continuation.set(0, Cell(content: '👩‍💻', width: 2));
+      final placeholder = continuation.at(1)!;
+      expect(placeholder.width, 0);
+      expect(contentKindShift.width, 2);
+      expect(contentKindShift.packed, isNot(placeholder.packed));
+
+      final sameLinkDifferentInstance = Cell(
+        content: 'A',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(1, 2, 3)),
+        link: const Link(url: 'https://example.com'),
+      );
+      expect(base.packed, sameLinkDifferentInstance.packed);
+
+      final styleShift = Cell(
+        content: 'A',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(9, 8, 7)),
+        link: const Link(url: 'https://example.com'),
+      );
+      expect(base.packed, isNot(styleShift.packed));
+    });
+
+    test('empty keeps style and link while rewriting content to space', () {
+      final cell = Cell(
+        content: 'X',
+        width: 1,
+        style: const UvStyle(fg: UvRgb(255, 0, 0)),
+        link: const Link(url: 'https://example.com'),
+      );
+
+      cell.empty();
+
+      expect(cell.content, ' ');
+      expect(cell.width, 1);
+      expect(cell.style, const UvStyle(fg: UvRgb(255, 0, 0)));
+      expect(cell.link, const Link(url: 'https://example.com'));
+    });
+
     test('ConvertStyle', () {
       final s = UvStyle(
         fg: const UvRgb(0, 0, 0),
@@ -621,6 +853,34 @@ void main() {
         final got = styleDiff(c.from, c.to);
         expect(got, c.want, reason: c.name);
       }
+    });
+
+    test('styleTransitionSgr picks the cheaper transition', () {
+      final from = const UvStyle(
+        fg: UvRgb(255, 0, 0),
+        bg: UvRgb(0, 0, 255),
+        attrs: Attr.bold | Attr.faint,
+      );
+      final to = const UvStyle(attrs: Attr.italic);
+
+      final delta = styleDiff(from, to);
+      final chosen = styleTransitionSgr(from, to);
+      final resetThenApply = '${UvAnsi.resetStyle}${styleToSgr(to)}';
+
+      expect(chosen.length, lessThanOrEqualTo(delta.length));
+      expect(chosen.length, lessThanOrEqualTo(resetThenApply.length));
+    });
+
+    test('styleTransitionSgr handles bold/faint collateral damage cheaply', () {
+      const from = UvStyle(attrs: Attr.bold | Attr.faint);
+      const to = UvStyle(attrs: Attr.bold);
+
+      final chosen = styleTransitionSgr(from, to);
+
+      expect(
+        chosen,
+        anyOf('\x1b[22;1m', '${UvAnsi.resetStyle}${styleToSgr(to)}'),
+      );
     });
   });
 }

@@ -140,7 +140,7 @@ class StepsResult {
 /// ## Features
 ///
 /// - **Output**: [writeln], [write], [title], [section], [line], [info], [comment], [question], [warn], [success], [error], [alert].
-/// - **Components**: [table], [progressBar], [tree].
+/// - **Components**: [table], `progressBar`, [tree].
 /// - **Prompts**: [ask], [confirm], [choice], [secret].
 /// - **Tasks**: [task] for running operations with a status indicator.
 ///

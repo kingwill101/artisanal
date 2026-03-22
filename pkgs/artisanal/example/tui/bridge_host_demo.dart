@@ -64,7 +64,8 @@ class _BridgeCounterModel implements Model {
   }
 
   @override
-  String view() => '''
+  String view() =>
+      '''
 Bridge Host Demo
 ================
 

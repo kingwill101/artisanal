@@ -282,7 +282,7 @@ class FilePickerModel extends ViewComponent {
   /// Creates a new file picker model.
   ///
   /// [currentDirectory] is the starting directory.
-  /// [allowedTypes] is a list of allowed file extensions (e.g., ['.dart', '.txt']).
+  /// `allowedTypes` is a list of allowed file extensions (e.g., `['.dart', '.txt']`).
   /// [fileAllowed] whether files can be selected.
   /// [dirAllowed] whether directories can be selected.
   /// [showHidden] whether to show hidden files.

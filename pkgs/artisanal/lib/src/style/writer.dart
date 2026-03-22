@@ -69,7 +69,7 @@ void resetWriter() {
 ///
 /// This mirrors the behavior of the upstream colorprofile writer:
 /// - [ColorProfile.ascii]: strip all ANSI escape sequences
-/// - [ColorProfile.noColor]/[ansi]/[ansi256]: downsample SGR colors
+/// - [ColorProfile.noColor]/`ansi`/`ansi256`: downsample SGR colors
 /// - [ColorProfile.trueColor]: unchanged
 String stringForProfile(String input, ColorProfile profile) {
   final p = _toInternalProfile(profile);

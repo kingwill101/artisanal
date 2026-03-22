@@ -124,7 +124,8 @@ class BackendTerminal implements Terminal {
   }
 
   @override
-  void writeln([String text = '']) => write('$text${io.Platform.lineTerminator}');
+  void writeln([String text = '']) =>
+      write('$text${io.Platform.lineTerminator}');
 
   @override
   Future<void> flush() => backend.flush();

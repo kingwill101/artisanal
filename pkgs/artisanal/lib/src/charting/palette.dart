@@ -3,7 +3,7 @@ library;
 
 import '../uv/cell.dart';
 
-/// Discrete color ramp for mapping normalized [0..1] values to colors.
+/// Discrete color ramp for mapping normalized `0..1` values to colors.
 final class ChartRamp {
   /// Creates a ramp from an explicit list of [UvColor]s.
   const ChartRamp(this.colors);
@@ -31,7 +31,7 @@ final class ChartRamp {
   /// The ordered color stops in this ramp.
   final List<UvColor> colors;
 
-  /// Returns the color for a normalized [value] in [0..1].
+  /// Returns the color for a normalized [value] in `0..1`.
   UvColor colorFor(double value) {
     if (colors.isEmpty) return const UvBasic16(7);
     final idx = (value.clamp(0, 1) * (colors.length - 1)).round();

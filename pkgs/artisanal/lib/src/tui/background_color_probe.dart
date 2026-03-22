@@ -12,9 +12,7 @@ import 'startup_probe.dart';
 /// palette until an OSC 11 or color-scheme response arrives later.
 final class BackgroundColorProbe implements StartupProbe {
   /// Creates a background-color probe.
-  BackgroundColorProbe({
-    this.timeout = const Duration(milliseconds: 120),
-  });
+  BackgroundColorProbe({this.timeout = const Duration(milliseconds: 120)});
 
   /// Maximum time to wait for a terminal response.
   final Duration timeout;

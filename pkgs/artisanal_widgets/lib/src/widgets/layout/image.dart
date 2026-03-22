@@ -476,7 +476,7 @@ T withImageAutoConfiguration<T>({
     callback,
     zoneValues: <Object?, Object?>{
       _imageAutoModeZoneKey: mode,
-      if (capabilities != null) _imageCapabilitiesZoneKey: capabilities,
+      _imageCapabilitiesZoneKey: ?capabilities,
     },
   );
 }

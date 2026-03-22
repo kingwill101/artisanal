@@ -162,6 +162,7 @@ export 'msg.dart'
         InterruptMsg,
         RepaintMsg,
         RenderMetricsMsg,
+        RenderBudgetMsg,
         UvEventMsg;
 
 // Terminal theme helper (background/dark-mode)
@@ -213,6 +214,26 @@ export 'model.dart'
         RenderMetricsModel,
         noCmd,
         quit;
+export 'degradation.dart'
+    show
+        DegradationLevel,
+        RenderBudgetOptions,
+        RenderBudgetController,
+        RenderBudgetState,
+        ViewDegradation;
+export 'pane_manager.dart'
+    show
+        PaneSplitDirection,
+        PaneNavigationDirection,
+        PaneSnapAlignment,
+        PaneSnapTarget,
+        PaneRect,
+        SplitHandle,
+        PaneLayout,
+        PaneTreeNode,
+        PaneLeaf,
+        PaneSplit,
+        TilingPaneManager;
 export 'view.dart'
     show
         View,
@@ -240,10 +261,13 @@ export 'renderer.dart'
 // Program runtime
 export 'program.dart'
     show
+        ScreenMode,
+        UiAnchor,
         ProgramHostResolver,
         ProgramHostBinding,
         ProgramHost,
         ProgramInterceptor,
+        ProgramMacro,
         ProgramReplay,
         ProgramReplayStep,
         Program,
@@ -299,6 +323,9 @@ export 'zone/zone.dart'
 // Trace / debug logging
 export 'trace.dart'
     show TuiTrace, TraceTag, TraceSpan, TraceEventType, TraceEventRecord;
+
+// Structured runtime evidence logging
+export 'evidence.dart' show TuiEvidence, TuiEvidenceRecord;
 
 // Stable high-level widget system for composable components.
 //

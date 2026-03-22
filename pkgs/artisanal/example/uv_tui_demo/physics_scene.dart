@@ -215,7 +215,11 @@ List<String> renderPhysicsScene({
     if (body.bodyType != BodyType.dynamic) continue;
     final speed = body.linearVelocity.length;
     final color = speedColor(speed);
-    final glyph = speed > 12 ? '◆' : speed > 6 ? '●' : '•';
+    final glyph = speed > 12
+        ? '◆'
+        : speed > 6
+        ? '●'
+        : '•';
 
     for (final fixture in body.fixtures) {
       final shape = fixture.shape;

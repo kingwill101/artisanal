@@ -48,6 +48,10 @@
 - [x] tui-daemon-combo
 - [x] views
 - [x] window-size
+- [x] layout
+- [x] layout-breakpoints
+- [x] macro-recorder
+- [x] evidence-logging
 
 Guideline: when an example is ported, add its `main.dart`, tick the box here, and delete the original `main.go` for that folder. Keep README/gif assets for reference.
 

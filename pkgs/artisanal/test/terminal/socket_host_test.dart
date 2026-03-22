@@ -70,25 +70,27 @@ void main() {
       final resizedOutputReady = Completer<void>();
       final streamClosed = Completer<void>();
       late final StreamSubscription<String> outputSubscription;
-      outputSubscription = utf8.decoder.bind(client).listen(
-        (chunk) {
-          outputBuffer.write(chunk);
-          final output = outputBuffer.toString();
-          if (!initialOutputReady.isCompleted &&
-              output.contains('Socket Host Test Model')) {
-            initialOutputReady.complete();
-          }
-          if (!resizedOutputReady.isCompleted &&
-              output.contains('Viewport: 120x40')) {
-            resizedOutputReady.complete();
-          }
-        },
-        onDone: () {
-          if (!streamClosed.isCompleted) {
-            streamClosed.complete();
-          }
-        },
-      );
+      outputSubscription = utf8.decoder
+          .bind(client)
+          .listen(
+            (chunk) {
+              outputBuffer.write(chunk);
+              final output = outputBuffer.toString();
+              if (!initialOutputReady.isCompleted &&
+                  output.contains('Socket Host Test Model')) {
+                initialOutputReady.complete();
+              }
+              if (!resizedOutputReady.isCompleted &&
+                  output.contains('Viewport: 120x40')) {
+                resizedOutputReady.complete();
+              }
+            },
+            onDone: () {
+              if (!streamClosed.isCompleted) {
+                streamClosed.complete();
+              }
+            },
+          );
       addTearDown(outputSubscription.cancel);
 
       await initialOutputReady.future.timeout(const Duration(seconds: 5));
@@ -104,36 +106,40 @@ void main() {
       await streamClosed.future.timeout(const Duration(seconds: 5));
     });
 
-    test('socket disconnect delivers InterruptMsg to the hosted program', () async {
-      final interrupted = Completer<void>();
-      final server = await SocketTerminalHostServer.serveProgram(
-        port: 0,
-        modelBuilder: () => _DisconnectAwareModel(interrupted),
-        options: const ProgramOptions(
-          altScreen: false,
-          frameTick: false,
-          signalHandlers: false,
-        ),
-      );
-      addTearDown(server.close);
+    test(
+      'socket disconnect delivers InterruptMsg to the hosted program',
+      () async {
+        final interrupted = Completer<void>();
+        final server = await SocketTerminalHostServer.serveProgram(
+          port: 0,
+          modelBuilder: () => _DisconnectAwareModel(interrupted),
+          options: const ProgramOptions(
+            altScreen: false,
+            frameTick: false,
+            signalHandlers: false,
+          ),
+        );
+        addTearDown(server.close);
 
-      final client = await io.Socket.connect(
-        io.InternetAddress.loopbackIPv4,
-        server.server.port,
-      );
+        final client = await io.Socket.connect(
+          io.InternetAddress.loopbackIPv4,
+          server.server.port,
+        );
 
-      final outputReady = Completer<void>();
-      final subscription = utf8.decoder.bind(client).listen((chunk) {
-        if (!outputReady.isCompleted && chunk.contains('Disconnect Aware Model')) {
-          outputReady.complete();
-        }
-      });
-      addTearDown(subscription.cancel);
+        final outputReady = Completer<void>();
+        final subscription = utf8.decoder.bind(client).listen((chunk) {
+          if (!outputReady.isCompleted &&
+              chunk.contains('Disconnect Aware Model')) {
+            outputReady.complete();
+          }
+        });
+        addTearDown(subscription.cancel);
 
-      await outputReady.future.timeout(const Duration(seconds: 5));
-      await client.close();
-      await interrupted.future.timeout(const Duration(seconds: 5));
-    });
+        await outputReady.future.timeout(const Duration(seconds: 5));
+        await client.close();
+        await interrupted.future.timeout(const Duration(seconds: 5));
+      },
+    );
 
     test('close(force: true) tears down active socket sessions', () async {
       final sessionStarted = Completer<void>();
@@ -291,7 +297,8 @@ class _SocketHostModel implements Model {
   }
 
   @override
-  String view() => '''
+  String view() =>
+      '''
 Socket Host Test Model
 ======================
 

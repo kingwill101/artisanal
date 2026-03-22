@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:io' as io;
 
+import 'program.dart' show ScreenMode, UiAnchor;
 import 'terminal.dart';
 import 'trace.dart';
 import 'view.dart';
@@ -48,7 +49,11 @@ abstract class TuiRenderer {
   uv_term.RenderMetrics? get metrics;
 }
 
-/// Options for configuring the renderer.
+/// Options for configuring a [TuiRenderer].
+///
+/// These values are derived from [ProgramOptions] so the runtime can switch
+/// between full-screen and inline presentation without changing renderer
+/// implementations.
 class TuiRendererOptions {
   /// Creates renderer options.
   ///
@@ -58,6 +63,9 @@ class TuiRendererOptions {
     this.altScreen = true,
     this.hideCursor = true,
     this.ansiCompress = false,
+    this.screenMode = ScreenMode.fullScreen,
+    this.inlineHeight = 4,
+    this.uiAnchor = UiAnchor.bottom,
   });
 
   /// Maximum frames per second for rendering.
@@ -77,6 +85,21 @@ class TuiRendererOptions {
 
   /// Whether to compress redundant ANSI sequences.
   final bool ansiCompress;
+
+  /// The effective screen mode for this renderer.
+  final ScreenMode screenMode;
+
+  /// Height of the inline UI region in rows.
+  ///
+  /// Only meaningful when [screenMode] is [ScreenMode.inline].
+  final int inlineHeight;
+
+  /// Which edge of the viewport this inline UI region is anchored to.
+  final UiAnchor uiAnchor;
+
+  /// Whether the renderer operates in inline (non-alt-screen) mode.
+  bool get isInline =>
+      screenMode == ScreenMode.inline || screenMode == ScreenMode.inlineAuto;
 
   /// The minimum time between renders.
   Duration get frameTime => Duration(milliseconds: 1000 ~/ fps);
@@ -660,6 +683,11 @@ class BufferedTuiRenderer implements TuiRenderer {
 /// parses ANSI-styled strings into a cell buffer and diffs frames to emit
 /// minimal terminal updates.
 ///
+/// In full-screen mode this writes UV output directly to the terminal. In
+/// inline mode it captures UV output first, rewrites absolute row-addressing
+/// escape sequences into the configured inline region, and then restores the
+/// surrounding CLI cursor position.
+///
 /// Upstream references:
 /// - `third_party/ultraviolet/styled.go` (`StyledString.Draw`)
 /// - `third_party/ultraviolet/terminal_renderer.go` (`UvTerminalRenderer.Render`)
@@ -692,6 +720,12 @@ class UltravioletTuiRenderer implements TuiRenderer {
 
   uv_buffer.ScreenBuffer? _screen;
   uv_term.UvTerminalRenderer? _renderer;
+
+  // Inline mode captures UV output so absolute row-addressing sequences can
+  // be rewritten into the anchored region before bytes reach the terminal.
+  final StringBuffer _inlineCapture = StringBuffer();
+  _CapturingSink? _inlineSink;
+  bool _inlineNeedsFullClear = false;
 
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
@@ -741,27 +775,24 @@ class UltravioletTuiRenderer implements TuiRenderer {
   void _initialize() {
     if (_initialized) return;
 
-    if (_options.altScreen) {
+    final isInline = _options.isInline;
+
+    if (!isInline && _options.altScreen) {
       terminal.enterAltScreen();
     }
     if (_options.hideCursor) {
       terminal.hideCursor();
     }
-    if (_options.altScreen) {
+    if (!isInline && _options.altScreen) {
       terminal.clearScreen();
     }
 
     final (width: w, height: h) = terminal.size;
-    _screen = uv_buffer.ScreenBuffer(w, h);
+    final renderHeight = isInline ? _options.inlineHeight.clamp(1, h) : h;
+    _screen = uv_buffer.ScreenBuffer(w, renderHeight);
 
-    final sink = _TerminalStringSink(terminal);
     final envMap = io.Platform.environment;
     final env = envMap.entries.map((e) => '${e.key}=${e.value}').toList();
-    // The UV-style renderer needs to know whether output is a TTY so it can
-    // pick the correct color profile and enable terminal optimizations.
-    //
-    // Upstream: `third_party/ultraviolet/terminal_renderer.go` uses a real
-    // terminal writer; our `StringSink` abstraction requires an explicit hint.
     if (terminal.isTerminal && !envMap.containsKey('TTY_FORCE')) {
       env.add('TTY_FORCE=1');
     }
@@ -770,13 +801,27 @@ class UltravioletTuiRenderer implements TuiRenderer {
         (envMap['TERM'] == null || (envMap['TERM'] ?? '').isEmpty)) {
       env.add('TERM=xterm-256color');
     }
-    _renderer = uv_term.UvTerminalRenderer(sink, env: env);
-    _renderer!.setFullscreen(_options.altScreen);
-    _renderer!.setRelativeCursor(!_options.altScreen);
-    final mapNewline =
-        !io.Platform.isWindows && (terminal.isTerminal || _options.altScreen);
-    _renderer!.setMapNewline(mapNewline);
-    _renderer!.setScrollOptim(_options.altScreen);
+
+    // For inline mode, capture UV output into a buffer so we can offset
+    // cursor positioning to the UI region.  The UV renderer runs in
+    // fullscreen mode (absolute CUP) on the full-size buffer; we
+    // post-process the output to shift row coordinates.
+    if (isInline) {
+      _inlineSink = _CapturingSink(_inlineCapture);
+      _renderer = uv_term.UvTerminalRenderer(_inlineSink!, env: env);
+      _renderer!.setFullscreen(true);
+      _renderer!.setRelativeCursor(false);
+      _renderer!.setMapNewline(false);
+      _renderer!.setScrollOptim(false);
+    } else {
+      final sink = _TerminalStringSink(terminal);
+      _renderer = uv_term.UvTerminalRenderer(sink, env: env);
+      _renderer!.setFullscreen(true);
+      _renderer!.setRelativeCursor(false);
+      final mapNewline = !io.Platform.isWindows && terminal.isTerminal;
+      _renderer!.setMapNewline(mapNewline);
+      _renderer!.setScrollOptim(true);
+    }
 
     // Apply terminal movement optimizations. Allow a compatibility override so
     // callers can provide capability bits without probing the terminal.
@@ -787,9 +832,11 @@ class UltravioletTuiRenderer implements TuiRenderer {
       _renderer!.setTabStops(w);
     }
 
-    if (_options.altScreen) {
+    if (!isInline) {
       _renderer!.saveCursor();
       _renderer!.erase();
+    } else {
+      _inlineNeedsFullClear = true;
     }
 
     _initialized = true;
@@ -802,10 +849,17 @@ class UltravioletTuiRenderer implements TuiRenderer {
     final (width: w, height: h) = terminal.size;
     final scr = _screen;
     if (scr == null) return;
-    if (scr.width() == w && scr.height() == h) return;
-    scr.resize(w, h);
-    _renderer?.resize(w, h);
-    _renderer?.erase();
+    final targetHeight = _options.isInline
+        ? _options.inlineHeight.clamp(1, h)
+        : h;
+    if (scr.width() == w && scr.height() == targetHeight) return;
+    scr.resize(w, targetHeight);
+    _renderer?.resize(w, targetHeight);
+    if (!_options.isInline) {
+      _renderer?.erase();
+    } else {
+      _inlineNeedsFullClear = true;
+    }
   }
 
   @override
@@ -817,10 +871,13 @@ class UltravioletTuiRenderer implements TuiRenderer {
       View v => v.content,
       _ => view.toString(),
     };
+    final targetHeight = _options.isInline
+        ? _options.inlineHeight.clamp(1, terminal.height)
+        : terminal.height;
     final sizeChanged =
         _screen == null ||
         _screen!.width() != terminal.width ||
-        _screen!.height() != terminal.height;
+        _screen!.height() != targetHeight;
 
     // Frame rate limiting using Stopwatch (immune to clock adjustments)
     if (_frameStopwatch.isRunning) {
@@ -885,6 +942,8 @@ class UltravioletTuiRenderer implements TuiRenderer {
       return;
     }
 
+    final isInline = _options.isInline;
+
     // Phase 1: ANSI parse → StyledString
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
     final ss = uv_styled.newStyledString(
@@ -899,19 +958,29 @@ class UltravioletTuiRenderer implements TuiRenderer {
 
     // Phase 3: Diff buffers and compute update sequence
     final Stopwatch? diffSw = tracing ? (Stopwatch()..start()) : null;
+    if (isInline) {
+      // Inline mode restores the real terminal cursor after every frame, so
+      // the UV renderer must not rely on its previous cursor position when
+      // generating incremental updates.
+      r.setPosition(-1, -1);
+    }
     r.render(scr.buffer);
     diffSw?.stop();
 
     // Phase 4: Flush to terminal
     final Stopwatch? writeSw = tracing ? (Stopwatch()..start()) : null;
-    // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
-    // terminal buffers all changes and paints them atomically.  This prevents
-    // visible flashes when scroll optimization emits DL/IL before the
-    // replacement content arrives.  Terminals that don't support mode 2026
-    // silently ignore the sequences.
-    terminal.write(UvAnsi.beginSynchronizedUpdate);
-    r.flush();
-    terminal.write(UvAnsi.endSynchronizedUpdate);
+    if (isInline) {
+      _flushInline();
+    } else {
+      // Wrap the flush in Synchronized Update markers (DEC mode 2026) so the
+      // terminal buffers all changes and paints them atomically.  This prevents
+      // visible flashes when scroll optimization emits DL/IL before the
+      // replacement content arrives.  Terminals that don't support mode 2026
+      // silently ignore these sequences.
+      terminal.write(UvAnsi.beginSynchronizedUpdate);
+      r.flush();
+      terminal.write(UvAnsi.endSynchronizedUpdate);
+    }
     writeSw?.stop();
     _dirty = false;
 
@@ -927,13 +996,104 @@ class UltravioletTuiRenderer implements TuiRenderer {
     }
   }
 
+  /// Flushes the current frame in inline mode.
+  ///
+  /// Inline mode preserves scrollback and renders the UI within a bounded
+  /// region at the top or bottom of the viewport.
+  ///
+  /// The UV renderer runs in fullscreen mode on the full terminal buffer,
+  /// generating absolute CUP sequences.  We capture that output and offset
+  /// all row coordinates so they land inside the UI region.
+  void _flushInline() {
+    final r = _renderer;
+    final sink = _inlineSink;
+    if (r == null || sink == null) return;
+
+    final termHeight = terminal.height;
+    final scr = _screen;
+    if (scr == null) return;
+    final uiHeight = scr.height();
+    final uiStartRow = _options.uiAnchor == UiAnchor.bottom
+        ? termHeight - uiHeight + 1
+        : 1;
+
+    // Clear the capturing buffer and let the UV renderer write into it.
+    _inlineCapture.clear();
+    r.flush();
+    final raw = _inlineCapture.toString();
+    if (raw.isEmpty) return;
+
+    // Shift all absolute row-addressing sequences into the anchored inline
+    // region before replaying UV's diff output onto the real terminal.
+    final offset = uiStartRow - 1;
+    final shifted = offset > 0 ? _offsetInlineRows(raw, offset) : raw;
+
+    // Build the output.
+    final out = StringBuffer();
+    out.write(Ansi.beginSynchronizedUpdate);
+    out.write(Ansi.cursorSaveDec);
+
+    // Clear the entire inline region only on first paint or after resize.
+    if (_inlineNeedsFullClear) {
+      for (var row = 0; row < uiHeight; row++) {
+        final absRow = uiStartRow + row;
+        out.write(Ansi.cursorTo(absRow, 1));
+        out.write(Ansi.clearLine);
+      }
+      _inlineNeedsFullClear = false;
+    }
+
+    // Write the offset UV output.
+    out.write(shifted);
+    out.write(Ansi.cursorRestoreDec);
+
+    if (!_options.hideCursor) {
+      out.write(Ansi.cursorShow);
+    }
+    out.write(Ansi.endSynchronizedUpdate);
+
+    terminal.write(out.toString());
+  }
+
+  /// Offsets all absolute row-addressing escape sequences by [rowOffset].
+  ///
+  /// Handles:
+  /// - `CUP` / `HVP`: `ESC[<row>;<col>H` and `ESC[<row>;<col>f`
+  /// - home shortcuts: `ESC[H` / `ESC[f`
+  /// - `VPA`: `ESC[<row>d`
+  static String _offsetInlineRows(String input, int rowOffset) {
+    if (input.isEmpty || rowOffset <= 0) return input;
+
+    final cupOrHvpRe = RegExp(r'\x1b\[(?:(\d+)(?:;(\d+))?)?([Hf])');
+    final vpaRe = RegExp(r'\x1b\[(\d+)d');
+
+    var result = input;
+    result = result.replaceAllMapped(cupOrHvpRe, (m) {
+      final rowStr = m.group(1);
+      final colStr = m.group(2);
+      final finalByte = m.group(3)!;
+      final row = (rowStr == null ? 1 : int.parse(rowStr)) + rowOffset;
+      final col = colStr == null ? 1 : int.parse(colStr);
+      return '\x1b[$row;$col$finalByte';
+    });
+    result = result.replaceAllMapped(vpaRe, (m) {
+      final row = int.parse(m.group(1)!) + rowOffset;
+      return '\x1b[${row}d';
+    });
+
+    return result;
+  }
+
   @override
   void dispose() {
     if (!_initialized) return;
+
+    final isInline = _options.isInline;
+
     if (_options.hideCursor) {
       terminal.showCursor();
     }
-    if (_options.altScreen) {
+    if (!isInline && _options.altScreen) {
       terminal.exitAltScreen();
     }
     _initialized = false;
@@ -958,6 +1118,29 @@ final class _TerminalStringSink implements StringSink {
 
   @override
   void writeln([Object? obj = '']) => terminal.writeln(obj?.toString() ?? '');
+}
+
+/// A [StringSink] that captures all writes into a [StringBuffer].
+///
+/// Used by the inline-mode UV renderer so its output can be post-processed
+/// (cursor-position offset) before being written to the real terminal.
+final class _CapturingSink implements StringSink {
+  _CapturingSink(this._target);
+
+  final StringBuffer _target;
+
+  @override
+  void write(Object? obj) => _target.write(obj?.toString() ?? '');
+
+  @override
+  void writeAll(Iterable objects, [String separator = '']) =>
+      _target.writeAll(objects, separator);
+
+  @override
+  void writeCharCode(int charCode) => _target.writeCharCode(charCode);
+
+  @override
+  void writeln([Object? obj = '']) => _target.writeln(obj?.toString() ?? '');
 }
 
 /// A renderer that does nothing (for testing).

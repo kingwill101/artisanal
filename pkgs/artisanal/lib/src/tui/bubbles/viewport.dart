@@ -235,7 +235,7 @@ class ViewportModel extends ViewComponent {
   /// useful for setting borders, margins and padding.
   final Style style;
 
-  /// HighlightStyle highlights the ranges set with [SetHighlights].
+  /// HighlightStyle highlights the ranges set with `copyWith(highlights: ...)`.
   final Style highlightStyle;
 
   /// SelectedHighlightStyle highlights the highlight range focused during

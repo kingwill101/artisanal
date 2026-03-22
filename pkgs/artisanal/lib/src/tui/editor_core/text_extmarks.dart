@@ -121,10 +121,7 @@ final class TextExtmarkOptions {
 }
 
 final class TextExtmarkPositionRange {
-  const TextExtmarkPositionRange({
-    required this.start,
-    required this.end,
-  });
+  const TextExtmarkPositionRange({required this.start, required this.end});
 
   final TextPosition start;
   final TextPosition end;
@@ -195,9 +192,7 @@ final class TextExtmarksController {
     if (ids == null || ids.isEmpty) {
       return const <TextExtmark>[];
     }
-    return _sorted(
-      ids.map((id) => _extmarks[id]).whereType<TextExtmark>(),
-    );
+    return _sorted(ids.map((id) => _extmarks[id]).whereType<TextExtmark>());
   }
 
   void clear() {
@@ -205,10 +200,7 @@ final class TextExtmarksController {
     _extmarksByType.clear();
   }
 
-  void applyInsertion({
-    required int offset,
-    required String text,
-  }) {
+  void applyInsertion({required int offset, required String text}) {
     final insertOffset = offset.clamp(0, 1 << 30);
     final length = text.characters.length;
     if (length <= 0) {
@@ -243,10 +235,7 @@ final class TextExtmarksController {
     }
   }
 
-  void applyDeletion({
-    required int startOffset,
-    required int endOffset,
-  }) {
+  void applyDeletion({required int startOffset, required int endOffset}) {
     final range = _normalizedOffsets(startOffset, endOffset);
     final deleteStart = range.start;
     final deleteEnd = range.end;
@@ -276,7 +265,8 @@ final class TextExtmarksController {
         continue;
       }
 
-      if (extmark.startOffset >= deleteStart && extmark.endOffset <= deleteEnd) {
+      if (extmark.startOffset >= deleteStart &&
+          extmark.endOffset <= deleteEnd) {
         toDelete.add(entry.key);
         continue;
       }
@@ -295,7 +285,8 @@ final class TextExtmarksController {
         continue;
       }
 
-      if (extmark.startOffset < deleteStart && extmark.endOffset > deleteStart) {
+      if (extmark.startOffset < deleteStart &&
+          extmark.endOffset > deleteStart) {
         _extmarks[entry.key] = TextExtmark(
           id: extmark.id,
           type: extmark.type,

@@ -59,10 +59,7 @@ Future<void> main() async {
         surfaceId: _popupId,
         width: 14,
         height: 3,
-        lines: const <String>[
-          'Hint',
-          'Waiting...',
-        ],
+        lines: const <String>['Hint', 'Waiting...'],
         accent: '#f59e0b',
       ),
     );
@@ -87,10 +84,7 @@ Future<void> main() async {
               surfaceId: _popupId,
               width: 14,
               height: 3,
-              lines: const <String>[
-                'Hint',
-                'Focused popup',
-              ],
+              lines: const <String>['Hint', 'Focused popup'],
               accent: '#22c55e',
             ),
           );

@@ -545,4 +545,176 @@ void main() {
       expect(result, contains('32')); // Green for cell (from cellStyle)
     });
   });
+
+  group('TableTheme', () {
+    test('byName is case-insensitive and unknown names fallback', () {
+      final neon = TableTheme.byName('NEON');
+      expect(neon.effects, isNotEmpty);
+
+      final fallback = TableTheme.byName('does-not-exist');
+      expect(fallback, equals(TableTheme.defaultTheme));
+    });
+
+    test('presets expose names and values in parallel', () {
+      expect(TableTheme.names, isNotEmpty);
+      expect(TableTheme.values.length, equals(TableTheme.names.length));
+
+      for (final name in TableTheme.names) {
+        final theme = TableTheme.byName(name);
+        expect(theme.effects, isNotEmpty);
+      }
+    });
+
+    test('effect applies to target section, row, and column', () {
+      final theme = TableTheme([
+        TableThemeEffect(
+          section: TableThemeSection.header,
+          style: Style().foreground(Colors.red),
+        ),
+        TableThemeEffect(
+          section: TableThemeSection.body,
+          row: 1,
+          column: 0,
+          style: Style().foreground(Colors.green),
+        ),
+        TableThemeEffect(
+          section: TableThemeSection.body,
+          row: 0,
+          column: 1,
+          style: Style().foreground(Colors.cyan),
+        ),
+        TableThemeEffect(
+          section: TableThemeSection.body,
+          row: 0,
+          column: 1,
+          style: Style().foreground(Colors.blue),
+        ),
+      ]);
+
+      final headerStyle = theme.styleForCell(
+        row: Table.headerRow,
+        column: 0,
+        section: TableThemeSection.header,
+        rowCount: 3,
+        columnCount: 2,
+        hasHeader: true,
+        hasDarkBackground: true,
+      );
+      expect(headerStyle?.foregroundColor?.toHex(), equals(Colors.red.toHex()));
+
+      final targetedBodyStyle = theme.styleForCell(
+        row: 1,
+        column: 0,
+        section: TableThemeSection.body,
+        rowCount: 3,
+        columnCount: 2,
+        hasHeader: true,
+        hasDarkBackground: true,
+      );
+      expect(
+        targetedBodyStyle?.foregroundColor?.toHex(),
+        equals(Colors.green.toHex()),
+      );
+
+      final fallbackBodyStyle = theme.styleForCell(
+        row: 0,
+        column: 0,
+        section: TableThemeSection.body,
+        rowCount: 3,
+        columnCount: 2,
+        hasHeader: true,
+        hasDarkBackground: true,
+      );
+      expect(fallbackBodyStyle?.foregroundColor, isNull);
+
+      final lastBodyStyle = theme.styleForCell(
+        row: 0,
+        column: 1,
+        section: TableThemeSection.body,
+        rowCount: 3,
+        columnCount: 2,
+        hasHeader: true,
+        hasDarkBackground: true,
+      );
+      expect(
+        lastBodyStyle?.foregroundColor?.toHex(),
+        equals(Colors.blue.toHex()),
+      );
+    });
+
+    test('gradient axis sampling', () {
+      final theme = TableTheme([
+        TableThemeEffect(
+          section: TableThemeSection.body,
+          gradient: [Colors.black, Colors.white],
+          gradientAxis: TableThemeGradientAxis.vertical,
+        ),
+      ]);
+
+      final top = theme.styleForCell(
+        row: 0,
+        column: 0,
+        section: TableThemeSection.body,
+        rowCount: 4,
+        columnCount: 2,
+        hasHeader: false,
+        hasDarkBackground: true,
+      );
+      final middle = theme.styleForCell(
+        row: 2,
+        column: 0,
+        section: TableThemeSection.body,
+        rowCount: 4,
+        columnCount: 2,
+        hasHeader: false,
+        hasDarkBackground: true,
+      );
+
+      expect(top?.foregroundColor?.toHex(), equals('#000000'));
+      expect(middle?.foregroundColor?.toHex(), equals('#aaaaaa'));
+    });
+
+    test('blend mode math', () {
+      final base = const BasicColor('#404040');
+      final overlay = const BasicColor('#808080');
+
+      expect(
+        TableTheme.applyBlendMode(
+          base,
+          overlay,
+          TableBlendMode.multiply,
+          hasDarkBackground: true,
+        ).toHex(),
+        equals('#202020'),
+      );
+
+      expect(
+        TableTheme.applyBlendMode(
+          base,
+          overlay,
+          TableBlendMode.screen,
+          hasDarkBackground: true,
+        ).toHex(),
+        equals('#a0a0a0'),
+      );
+    });
+
+    test('adaptive colors follow background hint', () {
+      final base = AdaptiveColor(light: Colors.green, dark: Colors.red);
+      final dark = TableTheme.applyBlendMode(
+        base,
+        const BasicColor('#ffffff'),
+        TableBlendMode.multiply,
+        hasDarkBackground: true,
+      ).toHex();
+      final light = TableTheme.applyBlendMode(
+        base,
+        const BasicColor('#ffffff'),
+        TableBlendMode.multiply,
+        hasDarkBackground: false,
+      ).toHex();
+
+      expect(dark, isNot(equals(light)));
+    });
+  });
 }

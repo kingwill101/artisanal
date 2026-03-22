@@ -154,7 +154,7 @@ class ConfirmStyles {
 
 /// Display mode for the confirm component.
 enum ConfirmDisplayMode {
-  /// Show as Yes/No toggle: "Delete file? [Yes] / No"
+  /// Show as Yes/No toggle: "Delete file? `Yes` / No"
   toggle,
 
   /// Show as hint: "Delete file? (y/n)"
@@ -307,7 +307,7 @@ class ConfirmModel extends ViewComponent {
     return buffer.toString();
   }
 
-  /// Renders toggle mode: [Yes] / No or Yes / [No]
+  /// Renders toggle mode: `Yes` / No or Yes / `No`
   void _renderToggleMode(StringBuffer buffer) {
     if (_value) {
       buffer.write('[');

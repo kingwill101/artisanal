@@ -47,7 +47,7 @@ final class Link {
       other is Link && other.url == url && other.params == params;
 
   @override
-  int get hashCode => Object.hash(url, params);
+  int get hashCode => _mixHash(url.hashCode, params.hashCode);
 }
 
 /// Color representation sufficient for Ultraviolet parity tests.
@@ -78,7 +78,7 @@ final class UvBasic16 extends UvColor {
       other is UvBasic16 && other.index == index && other.bright == bright;
 
   @override
-  int get hashCode => Object.hash(index, bright);
+  int get hashCode => index | (bright ? 0x100 : 0);
 }
 
 /// 256-color indexed palette entry.
@@ -92,7 +92,7 @@ final class UvIndexed256 extends UvColor {
       other is UvIndexed256 && other.index == index;
 
   @override
-  int get hashCode => index.hashCode;
+  int get hashCode => index;
 }
 
 /// 24-bit RGBA color.
@@ -113,7 +113,7 @@ final class UvRgb extends UvColor {
       other.a == a;
 
   @override
-  int get hashCode => Object.hash(r, g, b, a);
+  int get hashCode => r | (g << 8) | (b << 16) | (a << 24);
 }
 
 /// Text attributes (bitmask).
@@ -146,6 +146,12 @@ final class UvStyle {
   final UvColor? underlineColor;
   final UnderlineStyle underline;
   final int attrs;
+
+  /// A packed metadata key for this style.
+  ///
+  /// This folds colors, underline mode, and attributes into one stable integer
+  /// so callers can cheaply compare and cache style state.
+  int get packedKey => _packStyleExact(this);
 
   /// Whether this style has no attributes or colors set.
   bool get isZero =>
@@ -180,6 +186,7 @@ final class UvStyle {
   @override
   bool operator ==(Object other) =>
       other is UvStyle &&
+      other.packedKey == packedKey &&
       other.fg == fg &&
       other.bg == bg &&
       other.underlineColor == underlineColor &&
@@ -187,61 +194,211 @@ final class UvStyle {
       other.attrs == attrs;
 
   @override
-  int get hashCode => Object.hash(fg, bg, underlineColor, underline, attrs);
+  int get hashCode => packedKey;
+}
+
+/// Fixed-size packed representation of a [Cell].
+///
+/// This is structured into four machine-word lanes so it can be compared as a
+/// small SIMD-sized tuple in hot diff paths.
+final class PackedCell {
+  const PackedCell({
+    required this.word0,
+    required this.word1,
+    required this.word2,
+    required this.word3,
+  });
+
+  final int word0;
+  final int word1;
+  final int word2;
+  final int word3;
+
+  /// Returns a copy of the words as a fixed-length list for compact inspection.
+  List<int> get words => <int>[word0, word1, word2, word3];
+
+  @override
+  bool operator ==(Object other) =>
+      other is PackedCell &&
+      other.word0 == word0 &&
+      other.word1 == word1 &&
+      other.word2 == word2 &&
+      other.word3 == word3;
+
+  @override
+  int get hashCode => Object.hash(word0, word1, word2, word3);
 }
 
 /// A single cell in a terminal [Buffer].
 ///
-/// A cell contains a character (or string for multi-byte characters), a [UvStyle],
-/// an optional [Link], and its display width. It can also hold a [drawable]
-/// for rendering images or complex graphics.
+/// A cell contains one grapheme, a [UvStyle], an optional [Link], and its
+/// display width. This Dart port keeps the public mutable API but also caches a
+/// packed metadata signature so equality and hashing stay fast for the common
+/// case of plain single-rune cells.
 ///
 /// Upstream: `third_party/ultraviolet/cell.go` (`Cell`, `EmptyCell`).
-/// A single cell in a terminal [Buffer].
 final class Cell {
   Cell({
-    this.content = '',
-    this.style = const UvStyle(),
-    this.link = const Link(),
+    String content = '',
+    UvStyle style = const UvStyle(),
+    Link link = const Link(),
     this.drawable,
     int? width,
-  }) : width = width ?? (content.isEmpty ? 0 : 1);
+  }) {
+    _width = width ?? (content.isEmpty ? 0 : 1);
+    _setContent(content);
+    _setStyle(style);
+    _setLink(link);
+  }
 
-  String content;
-  UvStyle style;
-  Link link;
-  int width;
+  Cell._packed({
+    required UvStyle style,
+    required Link link,
+    required int width,
+    required int contentKind,
+    required int contentValue,
+    required int styleId,
+    required int linkId,
+    this.drawable,
+  }) : _style = style,
+       _link = link,
+       _width = width,
+       _contentKind = contentKind,
+       _contentValue = contentValue,
+       _styleId = styleId,
+       _linkId = linkId {
+    _attachPooledContentFinalizerIfNeeded();
+    _attachLinkFinalizerIfNeeded();
+  }
+
+  UvStyle _style = const UvStyle();
+  Link _link = const Link();
+  int _width = 0;
+  int _contentKind = _CellContentKind.empty;
+  int _contentValue = 0;
+  int _styleId = 0;
+  int _linkId = 0;
+  final Object _pooledContentToken = Object();
+  final Object _linkFinalizerToken = Object();
+
+  static final Finalizer<int> _pooledContentFinalizer = Finalizer<int>((id) {
+    _graphemePool.release(id);
+  });
+  static final Finalizer<int> _linkFinalizer = Finalizer<int>((id) {
+    _linkRegistry.release(id);
+  });
+
+  /// The grapheme content stored in this cell.
+  String get content => switch (_contentKind) {
+    _CellContentKind.empty => '',
+    _CellContentKind.space => ' ',
+    _CellContentKind.singleScalar => String.fromCharCode(_contentValue),
+    _CellContentKind.complex => _graphemePool.resolve(_contentValue),
+    _ => '',
+  };
+  set content(String value) => _setContent(value);
+
+  /// The canonicalized style for this cell.
+  UvStyle get style => _style;
+  set style(UvStyle value) => _setStyle(value);
+
+  /// The canonicalized hyperlink metadata for this cell.
+  Link get link => _link;
+  set link(Link value) => _setLink(value);
+
+  /// The display width of this cell in terminal columns.
+  int get width => _width;
+  set width(int value) {
+    _width = value;
+    _updatePackedContent();
+  }
+
   Object? drawable;
+
+  /// Returns a fixed-layout packed cell tuple for fast comparisons.
+  ///
+  /// Layout:
+  /// - `word0`: content kind/width plus low content bits
+  /// - `word1`: content high bits
+  /// - `word2`: canonicalized style identity
+  /// - `word3`: canonicalized link identity
+  PackedCell get packed {
+    final contentLo = _contentValue & _contentPackLoMask;
+    final contentHi = _contentValue >>> _contentValueBits;
+    return PackedCell(
+      word0:
+          (_contentKind & _cellContentKindMask) |
+          ((_width & _cellWidthMask) << _cellWidthShift) |
+          (contentLo << _packedContentShift),
+      word1: contentHi,
+      word2: _styleId,
+      word3: _linkId,
+    );
+  }
+
+  /// The pooled complex grapheme id for this cell, if any.
+  ///
+  /// This is primarily useful for diagnostics and tests.
+  int? get pooledContentId =>
+      _contentKind == _CellContentKind.complex ? _contentValue : null;
+
+  /// The pooled link id for this cell, if any.
+  ///
+  /// This is primarily useful for diagnostics and tests.
+  int? get linkId => _linkId == 0 ? null : _linkId;
 
   /// Whether this cell has no content, style, link, or drawable.
   bool get isZero =>
-      content.isEmpty &&
-      width == 0 &&
-      style.isZero &&
-      link.isZero &&
+      _contentKind == _CellContentKind.empty &&
+      _width == 0 &&
+      _styleId == 0 &&
+      _linkId == 0 &&
       drawable == null;
 
   /// Whether this cell represents a plain space with no attributes.
   bool get isEmpty =>
-      content == ' ' &&
-      width == 1 &&
-      style.isZero &&
-      link.isZero &&
+      _contentKind == _CellContentKind.space &&
+      _width == 1 &&
+      _styleId == 0 &&
+      _linkId == 0 &&
       drawable == null;
 
   /// Returns a copy of this cell.
-  Cell clone() => Cell(
-    content: content,
-    style: style,
-    link: link,
-    width: width,
-    drawable: drawable,
-  );
+  Cell clone() {
+    if (_contentKind == _CellContentKind.complex) {
+      _graphemePool.retain(_contentValue);
+    }
+    if (_linkId != 0) {
+      _linkRegistry.retain(_linkId);
+    }
+    return Cell._packed(
+      style: _style,
+      link: _link,
+      width: _width,
+      contentKind: _contentKind,
+      contentValue: _contentValue,
+      styleId: _styleId,
+      linkId: _linkId,
+      drawable: drawable,
+    );
+  }
 
   /// Sets this cell to a space with width 1.
   void empty() {
-    content = ' ';
-    width = 1;
+    _releasePooledContent();
+    _width = 1;
+    _contentKind = _CellContentKind.space;
+    _contentValue = 0;
+  }
+
+  /// Releases any pooled grapheme content owned by this cell.
+  void dispose() {
+    _releaseLink();
+    _releasePooledContent();
+    _contentKind = _CellContentKind.empty;
+    _contentValue = 0;
+    _width = 0;
+    _updatePackedContent();
   }
 
   /// Creates a space cell with width 1.
@@ -257,11 +414,407 @@ final class Cell {
   @override
   bool operator ==(Object other) =>
       other is Cell &&
-      other.content == content &&
-      other.width == width &&
-      other.style == style &&
-      other.link == link;
+      other._contentKind == _contentKind &&
+      other._contentValue == _contentValue &&
+      other._width == _width &&
+      other._styleId == _styleId &&
+      other._linkId == _linkId &&
+      (identical(other._link, _link) || other._link == _link);
 
   @override
-  int get hashCode => Object.hash(content, width, style, link);
+  int get hashCode => _mixHash(
+    _mixHash(_mixHash(_contentKind, _contentValue), _width),
+    _mixHash(_styleId, _linkId),
+  );
+
+  void _setContent(String value) {
+    _releasePooledContent();
+    _assignPackedContent(value);
+  }
+
+  void _setStyle(UvStyle value) {
+    _style = value;
+    final packed = value.packedKey;
+    _styleId = value.isZero ? 0 : (packed == 0 ? 1 : packed);
+  }
+
+  void _setLink(Link value) {
+    _releaseLink();
+    if (value.isZero) {
+      _link = const Link();
+      _linkId = 0;
+      return;
+    }
+    final id = _linkRegistry.intern(value);
+    _linkId = id;
+    _link = _linkRegistry.resolve(id);
+    _attachLinkFinalizerIfNeeded();
+  }
+
+  void _updatePackedContent() {
+    final value = content;
+    _releasePooledContent();
+    _assignPackedContent(value);
+  }
+
+  void _assignPackedContent(String value) {
+    if (value.isEmpty) {
+      _contentKind = _CellContentKind.empty;
+      _contentValue = 0;
+      return;
+    }
+    if (value == ' ' && _width == 1) {
+      _contentKind = _CellContentKind.space;
+      _contentValue = 0;
+      return;
+    }
+    final scalar = _trySingleScalar(value);
+    if (scalar != null) {
+      _contentKind = _CellContentKind.singleScalar;
+      _contentValue = scalar;
+      return;
+    }
+    _contentKind = _CellContentKind.complex;
+    _contentValue = _graphemePool.intern(value, _width);
+    _attachPooledContentFinalizerIfNeeded();
+  }
+
+  void _releasePooledContent() {
+    if (_contentKind == _CellContentKind.complex) {
+      _pooledContentFinalizer.detach(_pooledContentToken);
+      _graphemePool.release(_contentValue);
+    }
+  }
+
+  void _attachPooledContentFinalizerIfNeeded() {
+    if (_contentKind != _CellContentKind.complex) return;
+    _pooledContentFinalizer.attach(
+      this,
+      _contentValue,
+      detach: _pooledContentToken,
+    );
+  }
+
+  void _releaseLink() {
+    if (_linkId == 0) {
+      return;
+    }
+    _linkFinalizer.detach(_linkFinalizerToken);
+    _linkRegistry.release(_linkId);
+    _link = const Link();
+    _linkId = 0;
+  }
+
+  void _attachLinkFinalizerIfNeeded() {
+    if (_linkId == 0) return;
+    _linkFinalizer.attach(this, _linkId, detach: _linkFinalizerToken);
+  }
+}
+
+abstract final class _CellContentKind {
+  static const int empty = 0;
+  static const int space = 1;
+  static const int singleScalar = 2;
+  static const int complex = 3;
+}
+
+final _GraphemePool _graphemePool = _GraphemePool();
+final _LinkRegistry _linkRegistry = _LinkRegistry();
+
+final class _GraphemePool {
+  final Map<({String value, int width}), int> _idsByKey =
+      <({String value, int width}), int>{};
+  final List<_GraphemeEntry?> _slots = <_GraphemeEntry?>[];
+  final List<int> _freeSlots = <int>[];
+
+  int intern(String value, int width) {
+    final key = (value: value, width: width);
+    final existing = _idsByKey[key];
+    if (existing != null) {
+      final entry = _entryForId(existing);
+      if (entry != null) {
+        entry.refCount++;
+        return existing;
+      }
+      _idsByKey.remove(key);
+    }
+
+    final slotIndex = _freeSlots.isEmpty
+        ? _allocateSlot()
+        : _freeSlots.removeLast();
+    final previous = _slots[slotIndex];
+    final generation = previous == null ? 0 : previous.generation + 1;
+    final id = _encodeId(slotIndex, generation, width);
+    final entry = _GraphemeEntry(
+      value: value,
+      width: width,
+      generation: generation,
+      refCount: 1,
+    );
+    _slots[slotIndex] = entry;
+    _idsByKey[key] = id;
+    return id;
+  }
+
+  void retain(int id) {
+    final entry = _entryForId(id);
+    if (entry == null) return;
+    entry.refCount++;
+  }
+
+  void release(int id) {
+    final entry = _entryForId(id);
+    if (entry == null) return;
+    entry.refCount--;
+    if (entry.refCount > 0) return;
+    final slotIndex = _decodeSlotIndex(id);
+    _idsByKey.remove((value: entry.value, width: entry.width));
+    _slots[slotIndex] = entry;
+    _freeSlots.add(slotIndex);
+  }
+
+  String resolve(int id) => _entryForId(id)?.value ?? '';
+
+  int refCount(int id) => _entryForId(id)?.refCount ?? 0;
+
+  int encodedWidth(int id) => (id >> _slotBits) & _widthMask;
+
+  int generation(int id) => id >> (_slotBits + _widthBits);
+
+  int slot(int id) => _decodeSlotIndex(id);
+
+  int _allocateSlot() {
+    final slotIndex = _slots.length;
+    _slots.add(null);
+    return slotIndex;
+  }
+
+  _GraphemeEntry? _entryForId(int id) {
+    final slotIndex = _decodeSlotIndex(id);
+    if (slotIndex < 0 || slotIndex >= _slots.length) return null;
+    final entry = _slots[slotIndex];
+    if (entry == null) return null;
+    if (entry.refCount <= 0) return null;
+    if (entry.generation != generation(id)) return null;
+    if (entry.width != encodedWidth(id)) return null;
+    return entry;
+  }
+
+  int _decodeSlotIndex(int id) => (id & _slotMask) - 1;
+
+  int _encodeId(int slotIndex, int generation, int width) {
+    return (generation << (_slotBits + _widthBits)) |
+        ((width & _widthMask) << _slotBits) |
+        ((slotIndex + 1) & _slotMask);
+  }
+}
+
+final class _GraphemeEntry {
+  _GraphemeEntry({
+    required this.value,
+    required this.width,
+    required this.generation,
+    required this.refCount,
+  });
+
+  final String value;
+  final int width;
+  final int generation;
+  int refCount;
+}
+
+final class _LinkRegistry {
+  int intern(Link link) {
+    _validateLinkText(link);
+    final key = (url: link.url, params: link.params);
+    final existing = _idsByKey[key];
+    if (existing != null) {
+      final entry = _entryForId(existing);
+      if (entry != null) {
+        entry.refCount++;
+        return existing;
+      }
+      _idsByKey.remove(key);
+    }
+
+    final slotIndex = _freeSlots.isEmpty
+        ? _allocateSlot()
+        : _freeSlots.removeLast();
+    if (slotIndex >= _linkSlotMask) {
+      throw StateError('Link registry exhausted');
+    }
+
+    final previous = _slots[slotIndex];
+    final generation = previous == null ? 0 : previous.generation + 1;
+    if (previous != null && generation > _linkGenerationMask) {
+      throw StateError('Link generation overflow');
+    }
+    final id = _encodeId(slotIndex, generation);
+    final entry = _LinkEntry(
+      id: id,
+      url: link.url,
+      params: link.params,
+      generation: generation,
+      refCount: 1,
+    );
+    _slots[slotIndex] = entry;
+    _idsByKey[key] = id;
+    return id;
+  }
+
+  void retain(int id) {
+    final entry = _entryForId(id);
+    if (entry == null) return;
+    entry.refCount++;
+  }
+
+  void release(int id) {
+    final entry = _entryForId(id);
+    if (entry == null) return;
+    entry.refCount--;
+    if (entry.refCount > 0) return;
+    final key = (url: entry.url, params: entry.params);
+    _idsByKey.remove(key);
+    final slotIndex = _decodeSlotIndex(id);
+    _freeSlots.add(slotIndex);
+  }
+
+  int refCount(int id) => _entryForId(id)?.refCount ?? 0;
+
+  int slot(int id) => _decodeSlotIndex(id);
+
+  int generation(int id) => id >> _linkSlotBits;
+
+  Link resolve(int id) {
+    final entry = _entryForId(id);
+    if (entry == null) return const Link();
+    return Link(url: entry.url, params: entry.params);
+  }
+
+  _LinkEntry? _entryForId(int id) {
+    final slotIndex = _decodeSlotIndex(id);
+    if (slotIndex < 0 || slotIndex >= _slots.length) return null;
+    final entry = _slots[slotIndex];
+    if (entry == null) return null;
+    if (entry.id != id) return null;
+    if (entry.refCount <= 0) return null;
+    return entry;
+  }
+
+  int _allocateSlot() {
+    final slotIndex = _slots.length;
+    _slots.add(null);
+    return slotIndex;
+  }
+
+  int _decodeSlotIndex(int id) => (id & _linkSlotMask) - 1;
+
+  int _encodeId(int slotIndex, int generation) =>
+      (generation << _linkSlotBits) | ((slotIndex + 1) & _linkSlotMask);
+
+  final Map<({String url, String params}), int> _idsByKey =
+      <({String url, String params}), int>{};
+  final List<_LinkEntry?> _slots = <_LinkEntry?>[];
+  final List<int> _freeSlots = <int>[];
+}
+
+final class _LinkEntry {
+  _LinkEntry({
+    required this.id,
+    required this.url,
+    required this.params,
+    required this.generation,
+    required this.refCount,
+  });
+
+  final int id;
+  final String url;
+  final String params;
+  final int generation;
+  int refCount;
+}
+
+void _validateLinkText(Link link) {
+  if (_containsControl(link.url) || _containsControl(link.params)) {
+    throw ArgumentError('Link URL and params must not contain control chars');
+  }
+}
+
+bool _containsControl(String value) => value.runes.any((r) => r < 0x20 || r == 0x7f);
+
+/// Returns the pooled grapheme refcount for [id].
+///
+/// This is exposed for targeted regression tests.
+int debugGraphemeRefCount(int id) => _graphemePool.refCount(id);
+
+/// Returns the encoded grapheme slot index for [id].
+int debugGraphemeSlot(int id) => _graphemePool.slot(id);
+
+/// Returns the encoded grapheme generation for [id].
+int debugGraphemeGeneration(int id) => _graphemePool.generation(id);
+
+/// Returns the encoded grapheme width for [id].
+int debugGraphemeWidth(int id) => _graphemePool.encodedWidth(id);
+
+/// Returns the pooled link refcount for [id].
+///
+/// This is exposed for targeted regression tests.
+int debugLinkRefCount(int id) => _linkRegistry.refCount(id);
+
+/// Returns the pooled link slot index for [id].
+///
+/// This is exposed for targeted regression tests.
+int debugLinkSlot(int id) => _linkRegistry.slot(id);
+
+/// Returns the pooled link generation for [id].
+///
+/// This is exposed for targeted regression tests.
+int debugLinkGeneration(int id) => _linkRegistry.generation(id);
+
+const int _slotBits = 16;
+const int _widthBits = 3;
+const int _slotMask = (1 << _slotBits) - 1;
+const int _widthMask = (1 << _widthBits) - 1;
+const int _linkSlotBits = 16;
+const int _linkGenerationBits = 8;
+const int _linkSlotMask = (1 << _linkSlotBits) - 1;
+const int _linkGenerationMask = (1 << _linkGenerationBits) - 1;
+const int _cellWidthBits = 4;
+const int _cellWidthMask = (1 << _cellWidthBits) - 1;
+const int _cellContentKindMask = 0x3;
+const int _cellWidthShift = 2;
+const int _packedContentShift = 6;
+const int _contentValueBits = 32;
+const int _contentPackLoMask = (1 << _contentValueBits) - 1;
+
+int? _trySingleScalar(String value) {
+  if (value.isEmpty) return null;
+  final iterator = value.runes.iterator;
+  if (!iterator.moveNext()) return null;
+  final scalar = iterator.current;
+  return iterator.moveNext() ? null : scalar;
+}
+
+int _mixHash(int a, int b) => 0x1fffffff & (a * 31 + b);
+
+int _packStyleExact(UvStyle style) {
+  const colorBits = 35;
+  const underlineShift = colorBits * 3;
+  const attrsShift = underlineShift + 3;
+  return _packColorExact(style.fg) |
+      (_packColorExact(style.bg) << colorBits) |
+      (_packColorExact(style.underlineColor) << (colorBits * 2)) |
+      (style.underline.index << underlineShift) |
+      (style.attrs << attrsShift);
+}
+
+int _packColorExact(UvColor? color) {
+  if (color == null) return 0;
+  return switch (color) {
+    UvBasic16(:final index, :final bright) =>
+      1 | (index << 3) | ((bright ? 1 : 0) << 7),
+    UvIndexed256(:final index) => 2 | (index << 3),
+    UvRgb(:final r, :final g, :final b, :final a) =>
+      3 | (r << 3) | (g << 11) | (b << 19) | (a << 27),
+  };
 }

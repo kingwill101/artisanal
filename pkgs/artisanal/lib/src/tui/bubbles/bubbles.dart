@@ -96,5 +96,8 @@ export 'wizard.dart' hide ValidateFunc;
 // Git
 export 'git_diff.dart';
 
+// Editor Core re-exports
+export '../editor_core/editor_core.dart';
+
 // Utilities
 export 'runeutil.dart';

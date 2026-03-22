@@ -62,7 +62,9 @@ void main() {
       channel.addInboundJson(
         const TerminalBridgeMessage.resize(width: 120, height: 50).encodeJson(),
       );
-      channel.addInboundJson(const TerminalBridgeMessage.shutdown().encodeJson());
+      channel.addInboundJson(
+        const TerminalBridgeMessage.shutdown().encodeJson(),
+      );
 
       expect(utf8.decode(await inputFuture), 'abc');
       expect(await resizeFuture, (width: 120, height: 50));
@@ -88,21 +90,27 @@ void main() {
       bridge.dispose();
     });
 
-    test('rejects outbound messages sent back as inbound host messages', () async {
-      final bridge = TerminalBridge();
-      final channel = TerminalBridgeJsonChannel(bridge);
+    test(
+      'rejects outbound messages sent back as inbound host messages',
+      () async {
+        final bridge = TerminalBridge();
+        final channel = TerminalBridgeJsonChannel(bridge);
 
-      expect(
-        () => channel.addInboundJson(
-          const TerminalBridgeMessage.output('bad').encodeJson(),
-        ),
-        throwsA(isA<ArgumentError>()),
-      );
-      final doneExpectation = expectLater(channel.outboundMessages, emitsDone);
-      await channel.dispose();
-      bridge.dispose();
-      await doneExpectation;
-    });
+        expect(
+          () => channel.addInboundJson(
+            const TerminalBridgeMessage.output('bad').encodeJson(),
+          ),
+          throwsA(isA<ArgumentError>()),
+        );
+        final doneExpectation = expectLater(
+          channel.outboundMessages,
+          emitsDone,
+        );
+        await channel.dispose();
+        bridge.dispose();
+        await doneExpectation;
+      },
+    );
   });
 
   group('JsonTerminalBackend', () {
@@ -123,7 +131,10 @@ void main() {
       inbound.add(const TerminalBridgeMessage.inputText('abc').encodeJson());
       inbound.add(
         utf8.encode(
-          const TerminalBridgeMessage.resize(width: 101, height: 28).encodeJson(),
+          const TerminalBridgeMessage.resize(
+            width: 101,
+            height: 28,
+          ).encodeJson(),
         ),
       );
       inbound.add(const TerminalBridgeMessage.shutdown().encodeJson());
@@ -174,24 +185,27 @@ void main() {
       await inbound.close();
     });
 
-    test('ignores late output writes after the transport sink closes', () async {
-      final inbound = StreamController<Object?>();
-      var writes = 0;
-      final backend = JsonTerminalBackend(
-        sendMessage: (_) {
-          writes++;
-          throw StateError('closed');
-        },
-        inboundMessages: inbound.stream,
-      );
-      final terminal = BackendTerminal(backend);
+    test(
+      'ignores late output writes after the transport sink closes',
+      () async {
+        final inbound = StreamController<Object?>();
+        var writes = 0;
+        final backend = JsonTerminalBackend(
+          sendMessage: (_) {
+            writes++;
+            throw StateError('closed');
+          },
+          inboundMessages: inbound.stream,
+        );
+        final terminal = BackendTerminal(backend);
 
-      expect(() => terminal.setTitle('late write'), returnsNormally);
-      expect(writes, 1);
+        expect(() => terminal.setTitle('late write'), returnsNormally);
+        expect(writes, 1);
 
-      terminal.dispose();
-      await inbound.close();
-    });
+        terminal.dispose();
+        await inbound.close();
+      },
+    );
 
     test('closing inbound transport emits shutdown', () async {
       final inbound = StreamController<Object?>();
@@ -209,30 +223,40 @@ void main() {
   });
 
   group('WebSocketTerminalBackend', () {
-    test('bridges websocket JSON messages into runtime input and output', () async {
-      final server = await io.HttpServer.bind(io.InternetAddress.loopbackIPv4, 0);
-      final acceptedSocket = server.transform(io.WebSocketTransformer()).first;
-      final client = await io.WebSocket.connect(
-        'ws://${server.address.address}:${server.port}',
-      );
-      final serverSocket = await acceptedSocket;
+    test(
+      'bridges websocket JSON messages into runtime input and output',
+      () async {
+        final server = await io.HttpServer.bind(
+          io.InternetAddress.loopbackIPv4,
+          0,
+        );
+        final acceptedSocket = server
+            .transform(io.WebSocketTransformer())
+            .first;
+        final client = await io.WebSocket.connect(
+          'ws://${server.address.address}:${server.port}',
+        );
+        final serverSocket = await acceptedSocket;
 
-      final backend = WebSocketTerminalBackend(serverSocket);
-      final terminal = BackendTerminal(backend);
-      final outputFuture = client.first;
-      final inputFuture = backend.inputStream!.first;
+        final backend = WebSocketTerminalBackend(serverSocket);
+        final terminal = BackendTerminal(backend);
+        final outputFuture = client.first;
+        final inputFuture = backend.inputStream!.first;
 
-      terminal.setTitle('ws');
-      client.add(const TerminalBridgeMessage.inputText('q').encodeJson());
+        terminal.setTitle('ws');
+        client.add(const TerminalBridgeMessage.inputText('q').encodeJson());
 
-      final outbound = TerminalBridgeMessage.decodeJson(await outputFuture as String);
-      expect(outbound.type, TerminalBridgeMessageType.output);
-      expect(outbound.data, contains('ws'));
-      expect(utf8.decode(await inputFuture), 'q');
+        final outbound = TerminalBridgeMessage.decodeJson(
+          await outputFuture as String,
+        );
+        expect(outbound.type, TerminalBridgeMessageType.output);
+        expect(outbound.data, contains('ws'));
+        expect(utf8.decode(await inputFuture), 'q');
 
-      terminal.dispose();
-      await client.close();
-      await server.close(force: true);
-    });
+        terminal.dispose();
+        await client.close();
+        await server.close(force: true);
+      },
+    );
   });
 }

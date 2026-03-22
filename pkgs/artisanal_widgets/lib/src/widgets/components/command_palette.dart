@@ -35,6 +35,29 @@ class CommandPaletteItem {
   final bool enabled;
 }
 
+/// A scored command palette match with explainable evidence.
+class CommandPaletteMatch {
+  /// Creates a scored match for [item].
+  const CommandPaletteMatch({
+    required this.item,
+    required this.score,
+    required this.evidence,
+    required this.originalIndex,
+  });
+
+  /// Matched item.
+  final CommandPaletteItem item;
+
+  /// Total score for ranking.
+  final double score;
+
+  /// Evidence ledger keyed by named feature.
+  final Map<String, double> evidence;
+
+  /// Original index in the source list.
+  final int originalIndex;
+}
+
 /// A searchable, grouped list displayed in a modal overlay.
 ///
 /// Modeled after VS Code's command palette / Ctrl+P picker. Supports:
@@ -127,6 +150,162 @@ class CommandPalette extends StatefulWidget {
 
   @override
   State<CommandPalette> createState() => _CommandPaletteState();
+
+  /// Returns ranked matches for [query] with deterministic scoring and
+  /// explainable evidence.
+  ///
+  /// Public for testing and parity-validation workflows.
+  static List<CommandPaletteMatch> matchItems(
+    List<CommandPaletteItem> items,
+    String query,
+  ) {
+    final normalizedQuery = query.trim().toLowerCase();
+
+    final matches = <CommandPaletteMatch>[];
+    for (var index = 0; index < items.length; index++) {
+      final item = items[index];
+      if (!item.enabled) continue;
+
+      final evidence = <String, double>{};
+      final label = item.label.toLowerCase();
+      final description = item.description?.toLowerCase();
+      final group = item.group?.toLowerCase();
+      double score = 0;
+
+      if (normalizedQuery.isEmpty) {
+        evidence['query:empty'] = 1.0;
+      } else {
+        if (label == normalizedQuery) {
+          score += 10000;
+          evidence['label:exact'] = 10000;
+        }
+
+        if (label.startsWith(normalizedQuery)) {
+          score += 6000;
+          evidence['label:prefix'] = 6000;
+        }
+
+        if (label.contains(normalizedQuery)) {
+          score += 4000;
+          evidence['label:contains'] = 4000;
+        }
+
+        if (description != null && description.contains(normalizedQuery)) {
+          score += 1800;
+          evidence['description:contains'] = 1800;
+        }
+
+        if (group != null && group.contains(normalizedQuery)) {
+          score += 1200;
+          evidence['group:contains'] = 1200;
+        }
+
+        final subseq = _subsequenceScore(normalizedQuery, label);
+        if (subseq > 0) {
+          score += subseq;
+          evidence['label:subsequence'] = subseq;
+        }
+
+        final typo = _typoScore(normalizedQuery, label);
+        if (typo > 0) {
+          score += typo;
+          evidence['label:typo'] = typo;
+        }
+      }
+
+      if (normalizedQuery.isEmpty || score > 0) {
+        matches.add(
+          CommandPaletteMatch(
+            item: item,
+            score: score,
+            evidence: evidence,
+            originalIndex: index,
+          ),
+        );
+      }
+    }
+
+    if (normalizedQuery.isEmpty) {
+      matches.sort(
+        (lhs, rhs) => lhs.originalIndex.compareTo(rhs.originalIndex),
+      );
+    } else {
+      matches.sort((lhs, rhs) {
+        final byScore = rhs.score.compareTo(lhs.score);
+        if (byScore != 0) return byScore;
+
+        final byLabel = lhs.item.label.compareTo(rhs.item.label);
+        if (byLabel != 0) return byLabel;
+
+        return lhs.originalIndex.compareTo(rhs.originalIndex);
+      });
+    }
+
+    return matches;
+  }
+
+  static double _subsequenceScore(String query, String target) {
+    if (query.isEmpty) return 0;
+
+    var qi = 0;
+    var firstMatchIndex = -1;
+    var lastMatchIndex = -1;
+
+    for (var ti = 0; ti < target.length && qi < query.length; ti++) {
+      if (target[ti] != query[qi]) continue;
+      if (qi == 0) firstMatchIndex = ti;
+      qi++;
+      lastMatchIndex = ti;
+    }
+
+    if (qi != query.length) return 0;
+
+    final span = lastMatchIndex - firstMatchIndex + 1;
+    final gapPenalty = (span - query.length) * 6.0;
+    final leadPenalty = firstMatchIndex.toDouble();
+    final base = 1500.0 - gapPenalty - leadPenalty;
+    if (base <= 0) return 20;
+    return base;
+  }
+
+  static double _typoScore(String query, String target) {
+    if (query.length < 2 || query.length > 8) return 0;
+    if ((target.length - query.length).abs() > 2) return 0;
+
+    final distance = _levenshtein(query, target);
+    if (distance == 0) return 0;
+    if (distance > 2) return 0;
+
+    const maxScore = 2400.0;
+    return maxScore - (distance * 800);
+  }
+
+  static int _levenshtein(String left, String right) {
+    if (left == right) return 0;
+
+    if (left.isEmpty) return right.length;
+    if (right.isEmpty) return left.length;
+
+    var previous = List<int>.generate(right.length + 1, (index) => index);
+    var current = List<int>.filled(right.length + 1, 0);
+
+    for (var leftIndex = 1; leftIndex <= left.length; leftIndex++) {
+      current[0] = leftIndex;
+      for (var rightIndex = 1; rightIndex <= right.length; rightIndex++) {
+        final leftMatch = left[leftIndex - 1] == right[rightIndex - 1] ? 0 : 1;
+        current[rightIndex] = [
+          previous[rightIndex] + 1,
+          current[rightIndex - 1] + 1,
+          previous[rightIndex - 1] + leftMatch,
+        ].reduce((lhs, rhs) => lhs < rhs ? lhs : rhs);
+      }
+      final swap = previous;
+      previous = current;
+      current = swap;
+    }
+
+    return previous[right.length];
+  }
 }
 
 class _CommandPaletteState extends State<CommandPalette> {

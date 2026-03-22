@@ -6,6 +6,7 @@ import 'package:artisanal/terminal.dart';
 
 import '../unicode/width.dart' as uni_width;
 import 'cmd.dart';
+import 'degradation.dart';
 import 'emoji_width_probe.dart';
 import 'key.dart' show Key, KeyParser, KeyResult, KeyType, MsgResult;
 import 'model.dart';
@@ -14,6 +15,7 @@ import 'renderer.dart';
 import 'startup_probe.dart';
 import 'terminal.dart';
 import 'trace.dart';
+import 'resize_coalescer.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
 import '../style/color.dart' show Color, ColorProfile;
@@ -161,13 +163,65 @@ final class ProgramReplay {
   }
 }
 
+/// Recorded user-input macro that can be replayed later.
+final class ProgramMacro {
+  /// Creates a macro from timed replay steps.
+  const ProgramMacro(this.steps);
+
+  /// The recorded timed steps.
+  final List<ProgramReplayStep> steps;
+
+  /// Converts this macro into a [ProgramReplay].
+  ProgramReplay toReplay({bool loop = false}) =>
+      ProgramReplay.script(steps, loop: loop);
+}
+
+/// Controls how the TUI renders relative to the terminal's primary screen.
+///
+/// [ScreenMode.fullScreen] takes over the entire terminal via the alternate
+/// screen buffer. [ScreenMode.inline] and [ScreenMode.inlineAuto] preserve
+/// scrollback and render the
+/// UI within a region anchored to the top or bottom of the visible
+/// viewport.
+enum ScreenMode {
+  /// Full-screen alternate-screen mode. Restores previous terminal content
+  /// on exit.
+  fullScreen,
+
+  /// Inline mode with a fixed UI height in rows. Scrollback is preserved
+  /// above or below the UI region.
+  inline,
+
+  /// Inline mode reserved for content-aware height selection.
+  ///
+  /// This currently behaves the same as [ScreenMode.inline] and uses
+  /// [ProgramOptions.inlineHeight] until automatic sizing lands.
+  inlineAuto,
+}
+
+/// Which edge of the terminal the inline UI region is anchored to.
+enum UiAnchor {
+  /// UI region is at the bottom of the viewport. Log output scrolls above it.
+  bottom,
+
+  /// UI region is at the top of the viewport. Log output scrolls below it.
+  top,
+}
+
 /// Options for configuring the TUI program.
 class ProgramOptions {
   static const Object _retainValue = Object();
 
   /// Creates program configuration options.
+  ///
+  /// When [screenMode] is provided it takes precedence over [altScreen].
+  /// The [altScreen] field is retained for backward compatibility and
+  /// resolves to `true` when [screenMode] is [ScreenMode.fullScreen].
   const ProgramOptions({
     this.altScreen = true,
+    this.screenMode,
+    this.inlineHeight = 4,
+    this.uiAnchor = UiAnchor.bottom,
     this.mouse = false,
     this.mouseMode = MouseMode.none,
     this.fps = 60,
@@ -198,13 +252,37 @@ class ProgramOptions {
     this.movementCapsOverride,
     this.shutdownSharedStdinOnExit = true,
     this.metricsInterval = const Duration(seconds: 1),
+    this.renderBudget = const RenderBudgetOptions(),
   }) : assert(fps >= 1 && fps <= 120, 'fps must be between 1 and 120');
 
   /// Whether to use the alternate screen buffer (fullscreen mode).
   ///
-  /// When true, the application takes over the entire terminal and
-  /// restores the original content on exit.
+  /// When [screenMode] is set, this field is ignored in favour of the
+  /// resolved mode. Prefer [effectiveScreenMode] when deciding which
+  /// renderer to create.
   final bool altScreen;
+
+  /// Explicit screen mode. When non-null this takes precedence over
+  /// [altScreen].
+  final ScreenMode? screenMode;
+
+  /// Height of the inline UI region in rows when using [ScreenMode.inline].
+  ///
+  /// Ignored when the effective mode is [ScreenMode.fullScreen].
+  /// [ScreenMode.inlineAuto] currently uses this same fixed height.
+  final int inlineHeight;
+
+  /// Which edge of the viewport the inline UI region is anchored to.
+  ///
+  /// Only meaningful when the effective mode is [ScreenMode.inline] or
+  /// [ScreenMode.inlineAuto].
+  final UiAnchor uiAnchor;
+
+  /// Resolves the effective [ScreenMode] from [screenMode] and [altScreen].
+  ScreenMode get effectiveScreenMode {
+    if (screenMode != null) return screenMode!;
+    return altScreen ? ScreenMode.fullScreen : ScreenMode.inline;
+  }
 
   /// Whether to enable mouse tracking.
   ///
@@ -232,6 +310,9 @@ class ProgramOptions {
   /// Limits how often the screen can be redrawn.
   /// Value is clamped to the range 1-120.
   final int fps;
+
+  /// Budget-aware render degradation configuration.
+  final RenderBudgetOptions renderBudget;
 
   /// Whether to automatically send [FrameTickMsg] at the configured [fps].
   ///
@@ -389,6 +470,10 @@ class ProgramOptions {
   /// When `null` (default), the runtime only auto-runs startup probes for the
   /// built-in terminal implementations that it knows how to interrogate
   /// safely. Arbitrary injected terminals are skipped unless they opt in.
+  ///
+  /// Inline modes skip auto-probing unless this is explicitly set to `true`
+  /// because cursor-report and emoji-width probes can visibly disturb the
+  /// primary screen.
   final bool? startupProbes;
 
   /// Optional cancellation signal. When this completes, the program exits with cancellation.
@@ -461,9 +546,13 @@ class ProgramOptions {
     ({bool useTabs, bool useBackspace})? movementCapsOverride,
     bool? shutdownSharedStdinOnExit,
     Duration? metricsInterval,
+    RenderBudgetOptions? renderBudget,
   }) {
     return ProgramOptions(
       altScreen: altScreen ?? this.altScreen,
+      screenMode: screenMode,
+      inlineHeight: inlineHeight,
+      uiAnchor: uiAnchor,
       mouse: mouse ?? this.mouse,
       mouseMode: mouseMode ?? this.mouseMode,
       fps: fps ?? this.fps,
@@ -498,6 +587,7 @@ class ProgramOptions {
       shutdownSharedStdinOnExit:
           shutdownSharedStdinOnExit ?? this.shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval ?? this.metricsInterval,
+      renderBudget: renderBudget ?? this.renderBudget,
     );
   }
 
@@ -632,6 +722,9 @@ class ProgramOptions {
   }) {
     return ProgramOptions(
       altScreen: altScreen,
+      screenMode: screenMode,
+      inlineHeight: inlineHeight,
+      uiAnchor: uiAnchor,
       mouse: mouse,
       mouseMode: mouseMode,
       fps: fps,
@@ -641,54 +734,46 @@ class ProgramOptions {
       inputTimeout: inputTimeout,
       catchPanics: catchPanics,
       maxStackFrames: maxStackFrames,
-      filter:
-          identical(filter, _retainValue)
-              ? this.filter
-              : filter as MessageFilter?,
-      interceptor:
-          identical(interceptor, _retainValue)
-              ? this.interceptor
-              : interceptor as ProgramInterceptor?,
-      replay:
-          identical(replay, _retainValue)
-              ? this.replay
-              : replay as ProgramReplay?,
+      filter: identical(filter, _retainValue)
+          ? this.filter
+          : filter as MessageFilter?,
+      interceptor: identical(interceptor, _retainValue)
+          ? this.interceptor
+          : interceptor as ProgramInterceptor?,
+      replay: identical(replay, _retainValue)
+          ? this.replay
+          : replay as ProgramReplay?,
       blockInputWhileReplay: blockInputWhileReplay,
       signalHandlers: signalHandlers,
       sendInterrupt: sendInterrupt,
       sendSuspendSignal: sendSuspendSignal,
-      startupTitle:
-          identical(startupTitle, _retainValue)
-              ? this.startupTitle
-              : startupTitle as String?,
-      input:
-          identical(input, _retainValue)
-              ? this.input
-              : input as Stream<List<int>>?,
-      output:
-          identical(output, _retainValue)
-              ? this.output
-              : output as void Function(String)?,
+      startupTitle: identical(startupTitle, _retainValue)
+          ? this.startupTitle
+          : startupTitle as String?,
+      input: identical(input, _retainValue)
+          ? this.input
+          : input as Stream<List<int>>?,
+      output: identical(output, _retainValue)
+          ? this.output
+          : output as void Function(String)?,
       disableRenderer: disableRenderer,
       ansiCompress: ansiCompress,
       useUltravioletRenderer: useUltravioletRenderer,
       useUltravioletInputDecoder: useUltravioletInputDecoder,
-      startupProbes:
-          identical(startupProbes, _retainValue)
-              ? this.startupProbes
-              : startupProbes as bool?,
-      cancelSignal:
-          identical(cancelSignal, _retainValue)
-              ? this.cancelSignal
-              : cancelSignal as Future<void>?,
+      startupProbes: identical(startupProbes, _retainValue)
+          ? this.startupProbes
+          : startupProbes as bool?,
+      cancelSignal: identical(cancelSignal, _retainValue)
+          ? this.cancelSignal
+          : cancelSignal as Future<void>?,
       environment: environment,
       inputTTY: inputTTY,
-      movementCapsOverride:
-          identical(movementCapsOverride, _retainValue)
-              ? this.movementCapsOverride
-              : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
+      movementCapsOverride: identical(movementCapsOverride, _retainValue)
+          ? this.movementCapsOverride
+          : movementCapsOverride as ({bool useTabs, bool useBackspace})?,
       shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval,
+      renderBudget: renderBudget,
     );
   }
 }
@@ -913,7 +998,10 @@ ProgramHostBinding _resolveProgramHost({
     return ProgramHostBinding(options: options, terminal: terminal);
   }
   final binding = host.resolve(options);
-  return ProgramHostBinding(options: binding.options, terminal: binding.terminal);
+  return ProgramHostBinding(
+    options: binding.options,
+    terminal: binding.terminal,
+  );
 }
 
 /// Error thrown when a program is cancelled via an external signal.
@@ -1019,6 +1107,12 @@ class Program<M extends Model> {
   final ProgramOptions _options;
   TuiTerminal? _terminal;
 
+  /// The current render-budget state.
+  ///
+  /// This is primarily useful for tests, diagnostics, and host integrations
+  /// that want to observe whether runtime degradation is active.
+  RenderBudgetState get renderBudgetState => _renderBudgetController.state;
+
   /// The current model state.
   M? _model;
 
@@ -1050,6 +1144,18 @@ class Program<M extends Model> {
   Timer? _uvInputTimeoutTimer;
   Timer? _metricsTimer;
   Timer? _frameTickTimer;
+  Timer? _resizeCoalesceTimer;
+  int? _pendingResizeWidth;
+  int? _pendingResizeHeight;
+  ResizeCoalescerState _resizeCoalescerState = const ResizeCoalescerState();
+  static const ResizeCoalescer _resizeCoalescer = ResizeCoalescer();
+  bool _degradationRepaintScheduled = false;
+  DegradationLevel? _lastRenderedDegradationLevel;
+  late final RenderBudgetController _renderBudgetController =
+      RenderBudgetController(
+        options: _options.renderBudget,
+        frameBudget: Duration(milliseconds: 1000 ~/ _options.fps),
+      );
 
   /// Frame tick state for FrameTickMsg.
   int _frameNumber = 0;
@@ -1061,8 +1167,11 @@ class Program<M extends Model> {
   /// Stream subscription for input.
   StreamSubscription<List<int>>? _inputSubscription;
   StreamSubscription<Msg>? _replaySubscription;
-  bool _replayActive = false;
+  int _replayDepth = 0;
   StreamSubscription<void>? _cancelSubscription;
+  bool _macroRecording = false;
+  final List<ProgramReplayStep> _macroSteps = <ProgramReplayStep>[];
+  DateTime? _lastMacroEventAt;
 
   /// Active stream commands.
   final List<StreamCmd> _streamCommands = [];
@@ -1425,11 +1534,16 @@ class Program<M extends Model> {
     }
 
     // Set up renderer based on options
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
 
     _createRenderer(rendererOptions);
@@ -1461,32 +1575,23 @@ class Program<M extends Model> {
 
   void _createRenderer(TuiRendererOptions options) {
     if (_options.disableRenderer) {
-      _renderer = SimpleTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+      _renderer = SimpleTuiRenderer(terminal: _terminal!, options: options);
     } else if (_options.useUltravioletRenderer) {
       _renderer = UltravioletTuiRenderer(
         terminal: _terminal!,
         options: options,
       );
-    } else if (_options.altScreen) {
-      _renderer = FullScreenTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+    } else if (options.screenMode == ScreenMode.fullScreen) {
+      _renderer = FullScreenTuiRenderer(terminal: _terminal!, options: options);
     } else {
-      _renderer = InlineTuiRenderer(
-        terminal: _terminal!,
-        options: options,
-      );
+      _renderer = InlineTuiRenderer(terminal: _terminal!, options: options);
     }
     _renderer!.initialize();
   }
 
   /// Initializes the model and renders initial view.
   Future<void> _initialize() async {
-    _replayActive = false;
+    _replayDepth = 0;
     _model = _initialModel;
 
     // Suppress renders during initialization to avoid visual flash of pre-init state
@@ -1610,38 +1715,62 @@ class Program<M extends Model> {
   void _startReplay() {
     final replay = _options.replay;
     if (replay == null || _replaySubscription != null) return;
+    _startReplayStream(replay.toStream(), parser: 'replay');
+  }
 
-    _replayActive = true;
+  void _startReplayStream(Stream<Msg> stream, {required String parser}) {
+    unawaited(_cancelReplayStream());
+    _replayDepth += 1;
     if (TuiTrace.enabled) {
       _trace(
-        'replay stream start blockInputWhileReplay=${_options.blockInputWhileReplay}',
+        'replay stream start parser=$parser '
+        'blockInputWhileReplay=${_options.blockInputWhileReplay}',
         tag: TraceTag.input,
       );
     }
-    _replaySubscription = replay.toStream().listen(
+    late final StreamSubscription<Msg> subscription;
+    subscription = stream.listen(
       (msg) {
         if (!_running) return;
         _traceInputBatch(
-          parser: 'replay',
+          parser: parser,
           flush: false,
           messages: <Msg>[msg],
           dropped: 0,
         );
-        send(msg);
+        _runWithReplayDepth(() => send(msg));
       },
       onError: (error, stackTrace) {
-        _replayActive = false;
+        if (_replaySubscription == subscription) {
+          _replaySubscription = null;
+        }
+        _replayDepth = 0;
         if (TuiTrace.enabled) {
-          _trace('replay stream error: $error', tag: TraceTag.input);
+          _trace(
+            'replay stream error parser=$parser: $error',
+            tag: TraceTag.input,
+          );
         }
       },
       onDone: () {
-        _replayActive = false;
+        if (_replaySubscription == subscription) {
+          _replaySubscription = null;
+        }
+        _replayDepth = 0;
         if (TuiTrace.enabled) {
-          _trace('replay stream done', tag: TraceTag.input);
+          _trace('replay stream done parser=$parser', tag: TraceTag.input);
         }
       },
     );
+    _replaySubscription = subscription;
+  }
+
+  Future<void> _cancelReplayStream() async {
+    final subscription = _replaySubscription;
+    if (subscription == null) return;
+    _replaySubscription = null;
+    _replayDepth = 0;
+    await subscription.cancel();
   }
 
   /// Starts a periodic timer to send render metrics to the model.
@@ -1713,6 +1842,15 @@ class Program<M extends Model> {
     _frameTickTimer = null;
   }
 
+  void _stopResizeCoalesceTimer() {
+    try {
+      _resizeCoalesceTimer?.cancel();
+    } catch (_) {}
+    _resizeCoalesceTimer = null;
+    _pendingResizeWidth = null;
+    _pendingResizeHeight = null;
+  }
+
   void _syncModelOptionalTimers() {
     // Render metrics timer.
     if (_options.metricsInterval <= Duration.zero) {
@@ -1752,7 +1890,7 @@ class Program<M extends Model> {
     final resizeStream = terminal.resizeStream;
     if (resizeStream != null) {
       _backendResizeSubscription = resizeStream.listen((size) {
-        _sendWindowSizeIfChanged(size.width, size.height);
+        _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
       });
     }
 
@@ -1804,7 +1942,7 @@ class Program<M extends Model> {
       try {
         _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
           final size = _terminal!.size;
-          _sendWindowSizeIfChanged(size.width, size.height);
+          _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
         });
       } catch (_) {
         // SIGWINCH not available on this platform
@@ -1812,10 +1950,40 @@ class Program<M extends Model> {
     }
   }
 
-  void _sendWindowSizeIfChanged(int width, int height) {
-    if (_lastWindowSizeWidth == width && _lastWindowSizeHeight == height) {
+  void _sendWindowSizeIfChanged(
+    int width,
+    int height, {
+    bool coalesce = false,
+  }) {
+    final sameAsLast =
+        _lastWindowSizeWidth == width && _lastWindowSizeHeight == height;
+    final sameAsPending =
+        _pendingResizeWidth == width && _pendingResizeHeight == height;
+    if (sameAsLast || sameAsPending) {
       return;
     }
+    if (coalesce) {
+      final next = _resizeCoalescer.next(_resizeCoalescerState, DateTime.now());
+      _resizeCoalescerState = next;
+      if (next.delay > Duration.zero) {
+        _pendingResizeWidth = width;
+        _pendingResizeHeight = height;
+        _resizeCoalesceTimer?.cancel();
+        _resizeCoalesceTimer = Timer(next.delay, () {
+          final pendingWidth = _pendingResizeWidth;
+          final pendingHeight = _pendingResizeHeight;
+          _pendingResizeWidth = null;
+          _pendingResizeHeight = null;
+          if (pendingWidth == null || pendingHeight == null) return;
+          _dispatchWindowSize(pendingWidth, pendingHeight);
+        });
+        return;
+      }
+    }
+    _dispatchWindowSize(width, height);
+  }
+
+  void _dispatchWindowSize(int width, int height) {
     _lastWindowSizeWidth = width;
     _lastWindowSizeHeight = height;
     send(WindowSizeMsg(width, height));
@@ -1968,7 +2136,7 @@ class Program<M extends Model> {
       );
     }
 
-    if (_options.blockInputWhileReplay && _replayActive) {
+    if (_options.blockInputWhileReplay && _isReplayActive) {
       if (TuiTrace.enabled) {
         _trace(
           'input dropped while replay active bytes=${bytes.length}',
@@ -2253,6 +2421,10 @@ class Program<M extends Model> {
     if (_options.disableRenderer) return;
     if (!_options.useUltravioletRenderer) return;
     if (!_options.useUltravioletInputDecoder) return;
+    if (_options.effectiveScreenMode != ScreenMode.fullScreen &&
+        _options.startupProbes != true) {
+      return;
+    }
     final term = _terminal;
     if (term == null) return;
     if (!_shouldRunStartupProbes(term)) return;
@@ -2261,7 +2433,7 @@ class Program<M extends Model> {
 
     // Avoid messing with normal terminal output in inline mode. Users can
     // always override via UV_EMOJI_WIDTH/EMOJI_WIDTH if needed.
-    if (_options.altScreen) {
+    if (_options.effectiveScreenMode == ScreenMode.fullScreen) {
       final override =
           io.Platform.environment['UV_EMOJI_WIDTH'] ??
           io.Platform.environment['EMOJI_WIDTH'];
@@ -2324,6 +2496,15 @@ class Program<M extends Model> {
         return;
       }
       msg = intercepted;
+    }
+
+    if (_macroRecording && !_isReplayActive && _isMacroRecordable(msg)) {
+      final now = DateTime.now();
+      final delay = _lastMacroEventAt == null
+          ? Duration.zero
+          : now.difference(_lastMacroEventAt!);
+      _lastMacroEventAt = now;
+      _macroSteps.add(ProgramReplayStep(after: delay, msg: msg));
     }
 
     // Coalesce: when a key arrives, drop all pending mouse messages.
@@ -2391,6 +2572,76 @@ class Program<M extends Model> {
     }
     _drainMessageQueue();
   }
+
+  /// Whether user-input macro recording is active.
+  bool get isMacroRecording => _macroRecording;
+
+  /// Whether macro replay is currently in-flight.
+  bool get isMacroPlaying => _replaySubscription != null;
+
+  bool get _isReplayActive => _replayDepth > 0;
+
+  void _runWithReplayDepth(void Function() action) {
+    _replayDepth++;
+    try {
+      action();
+    } finally {
+      _replayDepth -= 1;
+      if (_replayDepth < 0) {
+        _replayDepth = 0;
+      }
+    }
+  }
+
+  /// Starts recording user-input messages into a macro.
+  void startMacroRecording() {
+    if (_macroRecording) {
+      throw StateError('Macro recording is already active.');
+    }
+    if (isMacroPlaying) {
+      throw StateError(
+        'Cannot start macro recording while macro playback is active.',
+      );
+    }
+    _macroRecording = true;
+    _macroSteps.clear();
+    _lastMacroEventAt = null;
+  }
+
+  /// Stops recording and returns the captured macro.
+  ProgramMacro stopMacroRecording() {
+    if (!_macroRecording) {
+      throw StateError('Macro recording is not active.');
+    }
+    _macroRecording = false;
+    _lastMacroEventAt = null;
+    return ProgramMacro(
+      List<ProgramReplayStep>.from(_macroSteps, growable: false),
+    );
+  }
+
+  /// Plays back a previously recorded [macro].
+  StreamSubscription<Msg> playMacro(ProgramMacro macro, {bool loop = false}) {
+    final stream = macro.toReplay(loop: loop).toStream();
+    return _startMacroReplay(stream);
+  }
+
+  /// Stops the currently running replay/macro playback stream, if any.
+  Future<void> stopMacroPlayback() async {
+    await _cancelReplayStream();
+  }
+
+  StreamSubscription<Msg> _startMacroReplay(Stream<Msg> stream) {
+    _startReplayStream(stream, parser: 'macro');
+    return _replaySubscription!;
+  }
+
+  bool _isMacroRecordable(Msg msg) =>
+      msg is KeyMsg ||
+      msg is PasteTextMsg ||
+      msg is MouseMsg ||
+      msg is FocusMsg ||
+      msg is UvEventMsg;
 
   /// Removes messages from the queue that don't pass [keep].
   ///
@@ -2868,6 +3119,7 @@ class Program<M extends Model> {
     _uvInputTimeoutTimer = null;
     _stopMetricsTimer();
     _stopFrameTickTimer();
+    _stopResizeCoalesceTimer();
     _uvInputParser.clear();
 
     try {
@@ -2902,11 +3154,16 @@ class Program<M extends Model> {
     // Re-enable raw mode
     _terminal?.enableRawMode();
 
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
@@ -3069,7 +3326,9 @@ class Program<M extends Model> {
       _appliedKeyboardEnhancementFlags = 0;
     }
     if (_desiredKeyboardEnhancementFlags != 0) {
-      terminal.write(Ansi.kittyKeyboard(_desiredKeyboardEnhancementFlags, mode: 1));
+      terminal.write(
+        Ansi.kittyKeyboard(_desiredKeyboardEnhancementFlags, mode: 1),
+      );
       terminal.write(Ansi.requestKittyKeyboard);
       _appliedKeyboardEnhancementFlags = _desiredKeyboardEnhancementFlags;
     }
@@ -3226,6 +3485,7 @@ class Program<M extends Model> {
     _uvInputTimeoutTimer = null;
     _stopMetricsTimer();
     _stopFrameTickTimer();
+    _stopResizeCoalesceTimer();
     _uvInputParser.clear();
     unawaited(_inputSubscription?.cancel());
     _inputSubscription = null;
@@ -3261,11 +3521,16 @@ class Program<M extends Model> {
       _appliedDynamicAltScreen = true;
     }
 
+    final effectiveMode = _options.effectiveScreenMode;
     final rendererOptions = TuiRendererOptions(
       fps: _options.fps,
-      altScreen: _options.altScreen && !_options.disableRenderer,
+      altScreen:
+          effectiveMode == ScreenMode.fullScreen && !_options.disableRenderer,
       hideCursor: _options.hideCursor && !_options.disableRenderer,
       ansiCompress: _options.ansiCompress,
+      screenMode: effectiveMode,
+      inlineHeight: _options.inlineHeight,
+      uiAnchor: _options.uiAnchor,
     );
     _createRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
@@ -3309,6 +3574,8 @@ class Program<M extends Model> {
     final Stopwatch? viewSw = renderId == null ? null : Stopwatch();
     viewSw?.start();
     final view = _model!.view();
+    final degradationLevel = _renderBudgetController.level;
+    final effectiveView = _applyRenderDegradation(view, degradationLevel);
     viewSw?.stop();
     if (renderId != null && viewSw != null) {
       _trace(
@@ -3320,32 +3587,39 @@ class Program<M extends Model> {
     // (e.g. WidgetApp returning its _cachedView when !_dirty), skip the
     // entire renderer pipeline.  This avoids ANSI parsing, buffer drawing,
     // and diffing for no-op frames (e.g. RenderMetricsMsg with overlay off).
-    if (!sizeChangedSinceLastRender && identical(view, _lastRenderedView)) {
+    if (!sizeChangedSinceLastRender &&
+        identical(view, _lastRenderedView) &&
+        degradationLevel == _lastRenderedDegradationLevel) {
       if (renderId != null) {
         _trace('render#$renderId skip (identical view)', tag: TraceTag.render);
       }
       return;
     }
     _lastRenderedView = view;
+    _lastRenderedDegradationLevel = degradationLevel;
     if (termSize != null) {
       _lastRenderWidth = termSize.width;
       _lastRenderHeight = termSize.height;
     }
 
-    if (view is View) {
-      _lastView = view;
-      _applyViewMetadata(view);
+    if (effectiveView is View) {
+      _lastView = effectiveView;
+      _applyViewMetadata(effectiveView);
     } else {
       _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
-    final Stopwatch? renderSw = renderId == null ? null : Stopwatch();
-    renderSw?.start();
-    _renderer!.render(view);
+    final renderSw = Stopwatch()..start();
+    _renderer!.render(effectiveView);
     _renderGeneration += 1;
-    renderSw?.stop();
-    if (renderId != null && renderSw != null) {
+    renderSw.stop();
+    final changed = _renderBudgetController.recordFrame(renderSw.elapsed);
+    if (changed) {
+      send(RenderBudgetMsg(_renderBudgetController.state));
+      _scheduleDegradationRepaint();
+    }
+    if (renderId != null) {
       _trace('render#$renderId paint ${renderSw.elapsedMicroseconds}us');
     }
     // Emit per-frame Layout operation counters before flushing.
@@ -3451,24 +3725,42 @@ class Program<M extends Model> {
     // Clear the renderer's cached view to force a full redraw
     _renderer!.clear();
     final view = _model!.view();
+    final degradationLevel = _renderBudgetController.level;
+    final effectiveView = _applyRenderDegradation(view, degradationLevel);
 
-    if (view is View) {
-      _lastView = view;
-      _applyViewMetadata(view);
+    if (effectiveView is View) {
+      _lastView = effectiveView;
+      _applyViewMetadata(effectiveView);
     } else {
       _resetViewScopedTerminalMetadata();
       _lastView = null;
     }
 
-    _renderer!.render(view);
+    _renderer!.render(effectiveView);
     _renderGeneration += 1;
     _lastRenderedView = view;
+    _lastRenderedDegradationLevel = degradationLevel;
     final termSize = _terminal?.size;
     if (termSize != null) {
       _lastRenderWidth = termSize.width;
       _lastRenderHeight = termSize.height;
     }
     unawaited(_renderer!.flush());
+  }
+
+  Object _applyRenderDegradation(Object view, DegradationLevel level) {
+    if (view is! View) return view;
+    return view.degraded(level);
+  }
+
+  void _scheduleDegradationRepaint() {
+    if (_degradationRepaintScheduled || !_running || _terminalReleased) return;
+    _degradationRepaintScheduled = true;
+    scheduleMicrotask(() {
+      _degradationRepaintScheduled = false;
+      if (!_running || _terminalReleased) return;
+      send(const RepaintMsg());
+    });
   }
 
   /// Executes a command.
@@ -3675,15 +3967,17 @@ class Program<M extends Model> {
     _metricsTimer = null;
     trySync(() => _frameTickTimer?.cancel());
     _frameTickTimer = null;
+    trySync(() => _resizeCoalesceTimer?.cancel());
+    _resizeCoalesceTimer = null;
+    _pendingResizeWidth = null;
+    _pendingResizeHeight = null;
     _frameNumber = 0;
     _lastFrameTime = null;
 
     // Cancel input subscription
     await tryAsync(() async => _inputSubscription?.cancel());
     _inputSubscription = null;
-    await tryAsync(() async => _replaySubscription?.cancel());
-    _replaySubscription = null;
-    _replayActive = false;
+    await tryAsync(() async => _cancelReplayStream());
     await tryAsync(() async => _cancelSubscription?.cancel());
     _cancelSubscription = null;
 
@@ -3860,7 +4154,10 @@ bool _isTerminalReportRequest(String data) {
     }
     if (remaining.startsWith('\x1b]4;')) {
       final belLen = _consumePaletteColorRequest(remaining, terminator: '\x07');
-      final stLen = _consumePaletteColorRequest(remaining, terminator: '\x1b\\');
+      final stLen = _consumePaletteColorRequest(
+        remaining,
+        terminator: '\x1b\\',
+      );
       final consumed = belLen > 0 ? belLen : stLen;
       if (consumed > 0) {
         remaining = remaining.substring(consumed);
@@ -3869,7 +4166,9 @@ bool _isTerminalReportRequest(String data) {
       }
     }
     if (remaining.startsWith(Ansi.requestPrimaryDeviceAttributes)) {
-      remaining = remaining.substring(Ansi.requestPrimaryDeviceAttributes.length);
+      remaining = remaining.substring(
+        Ansi.requestPrimaryDeviceAttributes.length,
+      );
       matchedAny = true;
       continue;
     }
@@ -3974,7 +4273,9 @@ int _consumeXtGetTcapRequest(String text) {
   if (payload.isEmpty) return 0;
   final parts = payload.split(';');
   final hexPart = RegExp(r'^[0-9a-fA-F]+$');
-  if (parts.any((part) => part.isEmpty || part.length.isOdd || !hexPart.hasMatch(part))) {
+  if (parts.any(
+    (part) => part.isEmpty || part.length.isOdd || !hexPart.hasMatch(part),
+  )) {
     return 0;
   }
   return end + '\x1b\\'.length;
