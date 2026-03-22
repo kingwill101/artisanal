@@ -31,6 +31,7 @@ import 'dart:typed_data';
 
 import 'ansi.dart';
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 import 'drawable.dart';
 import 'geometry.dart';
 import 'screen.dart';
@@ -44,10 +45,14 @@ import '../unicode/width.dart';
 final class DirtyDensityMap {
   DirtyDensityMap._(this.width, this.height, this._prefixSums);
 
-  factory DirtyDensityMap.fromBuffer(Buffer buffer) {
+  factory DirtyDensityMap.fromBuffer(Buffer buffer, {Int32List? scratch}) {
     final width = buffer.width();
     final height = buffer.height();
-    final prefix = Int32List((width + 1) * (height + 1));
+    final size = (width + 1) * (height + 1);
+    final prefix = scratch != null && scratch.length >= size
+        ? scratch
+        : Int32List(size);
+    prefix.fillRange(0, size, 0);
 
     for (var y = 0; y < height; y++) {
       var rowSum = 0;
@@ -176,6 +181,16 @@ final class Line {
   /// Returns the cell at [x], or null if out of bounds.
   Cell? at(int x) => (x < 0 || x >= _cells.length) ? null : _cells[x];
 
+  /// Replaces the cell at [x] with [cell] without applying wide-cell rules.
+  void replace(int x, Cell cell) {
+    if (x < 0 || x >= _cells.length) return;
+    _cells[x].dispose();
+    _cells[x] = cell;
+  }
+
+  /// Replaces the cell at [x] with a clone of [cell].
+  void replaceWithClone(int x, Cell cell) => replace(x, cell.clone());
+
   /// Sets the cell at [x], applying wide-cell overwrite rules.
   void set(int x, Cell? cell) {
     // Upstream: maxCellWidth = 5.
@@ -191,7 +206,7 @@ final class Line {
       if (pw > 1) {
         for (var j = 0; j < pw && x + j < lineWidth; j++) {
           final c = prev.clone()..empty();
-          _cells[x + j] = c;
+          replace(x + j, c);
         }
       } else if (pw == 0) {
         // Placeholder overwrite: scan left for the wide cell origin.
@@ -202,7 +217,7 @@ final class Line {
           if (ww > 1 && j < ww) {
             for (var k = 0; k < ww && x - j + k < lineWidth; k++) {
               final c = wide.clone()..empty();
-              _cells[x - j + k] = c;
+              replace(x - j + k, c);
             }
             break;
           }
@@ -211,17 +226,17 @@ final class Line {
     }
 
     if (cell == null) {
-      _cells[x] = Cell.emptyCell();
+      replace(x, Cell.emptyCell());
       return;
     }
 
-    _cells[x] = cell.clone();
+    replaceWithClone(x, cell);
     final cw = cell.width;
 
     if (x + cw > lineWidth) {
       for (var i = 0; i < cw && x + i < lineWidth; i++) {
         final c = cell.clone()..empty();
-        _cells[x + i] = c;
+        replace(x + i, c);
       }
       return;
     }
@@ -229,7 +244,7 @@ final class Line {
     if (cw > 1) {
       // Mark placeholder cells with zero-width zero cells.
       for (var j = 1; j < cw && x + j < lineWidth; j++) {
-        _cells[x + j] = Cell();
+        replace(x + j, Cell());
       }
     }
   }
@@ -304,6 +319,8 @@ final class Buffer {
   List<LineData?> touched;
   List<bool> dirtyRows;
   List<Uint32List> dirtyBits;
+  final List<Rectangle> _scissorStack = <Rectangle>[];
+  final List<double> _opacityStack = <double>[1];
 
   /// The buffer width in cells.
   int width() => lines.isEmpty ? 0 : lines[0].length;
@@ -330,16 +347,59 @@ final class Buffer {
   /// Marks the cell at ([x], [y]) as dirty.
   void touch(int x, int y) => touchLine(x, y, 1);
 
+  /// Pushes a scissor clip rectangle onto the clipping stack.
+  ///
+  /// Each pushed rectangle is intersected with the current active scissor and
+  /// clamped to buffer bounds. Empty clips are retained so that matching pops
+  /// restore prior clipping behavior.
+  void pushScissor(Rectangle clip) {
+    final bufferBounds = bounds();
+    final clamped = bufferBounds.intersect(clip);
+    final active = _scissorStack.isEmpty ? bufferBounds : _scissorStack.last;
+    _scissorStack.add(active.intersect(clamped));
+  }
+
+  /// Restores the previous scissor clip rectangle.
+  ///
+  /// Popping past an empty stack is a no-op.
+  void popScissor() {
+    if (_scissorStack.isNotEmpty) {
+      _scissorStack.removeLast();
+    }
+  }
+
+  /// Pushes an opacity multiplier onto the opacity stack.
+  ///
+  /// Multiplicative opacity is applied to incoming `Cell` RGB style channels. This
+  /// enables nested translucent overlays where opacity composes as a product.
+  void pushOpacity(double opacity) {
+    final clamped = opacity.clamp(0.0, 1.0);
+    _opacityStack.add(_opacityStack.last * clamped);
+  }
+
+  /// Restores the previous opacity stack frame.
+  ///
+  /// Popping past the base frame restores full opacity.
+  void popOpacity() {
+    if (_opacityStack.length > 1) {
+      _opacityStack.removeLast();
+    }
+  }
+
   /// Sets the cell at ([x], [y]) and updates dirty tracking.
   void setCell(int x, int y, Cell? cell) {
     if (y < 0 || y >= lines.length) return;
     final current = cellAt(x, y);
-    final next = cell ?? Cell.emptyCell();
+    final rawNext = cell ?? Cell.emptyCell();
+    final next = current == null
+        ? _applyOpacity(rawNext)
+        : _compositeCell(current, _applyOpacity(rawNext));
+    if (_isOutsideScissor(x, y, next.width)) return;
     if (current == null || current != next) {
       final w = next.width > 0 ? next.width : 1;
       touchLine(x, y, w);
     }
-    lines[y].set(x, cell);
+    lines[y].set(x, next);
   }
 
   /// Resizes the buffer to [width] × [height], preserving content where possible.
@@ -370,7 +430,7 @@ final class Buffer {
         final newLine = Line.filled(width);
         final copyWidth = width < oldWidth ? width : oldWidth;
         for (var x = 0; x < copyWidth; x++) {
-          newLine.cells[x] = lines[y].cells[x].clone();
+          newLine.replaceWithClone(x, lines[y].cells[x]);
         }
         lines[y] = newLine;
       }
@@ -396,8 +456,22 @@ final class Buffer {
   ///
   /// Upstream: `third_party/ultraviolet/buffer.go` (`FillArea`).
   void fillArea(Cell? cell, Rectangle area) {
+    final opaqueSingleWidth =
+        (cell == null || !_hasTranslucentOverlay(cell.style)) &&
+        (cell == null || cell.width <= 1);
+    if (opaqueSingleWidth) {
+      final fillCell = cell ?? Cell.emptyCell();
+      for (var y = area.minY; y < area.maxY; y++) {
+        touchLine(area.minX, y, area.width);
+        for (var x = area.minX; x < area.maxX; x++) {
+          lines[y].replaceWithClone(x, fillCell);
+        }
+      }
+      return;
+    }
+
     var cellWidth = 1;
-    if (cell != null && cell.width > 1) cellWidth = cell.width;
+    if (cell.width > 1) cellWidth = cell.width;
     for (var y = area.minY; y < area.maxY; y++) {
       for (var x = area.minX; x < area.maxX; x += cellWidth) {
         setCell(x, y, cell);
@@ -456,7 +530,7 @@ final class Buffer {
 
     for (var i = area.maxY - 1; i >= y + n; i--) {
       for (var x = area.minX; x < area.maxX; x++) {
-        lines[i].cells[x] = lines[i - n].cells[x].clone();
+        lines[i].replaceWithClone(x, lines[i - n].cells[x]);
       }
       touchLine(area.minX, i, area.maxX - area.minX);
       touchLine(area.minX, i - n, area.maxX - area.minX);
@@ -485,7 +559,7 @@ final class Buffer {
     for (var dst = y; dst < area.maxY - n; dst++) {
       final src = dst + n;
       for (var x = area.minX; x < area.maxX; x++) {
-        lines[dst].cells[x] = lines[src].cells[x].clone();
+        lines[dst].replaceWithClone(x, lines[src].cells[x]);
       }
       touchLine(area.minX, dst, area.maxX - area.minX);
       touchLine(area.minX, src, area.maxX - area.minX);
@@ -521,7 +595,7 @@ final class Buffer {
     if (x + n > area.maxX) n = area.maxX - x;
 
     for (var i = area.maxX - 1; i >= x + n && i - n >= area.minX; i--) {
-      lines[y].cells[i] = lines[y].cells[i - n].clone();
+      lines[y].replaceWithClone(i, lines[y].cells[i - n]);
     }
     touchLine(x, y, n);
 
@@ -618,6 +692,34 @@ final class Buffer {
     } else {
       final prevFirst = ch.firstCell == -1 ? first : ch.firstCell;
       final prevLast = ch.lastCell == -1 ? last : ch.lastCell;
+      if (ch.overflowed) {
+        final mergedFirst = first < prevFirst ? first : prevFirst;
+        final mergedLast = last > prevLast ? last : prevLast;
+        touched[y] = LineData(
+          firstCell: mergedFirst,
+          lastCell: mergedLast,
+          spans: <DirtySpan>[DirtySpan(start: mergedFirst, end: mergedLast)],
+          overflowed: true,
+        );
+        return;
+      }
+      if (ch.spans.isNotEmpty) {
+        final lastSpan = ch.spans.last;
+        if (first <= lastSpan.end && first >= lastSpan.start) {
+          final mergedSpans = List<DirtySpan>.from(ch.spans, growable: false);
+          mergedSpans[mergedSpans.length - 1] = DirtySpan(
+            start: lastSpan.start,
+            end: last > lastSpan.end ? last : lastSpan.end,
+          );
+          touched[y] = LineData(
+            firstCell: first < prevFirst ? first : prevFirst,
+            lastCell: last > prevLast ? last : prevLast,
+            spans: mergedSpans,
+            overflowed: false,
+          );
+          return;
+        }
+      }
       final spans = _mergeDirtySpans(
         ch.spans,
         DirtySpan(start: first, end: last),
@@ -650,6 +752,41 @@ final class Buffer {
     dirtyBits = List<Uint32List>.generate(
       lines.length,
       (_) => Uint32List(_dirtyWordCount(width())),
+    );
+  }
+
+  bool _isOutsideScissor(int x, int y, int width) {
+    if (_scissorStack.isEmpty) return false;
+    final s = _scissorStack.last;
+    final minX = x;
+    final maxX = x + width;
+    return y < s.minY || y >= s.maxY || maxX <= s.minX || minX >= s.maxX;
+  }
+
+  Cell _applyOpacity(Cell cell) {
+    final opacity = _opacityStack.isEmpty ? 1.0 : _opacityStack.last;
+    if (opacity >= 1.0) return cell;
+    if (opacity <= 0.0) {
+      return Cell(
+        content: cell.content,
+        style: const UvStyle(),
+        link: cell.link,
+        width: cell.width,
+      );
+    }
+
+    final style = cell.style;
+    return Cell(
+      content: cell.content,
+      style: UvStyle(
+        fg: _scaledColor(style.fg, opacity),
+        bg: _scaledColor(style.bg, opacity),
+        underlineColor: _scaledColor(style.underlineColor, opacity),
+        underline: style.underline,
+        attrs: style.attrs,
+      ),
+      link: cell.link,
+      width: cell.width,
     );
   }
 
@@ -741,6 +878,48 @@ final class Buffer {
     }
     return out.toString();
   }
+}
+
+Cell _compositeCell(Cell base, Cell overlay) {
+  final style = overlay.style;
+  if (!_hasTranslucentOverlay(style)) {
+    return overlay;
+  }
+  final bg = color_utils.sourceOver(style.bg, base.style.bg);
+  final fg = color_utils.sourceOver(style.fg, base.style.fg);
+  final underlineColor = color_utils.sourceOver(
+    style.underlineColor,
+    base.style.underlineColor,
+  );
+  if (bg == style.bg &&
+      fg == style.fg &&
+      underlineColor == style.underlineColor) {
+    return overlay;
+  }
+  return overlay.clone()
+    ..style = style.copyWith(
+      fg: fg,
+      clearFg: fg == null,
+      bg: bg,
+      clearBg: bg == null,
+      underlineColor: underlineColor,
+      clearUnderlineColor: underlineColor == null,
+    );
+}
+
+bool _hasTranslucentOverlay(UvStyle style) =>
+    _isTranslucentColor(style.fg) ||
+    _isTranslucentColor(style.bg) ||
+    _isTranslucentColor(style.underlineColor);
+
+bool _isTranslucentColor(UvColor? color) =>
+    color is UvRgb && color.a > 0 && color.a < 255;
+
+UvColor? _scaledColor(UvColor? color, double opacity) {
+  if (color == null) return null;
+  if (color is! UvRgb) return color;
+  final a = (color.a * opacity).clamp(0, 255).round();
+  return UvRgb(color.r, color.g, color.b, a: a);
 }
 
 ({List<DirtySpan> spans, bool overflowed}) _mergeDirtySpans(
