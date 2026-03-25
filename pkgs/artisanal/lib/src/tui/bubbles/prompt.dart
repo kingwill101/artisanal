@@ -10,10 +10,12 @@ import '../terminal.dart';
 import 'anticipate.dart';
 import 'confirm.dart';
 import 'data_table.dart';
+import 'number_input.dart';
 import 'password.dart';
 import 'search.dart';
 import 'select.dart';
 import 'spinner.dart';
+import 'suggest.dart';
 import 'textinput.dart';
 import 'textarea.dart';
 import 'wizard.dart';
@@ -280,6 +282,14 @@ Future<T> runSpinnerTask<T>({
   ProgramOptions? options,
 }) async {
   final controller = _PromptController<T>();
+  // Pre-attach an error listener so that if [_SpinnerTaskModel] calls
+  // [completeError] while the program is still running (e.g. on InterruptMsg),
+  // Dart's async machinery does not flag the future as an unhandled error
+  // before [program.run()] returns and we reach the `await controller.future`
+  // below.  The separate listener does NOT swallow the error — the `await`
+  // below will still throw as expected.
+  final resultFuture = controller.future
+    ..ignore(); // registers a no-op error listener; original future is intact
   final program = Program(
     _SpinnerTaskModel<T>(
       message: message,
@@ -291,7 +301,7 @@ Future<T> runSpinnerTask<T>({
     terminal: terminal,
   );
   await program.run();
-  return await controller.future;
+  return await resultFuture;
 }
 
 class _PromptController<T> {
@@ -324,6 +334,11 @@ class _PasswordPromptModel extends ViewComponent {
   @override
   (_PasswordPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is PasswordSubmittedMsg) {
       _controller.complete(msg.password);
@@ -361,6 +376,11 @@ class _PasswordConfirmPromptModel extends ViewComponent {
   (_PasswordConfirmPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
     if (msg is PasswordSubmittedMsg) {
       _controller.complete(msg.password);
       return (this, Cmd.quit());
@@ -396,6 +416,11 @@ class _ConfirmPromptModel extends ViewComponent {
   @override
   (_ConfirmPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is ConfirmResultMsg) {
       _controller.complete(msg.confirmed);
@@ -433,6 +458,11 @@ class _SelectPromptModel<T> extends ViewComponent {
   (_SelectPromptModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
     if (msg is SelectionMadeMsg<T>) {
       _controller.complete(msg.item);
       return (this, Cmd.quit());
@@ -468,6 +498,11 @@ class _SearchPromptModel<T> extends ViewComponent {
   @override
   (_SearchPromptModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is SearchSelectionMadeMsg<T>) {
       _controller.complete(msg.item);
@@ -505,6 +540,11 @@ class _MultiSearchPromptModel<T> extends ViewComponent {
   (_MultiSearchPromptModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
     if (msg is MultiSearchSelectionMadeMsg<T>) {
       _controller.complete(msg.items);
       return (this, Cmd.quit());
@@ -534,15 +574,27 @@ class _AnticipatePromptModel extends ViewComponent {
   AnticipateModel _model;
   final _PromptController<String?> _controller;
 
+  // Guard: init() is called AFTER two startup messages (WindowSizeMsg,
+  // ColorProfileMsg) are already dispatched. Without this flag the
+  // `!_model.focused` completion check below would fire immediately on
+  // those pre-init messages because the model starts unfocused.
+  bool _initDone = false;
+
   @override
   Cmd? init() {
     _model = _model.focus();
+    _initDone = true;
     return _model.init();
   }
 
   @override
   (_AnticipatePromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is KeyMsg &&
         (msg.key.type == KeyType.escape ||
@@ -556,8 +608,10 @@ class _AnticipatePromptModel extends ViewComponent {
     final (newModel, cmd) = _model.update(msg);
     _model = newModel;
 
-    // Anticipate "completes" when it loses focus.
-    if (!_model.focused) {
+    // Anticipate "completes" when it loses focus — but only after init() has
+    // run (the model starts unfocused; init() calls focus() before the first
+    // user-visible message).
+    if (_initDone && !_model.focused) {
       final value = _model.value.isEmpty ? null : _model.value;
       _controller.complete(value);
       return (this, Cmd.quit());
@@ -586,6 +640,11 @@ class _TextInputPromptModel extends ViewComponent {
   @override
   (_TextInputPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is KeyMsg) {
       if (msg.key.type == KeyType.enter) {
@@ -628,6 +687,11 @@ class _MultiSelectPromptModel<T> extends ViewComponent {
   (_MultiSelectPromptModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
     if (msg is MultiSelectionMadeMsg<T>) {
       _controller.complete(msg.items);
       return (this, Cmd.quit());
@@ -663,6 +727,11 @@ class _TextAreaPromptModel extends ViewComponent {
   @override
   (_TextAreaPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is KeyMsg) {
       if (msg.key.type == KeyType.escape ||
@@ -707,6 +776,11 @@ class _WizardPromptModel extends ViewComponent {
   @override
   (_WizardPromptModel, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
 
     if (msg is WizardCompletedMsg) {
       _controller.complete(msg.answers);
@@ -780,6 +854,11 @@ class _SpinnerTaskModel<T> extends ViewComponent {
   (_SpinnerTaskModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.completeError(ProgramCancelledError(), StackTrace.empty);
+      return (this, Cmd.quit());
+    }
+
     if (msg is _SpinnerTaskDoneMsg<T>) {
       _controller.complete(msg.result);
       return (this, Cmd.quit());
@@ -813,6 +892,11 @@ class _DataTablePromptModel<T> extends ViewComponent {
   (_DataTablePromptModel<T>, Cmd?) update(Msg msg) {
     if (_controller.isCompleted) return (this, null);
 
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
     if (msg is DataTableSelectionMadeMsg<T>) {
       _controller.complete(msg.item);
       return (this, Cmd.quit());
@@ -834,4 +918,120 @@ class _DataTablePromptModel<T> extends ViewComponent {
     if (v is tui_view.View) return v.content;
     return v.toString();
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NumberInput prompt
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Runs a [NumberInputModel] and resolves to the submitted number, or `null`
+/// if the user cancels.
+Future<num?> runNumberInputPrompt(
+  NumberInputModel model,
+  Terminal terminal, {
+  ProgramOptions? options,
+}) async {
+  final controller = _PromptController<num?>();
+  final program = Program(
+    _NumberInputPromptModel(model, controller),
+    options: options ?? promptProgramOptions,
+    terminal: terminal,
+  );
+  await program.run();
+  return await controller.future;
+}
+
+class _NumberInputPromptModel extends ViewComponent {
+  _NumberInputPromptModel(this._model, this._controller);
+
+  NumberInputModel _model;
+  final _PromptController<num?> _controller;
+
+  @override
+  Cmd? init() => _model.init();
+
+  @override
+  (_NumberInputPromptModel, Cmd?) update(Msg msg) {
+    if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is NumberSubmittedMsg) {
+      _controller.complete(msg.value);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is NumberCancelledMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    final (newModel, cmd) = _model.update(msg);
+    _model = newModel;
+    return (this, cmd);
+  }
+
+  @override
+  String view() => _model.view();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suggest prompt
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Runs a [SuggestModel] and resolves to the accepted value, or `null` if
+/// the user cancels.
+Future<String?> runSuggestPrompt(
+  SuggestModel model,
+  Terminal terminal, {
+  ProgramOptions? options,
+}) async {
+  final controller = _PromptController<String?>();
+  final program = Program(
+    _SuggestPromptModel(model, controller),
+    options: options ?? promptProgramOptions,
+    terminal: terminal,
+  );
+  await program.run();
+  return await controller.future;
+}
+
+class _SuggestPromptModel extends ViewComponent {
+  _SuggestPromptModel(this._model, this._controller);
+
+  SuggestModel _model;
+  final _PromptController<String?> _controller;
+
+  @override
+  Cmd? init() => _model.init();
+
+  @override
+  (_SuggestPromptModel, Cmd?) update(Msg msg) {
+    if (_controller.isCompleted) return (this, null);
+
+    if (msg is InterruptMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is SuggestSubmittedMsg) {
+      _controller.complete(msg.value);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is SuggestCancelledMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    final (newModel, cmd) = _model.update(msg);
+    _model = newModel;
+    return (this, cmd);
+  }
+
+  @override
+  String view() => _model.view();
 }
