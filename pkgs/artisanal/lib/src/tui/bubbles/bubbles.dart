@@ -22,6 +22,8 @@
 /// - [FilePickerModel] - File/directory browser and selection
 /// - [AnticipateModel] - Autocomplete input with suggestions
 /// - [WizardModel] - Multi-step form wizard
+/// - [NumberInputModel] - Interactive numeric input with increment/decrement
+/// - [SuggestModel] - Text input with a prefix-matched suggestion dropdown
 ///
 /// ## Usage
 ///
@@ -93,6 +95,8 @@ export 'search.dart';
 export 'confirm.dart';
 export 'anticipate.dart';
 export 'wizard.dart' hide ValidateFunc;
+export 'number_input.dart';
+export 'suggest.dart';
 
 // Git
 export 'git_diff.dart';

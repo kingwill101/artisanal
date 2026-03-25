@@ -23,6 +23,8 @@
 /// - [StopwatchModel] - Stopwatch/elapsed time
 /// - [FilePickerModel] - File/directory browser and selection
 /// - [AnticipateModel] - Autocomplete input with suggestions
+/// - [NumberInputModel] - Interactive numeric input with increment/decrement
+/// - [SuggestModel] - Text input with a prefix-matched suggestion dropdown
 ///
 /// ## Usage
 ///
