@@ -267,12 +267,16 @@ class Validators {
   static String? Function(String) numeric({
     String message = 'Please enter a valid number.',
     bool allowNegative = true,
+    num? min,
+    num? max,
   }) {
     return (value) {
       if (value.trim().isEmpty) return null;
-      final num = double.tryParse(value);
-      if (num == null) return message;
-      if (!allowNegative && num < 0) return 'Value cannot be negative.';
+      final number = double.tryParse(value);
+      if (number == null) return message;
+      if (!allowNegative && number < 0) return 'Value cannot be negative.';
+      if (min != null && number < min) return 'Value must be at least $min.';
+      if (max != null && number > max) return 'Value must be at most $max.';
       return null;
     };
   }

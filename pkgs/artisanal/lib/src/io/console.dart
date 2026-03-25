@@ -13,16 +13,26 @@ import '../style/tag_parser.dart';
 import '../style/verbosity.dart';
 import 'components.dart';
 import 'inline_animation.dart';
+import 'output_theme.dart';
+import 'validators.dart';
+import 'uv_console.dart' show UVConsole;
+import '../tui/program.dart' show Program, UiAnchor;
 import '../tui/terminal.dart' show StdioTerminal;
 import '../tui/bubbles/password.dart' show PasswordModel;
-import '../tui/bubbles/select.dart' show MultiSelectModel, SelectModel;
-import '../tui/bubbles/search.dart' show SearchModel;
+import '../tui/bubbles/select.dart'
+    show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;
+import '../tui/bubbles/search.dart'
+    show MultiSearchModel, SearchModel, SearchStyles;
+import '../tui/bubbles/data_table.dart' show DataTableModel, DataTableStyles;
+import '../tui/bubbles/table.dart' show Column;
 import '../tui/bubbles/prompt.dart'
     show
         runMultiSelectPrompt,
         runPasswordPrompt,
         runSelectPrompt,
         runSearchPrompt,
+        runMultiSearchPrompt,
+        runDataTablePrompt,
         promptProgramOptions;
 import '../tui/bubbles/pause.dart' show CountdownModel;
 import '../tui/program.dart' show Program;
@@ -159,6 +169,9 @@ class StepsResult {
 /// ```
 class Console {
   /// Creates a new I/O helper.
+  ///
+  /// The [outputTheme] parameter allows customizing the colors used for
+  /// different message types (info, warning, error, etc.).
   Console({
     WriteLine? out,
     WriteLine? err,
@@ -172,6 +185,7 @@ class Console {
     this.verbosity = Verbosity.normal,
     int? terminalWidth,
     Renderer? renderer,
+    OutputTheme? outputTheme,
   }) : _stdout = stdout ?? io.stdout,
        _stdin = stdin ?? io.stdin,
        _out = out ?? ((line) => (stdout ?? io.stdout).writeln(line)),
@@ -182,19 +196,33 @@ class Console {
        _secretReader = secretReader,
        terminalWidth = terminalWidth ?? 120,
        _renderer = renderer ?? defaultRenderer,
-       _tagParser =
-           ConsoleTagParser(
-               colorProfile: (renderer ?? defaultRenderer).colorProfile,
-               hasDarkBackground:
-                   (renderer ?? defaultRenderer).hasDarkBackground,
-             )
-             ..registerStyle('info', Style().foreground(Colors.info))
-             ..registerStyle('comment', Style().foreground(Colors.warning))
-             ..registerStyle('question', Style().foreground(Colors.cyan))
-             ..registerStyle('warning', Style().foreground(Colors.warning))
-             ..registerStyle('error', Style().foreground(Colors.error))
-             ..registerStyle('success', Style().foreground(Colors.success))
-             ..registerStyle('muted', Style().foreground(Colors.muted));
+       _outputTheme = outputTheme ?? const OutputTheme(),
+       _tagParser = ConsoleTagParser(
+         colorProfile: (renderer ?? defaultRenderer).colorProfile,
+         hasDarkBackground: (renderer ?? defaultRenderer).hasDarkBackground,
+       )..registerStyle('alert', Style().foreground(Colors.yellow)) {
+    _applyOutputTheme();
+  }
+
+  /// The current output theme.
+  OutputTheme get outputTheme => _outputTheme;
+
+  set outputTheme(OutputTheme value) {
+    _outputTheme = value;
+    _applyOutputTheme();
+  }
+
+  OutputTheme _outputTheme;
+
+  void _applyOutputTheme() {
+    for (final entry in _outputTheme.toStyles().entries) {
+      _tagParser.registerStyle(entry.key, entry.value);
+    }
+    // Update existing components to use the new theme
+    if (_components != null) {
+      _components = Components(io: this);
+    }
+  }
 
   /// The renderer for output.
   final Renderer _renderer;
@@ -523,11 +551,14 @@ class Console {
         final runtime = run == null ? '' : ' ${_formatDuration(watch.elapsed)}';
         final statusLabel = switch (result) {
           TaskResult.success =>
-            _style.bold().foreground(Colors.success).render('DONE'),
+            (getStyle('success') ?? _style.bold().foreground(Colors.success))
+                .render('DONE'),
           TaskResult.skipped =>
-            _style.bold().foreground(Colors.warning).render('SKIPPED'),
+            (getStyle('warning') ?? _style.bold().foreground(Colors.warning))
+                .render('SKIPPED'),
           TaskResult.failure =>
-            _style.bold().foreground(Colors.error).render('FAIL'),
+            (getStyle('error') ?? _style.bold().foreground(Colors.error))
+                .render('FAIL'),
         };
 
         final used =
@@ -930,13 +961,13 @@ class Console {
             spinnerTick++;
             terminal.clearLine();
             terminal.write(
-              '  ${_style.foreground(Colors.info).render(prefix)} $name ${_style.foreground(Colors.info).render(frame)}',
+              '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frame)}',
             );
           });
 
           // Show initial state
           terminal.write(
-            '  ${_style.foreground(Colors.info).render(prefix)} $name ${_style.foreground(Colors.info).render(frames[0])}',
+            '  ${(getStyle('info') ?? _style.foreground(Colors.info)).render(prefix)} $name ${(getStyle('info') ?? _style.foreground(Colors.info)).render(frames[0])}',
           );
 
           await action();
@@ -945,7 +976,7 @@ class Console {
           stepWatch.stop();
           terminal.clearLine();
           terminal.writeln(
-            '  ${_style.foreground(Colors.success).render(prefix)} $name ${_style.foreground(Colors.success).render('✓')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+            '  ${(getStyle('success') ?? _style.foreground(Colors.success)).render(prefix)} $name ${(getStyle('success') ?? _style.foreground(Colors.success)).render('✓')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
           );
           completed.add(name);
         } catch (e) {
@@ -953,7 +984,7 @@ class Console {
           stepWatch.stop();
           terminal.clearLine();
           terminal.writeln(
-            '  ${_style.foreground(Colors.error).render(prefix)} $name ${_style.foreground(Colors.error).render('✗')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
+            '  ${(getStyle('error') ?? _style.foreground(Colors.error)).render(prefix)} $name ${(getStyle('error') ?? _style.foreground(Colors.error)).render('✗')} ${_style.dim().render(_formatDuration(stepWatch.elapsed))}',
           );
           failed.add((name, e));
           hadError = true;
@@ -1120,7 +1151,7 @@ class Console {
 
     final suffix = defaultValue ? '[Y/n]' : '[y/N]';
     write(
-      '${_style.bold().foreground(Colors.warning).render(question)} $suffix ',
+      '${(getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(question)} $suffix ',
     );
     final input = (_readLine?.call() ?? '').trim().toLowerCase();
     if (input.isEmpty) return defaultValue;
@@ -1144,7 +1175,7 @@ class Console {
     for (var i = 0; i < attempts; i++) {
       final suffix = defaultValue == null ? '' : ' [$defaultValue]';
       write(
-        '${_style.bold().foreground(Colors.warning).render(question)}$suffix: ',
+        '${(getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(question)}$suffix: ',
       );
       final raw = _readLine?.call();
       final value = (raw == null || raw.isEmpty) ? (defaultValue ?? '') : raw;
@@ -1195,7 +1226,11 @@ class Console {
       throw StateError('Cannot prompt in non-interactive mode.');
     }
 
-    writeln(_style.bold().foreground(Colors.warning).render(question));
+    writeln(
+      (getStyle('question') ?? _style.bold().foreground(Colors.warning)).render(
+        question,
+      ),
+    );
     for (var i = 0; i < choices.length; i++) {
       writeln('  [$i] ${choices[i]}');
     }
@@ -1232,6 +1267,36 @@ class Console {
     return selected;
   }
 
+  /// Prompts for a numeric value.
+  num number(
+    String question, {
+    num? defaultValue,
+    num? min,
+    num? max,
+    int attempts = 3,
+  }) {
+    final validator = Validators.combine([
+      Validators.required(),
+      Validators.numeric(min: min, max: max),
+    ]);
+
+    final raw = ask(
+      question,
+      defaultValue: defaultValue?.toString(),
+      validator: (val) {
+        try {
+          final err = validator(val);
+          return err;
+        } catch (e) {
+          return e.toString();
+        }
+      },
+      attempts: attempts,
+    );
+
+    return num.parse(raw);
+  }
+
   /// Interactive single-select with arrow-key navigation.
   Future<T?> selectChoice<T>(
     String question, {
@@ -1254,6 +1319,10 @@ class Console {
       title: question,
       initialIndex: defaultIndex ?? 0,
       display: display,
+      styles: SelectStyles(
+        title: getStyle('question') ?? Style().bold(),
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
     );
     return await runSelectPrompt(model, terminal);
   }
@@ -1279,6 +1348,10 @@ class Console {
       initialIndex: validDefaults.isNotEmpty ? validDefaults.first : 0,
       initialSelected: validDefaults,
       display: display,
+      styles: MultiSelectStyles(
+        title: getStyle('question') ?? Style().bold(),
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
     );
     final result = await runMultiSelectPrompt(model, terminal);
     return result ?? [];
@@ -1340,8 +1413,128 @@ class Console {
       display: display,
       placeholder: placeholder,
       noResultsText: noResultsText,
+      styles: SearchStyles(
+        title: getStyle('question') ?? Style().bold(),
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
     );
     return await runSearchPrompt(model, terminal);
+  }
+
+  /// Interactive multi-search/filter prompt with fuzzy matching.
+  ///
+  /// Shows a search input that filters items in real-time. Allows selecting
+  /// multiple items using space. Returns the selected items.
+  ///
+  /// Parameters:
+  /// - [question]: Title displayed above the search
+  /// - [items]: List of items to search through
+  /// - [display]: Optional function to convert items to display strings
+  /// - [placeholder]: Placeholder text for the search input
+  /// - [noResultsText]: Text shown when no items match
+  /// - [hint]: Hint text shown below the title
+  ///
+  /// Example:
+  /// ```dart
+  /// final files = await console.multiSearch(
+  ///   'Select files:',
+  ///   items: ['main.dart', 'pubspec.yaml', 'README.md', 'lib/utils.dart'],
+  /// );
+  /// ```
+  Future<List<T>> multiSearch<T>(
+    String question, {
+    required List<T> items,
+    String Function(T)? display,
+    String placeholder = 'Type to search...',
+    String noResultsText = 'No matches found',
+    String? hint,
+  }) async {
+    if (!interactive) {
+      return [];
+    }
+
+    final terminal = promptTerminal;
+    final model = MultiSearchModel<T>(
+      items: items,
+      title: question,
+      display: display,
+      placeholder: placeholder,
+      noResultsText: noResultsText,
+      hint: hint ?? '(Space to toggle, ^a to toggle all, Enter to confirm)',
+      styles: SearchStyles(
+        title: getStyle('question') ?? Style().bold(),
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
+    );
+    final result = await runMultiSearchPrompt(model, terminal);
+    return result ?? [];
+  }
+
+  /// Interactive data table with fuzzy filtering and row selection.
+  ///
+  /// Displays a searchable grid of items. Returns the selected item, or null if cancelled.
+  ///
+  /// Parameters:
+  /// - [question]: Title displayed above the table
+  /// - [columns]: List of table columns with titles and widths
+  /// - [items]: List of source items
+  /// - [rowBuilder]: Function to convert an item to a list of strings (cells)
+  /// - [pageSize]: Number of rows to show per page
+  ///
+  /// Example:
+  /// ```dart
+  /// final user = await console.dataTable<User>(
+  ///   'Select a user:',
+  ///   columns: [
+  ///     Column(title: 'ID', width: 5),
+  ///     Column(title: 'Name', width: 20),
+  ///   ],
+  ///   items: users,
+  ///   rowBuilder: (u) => [u.id, u.name],
+  /// );
+  /// ```
+  Future<T?> dataTable<T>(
+    String question, {
+    required List<Column> columns,
+    required List<T> items,
+    required List<String> Function(T) rowBuilder,
+    int pageSize = 10,
+  }) async {
+    if (!interactive) {
+      return items.isNotEmpty ? items.first : null;
+    }
+
+    final terminal = promptTerminal;
+
+    // Build header style: always keep bold + padding, optionally apply theme color.
+    final headerBase = Style().bold().padding(0, 1);
+    final infoColor = outputTheme.info;
+    final headerStyle = infoColor != null
+        ? (headerBase.copy()..foreground(infoColor))
+        : headerBase;
+
+    // Build selected-row style: always keep bold, apply theme color if available.
+    final selectedBase = Style().bold();
+    final alertColor = outputTheme.alert;
+    final selectedStyle = alertColor != null
+        ? (selectedBase.copy()..foreground(alertColor))
+        : (selectedBase.copy()..foreground(AnsiColor(212)));
+
+    final model = DataTableModel<T>(
+      items: items,
+      columns: columns,
+      rowBuilder: rowBuilder,
+      title: question,
+      pageSize: pageSize,
+      styles: DataTableStyles(
+        title: getStyle('question') ?? Style().bold(),
+        prompt: getStyle('info') ?? Style().foreground(AnsiColor(11)),
+        tableHeader: headerStyle,
+        tableSelected: selectedStyle,
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
+    );
+    return await runDataTablePrompt<T>(model, terminal);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

@@ -47,7 +47,8 @@ class Components {
   RenderConfig get _renderConfig => io.renderConfig;
 
   /// Helper to apply muted styling.
-  String muted(String text) => style.foreground(Colors.muted).render(text);
+  String muted(String text) =>
+      (io.getStyle('muted') ?? style.foreground(Colors.muted)).render(text);
 
   void _writeComponent(DisplayComponent component) {
     final output = component.render();
@@ -77,7 +78,9 @@ class Components {
   /// Displays a bulleted list of items.
   void bulletList(Iterable<Object> items) {
     final bullet = _renderConfig
-        .configureStyle(Style().foreground(Colors.muted))
+        .configureStyle(
+          io.getStyle('muted') ?? Style().foreground(Colors.muted),
+        )
         .render('•');
     _writeComponent(
       BulletList(
@@ -92,22 +95,28 @@ class Components {
 
   /// Displays a boxed alert message.
   void alert(Object message) {
-    _writeComponent(
-      Alert(renderConfig: _renderConfig)
-        ..warning()
-        ..displayStyle(AlertDisplayStyle.block)
-        ..message(message.toString())
-        ..width(_renderConfig.terminalWidth),
-    );
+    final component = Alert(renderConfig: _renderConfig)
+      ..warning()
+      ..displayStyle(AlertDisplayStyle.block)
+      ..message(message.toString())
+      ..width(_renderConfig.terminalWidth);
+
+    final style = io.getStyle('alert') ?? io.getStyle('warning');
+    if (style != null) {
+      component.prefixStyle(style.bold()).borderStyle(style);
+    }
+
+    _writeComponent(component);
     io.newLine();
   }
 
   /// Displays an info block with a header.
   void info(String title, Object message) {
     _writeComponent(
-      TitledBlockComponent.info(
+      TitledBlockComponent(
         title: title,
         message: message,
+        titleStyle: io.getStyle('info') ?? Style().foreground(Colors.info),
         renderConfig: _renderConfig,
       ),
     );
@@ -117,9 +126,11 @@ class Components {
   /// Displays a success block with a header.
   void success(String title, Object message) {
     _writeComponent(
-      TitledBlockComponent.success(
+      TitledBlockComponent(
         title: title,
         message: message,
+        titleStyle:
+            io.getStyle('success') ?? Style().foreground(Colors.success),
         renderConfig: _renderConfig,
       ),
     );
@@ -129,9 +140,11 @@ class Components {
   /// Displays a warning block with a header.
   void warn(String title, Object message) {
     _writeComponent(
-      TitledBlockComponent.warning(
+      TitledBlockComponent(
         title: title,
         message: message,
+        titleStyle:
+            io.getStyle('warning') ?? Style().foreground(Colors.warning),
         renderConfig: _renderConfig,
       ),
     );
@@ -141,9 +154,10 @@ class Components {
   /// Displays an error block with a header.
   void error(String title, Object message) {
     _writeComponent(
-      TitledBlockComponent.error(
+      TitledBlockComponent(
         title: title,
         message: message,
+        titleStyle: io.getStyle('error') ?? Style().foreground(Colors.error),
         renderConfig: _renderConfig,
       ),
     );
@@ -225,7 +239,9 @@ class Components {
         watch.stop();
         if (showResult && !clearOnDone) {
           io.writeln(
-            style.foreground(Colors.success).render('✓') +
+            (io.getStyle('success') ?? style.foreground(Colors.success)).render(
+                  '✓',
+                ) +
                 muted(' ${_formatDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -236,7 +252,9 @@ class Components {
         watch.stop();
         if (showResult && !clearOnDone) {
           io.writeln(
-            style.foreground(Colors.error).render('✗') +
+            (io.getStyle('error') ?? style.foreground(Colors.error)).render(
+                  '✗',
+                ) +
                 muted(' ${_formatDuration(watch.elapsed)}'),
           );
         } else if (!clearOnDone) {
@@ -257,7 +275,7 @@ class Components {
         spinner: spinner,
         clearOnDone: clearOnDone,
         doneMessage: showResult && !clearOnDone
-            ? '${style.foreground(Colors.success).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
+            ? '${(io.getStyle('success') ?? style.foreground(Colors.success)).render('✓')} $message ${muted(_formatDuration(watch.elapsed))}'
             : null,
       );
       return result;
@@ -266,7 +284,7 @@ class Components {
       if (showResult && !clearOnDone) {
         io.promptTerminal.clearLine();
         io.promptTerminal.writeln(
-          '${style.foreground(Colors.error).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
+          '${(io.getStyle('error') ?? style.foreground(Colors.error)).render('✗')} $message ${muted(_formatDuration(watch.elapsed))}',
         );
       }
       rethrow;
