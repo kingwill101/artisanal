@@ -290,8 +290,4 @@ Visit [GitHub](https://github.com) for more info.
 }
 ```
 
----
 
-## 🌟 Get Started
-
-To explore more, check out the examples in the `example` directory or dive into the documentation. Build your next terminal application with Artisanal!
