@@ -44,6 +44,355 @@ advertises `services`:
 envelopes, and manifest files so non-Dart tooling can validate the same wire
 format the host and guest libraries use.
 
+---
+
+## Examples
+
+### 1. Basic Host — Launch a Plugin Process
+
+The host launches a guest executable, waits for it to open a surface, then
+renders the received cell state with a UV canvas.
+
+```dart
+// example/tui/remote_plugin_host_demo.dart
+import 'dart:io' as io;
+import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/uv.dart' as uv;
+
+const _surfaceId = 'demo.panel';
+
+Future<void> main() async {
+  final connection = await plugins.RemotePluginHostConnection.startProcess(
+    io.Platform.resolvedExecutable,
+    ['path/to/remote_plugin_guest_demo.dart'],
+    hostHello: const plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: ['surfaces'],
+    ),
+    timeout: const Duration(seconds: 15),
+  );
+
+  try {
+    // Send focus to the plugin's surface
+    await connection.send(
+      const plugins.RemotePluginFocusInput(surfaceId: _surfaceId),
+    );
+
+    // Wait for all surface messages to complete
+    await connection.surfaceMessages.drain<void>();
+
+    // Retrieve and render the surface
+    final surface = connection.surfaces[_surfaceId]!;
+    final canvas = uv.Canvas(surface.width, surface.height);
+    canvas.compose(plugins.RemotePluginSurfaceDrawable(surface));
+    io.stdout.writeln(canvas.render());
+  } finally {
+    await connection.dispose(kill: true);
+  }
+}
+```
+
+---
+
+### 2. Basic Guest — Open a Surface and Render Frames
+
+The guest binds stdin/stdout, opens a named surface, and pushes sparse cell
+frames back to the host.
+
+```dart
+// example/tui/remote_plugin_guest_demo.dart
+import 'package:artisanal/plugins.dart' as plugins;
+
+const _surfaceId = 'demo.panel';
+const _width = 28;
+const _height = 5;
+
+Future<void> main() async {
+  final session = await plugins.RemotePluginGuestSession.bindStdio(
+    pluginHello: const plugins.RemotePluginHello(
+      pluginId: 'remote-surface-demo',
+      pluginVersion: '0.1.0',
+      displayName: 'Remote Surface Demo',
+      capabilities: ['surfaces'],
+    ),
+  );
+
+  try {
+    // Open the surface
+    await session.send(const plugins.RemotePluginSurfaceOpen(
+      surfaceId: _surfaceId,
+      kind: plugins.RemotePluginSurfaceKind.panel,
+      width: _width,
+      height: _height,
+      title: 'Demo Panel',
+      slot: 'main',
+    ));
+
+    // Push an initial frame
+    await session.send(_buildFrame(
+      hostName: session.hostHello.hostName,
+      status: 'ready',
+    ));
+
+    // React to host messages
+    await for (final message in session.messages) {
+      switch (message) {
+        case plugins.RemotePluginFocusInput(surfaceId: _surfaceId):
+          await session.send(_buildFrame(
+            hostName: session.hostHello.hostName,
+            status: 'focused',
+          ));
+          return;
+        case plugins.RemotePluginBlurInput(surfaceId: _surfaceId):
+          await session.send(_buildFrame(
+            hostName: session.hostHello.hostName,
+            status: 'blurred',
+          ));
+        default:
+          continue;
+      }
+    }
+  } finally {
+    await session.dispose();
+  }
+}
+
+plugins.RemotePluginFrame _buildFrame({
+  required String hostName,
+  required String status,
+}) {
+  final lines = [
+    'Remote Plugin Demo',
+    'Host: $hostName',
+    'State: $status',
+    'Surface: $_surfaceId',
+  ];
+
+  final cells = <plugins.RemotePluginFrameCell>[];
+  for (var row = 0; row < lines.length; row++) {
+    final line = lines[row];
+    for (var col = 0; col < line.length && col < _width; col++) {
+      cells.add(plugins.RemotePluginFrameCell(
+        column: col,
+        row: row,
+        symbol: line[col],
+        // Highlight the title row in light blue
+        foreground: row == 0 ? '#7dd3fc' : null,
+      ));
+    }
+  }
+
+  return plugins.RemotePluginFrame(
+    surfaceId: _surfaceId,
+    width: _width,
+    height: _height,
+    cells: cells,
+    cursor: const plugins.RemotePluginCursor(column: 7, row: 2),
+  );
+}
+```
+
+---
+
+### 3. Generic Host Service (Custom RPC)
+
+Register a custom `host.ping` RPC with JSON schema validation. The guest
+calls it via the generic service envelope.
+
+```dart
+// Host side — example/tui/remote_plugin_generic_service_host_demo.dart
+import 'dart:io' as io;
+import 'package:artisanal/plugins.dart' as plugins;
+import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
+
+Future<void> main() async {
+  // Define request/result schemas
+  final paramsSchema = jsb.S.object(
+    required: const ['value'],
+    properties: {'value': jsb.S.string(minLength: 1)},
+    additionalProperties: false,
+  );
+  final resultSchema = jsb.S.object(
+    required: const ['reply'],
+    properties: {'reply': jsb.S.string(minLength: 1)},
+    additionalProperties: false,
+  );
+
+  // Build a service catalog and register the handler
+  final catalog = plugins.RemotePluginGenericServiceCatalog()
+    ..register(
+      'host',
+      'ping',
+      (request) => {'reply': 'pong ${request.params['value']}'},
+      description: 'Reply to a plugin ping with a tagged pong payload.',
+      paramsSchema: paramsSchema,
+      resultSchema: resultSchema,
+    );
+
+  final connection = await plugins.RemotePluginHostConnection.startProcess(
+    io.Platform.resolvedExecutable,
+    ['path/to/remote_plugin_generic_service_guest_demo.dart'],
+    hostHello: const plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: ['surfaces', 'services'],
+    ),
+    genericServices: catalog,
+    timeout: const Duration(seconds: 15),
+  );
+
+  try {
+    await connection.surfaceMessages.drain<void>();
+    final surface = connection.surfaces['generic.panel']!;
+    io.stdout.writeln('Service result rendered on surface:');
+    final canvas = uv.Canvas(surface.width, surface.height);
+    canvas.compose(plugins.RemotePluginSurfaceDrawable(surface));
+    io.stdout.writeln(canvas.render());
+  } finally {
+    await connection.dispose(kill: true);
+  }
+}
+```
+
+```dart
+// Guest side — example/tui/remote_plugin_generic_service_guest_demo.dart
+import 'package:artisanal/plugins.dart' as plugins;
+
+Future<void> main() async {
+  final session = await plugins.RemotePluginGuestSession.bindStdio(
+    pluginHello: const plugins.RemotePluginHello(
+      pluginId: 'remote-generic-service-demo',
+      pluginVersion: '0.1.0',
+      displayName: 'Remote Generic Service Demo',
+      capabilities: ['surfaces', 'services'],
+    ),
+  );
+
+  try {
+    await session.send(const plugins.RemotePluginSurfaceOpen(
+      surfaceId: 'generic.panel',
+      kind: plugins.RemotePluginSurfaceKind.panel,
+      width: 38,
+      height: 6,
+      title: 'Generic Service Panel',
+      slot: 'main',
+    ));
+
+    // Call the host.ping generic service
+    try {
+      final result = await session.services.call(
+        'host', 'ping',
+        params: const {'value': 'demo'},
+      );
+      // result['reply'] == 'pong demo'
+    } on plugins.RemotePluginServiceException catch (error) {
+      // Handle service errors
+    }
+  } finally {
+    await session.dispose();
+  }
+}
+```
+
+---
+
+### 4. Built-In Services (Clipboard, URL, Notifications, File Picker)
+
+Use `RemotePluginGenericServiceCatalog.builtIns(...)` to wire all four
+built-in host-owned services in one call.
+
+```dart
+// Host side
+final catalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
+  readClipboard: (_) => 'clipboard text',
+  openUrl: (req) { /* launch browser */ },
+  notify: (req) { /* show OS notification */ },
+  pickPaths: (_) => const ['/tmp/selected.txt'],
+);
+
+final connection = await plugins.RemotePluginHostConnection.startProcess(
+  io.Platform.resolvedExecutable,
+  ['path/to/guest.dart'],
+  hostHello: plugins.RemotePluginHostHello(
+    hostName: 'my-host',
+    hostVersion: '1.0.0',
+    capabilities: const ['surfaces', 'services'],
+  ),
+  genericServices: catalog,
+  timeout: const Duration(seconds: 15),
+);
+```
+
+```dart
+// Guest side — call built-in services via RemotePluginGuestServices
+final clipboardText = await session.services.readClipboard();
+await session.services.openUrl('https://example.com');
+await session.services.notify('Done', body: 'Task complete');
+final paths = await session.services.pickPaths(title: 'Open file');
+```
+
+---
+
+### 5. Multi-Plugin Workspace
+
+`RemotePluginWorkspace` discovers plugin manifests from a directory, launches
+all plugin processes, and composes their surfaces into one UV canvas. Input
+routing (focus, mouse, keyboard) is handled by the built-in
+`RemotePluginSurfaceInputRouter`.
+
+```dart
+// example/tui/remote_plugin_workspace/host/main.dart (condensed)
+import 'dart:io' as io;
+import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/runtime.dart';
+import 'package:artisanal/uv.dart' as uv;
+
+Future<void> main() async {
+  // Share built-in host services across all plugin connections
+  final catalog = plugins.RemotePluginGenericServiceCatalog.builtIns(
+    readClipboard: (_) => 'workspace clipboard',
+    openUrl: (_) {},
+    notify: (_) {},
+    pickPaths: (_) => const ['/tmp/workspace.txt'],
+  );
+
+  // Discover manifests and launch all plugins
+  final workspace = await plugins.RemotePluginWorkspace.startManifestDirectory(
+    'pkgs/artisanal/example/tui/remote_plugin_workspace/plugins',
+    executable: io.Platform.resolvedExecutable,
+    hostHello: plugins.RemotePluginHostHello(
+      hostName: 'artisanal',
+      hostVersion: '0.2.0',
+      capabilities: const ['surfaces'],
+    ),
+    genericServices: catalog,
+    timeout: const Duration(seconds: 30),
+  );
+
+  // Focus the primary plugin
+  await workspace.focusPlugin('overview');
+
+  // Compose all plugin surfaces into one UV canvas using their manifest placements
+  final layers = plugins.buildRemotePluginSurfaceLayers(
+    workspace.surfaces,
+    placements: workspace.manifests.map(
+      (m) => m.placement.toSurfacePlacement(),
+    ),
+  );
+  final output = uv.Compositor(layers).render();
+  io.stdout.writeln(output);
+
+  await workspace.dispose(kill: true);
+}
+```
+
+For the full interactive TUI version (with mouse, keyboard, and live surface
+updates), see
+`pkgs/artisanal/example/tui/remote_plugin_workspace/host/main.dart`.
+
+---
+
 ## Running the Demos
 
 End-to-end reference demo (launches the matching guest process automatically):
