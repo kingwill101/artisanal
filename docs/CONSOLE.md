@@ -219,7 +219,11 @@ console.writeln('<question>Question?</question>');
 console.writeln('<error>Error message</error>');
 console.writeln('<success>Success!</success>');
 console.writeln('<warning>Warning</warning>');
+console.writeln('<alert>Alert!</alert>');
+console.writeln('<muted>Muted text</muted>');
 ```
+
+Tags automatically map to the active `OutputTheme` semantic colors.
 
 ### Custom Styles
 
