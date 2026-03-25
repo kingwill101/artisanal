@@ -75,6 +75,7 @@ export '../editor_core/text_document.dart';
 export 'textinput.dart';
 export 'textarea.dart';
 export 'table.dart';
+export 'data_table.dart';
 export 'list.dart';
 export 'timer.dart';
 export 'stopwatch.dart';

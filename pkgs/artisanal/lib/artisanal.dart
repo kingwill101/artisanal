@@ -71,10 +71,16 @@ export 'src/io/console.dart';
 export 'src/io/components.dart' show Components;
 export 'src/io/inline_animation.dart'
     show InlineAnimation, InlineAnimationResult;
+export 'src/io/output_theme.dart' show OutputTheme;
+export 'src/io/uv_console.dart' show UVConsole;
 export 'src/io/validators.dart' show Validators;
 
 // Spinners (for inline animations)
 export 'src/tui/bubbles/spinner.dart' show Spinner, Spinners;
+
+// Table types (for use with Console.dataTable)
+export 'src/tui/bubbles/table.dart' show Column;
+export 'src/tui/bubbles/data_table.dart' show DataTableStyles;
 
 // Terminal utilities
 export 'src/terminal/terminal.dart'
@@ -93,7 +99,14 @@ export 'src/terminal/terminal.dart'
 export 'src/style/verbosity.dart' show Verbosity;
 export 'src/style/style.dart';
 export 'src/style/color.dart'
-    show Color, AnsiColor, BasicColor, Colors, ColorProfile;
+    show
+        Color,
+        AnsiColor,
+        BasicColor,
+        AdaptiveColor,
+        CompleteAdaptiveColor,
+        Colors,
+        ColorProfile;
 
 // Renderer
 export 'src/renderer/renderer.dart'

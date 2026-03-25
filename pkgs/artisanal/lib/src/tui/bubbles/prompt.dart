@@ -9,6 +9,7 @@ import '../program.dart';
 import '../terminal.dart';
 import 'anticipate.dart';
 import 'confirm.dart';
+import 'data_table.dart';
 import 'password.dart';
 import 'search.dart';
 import 'select.dart';
@@ -35,7 +36,22 @@ const promptProgramOptions = ProgramOptions(
   shutdownSharedStdinOnExit: false,
 );
 
-/// Dedicated defaults for full-screen text editing prompts.
+/// Dedicated defaults for interactive data-table prompts.
+///
+/// Identical to [promptProgramOptions] but with [ProgramOptions.mouse] enabled
+/// so that wheel/trackpad scroll events reach the [DataTableModel].
+const dataTablePromptOptions = ProgramOptions(
+  altScreen: false,
+  hideCursor: false,
+  fps: 20,
+  mouse: true,
+  bracketedPaste: false,
+  signalHandlers: false,
+  sendInterrupt: false,
+  useUltravioletRenderer: false,
+  useUltravioletInputDecoder: false,
+  shutdownSharedStdinOnExit: false,
+);
 const textareaPromptOptions = ProgramOptions(
   altScreen: true,
   hideCursor: true,
@@ -145,6 +161,40 @@ Future<T?> runSearchPrompt<T>(
   final program = Program(
     _SearchPromptModel<T>(model, controller),
     options: options ?? promptProgramOptions,
+    terminal: terminal,
+  );
+  await program.run();
+  return await controller.future;
+}
+
+/// Runs a [MultiSearchModel] and resolves to the selected items, or `null` if
+/// cancelled.
+Future<List<T>?> runMultiSearchPrompt<T>(
+  MultiSearchModel<T> model,
+  Terminal terminal, {
+  ProgramOptions? options,
+}) async {
+  final controller = _PromptController<List<T>?>();
+  final program = Program(
+    _MultiSearchPromptModel<T>(model, controller),
+    options: options ?? promptProgramOptions,
+    terminal: terminal,
+  );
+  await program.run();
+  return await controller.future;
+}
+
+/// Runs a [DataTableModel] and resolves to the selected item, or `null` if
+/// cancelled.
+Future<T?> runDataTablePrompt<T>(
+  DataTableModel<T> model,
+  Terminal terminal, {
+  ProgramOptions? options,
+}) async {
+  final controller = _PromptController<T?>();
+  final program = Program(
+    _DataTablePromptModel<T>(model, controller),
+    options: options ?? dataTablePromptOptions,
     terminal: terminal,
   );
   await program.run();
@@ -442,6 +492,42 @@ class _SearchPromptModel<T> extends ViewComponent {
   }
 }
 
+class _MultiSearchPromptModel<T> extends ViewComponent {
+  _MultiSearchPromptModel(this._model, this._controller);
+
+  MultiSearchModel<T> _model;
+  final _PromptController<List<T>?> _controller;
+
+  @override
+  Cmd? init() => _model.init();
+
+  @override
+  (_MultiSearchPromptModel<T>, Cmd?) update(Msg msg) {
+    if (_controller.isCompleted) return (this, null);
+
+    if (msg is MultiSearchSelectionMadeMsg<T>) {
+      _controller.complete(msg.items);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is SearchCancelledMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    final (newModel, cmd) = _model.update(msg);
+    _model = newModel;
+    return (this, cmd);
+  }
+
+  @override
+  String view() {
+    final Object v = _model.view();
+    if (v is tui_view.View) return v.content;
+    return v.toString();
+  }
+}
+
 class _AnticipatePromptModel extends ViewComponent {
   _AnticipatePromptModel(this._model, this._controller);
 
@@ -712,4 +798,40 @@ class _SpinnerTaskModel<T> extends ViewComponent {
 
   @override
   String view() => '${_spinner.view()} $message';
+}
+
+class _DataTablePromptModel<T> extends ViewComponent {
+  _DataTablePromptModel(this._model, this._controller);
+
+  DataTableModel<T> _model;
+  final _PromptController<T?> _controller;
+
+  @override
+  Cmd? init() => _model.init();
+
+  @override
+  (_DataTablePromptModel<T>, Cmd?) update(Msg msg) {
+    if (_controller.isCompleted) return (this, null);
+
+    if (msg is DataTableSelectionMadeMsg<T>) {
+      _controller.complete(msg.item);
+      return (this, Cmd.quit());
+    }
+
+    if (msg is SearchCancelledMsg) {
+      _controller.complete(null);
+      return (this, Cmd.quit());
+    }
+
+    final (newModel, cmd) = _model.update(msg);
+    _model = newModel;
+    return (this, cmd);
+  }
+
+  @override
+  String view() {
+    final Object v = _model.view();
+    if (v is tui_view.View) return v.content;
+    return v.toString();
+  }
 }
