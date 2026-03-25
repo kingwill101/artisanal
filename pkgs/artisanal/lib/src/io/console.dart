@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import '../terminal/ansi.dart' show Ansi;
 import '../tui/bubbles/components/base.dart';
 import '../tui/bubbles/components/progress_bar.dart' show ProgressBarComponent;
 import '../tui/bubbles/components/table.dart';
@@ -33,8 +34,12 @@ import '../tui/bubbles/prompt.dart'
         runSearchPrompt,
         runMultiSearchPrompt,
         runDataTablePrompt,
+        runNumberInputPrompt,
+        runSuggestPrompt,
         promptProgramOptions;
 import '../tui/bubbles/pause.dart' show CountdownModel;
+import '../tui/bubbles/number_input.dart' show NumberInputModel;
+import '../tui/bubbles/suggest.dart' show SuggestModel, SuggestStyles;
 import '../tui/program.dart' show Program;
 
 /// Callback for writing a complete line to output.
@@ -379,6 +384,213 @@ class Console {
       writeln(' * $item');
     }
     newLine();
+  }
+
+  /// Clears the terminal screen and moves the cursor to the top-left.
+  ///
+  /// Writes the ANSI clear-screen and cursor-home sequences directly to
+  /// stdout. Has no effect when output is quiet.
+  ///
+  /// Example:
+  /// ```dart
+  /// console.clearScreen();
+  /// console.title('Fresh start');
+  /// ```
+  void clearScreen() {
+    if (quiet) return;
+    _outRaw(Ansi.clearScreen);
+    _outRaw(Ansi.cursorHome);
+  }
+
+  /// Sets the terminal window title via an OSC escape sequence.
+  ///
+  /// Most modern terminal emulators honour this. Has no visible effect in
+  /// environments that do not support OSC sequences.
+  ///
+  /// Example:
+  /// ```dart
+  /// console.setTerminalTitle('My CLI Tool — processing…');
+  /// ```
+  void setTerminalTitle(String title) {
+    _outRaw(Ansi.setTitle(title));
+  }
+
+  /// Displays items in a multi-column grid layout.
+  ///
+  /// Arranges [items] into as many columns as fit within [maxWidth] (defaults
+  /// to [terminalWidth]). Each column is sized to the longest item it contains,
+  /// plus [columnGap] spaces of padding between columns.
+  ///
+  /// Items are filled **column-first** (down then across), matching the
+  /// behaviour of `Laravel\Prompts\Grid`.
+  ///
+  /// Example:
+  /// ```dart
+  /// console.grid(['apple', 'banana', 'cherry', 'date', 'elderberry']);
+  /// ```
+  void grid(List<String> items, {int? maxWidth, int columnGap = 2}) {
+    if (items.isEmpty) return;
+    final width = maxWidth ?? terminalWidth;
+
+    // Strip ANSI from items to measure visible width.
+    int visibleWidth(String s) => Style.visibleLength(s);
+
+    // Try to find the maximum number of columns that fit.
+    // Start from 1 column and increase until it no longer fits.
+    int bestCols = 1;
+    for (var cols = 1; cols <= items.length; cols++) {
+      final rows = (items.length / cols).ceil();
+      // Build column widths for this layout.
+      var totalWidth = 0;
+      for (var col = 0; col < cols; col++) {
+        var colMax = 0;
+        for (var row = 0; row < rows; row++) {
+          final idx = row * cols + col;
+          if (idx < items.length) {
+            final w = visibleWidth(items[idx]);
+            if (w > colMax) colMax = w;
+          }
+        }
+        totalWidth += colMax;
+        if (col < cols - 1) totalWidth += columnGap;
+      }
+      if (totalWidth <= width) {
+        bestCols = cols;
+      } else {
+        break;
+      }
+    }
+
+    final cols = bestCols;
+    final rows = (items.length / cols).ceil();
+
+    // Compute column widths for the chosen layout.
+    final colWidths = List<int>.filled(cols, 0);
+    for (var col = 0; col < cols; col++) {
+      for (var row = 0; row < rows; row++) {
+        final idx = row * cols + col;
+        if (idx < items.length) {
+          final w = visibleWidth(items[idx]);
+          if (w > colWidths[col]) colWidths[col] = w;
+        }
+      }
+    }
+
+    // Render rows.
+    for (var row = 0; row < rows; row++) {
+      final buffer = StringBuffer();
+      for (var col = 0; col < cols; col++) {
+        final idx = row * cols + col;
+        final item = idx < items.length ? items[idx] : '';
+        buffer.write(item);
+        // Pad to column width (except last column in row).
+        if (col < cols - 1) {
+          final pad = colWidths[col] - visibleWidth(item) + columnGap;
+          if (pad > 0) buffer.write(' ' * pad);
+        }
+      }
+      writeln(buffer.toString());
+    }
+  }
+
+  /// Sends a desktop notification using the platform's native notification
+  /// system.
+  ///
+  /// - **macOS**: uses `osascript`.
+  /// - **Linux**: tries `notify-send`, then falls back to `kdialog`.
+  /// - Other platforms: returns `false` immediately.
+  ///
+  /// Returns `true` if the notification was delivered successfully.
+  ///
+  /// Example:
+  /// ```dart
+  /// await console.notify('Build complete', body: 'All tests passed.');
+  /// ```
+  Future<bool> notify(
+    String title, {
+    String body = '',
+    String subtitle = '',
+    String sound = '',
+    String icon = '',
+  }) async {
+    if (io.Platform.isMacOS) {
+      return _notifyMacOS(title, body: body, subtitle: subtitle, sound: sound);
+    }
+    if (io.Platform.isLinux) {
+      return _notifyLinux(title, body: body, icon: icon);
+    }
+    return false;
+  }
+
+  Future<bool> _notifyMacOS(
+    String title, {
+    String body = '',
+    String subtitle = '',
+    String sound = '',
+  }) async {
+    String esc(String s) =>
+        '"${s.replaceAll(r'\', r'\\').replaceAll('"', '\\"')}"';
+
+    final sb = StringBuffer('display notification ${esc(body)}');
+    sb.write(' with title ${esc(title)}');
+    if (subtitle.isNotEmpty) sb.write(' subtitle ${esc(subtitle)}');
+    if (sound.isNotEmpty) sb.write(' sound name ${esc(sound)}');
+
+    return _runProcess('osascript', ['-e', sb.toString()]);
+  }
+
+  Future<bool> _notifyLinux(
+    String title, {
+    String body = '',
+    String icon = '',
+  }) async {
+    // Try notify-send first.
+    final notifySend = await _findExecutable('notify-send');
+    if (notifySend != null) {
+      final args = <String>[];
+      if (icon.isNotEmpty) {
+        args.addAll(['--icon', icon]);
+      }
+      args.add(title);
+      if (body.isNotEmpty) args.add(body);
+      return _runProcess('notify-send', args);
+    }
+
+    // Fallback to kdialog.
+    final kdialog = await _findExecutable('kdialog');
+    if (kdialog != null) {
+      final message = body.isNotEmpty ? '$title: $body' : title;
+      return _runProcess('kdialog', [
+        '--passivepopup',
+        message,
+        '5',
+        '--title',
+        title,
+      ]);
+    }
+
+    return false;
+  }
+
+  /// Returns the full path of [executable] if it is on PATH, else null.
+  Future<String?> _findExecutable(String executable) async {
+    try {
+      final result = await io.Process.run('which', [executable]);
+      if (result.exitCode == 0) {
+        return (result.stdout as String).trim();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Runs [executable] with [args] and returns whether it exited successfully.
+  Future<bool> _runProcess(String executable, List<String> args) async {
+    try {
+      final result = await io.Process.run(executable, args);
+      return result.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1268,33 +1480,55 @@ class Console {
   }
 
   /// Prompts for a numeric value.
-  num number(
+  ///
+  /// When [interactive] is true, runs a TUI prompt where Up/Down arrow keys
+  /// increment or decrement the value by [step], respecting [min] and [max].
+  /// When non-interactive, falls back to a simple readline loop with validation.
+  ///
+  /// Returns the entered number, or [defaultValue] if accepted without typing.
+  Future<num> number(
     String question, {
     num? defaultValue,
     num? min,
     num? max,
+    num step = 1,
     int attempts = 3,
-  }) {
-    final validator = Validators.combine([
-      Validators.required(),
-      Validators.numeric(min: min, max: max),
-    ]);
+    String hint = '',
+  }) async {
+    if (!interactive) {
+      // Non-interactive path: simple readline with validation.
+      final validator = Validators.combine([
+        Validators.required(),
+        Validators.numeric(min: min, max: max),
+      ]);
+      final raw = ask(
+        question,
+        defaultValue: defaultValue?.toString(),
+        validator: (val) {
+          try {
+            return validator(val);
+          } catch (e) {
+            return e.toString();
+          }
+        },
+        attempts: attempts,
+      );
+      return num.parse(raw);
+    }
 
-    final raw = ask(
-      question,
-      defaultValue: defaultValue?.toString(),
-      validator: (val) {
-        try {
-          final err = validator(val);
-          return err;
-        } catch (e) {
-          return e.toString();
-        }
-      },
-      attempts: attempts,
+    final terminal = promptTerminal;
+    final model = NumberInputModel(
+      prompt: question,
+      defaultValue: defaultValue,
+      min: min,
+      max: max,
+      step: step,
+      hint: hint,
     );
-
-    return num.parse(raw);
+    final result = await runNumberInputPrompt(model, terminal);
+    if (result != null) return result;
+    if (defaultValue != null) return defaultValue;
+    throw StateError('Number prompt cancelled.');
   }
 
   /// Interactive single-select with arrow-key navigation.
@@ -1535,6 +1769,53 @@ class Console {
       ),
     );
     return await runDataTablePrompt<T>(model, terminal);
+  }
+
+  /// Interactive suggest/autocomplete prompt.
+  ///
+  /// Shows a text input with a scrollable dropdown of prefix-matched suggestions
+  /// while the user types. The user may also type a value not in the list.
+  ///
+  /// - [options]: Static list of suggestion strings, **or** a callback
+  ///   `(String input) => List<String>` for dynamic/async suggestions.
+  /// - [scroll]: Maximum number of suggestion rows shown at once.
+  ///
+  /// Returns the accepted value (typed or selected), or null if cancelled.
+  ///
+  /// Example:
+  /// ```dart
+  /// final lang = await console.suggest(
+  ///   'Pick a language:',
+  ///   options: ['Dart', 'Python', 'Ruby', 'Rust'],
+  /// );
+  /// ```
+  Future<String?> suggest(
+    String question, {
+    required List<String> options,
+    String placeholder = '',
+    String? defaultValue,
+    int scroll = 5,
+    String hint = '',
+  }) async {
+    if (!interactive) {
+      return defaultValue;
+    }
+
+    final terminal = promptTerminal;
+    final model = SuggestModel(
+      prompt: question,
+      options: options,
+      placeholder: placeholder,
+      defaultValue: defaultValue ?? '',
+      scroll: scroll,
+      hint: hint,
+      styles: SuggestStyles(
+        title: getStyle('question') ?? Style().bold(),
+        highlighted: getStyle('info') ?? Style().foreground(AnsiColor(11)),
+        dimmed: getStyle('muted') ?? Style().foreground(AnsiColor(8)),
+      ),
+    );
+    return await runSuggestPrompt(model, terminal);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
