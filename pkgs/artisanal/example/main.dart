@@ -63,11 +63,157 @@ Future<void> main(List<String> args) async {
     ..addCommand(UiWizardCommand())
     ..addCommand(UiLinkCommand())
     ..addCommand(UiComponentSystemCommand())
+    ..addCommand(UiThemeCommand())
+    ..addCommand(UiTagsCommand())
     ..addCommand(UiAllCommand());
 
   await runner.run(args);
 }
+
+/// A command that demonstrates custom themes.
+class UiThemeCommand extends Command<void> {
+  @override
+  String get name => 'ui:theme';
+
+  @override
+  String get description => 'Demonstrate custom output themes.';
+
+  @override
+  Future<void> run() async {
+    final originalTheme = io.outputTheme;
+
+    io.title('Theme Demonstration');
+    io.text('The current theme is the default (Zinc-inspired).');
+    io.newLine();
+
+    _showThemePreview();
+
+    io.newLine();
+    io.section('Switching to Cyberpunk Theme');
+
+    final cyberpunkTheme = OutputTheme(
+      info: AdaptiveColor(
+        light: BasicColor('#ff00ff'),
+        dark: BasicColor('#ff00ff'),
+      ), // Magenta
+      success: AdaptiveColor(
+        light: BasicColor('#00ffff'),
+        dark: BasicColor('#00ffff'),
+      ), // Cyan
+      warning: AdaptiveColor(
+        light: BasicColor('#ffff00'),
+        dark: BasicColor('#ffff00'),
+      ), // Yellow
+      error: AdaptiveColor(
+        light: BasicColor('#ff0000'),
+        dark: BasicColor('#ff0000'),
+      ), // Red
+      alert: AdaptiveColor(
+        light: BasicColor('#f43f5e'),
+        dark: BasicColor('#fb7185'),
+      ), // Rose/Pink
+    );
+
+    // Apply theme
+    io.outputTheme = cyberpunkTheme;
+
+    _showThemePreview();
+
+    // Reset theme
+    io.outputTheme = originalTheme;
+
+    io.newLine();
+    io.success('Theme demonstration complete!');
+  }
+
+  void _showThemePreview() {
+    io.info('This is an info message');
+    io.success('This is a success message');
+    io.warn('This is a warning message');
+    io.error('This is an error message');
+
+    io.newLine();
+    io.components.alert('Alerts also respect the theme!');
+
+    io.components.info('Titled Info', 'Details go here...');
+  }
+}
 // #endregion
+
+/// A command that demonstrates console tags.
+class UiTagsCommand extends Command<void> {
+  @override
+  String get name => 'ui:tags';
+
+  @override
+  String get description => 'Demonstrate themed console tags.';
+
+  @override
+  Future<void> run() async {
+    final originalTheme = io.outputTheme;
+
+    io.title('Console Tags Demonstration');
+    io.text('Tags automatically map to the active theme\'s semantic colors.');
+    io.newLine();
+
+    _showTagsPreview();
+
+    io.newLine();
+    io.section('Switching to Cyberpunk Theme');
+
+    final cyberpunkTheme = OutputTheme(
+      info: AdaptiveColor(
+        light: BasicColor('#ff00ff'),
+        dark: BasicColor('#ff00ff'),
+      ), // Magenta
+      success: AdaptiveColor(
+        light: BasicColor('#00ffff'),
+        dark: BasicColor('#00ffff'),
+      ), // Cyan
+      warning: AdaptiveColor(
+        light: BasicColor('#ffff00'),
+        dark: BasicColor('#ffff00'),
+      ), // Yellow
+      error: AdaptiveColor(
+        light: BasicColor('#ff0000'),
+        dark: BasicColor('#ff0000'),
+      ), // Red
+      alert: AdaptiveColor(
+        light: BasicColor('#f43f5e'),
+        dark: BasicColor('#fb7185'),
+      ), // Rose/Pink
+    );
+
+    // Apply theme
+    io.outputTheme = cyberpunkTheme;
+
+    _showTagsPreview();
+
+    // Reset theme
+    io.outputTheme = originalTheme;
+
+    io.newLine();
+    io.success('Tags demonstration complete!');
+  }
+
+  void _showTagsPreview() {
+    io.writeln('Standard Tags:');
+    io.writeln('  <info>This is info text</info>');
+    io.writeln('  <success>This is success text</success>');
+    io.writeln('  <warning>This is warning text</warning>');
+    io.writeln('  <error>This is error text</error>');
+    io.writeln('  <alert>This is alert text</alert>');
+    io.newLine();
+
+    io.writeln('Nested & Combined:');
+    io.writeln(
+      '  <info>Important: <success>Everything is working!</success></info>',
+    );
+    io.writeln(
+      '  <error>Critical: <warning>System resource low</warning></error>',
+    );
+  }
+}
 
 // #region command_definition_usage
 class DemoCommand extends Command<void> {
