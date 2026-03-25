@@ -69,3 +69,4 @@ export 'src/runner/command_runner.dart'
         ArgParserException,
         ArgResults,
         UsageException;
+export 'src/runner/help_color_scheme.dart' show HelpColorScheme;

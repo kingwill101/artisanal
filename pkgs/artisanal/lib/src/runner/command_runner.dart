@@ -6,11 +6,10 @@ export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
-import '../style/color.dart';
-import '../style/style.dart';
 import '../style/verbosity.dart';
 import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';
+import 'help_color_scheme.dart';
 
 /// Callback for writing a line to output.
 typedef Write = void Function(String line);
@@ -51,6 +50,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// - [namespaceSeparator]: Character used to group commands (default: `:`).
   /// - [usageExitCode]: Exit code for usage errors (default: 64).
   /// - [ansi]: Force ANSI output on/off (auto-detected by default).
+  /// - [helpColorScheme]: Color scheme for help output (default: [HelpColorScheme.default_]).
   CommandRunner(
     super.executableName,
     super.description, {
@@ -65,6 +65,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     ReadLine? readLine,
     ExitCodeSetter? setExitCode,
     super.usageLineLength,
+    HelpColorScheme? helpColorScheme,
   }) : _out = out ?? ((line) => dartio.stdout.writeln(line)),
        _err = err ?? ((line) => dartio.stderr.writeln(line)),
        _outRaw = outRaw ?? ((text) => dartio.stdout.write(text)),
@@ -80,7 +81,8 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
                  : (ansi == false ? ColorProfile.ascii : null),
              forceNoAnsi: ansi == false,
            ),
-       _rendererInjected = renderer != null {
+       _rendererInjected = renderer != null,
+       helpColorScheme = helpColorScheme ?? HelpColorScheme.default_ {
     _setupGlobalFlags();
   }
 
@@ -102,6 +104,16 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   Verbosity _verbosity = Verbosity.normal;
   bool _interactive = true;
   Console? _io;
+
+  /// The color scheme used for help output.
+  ///
+  /// Defaults to [HelpColorScheme.default_].
+  ///
+  /// Example:
+  /// ```dart
+  /// runner.helpColorScheme = HelpColorScheme.dark();
+  /// ```
+  final HelpColorScheme helpColorScheme;
 
   /// The renderer for output.
   Renderer get renderer => _renderer;
@@ -322,37 +334,12 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   }
 
   // Helpers for styling
-  String _heading(String text) =>
-      (Style()
-            ..colorProfile = _renderer.colorProfile
-            ..hasDarkBackground = _renderer.hasDarkBackground)
-          .bold()
-          .foreground(Colors.yellow)
-          .render(text);
-  String _command(String text) =>
-      (Style()
-            ..colorProfile = _renderer.colorProfile
-            ..hasDarkBackground = _renderer.hasDarkBackground)
-          .foreground(Colors.green)
-          .render(text);
-  String _option(String text) =>
-      (Style()
-            ..colorProfile = _renderer.colorProfile
-            ..hasDarkBackground = _renderer.hasDarkBackground)
-          .foreground(Colors.green)
-          .render(text);
+  String _heading(String text) => helpColorScheme.headingStyle(_renderer)(text);
+  String _command(String text) => helpColorScheme.commandStyle(_renderer)(text);
+  String _option(String text) => helpColorScheme.optionStyle(_renderer)(text);
   String _emphasize(String text) =>
-      (Style()
-            ..colorProfile = _renderer.colorProfile
-            ..hasDarkBackground = _renderer.hasDarkBackground)
-          .bold()
-          .render(text);
-  String _error(String text) =>
-      (Style()
-            ..colorProfile = _renderer.colorProfile
-            ..hasDarkBackground = _renderer.hasDarkBackground)
-          .foreground(Colors.red)
-          .render(text);
+      helpColorScheme.emphasisStyle(_renderer)(text);
+  String _error(String text) => helpColorScheme.errorStyle(_renderer)(text);
 
   String _formatOptionsUsage(String usage) {
     if (_renderer.colorProfile == ColorProfile.ascii) return usage;

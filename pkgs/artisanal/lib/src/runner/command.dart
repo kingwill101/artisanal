@@ -4,11 +4,10 @@ import 'package:args/command_runner.dart' as args;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
-import '../style/color.dart';
-import '../style/style.dart';
 import '../style/verbosity.dart';
 import 'command_listing.dart';
 import 'command_runner.dart';
+import 'help_color_scheme.dart';
 
 /// Base command class for Artisanal-style CLI commands.
 ///
@@ -120,20 +119,14 @@ abstract class Command<T> extends args.Command<T> {
     final Renderer renderer = runner is CommandRunner<T>
         ? (runner as CommandRunner<T>).renderer
         : StringRenderer(colorProfile: ColorProfile.ascii);
+    final HelpColorScheme scheme = runner is CommandRunner<T>
+        ? (runner as CommandRunner<T>).helpColorScheme
+        : HelpColorScheme.default_;
 
-    String heading(String text) =>
-        (Style()
-              ..colorProfile = renderer.colorProfile
-              ..hasDarkBackground = renderer.hasDarkBackground)
-            .bold()
-            .foreground(Colors.yellow)
-            .render(text);
-    String command(String text) =>
-        (Style()
-              ..colorProfile = renderer.colorProfile
-              ..hasDarkBackground = renderer.hasDarkBackground)
-            .foreground(Colors.green)
-            .render(text);
+    String heading(String text) => scheme.headingStyle(renderer)(text);
+    String command(String text) => scheme.commandStyle(renderer)(text);
+    String option(String text) => scheme.optionStyle(renderer)(text);
+
     String formatOptionsUsage(String usage) {
       if (renderer.colorProfile == ColorProfile.ascii) return usage;
       final lines = usage.split('\n');
@@ -155,14 +148,9 @@ abstract class Command<T> extends args.Command<T> {
           styled.add(line);
           continue;
         }
-        final option = rest.substring(0, split.start);
+        final opt = rest.substring(0, split.start);
         final desc = rest.substring(split.end);
-        final styledOption =
-            (Style()
-                  ..colorProfile = renderer.colorProfile
-                  ..hasDarkBackground = renderer.hasDarkBackground)
-                .foreground(Colors.green)
-                .render(option);
+        final styledOption = option(opt);
         styled.add(
           '$indent$styledOption${' ' * (split.end - split.start)}$desc',
         );
