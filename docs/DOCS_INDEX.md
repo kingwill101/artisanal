@@ -31,6 +31,7 @@ This index links the current primary documentation across the workspace.
 - Widget catalog: [WIDGETS.md](WIDGETS.md)
 - Bubbles components: [BUBBLES.md](BUBBLES.md)
 - Console components helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)
+- Remote plugin surfaces: [PLUGINS.md](PLUGINS.md)
 
 ## Rendering and Content
 
