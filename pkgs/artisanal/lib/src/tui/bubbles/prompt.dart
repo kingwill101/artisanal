@@ -25,14 +25,20 @@ import 'wizard.dart';
 ///
 /// Prompts run in inline mode to preserve the artisanal command UX (print output
 /// above/between prompts), while still using the Bubble Tea event loop.
+///
+/// Signal handlers are enabled so that Ctrl+C (SIGINT) is intercepted by the
+/// running [Program] rather than killing the Dart process immediately.  Each
+/// prompt wrapper handles [InterruptMsg] by completing its controller with
+/// `null` and issuing [Cmd.quit()], which triggers [Program._cleanup()] and
+/// restores the terminal to a clean state before the process exits.
 const promptProgramOptions = ProgramOptions(
   altScreen: false,
   hideCursor: false,
   fps: 20,
   mouse: false,
   bracketedPaste: false,
-  signalHandlers: false,
-  sendInterrupt: false,
+  signalHandlers: true,
+  sendInterrupt: true,
   useUltravioletRenderer: false,
   useUltravioletInputDecoder: false,
   shutdownSharedStdinOnExit: false,
@@ -48,20 +54,21 @@ const dataTablePromptOptions = ProgramOptions(
   fps: 20,
   mouse: true,
   bracketedPaste: false,
-  signalHandlers: false,
-  sendInterrupt: false,
+  signalHandlers: true,
+  sendInterrupt: true,
   useUltravioletRenderer: false,
   useUltravioletInputDecoder: false,
   shutdownSharedStdinOnExit: false,
 );
+
 const textareaPromptOptions = ProgramOptions(
   altScreen: true,
   hideCursor: true,
   fps: 60,
   mouse: false,
   bracketedPaste: true,
-  signalHandlers: false,
-  sendInterrupt: false,
+  signalHandlers: true,
+  sendInterrupt: true,
   useUltravioletRenderer: true,
   useUltravioletInputDecoder: true,
   shutdownSharedStdinOnExit: false,
