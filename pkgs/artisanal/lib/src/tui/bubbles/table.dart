@@ -400,12 +400,9 @@ class TableModel extends ViewComponent {
     for (final col in _columns) {
       if (col.width <= 0) continue;
 
-      final widthStyle = Style()
-          .inline(true)
-          .width(col.width)
-          .maxWidth(col.width);
-      final rendered = widthStyle.render(truncate(col.title, col.width, '…'));
-      cells.add(styles.header.render(rendered));
+      final content = truncate(col.title, col.width, '…');
+      final padded = content.padRight(col.width);
+      cells.add(styles.header.render(padded));
     }
     return Layout.joinHorizontal(VerticalAlign.top, cells);
   }
@@ -417,12 +414,9 @@ class TableModel extends ViewComponent {
       if (col.width <= 0) continue;
 
       final value = _rows[r][i];
-      final widthStyle = Style()
-          .inline(true)
-          .width(col.width)
-          .maxWidth(col.width);
-      final rendered = widthStyle.render(truncate(value, col.width, '…'));
-      cells.add(styles.cell.render(rendered));
+      final content = truncate(value, col.width, '…');
+      final padded = content.padRight(col.width);
+      cells.add(styles.cell.render(padded));
     }
 
     final row = Layout.joinHorizontal(VerticalAlign.top, cells);
