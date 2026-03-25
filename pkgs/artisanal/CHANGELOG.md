@@ -1,8 +1,24 @@
 # Changelog
 
-## Unreleased
+## 0.3.0-wip
 
 ### Added
+
+- Added `NumberInputModel` bubble for numeric input prompts with min/max validation and configurable step.
+- Added `SuggestModel` bubble for auto-complete suggestion prompts with fuzzy filtering.
+- Added `Console.clearScreen()` to clear the terminal screen.
+- Added `Console.setTerminalTitle(String)` to set the terminal window title.
+- Added `Console.notify(String)` to send a desktop notification.
+- Added `Console.grid(List<List<String>>)` to render a formatted grid/table to the console.
+- Added `Console.number(...)` interactive prompt for reading a numeric value from the user.
+- Added `Console.suggest(...)` interactive prompt for auto-complete suggestion input.
+
+### Fixed
+
+- Fixed terminal corruption on Ctrl+C by enabling `signalHandlers: true` and `sendInterrupt: true` in `promptProgramOptions`, `dataTablePromptOptions`, and `textareaPromptOptions` so SIGINT is caught before killing the process and the terminal is properly restored.
+- Fixed `InterruptMsg` handling in all 14 `_*PromptModel` wrapper models so Ctrl+C during any prompt gracefully restores the terminal.
+- Fixed `_AnticipatePromptModel` so an `InterruptMsg` arriving before `init()` completes (via `_initDone` guard) exits cleanly instead of hanging.
+- Fixed `runSpinnerTask` to call `future.ignore()` so a rejected future before the `await` does not produce an unhandled error.
 
 - Added `example/tui/remote_plugin_generic_service_host_demo.dart` plus a
   matching guest plugin demo, showing how to register a custom schema-backed

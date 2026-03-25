@@ -1,6 +1,6 @@
 name: ultraviolet
 description: Core cell/buffer/style types for terminal rendering.
-version: 0.1.1+1
+version: 0.2.0-wip
 repository: https://github.com/kingwill101/artisanal
 issue_tracker: https://github.com/kingwill101/artisanal/issues
 screenshots:

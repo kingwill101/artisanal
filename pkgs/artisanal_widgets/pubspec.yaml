@@ -1,6 +1,6 @@
 name: artisanal_widgets
 description: Widget system for composable TUI components, built on top of the artisanal terminal toolkit.
-version: 0.1.0+1
+version: 0.2.0-wip
 repository: https://github.com/kingwill101/artisanal
 issue_tracker: https://github.com/kingwill101/artisanal/issues
 funding:
@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  artisanal: ^0.2.0+1
+  artisanal: ^0.3.0-wip
   image: ^4.7.1
   meta: ^1.12.0
 
