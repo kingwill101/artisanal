@@ -6,10 +6,6 @@
 >
 > Many of the included examples were generated and may contain issues or not reflect the latest API. If you find a broken or outdated example, please let us know!
 
-> **⚠️ Work in Progress:**
->
-> This library is under active development and its API may change. Some examples may be broken or require updates to match the latest state of the package. If you discover any broken or outdated examples, please report them or open an issue. Thank you for your understanding!
-
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Documentation](https://img.shields.io/badge/docs-ormed.vercel.app-blue)](https://ormed.vercel.app/)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://www.buymeacoffee.com/kingwill101)
