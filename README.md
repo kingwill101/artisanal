@@ -295,9 +295,3 @@ Visit [GitHub](https://github.com) for more info.
 ## 🌟 Get Started
 
 To explore more, check out the examples in the `example` directory or dive into the documentation. Build your next terminal application with Artisanal!
-
-If you want a live surface for the shared text editing work, run:
-
-```bash
-dart run pkgs/artisanal_widgets/example/editor-core-playground/main.dart
-```
