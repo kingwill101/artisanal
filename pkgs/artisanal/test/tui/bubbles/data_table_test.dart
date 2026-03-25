@@ -1,5 +1,4 @@
 import 'package:artisanal/src/tui/bubbles/data_table.dart';
-import 'package:artisanal/src/tui/bubbles/search.dart' show SearchCancelledMsg;
 import 'package:artisanal/src/tui/bubbles/table.dart';
 import 'package:artisanal/src/tui/key.dart';
 import 'package:artisanal/src/tui/msg.dart';
@@ -9,7 +8,7 @@ import 'package:test/test.dart';
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Creates a minimal DataTableModel<int> with [count] items, pageSize [page].
+/// Creates a minimal `DataTableModel<int>` with [count] items, pageSize [page].
 DataTableModel<int> _makeModel({int count = 10, int pageSize = 3}) {
   return DataTableModel<int>(
     items: List.generate(count, (i) => i),

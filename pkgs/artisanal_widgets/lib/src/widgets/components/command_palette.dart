@@ -314,14 +314,12 @@ class _CommandPaletteState extends State<CommandPalette> {
   final _scorer = IncrementalScorer();
   final _ranker = const ConformalRanker();
   List<CommandPaletteItem> _cachedItems = [];
-  List<MatchResult> _cachedResults = [];
 
   List<CommandPaletteItem> get _filteredItems {
     final enabled = widget.items.where((item) => item.enabled).toList();
 
     if (_query.isEmpty) {
       _cachedItems = enabled;
-      _cachedResults = [];
       return _cachedItems;
     }
 
@@ -332,17 +330,14 @@ class _CommandPaletteState extends State<CommandPalette> {
     // Rank results and filter to those that matched
     final ranked = _ranker.rank(results);
     final filtered = <CommandPaletteItem>[];
-    final matchResults = <MatchResult>[];
 
     for (final item in ranked.items) {
       if (item.result.matchType != MatchType.noMatch) {
         filtered.add(enabled[item.originalIndex]);
-        matchResults.add(item.result);
       }
     }
 
     _cachedItems = filtered;
-    _cachedResults = matchResults;
     return _cachedItems;
   }
 

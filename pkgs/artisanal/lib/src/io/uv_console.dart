@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' as io;
 
 import '../style/color.dart';
 import '../style/style.dart';
@@ -206,11 +205,10 @@ class _SpinModel implements Model {
   _SpinModel({
     required this.message,
     required this.spinner,
-    required void Function(dynamic) this.onComplete,
-    required void Function(Object) this.onError,
+    required this.onComplete,
+    required this.onError,
     required this.theme,
     this.frameIndex = 0,
-    this.done = false,
   });
 
   final String message;
@@ -219,7 +217,6 @@ class _SpinModel implements Model {
   final void Function(Object) onError;
   final OutputTheme theme;
   int frameIndex;
-  bool done;
 
   @override
   Cmd? init() =>
@@ -271,11 +268,10 @@ class _SpinTick extends Msg {
 class _ProgressModel implements Model {
   _ProgressModel({
     required this.message,
-    required _ProgressController this.progressController,
-    required void Function(dynamic) this.onComplete,
-    required void Function(Object) this.onError,
+    required this.progressController,
+    required this.onComplete,
+    required this.onError,
     required this.theme,
-    this.progress = 0.0,
   });
 
   final String message;
@@ -283,7 +279,7 @@ class _ProgressModel implements Model {
   final void Function(dynamic) onComplete;
   final void Function(Object) onError;
   final OutputTheme theme;
-  final double progress;
+  final double progress = 0.0;
 
   @override
   Cmd? init() {

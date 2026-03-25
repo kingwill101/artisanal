@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:artisanal/artisanal.dart';
-import 'package:artisanal/args.dart';
 
 void main() async {
   final customTheme = OutputTheme(

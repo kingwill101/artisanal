@@ -6,11 +6,6 @@ import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
 
-/// Block characters for sub-cell vertical resolution (1/8 increments).
-///
-/// Index 0 is the lowest fraction, index 7 is a full block.
-const _sparkChars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-
 /// Block characters for sparkline rendering (9 levels: empty + 8 bars).
 const sparkChars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 

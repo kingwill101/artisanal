@@ -9,13 +9,7 @@ import 'dart:io';
 
 import 'package:artisanal/widgets.dart';
 import 'package:artisanal/scoring.dart'
-    show
-        BayesianScorer,
-        IncrementalScorer,
-        MatchResult,
-        MatchType,
-        ConformalRanker,
-        RankedItem;
+    show IncrementalScorer, MatchType, ConformalRanker;
 import 'package:artisanal/markdown.dart'
     show
         AdaptiveChromaTheme,
