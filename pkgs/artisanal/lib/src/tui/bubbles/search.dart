@@ -196,7 +196,25 @@ class SearchKeyMap implements KeyMap {
 
 /// Styles for the search component.
 class SearchStyles {
-  SearchStyles({
+  SearchStyles._({
+    required this.title,
+    required this.prompt,
+    required this.item,
+    required this.selectedItem,
+    required this.matchHighlight,
+    required this.cursor,
+    required this.dimmed,
+    required this.noResults,
+    required this.selectedIcon,
+    required this.unselectedIcon,
+    required this.selectedIconChar,
+    required this.unselectedIconChar,
+    required this.cursorPrefix,
+    required this.itemPrefix,
+  });
+
+  /// Creates default styles.
+  factory SearchStyles({
     Style? title,
     Style? prompt,
     Style? item,
@@ -205,19 +223,28 @@ class SearchStyles {
     Style? cursor,
     Style? dimmed,
     Style? noResults,
+    Style? selectedIcon,
+    Style? unselectedIcon,
+    String? selectedIconChar,
+    String? unselectedIconChar,
     String? cursorPrefix,
     String? itemPrefix,
-  }) : title = title ?? Style().bold(),
-       prompt = prompt ?? Style().foreground(AnsiColor(11)),
-       item = item ?? Style(),
-       selectedItem = selectedItem ?? Style().foreground(AnsiColor(14)),
-       matchHighlight =
-           matchHighlight ?? Style().foreground(AnsiColor(11)).bold(),
-       cursor = cursor ?? Style().foreground(AnsiColor(14)),
-       dimmed = dimmed ?? Style().foreground(AnsiColor(8)),
-       noResults = noResults ?? Style().foreground(AnsiColor(8)).italic(),
-       cursorPrefix = cursorPrefix ?? '❯ ',
-       itemPrefix = itemPrefix ?? '  ';
+  }) => SearchStyles._(
+    title: title ?? Style().bold(),
+    prompt: prompt ?? Style().foreground(AnsiColor(11)),
+    item: item ?? Style(),
+    selectedItem: selectedItem ?? Style().foreground(AnsiColor(14)),
+    matchHighlight: matchHighlight ?? Style().foreground(AnsiColor(11)).bold(),
+    cursor: cursor ?? Style().foreground(AnsiColor(14)),
+    dimmed: dimmed ?? Style().foreground(AnsiColor(8)),
+    noResults: noResults ?? Style().foreground(AnsiColor(8)).italic(),
+    selectedIcon: selectedIcon ?? Style().foreground(AnsiColor(10)),
+    unselectedIcon: unselectedIcon ?? Style().foreground(AnsiColor(8)),
+    selectedIconChar: selectedIconChar ?? '●',
+    unselectedIconChar: unselectedIconChar ?? '○',
+    cursorPrefix: cursorPrefix ?? '❯ ',
+    itemPrefix: itemPrefix ?? '  ',
+  );
 
   /// Style for the title.
   final Style title;
@@ -243,6 +270,18 @@ class SearchStyles {
   /// Style for "no results" message.
   final Style noResults;
 
+  /// Style for selected item icon.
+  final Style selectedIcon;
+
+  /// Style for unselected item icon.
+  final Style unselectedIcon;
+
+  /// Character for selected items.
+  final String selectedIconChar;
+
+  /// Character for unselected items.
+  final String unselectedIconChar;
+
   /// Prefix shown before the selected item.
   final String cursorPrefix;
 
@@ -251,6 +290,75 @@ class SearchStyles {
 
   /// Creates default styles.
   factory SearchStyles.defaults() => SearchStyles();
+}
+
+/// Message sent when multiple search results are selected.
+class MultiSearchSelectionMadeMsg<T> extends Msg {
+  const MultiSearchSelectionMadeMsg(this.items, this.indices);
+
+  /// The selected items.
+  final List<T> items;
+
+  /// The indices of the selected items in the original list.
+  final List<int> indices;
+
+  @override
+  String toString() => 'MultiSearchSelectionMadeMsg($items, indices: $indices)';
+}
+
+/// Key bindings for the multi-search component.
+class MultiSearchKeyMap extends SearchKeyMap {
+  MultiSearchKeyMap({
+    super.up,
+    super.down,
+    super.home,
+    super.end,
+    super.pageUp,
+    super.pageDown,
+    super.cancel,
+    KeyBinding? toggle,
+    KeyBinding? toggleAll,
+    KeyBinding? confirm,
+  }) : toggle =
+           toggle ??
+           KeyBinding(
+             keys: [' ', 'ctrl+space'],
+             help: Help(key: 'space', desc: 'toggle'),
+           ),
+       toggleAll =
+           toggleAll ??
+           KeyBinding(
+             keys: ['ctrl+a'],
+             help: Help(key: '^a', desc: 'toggle all'),
+           ),
+       confirm =
+           confirm ??
+           KeyBinding(
+             keys: ['enter'],
+             help: Help(key: '↵', desc: 'confirm'),
+           );
+
+  /// Toggle current item selection.
+  final KeyBinding toggle;
+
+  /// Toggle all currently filtered items.
+  final KeyBinding toggleAll;
+
+  /// Confirm multi-selection.
+  final KeyBinding confirm;
+
+  @override
+  List<KeyBinding> shortHelp() {
+    return [up, down, toggle, confirm, cancel];
+  }
+
+  @override
+  List<List<KeyBinding>> fullHelp() {
+    return [
+      [up, down, home, end],
+      [pageUp, pageDown, toggle, toggleAll, confirm, cancel],
+    ];
+  }
 }
 
 /// A search/filter component following the Model architecture.
@@ -595,6 +703,335 @@ class SearchModel<T> extends ViewComponent {
     }
 
     // Help
+    if (showHelp) {
+      final helpItems = keyMap.shortHelp();
+      final helpText = helpItems
+          .where((b) => b.help.hasContent)
+          .map((b) => '${b.help.key} ${b.help.desc}')
+          .join('  ');
+      buffer.writeln(styles.dimmed.render(helpText));
+    }
+
+    return buffer.toString();
+  }
+}
+
+/// A multi-select search/filter component.
+class MultiSearchModel<T> extends ViewComponent {
+  MultiSearchModel({
+    required List<T> items,
+    this.title = '',
+    this.hint = '(Space to toggle, ^a to toggle all, Enter to confirm)',
+    this.placeholder = 'Type to search...',
+    this.noResultsText = 'No matches found',
+    this.showTitle = true,
+    this.showHint = true,
+    this.showHelp = true,
+    this.showPagination = true,
+    this.highlightMatches = true,
+    int height = 10,
+    int initialIndex = 0,
+    Set<int>? initialSelected,
+    this.display,
+    SearchFilterFunc<T>? filter,
+    MultiSearchKeyMap? keyMap,
+    SearchStyles? styles,
+  }) : _items = items,
+       _selected = initialSelected ?? {},
+       _filter = filter ?? defaultSearchFilter,
+       keyMap = keyMap ?? MultiSearchKeyMap(),
+       styles = styles ?? SearchStyles.defaults(),
+       _height = height {
+    _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
+    _paginator = PaginatorModel(
+      type: PaginationType.dots,
+      activeDot: '●',
+      inactiveDot: '○',
+    );
+    _runFilter();
+    _cursor = initialIndex.clamp(
+      0,
+      _filteredItems.isEmpty ? 0 : _filteredItems.length - 1,
+    );
+    _updatePagination();
+  }
+
+  final String title;
+  final String hint;
+  final String placeholder;
+  final String noResultsText;
+  final bool showTitle;
+  final bool showHint;
+  final bool showHelp;
+  final bool showPagination;
+  final bool highlightMatches;
+  final MultiSearchKeyMap keyMap;
+  final SearchStyles styles;
+  final String Function(T)? display;
+
+  final List<T> _items;
+  final SearchFilterFunc<T> _filter;
+  late TextInputModel _input;
+  late PaginatorModel _paginator;
+  List<FilteredSearchItem<T>> _filteredItems = [];
+  final Set<int> _selected;
+  int _cursor = 0;
+  final int _height;
+
+  List<T> get items => List.unmodifiable(_items);
+  String get query => _input.value;
+  List<FilteredSearchItem<T>> get filteredItems =>
+      List.unmodifiable(_filteredItems);
+  int get cursor => _cursor;
+
+  List<T> get selectedItems {
+    final indices = _selected.toList()..sort();
+    return indices.map((i) => _items[i]).toList();
+  }
+
+  int get _visibleHeight {
+    var h = _height;
+    if (showTitle && title.isNotEmpty) h -= 1;
+    if (showHint && hint.isNotEmpty) h -= 1;
+    h -= 1; // Search input
+    if (showHelp) h -= 1;
+    if (showPagination && _paginator.totalPages > 1) h -= 1;
+    return h.clamp(1, _filteredItems.isEmpty ? 1 : _filteredItems.length);
+  }
+
+  String _displayItem(T item) {
+    return display?.call(item) ?? item.toString();
+  }
+
+  String _renderItemWithHighlights(FilteredSearchItem<T> filteredItem) {
+    if (!highlightMatches || filteredItem.matches.isEmpty) {
+      return _displayItem(filteredItem.item);
+    }
+
+    final text = _displayItem(filteredItem.item);
+    final buffer = StringBuffer();
+    final matchSet = filteredItem.matches.toSet();
+
+    for (var i = 0; i < text.length; i++) {
+      if (matchSet.contains(i)) {
+        buffer.write(styles.matchHighlight.render(text[i]));
+      } else {
+        buffer.write(text[i]);
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  void _cursorUp() {
+    if (_cursor > 0) {
+      _cursor--;
+      _updatePagination();
+    }
+  }
+
+  void _cursorDown() {
+    if (_cursor < _filteredItems.length - 1) {
+      _cursor++;
+      _updatePagination();
+    }
+  }
+
+  void _goToStart() {
+    _cursor = 0;
+    _updatePagination();
+  }
+
+  void _goToEnd() {
+    _cursor = _filteredItems.isEmpty ? 0 : _filteredItems.length - 1;
+    _updatePagination();
+  }
+
+  void _pageUp() {
+    final pageSize = _visibleHeight;
+    _cursor = (_cursor - pageSize).clamp(0, _filteredItems.length - 1);
+    _updatePagination();
+  }
+
+  void _pageDown() {
+    final pageSize = _visibleHeight;
+    _cursor = (_cursor + pageSize).clamp(0, _filteredItems.length - 1);
+    _updatePagination();
+  }
+
+  void _toggleSelection() {
+    if (_filteredItems.isEmpty) return;
+    final item = _filteredItems[_cursor];
+    if (_selected.contains(item.index)) {
+      _selected.remove(item.index);
+    } else {
+      _selected.add(item.index);
+    }
+  }
+
+  void _toggleAll() {
+    if (_filteredItems.isEmpty) return;
+    final allVisibleSelected = _filteredItems.every(
+      (item) => _selected.contains(item.index),
+    );
+
+    if (allVisibleSelected) {
+      for (final item in _filteredItems) {
+        _selected.remove(item.index);
+      }
+    } else {
+      for (final item in _filteredItems) {
+        _selected.add(item.index);
+      }
+    }
+  }
+
+  void _runFilter() {
+    _filteredItems = _filter(_input.value, _items, _displayItem);
+    if (_cursor >= _filteredItems.length) {
+      _cursor = _filteredItems.isEmpty ? 0 : _filteredItems.length - 1;
+    }
+  }
+
+  void _updatePagination() {
+    if (_filteredItems.isEmpty) {
+      _paginator = PaginatorModel(
+        page: 0,
+        perPage: _visibleHeight,
+        totalPages: 1,
+        type: PaginationType.dots,
+      );
+      return;
+    }
+    final pageSize = _visibleHeight;
+    final page = _cursor ~/ pageSize;
+    final totalPages = (_filteredItems.length / pageSize).ceil();
+    _paginator = PaginatorModel(
+      page: page,
+      perPage: pageSize,
+      totalPages: totalPages,
+      type: PaginationType.dots,
+      activeDot: '●',
+      inactiveDot: '○',
+    );
+  }
+
+  @override
+  Cmd? init() => _input.focus();
+
+  @override
+  (MultiSearchModel<T>, Cmd?) update(Msg msg) {
+    final cmds = <Cmd>[];
+
+    if (msg is KeyMsg) {
+      final key = msg.key;
+
+      if (key.ctrl && key.runes.isNotEmpty && key.runes.first == 0x63) {
+        return (this, Cmd.message(const SearchCancelledMsg()));
+      }
+
+      if (keyMatches(key, [keyMap.cancel])) {
+        return (this, Cmd.message(const SearchCancelledMsg()));
+      }
+
+      if (keyMatches(key, [keyMap.confirm])) {
+        final sortedIndices = _selected.toList()..sort();
+        final selectedItems = sortedIndices.map((i) => _items[i]).toList();
+        return (
+          this,
+          Cmd.message(
+            MultiSearchSelectionMadeMsg<T>(selectedItems, sortedIndices),
+          ),
+        );
+      }
+
+      if (keyMatches(key, [keyMap.toggle])) {
+        _toggleSelection();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.toggleAll])) {
+        _toggleAll();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.up])) {
+        _cursorUp();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.down])) {
+        _cursorDown();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.home])) {
+        _goToStart();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.end])) {
+        _goToEnd();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.pageUp])) {
+        _pageUp();
+        return (this, null);
+      } else if (keyMatches(key, [keyMap.pageDown])) {
+        _pageDown();
+        return (this, null);
+      }
+    }
+
+    final oldValue = _input.value;
+    final (newInput, inputCmd) = _input.update(msg);
+    _input = newInput;
+    if (inputCmd != null) cmds.add(inputCmd);
+
+    if (_input.value != oldValue) {
+      _runFilter();
+      _cursor = 0;
+      _updatePagination();
+    }
+
+    return (this, cmds.isNotEmpty ? Cmd.batch(cmds) : null);
+  }
+
+  @override
+  String view() {
+    final buffer = StringBuffer();
+
+    if (showTitle && title.isNotEmpty) {
+      buffer.writeln(styles.title.render(title));
+    }
+
+    if (showHint && hint.isNotEmpty) {
+      buffer.writeln(styles.dimmed.render('  $hint'));
+    }
+
+    final inputView = _input.view();
+    final inputContent = inputView is View
+        ? inputView.content
+        : inputView.toString();
+    buffer.writeln(inputContent.trimRight());
+
+    if (_filteredItems.isEmpty) {
+      buffer.writeln(styles.noResults.render('  $noResultsText'));
+    } else {
+      final pageSize = _visibleHeight;
+      final startIndex = (_cursor ~/ pageSize) * pageSize;
+      final endIndex = (startIndex + pageSize).clamp(0, _filteredItems.length);
+
+      for (var i = startIndex; i < endIndex; i++) {
+        final filteredItem = _filteredItems[i];
+        final isHighlighted = i == _cursor;
+        final isSelected = _selected.contains(filteredItem.index);
+        final displayText = _renderItemWithHighlights(filteredItem);
+
+        final icon = isSelected
+            ? styles.selectedIcon.render(styles.selectedIconChar)
+            : styles.unselectedIcon.render(styles.unselectedIconChar);
+
+        final prefix = isHighlighted ? styles.cursorPrefix.trimRight() : ' ';
+        final itemStyle = isHighlighted ? styles.selectedItem : styles.item;
+
+        buffer.writeln('  $prefix $icon ${itemStyle.render(displayText)}');
+      }
+    }
+
+    if (showPagination && _paginator.totalPages > 1) {
+      buffer.writeln(styles.dimmed.render(_paginator.view()));
+    }
+
     if (showHelp) {
       final helpItems = keyMap.shortHelp();
       final helpText = helpItems
