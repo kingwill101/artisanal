@@ -5,7 +5,7 @@ name: Publish
 # When you push a tag (for a package), firehose will attempt to publish that package.
 on:
   pull_request:
-    branches: [ master ]
+    branches: [ artisanal, main, master ]
     types: [ opened, synchronize, reopened, labeled, unlabeled ]
   push:
     # For mono repos the tag must be prefixed with the package name,

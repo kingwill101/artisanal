@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - artisanal
+      - main
+      - master
+  pull_request:
+    branches:
+      - artisanal
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        run: dart pub get
+
+      - name: Analyze workspace
+        run: dart analyze
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - pkgs/ultraviolet
+          - pkgs/artisanal
+          - pkgs/artisanal_widgets
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        run: dart pub get
+
+      - name: Test ${{ matrix.package }}
+        run: dart test ${{ matrix.package }} -r compact
