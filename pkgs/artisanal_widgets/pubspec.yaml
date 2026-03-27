@@ -16,7 +16,7 @@ environment:
   sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
-  artisanal: ^0.2.0+1
+  artisanal: ^0.3.0
   image: ^4.7.1
   meta: ^1.12.0
 
