@@ -82,6 +82,23 @@ void main() {
       expect(change.isNoop, isTrue);
     });
 
+    test('tracks trailing newline deletions from the shared line end', () {
+      final previousDocument = TextDocument(text: 'a\n');
+      final nextDocument = TextDocument(text: 'a');
+
+      final change = computeTextDocumentChangeForDocuments(
+        previousDocument: previousDocument,
+        nextDocument: nextDocument,
+      );
+
+      expect(change.startOffset, 1);
+      expect(change.oldEndOffset, 2);
+      expect(change.newEndOffset, 1);
+      expect(change.startPosition, const TextPosition(line: 0, column: 1));
+      expect(change.oldEndPosition, const TextPosition(line: 1, column: 0));
+      expect(change.newEndPosition, const TextPosition(line: 0, column: 1));
+    });
+
     test('computes syntax line windows around a document change', () {
       final previousDocument = TextDocument(text: 'alpha\nbeta\ngamma');
       final nextDocument = TextDocument(text: 'alpha\nbetter\ngamma');
@@ -281,6 +298,59 @@ void main() {
       ]);
       expect(provider.calls, hasLength(2));
       expect(provider.calls.last.change, isNotNull);
+    });
+
+    test('keeps unaffected decoration spans that overlap a patch window', () {
+      final merged = mergeTextSyntaxDecorationPatch(
+        const [
+          TextDecorationRange(
+            startOffset: 0,
+            endOffset: 10,
+            styleKey: 'syntax.comment',
+          ),
+          TextDecorationRange(
+            startOffset: 12,
+            endOffset: 15,
+            styleKey: 'syntax.after',
+          ),
+        ],
+        TextSyntaxDecorationPatch(
+          previousStartOffset: 4,
+          previousEndOffset: 6,
+          nextStartOffset: 4,
+          nextEndOffset: 8,
+          decorations: const [
+            TextDecorationRange(
+              startOffset: 4,
+              endOffset: 8,
+              styleKey: 'syntax.patched',
+            ),
+          ],
+        ),
+      );
+
+      expect(merged, const [
+        TextDecorationRange(
+          startOffset: 0,
+          endOffset: 4,
+          styleKey: 'syntax.comment',
+        ),
+        TextDecorationRange(
+          startOffset: 4,
+          endOffset: 8,
+          styleKey: 'syntax.patched',
+        ),
+        TextDecorationRange(
+          startOffset: 8,
+          endOffset: 12,
+          styleKey: 'syntax.comment',
+        ),
+        TextDecorationRange(
+          startOffset: 14,
+          endOffset: 17,
+          styleKey: 'syntax.after',
+        ),
+      ]);
     });
 
     test('rebuilds when the language changes even if text does not', () {

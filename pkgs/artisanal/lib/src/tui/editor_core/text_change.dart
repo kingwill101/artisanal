@@ -95,10 +95,19 @@ TextDocumentChange computeTextDocumentChangeForDocuments({
     suffixLineCount += 1;
   }
 
-  final previousWindowStartOffset = prefixLineCount < previousDocument.lineCount
+  final sharedPrefixEndsAtDocumentBoundary =
+      prefixLineCount > 0 &&
+      previousDocument.lineCount != nextDocument.lineCount &&
+      (prefixLineCount == previousDocument.lineCount ||
+          prefixLineCount == nextDocument.lineCount);
+  final previousWindowStartOffset = sharedPrefixEndsAtDocumentBoundary
+      ? previousDocument.lineEndOffset(prefixLineCount - 1)
+      : prefixLineCount < previousDocument.lineCount
       ? previousDocument.lineStartOffset(prefixLineCount)
       : previousDocument.length;
-  final nextWindowStartOffset = prefixLineCount < nextDocument.lineCount
+  final nextWindowStartOffset = sharedPrefixEndsAtDocumentBoundary
+      ? nextDocument.lineEndOffset(prefixLineCount - 1)
+      : prefixLineCount < nextDocument.lineCount
       ? nextDocument.lineStartOffset(prefixLineCount)
       : nextDocument.length;
   final previousWindowEndLine = previousDocument.lineCount - suffixLineCount;
