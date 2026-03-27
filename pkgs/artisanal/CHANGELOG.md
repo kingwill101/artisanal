@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0-wip
+## 0.3.0
 
 ### Added
 
