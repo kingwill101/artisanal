@@ -1,5 +1,6 @@
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/testing.dart';
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
@@ -153,6 +154,33 @@ void main() {
       );
 
       expect(redTester.view, isNot(equals(blueTester.view)));
+    });
+
+    test('open modal freezes background subtree updates', () {
+      final app = tui.WidgetApp(
+        Container(
+          width: 40,
+          height: 10,
+          child: Modal(
+            open: true,
+            child: _FrameTickCounter(),
+            dialog: Text('Dialog'),
+          ),
+        ),
+      );
+
+      app.update(const tui.WindowSizeMsg(40, 10));
+      expect(app.view().toString(), contains('ticks:0'));
+
+      app.update(
+        tui.FrameTickMsg(
+          time: DateTime.fromMillisecondsSinceEpoch(0),
+          frameNumber: 1,
+          delta: Duration.zero,
+        ),
+      );
+
+      expect(app.view().toString(), contains('ticks:0'));
     });
   });
 
@@ -430,4 +458,24 @@ void main() {
       expect(after!.y, equals(1));
     });
   });
+}
+
+class _FrameTickCounter extends StatefulWidget {
+  @override
+  State createState() => _FrameTickCounterState();
+}
+
+class _FrameTickCounterState extends State<_FrameTickCounter> {
+  int _ticks = 0;
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.FrameTickMsg) {
+      setState(() => _ticks += 1);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => Text('ticks:$_ticks');
 }

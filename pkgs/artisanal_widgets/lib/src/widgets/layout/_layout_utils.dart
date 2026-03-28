@@ -1,7 +1,15 @@
 part of 'layout_widgets.dart';
 
+final Map<({Color color, bool darkBackground}), UvColor?> _uvColorCache =
+    <({Color color, bool darkBackground}), UvColor?>{};
+
 UvColor? _colorToUvColor(Color? color) {
   if (color == null || color is NoColor) return null;
+
+  final cacheKey = (color: color, darkBackground: hasDarkBackground);
+  if (_uvColorCache.containsKey(cacheKey)) {
+    return _uvColorCache[cacheKey];
+  }
 
   Color resolved = color;
   if (color is AdaptiveColor) {
@@ -11,19 +19,21 @@ UvColor? _colorToUvColor(Color? color) {
   final hex = resolved.toHex();
   if (hex.isEmpty) {
     if (resolved is AnsiColor) {
-      return UvColor.indexed256(resolved.code);
+      return _uvColorCache[cacheKey] = UvColor.indexed256(resolved.code);
     }
-    return null;
+    return _uvColorCache[cacheKey] = null;
   }
 
   final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
-  if (normalized.length != 6) return null;
+  if (normalized.length != 6) {
+    return _uvColorCache[cacheKey] = null;
+  }
 
   final r = int.tryParse(normalized.substring(0, 2), radix: 16) ?? 0;
   final g = int.tryParse(normalized.substring(2, 4), radix: 16) ?? 0;
   final b = int.tryParse(normalized.substring(4, 6), radix: 16) ?? 0;
 
-  return UvColor.rgb(r, g, b);
+  return _uvColorCache[cacheKey] = UvColor.rgb(r, g, b);
 }
 
 int _roundClamp(num value) => math.max(0, value.round());

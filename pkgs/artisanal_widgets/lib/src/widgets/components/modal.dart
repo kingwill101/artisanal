@@ -38,7 +38,10 @@ class Modal extends StatelessWidget {
     // Prevent pointer/scroll events from leaking to background content while
     // a modal is open. The dismiss layer and dialog remain interactive.
     final blockedBackground = _ModalInputBlocker(
-      child: IgnorePointer(ignoring: true, child: dimmedChild),
+      child: IgnorePointer(
+        ignoring: true,
+        child: _FrozenBackdropHost(frozen: true, child: dimmedChild),
+      ),
     );
 
     // Transparent dismiss layer — sized to fill the stack but paints nothing,
@@ -83,12 +86,139 @@ class _ModalInputBlocker extends StatefulWidget {
 class _ModalInputBlockerState extends State<_ModalInputBlocker> {
   @override
   Cmd? handleIntercept(Msg msg) {
-    if (msg is KeyMsg || msg is MouseMsg) {
-      return Cmd.none();
+    return switch (msg) {
+      WindowSizeMsg() || BackgroundColorMsg() || ColorProfileMsg() => null,
+      _ => Cmd.none(),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _FrozenBackdropHost extends StatefulWidget {
+  _FrozenBackdropHost({required this.frozen, required this.child});
+
+  final bool frozen;
+  final Widget child;
+
+  @override
+  State createState() => _FrozenBackdropHostState();
+}
+
+class _FrozenBackdropHostState extends State<_FrozenBackdropHost> {
+  Widget? _capturedChild;
+
+  @override
+  void initState() {
+    super.initState();
+    _capturedChild = widget.child;
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant _FrozenBackdropHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.frozen) {
+      _capturedChild = widget.child;
+      return null;
+    }
+    if (!oldWidget.frozen) {
+      _capturedChild = widget.child;
     }
     return null;
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    final effectiveChild = widget.frozen
+        ? (_capturedChild ?? widget.child)
+        : widget.child;
+    return _FrozenBackdrop(frozen: widget.frozen, child: effectiveChild);
+  }
+}
+
+class _FrozenBackdrop extends SingleChildRenderObjectWidget {
+  _FrozenBackdrop({required this.frozen, super.child});
+
+  final bool frozen;
+
+  @override
+  Object view() => '';
+
+  @override
+  RenderObject createRenderObject() {
+    return _RenderFrozenBackdrop(frozen: frozen);
+  }
+
+  @override
+  void updateRenderObject(RenderObject renderObject) {
+    (renderObject as _RenderFrozenBackdrop).frozen = frozen;
+  }
+}
+
+class _RenderFrozenBackdrop extends RenderBox {
+  _RenderFrozenBackdrop({required bool frozen}) : _frozen = frozen;
+
+  bool _frozen;
+  String? _snapshotPaint;
+  Size _snapshotSize = Size.zero;
+  BoxConstraints? _snapshotConstraints;
+
+  RenderObject? get _child => children.isEmpty ? null : children.first;
+
+  set frozen(bool value) {
+    if (_frozen == value) return;
+    _frozen = value;
+    if (!value) {
+      _snapshotPaint = null;
+      _snapshotConstraints = null;
+      _snapshotSize = Size.zero;
+    }
+  }
+
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    if (_frozen &&
+        _snapshotPaint != null &&
+        _snapshotConstraints == constraints) {
+      size = constraints.constrain(_snapshotSize);
+      return;
+    }
+
+    final child = _child;
+    if (child == null) {
+      _snapshotPaint = '';
+      _snapshotConstraints = constraints;
+      _snapshotSize = constraints.constrain(Size.zero);
+      size = _snapshotSize;
+      return;
+    }
+
+    child.layout(constraints);
+    final content = child.paint();
+    final resolvedSize = constraints.constrain(
+      Size(
+        Layout.getWidth(content).toDouble(),
+        Layout.getHeight(content).toDouble(),
+      ),
+    );
+    size = resolvedSize;
+    _snapshotConstraints = constraints;
+    _snapshotSize = resolvedSize;
+    if (_frozen) {
+      _snapshotPaint = content;
+    }
+  }
+
+  @override
+  String paint() {
+    final cached = _snapshotPaint;
+    if (_frozen && cached != null) return cached;
+    final content = _child?.paint() ?? '';
+    if (_frozen) {
+      _snapshotPaint = content;
+    }
+    return content;
+  }
 }

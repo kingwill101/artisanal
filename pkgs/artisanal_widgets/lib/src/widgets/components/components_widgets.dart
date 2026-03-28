@@ -83,6 +83,8 @@ import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'
     show
         Cmd,
+        BackgroundColorMsg,
+        ColorProfileMsg,
         InterruptMsg,
         Msg,
         KeyBinding,
@@ -96,10 +98,13 @@ import 'package:artisanal/tui.dart'
         RenderMetricsMsg,
         TraceTag,
         TuiTrace,
+        WindowSizeMsg,
         every;
 import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
 import '../core/element.dart' show Element, elementOf;
-import '../rendering/render_object.dart' show RenderObject;
+import '../layout/geometry.dart' show BoxConstraints, Size;
+import '../rendering/render_object.dart'
+    show RenderObject, RenderBox, SingleChildRenderObjectWidget;
 export 'package:artisanal/bubbles.dart'
     show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
 

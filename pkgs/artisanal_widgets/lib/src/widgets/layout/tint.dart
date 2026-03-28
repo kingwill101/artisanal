@@ -1,5 +1,7 @@
 part of 'layout_widgets.dart';
 
+final Map<UvColor, Color> _uvToStyleColorCache = <UvColor, Color>{};
+
 /// A widget that applies a color tint over its child.
 ///
 /// The tint color is applied as a foreground color overlay on all cells
@@ -93,50 +95,44 @@ String _applyTint(String content, Color color, double opacity) {
   if (w == 0 || h == 0) return content;
 
   final canvas = Canvas(w, h);
-  final styledBounds = StyledString(content).bounds();
-  final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
-  StyledString(content).draw(tempCanvas, tempCanvas.bounds());
+  StyledString(content).draw(canvas, canvas.bounds());
+  final defaultFg = _colorToUvColor(currentTheme.onBackground);
+  final defaultBg = _colorToUvColor(currentTheme.background);
+  final styleCache = <({int styleKey, bool visibleContent}), UvStyle>{};
+  final colorCache = <({UvColor? source, UvColor? fallback}), UvColor?>{};
 
   for (var y = 0; y < h; y++) {
     for (var x = 0; x < w; x++) {
-      if (x >= styledBounds.width || y >= styledBounds.height) {
-        canvas.setCell(x, y, Cell(content: ' ', width: 1));
-        continue;
-      }
-
-      final srcCell = tempCanvas.cellAt(x, y);
+      final srcCell = canvas.cellAt(x, y);
       if (srcCell == null || srcCell.isZero) {
-        canvas.setCell(x, y, Cell(content: ' ', width: 1));
         continue;
       }
 
-      final defaultFg = _colorToUvColor(currentTheme.onBackground);
-      final defaultBg = _colorToUvColor(currentTheme.background);
-      final tintedStyle = srcCell.style.copyWith(
-        fg: _blendTintColor(
-          srcCell.style.fg,
-          tintFg,
-          opacity,
-          fallback: srcCell.content.trim().isEmpty ? null : defaultFg,
-        ),
-        bg: _blendTintColor(
-          srcCell.style.bg,
-          tintFg,
-          opacity,
-          fallback: defaultBg,
-        ),
+      final visibleContent = srcCell.content.isNotEmpty && srcCell.content != ' ';
+      final styleKey = (
+        styleKey: srcCell.style.packedKey,
+        visibleContent: visibleContent,
       );
-
-      canvas.setCell(
-        x,
-        y,
-        Cell(
-          content: srcCell.content,
-          width: srcCell.width,
-          style: tintedStyle,
-          link: srcCell.link,
-        ),
-      );
+      final tintedStyle =
+          styleCache[styleKey] ??= srcCell.style.copyWith(
+            fg: _blendTintColor(
+              srcCell.style.fg,
+              tintFg,
+              opacity,
+              fallback: visibleContent ? defaultFg : null,
+              cache: colorCache,
+            ),
+            bg: _blendTintColor(
+              srcCell.style.bg,
+              tintFg,
+              opacity,
+              fallback: defaultBg,
+              cache: colorCache,
+            ),
+          );
+      if (tintedStyle != srcCell.style) {
+        srcCell.style = tintedStyle;
+      }
     }
   }
 
@@ -148,14 +144,22 @@ UvColor? _blendTintColor(
   UvColor tint,
   double opacity, {
   UvColor? fallback,
+  Map<({UvColor? source, UvColor? fallback}), UvColor?>? cache,
 }) {
+  final cacheKey = (source: source, fallback: fallback);
+  if (cache != null && cache.containsKey(cacheKey)) {
+    return cache[cacheKey];
+  }
+
   final sourceColor = _uvColorToStyleColor(source ?? fallback);
   final tintColor = _uvColorToStyleColor(tint);
   if (sourceColor == null || tintColor == null) {
-    return source ?? fallback;
+    return cache != null
+        ? (cache[cacheKey] = source ?? fallback)
+        : source ?? fallback;
   }
 
-  return _colorToUvColor(
+  final blended = _colorToUvColor(
     blendColor(
       sourceColor,
       tintColor,
@@ -163,10 +167,18 @@ UvColor? _blendTintColor(
       hasDarkBackground: hasDarkBackground,
     ),
   );
+  if (cache != null) {
+    cache[cacheKey] = blended;
+  }
+  return blended;
 }
 
 Color? _uvColorToStyleColor(UvColor? color) {
-  return switch (color) {
+  if (color == null) return null;
+  final cached = _uvToStyleColorCache[color];
+  if (cached != null) return cached;
+
+  final resolved = switch (color) {
     UvRgb(:final r, :final g, :final b) => BasicColor(
       '#'
       '${r.toRadixString(16).padLeft(2, '0')}'
@@ -174,7 +186,10 @@ Color? _uvColorToStyleColor(UvColor? color) {
       '${b.toRadixString(16).padLeft(2, '0')}',
     ),
     UvIndexed256(:final index) => AnsiColor(index),
-    UvBasic16(:final index, :final bright) => AnsiColor(index + (bright ? 8 : 0)),
-    _ => null,
+    UvBasic16(:final index, :final bright) => AnsiColor(
+      index + (bright ? 8 : 0),
+    ),
   };
+  _uvToStyleColorCache[color] = resolved;
+  return resolved;
 }
