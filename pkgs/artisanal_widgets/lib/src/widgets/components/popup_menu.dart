@@ -114,7 +114,6 @@ class PopupMenuButton<T> extends StatefulWidget {
 class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   bool _open = false;
   int _highlightedIndex = -1;
-  int? _lastHoveredMenuIndex;
   OverlayEntry? _floatingEntry;
   _PopupMenuFloatingMenuState<T>? _floatingMenuState;
   int _menuLeft = 0;
@@ -302,7 +301,6 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     setState(() {
       _open = true;
       _highlightedIndex = _defaultHighlightedIndex();
-      _lastHoveredMenuIndex = null;
     });
     if (overlayState != null) {
       _insertFloatingEntry(overlayState);
@@ -316,7 +314,6 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     setState(() {
       _open = false;
       _highlightedIndex = -1;
-      _lastHoveredMenuIndex = null;
     });
     if (canceled) {
       return widget.onCanceled?.call();
@@ -392,14 +389,8 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     if (!_open || !_usingFloatingOverlay) return null;
     if (msg is! MouseMsg || msg.action != MouseAction.motion) return null;
     final hoveredIndex = _menuIndexAtPointer(msg.x, msg.y);
-    if (hoveredIndex == null) {
-      _lastHoveredMenuIndex = null;
-      return null;
-    }
-    final indexChanged = hoveredIndex != _lastHoveredMenuIndex;
-    _lastHoveredMenuIndex = hoveredIndex;
-    if (!indexChanged) return _setHighlightedIndex(hoveredIndex);
-    return _selectAt(hoveredIndex);
+    if (hoveredIndex == null) return null;
+    return _setHighlightedIndex(hoveredIndex);
   }
 
   @override
@@ -519,8 +510,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       if (entry.enabled) {
         tile = GestureDetector(
           onTap: () => _selectAt(i),
-          onEnter: (_) =>
-              _usingFloatingOverlay ? _setHighlightedIndex(i) : _selectAt(i),
+          onEnter: (_) => _setHighlightedIndex(i),
           child: tile,
         );
       }
