@@ -27,6 +27,7 @@ import 'package:artisanal/tui.dart'
         RenderMetricsModel,
         RenderMetricsMsg,
         TerminalVersionMsg,
+        TraceTag,
         StreamCmd,
         TuiTrace,
         View,
@@ -55,6 +56,8 @@ import '../components/components_widgets.dart'
 import '../theme/theme.dart' show hasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
+
+const int _widgetRenderTraceThresholdUs = 5000;
 
 /// Runs a widget tree using an element hierarchy.
 ///
@@ -548,8 +551,12 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         callback: _tree.render,
       );
       sw?.stop();
-      if (sw != null) {
-        TuiTrace.log('widget_view render ${sw.elapsedMicroseconds}us');
+      if (sw != null &&
+          sw.elapsedMicroseconds >= _widgetRenderTraceThresholdUs) {
+        TuiTrace.log(
+          'widget_view render ${sw.elapsedMicroseconds}us',
+          tag: TraceTag.render,
+        );
       }
 
       _cachedView = baseContent;

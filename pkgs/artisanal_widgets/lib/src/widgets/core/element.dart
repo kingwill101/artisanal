@@ -40,6 +40,8 @@ import 'widget.dart';
 import '../app/performance.dart';
 import 'accessibility.dart';
 
+const int _elementTreeRenderTraceThresholdUs = 5000;
+
 final Expando<Element> _elementForWidget = Expando<Element>('widgetElement');
 
 /// Returns the mounted [Element] associated with [widget], if any.
@@ -1318,10 +1320,12 @@ class ElementTree {
       totalDuration: totalSw.elapsed,
       buildDuration: buildSw.elapsed,
     );
-    if (TuiTrace.enabled) {
+    if (TuiTrace.enabled &&
+        totalSw.elapsedMicroseconds >= _elementTreeRenderTraceThresholdUs) {
       TuiTrace.log(
         'element_tree.render root=${_root.widget.runtimeType} '
         '${totalSw.elapsedMicroseconds}us',
+        tag: TraceTag.render,
       );
     }
     return output;

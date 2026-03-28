@@ -38,6 +38,18 @@ import '../unicode/grapheme.dart' as uni;
 import '../unicode/width.dart' show maxLineWidth, runeWidth;
 import '../tui/trace.dart';
 
+const int _layoutTraceThresholdUs = 1000;
+
+void _traceLayout(String message, Stopwatch? sw) {
+  if (sw == null) return;
+  sw.stop();
+  if (sw.elapsedMicroseconds < _layoutTraceThresholdUs) return;
+  TuiTrace.log(
+    '$message ${sw.elapsedMicroseconds}us',
+    tag: TraceTag.render,
+  );
+}
+
 /// Breakpoint names for responsive terminal layouts.
 enum LayoutBreakpoint {
   /// Extra-small viewport bucket.
@@ -461,17 +473,14 @@ class Layout {
     }
 
     final output = result.join('\n');
-    sw?.stop();
-    if (sw != null) {
-      final maxWidth = widths.isEmpty
-          ? 0
-          : widths.reduce((a, b) => a > b ? a : b);
-      TuiTrace.log(
-        'layout.joinHorizontal blocks=${blocks.length} '
-        'maxWidth=$maxWidth maxHeight=$maxHeight '
-        '${sw.elapsedMicroseconds}us',
-      );
-    }
+    final maxWidth = widths.isEmpty
+        ? 0
+        : widths.reduce((a, b) => a > b ? a : b);
+    _traceLayout(
+      'layout.joinHorizontal blocks=${blocks.length} '
+      'maxWidth=$maxWidth maxHeight=$maxHeight',
+      sw,
+    );
     return output;
   }
 
@@ -529,14 +538,11 @@ class Layout {
     }
 
     final output = result.join('\n');
-    sw?.stop();
-    if (sw != null) {
-      TuiTrace.log(
-        'layout.joinVertical blocks=${blocks.length} '
-        'maxWidth=$maxWidth height=${result.length} '
-        '${sw.elapsedMicroseconds}us',
-      );
-    }
+    _traceLayout(
+      'layout.joinVertical blocks=${blocks.length} '
+      'maxWidth=$maxWidth height=${result.length}',
+      sw,
+    );
     return output;
   }
 
@@ -609,13 +615,7 @@ class Layout {
     // First place horizontally, then vertically (like Go)
     final horizontalPlaced = _placeHorizontal(width, horizontal, content, ws);
     final output = _placeVertical(height, vertical, horizontalPlaced, ws);
-    sw?.stop();
-    if (sw != null) {
-      TuiTrace.log(
-        'layout.place width=$width height=$height '
-        '${sw.elapsedMicroseconds}us',
-      );
-    }
+    _traceLayout('layout.place width=$width height=$height', sw);
     return output;
   }
 
