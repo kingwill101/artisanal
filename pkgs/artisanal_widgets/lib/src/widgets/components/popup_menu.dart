@@ -261,7 +261,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       } else {
         _markFloatingEntryNeedsBuild();
       }
-      return Cmd.repaint();
+      return null;
     }
     setState(() {
       _highlightedIndex = nextIndex;
