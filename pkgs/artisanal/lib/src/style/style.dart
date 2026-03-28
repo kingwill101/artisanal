@@ -18,7 +18,6 @@
 /// ```
 library;
 
-import 'package:chalkdart/chalk.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html;
 
@@ -2112,7 +2111,8 @@ class Style {
   }
 
   String _applyStylesToString(String text, {bool isSpace = false}) {
-    var styled = text;
+    final prefix = StringBuffer();
+    final suffix = StringBuffer();
     var hasAnsi = false;
 
     // Apply colors
@@ -2123,7 +2123,7 @@ class Style {
         hasDarkBackground: hasDarkBackground,
       );
       if (ansi.isNotEmpty) {
-        styled = '$ansi$styled';
+        prefix.write(ansi);
         hasAnsi = true;
       }
     }
@@ -2135,20 +2135,18 @@ class Style {
         hasDarkBackground: hasDarkBackground,
       );
       if (ansi.isNotEmpty) {
-        styled = '$ansi$styled';
+        prefix.write(ansi);
         hasAnsi = true;
       }
     }
 
-    final chalk = Chalk();
-
     // Apply text attributes
     if (_hasFlag(_PropBits.bold) && _bold) {
-      styled = chalk.bold(styled);
+      prefix.write('\x1b[1m');
       hasAnsi = true;
     }
     if (_hasFlag(_PropBits.italic) && _italic) {
-      styled = chalk.italic(styled);
+      prefix.write('\x1b[3m');
       hasAnsi = true;
     }
     if (_hasFlag(_PropBits.underline) && _underline) {
@@ -2167,8 +2165,7 @@ class Style {
         if (start.isNotEmpty) {
           // Underline color must be applied *within* the underline span.
           // If we emit 58/59 outside, the 59 reset would occur before 4m/4:xm.
-          var ulPrefix = '';
-          var ulSuffix = '';
+          prefix.write(start);
           if (_hasFlag2(_PropBits.underlineColor) && _underlineColor != null) {
             final ansi = _underlineColor!.toAnsi(
               colorProfile,
@@ -2176,11 +2173,11 @@ class Style {
               hasDarkBackground: hasDarkBackground,
             );
             if (ansi.isNotEmpty) {
-              ulPrefix = ansi;
-              ulSuffix = '\x1b[59m';
+              prefix.write(ansi);
+              suffix.write('\x1b[59m');
             }
           }
-          styled = '$start$ulPrefix$styled$ulSuffix\x1b[24m';
+          suffix.write('\x1b[24m');
           hasAnsi = true;
         }
       }
@@ -2189,30 +2186,36 @@ class Style {
       final strikethroughSpaces =
           _hasFlag2(_PropBits.strikethroughSpaces) && _strikethroughSpaces;
       if (!isSpace || strikethroughSpaces) {
-        styled = chalk.strikethrough(styled);
+        prefix.write('\x1b[9m');
         hasAnsi = true;
       }
     }
     if (_hasFlag(_PropBits.dim) && _dim) {
-      styled = chalk.dim(styled);
+      prefix.write('\x1b[2m');
       hasAnsi = true;
     }
     if (_hasFlag(_PropBits.inverse) && _inverse) {
-      styled = chalk.inverse(styled);
+      prefix.write('\x1b[7m');
+      hasAnsi = true;
+    }
+    if (_hasFlag(_PropBits.blink) && _blink) {
+      prefix.write('\x1b[5m');
       hasAnsi = true;
     }
 
     if (_hasFlag2(_PropBits.hyperlink) && _hyperlinkUrl != null) {
       final params = _hyperlinkParams;
-      final prefix = params.isEmpty
+      final linkPrefix = params.isEmpty
           ? '\x1b]8;;${_hyperlinkUrl!}\x1b\\'
           : '\x1b]8;$params;${_hyperlinkUrl!}\x1b\\';
-      styled = '$prefix$styled\x1b]8;;\x1b\\';
+      prefix.write(linkPrefix);
+      suffix.write('\x1b]8;;\x1b\\');
       hasAnsi = true;
     }
 
     // lipgloss v2 parity: use a full reset when any styling is applied.
-    return hasAnsi ? '$styled\x1b[m' : styled;
+    if (!hasAnsi) return text;
+    return '$prefix$text$suffix\x1b[m';
   }
 
   bool get _styleWhitespaceEnabled {
