@@ -119,6 +119,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   int _menuLeft = 0;
   int _menuTop = 0;
   T? _currentValue;
+  final Map<Object, String> _renderedTextLineCache = <Object, String>{};
 
   @override
   void initState() {
@@ -275,6 +276,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   @override
   Cmd? didUpdateWidget(covariant PopupMenuButton<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    _renderedTextLineCache.clear();
 
     if (oldWidget.initialValue != widget.initialValue) {
       _currentValue = widget.initialValue;
@@ -483,14 +485,27 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       final checkmark = entry is CheckedPopupMenuItem<T> && entry.checked
           ? 'x'
           : ' ';
-      final row = Row(
-        gap: 1,
-        children: [
-          Text(selected ? '>' : ' ', style: markerStyle),
-          Text(checkmark, style: markerStyle),
-          Expanded(child: _menuItemChild(entry, textStyle)),
-        ],
-      );
+      final lineLabel = _menuItemLabel(entry);
+      final row = lineLabel != null
+          ? Text(
+              _renderedTextMenuLine(
+                entry: entry,
+                label: lineLabel,
+                marker: selected ? '>' : ' ',
+                checkmark: checkmark,
+                textStyle: textStyle,
+                markerStyle: markerStyle,
+              ),
+              softWrap: false,
+            )
+          : Row(
+              gap: 1,
+              children: [
+                Text(selected ? '>' : ' ', style: markerStyle),
+                Text(checkmark, style: markerStyle),
+                Expanded(child: _menuItemChild(entry, textStyle)),
+              ],
+            );
 
       Widget tile = Container(
         width: width,
@@ -517,10 +532,41 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
 
   Widget _menuItemChild(PopupMenuItem<T> item, Style style) {
     if (item.child is! Text) return item.child;
+    final label = _menuItemLabel(item);
+    if (label == null) return item.child;
+    return Text(label, style: style, softWrap: false);
+  }
+
+  String? _menuItemLabel(PopupMenuItem<T> item) {
+    if (item.child is! Text) return null;
     final text = item.child as Text;
-    final data = text.data;
-    if (data == null) return item.child;
-    return Text(data, style: style, softWrap: false);
+    return text.data;
+  }
+
+  String _renderedTextMenuLine({
+    required PopupMenuItem<T> entry,
+    required String label,
+    required String marker,
+    required String checkmark,
+    required Style textStyle,
+    required Style markerStyle,
+  }) {
+    final cacheKey = (
+      entry,
+      label,
+      marker,
+      checkmark,
+      textStyle,
+      markerStyle,
+      hasDarkBackground,
+    );
+    final cached = _renderedTextLineCache[cacheKey];
+    if (cached != null) return cached;
+
+    final rendered =
+        '${markerStyle.render('$marker $checkmark')} ${textStyle.render(label)}';
+    _renderedTextLineCache[cacheKey] = rendered;
+    return rendered;
   }
 
   int _menuRowWidth() {

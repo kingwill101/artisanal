@@ -36,6 +36,9 @@ extension WidthMethodX on WidthMethod {
   /// U+FE0F (emoji presentation selector) are widened to
   /// [emojiPresentationWidth] when the base rune would otherwise be narrow.
   int stringWidth(String s) {
+    final asciiWidth = _asciiStringWidth(s);
+    if (asciiWidth != null) return asciiWidth;
+
     var width = 0;
     // Count display width per grapheme cluster to avoid double-counting
     // multi-codepoint clusters (e.g. ZWJ emoji sequences).
@@ -76,6 +79,11 @@ int stringWidth(String s) => WidthMethod.grapheme.stringWidth(s);
 /// The input is treated as newline-separated rows; width resets after each
 /// newline. This matches how layout code interprets terminal cell widths.
 int maxLineWidth(String s) {
+  if (s.isEmpty) return 0;
+  if (!s.contains('\n') && !s.contains('\r')) {
+    return stringWidth(s);
+  }
+
   final normalized = s.replaceAll('\r\n', '\n');
   var maxWidth = 0;
   for (final line in normalized.split('\n')) {
@@ -83,6 +91,18 @@ int maxLineWidth(String s) {
     if (w > maxWidth) maxWidth = w;
   }
   return maxWidth;
+}
+
+int? _asciiStringWidth(String s) {
+  var width = 0;
+  for (var i = 0; i < s.length; i++) {
+    final unit = s.codeUnitAt(i);
+    if (unit >= 0x80) return null;
+    if (unit >= 0x20 && unit != 0x7F) {
+      width++;
+    }
+  }
+  return width;
 }
 
 /// Returns the display width of a single Unicode code point.

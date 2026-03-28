@@ -213,6 +213,12 @@ void main() {
       expect(w.maxLineWidth('single'), 6);
     });
 
+    test('ASCII fast path preserves printable and control widths', () {
+      expect(w.stringWidth('popup menu'), 10);
+      expect(w.stringWidth('a\tb'), 2);
+      expect(w.maxLineWidth('Action: open v'), 14);
+    });
+
     test('mixed ASCII and emoji string width', () {
       // "Hello 🌍!" - "Hello " (6) + emoji (2) + "!" (1) = 9
       // Note: The space after "Hello" is 1 character

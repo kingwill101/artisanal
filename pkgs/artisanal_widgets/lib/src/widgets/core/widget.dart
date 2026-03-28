@@ -238,6 +238,15 @@ abstract class Widget implements Model {
     _cachedViewKey = null;
   }
 
+  /// Transfers any cached view payload from [from] to [to].
+  ///
+  /// This lets reconciled widget replacements preserve expensive cached view
+  /// output when their cache keys are still valid after an element update.
+  static void transferCachedView(Widget from, Widget to) {
+    to._cachedView = from._cachedView;
+    to._cachedViewKey = from._cachedViewKey;
+  }
+
   @override
   String toString() => 'Widget($id)';
 }

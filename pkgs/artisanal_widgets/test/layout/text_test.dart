@@ -1,4 +1,5 @@
 import 'package:artisanal/style.dart';
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
@@ -197,6 +198,20 @@ void main() {
       final text = Text('test', key: ValueKey('my-key'));
       expect(text.id, equals('my-key'));
     });
+
+    test('preserves cached view output across widget replacement', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      _CountingCachedWidget.renderCount = 0;
+
+      await tester.pumpWidget(_CacheTransferHarness());
+      tester.sendKey('r');
+      tester.sendKey('c');
+
+      expect(_CountingCachedWidget.renderCount, equals(2));
+      expect(tester.find.text('changed'), isTrue);
+    });
   });
 
   group('Text integration', () {
@@ -250,4 +265,46 @@ void main() {
       expect(lines.length, greaterThanOrEqualTo(3));
     });
   });
+}
+
+class _CountingCachedWidget extends Widget {
+  _CountingCachedWidget(this.label);
+
+  final String label;
+  static int renderCount = 0;
+
+  @override
+  Object view() {
+    return buildCachedView(() {
+      renderCount++;
+      return label;
+    }, label);
+  }
+}
+
+class _CacheTransferHarness extends StatefulWidget {
+  _CacheTransferHarness();
+
+  @override
+  State createState() => _CacheTransferHarnessState();
+}
+
+class _CacheTransferHarnessState extends State<_CacheTransferHarness> {
+  var _label = 'cache-me';
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is! KeyMsg) return null;
+    if (msg.key.char == 'r') {
+      setState(() {});
+    } else if (msg.key.char == 'c') {
+      setState(() {
+        _label = 'changed';
+      });
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) => _CountingCachedWidget(_label);
 }
