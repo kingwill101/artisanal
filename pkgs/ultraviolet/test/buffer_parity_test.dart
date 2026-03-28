@@ -275,6 +275,49 @@ void main() {
       },
     );
 
+    test('Buffer.setCell no-ops when the target cell already matches', () {
+      final b = Buffer.create(3, 1);
+      final cell = Cell(content: 'X', width: 1);
+
+      b.setCell(1, 0, cell);
+      b.clearDirtyTracking();
+
+      final before = b.cellAt(1, 0)!;
+      b.setCell(1, 0, cell);
+
+      expect(identical(b.cellAt(1, 0), before), isTrue);
+      expect(b.touched[0], LineData.clean);
+      expect(b.dirtyBitSpans(0), isEmpty);
+    });
+
+    test('Line.renderHash changes for style-only updates', () {
+      final line = Line.filled(2);
+      final initial = line.renderHash();
+
+      line.setOwned(
+        0,
+        Cell(
+          content: ' ',
+          width: 1,
+          style: const UvStyle(fg: UvRgb(255, 0, 0)),
+        ),
+      );
+
+      final updated = line.renderHash();
+      expect(updated, isNot(initial));
+
+      line.setOwned(
+        0,
+        Cell(
+          content: ' ',
+          width: 1,
+          style: const UvStyle(fg: UvRgb(255, 0, 0)),
+        ),
+      );
+
+      expect(line.renderHash(), equals(updated));
+    });
+
     test('clear, clone, cloneArea, draw', () {
       final b = Buffer.create(10, 5);
       b.setCell(2, 1, Cell(content: 'X', width: 1));

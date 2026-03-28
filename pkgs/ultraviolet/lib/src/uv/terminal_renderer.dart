@@ -2070,14 +2070,7 @@ final class _FrameArena {
 const int _newIndex = -1;
 
 int _hashLine(Line l) {
-  var hash = 0xcbf29ce484222325;
-  for (final c in l.cells) {
-    for (final cu in c.content.codeUnits) {
-      hash ^= cu;
-      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
-    }
-  }
-  return hash;
+  return l.renderHash();
 }
 
 void _updateHashmap(UvTerminalRenderer s, Buffer newbuf) {

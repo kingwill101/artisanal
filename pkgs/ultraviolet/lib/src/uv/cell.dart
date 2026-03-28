@@ -347,6 +347,22 @@ final class Cell {
   /// This is primarily useful for diagnostics and tests.
   int? get linkId => _linkId == 0 ? null : _linkId;
 
+  /// A compact identity for just the cell content, excluding width/style/link.
+  ///
+  /// This is used by line-level hashing to avoid reconstructing grapheme text
+  /// when only content equality matters.
+  int get contentFingerprint => _mixHash(_contentKind, _contentValue);
+
+  /// A compact identity for full rendered output at one cell slot.
+  ///
+  /// This includes style, link, width, and drawable identity so renderer-side
+  /// line hashing can cheaply detect visual changes without reconstructing
+  /// grapheme text.
+  int get renderFingerprint => _mixHash(
+    _mixHash(_mixHash(_contentKind, _contentValue), _width),
+    _mixHash(_mixHash(_styleId, _linkId), identityHashCode(drawable)),
+  );
+
   /// Whether this cell has no content, style, link, or drawable.
   bool get isZero =>
       _contentKind == _CellContentKind.empty &&
@@ -383,6 +399,71 @@ final class Cell {
     );
   }
 
+  /// Returns a blank space cell with the same style/link/drawable metadata.
+  ///
+  /// This avoids cloning pooled grapheme content when wide-cell overwrite
+  /// semantics only need a cleared replacement.
+  Cell cloneEmpty() {
+    if (_linkId != 0) {
+      _linkRegistry.retain(_linkId);
+    }
+    return Cell._packed(
+      style: _style,
+      link: _link,
+      width: 1,
+      contentKind: _CellContentKind.space,
+      contentValue: 0,
+      styleId: _styleId,
+      linkId: _linkId,
+      drawable: drawable,
+    );
+  }
+
+  /// Copies the full cell payload from [other] into this instance.
+  ///
+  /// This lets hot buffer paths update an existing slot without allocating a
+  /// replacement `Cell` object first.
+  void copyFrom(Cell other) {
+    if (identical(this, other)) return;
+    _releaseLink();
+    _releasePooledContent();
+    _style = other._style;
+    _styleId = other._styleId;
+    _link = other._link;
+    _linkId = other._linkId;
+    _width = other._width;
+    _contentKind = other._contentKind;
+    _contentValue = other._contentValue;
+    drawable = other.drawable;
+    if (_contentKind == _CellContentKind.complex) {
+      _graphemePool.retain(_contentValue);
+      _attachPooledContentFinalizerIfNeeded();
+    }
+    if (_linkId != 0) {
+      _linkRegistry.retain(_linkId);
+      _attachLinkFinalizerIfNeeded();
+    }
+  }
+
+  /// Copies just the style/link/drawable payload from [other] and clears the
+  /// content to a plain space cell.
+  void copyEmptyFrom(Cell other) {
+    _releaseLink();
+    _releasePooledContent();
+    _style = other._style;
+    _styleId = other._styleId;
+    _link = other._link;
+    _linkId = other._linkId;
+    _width = 1;
+    _contentKind = _CellContentKind.space;
+    _contentValue = 0;
+    drawable = other.drawable;
+    if (_linkId != 0) {
+      _linkRegistry.retain(_linkId);
+      _attachLinkFinalizerIfNeeded();
+    }
+  }
+
   /// Sets this cell to a space with width 1.
   void empty() {
     _releasePooledContent();
@@ -401,8 +482,55 @@ final class Cell {
     _updatePackedContent();
   }
 
+  /// Resets this cell to a canonical empty space cell.
+  void resetToEmptyCell() {
+    _releaseLink();
+    _releasePooledContent();
+    _style = const UvStyle();
+    _styleId = 0;
+    _link = const Link();
+    _linkId = 0;
+    drawable = null;
+    _width = 1;
+    _contentKind = _CellContentKind.space;
+    _contentValue = 0;
+  }
+
+  /// Resets this cell to a canonical zero-width placeholder cell.
+  void resetToZeroCell() {
+    _releaseLink();
+    _releasePooledContent();
+    _style = const UvStyle();
+    _styleId = 0;
+    _link = const Link();
+    _linkId = 0;
+    drawable = null;
+    _width = 0;
+    _contentKind = _CellContentKind.empty;
+    _contentValue = 0;
+  }
+
   /// Creates a space cell with width 1.
-  static Cell emptyCell() => Cell(content: ' ', width: 1);
+  static Cell emptyCell() => Cell._packed(
+    style: const UvStyle(),
+    link: const Link(),
+    width: 1,
+    contentKind: _CellContentKind.space,
+    contentValue: 0,
+    styleId: 0,
+    linkId: 0,
+  );
+
+  /// Creates an empty placeholder cell with zero width and no attributes.
+  static Cell zeroCell() => Cell._packed(
+    style: const UvStyle(),
+    link: const Link(),
+    width: 0,
+    contentKind: _CellContentKind.empty,
+    contentValue: 0,
+    styleId: 0,
+    linkId: 0,
+  );
 
   /// Creates a new cell from a grapheme, computing its display width.
   static Cell newCell(WidthMethod method, String grapheme) {
@@ -418,8 +546,7 @@ final class Cell {
       other._contentValue == _contentValue &&
       other._width == _width &&
       other._styleId == _styleId &&
-      other._linkId == _linkId &&
-      (identical(other._link, _link) || other._link == _link);
+      other._linkId == _linkId;
 
   @override
   int get hashCode => _mixHash(

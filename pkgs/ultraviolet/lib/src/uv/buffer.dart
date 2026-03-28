@@ -174,6 +174,7 @@ final class Line {
   }
 
   final List<Cell> _cells;
+  int? _renderHash;
 
   /// The number of cells in this line.
   int get length => _cells.length;
@@ -184,6 +185,15 @@ final class Line {
   /// Replaces the cell at [x] with [cell] without applying wide-cell rules.
   void replace(int x, Cell cell) {
     if (x < 0 || x >= _cells.length) return;
+    final cachedHash = _renderHash;
+    if (cachedHash != null) {
+      final previous = _cells[x];
+      _renderHash =
+          (cachedHash ^
+                  _slotHash(x, previous.renderFingerprint) ^
+                  _slotHash(x, cell.renderFingerprint)) &
+              0xFFFFFFFFFFFFFFFF;
+    }
     _cells[x].dispose();
     _cells[x] = cell;
   }
@@ -191,8 +201,28 @@ final class Line {
   /// Replaces the cell at [x] with a clone of [cell].
   void replaceWithClone(int x, Cell cell) => replace(x, cell.clone());
 
+  /// Returns a cached hash of the line's rendered content.
+  int renderHash() {
+    final cached = _renderHash;
+    if (cached != null) return cached;
+    var hash = 0;
+    for (var i = 0; i < _cells.length; i++) {
+      hash ^= _slotHash(i, _cells[i].renderFingerprint);
+    }
+    _renderHash = hash & 0xFFFFFFFFFFFFFFFF;
+    return hash;
+  }
+
+  /// Sets the cell at [x], taking ownership of [cell] if provided.
+  ///
+  /// Callers should use this only when they know [cell] is a freshly created
+  /// instance that will not be reused elsewhere.
+  void setOwned(int x, Cell? cell) => _setInternal(x, cell, takeOwnership: true);
+
   /// Sets the cell at [x], applying wide-cell overwrite rules.
-  void set(int x, Cell? cell) {
+  void set(int x, Cell? cell) => _setInternal(x, cell, takeOwnership: false);
+
+  void _setInternal(int x, Cell? cell, {required bool takeOwnership}) {
     // Upstream: maxCellWidth = 5.
     const maxCellWidth = 5;
 
@@ -205,8 +235,7 @@ final class Line {
       final pw = prev.width;
       if (pw > 1) {
         for (var j = 0; j < pw && x + j < lineWidth; j++) {
-          final c = prev.clone()..empty();
-          replace(x + j, c);
+          replace(x + j, prev.cloneEmpty());
         }
       } else if (pw == 0) {
         // Placeholder overwrite: scan left for the wide cell origin.
@@ -216,8 +245,7 @@ final class Line {
           final ww = wide.width;
           if (ww > 1 && j < ww) {
             for (var k = 0; k < ww && x - j + k < lineWidth; k++) {
-              final c = wide.clone()..empty();
-              replace(x - j + k, c);
+              replace(x - j + k, wide.cloneEmpty());
             }
             break;
           }
@@ -230,13 +258,16 @@ final class Line {
       return;
     }
 
-    replaceWithClone(x, cell);
+    if (takeOwnership) {
+      replace(x, cell);
+    } else {
+      replaceWithClone(x, cell);
+    }
     final cw = cell.width;
 
     if (x + cw > lineWidth) {
       for (var i = 0; i < cw && x + i < lineWidth; i++) {
-        final c = cell.clone()..empty();
-        replace(x + i, c);
+        replace(x + i, cell.cloneEmpty());
       }
       return;
     }
@@ -244,7 +275,7 @@ final class Line {
     if (cw > 1) {
       // Mark placeholder cells with zero-width zero cells.
       for (var j = 1; j < cw && x + j < lineWidth; j++) {
-        replace(x + j, Cell());
+        replace(x + j, Cell.zeroCell());
       }
     }
   }
@@ -395,11 +426,15 @@ final class Buffer {
         ? _applyOpacity(rawNext)
         : _compositeCell(current, _applyOpacity(rawNext));
     if (_isOutsideScissor(x, y, next.width)) return;
-    if (current == null || current != next) {
-      final w = next.width > 0 ? next.width : 1;
-      touchLine(x, y, w);
+    if (current != null && current == next) return;
+    final w = next.width > 0 ? next.width : 1;
+    touchLine(x, y, w);
+    final canTakeOwnership = cell == null || !identical(next, rawNext);
+    if (canTakeOwnership) {
+      lines[y].setOwned(x, next);
+    } else {
+      lines[y].set(x, next);
     }
-    lines[y].set(x, next);
   }
 
   /// Resizes the buffer to [width] × [height], preserving content where possible.
@@ -972,6 +1007,19 @@ bool _listEquals<T>(List<T> a, List<T> b) {
 }
 
 int _dirtyWordCount(int width) => width <= 0 ? 0 : ((width - 1) >> 5) + 1;
+
+int _slotHash(int index, int value) {
+  var hash = 0xcbf29ce484222325;
+  hash ^= index & 0xFFFFFFFF;
+  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash ^= index >>> 32;
+  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash ^= value & 0xFFFFFFFF;
+  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash ^= value >>> 32;
+  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  return hash;
+}
 
 int _bitMask(int from, int to) {
   var mask = 0;
