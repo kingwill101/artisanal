@@ -120,7 +120,7 @@ class _PopupMenuButtonHostState extends w.State<_PopupMenuButtonHost> {
         children: [
           w.Text('PopupMenuButton', style: theme.titleLarge),
           w.Text(
-            'Open menu with click/enter. Use up/down + enter. q to quit.',
+            'Open menu with click/enter. Hover items to activate. Use up/down + enter. q to quit.',
             style: labelStyle,
           ),
           w.Text(

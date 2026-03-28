@@ -223,7 +223,7 @@ void main() {
       expect((menuLabel!.x - trigger!.x).abs() <= 8, isTrue);
     });
 
-    test('hovering a floating menu item updates the highlighted selection', () async {
+    test('hovering a floating menu item selects it immediately', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
       String? selected;
@@ -251,9 +251,9 @@ void main() {
       tester.tap(tester.find.byKeyLocation(ValueKey('popup-hover-highlight')));
       final save = tester.locateText('Save');
       expect(save, isNotNull);
+      expect(selected, isNull);
 
       tester.mouseMove(save!.x + 2, save.y);
-      tester.sendSpecialKey(KeyType.enter);
 
       expect(selected, equals('save'));
     });
