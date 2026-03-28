@@ -33,7 +33,7 @@ import '../tui/trace.dart';
 import '../unicode/grapheme.dart' as uni;
 import '../uv/wrap.dart' as uv_wrap;
 
-const int _styleRenderTraceThresholdUs = 500;
+const int _styleRenderTraceThresholdUs = 5000;
 
 void _traceStyleRender(String message, Stopwatch? sw) {
   if (sw == null) return;
