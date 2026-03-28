@@ -1202,6 +1202,31 @@ class ElementTree {
     ]);
   }
 
+  /// Dispatches [msg] directly to the provided [StatefulElement]s.
+  ///
+  /// Unlike [dispatch], this does not traverse descendants. It is intended
+  /// for targeted follow-up delivery such as hover-exit housekeeping for
+  /// elements that were hit on the previous mouse-motion frame but are no
+  /// longer under the pointer.
+  Cmd? dispatchToStatefulElements(
+    Iterable<StatefulElement> elements,
+    Msg msg,
+  ) {
+    final cmds = <Cmd>[];
+    for (final element in elements) {
+      if (!element.state.mounted) continue;
+      element.rebuild();
+      final cmd = element.state.handleUpdate(msg);
+      if (cmd != null) cmds.add(cmd);
+    }
+    _flushDirtyBuilds();
+    final mountInit = _owner.drainMountInitCmds();
+    return _coalesceCommands([
+      ...cmds,
+      ?mountInit,
+    ]);
+  }
+
   /// Dispatches [msg] by walking UP the element tree from [startElement] to
   /// the root, calling `handleUpdate` on each [StatefulElement]'s state.
   ///

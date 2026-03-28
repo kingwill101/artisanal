@@ -41,7 +41,12 @@ import 'package:artisanal/style.dart'
     show Color, AdaptiveColor, CompleteAdaptiveColor;
 import 'package:artisanal/terminal.dart' show KeyType;
 import '../core/element.dart'
-    show BuildOwner, Element, ElementTree, HitTestElementEntry;
+    show
+        BuildOwner,
+        Element,
+        ElementTree,
+        HitTestElementEntry,
+        StatefulElement;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
@@ -197,6 +202,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
   /// Latest runtime-level render metrics received from [RenderMetricsMsg].
   RenderMetrics? _latestRenderMetrics;
+  final Set<StatefulElement> _lastMouseMotionTargets = <StatefulElement>{};
 
   final Stopwatch _latencyClock = Stopwatch()..start();
   final ListQueue<int> _pendingKeyTimestampsUs = ListQueue<int>();
@@ -362,6 +368,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     }
 
     if (msg is MouseMsg) {
+      if (msg.action != MouseAction.motion) {
+        _lastMouseMotionTargets.removeWhere((element) => !element.state.mounted);
+      }
       // --- Mouse capture: active drag/press owner gets the event first ---
       final capture = _tree.mouseCapture;
       if (capture != null) {
@@ -424,6 +433,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
               break;
             }
           }
+          final currentMotionTargets = msg.action == MouseAction.motion
+              ? visited.whereType<StatefulElement>().toSet()
+              : const <StatefulElement>{};
           // Capture dirty state BEFORE broadcasting the raw MouseMsg.
           // The hit-test dispatch above may have triggered setState() calls
           // (e.g., onWheel, onEnter) that marked elements dirty.  If we
@@ -449,12 +461,51 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           // controls like draggable scroll thumbs.
           final shouldBroadcastRawMouse =
               !isWheelLike && msg.action != MouseAction.press;
-          if (shouldBroadcastRawMouse) {
+          if (msg.action == MouseAction.motion) {
+            final rawMotionTargets = <StatefulElement>{
+              ...currentMotionTargets.where((element) => element.state.mounted),
+              ..._lastMouseMotionTargets.where((element) =>
+                  element.state.mounted &&
+                  !currentMotionTargets.contains(element)),
+            };
+            if (rawMotionTargets.isNotEmpty) {
+              final motionCmd = _tree.dispatchToStatefulElements(
+                rawMotionTargets,
+                msg,
+              );
+              if (motionCmd != null) cmds.add(motionCmd);
+            }
+            _lastMouseMotionTargets
+              ..clear()
+              ..addAll(
+                currentMotionTargets.where((element) => element.state.mounted),
+              );
+          } else if (shouldBroadcastRawMouse) {
             final broadcastCmd = _tree.dispatch(msg);
             if (broadcastCmd != null) cmds.add(broadcastCmd);
           }
 
           // Pick up any additional dirty flags from the broadcast.
+          root = _currentRoot();
+          _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
+          if (TuiTrace.enabled) {
+            TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
+          }
+          return (this, _coalesceCommands(cmds));
+        }
+        if (msg.action == MouseAction.motion &&
+            _lastMouseMotionTargets.isNotEmpty) {
+          final exitedTargets = _lastMouseMotionTargets
+              .where((element) => element.state.mounted)
+              .toSet();
+          if (exitedTargets.isNotEmpty) {
+            final exitCmd = _tree.dispatchToStatefulElements(
+              exitedTargets,
+              msg,
+            );
+            if (exitCmd != null) cmds.add(exitCmd);
+          }
+          _lastMouseMotionTargets.clear();
           root = _currentRoot();
           _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
           if (TuiTrace.enabled) {
