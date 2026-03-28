@@ -11,6 +11,7 @@ import 'package:artisanal/tui.dart'
         EveryCmd,
         DegradationLevel,
         HitTestMouseMsg,
+        MouseMsg,
         MouseAction,
         ParallelCmd,
         Msg,
@@ -1213,13 +1214,18 @@ class ElementTree {
     Msg msg,
   ) {
     final cmds = <Cmd>[];
+    final deferBuildFlush = msg is MouseMsg && msg.action == MouseAction.motion;
     for (final element in elements) {
       if (!element.state.mounted) continue;
       final cmd = element.state.handleUpdate(msg);
       if (cmd != null) cmds.add(cmd);
     }
-    _flushDirtyBuilds();
-    final mountInit = _owner.drainMountInitCmds();
+    final mountInit = deferBuildFlush
+        ? null
+        : () {
+            _flushDirtyBuilds();
+            return _owner.drainMountInitCmds();
+          }();
     return _coalesceCommands([
       ...cmds,
       ?mountInit,
@@ -1251,6 +1257,7 @@ class ElementTree {
     final bubbleCmds = <Cmd>[];
     final continueOnMotion =
         msg is HitTestMouseMsg && msg.event.action == MouseAction.motion;
+    final deferBuildFlush = continueOnMotion;
     while (current != null) {
       if (current is StatefulElement) {
         if (visited != null) {
@@ -1270,8 +1277,12 @@ class ElementTree {
       }
       current = current.parent;
     }
-    _flushDirtyBuilds();
-    final mountInit = _owner.drainMountInitCmds();
+    final mountInit = deferBuildFlush
+        ? null
+        : () {
+            _flushDirtyBuilds();
+            return _owner.drainMountInitCmds();
+          }();
     return _coalesceCommands([...bubbleCmds, ?mountInit]);
   }
 
