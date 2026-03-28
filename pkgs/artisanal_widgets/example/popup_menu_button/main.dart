@@ -4,11 +4,34 @@
 // and PopupMenuDivider.
 //
 // Run with: dart run example/popup_menu_button/main.dart
+//
+// Record a trace:
+// ARTISANAL_TUI_TRACE=1 dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+
+import 'dart:io';
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
-void main() async {
+Future<void> main(List<String> args) async {
+  if (args.contains('--help') || args.contains('-h')) {
+    stdout.writeln(_usage);
+    return;
+  }
+
+  if (tui.TuiTrace.enabled) {
+    stdout.writeln(
+      'TUI trace enabled. '
+      'Logs will be written to ${_traceOutputHint()}.',
+    );
+    _traceEvent(
+      'demo.start',
+      fields: <String, Object?>{
+        'trace_output': _traceOutputHint(),
+      },
+    );
+  }
+
   final app = tui.WidgetApp(PopupMenuButtonShowcase());
   await tui.runProgram(
     app,
@@ -19,6 +42,42 @@ void main() async {
     ),
   );
 }
+
+void _traceEvent(
+  String type, {
+  tui.TraceTag tag = tui.TraceTag.general,
+  Map<String, Object?> fields = const <String, Object?>{},
+}) {
+  if (!tui.TuiTrace.enabled) return;
+  tui.TuiTrace.log(
+    'POPUP_MENU_DEMO $type ${fields.isEmpty ? '' : fields}',
+    tag: tag,
+  );
+  tui.TuiTrace.event(
+    'popup_menu_demo.$type',
+    tag: tag,
+    fields: fields,
+  );
+}
+
+String _traceOutputHint() {
+  final env = Platform.environment;
+  final explicit = env['ARTISANAL_TUI_TRACE_PATH'];
+  if (explicit != null && explicit.isNotEmpty) return explicit;
+  return './traces/artisanal-<timestamp>.log';
+}
+
+const String _usage = '''
+PopupMenuButton showcase
+
+Run:
+  dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+
+Trace:
+  ARTISANAL_TUI_TRACE=1 dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+  ARTISANAL_TUI_TRACE=1 ARTISANAL_TUI_TRACE_TAGS=input,dispatch,render,general dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+  ARTISANAL_TUI_TRACE_PATH=/tmp/popup-menu.log ARTISANAL_TUI_TRACE=1 dart run pkgs/artisanal_widgets/example/popup_menu_button/main.dart
+''';
 
 class PopupMenuButtonShowcase extends w.StatelessWidget {
   PopupMenuButtonShowcase({super.key});
@@ -64,6 +123,12 @@ class _PopupMenuButtonHostState extends w.State<_PopupMenuButtonHost> {
             'Open menu with click/enter. Use up/down + enter. q to quit.',
             style: labelStyle,
           ),
+          w.Text(
+            tui.TuiTrace.enabled
+                ? 'Trace: enabled -> ${_traceOutputHint()}'
+                : 'Trace: disabled',
+            style: labelStyle,
+          ),
           w.Divider(width: 68),
           w.PopupMenuButton<String>(
             initialValue: _selectedAction == 'none' ? null : _selectedAction,
@@ -84,19 +149,37 @@ class _PopupMenuButtonHostState extends w.State<_PopupMenuButtonHost> {
               ),
             ],
             onSelected: (value) {
+              final nextShowHidden = value == 'toggle_hidden'
+                  ? !_showHidden
+                  : _showHidden;
               setState(() {
                 _selectedAction = value;
                 if (value == 'toggle_hidden') {
-                  _showHidden = !_showHidden;
+                  _showHidden = nextShowHidden;
                   _status = 'show hidden: $_showHidden';
                 } else {
                   _status = 'selected: $value';
                 }
               });
+              _traceEvent(
+                'menu.selected',
+                fields: <String, Object?>{
+                  'value': value,
+                  'show_hidden': nextShowHidden,
+                  'status': _status,
+                },
+              );
               return null;
             },
             onCanceled: () {
               setState(() => _status = 'menu canceled');
+              _traceEvent(
+                'menu.canceled',
+                fields: <String, Object?>{
+                  'selected_action': _selectedAction,
+                  'show_hidden': _showHidden,
+                },
+              );
               return null;
             },
           ),
@@ -117,7 +200,17 @@ class _PopupMenuButtonHostState extends w.State<_PopupMenuButtonHost> {
 
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == 'q') return tui.Cmd.quit();
+    if (msg is tui.KeyMsg && msg.key.char == 'q') {
+      _traceEvent(
+        'quit.requested',
+        tag: tui.TraceTag.input,
+        fields: <String, Object?>{
+          'selected_action': _selectedAction,
+          'show_hidden': _showHidden,
+        },
+      );
+      return tui.Cmd.quit();
+    }
     return null;
   }
 }
