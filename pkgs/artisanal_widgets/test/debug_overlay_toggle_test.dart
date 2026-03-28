@@ -401,6 +401,42 @@ void main() {
         expect(output, contains('FPS:'));
         expect(counter.buildCount, equals(buildsBefore));
       });
+
+      test(
+        'built-in overlay continues updating when the same metrics object mutates during mouse motion',
+        () {
+          final app = tui.WidgetApp(w.Text('hello'), debugOverlay: true);
+          app.update(tui.WindowSizeMsg(80, 24));
+          app.view();
+
+          final metrics = tui.RenderMetrics();
+          metrics.beginFrame();
+          metrics.endFrame();
+
+          app.update(tui.RenderMetricsMsg(metrics));
+          final firstOutput = _stripAnsi(app.view());
+          expect(firstOutput, contains('Frames: 1'));
+
+          app.update(
+            const tui.MouseMsg(
+              action: tui.MouseAction.motion,
+              button: tui.MouseButton.none,
+              x: 10,
+              y: 4,
+            ),
+          );
+          app.view();
+
+          metrics.beginFrame();
+          metrics.endFrame();
+
+          app.update(tui.RenderMetricsMsg(metrics));
+          final secondOutput = _stripAnsi(app.view());
+
+          expect(secondOutput, contains('Frames: 2'));
+          expect(secondOutput, isNot(equals(firstOutput)));
+        },
+      );
     });
 
     group('rapid F12 toggling', () {
@@ -564,6 +600,10 @@ void main() {
       expect(tester.find.text('positioned'), isTrue);
     });
   });
+}
+
+String _stripAnsi(Object value) {
+  return value.toString().replaceAll(RegExp(r'\x1B\[[0-9;]*m'), '');
 }
 
 // ---------------------------------------------------------------------------

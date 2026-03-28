@@ -1151,7 +1151,7 @@ class ViewportModel extends ViewComponent {
   }
 
   void _traceUpdate(String label, ViewportModel next, Stopwatch? sw) {
-    if (!TuiTrace.enabled) return;
+    if (!TuiTrace.captureDispatchEnabled) return;
     sw?.stop();
     final elapsed = sw?.elapsedMicroseconds;
     final sel = next.selectionStart != null || next.selectionEnd != null;
@@ -1192,7 +1192,7 @@ class ViewportModel extends ViewComponent {
     if (rendered.contains(Ansi.escape)) {
       rendered = '$rendered${Ansi.reset}';
     }
-    if (sw != null) {
+    if (sw != null && TuiTrace.captureDispatchEnabled) {
       sw.stop();
       TuiTrace.log(
         'viewport.view y=$yOffset w=$w h=$h lines=${lines.length} '

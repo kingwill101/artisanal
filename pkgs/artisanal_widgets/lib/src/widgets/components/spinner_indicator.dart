@@ -131,4 +131,7 @@ class _SpinnerTickMsg extends Msg {
   const _SpinnerTickMsg(this.token);
 
   final Object token;
+
+  @override
+  bool get dropWhenInputQueued => true;
 }

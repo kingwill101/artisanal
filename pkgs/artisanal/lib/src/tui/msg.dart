@@ -38,6 +38,13 @@ import 'key.dart';
 /// ```
 abstract class Msg {
   const Msg();
+
+  /// Whether this message can be dropped when fresher user input is queued.
+  ///
+  /// This is intended for low-priority periodic updates such as animation
+  /// ticks or metrics samples where processing every queued instance is less
+  /// important than keeping interactive input responsive.
+  bool get dropWhenInputQueued => false;
 }
 
 /// Message sent when a key is pressed.
@@ -321,6 +328,9 @@ class FrameTickMsg extends Msg {
   ///
   /// Useful for frame-rate-independent animations.
   final Duration delta;
+
+  @override
+  bool get dropWhenInputQueued => true;
 
   @override
   String toString() =>

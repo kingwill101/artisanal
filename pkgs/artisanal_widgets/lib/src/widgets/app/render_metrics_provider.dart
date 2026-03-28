@@ -115,6 +115,7 @@ class RenderMetricsInjector {
 class RenderMetricsHolder {
   /// The latest [RenderMetrics] snapshot, or `null` if none received yet.
   RenderMetrics? metrics;
+  _RenderMetricsFingerprint? _metricsFingerprint;
 
   final LinkedHashMap<String, String> _customMetrics =
       LinkedHashMap<String, String>();
@@ -130,9 +131,14 @@ class RenderMetricsHolder {
     var changed = false;
 
     final nextMetrics = injection.metrics;
-    if (nextMetrics != null && !identical(nextMetrics, metrics)) {
-      metrics = nextMetrics;
-      changed = true;
+    if (nextMetrics != null) {
+      final nextFingerprint = _RenderMetricsFingerprint.capture(nextMetrics);
+      if (!identical(nextMetrics, metrics) ||
+          nextFingerprint != _metricsFingerprint) {
+        metrics = nextMetrics;
+        _metricsFingerprint = nextFingerprint;
+        changed = true;
+      }
     }
 
     if (injection.clearEntries && _customMetrics.isNotEmpty) {
@@ -158,6 +164,56 @@ class RenderMetricsHolder {
 
     return changed;
   }
+}
+
+final class _RenderMetricsFingerprint {
+  const _RenderMetricsFingerprint({
+    required this.frameCount,
+    required this.skippedFrames,
+    required this.lastFrameTimeUs,
+    required this.lastRenderTimeUs,
+    required this.averageFrameTimeUs,
+    required this.averageRenderTimeUs,
+  });
+
+  final int frameCount;
+  final int skippedFrames;
+  final int lastFrameTimeUs;
+  final int lastRenderTimeUs;
+  final int averageFrameTimeUs;
+  final int averageRenderTimeUs;
+
+  factory _RenderMetricsFingerprint.capture(RenderMetrics metrics) {
+    return _RenderMetricsFingerprint(
+      frameCount: metrics.frameCount,
+      skippedFrames: metrics.skippedFrames,
+      lastFrameTimeUs: metrics.lastFrameTime.inMicroseconds,
+      lastRenderTimeUs: metrics.lastRenderDuration.inMicroseconds,
+      averageFrameTimeUs: metrics.averageFrameTime.inMicroseconds,
+      averageRenderTimeUs: metrics.averageRenderDuration.inMicroseconds,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is _RenderMetricsFingerprint &&
+          frameCount == other.frameCount &&
+          skippedFrames == other.skippedFrames &&
+          lastFrameTimeUs == other.lastFrameTimeUs &&
+          lastRenderTimeUs == other.lastRenderTimeUs &&
+          averageFrameTimeUs == other.averageFrameTimeUs &&
+          averageRenderTimeUs == other.averageRenderTimeUs);
+
+  @override
+  int get hashCode => Object.hash(
+    frameCount,
+    skippedFrames,
+    lastFrameTimeUs,
+    lastRenderTimeUs,
+    averageFrameTimeUs,
+    averageRenderTimeUs,
+  );
 }
 
 /// Provides [RenderMetricsHolder] to the widget tree via [InheritedWidget].

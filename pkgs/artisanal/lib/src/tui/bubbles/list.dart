@@ -461,7 +461,7 @@ class ListStyles {
 }
 
 /// Filter matches message.
-class FilterMatchesMsg implements Msg {
+class FilterMatchesMsg extends Msg {
   /// Creates a filter matches message.
   FilterMatchesMsg(this.matches);
 
@@ -470,7 +470,7 @@ class FilterMatchesMsg implements Msg {
 }
 
 /// Status message timeout message.
-class StatusMessageTimeoutMsg implements Msg {}
+class StatusMessageTimeoutMsg extends Msg {}
 
 /// List model for interactive lists.
 ///

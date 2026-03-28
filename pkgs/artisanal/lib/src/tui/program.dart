@@ -1192,8 +1192,12 @@ class Program<M extends Model> {
   int _traceMsgId = 0;
   DateTime? _lastQueuedKeyAt;
   DateTime? _lastProcessedKeyAt;
+  DateTime? _lastInteractiveInputAt;
   int _traceRenderId = 0;
   int _renderGeneration = 0;
+  static const Duration _recentInputBackpressureWindow = Duration(
+    milliseconds: 120,
+  );
 
   /// Whether we're in the initialization phase (suppresses renders until init completes).
   bool _initializing = false;
@@ -1950,17 +1954,18 @@ class Program<M extends Model> {
     }
   }
 
-  void _sendWindowSizeIfChanged(
+  bool _sendWindowSizeIfChanged(
     int width,
     int height, {
     bool coalesce = false,
+    bool drain = true,
   }) {
     final sameAsLast =
         _lastWindowSizeWidth == width && _lastWindowSizeHeight == height;
     final sameAsPending =
         _pendingResizeWidth == width && _pendingResizeHeight == height;
     if (sameAsLast || sameAsPending) {
-      return;
+      return false;
     }
     if (coalesce) {
       final next = _resizeCoalescer.next(_resizeCoalescerState, DateTime.now());
@@ -1977,16 +1982,20 @@ class Program<M extends Model> {
           if (pendingWidth == null || pendingHeight == null) return;
           _dispatchWindowSize(pendingWidth, pendingHeight);
         });
-        return;
+        return false;
       }
     }
-    _dispatchWindowSize(width, height);
+    return _dispatchWindowSize(width, height, drain: drain);
   }
 
-  void _dispatchWindowSize(int width, int height) {
+  bool _dispatchWindowSize(int width, int height, {bool drain = true}) {
     _lastWindowSizeWidth = width;
     _lastWindowSizeHeight = height;
-    send(WindowSizeMsg(width, height));
+    if (drain) {
+      send(WindowSizeMsg(width, height));
+      return true;
+    }
+    return _enqueueMessage(WindowSizeMsg(width, height));
   }
 
   /// Starts listening for terminal input.
@@ -2169,9 +2178,7 @@ class Program<M extends Model> {
           tag: TraceTag.input,
         );
       }
-      for (final msg in coalesced) {
-        _dispatchParsedInputMsg(msg);
-      }
+      _dispatchParsedInputBatch(coalesced);
 
       if (_uvInputParser.hasPending) {
         _uvInputTimeoutTimer = Timer(_options.inputTimeout, () {
@@ -2197,9 +2204,7 @@ class Program<M extends Model> {
               tag: TraceTag.input,
             );
           }
-          for (final msg in coalesced) {
-            _dispatchParsedInputMsg(msg);
-          }
+          _dispatchParsedInputBatch(coalesced);
         });
       }
       return;
@@ -2221,7 +2226,7 @@ class Program<M extends Model> {
           tag: TraceTag.input,
         );
       }
-      send(collapsedPaste);
+      _dispatchParsedInputBatch(<Msg>[collapsedPaste]);
       return;
     }
     if (TuiTrace.enabled && results.isNotEmpty) {
@@ -2254,18 +2259,29 @@ class Program<M extends Model> {
       dropped: 0,
     );
 
-    // Send each result as a message
-    for (final msg in parsedMessages) {
-      _dispatchParsedInputMsg(msg);
+    _dispatchParsedInputBatch(parsedMessages);
+  }
+
+  void _dispatchParsedInputBatch(List<Msg> messages) {
+    if (messages.isEmpty) return;
+    var queuedAny = false;
+    for (final msg in messages) {
+      queuedAny = _dispatchParsedInputMsg(msg, drain: false) || queuedAny;
+    }
+    if (queuedAny) {
+      _drainMessageQueue();
     }
   }
 
-  void _dispatchParsedInputMsg(Msg msg) {
+  bool _dispatchParsedInputMsg(Msg msg, {bool drain = true}) {
     if (msg case WindowSizeMsg(:final width, :final height)) {
-      _sendWindowSizeIfChanged(width, height);
-      return;
+      return _sendWindowSizeIfChanged(width, height, drain: drain);
     }
-    send(msg);
+    if (drain) {
+      send(msg);
+      return true;
+    }
+    return _enqueueMessage(msg);
   }
 
   List<Msg> _coalesceInputMsgs(List<Msg> msgs) {
@@ -2475,8 +2491,9 @@ class Program<M extends Model> {
   /// This can be called from outside the program to inject messages.
   /// Messages are queued and processed sequentially to prevent race
   /// conditions and ensure consistent state updates.
-  void send(Msg msg) {
-    if (!_running) return;
+  bool _enqueueMessage(Msg msg) {
+    if (!_running) return false;
+    final now = DateTime.now();
 
     if ((_startupProbes?.hasActiveProbe ?? false) &&
         isCriticalStartupProbeMsg(msg)) {
@@ -2493,13 +2510,12 @@ class Program<M extends Model> {
             tag: TraceTag.dispatch,
           );
         }
-        return;
+        return false;
       }
       msg = intercepted;
     }
 
     if (_macroRecording && !_isReplayActive && _isMacroRecordable(msg)) {
-      final now = DateTime.now();
       final delay = _lastMacroEventAt == null
           ? Duration.zero
           : now.difference(_lastMacroEventAt!);
@@ -2507,21 +2523,34 @@ class Program<M extends Model> {
       _macroSteps.add(ProgramReplayStep(after: delay, msg: msg));
     }
 
-    // Coalesce: when a key arrives, drop all pending mouse messages.
-    // Also drop pending frame ticks so input is not blocked by stale animation
-    // updates. When a motion/wheel arrives, drop prior events of the same
-    // action. Keep only the newest frame tick in the queue.
+    if (_isInteractiveInputMsg(msg)) {
+      _lastInteractiveInputAt = now;
+    } else if (_shouldDropForRecentInteractiveInput(msg, now)) {
+      if (TuiTrace.captureDispatchEnabled) {
+        _trace(
+          'recent-input drop ${msg.runtimeType} '
+          'age_us=${now.difference(_lastInteractiveInputAt!).inMicroseconds}',
+          tag: TraceTag.queue,
+        );
+      }
+      return false;
+    }
+
+    // Coalesce: when a key arrives, drop all pending mouse messages and any
+    // low-priority updates that opt into yielding to fresher input. When a
+    // motion/wheel arrives, drop prior events of the same action. Keep only
+    // the newest frame tick in the queue.
     // Use _coalesceQueue to avoid O(n) removeWhere on each send.
     if (msg is KeyMsg) {
       final dropped = _coalesceQueue(
-        (m) => m is! MouseMsg && m is! FrameTickMsg,
+        (m) => m is! MouseMsg && !m.dropWhenInputQueued,
       );
-      if (TuiTrace.enabled && dropped > 0) {
+      if (TuiTrace.captureDispatchEnabled && dropped > 0) {
         _trace('queue coalesce key dropped=$dropped', tag: TraceTag.queue);
       }
     } else if (msg is FrameTickMsg) {
       final dropped = _coalesceQueue((m) => m is! FrameTickMsg);
-      if (TuiTrace.enabled && dropped > 0) {
+      if (TuiTrace.captureDispatchEnabled && dropped > 0) {
         _trace(
           'queue coalesce frameTick dropped=$dropped',
           tag: TraceTag.queue,
@@ -2533,7 +2562,7 @@ class Program<M extends Model> {
       final dropped = _coalesceQueue(
         (m) => m is! MouseMsg || m.action != MouseAction.motion,
       );
-      if (TuiTrace.enabled && dropped > 0) {
+      if (TuiTrace.captureDispatchEnabled && dropped > 0) {
         _trace(
           'queue coalesce mouse-motion dropped=$dropped',
           tag: TraceTag.queue,
@@ -2543,14 +2572,14 @@ class Program<M extends Model> {
       final dropped = _coalesceQueue(
         (m) => m is! MouseMsg || m.action != MouseAction.wheel,
       );
-      if (TuiTrace.enabled && dropped > 0) {
+      if (TuiTrace.captureDispatchEnabled && dropped > 0) {
         _trace(
           'queue coalesce mouse-wheel dropped=$dropped',
           tag: TraceTag.queue,
         );
       }
     }
-    if (TuiTrace.enabled && msg is KeyMsg) {
+    if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
       final now = DateTime.now();
       final dtMs = _lastQueuedKeyAt == null
           ? -1
@@ -2564,12 +2593,17 @@ class Program<M extends Model> {
       );
     }
     _messageQueue.add(msg);
-    if (TuiTrace.enabled && msg is KeyMsg) {
+    if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
       TuiTrace.log(
         'queue after key len=${_messageQueue.length}',
         tag: TraceTag.queue,
       );
     }
+    return true;
+  }
+
+  void send(Msg msg) {
+    if (!_enqueueMessage(msg)) return;
     _drainMessageQueue();
   }
 
@@ -2643,6 +2677,21 @@ class Program<M extends Model> {
       msg is FocusMsg ||
       msg is UvEventMsg;
 
+  bool _isInteractiveInputMsg(Msg msg) =>
+      msg is KeyMsg ||
+      msg is PasteTextMsg ||
+      msg is MouseMsg ||
+      msg is FocusMsg ||
+      msg is UvEventMsg;
+
+  bool _shouldDropForRecentInteractiveInput(Msg msg, DateTime now) {
+    if (!msg.dropWhenInputQueued) return false;
+    final lastInteractiveInputAt = _lastInteractiveInputAt;
+    if (lastInteractiveInputAt == null) return false;
+    final age = now.difference(lastInteractiveInputAt);
+    return age >= Duration.zero && age <= _recentInputBackpressureWindow;
+  }
+
   /// Removes messages from the queue that don't pass [keep].
   ///
   /// Rebuilds the queue in-place, retaining only matching messages.
@@ -2691,7 +2740,7 @@ class Program<M extends Model> {
     final interceptor = _options.interceptor;
     final processSw = interceptor == null ? null : (Stopwatch()..start());
 
-    if (TuiTrace.enabled && msg is KeyMsg) {
+    if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
       final now = DateTime.now();
       final dtMs = _lastProcessedKeyAt == null
           ? -1
@@ -2704,11 +2753,13 @@ class Program<M extends Model> {
       );
     }
 
-    final span = TuiTrace.begin(
-      'msg#${++_traceMsgId}',
-      tag: TraceTag.dispatch,
-      extra: msg.runtimeType.toString(),
-    );
+    final span = TuiTrace.captureDispatchEnabled
+        ? TuiTrace.begin(
+            'msg#${++_traceMsgId}',
+            tag: TraceTag.dispatch,
+            extra: msg.runtimeType.toString(),
+          )
+        : TraceSpan.noop;
 
     try {
       if (msg case WindowSizeMsg(:final width, :final height)) {
@@ -2802,11 +2853,14 @@ class Program<M extends Model> {
         _renderer?.metrics?.metricsOnlyFrame = true;
       }
       final startupProbeActive = _startupProbes?.hasActiveProbe ?? false;
-      if (deferRender || startupProbeActive) {
-        if (TuiTrace.enabled && msg is KeyMsg) {
+      if (deferRender || startupProbeActive || _backendShutdownRequested) {
+        if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
           TuiTrace.log(
             startupProbeActive
                 ? 'render deferred while startup probe active; '
+                      'queue_len=${_messageQueue.length}'
+                : _backendShutdownRequested
+                ? 'render deferred while backend shutdown is pending; '
                       'queue_len=${_messageQueue.length}'
                 : 'render deferred for queued key; '
                       'queue_len=${_messageQueue.length}',
@@ -3204,7 +3258,7 @@ class Program<M extends Model> {
     final pending = List<Msg>.from(_deferredUntilAfterInitialRender);
     _deferredUntilAfterInitialRender.clear();
     for (final msg in pending) {
-      send(msg);
+      _enqueueMessage(msg);
     }
     _drainMessageQueue();
   }
@@ -3552,7 +3606,7 @@ class Program<M extends Model> {
 
     // Send resume message
     _processMessage(const ResumeMsg(), deferRender: true);
-    if (!restoringDuringInitialization) {
+    if (!restoringDuringInitialization && !_backendShutdownRequested) {
       _schedulePostRestoreRender();
     }
   }

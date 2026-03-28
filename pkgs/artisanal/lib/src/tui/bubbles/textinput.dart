@@ -560,7 +560,7 @@ class TextInputKeyMap implements KeyMap {
 }
 
 /// Message for paste events.
-class PasteMsg implements Msg {
+class PasteMsg extends Msg {
   /// Creates a paste message with the pasted content.
   PasteMsg(this.content);
 
@@ -569,7 +569,7 @@ class PasteMsg implements Msg {
 }
 
 /// Message for paste errors.
-class PasteErrorMsg implements Msg {
+class PasteErrorMsg extends Msg {
   /// Creates a paste error message.
   PasteErrorMsg(this.error);
 
@@ -578,7 +578,7 @@ class PasteErrorMsg implements Msg {
 }
 
 /// Internal message used to apply a large paste in chunks.
-class _PasteChunkMsg implements Msg {
+class _PasteChunkMsg extends Msg {
   const _PasteChunkMsg();
 }
 

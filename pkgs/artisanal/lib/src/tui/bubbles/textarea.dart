@@ -370,17 +370,17 @@ TextAreaStyles defaultTextAreaStyles() {
   );
 }
 
-class TextAreaPasteMsg implements Msg {
+class TextAreaPasteMsg extends Msg {
   TextAreaPasteMsg(this.content);
   final String content;
 }
 
-class TextAreaPasteErrorMsg implements Msg {
+class TextAreaPasteErrorMsg extends Msg {
   TextAreaPasteErrorMsg(this.error);
   final Object error;
 }
 
-class _TextAreaPasteChunkMsg implements Msg {
+class _TextAreaPasteChunkMsg extends Msg {
   const _TextAreaPasteChunkMsg();
 }
 

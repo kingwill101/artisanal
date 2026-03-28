@@ -284,7 +284,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
   (Model, Cmd?) update(Msg msg) {
     final cmds = <Cmd>[];
 
-    if (TuiTrace.enabled) {
+    if (TuiTrace.captureDispatchEnabled) {
       TuiTrace.log('widget_app.update start ${msg.runtimeType}');
     }
 
@@ -368,6 +368,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     }
 
     if (msg is MouseMsg) {
+      if (_debugOverlayEnabled) {
+        _overlayDirty = true;
+      }
       if (msg.action != MouseAction.motion) {
         _lastMouseMotionTargets.removeWhere((element) => !element.state.mounted);
       }
@@ -388,7 +391,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
 
         root = _currentRoot();
         _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-        if (TuiTrace.enabled) {
+        if (TuiTrace.captureDispatchEnabled) {
           TuiTrace.log('widget_app.update end (capture) dirty=$_dirty');
         }
         return (this, _coalesceCommands(cmds));
@@ -400,7 +403,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         hitSw?.start();
         final hits = _tree.hitTestAt(msg.x.toDouble(), msg.y.toDouble());
         hitSw?.stop();
-        if (TuiTrace.enabled) {
+        if (TuiTrace.captureDispatchEnabled) {
           TuiTrace.log(
             'widget_app.hitTest count=${hits.length} '
             'mouse=(${msg.x},${msg.y}) '
@@ -488,7 +491,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           // Pick up any additional dirty flags from the broadcast.
           root = _currentRoot();
           _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-          if (TuiTrace.enabled) {
+          if (TuiTrace.captureDispatchEnabled) {
             TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
           }
           return (this, _coalesceCommands(cmds));
@@ -508,7 +511,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           _lastMouseMotionTargets.clear();
           root = _currentRoot();
           _dirty = _dirty || _tree.hasDirty || _tree.hasPaintDirty;
-          if (TuiTrace.enabled) {
+          if (TuiTrace.captureDispatchEnabled) {
             TuiTrace.log('widget_app.update end (hitTest) dirty=$_dirty');
           }
           return (this, _coalesceCommands(cmds));
@@ -526,7 +529,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     dispatchSw?.start();
     final cmd = _tree.dispatch(msg);
     dispatchSw?.stop();
-    if (TuiTrace.enabled) {
+    if (TuiTrace.captureDispatchEnabled) {
       TuiTrace.log(
         'widget_app.dispatch ${msg.runtimeType} '
         'dt=${dispatchSw?.elapsedMicroseconds ?? -1}us',
@@ -557,7 +560,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           _tree.hasPaintDirty;
     }
 
-    if (TuiTrace.enabled) {
+    if (TuiTrace.captureDispatchEnabled) {
       TuiTrace.log('widget_app.update end dirty=$_dirty');
     }
 
@@ -584,7 +587,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         !_overlayDirty &&
         _cachedViewObject != null &&
         !_tree.hasPaintDirty) {
-      if (TuiTrace.enabled) {
+      if (TuiTrace.captureDispatchEnabled) {
         TuiTrace.log('widget_view cache hit');
       }
       return _cachedViewObject!;
@@ -735,6 +738,7 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     );
     if (_debugOverlayEnabled) {
       _runtimeDebugOverlay = _positionRuntimeOverlay(_runtimeDebugOverlay);
+      _overlayDirty = true;
     }
   }
 

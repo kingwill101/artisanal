@@ -30,6 +30,7 @@
 /// ```
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
@@ -190,11 +191,16 @@ final class TuiTrace {
 
   static String? _path;
   static io.File? _file;
+  static io.IOSink? _sink;
   static bool _headerWritten = false;
+  static List<String>? _pendingWrites;
+  static int _pendingWriteBytes = 0;
+  static bool _flushScheduled = false;
   static bool? _captureEnabled;
   static String? _tagsRaw;
   static Set<TraceTag>? _enabledTags;
   static bool _resolved = false;
+  static const int _flushThresholdBytes = 32 * 1024;
   static final Map<String, TraceTag> _traceTagByName = <String, TraceTag>{
     for (final tag in TraceTag.values) tag.name: tag,
   };
@@ -319,13 +325,24 @@ final class TuiTrace {
 
   /// Writes a raw line with a monotonic microsecond timestamp.
   static void _writeRaw(String message) {
-    final file = _file ??= _openFile();
-    if (!_headerWritten) {
-      _writeHeader(file);
-      _headerWritten = true;
-    }
+    final sink = _ensureSink();
     final us = _clock.elapsedMicroseconds;
-    file.writeAsStringSync('[+${us}us] $message\n', mode: io.FileMode.append);
+    final line = '[+${us}us] $message\n';
+    final pendingWrites = _pendingWrites ??= <String>[];
+    pendingWrites.add(line);
+    _pendingWriteBytes += line.length;
+    if (_pendingWriteBytes >= _flushThresholdBytes) {
+      _flushPendingWrites(sink);
+      return;
+    }
+    if (_flushScheduled) return;
+    _flushScheduled = true;
+    scheduleMicrotask(() {
+      _flushScheduled = false;
+      final activeSink = _sink;
+      if (activeSink == null) return;
+      _flushPendingWrites(activeSink);
+    });
   }
 
   static _ParsedTraceLine? _parseLine(String line) {
@@ -374,12 +391,30 @@ final class TuiTrace {
     return file;
   }
 
-  static void _writeHeader(io.File file) {
+  static io.IOSink _ensureSink() {
+    final file = _file ??= _openFile();
+    final sink = _sink ??= file.openWrite(mode: io.FileMode.append);
+    if (!_headerWritten) {
+      _writeHeader(sink, file.path);
+      _headerWritten = true;
+    }
+    return sink;
+  }
+
+  static void _flushPendingWrites(io.IOSink sink) {
+    final pendingWrites = _pendingWrites;
+    if (pendingWrites == null || pendingWrites.isEmpty) return;
+    sink.write(pendingWrites.join());
+    _pendingWrites = null;
+    _pendingWriteBytes = 0;
+  }
+
+  static void _writeHeader(io.IOSink sink, String path) {
     final scriptPath = _resolveScriptPath();
     final lines = <String>[
       '# trace start: $_startWallTime',
       '# timestamps are monotonic microseconds from start',
-      '# path: ${file.path}',
+      '# path: $path',
       '# pid: ${io.pid}',
       '# cwd: ${io.Directory.current.path}',
       '# executable: ${io.Platform.executable}',
@@ -391,13 +426,23 @@ final class TuiTrace {
     ];
 
     // Write header with wall-clock correlation.
-    file.writeAsStringSync('${lines.join('\n')}\n', mode: io.FileMode.append);
+    sink.write('${lines.join('\n')}\n');
   }
 
   /// Closes the trace log file.
   static void close() {
+    final sink = _sink;
+    if (sink != null) {
+      _flushPendingWrites(sink);
+      unawaited(sink.flush());
+      unawaited(sink.close());
+    }
+    _sink = null;
     _file = null;
     _headerWritten = false;
+    _pendingWrites = null;
+    _pendingWriteBytes = 0;
+    _flushScheduled = false;
   }
 
   static String? _resolvePath() {

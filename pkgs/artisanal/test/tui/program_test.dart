@@ -9,6 +9,7 @@ import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
+import 'package:artisanal/src/uv/terminal_renderer.dart' show RenderMetrics;
 import 'package:artisanal/src/uv/uv.dart' show Cursor, CursorShape;
 import 'package:test/test.dart';
 
@@ -3251,10 +3252,11 @@ void main() {
                 delta: const Duration(milliseconds: 16),
               ),
             );
+            program.send(const CustomMsg('quit'));
             return null;
           }
 
-          if (msg is FrameTickMsg && msg.frameNumber == 3) {
+          if (msg is CustomMsg && msg.value == 'quit') {
             return Cmd.quit();
           }
 
@@ -3277,7 +3279,7 @@ void main() {
           .whereType<FrameTickMsg>()
           .map((m) => m.frameNumber)
           .toList(growable: false);
-      expect(frameNumbers, [3]);
+      expect(frameNumbers, isEmpty);
       expect(received.whereType<KeyMsg>(), hasLength(1));
       expect(received.whereType<KeyMsg>().single.key.char, equals('k'));
     });
@@ -3323,6 +3325,190 @@ void main() {
       expect(keyUpdates, 3);
       // One render for the trigger message + one for the final key state.
       expect(viewCalls - before, 2);
+    });
+
+    test('parsed key bursts defer intermediate renders', () async {
+      var viewCalls = 0;
+      var keyUpdates = 0;
+
+      final model = _CallbackModel(
+        onView: () {
+          viewCalls++;
+          return 'keys=$keyUpdates';
+        },
+        onUpdate: (msg) {
+          if (msg is KeyMsg) {
+            keyUpdates++;
+            if (keyUpdates >= 3) return Cmd.quit();
+          }
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(
+          altScreen: false,
+          frameTick: false,
+          useUltravioletInputDecoder: true,
+        ),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => viewCalls > 0);
+      final before = viewCalls;
+      terminal.sendInput(const [0x61, 0x62, 0x63]); // abc
+      await runFuture;
+
+      expect(keyUpdates, 3);
+      expect(viewCalls - before, 1);
+    });
+
+    test('key send drops queued droppable updates in same drain cycle', () async {
+      final received = <Msg>[];
+      late Program program;
+      var queued = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+
+          if (msg is CustomMsg && msg.value == 'start' && !queued) {
+            queued = true;
+            program.send(const _DroppableMsg(1));
+            program.send(const _DroppableMsg(2));
+            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+            program.send(const _DroppableMsg(3));
+            program.send(const CustomMsg('quit'));
+            return null;
+          }
+
+          if (msg is CustomMsg && msg.value == 'quit') {
+            return Cmd.quit();
+          }
+
+          return null;
+        },
+      );
+
+      program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const CustomMsg('start'));
+      await runFuture;
+
+      final droppableValues = received
+          .whereType<_DroppableMsg>()
+          .map((m) => m.value)
+          .toList(growable: false);
+      expect(droppableValues, isEmpty);
+      expect(received.whereType<KeyMsg>(), hasLength(1));
+      expect(received.whereType<KeyMsg>().single.key.char, equals('k'));
+    });
+
+    test(
+      'recent key input suppresses droppable updates after queue drains',
+      () async {
+        final received = <Msg>[];
+        late Program program;
+        var queued = false;
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            received.add(msg);
+
+            if (msg is CustomMsg && msg.value == 'start' && !queued) {
+              queued = true;
+              program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+              program.send(const _DroppableMsg(1));
+              program.send(const _DroppableMsg(2));
+              program.send(const CustomMsg('quit'));
+              return null;
+            }
+
+            if (msg is CustomMsg && msg.value == 'quit') {
+              return Cmd.quit();
+            }
+
+            return null;
+          },
+        );
+
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, frameTick: false),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
+
+        expect(received.whereType<KeyMsg>(), hasLength(1));
+        expect(received.whereType<_DroppableMsg>(), isEmpty);
+      },
+    );
+
+    test('droppable updates resume after recent key input window', () async {
+      final received = <Msg>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+          if (msg is _DroppableMsg) return Cmd.quit();
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+      await Future<void>.delayed(const Duration(milliseconds: 160));
+      program.send(const _DroppableMsg(1));
+      await runFuture;
+
+      expect(received.whereType<KeyMsg>(), hasLength(1));
+      expect(received.whereType<_DroppableMsg>().map((m) => m.value), [1]);
+    });
+
+    test('render metrics are not suppressed after recent key input', () async {
+      final received = <Msg>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          received.add(msg);
+          if (msg is RenderMetricsMsg) return Cmd.quit();
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, frameTick: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await Future<void>.delayed(const Duration(milliseconds: 40));
+      program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+      program.send(RenderMetricsMsg(RenderMetrics()));
+      await runFuture;
+
+      expect(received.whereType<KeyMsg>(), hasLength(1));
+      expect(received.whereType<RenderMetricsMsg>(), hasLength(1));
     });
 
     test('drag motion events are not coalesced away', () async {
@@ -7811,6 +7997,15 @@ class _StreamDataMsg extends Msg {
 /// Message for tick events in tests.
 class _TickMsg extends Msg {
   const _TickMsg();
+}
+
+class _DroppableMsg extends Msg {
+  const _DroppableMsg(this.value);
+
+  final int value;
+
+  @override
+  bool get dropWhenInputQueued => true;
 }
 
 /// A model that immediately quits (simpler than ImmediateQuitModel).
