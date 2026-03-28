@@ -2,6 +2,8 @@
 @experimental
 library;
 
+import 'dart:collection';
+
 import 'package:meta/meta.dart' show experimental;
 
 import 'package:artisanal/tui.dart'
@@ -79,13 +81,17 @@ abstract class Element {
   Widget widget;
   Element? parent;
   final List<Element> _children = [];
+  late final UnmodifiableListView<Element> _childrenView =
+      UnmodifiableListView<Element>(_children);
   final BuildContext context = _ElementBuildContext();
   BuildOwner? _owner;
   bool _dirty = false;
   bool _isRebuilding = false;
+  int _subtreeFocusCacheEpoch = -1;
+  bool _subtreeFocusCacheValue = false;
 
   /// The child elements for this node, in paint order.
-  List<Element> get children => List.unmodifiable(_children);
+  List<Element> get children => _childrenView;
 
   /// Mounts this element under [parent] and performs its initial build.
   void mount(Element? parent) {
@@ -192,7 +198,7 @@ abstract class Element {
         }
         return;
       }
-      for (final child in element.children) {
+      for (final child in element._children) {
         visit(child);
       }
     }
@@ -237,6 +243,13 @@ abstract class Element {
   RenderObject? get renderObject => null;
 
   bool _shouldRender(DegradationLevel degradationLevel) {
+    final signal = widget.degradationSignal;
+    if (!signal.focusBoost) {
+      return widget.shouldRenderAt(
+        degradationLevel,
+        subtreeHasFocusedWidget: false,
+      );
+    }
     return widget.shouldRenderAt(
       degradationLevel,
       subtreeHasFocusedWidget: _subtreeHasFocusedWidget(),
@@ -244,10 +257,27 @@ abstract class Element {
   }
 
   bool _subtreeHasFocusedWidget() {
+    final owner = _owner;
+    if (owner != null) {
+      final epoch = owner.focusTraversalEpoch;
+      if (_subtreeFocusCacheEpoch == epoch) {
+        return _subtreeFocusCacheValue;
+      }
+    }
+
+    final value = _computeSubtreeHasFocusedWidget();
+    if (owner != null) {
+      _subtreeFocusCacheEpoch = owner.focusTraversalEpoch;
+      _subtreeFocusCacheValue = value;
+    }
+    return value;
+  }
+
+  bool _computeSubtreeHasFocusedWidget() {
     if (widget is FocusableWidget && (widget as FocusableWidget).focused) {
       return true;
     }
-    for (final child in children) {
+    for (final child in _children) {
       if (child._subtreeHasFocusedWidget()) {
         return true;
       }
@@ -485,6 +515,7 @@ class BuildOwner {
   bool _needsPaint = false;
   Element? _mouseCapture;
   bool _hadBuildThisFrame = false;
+  int _focusTraversalEpoch = 0;
 
   // Init commands from elements mounted after initial app startup.
   bool _captureMountInitCmds = false;
@@ -506,6 +537,9 @@ class BuildOwner {
 
   /// Whether a repaint has been requested for the current frame.
   bool get hasPaintDirty => _needsPaint;
+
+  /// Monotonic epoch used to memoize subtree focus scans during a frame.
+  int get focusTraversalEpoch => _focusTraversalEpoch;
 
   /// Whether any elements were rebuilt during the current frame's build phase.
   ///
@@ -638,6 +672,7 @@ class BuildOwner {
     _currentBuildDuration = Duration.zero;
     _currentLayoutDuration = Duration.zero;
     _currentPaintDuration = Duration.zero;
+    _focusTraversalEpoch++;
     // Preserve any `true` value set by didRebuild() during the dispatch
     // phase that precedes this render pass.  Without `||`, elements rebuilt
     // during dispatch (e.g., a HoverTracker setState) would be invisible to
@@ -807,8 +842,8 @@ class InheritedElement extends Element {
     if (!_shouldRender(degradationLevel)) {
       return '';
     }
-    if (children.isEmpty) return '';
-    return children.first.render(
+    if (_children.isEmpty) return '';
+    return _children.first.render(
       constraints: constraints,
       degradationLevel: degradationLevel,
     );
@@ -1007,7 +1042,7 @@ class RenderObjectElement extends Element {
       final flexChildren = <RenderObject>[];
       final flexData = <RenderObject, FlexParentData>{};
 
-      for (final child in children) {
+      for (final child in _children) {
         final info = _flexInfoFor(child.widget);
         for (final renderChild in _collectRenderChildren(
           child,
@@ -1033,7 +1068,7 @@ class RenderObjectElement extends Element {
       final stackChildren = <RenderObject>[];
       final stackData = <RenderObject, StackParentData>{};
 
-      for (final child in children) {
+      for (final child in _children) {
         final info = _stackInfoFor(child.widget);
         for (final renderChild in _collectRenderChildren(
           child,
@@ -1053,7 +1088,7 @@ class RenderObjectElement extends Element {
       return;
     }
 
-    for (final child in children) {
+    for (final child in _children) {
       for (final renderChild in _collectRenderChildren(
         child,
         degradationLevel: degradationLevel,
@@ -1064,7 +1099,7 @@ class RenderObjectElement extends Element {
   }
 
   void _buildDescendants({required DegradationLevel degradationLevel}) {
-    for (final child in children) {
+    for (final child in _children) {
       _ensureSubtreeBuilt(child, degradationLevel: degradationLevel);
     }
   }
@@ -1077,7 +1112,7 @@ class RenderObjectElement extends Element {
       return;
     }
     element.ensureBuilt();
-    for (final child in element.children) {
+    for (final child in element._children) {
       _ensureSubtreeBuilt(child, degradationLevel: degradationLevel);
     }
   }
@@ -1108,7 +1143,7 @@ class RenderObjectElement extends Element {
       );
     }
 
-    for (final child in element.children) {
+    for (final child in element._children) {
       yield* _collectRenderChildren(child, degradationLevel: degradationLevel);
     }
   }
@@ -1327,7 +1362,7 @@ class ElementTree {
         final stateCmd = element.state.handleInit();
         if (stateCmd != null) cmds.add(stateCmd);
       }
-      for (final child in element.children) {
+      for (final child in element._children) {
         visit(child);
       }
     }
@@ -1402,7 +1437,7 @@ class ElementTree {
   /// Walks the element tree to find the root [RenderObject].
   static RenderObject? _findRootRenderObject(Element element) {
     if (element is RenderObjectElement) return element.renderObject;
-    for (final child in element.children) {
+    for (final child in element._children) {
       final ro = _findRootRenderObject(child);
       if (ro != null) return ro;
     }
@@ -1431,17 +1466,17 @@ class ElementTree {
         depth: depth,
       );
 
-      final children = <int>[];
-      for (var i = 0; i < element.children.length; i++) {
-        final childId = build(element.children[i], id, i, depth + 1);
-        children.add(childId);
+      final childIds = <int>[];
+      for (var i = 0; i < element._children.length; i++) {
+        final childId = build(element._children[i], id, i, depth + 1);
+        childIds.add(childId);
       }
 
       final node = A11yNode(
         id: id,
         widget: element.widget,
         parentId: parentId,
-        children: children,
+        children: childIds,
         role: element.widget.accessibilityRole,
         label: element.widget.accessibilityLabel,
       );
