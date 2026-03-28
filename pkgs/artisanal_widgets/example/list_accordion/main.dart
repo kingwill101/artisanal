@@ -11,7 +11,13 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ListAccordionShowcase());
+  final app = tui.WidgetApp(
+    w.Overlay(
+      initialEntries: [
+        w.OverlayEntry(builder: (_) => ListAccordionShowcase()),
+      ],
+    ),
+  );
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

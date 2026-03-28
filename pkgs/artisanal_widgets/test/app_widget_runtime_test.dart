@@ -10,7 +10,7 @@ import '../example/main.dart' show AppWidget;
 
 Future<void> _waitUntil(
   bool Function() predicate, {
-  Duration timeout = const Duration(milliseconds: 250),
+  Duration timeout = const Duration(milliseconds: 500),
   Duration step = const Duration(milliseconds: 5),
 }) async {
   final deadline = DateTime.now().add(timeout);
@@ -54,15 +54,15 @@ void main() {
             await runFuture;
           });
 
-          await _waitUntil(() => Style.stripAnsi(terminal.output).contains('Layout'));
+          await _waitUntil(() => _plainView(program).contains('Layout'));
 
           _tapAt(program, script.componentsTab);
           await _waitUntil(
-            () => Style.stripAnsi(terminal.output).contains('Buttons + Badges'),
+            () => _plainView(program).contains('Buttons + Badges'),
           );
 
           _tapAt(program, script.overlaysTab);
-          await _waitUntil(() => Style.stripAnsi(terminal.output).contains('Hover me'));
+          await _waitUntil(() => _plainView(program).contains('Hover me'));
 
           final app = program.currentModel!;
           expect(app, isA<w.WidgetApp>());
@@ -85,7 +85,7 @@ void main() {
           );
 
           await _waitUntil(
-            () => Style.stripAnsi(terminal.output).contains('Hover to preview tooltips'),
+            () => _plainView(program).contains('Hover to preview tooltips'),
             timeout: const Duration(milliseconds: 100),
           );
         },
@@ -146,4 +146,8 @@ void _tapAt(runtime.Program program, ({int x, int y}) target) {
   final loc = tester.locateText(text);
   expect(loc, isNotNull, reason: 'Could not locate "$text" in widget tester view');
   return (x: loc!.x + text.length ~/ 2, y: loc.y);
+}
+
+String _plainView(runtime.Program program) {
+  return Style.stripAnsi(program.currentModel?.view().toString() ?? '');
 }

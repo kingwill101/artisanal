@@ -192,7 +192,9 @@ class _TooltipState extends State<Tooltip> {
           viewport: viewport,
         );
         final gap = 1;
-        final left = trigger.x.clamp(
+        final anchorCenterX = trigger.x + (trigger.width ~/ 2);
+        final preferredLeft = anchorCenterX - (bubbleWidth ~/ 2);
+        final left = preferredLeft.clamp(
           0,
           math.max(0, viewport.width.toInt() - bubbleWidth),
         );

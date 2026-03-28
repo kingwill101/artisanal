@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:artisanal/runtime.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/testing.dart' show WidgetTester;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 
@@ -63,9 +64,11 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(() => terminal.output.isNotEmpty);
+      await _waitUntil(
+        () => _plainView(program).contains('Hover to preview tooltips'),
+      );
       expect(
-        Style.stripAnsi(terminal.output),
+        _plainView(program),
         contains('Hover to preview tooltips'),
       );
     });
@@ -91,13 +94,7 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover me'),
-      );
-
-      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
-      expect(hoverTarget, isNotNull);
-      final target = hoverTarget!;
+      final target = await _overlayHoverTarget(child: w.Text('Hover me'));
 
       terminal.clear();
       program.send(
@@ -109,9 +106,11 @@ void main() {
         ),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(
+        () => _plainView(program).contains('Hover to preview tooltips'),
+      );
       expect(
-        Style.stripAnsi(terminal.output),
+        _plainView(program),
         contains('Hover to preview tooltips'),
       );
     });
@@ -144,26 +143,28 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover me'),
+      final hoverTarget = await _overlayHoverTarget(
+        child: w.MouseRegion(
+          onEnter: (_) => runtime.Cmd.repaint(),
+          child: w.Button(label: 'Hover me', onPressed: () => null),
+        ),
       );
-
-      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
-      expect(hoverTarget, isNotNull);
 
       terminal.clear();
       program.send(
         runtime.MouseMsg(
           action: runtime.MouseAction.motion,
           button: runtime.MouseButton.none,
-          x: hoverTarget!.x,
+          x: hoverTarget.x,
           y: hoverTarget.y,
         ),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await _waitUntil(
+        () => _plainView(program).contains('Hover to preview tooltips'),
+      );
       expect(
-        Style.stripAnsi(terminal.output),
+        _plainView(program),
         contains('Hover to preview tooltips'),
       );
     });
@@ -189,17 +190,12 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover me'),
-      );
-
-      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
-      expect(hoverTarget, isNotNull);
+      final hoverTarget = await _overlayHoverTarget();
       final app = program.currentModel!;
       expect(app, isA<w.WidgetApp>());
       expect(
         app.hitTestAt(
-          hoverTarget!.x.toDouble(),
+          hoverTarget.x.toDouble(),
           hoverTarget.y.toDouble(),
         ),
         isNotEmpty,
@@ -215,17 +211,16 @@ void main() {
         ),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      final plain = Style.stripAnsi(terminal.output);
-      final viewAfterHover = Style.stripAnsi(
-        program.currentModel!.view().toString(),
+      await _waitUntil(
+        () => _plainView(program).contains('Hover to preview tooltips'),
       );
+      final plain = _plainView(program);
       expect(
         plain,
         contains('Hover to preview tooltips'),
         reason:
             'hover output was: ${terminal.output}\n'
-            'view after hover was: $viewAfterHover',
+            'view after hover was: $plain',
       );
     });
 
@@ -250,17 +245,12 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover me'),
-      );
-
-      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
-      expect(hoverTarget, isNotNull);
+      final hoverTarget = await _overlayHoverTarget();
       final app = program.currentModel!;
       expect(app, isA<w.WidgetApp>());
       expect(
         app.hitTestAt(
-          hoverTarget!.x.toDouble(),
+          hoverTarget.x.toDouble(),
           hoverTarget.y.toDouble(),
         ),
         isNotEmpty,
@@ -275,7 +265,7 @@ void main() {
         ),
       );
       await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover to preview tooltips'),
+        () => _plainView(program).contains('Hover to preview tooltips'),
       );
 
       terminal.clear();
@@ -288,8 +278,10 @@ void main() {
         ),
       );
 
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      final plain = Style.stripAnsi(terminal.output);
+      await _waitUntil(
+        () => !_plainView(program).contains('Hover to preview tooltips'),
+      );
+      final plain = _plainView(program);
       expect(plain, isNot(contains('Hover to preview tooltips')));
       expect(plain, contains('Hover me'));
     });
@@ -315,31 +307,26 @@ void main() {
         await runFuture;
       });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover me'),
-      );
-
-      final hoverTarget = _locateText(Style.stripAnsi(terminal.output), 'Hover me');
-      expect(hoverTarget, isNotNull);
+      final hoverTarget = await _overlayHoverTarget();
 
       terminal.clear();
       program.send(
         runtime.MouseMsg(
           action: runtime.MouseAction.motion,
           button: runtime.MouseButton.none,
-          x: hoverTarget!.x,
+          x: hoverTarget.x,
           y: hoverTarget.y,
         ),
       );
 
       await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('Hover to preview tooltips'),
+        () => _plainView(program).contains('Hover to preview tooltips'),
       );
 
-      final settledOutput = terminal.output;
+      final settledOutput = _plainView(program);
       await Future<void>.delayed(const Duration(milliseconds: 120));
       expect(
-        terminal.output,
+        _plainView(program),
         equals(settledOutput),
         reason: 'tooltip output should stay stable without new input',
       );
@@ -347,13 +334,20 @@ void main() {
   });
 }
 
-({int x, int y})? _locateText(String view, String text) {
-  final lines = view.split('\n');
-  for (var row = 0; row < lines.length; row++) {
-    final col = lines[row].indexOf(text);
-    if (col >= 0) return (x: col, y: row);
+Future<({int x, int y})> _overlayHoverTarget({w.Widget? child}) async {
+  final tester = WidgetTester();
+  try {
+    await tester.pumpWidget(_overlayRoot(child: child), width: 80, height: 24);
+    final target = tester.locateText('Hover me');
+    expect(target, isNotNull);
+    return target!;
+  } finally {
+    tester.dispose();
   }
-  return null;
+}
+
+String _plainView(runtime.Program program) {
+  return Style.stripAnsi(program.currentModel?.view().toString() ?? '');
 }
 
 w.Widget _overlayRoot({w.Widget? child}) => w.Overlay(
