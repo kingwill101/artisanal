@@ -39,6 +39,9 @@ class Tooltip extends StatefulWidget {
 }
 
 class _TooltipState extends State<Tooltip> {
+  static const int _cursorHorizontalOffset = 2;
+  static const int _cursorVerticalOffset = 1;
+
   bool _hovered = false;
   OverlayEntry? _floatingEntry;
   ({int x, int y})? _lastPointer;
@@ -112,12 +115,43 @@ class _TooltipState extends State<Tooltip> {
     );
   }
 
-  ({int x, int y, int width, int height})? _anchorGeometry() {
-    final trigger = _triggerGeometry();
-    if (trigger != null) return trigger;
+  bool get _preferPointerAnchor => widget.show != true && _hovered;
+
+  ({
+    int x,
+    int y,
+    int width,
+    int height,
+    bool usesPointer,
+  })? _anchorGeometry() {
     final pointer = _lastPointer;
+    if (_preferPointerAnchor && pointer != null) {
+      return (
+        x: pointer.x,
+        y: pointer.y,
+        width: 0,
+        height: 0,
+        usesPointer: true,
+      );
+    }
+    final trigger = _triggerGeometry();
+    if (trigger != null) {
+      return (
+        x: trigger.x,
+        y: trigger.y,
+        width: trigger.width,
+        height: trigger.height,
+        usesPointer: false,
+      );
+    }
     if (pointer == null) return null;
-    return (x: pointer.x, y: pointer.y, width: 0, height: 0);
+    return (
+      x: pointer.x,
+      y: pointer.y,
+      width: 0,
+      height: 0,
+      usesPointer: true,
+    );
   }
 
   String _viewToString(Object view) {
@@ -128,11 +162,11 @@ class _TooltipState extends State<Tooltip> {
   TooltipPosition _resolvedPosition({
     required TooltipPosition preferred,
     required int bubbleHeight,
-    required ({int x, int y, int width, int height})? trigger,
+    required ({int x, int y, int width, int height, bool usesPointer})? trigger,
     required Size viewport,
   }) {
     if (trigger == null) return preferred;
-    final gap = 1;
+    final gap = trigger.usesPointer ? _cursorVerticalOffset : 1;
     final fitsAbove = trigger.y >= bubbleHeight + gap;
     final fitsBelow =
         trigger.y + trigger.height + gap + bubbleHeight <= viewport.height;
@@ -191,19 +225,35 @@ class _TooltipState extends State<Tooltip> {
           trigger: trigger,
           viewport: viewport,
         );
-        final gap = 1;
-        final anchorCenterX = trigger.x + (trigger.width ~/ 2);
-        final preferredLeft = anchorCenterX - (bubbleWidth ~/ 2);
+        final maxLeft = math.max(0, viewport.width.toInt() - bubbleWidth);
+        final preferredLeft = trigger.usesPointer
+            ? (() {
+                final rightOfCursor = trigger.x + _cursorHorizontalOffset;
+                if (rightOfCursor + bubbleWidth <= viewport.width) {
+                  return rightOfCursor;
+                }
+                return trigger.x - bubbleWidth - _cursorHorizontalOffset;
+              })()
+            : (() {
+                final anchorCenterX = trigger.x + (trigger.width ~/ 2);
+                return anchorCenterX - (bubbleWidth ~/ 2);
+              })();
         final left = preferredLeft.clamp(
           0,
-          math.max(0, viewport.width.toInt() - bubbleWidth),
+          maxLeft,
         );
         final top = switch (position) {
-          TooltipPosition.above => (trigger.y - bubbleHeight - gap).clamp(
+          TooltipPosition.above => (trigger.y -
+                  bubbleHeight -
+                  (trigger.usesPointer ? _cursorVerticalOffset : 1))
+              .clamp(
             0,
             math.max(0, viewport.height.toInt() - bubbleHeight),
           ),
-          TooltipPosition.below => (trigger.y + trigger.height + gap).clamp(
+          TooltipPosition.below => (trigger.y +
+                  trigger.height +
+                  (trigger.usesPointer ? _cursorVerticalOffset : 1))
+              .clamp(
             0,
             math.max(0, viewport.height.toInt() - bubbleHeight),
           ),
@@ -221,6 +271,7 @@ class _TooltipState extends State<Tooltip> {
               'triggerY': trigger.y,
               'triggerWidth': trigger.width,
               'triggerHeight': trigger.height,
+              'usesPointer': trigger.usesPointer,
               'position': position.name,
             },
           );
@@ -230,6 +281,7 @@ class _TooltipState extends State<Tooltip> {
             fields: <String, Object?>{
               'left': left,
               'top': top,
+              'usesPointer': trigger.usesPointer,
               'position': position.name,
             },
           );
@@ -273,6 +325,24 @@ class _TooltipState extends State<Tooltip> {
   Cmd? handleInit() {
     if (widget.enabled && widget.show == true) {
       _syncFloatingEntry();
+      return Cmd.repaint();
+    }
+    return null;
+  }
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is! MouseMsg || !_hovered) return null;
+    if (msg.action != MouseAction.motion) return null;
+    final nextPointer = (x: msg.x, y: msg.y);
+    if (_lastPointer == nextPointer) return null;
+    _lastPointer = nextPointer;
+    if (_floatingEntry != null) {
+      _traceLifecycle(
+        'hover.move',
+        fields: <String, Object?>{'x': msg.x, 'y': msg.y},
+      );
+      _syncFloatingEntry(forceRebuild: true);
       return Cmd.repaint();
     }
     return null;

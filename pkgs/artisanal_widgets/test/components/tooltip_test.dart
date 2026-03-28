@@ -218,5 +218,54 @@ void main() {
       // Second tooltip not shown (no show=true, not hovered)
       expect(tester.find.text('Second tip'), isFalse);
     });
+
+    test('hover tooltip is offset from the cursor and tracks motion', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        Overlay(
+          initialEntries: [
+            OverlayEntry(
+              builder: (_) => Stack(
+                width: 80,
+                height: 24,
+                children: [
+                  Positioned(
+                    left: 5,
+                    top: 8,
+                    child: Tooltip(
+                      message: 'Removes this item forever',
+                      child: Button(
+                        label: 'Delete permanently',
+                        onPressed: () => null,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        width: 80,
+        height: 24,
+      );
+
+      final target = tester.locateText('Delete permanently');
+      expect(target, isNotNull);
+
+      tester.mouseMove(target!.x, target.y);
+
+      final firstTooltip = tester.locateText('Removes this item forever');
+      expect(firstTooltip, isNotNull);
+      expect(firstTooltip!.x, greaterThan(target.x));
+      expect(firstTooltip.y, lessThanOrEqualTo(target.y));
+
+      tester.mouseMove(target.x + 6, target.y);
+
+      final movedTooltip = tester.locateText('Removes this item forever');
+      expect(movedTooltip, isNotNull);
+      expect(movedTooltip!.x, greaterThan(firstTooltip.x));
+    });
   });
 }

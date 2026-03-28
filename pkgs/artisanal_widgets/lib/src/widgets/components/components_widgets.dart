@@ -87,6 +87,7 @@ import 'package:artisanal/tui.dart'
         Msg,
         KeyBinding,
         KeyMap,
+        MouseAction,
         KeyMsg,
         MouseMsg,
         RenderMetrics,
