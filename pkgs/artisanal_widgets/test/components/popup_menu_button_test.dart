@@ -223,6 +223,41 @@ void main() {
       expect((menuLabel!.x - trigger!.x).abs() <= 8, isTrue);
     });
 
+    test('hovering a floating menu item updates the highlighted selection', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      String? selected;
+
+      await tester.pumpWidget(
+        Overlay(
+          initialEntries: [
+            OverlayEntry(
+              builder: (_) => PopupMenuButton<String>(
+                key: ValueKey('popup-hover-highlight'),
+                items: [
+                  PopupMenuItem(value: 'open', child: Text('Open')),
+                  PopupMenuItem(value: 'save', child: Text('Save')),
+                ],
+                onSelected: (value) {
+                  selected = value;
+                  return null;
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+
+      tester.tap(tester.find.byKeyLocation(ValueKey('popup-hover-highlight')));
+      final save = tester.locateText('Save');
+      expect(save, isNotNull);
+
+      tester.mouseMove(save!.x, save.y);
+      tester.sendSpecialKey(KeyType.enter);
+
+      expect(selected, equals('save'));
+    });
+
     test('escape closes menu and triggers onCanceled', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

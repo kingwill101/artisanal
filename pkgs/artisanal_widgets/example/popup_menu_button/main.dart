@@ -20,23 +20,32 @@ void main() async {
   );
 }
 
-class PopupMenuButtonShowcase extends w.StatefulWidget {
+class PopupMenuButtonShowcase extends w.StatelessWidget {
   PopupMenuButtonShowcase({super.key});
 
   @override
-  w.State createState() => _PopupMenuButtonShowcaseState();
+  w.Widget build(w.BuildContext context) {
+    return w.Overlay(
+      initialEntries: [w.OverlayEntry(builder: (_) => _PopupMenuButtonHost())],
+    );
+  }
 }
 
-class _PopupMenuButtonShowcaseState extends w.State<PopupMenuButtonShowcase> {
+class _PopupMenuButtonHost extends w.StatefulWidget {
+  _PopupMenuButtonHost();
+
+  @override
+  w.State createState() => _PopupMenuButtonHostState();
+}
+
+class _PopupMenuButtonHostState extends w.State<_PopupMenuButtonHost> {
   String _selectedAction = 'none';
   String _status = 'menu closed';
   bool _showHidden = false;
 
   @override
   w.Widget build(w.BuildContext context) {
-    return w.Overlay(
-      initialEntries: [w.OverlayEntry(builder: (_) => _buildContent())],
-    );
+    return _buildContent();
   }
 
   w.Widget _buildContent() {

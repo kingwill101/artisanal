@@ -212,6 +212,57 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     _floatingEntry?.markNeedsBuild();
   }
 
+  ({int left, int top, int width, int height})? _floatingMenuRect() {
+    if (!_usingFloatingOverlay) return null;
+    final media = MediaQuery.of(context);
+    final width = _menuRowWidth() + 2;
+    final height = _menuContentHeight() + 2;
+    final left = _menuLeft
+        .clamp(
+      0,
+      math.max(0, media.size.width.toInt() - width),
+    )
+        .toInt();
+    final top = _menuTop
+        .clamp(
+      0,
+      math.max(0, media.size.height.toInt() - height),
+    )
+        .toInt();
+    return (left: left, top: top, width: width, height: height);
+  }
+
+  int? _menuIndexAtPointer(int x, int y) {
+    final rect = _floatingMenuRect();
+    if (rect == null) return null;
+    if (x < rect.left || x >= rect.left + rect.width) return null;
+    if (y < rect.top + 1 || y >= rect.top + rect.height - 1) return null;
+
+    var localY = y - rect.top - 1;
+    for (var i = 0; i < widget.items.length; i++) {
+      final entry = widget.items[i];
+      final height = entry is PopupMenuDivider<T> ? entry.height : 1;
+      if (localY < height) {
+        return entry is PopupMenuItem<T> && entry.enabled ? i : null;
+      }
+      localY -= height;
+    }
+    return null;
+  }
+
+  Cmd? _setHighlightedIndex(int nextIndex) {
+    if (_highlightedIndex == nextIndex) return null;
+    if (_usingFloatingOverlay) {
+      _highlightedIndex = nextIndex;
+      _markFloatingEntryNeedsBuild();
+      return Cmd.repaint();
+    }
+    setState(() {
+      _highlightedIndex = nextIndex;
+    });
+    return Cmd.none();
+  }
+
   @override
   Cmd? didUpdateWidget(covariant PopupMenuButton<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -295,12 +346,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     if (cursor < 0) cursor = 0;
     cursor = (cursor + delta) % selectable.length;
     if (cursor < 0) cursor += selectable.length;
-
-    setState(() {
-      _highlightedIndex = selectable[cursor];
-    });
-    _markFloatingEntryNeedsBuild();
-    return Cmd.none();
+    return _setHighlightedIndex(selectable[cursor]) ?? Cmd.none();
   }
 
   Cmd? _handleOpenKey(KeyMsg msg) {
@@ -330,6 +376,15 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     if (!_open) return null;
     if (msg is KeyMsg) return _handleOpenKey(msg);
     return null;
+  }
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    if (!_open || !_usingFloatingOverlay) return null;
+    if (msg is! MouseMsg || msg.action != MouseAction.motion) return null;
+    final hoveredIndex = _menuIndexAtPointer(msg.x, msg.y);
+    if (hoveredIndex == null) return null;
+    return _setHighlightedIndex(hoveredIndex);
   }
 
   @override
@@ -449,13 +504,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       if (entry.enabled) {
         tile = GestureDetector(
           onTap: () => _selectAt(i),
-          onEnter: (_) {
-            if (_highlightedIndex != i) {
-              setState(() => _highlightedIndex = i);
-              _markFloatingEntryNeedsBuild();
-            }
-            return null;
-          },
+          onEnter: _usingFloatingOverlay ? null : (_) => _setHighlightedIndex(i),
           child: tile,
         );
       }
