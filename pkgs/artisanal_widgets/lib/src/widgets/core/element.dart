@@ -103,6 +103,7 @@ abstract class Element {
 
   /// Updates this element with a new widget configuration.
   void update(Widget newWidget) {
+    if (identical(widget, newWidget)) return;
     Widget.transferCachedView(widget, newWidget);
     widget = newWidget;
     _bindElement(widget, this);

@@ -120,6 +120,8 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   int _menuTop = 0;
   T? _currentValue;
   final Map<Object, String> _renderedTextLineCache = <Object, String>{};
+  final Map<Object, Widget> _menuRowWidgetCache = <Object, Widget>{};
+  int? _cachedMenuRowWidth;
 
   @override
   void initState() {
@@ -277,6 +279,8 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   Cmd? didUpdateWidget(covariant PopupMenuButton<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
     _renderedTextLineCache.clear();
+    _menuRowWidgetCache.clear();
+    _cachedMenuRowWidth = null;
 
     if (oldWidget.initialValue != widget.initialValue) {
       _currentValue = widget.initialValue;
@@ -450,17 +454,38 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   List<Widget> _buildMenuRows(Theme theme) {
     final rows = <Widget>[];
     final width = _menuRowWidth();
+    final itemPadding =
+        widget.itemPadding ??
+        const EdgeInsets.symmetric(horizontal: 1, vertical: 0);
+    final bodyMedium = theme.bodyMedium;
+    final bodySmall = theme.bodySmall;
+    final labelSmall = theme.labelSmall;
 
     for (var i = 0; i < widget.items.length; i++) {
       final entry = widget.items[i];
       if (entry is PopupMenuDivider<T>) {
-        final line = Text(
-          '-' * width,
-          style: _copyStyle(theme.bodySmall)..foreground(theme.border),
+        final dividerKey = (
+          'divider',
+          entry,
+          width,
+          theme.border,
+          bodySmall,
+          hasDarkBackground,
         );
-        rows.add(
-          Padding(padding: EdgeInsets.symmetric(horizontal: 1), child: line),
-        );
+        final cachedDivider = _menuRowWidgetCache[dividerKey];
+        if (cachedDivider != null) {
+          rows.add(cachedDivider);
+        } else {
+          final divider = Padding(
+            padding: EdgeInsets.symmetric(horizontal: 1),
+            child: Text(
+              '-' * width,
+              style: _copyStyle(bodySmall)..foreground(theme.border),
+            ),
+          );
+          _menuRowWidgetCache[dividerKey] = divider;
+          rows.add(divider);
+        }
         for (var h = 1; h < entry.height; h++) {
           rows.add(SizedBox(height: 1));
         }
@@ -473,12 +498,12 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       final selectedFg = widget.menuSelectedForeground ?? theme.onPrimary;
       final normalFg = widget.menuForeground ?? theme.onSurface;
       final foreground = selected ? selectedFg : normalFg;
-      final textStyle = _copyStyle(theme.bodyMedium)..foreground(foreground);
+      final textStyle = _copyStyle(bodyMedium)..foreground(foreground);
       if (!entry.enabled) {
         textStyle.dim();
       }
 
-      final markerStyle = _copyStyle(theme.labelSmall)..foreground(foreground);
+      final markerStyle = _copyStyle(labelSmall)..foreground(foreground);
       if (selected) markerStyle.bold();
       if (!entry.enabled) markerStyle.dim();
 
@@ -486,6 +511,27 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
           ? 'x'
           : ' ';
       final lineLabel = _menuItemLabel(entry);
+      final rowKey = (
+        'row',
+        entry,
+        i,
+        width,
+        selected,
+        _usingFloatingOverlay,
+        itemPadding,
+        selectedBg,
+        selectedFg,
+        normalFg,
+        bodyMedium,
+        labelSmall,
+        hasDarkBackground,
+      );
+      final cachedRow = _menuRowWidgetCache[rowKey];
+      if (cachedRow != null) {
+        rows.add(cachedRow);
+        continue;
+      }
+
       final row = lineLabel != null
           ? Text(
               _renderedTextMenuLine(
@@ -493,6 +539,14 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
                 label: lineLabel,
                 marker: selected ? '>' : ' ',
                 checkmark: checkmark,
+                styleKey: (
+                  bodyMedium,
+                  labelSmall,
+                  foreground,
+                  selected,
+                  entry.enabled,
+                  hasDarkBackground,
+                ),
                 textStyle: textStyle,
                 markerStyle: markerStyle,
               ),
@@ -510,9 +564,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       Widget tile = Container(
         width: width,
         color: selected ? selectedBg : null,
-        padding:
-            widget.itemPadding ??
-            const EdgeInsets.symmetric(horizontal: 1, vertical: 0),
+        padding: itemPadding,
         child: row,
       );
 
@@ -524,6 +576,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
         );
       }
 
+      _menuRowWidgetCache[rowKey] = tile;
       rows.add(tile);
     }
 
@@ -548,6 +601,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     required String label,
     required String marker,
     required String checkmark,
+    required Object styleKey,
     required Style textStyle,
     required Style markerStyle,
   }) {
@@ -556,9 +610,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       label,
       marker,
       checkmark,
-      textStyle,
-      markerStyle,
-      hasDarkBackground,
+      styleKey,
     );
     final cached = _renderedTextLineCache[cacheKey];
     if (cached != null) return cached;
@@ -570,12 +622,15 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   }
 
   int _menuRowWidth() {
+    final cachedWidth = _cachedMenuRowWidth;
+    if (cachedWidth != null) return cachedWidth;
     var width = 8;
     for (final entry in widget.items) {
       if (entry is! PopupMenuItem<T>) continue;
       final labelLength = _menuItemLabelLength(entry);
       width = math.max(width, labelLength + 7);
     }
+    _cachedMenuRowWidth = width;
     return width;
   }
 
