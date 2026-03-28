@@ -2028,22 +2028,26 @@ class Style {
       lines = _applyPadding(lines);
     }
 
+    var boxWidth = contentWidth + _padding.horizontal;
+    if (_hasFlag(_PropBits.width) && _width > 0) {
+      boxWidth = _width;
+    }
+
     // Apply alignment to reach target width
     // Like lipgloss, this runs when there are multiple lines OR when width is set
     // The target width is the full _width (including padding), or the widest line if no width set
-    final alignWidth = _hasFlag(_PropBits.width) && _width > 0
-        ? _width
-        : _getMaxLineWidth(lines);
-    if ((lines.length > 1 || _hasFlag(_PropBits.width)) && alignWidth > 0) {
-      lines = _alignLines(lines, alignWidth);
+    if ((lines.length > 1 || _hasFlag(_PropBits.width)) && boxWidth > 0) {
+      lines = _alignLines(lines, boxWidth, widestLine: boxWidth);
     }
 
     // Update contentWidth after alignment for border
-    contentWidth = alignWidth;
+    contentWidth = boxWidth;
 
     // Apply border
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
       lines = _applyBorder(lines, contentWidth);
+      if (_borderSides.left) contentWidth += 1;
+      if (_borderSides.right) contentWidth += 1;
     }
 
     // Apply fixed height (affects the styled box, margin is applied after)
@@ -2060,12 +2064,7 @@ class Style {
 
     // Apply margin (after sizing the box; margin lines are unstyled)
     if (!_margin.isZero) {
-      // Use the actual rendered line width to keep margin rows aligned with
-      // the styled box (padding/border may have changed width).
-      final renderedWidth = lines.isEmpty
-          ? contentWidth
-          : lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
-      lines = _applyMargin(lines, renderedWidth);
+      lines = _applyMargin(lines, contentWidth);
     }
 
     result = lines.join('\n');
@@ -2330,7 +2329,12 @@ class Style {
 
   int _getMaxLineWidth(List<String> lines) {
     if (lines.isEmpty) return 0;
-    return lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
+    var maxWidth = 0;
+    for (final line in lines) {
+      final width = visibleLength(line);
+      if (width > maxWidth) maxWidth = width;
+    }
+    return maxWidth;
   }
 
   List<String> _truncateLines(List<String> lines, int maxWidth) {
@@ -2520,15 +2524,18 @@ class Style {
   /// 1. Calculate shortAmount = widestLine - lineWidth (to match widest line)
   /// 2. Add additional space if width > (shortAmount + lineWidth)
   /// This ensures all lines become the same width, and reach the target width if set.
-  List<String> _alignLines(List<String> lines, int targetWidth) {
+  List<String> _alignLines(
+    List<String> lines,
+    int targetWidth, {
+    int? widestLine,
+  }) {
     if (lines.isEmpty) return lines;
 
-    // Find the widest line
-    final widestLine = lines.map(visibleLength).reduce((a, b) => a > b ? a : b);
+    final widest = widestLine ?? _getMaxLineWidth(lines);
 
     return lines.map((line) {
       final lineWidth = visibleLength(line);
-      var shortAmount = widestLine - lineWidth; // difference from widest line
+      var shortAmount = widest - lineWidth; // difference from widest line
 
       // Add more if we need to reach target width
       final neededForWidth = targetWidth - (shortAmount + lineWidth);

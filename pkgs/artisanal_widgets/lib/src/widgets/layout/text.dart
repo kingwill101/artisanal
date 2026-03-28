@@ -88,6 +88,10 @@ class Text extends LeafRenderObjectWidget {
         content = Layout.truncateLines(content, maxWidth!, ellipsis: '...');
       }
 
+      if (textAlign == TextAlign.left) {
+        return content;
+      }
+
       final lines = content.split('\n');
       final renderedWidth = lines.isEmpty
           ? 0

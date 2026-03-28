@@ -39,6 +39,9 @@ extension WidthMethodX on WidthMethod {
     final asciiWidth = _asciiStringWidth(s);
     if (asciiWidth != null) return asciiWidth;
 
+    final simpleUnicodeWidth = _simpleUnicodeStringWidth(s);
+    if (simpleUnicodeWidth != null) return simpleUnicodeWidth;
+
     var width = 0;
     // Count display width per grapheme cluster to avoid double-counting
     // multi-codepoint clusters (e.g. ZWJ emoji sequences).
@@ -103,6 +106,23 @@ int? _asciiStringWidth(String s) {
     }
   }
   return width;
+}
+
+int? _simpleUnicodeStringWidth(String s) {
+  var width = 0;
+  for (var i = 0; i < s.length; i++) {
+    final unit = s.codeUnitAt(i);
+    if (_requiresGraphemeFallback(unit)) return null;
+    width += runeWidth(unit);
+  }
+  return width;
+}
+
+bool _requiresGraphemeFallback(int unit) {
+  if (unit >= 0xD800 && unit <= 0xDFFF) return true;
+  if (unit == 0x200C || unit == 0x200D) return true;
+  if (unit >= 0xFE00 && unit <= 0xFE0F) return true;
+  return false;
 }
 
 /// Returns the display width of a single Unicode code point.

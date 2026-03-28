@@ -219,6 +219,12 @@ void main() {
       expect(w.maxLineWidth('Action: open v'), 14);
     });
 
+    test('simple unicode fast path handles BMP border glyphs', () {
+      expect(w.stringWidth('╭─╮'), 3);
+      expect(w.stringWidth('│中│'), 4);
+      expect(w.maxLineWidth('╭─╮\n│中│'), 4);
+    });
+
     test('mixed ASCII and emoji string width', () {
       // "Hello 🌍!" - "Hello " (6) + emoji (2) + "!" (1) = 9
       // Note: The space after "Hello" is 1 character

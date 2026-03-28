@@ -1036,9 +1036,6 @@ class RenderObjectElement extends Element {
   }
 
   void _syncRenderChildren({required DegradationLevel degradationLevel}) {
-    for (final child in List<RenderObject>.from(renderObject.children)) {
-      renderObject.detach(child);
-    }
     if (renderObject is RenderRow || renderObject is RenderColumn) {
       final flexChildren = <RenderObject>[];
       final flexData = <RenderObject, FlexParentData>{};
@@ -1056,6 +1053,13 @@ class RenderObjectElement extends Element {
         }
       }
 
+      if (_syncFlexRenderChildrenIfUnchanged(flexChildren, flexData)) {
+        return;
+      }
+
+      for (final child in List<RenderObject>.from(renderObject.children)) {
+        renderObject.detach(child);
+      }
       for (final renderChild in flexChildren) {
         renderChild.parentData =
             flexData[renderChild] ??
@@ -1082,6 +1086,13 @@ class RenderObjectElement extends Element {
         }
       }
 
+      if (_syncStackRenderChildrenIfUnchanged(stackChildren, stackData)) {
+        return;
+      }
+
+      for (final child in List<RenderObject>.from(renderObject.children)) {
+        renderObject.detach(child);
+      }
       for (final renderChild in stackChildren) {
         renderChild.parentData = stackData[renderChild];
         renderObject.attach(renderChild);
@@ -1089,14 +1100,86 @@ class RenderObjectElement extends Element {
       return;
     }
 
+    final nextChildren = <RenderObject>[];
     for (final child in _children) {
       for (final renderChild in _collectRenderChildren(
         child,
         degradationLevel: degradationLevel,
       )) {
-        renderObject.attach(renderChild);
+        nextChildren.add(renderChild);
       }
     }
+
+    if (_sameRenderChildOrder(nextChildren)) {
+      return;
+    }
+
+    for (final child in List<RenderObject>.from(renderObject.children)) {
+      renderObject.detach(child);
+    }
+    for (final renderChild in nextChildren) {
+      renderObject.attach(renderChild);
+    }
+  }
+
+  bool _syncFlexRenderChildrenIfUnchanged(
+    List<RenderObject> nextChildren,
+    Map<RenderObject, FlexParentData> nextData,
+  ) {
+    if (!_sameRenderChildOrder(nextChildren)) return false;
+    final currentChildren = renderObject.children;
+    for (var i = 0; i < currentChildren.length; i++) {
+      final child = currentChildren[i];
+      final nextParentData =
+          nextData[child] ?? const FlexParentData(flex: 0, fit: RenderFlexFit.loose);
+      if (!_sameFlexParentData(child.parentData, nextParentData)) {
+        child.parentData = nextParentData;
+      }
+    }
+    return true;
+  }
+
+  bool _syncStackRenderChildrenIfUnchanged(
+    List<RenderObject> nextChildren,
+    Map<RenderObject, StackParentData> nextData,
+  ) {
+    if (!_sameRenderChildOrder(nextChildren)) return false;
+    final currentChildren = renderObject.children;
+    for (var i = 0; i < currentChildren.length; i++) {
+      final child = currentChildren[i];
+      final nextParentData = nextData[child];
+      if (!_sameStackParentData(child.parentData, nextParentData)) {
+        child.parentData = nextParentData;
+      }
+    }
+    return true;
+  }
+
+  bool _sameRenderChildOrder(List<RenderObject> nextChildren) {
+    final currentChildren = renderObject.children;
+    if (currentChildren.length != nextChildren.length) return false;
+    for (var i = 0; i < currentChildren.length; i++) {
+      if (!identical(currentChildren[i], nextChildren[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool _sameFlexParentData(Object? current, FlexParentData next) {
+    if (current is! FlexParentData) return false;
+    return current.flex == next.flex && current.fit == next.fit;
+  }
+
+  bool _sameStackParentData(Object? current, StackParentData? next) {
+    if (current == null || next == null) return current == next;
+    if (current is! StackParentData) return false;
+    return current.left == next.left &&
+        current.right == next.right &&
+        current.top == next.top &&
+        current.bottom == next.bottom &&
+        current.width == next.width &&
+        current.height == next.height;
   }
 
   void _buildDescendants({required DegradationLevel degradationLevel}) {
