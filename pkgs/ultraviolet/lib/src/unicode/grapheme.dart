@@ -25,8 +25,12 @@ List<int> codePoints(String s) => s.runes.toList(growable: false);
 }
 
 int firstCodePoint(String s) {
-  final cps = codePoints(s);
-  return cps.isEmpty ? 0 : cps.first;
+  final iterator = s.runes.iterator;
+  return iterator.moveNext() ? iterator.current : 0;
 }
 
-bool isSingleCodePoint(String s) => codePoints(s).length == 1;
+bool isSingleCodePoint(String s) {
+  final iterator = s.runes.iterator;
+  if (!iterator.moveNext()) return false;
+  return !iterator.moveNext();
+}

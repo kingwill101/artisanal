@@ -40,11 +40,23 @@ extension WidthMethodX on WidthMethod {
     // Count display width per grapheme cluster to avoid double-counting
     // multi-codepoint clusters (e.g. ZWJ emoji sequences).
     for (final g in uni.graphemes(s)) {
-      var w = runeWidth(uni.firstCodePoint(g));
+      final iterator = g.runes.iterator;
+      if (!iterator.moveNext()) continue;
+
+      final first = iterator.current;
+      var hasEmojiPresentationSelector = first == 0xFE0F;
+      while (iterator.moveNext()) {
+        if (iterator.current == 0xFE0F) {
+          hasEmojiPresentationSelector = true;
+          break;
+        }
+      }
+
+      var w = runeWidth(first);
       // If the grapheme contains U+FE0F (variation selector 16 — emoji
       // presentation), terminals render the base character at emoji width
       // even if runeWidth() returned 1.
-      if (w == 1 && g.length > 1 && g.contains('\uFE0F')) {
+      if (w == 1 && hasEmojiPresentationSelector) {
         w = emojiPresentationWidth;
       }
       width += w;
