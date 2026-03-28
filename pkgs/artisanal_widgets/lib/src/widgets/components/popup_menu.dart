@@ -233,20 +233,23 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     return (left: left, top: top, width: width, height: height);
   }
 
-  int? _menuIndexAtPointer(int x, int y) {
-    final rect = _floatingMenuRect();
-    if (rect == null) return null;
-    if (x < rect.left || x >= rect.left + rect.width) return null;
-    if (y < rect.top + 1 || y >= rect.top + rect.height - 1) return null;
+  int? _menuIndexAtLocal({
+    required int localX,
+    required int localY,
+    required int menuWidth,
+    required int menuHeight,
+  }) {
+    if (localX < 0 || localX >= menuWidth) return null;
+    if (localY < 1 || localY >= menuHeight - 1) return null;
 
-    var localY = y - rect.top - 1;
+    var rowOffset = localY - 1;
     for (var i = 0; i < widget.items.length; i++) {
       final entry = widget.items[i];
       final height = entry is PopupMenuDivider<T> ? entry.height : 1;
-      if (localY < height) {
+      if (rowOffset < height) {
         return entry is PopupMenuItem<T> && entry.enabled ? i : null;
       }
-      localY -= height;
+      rowOffset -= height;
     }
     return null;
   }
@@ -385,15 +388,6 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   }
 
   @override
-  Cmd? handleUpdate(Msg msg) {
-    if (!_open || !_usingFloatingOverlay) return null;
-    if (msg is! MouseMsg || msg.action != MouseAction.motion) return null;
-    final hoveredIndex = _menuIndexAtPointer(msg.x, msg.y);
-    if (hoveredIndex == null) return null;
-    return _setHighlightedIndex(hoveredIndex);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final triggerChild =
         widget.child ?? widget.icon ?? Text(_defaultTriggerLabel());
@@ -507,7 +501,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
         child: row,
       );
 
-      if (entry.enabled) {
+      if (entry.enabled && !_usingFloatingOverlay) {
         tile = GestureDetector(
           onTap: () => _selectAt(i),
           onEnter: (_) => _setHighlightedIndex(i),
@@ -607,6 +601,35 @@ class _PopupMenuFloatingMenuState<T> extends State<_PopupMenuFloatingMenu<T>> {
       _detach(oldWidget.owner);
       _attach(widget.owner);
     }
+    return null;
+  }
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
+    final owner = widget.owner;
+    if (!owner._open) return null;
+
+    if (msg is HitTestMouseMsg) {
+      final menuRect = owner._floatingMenuRect();
+      if (menuRect == null) return null;
+      final hoveredIndex = owner._menuIndexAtLocal(
+        localX: msg.event.x - menuRect.left,
+        localY: msg.event.y - menuRect.top,
+        menuWidth: menuRect.width,
+        menuHeight: menuRect.height,
+      );
+      final event = msg.event;
+      if (event.action == MouseAction.motion) {
+        if (hoveredIndex == null) return null;
+        return owner._setHighlightedIndex(hoveredIndex);
+      }
+      if (event.action == MouseAction.release &&
+          event.button == MouseButton.left) {
+        if (hoveredIndex == null) return null;
+        return owner._selectAt(hoveredIndex);
+      }
+    }
+
     return null;
   }
 

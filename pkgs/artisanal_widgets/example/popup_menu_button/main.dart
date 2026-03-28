@@ -32,7 +32,11 @@ Future<void> main(List<String> args) async {
     );
   }
 
-  final app = tui.WidgetApp(PopupMenuButtonShowcase());
+  final app = tui.WidgetApp(
+    PopupMenuButtonShowcase(),
+    enableRenderMetrics: false,
+    enableRenderMetricsInjection: false,
+  );
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(
