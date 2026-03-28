@@ -252,7 +252,7 @@ void main() {
       final save = tester.locateText('Save');
       expect(save, isNotNull);
 
-      tester.mouseMove(save!.x, save.y);
+      tester.mouseMove(save!.x + 2, save.y);
       tester.sendSpecialKey(KeyType.enter);
 
       expect(selected, equals('save'));

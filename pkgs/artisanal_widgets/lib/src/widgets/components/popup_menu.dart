@@ -115,6 +115,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   bool _open = false;
   int _highlightedIndex = -1;
   OverlayEntry? _floatingEntry;
+  _PopupMenuFloatingMenuState<T>? _floatingMenuState;
   int _menuLeft = 0;
   int _menuTop = 0;
   T? _currentValue;
@@ -193,7 +194,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
         return Positioned(
           left: left,
           top: top,
-          child: _buildMenuFrame(context),
+          child: _PopupMenuFloatingMenu<T>(owner: this),
         );
       },
     );
@@ -254,7 +255,12 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     if (_highlightedIndex == nextIndex) return null;
     if (_usingFloatingOverlay) {
       _highlightedIndex = nextIndex;
-      _markFloatingEntryNeedsBuild();
+      final menuState = _floatingMenuState;
+      if (menuState != null) {
+        menuState.rebuild();
+      } else {
+        _markFloatingEntryNeedsBuild();
+      }
       return Cmd.repaint();
     }
     setState(() {
@@ -504,7 +510,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
       if (entry.enabled) {
         tile = GestureDetector(
           onTap: () => _selectAt(i),
-          onEnter: _usingFloatingOverlay ? null : (_) => _setHighlightedIndex(i),
+          onEnter: (_) => _setHighlightedIndex(i),
           child: tile,
         );
       }
@@ -558,6 +564,60 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
   @override
   void dispose() {
     _removeFloatingEntry();
+    super.dispose();
+  }
+}
+
+class _PopupMenuFloatingMenu<T> extends StatefulWidget {
+  _PopupMenuFloatingMenu({required this.owner});
+
+  final _PopupMenuButtonState<T> owner;
+
+  @override
+  State<_PopupMenuFloatingMenu<T>> createState() =>
+      _PopupMenuFloatingMenuState<T>();
+}
+
+class _PopupMenuFloatingMenuState<T> extends State<_PopupMenuFloatingMenu<T>> {
+  void rebuild() {
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  void _attach(_PopupMenuButtonState<T> owner) {
+    owner._floatingMenuState = this;
+  }
+
+  void _detach(_PopupMenuButtonState<T> owner) {
+    if (identical(owner._floatingMenuState, this)) {
+      owner._floatingMenuState = null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _attach(widget.owner);
+  }
+
+  @override
+  Cmd? didUpdateWidget(covariant _PopupMenuFloatingMenu<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.owner, widget.owner)) {
+      _detach(oldWidget.owner);
+      _attach(widget.owner);
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.owner._buildMenuFrame(context);
+  }
+
+  @override
+  void dispose() {
+    _detach(widget.owner);
     super.dispose();
   }
 }
