@@ -1215,7 +1215,6 @@ class ElementTree {
     final cmds = <Cmd>[];
     for (final element in elements) {
       if (!element.state.mounted) continue;
-      element.rebuild();
       final cmd = element.state.handleUpdate(msg);
       if (cmd != null) cmds.add(cmd);
     }
@@ -1261,7 +1260,6 @@ class ElementTree {
             continue;
           }
         }
-        current.rebuild();
         final cmd = current.state.handleUpdate(msg);
         if (cmd != null) {
           bubbleCmds.add(cmd);
