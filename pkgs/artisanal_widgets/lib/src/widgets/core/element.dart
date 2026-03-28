@@ -301,6 +301,16 @@ abstract class Element {
   /// - Unmount any remaining unmatched keyed old children.
   void updateChildren(List<Widget> newWidgets) {
     if (_children.isEmpty && newWidgets.isEmpty) return;
+    if (_children.length == newWidgets.length) {
+      var allIdentical = true;
+      for (var i = 0; i < newWidgets.length; i++) {
+        if (!identical(_children[i].widget, newWidgets[i])) {
+          allIdentical = false;
+          break;
+        }
+      }
+      if (allIdentical) return;
+    }
 
     var structureChanged = false;
 

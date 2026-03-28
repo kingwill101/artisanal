@@ -166,12 +166,26 @@ class Style {
   static const nbsp = '\u00A0';
 
   bool _hasFlag(int flag) => _props & flag != 0;
-  void _setFlag(int flag) => _props |= flag;
-  void _clearFlag(int flag) => _props &= ~flag;
+  void _setFlag(int flag) {
+    _props |= flag;
+    _invalidateTextStyleCache();
+  }
+
+  void _clearFlag(int flag) {
+    _props &= ~flag;
+    _invalidateTextStyleCache();
+  }
 
   bool _hasFlag2(int flag) => _props2 & flag != 0;
-  void _setFlag2(int flag) => _props2 |= flag;
-  void _clearFlag2(int flag) => _props2 &= ~flag;
+  void _setFlag2(int flag) {
+    _props2 |= flag;
+    _invalidateTextStyleCache();
+  }
+
+  void _clearFlag2(int flag) {
+    _props2 &= ~flag;
+    _invalidateTextStyleCache();
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Text Attribute Properties
@@ -313,10 +327,40 @@ class Style {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Color profile for rendering (defaults to trueColor).
-  ColorProfile colorProfile = ColorProfile.trueColor;
+  ColorProfile _colorProfile = ColorProfile.trueColor;
 
   /// Whether the terminal has a dark background.
-  bool hasDarkBackground = true;
+  bool _hasDarkBackground = true;
+
+  String? _cachedTextStylePrefix;
+  String? _cachedTextStyleSuffix;
+  bool _hasCachedTextStyle = false;
+  String? _cachedSpaceTextStylePrefix;
+  String? _cachedSpaceTextStyleSuffix;
+  bool _hasCachedSpaceTextStyle = false;
+
+  ColorProfile get colorProfile => _colorProfile;
+  set colorProfile(ColorProfile value) {
+    if (_colorProfile == value) return;
+    _colorProfile = value;
+    _invalidateTextStyleCache();
+  }
+
+  bool get hasDarkBackground => _hasDarkBackground;
+  set hasDarkBackground(bool value) {
+    if (_hasDarkBackground == value) return;
+    _hasDarkBackground = value;
+    _invalidateTextStyleCache();
+  }
+
+  void _invalidateTextStyleCache() {
+    _hasCachedTextStyle = false;
+    _cachedTextStylePrefix = null;
+    _cachedTextStyleSuffix = null;
+    _hasCachedSpaceTextStyle = false;
+    _cachedSpaceTextStylePrefix = null;
+    _cachedSpaceTextStyleSuffix = null;
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // FLUENT SETTERS
@@ -2111,6 +2155,29 @@ class Style {
   }
 
   String _applyStylesToString(String text, {bool isSpace = false}) {
+    if (colorProfile == ColorProfile.ascii) return text;
+    final cached = _resolveTextStyleAffixes(isSpace);
+    if (cached == null) return text;
+    return '${cached.prefix}$text${cached.suffix}\x1b[m';
+  }
+
+  ({String prefix, String suffix})? _resolveTextStyleAffixes(bool isSpace) {
+    if (isSpace) {
+      if (_hasCachedSpaceTextStyle) {
+        if (_cachedSpaceTextStylePrefix == null) return null;
+        return (
+          prefix: _cachedSpaceTextStylePrefix!,
+          suffix: _cachedSpaceTextStyleSuffix!,
+        );
+      }
+    } else if (_hasCachedTextStyle) {
+      if (_cachedTextStylePrefix == null) return null;
+      return (
+        prefix: _cachedTextStylePrefix!,
+        suffix: _cachedTextStyleSuffix!,
+      );
+    }
+
     final prefix = StringBuffer();
     final suffix = StringBuffer();
     var hasAnsi = false;
@@ -2214,8 +2281,26 @@ class Style {
     }
 
     // lipgloss v2 parity: use a full reset when any styling is applied.
-    if (!hasAnsi) return text;
-    return '$prefix$text$suffix\x1b[m';
+    if (!hasAnsi) {
+      if (isSpace) {
+        _hasCachedSpaceTextStyle = true;
+      } else {
+        _hasCachedTextStyle = true;
+      }
+      return null;
+    }
+
+    final resolved = (prefix: '$prefix', suffix: '$suffix');
+    if (isSpace) {
+      _cachedSpaceTextStylePrefix = resolved.prefix;
+      _cachedSpaceTextStyleSuffix = resolved.suffix;
+      _hasCachedSpaceTextStyle = true;
+    } else {
+      _cachedTextStylePrefix = resolved.prefix;
+      _cachedTextStyleSuffix = resolved.suffix;
+      _hasCachedTextStyle = true;
+    }
+    return resolved;
   }
 
   bool get _styleWhitespaceEnabled {
