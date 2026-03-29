@@ -9,6 +9,7 @@ export 'color_utils.dart';
 export 'cursor.dart';
 export 'decoder.dart';
 export 'drawable.dart';
+export 'effects.dart';
 export 'environ.dart';
 export 'event.dart';
 export 'event_stream.dart';

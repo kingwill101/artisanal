@@ -70,6 +70,7 @@ export 'src/uv/canvas.dart' show Canvas;
 export 'src/uv/layout.dart';
 export 'src/uv/screen.dart';
 export 'src/uv/filters.dart' show BufferFilter, BufferRenderSink, LiquifyFilter;
+export 'src/uv/effects.dart' show ColorMatrix, ColorMatrixFilter;
 export 'src/uv/drawable.dart' show Drawable, EmptyDrawable;
 export 'src/unicode/width.dart'
     show
