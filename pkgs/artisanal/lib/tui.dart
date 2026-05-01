@@ -129,3 +129,4 @@ export 'src/tui/bubbles/bubbles.dart'
     hide ValidateFunc, PasteMsg, Row, Column, Text, TextSelection;
 export 'src/tui/markdown/markdown.dart';
 export 'src/tui/markdown/ansi_renderer.dart';
+export 'editor_core.dart' hide TextSelection;

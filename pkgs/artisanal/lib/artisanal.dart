@@ -35,6 +35,8 @@
 /// - `package:artisanal/bubbles.dart`: Reusable interactive TUI components.
 /// - `package:artisanal/app.dart`: Stable widget app shells, runners, and hosted wrappers.
 /// - `package:artisanal/editors.dart`: Stable widget text input and editor surface.
+/// - `package:artisanal/editor_core.dart`: Stable low-level text document,
+///   state, and viewport primitives for editor integrations.
 /// - `package:artisanal/selection.dart`: Stable widget text-selection surface.
 /// - `package:artisanal/testing.dart`: Stable widget testing helpers.
 /// - `package:ultraviolet/ultraviolet.dart`: Low-level cell-buffer rendering engine.
@@ -130,6 +132,9 @@ export 'charting.dart';
 
 // Liquify adapters
 export 'liquid.dart';
+
+// Stable low-level editor primitives
+export 'editor_core.dart';
 
 // Remote plugin protocol
 export 'plugins.dart';
