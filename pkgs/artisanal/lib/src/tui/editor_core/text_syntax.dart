@@ -157,33 +157,34 @@ List<TextDecorationRange> mergeTextSyntaxDecorationPatch(
   List<TextDecorationRange> previousDecorations,
   TextSyntaxDecorationPatch patch,
 ) {
-  final merged = <TextDecorationRange>[
-    for (final decoration in previousDecorations) ...[
-      if (decoration.endOffset <= patch.previousStartOffset)
-        decoration
-      else if (decoration.startOffset >= patch.previousEndOffset)
-        TextDecorationRange(
-          startOffset: decoration.startOffset + patch.offsetDelta,
-          endOffset: decoration.endOffset + patch.offsetDelta,
-          styleKey: decoration.styleKey,
-        )
-      else ...[
-        if (decoration.startOffset < patch.previousStartOffset)
-          TextDecorationRange(
-            startOffset: decoration.startOffset,
-            endOffset: patch.previousStartOffset,
-            styleKey: decoration.styleKey,
-          ),
-        if (decoration.endOffset > patch.previousEndOffset)
-          TextDecorationRange(
-            startOffset: patch.nextEndOffset,
-            endOffset: decoration.endOffset + patch.offsetDelta,
-            styleKey: decoration.styleKey,
-          ),
-      ],
-    ],
-    ...patch.decorations,
-  ]..sort((a, b) {
+  final merged =
+      <TextDecorationRange>[
+        for (final decoration in previousDecorations) ...[
+          if (decoration.endOffset <= patch.previousStartOffset)
+            decoration
+          else if (decoration.startOffset >= patch.previousEndOffset)
+            TextDecorationRange(
+              startOffset: decoration.startOffset + patch.offsetDelta,
+              endOffset: decoration.endOffset + patch.offsetDelta,
+              styleKey: decoration.styleKey,
+            )
+          else ...[
+            if (decoration.startOffset < patch.previousStartOffset)
+              TextDecorationRange(
+                startOffset: decoration.startOffset,
+                endOffset: patch.previousStartOffset,
+                styleKey: decoration.styleKey,
+              ),
+            if (decoration.endOffset > patch.previousEndOffset)
+              TextDecorationRange(
+                startOffset: patch.nextEndOffset,
+                endOffset: decoration.endOffset + patch.offsetDelta,
+                styleKey: decoration.styleKey,
+              ),
+          ],
+        ],
+        ...patch.decorations,
+      ]..sort((a, b) {
         final startComparison = a.startOffset.compareTo(b.startOffset);
         if (startComparison != 0) {
           return startComparison;

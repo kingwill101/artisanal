@@ -3,6 +3,7 @@ library;
 export 'code_edit_policy.dart';
 export 'code_editing.dart';
 export 'code_language_profile.dart';
+export 'edit_buffer.dart';
 export 'edit_history.dart';
 export 'editor_state.dart';
 export 'state_bridge.dart';
