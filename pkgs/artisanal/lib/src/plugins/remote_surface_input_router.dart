@@ -104,23 +104,16 @@ final class RemotePluginSurfaceInputRouter {
       await focusSurface(hit.surface.surfaceId);
     }
 
-    final sender = _sendersBySurfaceId[hit.surface.surfaceId];
-    if (sender == null) {
-      return hit;
-    }
-
-    await sender(
-      RemotePluginMouseInput(
-        surfaceId: hit.surface.surfaceId,
-        action: action,
-        button: button,
-        column: hit.column,
-        row: hit.row,
-        ctrl: ctrl,
-        alt: alt,
-        shift: shift,
-        meta: meta,
-      ),
+    await sendMouseToSurface(
+      surfaceId: hit.surface.surfaceId,
+      action: action,
+      button: button,
+      column: hit.column,
+      row: hit.row,
+      ctrl: ctrl,
+      alt: alt,
+      shift: shift,
+      meta: meta,
     );
     return hit;
   }
@@ -175,6 +168,39 @@ final class RemotePluginSurfaceInputRouter {
         surfaceId: surfaceId,
         key: key,
         code: code,
+        ctrl: ctrl,
+        alt: alt,
+        shift: shift,
+        meta: meta,
+      ),
+    );
+  }
+
+  /// Sends one mouse event directly to [surfaceId] using surface-local
+  /// coordinates.
+  Future<void> sendMouseToSurface({
+    required String surfaceId,
+    required RemotePluginMouseAction action,
+    required RemotePluginMouseButton button,
+    required int column,
+    required int row,
+    bool ctrl = false,
+    bool alt = false,
+    bool shift = false,
+    bool meta = false,
+  }) async {
+    final sender = _sendersBySurfaceId[surfaceId];
+    if (sender == null) {
+      return;
+    }
+
+    await sender(
+      RemotePluginMouseInput(
+        surfaceId: surfaceId,
+        action: action,
+        button: button,
+        column: column,
+        row: row,
         ctrl: ctrl,
         alt: alt,
         shift: shift,

@@ -4,9 +4,11 @@ import 'dart:io' as io;
 import 'remote_surface_generic_service.dart';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_input_router.dart';
+import 'remote_surface_slot_input.dart';
 import 'remote_surface_manifest.dart';
 import 'remote_surface_protocol.dart';
 import 'remote_surface_state.dart';
+import 'remote_surface_slots.dart';
 
 /// Bundled multi-plugin host workspace built from manifest-backed plugins.
 final class RemotePluginWorkspace {
@@ -149,6 +151,36 @@ final class RemotePluginWorkspace {
     return pluginIdBySurfaceId[surfaceId];
   }
 
+  /// Resolves current slot entries for [slot].
+  List<RemotePluginSlotEntry> slotEntriesFor(
+    String slot, {
+    String? defaultSlot,
+  }) {
+    return resolveRemotePluginSlotEntries(
+      surfaces,
+      placements: manifests.map(
+        (manifest) => manifest.placement.toSurfacePlacement(),
+      ),
+      pluginIdBySurfaceId: pluginIdBySurfaceId,
+      defaultSlot: defaultSlot,
+    ).where((entry) => entry.slot == slot).toList(growable: false);
+  }
+
+  /// Builds a slot-scoped input router for [slot].
+  RemotePluginSlotInputRouter slotInputRouterFor(
+    String slot, {
+    int originX = 0,
+    int originY = 0,
+    String? defaultSlot,
+  }) {
+    return RemotePluginSlotInputRouter(
+      router: router,
+      entries: slotEntriesFor(slot, defaultSlot: defaultSlot),
+      originX: originX,
+      originY: originY,
+    );
+  }
+
   Future<void> focusPlugin(String? pluginId) async {
     if (pluginId == null) {
       return;
@@ -172,9 +204,9 @@ Future<void> _waitForSurfaceIds(
   Iterable<String> surfaceIds, {
   required Duration timeout,
 }) async {
-  final deadline = DateTime.now().add(timeout);
+  final stopwatch = Stopwatch()..start();
   final expected = surfaceIds.toSet();
-  while (DateTime.now().isBefore(deadline)) {
+  while (stopwatch.elapsed < timeout) {
     final open = expected.every((surfaceId) => surfaces[surfaceId] != null);
     if (open) {
       return;

@@ -96,6 +96,13 @@ export 'src/plugins/remote_surface_layers.dart'
         resolveRemotePluginSurfacePlacements,
         hitTestRemotePluginSurface,
         buildRemotePluginSurfaceLayers;
+export 'src/plugins/remote_surface_slots.dart'
+    show
+        RemotePluginSlotEntry,
+        resolveRemotePluginSlotEntries,
+        groupRemotePluginSlotEntries;
+export 'src/plugins/remote_surface_slot_input.dart'
+    show RemotePluginSlotHit, RemotePluginSlotInputRouter;
 export 'src/plugins/remote_surface_guest_session.dart'
     show RemotePluginGuestSession;
 export 'src/plugins/remote_surface_guest_services.dart'

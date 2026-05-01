@@ -61,6 +61,7 @@ export 'theme/theme.dart';
 export 'theme/theme_scope.dart';
 export 'theme/opencode_themes.dart';
 export 'gestures/gestures.dart';
+export 'plugins/slots.dart';
 export 'layout/layout_widgets.dart';
 export 'layout/keyboard_listener.dart';
 export 'layout/block_focus.dart';

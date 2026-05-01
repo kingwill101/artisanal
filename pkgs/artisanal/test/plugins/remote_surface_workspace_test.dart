@@ -122,6 +122,31 @@ void main() {
             'notification',
         'notification',
       );
+
+      final notificationEntries = workspace.slotEntriesFor(
+        'notification',
+        defaultSlot: 'notification',
+      );
+      expect(
+        notificationEntries.any((entry) => entry.pluginId == 'notification'),
+        isTrue,
+      );
+      expect(
+        notificationEntries.any(
+          (entry) => entry.surfaceId == 'notification.panel',
+        ),
+        isTrue,
+      );
+
+      final notificationRouter = workspace.slotInputRouterFor(
+        'notification',
+        originX: 40,
+        originY: 0,
+        defaultSlot: 'notification',
+      );
+      final hit = notificationRouter.hitTest(0, 0);
+      expect(hit, isNotNull);
+      expect(hit!.surfaceId, 'notification.panel');
     },
   );
 }
@@ -156,8 +181,8 @@ Future<void> _waitForSurfaceText(
   required String contains,
   Duration timeout = const Duration(seconds: 5),
 }) async {
-  final deadline = DateTime.now().add(timeout);
-  while (DateTime.now().isBefore(deadline)) {
+  final stopwatch = Stopwatch()..start();
+  while (stopwatch.elapsed < timeout) {
     final manifest = workspace.manifestForPlugin(pluginId);
     if (manifest != null) {
       final surface = workspace.surfaces[manifest.primarySurfaceId];
