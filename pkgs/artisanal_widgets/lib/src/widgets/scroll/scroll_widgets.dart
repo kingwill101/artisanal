@@ -34,6 +34,8 @@ void _traceScroll(String message) {
   TuiTrace.log(message, tag: TraceTag.scroll);
 }
 
+DateTime _defaultNowProvider() => DateTime.now();
+
 int _selectionAutoScrollDelta({
   required int localY,
   required int viewportHeight,
@@ -740,8 +742,9 @@ class SingleChildScrollView extends StatefulWidget {
     this.handleKeys = true,
     this.mouseWheelDelta = 3,
     this.enableSelection = false,
+    DateTime Function()? nowProvider,
     super.key,
-  });
+  }) : nowProvider = nowProvider ?? _defaultNowProvider;
 
   /// The widget to render inside the scrollable viewport.
   final Widget child;
@@ -765,6 +768,9 @@ class SingleChildScrollView extends StatefulWidget {
   /// When true, click+drag inside the content area selects text.
   /// Double-click selects a word. Ctrl+C copies the selection to clipboard.
   final bool enableSelection;
+
+  /// Logical clock used for click sequencing.
+  final DateTime Function() nowProvider;
 
   @override
   State createState() => _SingleChildScrollViewState();
@@ -949,7 +955,7 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     }
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
-      final now = DateTime.now();
+      final now = widget.nowProvider();
       final pos = (x: contentX, y: contentY);
       final isSequential =
           ctrl._lastClickTime != null &&
@@ -1289,8 +1295,9 @@ class ScrollView extends StatefulWidget {
     this.autoCopySelectionOnMouseUp = false,
     this.autoCopySelectionOnExit = false,
     this.clearSelectionAfterAutoCopy = true,
+    DateTime Function()? nowProvider,
     super.key,
-  });
+  }) : nowProvider = nowProvider ?? _defaultNowProvider;
 
   /// Child widget rendered inside the viewport.
   final Widget child;
@@ -1319,6 +1326,9 @@ class ScrollView extends StatefulWidget {
 
   /// Whether to clear selection after auto-copy.
   final bool clearSelectionAfterAutoCopy;
+
+  /// Logical clock used for click sequencing.
+  final DateTime Function() nowProvider;
 
   @override
   State createState() => _ScrollViewState();
@@ -1521,7 +1531,7 @@ class _ScrollViewState extends State<ScrollView> {
     }
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
-      final now = DateTime.now();
+      final now = widget.nowProvider();
       final pos = (x: contentX, y: contentY);
       final isSequential =
           ctrl._lastClickTime != null &&
@@ -3400,8 +3410,9 @@ class VirtualListView extends StatefulWidget {
     this.clearSelectionAfterAutoCopy = true,
     this.controller,
     this.zoneId,
+    DateTime Function()? nowProvider,
     super.key,
-  });
+  }) : nowProvider = nowProvider ?? _defaultNowProvider;
 
   /// Child widgets rendered by index.
   @override
@@ -3453,6 +3464,9 @@ class VirtualListView extends StatefulWidget {
 
   /// Optional mouse zone id override.
   final String? zoneId;
+
+  /// Logical clock used for wheel pulse dedupe and click sequencing.
+  final DateTime Function() nowProvider;
 
   @override
   State createState() => _VirtualListViewState();
@@ -3527,7 +3541,7 @@ class _VirtualListViewState extends State<VirtualListView> {
 
     final direction = delta > 0 ? 1 : -1;
     final beforeAccumulator = _wheelAccumulator;
-    final now = DateTime.now();
+    final now = widget.nowProvider();
     final last = _lastWheelEventAt;
     final duplicatePulse =
         last != null &&
@@ -3715,7 +3729,7 @@ class _VirtualListViewState extends State<VirtualListView> {
     }
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
-      final now = DateTime.now();
+      final now = widget.nowProvider();
       final pos = (x: contentX, y: contentY);
       final isSequential =
           ctrl._lastClickTime != null &&

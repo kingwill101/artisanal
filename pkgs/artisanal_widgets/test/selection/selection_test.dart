@@ -149,6 +149,19 @@ void main() {
       ctrl.setSelection(start: (x: 2, y: -1), end: (x: 3, y: 1));
       expect(ctrl.getSelectedText(['Hello', 'World']), 'Hello\nWor');
     });
+
+    test('registerClick uses injected time source deterministically', () {
+      final clock = ManualClock();
+      final ctrl = SelectionController(nowProvider: () => clock.now);
+
+      expect(ctrl.registerClick((x: 4, y: 2)), equals(1));
+      clock.advance(const Duration(milliseconds: 100));
+      expect(ctrl.registerClick((x: 4, y: 2)), equals(2));
+      clock.advance(const Duration(milliseconds: 100));
+      expect(ctrl.registerClick((x: 4, y: 2)), equals(3));
+      clock.advance(const Duration(milliseconds: 600));
+      expect(ctrl.registerClick((x: 4, y: 2)), equals(1));
+    });
   });
 
   // -------------------------------------------------------
@@ -968,6 +981,45 @@ void main() {
 
         // Shared selection should be cleared.
         expect(ctrl.hasSelection, isFalse);
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('double click selection can be driven by a manual clock', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final clock = ManualClock();
+      final ctrl = SelectionController(nowProvider: () => clock.now);
+      try {
+        await tester.pumpWidget(
+          SelectableText('Hello selection world', controller: ctrl),
+        );
+
+        tester.tapAt(7, 0);
+        clock.advance(const Duration(milliseconds: 100));
+        tester.tapAt(7, 0);
+
+        expect(ctrl.getSelectedText(['Hello selection world']), 'selection');
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('double click timeout can be exceeded deterministically', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      final clock = ManualClock();
+      final ctrl = SelectionController(nowProvider: () => clock.now);
+      try {
+        await tester.pumpWidget(
+          SelectableText('Hello selection world', controller: ctrl),
+        );
+
+        tester.tapAt(7, 0);
+        clock.advance(const Duration(milliseconds: 700));
+        tester.tapAt(7, 0);
+
+        expect(ctrl.selectionStart, equals((x: 7, y: 0)));
+        expect(ctrl.selectionEnd, equals((x: 7, y: 0)));
       } finally {
         await tester.dispose();
       }

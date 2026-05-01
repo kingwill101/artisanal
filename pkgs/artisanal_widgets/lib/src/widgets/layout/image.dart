@@ -441,8 +441,11 @@ Drawable _bestDrawableFromCapabilities(
         KittyImageDrawable(image, columns: columns, rows: rows),
       TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
         ITerm2ImageDrawable(image, columns: columns, rows: rows),
-      TerminalCapabilities(:final hasSixel) when hasSixel =>
-        SixelImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasSixel) when hasSixel => SixelImageDrawable(
+        image,
+        columns: columns,
+        rows: rows,
+      ),
       _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
     },
     ImageAutoMode.sessionCapabilities => switch (_currentImageCapabilities) {
@@ -450,8 +453,11 @@ Drawable _bestDrawableFromCapabilities(
         KittyImageDrawable(image, columns: columns, rows: rows),
       TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
         ITerm2ImageDrawable(image, columns: columns, rows: rows),
-      TerminalCapabilities(:final hasSixel) when hasSixel =>
-        SixelImageDrawable(image, columns: columns, rows: rows),
+      TerminalCapabilities(:final hasSixel) when hasSixel => SixelImageDrawable(
+        image,
+        columns: columns,
+        rows: rows,
+      ),
       _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
     },
   };
@@ -468,7 +474,8 @@ T withImageAutoConfiguration<T>({
 }) {
   final sameMode = _currentImageAutoMode == mode;
   final sameCapabilities =
-      capabilities == null || identical(_currentImageCapabilities, capabilities);
+      capabilities == null ||
+      identical(_currentImageCapabilities, capabilities);
   if (sameMode && sameCapabilities) {
     return callback();
   }

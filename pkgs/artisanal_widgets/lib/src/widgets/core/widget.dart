@@ -26,12 +26,7 @@ library;
 import 'package:meta/meta.dart' show protected;
 
 import 'package:artisanal/tui.dart'
-    show
-        BackgroundColorMsg,
-        Cmd,
-        DegradationLevel,
-        Msg,
-        Model;
+    show BackgroundColorMsg, Cmd, DegradationLevel, Msg, Model;
 import 'key.dart';
 import '../theme/theme.dart';
 

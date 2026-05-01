@@ -72,10 +72,7 @@ void main() {
         tester.mouseUp(wordX, line.y);
       }
 
-      expect(
-        controller.getSelectedRegisteredText(),
-        equals('selection'),
-      );
+      expect(controller.getSelectedRegisteredText(), equals('selection'));
     },
   );
 

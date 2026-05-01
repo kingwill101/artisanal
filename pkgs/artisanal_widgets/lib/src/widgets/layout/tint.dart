@@ -108,28 +108,28 @@ String _applyTint(String content, Color color, double opacity) {
         continue;
       }
 
-      final visibleContent = srcCell.content.isNotEmpty && srcCell.content != ' ';
+      final visibleContent =
+          srcCell.content.isNotEmpty && srcCell.content != ' ';
       final styleKey = (
         styleKey: srcCell.style.packedKey,
         visibleContent: visibleContent,
       );
-      final tintedStyle =
-          styleCache[styleKey] ??= srcCell.style.copyWith(
-            fg: _blendTintColor(
-              srcCell.style.fg,
-              tintFg,
-              opacity,
-              fallback: visibleContent ? defaultFg : null,
-              cache: colorCache,
-            ),
-            bg: _blendTintColor(
-              srcCell.style.bg,
-              tintFg,
-              opacity,
-              fallback: defaultBg,
-              cache: colorCache,
-            ),
-          );
+      final tintedStyle = styleCache[styleKey] ??= srcCell.style.copyWith(
+        fg: _blendTintColor(
+          srcCell.style.fg,
+          tintFg,
+          opacity,
+          fallback: visibleContent ? defaultFg : null,
+          cache: colorCache,
+        ),
+        bg: _blendTintColor(
+          srcCell.style.bg,
+          tintFg,
+          opacity,
+          fallback: defaultBg,
+          cache: colorCache,
+        ),
+      );
       if (tintedStyle != srcCell.style) {
         srcCell.style = tintedStyle;
       }

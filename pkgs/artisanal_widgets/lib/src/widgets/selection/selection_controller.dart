@@ -6,6 +6,11 @@ part of 'selection_widgets.dart';
 /// methods for text extraction and highlighting. Used by both
 /// [SelectableText] (per-widget) and [SelectionArea] (cross-widget).
 class SelectionController {
+  SelectionController({
+    DateTime Function()? nowProvider,
+    this.multiClickTimeout = const Duration(milliseconds: 500),
+  }) : _nowProvider = nowProvider ?? (() => DateTime.now().toUtc());
+
   /// Start of selection in widget-local coordinates (column, line).
   ({int x, int y})? _selectionStart;
 
@@ -28,6 +33,10 @@ class SelectionController {
       <Object, _SelectionParticipant>{};
 
   final Set<void Function()> _listeners = <void Function()>{};
+  final DateTime Function() _nowProvider;
+
+  /// Maximum spacing between clicks that still counts as sequential.
+  final Duration multiClickTimeout;
 
   // ---- Public API ----
 
@@ -45,6 +54,20 @@ class SelectionController {
 
   /// Whether any selectable fragments are registered with this controller.
   bool get hasParticipants => _participants.isNotEmpty;
+
+  /// Registers a click at [position] and returns the sequential click count.
+  int registerClick(({int x, int y}) position) {
+    final now = _nowProvider();
+    final isSequential =
+        _lastClickTime != null &&
+        now.difference(_lastClickTime!) < multiClickTimeout &&
+        _lastClickPos == position;
+    final count = isSequential ? math.min(_lastClickCount + 1, 3) : 1;
+    _lastClickTime = now;
+    _lastClickPos = position;
+    _lastClickCount = count;
+    return count;
+  }
 
   /// Sets the selection and notifies listeners.
   void setSelection({

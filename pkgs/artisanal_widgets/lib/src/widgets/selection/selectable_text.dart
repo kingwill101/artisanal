@@ -291,23 +291,8 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     return (x: event.x.toInt(), y: event.y.toInt() + _sharedSelectionYOffset);
   }
 
-  int _updateClickCount(
-    SelectionController ctrl,
-    DateTime now,
-    SelectionPoint screenPos,
-  ) {
-    final isSequential =
-        ctrl._lastClickTime != null &&
-        now.difference(ctrl._lastClickTime!) <
-            const Duration(milliseconds: 500) &&
-        ctrl._lastClickPos == screenPos;
-    final count = isSequential ? math.min(ctrl._lastClickCount + 1, 3) : 1;
-    ctrl
-      .._lastClickTime = now
-      .._lastClickPos = screenPos
-      .._lastClickCount = count;
-    return count;
-  }
+  int _updateClickCount(SelectionController ctrl, SelectionPoint screenPos) =>
+      ctrl.registerClick(screenPos);
 
   void _selectWordAt(SelectionController ctrl, int localX, int localY) {
     final lines = _getContentLines();
@@ -438,9 +423,8 @@ class _SelectableRenderedTextState extends State<_SelectableRenderedText> {
     }
 
     if (event.button == MouseButton.left && event.action == MouseAction.press) {
-      final now = DateTime.now();
       final screenPos = _selectionPointForEvent(event);
-      final clickCount = _updateClickCount(ctrl, now, screenPos);
+      final clickCount = _updateClickCount(ctrl, screenPos);
 
       if (clickCount == 2) {
         _selectWordAt(ctrl, localX, localY);

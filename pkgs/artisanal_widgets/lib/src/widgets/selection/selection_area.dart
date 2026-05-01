@@ -99,7 +99,11 @@ class _SelectionAreaState extends State<SelectionArea> {
     SelectionController ctrl,
     _RegisteredSelectionTarget target,
   ) {
-    final (startX, endX) = findWordAt(target.lines, target.localX, target.localY);
+    final (startX, endX) = findWordAt(
+      target.lines,
+      target.localX,
+      target.localY,
+    );
     ctrl._selectionStart = (
       x: target.globalPoint.x - target.localX + startX,
       y: target.globalPoint.y,
@@ -142,18 +146,8 @@ class _SelectionAreaState extends State<SelectionArea> {
     );
     if (target == null) return false;
 
-    final now = DateTime.now();
     final screenPos = target.globalPoint;
-    final isSequential =
-        ctrl._lastClickTime != null &&
-        now.difference(ctrl._lastClickTime!) <
-            const Duration(milliseconds: 500) &&
-        ctrl._lastClickPos == screenPos;
-    final clickCount = isSequential ? math.min(ctrl._lastClickCount + 1, 3) : 1;
-    ctrl
-      .._lastClickTime = now
-      .._lastClickPos = screenPos
-      .._lastClickCount = clickCount;
+    final clickCount = ctrl.registerClick(screenPos);
 
     if (clickCount == 2) {
       _selectRegisteredWordAt(ctrl, target);

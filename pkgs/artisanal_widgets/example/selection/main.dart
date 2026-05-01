@@ -108,7 +108,7 @@ class _SelectionShowcaseState extends w.State<SelectionShowcase> {
     final bodyStyle = theme.bodyMedium.copy()..foreground(theme.onSurface);
     final labelStyle = theme.labelSmall.copy()..foreground(theme.onBackground);
     final subtleStyle = theme.bodySmall.copy()..foreground(theme.onBackground);
-  final previewText = _selectedText.isEmpty
+    final previewText = _selectedText.isEmpty
         ? 'Drag from the title to the footer. Triple-click selects a full line.'
         : _selectedText;
     final plainSelectionStyle = Style()
@@ -274,14 +274,15 @@ w.Widget _documentCard({
           _documentBlock(
             theme: theme,
             title: 'View-backed section',
-            child: View(
-              content:
-                  '${Style().foreground(theme.secondary).render('VIEW')} :: '
-                  'Raw View() content joins the same drag selection area.',
-            ).selectable(
-              controller: controller,
-              selectionHighlightStyle: viewSelectionStyle,
-            ),
+            child:
+                View(
+                  content:
+                      '${Style().foreground(theme.secondary).render('VIEW')} :: '
+                      'Raw View() content joins the same drag selection area.',
+                ).selectable(
+                  controller: controller,
+                  selectionHighlightStyle: viewSelectionStyle,
+                ),
           ),
           _documentBlock(
             theme: theme,

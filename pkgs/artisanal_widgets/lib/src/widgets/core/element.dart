@@ -519,10 +519,12 @@ abstract class Element {
 /// Schedules and rebuilds dirty elements.
 class BuildOwner {
   /// Creates a build owner.
-  BuildOwner({this.debugRebuilds = false});
+  BuildOwner({this.debugRebuilds = false, DateTime Function()? nowProvider})
+    : _nowProvider = nowProvider ?? DateTime.now;
 
   /// Enables per-element rebuild logging to stdout.
   final bool debugRebuilds;
+  final DateTime Function() _nowProvider;
   final Set<Element> _dirty = <Element>{};
   bool _needsPaint = false;
   Element? _mouseCapture;
@@ -707,7 +709,7 @@ class BuildOwner {
       layoutDuration: _currentLayoutDuration,
       paintDuration: _currentPaintDuration,
       totalDuration: totalDuration ?? Duration.zero,
-      timestamp: DateTime.now(),
+      timestamp: _nowProvider(),
     );
 
     _recentTimings.add(timing);
@@ -941,10 +943,7 @@ class StatefulElement extends Element implements StateSetter {
     // Drain any pending commands from didUpdateWidget before normal dispatch.
     final pending = _drainPendingCmds();
     final baseCmd = super.dispatch(msg);
-    return _coalesceCommands([
-      ?pending,
-      ?baseCmd,
-    ]);
+    return _coalesceCommands([?pending, ?baseCmd]);
   }
 
   /// Drains and returns any pending commands accumulated by [didUpdateWidget],
@@ -1142,7 +1141,8 @@ class RenderObjectElement extends Element {
     for (var i = 0; i < currentChildren.length; i++) {
       final child = currentChildren[i];
       final nextParentData =
-          nextData[child] ?? const FlexParentData(flex: 0, fit: RenderFlexFit.loose);
+          nextData[child] ??
+          const FlexParentData(flex: 0, fit: RenderFlexFit.loose);
       if (!_sameFlexParentData(child.parentData, nextParentData)) {
         child.parentData = nextParentData;
       }
@@ -1327,10 +1327,7 @@ class ElementTree {
     final cmd = element.dispatch(msg);
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
-    return _coalesceCommands([
-      ?cmd,
-      ?mountInit,
-    ]);
+    return _coalesceCommands([?cmd, ?mountInit]);
   }
 
   /// Dispatches [msg] directly to the provided [StatefulElement]s.
@@ -1339,10 +1336,7 @@ class ElementTree {
   /// for targeted follow-up delivery such as hover-exit housekeeping for
   /// elements that were hit on the previous mouse-motion frame but are no
   /// longer under the pointer.
-  Cmd? dispatchToStatefulElements(
-    Iterable<StatefulElement> elements,
-    Msg msg,
-  ) {
+  Cmd? dispatchToStatefulElements(Iterable<StatefulElement> elements, Msg msg) {
     final cmds = <Cmd>[];
     final deferBuildFlush = msg is MouseMsg && msg.action == MouseAction.motion;
     for (final element in elements) {
@@ -1356,10 +1350,7 @@ class ElementTree {
             _flushDirtyBuilds();
             return _owner.drainMountInitCmds();
           }();
-    return _coalesceCommands([
-      ...cmds,
-      ?mountInit,
-    ]);
+    return _coalesceCommands([...cmds, ?mountInit]);
   }
 
   /// Dispatches [msg] by walking UP the element tree from [startElement] to
@@ -1432,10 +1423,7 @@ class ElementTree {
     final cmd = _root.dispatch(msg);
     _flushDirtyBuilds();
     final mountInit = _owner.drainMountInitCmds();
-    return _coalesceCommands([
-      ?cmd,
-      ?mountInit,
-    ]);
+    return _coalesceCommands([?cmd, ?mountInit]);
   }
 
   void _flushDirtyBuilds() {

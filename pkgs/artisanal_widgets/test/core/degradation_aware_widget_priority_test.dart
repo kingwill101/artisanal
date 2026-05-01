@@ -36,57 +36,78 @@ void main() {
         isTrue,
       );
       expect(
-        standard.shouldRenderAt(DegradationLevel.noStyling, subtreeHasFocusedWidget: false),
-        isTrue,
-      );
-      expect(
-        standard.shouldRenderAt(DegradationLevel.essentialOnly, subtreeHasFocusedWidget: false),
-        isFalse,
-      );
-      expect(
-        low.shouldRenderAt(DegradationLevel.noStyling, subtreeHasFocusedWidget: false),
-        isFalse,
-      );
-      expect(
-        decorative.shouldRenderAt(DegradationLevel.full, subtreeHasFocusedWidget: false),
-        isTrue,
-      );
-      expect(
-        staleStandard.shouldRenderAt(DegradationLevel.noStyling, subtreeHasFocusedWidget: false),
-        isFalse,
-      );
-      expect(
-        staleStandard.shouldRenderAt(DegradationLevel.simpleBorders, subtreeHasFocusedWidget: false),
-        isTrue,
-      );
-    });
-
-    test('focus boosts visibility while standard-priority subtree is focused', () {
-      final focused = _FocusableText('focused');
-      final tree = w.ElementTree(
-        w.Budgeted(
-          priority: w.WidgetDegradationPriority.standard,
-          focusBoost: true,
-          child: focused,
+        standard.shouldRenderAt(
+          DegradationLevel.noStyling,
+          subtreeHasFocusedWidget: false,
         ),
-      );
-      addTearDown(tree.unmount);
-
-      expect(
-        tree.root.render(degradationLevel: DegradationLevel.skeleton),
-        equals(''),
-      );
-
-      focused.onFocus();
-      expect(
-        tree.root.render(degradationLevel: DegradationLevel.essentialOnly),
-        contains('focused'),
+        isTrue,
       );
       expect(
-        tree.root.render(degradationLevel: DegradationLevel.skeleton),
-        equals(''),
+        standard.shouldRenderAt(
+          DegradationLevel.essentialOnly,
+          subtreeHasFocusedWidget: false,
+        ),
+        isFalse,
+      );
+      expect(
+        low.shouldRenderAt(
+          DegradationLevel.noStyling,
+          subtreeHasFocusedWidget: false,
+        ),
+        isFalse,
+      );
+      expect(
+        decorative.shouldRenderAt(
+          DegradationLevel.full,
+          subtreeHasFocusedWidget: false,
+        ),
+        isTrue,
+      );
+      expect(
+        staleStandard.shouldRenderAt(
+          DegradationLevel.noStyling,
+          subtreeHasFocusedWidget: false,
+        ),
+        isFalse,
+      );
+      expect(
+        staleStandard.shouldRenderAt(
+          DegradationLevel.simpleBorders,
+          subtreeHasFocusedWidget: false,
+        ),
+        isTrue,
       );
     });
+
+    test(
+      'focus boosts visibility while standard-priority subtree is focused',
+      () {
+        final focused = _FocusableText('focused');
+        final tree = w.ElementTree(
+          w.Budgeted(
+            priority: w.WidgetDegradationPriority.standard,
+            focusBoost: true,
+            child: focused,
+          ),
+        );
+        addTearDown(tree.unmount);
+
+        expect(
+          tree.root.render(degradationLevel: DegradationLevel.skeleton),
+          equals(''),
+        );
+
+        focused.onFocus();
+        expect(
+          tree.root.render(degradationLevel: DegradationLevel.essentialOnly),
+          contains('focused'),
+        );
+        expect(
+          tree.root.render(degradationLevel: DegradationLevel.skeleton),
+          equals(''),
+        );
+      },
+    );
   });
 
   group('WidgetApp budget-aware rendering', () {
@@ -122,33 +143,46 @@ void main() {
       String renderAt(DegradationLevel level) {
         app.update(RenderBudgetMsg(_budgetState(level)));
         final view = app.view();
-        expect(view, isA<String>(), reason: 'WidgetApp without background uses String view');
+        expect(
+          view,
+          isA<String>(),
+          reason: 'WidgetApp without background uses String view',
+        );
         return view as String;
       }
 
-      expect(renderAt(DegradationLevel.full), allOf(
-        contains('decorative'),
-        contains('standard'),
-        contains('low'),
-        contains('essential'),
-        contains('stale-standard'),
-      ));
+      expect(
+        renderAt(DegradationLevel.full),
+        allOf(
+          contains('decorative'),
+          contains('standard'),
+          contains('low'),
+          contains('essential'),
+          contains('stale-standard'),
+        ),
+      );
 
-      expect(renderAt(DegradationLevel.noStyling), allOf(
-        isNot(contains('decorative')),
-        contains('standard'),
-        isNot(contains('low')),
-        contains('essential'),
-        isNot(contains('stale-standard')),
-      ));
+      expect(
+        renderAt(DegradationLevel.noStyling),
+        allOf(
+          isNot(contains('decorative')),
+          contains('standard'),
+          isNot(contains('low')),
+          contains('essential'),
+          isNot(contains('stale-standard')),
+        ),
+      );
 
-      expect(renderAt(DegradationLevel.essentialOnly), allOf(
-        isNot(contains('decorative')),
-        isNot(contains('standard')),
-        isNot(contains('low')),
-        contains('essential'),
-        isNot(contains('stale-standard')),
-      ));
+      expect(
+        renderAt(DegradationLevel.essentialOnly),
+        allOf(
+          isNot(contains('decorative')),
+          isNot(contains('standard')),
+          isNot(contains('low')),
+          contains('essential'),
+          isNot(contains('stale-standard')),
+        ),
+      );
     });
   });
 }

@@ -34,6 +34,7 @@ Widget _buildScrollable({
   int width = 40,
   bool wrapInScrollbar = false,
   bool useScrollView = false,
+  DateTime Function()? nowProvider,
 }) {
   final lines = List.generate(lineCount, (i) => Text('Line $i'));
   Widget child;
@@ -41,12 +42,14 @@ Widget _buildScrollable({
     child = ScrollView(
       controller: controller,
       enableSelection: true,
+      nowProvider: nowProvider,
       child: Column(children: lines),
     );
   } else {
     child = SingleChildScrollView(
       controller: controller,
       enableSelection: true,
+      nowProvider: nowProvider,
       child: Column(children: lines),
     );
   }
@@ -61,6 +64,7 @@ Widget _buildVirtualScrollable({
   int lineCount = 30,
   int height = 10,
   int width = 40,
+  DateTime Function()? nowProvider,
 }) {
   final lines = List.generate(lineCount, (i) => Text('Line $i'));
   return Container(
@@ -69,6 +73,7 @@ Widget _buildVirtualScrollable({
     child: VirtualListView(
       controller: controller,
       enableSelection: true,
+      nowProvider: nowProvider,
       children: lines,
     ),
   );
@@ -138,16 +143,23 @@ void main() {
 
     test('triple click selects the entire content line', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
       final ctrl = WidgetScrollController();
       try {
         await tester.pumpWidget(
-          _buildScrollable(controller: ctrl, useScrollView: true),
+          _buildScrollable(
+            controller: ctrl,
+            useScrollView: true,
+            nowProvider: () => clock.now,
+          ),
         );
 
         tester.mouseDown(2, 0);
         tester.mouseUp(2, 0);
+        clock.advance(const Duration(milliseconds: 100));
         tester.mouseDown(2, 0);
         tester.mouseUp(2, 0);
+        clock.advance(const Duration(milliseconds: 100));
         tester.mouseDown(2, 0);
         tester.mouseUp(2, 0);
 
@@ -336,6 +348,32 @@ void main() {
   });
 
   group('SingleChildScrollView selection', () {
+    test('double click selects the current word deterministically', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
+      final ctrl = WidgetScrollController();
+      try {
+        await tester.pumpWidget(
+          _buildScrollable(
+            controller: ctrl,
+            useScrollView: false,
+            nowProvider: () => clock.now,
+          ),
+        );
+
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+        clock.advance(const Duration(milliseconds: 100));
+        tester.mouseDown(2, 0);
+        tester.mouseUp(2, 0);
+
+        expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+        expect(ctrl.selectionEnd, equals((x: 4, y: 0)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
     test('press+drag selects text', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();
@@ -661,6 +699,37 @@ void main() {
   });
 
   group('VirtualListView selection', () {
+    test(
+      'triple click selects the entire content line deterministically',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+        final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
+        final ctrl = WidgetScrollController();
+        try {
+          await tester.pumpWidget(
+            _buildVirtualScrollable(
+              controller: ctrl,
+              nowProvider: () => clock.now,
+            ),
+          );
+
+          tester.mouseDown(2, 0);
+          tester.mouseUp(2, 0);
+          clock.advance(const Duration(milliseconds: 100));
+          tester.mouseDown(2, 0);
+          tester.mouseUp(2, 0);
+          clock.advance(const Duration(milliseconds: 100));
+          tester.mouseDown(2, 0);
+          tester.mouseUp(2, 0);
+
+          expect(ctrl.selectionStart, equals((x: 0, y: 0)));
+          expect(ctrl.selectionEnd, equals((x: 6, y: 0)));
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
+
     test('selection highlighting uses theme highlight colors', () async {
       final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
       final ctrl = WidgetScrollController();

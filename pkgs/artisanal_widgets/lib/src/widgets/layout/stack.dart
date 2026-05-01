@@ -57,11 +57,13 @@ class RenderStack extends RenderBox {
       final top = _resolveDimension(data.top);
       final bottom = _resolveDimension(data.bottom);
 
-      final x = left ??
+      final x =
+          left ??
           (right != null
               ? targetWidth - childWidth - right
               : ((alignment.x + 1) / 2 * (targetWidth - childWidth)).round());
-      final y = top ??
+      final y =
+          top ??
           (bottom != null
               ? targetHeight - childHeight - bottom
               : ((alignment.y + 1) / 2 * (targetHeight - childHeight)).round());
@@ -110,18 +112,18 @@ class RenderStack extends RenderBox {
         _resolveDimensionDouble(width) ??
         (expandWidth ??
             (hasNonPositionedChild
-            ? maxWidth
-            : constraints.hasBoundedWidth
-            ? constraints.maxWidth
-            : 0.0));
+                ? maxWidth
+                : constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : 0.0));
     var resolvedHeight =
         _resolveDimensionDouble(height) ??
         (expandHeight ??
             (hasNonPositionedChild
-            ? maxHeight
-            : constraints.hasBoundedHeight
-            ? constraints.maxHeight
-            : 0.0));
+                ? maxHeight
+                : constraints.hasBoundedHeight
+                ? constraints.maxHeight
+                : 0.0));
 
     if (resolvedWidth.isInfinite) {
       resolvedWidth = maxWidth;
@@ -166,7 +168,12 @@ class RenderStack extends RenderBox {
     final targetHeight = size.height.toInt();
     for (final child in children) {
       final data = child.parentData as StackParentData?;
-      child.offset = _resolveChildOffset(child, data, targetWidth, targetHeight);
+      child.offset = _resolveChildOffset(
+        child,
+        data,
+        targetWidth,
+        targetHeight,
+      );
     }
   }
 
