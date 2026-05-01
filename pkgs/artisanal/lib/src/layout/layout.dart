@@ -44,10 +44,7 @@ void _traceLayout(String message, Stopwatch? sw) {
   if (sw == null) return;
   sw.stop();
   if (sw.elapsedMicroseconds < _layoutTraceThresholdUs) return;
-  TuiTrace.log(
-    '$message ${sw.elapsedMicroseconds}us',
-    tag: TraceTag.render,
-  );
+  TuiTrace.log('$message ${sw.elapsedMicroseconds}us', tag: TraceTag.render);
 }
 
 /// Breakpoint names for responsive terminal layouts.

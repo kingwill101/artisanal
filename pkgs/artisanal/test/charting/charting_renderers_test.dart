@@ -444,11 +444,11 @@ void main() {
 
     test('uses half-block for sub-cell precision', () {
       // Use values that produce non-integer bar heights to trigger fractional
-      // tops.  With usableHeight=9 (10 minus 1 for axis), subHeight=18, and
-      // values normalised between min=1 and max=10, a value like 3.7 gives
-      // a sub-cell height that is odd → half block.
+      // tops.  With usableHeight=9 (10 minus 1 for axis) and normalisation
+      // against globalMax=10, value=5 gives h=(5/10)*9=4.5 whose fractional
+      // part 0.5 maps to fracIdx=4 → '▄'.
       final output = _render(30, 10, (s, a) {
-        drawHistogram(s, a, [1, 3.7, 6.2, 8.8, 10]);
+        drawHistogram(s, a, [1, 5, 6.2, 8.8, 10]);
       });
       // The ▄ half-block should appear at the top of some bars
       expect(output, contains('▄'));

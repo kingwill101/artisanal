@@ -38,10 +38,7 @@ void _traceStyleRender(String message, Stopwatch? sw) {
   if (sw == null) return;
   sw.stop();
   if (sw.elapsedMicroseconds < _styleRenderTraceThresholdUs) return;
-  TuiTrace.log(
-    '$message ${sw.elapsedMicroseconds}us',
-    tag: TraceTag.render,
-  );
+  TuiTrace.log('$message ${sw.elapsedMicroseconds}us', tag: TraceTag.render);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2172,10 +2169,7 @@ class Style {
       }
     } else if (_hasCachedTextStyle) {
       if (_cachedTextStylePrefix == null) return null;
-      return (
-        prefix: _cachedTextStylePrefix!,
-        suffix: _cachedTextStyleSuffix!,
-      );
+      return (prefix: _cachedTextStylePrefix!, suffix: _cachedTextStyleSuffix!);
     }
 
     final prefix = StringBuffer();

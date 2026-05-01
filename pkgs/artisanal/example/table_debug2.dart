@@ -16,10 +16,15 @@ void main() {
   // Reproduce it manually
   final headerStyle = Style().bold().padding(0, 1);
   for (final col in cols) {
-    final widthStyle = Style().inline(true).width(col.width).maxWidth(col.width);
+    final widthStyle = Style()
+        .inline(true)
+        .width(col.width)
+        .maxWidth(col.width);
     final rendered = widthStyle.render(col.title);
     final cell = headerStyle.render(rendered);
-    print('col "${col.title}" width=${col.width} '
-          'cellLen=${Style.visibleLength(cell)} cell="$cell"');
+    print(
+      'col "${col.title}" width=${col.width} '
+      'cellLen=${Style.visibleLength(cell)} cell="$cell"',
+    );
   }
 }
