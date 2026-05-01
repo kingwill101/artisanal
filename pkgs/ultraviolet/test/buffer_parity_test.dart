@@ -191,9 +191,7 @@ void main() {
         Cell(
           content: 'B',
           width: 1,
-          style: const UvStyle(
-            fg: UvRgb(10, 20, 30, a: 255),
-          ),
+          style: const UvStyle(fg: UvRgb(10, 20, 30, a: 255)),
         ),
       );
       final fgNested = b.cellAt(1, 0)!.style.fg! as UvRgb;
@@ -206,9 +204,7 @@ void main() {
         Cell(
           content: 'C',
           width: 1,
-          style: const UvStyle(
-            fg: UvRgb(100, 110, 120, a: 255),
-          ),
+          style: const UvStyle(fg: UvRgb(100, 110, 120, a: 255)),
         ),
       );
       final fgRestored = b.cellAt(2, 0)!.style.fg! as UvRgb;
@@ -221,9 +217,7 @@ void main() {
         Cell(
           content: 'D',
           width: 1,
-          style: const UvStyle(
-            fg: UvRgb(1, 2, 3, a: 10),
-          ),
+          style: const UvStyle(fg: UvRgb(1, 2, 3, a: 10)),
         ),
       );
       final fgFinal = b.cellAt(3, 0)!.style.fg! as UvRgb;

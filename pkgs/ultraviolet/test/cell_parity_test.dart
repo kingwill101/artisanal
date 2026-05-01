@@ -117,7 +117,10 @@ void main() {
       final first = Cell(
         content: 'L',
         width: 1,
-        link: const Link(url: 'https://example-parity-link-registry-a.test', params: 'id=1'),
+        link: const Link(
+          url: 'https://example-parity-link-registry-a.test',
+          params: 'id=1',
+        ),
       );
       final second = Cell(
         content: 'i',
@@ -143,7 +146,10 @@ void main() {
     });
 
     test('link registry reuses freed slots with generation increments', () {
-      final first = Cell(content: 'A', link: const Link(url: 'https://free.example'));
+      final first = Cell(
+        content: 'A',
+        link: const Link(url: 'https://free.example'),
+      );
       final firstId = first.linkId!;
       final firstSlot = debugLinkSlot(firstId);
       final firstGeneration = debugLinkGeneration(firstId);
@@ -157,7 +163,10 @@ void main() {
 
       expect(debugLinkSlot(secondId), firstSlot);
       expect(debugLinkGeneration(secondId), greaterThan(firstGeneration));
-      expect(second.link, const Link(url: 'https://example-parity-link-registry-b.test'));
+      expect(
+        second.link,
+        const Link(url: 'https://example-parity-link-registry-b.test'),
+      );
       second.dispose();
     });
 
@@ -167,7 +176,9 @@ void main() {
         throwsArgumentError,
       );
       expect(
-        () => Cell(link: const Link(url: 'https://bad.example', params: '\x00x')),
+        () => Cell(
+          link: const Link(url: 'https://bad.example', params: '\x00x'),
+        ),
         throwsArgumentError,
       );
     });

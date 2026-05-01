@@ -25,25 +25,28 @@ void main() {
       expect(caps.hasSixel, isTrue);
     });
 
-    test('tracks primary device attribute changes even without sixel changes', () {
-      final caps = TerminalCapabilities(env: const []);
+    test(
+      'tracks primary device attribute changes even without sixel changes',
+      () {
+        final caps = TerminalCapabilities(env: const []);
 
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
-        isTrue,
-      );
-      expect(caps.primaryAttributes, [1, 2]);
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
-        isFalse,
-      );
-      expect(
-        caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 18])),
-        isTrue,
-      );
-      expect(caps.primaryAttributes, [1, 18]);
-      expect(caps.hasSixel, isFalse);
-    });
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+          isTrue,
+        );
+        expect(caps.primaryAttributes, [1, 2]);
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 2])),
+          isFalse,
+        );
+        expect(
+          caps.updateFromEvent(const PrimaryDeviceAttributesEvent([1, 18])),
+          isTrue,
+        );
+        expect(caps.primaryAttributes, [1, 18]);
+        expect(caps.hasSixel, isFalse);
+      },
+    );
 
     test('tracks secondary device attribute changes', () {
       final caps = TerminalCapabilities(env: const []);
@@ -64,37 +67,40 @@ void main() {
       expect(caps.secondaryAttributes, [1, 4, 5]);
     });
 
-    test('tracks tertiary device attributes and infers image protocols from terminal version', () {
-      final caps = TerminalCapabilities(env: const []);
+    test(
+      'tracks tertiary device attributes and infers image protocols from terminal version',
+      () {
+        final caps = TerminalCapabilities(env: const []);
 
-      expect(
-        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
-        isTrue,
-      );
-      expect(caps.tertiaryAttributes, 'Chrm');
-      expect(
-        caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
-        isFalse,
-      );
-      expect(
-        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
-        isTrue,
-      );
-      expect(caps.terminalVersion, 'Ghostty 1.2.3');
-      expect(caps.hasKittyGraphics, isTrue);
-      expect(caps.hasITerm2, isFalse);
-      expect(
-        caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
-        isFalse,
-      );
+        expect(
+          caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+          isTrue,
+        );
+        expect(caps.tertiaryAttributes, 'Chrm');
+        expect(
+          caps.updateFromEvent(const TertiaryDeviceAttributesEvent('Chrm')),
+          isFalse,
+        );
+        expect(
+          caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+          isTrue,
+        );
+        expect(caps.terminalVersion, 'Ghostty 1.2.3');
+        expect(caps.hasKittyGraphics, isTrue);
+        expect(caps.hasITerm2, isFalse);
+        expect(
+          caps.updateFromEvent(const TerminalVersionEvent('Ghostty 1.2.3')),
+          isFalse,
+        );
 
-      expect(
-        caps.updateFromEvent(const TerminalVersionEvent('iTerm2 3.5.0')),
-        isTrue,
-      );
-      expect(caps.terminalVersion, 'iTerm2 3.5.0');
-      expect(caps.hasITerm2, isTrue);
-    });
+        expect(
+          caps.updateFromEvent(const TerminalVersionEvent('iTerm2 3.5.0')),
+          isTrue,
+        );
+        expect(caps.terminalVersion, 'iTerm2 3.5.0');
+        expect(caps.hasITerm2, isTrue);
+      },
+    );
 
     test('stores foreground, background, cursor, and palette reports', () {
       final caps = TerminalCapabilities(env: const []);
@@ -182,10 +188,7 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        caps.updateFromEvent(const KeyboardEnhancementsEvent(0)),
-        isTrue,
-      );
+      expect(caps.updateFromEvent(const KeyboardEnhancementsEvent(0)), isTrue);
       expect(caps.hasKeyboardEnhancements, isFalse);
       expect(caps.keyboardEnhancementFlags, 0);
     });
@@ -194,20 +197,28 @@ void main() {
       final caps = TerminalCapabilities(env: const []);
 
       expect(
-        caps.updateFromEvent(const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33))),
+        caps.updateFromEvent(
+          const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33)),
+        ),
         isTrue,
       );
       expect(
-        caps.updateFromEvent(const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33))),
+        caps.updateFromEvent(
+          const BackgroundColorEvent(UvRgb(0x11, 0x22, 0x33)),
+        ),
         isFalse,
       );
 
       expect(
-        caps.updateFromEvent(const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc))),
+        caps.updateFromEvent(
+          const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc)),
+        ),
         isTrue,
       );
       expect(
-        caps.updateFromEvent(const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc))),
+        caps.updateFromEvent(
+          const ColorPaletteEvent(4, UvRgb(0xaa, 0xbb, 0xcc)),
+        ),
         isFalse,
       );
 
@@ -228,14 +239,8 @@ void main() {
         isFalse,
       );
 
-      expect(
-        caps.updateFromEvent(const ModifyOtherKeysEvent(2)),
-        isTrue,
-      );
-      expect(
-        caps.updateFromEvent(const ModifyOtherKeysEvent(2)),
-        isFalse,
-      );
+      expect(caps.updateFromEvent(const ModifyOtherKeysEvent(2)), isTrue);
+      expect(caps.updateFromEvent(const ModifyOtherKeysEvent(2)), isFalse);
 
       expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isTrue);
       expect(caps.updateFromEvent(const DarkColorSchemeEvent()), isFalse);

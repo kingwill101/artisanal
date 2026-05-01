@@ -89,7 +89,9 @@ void main() {
 
       final output = outputBuffer.toString();
       expect(
-        RegExp(RegExp.escape(UvAnsi.setModeAltScreenSaveCursor)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.setModeAltScreenSaveCursor),
+        ).allMatches(output).length,
         1,
       );
       expect(
@@ -97,28 +99,40 @@ void main() {
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.enableMouseAllEvents)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.enableMouseAllEvents),
+        ).allMatches(output).length,
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.enableBracketedPaste)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.enableBracketedPaste),
+        ).allMatches(output).length,
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.enableFocusReporting)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.enableFocusReporting),
+        ).allMatches(output).length,
         1,
       );
       expect(RegExp(r'\x1b\[>1u').allMatches(output).length, 1);
       expect(
-        RegExp(RegExp.escape(UvAnsi.disableFocusReporting)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.disableFocusReporting),
+        ).allMatches(output).length,
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.disableBracketedPaste)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.disableBracketedPaste),
+        ).allMatches(output).length,
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.disableMouseAllEvents)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.disableMouseAllEvents),
+        ).allMatches(output).length,
         1,
       );
       expect(
@@ -126,7 +140,9 @@ void main() {
         1,
       );
       expect(
-        RegExp(RegExp.escape(UvAnsi.resetModeAltScreenSaveCursor)).allMatches(output).length,
+        RegExp(
+          RegExp.escape(UvAnsi.resetModeAltScreenSaveCursor),
+        ).allMatches(output).length,
         1,
       );
       expect(RegExp(r'\x1b\[<u').allMatches(output).length, 1);
@@ -134,29 +150,32 @@ void main() {
       await terminal.stop();
     });
 
-    test('changing keyboard enhancement flags resets the old mode first', () async {
-      await terminal.start(handleSignals: false);
+    test(
+      'changing keyboard enhancement flags resets the old mode first',
+      () async {
+        await terminal.start(handleSignals: false);
 
-      outputBuffer.clear();
-      terminal.enableKeyboardEnhancements(
-        KeyboardEnhancementsEvent.disambiguateEscapeCodes,
-      );
-      terminal.enableKeyboardEnhancements(
-        KeyboardEnhancementsEvent.disambiguateEscapeCodes |
-            KeyboardEnhancementsEvent.reportEventTypes,
-      );
+        outputBuffer.clear();
+        terminal.enableKeyboardEnhancements(
+          KeyboardEnhancementsEvent.disambiguateEscapeCodes,
+        );
+        terminal.enableKeyboardEnhancements(
+          KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+              KeyboardEnhancementsEvent.reportEventTypes,
+        );
 
-      final output = outputBuffer.toString();
-      final firstPush = output.indexOf('\x1b[>1u');
-      final pop = output.indexOf('\x1b[<u');
-      final secondPush = output.indexOf('\x1b[>3u');
+        final output = outputBuffer.toString();
+        final firstPush = output.indexOf('\x1b[>1u');
+        final pop = output.indexOf('\x1b[<u');
+        final secondPush = output.indexOf('\x1b[>3u');
 
-      expect(firstPush, isNonNegative);
-      expect(pop, greaterThan(firstPush));
-      expect(secondPush, greaterThan(pop));
+        expect(firstPush, isNonNegative);
+        expect(pop, greaterThan(firstPush));
+        expect(secondPush, greaterThan(pop));
 
-      await terminal.stop();
-    });
+        await terminal.stop();
+      },
+    );
 
     test('receives key events', () async {
       await terminal.start(handleSignals: false);
@@ -252,12 +271,7 @@ void main() {
       final wheel = await wheelFuture as MouseWheelEvent;
       expect(
         wheel.mouse(),
-        const Mouse(
-          x: 6,
-          y: 3,
-          button: MouseButton.wheelUp,
-          mod: 0,
-        ),
+        const Mouse(x: 6, y: 3, button: MouseButton.wheelUp, mod: 0),
       );
 
       await terminal.stop();
@@ -314,30 +328,33 @@ void main() {
       await terminal.stop();
     });
 
-    test('receives in-band terminal size reports and updates terminal size', () async {
-      await terminal.start(handleSignals: false);
-      final resizeFuture = terminal.events
-          .where((e) => e is WindowSizeEvent)
-          .cast<WindowSizeEvent>()
-          .firstWhere((e) => e.width == 120 && e.height == 33);
-      final pixelFuture = terminal.events
-          .where((e) => e is WindowPixelSizeEvent)
-          .cast<WindowPixelSizeEvent>()
-          .firstWhere((e) => e.width == 2400 && e.height == 660);
+    test(
+      'receives in-band terminal size reports and updates terminal size',
+      () async {
+        await terminal.start(handleSignals: false);
+        final resizeFuture = terminal.events
+            .where((e) => e is WindowSizeEvent)
+            .cast<WindowSizeEvent>()
+            .firstWhere((e) => e.width == 120 && e.height == 33);
+        final pixelFuture = terminal.events
+            .where((e) => e is WindowPixelSizeEvent)
+            .cast<WindowPixelSizeEvent>()
+            .firstWhere((e) => e.width == 2400 && e.height == 660);
 
-      inputController.add('\x1b[48;33;120;660;2400t'.codeUnits);
+        inputController.add('\x1b[48;33;120;660;2400t'.codeUnits);
 
-      final resize = await resizeFuture;
-      final pixels = await pixelFuture;
-      expect(resize.width, 120);
-      expect(resize.height, 33);
-      expect(pixels.width, 2400);
-      expect(pixels.height, 660);
-      expect(terminal.bounds().width, 120);
-      expect(terminal.bounds().height, 33);
+        final resize = await resizeFuture;
+        final pixels = await pixelFuture;
+        expect(resize.width, 120);
+        expect(resize.height, 33);
+        expect(pixels.width, 2400);
+        expect(pixels.height, 660);
+        expect(terminal.bounds().width, 120);
+        expect(terminal.bounds().height, 33);
 
-      await terminal.stop();
-    });
+        await terminal.stop();
+      },
+    );
 
     test('receives ModifyOtherKeys reports', () async {
       await terminal.start(handleSignals: false);
@@ -357,8 +374,12 @@ void main() {
 
     test('receives color scheme reports and updates capabilities', () async {
       await terminal.start(handleSignals: false);
-      final darkFuture = terminal.events.where((e) => e is DarkColorSchemeEvent).first;
-      final lightFuture = terminal.events.where((e) => e is LightColorSchemeEvent).first;
+      final darkFuture = terminal.events
+          .where((e) => e is DarkColorSchemeEvent)
+          .first;
+      final lightFuture = terminal.events
+          .where((e) => e is LightColorSchemeEvent)
+          .first;
 
       inputController.add('\x1b[?997;1n'.codeUnits);
       await darkFuture;
@@ -371,39 +392,42 @@ void main() {
       await terminal.stop();
     });
 
-    test('receives device attribute reports and updates capabilities', () async {
-      await terminal.start(handleSignals: false);
-      final primaryFuture = terminal.events
-          .where((e) => e is PrimaryDeviceAttributesEvent)
-          .cast<PrimaryDeviceAttributesEvent>()
-          .firstWhere((e) => e.attrs.length == 3 && e.attrs[1] == 4);
-      final secondaryFuture = terminal.events
-          .where((e) => e is SecondaryDeviceAttributesEvent)
-          .cast<SecondaryDeviceAttributesEvent>()
-          .firstWhere((e) => e.attrs.length == 3 && e.attrs[2] == 3);
-      final tertiaryFuture = terminal.events
-          .where((e) => e is TertiaryDeviceAttributesEvent)
-          .cast<TertiaryDeviceAttributesEvent>()
-          .firstWhere((e) => e.value == 'Chrm');
+    test(
+      'receives device attribute reports and updates capabilities',
+      () async {
+        await terminal.start(handleSignals: false);
+        final primaryFuture = terminal.events
+            .where((e) => e is PrimaryDeviceAttributesEvent)
+            .cast<PrimaryDeviceAttributesEvent>()
+            .firstWhere((e) => e.attrs.length == 3 && e.attrs[1] == 4);
+        final secondaryFuture = terminal.events
+            .where((e) => e is SecondaryDeviceAttributesEvent)
+            .cast<SecondaryDeviceAttributesEvent>()
+            .firstWhere((e) => e.attrs.length == 3 && e.attrs[2] == 3);
+        final tertiaryFuture = terminal.events
+            .where((e) => e is TertiaryDeviceAttributesEvent)
+            .cast<TertiaryDeviceAttributesEvent>()
+            .firstWhere((e) => e.value == 'Chrm');
 
-      inputController.add('\x1b[?1;4;18c'.codeUnits);
-      inputController.add('\x1b[>1;2;3c'.codeUnits);
-      inputController.add('\x1bP!|4368726d\x1b\\'.codeUnits);
+        inputController.add('\x1b[?1;4;18c'.codeUnits);
+        inputController.add('\x1b[>1;2;3c'.codeUnits);
+        inputController.add('\x1bP!|4368726d\x1b\\'.codeUnits);
 
-      final primary = await primaryFuture;
-      final secondary = await secondaryFuture;
-      final tertiary = await tertiaryFuture;
+        final primary = await primaryFuture;
+        final secondary = await secondaryFuture;
+        final tertiary = await tertiaryFuture;
 
-      expect(primary.attrs, [1, 4, 18]);
-      expect(secondary.attrs, [1, 2, 3]);
-      expect(tertiary.value, 'Chrm');
-      expect(terminal.capabilities.primaryAttributes, [1, 4, 18]);
-      expect(terminal.capabilities.secondaryAttributes, [1, 2, 3]);
-      expect(terminal.capabilities.tertiaryAttributes, 'Chrm');
-      expect(terminal.capabilities.hasSixel, isTrue);
+        expect(primary.attrs, [1, 4, 18]);
+        expect(secondary.attrs, [1, 2, 3]);
+        expect(tertiary.value, 'Chrm');
+        expect(terminal.capabilities.primaryAttributes, [1, 4, 18]);
+        expect(terminal.capabilities.secondaryAttributes, [1, 2, 3]);
+        expect(terminal.capabilities.tertiaryAttributes, 'Chrm');
+        expect(terminal.capabilities.hasSixel, isTrue);
 
-      await terminal.stop();
-    });
+        await terminal.stop();
+      },
+    );
 
     test('receives terminal version and XTGETTCAP responses', () async {
       await terminal.start(handleSignals: false);
@@ -465,14 +489,19 @@ void main() {
       final foregroundFuture = terminal.events
           .where((e) => e is ForegroundColorEvent)
           .first;
-      final cursorFuture = terminal.events.where((e) => e is CursorColorEvent).first;
+      final cursorFuture = terminal.events
+          .where((e) => e is CursorColorEvent)
+          .first;
 
       inputController.add('\x1b]10;rgb:1111/2222/3333\x1b\\'.codeUnits);
       inputController.add('\x1b]12;rgb:aaaa/bbbb/cccc\x1b\\'.codeUnits);
 
       await Future.wait([foregroundFuture, cursorFuture]);
 
-      expect(terminal.capabilities.foregroundColor, const UvRgb(0x11, 0x22, 0x33));
+      expect(
+        terminal.capabilities.foregroundColor,
+        const UvRgb(0x11, 0x22, 0x33),
+      );
       expect(terminal.capabilities.hasForegroundColor, isTrue);
       expect(terminal.capabilities.cursorColor, const UvRgb(0xaa, 0xbb, 0xcc));
       expect(terminal.capabilities.hasCursorColor, isTrue);
@@ -490,14 +519,19 @@ void main() {
       final paletteFuture = terminal.events
           .where((e) => e is ColorPaletteEvent)
           .cast<ColorPaletteEvent>()
-          .firstWhere((e) => e.index == 42 && e.color == const UvRgb(0x0f, 0x1a, 0x2b));
+          .firstWhere(
+            (e) => e.index == 42 && e.color == const UvRgb(0x0f, 0x1a, 0x2b),
+          );
 
       inputController.add('\x1b]11;rgb:1111/2222/3333\x1b\\'.codeUnits);
       inputController.add('\x1b]4;42;rgb:0f0f/1a1a/2b2b\x1b\\'.codeUnits);
 
       await Future.wait([backgroundFuture, paletteFuture]);
 
-      expect(terminal.capabilities.backgroundColor, const UvRgb(0x11, 0x22, 0x33));
+      expect(
+        terminal.capabilities.backgroundColor,
+        const UvRgb(0x11, 0x22, 0x33),
+      );
       expect(terminal.capabilities.hasBackgroundColor, isTrue);
       expect(terminal.capabilities.palette[42], const UvRgb(0x0f, 0x1a, 0x2b));
       expect(terminal.capabilities.hasColorPalette, isTrue);
@@ -505,22 +539,25 @@ void main() {
       await terminal.stop();
     });
 
-    test('keyboard enhancements enable and disable with kitty protocol', () async {
-      await terminal.start(handleSignals: false);
+    test(
+      'keyboard enhancements enable and disable with kitty protocol',
+      () async {
+        await terminal.start(handleSignals: false);
 
-      outputBuffer.clear();
-      terminal.enableKeyboardEnhancements(
-        KeyboardEnhancementsEvent.disambiguateEscapeCodes |
-            KeyboardEnhancementsEvent.reportEventTypes,
-      );
-      terminal.disableKeyboardEnhancements();
+        outputBuffer.clear();
+        terminal.enableKeyboardEnhancements(
+          KeyboardEnhancementsEvent.disambiguateEscapeCodes |
+              KeyboardEnhancementsEvent.reportEventTypes,
+        );
+        terminal.disableKeyboardEnhancements();
 
-      final output = outputBuffer.toString();
-      expect(output, contains('\x1b[>3u'));
-      expect(output, contains('\x1b[<u'));
+        final output = outputBuffer.toString();
+        expect(output, contains('\x1b[>3u'));
+        expect(output, contains('\x1b[<u'));
 
-      await terminal.stop();
-    });
+        await terminal.stop();
+      },
+    );
 
     test('stop disables enabled modes and exits alt screen', () async {
       await terminal.start(handleSignals: false);

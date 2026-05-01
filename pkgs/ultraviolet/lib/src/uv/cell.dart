@@ -867,7 +867,8 @@ void _validateLinkText(Link link) {
   }
 }
 
-bool _containsControl(String value) => value.runes.any((r) => r < 0x20 || r == 0x7f);
+bool _containsControl(String value) =>
+    value.runes.any((r) => r < 0x20 || r == 0x7f);
 
 /// Returns the pooled grapheme refcount for [id].
 ///

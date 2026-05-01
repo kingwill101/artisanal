@@ -190,9 +190,9 @@ final class Line {
       final previous = _cells[x];
       _renderHash =
           (cachedHash ^
-                  _slotHash(x, previous.renderFingerprint) ^
-                  _slotHash(x, cell.renderFingerprint)) &
-              0xFFFFFFFFFFFFFFFF;
+              _slotHash(x, previous.renderFingerprint) ^
+              _slotHash(x, cell.renderFingerprint)) &
+          0xFFFFFFFFFFFFFFFF;
     }
     _cells[x].dispose();
     _cells[x] = cell;
@@ -217,7 +217,8 @@ final class Line {
   ///
   /// Callers should use this only when they know [cell] is a freshly created
   /// instance that will not be reused elsewhere.
-  void setOwned(int x, Cell? cell) => _setInternal(x, cell, takeOwnership: true);
+  void setOwned(int x, Cell? cell) =>
+      _setInternal(x, cell, takeOwnership: true);
 
   /// Sets the cell at [x], applying wide-cell overwrite rules.
   void set(int x, Cell? cell) => _setInternal(x, cell, takeOwnership: false);

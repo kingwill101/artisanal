@@ -529,13 +529,7 @@ final class Key {
     String? s3,
     String? s4,
     String? s5,
-  ]) => matchStrings([
-    s,
-    ?s2,
-    ?s3,
-    ?s4,
-    ?s5,
-  ]);
+  ]) => matchStrings([s, ?s2, ?s3, ?s4, ?s5]);
 
   bool matchStrings(Iterable<String> patterns) {
     for (final p in patterns) {

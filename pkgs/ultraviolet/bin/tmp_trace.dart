@@ -8,7 +8,8 @@ final class _Sink implements StringSink {
   @override
   void write(Object? obj) => b.write(obj);
   @override
-  void writeAll(Iterable objects, [String separator = '']) => b.writeAll(objects, separator);
+  void writeAll(Iterable objects, [String separator = '']) =>
+      b.writeAll(objects, separator);
   @override
   void writeCharCode(int charCode) => b.writeCharCode(charCode);
   @override
