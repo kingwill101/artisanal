@@ -94,15 +94,14 @@ import 'package:artisanal/tui.dart'
         MouseButton,
         KeyMsg,
         MouseMsg,
+        ReplayEventPresentation,
         RenderMetrics,
         RenderMetricsMsg,
         TraceTag,
         TuiTrace,
         WindowSizeMsg,
         every;
-import '../app/render_metrics_provider.dart' show RenderMetricsProvider;
 import '../core/element.dart' show Element, elementOf;
-import '../layout/geometry.dart' show BoxConstraints, Size;
 import '../rendering/render_object.dart'
     show RenderObject, RenderBox, SingleChildRenderObjectWidget;
 export 'package:artisanal/bubbles.dart'
@@ -145,6 +144,8 @@ part 'key_hint.dart';
 part 'help_view.dart';
 part 'status_bar.dart';
 part 'status_line.dart';
+part 'replay_event_panel.dart';
+part 'replay_event_history_panel.dart';
 part 'history_panel.dart';
 part 'decision_card.dart';
 part 'accent_panel.dart';

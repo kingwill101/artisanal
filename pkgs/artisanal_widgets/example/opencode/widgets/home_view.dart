@@ -23,6 +23,7 @@ import 'tips_widget.dart';
 class HomeView extends w.StatefulWidget {
   HomeView({
     required this.model,
+    this.statusHint = '/status',
     this.promptController,
     this.onInputChanged,
     this.onSubmit,
@@ -30,6 +31,7 @@ class HomeView extends w.StatefulWidget {
   });
 
   final ChatModel model;
+  final String statusHint;
   final w.TextFieldController? promptController;
   final w.TextChangedCallback? onInputChanged;
 
@@ -109,6 +111,7 @@ class _HomeViewState extends w.State<HomeView> {
           workingDirectory: model.workingDirectory,
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
+          statusHint: widget.statusHint,
         ),
       ],
     );

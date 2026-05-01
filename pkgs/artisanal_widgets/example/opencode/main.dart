@@ -784,6 +784,13 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
   List<String> _themeOptions = const [openCodeDefaultThemeName];
   String? _copyToastMessage;
   int _copyToastToken = 0;
+  String _footerStatusHint = '/status';
+  w.ReplayEventHistoryState _replayHistory = const w.ReplayEventHistoryState(
+    filter: w.ReplayEventHistoryFilter.renderCaptures,
+    mode: w.ReplayEventHistoryMode.grouped,
+  );
+  final List<tui.ReplayEventPresentation> _recentReplayPresentations =
+      <tui.ReplayEventPresentation>[];
 
   @override
   void initState() {
@@ -984,6 +991,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         child: wrapWithOverlays(
           HomeView(
             model: _model,
+            statusHint: _footerStatusHint,
             promptController: _promptController,
             onSubmit: (text) {
               setState(() {
@@ -1017,6 +1025,21 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       model: _model,
       scrollController: _scrollController,
       promptController: _promptController,
+      statusHint: _footerStatusHint,
+      replayEvents: _recentReplayPresentations,
+      replayHistory: _replayHistory,
+      onReplayHistoryModeSelected: (mode) {
+        setState(() {
+          _replayHistory = _replayHistory.withMode(mode);
+        });
+        return tui.Cmd.none();
+      },
+      onReplayHistoryExpandedChanged: (expanded) {
+        setState(() {
+          _replayHistory = _replayHistory.withExpanded(expanded);
+        });
+        return tui.Cmd.none();
+      },
     );
 
     // Wrap with theme + session list + command palette
@@ -1043,6 +1066,21 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         });
       }
       return null;
+    }
+
+    if (msg is tui.ReplayEventMsg) {
+      final presentation = msg.event.presentation;
+      setState(() {
+        _footerStatusHint = presentation.statusHint;
+        _recentReplayPresentations.insert(0, presentation);
+        if (_recentReplayPresentations.length > 5) {
+          _recentReplayPresentations.removeRange(
+            5,
+            _recentReplayPresentations.length,
+          );
+        }
+      });
+      return tui.Cmd.none();
     }
 
     if (msg is tui.KeyMsg) {
@@ -1101,12 +1139,23 @@ class SessionShell extends w.StatelessWidget {
     required this.model,
     required this.scrollController,
     required this.promptController,
+    required this.statusHint,
+    required this.replayEvents,
+    required this.replayHistory,
+    this.onReplayHistoryModeSelected,
+    this.onReplayHistoryExpandedChanged,
     super.key,
   });
 
   final ChatModel model;
   final w.WidgetScrollController scrollController;
   final w.TextFieldController promptController;
+  final String statusHint;
+  final List<tui.ReplayEventPresentation> replayEvents;
+  final w.ReplayEventHistoryState replayHistory;
+  final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
+  onReplayHistoryModeSelected;
+  final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -1114,6 +1163,11 @@ class SessionShell extends w.StatelessWidget {
       model: model,
       scrollController: scrollController,
       promptController: promptController,
+      statusHint: statusHint,
+      replayEvents: replayEvents,
+      replayHistory: replayHistory,
+      onReplayHistoryModeSelected: onReplayHistoryModeSelected,
+      onReplayHistoryExpandedChanged: onReplayHistoryExpandedChanged,
     );
     if (!model.sidebarOpen) return content;
     return w.Row(
@@ -1131,12 +1185,23 @@ class SessionContentPane extends w.StatelessWidget {
     required this.model,
     required this.scrollController,
     required this.promptController,
+    required this.statusHint,
+    required this.replayEvents,
+    required this.replayHistory,
+    this.onReplayHistoryModeSelected,
+    this.onReplayHistoryExpandedChanged,
     super.key,
   });
 
   final ChatModel model;
   final w.WidgetScrollController scrollController;
   final w.TextFieldController promptController;
+  final String statusHint;
+  final List<tui.ReplayEventPresentation> replayEvents;
+  final w.ReplayEventHistoryState replayHistory;
+  final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
+  onReplayHistoryModeSelected;
+  final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -1176,6 +1241,25 @@ class SessionContentPane extends w.StatelessWidget {
                   modelName: model.modelName,
                   providerName: model.providerName,
                 ),
+                if (replayEvents.isNotEmpty) ...[
+                  w.SizedBox(height: 1),
+                  w.ReplayEventHistoryBrowser.renderCaptures(
+                    title: 'Replay History',
+                    events: replayEvents,
+                    state: replayHistory,
+                    onStateChanged: (state) {
+                      if (state.mode != replayHistory.mode) {
+                        return onReplayHistoryModeSelected?.call(state.mode);
+                      }
+                      if (state.expanded != replayHistory.expanded) {
+                        return onReplayHistoryExpandedChanged?.call(
+                          state.expanded,
+                        );
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -1184,6 +1268,7 @@ class SessionContentPane extends w.StatelessWidget {
           workingDirectory: model.workingDirectory,
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
+          statusHint: statusHint,
         ),
       ],
     );

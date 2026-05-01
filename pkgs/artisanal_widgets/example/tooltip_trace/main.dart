@@ -107,6 +107,9 @@ class TooltipTraceDemoScreen extends w.StatefulWidget {
 class _TooltipTraceDemoScreenState extends w.State<TooltipTraceDemoScreen> {
   w.TooltipPosition _position = w.TooltipPosition.above;
   TooltipVisibilityMode _visibilityMode = TooltipVisibilityMode.hover;
+  w.ReplayEventHistoryState _replayHistory = const w.ReplayEventHistoryState(
+    mode: w.ReplayEventHistoryMode.grouped,
+  );
   bool _enabled = true;
   bool _hovered = false;
   int _hoverEnterCount = 0;
@@ -114,6 +117,9 @@ class _TooltipTraceDemoScreenState extends w.State<TooltipTraceDemoScreen> {
   int _clickCount = 0;
   String _lastPointer = 'none';
   String _lastReplayEvent = 'none';
+  runtime.ReplayEventPresentation? _lastReplayPresentation;
+  final List<runtime.ReplayEventPresentation> _recentReplayPresentations =
+      <runtime.ReplayEventPresentation>[];
   final List<String> _recentEvents = <String>[];
 
   bool? get _tooltipShow => switch (_visibilityMode) {
@@ -225,15 +231,23 @@ class _TooltipTraceDemoScreenState extends w.State<TooltipTraceDemoScreen> {
     }
 
     if (msg is runtime.ReplayEventMsg) {
+      final replayPresentation = msg.event.presentation;
       setState(() {
         _lastReplayEvent = msg.event.type;
+        _lastReplayPresentation = replayPresentation;
+        _recentReplayPresentations.insert(0, replayPresentation);
+        if (_recentReplayPresentations.length > 5) {
+          _recentReplayPresentations.removeRange(
+            5,
+            _recentReplayPresentations.length,
+          );
+        }
         _recordUiEvent(
-          'replay.event',
-          summary: 'replay event -> ${msg.event.type}',
-          fields: <String, Object?>{
-            'type': msg.event.type,
-            'fields': msg.event.fields,
-          },
+          msg.event.renderCapture == null
+              ? 'replay.event'
+              : 'replay.render_capture',
+          summary: replayPresentation.summary,
+          fields: replayPresentation.fields,
         );
       });
       return runtime.Cmd.repaint();
@@ -338,6 +352,43 @@ class _TooltipTraceDemoScreenState extends w.State<TooltipTraceDemoScreen> {
                   ],
                 ),
               ),
+              if (_lastReplayPresentation != null)
+                w.ReplayEventPanel(
+                  presentation: _lastReplayPresentation!,
+                  title: 'Replay Summary',
+                ),
+              w.ReplayEventHistoryBrowser.interactive(
+                events: _recentReplayPresentations,
+                state: _replayHistory,
+                onStateChanged: (state) {
+                  setState(() {
+                    if (state.filter != _replayHistory.filter) {
+                      _recordUiEvent(
+                        'replay.filter',
+                        summary: 'replay filter -> ${state.filter.name}',
+                        fields: <String, Object?>{'filter': state.filter.name},
+                      );
+                    }
+                    if (state.mode != _replayHistory.mode) {
+                      _recordUiEvent(
+                        'replay.mode',
+                        summary: 'replay mode -> ${state.mode.name}',
+                        fields: <String, Object?>{'mode': state.mode.name},
+                      );
+                    }
+                    if (state.expanded != _replayHistory.expanded) {
+                      _recordUiEvent(
+                        'replay.expand',
+                        summary: 'replay expand -> ${state.expanded}',
+                        fields: <String, Object?>{'expanded': state.expanded},
+                      );
+                    }
+                    _replayHistory = state;
+                  });
+                  return runtime.Cmd.repaint();
+                },
+                title: 'Replay History',
+              ),
               w.Card(
                 child: w.Column(
                   gap: 1,
@@ -348,7 +399,10 @@ class _TooltipTraceDemoScreenState extends w.State<TooltipTraceDemoScreen> {
                       'without shifting this layout.',
                       style: theme.bodySmall,
                     ),
-                    w.SizedBox(height: 5, child: w.Center(child: tooltipTarget)),
+                    w.SizedBox(
+                      height: 5,
+                      child: w.Center(child: tooltipTarget),
+                    ),
                   ],
                 ),
               ),

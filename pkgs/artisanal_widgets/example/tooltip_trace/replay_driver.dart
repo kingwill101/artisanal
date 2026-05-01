@@ -116,7 +116,9 @@ Future<TooltipTraceReplayPlan?> loadTooltipTraceReplayPlanFromArgs(
       continue;
     }
     if (arg == '--replay-speed') {
-      speed = _parseReplaySpeed(_requiredNextValue(args, ++i, '--replay-speed'));
+      speed = _parseReplaySpeed(
+        _requiredNextValue(args, ++i, '--replay-speed'),
+      );
       continue;
     }
   }
@@ -232,7 +234,9 @@ String _resolveScenarioPath(String scenarioArg) {
 
   addCandidate(trimmed);
   addCandidate(withJson);
-  addCandidate('pkgs/artisanal_widgets/example/tooltip_trace/scenarios/$trimmed');
+  addCandidate(
+    'pkgs/artisanal_widgets/example/tooltip_trace/scenarios/$trimmed',
+  );
   addCandidate(
     'pkgs/artisanal_widgets/example/tooltip_trace/scenarios/$withJson',
   );

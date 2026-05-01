@@ -30,7 +30,9 @@ class OpenCodeReplayPlan {
   final tui.ReplayTraceConversionResult? traceConversion;
 }
 
-Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(List<String> args) async {
+Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(
+  List<String> args,
+) async {
   String? scenarioArg;
   String? traceArg;
   String? traceOutArg;
@@ -89,7 +91,10 @@ Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(List<String> args) as
     }
 
     if (arg.startsWith('--replay-trace-description=')) {
-      traceDescription = _requiredInlineValue(arg, '--replay-trace-description=');
+      traceDescription = _requiredInlineValue(
+        arg,
+        '--replay-trace-description=',
+      );
       continue;
     }
     if (arg == '--replay-trace-description') {
@@ -218,7 +223,9 @@ Future<OpenCodeReplayPlan?> loadOpenCodeReplayPlanFromArgs(List<String> args) as
       continue;
     }
     if (arg == '--replay-speed') {
-      speed = _parseReplaySpeed(_requiredNextValue(args, ++i, '--replay-speed'));
+      speed = _parseReplaySpeed(
+        _requiredNextValue(args, ++i, '--replay-speed'),
+      );
       continue;
     }
   }
@@ -321,7 +328,9 @@ int _parseRequiredInt(String rawValue, String optionName) {
 String _requiredInlineValue(String arg, String prefix) {
   final value = arg.substring(prefix.length).trim();
   if (value.isEmpty) {
-    throw FormatException('Missing value for ${prefix.substring(0, prefix.length - 1)}.');
+    throw FormatException(
+      'Missing value for ${prefix.substring(0, prefix.length - 1)}.',
+    );
   }
   return value;
 }
