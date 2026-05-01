@@ -2,6 +2,9 @@
 ///
 /// This module provides a reusable [ColorMatrix] primitive plus
 /// [ColorMatrixFilter], which plugs into the existing [BufferFilter] pipeline.
+/// It also exposes named built-in effect filters such as
+/// [ColorMatrixFilter.grayscale] and [ColorMatrixFilter.tint].
+///
 /// Effects operate on cell style colors (foreground/background/underline) while
 /// preserving glyph content, width, links, and drawables.
 library;
@@ -237,6 +240,41 @@ final class ColorMatrix {
     ]);
   }
 
+  /// Returns a matrix that applies this transform before [next].
+  ColorMatrix followedBy(ColorMatrix next) {
+    if (isIdentity) return next;
+    if (next.isIdentity) return this;
+
+    final result = List<double>.filled(20, 0);
+    for (var row = 0; row < 4; row++) {
+      final nextOffset = row * 5;
+      final outOffset = row * 5;
+      for (var col = 0; col < 4; col++) {
+        result[outOffset + col] =
+            (next._values[nextOffset] * _values[col]) +
+            (next._values[nextOffset + 1] * _values[5 + col]) +
+            (next._values[nextOffset + 2] * _values[10 + col]) +
+            (next._values[nextOffset + 3] * _values[15 + col]);
+      }
+      result[outOffset + 4] =
+          next._values[nextOffset + 4] +
+          (next._values[nextOffset] * _values[4]) +
+          (next._values[nextOffset + 1] * _values[9]) +
+          (next._values[nextOffset + 2] * _values[14]) +
+          (next._values[nextOffset + 3] * _values[19]);
+    }
+    return ColorMatrix(result);
+  }
+
+  /// Collapses [matrices] into a single matrix in application order.
+  static ColorMatrix compose(Iterable<ColorMatrix> matrices) {
+    var combined = identity;
+    for (final matrix in matrices) {
+      combined = combined.followedBy(matrix);
+    }
+    return combined;
+  }
+
   /// Applies this matrix to [style].
   UvStyle transformStyle(
     UvStyle style, {
@@ -306,6 +344,109 @@ final class ColorMatrixFilter extends BufferFilter {
     this.underlineColor = true,
   });
 
+  /// An identity effect that preserves all colors.
+  factory ColorMatrixFilter.identity({
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.identity,
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// A grayscale effect using sRGB luminance coefficients.
+  factory ColorMatrixFilter.grayscale({
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.grayscale(),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// An invert effect that flips RGB channels.
+  factory ColorMatrixFilter.invert({
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.invert(),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// A gain effect that scales RGB channels by [amount].
+  factory ColorMatrixFilter.gain(
+    double amount, {
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.gain(amount),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// An attenuation effect that scales RGB channels by [amount].
+  factory ColorMatrixFilter.attenuation(
+    double amount, {
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.attenuation(amount),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// A tint effect that blends colors toward [tint].
+  factory ColorMatrixFilter.tint(
+    UvColor tint, {
+    double amount = 0.5,
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.tint(tint, amount: amount),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
+  /// A multiply-style effect using [color] as the multiplier.
+  factory ColorMatrixFilter.multiply(
+    UvColor color, {
+    bool foreground = true,
+    bool background = true,
+    bool underlineColor = true,
+  }) {
+    return ColorMatrixFilter(
+      ColorMatrix.multiply(color),
+      foreground: foreground,
+      background: background,
+      underlineColor: underlineColor,
+    );
+  }
+
   final ColorMatrix matrix;
   final bool foreground;
   final bool background;
@@ -337,6 +478,104 @@ final class ColorMatrixFilter extends BufferFilter {
     cloned.style = style;
     return cloned;
   }
+}
+
+/// Amber monochrome display preset built from the UV filter primitives.
+///
+/// This approximates a warm monochrome monitor by stacking color grading with
+/// mild edge falloff and scanlines.
+final class AmberTerminalFilter extends CompositeFilter {
+  AmberTerminalFilter({double tint = 0.62, double attenuation = 0.96})
+    : super([
+        ColorMatrixFilter.grayscale(background: false),
+        ColorMatrixFilter.tint(
+          const UvRgb(255, 191, 96),
+          amount: tint,
+          background: false,
+        ),
+        ColorMatrixFilter.attenuation(attenuation, background: false),
+        VignetteFilter(strength: 0.08, roundness: 1.08),
+        ScanlineFilter(
+          lineStrength: 0.02,
+          barStrength: 0.0,
+          barSpeed: 0.45,
+          barHeightFraction: 0.12,
+        ),
+      ]);
+}
+
+/// Green phosphor display preset with a stronger CRT feel.
+final class PhosphorFilter extends CompositeFilter {
+  PhosphorFilter({double tint = 0.58, double distortion = 0.08})
+    : super([
+        ColorMatrixFilter.grayscale(background: false),
+        ColorMatrixFilter.tint(
+          const UvRgb(120, 255, 160),
+          amount: tint,
+          background: false,
+        ),
+        ColorMatrixFilter.attenuation(0.92, background: false),
+        WaveDistortionFilter(
+          xAmplitude: distortion,
+          yAmplitude: distortion * 0.08,
+          xFrequency: 0.34,
+          yFrequency: 0.2,
+          speed: 0.36,
+        ),
+        VignetteFilter(strength: 0.1, roundness: 1.05),
+        ScanlineFilter(
+          lineStrength: 0.08,
+          barStrength: 0.0,
+          barSpeed: 0.5,
+          barHeightFraction: 0.12,
+        ),
+      ]);
+}
+
+/// Green phosphor preset with a temporal afterimage trail.
+///
+/// This layers [GhostingFilter] onto the existing phosphor look so moving text
+/// or rapidly changing scenes keep a short-lived persistence trail.
+final class PhosphorTrailFilter extends CompositeFilter {
+  PhosphorTrailFilter({
+    double tint = 0.58,
+    double distortion = 0.08,
+    double persistence = 0.42,
+  }) : super([
+         PhosphorFilter(tint: tint, distortion: distortion),
+         GhostingFilter(persistence: persistence, currentBoost: 0.02),
+       ]);
+}
+
+/// Warm monochrome preset with a short-lived persistence trail.
+final class AmberTrailFilter extends CompositeFilter {
+  AmberTrailFilter({
+    double tint = 0.62,
+    double attenuation = 0.96,
+    double persistence = 0.38,
+  }) : super([
+         AmberTerminalFilter(tint: tint, attenuation: attenuation),
+         GhostingFilter(persistence: persistence, currentBoost: 0.01),
+       ]);
+}
+
+/// CRT-style preset with a short temporal persistence trail.
+final class CrtTrailFilter extends CompositeFilter {
+  CrtTrailFilter({
+    double distortion = 0.22,
+    double vignette = 0.16,
+    double scanline = 0.1,
+    double rollingBar = 0.08,
+    double persistence = 0.32,
+  }) : super([
+         CrtFilter(
+           distortion: distortion,
+           vignette: vignette,
+           scanline: scanline,
+           rollingBar: rollingBar,
+         ),
+         GhostingFilter(persistence: persistence, currentBoost: 0.0),
+       ]);
 }
 
 UvRgb? _resolveRgb(UvColor? color) {
