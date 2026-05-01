@@ -18,7 +18,7 @@ const _tickRate = Duration(milliseconds: 140);
 const _maxLogs = 220;
 const _maxConsoleLines = 120;
 
-final class NexusTickMsg implements tui.Msg {
+final class NexusTickMsg extends tui.Msg {
   const NexusTickMsg();
 }
 

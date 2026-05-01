@@ -302,7 +302,7 @@ final class _ColorsPage extends _KitchenSinkPage {
         ._style(Style())
         .dim()
         .render(
-          'background=${m._theme.backgroundHex ?? '(unknown)'} (UV: $bgStr)  dark=${m._theme.hasDarkBackground ?? '(unknown)'}',
+          'background=${m.terminalTheme.backgroundHex ?? '(unknown)'} (UV: $bgStr)  dark=${m.terminalTheme.hasDarkBackground ?? '(unknown)'}',
         );
 
     final adaptive = m._style(Style())
@@ -317,7 +317,7 @@ final class _ColorsPage extends _KitchenSinkPage {
     final grad = blend1D(
       demoWidth,
       stops,
-      hasDarkBackground: m._theme.hasDarkBackground ?? true,
+      hasDarkBackground: m.terminalTheme.hasDarkBackground ?? true,
     );
     final bar = grad
         .map((c) => m._style(Style())..background(c))
