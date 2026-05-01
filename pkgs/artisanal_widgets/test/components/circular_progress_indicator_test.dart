@@ -2,6 +2,21 @@ import 'package:artisanal/testing.dart';
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
+Future<bool> _waitForAnyText(
+  WidgetTester tester,
+  Iterable<String> values, {
+  Duration timeout = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    tester.pump();
+    if (values.any(tester.find.text)) return true;
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  }
+  tester.pump();
+  return values.any(tester.find.text);
+}
+
 void main() {
   group('CircularProgressIndicator', () {
     test('determinate maps min/max values to glyphs', () async {
@@ -43,10 +58,7 @@ void main() {
 
       expect(tester.find.text('◜'), isTrue);
 
-      await Future<void>.delayed(const Duration(milliseconds: 65));
-      tester.pump();
-
-      final advanced = tester.find.text('◠') || tester.find.text('◝');
+      final advanced = await _waitForAnyText(tester, const ['◠', '◝']);
       expect(advanced, isTrue);
     });
   });

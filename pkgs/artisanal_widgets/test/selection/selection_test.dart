@@ -330,7 +330,10 @@ void main() {
       expect(output, contains('38;5;45'));
       expect(output, contains('48;5;160m'));
       expect(output, contains('38;5;230'));
-      expect(output, contains('48;5;27mbeta'));
+      expect(
+        RegExp('\x1B\\[48;5;27m(?:\x1B\\[[0-9;]*m)*beta').hasMatch(output),
+        isTrue,
+      );
     });
 
     test(

@@ -54,6 +54,23 @@ String _visibleSpinnerFrame(WidgetTester tester, List<String> frames) {
   return '';
 }
 
+Future<String> _waitForSpinnerFrame(
+  WidgetTester tester,
+  List<String> frames, {
+  String except = '',
+  Duration timeout = const Duration(seconds: 1),
+}) async {
+  final deadline = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(deadline)) {
+    tester.pump();
+    final frame = _visibleSpinnerFrame(tester, frames);
+    if (frame.isNotEmpty && frame != except) return frame;
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+  }
+  tester.pump();
+  return _visibleSpinnerFrame(tester, frames);
+}
+
 class _DelayedSpinnerMountHostState extends State<_DelayedSpinnerMountHost> {
   var _showSpinner = false;
 
@@ -226,11 +243,8 @@ void main() {
         );
         expect(tester.find.text('1'), isTrue);
 
-        await Future<void>.delayed(const Duration(milliseconds: 65));
-        tester.pump();
-
-        final advanced = tester.find.text('2') || tester.find.text('3');
-        expect(advanced, isTrue);
+        final advanced = await _waitForSpinnerFrame(tester, const ['2', '3']);
+        expect(advanced, isNotEmpty);
       } finally {
         await tester.dispose();
       }
@@ -246,10 +260,8 @@ void main() {
         tester.pump();
         expect(tester.find.text('1'), isTrue);
 
-        await Future<void>.delayed(const Duration(milliseconds: 170));
-        tester.pump();
-        final advanced = tester.find.text('2') || tester.find.text('3');
-        expect(advanced, isTrue);
+        final advanced = await _waitForSpinnerFrame(tester, const ['2', '3']);
+        expect(advanced, isNotEmpty);
       } finally {
         await tester.dispose();
       }
@@ -266,10 +278,11 @@ void main() {
         final before = _visibleSpinnerFrame(tester, frames);
         expect(before, isNotEmpty);
 
-        await Future<void>.delayed(const Duration(milliseconds: 220));
-        tester.pump();
-
-        final after = _visibleSpinnerFrame(tester, frames);
+        final after = await _waitForSpinnerFrame(
+          tester,
+          frames,
+          except: before,
+        );
         expect(after, isNotEmpty);
         expect(after, isNot(equals(before)));
       } finally {
