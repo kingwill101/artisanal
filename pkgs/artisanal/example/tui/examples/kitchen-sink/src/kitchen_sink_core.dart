@@ -39,7 +39,7 @@ class _TickMsg extends tui.Msg {
   const _TickMsg();
 }
 
-class _KitchenSinkModel extends tui.Model {
+class _KitchenSinkModel extends tui.Model with tui.TerminalThemeHost {
   _KitchenSinkModel({required this.useUvInput, required this.useUvRenderer})
     : spinner = tui.SpinnerModel(spinner: tui.Spinners.miniDot),
       progress = tui.ProgressModel(width: 44, useGradient: true),
@@ -66,8 +66,6 @@ class _KitchenSinkModel extends tui.Model {
   bool _showHelp = true;
   int _headerLines = 4;
   int _footerLines = 0;
-
-  tui.TerminalThemeState _theme = const tui.TerminalThemeState();
 
   tui.SpinnerModel spinner;
   tui.ProgressModel progress;
@@ -168,8 +166,7 @@ class _KitchenSinkModel extends tui.Model {
     ];
     _activePage.onActivate(this, cmds);
     if (useUvInput) {
-      // Request background color so we can adapt styles to light/dark themes.
-      cmds.add(tui.Cmd.requestBackgroundColorReport());
+      cmds.add(initTerminalTheme(paletteCount: 8));
       // Capability probing (best-effort; replies arrive as UV events).
       cmds.add(
         tui.Cmd.writeRaw('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'),
@@ -177,10 +174,6 @@ class _KitchenSinkModel extends tui.Model {
       cmds.add(
         tui.Cmd.writeRaw('\x1b[?u'),
       ); // Kitty keyboard enhancements query
-      // Query a handful of palette entries (enough to know it's supported).
-      for (var i = 0; i < 8; i++) {
-        cmds.add(tui.Cmd.writeRaw('\x1b]4;$i;?\x1b\\'));
-      }
     }
     final focus = textInput.focus();
     if (focus != null) cmds.add(focus);
@@ -189,7 +182,7 @@ class _KitchenSinkModel extends tui.Model {
 
   Style _style([Style? base]) {
     final s = base ?? Style();
-    s.hasDarkBackground = _theme.hasDarkBackground ?? true;
+    s.hasDarkBackground = terminalTheme.hasDarkBackground ?? true;
     return s;
   }
 
@@ -217,17 +210,17 @@ class _KitchenSinkModel extends tui.Model {
 
       case tui.BackgroundColorMsg(:final hex):
         _log('BackgroundColorMsg(hex: $hex)');
-        _theme = _theme.update(msg);
+        updateTerminalTheme(msg);
         return (this, null);
 
       case tui.ForegroundColorMsg(:final hex):
         _log('ForegroundColorMsg(hex: $hex)');
-        _theme = _theme.update(msg);
+        updateTerminalTheme(msg);
         return (this, null);
 
       case tui.CursorColorMsg(:final hex):
         _log('CursorColorMsg(hex: $hex)');
-        _theme = _theme.update(msg);
+        updateTerminalTheme(msg);
         return (this, null);
 
       case _TickMsg():
@@ -380,7 +373,7 @@ class _KitchenSinkModel extends tui.Model {
 
     final title = _style(Style()).bold().render('Kitchen Sink');
     final mode = _style(Style()).dim().render(
-      'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}  size=${_width}x$_height  bg=${_theme.backgroundHex ?? '(unknown)'}  dark=${_theme.hasDarkBackground ?? '(unknown)'}  emoji=${emojiEnabled ? 'on' : 'off'}',
+      'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}  size=${_width}x$_height  bg=${terminalTheme.backgroundHex ?? '(unknown)'}  dark=${terminalTheme.hasDarkBackground ?? '(unknown)'}  emoji=${emojiEnabled ? 'on' : 'off'}',
     );
 
     final maxW = _width.clamp(10, 1000);
@@ -447,7 +440,7 @@ class _KitchenSinkModel extends tui.Model {
       Colors.red,
       Colors.blue,
       Colors.green,
-    ], hasDarkBackground: _theme.hasDarkBackground ?? true);
+    ], hasDarkBackground: terminalTheme.hasDarkBackground ?? true);
     if (colors.isEmpty) return '';
 
     final rows = <String>[];

@@ -533,6 +533,21 @@ void main() {
       expect(manager.get('btn2'), isNull); // Should be cleaned up
     });
 
+    test('scan advances zone iteration monotonically across renders', () {
+      final marked = manager.mark('btn', 'Button');
+
+      manager.scan(marked);
+      final first = manager.get('btn');
+      expect(first, isNotNull);
+
+      manager.scan(marked);
+      final second = manager.get('btn');
+      expect(second, isNotNull);
+
+      expect(second!.iteration, greaterThan(first!.iteration));
+      expect(second.iteration, equals(first.iteration + 1));
+    });
+
     test('enabled property works correctly', () {
       expect(manager.enabled, isTrue);
 

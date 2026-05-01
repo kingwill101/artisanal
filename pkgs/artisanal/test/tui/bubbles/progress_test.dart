@@ -302,6 +302,18 @@ void main() {
         expect(progress.frequency, 5.0);
         expect(progress.damping, 0.5);
       });
+
+      test('eta uses custom nowProvider', () {
+        final start = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+        final now = DateTime.fromMillisecondsSinceEpoch(5000, isUtc: true);
+        final progress = ProgressModel(
+          startTime: start,
+          targetPercent: 0.5,
+          nowProvider: () => now,
+        );
+
+        expect(progress.eta, equals('00:05'));
+      });
     });
   });
 
@@ -314,4 +326,7 @@ void main() {
   });
 }
 
-class _MockMsg implements Msg {}
+class _MockMsg implements Msg {
+  @override
+  bool get dropWhenInputQueued => false;
+}

@@ -1,4 +1,5 @@
 /// Parse and print artifacts from a JSONL evidence log.
+// tui:allow-stdout — CLI tool, not a TUI program.
 library;
 
 import 'dart:io';

@@ -5,6 +5,8 @@ import 'dart:io' as io;
 import 'msg.dart';
 import '../terminal/ansi.dart' as term_ansi;
 
+DateTime _defaultNowProvider() => DateTime.now();
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal messages for terminal control commands
 // ─────────────────────────────────────────────────────────────────────────────
@@ -754,10 +756,15 @@ class Cmd {
   ///   };
   /// }
   /// ```
-  static Cmd tick(Duration duration, Msg? Function(DateTime time) callback) {
+  static Cmd tick(
+    Duration duration,
+    Msg? Function(DateTime time) callback, {
+    DateTime Function()? nowProvider,
+  }) {
+    final resolveNow = nowProvider ?? _defaultNowProvider;
     return Cmd(() async {
       await Future<void>.delayed(duration);
-      return callback(DateTime.now());
+      return callback(resolveNow());
     });
   }
 
@@ -979,8 +986,13 @@ class StreamCmd<T> extends Cmd {
 /// The interval is synchronized to wall-clock time (e.g., if interval
 /// is 1 second, it fires at :00, :01, :02, etc.).
 class EveryCmd extends Cmd {
-  EveryCmd({required this.interval, required this.callback, this.id})
-    : super(_placeholder);
+  EveryCmd({
+    required this.interval,
+    required this.callback,
+    this.id,
+    DateTime Function()? nowProvider,
+  }) : _nowProvider = nowProvider ?? _defaultNowProvider,
+       super(_placeholder);
 
   static Future<Msg?> _placeholder() async => null;
 
@@ -993,6 +1005,8 @@ class EveryCmd extends Cmd {
   /// Optional identifier for this timer.
   final Object? id;
 
+  final DateTime Function() _nowProvider;
+
   Timer? _starter;
   Timer? _timer;
 
@@ -1001,7 +1015,7 @@ class EveryCmd extends Cmd {
   /// Messages are sent through the provided [sendMessage] callback.
   void start(void Function(Msg) sendMessage) {
     // Calculate time until next interval boundary
-    final now = DateTime.now();
+    final now = _nowProvider();
     final intervalMs = interval.inMilliseconds;
     final msIntoInterval = now.millisecondsSinceEpoch % intervalMs;
     final msUntilNext = intervalMs - msIntoInterval;
@@ -1019,7 +1033,7 @@ class EveryCmd extends Cmd {
   }
 
   void _tick(void Function(Msg) sendMessage) {
-    final msg = callback(DateTime.now());
+    final msg = callback(_nowProvider());
     if (msg != null) sendMessage(msg);
   }
 
@@ -1094,8 +1108,14 @@ Cmd every(
   Duration interval,
   Msg? Function(DateTime time) callback, {
   Object? id,
+  DateTime Function()? nowProvider,
 }) {
-  return EveryCmd(interval: interval, callback: callback, id: id);
+  return EveryCmd(
+    interval: interval,
+    callback: callback,
+    id: id,
+    nowProvider: nowProvider,
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

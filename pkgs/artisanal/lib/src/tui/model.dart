@@ -229,6 +229,28 @@ abstract class RenderMetricsModel {
   bool get wantsRenderMetrics;
 }
 
+/// Optional interface for models that support hot-reload reassembly.
+///
+/// When a model implements [ReassemblableModel], [Program.performReassemble]
+/// calls [reassemble] before re-rendering. This gives the model a chance to
+/// invalidate internal caches, mark element trees dirty, or perform any other
+/// bookkeeping needed so that the next [Model.view] call produces fresh output
+/// that reflects the reloaded code.
+///
+/// This follows the same opt-in pattern as [FrameTickModel] and
+/// [RenderMetricsModel].
+///
+/// [WidgetApp] implements this interface to mark its entire element tree dirty
+/// and clear its cached view, ensuring that widget `build()` methods are
+/// re-executed after a hot reload.
+abstract class ReassemblableModel {
+  /// Called by the runtime immediately before re-rendering after a hot reload.
+  ///
+  /// Implementations should invalidate any cached state so that the next
+  /// [Model.view] call rebuilds from scratch.
+  void reassemble();
+}
+
 /// Mixin that documents the copyWith pattern for models.
 ///
 /// Models can use this mixin to indicate they follow the copyWith pattern
@@ -299,3 +321,180 @@ UpdateResult noCmd(Model model) => (model, null);
 /// // equivalent to: return (model, Cmd.quit());
 /// ```
 UpdateResult quit(Model model) => (model, Cmd.quit());
+
+// ---------------------------------------------------------------------------
+// Captured output support
+// ---------------------------------------------------------------------------
+
+/// A single entry in an [OutputLog].
+///
+/// Captures a line of output along with its [source] and [timestamp].
+class OutputLogEntry {
+  /// Creates an output log entry.
+  const OutputLogEntry({
+    required this.line,
+    required this.source,
+    required this.timestamp,
+  });
+
+  /// The captured output line.
+  final String line;
+
+  /// Where the output originated from.
+  final OutputSource source;
+
+  /// When the output was captured.
+  final DateTime timestamp;
+
+  @override
+  String toString() => '[$source] $line';
+}
+
+/// An immutable, bounded log of captured output entries.
+///
+/// [OutputLog] is designed for use inside immutable [Model] classes.
+/// Because models must be immutable, mutating methods like [add] and
+/// [clear] return new [OutputLog] instances instead of modifying this
+/// one in place.
+///
+/// Entries beyond [maxEntries] are dropped from the front (oldest
+/// first), making this behave like a ring buffer.
+///
+/// ## Example
+///
+/// ```dart
+/// class MyModel extends Model implements CapturedOutputModel {
+///   final OutputLog outputLog;
+///
+///   MyModel({this.outputLog = const OutputLog()});
+///
+///   @override
+///   MyModel withOutputLog(OutputLog log) =>
+///       MyModel(outputLog: log);
+///
+///   // ...
+/// }
+/// ```
+class OutputLog {
+  /// Creates an empty output log.
+  ///
+  /// [maxEntries] controls how many entries are retained. Defaults
+  /// to 500.
+  const OutputLog({
+    this.maxEntries = 500,
+    List<OutputLogEntry> entries = const [],
+  }) : _entries = entries;
+
+  /// The maximum number of entries retained in this log.
+  final int maxEntries;
+
+  final List<OutputLogEntry> _entries;
+
+  /// The log entries, oldest first.
+  List<OutputLogEntry> get entries =>
+      List<OutputLogEntry>.unmodifiable(_entries);
+
+  /// The number of entries currently in the log.
+  int get length => _entries.length;
+
+  /// Whether the log contains no entries.
+  bool get isEmpty => _entries.isEmpty;
+
+  /// Whether the log contains at least one entry.
+  bool get isNotEmpty => _entries.isNotEmpty;
+
+  /// Returns a new [OutputLog] with [entry] appended.
+  ///
+  /// If the resulting log would exceed [maxEntries], the oldest
+  /// entries are dropped.
+  OutputLog add(OutputLogEntry entry) {
+    final newEntries = [..._entries, entry];
+    if (newEntries.length > maxEntries) {
+      return OutputLog(
+        maxEntries: maxEntries,
+        entries: newEntries.sublist(newEntries.length - maxEntries),
+      );
+    }
+    return OutputLog(maxEntries: maxEntries, entries: newEntries);
+  }
+
+  /// Returns a new [OutputLog] with a [CapturedOutputMsg] appended.
+  ///
+  /// Convenience method that creates an [OutputLogEntry] from a
+  /// [CapturedOutputMsg] and appends it.
+  OutputLog addMessage(CapturedOutputMsg msg) {
+    return add(
+      OutputLogEntry(
+        line: msg.line,
+        source: msg.source,
+        timestamp: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Returns a new empty [OutputLog] with the same [maxEntries].
+  OutputLog clear() => OutputLog(maxEntries: maxEntries);
+
+  @override
+  String toString() => 'OutputLog(${_entries.length}/$maxEntries entries)';
+}
+
+/// Optional interface for models that receive captured output
+/// automatically.
+///
+/// When a model implements [CapturedOutputModel] and
+/// [ProgramOptions.captureOutput] is enabled, the runtime
+/// automatically appends intercepted `print()` output to the
+/// model's [outputLog] by calling [withOutputLog]. The model's
+/// [update] method is **not** called for [CapturedOutputMsg] —
+/// the runtime handles it entirely.
+///
+/// This follows the same opt-in pattern as [FrameTickModel] and
+/// [RenderMetricsModel].
+///
+/// ## Example
+///
+/// ```dart
+/// class DebugModel extends Model implements CapturedOutputModel {
+///   final int count;
+///   final OutputLog outputLog;
+///
+///   DebugModel({this.count = 0, this.outputLog = const OutputLog()});
+///
+///   @override
+///   DebugModel withOutputLog(OutputLog log) =>
+///       DebugModel(count: count, outputLog: log);
+///
+///   @override
+///   (Model, Cmd?) update(Msg msg) {
+///     // No need to handle CapturedOutputMsg here —
+///     // the runtime does it automatically.
+///     return switch (msg) {
+///       KeyMsg(key: Key(type: KeyType.runes, runes: [0x71])) =>
+///         (this, Cmd.quit()),
+///       _ => (this, null),
+///     };
+///   }
+///
+///   @override
+///   String view() {
+///     final buf = StringBuffer('Count: $count\n\n');
+///     buf.writeln('--- Output Log ---');
+///     for (final entry in outputLog.entries) {
+///       buf.writeln(entry);
+///     }
+///     return buf.toString();
+///   }
+/// }
+/// ```
+abstract class CapturedOutputModel {
+  /// The current captured output log.
+  OutputLog get outputLog;
+
+  /// Returns a new model with the given [log] replacing [outputLog].
+  ///
+  /// This is called by the runtime when a [CapturedOutputMsg] is
+  /// received. Implementations should return a copy of `this` with
+  /// only the [outputLog] field replaced.
+  Model withOutputLog(OutputLog log);
+}

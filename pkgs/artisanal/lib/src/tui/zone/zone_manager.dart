@@ -293,7 +293,7 @@ class ZoneManager {
   String scan(String view) {
     if (_closed) return view;
 
-    _iteration = DateTime.now().microsecondsSinceEpoch;
+    _iteration++;
     final zonesInThisScan = <String>{};
 
     final scanner = ZoneScanner(

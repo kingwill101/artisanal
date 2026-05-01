@@ -3,8 +3,27 @@ import 'package:artisanal/style.dart' show Colors, Style;
 import 'package:artisanal/tui.dart' show Cmd;
 import 'package:artisanal/uv.dart' as uv;
 
+import '../devtools.dart' show DevToolsMessageEntry;
+import '../model.dart' show OutputLogEntry;
 import '../msg.dart';
 import 'components/panel.dart';
+
+/// Which sections the debug overlay displays.
+///
+/// Use [DebugOverlayModel.cycleMode] to cycle through modes.
+enum DebugOverlayMode {
+  /// Only render metrics (FPS, frame time, etc.) — the original behavior.
+  metrics,
+
+  /// Only recent messages dispatched through the program.
+  messages,
+
+  /// Only captured output from intercepted `print()` calls.
+  output,
+
+  /// All sections combined.
+  all,
+}
 
 /// Draggable render-metrics overlay for debugging TUI performance.
 ///
@@ -12,6 +31,29 @@ import 'components/panel.dart';
 /// - feed it `RenderMetricsMsg` + `WindowSizeMsg`
 /// - call [compose] to overlay it above your main view
 /// - use [toggle] to show/hide (the caller decides which key)
+/// - use [cycleMode] to switch between metrics / messages / output / all
+///
+/// ### Message Log
+///
+/// Supply [DevToolsMessageEntry] items via the [messageEntries] field
+/// (typically sourced from [ArtisanalDevTools.messageLog]):
+///
+/// ```dart
+/// debugOverlay.copyWith(
+///   messageEntries: devtools.messageLog.reversed.take(10).toList(),
+/// )
+/// ```
+///
+/// ### Captured Output
+///
+/// Supply [OutputLogEntry] items via the [outputEntries] field
+/// (typically sourced from a model's [OutputLog]):
+///
+/// ```dart
+/// debugOverlay.copyWith(
+///   outputEntries: model.outputLog.entries.reversed.take(10).toList(),
+/// )
+/// ```
 final class DebugOverlayModel {
   DebugOverlayModel({
     required this.enabled,
@@ -30,14 +72,17 @@ final class DebugOverlayModel {
     this.marginBottom = 2,
     this.title = 'Render Metrics',
     this.rendererLabel = 'UV',
+    this.mode = DebugOverlayMode.metrics,
+    this.messageEntries = const <DevToolsMessageEntry>[],
+    this.outputEntries = const <OutputLogEntry>[],
+    this.maxDisplayMessages = 8,
+    this.maxDisplayOutput = 8,
   });
 
-  // Cached panel render - only rebuild when metrics change
+  // Cached panel render - only rebuild when data changes.
   String? _cachedPanel;
-  int _cachedPanelWidth = 0;
   int _cachedPanelHeight = 0;
-  int? _cachedMetricsFrame;
-  int _cachedCustomMetricsHash = 0;
+  int _cachedCacheKey = 0;
 
   factory DebugOverlayModel.initial({
     bool enabled = false,
@@ -93,6 +138,29 @@ final class DebugOverlayModel {
   final String title;
   final String rendererLabel;
 
+  /// Which sections to display. Defaults to [DebugOverlayMode.metrics].
+  final DebugOverlayMode mode;
+
+  /// Recent message log entries to display in the *Messages* section.
+  ///
+  /// Typically sourced from [ArtisanalDevTools.messageLog]. Entries should
+  /// be ordered newest-first for display (the overlay takes the first
+  /// [maxDisplayMessages] entries).
+  final List<DevToolsMessageEntry> messageEntries;
+
+  /// Recent captured output entries to display in the *Output* section.
+  ///
+  /// Typically sourced from an [OutputLog]. Entries should be ordered
+  /// newest-first for display (the overlay takes the first
+  /// [maxDisplayOutput] entries).
+  final List<OutputLogEntry> outputEntries;
+
+  /// Maximum message entries shown in the panel.
+  final int maxDisplayMessages;
+
+  /// Maximum output entries shown in the panel.
+  final int maxDisplayOutput;
+
   DebugOverlayModel copyWith({
     bool? enabled,
     int? terminalWidth,
@@ -110,6 +178,11 @@ final class DebugOverlayModel {
     int? marginBottom,
     String? title,
     String? rendererLabel,
+    DebugOverlayMode? mode,
+    List<DevToolsMessageEntry>? messageEntries,
+    List<OutputLogEntry>? outputEntries,
+    int? maxDisplayMessages,
+    int? maxDisplayOutput,
   }) {
     return DebugOverlayModel(
       enabled: enabled ?? this.enabled,
@@ -128,6 +201,11 @@ final class DebugOverlayModel {
       marginBottom: marginBottom ?? this.marginBottom,
       title: title ?? this.title,
       rendererLabel: rendererLabel ?? this.rendererLabel,
+      mode: mode ?? this.mode,
+      messageEntries: messageEntries ?? this.messageEntries,
+      outputEntries: outputEntries ?? this.outputEntries,
+      maxDisplayMessages: maxDisplayMessages ?? this.maxDisplayMessages,
+      maxDisplayOutput: maxDisplayOutput ?? this.maxDisplayOutput,
     );
   }
 
@@ -136,6 +214,16 @@ final class DebugOverlayModel {
 
   DebugOverlayModel setEnabled(bool v) =>
       v == enabled ? this : copyWith(enabled: v);
+
+  /// Cycles through [DebugOverlayMode] values.
+  ///
+  /// Resets panel position so the new (potentially different-sized) panel
+  /// snaps back to the default position.
+  DebugOverlayModel cycleMode() {
+    final modes = DebugOverlayMode.values;
+    final next = modes[(mode.index + 1) % modes.length];
+    return copyWith(mode: next, panelX: null, panelY: null);
+  }
 
   /// Updates overlay state and reports whether the message was consumed.
   ({DebugOverlayModel model, Cmd? cmd, bool consumed}) update(Msg msg) {
@@ -226,46 +314,137 @@ final class DebugOverlayModel {
       customMetrics.entries.map((e) => Object.hash(e.key, e.value)),
     );
 
-    // Use cached panel if metrics haven't changed
-    if (_cachedPanel != null &&
-        _cachedMetricsFrame == currentFrame &&
-        _cachedPanelWidth == panelWidth &&
-        _cachedCustomMetricsHash == customHash) {
+    // Include mode, message count, and output count in cache key.
+    final msgCount = messageEntries.length;
+    final outCount = outputEntries.length;
+    final cacheKey = Object.hash(
+      currentFrame,
+      panelWidth,
+      customHash,
+      mode,
+      msgCount,
+      outCount,
+    );
+
+    // Use cached panel if nothing has changed.
+    if (_cachedPanel != null && _cachedCacheKey == cacheKey) {
       return _cachedPanel!;
     }
 
     final label = Style().foreground(Colors.yellow).bold();
-    final avgFps = m?.averageFps ?? 0.0;
-    final avgFrameTimeUs = m?.averageFrameTime.inMicroseconds ?? 0;
-    final avgRenderTimeUs = m?.averageRenderDuration.inMicroseconds ?? 0;
-    final frameCount = m?.frameCount ?? 0;
-    final skippedFrames = m?.skippedFrames ?? 0;
-    final renderPct = m?.renderTimePercentage ?? 0.0;
+    final dim = Style().dim();
+    final content = StringBuffer();
 
-    final content = StringBuffer()
-      ..writeln(
-        '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} '
-        '(${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})',
-      )
-      ..writeln(
-        '${label.render('Frame Time:')} ${(avgFrameTimeUs / 1000).toStringAsFixed(2)}ms',
-      )
-      ..writeln(
-        '${label.render('Render Time:')} $avgRenderTimeUsµs '
-        '(${renderPct.toStringAsFixed(1)}%)',
-      )
-      ..writeln(
-        '${label.render('Frames:')} $frameCount (skipped: $skippedFrames)',
-      )
-      ..writeln('${label.render('Cells:')} ${terminalWidth * terminalHeight}')
-      ..writeln('${label.render('Renderer:')} $rendererLabel');
+    // --- Metrics section ---
+    if (mode == DebugOverlayMode.metrics || mode == DebugOverlayMode.all) {
+      if (mode == DebugOverlayMode.all) {
+        content.writeln(dim.render('── Metrics ──'));
+      }
+      final avgFps = m?.averageFps ?? 0.0;
+      final avgFrameTimeUs = m?.averageFrameTime.inMicroseconds ?? 0;
+      final avgRenderTimeUs = m?.averageRenderDuration.inMicroseconds ?? 0;
+      final frameCount = m?.frameCount ?? 0;
+      final skippedFrames = m?.skippedFrames ?? 0;
+      final renderPct = m?.renderTimePercentage ?? 0.0;
 
-    for (final entry in customMetrics.entries) {
-      content.writeln('${label.render('${entry.key}:')} ${entry.value}');
+      content
+        ..writeln(
+          '${label.render('FPS:')} ${avgFps.toStringAsFixed(1)} '
+          '(${m?.minFps.toStringAsFixed(0) ?? 0}-${m?.maxFps.toStringAsFixed(0) ?? 0})',
+        )
+        ..writeln(
+          '${label.render('Frame Time:')} ${(avgFrameTimeUs / 1000).toStringAsFixed(2)}ms',
+        )
+        ..writeln(
+          '${label.render('Render Time:')} $avgRenderTimeUsµs '
+          '(${renderPct.toStringAsFixed(1)}%)',
+        )
+        ..writeln(
+          '${label.render('Frames:')} $frameCount (skipped: $skippedFrames)',
+        )
+        ..writeln('${label.render('Cells:')} ${terminalWidth * terminalHeight}')
+        ..writeln('${label.render('Renderer:')} $rendererLabel');
+
+      for (final entry in customMetrics.entries) {
+        content.writeln('${label.render('${entry.key}:')} ${entry.value}');
+      }
     }
 
+    // --- Messages section ---
+    if (mode == DebugOverlayMode.messages || mode == DebugOverlayMode.all) {
+      if (content.isNotEmpty) content.writeln();
+      if (mode == DebugOverlayMode.all) {
+        content.writeln(dim.render('── Messages ──'));
+      }
+      if (messageEntries.isEmpty) {
+        content.writeln(dim.render('(no messages)'));
+      } else {
+        final display = messageEntries.take(maxDisplayMessages);
+        for (final entry in display) {
+          final elapsed = entry.processingTime.inMicroseconds;
+          final line = '${entry.summary}  ${dim.render('$elapsed\u00b5s')}';
+          // Truncate to fit panel width (leaving room for borders + padding).
+          final maxLen = panelWidth - 4;
+          if (Style.visibleLength(line) > maxLen && maxLen > 3) {
+            content.writeln(
+              '${_truncateVisible(line, maxLen - 3)}${dim.render('...')}',
+            );
+          } else {
+            content.writeln(line);
+          }
+        }
+        if (messageEntries.length > maxDisplayMessages) {
+          content.writeln(
+            dim.render('(+${messageEntries.length - maxDisplayMessages} more)'),
+          );
+        }
+      }
+    }
+
+    // --- Output section ---
+    if (mode == DebugOverlayMode.output || mode == DebugOverlayMode.all) {
+      if (content.isNotEmpty) content.writeln();
+      if (mode == DebugOverlayMode.all) {
+        content.writeln(dim.render('── Output ──'));
+      }
+      if (outputEntries.isEmpty) {
+        content.writeln(dim.render('(no output)'));
+      } else {
+        final display = outputEntries.take(maxDisplayOutput);
+        for (final entry in display) {
+          final prefix = entry.source.name == 'stderr'
+              ? Style().foreground(Colors.red).render('err')
+              : '';
+          final lineText = prefix.isNotEmpty
+              ? '$prefix ${entry.line}'
+              : entry.line;
+          final maxLen = panelWidth - 4;
+          if (Style.visibleLength(lineText) > maxLen && maxLen > 3) {
+            content.writeln(
+              '${_truncateVisible(lineText, maxLen - 3)}${dim.render('...')}',
+            );
+          } else {
+            content.writeln(lineText);
+          }
+        }
+        if (outputEntries.length > maxDisplayOutput) {
+          content.writeln(
+            dim.render('(+${outputEntries.length - maxDisplayOutput} more)'),
+          );
+        }
+      }
+    }
+
+    // Determine panel title based on mode.
+    final panelTitle = switch (mode) {
+      DebugOverlayMode.metrics => title,
+      DebugOverlayMode.messages => 'Messages',
+      DebugOverlayMode.output => 'Captured Output',
+      DebugOverlayMode.all => 'Debug',
+    };
+
     final rendered = PanelComponent(
-      title: title,
+      title: panelTitle,
       content: content.toString().trimRight(),
       width: panelWidth,
       renderConfig: RenderConfig(
@@ -273,11 +452,9 @@ final class DebugOverlayModel {
       ),
     ).render();
 
-    // Cache the result
+    // Cache the result.
     _cachedPanel = rendered;
-    _cachedMetricsFrame = currentFrame;
-    _cachedPanelWidth = panelWidth;
-    _cachedCustomMetricsHash = customHash;
+    _cachedCacheKey = cacheKey;
     final lines = rendered.split('\n');
     _cachedPanelHeight = lines.length;
 
@@ -300,6 +477,11 @@ final class DebugOverlayModel {
 
     // Fast path: overlay panel onto base using string manipulation
     return _overlayStrings(base, p, x, y, terminalWidth, terminalHeight);
+  }
+
+  /// Truncates [s] to [maxVisible] visible characters, preserving ANSI.
+  static String _truncateVisible(String s, int maxVisible) {
+    return _truncateAtVisiblePos(s, maxVisible);
   }
 
   /// Overlays [overlay] onto [base] at position (x, y) using string manipulation.

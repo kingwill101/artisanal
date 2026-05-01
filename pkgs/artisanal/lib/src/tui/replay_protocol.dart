@@ -6,6 +6,8 @@ import 'dart:math' as math;
 import 'key.dart';
 import 'msg.dart';
 import 'program.dart';
+import 'evidence.dart';
+import 'render_recorder.dart';
 import 'trace.dart';
 
 /// Screen metadata captured for replay coordinate scaling.
@@ -52,6 +54,149 @@ final class ReplayCustomEvent {
 
   /// Event payload fields.
   final Map<String, Object?> fields;
+
+  /// Whether this event carries a runtime render-capture payload.
+  bool get isRenderCapture =>
+      type == 'runtime.render_capture' &&
+      fields['recordType'] == 'runtime.render' &&
+      fields['decisionType'] == 'render_capture';
+
+  /// Decodes the embedded render-capture payload when this event carries one.
+  ProgramRenderCapturePayload? get renderCapturePayload {
+    if (!isRenderCapture) return null;
+    return ProgramRenderCapturePayload.fromJson(fields);
+  }
+
+  /// Typed render-capture inspector when this event carries one.
+  ReplayRenderCaptureEvent? get renderCapture {
+    final payload = renderCapturePayload;
+    if (payload == null) return null;
+    return ReplayRenderCaptureEvent(event: this, payload: payload);
+  }
+
+  /// Shared presentation model for replay/debug consumers.
+  ReplayEventPresentation get presentation =>
+      renderCapture?.presentation ?? ReplayEventPresentation.generic(this);
+}
+
+/// Shared replay-event summary for debug UIs and status surfaces.
+final class ReplayEventPresentation {
+  /// Creates a replay-event presentation model.
+  const ReplayEventPresentation({
+    required this.summary,
+    required this.statusHint,
+    required this.fields,
+    this.detailLines = const <String>[],
+  });
+
+  /// Human-readable one-line summary.
+  final String summary;
+
+  /// Compact footer/status-bar hint.
+  final String statusHint;
+
+  /// Structured fields useful for logging or event inspection.
+  final Map<String, Object?> fields;
+
+  /// Optional detailed lines for richer debug UIs.
+  final List<String> detailLines;
+
+  /// Generic presentation for non-render-capture replay events.
+  factory ReplayEventPresentation.generic(ReplayCustomEvent event) {
+    return ReplayEventPresentation(
+      summary: 'replay event -> ${event.type}',
+      statusHint: '/replay ${event.type}',
+      fields: <String, Object?>{'type': event.type, 'fields': event.fields},
+      detailLines: <String>['event: ${event.type}'],
+    );
+  }
+}
+
+/// Typed replay-side view of one `runtime.render_capture` custom event.
+final class ReplayRenderCaptureEvent {
+  /// Creates a typed replay render-capture event view.
+  const ReplayRenderCaptureEvent({required this.event, required this.payload});
+
+  /// Original replay custom event.
+  final ReplayCustomEvent event;
+
+  /// Decoded structured capture payload.
+  final ProgramRenderCapturePayload payload;
+
+  /// Run identifier propagated from evidence, when present.
+  String? get runId => event.fields['runId'] as String?;
+
+  /// Source record type, usually `runtime.render`.
+  String? get recordType => event.fields['recordType'] as String?;
+
+  /// Evidence decision type, usually `render_capture`.
+  String? get decisionType => event.fields['decisionType'] as String?;
+
+  /// Evidence result label, usually `captured`.
+  String? get result => event.fields['result'] as String?;
+
+  /// Shared presentation model for replay/debug consumers.
+  ReplayEventPresentation get presentation {
+    final summaryModel = payload.lastSnapshotSummary;
+    final generation = summaryModel?.renderGeneration;
+    final width = summaryModel?.width ?? payload.report.lastWidth;
+    final height = summaryModel?.height ?? payload.report.lastHeight;
+    final changes =
+        summaryModel?.changeSummary ?? payload.stats.lastChangeSummary;
+
+    final summaryParts = <String>['render capture'];
+    if (generation != null) {
+      summaryParts.add('g$generation');
+    }
+    if (width != null && height != null) {
+      summaryParts.add('${width}x$height');
+    }
+    if (changes != null) {
+      summaryParts.add('cells ${changes.changedCellCount}');
+      summaryParts.add('spans ${changes.changedSpanCount}');
+    }
+
+    final statusParts = <String>['/replay'];
+    if (generation != null) {
+      statusParts.add('g$generation');
+    }
+    if (width != null && height != null) {
+      statusParts.add('${width}x$height');
+    }
+    if (changes != null) {
+      statusParts.add('c${changes.changedCellCount}');
+      statusParts.add('s${changes.changedSpanCount}');
+    }
+
+    return ReplayEventPresentation(
+      summary: summaryParts.join(' '),
+      statusHint: statusParts.join(' '),
+      fields: <String, Object?>{
+        'type': event.type,
+        if (recordType != null) 'recordType': recordType,
+        if (decisionType != null) 'decisionType': decisionType,
+        if (result != null) 'result': result,
+        if (generation != null) 'renderGeneration': generation,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
+        if (changes != null) 'changeSummary': changes.toJson(),
+      },
+      detailLines: toLines(),
+    );
+  }
+
+  /// Compact metric lines suitable for replay/debug UIs.
+  List<String> toLines({String? prefix}) {
+    final effectivePrefix = prefix ?? payload.report.prefix;
+    final lines = <String>[
+      '$effectivePrefix event: ${event.type}',
+      if (recordType != null || decisionType != null || result != null)
+        '$effectivePrefix source: '
+            '${recordType ?? 'unknown'} / ${decisionType ?? 'unknown'} / ${result ?? 'unknown'}',
+      ...payload.report.toLines(),
+    ];
+    return List<String>.unmodifiable(lines);
+  }
 }
 
 /// Replay control decision for a custom replay event.
@@ -714,6 +859,41 @@ final class ReplayTraceConverter {
     var hasStructuredInput = false;
     var hasCustomEvents = false;
     for (final line in lines) {
+      final evidenceRecord = TuiEvidence.tryParseLine(line);
+      if (evidenceRecord != null) {
+        final (width, height) = _screenSizeForEvidence(evidenceRecord);
+        if (width != null &&
+            width > 0 &&
+            height != null &&
+            height > 0 &&
+            (inferredScreenWidth <= 0 || inferredScreenHeight <= 0)) {
+          inferredScreenWidth = width;
+          inferredScreenHeight = height;
+        }
+
+        if (includeCustomEvents) {
+          hasCustomEvents = true;
+          events.add(
+            _ParsedCustomTraceEvent(
+              tsUs: evidenceRecord.timestampUs,
+              event: ReplayCustomEvent(
+                type: _customEventTypeForEvidence(evidenceRecord),
+                fields: <String, Object?>{
+                  'source': 'evidence',
+                  'recordType': evidenceRecord.type,
+                  'decisionType': evidenceRecord.decisionType,
+                  'result': evidenceRecord.result,
+                  if (evidenceRecord.runId != null)
+                    'runId': evidenceRecord.runId,
+                  ...evidenceRecord.factors,
+                },
+              ),
+            ),
+          );
+        }
+        continue;
+      }
+
       final eventLine = TuiTrace.tryParseEventLine(line);
       if (eventLine == null) continue;
 
@@ -770,6 +950,41 @@ final class ReplayTraceConverter {
       hasStructuredInput: hasStructuredInput,
       hasCustomEvents: hasCustomEvents,
     );
+  }
+
+  static (int?, int?) _screenSizeForEvidence(TuiEvidenceRecord record) {
+    final topLevelWidth = _asInt(record.factors['width']);
+    final topLevelHeight = _asInt(record.factors['height']);
+    if (topLevelWidth != null && topLevelHeight != null) {
+      return (topLevelWidth, topLevelHeight);
+    }
+
+    final report = _asJsonObject(record.factors['report']);
+    final reportWidth = _asInt(report['lastWidth']);
+    final reportHeight = _asInt(report['lastHeight']);
+    if (reportWidth != null && reportHeight != null) {
+      return (reportWidth, reportHeight);
+    }
+
+    final summary = _asJsonObject(record.factors['lastSnapshotSummary']);
+    final summaryWidth = _asInt(summary['width']);
+    final summaryHeight = _asInt(summary['height']);
+    if (summaryWidth != null && summaryHeight != null) {
+      return (summaryWidth, summaryHeight);
+    }
+
+    final snapshot = _asJsonObject(record.factors['lastSnapshot']);
+    return (_asInt(snapshot['width']), _asInt(snapshot['height']));
+  }
+
+  static String _customEventTypeForEvidence(TuiEvidenceRecord record) {
+    if (record.type == 'runtime.render') {
+      return 'runtime.${record.decisionType}';
+    }
+    if (record.type == 'runtime.decision') {
+      return '${record.type}.${record.decisionType}';
+    }
+    return record.type;
   }
 
   static _ActionConversion _toActions(

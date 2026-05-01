@@ -154,6 +154,8 @@ typedef GutterFunc = String Function(GutterContext context);
 /// }
 /// ```
 class ViewportModel extends ViewComponent {
+  static DateTime _defaultNowProvider() => DateTime.now();
+
   /// Creates a new viewport model.
   ViewportModel({
     this.width = 80,
@@ -178,6 +180,7 @@ class ViewportModel extends ViewComponent {
     this.selectionEnd,
     this.lastClickTime,
     this.lastClickPos,
+    DateTime Function()? nowProvider,
     ViewportKeyMap? keyMap,
     List<String>? lines,
     List<String>? wrappedLines,
@@ -185,6 +188,7 @@ class ViewportModel extends ViewComponent {
   }) : style = style ?? Style(),
        highlightStyle = highlightStyle ?? Style(),
        selectedHighlightStyle = selectedHighlightStyle ?? Style(),
+       _nowProvider = nowProvider ?? _defaultNowProvider,
        keyMap = keyMap ?? ViewportKeyMap(),
        _highlights = highlights ?? const [],
        _lines = lines ?? [],
@@ -266,6 +270,8 @@ class ViewportModel extends ViewComponent {
 
   /// The position of the last mouse click.
   final (int, int)? lastClickPos;
+
+  final DateTime Function() _nowProvider;
 
   /// Key bindings for navigation.
   final ViewportKeyMap keyMap;
@@ -370,6 +376,7 @@ class ViewportModel extends ViewComponent {
     Object? selectionEnd = undefined,
     DateTime? lastClickTime,
     (int, int)? lastClickPos,
+    DateTime Function()? nowProvider,
   }) {
     final newWidth = width ?? this.width;
     final newGutter = gutter ?? this.gutter;
@@ -420,6 +427,7 @@ class ViewportModel extends ViewComponent {
       selectionEnd: newSelectionEnd,
       lastClickTime: lastClickTime ?? this.lastClickTime,
       lastClickPos: lastClickPos ?? this.lastClickPos,
+      nowProvider: nowProvider ?? _nowProvider,
     );
     newModel._longestLineWidth = _findLongestLineWidth(styledLines);
     return newModel;
@@ -1049,7 +1057,7 @@ class ViewportModel extends ViewComponent {
           if (action == MouseAction.press) {
             final contentX = x - gutter + xOffset;
             final contentY = y + yOffset;
-            final now = DateTime.now();
+            final now = _nowProvider();
 
             // Check for double click
             if (lastClickTime != null &&

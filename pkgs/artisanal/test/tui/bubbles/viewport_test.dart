@@ -816,9 +816,11 @@ void main() {
       });
 
       test('double click selects word', () {
+        var now = DateTime(2026, 1, 1, 12, 0, 0);
         var viewport = ViewportModel(
           width: 20,
           height: 5,
+          nowProvider: () => now,
         ).setContent('Hello World\nLine 2');
 
         // First click at (2, 0) - inside "Hello"
@@ -830,6 +832,8 @@ void main() {
             y: 0,
           ),
         );
+
+        now = now.add(const Duration(milliseconds: 100));
 
         // Second click at same position immediately
         var (v2, _) = v1.update(
@@ -845,9 +849,11 @@ void main() {
       });
 
       test('double click selects whitespace', () {
+        var now = DateTime(2026, 1, 1, 12, 0, 0);
         var viewport = ViewportModel(
           width: 20,
           height: 5,
+          nowProvider: () => now,
         ).setContent('Hello   World');
 
         // Click in the middle of spaces
@@ -859,6 +865,8 @@ void main() {
             y: 0,
           ),
         );
+
+        now = now.add(const Duration(milliseconds: 100));
 
         var (v2, _) = v1.update(
           const MouseMsg(

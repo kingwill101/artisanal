@@ -1,4 +1,5 @@
 /// Toggle evidence logging on/off from an example entrypoint.
+// tui:allow-stdout — CLI tool, not a TUI program.
 library;
 
 import 'dart:io';

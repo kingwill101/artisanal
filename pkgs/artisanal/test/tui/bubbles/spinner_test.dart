@@ -229,6 +229,17 @@ void main() {
         final model = SpinnerModel();
         expect(model.tick(), isNotNull);
       });
+
+      test('uses custom nowProvider', () async {
+        final expected = DateTime.fromMillisecondsSinceEpoch(
+          15000,
+          isUtc: true,
+        );
+        final model = SpinnerModel(nowProvider: () => expected);
+        final msg = await model.tick().execute() as SpinnerTickMsg;
+        expect(msg.time, equals(expected));
+        expect(msg.id, equals(model.id));
+      });
     });
 
     test('is a ViewComponent and updates via base type', () {
@@ -256,4 +267,7 @@ void main() {
 }
 
 /// Mock message for testing non-spinner message handling.
-class MockMsg implements Msg {}
+class MockMsg implements Msg {
+  @override
+  bool get dropWhenInputQueued => false;
+}

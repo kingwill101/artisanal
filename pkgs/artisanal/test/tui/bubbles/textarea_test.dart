@@ -1701,7 +1701,12 @@ void main() {
       });
 
       test('double click selects word', () {
-        var textarea = TextAreaModel(prompt: '> ', showLineNumbers: false);
+        var now = DateTime(2026, 1, 1, 12, 0, 0);
+        var textarea = TextAreaModel(
+          prompt: '> ',
+          showLineNumbers: false,
+          nowProvider: () => now,
+        );
         textarea.value = 'Hello World\nLine 2';
 
         // Click inside "Hello"
@@ -1713,6 +1718,8 @@ void main() {
             y: 0,
           ),
         );
+
+        now = now.add(const Duration(milliseconds: 100));
 
         var (v2, _) = v1.update(
           const MouseMsg(

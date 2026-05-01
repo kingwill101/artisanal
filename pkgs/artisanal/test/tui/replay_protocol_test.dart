@@ -81,6 +81,121 @@ void main() {
       expect(eventAction.eventFields['open'], isTrue);
       expect(eventAction.eventFields['source'], 'shortcut');
     });
+
+    test(
+      'converts evidence render-frame records into replay event actions',
+      () async {
+        final tracePath = await _writeTrace(<String>[
+          '{"v":1,"type":"runtime.render","timestampUs":250,"decisionType":"render_frame","result":"captured","factors":{"width":90,"height":30,"lineCount":2,"plainText":"hello\\nworld","lines":[{"raw":"hello","statePrefix":"","plainText":"hello","visibleWidth":5},{"raw":"world","statePrefix":"\\u001b[31m","plainText":"world","visibleWidth":5}],"nativeSpanDelta":[{"index":1,"spans":[{"lineIndex":1,"startColumn":0,"endColumn":5,"text":"world","style":{"attrs":1,"fg":{"kind":"basic16","index":1,"bright":false}},"link":{"url":"https://example.com","params":""},"hasDrawable":false}]}]}}',
+        ]);
+        addTearDown(() async {
+          await File(tracePath).delete();
+        });
+
+        final conversion = await ReplayTraceConverter.convertFile(tracePath);
+        expect(conversion.inferredScreenWidth, 90);
+        expect(conversion.inferredScreenHeight, 30);
+        expect(conversion.scenario.actions, hasLength(1));
+
+        final eventAction = conversion.scenario.actions.single;
+        expect(eventAction.type, 'event');
+        expect(eventAction.eventType, 'runtime.render_frame');
+        expect(eventAction.eventFields['source'], 'evidence');
+        expect(eventAction.eventFields['recordType'], 'runtime.render');
+        expect(eventAction.eventFields['decisionType'], 'render_frame');
+        expect(eventAction.eventFields['result'], 'captured');
+        expect(eventAction.eventFields['plainText'], 'hello\nworld');
+
+        final lines = eventAction.eventFields['lines'] as List<Object?>;
+        expect(lines, hasLength(2));
+        final second = lines[1] as Map<Object?, Object?>;
+        expect(second['plainText'], 'world');
+        expect(second['statePrefix'], contains('[31m'));
+
+        final spanLines =
+            eventAction.eventFields['nativeSpanDelta'] as List<Object?>;
+        expect(spanLines, hasLength(1));
+        final firstSpanLine = spanLines.single as Map<Object?, Object?>;
+        final spans = firstSpanLine['spans'] as List<Object?>;
+        final span = spans.single as Map<Object?, Object?>;
+        expect(span['text'], 'world');
+        expect((span['style'] as Map<Object?, Object?>)['attrs'], 1);
+        expect(
+          (span['link'] as Map<Object?, Object?>)['url'],
+          'https://example.com',
+        );
+      },
+    );
+
+    test(
+      'converts evidence render-capture records into replay event actions',
+      () async {
+        final tracePath = await _writeTrace(<String>[
+          '{"v":1,"type":"runtime.render","timestampUs":500,"decisionType":"render_capture","result":"captured","factors":{"stats":{"totalRenders":2,"changedRenders":1,"averageRenderDurationUs":800,"totalChangedCells":4,"totalChangedSpans":2,"peakDirtyLines":1,"peakChangedCells":4,"peakChangedSpans":2,"lastChangeSummary":{"hasChanges":true,"dirtyLineCount":1,"changedLineCount":1,"changedCellCount":4,"changedSpanCount":2}},"report":{"prefix":"Capture","lastRenderGeneration":2,"lastWidth":100,"lastHeight":32,"frameLines":["count: 1"],"lastChangeSummary":{"hasChanges":true,"dirtyLineCount":1,"changedLineCount":1,"changedCellCount":4,"changedSpanCount":2},"metricEntries":{"Capture renders":"2","Capture changed":"1"}},"lastSnapshot":{"sequence":1,"renderGeneration":2,"degradationLevel":"full","renderDurationUs":800,"width":100,"height":32,"lines":["count: 1"],"changeSummary":{"hasChanges":true,"dirtyLineCount":1,"changedLineCount":1,"changedCellCount":4,"changedSpanCount":2}},"lastSnapshotSummary":{"sequence":1,"renderGeneration":2,"degradationLevel":"full","renderDurationUs":800,"width":100,"height":32,"frameLines":["count: 1"],"changeSummary":{"hasChanges":true,"dirtyLineCount":1,"changedLineCount":1,"changedCellCount":4,"changedSpanCount":2}}}}',
+        ]);
+        addTearDown(() async {
+          await File(tracePath).delete();
+        });
+
+        final conversion = await ReplayTraceConverter.convertFile(tracePath);
+        expect(conversion.inferredScreenWidth, 100);
+        expect(conversion.inferredScreenHeight, 32);
+        expect(conversion.scenario.actions, hasLength(1));
+
+        final eventAction = conversion.scenario.actions.single;
+        expect(eventAction.type, 'event');
+        expect(eventAction.eventType, 'runtime.render_capture');
+        expect(eventAction.eventFields['source'], 'evidence');
+        expect(eventAction.eventFields['recordType'], 'runtime.render');
+        expect(eventAction.eventFields['decisionType'], 'render_capture');
+
+        final stats = eventAction.eventFields['stats'] as Map<Object?, Object?>;
+        expect(stats['totalRenders'], 2);
+        final report =
+            eventAction.eventFields['report'] as Map<Object?, Object?>;
+        expect(report['lastWidth'], 100);
+        expect(report['lastHeight'], 32);
+        final summary =
+            eventAction.eventFields['lastSnapshotSummary']
+                as Map<Object?, Object?>;
+        expect(summary['frameLines'], <Object?>['count: 1']);
+
+        final decoded = eventAction.customEvent!.renderCapturePayload;
+        expect(decoded, isNotNull);
+        expect(decoded!.stats.totalRenders, 2);
+        expect(decoded.report.lastWidth, 100);
+        expect(decoded.lastSnapshot, isNotNull);
+        expect(decoded.lastSnapshot!.renderGeneration, 2);
+        expect(decoded.lastSnapshotSummary, isNotNull);
+        expect(decoded.lastSnapshotSummary!.frameLines, <String>['count: 1']);
+
+        final typedEvent = eventAction.customEvent!.renderCapture;
+        expect(typedEvent, isNotNull);
+        expect(typedEvent!.recordType, 'runtime.render');
+        expect(typedEvent.decisionType, 'render_capture');
+        expect(typedEvent.result, 'captured');
+        final presentation = eventAction.customEvent!.presentation;
+        expect(
+          presentation.summary,
+          'render capture g2 100x32 cells 4 spans 2',
+        );
+        expect(presentation.statusHint, '/replay g2 100x32 c4 s2');
+        expect(presentation.fields['renderGeneration'], 2);
+        expect(presentation.detailLines, isNotEmpty);
+        final lines = typedEvent.toLines();
+        expect(lines.first, 'Capture event: runtime.render_capture');
+        expect(
+          lines[1],
+          'Capture source: runtime.render / render_capture / captured',
+        );
+        expect(
+          lines.any(
+            (line) => line.contains('Capture last: generation 2 (100x32)'),
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 
   group('replay custom event hooks', () {
@@ -105,6 +220,8 @@ void main() {
         final event = (messages.single as ReplayEventMsg).event;
         expect(event.type, 'ui.sidebar.toggle');
         expect(event.fields['open'], isTrue);
+        expect(event.presentation.summary, 'replay event -> ui.sidebar.toggle');
+        expect(event.presentation.statusHint, '/replay ui.sidebar.toggle');
       },
     );
 

@@ -1,4 +1,5 @@
 /// Summarize JSONL evidence logs emitted by `TuiEvidence`.
+// tui:allow-stdout — CLI tool, not a TUI program.
 library;
 
 import 'dart:io';

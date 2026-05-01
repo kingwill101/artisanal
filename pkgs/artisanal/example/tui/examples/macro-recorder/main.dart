@@ -1,4 +1,5 @@
 /// Macro recorder/player example for the runtime macro APIs.
+// tui:allow-stdout — print() used between headless program runs for diagnostics.
 library;
 
 import 'dart:async';

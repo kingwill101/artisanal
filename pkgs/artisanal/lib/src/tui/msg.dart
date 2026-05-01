@@ -1074,6 +1074,118 @@ class RenderBudgetMsg extends Msg {
       'RenderBudgetMsg(level: ${state.level}, budget: ${state.frameBudget.inMicroseconds}us)';
 }
 
+/// Status of the hot reload system.
+///
+/// These values are emitted as [HotReloadStatusMsg] messages so the model
+/// can optionally display reload feedback in the TUI view.
+enum HotReloadStatus {
+  /// The hot reload watcher is being set up.
+  initializing,
+
+  /// The hot reload watcher is active and monitoring for file changes.
+  ready,
+
+  /// A file change was detected and a reload is about to start.
+  changeDetected,
+
+  /// The reload succeeded and the application is being reassembled.
+  reassembling,
+
+  /// The reassembly completed successfully.
+  succeeded,
+
+  /// The reload or reassembly failed.
+  failed,
+
+  /// The VM service is not available (hot reload cannot work).
+  unavailable,
+}
+
+/// Message sent when the hot reload system changes state.
+///
+/// Models can pattern-match on this in [Model.update] to display
+/// reload status in the TUI view. The message is dispatched through
+/// the normal message queue and is never dropped by input coalescing.
+///
+/// ## Example
+///
+/// ```dart
+/// @override
+/// (Model, Cmd?) update(Msg msg) {
+///   return switch (msg) {
+///     HotReloadStatusMsg(status: HotReloadStatus.succeeded) => (
+///       this,
+///       null,
+///     ),
+///     _ => (this, null),
+///   };
+/// }
+/// ```
+class HotReloadStatusMsg extends Msg {
+  /// Creates a hot reload status message.
+  const HotReloadStatusMsg(this.status, {this.detail});
+
+  /// The current hot reload status.
+  final HotReloadStatus status;
+
+  /// Optional human-readable detail about the status change.
+  final String? detail;
+
+  @override
+  String toString() =>
+      'HotReloadStatusMsg($status${detail != null ? ', $detail' : ''})';
+}
+
+/// The origin of a captured output line.
+///
+/// Used by [CapturedOutputMsg] to distinguish between output that was
+/// originally written to stdout (via `print()`) and output written to stderr.
+enum OutputSource {
+  /// Output captured from `print()` / zone print handler (stdout).
+  stdout,
+
+  /// Output captured from `stderr` writes.
+  stderr,
+}
+
+/// Message sent when a `print()` or stderr write is intercepted by the
+/// output-capture system.
+///
+/// When [ProgramOptions.captureOutput] is enabled, calls to `print()` inside
+/// the program zone are intercepted and dispatched as [CapturedOutputMsg]
+/// instead of being written to the terminal (which would corrupt the TUI).
+///
+/// Models can collect these messages to display in a debug panel, log viewer,
+/// or simply ignore them.
+///
+/// ## Example
+///
+/// ```dart
+/// @override
+/// (Model, Cmd?) update(Msg msg) {
+///   return switch (msg) {
+///     CapturedOutputMsg(:final line, :final source) => (
+///       copyWith(logs: [...logs, '[$source] $line']),
+///       null,
+///     ),
+///     _ => (this, null),
+///   };
+/// }
+/// ```
+class CapturedOutputMsg extends Msg {
+  /// Creates a captured output message.
+  const CapturedOutputMsg(this.line, {this.source = OutputSource.stdout});
+
+  /// The captured output line.
+  final String line;
+
+  /// Where the output originated from.
+  final OutputSource source;
+
+  @override
+  String toString() => 'CapturedOutputMsg($source, $line)';
+}
+
 /// Message wrapper for custom user-defined messages.
 ///
 /// This allows wrapping any value as a message:

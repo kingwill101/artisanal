@@ -665,6 +665,8 @@ class _WrappedLine {
 /// );
 /// ```
 class TextInputModel extends ViewComponent {
+  static DateTime _defaultNowProvider() => DateTime.now();
+
   /// Creates a new text input model.
   TextInputModel({
     this.prompt = '> ',
@@ -684,9 +686,11 @@ class TextInputModel extends ViewComponent {
     CursorModel? cursor,
     this.validate,
     TextInputStyles? styles,
+    DateTime Function()? nowProvider,
   }) : keyMap = keyMap ?? TextInputKeyMap(),
        cursor = cursor ?? CursorModel(),
-       styles = styles ?? defaultTextInputStyles() {
+       styles = styles ?? defaultTextInputStyles(),
+       _nowProvider = nowProvider ?? _defaultNowProvider {
     _document = TextDocument();
     _editorState = EditorState();
     _textView = TextView();
@@ -778,6 +782,8 @@ class TextInputModel extends ViewComponent {
 
   /// Current validation error.
   String? error;
+
+  final DateTime Function() _nowProvider;
 
   // Internal state
   List<String> _value = <String>[];
@@ -2267,7 +2273,7 @@ class TextInputModel extends ViewComponent {
         if (msg.action == MouseAction.press && msg.button == MouseButton.left) {
           _focused = true;
           _mouseSelecting = true;
-          final now = DateTime.now();
+          final now = _nowProvider();
           final clickCount =
               _lastClickTime != null &&
                   now.difference(_lastClickTime!) <
@@ -2774,7 +2780,7 @@ class TextInputModel extends ViewComponent {
       _mouseSelecting = true;
       _resetDesiredCol();
       final pressFlatPos = flatPos;
-      final now = DateTime.now();
+      final now = _nowProvider();
       final clickCount =
           _lastClickTime != null &&
               now.difference(_lastClickTime!) <

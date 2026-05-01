@@ -204,4 +204,7 @@ void main() {
   });
 }
 
-class _MockMsg implements Msg {}
+class _MockMsg implements Msg {
+  @override
+  bool get dropWhenInputQueued => false;
+}

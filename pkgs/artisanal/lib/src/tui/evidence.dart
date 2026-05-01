@@ -8,6 +8,10 @@ library;
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'render_recorder.dart';
+import 'terminal_native_frame.dart';
+import 'terminal_render_inspector.dart';
+
 /// A decoded evidence event line.
 final class TuiEvidenceRecord {
   /// Creates a typed evidence record.
@@ -51,32 +55,41 @@ final class TuiEvidence {
   static const _flagEnv = 'ARTISANAL_TUI_EVIDENCE';
   static const _pathEnv = 'ARTISANAL_TUI_EVIDENCE_PATH';
   static const _runIdEnv = 'ARTISANAL_TUI_EVIDENCE_RUN_ID';
+  static const _framesEnv = 'ARTISANAL_TUI_EVIDENCE_FRAMES';
   static const _schemaVersion = 1;
 
   static bool? _testEnabled;
+  static bool? _testCaptureFrames;
   static String? _testPath;
   static String? _testRunId;
+  static DateTime Function()? _testNowProvider;
   static bool _testOverride = false;
   static bool _resolved = false;
 
   static String? _path;
   static String? _runId;
+  static bool _captureFrames = false;
   static io.File? _file;
   static final Stopwatch _clock = Stopwatch();
+  static DateTime Function() _nowProvider = DateTime.now;
 
   /// Enable/disable evidence logging for tests regardless of process env.
   ///
   /// If [enabled] is `null`, the logger is enabled by default for the test.
   static void configureForTest({
     bool? enabled,
+    bool captureFrames = false,
     String? path,
     String? runId,
+    DateTime Function()? nowProvider,
     bool clear = false,
   }) {
     _testOverride = true;
     _testEnabled = clear ? false : enabled;
+    _testCaptureFrames = clear ? false : captureFrames;
     _testPath = clear ? null : path;
     _testRunId = clear ? null : runId;
+    _testNowProvider = clear ? null : nowProvider;
     _resolved = false;
     close();
   }
@@ -85,8 +98,10 @@ final class TuiEvidence {
   static void clearTestOverrides() {
     _testOverride = false;
     _testEnabled = null;
+    _testCaptureFrames = null;
     _testPath = null;
     _testRunId = null;
+    _testNowProvider = null;
     _resolved = false;
     close();
   }
@@ -97,6 +112,14 @@ final class TuiEvidence {
       _resolveState();
     }
     return _path != null;
+  }
+
+  /// Whether render-frame evidence capture is enabled.
+  static bool get captureFramesEnabled {
+    if (!_resolved) {
+      _resolveState();
+    }
+    return enabled && _captureFrames;
   }
 
   /// Parses one strict JSONL evidence line.
@@ -165,6 +188,131 @@ final class TuiEvidence {
     _write(payload);
   }
 
+  /// Emits a parsed rendered-frame snapshot when frame evidence is enabled.
+  static void logRenderFrame({
+    required Object view,
+    int? renderGeneration,
+    String? degradationLevel,
+    int? renderDurationUs,
+    int? width,
+    int? height,
+    List<TerminalNativeSpanDelta>? nativeSpanDelta,
+  }) {
+    if (!captureFramesEnabled) return;
+
+    final frame = TerminalRenderFrame.inspect(view);
+    logDecision(
+      decisionType: 'render_frame',
+      result: 'captured',
+      type: 'runtime.render',
+      factors: <String, Object?>{
+        if (renderGeneration != null) 'renderGeneration': renderGeneration,
+        if (degradationLevel != null) 'degradationLevel': degradationLevel,
+        if (renderDurationUs != null) 'renderDurationUs': renderDurationUs,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
+        'lineCount': frame.lines.length,
+        'content': frame.content,
+        'plainText': frame.plainText,
+        'lines': frame.lines
+            .map(
+              (line) => <String, Object?>{
+                'raw': line.raw,
+                'statePrefix': line.statePrefix,
+                'plainText': line.plainText,
+                'visibleWidth': line.visibleWidth,
+              },
+            )
+            .toList(growable: false),
+        if (nativeSpanDelta != null)
+          'nativeSpanDelta': nativeSpanDelta
+              .map(
+                (line) => <String, Object?>{
+                  'index': line.index,
+                  'spans': line.spans
+                      .map(
+                        (span) => <String, Object?>{
+                          'lineIndex': span.lineIndex,
+                          'startColumn': span.startColumn,
+                          'endColumn': span.endColumn,
+                          'text': span.text,
+                          'hasDrawable': span.hasDrawable,
+                          'style': <String, Object?>{
+                            'attrs': span.style.attrs,
+                            'underline': span.style.underline.name,
+                            'packedKey': span.style.packedKey,
+                          },
+                          'link': <String, Object?>{
+                            'url': span.link.url,
+                            'params': span.link.params,
+                          },
+                          if (span.style.fg != null)
+                            'fg': <String, Object?>{
+                              'kind': span.style.fg!.kind,
+                              if (span.style.fg!.index != null)
+                                'index': span.style.fg!.index,
+                              if (span.style.fg!.bright != null)
+                                'bright': span.style.fg!.bright,
+                              if (span.style.fg!.r != null)
+                                'r': span.style.fg!.r,
+                              if (span.style.fg!.g != null)
+                                'g': span.style.fg!.g,
+                              if (span.style.fg!.b != null)
+                                'b': span.style.fg!.b,
+                              if (span.style.fg!.a != null)
+                                'a': span.style.fg!.a,
+                            },
+                          if (span.style.bg != null)
+                            'bg': <String, Object?>{
+                              'kind': span.style.bg!.kind,
+                              if (span.style.bg!.index != null)
+                                'index': span.style.bg!.index,
+                              if (span.style.bg!.bright != null)
+                                'bright': span.style.bg!.bright,
+                              if (span.style.bg!.r != null)
+                                'r': span.style.bg!.r,
+                              if (span.style.bg!.g != null)
+                                'g': span.style.bg!.g,
+                              if (span.style.bg!.b != null)
+                                'b': span.style.bg!.b,
+                              if (span.style.bg!.a != null)
+                                'a': span.style.bg!.a,
+                            },
+                        },
+                      )
+                      .toList(growable: false),
+                },
+              )
+              .toList(growable: false),
+      },
+    );
+  }
+
+  /// Emits one structured render-capture payload when frame evidence is enabled.
+  static void logRenderCapture({
+    required ProgramRenderCapture capture,
+    String prefix = 'Render',
+    int maxFrameLines = 3,
+  }) {
+    if (!captureFramesEnabled) return;
+    logRenderCapturePayload(
+      payload: capture.payload(prefix: prefix, maxFrameLines: maxFrameLines),
+    );
+  }
+
+  /// Emits one structured render-capture payload when frame evidence is enabled.
+  static void logRenderCapturePayload({
+    required ProgramRenderCapturePayload payload,
+  }) {
+    if (!captureFramesEnabled) return;
+    logDecision(
+      decisionType: 'render_capture',
+      result: 'captured',
+      type: 'runtime.render',
+      factors: payload.toJson(),
+    );
+  }
+
   /// Closes the evidence file and drops in-flight buffers.
   static void close() {
     _file = null;
@@ -174,9 +322,11 @@ final class TuiEvidence {
   }
 
   static void _resolveState() {
+    _nowProvider = _testNowProvider ?? DateTime.now;
     final flag = _resolveEnabledFlag();
     _path = flag ? _resolvePath() : null;
     _runId = _resolveRunId();
+    _captureFrames = flag && _resolveCaptureFrames();
     _resolved = true;
     if (_path != null && !_clock.isRunning) {
       _clock.start();
@@ -212,6 +362,14 @@ final class TuiEvidence {
     return env[_runIdEnv];
   }
 
+  static bool _resolveCaptureFrames() {
+    if (_testOverride) return _testCaptureFrames ?? false;
+    final env = io.Platform.environment;
+    final flag = env[_framesEnv];
+    if (flag == null) return false;
+    return _isEnabledFlag(flag);
+  }
+
   static void _write(Map<String, Object?> payload) {
     final file = _file ?? _openFile();
     file.writeAsStringSync(
@@ -230,7 +388,7 @@ final class TuiEvidence {
   }
 
   static String _generateDateBasedPath() {
-    final now = DateTime.now();
+    final now = _nowProvider();
     final ts =
         '${now.year.toString().padLeft(4, '0')}'
         '-${now.month.toString().padLeft(2, '0')}'

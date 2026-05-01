@@ -46,6 +46,8 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 
+DateTime _defaultBubbleNowProvider() => DateTime.now();
+
 /// A spinner animation definition.
 ///
 /// Contains the frames to display and the speed at which to animate.
@@ -528,24 +530,31 @@ class SpinnerTickMsg extends Msg {
 /// ```
 class SpinnerModel extends ViewComponent {
   /// Creates a new spinner model.
-  SpinnerModel({Spinner spinner = Spinners.line, int frame = 0})
-    : _spinner = spinner,
-      _frame = frame,
-      _id = _nextSpinnerId(),
-      _tag = 0;
+  SpinnerModel({
+    Spinner spinner = Spinners.line,
+    int frame = 0,
+    DateTime Function()? nowProvider,
+  }) : _spinner = spinner,
+       _frame = frame,
+       _nowProvider = nowProvider ?? _defaultBubbleNowProvider,
+       _id = _nextSpinnerId(),
+       _tag = 0;
 
   SpinnerModel._internal({
     required Spinner spinner,
     required int frame,
     required int id,
     required int tag,
+    required DateTime Function() nowProvider,
   }) : _spinner = spinner,
        _frame = frame,
+       _nowProvider = nowProvider,
        _id = id,
        _tag = tag;
 
   final Spinner _spinner;
   final int _frame;
+  final DateTime Function() _nowProvider;
   final int _id;
   final int _tag;
 
@@ -563,6 +572,7 @@ class SpinnerModel extends ViewComponent {
     return SpinnerModel._internal(
       spinner: spinner ?? _spinner,
       frame: frame ?? _frame,
+      nowProvider: _nowProvider,
       id: _id,
       tag: tag ?? _tag,
     );
@@ -600,7 +610,7 @@ class SpinnerModel extends ViewComponent {
   /// Call this from your init() method to begin animating.
   Cmd tick() {
     return Cmd(() async {
-      return SpinnerTickMsg(time: DateTime.now(), id: _id, tag: _tag);
+      return SpinnerTickMsg(time: _nowProvider(), id: _id, tag: _tag);
     });
   }
 
@@ -610,9 +620,11 @@ class SpinnerModel extends ViewComponent {
     final tag = _tag;
     final fps = _spinner.fps;
 
-    return Cmd.tick(fps, (time) {
-      return SpinnerTickMsg(time: time, id: id, tag: tag);
-    });
+    return Cmd.tick(
+      fps,
+      (time) => SpinnerTickMsg(time: time, id: id, tag: tag),
+      nowProvider: _nowProvider,
+    );
   }
 
   @override

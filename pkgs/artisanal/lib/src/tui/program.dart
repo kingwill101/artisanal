@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:developer' as dev;
 import 'dart:io' as io;
 
 import 'package:artisanal/terminal.dart';
@@ -7,6 +8,8 @@ import 'package:artisanal/terminal.dart';
 import '../unicode/width.dart' as uni_width;
 import 'cmd.dart';
 import 'degradation.dart';
+import 'devtools.dart';
+import 'evidence.dart';
 import 'emoji_width_probe.dart';
 import 'key.dart' show Key, KeyParser, KeyResult, KeyType, MsgResult;
 import 'model.dart';
@@ -14,6 +17,7 @@ import 'msg.dart';
 import 'renderer.dart';
 import 'startup_probe.dart';
 import 'terminal.dart';
+import 'terminal_native_frame.dart';
 import 'trace.dart';
 import 'resize_coalescer.dart';
 import 'view.dart';
@@ -23,6 +27,7 @@ import 'background_color_probe.dart';
 import 'uv_capability_probe.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
+import 'hot_reload_mixin.dart';
 
 /// The TUI program runtime.
 ///
@@ -117,6 +122,20 @@ abstract class ProgramInterceptor {
 
   /// Called after a message has been processed.
   void onProcessed(Msg msg, Duration elapsed) {}
+
+  /// Called after a render has completed.
+  void onRendered({
+    required int renderGeneration,
+    required Object view,
+    required DegradationLevel degradationLevel,
+    required Duration renderDuration,
+    int? width,
+    int? height,
+    TerminalNativeFrame? nativeFrame,
+    TerminalNativeDeltaFrame? nativeDelta,
+    TerminalNativeCellDeltaFrame? nativeCellDelta,
+    List<TerminalNativeSpanDelta>? nativeSpanDelta,
+  }) {}
 
   /// Called during program cleanup.
   void onStop() {}
@@ -246,6 +265,8 @@ class ProgramOptions {
     this.useUltravioletRenderer = true,
     this.useUltravioletInputDecoder = true,
     this.startupProbes,
+    this.hotReload,
+    this.captureOutput = false,
     this.cancelSignal,
     this.environment,
     this.inputTTY = false,
@@ -253,7 +274,10 @@ class ProgramOptions {
     this.shutdownSharedStdinOnExit = true,
     this.metricsInterval = const Duration(seconds: 1),
     this.renderBudget = const RenderBudgetOptions(),
+    this.nowProvider = _defaultNowProvider,
   }) : assert(fps >= 1 && fps <= 120, 'fps must be between 1 and 120');
+
+  static DateTime _defaultNowProvider() => DateTime.now();
 
   /// Whether to use the alternate screen buffer (fullscreen mode).
   ///
@@ -476,6 +500,31 @@ class ProgramOptions {
   /// primary screen.
   final bool? startupProbes;
 
+  /// Whether to enable hot reload when running with `--enable-vm-service`.
+  ///
+  /// When `null` (the default), hot reload is auto-detected: the runtime
+  /// attempts to initialize hot reload if the VM service is available and
+  /// gracefully disables it otherwise.
+  /// When `true`, hot reload is explicitly enabled (same auto-detection).
+  /// When `false`, hot reload is explicitly disabled.
+  ///
+  /// Hot reload uses `package:hotreloader` to watch for file changes and
+  /// trigger [Program.performReassemble] after successful compilation.
+  ///
+  /// This is automatically disabled in production (`dart.vm.product` is `true`).
+  final bool? hotReload;
+
+  /// Whether to capture `print()` output inside the program zone.
+  ///
+  /// When `true`, calls to `print()` from application code (and any
+  /// third-party packages running in the same zone) are intercepted and
+  /// dispatched as [CapturedOutputMsg] instead of being written directly
+  /// to stdout, which would corrupt the TUI display.
+  ///
+  /// Defaults to `false` for backwards compatibility. Recommended when
+  /// running in [ScreenMode.fullScreen] (alt-screen) mode.
+  final bool captureOutput;
+
   /// Optional cancellation signal. When this completes, the program exits with cancellation.
   final Future<void>? cancelSignal;
 
@@ -513,6 +562,12 @@ class ProgramOptions {
   /// The interval at which render metrics are reported to the model.
   final Duration metricsInterval;
 
+  /// Logical wall-clock provider used for frame ticks and input timing.
+  ///
+  /// Override this in tests to make runtime timestamps deterministic without
+  /// affecting stopwatch-based performance metrics.
+  final DateTime Function() nowProvider;
+
   /// Creates a copy with the given fields replaced.
   ProgramOptions copyWith({
     bool? altScreen,
@@ -540,6 +595,8 @@ class ProgramOptions {
     bool? useUltravioletRenderer,
     bool? useUltravioletInputDecoder,
     bool? startupProbes,
+    bool? hotReload,
+    bool? captureOutput,
     Future<void>? cancelSignal,
     List<String>? environment,
     bool? inputTTY,
@@ -547,6 +604,7 @@ class ProgramOptions {
     bool? shutdownSharedStdinOnExit,
     Duration? metricsInterval,
     RenderBudgetOptions? renderBudget,
+    DateTime Function()? nowProvider,
   }) {
     return ProgramOptions(
       altScreen: altScreen ?? this.altScreen,
@@ -580,6 +638,8 @@ class ProgramOptions {
       useUltravioletInputDecoder:
           useUltravioletInputDecoder ?? this.useUltravioletInputDecoder,
       startupProbes: startupProbes ?? this.startupProbes,
+      hotReload: hotReload ?? this.hotReload,
+      captureOutput: captureOutput ?? this.captureOutput,
       cancelSignal: cancelSignal ?? this.cancelSignal,
       environment: environment ?? this.environment,
       inputTTY: inputTTY ?? this.inputTTY,
@@ -588,6 +648,7 @@ class ProgramOptions {
           shutdownSharedStdinOnExit ?? this.shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval ?? this.metricsInterval,
       renderBudget: renderBudget ?? this.renderBudget,
+      nowProvider: nowProvider ?? this.nowProvider,
     );
   }
 
@@ -639,6 +700,12 @@ class ProgramOptions {
   ProgramOptions withStartupProbes(bool enabled) =>
       copyWith(startupProbes: enabled);
 
+  /// Creates options with output capture enabled.
+  ///
+  /// When enabled, `print()` calls inside the program zone are intercepted
+  /// and dispatched as [CapturedOutputMsg] instead of corrupting the TUI.
+  ProgramOptions withCaptureOutput() => copyWith(captureOutput: true);
+
   /// Creates options that clear any explicit startup-probe override.
   ///
   /// After calling this helper, startup probing returns to the default
@@ -669,6 +736,10 @@ class ProgramOptions {
   /// Creates options with replay input blocking enabled/disabled.
   ProgramOptions withReplayInputBlocking(bool enabled) =>
       copyWith(blockInputWhileReplay: enabled);
+
+  /// Creates options with a custom logical time source.
+  ProgramOptions withNowProvider(DateTime Function() nowProvider) =>
+      copyWith(nowProvider: nowProvider);
 
   /// Creates options that disable rendering (nil renderer).
   ProgramOptions withoutRenderer() => copyWith(disableRenderer: true);
@@ -774,6 +845,7 @@ class ProgramOptions {
       shutdownSharedStdinOnExit: shutdownSharedStdinOnExit,
       metricsInterval: metricsInterval,
       renderBudget: renderBudget,
+      nowProvider: nowProvider,
     );
   }
 }
@@ -1087,7 +1159,7 @@ class ProgramCancelledError implements Exception {
 /// {@macro artisanal_tui_rendering_overview}
 ///
 /// {@category TUI}
-class Program<M extends Model> {
+class Program<M extends Model> with HotReloadMixin {
   /// Creates a new TUI program with the given initial model.
   Program(
     M initialModel, {
@@ -1123,6 +1195,24 @@ class Program<M extends Model> {
   /// skip in _render() to avoid the full ANSI-parse/draw/diff pipeline
   /// when the model returned the exact same cached object.
   Object? _lastRenderedView;
+
+  /// Whether a render has been scheduled but not yet flushed.
+  ///
+  /// Used by [scheduleRender] to coalesce multiple render requests into
+  /// a single [_render] call per microtask turn.  Multiple calls to
+  /// [scheduleRender] between event-loop ticks set this flag but only
+  /// the first one schedules the microtask; [_flushRender] clears it.
+  bool _needsRender = false;
+
+  /// The zone in which the program is running.
+  ///
+  /// When [ProgramOptions.captureOutput] is enabled, this is the zone
+  /// created by [runZoned] that intercepts `print()`. Message processing
+  /// via [_drainMessageQueue] runs inside this zone so that `print()`
+  /// calls from model code are always captured, regardless of whether
+  /// the drain was triggered by an external [send] call or an internal
+  /// event.
+  Zone? _programZone;
 
   /// Terminal size at the last successful render.
   ///
@@ -1241,6 +1331,8 @@ class Program<M extends Model> {
 
   /// Sticky cursor visibility override requested by control messages.
   bool? _desiredCursorVisibilityOverride;
+
+  DateTime _now() => _options.nowProvider();
   bool? _appliedCursorVisibilityOverride;
 
   /// Monotonic token for released-terminal exec lifecycles.
@@ -1347,6 +1439,27 @@ class Program<M extends Model> {
     _panic = null;
     _panicStackTrace = null;
 
+    if (_options.captureOutput) {
+      await runZoned(
+        _runInner,
+        zoneSpecification: ZoneSpecification(
+          print: (self, parent, zone, line) {
+            // Intercept print() and dispatch as a message instead of
+            // writing to stdout (which would corrupt the TUI display).
+            if (_running) {
+              send(CapturedOutputMsg(line));
+            }
+          },
+        ),
+      );
+    } else {
+      await _runInner();
+    }
+  }
+
+  /// Common run body shared by the zone-wrapped and unwrapped paths.
+  Future<void> _runInner() async {
+    _programZone = Zone.current;
     if (_options.catchPanics) {
       await _runWithPanicRecovery();
     } else {
@@ -1575,6 +1688,11 @@ class Program<M extends Model> {
 
     // Start listening for input
     _startInputListener();
+
+    // Bind DevTools bridge if the interceptor supports it.
+    if (_options.interceptor case final ArtisanalDevTools dt) {
+      dt.bindOptions(_options);
+    }
   }
 
   void _createRenderer(TuiRendererOptions options) {
@@ -1675,6 +1793,9 @@ class Program<M extends Model> {
       _syncModelOptionalTimers();
       _options.interceptor?.onStart(send);
       _startReplay();
+      if (await _shouldInitializeHotReload()) {
+        await initializeHotReload();
+      }
       return;
     }
 
@@ -1714,6 +1835,13 @@ class Program<M extends Model> {
     // Start automation hooks after the first stable frame is rendered.
     _options.interceptor?.onStart(send);
     _startReplay();
+
+    // Initialize hot reload after the model and first render are ready.
+    // This must happen after _model is set (otherwise _processMessage
+    // silently drops status messages because _model == null).
+    if (await _shouldInitializeHotReload()) {
+      await initializeHotReload();
+    }
   }
 
   void _startReplay() {
@@ -1815,12 +1943,12 @@ class Program<M extends Model> {
 
     // Initialize frame tick state
     _frameNumber = 0;
-    _lastFrameTime = DateTime.now();
+    _lastFrameTime = _now();
 
     _frameTickTimer = Timer.periodic(interval, (_) {
       if (!_running || _terminalReleased) return;
 
-      final now = DateTime.now();
+      final now = _now();
       final delta = _lastFrameTime != null
           ? now.difference(_lastFrameTime!)
           : interval;
@@ -1968,7 +2096,7 @@ class Program<M extends Model> {
       return false;
     }
     if (coalesce) {
-      final next = _resizeCoalescer.next(_resizeCoalescerState, DateTime.now());
+      final next = _resizeCoalescer.next(_resizeCoalescerState, _now());
       _resizeCoalescerState = next;
       if (next.delay > Duration.zero) {
         _pendingResizeWidth = width;
@@ -2493,7 +2621,7 @@ class Program<M extends Model> {
   /// conditions and ensure consistent state updates.
   bool _enqueueMessage(Msg msg) {
     if (!_running) return false;
-    final now = DateTime.now();
+    final now = _now();
 
     if ((_startupProbes?.hasActiveProbe ?? false) &&
         isCriticalStartupProbeMsg(msg)) {
@@ -2580,7 +2708,7 @@ class Program<M extends Model> {
       }
     }
     if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
-      final now = DateTime.now();
+      final now = _now();
       final dtMs = _lastQueuedKeyAt == null
           ? -1
           : now.difference(_lastQueuedKeyAt!).inMicroseconds / 1000.0;
@@ -2717,6 +2845,18 @@ class Program<M extends Model> {
   /// calls [send], the new message is queued and processed after the
   /// current message completes.
   void _drainMessageQueue() {
+    // When output capture is active, ensure we drain inside the program
+    // zone so that print() calls from model code are intercepted even
+    // when the drain was triggered by an external send() call.
+    final zone = _programZone;
+    if (zone != null && !identical(Zone.current, zone)) {
+      zone.run(_drainMessageQueueInner);
+    } else {
+      _drainMessageQueueInner();
+    }
+  }
+
+  void _drainMessageQueueInner() {
     if (_processingMessage) return;
     _processingMessage = true;
     try {
@@ -2731,6 +2871,11 @@ class Program<M extends Model> {
     } finally {
       _processingMessage = false;
     }
+    // Flush any coalesced render requests that accumulated during the
+    // drain loop.  This keeps rendering synchronous from the callers'
+    // perspective (e.g. _setup, _schedulePostRestoreRender) while still
+    // collapsing redundant per-message renders into one.
+    _flushRender();
   }
 
   /// Processes a message through the model.
@@ -2741,7 +2886,7 @@ class Program<M extends Model> {
     final processSw = interceptor == null ? null : (Stopwatch()..start());
 
     if (TuiTrace.captureDispatchEnabled && msg is KeyMsg) {
-      final now = DateTime.now();
+      final now = _now();
       final dtMs = _lastProcessedKeyAt == null
           ? -1
           : now.difference(_lastProcessedKeyAt!).inMicroseconds / 1000.0;
@@ -2831,6 +2976,35 @@ class Program<M extends Model> {
         return;
       }
 
+      // Auto-handle captured output when model opts in via
+      // CapturedOutputModel.  The message is consumed here so it
+      // never reaches model.update().
+      if (msg is CapturedOutputMsg) {
+        if (_model case CapturedOutputModel(:final outputLog)) {
+          final updated = (_model! as CapturedOutputModel).withOutputLog(
+            outputLog.addMessage(msg),
+          );
+          if (updated is! M) {
+            throw StateError(
+              'CapturedOutputModel.withOutputLog() returned '
+              '${updated.runtimeType}, expected $M.',
+            );
+          }
+          _model = updated;
+          // Update DevTools snapshot.
+          if (_options.interceptor case final ArtisanalDevTools dt) {
+            dt.updateModelSnapshot(updated);
+          }
+          scheduleRender();
+          if (processSw != null) {
+            processSw.stop();
+            interceptor!.onProcessed(msg, processSw.elapsed);
+          }
+          span.end();
+          return;
+        }
+      }
+
       // Update model
       final (newModel, cmd) = _model!.update(msg);
       if (newModel is! M) {
@@ -2840,6 +3014,11 @@ class Program<M extends Model> {
         );
       }
       _model = newModel;
+
+      // Update DevTools model snapshot for state inspection.
+      if (_options.interceptor case final ArtisanalDevTools dt) {
+        dt.updateModelSnapshot(newModel);
+      }
 
       // The model may have toggled optional runtime feeds (frame ticks /
       // render metrics). Keep timers in sync with current model flags.
@@ -2868,7 +3047,7 @@ class Program<M extends Model> {
           );
         }
       } else {
-        _render();
+        scheduleRender();
       }
 
       // Execute command
@@ -2901,7 +3080,7 @@ class Program<M extends Model> {
       case ClearScreenMsg():
         if (_terminalReleased) return true;
         _terminal?.clearScreen();
-        _render();
+        scheduleRender();
         return true;
 
       case EnterAltScreenMsg():
@@ -2991,7 +3170,7 @@ class Program<M extends Model> {
         } else if (!_options.altScreen) {
           _renderer?.clear();
           _terminal?.writeln(text);
-          _render();
+          scheduleRender();
         }
         return true;
 
@@ -3032,7 +3211,7 @@ class Program<M extends Model> {
         if (force) {
           _forceRender();
         } else {
-          _render();
+          scheduleRender();
         }
         return true;
 
@@ -3668,6 +3847,43 @@ class Program<M extends Model> {
     _renderer!.render(effectiveView);
     _renderGeneration += 1;
     renderSw.stop();
+    final nativeFrame = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeFrame(),
+      _ => null,
+    };
+    final nativeDelta = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeDelta(),
+      _ => null,
+    };
+    final nativeCellDelta = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeCellDelta(),
+      _ => null,
+    };
+    final nativeSpanDelta = nativeCellDelta?.spanDeltas;
+    TuiEvidence.logRenderFrame(
+      view: effectiveView,
+      renderGeneration: _renderGeneration,
+      degradationLevel: degradationLevel.name,
+      renderDurationUs: renderSw.elapsedMicroseconds,
+      width: _lastRenderWidth,
+      height: _lastRenderHeight,
+      nativeSpanDelta: nativeSpanDelta,
+    );
+    _options.interceptor?.onRendered(
+      renderGeneration: _renderGeneration,
+      view: effectiveView,
+      degradationLevel: degradationLevel,
+      renderDuration: renderSw.elapsed,
+      width: _lastRenderWidth,
+      height: _lastRenderHeight,
+      nativeFrame: nativeFrame,
+      nativeDelta: nativeDelta,
+      nativeCellDelta: nativeCellDelta,
+      nativeSpanDelta: nativeSpanDelta,
+    );
     final changed = _renderBudgetController.recordFrame(renderSw.elapsed);
     if (changed) {
       send(RenderBudgetMsg(_renderBudgetController.state));
@@ -3682,6 +3898,35 @@ class Program<M extends Model> {
     // implementations) may buffer output until an explicit flush, and the UV
     // renderer in particular emits bytes through an intermediate writer.
     unawaited(_renderer!.flush());
+  }
+
+  /// Schedules a render to occur at the end of the current microtask turn.
+  ///
+  /// Multiple calls to this method before the microtask executes are
+  /// coalesced into a single [_render] call.  This avoids redundant renders
+  /// when several state-changing messages are processed in one
+  /// [_drainMessageQueue] loop or when a burst of events (resize, timer,
+  /// resume) fire on the same event-loop tick.
+  ///
+  /// For startup paths and explicit repaint requests that must render
+  /// synchronously, call [_render] or [_forceRender] directly instead.
+  void scheduleRender() {
+    if (_needsRender) return;
+    _needsRender = true;
+    scheduleMicrotask(_flushRender);
+  }
+
+  /// Executes the pending render scheduled by [scheduleRender].
+  ///
+  /// Clears [_needsRender] before calling [_render] so that a new
+  /// [scheduleRender] during the render itself (e.g. from a command
+  /// callback) schedules a fresh microtask rather than being swallowed.
+  void _flushRender() {
+    if (!_needsRender) return;
+    _needsRender = false;
+    if (_model == null || _renderer == null) return;
+    if (!_running || _backendShutdownRequested) return;
+    _render();
   }
 
   /// Applies metadata from a [View] object to the terminal state.
@@ -3776,6 +4021,10 @@ class Program<M extends Model> {
     if (_model == null || _renderer == null) return;
     if (_terminalReleased) return;
 
+    // Cancel any pending coalesced render – we are about to render
+    // synchronously so the scheduled microtask would be redundant.
+    _needsRender = false;
+
     // Clear the renderer's cached view to force a full redraw
     _renderer!.clear();
     final view = _model!.view();
@@ -3792,6 +4041,34 @@ class Program<M extends Model> {
 
     _renderer!.render(effectiveView);
     _renderGeneration += 1;
+    final nativeFrame = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeFrame(),
+      _ => null,
+    };
+    final nativeDelta = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeDelta(),
+      _ => null,
+    };
+    final nativeCellDelta = switch (_renderer) {
+      NativeFrameInspectableRenderer inspector =>
+        inspector.captureNativeCellDelta(),
+      _ => null,
+    };
+    final nativeSpanDelta = nativeCellDelta?.spanDeltas;
+    _options.interceptor?.onRendered(
+      renderGeneration: _renderGeneration,
+      view: effectiveView,
+      degradationLevel: degradationLevel,
+      renderDuration: Duration.zero,
+      width: _lastRenderWidth,
+      height: _lastRenderHeight,
+      nativeFrame: nativeFrame,
+      nativeDelta: nativeDelta,
+      nativeCellDelta: nativeCellDelta,
+      nativeSpanDelta: nativeSpanDelta,
+    );
     _lastRenderedView = view;
     _lastRenderedDegradationLevel = degradationLevel;
     final termSize = _terminal?.size;
@@ -3878,6 +4155,109 @@ class Program<M extends Model> {
   /// This is equivalent to the model returning [Cmd.quit()].
   void quit() {
     send(const QuitMsg());
+  }
+
+  /// Returns `true` if the hot reload system should be initialized.
+  ///
+  /// When [ProgramOptions.hotReload] is explicitly `true`, always returns
+  /// `true` (the mixin will handle the "unavailable" case internally).
+  /// When explicitly `false`, always returns `false`.
+  /// When `null` (auto-detect), probes the VM service and only returns
+  /// `true` if a service URI is actually available.  This avoids emitting
+  /// spurious `HotReloadStatusMsg` messages in environments without a VM
+  /// service (tests, AOT builds, etc.).
+  Future<bool> _shouldInitializeHotReload() async {
+    final opt = _options.hotReload;
+    if (opt == false) return false;
+    if (opt == true) return true;
+
+    // Auto-detect: only proceed if the VM service is reachable.
+    try {
+      final info = await dev.Service.getInfo();
+      return info.serverUri != null;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Reassembles the application after a hot reload.
+  ///
+  /// This method is called by the hot reload mechanism after successful
+  /// code compilation. It forces a re-render by clearing cached view state,
+  /// allowing the model to rebuild its view with the updated code.
+  ///
+  /// For [WidgetApp] models, this triggers a full element tree rebuild.
+  /// For raw TEA models, this re-executes `model.view()` to pick up
+  /// any changes to the view code.
+  ///
+  /// Subclasses or hosts that wrap [Program] can override this method
+  /// to provide custom reassembly behavior (e.g., preserving additional
+  /// state across reloads).
+  @override
+  Future<void> performReassemble() async {
+    dev.log(
+      'performReassemble: start '
+      '(model=${_model.runtimeType}, '
+      'isReassemblable=${_model is ReassemblableModel}, '
+      'renderer=${_renderer.runtimeType}, '
+      'terminalReleased=$_terminalReleased, '
+      'needsRender=$_needsRender)',
+      name: 'HotReload',
+    );
+
+    // Invalidate Program-level view caches so that the identity-based
+    // skip in _render() does not suppress the next frame.
+    _lastView = null;
+    _lastRenderedView = null;
+    _lastRenderWidth = null;
+    _lastRenderHeight = null;
+
+    // Let the model invalidate its own caches (e.g., WidgetApp marks its
+    // element tree dirty so that build() methods are re-executed).
+    if (_model case ReassemblableModel reassemblable) {
+      dev.log(
+        'performReassemble: calling model.reassemble()',
+        name: 'HotReload',
+      );
+      reassemblable.reassemble();
+    }
+
+    if (_renderer != null && !_terminalReleased) {
+      // Invalidate the renderer's diff state so the next render produces
+      // a full redraw. Unlike clear(), invalidate() does NOT perform any
+      // terminal I/O (no flush, no screen erase), so it avoids the
+      // _stdoutFlushInFlight race that caused previous approaches to leave
+      // the screen stale until a keypress.
+      _renderer!.invalidate();
+      dev.log(
+        'performReassemble: invalidated renderer, calling scheduleRender()',
+        name: 'HotReload',
+      );
+
+      // Schedule a render through the normal pipeline: scheduleRender()
+      // sets _needsRender and queues a microtask that calls _flushRender()
+      // → _render() → UV render() → _flushInternal() + terminal.flush().
+      // This is the exact same path used for keypress-triggered renders,
+      // which are known to update the screen reliably.
+      scheduleRender();
+    } else {
+      dev.log(
+        'performReassemble: skipped render '
+        '(renderer=${_renderer == null ? "null" : "present"}, '
+        'terminalReleased=$_terminalReleased)',
+        name: 'HotReload',
+      );
+    }
+    dev.log('performReassemble: done', name: 'HotReload');
+  }
+
+  /// Dispatches a [HotReloadStatusMsg] through the normal message queue
+  /// so that the model can react to hot reload state changes.
+  @override
+  void onHotReloadStatus(HotReloadStatus status, {String? detail}) {
+    if (_running) {
+      send(HotReloadStatusMsg(status, detail: detail));
+    }
   }
 
   /// Whether the program was killed (vs graceful quit).
@@ -4091,10 +4471,14 @@ class Program<M extends Model> {
     trySync(() => TuiTrace.close());
     trySync(() => _options.interceptor?.onStop());
 
+    // Stop hot reload
+    trySync(() => stopHotReload());
+
     // Final terminal cleanup
     trySync(() => _terminal?.dispose());
     _terminal = null;
     _model = null;
+    _programZone = null;
 
     if (_options.shutdownSharedStdinOnExit && isSharedStdinStreamStarted) {
       await tryAsync(() async => shutdownSharedStdinStream());

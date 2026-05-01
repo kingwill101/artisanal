@@ -12,7 +12,7 @@ import 'package:artisanal/artisanal.dart' show Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/terminal.dart' as term;
 
-class _LogModel implements tui.Model {
+class _LogModel with tui.TerminalThemeHost implements tui.Model {
   _LogModel({required this.useUvInput, required this.useUvRenderer});
 
   final bool useUvInput;
@@ -33,8 +33,8 @@ class _LogModel implements tui.Model {
       tui.Cmd.enableReportFocus(),
       tui.Cmd.enableBracketedPaste(),
       tui.Cmd.enableMouseAllMotion(),
-      // Request a few common terminal reports. Not all terminals respond.
-      tui.Cmd.requestTerminalColors(),
+      // Request the standard theme/color reports. Not all terminals respond.
+      initTerminalTheme(),
     ]);
   }
 
@@ -78,6 +78,7 @@ class _LogModel implements tui.Model {
         }
         // #endregion
         // Convenience: press `d/b/f/c` to re-request reports.
+        // Palette: `8` requests ANSI slots 0-7, `0` requests ANSI slots 0-15.
         // Clipboard: `y` copy demo text, `p` request clipboard read (if supported).
         // Size: `s` request window-size report (CSI 18 t).
         if (key.type == tui.KeyType.runes && key.runes.isNotEmpty) {
@@ -88,11 +89,15 @@ class _LogModel implements tui.Model {
                 tui.Cmd.writeRaw(term.Ansi.requestPrimaryDeviceAttributes),
               );
             case 0x62: // b
-              return (this, tui.Cmd.requestBackgroundColorReport());
+              return (this, probeTerminalTheme(includeCursor: false));
             case 0x66: // f
-              return (this, tui.Cmd.requestTerminalColors());
+              return (this, probeTerminalTheme());
             case 0x63: // c
-              return (this, tui.Cmd.requestTerminalColors());
+              return (this, initTerminalTheme());
+            case 0x38: // 8
+              return (this, initTerminalTheme(paletteCount: 8));
+            case 0x30: // 0
+              return (this, initTerminalTheme(paletteCount: 16));
             case 0x79: // y
               return (this, tui.Cmd.setClipboard('uv-input demo: hello'));
             case 0x70: // p
@@ -112,14 +117,17 @@ class _LogModel implements tui.Model {
 
       case tui.BackgroundColorMsg(:final hex):
         _log('BackgroundColorMsg(hex: $hex)');
+        updateTerminalTheme(msg);
         return (this, null);
 
       case tui.ForegroundColorMsg(:final hex):
         _log('ForegroundColorMsg(hex: $hex)');
+        updateTerminalTheme(msg);
         return (this, null);
 
       case tui.CursorColorMsg(:final hex):
         _log('CursorColorMsg(hex: $hex)');
+        updateTerminalTheme(msg);
         return (this, null);
 
       case tui.UvEventMsg(:final event):
@@ -134,13 +142,17 @@ class _LogModel implements tui.Model {
   String view() {
     final title = Style().bold().render('UV Input Decoder Demo');
     final mode =
-        'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}';
+        'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}  bg=${terminalTheme.backgroundHex ?? '(unknown)'}  dark=${terminalTheme.hasDarkBackground ?? '(unknown)'}';
+    final paletteSnapshot = terminalPalette.snapshot;
+    final themeLine =
+        'fg=${paletteSnapshot.foregroundHex ?? '(unknown)'}  cursor=${paletteSnapshot.cursorHex ?? '(unknown)'}  cachedPalette=${paletteSnapshot.palette.length}';
+    final paletteLine = _palettePreview(paletteSnapshot);
     final help =
-        'Press `q` to quit. Try keys/mouse/paste/focus/resize. Press `d/b/f/c` reports, `y/p` clipboard, `s` size.';
+        'Press `q` to quit. Try keys/mouse/paste/focus/resize. Press `d/b/f/c/8/0` reports, `y/p` clipboard, `s` size.';
 
-    final header = '$title\n$mode\n$help\n';
+    final header = '$title\n$mode\n$themeLine\n$paletteLine\n$help\n';
 
-    final maxBody = (_height - 5).clamp(0, 10_000);
+    final maxBody = (_height - 7).clamp(0, 10_000);
     final bodyLines = _lines.length <= maxBody
         ? _lines
         : _lines.sublist(_lines.length - maxBody);
@@ -165,6 +177,17 @@ String _clipToWidth(String s, int maxWidth) {
     w += gw;
   }
   return out.toString();
+}
+
+String _palettePreview(tui.TerminalPaletteSnapshot snapshot) {
+  if (snapshot.palette.isEmpty) {
+    return 'palette[0..7]=(none)';
+  }
+  final preview = List<String>.generate(8, (index) {
+    final hex = snapshot.paletteHex(index);
+    return '$index:${hex ?? '--'}';
+  });
+  return 'palette[0..7]=${preview.join(' ')}';
 }
 
 void main(List<String> args) async {

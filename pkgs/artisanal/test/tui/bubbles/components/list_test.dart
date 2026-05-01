@@ -94,7 +94,7 @@ void main() {
       final result = list.render();
 
       expect(result, contains('Normal'));
-      expect(result, contains('\x1B[1mBold\x1B[22m'));
+      expect(result, contains('\x1B[1mBold\x1B[m'));
     });
   });
 
@@ -155,7 +155,7 @@ void main() {
       );
       final result = list.render();
 
-      expect(result, contains('\x1B[3mItalic\x1B[23m'));
+      expect(result, contains('\x1B[3mItalic\x1B[m'));
     });
   });
 }

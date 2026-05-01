@@ -203,6 +203,29 @@ void main() {
           );
           expect(cmd, isNotNull);
         });
+
+        test('tick command uses custom nowProvider', () async {
+          final expected = DateTime.fromMillisecondsSinceEpoch(
+            12000,
+            isUtc: true,
+          );
+          var stopwatch = StopwatchModel(
+            interval: const Duration(milliseconds: 100),
+            nowProvider: () => expected,
+          );
+          var (updated, _) = stopwatch.update(
+            StopwatchStartStopMsg(true, stopwatch.tag, stopwatch.id),
+          );
+          stopwatch = updated;
+
+          Cmd? cmd;
+          (updated, cmd) = stopwatch.update(
+            StopwatchTickMsg(expected, stopwatch.tag, stopwatch.id),
+          );
+          final msg = await cmd!.execute() as StopwatchTickMsg;
+          expect(msg.time, equals(expected));
+          expect(msg.id, equals(stopwatch.id));
+        });
       });
 
       test('returns unchanged model for unknown messages', () {

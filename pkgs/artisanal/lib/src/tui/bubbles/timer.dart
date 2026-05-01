@@ -2,6 +2,8 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 
+DateTime _defaultBubbleNowProvider() => DateTime.now();
+
 /// Message sent when the timer ticks.
 class TimerTickMsg extends Msg {
   const TimerTickMsg(this.time, this.tag, this.timeout);
@@ -64,7 +66,9 @@ class TimerModel extends ViewComponent {
   TimerModel({
     required this.timeout,
     this.interval = const Duration(seconds: 1),
+    DateTime Function()? nowProvider,
   }) : _running = false,
+       _nowProvider = nowProvider ?? _defaultBubbleNowProvider,
        _id = _nextTimerId(),
        _tag = 0;
 
@@ -75,7 +79,9 @@ class TimerModel extends ViewComponent {
     required bool running,
     required int id,
     required int tag,
+    required DateTime Function() nowProvider,
   }) : _running = running,
+       _nowProvider = nowProvider,
        _id = id,
        _tag = tag;
 
@@ -87,6 +93,8 @@ class TimerModel extends ViewComponent {
 
   /// Whether the timer is currently running.
   final bool _running;
+
+  final DateTime Function() _nowProvider;
 
   /// Unique ID for this timer instance.
   final int _id;
@@ -120,6 +128,7 @@ class TimerModel extends ViewComponent {
       running: running ?? _running,
       id: id ?? _id,
       tag: tag ?? _tag,
+      nowProvider: _nowProvider,
     );
   }
 
@@ -217,11 +226,15 @@ class TimerModel extends ViewComponent {
 
   /// Internal: creates a tick command with a specific tag.
   Cmd _tickWithTag(int tag) {
-    return Cmd.tick(interval, (time) => TimerTickMsg(time, tag, false));
+    return Cmd.tick(
+      interval,
+      (time) => TimerTickMsg(time, tag, false),
+      nowProvider: _nowProvider,
+    );
   }
 
   /// Internal: creates a timeout command.
   Cmd _timedOut() {
-    return Cmd.message(TimerTickMsg(DateTime.now(), _tag, true));
+    return Cmd.message(TimerTickMsg(_nowProvider(), _tag, true));
   }
 }

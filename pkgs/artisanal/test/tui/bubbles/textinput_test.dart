@@ -694,7 +694,8 @@ void main() {
       });
 
       test('double click selects word', () {
-        var input = TextInputModel(prompt: '> ');
+        var now = DateTime(2026, 1, 1, 12, 0, 0);
+        var input = TextInputModel(prompt: '> ', nowProvider: () => now);
         input.value = 'Hello World';
 
         // Click inside "Hello"
@@ -706,6 +707,8 @@ void main() {
             y: 0,
           ),
         );
+
+        now = now.add(const Duration(milliseconds: 100));
 
         var (v2, _) = v1.update(
           const MouseMsg(

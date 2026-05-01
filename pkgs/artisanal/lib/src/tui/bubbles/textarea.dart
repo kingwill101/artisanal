@@ -670,6 +670,8 @@ class TextAreaKeyMap implements KeyMap {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class TextAreaModel extends ViewComponent {
+  static DateTime _defaultNowProvider() => DateTime.now();
+
   TextAreaModel({
     this.prompt = '│ ',
     this.placeholder = '',
@@ -682,11 +684,13 @@ class TextAreaModel extends ViewComponent {
     TextAreaKeyMap? keyMap,
     CursorModel? cursor,
     TextAreaStyles? styles,
+    DateTime Function()? nowProvider,
   }) : keyMap = keyMap ?? TextAreaKeyMap(),
        cursor = cursor ?? CursorModel(),
        styles = styles ?? defaultTextAreaStyles(),
        _width = width,
-       _height = height {
+       _height = height,
+       _nowProvider = nowProvider ?? _defaultNowProvider {
     _document = TextDocument();
     _editorState = EditorState();
     _textView = TextView(width: width, height: height, softWrap: softWrap);
@@ -732,6 +736,7 @@ class TextAreaModel extends ViewComponent {
   late TextDocument _document;
   late final EditorState _editorState;
   late final TextView _textView;
+  final DateTime Function() _nowProvider;
   int _row = 0;
   int _col = 0;
   int _width;
@@ -2852,7 +2857,7 @@ class TextAreaModel extends ViewComponent {
           }
           final contentX = hit.column;
           final contentY = hit.line;
-          final now = DateTime.now();
+          final now = _nowProvider();
 
           final clickCount =
               _lastClickTime != null &&

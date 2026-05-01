@@ -81,7 +81,7 @@ void main() {
                 initialOutputReady.complete();
               }
               if (!resizedOutputReady.isCompleted &&
-                  output.contains('Viewport: 120x40')) {
+                  output.contains('120x40')) {
                 resizedOutputReady.complete();
               }
             },

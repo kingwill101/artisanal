@@ -92,6 +92,19 @@ void main() {
       final msg = await cmd.execute();
       expect(msg, isNull);
     });
+
+    test('uses custom nowProvider for callback time', () async {
+      final expected = DateTime.fromMillisecondsSinceEpoch(1234, isUtc: true);
+      DateTime? receivedTime;
+
+      final cmd = Cmd.tick(const Duration(milliseconds: 1), (time) {
+        receivedTime = time;
+        return const TestMsg('done');
+      }, nowProvider: () => expected);
+
+      await cmd.execute();
+      expect(receivedTime, equals(expected));
+    });
   });
 
   group('Cmd.message', () {
@@ -475,6 +488,26 @@ void main() {
 
       expect(received, isEmpty);
     });
+
+    test('uses custom nowProvider for emitted tick time', () async {
+      final expected = DateTime.fromMillisecondsSinceEpoch(2050, isUtc: true);
+      DateTime? receivedTime;
+
+      final cmd = EveryCmd(
+        interval: const Duration(milliseconds: 40),
+        callback: (time) {
+          receivedTime = time;
+          return const TestMsg('tick');
+        },
+        nowProvider: () => expected,
+      );
+
+      cmd.start((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      cmd.stop();
+
+      expect(receivedTime, equals(expected));
+    });
   });
 
   group('CmdExtension', () {
@@ -519,6 +552,24 @@ void main() {
         id: 'my-timer',
       );
       expect((cmd as EveryCmd).id, 'my-timer');
+    });
+
+    test('forwards optional nowProvider', () async {
+      final expected = DateTime.fromMillisecondsSinceEpoch(4096, isUtc: true);
+      DateTime? receivedTime;
+
+      final cmd =
+          every(const Duration(milliseconds: 40), (time) {
+                receivedTime = time;
+                return const TestMsg('tick');
+              }, nowProvider: () => expected)
+              as EveryCmd;
+
+      cmd.start((_) {});
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+      cmd.stop();
+
+      expect(receivedTime, equals(expected));
     });
   });
 }

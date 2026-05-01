@@ -1,4 +1,5 @@
 /// Bottom-Anchored Inline Status Bar
+// tui:allow-stdout — print() used outside TUI lifecycle to seed scrollback.
 ///
 /// Renders a small TUI at the bottom of the terminal while preserving
 /// scrollback above it. Log lines scroll naturally above the UI region.

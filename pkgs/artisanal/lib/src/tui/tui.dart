@@ -163,10 +163,48 @@ export 'msg.dart'
         RepaintMsg,
         RenderMetricsMsg,
         RenderBudgetMsg,
+        HotReloadStatus,
+        HotReloadStatusMsg,
+        OutputSource,
+        CapturedOutputMsg,
         UvEventMsg;
 
 // Terminal theme helper (background/dark-mode)
 export 'theme.dart' show TerminalThemeState, TerminalThemeHost;
+export 'terminal_palette.dart'
+    show TerminalPaletteSnapshot, TerminalPaletteService;
+export 'terminal_native_frame.dart'
+    show
+        TerminalNativeCell,
+        TerminalNativeCellDelta,
+        TerminalNativeCellDeltaFrame,
+        TerminalNativeColor,
+        TerminalNativeDeltaFrame,
+        TerminalNativeFrame,
+        TerminalNativeLineDelta,
+        TerminalNativeLine,
+        TerminalNativeLink,
+        TerminalNativeSpan,
+        TerminalNativeSpanDelta,
+        TerminalNativeStyle,
+        TerminalDirtySpan;
+export 'render_feed.dart'
+    show
+        ProgramRenderChangeSummary,
+        ProgramRenderEvent,
+        ProgramRenderFeed,
+        ProgramRenderMonitor,
+        ProgramRenderStats;
+export 'render_recorder.dart'
+    show
+        ProgramRenderCapture,
+        ProgramRenderCapturePayload,
+        ProgramRenderCaptureReport,
+        ProgramRenderRecorder,
+        ProgramRenderSnapshotSummary,
+        ProgramRenderSnapshot;
+export 'terminal_render_inspector.dart'
+    show TerminalRenderFrame, TerminalRenderLine;
 
 // Command system
 export 'cmd.dart'
@@ -212,6 +250,10 @@ export 'model.dart'
         UpdateResult,
         FrameTickModel,
         RenderMetricsModel,
+        ReassemblableModel,
+        CapturedOutputModel,
+        OutputLog,
+        OutputLogEntry,
         noCmd,
         quit;
 export 'degradation.dart'
@@ -283,6 +325,8 @@ export 'replay_protocol.dart'
     show
         ReplayScreen,
         ReplayCustomEvent,
+        ReplayEventPresentation,
+        ReplayRenderCaptureEvent,
         ReplayEventControl,
         ReplayEventDirective,
         ReplayEventHook,
@@ -326,6 +370,10 @@ export 'trace.dart'
 
 // Structured runtime evidence logging
 export 'evidence.dart' show TuiEvidence, TuiEvidenceRecord;
+
+// DevTools integration
+export 'devtools.dart'
+    show ArtisanalDevTools, DevToolsMessageEntry, DevToolsRenderStats;
 
 // Stable high-level widget system for composable components.
 //

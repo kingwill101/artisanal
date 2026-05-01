@@ -1,4 +1,6 @@
 import 'msg.dart';
+import 'cmd.dart';
+import 'terminal_palette.dart';
 import '../uv/uv.dart' as uvev;
 
 /// Tracks terminal theme information (background + dark/light heuristic).
@@ -6,10 +8,21 @@ import '../uv/uv.dart' as uvev;
 /// This is a lightweight helper that apps/components can keep in their model to
 /// avoid re-implementing background color parsing and dark-mode heuristics.
 final class TerminalThemeState {
-  const TerminalThemeState({this.backgroundHex, this.hasDarkBackground});
+  const TerminalThemeState({
+    this.backgroundHex,
+    this.foregroundHex,
+    this.cursorHex,
+    this.hasDarkBackground,
+  });
 
   /// Terminal-reported background color in hex form (e.g. `#0a0a0a`).
   final String? backgroundHex;
+
+  /// Terminal-reported foreground color in hex form.
+  final String? foregroundHex;
+
+  /// Terminal-reported cursor color in hex form.
+  final String? cursorHex;
 
   /// Whether the background is considered "dark".
   ///
@@ -19,9 +32,23 @@ final class TerminalThemeState {
 
   TerminalThemeState update(Msg msg) {
     return switch (msg) {
+      ForegroundColorMsg(hex: final hex) => TerminalThemeState(
+        foregroundHex: hex,
+        backgroundHex: backgroundHex,
+        cursorHex: cursorHex,
+        hasDarkBackground: hasDarkBackground,
+      ),
       BackgroundColorMsg(hex: final hex) => _withBackgroundHex(hex),
+      CursorColorMsg(hex: final hex) => TerminalThemeState(
+        foregroundHex: foregroundHex,
+        backgroundHex: backgroundHex,
+        cursorHex: hex,
+        hasDarkBackground: hasDarkBackground,
+      ),
       ColorSchemeMsg(dark: final dark) => TerminalThemeState(
         backgroundHex: backgroundHex,
+        foregroundHex: foregroundHex,
+        cursorHex: cursorHex,
         hasDarkBackground: dark,
       ),
 
@@ -29,12 +56,16 @@ final class TerminalThemeState {
       UvEventMsg(event: final ev) when ev is uvev.DarkColorSchemeEvent =>
         TerminalThemeState(
           backgroundHex: backgroundHex,
+          foregroundHex: foregroundHex,
+          cursorHex: cursorHex,
           hasDarkBackground: true,
         ),
 
       UvEventMsg(event: final ev) when ev is uvev.LightColorSchemeEvent =>
         TerminalThemeState(
           backgroundHex: backgroundHex,
+          foregroundHex: foregroundHex,
+          cursorHex: cursorHex,
           hasDarkBackground: false,
         ),
 
@@ -47,7 +78,20 @@ final class TerminalThemeState {
     final dark = _isDarkHex(hex);
     return TerminalThemeState(
       backgroundHex: hex,
+      foregroundHex: foregroundHex,
+      cursorHex: cursorHex,
       hasDarkBackground: dark ?? hasDarkBackground,
+    );
+  }
+
+  TerminalThemeState mergePalette(TerminalPaletteSnapshot snapshot) {
+    return TerminalThemeState(
+      backgroundHex: snapshot.backgroundHex ?? backgroundHex,
+      foregroundHex: snapshot.foregroundHex ?? foregroundHex,
+      cursorHex: snapshot.cursorHex ?? cursorHex,
+      hasDarkBackground: snapshot.backgroundHex != null
+          ? snapshot.isBackgroundDark
+          : hasDarkBackground,
     );
   }
 
@@ -68,9 +112,32 @@ final class TerminalThemeState {
 /// boilerplate.
 mixin TerminalThemeHost {
   TerminalThemeState terminalTheme = const TerminalThemeState();
+  final TerminalPaletteService terminalPalette = TerminalPaletteService();
 
   /// Updates [terminalTheme] if [msg] carries theme information.
   void updateTerminalTheme(Msg msg) {
+    if (terminalPalette.handle(msg)) {
+      terminalTheme = terminalTheme.mergePalette(terminalPalette.snapshot);
+      return;
+    }
     terminalTheme = terminalTheme.update(msg);
+  }
+
+  /// Requests foreground/background/cursor reports for terminal theme probing.
+  Cmd probeTerminalTheme({bool includeCursor = true}) {
+    return terminalPalette.requestCoreColors(includeCursor: includeCursor);
+  }
+
+  /// Requests the standard terminal theme probes used by most hosts.
+  ///
+  /// This includes foreground/background reports, optionally the cursor color,
+  /// and an optional leading slice of the indexed ANSI palette.
+  Cmd initTerminalTheme({bool includeCursor = true, int paletteCount = 0}) {
+    final commands = <Cmd>[
+      probeTerminalTheme(includeCursor: includeCursor),
+      if (paletteCount > 0)
+        terminalPalette.requestAnsiPalette(count: paletteCount),
+    ];
+    return Cmd.batch(commands);
   }
 }

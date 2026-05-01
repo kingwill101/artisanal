@@ -875,11 +875,17 @@ void main() {
       () async {
         final backend = EmbeddedTerminalBackend(output: (_) {});
         final received = <WindowSizeMsg>[];
+        var initialized = false;
 
         final model = _CallbackModel(
           onUpdate: (msg) {
-            if (msg is WindowSizeMsg && msg.width >= 120) {
-              received.add(msg);
+            if (msg is WindowSizeMsg) {
+              // Track initialization via the initial WindowSizeMsg(80, 24)
+              // which is dispatched by _initialize().
+              initialized = true;
+              if (msg.width >= 120) {
+                received.add(msg);
+              }
             }
             if (msg is InterruptMsg) {
               return Cmd.quit();
@@ -894,7 +900,11 @@ void main() {
           host: ProgramHost.backend(backend),
         );
 
-        await _waitUntil(() => backend.isRawMode);
+        // Wait until the model has been initialized and has received the
+        // initial WindowSizeMsg(80, 24). Without this, resize events fired
+        // before _initialize() runs are silently dropped because _model is
+        // still null.
+        await _waitUntil(() => initialized);
         backend.notifySizeChanged((width: 120, height: 33));
         backend.notifySizeChanged((width: 121, height: 34));
         backend.notifySizeChanged((width: 121, height: 34));
@@ -920,11 +930,13 @@ void main() {
       () async {
         final backend = EmbeddedTerminalBackend(output: (_) {});
         final received = <Msg>[];
+        var initialized = false;
 
         final runFuture = runProgram(
           _CallbackModel(
             onUpdate: (msg) {
               received.add(msg);
+              if (msg is WindowSizeMsg) initialized = true;
               return null;
             },
           ),
@@ -932,7 +944,7 @@ void main() {
           host: ProgramHost.backend(backend),
         );
 
-        await _waitUntil(() => backend.isRawMode);
+        await _waitUntil(() => initialized);
         backend.requestShutdown();
         await runFuture.timeout(const Duration(seconds: 2));
 
@@ -3323,8 +3335,10 @@ void main() {
       await runFuture;
 
       expect(keyUpdates, 3);
-      // One render for the trigger message + one for the final key state.
-      expect(viewCalls - before, 2);
+      // With frame coalescing, all messages processed within a single
+      // _drainMessageQueue invocation share one coalesced render at the end.
+      // The trigger message's render is coalesced with the final key's render.
+      expect(viewCalls - before, 1);
     });
 
     test('parsed key bursts defer intermediate renders', () async {
@@ -3365,52 +3379,55 @@ void main() {
       expect(viewCalls - before, 1);
     });
 
-    test('key send drops queued droppable updates in same drain cycle', () async {
-      final received = <Msg>[];
-      late Program program;
-      var queued = false;
+    test(
+      'key send drops queued droppable updates in same drain cycle',
+      () async {
+        final received = <Msg>[];
+        late Program program;
+        var queued = false;
 
-      final model = _CallbackModel(
-        onUpdate: (msg) {
-          received.add(msg);
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            received.add(msg);
 
-          if (msg is CustomMsg && msg.value == 'start' && !queued) {
-            queued = true;
-            program.send(const _DroppableMsg(1));
-            program.send(const _DroppableMsg(2));
-            program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
-            program.send(const _DroppableMsg(3));
-            program.send(const CustomMsg('quit'));
+            if (msg is CustomMsg && msg.value == 'start' && !queued) {
+              queued = true;
+              program.send(const _DroppableMsg(1));
+              program.send(const _DroppableMsg(2));
+              program.send(const KeyMsg(Key(KeyType.runes, runes: [0x6b])));
+              program.send(const _DroppableMsg(3));
+              program.send(const CustomMsg('quit'));
+              return null;
+            }
+
+            if (msg is CustomMsg && msg.value == 'quit') {
+              return Cmd.quit();
+            }
+
             return null;
-          }
+          },
+        );
 
-          if (msg is CustomMsg && msg.value == 'quit') {
-            return Cmd.quit();
-          }
+        program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, frameTick: false),
+          terminal: terminal,
+        );
 
-          return null;
-        },
-      );
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 40));
+        program.send(const CustomMsg('start'));
+        await runFuture;
 
-      program = Program(
-        model,
-        options: const ProgramOptions(altScreen: false, frameTick: false),
-        terminal: terminal,
-      );
-
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      program.send(const CustomMsg('start'));
-      await runFuture;
-
-      final droppableValues = received
-          .whereType<_DroppableMsg>()
-          .map((m) => m.value)
-          .toList(growable: false);
-      expect(droppableValues, isEmpty);
-      expect(received.whereType<KeyMsg>(), hasLength(1));
-      expect(received.whereType<KeyMsg>().single.key.char, equals('k'));
-    });
+        final droppableValues = received
+            .whereType<_DroppableMsg>()
+            .map((m) => m.value)
+            .toList(growable: false);
+        expect(droppableValues, isEmpty);
+        expect(received.whereType<KeyMsg>(), hasLength(1));
+        expect(received.whereType<KeyMsg>().single.key.char, equals('k'));
+      },
+    );
 
     test(
       'recent key input suppresses droppable updates after queue drains',
@@ -6164,6 +6181,60 @@ Future<void> main() async {
       final options = ProgramOptions().withReplayInputBlocking(true);
       expect(options.blockInputWhileReplay, isTrue);
     });
+
+    test('withNowProvider sets logical time source', () {
+      final epoch = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      DateTime nowProvider() => epoch;
+
+      final options = ProgramOptions().withNowProvider(nowProvider);
+      expect(options.nowProvider, same(nowProvider));
+      expect(options.nowProvider(), equals(epoch));
+    });
+  });
+
+  group('Program logical clock', () {
+    test(
+      'frame ticks use ProgramOptions.nowProvider for time and delta',
+      () async {
+        final times = <DateTime>[
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+          DateTime.fromMillisecondsSinceEpoch(16, isUtc: true),
+          DateTime.fromMillisecondsSinceEpoch(32, isUtc: true),
+        ];
+        final receivedTicks = <FrameTickMsg>[];
+        var index = 0;
+
+        DateTime nowProvider() {
+          final resolved = times[index.clamp(0, times.length - 1)];
+          index++;
+          return resolved;
+        }
+
+        final program = Program(
+          _FrameTickCaptureModel(onTick: receivedTicks.add),
+          options: ProgramOptions(
+            altScreen: false,
+            fps: 120,
+            nowProvider: nowProvider,
+          ),
+          terminal: StringTerminal(terminalWidth: 20, terminalHeight: 4),
+        );
+
+        await program.run().timeout(const Duration(seconds: 2));
+
+        expect(receivedTicks, hasLength(2));
+        expect(receivedTicks.first.time, equals(times[1]));
+        expect(
+          receivedTicks.first.delta,
+          equals(const Duration(milliseconds: 16)),
+        );
+        expect(receivedTicks.last.time, equals(times[2]));
+        expect(
+          receivedTicks.last.delta,
+          equals(const Duration(milliseconds: 16)),
+        );
+      },
+    );
   });
 
   group('InterruptMsg', () {
@@ -7831,11 +7902,365 @@ Future<void> main() async {
       );
     });
   });
+
+  group('captureOutput', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('print() inside program zone dispatches CapturedOutputMsg', () async {
+      final captured = <CapturedOutputMsg>[];
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is CapturedOutputMsg) {
+            captured.add(msg);
+          }
+          if (msg == const CustomMsg('go')) {
+            // These print() calls run inside the program zone.
+            print('hello from zone');
+            print('second line');
+          }
+          // Quit after we've seen both captured messages.
+          if (captured.length >= 2) return Cmd.quit();
+          return null;
+        },
+        onView: () => 'capture test',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: true),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+      program.send(const CustomMsg('go'));
+      await runFuture;
+
+      expect(captured, hasLength(2));
+      expect(captured[0].line, 'hello from zone');
+      expect(captured[0].source, OutputSource.stdout);
+      expect(captured[1].line, 'second line');
+      expect(captured[1].source, OutputSource.stdout);
+    });
+
+    test('print() without captureOutput is not intercepted', () async {
+      var gotCapture = false;
+
+      final model = _CallbackModel(
+        onUpdate: (msg) {
+          if (msg is CapturedOutputMsg) {
+            gotCapture = true;
+          }
+          if (msg == const CustomMsg('go')) {
+            return Cmd.quit();
+          }
+          return null;
+        },
+        onView: () => 'no capture',
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: false),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+      program.send(const CustomMsg('go'));
+      await runFuture;
+
+      expect(gotCapture, isFalse);
+    });
+
+    test(
+      'print() during the same update that returns Cmd.quit() is still delivered',
+      () async {
+        final captured = <CapturedOutputMsg>[];
+
+        final model = _CallbackModel(
+          onUpdate: (msg) {
+            if (msg is CapturedOutputMsg) {
+              captured.add(msg);
+            }
+            if (msg == const CustomMsg('go')) {
+              // print() synchronously enqueues a CapturedOutputMsg.
+              // Cmd.quit() is async (returns QuitMsg via a Future), so the
+              // drain loop processes the CapturedOutputMsg before the
+              // QuitMsg arrives on the next microtask.
+              print('captured before quit');
+              return Cmd.quit();
+            }
+            return null;
+          },
+          onView: () => 'quit capture',
+        );
+
+        final program = Program(
+          model,
+          options: const ProgramOptions(altScreen: false, captureOutput: true),
+          terminal: terminal,
+        );
+
+        final runFuture = program.run();
+        await _waitUntil(() => terminal.output.isNotEmpty);
+        program.send(const CustomMsg('go'));
+        await runFuture;
+
+        // The CapturedOutputMsg is processed by the drain loop before the
+        // async QuitMsg arrives from Cmd.quit().
+        expect(captured, hasLength(1));
+        expect(captured.first.line, 'captured before quit');
+      },
+    );
+
+    test('withCaptureOutput() convenience enables capture', () {
+      const base = ProgramOptions(altScreen: false);
+      expect(base.captureOutput, isFalse);
+
+      final withCapture = base.withCaptureOutput();
+      expect(withCapture.captureOutput, isTrue);
+    });
+
+    test('CapturedOutputMsg toString includes source and line', () {
+      const msg = CapturedOutputMsg('test line');
+      expect(
+        msg.toString(),
+        'CapturedOutputMsg(OutputSource.stdout, test line)',
+      );
+
+      const stderrMsg = CapturedOutputMsg('err', source: OutputSource.stderr);
+      expect(
+        stderrMsg.toString(),
+        'CapturedOutputMsg(OutputSource.stderr, err)',
+      );
+    });
+  });
+
+  group('CapturedOutputModel', () {
+    late MockTerminal terminal;
+
+    setUp(() {
+      terminal = MockTerminal();
+    });
+
+    test('auto-appends CapturedOutputMsg to outputLog', () async {
+      final model = _CapturedOutputTestModel();
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: true),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+
+      // Trigger print() inside the program zone.
+      program.send(const CustomMsg('print'));
+      // Give the drain loop time to process.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      program.send(const CustomMsg('quit'));
+      await runFuture;
+
+      // The view should contain the captured line.
+      final output = terminal.output.join();
+      expect(output, _containsRenderedText('hello auto'));
+    });
+
+    test('outputLog respects maxEntries', () async {
+      // Use a model with maxEntries=2 so overflow is easy to test.
+      final model = _CapturedOutputTestModel(maxEntries: 2);
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: true),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+
+      // Send 3 prints to overflow the 2-entry log.
+      program.send(const CustomMsg('print3'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      program.send(const CustomMsg('quit'));
+      await runFuture;
+
+      final output = terminal.output.join();
+      // The first line should have been evicted; only lines 2 and 3
+      // remain.
+      expect(output, isNot(_containsRenderedText('line-1')));
+      expect(output, _containsRenderedText('line-2'));
+      expect(output, _containsRenderedText('line-3'));
+    });
+
+    test('CapturedOutputMsg does not reach model.update()', () async {
+      var capturedMsgInUpdate = false;
+      final model = _CapturedOutputTestModel(
+        onUpdate: (msg) {
+          if (msg is CapturedOutputMsg) capturedMsgInUpdate = true;
+          return null;
+        },
+      );
+
+      final program = Program(
+        model,
+        options: const ProgramOptions(altScreen: false, captureOutput: true),
+        terminal: terminal,
+      );
+
+      final runFuture = program.run();
+      await _waitUntil(() => terminal.output.isNotEmpty);
+
+      program.send(const CustomMsg('print'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      program.send(const CustomMsg('quit'));
+      await runFuture;
+
+      expect(
+        capturedMsgInUpdate,
+        isFalse,
+        reason:
+            'CapturedOutputMsg should be handled by the runtime, '
+            'not forwarded to update()',
+      );
+    });
+
+    test('OutputLog.add creates new instance', () {
+      const log = OutputLog(maxEntries: 10);
+      final entry = OutputLogEntry(
+        line: 'test',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024),
+      );
+      final updated = log.add(entry);
+
+      expect(log.isEmpty, isTrue);
+      expect(updated.length, 1);
+      expect(updated.entries.first.line, 'test');
+    });
+
+    test('OutputLog.add drops oldest when exceeding maxEntries', () {
+      const log = OutputLog(maxEntries: 2);
+      final e1 = OutputLogEntry(
+        line: 'first',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024, 1, 1),
+      );
+      final e2 = OutputLogEntry(
+        line: 'second',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024, 1, 2),
+      );
+      final e3 = OutputLogEntry(
+        line: 'third',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024, 1, 3),
+      );
+
+      final result = log.add(e1).add(e2).add(e3);
+      expect(result.length, 2);
+      expect(result.entries[0].line, 'second');
+      expect(result.entries[1].line, 'third');
+    });
+
+    test('OutputLog.clear returns empty log with same maxEntries', () {
+      const log = OutputLog(maxEntries: 42);
+      final entry = OutputLogEntry(
+        line: 'x',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024),
+      );
+      final withEntry = log.add(entry);
+      final cleared = withEntry.clear();
+
+      expect(cleared.isEmpty, isTrue);
+      expect(cleared.maxEntries, 42);
+    });
+
+    test('OutputLog.addMessage creates entry from CapturedOutputMsg', () {
+      const log = OutputLog();
+      const msg = CapturedOutputMsg('hello', source: OutputSource.stderr);
+      final updated = log.addMessage(msg);
+
+      expect(updated.length, 1);
+      expect(updated.entries.first.line, 'hello');
+      expect(updated.entries.first.source, OutputSource.stderr);
+    });
+
+    test('OutputLog.toString reflects entry count', () {
+      const log = OutputLog(maxEntries: 100);
+      expect(log.toString(), 'OutputLog(0/100 entries)');
+    });
+
+    test('OutputLogEntry.toString formats source and line', () {
+      final entry = OutputLogEntry(
+        line: 'test output',
+        source: OutputSource.stdout,
+        timestamp: DateTime(2024),
+      );
+      expect(entry.toString(), '[OutputSource.stdout] test output');
+    });
+  });
 }
 
 // =============================================================================
 // Helper Classes
 // =============================================================================
+
+/// A model that implements [CapturedOutputModel] for testing automatic
+/// output-log handling by the runtime.
+class _CapturedOutputTestModel extends Model implements CapturedOutputModel {
+  _CapturedOutputTestModel({
+    OutputLog? outputLog,
+    int maxEntries = 500,
+    Cmd? Function(Msg)? onUpdate,
+  }) : outputLog = outputLog ?? OutputLog(maxEntries: maxEntries),
+       _onUpdate = onUpdate;
+
+  @override
+  final OutputLog outputLog;
+
+  final Cmd? Function(Msg)? _onUpdate;
+
+  @override
+  Model withOutputLog(OutputLog log) =>
+      _CapturedOutputTestModel(outputLog: log, onUpdate: _onUpdate);
+
+  @override
+  (Model, Cmd?) update(Msg msg) {
+    if (msg == const CustomMsg('print')) {
+      print('hello auto');
+      return (this, null);
+    }
+    if (msg == const CustomMsg('print3')) {
+      print('line-1');
+      print('line-2');
+      print('line-3');
+      return (this, null);
+    }
+    if (msg == const CustomMsg('quit')) {
+      return (this, Cmd.quit());
+    }
+    final cmd = _onUpdate?.call(msg);
+    return (this, cmd);
+  }
+
+  @override
+  String view() {
+    final buf = StringBuffer('Output:\n');
+    for (final entry in outputLog.entries) {
+      buf.writeln(entry.line);
+    }
+    return buf.toString();
+  }
+}
 
 /// A model that tracks received messages for testing.
 class _TrackingModel implements Model {
@@ -8417,6 +8842,37 @@ class _DisposeTrackingTerminal implements TuiTerminal {
     onDispose?.call();
     _inputController.close();
   }
+}
+
+final class _FrameTickCaptureModel extends Model implements FrameTickModel {
+  _FrameTickCaptureModel({this.tickCount = 0, this.onTick});
+
+  final int tickCount;
+  final void Function(FrameTickMsg tick)? onTick;
+
+  @override
+  bool get wantsFrameTicks => true;
+
+  @override
+  (Model, Cmd?) update(Msg msg) {
+    return switch (msg) {
+      FrameTickMsg() => (
+        () {
+          final tick = msg;
+          onTick?.call(tick);
+          return _FrameTickCaptureModel(
+            tickCount: tickCount + 1,
+            onTick: onTick,
+          );
+        }(),
+        tickCount >= 1 ? Cmd.quit() : null,
+      ),
+      _ => (this, null),
+    };
+  }
+
+  @override
+  Object view() => 'ticks: $tickCount';
 }
 
 class _ResizableMockTerminal extends MockTerminal {

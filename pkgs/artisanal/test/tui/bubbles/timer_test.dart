@@ -192,6 +192,27 @@ void main() {
           expect(timer.timeout, Duration.zero);
           expect(timer.running, isFalse);
         });
+
+        test('timeout command uses custom nowProvider', () async {
+          final expected = DateTime.fromMillisecondsSinceEpoch(
+            9000,
+            isUtc: true,
+          );
+          var timer = TimerModel(
+            timeout: const Duration(seconds: 1),
+            interval: const Duration(seconds: 1),
+            nowProvider: () => expected,
+          );
+          var (updated, _) = timer.update(TimerStartStopMsg(true, timer.tag));
+          timer = updated;
+
+          final (_, cmd) = timer.update(
+            TimerTickMsg(expected, timer.tag, false),
+          );
+          final msg = await cmd!.execute() as TimerTickMsg;
+          expect(msg.time, equals(expected));
+          expect(msg.timeout, isTrue);
+        });
       });
 
       test('returns unchanged model for unknown messages', () {

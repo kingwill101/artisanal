@@ -9,6 +9,8 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 
+DateTime _defaultProgressNowProvider() => DateTime.now();
+
 /// Message indicating a progress bar animation frame should advance.
 class ProgressFrameMsg extends Msg {
   const ProgressFrameMsg({required this.id, required this.tag});
@@ -134,6 +136,7 @@ class ProgressModel extends ViewComponent {
     this.indeterminate = false,
     this.pulseWidth = 0.2,
     this.startTime,
+    DateTime Function()? nowProvider,
     double percentShown = 0,
     double targetPercent = 0,
     double velocity = 0,
@@ -141,6 +144,7 @@ class ProgressModel extends ViewComponent {
     int? id,
     int tag = 0,
   }) : percentageStyle = percentageStyle ?? Style(),
+       _nowProvider = nowProvider ?? _defaultProgressNowProvider,
        _spring = _Spring(frequency: frequency, damping: damping),
        _percentShown = percentShown,
        _targetPercent = targetPercent,
@@ -209,6 +213,7 @@ class ProgressModel extends ViewComponent {
 
   /// When the progress started (for ETA calculation).
   final DateTime? startTime;
+  final DateTime Function() _nowProvider;
 
   final _Spring _spring;
   final double _percentShown;
@@ -268,7 +273,7 @@ class ProgressModel extends ViewComponent {
   String get eta {
     final start = startTime;
     if (start == null || _targetPercent <= 0) return '--:--';
-    final elapsed = DateTime.now().difference(start);
+    final elapsed = _nowProvider().difference(start);
     if (_targetPercent >= 1.0) return '00:00';
 
     final totalEstimatedMs = elapsed.inMilliseconds / _targetPercent;
@@ -300,6 +305,7 @@ class ProgressModel extends ViewComponent {
     bool? indeterminate,
     double? pulseWidth,
     DateTime? startTime,
+    DateTime Function()? nowProvider,
     double? percentShown,
     double? targetPercent,
     double? velocity,
@@ -327,6 +333,7 @@ class ProgressModel extends ViewComponent {
       indeterminate: indeterminate ?? this.indeterminate,
       pulseWidth: pulseWidth ?? this.pulseWidth,
       startTime: startTime ?? this.startTime,
+      nowProvider: nowProvider ?? _nowProvider,
       percentShown: percentShown ?? _percentShown,
       targetPercent: targetPercent ?? _targetPercent,
       velocity: velocity ?? _velocity,

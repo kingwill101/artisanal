@@ -189,6 +189,12 @@ final class TuiTrace {
   static const _eventMarker = '@event ';
   static const _eventSchemaVersion = 1;
 
+  static bool? _testEnabled;
+  static String? _testPath;
+  static bool? _testCaptureEnabled;
+  static String? _testTagsRaw;
+  static DateTime Function()? _testNowProvider;
+  static bool _testOverride = false;
   static String? _path;
   static io.File? _file;
   static io.IOSink? _sink;
@@ -212,6 +218,38 @@ final class TuiTrace {
   /// at initialization for correlation.
   static final Stopwatch _clock = Stopwatch();
   static String? _startWallTime;
+  static DateTime Function() _nowProvider = DateTime.now;
+
+  /// Enable/disable tracing for tests regardless of process env.
+  static void configureForTest({
+    bool? enabled,
+    String? path,
+    bool? captureDispatch,
+    String? tags,
+    DateTime Function()? nowProvider,
+    bool clear = false,
+  }) {
+    _testOverride = true;
+    _testEnabled = clear ? false : enabled;
+    _testPath = clear ? null : path;
+    _testCaptureEnabled = clear ? null : captureDispatch;
+    _testTagsRaw = clear ? null : tags;
+    _testNowProvider = clear ? null : nowProvider;
+    _resolved = false;
+    close();
+  }
+
+  /// Clears test overrides and returns to env-based behavior.
+  static void clearTestOverrides() {
+    _testOverride = false;
+    _testEnabled = null;
+    _testPath = null;
+    _testCaptureEnabled = null;
+    _testTagsRaw = null;
+    _testNowProvider = null;
+    _resolved = false;
+    close();
+  }
 
   /// Whether trace logging is enabled (set via `ARTISANAL_TUI_TRACE` env var).
   static bool get enabled {
@@ -219,10 +257,11 @@ final class TuiTrace {
       _path = _resolvePath();
       _resolved = true;
       if (_path != null) {
-        _tagsRaw = io.Platform.environment[_tagsEnv];
+        _tagsRaw = _resolveTagsRaw();
         _enabledTags = _resolveTagFilter(_tagsRaw);
+        _nowProvider = _testNowProvider ?? DateTime.now;
         _clock.start();
-        _startWallTime = DateTime.now().toIso8601String();
+        _startWallTime = _nowProvider().toIso8601String();
       }
     }
     return _path != null;
@@ -231,7 +270,7 @@ final class TuiTrace {
   /// Whether dispatch capture logging is enabled.
   static bool get captureDispatchEnabled {
     if (!enabled) return false;
-    _captureEnabled ??= _resolveFlag(_captureEnv);
+    _captureEnabled ??= _resolveCaptureDispatch();
     return _captureEnabled ?? false;
   }
 
@@ -434,18 +473,34 @@ final class TuiTrace {
     final sink = _sink;
     if (sink != null) {
       _flushPendingWrites(sink);
-      unawaited(sink.flush());
-      unawaited(sink.close());
+      try {
+        unawaited(sink.flush());
+      } on StateError {
+        // Ignore sinks already transitioning to closed/bound states.
+      }
+      try {
+        unawaited(sink.close());
+      } on StateError {
+        // Ignore sinks already transitioning to closed/bound states.
+      }
     }
     _sink = null;
     _file = null;
     _headerWritten = false;
+    _captureEnabled = null;
     _pendingWrites = null;
     _pendingWriteBytes = 0;
     _flushScheduled = false;
   }
 
   static String? _resolvePath() {
+    if (_testOverride) {
+      if (_testEnabled == false) return null;
+      if (_testPath != null && _testPath!.isNotEmpty) return _testPath;
+      if (_testEnabled == true) {
+        return _generateDateBasedPath();
+      }
+    }
     final env = io.Platform.environment;
     final path = env[_pathEnv];
     if (path != null && path.isNotEmpty) return path;
@@ -462,7 +517,7 @@ final class TuiTrace {
   /// Creates the `traces/` directory if it doesn't exist. The filename is
   /// sortable by date: `artisanal-YYYY-MM-DDTHH-MM-SS.log`.
   static String _generateDateBasedPath() {
-    final now = DateTime.now();
+    final now = (_testNowProvider ?? DateTime.now)();
     final ts =
         '${now.year.toString().padLeft(4, '0')}'
         '-${now.month.toString().padLeft(2, '0')}'
@@ -481,6 +536,18 @@ final class TuiTrace {
     final flag = io.Platform.environment[envKey];
     if (flag == null) return false;
     return _isEnabledFlag(flag);
+  }
+
+  static bool _resolveCaptureDispatch() {
+    if (_testOverride && _testCaptureEnabled != null) {
+      return _testCaptureEnabled!;
+    }
+    return _resolveFlag(_captureEnv);
+  }
+
+  static String? _resolveTagsRaw() {
+    if (_testOverride) return _testTagsRaw;
+    return io.Platform.environment[_tagsEnv];
   }
 
   static String _describeTagFilter() {

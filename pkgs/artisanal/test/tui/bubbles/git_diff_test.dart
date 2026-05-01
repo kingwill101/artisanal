@@ -2001,4 +2001,7 @@ index aaa..bbb 100644
 }
 
 /// Mock message for testing non-matching message handling.
-class _MockMsg implements Msg {}
+class _MockMsg implements Msg {
+  @override
+  bool get dropWhenInputQueued => false;
+}

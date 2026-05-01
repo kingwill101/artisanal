@@ -2,6 +2,8 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 
+DateTime _defaultBubbleNowProvider() => DateTime.now();
+
 /// Message sent when the stopwatch ticks.
 class StopwatchTickMsg extends Msg {
   const StopwatchTickMsg(this.time, this.tag, this.id);
@@ -65,11 +67,14 @@ class StopwatchModel extends ViewComponent {
   /// Creates a new stopwatch model.
   ///
   /// [interval] is how often the stopwatch ticks (defaults to 100 milliseconds).
-  StopwatchModel({this.interval = const Duration(milliseconds: 100)})
-    : _elapsed = Duration.zero,
-      _running = false,
-      _id = _nextStopwatchId(),
-      _tag = 0;
+  StopwatchModel({
+    this.interval = const Duration(milliseconds: 100),
+    DateTime Function()? nowProvider,
+  }) : _elapsed = Duration.zero,
+       _running = false,
+       _nowProvider = nowProvider ?? _defaultBubbleNowProvider,
+       _id = _nextStopwatchId(),
+       _tag = 0;
 
   /// Private constructor for copyWith.
   StopwatchModel._({
@@ -78,8 +83,10 @@ class StopwatchModel extends ViewComponent {
     required bool running,
     required int id,
     required int tag,
+    required DateTime Function() nowProvider,
   }) : _elapsed = elapsed,
        _running = running,
+       _nowProvider = nowProvider,
        _id = id,
        _tag = tag;
 
@@ -91,6 +98,8 @@ class StopwatchModel extends ViewComponent {
 
   /// Whether the stopwatch is currently running.
   final bool _running;
+
+  final DateTime Function() _nowProvider;
 
   /// Unique ID for this stopwatch instance.
   final int _id;
@@ -124,6 +133,7 @@ class StopwatchModel extends ViewComponent {
       running: running ?? _running,
       id: id ?? _id,
       tag: tag ?? _tag,
+      nowProvider: _nowProvider,
     );
   }
 
@@ -224,6 +234,10 @@ class StopwatchModel extends ViewComponent {
 
   /// Internal: creates a tick command with a specific tag.
   Cmd _tickWithTag(int tag) {
-    return Cmd.tick(interval, (time) => StopwatchTickMsg(time, tag, _id));
+    return Cmd.tick(
+      interval,
+      (time) => StopwatchTickMsg(time, tag, _id),
+      nowProvider: _nowProvider,
+    );
   }
 }

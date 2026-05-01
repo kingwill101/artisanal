@@ -1,4 +1,5 @@
 /// Top-Anchored Inline Info Panel
+// tui:allow-stdout — print() used outside TUI lifecycle to seed scrollback.
 ///
 /// Renders a TUI info panel at the top of the terminal while preserving
 /// scrollback below it. Useful for status dashboards that shouldn't
