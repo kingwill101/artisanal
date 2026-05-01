@@ -147,10 +147,7 @@ void main() {
       expect(ctrl.document.debugLineGraphemeCacheCount, lessThan(10));
 
       ctrl.applyTextCommandResult(
-        TextCommandResult(
-          cursorOffset: text.length,
-          graphemes: text.split(''),
-        ),
+        TextCommandResult(cursorOffset: text.length, graphemes: text.split('')),
       );
 
       expect(ctrl.text, text);

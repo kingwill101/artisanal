@@ -31,7 +31,9 @@ void main() {
       await File('${tempDir.path}/notes.txt').writeAsString('notes');
       await File('${tempDir.path}/.env').writeAsString('secret');
       await Directory('${tempDir.path}/src').create();
-      await File('${tempDir.path}/src/main.dart').writeAsString('void main() {}');
+      await File(
+        '${tempDir.path}/src/main.dart',
+      ).writeAsString('void main() {}');
     });
 
     tearDown(() async {

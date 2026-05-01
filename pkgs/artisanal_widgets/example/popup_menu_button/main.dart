@@ -26,9 +26,7 @@ Future<void> main(List<String> args) async {
     );
     _traceEvent(
       'demo.start',
-      fields: <String, Object?>{
-        'trace_output': _traceOutputHint(),
-      },
+      fields: <String, Object?>{'trace_output': _traceOutputHint()},
     );
   }
 
@@ -57,11 +55,7 @@ void _traceEvent(
     'POPUP_MENU_DEMO $type ${fields.isEmpty ? '' : fields}',
     tag: tag,
   );
-  tui.TuiTrace.event(
-    'popup_menu_demo.$type',
-    tag: tag,
-    fields: fields,
-  );
+  tui.TuiTrace.event('popup_menu_demo.$type', tag: tag, fields: fields);
 }
 
 String _traceOutputHint() {

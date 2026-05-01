@@ -718,11 +718,7 @@ class _WizardState extends State<Wizard> {
           Wrap(
             spacing: 1,
             runSpacing: 1,
-            children: [
-              backButton,
-              cancelButton,
-              ?exitButton,
-            ],
+            children: [backButton, cancelButton, ?exitButton],
           ),
         ],
       );
@@ -732,14 +728,7 @@ class _WizardState extends State<Wizard> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         backButton,
-        Row(
-          gap: 1,
-          children: [
-            ?exitButton,
-            cancelButton,
-            nextButton,
-          ],
-        ),
+        Row(gap: 1, children: [?exitButton, cancelButton, nextButton]),
       ],
     );
   }

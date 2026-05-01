@@ -55,13 +55,7 @@ class Modal extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         blockedBackground,
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
-          child: dismissLayer,
-        ),
+        Positioned(left: 0, right: 0, top: 0, bottom: 0, child: dismissLayer),
         Positioned(
           left: 0,
           right: 0,

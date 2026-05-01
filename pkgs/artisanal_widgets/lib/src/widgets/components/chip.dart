@@ -154,11 +154,7 @@ class FilterChip extends StatelessWidget {
     return Button(
       child: Row(
         gap: 1,
-        children: [
-          ?avatar,
-          if (showCheckmark && selected) Text('+'),
-          label,
-        ],
+        children: [?avatar, if (showCheckmark && selected) Text('+'), label],
       ),
       variant: selected ? ButtonVariant.secondary : ButtonVariant.outline,
       size: size,

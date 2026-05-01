@@ -174,11 +174,13 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
     final nextItems = () {
       if (_searchQuery.isEmpty) return widget.items;
       final q = _searchQuery.toLowerCase();
-      return widget.items.where((item) {
-        return item.label.toLowerCase().contains(q) ||
-            (item.description?.toLowerCase().contains(q) ?? false) ||
-            (item.category?.toLowerCase().contains(q) ?? false);
-      }).toList(growable: false);
+      return widget.items
+          .where((item) {
+            return item.label.toLowerCase().contains(q) ||
+                (item.description?.toLowerCase().contains(q) ?? false) ||
+                (item.category?.toLowerCase().contains(q) ?? false);
+          })
+          .toList(growable: false);
     }();
 
     var nextIndex = 0;

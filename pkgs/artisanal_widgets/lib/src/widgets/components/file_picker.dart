@@ -227,8 +227,7 @@ class _FilePickerState extends State<FilePicker> {
     String? symlinkTarget;
     var isDirectoryLike = entity is Directory;
 
-    final isSymlink =
-        entity is Link || stat?.type == FileSystemEntityType.link;
+    final isSymlink = entity is Link || stat?.type == FileSystemEntityType.link;
     if (isSymlink) {
       try {
         symlinkTarget = await Link(entity.path).target();
@@ -499,7 +498,8 @@ class _FilePickerState extends State<FilePicker> {
       return _goUpDirectory() ?? Cmd.none();
     }
 
-    if (key.type == terminal_keys.KeyType.right || _matchesLowerChar(key, 'l')) {
+    if (key.type == terminal_keys.KeyType.right ||
+        _matchesLowerChar(key, 'l')) {
       return _openSelectedDirectory() ?? Cmd.none();
     }
 
@@ -526,7 +526,8 @@ class _FilePickerState extends State<FilePicker> {
 
     final selectedEntry = _selectedEntry;
     final compactFooter = width < 64;
-    final canGoUp = Directory(_currentDirectory).parent.path != _currentDirectory;
+    final canGoUp =
+        Directory(_currentDirectory).parent.path != _currentDirectory;
     final openButtonVisible =
         selectedEntry != null &&
         selectedEntry.isDirectoryLike &&
@@ -565,7 +566,8 @@ class _FilePickerState extends State<FilePicker> {
         gap: 1,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (widget.title != null) Text(widget.title!, style: theme.titleLarge),
+          if (widget.title != null)
+            Text(widget.title!, style: theme.titleLarge),
           if (widget.title != null) Divider(),
           Text('Current directory', style: theme.labelMedium),
           Text(
@@ -745,7 +747,10 @@ class _FilePickerState extends State<FilePicker> {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [upButton, Row(gap: 1, children: trailing)],
+      children: [
+        upButton,
+        Row(gap: 1, children: trailing),
+      ],
     );
   }
 }
@@ -872,7 +877,8 @@ class _FilePickerRow extends StatelessWidget {
     final label = _entryLabel(entry, availableWidth);
     final spans = <TextSpan>[
       TextSpan(style: cursorStyle, text: selected ? '> ' : '  '),
-      if (showPermissions) TextSpan(style: metaStyle, text: '${entry.permissions} '),
+      if (showPermissions)
+        TextSpan(style: metaStyle, text: '${entry.permissions} '),
       if (showSize)
         TextSpan(
           style: metaStyle,
@@ -901,7 +907,9 @@ class _FilePickerRow extends StatelessWidget {
     if (entry.isDirectoryLike) {
       label = '$label/';
     }
-    if (entry.isSymlink && entry.symlinkTarget != null && availableWidth >= 56) {
+    if (entry.isSymlink &&
+        entry.symlinkTarget != null &&
+        availableWidth >= 56) {
       label = '$label -> ${entry.symlinkTarget}';
     }
     return label;

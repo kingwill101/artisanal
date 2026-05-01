@@ -91,44 +91,47 @@ void main() {
     }
   });
 
-  test('HelpView program resolves light background before first frame', () async {
-    final initialDarkBackground = w.hasDarkBackground;
-    addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
-    w.setHasDarkBackground(true);
+  test(
+    'HelpView program resolves light background before first frame',
+    () async {
+      final initialDarkBackground = w.hasDarkBackground;
+      addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
+      w.setHasDarkBackground(true);
 
-    final terminal = StringTerminal(terminalWidth: 100, terminalHeight: 32);
-    final program = runtime.Program<app.WidgetApp>(
-      createHelpViewApp(),
-      options: const runtime.ProgramOptions(
-        useUltravioletRenderer: true,
-        altScreen: true,
-        signalHandlers: false,
-        catchPanics: false,
-      ),
-      terminal: terminal,
-    );
+      final terminal = StringTerminal(terminalWidth: 100, terminalHeight: 32);
+      final program = runtime.Program<app.WidgetApp>(
+        createHelpViewApp(),
+        options: const runtime.ProgramOptions(
+          useUltravioletRenderer: true,
+          altScreen: true,
+          signalHandlers: false,
+          catchPanics: false,
+        ),
+        terminal: terminal,
+      );
 
-    final runFuture = program.run();
-    try {
-      var responded = false;
-      await _waitFor(() {
-        final sawProbe = terminal.output.contains('\x1b]11;?\x07');
-        if (sawProbe && !responded) {
-          responded = true;
-          terminal.simulateInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
-        }
-        return responded;
-      });
-
-      await _waitFor(() => terminal.output.contains('\x1b]11;#eeeeee\x07'));
-      expect(terminal.output, contains('\x1b]11;#eeeeee\x07'));
-    } finally {
-      program.quit();
+      final runFuture = program.run();
       try {
-        await runFuture.timeout(const Duration(seconds: 2));
-      } catch (_) {
-        program.kill();
+        var responded = false;
+        await _waitFor(() {
+          final sawProbe = terminal.output.contains('\x1b]11;?\x07');
+          if (sawProbe && !responded) {
+            responded = true;
+            terminal.simulateInput('\x1b]11;rgb:ffff/ffff/ffff\x07'.codeUnits);
+          }
+          return responded;
+        });
+
+        await _waitFor(() => terminal.output.contains('\x1b]11;#eeeeee\x07'));
+        expect(terminal.output, contains('\x1b]11;#eeeeee\x07'));
+      } finally {
+        program.quit();
+        try {
+          await runFuture.timeout(const Duration(seconds: 2));
+        } catch (_) {
+          program.kill();
+        }
       }
-    }
-  });
+    },
+  );
 }

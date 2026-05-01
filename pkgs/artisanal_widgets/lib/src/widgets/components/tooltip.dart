@@ -117,13 +117,7 @@ class _TooltipState extends State<Tooltip> {
 
   bool get _preferPointerAnchor => widget.show != true && _hovered;
 
-  ({
-    int x,
-    int y,
-    int width,
-    int height,
-    bool usesPointer,
-  })? _anchorGeometry() {
+  ({int x, int y, int width, int height, bool usesPointer})? _anchorGeometry() {
     final pointer = _lastPointer;
     if (_preferPointerAnchor && pointer != null) {
       return (
@@ -145,13 +139,7 @@ class _TooltipState extends State<Tooltip> {
       );
     }
     if (pointer == null) return null;
-    return (
-      x: pointer.x,
-      y: pointer.y,
-      width: 0,
-      height: 0,
-      usesPointer: true,
-    );
+    return (x: pointer.x, y: pointer.y, width: 0, height: 0, usesPointer: true);
   }
 
   String _viewToString(Object view) {
@@ -171,8 +159,10 @@ class _TooltipState extends State<Tooltip> {
     final fitsBelow =
         trigger.y + trigger.height + gap + bubbleHeight <= viewport.height;
     return switch (preferred) {
-      TooltipPosition.above when !fitsAbove && fitsBelow => TooltipPosition.below,
-      TooltipPosition.below when !fitsBelow && fitsAbove => TooltipPosition.above,
+      TooltipPosition.above when !fitsAbove && fitsBelow =>
+        TooltipPosition.below,
+      TooltipPosition.below when !fitsBelow && fitsAbove =>
+        TooltipPosition.above,
       _ => preferred,
     };
   }
@@ -211,7 +201,10 @@ class _TooltipState extends State<Tooltip> {
             _overlayRendered = false;
             _traceLifecycle('overlay.hidden');
           }
-          _traceLifecycle('overlay.build.skipped', fields: const {'reason': 'no-anchor'});
+          _traceLifecycle(
+            'overlay.build.skipped',
+            fields: const {'reason': 'no-anchor'},
+          );
           return SizedBox.shrink();
         }
         final bubble = _buildBubble(context);
@@ -238,25 +231,18 @@ class _TooltipState extends State<Tooltip> {
                 final anchorCenterX = trigger.x + (trigger.width ~/ 2);
                 return anchorCenterX - (bubbleWidth ~/ 2);
               })();
-        final left = preferredLeft.clamp(
-          0,
-          maxLeft,
-        );
+        final left = preferredLeft.clamp(0, maxLeft);
         final top = switch (position) {
-          TooltipPosition.above => (trigger.y -
-                  bubbleHeight -
-                  (trigger.usesPointer ? _cursorVerticalOffset : 1))
-              .clamp(
-            0,
-            math.max(0, viewport.height.toInt() - bubbleHeight),
-          ),
-          TooltipPosition.below => (trigger.y +
-                  trigger.height +
-                  (trigger.usesPointer ? _cursorVerticalOffset : 1))
-              .clamp(
-            0,
-            math.max(0, viewport.height.toInt() - bubbleHeight),
-          ),
+          TooltipPosition.above =>
+            (trigger.y -
+                    bubbleHeight -
+                    (trigger.usesPointer ? _cursorVerticalOffset : 1))
+                .clamp(0, math.max(0, viewport.height.toInt() - bubbleHeight)),
+          TooltipPosition.below =>
+            (trigger.y +
+                    trigger.height +
+                    (trigger.usesPointer ? _cursorVerticalOffset : 1))
+                .clamp(0, math.max(0, viewport.height.toInt() - bubbleHeight)),
         };
         if (!_overlayRendered) {
           _overlayRendered = true;
@@ -368,7 +354,9 @@ class _TooltipState extends State<Tooltip> {
       _syncFloatingEntry(forceRebuild: appearanceChanged);
     }
     final showInline =
-        Overlay.maybeOf(context) == null && widget.enabled && (widget.show ?? _hovered);
+        Overlay.maybeOf(context) == null &&
+        widget.enabled &&
+        (widget.show ?? _hovered);
     if (visibilityChanged || (showInline && appearanceChanged)) {
       return Cmd.repaint();
     }

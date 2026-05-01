@@ -19,12 +19,10 @@ app.WidgetApp createHelpViewApp() => app.WidgetApp(
 Color _resolvedHelpViewTerminalBackground() {
   final background = w.currentTheme.background;
   final resolved = switch (background) {
-    AdaptiveColor(:final light, :final dark) => w.hasDarkBackground
-        ? dark
-        : light,
-    CompleteAdaptiveColor(:final light, :final dark) => w.hasDarkBackground
-        ? dark
-        : light,
+    AdaptiveColor(:final light, :final dark) =>
+      w.hasDarkBackground ? dark : light,
+    CompleteAdaptiveColor(:final light, :final dark) =>
+      w.hasDarkBackground ? dark : light,
     _ => background,
   };
   final hex = resolved.toHex();

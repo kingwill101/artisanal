@@ -29,26 +29,29 @@ void _dumpFrame(String label, String view, {int maxLines = 16}) {
 }
 
 void main() {
-  test('diagnostic: trace HelpView showcase rendering while scrolling', () async {
-    if (Platform.environment[_traceEnv] != '1') return;
+  test(
+    'diagnostic: trace HelpView showcase rendering while scrolling',
+    () async {
+      if (Platform.environment[_traceEnv] != '1') return;
 
-    final tester = WidgetTester();
-    addTearDown(() => tester.dispose());
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
 
-    await tester.pumpWidget(HelpViewShowcase(), width: 100, height: 24);
-    tester.pump();
-    _dumpFrame('initial', tester.view);
+      await tester.pumpWidget(HelpViewShowcase(), width: 100, height: 24);
+      tester.pump();
+      _dumpFrame('initial', tester.view);
 
-    for (var step = 1; step <= 8; step++) {
-      tester.sendMsg(
-        const tui.MouseMsg(
-          action: tui.MouseAction.wheel,
-          button: tui.MouseButton.wheelDown,
-          x: 10,
-          y: 10,
-        ),
-      );
-      _dumpFrame('scroll $step', tester.view);
-    }
-  });
+      for (var step = 1; step <= 8; step++) {
+        tester.sendMsg(
+          const tui.MouseMsg(
+            action: tui.MouseAction.wheel,
+            button: tui.MouseButton.wheelDown,
+            x: 10,
+            y: 10,
+          ),
+        );
+        _dumpFrame('scroll $step', tester.view);
+      }
+    },
+  );
 }

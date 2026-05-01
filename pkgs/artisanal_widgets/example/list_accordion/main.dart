@@ -13,9 +13,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 void main() async {
   final app = tui.WidgetApp(
     w.Overlay(
-      initialEntries: [
-        w.OverlayEntry(builder: (_) => ListAccordionShowcase()),
-      ],
+      initialEntries: [w.OverlayEntry(builder: (_) => ListAccordionShowcase())],
     ),
   );
   await tui.runProgram(

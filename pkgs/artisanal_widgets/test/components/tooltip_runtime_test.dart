@@ -67,107 +67,104 @@ void main() {
       await _waitUntil(
         () => _plainView(program).contains('Hover to preview tooltips'),
       );
-      expect(
-        _plainView(program),
-        contains('Hover to preview tooltips'),
-      );
+      expect(_plainView(program), contains('Hover to preview tooltips'));
     });
 
-    test('floating tooltip appears immediately on hover enter for plain text', () async {
-      final terminal = runtime.StringTerminal();
-      final program = runtime.Program(
-        w.WidgetApp(_overlayRoot(child: w.Text('Hover me'))),
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouse: true,
-          mouseMode: runtime.MouseMode.allMotion,
-          signalHandlers: false,
-          frameTick: false,
-          startupProbes: false,
-        ),
-        terminal: terminal,
-      );
+    test(
+      'floating tooltip appears immediately on hover enter for plain text',
+      () async {
+        final terminal = runtime.StringTerminal();
+        final program = runtime.Program(
+          w.WidgetApp(_overlayRoot(child: w.Text('Hover me'))),
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouse: true,
+            mouseMode: runtime.MouseMode.allMotion,
+            signalHandlers: false,
+            frameTick: false,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      addTearDown(() async {
-        program.send(const runtime.QuitMsg());
-        await runFuture;
-      });
+        final runFuture = program.run();
+        addTearDown(() async {
+          program.send(const runtime.QuitMsg());
+          await runFuture;
+        });
 
-      final target = await _overlayHoverTarget(child: w.Text('Hover me'));
+        final target = await _overlayHoverTarget(child: w.Text('Hover me'));
 
-      terminal.clear();
-      program.send(
-        runtime.MouseMsg(
-          action: runtime.MouseAction.motion,
-          button: runtime.MouseButton.none,
-          x: target.x,
-          y: target.y,
-        ),
-      );
+        terminal.clear();
+        program.send(
+          runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: target.x,
+            y: target.y,
+          ),
+        );
 
-      await _waitUntil(
-        () => _plainView(program).contains('Hover to preview tooltips'),
-      );
-      expect(
-        _plainView(program),
-        contains('Hover to preview tooltips'),
-      );
-    });
+        await _waitUntil(
+          () => _plainView(program).contains('Hover to preview tooltips'),
+        );
+        expect(_plainView(program), contains('Hover to preview tooltips'));
+      },
+    );
 
-    test('floating tooltip appears immediately when child has its own MouseRegion', () async {
-      final terminal = runtime.StringTerminal();
-      final program = runtime.Program(
-        w.WidgetApp(
-          _overlayRoot(
-            child: w.MouseRegion(
-              onEnter: (_) => runtime.Cmd.repaint(),
-              child: w.Button(label: 'Hover me', onPressed: () => null),
+    test(
+      'floating tooltip appears immediately when child has its own MouseRegion',
+      () async {
+        final terminal = runtime.StringTerminal();
+        final program = runtime.Program(
+          w.WidgetApp(
+            _overlayRoot(
+              child: w.MouseRegion(
+                onEnter: (_) => runtime.Cmd.repaint(),
+                child: w.Button(label: 'Hover me', onPressed: () => null),
+              ),
             ),
           ),
-        ),
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouse: true,
-          mouseMode: runtime.MouseMode.allMotion,
-          signalHandlers: false,
-          frameTick: false,
-          startupProbes: false,
-        ),
-        terminal: terminal,
-      );
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouse: true,
+            mouseMode: runtime.MouseMode.allMotion,
+            signalHandlers: false,
+            frameTick: false,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      addTearDown(() async {
-        program.send(const runtime.QuitMsg());
-        await runFuture;
-      });
+        final runFuture = program.run();
+        addTearDown(() async {
+          program.send(const runtime.QuitMsg());
+          await runFuture;
+        });
 
-      final hoverTarget = await _overlayHoverTarget(
-        child: w.MouseRegion(
-          onEnter: (_) => runtime.Cmd.repaint(),
-          child: w.Button(label: 'Hover me', onPressed: () => null),
-        ),
-      );
+        final hoverTarget = await _overlayHoverTarget(
+          child: w.MouseRegion(
+            onEnter: (_) => runtime.Cmd.repaint(),
+            child: w.Button(label: 'Hover me', onPressed: () => null),
+          ),
+        );
 
-      terminal.clear();
-      program.send(
-        runtime.MouseMsg(
-          action: runtime.MouseAction.motion,
-          button: runtime.MouseButton.none,
-          x: hoverTarget.x,
-          y: hoverTarget.y,
-        ),
-      );
+        terminal.clear();
+        program.send(
+          runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: hoverTarget.x,
+            y: hoverTarget.y,
+          ),
+        );
 
-      await _waitUntil(
-        () => _plainView(program).contains('Hover to preview tooltips'),
-      );
-      expect(
-        _plainView(program),
-        contains('Hover to preview tooltips'),
-      );
-    });
+        await _waitUntil(
+          () => _plainView(program).contains('Hover to preview tooltips'),
+        );
+        expect(_plainView(program), contains('Hover to preview tooltips'));
+      },
+    );
 
     test('floating tooltip appears immediately on hover enter', () async {
       final terminal = runtime.StringTerminal();
@@ -194,10 +191,7 @@ void main() {
       final app = program.currentModel!;
       expect(app, isA<w.WidgetApp>());
       expect(
-        app.hitTestAt(
-          hoverTarget.x.toDouble(),
-          hoverTarget.y.toDouble(),
-        ),
+        app.hitTestAt(hoverTarget.x.toDouble(), hoverTarget.y.toDouble()),
         isNotEmpty,
       );
 
@@ -249,10 +243,7 @@ void main() {
       final app = program.currentModel!;
       expect(app, isA<w.WidgetApp>());
       expect(
-        app.hitTestAt(
-          hoverTarget.x.toDouble(),
-          hoverTarget.y.toDouble(),
-        ),
+        app.hitTestAt(hoverTarget.x.toDouble(), hoverTarget.y.toDouble()),
         isNotEmpty,
       );
 
@@ -286,51 +277,54 @@ void main() {
       expect(plain, contains('Hover me'));
     });
 
-    test('floating tooltip stays stable without repaint churn while hovered', () async {
-      final terminal = runtime.StringTerminal();
-      final program = runtime.Program(
-        w.WidgetApp(_overlayRoot()),
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouse: true,
-          mouseMode: runtime.MouseMode.allMotion,
-          signalHandlers: false,
-          frameTick: false,
-          startupProbes: false,
-        ),
-        terminal: terminal,
-      );
+    test(
+      'floating tooltip stays stable without repaint churn while hovered',
+      () async {
+        final terminal = runtime.StringTerminal();
+        final program = runtime.Program(
+          w.WidgetApp(_overlayRoot()),
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouse: true,
+            mouseMode: runtime.MouseMode.allMotion,
+            signalHandlers: false,
+            frameTick: false,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      addTearDown(() async {
-        program.send(const runtime.QuitMsg());
-        await runFuture;
-      });
+        final runFuture = program.run();
+        addTearDown(() async {
+          program.send(const runtime.QuitMsg());
+          await runFuture;
+        });
 
-      final hoverTarget = await _overlayHoverTarget();
+        final hoverTarget = await _overlayHoverTarget();
 
-      terminal.clear();
-      program.send(
-        runtime.MouseMsg(
-          action: runtime.MouseAction.motion,
-          button: runtime.MouseButton.none,
-          x: hoverTarget.x,
-          y: hoverTarget.y,
-        ),
-      );
+        terminal.clear();
+        program.send(
+          runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: hoverTarget.x,
+            y: hoverTarget.y,
+          ),
+        );
 
-      await _waitUntil(
-        () => _plainView(program).contains('Hover to preview tooltips'),
-      );
+        await _waitUntil(
+          () => _plainView(program).contains('Hover to preview tooltips'),
+        );
 
-      final settledOutput = _plainView(program);
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-      expect(
-        _plainView(program),
-        equals(settledOutput),
-        reason: 'tooltip output should stay stable without new input',
-      );
-    });
+        final settledOutput = _plainView(program);
+        await Future<void>.delayed(const Duration(milliseconds: 120));
+        expect(
+          _plainView(program),
+          equals(settledOutput),
+          reason: 'tooltip output should stay stable without new input',
+        );
+      },
+    );
   });
 }
 
@@ -351,9 +345,7 @@ String _plainView(runtime.Program program) {
 }
 
 w.Widget _overlayRoot({w.Widget? child}) => w.Overlay(
-  initialEntries: [
-    w.OverlayEntry(builder: (_) => _TooltipHost(child: child)),
-  ],
+  initialEntries: [w.OverlayEntry(builder: (_) => _TooltipHost(child: child))],
 );
 
 class _TooltipHost extends w.StatelessWidget {

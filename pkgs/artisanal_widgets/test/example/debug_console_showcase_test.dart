@@ -34,7 +34,10 @@ void main() {
       ),
     );
 
-    await _pumpUntil(tester, () => tester.view.contains('Debug console ready.'));
+    await _pumpUntil(
+      tester,
+      () => tester.view.contains('Debug console ready.'),
+    );
 
     expect(tester.view, contains('Debug Console'));
     expect(tester.view, contains('Debug console ready.'));

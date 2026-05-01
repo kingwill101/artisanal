@@ -251,7 +251,8 @@ final class _TermGrid {
     _x++;
   }
 
-  List<String> lines() => _rows.map((row) => row.join()).toList(growable: false);
+  List<String> lines() =>
+      _rows.map((row) => row.join()).toList(growable: false);
 }
 
 void main() {
@@ -263,7 +264,10 @@ void main() {
 
     const width = 100;
     const height = 24;
-    final terminal = StringTerminal(terminalWidth: width, terminalHeight: height);
+    final terminal = StringTerminal(
+      terminalWidth: width,
+      terminalHeight: height,
+    );
     final grid = _TermGrid(width, height);
     final program = tui.Program<tui.WidgetApp>(
       createHelpViewApp(),

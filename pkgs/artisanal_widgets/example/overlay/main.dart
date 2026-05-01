@@ -27,9 +27,7 @@ class OverlayDemo extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
     return w.Overlay(
-      initialEntries: [
-        w.OverlayEntry(builder: (_) => _OverlayDemoHost()),
-      ],
+      initialEntries: [w.OverlayEntry(builder: (_) => _OverlayDemoHost())],
     );
   }
 }
@@ -100,7 +98,10 @@ class _OverlayDemoHostState extends w.State<_OverlayDemoHost> {
     return null;
   }
 
-  w.OverlayEntry _buildOverlayEntry(_EntryInfo entry, {required int stackIndex}) {
+  w.OverlayEntry _buildOverlayEntry(
+    _EntryInfo entry, {
+    required int stackIndex,
+  }) {
     return w.OverlayEntry(
       builder: (ctx) {
         final theme = widget.theme;

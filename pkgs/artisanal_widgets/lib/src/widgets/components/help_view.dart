@@ -64,8 +64,8 @@ class HelpView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final resolvedKeyStyle = (keyStyle ?? theme.labelLarge).copy();
-    final resolvedDescriptionStyle =
-        (descriptionStyle ?? theme.bodySmall).copy();
+    final resolvedDescriptionStyle = (descriptionStyle ?? theme.bodySmall)
+        .copy();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -240,7 +240,9 @@ class HelpView extends StatelessWidget {
       totalWidth += _groupWidth(groups[i]);
     }
     return totalWidth > maxWidth ||
-        groups.any((group) => group.any((binding) => _bindingWidth(binding) > maxWidth));
+        groups.any(
+          (group) => group.any((binding) => _bindingWidth(binding) > maxWidth),
+        );
   }
 
   static int _groupWidth(List<KeyBinding> bindings) {

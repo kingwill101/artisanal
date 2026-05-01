@@ -17,6 +17,30 @@ Future<void> _pumpUntil(
 }
 
 void main() {
+  test(
+    'DebugConsoleController uses injected nowProvider for entry timestamps',
+    () {
+      var now = DateTime.utc(2026, 1, 1, 12, 34, 56);
+      final controller = DebugConsoleController(nowProvider: () => now);
+
+      controller.info('boot');
+      now = now.add(const Duration(seconds: 1));
+      controller.warn('warn');
+
+      expect(controller.entries, hasLength(2));
+      expect(
+        controller.entries.first.timestamp,
+        DateTime.utc(2026, 1, 1, 12, 34, 56),
+      );
+      expect(controller.entries.first.timestampLabel, equals('12:34:56'));
+      expect(
+        controller.entries.last.timestamp,
+        DateTime.utc(2026, 1, 1, 12, 34, 57),
+      );
+      expect(controller.entries.last.timestampLabel, equals('12:34:57'));
+    },
+  );
+
   test('DebugConsole renders controller entries and updates live', () async {
     final controller = DebugConsoleController(maxEntries: 3);
     controller.info('boot');
@@ -27,11 +51,7 @@ void main() {
     await tester.pumpWidget(
       ThemeScope(
         theme: Theme.dark(),
-        child: DebugConsole(
-          controller: controller,
-          height: 4,
-          showHelp: false,
-        ),
+        child: DebugConsole(controller: controller, height: 4, showHelp: false),
       ),
     );
 
@@ -64,7 +84,9 @@ void main() {
       throwsA(isA<StateError>()),
     );
 
-    final messages = controller.entries.map((entry) => entry.message).join('\n');
+    final messages = controller.entries
+        .map((entry) => entry.message)
+        .join('\n');
     expect(messages, contains('hello console'));
     expect(messages, contains('Bad state: boom'));
   });

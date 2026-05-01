@@ -157,52 +157,53 @@ void main() {
     test(
       'shows responsive exit affordances without stealing q from text input',
       () async {
-      final tester = WidgetTester(screenWidth: 44, screenHeight: 18);
-      addTearDown(() => tester.dispose());
+        final tester = WidgetTester(screenWidth: 44, screenHeight: 18);
+        addTearDown(() => tester.dispose());
 
-      var exited = false;
+        var exited = false;
 
-      await tester.pumpWidget(
-        ThemeScope(
-          theme: Theme.dark(),
-          child: FocusScope(
-            child: Wizard(
-              steps: [
-                WizardFormStep.textInput(key: 'name', prompt: 'Project name'),
-              ],
-              onExit: () {
-                exited = true;
-                return null;
-              },
+        await tester.pumpWidget(
+          ThemeScope(
+            theme: Theme.dark(),
+            child: FocusScope(
+              child: Wizard(
+                steps: [
+                  WizardFormStep.textInput(key: 'name', prompt: 'Project name'),
+                ],
+                onExit: () {
+                  exited = true;
+                  return null;
+                },
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(tester.find.text('Finish'), isTrue);
-      expect(tester.find.text('Quit'), isTrue);
-      expect(tester.find.text('enter'), isTrue);
-      expect(tester.find.text('finish'), isTrue);
-      expect(tester.find.text('ctrl+c'), isTrue);
-      expect(tester.find.text('quit'), isTrue);
+        expect(tester.find.text('Finish'), isTrue);
+        expect(tester.find.text('Quit'), isTrue);
+        expect(tester.find.text('enter'), isTrue);
+        expect(tester.find.text('finish'), isTrue);
+        expect(tester.find.text('ctrl+c'), isTrue);
+        expect(tester.find.text('quit'), isTrue);
 
-      tester.sendKey('q');
+        tester.sendKey('q');
 
-      expect(tester.view, contains('> q'));
-      expect(exited, isFalse);
+        expect(tester.view, contains('> q'));
+        expect(exited, isFalse);
 
-      tester.sendMsg(
-        KeyMsg(
-          terminal_keys.Key(
-            terminal_keys.KeyType.runes,
-            runes: const [0x63],
-            ctrl: true,
+        tester.sendMsg(
+          KeyMsg(
+            terminal_keys.Key(
+              terminal_keys.KeyType.runes,
+              runes: const [0x63],
+              ctrl: true,
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(exited, isTrue);
-    });
+        expect(exited, isTrue);
+      },
+    );
 
     test('exits on runtime interrupt messages and raw ctrl+c bytes', () async {
       final tester = WidgetTester(screenWidth: 44, screenHeight: 18);
@@ -236,10 +237,7 @@ void main() {
       await pumpWizard();
       tester.sendMsg(
         KeyMsg(
-          terminal_keys.Key(
-            terminal_keys.KeyType.runes,
-            runes: const [0x03],
-          ),
+          terminal_keys.Key(terminal_keys.KeyType.runes, runes: const [0x03]),
         ),
       );
       expect(exits, 2);

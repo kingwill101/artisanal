@@ -16,6 +16,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
+  final monitor = w.RenderMetricsProgramMonitor(prefix: 'Monitor');
   // The simplest way: set debugOverlay: true.
   // Press F12 at runtime to toggle it on/off.
   final app = tui.WidgetApp(
@@ -28,7 +29,7 @@ void main() async {
     options: const tui.ProgramOptions(
       altScreen: true,
       mouseMode: tui.MouseMode.allMotion,
-    ),
+    ).withInterceptor(monitor),
   );
 }
 

@@ -33,9 +33,7 @@ class _TextAreaDemoScreenState extends w.State<TextAreaDemoScreen> {
       _clearFocus();
       return runtime.Cmd.none();
     }
-    if (msg is runtime.KeyMsg &&
-        !_focus.hasFocus &&
-        _isQuitShortcut(msg.key)) {
+    if (msg is runtime.KeyMsg && !_focus.hasFocus && _isQuitShortcut(msg.key)) {
       return runtime.Cmd.quit();
     }
     return null;

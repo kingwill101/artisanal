@@ -21,8 +21,9 @@ class DebugOverlay extends StatefulWidget {
     required this.child,
     this.enabled = true,
     this.position = DebugOverlayPosition.topRight,
+    DateTime Function()? nowProvider,
     super.key,
-  });
+  }) : nowProvider = nowProvider ?? DateTime.now;
 
   /// The main content underneath the overlay.
   final Widget child;
@@ -32,6 +33,9 @@ class DebugOverlay extends StatefulWidget {
 
   /// Where to position the overlay.
   final DebugOverlayPosition position;
+
+  /// Logical clock used for fallback frame/update timing.
+  final DateTime Function() nowProvider;
 
   @override
   State<DebugOverlay> createState() => _DebugOverlayState();
@@ -49,7 +53,7 @@ class _DebugOverlayState extends State<DebugOverlay> {
   @override
   Cmd? handleUpdate(Msg msg) {
     // Track widget-layer update frequency as a supplement.
-    final now = DateTime.now();
+    final now = widget.nowProvider();
     if (_lastUpdateTime != null) {
       final delta = now.difference(_lastUpdateTime!).inMicroseconds / 1000.0;
       _updateIntervals.add(delta);
@@ -144,13 +148,21 @@ class _DebugOverlayState extends State<DebugOverlay> {
 /// )
 /// ```
 class PerformanceOverlay extends StatefulWidget {
-  PerformanceOverlay({required this.child, this.enabled = true, super.key});
+  PerformanceOverlay({
+    required this.child,
+    this.enabled = true,
+    DateTime Function()? nowProvider,
+    super.key,
+  }) : nowProvider = nowProvider ?? DateTime.now;
 
   /// The main content underneath the overlay.
   final Widget child;
 
   /// Whether the overlay is visible.
   final bool enabled;
+
+  /// Logical clock used for fallback frame/update timing.
+  final DateTime Function() nowProvider;
 
   @override
   State<PerformanceOverlay> createState() => _PerformanceOverlayState();
@@ -164,7 +176,7 @@ class _PerformanceOverlayState extends State<PerformanceOverlay> {
 
   @override
   Cmd? handleUpdate(Msg msg) {
-    final now = DateTime.now();
+    final now = widget.nowProvider();
     if (_lastUpdateTime != null) {
       _lastUpdateDeltaMs =
           now.difference(_lastUpdateTime!).inMicroseconds / 1000.0;

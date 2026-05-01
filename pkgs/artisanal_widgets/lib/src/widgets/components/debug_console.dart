@@ -1,5 +1,7 @@
 part of 'components_widgets.dart';
 
+DateTime _defaultDebugConsoleNowProvider() => DateTime.now();
+
 /// One line in a [DebugConsoleController].
 final class DebugConsoleEntry {
   DebugConsoleEntry({
@@ -34,19 +36,25 @@ final class DebugConsoleController {
   DebugConsoleController({
     this.maxEntries = 200,
     bool initiallyVisible = false,
-  }) : _visible = initiallyVisible;
+    DateTime Function()? nowProvider,
+  }) : _visible = initiallyVisible,
+       _nowProvider = nowProvider ?? _defaultDebugConsoleNowProvider;
 
   /// Maximum number of stored log lines.
   final int maxEntries;
 
   final List<DebugConsoleEntry> _entries = <DebugConsoleEntry>[];
   final Set<void Function()> _listeners = <void Function()>{};
-  final StreamController<int> _events = StreamController<int>.broadcast(sync: true);
+  final StreamController<int> _events = StreamController<int>.broadcast(
+    sync: true,
+  );
   bool _visible;
   int _revision = 0;
+  final DateTime Function() _nowProvider;
 
   /// Current immutable log entries.
-  List<DebugConsoleEntry> get entries => List<DebugConsoleEntry>.unmodifiable(_entries);
+  List<DebugConsoleEntry> get entries =>
+      List<DebugConsoleEntry>.unmodifiable(_entries);
 
   /// Stream of controller revisions for runtime-integrated listeners.
   Stream<int> get stream => _events.stream;
@@ -55,20 +63,12 @@ final class DebugConsoleController {
   bool get visible => _visible;
 
   /// Appends a log line.
-  void add(
-    String message, {
-    String level = 'info',
-    DateTime? timestamp,
-  }) {
-    final ts = timestamp ?? DateTime.now();
+  void add(String message, {String level = 'info', DateTime? timestamp}) {
+    final ts = timestamp ?? _nowProvider();
     final lines = message.split('\n');
     for (final line in lines) {
       _entries.add(
-        DebugConsoleEntry(
-          message: line,
-          level: level,
-          timestamp: ts,
-        ),
+        DebugConsoleEntry(message: line, level: level, timestamp: ts),
       );
     }
     if (_entries.length > maxEntries) {
@@ -400,8 +400,7 @@ class _DebugConsoleRow extends StatelessWidget {
 final class _DebugConsoleHelpKeyMap implements KeyMap {
   _DebugConsoleHelpKeyMap({required bool showToggleShortcut})
     : _bindings = <KeyBinding>[
-        if (showToggleShortcut)
-          KeyBinding.withHelp(['f10'], 'f10', 'toggle'),
+        if (showToggleShortcut) KeyBinding.withHelp(['f10'], 'f10', 'toggle'),
         KeyBinding.withHelp(['ctrl+l'], 'ctrl+l', 'clear'),
       ];
 
@@ -495,7 +494,10 @@ class _DebugConsoleHostState extends State<DebugConsoleHost> {
           Align(
             alignment: Alignment.bottomCenter,
             child: SizedBox(
-              width: math.max(32, MediaQuery.of(context).size.width.toInt() - 2),
+              width: math.max(
+                32,
+                MediaQuery.of(context).size.width.toInt() - 2,
+              ),
               child: DebugConsole(
                 controller: widget.controller,
                 height: widget.consoleHeight,

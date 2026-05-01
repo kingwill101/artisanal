@@ -222,16 +222,10 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     final width = _menuRowWidth() + 2;
     final height = _menuContentHeight() + 2;
     final left = _menuLeft
-        .clamp(
-      0,
-      math.max(0, media.size.width.toInt() - width),
-    )
+        .clamp(0, math.max(0, media.size.width.toInt() - width))
         .toInt();
     final top = _menuTop
-        .clamp(
-      0,
-      math.max(0, media.size.height.toInt() - height),
-    )
+        .clamp(0, math.max(0, media.size.height.toInt() - height))
         .toInt();
     return (left: left, top: top, width: width, height: height);
   }
@@ -605,13 +599,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
     required Style textStyle,
     required Style markerStyle,
   }) {
-    final cacheKey = (
-      entry,
-      label,
-      marker,
-      checkmark,
-      styleKey,
-    );
+    final cacheKey = (entry, label, marker, checkmark, styleKey);
     final cached = _renderedTextLineCache[cacheKey];
     if (cached != null) return cached;
 

@@ -595,8 +595,11 @@ class _TextEditorState extends State<TextEditor> {
         !key.meta) {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
       _applyLineEdit(
-        (document, state) =>
-            textOutdentLinesDocument(document: document, state: state, width: width),
+        (document, state) => textOutdentLinesDocument(
+          document: document,
+          state: state,
+          width: width,
+        ),
       );
       return Cmd.none();
     }
@@ -609,8 +612,11 @@ class _TextEditorState extends State<TextEditor> {
       final width = widget.indentWidth < 1 ? 1 : widget.indentWidth;
       if (_controller.hasSelection) {
         _applyLineEdit(
-          (document, state) =>
-              textIndentLinesDocument(document: document, state: state, width: width),
+          (document, state) => textIndentLinesDocument(
+            document: document,
+            state: state,
+            width: width,
+          ),
         );
         return Cmd.none();
       }
@@ -620,7 +626,8 @@ class _TextEditorState extends State<TextEditor> {
 
     if (keyMatchesSingle(key, _joinLinesBinding)) {
       _applyLineEdit(
-        (document, state) => textJoinLinesDocument(document: document, state: state),
+        (document, state) =>
+            textJoinLinesDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -633,7 +640,8 @@ class _TextEditorState extends State<TextEditor> {
         key.runes.isNotEmpty &&
         String.fromCharCode(key.runes.first).toLowerCase() == 'k') {
       _applyLineEdit(
-        (document, state) => textDeleteLinesDocument(document: document, state: state),
+        (document, state) =>
+            textDeleteLinesDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -803,20 +811,16 @@ class _TextEditorState extends State<TextEditor> {
 
     if (keyMatchesSingle(key, _toggleChecklistStateBinding)) {
       _applyLineEdit(
-        (document, state) => textToggleChecklistStateDocument(
-          document: document,
-          state: state,
-        ),
+        (document, state) =>
+            textToggleChecklistStateDocument(document: document, state: state),
       );
       return Cmd.none();
     }
 
     if (keyMatchesSingle(key, _renumberListBinding)) {
       _applyLineEdit(
-        (document, state) => textRenumberNumberedListDocument(
-          document: document,
-          state: state,
-        ),
+        (document, state) =>
+            textRenumberNumberedListDocument(document: document, state: state),
       );
       return Cmd.none();
     }
@@ -1233,10 +1237,7 @@ class _TextEditorState extends State<TextEditor> {
         ),
       ),
     );
-    final headerBandChildren = <Widget>[
-      header,
-      ?diagnosticBanner,
-    ];
+    final headerBandChildren = <Widget>[header, ?diagnosticBanner];
 
     final children = <Widget>[
       _buildChromeBand(
