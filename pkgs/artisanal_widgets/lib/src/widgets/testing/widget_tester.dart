@@ -397,6 +397,16 @@ class WidgetTester {
   /// The most recently rendered view string.
   String get view => _lastView;
 
+  /// Raw terminal output captured by the mock terminal.
+  ///
+  /// This includes all writes emitted by the renderer, not just the latest
+  /// canonical view. Harness analyzers use this for output hygiene checks such
+  /// as synchronized-output and flicker detection.
+  String get terminalOutput {
+    _ensureRunning();
+    return _terminal!.allOutput;
+  }
+
   /// Number of times [pump] has been called (including the implicit pump
   /// inside [pumpWidget]).
   int get pumpCount => _pumpCount;

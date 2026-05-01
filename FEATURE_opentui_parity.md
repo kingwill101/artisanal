@@ -28,6 +28,9 @@ Implemented locally:
   `pkgs/artisanal_widgets/example/slots/main.dart`
 - deterministic widget-test frame recording plus a testing-side `ManualClock`
   with animation-tick helpers
+- Frankentui-inspired widget harness additions for deterministic storm
+  profiles, flicker/output hygiene analysis, artifact classification, and
+  gauntlet-style composition
 - terminal palette service and theme-host integration for foreground,
   background, cursor, and indexed palette reports
 - public render-frame inspection with ANSI-aware line parsing and carried style
@@ -139,6 +142,24 @@ Current local status:
   `WidgetFuzzer` / `WidgetTester.fuzz(...)` harness for seeded key, special
   key, paste, mouse, drag, resize, and pump input streams, with structured
   failure reporting and optional frame capture for replaying a failed run
+- `artisanal_widgets/testing.dart` now also exports a deterministic
+  `WidgetStormProfile` / `WidgetStormRunner` layer for named stress profiles
+  such as keyboard storms, mouse floods, long paste bursts, resize sweeps, and
+  mixed input bursts, with seeded generation and optional frame capture
+- `FlickerAnalyzer` can inspect raw terminal output for synchronized-output
+  markers, sync gaps, partial clears, incomplete frames, interleaved writes,
+  and suspicious cursor movement so tests can flag flicker-prone render paths
+- `HarnessArtifactManifest` classifies harness artifacts such as run metadata,
+  evidence ledgers, frame snapshots, storm logs, flicker reports, gauntlet
+  reports, capture logs, replay scripts, and summaries with required-field,
+  retention, size, and redaction checks
+- `WidgetGauntlet` ties those pieces together into one composable widget-test
+  harness that mounts a widget, runs selected storm profiles, optionally runs
+  flicker analysis, and returns an in-memory validated manifest
+- the harness pass also tightened core widget-test stability: fallback focus IDs
+  remain stable across rebuilds, adaptive themes rebuild the full tree on
+  terminal background changes, and direct element renders no longer reuse stale
+  focused-subtree cache entries
 - `ProgramRenderRecorder` now provides deterministic runtime-side render
   snapshots for direct `Program` tests, including parsed frame metadata and
   optional native-frame / delta payload capture through the interceptor path

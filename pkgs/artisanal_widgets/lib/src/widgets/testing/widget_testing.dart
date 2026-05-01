@@ -21,5 +21,9 @@
 library;
 
 export 'manual_clock.dart';
+export 'flicker_analyzer.dart';
+export 'harness_artifacts.dart';
+export 'widget_gauntlet.dart';
 export 'widget_fuzzer.dart';
+export 'widget_storm.dart';
 export 'widget_tester.dart';
