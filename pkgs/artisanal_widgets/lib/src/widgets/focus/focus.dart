@@ -270,8 +270,9 @@ class _FocusScopeState extends State<FocusScope> {
   FocusController? _controller;
   FocusController? _localController;
   String? _parentId;
+  late final String _fallbackFocusId = widget.id;
 
-  String get _focusId => widget.id;
+  String get _focusId => _fallbackFocusId;
 
   @override
   void initState() {
@@ -420,8 +421,9 @@ class _FocusableState extends State<Focusable> {
   bool _focused = false;
   bool _autofocusSent = false;
   String? _parentId;
+  late final String _fallbackFocusId = widget.id;
 
-  String get _focusId => widget.focusId ?? widget.id;
+  String get _focusId => widget.focusId ?? _fallbackFocusId;
 
   @override
   void initState() {

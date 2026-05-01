@@ -546,10 +546,10 @@ class WidgetApp
     root = _currentRoot();
     if (msg is BackgroundColorMsg) {
       // Adaptive theme state lives outside the element tree. When the terminal
-      // reports a new background color, rebuild the root so widgets that read
-      // ThemeScope/current theme in build() update immediately without waiting
-      // for an unrelated resize or input event.
-      _tree.root.markNeedsBuild();
+      // reports a new background color, rebuild the full tree so widgets that
+      // read ThemeScope/current theme in build() update immediately without
+      // waiting for an unrelated resize or input event.
+      _markElementTreeDirty(_tree.root);
       _dirty = true;
     } else if (msg is WindowSizeMsg) {
       _dirty = true;

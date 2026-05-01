@@ -260,18 +260,17 @@ abstract class Element {
 
   bool _subtreeHasFocusedWidget() {
     final owner = _owner;
-    if (owner != null) {
-      final epoch = owner.focusTraversalEpoch;
-      if (_subtreeFocusCacheEpoch == epoch) {
-        return _subtreeFocusCacheValue;
-      }
+    if (owner == null || !owner.isInFrame) {
+      return _computeSubtreeHasFocusedWidget();
+    }
+    final epoch = owner.focusTraversalEpoch;
+    if (_subtreeFocusCacheEpoch == epoch) {
+      return _subtreeFocusCacheValue;
     }
 
     final value = _computeSubtreeHasFocusedWidget();
-    if (owner != null) {
-      _subtreeFocusCacheEpoch = owner.focusTraversalEpoch;
-      _subtreeFocusCacheValue = value;
-    }
+    _subtreeFocusCacheEpoch = owner.focusTraversalEpoch;
+    _subtreeFocusCacheValue = value;
     return value;
   }
 
@@ -529,6 +528,7 @@ class BuildOwner {
   bool _needsPaint = false;
   Element? _mouseCapture;
   bool _hadBuildThisFrame = false;
+  bool _inFrame = false;
   int _focusTraversalEpoch = 0;
 
   // Init commands from elements mounted after initial app startup.
@@ -554,6 +554,9 @@ class BuildOwner {
 
   /// Monotonic epoch used to memoize subtree focus scans during a frame.
   int get focusTraversalEpoch => _focusTraversalEpoch;
+
+  /// Whether a managed [ElementTree.render] frame is currently active.
+  bool get isInFrame => _inFrame;
 
   /// Whether any elements were rebuilt during the current frame's build phase.
   ///
@@ -682,6 +685,7 @@ class BuildOwner {
 
   /// Starts a frame by resetting accumulators and running the build phase.
   void beginFrame(Element root) {
+    _inFrame = true;
     // Reset per-frame phase accumulators.
     _currentBuildDuration = Duration.zero;
     _currentLayoutDuration = Duration.zero;
@@ -700,6 +704,7 @@ class BuildOwner {
   void endFrame({Duration? totalDuration, Duration? buildDuration}) {
     _needsPaint = false;
     _hadBuildThisFrame = false;
+    _inFrame = false;
 
     _widgetFrameCount++;
 

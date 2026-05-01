@@ -76,6 +76,7 @@ class _GestureDetectorState extends State<GestureDetector> {
   Offset? _lastPointerLocal;
   bool _keyboardDragging = false;
   Offset _keyboardDragOffset = Offset.zero;
+  late final String _keyboardDragFocusId = widget.id;
 
   /// Set to `true` when a [HitTestMouseMsg] is received in the current
   /// update cycle.  The subsequent broadcast [MouseMsg] should NOT trigger
@@ -507,7 +508,7 @@ class _GestureDetectorState extends State<GestureDetector> {
   Widget build(BuildContext context) {
     if (_hasDragCallbacks) {
       return Focusable(
-        focusId: widget.id,
+        focusId: _keyboardDragFocusId,
         enabled: widget.enabled,
         onKey: _handleKeyboardDrag,
         child: widget.child,
