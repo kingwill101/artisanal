@@ -24,82 +24,81 @@ Future<void> _waitUntil(
 void main() {
   group('AppWidget runtime tooltip behavior', () {
     for (final altScreen in [false, true]) {
-      test(
-        'tooltip appears immediately on hover in the real gallery runtime '
-        '(altScreen=$altScreen)',
-        () async {
-          final script = await _galleryOverlayCoordinates();
+      test('tooltip appears immediately on hover in the real gallery runtime '
+          '(altScreen=$altScreen)', () async {
+        final script = await _galleryOverlayCoordinates();
 
-          final terminal = runtime.StringTerminal();
-          final program = runtime.Program(
-            w.WidgetApp(
-              w.Overlay(
-                initialEntries: [w.OverlayEntry(builder: (_) => AppWidget())],
-              ),
+        final terminal = runtime.StringTerminal();
+        final program = runtime.Program(
+          w.WidgetApp(
+            w.Overlay(
+              initialEntries: [w.OverlayEntry(builder: (_) => AppWidget())],
             ),
-            options: runtime.ProgramOptions(
-              altScreen: altScreen,
-              mouse: true,
-              mouseMode: runtime.MouseMode.allMotion,
-              signalHandlers: false,
-              frameTick: false,
-              startupProbes: false,
-            ),
-            terminal: terminal,
-          );
+          ),
+          options: runtime.ProgramOptions(
+            altScreen: altScreen,
+            mouse: true,
+            mouseMode: runtime.MouseMode.allMotion,
+            signalHandlers: false,
+            frameTick: false,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-          final runFuture = program.run();
-          addTearDown(() async {
-            program.send(const runtime.QuitMsg());
-            await runFuture;
-          });
+        final runFuture = program.run();
+        addTearDown(() async {
+          program.send(const runtime.QuitMsg());
+          await runFuture;
+        });
 
-          await _waitUntil(() => _plainView(program).contains('Layout'));
+        await _waitUntil(() => _plainView(program).contains('Layout'));
 
-          _tapAt(program, script.componentsTab);
-          await _waitUntil(
-            () => _plainView(program).contains('Buttons + Badges'),
-          );
+        _tapAt(program, script.componentsTab);
+        await _waitUntil(
+          () => _plainView(program).contains('Buttons + Badges'),
+        );
 
-          _tapAt(program, script.overlaysTab);
-          await _waitUntil(() => _plainView(program).contains('Hover me'));
+        _tapAt(program, script.overlaysTab);
+        await _waitUntil(() => _plainView(program).contains('Hover me'));
 
-          final app = program.currentModel!;
-          expect(app, isA<w.WidgetApp>());
-          expect(
-            app.hitTestAt(
-              script.hoverTarget.x.toDouble(),
-              script.hoverTarget.y.toDouble(),
-            ),
-            isNotEmpty,
-          );
+        final app = program.currentModel!;
+        expect(app, isA<w.WidgetApp>());
+        expect(
+          app.hitTestAt(
+            script.hoverTarget.x.toDouble(),
+            script.hoverTarget.y.toDouble(),
+          ),
+          isNotEmpty,
+        );
 
-          terminal.clear();
-          program.send(
-            runtime.MouseMsg(
-              action: runtime.MouseAction.motion,
-              button: runtime.MouseButton.none,
-              x: script.hoverTarget.x,
-              y: script.hoverTarget.y,
-            ),
-          );
+        terminal.clear();
+        program.send(
+          runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: script.hoverTarget.x,
+            y: script.hoverTarget.y,
+          ),
+        );
 
-          await _waitUntil(
-            () => _plainView(program).contains('Hover to preview tooltips'),
-            timeout: const Duration(milliseconds: 100),
-          );
-        },
-      );
+        await _waitUntil(
+          () => _plainView(program).contains('Hover to preview tooltips'),
+          timeout: const Duration(milliseconds: 100),
+        );
+      });
     }
   });
 }
 
 Future<
-    ({
-      ({int x, int y}) componentsTab,
-      ({int x, int y}) overlaysTab,
-      ({int x, int y}) hoverTarget,
-    })> _galleryOverlayCoordinates() async {
+  ({
+    ({int x, int y}) componentsTab,
+    ({int x, int y}) overlaysTab,
+    ({int x, int y}) hoverTarget,
+  })
+>
+_galleryOverlayCoordinates() async {
   final tester = WidgetTester();
   try {
     await tester.pumpWidget(
@@ -144,7 +143,11 @@ void _tapAt(runtime.Program program, ({int x, int y}) target) {
 
 ({int x, int y}) _centeredTextTarget(WidgetTester tester, String text) {
   final loc = tester.locateText(text);
-  expect(loc, isNotNull, reason: 'Could not locate "$text" in widget tester view');
+  expect(
+    loc,
+    isNotNull,
+    reason: 'Could not locate "$text" in widget tester view',
+  );
   return (x: loc!.x + text.length ~/ 2, y: loc.y);
 }
 

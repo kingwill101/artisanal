@@ -78,52 +78,64 @@ void main() {
     expect(Layout.stripAnsi(view.content), contains('theme ok'));
   });
 
-  test('ArtisanalApp themeMode.system switches between light and dark themes', () {
-    final initialDarkBackground = w.hasDarkBackground;
-    addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
+  test(
+    'ArtisanalApp themeMode.system switches between light and dark themes',
+    () {
+      final initialDarkBackground = w.hasDarkBackground;
+      addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
 
-    w.setHasDarkBackground(true);
-    final lightTheme = w.Theme.light();
-    final darkTheme = w.Theme.dark();
-    final app = w.ArtisanalApp(
-      theme: lightTheme,
-      darkTheme: darkTheme,
-      themeMode: w.ThemeMode.system,
-      child: _ThemeModeProbe(
-        lightBackground: lightTheme.background,
-        darkBackground: darkTheme.background,
-      ),
-    );
+      w.setHasDarkBackground(true);
+      final lightTheme = w.Theme.light();
+      final darkTheme = w.Theme.dark();
+      final app = w.ArtisanalApp(
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: w.ThemeMode.system,
+        child: _ThemeModeProbe(
+          lightBackground: lightTheme.background,
+          darkBackground: darkTheme.background,
+        ),
+      );
 
-    app.update(const WindowSizeMsg(30, 8));
-    final initialView = app.view() as View;
-    expect(initialView.backgroundColor, equals(darkTheme.background));
-    expect(Layout.stripAnsi(initialView.content), contains('dark theme'));
+      app.update(const WindowSizeMsg(30, 8));
+      final initialView = app.view() as View;
+      expect(initialView.backgroundColor, equals(darkTheme.background));
+      expect(Layout.stripAnsi(initialView.content), contains('dark theme'));
 
-    app.update(const BackgroundColorMsg(hex: '#ffffff'));
-    final updatedView = app.view() as View;
-    expect(updatedView.backgroundColor, equals(lightTheme.background));
-    expect(Layout.stripAnsi(updatedView.content), contains('light theme'));
-  });
+      app.update(const BackgroundColorMsg(hex: '#ffffff'));
+      final updatedView = app.view() as View;
+      expect(updatedView.backgroundColor, equals(lightTheme.background));
+      expect(Layout.stripAnsi(updatedView.content), contains('light theme'));
+    },
+  );
 
-  test('ArtisanalApp rebuilds immediately when terminal background changes', () {
-    final initialDarkBackground = w.hasDarkBackground;
-    addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
+  test(
+    'ArtisanalApp rebuilds immediately when terminal background changes',
+    () {
+      final initialDarkBackground = w.hasDarkBackground;
+      addTearDown(() => w.setHasDarkBackground(initialDarkBackground));
 
-    w.setHasDarkBackground(true);
-    final app = w.ArtisanalApp(
-      theme: w.Theme.adaptive(),
-      home: _BackgroundModeProbe(),
-    );
+      w.setHasDarkBackground(true);
+      final app = w.ArtisanalApp(
+        theme: w.Theme.adaptive(),
+        home: _BackgroundModeProbe(),
+      );
 
-    app.update(const WindowSizeMsg(40, 12));
-    final initialView = app.view() as View;
-    expect(Layout.stripAnsi(initialView.content), contains('dark background'));
+      app.update(const WindowSizeMsg(40, 12));
+      final initialView = app.view() as View;
+      expect(
+        Layout.stripAnsi(initialView.content),
+        contains('dark background'),
+      );
 
-    app.update(const BackgroundColorMsg(hex: '#ffffff'));
-    final updatedView = app.view() as View;
-    expect(Layout.stripAnsi(updatedView.content), contains('light background'));
-  });
+      app.update(const BackgroundColorMsg(hex: '#ffffff'));
+      final updatedView = app.view() as View;
+      expect(
+        Layout.stripAnsi(updatedView.content),
+        contains('light background'),
+      );
+    },
+  );
 
   test('ArtisanalApp hosts a toggleable debug console pane', () {
     final controller = w.DebugConsoleController(initiallyVisible: false);
@@ -145,7 +157,10 @@ void main() {
 
     app.update(KeyMsg(const Key(KeyType.runes, runes: <int>[0x0c])));
     final cleared = app.view() as View;
-    expect(Layout.stripAnsi(cleared.content), contains('No console entries yet.'));
+    expect(
+      Layout.stripAnsi(cleared.content),
+      contains('No console entries yet.'),
+    );
 
     app.update(KeyMsg(const Key(KeyType.f10)));
     final hidden = app.view() as View;
@@ -161,7 +176,9 @@ final class _ThemeProbe extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
     final scoped = w.ThemeScope.of(context);
-    final result = scoped.background == expectedBackground ? 'theme ok' : 'theme mismatch';
+    final result = scoped.background == expectedBackground
+        ? 'theme ok'
+        : 'theme mismatch';
     return w.Text(result);
   }
 }
@@ -169,9 +186,7 @@ final class _ThemeProbe extends w.StatelessWidget {
 final class _BackgroundModeProbe extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
-    return w.Text(
-      w.hasDarkBackground ? 'dark background' : 'light background',
-    );
+    return w.Text(w.hasDarkBackground ? 'dark background' : 'light background');
   }
 }
 

@@ -282,6 +282,19 @@ void main() {
       expect(timing.totalDuration.inMicroseconds, greaterThanOrEqualTo(0));
     });
 
+    test('frame timing timestamps can be driven by an injected clock', () {
+      final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
+      final owner = w.BuildOwner(nowProvider: () => clock.now);
+      final tree = w.ElementTree(w.Text('hello'), owner: owner);
+
+      tree.render();
+      expect(owner.recentTimings.single.timestamp, equals(clock.now));
+
+      clock.advance(const Duration(milliseconds: 40));
+      tree.render();
+      expect(owner.recentTimings.last.timestamp, equals(clock.now));
+    });
+
     test('recentTimings is capped at 120 entries', () {
       final owner = w.BuildOwner();
       final tree = w.ElementTree(w.Text('hello'), owner: owner);
@@ -561,6 +574,53 @@ void main() {
       },
     );
 
+    test(
+      'RenderMetricsInjector render stats appear in built-in overlay',
+      () async {
+        final tester = WidgetTester();
+        try {
+          await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+
+          const stats = tui.ProgramRenderStats(
+            totalRenders: 12,
+            changedRenders: 9,
+            totalChangedCells: 144,
+            totalChangedSpans: 24,
+            maxDirtyLines: 3,
+            maxChangedCells: 18,
+            maxChangedSpans: 4,
+            totalRenderDuration: Duration(milliseconds: 60),
+            lastRenderGeneration: 12,
+            lastDegradationLevel: tui.DegradationLevel.full,
+            lastChangeSummary: null,
+          );
+
+          w.RenderMetricsInjector.instance.setRenderStats(
+            stats,
+            prefix: 'Monitor',
+            replace: true,
+          );
+          tester.pump();
+
+          expect(
+            tester.find.text('Monitor renders: 12 (9 changed, 75%)'),
+            isTrue,
+          );
+          expect(tester.find.text('Monitor avg: 5.0ms'), isTrue);
+          expect(
+            tester.find.text('Monitor cells: 144 total / 18 peak'),
+            isTrue,
+          );
+          expect(tester.find.text('Monitor spans: 24 total / 4 peak'), isTrue);
+          expect(tester.find.text('Monitor dirty: 3 peak'), isTrue);
+          expect(tester.find.text('Monitor level: full'), isTrue);
+        } finally {
+          w.RenderMetricsInjector.instance.clearMetrics();
+          await tester.dispose();
+        }
+      },
+    );
+
     test('built-in overlay publishes live key->render percentiles', () async {
       final tester = WidgetTester(screenWidth: 120, screenHeight: 30);
       try {
@@ -631,22 +691,35 @@ void main() {
       expect(output, isNot(contains('FPS: ~')));
     });
 
-    test('overlay shows Avg frame and Avg render with runtime metrics', () {
-      final app = tui.WidgetApp(
-        w.DebugOverlay(enabled: true, child: w.Text('content')),
+    test('overlay shows runtime frame and render timing labels', () async {
+      final tester = WidgetTester();
+      try {
+        await tester.pumpWidget(w.Text('content'), debugOverlay: true);
+
+        final metrics = tui.RenderMetrics();
+        metrics.beginFrame();
+        metrics.endFrame();
+
+        w.RenderMetricsInjector.instance.injectRuntime(metrics);
+        tester.pump();
+
+        expect(tester.view, contains('Frame Time:'));
+        expect(tester.view, contains('Render Time:'));
+      } finally {
+        w.RenderMetricsInjector.instance.clearMetrics();
+        await tester.dispose();
+      }
+    });
+
+    test('DebugOverlay stores an injected fallback clock', () {
+      final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
+      final overlay = w.DebugOverlay(
+        enabled: true,
+        nowProvider: () => clock.now,
+        child: w.Text('content'),
       );
-      app.update(tui.WindowSizeMsg(80, 24));
-      app.view();
 
-      final metrics = tui.RenderMetrics();
-      metrics.beginFrame();
-      metrics.endFrame();
-
-      app.update(tui.RenderMetricsMsg(metrics));
-      final output = app.view();
-
-      expect(output, contains('Avg frame:'));
-      expect(output, contains('Avg render:'));
+      expect(overlay.nowProvider(), equals(clock.now));
     });
 
     test('PerformanceOverlay shows fallback before metrics', () {
@@ -669,6 +742,54 @@ void main() {
       expect(output, isNot(contains('Frame')));
       expect(output, isNot(contains('FPS')));
     });
+
+    test('PerformanceOverlay stores an injected fallback clock', () {
+      final clock = ManualClock(initialTime: DateTime.utc(2026, 1, 1, 12));
+      final overlay = w.PerformanceOverlay(
+        enabled: true,
+        nowProvider: () => clock.now,
+        child: w.Text('content'),
+      );
+
+      expect(overlay.nowProvider(), equals(clock.now));
+    });
+  });
+
+  group('RenderMetricsProgramMonitor', () {
+    test(
+      'publishes render stats and clears injected metrics on stop',
+      () async {
+        final monitor = w.RenderMetricsProgramMonitor(prefix: 'Monitor');
+        final injections = <w.RenderMetricsInjection>[];
+        final subscription = w.RenderMetricsInjector.instance.stream.listen(
+          injections.add,
+        );
+        addTearDown(() async {
+          await subscription.cancel();
+        });
+
+        monitor.onRendered(
+          renderGeneration: 7,
+          view: 'frame',
+          degradationLevel: tui.DegradationLevel.full,
+          renderDuration: const Duration(milliseconds: 5),
+        );
+        monitor.onStop();
+
+        await Future<void>.delayed(Duration.zero);
+
+        expect(injections, hasLength(2));
+        expect(injections.first.clearEntries, isTrue);
+        expect(
+          injections.first.upsertEntries['Monitor renders'],
+          '1 (0 changed, 0%)',
+        );
+        expect(injections.first.upsertEntries['Monitor avg'], '5.0ms');
+        expect(injections.first.upsertEntries['Monitor level'], 'full');
+        expect(injections.last.clearEntries, isTrue);
+        expect(injections.last.upsertEntries, isEmpty);
+      },
+    );
   });
 }
 

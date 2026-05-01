@@ -12,7 +12,17 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart' show experimental;
 
-import 'package:artisanal/tui.dart' show RenderMetrics;
+import 'package:artisanal/tui.dart'
+    show
+        DegradationLevel,
+        ProgramInterceptor,
+        ProgramRenderMonitor,
+        ProgramRenderStats,
+        RenderMetrics,
+        TerminalNativeCellDeltaFrame,
+        TerminalNativeDeltaFrame,
+        TerminalNativeFrame,
+        TerminalNativeSpanDelta;
 import '../core/framework.dart' show BuildContext, InheritedWidget;
 
 /// A portable render-metrics update payload.
@@ -95,6 +105,18 @@ class RenderMetricsInjector {
     );
   }
 
+  /// Adds or updates overlay metrics derived from runtime render monitoring.
+  ///
+  /// This forwards the formatted entries from [stats] into the existing
+  /// custom-metrics channel used by built-in debug overlays.
+  void setRenderStats(
+    ProgramRenderStats stats, {
+    String prefix = 'Render',
+    bool replace = false,
+  }) {
+    setMetrics(stats.toMetricEntries(prefix: prefix), replace: replace);
+  }
+
   /// Removes one custom overlay metric line.
   void removeMetric(String key) {
     inject(RenderMetricsInjection(removeKeys: <String>{key}));
@@ -103,6 +125,78 @@ class RenderMetricsInjector {
   /// Clears all custom overlay metric lines.
   void clearMetrics() {
     inject(const RenderMetricsInjection(clearEntries: true));
+  }
+}
+
+/// Program interceptor that forwards render-monitor aggregates into overlays.
+///
+/// This wraps [ProgramRenderMonitor] and publishes formatted key/value entries
+/// through [RenderMetricsInjector], so widget apps can surface runtime render
+/// activity without duplicating monitor plumbing in each example or host app.
+final class RenderMetricsProgramMonitor extends ProgramInterceptor {
+  /// Creates a monitor bridge for widget overlays.
+  RenderMetricsProgramMonitor({
+    this.prefix = 'Render',
+    this.replace = true,
+    this.clearOnStop = true,
+  });
+
+  /// Entry prefix used when formatting overlay metrics.
+  final String prefix;
+
+  /// Whether each render update should replace existing custom metric entries.
+  final bool replace;
+
+  /// Whether to clear injected custom metrics when the program stops.
+  final bool clearOnStop;
+
+  final ProgramRenderMonitor _monitor = ProgramRenderMonitor();
+
+  /// Current aggregated render statistics.
+  ProgramRenderStats get stats => _monitor.stats;
+
+  /// Clears the internal monitor state.
+  void reset() {
+    _monitor.reset();
+  }
+
+  @override
+  void onRendered({
+    required int renderGeneration,
+    required Object view,
+    required DegradationLevel degradationLevel,
+    required Duration renderDuration,
+    int? width,
+    int? height,
+    TerminalNativeFrame? nativeFrame,
+    TerminalNativeDeltaFrame? nativeDelta,
+    TerminalNativeCellDeltaFrame? nativeCellDelta,
+    List<TerminalNativeSpanDelta>? nativeSpanDelta,
+  }) {
+    _monitor.onRendered(
+      renderGeneration: renderGeneration,
+      view: view,
+      degradationLevel: degradationLevel,
+      renderDuration: renderDuration,
+      width: width,
+      height: height,
+      nativeFrame: nativeFrame,
+      nativeDelta: nativeDelta,
+      nativeCellDelta: nativeCellDelta,
+      nativeSpanDelta: nativeSpanDelta,
+    );
+    RenderMetricsInjector.instance.setRenderStats(
+      _monitor.stats,
+      prefix: prefix,
+      replace: replace,
+    );
+  }
+
+  @override
+  void onStop() {
+    if (clearOnStop) {
+      RenderMetricsInjector.instance.clearMetrics();
+    }
   }
 }
 

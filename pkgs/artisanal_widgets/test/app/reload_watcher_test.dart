@@ -73,7 +73,9 @@ void main() {
       });
 
       final signalFuture = controller.stream.first;
-      await File('${tempDir.path}/widget.dart').writeAsString('class Demo {}\n');
+      await File(
+        '${tempDir.path}/widget.dart',
+      ).writeAsString('class Demo {}\n');
 
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
       expect(signal.mode, app.ReloadMode.restart);

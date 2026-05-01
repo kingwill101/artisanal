@@ -17,10 +17,7 @@ enum ReloadMode {
 
 /// One reload signal emitted by [ReloadController].
 final class ReloadSignal {
-  const ReloadSignal._({
-    required this.mode,
-    required this.revision,
-  });
+  const ReloadSignal._({required this.mode, required this.revision});
 
   /// Creates a rebuild-preserving reload signal.
   const ReloadSignal.reload(int revision)
@@ -89,21 +86,20 @@ final class ReloadController {
 }
 
 /// Builder used by [ReloadHost].
-typedef ReloadWidgetBuilder = Widget Function(BuildContext context, int revision);
+typedef ReloadWidgetBuilder =
+    Widget Function(BuildContext context, int revision);
 
 /// Exposes a [ReloadController] to descendant widgets.
 class ReloadScope extends InheritedWidget {
-  ReloadScope({
-    required this.controller,
-    required super.child,
-    super.key,
-  });
+  ReloadScope({required this.controller, required super.child, super.key});
 
   final ReloadController controller;
 
   /// Returns the nearest controller, if any.
   static ReloadController? maybeOf(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<ReloadScope>()?.controller;
+    return context
+        .dependOnInheritedWidgetOfExactType<ReloadScope>()
+        ?.controller;
   }
 
   /// Returns the nearest controller.
@@ -124,11 +120,7 @@ class ReloadScope extends InheritedWidget {
 /// Call [ReloadController.reload] to rerun [builder] while preserving
 /// compatible state, or [ReloadController.restart] to force a full remount.
 class ReloadHost extends StatefulWidget {
-  ReloadHost({
-    required this.controller,
-    required this.builder,
-    super.key,
-  });
+  ReloadHost({required this.controller, required this.builder, super.key});
 
   final ReloadController controller;
   final ReloadWidgetBuilder builder;
@@ -189,10 +181,7 @@ class _ReloadHostState extends State<ReloadHost> {
       controller: widget.controller,
       child: _ReloadBoundary(
         key: _restartBoundaryKey,
-        child: _ReloadBuilder(
-          builder: widget.builder,
-          revision: _revision,
-        ),
+        child: _ReloadBuilder(builder: widget.builder, revision: _revision),
       ),
     );
   }
@@ -208,10 +197,7 @@ class _ReloadBoundary extends StatelessWidget {
 }
 
 class _ReloadBuilder extends StatelessWidget {
-  _ReloadBuilder({
-    required this.builder,
-    required this.revision,
-  });
+  _ReloadBuilder({required this.builder, required this.revision});
 
   final ReloadWidgetBuilder builder;
   final int revision;

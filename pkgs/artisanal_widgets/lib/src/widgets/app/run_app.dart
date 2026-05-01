@@ -18,10 +18,10 @@ import 'widget_app.dart';
 /// latency on the first interaction.
 const runtime.ProgramOptions defaultWidgetProgramOptions =
     runtime.ProgramOptions(
-  altScreen: true,
-  mouseMode: runtime.MouseMode.allMotion,
-  startupProbes: false,
-);
+      altScreen: true,
+      mouseMode: runtime.MouseMode.allMotion,
+      startupProbes: false,
+    );
 
 T _configureImageAutoMode<T extends WidgetApp>(
   T app, {
@@ -183,10 +183,7 @@ Future<void> runReloadableArtisanalApp({
       darkTheme: darkTheme,
       themeMode: themeMode,
       themeBuilder: themeBuilder,
-      home: ReloadHost(
-        controller: controller,
-        builder: homeBuilder,
-      ),
+      home: ReloadHost(controller: controller, builder: homeBuilder),
     ),
     options: options,
     host: host,
@@ -330,10 +327,7 @@ Future<hosts.BrowserTerminalHostServer> serveReloadableArtisanalAppInBrowser({
       themeMode: themeMode,
       themeBuilder: themeBuilder,
       imageAutoMode: imageAutoMode,
-      home: ReloadHost(
-        controller: controller,
-        builder: homeBuilder,
-      ),
+      home: ReloadHost(controller: controller, builder: homeBuilder),
     ),
   );
 }
@@ -376,10 +370,7 @@ Future<hosts.SocketTerminalHostServer> serveReloadableArtisanalAppOnSocket({
       themeMode: themeMode,
       themeBuilder: themeBuilder,
       imageAutoMode: imageAutoMode,
-      home: ReloadHost(
-        controller: controller,
-        builder: homeBuilder,
-      ),
+      home: ReloadHost(controller: controller, builder: homeBuilder),
     ),
   );
 }
@@ -548,10 +539,8 @@ Future<hosts.BrowserTerminalHostServer> serveWidgetAppInBrowser({
     webSocketPath: webSocketPath,
     title: browserTitle,
     pageHtml: pageHtml,
-    modelBuilder: () => _configureImageAutoMode(
-      appBuilder(),
-      imageAutoMode: imageAutoMode,
-    ),
+    modelBuilder: () =>
+        _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -575,10 +564,8 @@ Future<hosts.BrowserTerminalHostServer> serveArtisanalAppInBrowser({
     webSocketPath: webSocketPath,
     title: browserTitle,
     pageHtml: pageHtml,
-    modelBuilder: () => _configureImageAutoMode(
-      appBuilder(),
-      imageAutoMode: imageAutoMode,
-    ),
+    modelBuilder: () =>
+        _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -604,10 +591,8 @@ Future<hosts.SocketTerminalHostServer> serveWidgetAppOnSocket({
     initialSize: initialSize,
     supportsAnsi: supportsAnsi,
     colorProfile: colorProfile,
-    modelBuilder: () => _configureImageAutoMode(
-      appBuilder(),
-      imageAutoMode: imageAutoMode,
-    ),
+    modelBuilder: () =>
+        _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
     options: options ?? defaultWidgetProgramOptions,
   );
 }
@@ -633,10 +618,8 @@ Future<hosts.SocketTerminalHostServer> serveArtisanalAppOnSocket({
     initialSize: initialSize,
     supportsAnsi: supportsAnsi,
     colorProfile: colorProfile,
-    modelBuilder: () => _configureImageAutoMode(
-      appBuilder(),
-      imageAutoMode: imageAutoMode,
-    ),
+    modelBuilder: () =>
+        _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
     options: options ?? defaultWidgetProgramOptions,
   );
 }

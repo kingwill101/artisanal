@@ -45,12 +45,7 @@ Future<String> _readSocketUntil(
   }
 
   timer = Timer(timeout, () {
-    finish(
-      TimeoutException(
-        'Timed out waiting for socket output',
-        timeout,
-      ),
-    );
+    finish(TimeoutException('Timed out waiting for socket output', timeout));
   });
 
   subscription = socket.listen(
@@ -93,12 +88,7 @@ Future<String> _readWebSocketOutputUntil(
   }
 
   timer = Timer(timeout, () {
-    finish(
-      TimeoutException(
-        'Timed out waiting for websocket output',
-        timeout,
-      ),
-    );
+    finish(TimeoutException('Timed out waiting for websocket output', timeout));
   });
 
   subscription = socket.listen(
@@ -204,7 +194,9 @@ void main() {
         host: runtime.ProgramHost.terminal(terminal),
       );
 
-      final messages = controller.entries.map((entry) => entry.message).join('\n');
+      final messages = controller.entries
+          .map((entry) => entry.message)
+          .join('\n');
       expect(messages, contains('captured print'));
     });
 
@@ -247,27 +239,34 @@ void main() {
   });
 
   group('watched runners', () {
-    test('runWatchedWidgetApp wires a file watcher around the reload host', () async {
-      final terminal = runtime.StringTerminal();
-      final tempDir = await Directory.systemTemp.createTemp('run-watched-widget-');
+    test(
+      'runWatchedWidgetApp wires a file watcher around the reload host',
+      () async {
+        final terminal = runtime.StringTerminal();
+        final tempDir = await Directory.systemTemp.createTemp(
+          'run-watched-widget-',
+        );
 
-      addTearDown(() async {
-        await tempDir.delete(recursive: true);
-      });
+        addTearDown(() async {
+          await tempDir.delete(recursive: true);
+        });
 
-      await w.runWatchedWidgetApp(
-        (context, revision) => _QuitOnInitWidget(),
-        watchRoots: [tempDir.path],
-        host: runtime.ProgramHost.terminal(terminal),
-      );
+        await w.runWatchedWidgetApp(
+          (context, revision) => _QuitOnInitWidget(),
+          watchRoots: [tempDir.path],
+          host: runtime.ProgramHost.terminal(terminal),
+        );
 
-      expect(terminal.operations, contains('enterAltScreen'));
-      expect(terminal.operations, contains('enableMouseAllMotion'));
-    });
+        expect(terminal.operations, contains('enterAltScreen'));
+        expect(terminal.operations, contains('enableMouseAllMotion'));
+      },
+    );
 
     test('runWatchedArtisanalApp applies the app shell title', () async {
       final terminal = runtime.StringTerminal();
-      final tempDir = await Directory.systemTemp.createTemp('run-watched-artisanal-');
+      final tempDir = await Directory.systemTemp.createTemp(
+        'run-watched-artisanal-',
+      );
 
       addTearDown(() async {
         await tempDir.delete(recursive: true);
@@ -379,35 +378,42 @@ void main() {
       },
     );
 
-    test('serveWatchedArtisanalAppInBrowser watches files and serves the page', () async {
-      final tempDir = await Directory.systemTemp.createTemp('watched-browser-app-');
-      final host = await w.serveWatchedArtisanalAppInBrowser(
-        port: 0,
-        browserTitle: 'Watched Browser Test',
-        watchRoots: [tempDir.path],
-        homeBuilder: (context, revision) => _QuitOnInitWidget(),
-      );
+    test(
+      'serveWatchedArtisanalAppInBrowser watches files and serves the page',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'watched-browser-app-',
+        );
+        final host = await w.serveWatchedArtisanalAppInBrowser(
+          port: 0,
+          browserTitle: 'Watched Browser Test',
+          watchRoots: [tempDir.path],
+          homeBuilder: (context, revision) => _QuitOnInitWidget(),
+        );
 
-      addTearDown(() async {
-        await host.close();
-        await tempDir.delete(recursive: true);
-      });
+        addTearDown(() async {
+          await host.close();
+          await tempDir.delete(recursive: true);
+        });
 
-      final client = HttpClient();
-      addTearDown(client.close);
+        final client = HttpClient();
+        addTearDown(client.close);
 
-      final request = await client.getUrl(host.server.pageUri);
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
+        final request = await client.getUrl(host.server.pageUri);
+        final response = await request.close();
+        final body = await response.transform(utf8.decoder).join();
 
-      expect(response.statusCode, HttpStatus.ok);
-      expect(body, contains('Watched Browser Test'));
+        expect(response.statusCode, HttpStatus.ok);
+        expect(body, contains('Watched Browser Test'));
 
-      final signalFuture = host.controller.stream.first;
-      await File('${tempDir.path}/main.dart').writeAsString('void main() {}\n');
-      final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, w.ReloadMode.reload);
-    });
+        final signalFuture = host.controller.stream.first;
+        await File(
+          '${tempDir.path}/main.dart',
+        ).writeAsString('void main() {}\n');
+        final signal = await signalFuture.timeout(const Duration(seconds: 5));
+        expect(signal.mode, w.ReloadMode.reload);
+      },
+    );
 
     test('serveArtisanalAppOnSocket exposes app output over tcp', () async {
       final server = await w.serveArtisanalAppOnSocket(
@@ -418,10 +424,8 @@ void main() {
           signalHandlers: false,
           frameTick: false,
         ),
-        appBuilder: () => w.ArtisanalApp(
-          title: 'Socket App',
-          home: _QuitOnInitWidget(),
-        ),
+        appBuilder: () =>
+            w.ArtisanalApp(title: 'Socket App', home: _QuitOnInitWidget()),
       );
 
       addTearDown(server.close);
@@ -534,9 +538,7 @@ void main() {
             signalHandlers: false,
             frameTick: false,
           ),
-          appBuilder: () => w.ArtisanalApp(
-            home: w.Text('plain socket client'),
-          ),
+          appBuilder: () => w.ArtisanalApp(home: w.Text('plain socket client')),
         );
 
         addTearDown(server.close);
@@ -560,138 +562,153 @@ void main() {
       },
     );
 
-    test('serveWatchedArtisanalAppOnSocket watches files and serves tcp output', () async {
-      final tempDir = await Directory.systemTemp.createTemp('watched-socket-app-');
-      final server = await w.serveWatchedArtisanalAppOnSocket(
-        port: 0,
-        watchRoots: [tempDir.path],
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouseMode: runtime.MouseMode.none,
-          signalHandlers: false,
-          frameTick: false,
-        ),
-        homeBuilder: (context, revision) => _QuitOnInitWidget(),
-      );
+    test(
+      'serveWatchedArtisanalAppOnSocket watches files and serves tcp output',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'watched-socket-app-',
+        );
+        final server = await w.serveWatchedArtisanalAppOnSocket(
+          port: 0,
+          watchRoots: [tempDir.path],
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          homeBuilder: (context, revision) => _QuitOnInitWidget(),
+        );
 
-      addTearDown(() async {
-        await server.close();
-        await tempDir.delete(recursive: true);
-      });
+        addTearDown(() async {
+          await server.close();
+          await tempDir.delete(recursive: true);
+        });
 
-      final socket = await Socket.connect(
-        server.server.server.address.address,
-        server.server.server.port,
-      );
-      addTearDown(socket.close);
+        final socket = await Socket.connect(
+          server.server.server.address.address,
+          server.server.server.port,
+        );
+        addTearDown(socket.close);
 
-      final chunk = await socket.first.timeout(const Duration(seconds: 5));
-      final output = utf8.decode(chunk, allowMalformed: true);
-      expect(output, contains('ready'));
+        final chunk = await socket.first.timeout(const Duration(seconds: 5));
+        final output = utf8.decode(chunk, allowMalformed: true);
+        expect(output, contains('ready'));
 
-      final signalFuture = server.controller.stream.first;
-      await File('${tempDir.path}/main.dart').writeAsString('void main() {}\n');
-      final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, w.ReloadMode.reload);
-    });
+        final signalFuture = server.controller.stream.first;
+        await File(
+          '${tempDir.path}/main.dart',
+        ).writeAsString('void main() {}\n');
+        final signal = await signalFuture.timeout(const Duration(seconds: 5));
+        expect(signal.mode, w.ReloadMode.reload);
+      },
+    );
 
-    test('serveWatchedArtisanalAppOnSocket close(force: true) tears down clients', () async {
-      final tempDir = await Directory.systemTemp.createTemp(
-        'watched-socket-force-close-',
-      );
-      final host = await w.serveWatchedArtisanalAppOnSocket(
-        port: 0,
-        watchRoots: [tempDir.path],
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouseMode: runtime.MouseMode.none,
-          signalHandlers: false,
-          frameTick: false,
-        ),
-        homeBuilder: (context, revision) => _IdleWidget(),
-      );
+    test(
+      'serveWatchedArtisanalAppOnSocket close(force: true) tears down clients',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'watched-socket-force-close-',
+        );
+        final host = await w.serveWatchedArtisanalAppOnSocket(
+          port: 0,
+          watchRoots: [tempDir.path],
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          homeBuilder: (context, revision) => _IdleWidget(),
+        );
 
-      addTearDown(() async {
+        addTearDown(() async {
+          await host.close(force: true);
+          await tempDir.delete(recursive: true);
+        });
+
+        final socket = await Socket.connect(
+          host.server.server.address.address,
+          host.server.server.port,
+        );
+
+        final firstOutput = Completer<void>();
+        final closed = Completer<void>();
+        late final StreamSubscription<List<int>> subscription;
+        subscription = socket.listen(
+          (_) {
+            if (!firstOutput.isCompleted) {
+              firstOutput.complete();
+            }
+          },
+          onDone: () {
+            if (!closed.isCompleted) {
+              closed.complete();
+            }
+          },
+        );
+        addTearDown(() async {
+          await subscription.cancel();
+          await socket.close();
+        });
+
+        await firstOutput.future.timeout(const Duration(seconds: 5));
         await host.close(force: true);
-        await tempDir.delete(recursive: true);
-      });
+        await closed.future.timeout(const Duration(seconds: 5));
+      },
+    );
 
-      final socket = await Socket.connect(
-        host.server.server.address.address,
-        host.server.server.port,
-      );
+    test(
+      'serveWatchedArtisanalAppInBrowser close(force: true) tears down clients',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'watched-browser-force-close-',
+        );
+        final host = await w.serveWatchedArtisanalAppInBrowser(
+          port: 0,
+          watchRoots: [tempDir.path],
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouseMode: runtime.MouseMode.none,
+            signalHandlers: false,
+            frameTick: false,
+          ),
+          homeBuilder: (context, revision) => _IdleWidget(),
+        );
 
-      final firstOutput = Completer<void>();
-      final closed = Completer<void>();
-      late final StreamSubscription<List<int>> subscription;
-      subscription = socket.listen(
-        (_) {
-          if (!firstOutput.isCompleted) {
-            firstOutput.complete();
-          }
-        },
-        onDone: () {
-          if (!closed.isCompleted) {
-            closed.complete();
-          }
-        },
-      );
-      addTearDown(() async {
-        await subscription.cancel();
-        await socket.close();
-      });
+        addTearDown(() async {
+          await host.close(force: true);
+          await tempDir.delete(recursive: true);
+        });
 
-      await firstOutput.future.timeout(const Duration(seconds: 5));
-      await host.close(force: true);
-      await closed.future.timeout(const Duration(seconds: 5));
-    });
+        final socket = await WebSocket.connect(
+          host.server.webSocketUri.toString(),
+        );
+        final firstOutput = Completer<void>();
+        final closed = Completer<void>();
+        late final StreamSubscription<dynamic> subscription;
+        subscription = socket.listen(
+          (_) {
+            if (!firstOutput.isCompleted) {
+              firstOutput.complete();
+            }
+          },
+          onDone: () {
+            if (!closed.isCompleted) {
+              closed.complete();
+            }
+          },
+        );
+        addTearDown(() async {
+          await subscription.cancel();
+          await socket.close();
+        });
 
-    test('serveWatchedArtisanalAppInBrowser close(force: true) tears down clients', () async {
-      final tempDir = await Directory.systemTemp.createTemp(
-        'watched-browser-force-close-',
-      );
-      final host = await w.serveWatchedArtisanalAppInBrowser(
-        port: 0,
-        watchRoots: [tempDir.path],
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouseMode: runtime.MouseMode.none,
-          signalHandlers: false,
-          frameTick: false,
-        ),
-        homeBuilder: (context, revision) => _IdleWidget(),
-      );
-
-      addTearDown(() async {
+        await firstOutput.future.timeout(const Duration(seconds: 5));
         await host.close(force: true);
-        await tempDir.delete(recursive: true);
-      });
-
-      final socket = await WebSocket.connect(host.server.webSocketUri.toString());
-      final firstOutput = Completer<void>();
-      final closed = Completer<void>();
-      late final StreamSubscription<dynamic> subscription;
-      subscription = socket.listen(
-        (_) {
-          if (!firstOutput.isCompleted) {
-            firstOutput.complete();
-          }
-        },
-        onDone: () {
-          if (!closed.isCompleted) {
-            closed.complete();
-          }
-        },
-      );
-      addTearDown(() async {
-        await subscription.cancel();
-        await socket.close();
-      });
-
-      await firstOutput.future.timeout(const Duration(seconds: 5));
-      await host.close(force: true);
-      await closed.future.timeout(const Duration(seconds: 5));
-    });
+        await closed.future.timeout(const Duration(seconds: 5));
+      },
+    );
   });
 }
 

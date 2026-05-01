@@ -2,6 +2,7 @@
 library;
 
 import 'dart:collection';
+import 'dart:developer' as dev;
 
 import 'package:artisanal/tui.dart'
     show
@@ -23,6 +24,7 @@ import 'package:artisanal/tui.dart'
         MouseMsg,
         Msg,
         ParallelCmd,
+        ReassemblableModel,
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
@@ -41,12 +43,7 @@ import 'package:artisanal/style.dart'
     show Color, AdaptiveColor, CompleteAdaptiveColor;
 import 'package:artisanal/terminal.dart' show KeyType;
 import '../core/element.dart'
-    show
-        BuildOwner,
-        Element,
-        ElementTree,
-        HitTestElementEntry,
-        StatefulElement;
+    show BuildOwner, Element, ElementTree, HitTestElementEntry, StatefulElement;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
@@ -75,7 +72,8 @@ const int _widgetRenderTraceThresholdUs = 5000;
 ///
 /// The F12 toggle works even when [debugOverlay] starts as `false` — pressing
 /// F12 will enable it on the fly.
-class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
+class WidgetApp
+    implements Model, FrameTickModel, RenderMetricsModel, ReassemblableModel {
   WidgetApp(
     this.root, {
     this.backgroundColor,
@@ -372,7 +370,9 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
         _overlayDirty = true;
       }
       if (msg.action != MouseAction.motion) {
-        _lastMouseMotionTargets.removeWhere((element) => !element.state.mounted);
+        _lastMouseMotionTargets.removeWhere(
+          (element) => !element.state.mounted,
+        );
       }
       // --- Mouse capture: active drag/press owner gets the event first ---
       final capture = _tree.mouseCapture;
@@ -467,9 +467,11 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
           if (msg.action == MouseAction.motion) {
             final rawMotionTargets = <StatefulElement>{
               ...currentMotionTargets.where((element) => element.state.mounted),
-              ..._lastMouseMotionTargets.where((element) =>
-                  element.state.mounted &&
-                  !currentMotionTargets.contains(element)),
+              ..._lastMouseMotionTargets.where(
+                (element) =>
+                    element.state.mounted &&
+                    !currentMotionTargets.contains(element),
+              ),
             };
             if (rawMotionTargets.isNotEmpty) {
               final motionCmd = _tree.dispatchToStatefulElements(
@@ -640,6 +642,31 @@ class WidgetApp implements Model, FrameTickModel, RenderMetricsModel {
     }
     _cachedViewObject = composedContent;
     return composedContent;
+  }
+
+  /// Invalidates all cached state so the next [view] call fully rebuilds
+  /// the element tree.
+  ///
+  /// Called by [Program.performReassemble] after a hot reload so that
+  /// updated `build()` methods in widgets are re-executed.
+  @override
+  void reassemble() {
+    dev.log(
+      'WidgetApp.reassemble: marking widget tree for rebuild',
+      name: 'HotReload',
+    );
+    _cachedView = null;
+    _cachedViewObject = null;
+    _dirty = true;
+    _overlayDirty = _debugOverlayEnabled;
+    _markElementTreeDirty(_tree.root);
+  }
+
+  void _markElementTreeDirty(Element element) {
+    element.markNeedsBuild();
+    for (final child in element.children) {
+      _markElementTreeDirty(child);
+    }
   }
 
   Color? _resolveTerminalBackgroundColor(Color? color) {

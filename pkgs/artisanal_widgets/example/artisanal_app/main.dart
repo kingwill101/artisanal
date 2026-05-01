@@ -48,10 +48,7 @@ final class _HomeScreenState extends w.State<_HomeScreen> {
         gap: 1,
         children: [
           w.Text('ArtisanalApp Shell', style: theme.titleLarge),
-          w.Text(
-            'Enter = push route | Escape = pop | q = quit',
-            style: label,
-          ),
+          w.Text('Enter = push route | Escape = pop | q = quit', style: label),
           w.Divider(width: 60),
           w.Text(
             'Theme mode: ${w.hasDarkBackground ? "dark background" : "light background"}',

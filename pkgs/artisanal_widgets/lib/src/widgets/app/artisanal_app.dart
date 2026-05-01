@@ -4,10 +4,7 @@ library;
 import 'package:artisanal/tui.dart' show View;
 
 import '../components/components_widgets.dart'
-    show
-        DebugConsoleController,
-        DebugConsoleHost,
-        DebugOverlayPosition;
+    show DebugConsoleController, DebugConsoleHost, DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
 import '../layout/layout_widgets.dart' show ImageAutoMode;
@@ -111,13 +108,12 @@ final class ArtisanalApp extends WidgetApp {
            debugConsoleController: debugConsoleController,
            debugConsoleHeight: debugConsoleHeight,
          ),
-         backgroundColorBuilder: () =>
-         _resolveArtisanalTheme(
-               theme: theme,
-               darkTheme: darkTheme,
-               themeMode: themeMode,
-               themeBuilder: themeBuilder,
-             ).background,
+         backgroundColorBuilder: () => _resolveArtisanalTheme(
+           theme: theme,
+           darkTheme: darkTheme,
+           themeMode: themeMode,
+           themeBuilder: themeBuilder,
+         ).background,
          imageAutoMode: imageAutoMode,
        );
 
@@ -294,9 +290,10 @@ Theme _resolveArtisanalTheme({
     ThemeMode.dark => darkTheme ?? theme ?? Theme.dark(),
     ThemeMode.system => switch ((theme, darkTheme)) {
       (null, null) => Theme.adaptive(),
-      _ => hasDarkBackground
-          ? darkTheme ?? theme ?? Theme.dark()
-          : theme ?? darkTheme ?? Theme.light(),
+      _ =>
+        hasDarkBackground
+            ? darkTheme ?? theme ?? Theme.dark()
+            : theme ?? darkTheme ?? Theme.light(),
     },
   };
 }

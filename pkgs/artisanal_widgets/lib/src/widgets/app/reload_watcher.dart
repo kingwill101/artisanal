@@ -33,20 +33,24 @@ final class ReloadFileWatcher {
     bool ignoreHidden = true,
     Iterable<String> extensions = const <String>[],
   }) async {
-    final normalizedRoots = roots
-        .map((root) => Directory(root).absolute.path)
-        .toSet()
-        .toList()
-      ..sort();
+    final normalizedRoots =
+        roots.map((root) => Directory(root).absolute.path).toSet().toList()
+          ..sort();
 
     if (normalizedRoots.isEmpty) {
-      throw ArgumentError.value(roots, 'roots', 'At least one watch root is required.');
+      throw ArgumentError.value(
+        roots,
+        'roots',
+        'At least one watch root is required.',
+      );
     }
 
     final normalizedExtensions = extensions
         .map((extension) => extension.trim().toLowerCase())
         .where((extension) => extension.isNotEmpty)
-        .map((extension) => extension.startsWith('.') ? extension : '.$extension')
+        .map(
+          (extension) => extension.startsWith('.') ? extension : '.$extension',
+        )
         .toSet();
 
     final subscriptions = <StreamSubscription<FileSystemEvent>>[];
@@ -67,10 +71,9 @@ final class ReloadFileWatcher {
         throw ArgumentError.value(root, 'roots', 'Watch root does not exist.');
       }
       subscriptions.add(
-        directory.watch(recursive: recursive).listen(
-          watcher._handleEvent,
-          cancelOnError: false,
-        ),
+        directory
+            .watch(recursive: recursive)
+            .listen(watcher._handleEvent, cancelOnError: false),
       );
     }
 
@@ -117,7 +120,9 @@ final class ReloadFileWatcher {
   bool _matches(String path) {
     if (ignoreHidden) {
       final segments = path.split(Platform.pathSeparator);
-      if (segments.any((segment) => segment.startsWith('.') && segment.length > 1)) {
+      if (segments.any(
+        (segment) => segment.startsWith('.') && segment.length > 1,
+      )) {
         return false;
       }
     }

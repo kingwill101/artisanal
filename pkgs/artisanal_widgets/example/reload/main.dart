@@ -143,8 +143,5 @@ _ReloadExampleConfig _parseArgs(List<String> args) {
     }
   }
 
-  return _ReloadExampleConfig(
-    watchRoots: watchRoots,
-    watchMode: watchMode,
-  );
+  return _ReloadExampleConfig(watchRoots: watchRoots, watchMode: watchMode);
 }
