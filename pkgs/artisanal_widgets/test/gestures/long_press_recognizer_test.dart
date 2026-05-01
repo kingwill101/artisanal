@@ -13,7 +13,8 @@ import 'package:artisanal_widgets/artisanal_widgets.dart'
         LongPressGestureRecognizer,
         LongPressStartDetails,
         LongPressEndDetails,
-        GestureRecognizerState;
+        GestureRecognizerState,
+        GestureTimerHandle;
 import 'package:test/test.dart';
 
 // ---------------------------------------------------------------------------
@@ -37,10 +38,11 @@ Offset _local(int x, int y) => Offset(x.toDouble(), y.toDouble());
 
 void main() {
   late LongPressGestureRecognizer recognizer;
+  late _FakeGestureTimerFactory timers;
 
   setUp(() {
-    recognizer = LongPressGestureRecognizer();
-    // Use a short but not too short duration for tests to avoid races.
+    timers = _FakeGestureTimerFactory();
+    recognizer = LongPressGestureRecognizer(timerFactory: timers.call);
     recognizer.duration = const Duration(milliseconds: 100);
   });
 
@@ -53,7 +55,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('basic long-press', () {
-    test('fires onLongPress after holding for duration', () async {
+    test('fires onLongPress after holding for duration', () {
       var longPressed = false;
       recognizer.onLongPress = () {
         longPressed = true;
@@ -62,13 +64,11 @@ void main() {
 
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
       expect(longPressed, isFalse, reason: 'should not fire immediately');
-
-      // Wait for timer to fire (duration=100ms, wait 200ms for safety).
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
       expect(longPressed, isTrue);
     });
 
-    test('fires onLongPressStart with position details', () async {
+    test('fires onLongPressStart with position details', () {
       LongPressStartDetails? captured;
       recognizer.onLongPressStart = (details) {
         captured = details;
@@ -76,14 +76,14 @@ void main() {
       };
 
       recognizer.handlePointerDown(_press(3, 7), _local(3, 7));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
 
       expect(captured, isNotNull);
       expect(captured!.globalPosition, equals(const Offset(3, 7)));
       expect(captured!.localPosition, equals(const Offset(3, 7)));
     });
 
-    test('fires onLongPressEnd on release after long-press', () async {
+    test('fires onLongPressEnd on release after long-press', () {
       LongPressEndDetails? captured;
       recognizer.onLongPressEnd = (details) {
         captured = details;
@@ -91,7 +91,7 @@ void main() {
       };
 
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
 
       recognizer.handlePointerUp(_release(6, 6), _local(6, 6));
       expect(captured, isNotNull);
@@ -100,7 +100,7 @@ void main() {
 
     test(
       'callback sequence: onLongPressStart → onLongPress → ... → onLongPressEnd',
-      () async {
+      () {
         final sequence = <String>[];
         recognizer
           ..onLongPressStart = (_) {
@@ -117,7 +117,7 @@ void main() {
           };
 
         recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-        await Future<void>.delayed(const Duration(milliseconds: 200));
+        timers.fireNext();
         recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
 
         expect(sequence, equals(['start', 'longPress', 'end']));
@@ -130,7 +130,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('cancellation', () {
-    test('release before timer fires does not trigger long-press', () async {
+    test('release before timer fires does not trigger long-press', () {
       var longPressed = false;
       recognizer.onLongPress = () {
         longPressed = true;
@@ -138,15 +138,12 @@ void main() {
       };
 
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      // Release immediately — before 100ms timer.
       recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
-
-      // Wait to make sure timer would have fired.
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireAll();
       expect(longPressed, isFalse);
     });
 
-    test('movement beyond slop cancels long-press', () async {
+    test('movement beyond slop cancels long-press', () {
       var longPressed = false;
       recognizer.onLongPress = () {
         longPressed = true;
@@ -158,12 +155,11 @@ void main() {
       // Move by (3, 0) → squared dist = 9.0, threshold is 2.0*2.0 = 4.0.
       recognizer.handlePointerMove(_motion(8, 5), _local(8, 5));
 
-      // Wait to see if timer fires.
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireAll();
       expect(longPressed, isFalse);
     });
 
-    test('small movement within slop does not cancel', () async {
+    test('small movement within slop does not cancel', () {
       var longPressed = false;
       recognizer.onLongPress = () {
         longPressed = true;
@@ -174,7 +170,7 @@ void main() {
       // Move by (1, 0) → squared dist = 1.0, threshold is 4.0.
       recognizer.handlePointerMove(_motion(6, 5), _local(6, 5));
 
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
       expect(longPressed, isTrue);
     });
   });
@@ -193,15 +189,15 @@ void main() {
       expect(recognizer.state, equals(GestureRecognizerState.possible));
     });
 
-    test('enters accepted state after timer fires', () async {
+    test('enters accepted state after timer fires', () {
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
       expect(recognizer.state, equals(GestureRecognizerState.accepted));
     });
 
-    test('enters defunct state on pointer-up after long-press', () async {
+    test('enters defunct state on pointer-up after long-press', () {
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
       recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
       expect(recognizer.state, equals(GestureRecognizerState.defunct));
     });
@@ -224,7 +220,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('cmd accumulation', () {
-    test('long-press callbacks accumulate Cmds', () async {
+    test('long-press callbacks accumulate Cmds', () {
       final cmd1 = Cmd.none();
       final cmd2 = Cmd.none();
       final cmd3 = Cmd.none();
@@ -233,7 +229,7 @@ void main() {
       recognizer.onLongPressEnd = (_) => cmd3;
 
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      timers.fireNext();
       recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
 
       expect(recognizer.pendingCmds, contains(cmd1));
@@ -247,7 +243,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('configurable duration', () {
-    test('longer duration delays long-press', () async {
+    test('longer duration delays long-press', () {
       recognizer.duration = const Duration(milliseconds: 200);
       var longPressed = false;
       recognizer.onLongPress = () {
@@ -256,11 +252,49 @@ void main() {
       };
 
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
       expect(longPressed, isFalse, reason: 'not enough time');
-
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+      timers.fireNext();
       expect(longPressed, isTrue, reason: 'enough time now');
     });
   });
+}
+
+final class _FakeGestureTimerFactory {
+  final List<_FakeGestureTimerHandle> _timers = <_FakeGestureTimerHandle>[];
+
+  GestureTimerHandle call(Duration delay, void Function() callback) {
+    final timer = _FakeGestureTimerHandle(delay, callback);
+    _timers.add(timer);
+    return timer;
+  }
+
+  void fireNext() {
+    final timer = _timers.firstWhere((timer) => !timer.isCanceled);
+    timer.fire();
+  }
+
+  void fireAll() {
+    for (final timer in _timers.where((timer) => !timer.isCanceled).toList()) {
+      timer.fire();
+    }
+  }
+}
+
+final class _FakeGestureTimerHandle implements GestureTimerHandle {
+  _FakeGestureTimerHandle(this.delay, this._callback);
+
+  final Duration delay;
+  final void Function() _callback;
+  bool isCanceled = false;
+
+  @override
+  void cancel() {
+    isCanceled = true;
+  }
+
+  void fire() {
+    if (isCanceled) return;
+    isCanceled = true;
+    _callback();
+  }
 }

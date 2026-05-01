@@ -27,6 +27,7 @@ class GestureDetector extends StatefulWidget {
     this.behavior = HitTestBehavior.deferToChild,
     this.enabled = true,
     this.captureMouse = true,
+    this.gestureTimerFactory,
     super.key,
   });
 
@@ -63,6 +64,7 @@ class GestureDetector extends StatefulWidget {
 
   final bool enabled;
   final bool captureMouse;
+  final GestureTimerFactory? gestureTimerFactory;
 
   @override
   State createState() => _GestureDetectorState();
@@ -124,7 +126,9 @@ class _GestureDetectorState extends State<GestureDetector> {
 
     // Double-tap recognizer
     if (widget.onDoubleTap != null) {
-      _doubleTap ??= DoubleTapGestureRecognizer();
+      _doubleTap ??= DoubleTapGestureRecognizer(
+        timerFactory: widget.gestureTimerFactory,
+      );
       _doubleTap!.onDoubleTap = widget.onDoubleTap;
     } else {
       _doubleTap?.dispose();
@@ -133,7 +137,9 @@ class _GestureDetectorState extends State<GestureDetector> {
 
     // Long-press recognizer
     if (_hasLongPressCallbacks) {
-      _longPress ??= LongPressGestureRecognizer();
+      _longPress ??= LongPressGestureRecognizer(
+        timerFactory: widget.gestureTimerFactory,
+      );
       _longPress!
         ..onLongPress = widget.onLongPress
         ..onLongPressStart = widget.onLongPressStart

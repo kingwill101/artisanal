@@ -75,6 +75,144 @@ void main() {
       tester.resize(100, 30);
       expect(tester.view, contains('100x30'));
     });
+
+    test('frame recording captures deterministic render history', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_KeyCounterWidget());
+      tester.startFrameRecording();
+
+      tester.sendKey('+');
+      tester.resize(100, 30);
+      tester.pump();
+
+      final frames = tester.stopFrameRecording();
+      expect(frames, hasLength(3));
+      expect(
+        frames.map((frame) => frame.sequence).toList(),
+        equals(<int>[0, 1, 2]),
+      );
+      expect(
+        frames.map((frame) => frame.trigger).toList(),
+        equals(<String>['sendKey(+)', 'resize', 'pump']),
+      );
+      expect(frames[0].view, contains('counter: 1'));
+      expect(frames[1].width, equals(100));
+      expect(frames[1].height, equals(30));
+      expect(frames[2].pumpCount, equals(2));
+    });
+
+    test('clearRecordedFrames resets frame history and sequence', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(w.Text('hello'));
+      tester.startFrameRecording();
+      tester.pump();
+
+      expect(tester.recordedFrames, hasLength(1));
+
+      tester.clearRecordedFrames();
+      expect(tester.recordedFrames, isEmpty);
+
+      tester.pump();
+      final frames = tester.stopFrameRecording();
+      expect(frames, hasLength(1));
+      expect(frames.single.sequence, equals(0));
+      expect(frames.single.trigger, equals('pump'));
+    });
+
+    test(
+      'startFrameRecording can capture the current frame immediately',
+      () async {
+        final tester = WidgetTester();
+        addTearDown(() => tester.dispose());
+
+        await tester.pumpWidget(_KeyCounterWidget());
+        tester.startFrameRecording(captureCurrentFrame: true);
+
+        expect(tester.recordedFrames, hasLength(1));
+        expect(tester.recordedFrames.single.sequence, equals(0));
+        expect(
+          tester.recordedFrames.single.trigger,
+          equals('startFrameRecording'),
+        );
+        expect(tester.recordedFrames.single.view, contains('counter: 0'));
+        expect(tester.lastRecordedFrame, same(tester.recordedFrames.single));
+      },
+    );
+
+    test('recordedFramesSince returns only newer frames', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_KeyCounterWidget());
+      tester.startFrameRecording();
+      tester.sendKey('+');
+
+      final checkpoint = tester.lastRecordedFrame!.sequence;
+      tester.resize(100, 30);
+      tester.pump();
+
+      final newerFrames = tester.recordedFramesSince(checkpoint);
+      expect(newerFrames, hasLength(2));
+      expect(
+        newerFrames.map((frame) => frame.trigger).toList(),
+        equals(<String>['resize', 'pump']),
+      );
+    });
+
+    test('recordFramesWhile brackets recording around an action', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_KeyCounterWidget());
+
+      final result = tester.recordFramesWhile(() {
+        tester.sendKey('+');
+        tester.sendKey('+');
+        return tester.view;
+      }, captureCurrentFrame: true);
+
+      expect(result, contains('counter: 2'));
+      expect(
+        tester.recordedFrames.map((frame) => frame.trigger).toList(),
+        equals(<String>['startFrameRecording', 'sendKey(+)', 'sendKey(+)']),
+      );
+      expect(tester.recordedFrames.first.lines, contains('counter: 0'));
+      expect(tester.isRecordingFrames, isFalse);
+    });
+
+    test('advanceAnimation drives deterministic animation ticks', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final clock = ManualClock();
+      await tester.pumpWidget(_ManualClockAnimationWidget());
+
+      expect(tester.find.text('animation: 0.00'), isTrue);
+
+      tester.advanceAnimation(
+        _ManualClockAnimationWidgetState.controllerId,
+        clock,
+      );
+      expect(tester.find.text('animation: 0.00'), isTrue);
+
+      tester.advanceAnimation(
+        _ManualClockAnimationWidgetState.controllerId,
+        clock,
+        delta: const Duration(milliseconds: 50),
+      );
+      expect(tester.find.text('animation: 0.50'), isTrue);
+
+      tester.advanceAnimation(
+        _ManualClockAnimationWidgetState.controllerId,
+        clock,
+        delta: const Duration(milliseconds: 50),
+      );
+      expect(tester.find.text('animation: 1.00'), isTrue);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -209,6 +347,88 @@ void main() {
 
       tester.sendKey('-');
       expect(tester.find.text('counter: 2'), isTrue);
+    });
+  });
+
+  group('scripted input helpers', () {
+    test('typeText sends rune keys as a single scripted action', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_TypedTextRecorder());
+
+      tester.typeText('hello');
+      expect(tester.find.text('typed: hello'), isTrue);
+
+      tester.typeText(' world');
+      expect(tester.find.text('typed: hello world'), isTrue);
+    });
+
+    test('pasteText sends a single paste payload', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_PasteRecorder());
+
+      tester.pasteText('alpha\nbeta');
+      expect(tester.find.text('paste: alpha/beta'), isTrue);
+    });
+  });
+
+  group('fuzzing helpers', () {
+    test('fuzz runs deterministic seeded input and records frames', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_TypedTextRecorder());
+
+      final result = tester.fuzz(
+        options: const WidgetFuzzOptions(
+          seed: 42,
+          steps: 4,
+          actions: [WidgetFuzzAction.key],
+          keyAlphabet: 'a',
+          captureFrames: true,
+        ),
+      );
+
+      expect(result.passed, isTrue);
+      expect(result.completedSteps, equals(4));
+      expect(result.history, hasLength(4));
+      expect(result.frames, hasLength(5));
+      expect(tester.find.text('typed: aaaa'), isTrue);
+      expect(
+        result.history.map((step) => step.toString()).toList(),
+        equals(<String>[
+          '#0 key "a"',
+          '#1 key "a"',
+          '#2 key "a"',
+          '#3 key "a"',
+        ]),
+      );
+    });
+
+    test('fuzz returns failed step and error details', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_ThrowOnKeyWidget());
+
+      final result = tester.fuzz(
+        options: const WidgetFuzzOptions(
+          seed: 7,
+          steps: 3,
+          actions: [WidgetFuzzAction.key],
+          keyAlphabet: 'x',
+        ),
+      );
+
+      expect(result.passed, isFalse);
+      expect(result.completedSteps, equals(0));
+      expect(result.failedStep?.index, equals(0));
+      expect(result.history, hasLength(1));
+      expect(result.error, isA<StateError>());
+      expect(() => result.throwIfFailed(), throwsA(isA<WidgetFuzzFailure>()));
     });
   });
 
@@ -505,6 +725,17 @@ void main() {
       // Release ends drag.
       tester.mouseUp(5, 0);
       expect(dragEnded, isTrue);
+    });
+
+    test('drag performs a full scripted drag sequence', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(_DragCounterWidget(), useHitTesting: true);
+      expect(tester.find.text('drags: 0'), isTrue);
+
+      tester.drag(0, 0, 6, 0, steps: 3);
+      expect(tester.find.text('drags: 1'), isTrue);
     });
   });
 
@@ -1284,6 +1515,150 @@ class _SpecialKeyWidgetState extends w.State<_SpecialKeyWidget> {
   @override
   w.Widget build(w.BuildContext context) {
     return w.Text('press escape');
+  }
+}
+
+class _ManualClockAnimationWidget extends w.StatefulWidget {
+  _ManualClockAnimationWidget();
+
+  @override
+  w.State createState() => _ManualClockAnimationWidgetState();
+}
+
+class _ManualClockAnimationWidgetState
+    extends w.State<_ManualClockAnimationWidget> {
+  static const controllerId = 'manual-clock-animation';
+
+  late final w.AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = w.AnimationController(
+      id: controllerId,
+      duration: const Duration(milliseconds: 100),
+    )..addListener(() => setState(() {}));
+  }
+
+  @override
+  tui.Cmd? handleInit() => _controller.forward();
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is w.AnimationTickMsg && msg.controllerId == controllerId) {
+      return _controller.processTick(msg.time);
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text('animation: ${_controller.value.toStringAsFixed(2)}');
+  }
+}
+
+class _TypedTextRecorder extends w.StatefulWidget {
+  _TypedTextRecorder();
+
+  @override
+  w.State createState() => _TypedTextRecorderState();
+}
+
+class _TypedTextRecorderState extends w.State<_TypedTextRecorder> {
+  var _typed = '';
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg case tui.KeyMsg(:final key) when key.char != null) {
+      setState(() => _typed += key.char!);
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text('typed: $_typed');
+  }
+}
+
+class _PasteRecorder extends w.StatefulWidget {
+  _PasteRecorder();
+
+  @override
+  w.State createState() => _PasteRecorderState();
+}
+
+class _PasteRecorderState extends w.State<_PasteRecorder> {
+  String _lastContent = '';
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    switch (msg) {
+      case tui.PasteMsg(:final content):
+        setState(() => _lastContent = content);
+      default:
+        break;
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    if (_lastContent.isEmpty) {
+      return w.Text('paste idle');
+    }
+    final content = _lastContent.replaceAll('\n', '/');
+    return w.Text('paste: $content');
+  }
+}
+
+class _ThrowOnKeyWidget extends w.StatefulWidget {
+  _ThrowOnKeyWidget();
+
+  @override
+  w.State createState() => _ThrowOnKeyWidgetState();
+}
+
+class _ThrowOnKeyWidgetState extends w.State<_ThrowOnKeyWidget> {
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.KeyMsg) {
+      throw StateError('fuzz key ${msg.key.char}');
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text('ready');
+  }
+}
+
+class _DragCounterWidget extends w.StatefulWidget {
+  _DragCounterWidget();
+
+  @override
+  w.State createState() => _DragCounterWidgetState();
+}
+
+class _DragCounterWidgetState extends w.State<_DragCounterWidget> {
+  var _dragCount = 0;
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.GestureDetector(
+      onDragStart: (_) {
+        setState(() => _dragCount++);
+        return null;
+      },
+      onDragUpdate: (_) => null,
+      onDragEnd: (_) => null,
+      child: w.Container(
+        width: 20,
+        height: 3,
+        child: w.Text('drags: $_dragCount'),
+      ),
+    );
   }
 }
 

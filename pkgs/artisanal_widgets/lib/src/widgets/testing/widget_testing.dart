@@ -20,4 +20,6 @@
 /// ```
 library;
 
+export 'manual_clock.dart';
+export 'widget_fuzzer.dart';
 export 'widget_tester.dart';

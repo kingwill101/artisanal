@@ -22,65 +22,71 @@ Future<void> _waitUntil(
 
 void main() {
   group('GestureDetector runtime hover commands', () {
-    test('hover enter and exit repaint immediately in the real runtime', () async {
-      final terminal = runtime.StringTerminal();
-      final program = runtime.Program(
-        w.WidgetApp(_HoverCmdRuntimeWidget()),
-        options: const runtime.ProgramOptions(
-          altScreen: false,
-          mouse: true,
-          mouseMode: runtime.MouseMode.allMotion,
-          signalHandlers: false,
-          frameTick: false,
-          startupProbes: false,
-        ),
-        terminal: terminal,
-      );
+    test(
+      'hover enter and exit repaint immediately in the real runtime',
+      () async {
+        final terminal = runtime.StringTerminal();
+        final program = runtime.Program(
+          w.WidgetApp(_HoverCmdRuntimeWidget()),
+          options: const runtime.ProgramOptions(
+            altScreen: false,
+            mouse: true,
+            mouseMode: runtime.MouseMode.allMotion,
+            signalHandlers: false,
+            frameTick: false,
+            startupProbes: false,
+          ),
+          terminal: terminal,
+        );
 
-      final runFuture = program.run();
-      addTearDown(() async {
-        program.send(const runtime.QuitMsg());
-        await runFuture;
-      });
+        final runFuture = program.run();
+        addTearDown(() async {
+          program.send(const runtime.QuitMsg());
+          await runFuture;
+        });
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('not hovered'),
-      );
+        await _waitUntil(
+          () => Style.stripAnsi(terminal.output).contains('not hovered'),
+        );
 
-      terminal.clear();
-      program.send(
-        const runtime.MouseMsg(
-          action: runtime.MouseAction.motion,
-          button: runtime.MouseButton.none,
-          x: 0,
-          y: 0,
-        ),
-      );
+        terminal.clear();
+        program.send(
+          const runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: 0,
+            y: 0,
+          ),
+        );
 
-      await _waitUntil(
-        () => Style.stripAnsi(terminal.output).contains('hovered'),
-      );
+        await _waitUntil(
+          () => Style.stripAnsi(terminal.output).contains('hovered'),
+        );
 
-      terminal.clear();
-      program.send(
-        const runtime.MouseMsg(
-          action: runtime.MouseAction.motion,
-          button: runtime.MouseButton.none,
-          x: 79,
-          y: 23,
-        ),
-      );
+        terminal.clear();
+        program.send(
+          const runtime.MouseMsg(
+            action: runtime.MouseAction.motion,
+            button: runtime.MouseButton.none,
+            x: 79,
+            y: 23,
+          ),
+        );
 
-      await _waitUntil(() => terminal.output.isNotEmpty);
-      final stripped = Style.stripAnsi(terminal.output);
-      expect(stripped, contains('not hovered'));
-      expect(
-        stripped
-            .split('\n')
-            .any((line) => line.contains('hovered') && !line.contains('not hovered')),
-        isFalse,
-      );
-    });
+        await _waitUntil(() => terminal.output.isNotEmpty);
+        final stripped = Style.stripAnsi(terminal.output);
+        expect(stripped, contains('not hovered'));
+        expect(
+          stripped
+              .split('\n')
+              .any(
+                (line) =>
+                    line.contains('hovered') && !line.contains('not hovered'),
+              ),
+          isFalse,
+        );
+      },
+    );
   });
 }
 

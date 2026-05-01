@@ -108,11 +108,13 @@ void main() {
   group('double-tap via widget pipeline', () {
     test('onDoubleTap fires on two rapid clicks', () async {
       final tester = WidgetTester();
+      final timers = _FakeGestureTimerFactory();
       addTearDown(() => tester.dispose());
 
       var doubleTapped = false;
       await tester.pumpWidget(
         w.GestureDetector(
+          gestureTimerFactory: timers.call,
           onDoubleTap: () {
             doubleTapped = true;
             return null;
@@ -132,11 +134,13 @@ void main() {
 
     test('onDoubleTap does not fire after timeout', () async {
       final tester = WidgetTester();
+      final timers = _FakeGestureTimerFactory();
       addTearDown(() => tester.dispose());
 
       var doubleTapped = false;
       await tester.pumpWidget(
         w.GestureDetector(
+          gestureTimerFactory: timers.call,
           onDoubleTap: () {
             doubleTapped = true;
             return null;
@@ -146,8 +150,7 @@ void main() {
       );
 
       tester.tapAt(0, 0);
-      // Wait for double-tap timeout to expire.
-      await Future<void>.delayed(const Duration(milliseconds: 350));
+      timers.fireNext();
       tester.tapAt(0, 0);
       expect(doubleTapped, isFalse);
     });
@@ -160,11 +163,13 @@ void main() {
   group('long-press via widget pipeline', () {
     test('onLongPress fires after hold duration', () async {
       final tester = WidgetTester();
+      final timers = _FakeGestureTimerFactory();
       addTearDown(() => tester.dispose());
 
       var longPressed = false;
       await tester.pumpWidget(
         w.GestureDetector(
+          gestureTimerFactory: timers.call,
           onLongPress: () {
             longPressed = true;
             return null;
@@ -175,19 +180,19 @@ void main() {
 
       tester.mouseDown(0, 0);
       expect(longPressed, isFalse);
-
-      // Default duration is 500ms. Wait for it.
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      timers.fireNext();
       expect(longPressed, isTrue);
     });
 
     test('onLongPressEnd fires on release after long-press', () async {
       final tester = WidgetTester();
+      final timers = _FakeGestureTimerFactory();
       addTearDown(() => tester.dispose());
 
       w.LongPressEndDetails? captured;
       await tester.pumpWidget(
         w.GestureDetector(
+          gestureTimerFactory: timers.call,
           onLongPress: () => null,
           onLongPressEnd: (details) {
             captured = details;
@@ -198,18 +203,20 @@ void main() {
       );
 
       tester.mouseDown(0, 0);
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      timers.fireNext();
       tester.mouseUp(0, 0);
       expect(captured, isNotNull);
     });
 
     test('release before duration does not fire long-press', () async {
       final tester = WidgetTester();
+      final timers = _FakeGestureTimerFactory();
       addTearDown(() => tester.dispose());
 
       var longPressed = false;
       await tester.pumpWidget(
         w.GestureDetector(
+          gestureTimerFactory: timers.call,
           onLongPress: () {
             longPressed = true;
             return null;
@@ -220,7 +227,7 @@ void main() {
 
       tester.mouseDown(0, 0);
       tester.mouseUp(0, 0); // Release immediately.
-      await Future<void>.delayed(const Duration(milliseconds: 600));
+      timers.fireAll();
       expect(longPressed, isFalse);
     });
   });
@@ -1131,6 +1138,46 @@ void main() {
       tester.mouseUp(10, 0);
     });
   });
+}
+
+final class _FakeGestureTimerFactory {
+  final List<_FakeGestureTimerHandle> _timers = <_FakeGestureTimerHandle>[];
+
+  w.GestureTimerHandle call(Duration delay, void Function() callback) {
+    final timer = _FakeGestureTimerHandle(delay, callback);
+    _timers.add(timer);
+    return timer;
+  }
+
+  void fireNext() {
+    final timer = _timers.firstWhere((timer) => !timer.isCanceled);
+    timer.fire();
+  }
+
+  void fireAll() {
+    for (final timer in _timers.where((timer) => !timer.isCanceled).toList()) {
+      timer.fire();
+    }
+  }
+}
+
+final class _FakeGestureTimerHandle implements w.GestureTimerHandle {
+  _FakeGestureTimerHandle(this.delay, this._callback);
+
+  final Duration delay;
+  final void Function() _callback;
+  bool isCanceled = false;
+
+  @override
+  void cancel() {
+    isCanceled = true;
+  }
+
+  void fire() {
+    if (isCanceled) return;
+    isCanceled = true;
+    _callback();
+  }
 }
 
 // ---------------------------------------------------------------------------

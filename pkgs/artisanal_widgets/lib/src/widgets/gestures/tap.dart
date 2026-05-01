@@ -1,16 +1,11 @@
-/// Tap and double-tap gesture recognizers.
-///
-/// [TapGestureRecognizer] handles single taps (press + release within slop).
-/// [DoubleTapGestureRecognizer] handles two taps in quick succession.
 library;
-
-import 'dart:async' show Timer;
 
 import 'package:artisanal/tui.dart' show MouseMsg;
 
 import '../layout/geometry.dart' show Offset;
 import 'events.dart';
 import 'recognizer.dart';
+import 'timer.dart';
 
 // ---------------------------------------------------------------------------
 // TapGestureRecognizer
@@ -121,6 +116,9 @@ class TapGestureRecognizer extends GestureRecognizer {
 /// A double-tap is two taps within [doubleTapTimeout] and [kDoubleTapSlop]
 /// cells of each other.
 class DoubleTapGestureRecognizer extends GestureRecognizer {
+  DoubleTapGestureRecognizer({GestureTimerFactory? timerFactory})
+    : _timerFactory = timerFactory ?? defaultGestureTimerFactory;
+
   /// Callback fired when a double-tap is detected.
   GestureDoubleTapCallback? onDoubleTap;
 
@@ -130,8 +128,9 @@ class DoubleTapGestureRecognizer extends GestureRecognizer {
   /// Maximum distance in cells between the two tap locations.
   static const double kDoubleTapSlop = 2.0;
 
+  final GestureTimerFactory _timerFactory;
   Offset? _firstTapPosition;
-  Timer? _doubleTapTimer;
+  GestureTimerHandle? _doubleTapTimer;
   bool _waitingForSecondTap = false;
 
   @override
@@ -168,7 +167,7 @@ class DoubleTapGestureRecognizer extends GestureRecognizer {
     } else {
       // First tap completed — start waiting for second.
       _waitingForSecondTap = true;
-      _doubleTapTimer = Timer(doubleTapTimeout, () {
+      _doubleTapTimer = _timerFactory(doubleTapTimeout, () {
         // Timeout — no double-tap.
         _resetDoubleTap();
       });

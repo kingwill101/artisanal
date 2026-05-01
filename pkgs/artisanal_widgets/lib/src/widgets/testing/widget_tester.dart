@@ -42,6 +42,7 @@ import 'package:artisanal/tui.dart'
     show
         Msg,
         KeyMsg,
+        PasteMsg,
         MouseMsg,
         MouseAction,
         MouseButton,
@@ -51,12 +52,14 @@ import 'package:artisanal/tui.dart'
         ProgramOptions,
         ZoneInfo;
 import '../app/widget_app.dart';
+import '../animation/animation_tick.dart';
 import '../components/components_widgets.dart' show DebugOverlayPosition;
 import '../core/widget.dart';
 import '../core/key.dart' show Key;
 import '../core/element.dart' show HitTestElementEntry, Element;
 import '../layout/layout_widgets.dart' show ImageAutoMode;
 import '../rendering/render_object.dart' show RenderObject;
+import 'manual_clock.dart';
 
 // ---------------------------------------------------------------------------
 // testWidgets — top-level convenience
@@ -311,6 +314,43 @@ class _TestTerminal implements Terminal {
 }
 
 // ---------------------------------------------------------------------------
+// WidgetTestFrame
+// ---------------------------------------------------------------------------
+
+/// One deterministic frame snapshot captured by [WidgetTester].
+final class WidgetTestFrame {
+  const WidgetTestFrame({
+    required this.sequence,
+    required this.pumpCount,
+    required this.width,
+    required this.height,
+    required this.trigger,
+    required this.view,
+  });
+
+  /// Monotonic frame sequence within one tester instance.
+  final int sequence;
+
+  /// Pump count at the moment the frame was captured.
+  final int pumpCount;
+
+  /// Terminal width used for this frame.
+  final int width;
+
+  /// Terminal height used for this frame.
+  final int height;
+
+  /// Stable label describing what caused the capture.
+  final String trigger;
+
+  /// Canonical rendered view string from the current [WidgetApp].
+  final String view;
+
+  /// ANSI-stripped lines from [view], useful for stable assertions.
+  List<String> get lines => view.split('\n').map(Layout.stripAnsi).toList();
+}
+
+// ---------------------------------------------------------------------------
 // WidgetTester
 // ---------------------------------------------------------------------------
 
@@ -347,6 +387,9 @@ class WidgetTester {
   WidgetApp? _app;
   String _lastView = '';
   int _pumpCount = 0;
+  bool _recordFrames = false;
+  int _frameSequence = 0;
+  final List<WidgetTestFrame> _recordedFrames = <WidgetTestFrame>[];
 
   /// The underlying [WidgetApp], or `null` if [pumpWidget] hasn't been called.
   WidgetApp? get app => _app;
@@ -357,6 +400,17 @@ class WidgetTester {
   /// Number of times [pump] has been called (including the implicit pump
   /// inside [pumpWidget]).
   int get pumpCount => _pumpCount;
+
+  /// Whether frame recording is currently enabled.
+  bool get isRecordingFrames => _recordFrames;
+
+  /// Recorded deterministic frame snapshots captured while recording.
+  List<WidgetTestFrame> get recordedFrames =>
+      List<WidgetTestFrame>.unmodifiable(_recordedFrames);
+
+  /// The most recently recorded frame, or `null` if no frames were captured.
+  WidgetTestFrame? get lastRecordedFrame =>
+      _recordedFrames.isEmpty ? null : _recordedFrames.last;
 
   /// A [Finder] scoped to this tester's latest rendered output.
   Finder get find => Finder._(this);
@@ -441,7 +495,7 @@ class WidgetTester {
     print('yield complete after ${DateTime.now().difference(start)}');
 
     // Capture the initial view.
-    _syncView();
+    _syncView(trigger: 'pumpWidget');
     print('syncView complete after ${DateTime.now().difference(start)}');
     _pumpCount++;
   }
@@ -458,7 +512,7 @@ class WidgetTester {
     // Force a render by sending a no-op repaint message.
     // Program handles RepaintMsg by calling _forceRender().
     _program!.send(const RepaintMsg());
-    _syncView();
+    _syncView(trigger: 'pump');
     _pumpCount++;
   }
 
@@ -471,7 +525,7 @@ class WidgetTester {
     _terminal!.terminalWidth = width;
     _terminal!.terminalHeight = height;
     _program!.send(WindowSizeMsg(width, height));
-    _syncView();
+    _syncView(trigger: 'resize');
     _pumpCount++;
   }
 
@@ -500,6 +554,70 @@ class WidgetTester {
   // Input helpers
   // -------------------------------------------------------------------------
 
+  /// Starts recording deterministic frame snapshots after each synced render.
+  ///
+  /// When [clearExisting] is true, previously captured frames are discarded.
+  ///
+  /// When [captureCurrentFrame] is true, the current view is immediately
+  /// recorded before any new input is sent.
+  void startFrameRecording({
+    bool clearExisting = true,
+    bool captureCurrentFrame = false,
+  }) {
+    if (clearExisting) {
+      clearRecordedFrames();
+    }
+    _recordFrames = true;
+    if (captureCurrentFrame) {
+      captureFrame(trigger: 'startFrameRecording');
+    }
+  }
+
+  /// Stops frame recording and returns the captured frames.
+  List<WidgetTestFrame> stopFrameRecording() {
+    _recordFrames = false;
+    return recordedFrames;
+  }
+
+  /// Removes all recorded frames and resets the local frame sequence.
+  void clearRecordedFrames() {
+    _recordedFrames.clear();
+    _frameSequence = 0;
+  }
+
+  /// Returns recorded frames whose sequence is greater than [sequence].
+  List<WidgetTestFrame> recordedFramesSince(int sequence) {
+    return List<WidgetTestFrame>.unmodifiable(
+      _recordedFrames.where((frame) => frame.sequence > sequence),
+    );
+  }
+
+  /// Records the current frame immediately without requiring a message send.
+  void captureFrame({String trigger = 'captureFrame'}) {
+    _ensureRunning();
+    _recordFrame(trigger: trigger);
+  }
+
+  /// Runs [action] while frame recording is enabled and returns the frames.
+  ///
+  /// Any previous recording state is restored after [action] completes.
+  T recordFramesWhile<T>(
+    T Function() action, {
+    bool clearExisting = true,
+    bool captureCurrentFrame = false,
+  }) {
+    final wasRecording = _recordFrames;
+    startFrameRecording(
+      clearExisting: clearExisting,
+      captureCurrentFrame: captureCurrentFrame,
+    );
+    try {
+      return action();
+    } finally {
+      _recordFrames = wasRecording;
+    }
+  }
+
   /// Sends a [KeyMsg] for the given character through the Program pipeline
   /// and captures the resulting view.
   ///
@@ -514,14 +632,14 @@ class WidgetTester {
         terminal_keys.Key(terminal_keys.KeyType.runes, runes: char.codeUnits),
       ),
     );
-    _syncView();
+    _syncView(trigger: 'sendKey($char)');
   }
 
   /// Sends a [KeyMsg] for a special key (e.g. enter, escape, arrow keys).
   void sendSpecialKey(terminal_keys.KeyType type) {
     _ensureRunning();
     _program!.send(KeyMsg(terminal_keys.Key(type)));
-    _syncView();
+    _syncView(trigger: 'sendSpecialKey(${type.name})');
   }
 
   /// Sends a [KeyMsg] without capturing the view afterwards.
@@ -536,17 +654,56 @@ class WidgetTester {
     );
   }
 
+  /// Types [text] as a sequence of rune key presses.
+  ///
+  /// This is useful for widgets that expect real key events rather than a
+  /// paste payload.
+  void typeText(String text) {
+    _ensureRunning();
+    for (final rune in text.runes) {
+      _program!.send(
+        KeyMsg(
+          terminal_keys.Key(terminal_keys.KeyType.runes, runes: <int>[rune]),
+        ),
+      );
+    }
+    _syncView(trigger: 'typeText(${text.runes.length} chars)');
+  }
+
+  /// Sends [text] as a single paste payload.
+  void pasteText(String text) {
+    _ensureRunning();
+    _program!.send(PasteMsg(text));
+    _syncView(trigger: 'pasteText(${text.length} chars)');
+  }
+
   /// Sends an arbitrary [Msg] to the Program and captures the view.
   void sendMsg(Msg msg) {
     _ensureRunning();
     _program!.send(msg);
-    _syncView();
+    _syncView(trigger: 'sendMsg(${msg.runtimeType})');
   }
 
   /// Sends an arbitrary [Msg] without capturing the view.
   void sendMsgNoPump(Msg msg) {
     _ensureRunning();
     _program!.send(msg);
+  }
+
+  /// Sends an [AnimationTickMsg] with an explicit timestamp.
+  void sendAnimationTick(Object controllerId, DateTime time) {
+    _ensureRunning();
+    _program!.send(AnimationTickMsg(controllerId, time));
+    _syncView(trigger: 'sendAnimationTick');
+  }
+
+  /// Advances [clock] by [delta] and sends the resulting animation tick.
+  void advanceAnimation(
+    Object controllerId,
+    ManualClock clock, {
+    Duration delta = Duration.zero,
+  }) {
+    sendAnimationTick(controllerId, clock.advance(delta));
   }
 
   // -------------------------------------------------------------------------
@@ -582,7 +739,7 @@ class WidgetTester {
     );
     // The Program renders after processing the press.  Sync view so hit-test
     // offsets are up-to-date for the release (matches real runtime flow).
-    _syncView();
+    _syncView(trigger: 'tapDown($x,$y)');
 
     // Release
     _program!.send(
@@ -593,7 +750,7 @@ class WidgetTester {
         y: y,
       ),
     );
-    _syncView();
+    _syncView(trigger: 'tapUp($x,$y)');
   }
 
   /// Simulates a full tap on the zone with [zoneId].
@@ -613,7 +770,7 @@ class WidgetTester {
     _program!.send(
       MouseMsg(action: MouseAction.press, button: button, x: x, y: y),
     );
-    _syncView();
+    _syncView(trigger: 'mouseDown(${button.name}@$x,$y)');
   }
 
   /// Sends a mouse release at (x, y).
@@ -622,7 +779,7 @@ class WidgetTester {
     _program!.send(
       MouseMsg(action: MouseAction.release, button: button, x: x, y: y),
     );
-    _syncView();
+    _syncView(trigger: 'mouseUp(${button.name}@$x,$y)');
   }
 
   /// Sends a mouse motion event at (x, y).
@@ -636,7 +793,38 @@ class WidgetTester {
         y: y,
       ),
     );
-    _syncView();
+    _syncView(trigger: 'mouseMove($x,$y)');
+  }
+
+  /// Sends a drag gesture from the start coordinates to the end coordinates.
+  ///
+  /// [steps] controls how many intermediate motion events are emitted between
+  /// the press and release, allowing tests to exercise drag handling without
+  /// open-coding repeated mouse events.
+  void drag(
+    int startX,
+    int startY,
+    int endX,
+    int endY, {
+    int steps = 1,
+    MouseButton button = MouseButton.left,
+  }) {
+    _ensureRunning();
+    if (steps < 1) {
+      throw ArgumentError.value(steps, 'steps', 'Must be at least 1');
+    }
+
+    mouseDown(startX, startY, button: button);
+    for (var step = 1; step <= steps; step++) {
+      final progress = step / steps;
+      final x = startX + ((endX - startX) * progress).round();
+      final y = startY + ((endY - startY) * progress).round();
+      _program!.send(
+        MouseMsg(action: MouseAction.motion, button: button, x: x, y: y),
+      );
+      _syncView(trigger: 'dragMove(${button.name}@$x,$y)');
+    }
+    mouseUp(endX, endY, button: button);
   }
 
   // -------------------------------------------------------------------------
@@ -710,11 +898,32 @@ class WidgetTester {
   /// `model.view()` and sends the result to the renderer.  We read back
   /// from the model directly so we get the canonical view string without
   /// terminal noise (escape sequences written during setup, etc.).
-  void _syncView() {
+  void _syncView({String trigger = 'sync'}) {
     final model = _program?.currentModel;
     if (model != null) {
       _lastView = model.view().toString();
+      if (_recordFrames) {
+        _recordFrame(trigger: trigger);
+      }
     }
+  }
+
+  void _recordFrame({required String trigger}) {
+    final model = _program?.currentModel;
+    if (model == null) {
+      return;
+    }
+    _lastView = model.view().toString();
+    _recordedFrames.add(
+      WidgetTestFrame(
+        sequence: _frameSequence++,
+        pumpCount: _pumpCount,
+        width: screenWidth,
+        height: screenHeight,
+        trigger: trigger,
+        view: _lastView,
+      ),
+    );
   }
 
   void _ensureRunning() {

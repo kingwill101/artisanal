@@ -9,7 +9,7 @@ import 'package:artisanal/tui.dart'
     show Cmd, MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal_widgets/artisanal_widgets.dart' show Offset;
 import 'package:artisanal_widgets/artisanal_widgets.dart'
-    show DoubleTapGestureRecognizer, GestureRecognizerState;
+    show DoubleTapGestureRecognizer, GestureRecognizerState, GestureTimerHandle;
 import 'package:test/test.dart';
 
 // ---------------------------------------------------------------------------
@@ -30,9 +30,11 @@ Offset _local(int x, int y) => Offset(x.toDouble(), y.toDouble());
 
 void main() {
   late DoubleTapGestureRecognizer recognizer;
+  late _FakeGestureTimerFactory timers;
 
   setUp(() {
-    recognizer = DoubleTapGestureRecognizer();
+    timers = _FakeGestureTimerFactory();
+    recognizer = DoubleTapGestureRecognizer(timerFactory: timers.call);
   });
 
   tearDown(() {
@@ -121,7 +123,7 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('timeout', () {
-    test('timeout expires between taps resets sequence', () async {
+    test('timeout expires between taps resets sequence', () {
       var doubleTapped = false;
       recognizer.onDoubleTap = () {
         doubleTapped = true;
@@ -132,8 +134,7 @@ void main() {
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
       recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
 
-      // Wait longer than doubleTapTimeout (300ms).
-      await Future<void>.delayed(const Duration(milliseconds: 350));
+      timers.fireNext();
 
       // Second tap — should NOT count as double-tap.
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
@@ -141,7 +142,7 @@ void main() {
       expect(doubleTapped, isFalse, reason: 'timeout expired');
     });
 
-    test('taps within timeout window fire double-tap', () async {
+    test('taps within timeout window fire double-tap', () {
       var doubleTapped = false;
       recognizer.onDoubleTap = () {
         doubleTapped = true;
@@ -151,9 +152,6 @@ void main() {
       // First tap.
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
       recognizer.handlePointerUp(_release(5, 5), _local(5, 5));
-
-      // Wait shorter than timeout.
-      await Future<void>.delayed(const Duration(milliseconds: 100));
 
       // Second tap — should fire.
       recognizer.handlePointerDown(_press(5, 5), _local(5, 5));
@@ -231,4 +229,38 @@ void main() {
       expect(recognizer.pendingCmds, contains(testCmd));
     });
   });
+}
+
+final class _FakeGestureTimerFactory {
+  final List<_FakeGestureTimerHandle> _timers = <_FakeGestureTimerHandle>[];
+
+  GestureTimerHandle call(Duration delay, void Function() callback) {
+    final timer = _FakeGestureTimerHandle(delay, callback);
+    _timers.add(timer);
+    return timer;
+  }
+
+  void fireNext() {
+    final timer = _timers.firstWhere((timer) => !timer.isCanceled);
+    timer.fire();
+  }
+}
+
+final class _FakeGestureTimerHandle implements GestureTimerHandle {
+  _FakeGestureTimerHandle(this.delay, this._callback);
+
+  final Duration delay;
+  final void Function() _callback;
+  bool isCanceled = false;
+
+  @override
+  void cancel() {
+    isCanceled = true;
+  }
+
+  void fire() {
+    if (isCanceled) return;
+    isCanceled = true;
+    _callback();
+  }
 }

@@ -1,16 +1,11 @@
-/// Long-press gesture recognizer.
-///
-/// [LongPressGestureRecognizer] detects when a pointer is held down
-/// for a configurable duration without moving beyond the touch slop.
 library;
-
-import 'dart:async' show Timer;
 
 import 'package:artisanal/tui.dart' show MouseMsg;
 
 import '../layout/geometry.dart' show Offset;
 import 'events.dart';
 import 'recognizer.dart';
+import 'timer.dart';
 
 /// Recognizes long-press gestures.
 ///
@@ -19,6 +14,9 @@ import 'recognizer.dart';
 /// and [onLongPressStart] / [onLongPress] fire. On pointer-up after
 /// acceptance, [onLongPressEnd] fires.
 class LongPressGestureRecognizer extends GestureRecognizer {
+  LongPressGestureRecognizer({GestureTimerFactory? timerFactory})
+    : _timerFactory = timerFactory ?? defaultGestureTimerFactory;
+
   /// Callback fired when the long-press is first recognized.
   GestureLongPressCallback? onLongPress;
 
@@ -34,7 +32,8 @@ class LongPressGestureRecognizer extends GestureRecognizer {
   /// Maximum distance in cells the pointer can move before cancelling.
   static const double kTouchSlop = 2.0;
 
-  Timer? _timer;
+  final GestureTimerFactory _timerFactory;
+  GestureTimerHandle? _timer;
   bool _longPressAccepted = false;
   Offset? _downGlobal;
   Offset? _downLocal;
@@ -46,7 +45,7 @@ class LongPressGestureRecognizer extends GestureRecognizer {
     _downLocal = localPosition;
     _longPressAccepted = false;
 
-    _timer = Timer(duration, () {
+    _timer = _timerFactory(duration, () {
       _longPressAccepted = true;
       resolve(GestureDisposition.accepted);
     });
