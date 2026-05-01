@@ -46,7 +46,7 @@ A powerful **markdown-to-ANSI** renderer for beautiful terminal output.
 
 - [x] Headings (h1-h6)
 - [x] Text formatting
-- [x] Code blocks with language hints
+- [x] Code blocks with language and filename hints
 - [x] Tables with borders
 - [ ] Syntax highlighting (coming soon)
 
@@ -62,6 +62,12 @@ A powerful **markdown-to-ANSI** renderer for beautiful terminal output.
 void main() {
   final renderer = AnsiRenderer();
   print(renderer.render(markdown));
+}
+```
+
+```main.rs
+fn main() {
+  println!("hello from a filename hint");
 }
 ```
 

@@ -17,6 +17,7 @@
 library;
 
 export 'ansi_renderer.dart';
+export 'fence_language_resolver.dart' show FenceLanguageResolver;
 export 'syntax_highlighter.dart'
     show
         AdaptiveChromaTheme,

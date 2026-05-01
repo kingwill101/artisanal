@@ -325,6 +325,28 @@ void main() {
       expect(stripAnsi(ts), contains('const x'));
       expect(stripAnsi(typescript), contains('const x'));
     });
+
+    test('filename hint main.rs produces highlighting like rust', () {
+      final filenameHint = markdownToAnsi('```main.rs\nfn main() {}\n```');
+      final rust = markdownToAnsi('```rust\nfn main() {}\n```');
+      expect(filenameHint, contains('\x1b['));
+      expect(rust, contains('\x1b['));
+      expect(stripAnsi(filenameHint), contains('fn main() {}'));
+      expect(stripAnsi(rust), contains('fn main() {}'));
+    });
+
+    test('filename hint Dockerfile produces highlighting like dockerfile', () {
+      final filenameHint = markdownToAnsi(
+        '```Dockerfile\nFROM dart:stable\nRUN dart pub get\n```',
+      );
+      final dockerfile = markdownToAnsi(
+        '```dockerfile\nFROM dart:stable\nRUN dart pub get\n```',
+      );
+      expect(filenameHint, contains('\x1b['));
+      expect(dockerfile, contains('\x1b['));
+      expect(stripAnsi(filenameHint), contains('FROM dart:stable'));
+      expect(stripAnsi(dockerfile), contains('FROM dart:stable'));
+    });
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

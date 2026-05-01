@@ -9,6 +9,7 @@ import 'package:highlight/highlight.dart' show highlight, Node;
 import '../../style/style.dart';
 import '../../style/color.dart' show BasicColor;
 import '../../unicode/grapheme.dart' as uni;
+import 'fence_language_resolver.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chroma-Style Color Theme
@@ -842,8 +843,7 @@ class SyntaxHighlighter {
   }
 
   List<Node>? _parseHighlightedNodes(String code, {String? language}) {
-    // Normalize the language name
-    final lang = _normalizeLanguage(language);
+    final lang = FenceLanguageResolver.resolve(language);
 
     // Try to highlight with the specified language
     if (lang != null && lang.isNotEmpty) {
@@ -871,30 +871,6 @@ class SyntaxHighlighter {
     }
 
     return null;
-  }
-
-  /// Normalizes language name to match highlight.dart's expectations.
-  String? _normalizeLanguage(String? language) {
-    if (language == null || language.isEmpty) return null;
-
-    final lang = language.toLowerCase().trim();
-
-    // Common aliases
-    return switch (lang) {
-      'js' => 'javascript',
-      'ts' => 'typescript',
-      'py' => 'python',
-      'rb' => 'ruby',
-      'rs' => 'rust',
-      'sh' || 'shell' => 'bash',
-      'yml' => 'yaml',
-      'md' => 'markdown',
-      'objc' => 'objectivec',
-      'c++' || 'cxx' => 'cpp',
-      'c#' => 'csharp',
-      'f#' => 'fsharp',
-      _ => lang,
-    };
   }
 
   /// Converts highlight.dart nodes to ANSI-styled string.

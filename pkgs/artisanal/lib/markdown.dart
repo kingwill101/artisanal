@@ -60,10 +60,24 @@
 ///   hasDarkBackground: terminalTheme.hasDarkBackground ?? true,
 /// );
 /// ```
+///
+/// Fence labels can also use common filename hints:
+///
+/// ```dart
+/// final styled = markdownToAnsi('''
+/// ```main.rs
+/// fn main() {
+///   println!("hello");
+/// }
+/// ```
+/// ''');
+/// ```
 library;
 
 export 'src/tui/markdown/ansi_renderer.dart'
     show AnsiRenderer, AnsiRendererOptions, markdownToAnsi;
+export 'src/tui/markdown/fence_language_resolver.dart'
+    show FenceLanguageResolver;
 export 'src/tui/markdown/syntax_highlighter.dart'
     show
         AdaptiveChromaTheme,
