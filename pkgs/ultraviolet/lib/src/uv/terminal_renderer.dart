@@ -679,6 +679,47 @@ final class UvTerminalRenderer {
     _profile = profile;
   }
 
+  /// Marks cells in [newbuf] as dirty wherever [_curbuf] disagrees.
+  ///
+  /// When content is removed between frames (e.g. an overlay disappears), the
+  /// new buffer's default empty cells are never explicitly written via
+  /// `setCell()`, so they carry no dirty bits. This method walks the previous
+  /// frame's buffer ([_curbuf]) and, for every cell that differs from the
+  /// corresponding cell in [newbuf] but is not already dirty in [newbuf],
+  /// marks it dirty with `newbuf.touch()`.
+  void _markStaleCells(Buffer newbuf) {
+    final cur = _curbuf;
+    if (cur == null) return;
+    // Only mark stale cells when buffer dimensions haven't changed. Size
+    // changes already trigger different handling in render() (resize +
+    // _clearBottom / _clearUpdate), and injecting extra dirty bits here would
+    // interfere with the cursor-movement optimizations used during those
+    // transitions.
+    if (cur.width() != newbuf.width() || cur.height() != newbuf.height()) {
+      return;
+    }
+    final w = cur.width();
+    final h = cur.height();
+    final empty = Cell.emptyCell();
+    for (var y = 0; y < h; y++) {
+      final curLine = cur.line(y);
+      if (curLine == null) continue;
+      final newLine = newbuf.line(y);
+      if (newLine == null) continue;
+      for (var x = 0; x < w; x++) {
+        // Skip cells already tracked as dirty in newbuf.
+        if (newbuf.isCellDirty(x, y)) continue;
+        final curCell = curLine.at(x);
+        // Skip cells in _curbuf that are already empty — nothing stale.
+        if (curCell == null || curCell == empty) continue;
+        final newCell = newLine.at(x);
+        if (!_cellEqual(curCell, newCell)) {
+          newbuf.touch(x, y);
+        }
+      }
+    }
+  }
+
   int _touched(Buffer buf) {
     if (buf.dirtyRows.isEmpty) return buf.height();
     var n = 0;
@@ -843,6 +884,16 @@ final class UvTerminalRenderer {
     metrics.beginFrame();
     _arena.reset();
 
+    _curbuf ??= Buffer.create(newbuf.width(), newbuf.height());
+
+    // Detect stale content: cells that exist in _curbuf from a previous frame
+    // but are not marked dirty in newbuf. This happens when content (e.g. an
+    // overlay) is removed — the new buffer has default empty cells at those
+    // positions but never explicitly wrote them, so they lack dirty bits.
+    // Without this pass the tile-based diff would skip those cells, leaving
+    // artifacts on screen.
+    _markStaleCells(newbuf);
+
     final touchedLines = _dirtyTouched(newbuf);
     if (!_clear && touchedLines == 0) {
       metrics.endFrame(skipped: true);
@@ -853,8 +904,6 @@ final class UvTerminalRenderer {
     if (useSync) {
       _buf.write(UvAnsi.beginSynchronizedUpdate);
     }
-
-    _curbuf ??= Buffer.create(newbuf.width(), newbuf.height());
 
     final newWidth = newbuf.width();
     final newHeight = newbuf.height();
@@ -1450,7 +1499,9 @@ final class UvTerminalRenderer {
     if (spans.length <= 1) return false;
     if (y < 0 || y >= newbuf.height()) return false;
     final newLine = newbuf.line(y);
-    final oldLine = _curbuf != null && y < _curbuf!.height() ? _curbuf!.line(y) : null;
+    final oldLine = _curbuf != null && y < _curbuf!.height()
+        ? _curbuf!.line(y)
+        : null;
     if (newLine == null || oldLine == null) return false;
 
     for (var i = 0; i + 1 < spans.length; i++) {
