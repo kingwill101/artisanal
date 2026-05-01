@@ -23,7 +23,7 @@ void main() async {
 }
 
 class _HotReloadRoot extends tui.StatelessWidget {
-  _HotReloadRoot({super.key});
+  _HotReloadRoot();
 
   @override
   (tui.Widget, runtime.Cmd?) handleUpdate(runtime.Msg msg) {

@@ -202,7 +202,7 @@ class _ReassembleDoneMsg extends Msg {
 }
 
 class _HotReloadProbeRoot extends tui.StatelessWidget {
-  _HotReloadProbeRoot(this.textProvider, {super.key});
+  _HotReloadProbeRoot(this.textProvider);
 
   final String Function() textProvider;
 
