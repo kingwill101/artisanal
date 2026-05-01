@@ -53,3 +53,4 @@ export 'curves.dart';
 export 'listenable.dart';
 export 'tween.dart';
 export 'implicitly_animated.dart';
+export 'timeline.dart';
