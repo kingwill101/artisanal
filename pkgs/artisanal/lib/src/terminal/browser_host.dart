@@ -363,7 +363,7 @@ final class BrowserTerminalHostServer {
       const requestModifyOtherKeys = '\\x1b[?4m';
       const requestPrivateModePrefix = '\\x1b[?';
       const requestModeSuffix = '\$p';
-      const requestPrimaryDeviceAttributes = '\\x1b[?c';
+      const requestPrimaryDeviceAttributes = '\\x1b[c';
       const requestSecondaryDeviceAttributes = '\\x1b[>c';
       const requestTertiaryDeviceAttributes = '\\x1b[=c';
       const requestTerminalVersion = '\\x1b[>0q';

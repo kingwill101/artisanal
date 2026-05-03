@@ -35,7 +35,7 @@ import '../style/properties.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../unicode/grapheme.dart' as uni;
-import '../unicode/width.dart' show maxLineWidth, runeWidth;
+import '../unicode/width.dart' show runeWidth;
 import '../tui/trace.dart';
 
 const int _layoutTraceThresholdUs = 1000;
@@ -300,7 +300,7 @@ class Layout {
     }
 
     final Stopwatch? sw = TuiTrace.enabled ? (Stopwatch()..start()) : null;
-    final result = maxLineWidth(Ansi.stripAnsi(text));
+    final result = Ansi.visibleLength(text);
     _cachePut(_visibleLengthCache, text, result);
     if (sw != null) {
       sw.stop();
@@ -424,6 +424,9 @@ class Layout {
     sw?.start();
     if (blocks.isEmpty) return '';
     if (blocks.length == 1) return blocks.first;
+    if (align == VerticalAlign.top) {
+      return _joinHorizontalTop(blocks, gap: gap, gapChar: gapChar, sw: sw);
+    }
 
     // Split each block into lines
     final blockLines = blocks.map((b) => b.split('\n')).toList();
@@ -473,6 +476,65 @@ class Layout {
     final maxWidth = widths.isEmpty
         ? 0
         : widths.reduce((a, b) => a > b ? a : b);
+    _traceLayout(
+      'layout.joinHorizontal blocks=${blocks.length} '
+      'maxWidth=$maxWidth maxHeight=$maxHeight',
+      sw,
+    );
+    return output;
+  }
+
+  static String _joinHorizontalTop(
+    List<String> blocks, {
+    required int gap,
+    required String gapChar,
+    required Stopwatch? sw,
+  }) {
+    final blockLines = <List<String>>[];
+    final lineWidths = <List<int>>[];
+    final widths = <int>[];
+    var maxHeight = 0;
+    var maxWidth = 0;
+
+    for (final block in blocks) {
+      final lines = block.split('\n');
+      blockLines.add(lines);
+      if (lines.length > maxHeight) maxHeight = lines.length;
+
+      final widthsForBlock = <int>[];
+      var width = 0;
+      for (final line in lines) {
+        final lineWidth = visibleLength(line);
+        widthsForBlock.add(lineWidth);
+        if (lineWidth > width) width = lineWidth;
+      }
+      lineWidths.add(widthsForBlock);
+      widths.add(width);
+      if (width > maxWidth) maxWidth = width;
+    }
+
+    final gapStr = gap > 0 ? gapChar * gap : '';
+    final buffer = StringBuffer();
+    for (var row = 0; row < maxHeight; row++) {
+      if (row > 0) buffer.write('\n');
+      for (var col = 0; col < blockLines.length; col++) {
+        if (col > 0 && gapStr.isNotEmpty) buffer.write(gapStr);
+
+        final lines = blockLines[col];
+        final width = widths[col];
+        if (row >= lines.length) {
+          if (width > 0) buffer.write(' ' * width);
+          continue;
+        }
+
+        final line = lines[row];
+        buffer.write(line);
+        final padding = width - lineWidths[col][row];
+        if (padding > 0) buffer.write(' ' * padding);
+      }
+    }
+
+    final output = buffer.toString();
     _traceLayout(
       'layout.joinHorizontal blocks=${blocks.length} '
       'maxWidth=$maxWidth maxHeight=$maxHeight',

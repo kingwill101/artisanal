@@ -10,6 +10,7 @@ import 'view.dart';
 import '../uv/ansi.dart' show UvAnsi;
 import '../uv/buffer.dart' as uv_buffer;
 import '../uv/styled_string.dart' as uv_styled;
+import '../uv/terminal_graphics.dart' as uv_graphics;
 import '../uv/terminal_renderer.dart' as uv_term;
 
 export '../uv/terminal_renderer.dart' show RenderMetrics;
@@ -61,6 +62,14 @@ abstract class TuiRenderer {
 
 /// Renderer that can expose a native UV cell-frame snapshot.
 abstract interface class NativeFrameInspectableRenderer {
+  /// Enables native frame capture during subsequent render flushes.
+  ///
+  /// Capture is intentionally opt-in because building native snapshots walks
+  /// the entire terminal cell buffer and allocates per-cell inspection objects.
+  /// Callers that need render evidence or interceptor payloads should enable
+  /// this before rendering, then read the captured values after render.
+  void setNativeFrameCaptureEnabled(bool enabled);
+
   /// Captures the renderer's current native frame, if available.
   TerminalNativeFrame? captureNativeFrame();
 
@@ -626,9 +635,15 @@ class UltravioletTuiRenderer
 
   uv_buffer.ScreenBuffer? _screen;
   uv_term.UvTerminalRenderer? _renderer;
-  TerminalNativeDeltaFrame? _lastNativeDelta;
-  TerminalNativeCellDeltaFrame? _lastNativeCellDelta;
-  TerminalNativeFrame? _lastCommittedNativeFrame;
+  int _nativeFrameRevision = 0;
+  int _nativeFrameCacheRevision = -1;
+  TerminalNativeFrame? _nativeFrameCache;
+  TerminalNativeDeltaFrame? _nativeDeltaCache;
+  TerminalNativeCellDeltaFrame? _nativeCellDeltaCache;
+  TerminalNativeFrame? _previousNativeFrameForCellDelta;
+  bool _captureNativeFrames = false;
+  uv_graphics.TerminalGraphicsFrame _lastGraphicsFrame =
+      uv_graphics.TerminalGraphicsFrame.empty;
 
   // Inline mode captures UV output so absolute row-addressing sequences can
   // be rewritten into the anchored region before bytes reach the terminal.
@@ -688,6 +703,10 @@ class UltravioletTuiRenderer
 
     if (!isInline && _options.altScreen) {
       terminal.enterAltScreen();
+    }
+    if (!isInline) {
+      terminal.write(uv_graphics.deleteAllRetainedGraphics());
+      _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     }
     if (_options.hideCursor) {
       terminal.hideCursor();
@@ -764,6 +783,7 @@ class UltravioletTuiRenderer
     if (scr.width() == w && scr.height() == targetHeight) return;
     scr.resize(w, targetHeight);
     _renderer?.resize(w, targetHeight);
+    _invalidateNativeFrameCache(resetPrevious: true);
     if (!_options.isInline) {
       _renderer?.erase();
     } else {
@@ -819,8 +839,13 @@ class UltravioletTuiRenderer
   @override
   void clear() {
     _initialize();
+    if (!_options.isInline) {
+      terminal.write(uv_graphics.deleteAllRetainedGraphics());
+    }
+    _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
     _renderer?.erase();
     _dirty = true;
+    _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed
     _frameStopwatch.stop();
     _pendingView = '';
@@ -832,6 +857,7 @@ class UltravioletTuiRenderer
     _initialize();
     _renderer?.erase();
     _dirty = true;
+    _invalidateNativeFrameCache(resetPrevious: true);
     // Stop the stopwatch to force next render to proceed past frame-rate
     // limiting, but do NOT flush the terminal — the caller will trigger a
     // render through the normal message-queue pipeline.
@@ -847,18 +873,79 @@ class UltravioletTuiRenderer
   }
 
   @override
-  TerminalNativeFrame? captureNativeFrame() {
-    final screen = _screen;
-    if (screen == null) return null;
-    return TerminalNativeFrame.fromScreenBuffer(screen);
+  void setNativeFrameCaptureEnabled(bool enabled) {
+    if (_captureNativeFrames == enabled) return;
+    _captureNativeFrames = enabled;
+    if (enabled) {
+      _frameStopwatch.stop();
+    }
+    if (!enabled) {
+      _invalidateNativeFrameCache(resetPrevious: true);
+    }
   }
 
   @override
-  TerminalNativeDeltaFrame? captureNativeDelta() => _lastNativeDelta;
+  TerminalNativeFrame? captureNativeFrame() {
+    return _captureNativeFrame();
+  }
 
   @override
-  TerminalNativeCellDeltaFrame? captureNativeCellDelta() =>
-      _lastNativeCellDelta;
+  TerminalNativeDeltaFrame? captureNativeDelta() {
+    final frame = _captureNativeFrame();
+    if (frame == null) return null;
+    return _nativeDeltaCache ??= TerminalNativeDeltaFrame.fromFrame(frame);
+  }
+
+  @override
+  TerminalNativeCellDeltaFrame? captureNativeCellDelta() {
+    final frame = _captureNativeFrame();
+    if (frame == null) return null;
+    final cached = _nativeCellDeltaCache;
+    if (cached != null) return cached;
+    final delta = TerminalNativeCellDeltaFrame.between(
+      _previousNativeFrameForCellDelta,
+      frame,
+    );
+    _previousNativeFrameForCellDelta = frame;
+    return _nativeCellDeltaCache = delta;
+  }
+
+  TerminalNativeFrame? _captureNativeFrame() {
+    final screen = _screen;
+    if (screen == null) return null;
+    if (_nativeFrameCacheRevision == _nativeFrameRevision) {
+      return _nativeFrameCache;
+    }
+    _nativeFrameCache = TerminalNativeFrame.fromScreenBuffer(screen);
+    _nativeDeltaCache = null;
+    _nativeCellDeltaCache = null;
+    _nativeFrameCacheRevision = _nativeFrameRevision;
+    return _nativeFrameCache;
+  }
+
+  void _invalidateNativeFrameCache({bool resetPrevious = false}) {
+    _nativeFrameRevision += 1;
+    _nativeFrameCacheRevision = -1;
+    _nativeFrameCache = null;
+    _nativeDeltaCache = null;
+    _nativeCellDeltaCache = null;
+    if (resetPrevious) {
+      _previousNativeFrameForCellDelta = null;
+    }
+  }
+
+  void _captureCurrentNativeFrame(uv_buffer.ScreenBuffer screen) {
+    final frame = TerminalNativeFrame.fromScreenBuffer(screen);
+    _nativeFrameRevision += 1;
+    _nativeFrameCacheRevision = _nativeFrameRevision;
+    _nativeFrameCache = frame;
+    _nativeDeltaCache = TerminalNativeDeltaFrame.fromFrame(frame);
+    _nativeCellDeltaCache = TerminalNativeCellDeltaFrame.between(
+      _previousNativeFrameForCellDelta,
+      frame,
+    );
+    _previousNativeFrameForCellDelta = frame;
+  }
 
   void _flushInternal() {
     if (!_initialized) return;
@@ -878,6 +965,7 @@ class UltravioletTuiRenderer
     }
 
     final isInline = _options.isInline;
+    final graphicsFrame = uv_graphics.TerminalGraphicsFrame.scan(_pendingView);
 
     // Phase 1: ANSI parse → StyledString
     final Stopwatch? parseSw = tracing ? (Stopwatch()..start()) : null;
@@ -890,12 +978,11 @@ class UltravioletTuiRenderer
     final Stopwatch? drawSw = tracing ? (Stopwatch()..start()) : null;
     ss.draw(scr, scr.bounds());
     drawSw?.stop();
-    final currentNativeFrame = TerminalNativeFrame.fromScreenBuffer(scr);
-    _lastNativeDelta = TerminalNativeDeltaFrame.fromBuffer(scr.buffer);
-    _lastNativeCellDelta = TerminalNativeCellDeltaFrame.between(
-      _lastCommittedNativeFrame,
-      currentNativeFrame,
-    );
+    if (_captureNativeFrames) {
+      _captureCurrentNativeFrame(scr);
+    } else {
+      _invalidateNativeFrameCache(resetPrevious: true);
+    }
 
     // Phase 3: Diff buffers and compute update sequence
     final Stopwatch? diffSw = tracing ? (Stopwatch()..start()) : null;
@@ -919,12 +1006,17 @@ class UltravioletTuiRenderer
       // replacement content arrives.  Terminals that don't support mode 2026
       // silently ignore these sequences.
       terminal.write(UvAnsi.beginSynchronizedUpdate);
+      for (final sequence in graphicsFrame.deletionSequencesSince(
+        _lastGraphicsFrame,
+      )) {
+        terminal.write(sequence);
+      }
       r.flush();
       terminal.write(UvAnsi.endSynchronizedUpdate);
     }
     writeSw?.stop();
     _dirty = false;
-    _lastCommittedNativeFrame = currentNativeFrame;
+    _lastGraphicsFrame = graphicsFrame;
 
     if (tracing) {
       TuiTrace.log(
@@ -1032,6 +1124,10 @@ class UltravioletTuiRenderer
 
     final isInline = _options.isInline;
 
+    if (!isInline) {
+      terminal.write(uv_graphics.deleteAllRetainedGraphics());
+      _lastGraphicsFrame = uv_graphics.TerminalGraphicsFrame.empty;
+    }
     if (_options.hideCursor) {
       terminal.showCursor();
     }

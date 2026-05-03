@@ -356,6 +356,13 @@ void main() {
         expect(result, endsWith('\x1b\\'));
       });
 
+      test('includes raster attributes with explicit dimensions', () {
+        final image = _solidImage(4, 6);
+        final result = SixelImage.encode(image);
+
+        expect(result, contains('"1;1;4;6'));
+      });
+
       test('defines color registers in 0-100 percentage format', () {
         // Pure red image.
         final image = _solidImage(2, 2, r: 255, g: 0, b: 0);
@@ -414,6 +421,7 @@ void main() {
           // We just verify no unexpected control chars.
           if (rune >= 63 && rune <= 126) continue; // Sixel data.
           if (rune >= 48 && rune <= 57) continue; // Digits.
+          if (rune == 34) continue; // "
           if (rune == 35) continue; // #
           if (rune == 33) continue; // !
           if (rune == 36) continue; // $

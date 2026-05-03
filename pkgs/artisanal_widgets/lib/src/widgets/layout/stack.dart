@@ -211,6 +211,8 @@ class RenderStack extends RenderBox {
           y,
           bgStyle,
           transparent: !isFirstChild,
+          contentWidth: childWidth,
+          contentHeight: childHeight,
         );
       }
       isFirstChild = false;

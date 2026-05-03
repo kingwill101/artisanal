@@ -415,6 +415,18 @@ void main() {
         expect(result, contains('Hello'));
       });
 
+      test('render preserves per-line styling for text-only styles', () {
+        final style = Style().bold();
+        style.colorProfile = ColorProfile.trueColor;
+
+        final result = style.render('a\nb\n');
+
+        expect(
+          result,
+          equals('\x1B[1ma\x1B[m\n\x1B[1mb\x1B[m\n\x1B[1m\x1B[m '),
+        );
+      });
+
       test('render applies padding', () {
         final style = Style().padding(1);
         style.colorProfile = ColorProfile.ascii;

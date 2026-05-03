@@ -39,6 +39,7 @@ abstract final class Ansi {
   /// - otherwise: replace each tab with `tabWidth` spaces
   static String expandTabs(String text, {int tabWidth = defaultTabWidth}) {
     if (tabWidth == -1) return text;
+    if (!text.contains('\t')) return text;
     if (tabWidth == 0) return text.replaceAll('\t', '');
     return text.replaceAll('\t', ' ' * tabWidth);
   }
@@ -112,7 +113,7 @@ abstract final class Ansi {
   /// Terminal responds with `ESC [ ? <attrs> c`.
   ///
   /// Upstream parity: `x/ansi.RequestPrimaryDeviceAttributes`.
-  static const requestPrimaryDeviceAttributes = '\x1b[?c';
+  static const requestPrimaryDeviceAttributes = '\x1b[c';
 
   /// Request secondary device attributes (DA2).
   ///
@@ -629,8 +630,79 @@ abstract final class Ansi {
 
   /// Calculates the visible width of a string (excluding ANSI sequences).
   static int visibleLength(String text) {
-    final stripped = stripAnsi(text);
+    final stripped = _stringForVisibleMeasurement(text);
     return maxLineWidth(stripped);
+  }
+
+  static String _stringForVisibleMeasurement(String text) {
+    return text.replaceAllMapped(ansiPattern, (match) {
+      final sequence = match.group(0);
+      if (sequence == null || sequence.isEmpty) return '';
+      final displayWidth = _displayControlWidth(sequence);
+      return displayWidth > 0 ? ' ' * displayWidth : '';
+    });
+  }
+
+  static int _displayControlWidth(String sequence) {
+    final kittyWidth = _kittyGraphicsDisplayWidth(sequence);
+    if (kittyWidth > 0) return kittyWidth;
+    final sixelWidth = _sixelDisplayWidth(sequence);
+    if (sixelWidth > 0) return sixelWidth;
+    return 0;
+  }
+
+  static int _kittyGraphicsDisplayWidth(String sequence) {
+    final parameters = _kittyGraphicsParameters(sequence);
+    if (parameters == null || parameters.isEmpty) return 0;
+
+    String? action;
+    int? columns;
+    for (final parameter in parameters.split(',')) {
+      if (parameter.isEmpty) continue;
+      final equals = parameter.indexOf('=');
+      if (equals <= 0) continue;
+      final key = parameter.substring(0, equals);
+      final value = parameter.substring(equals + 1);
+      switch (key) {
+        case 'a':
+          action = value;
+        case 'c':
+          columns = int.tryParse(value);
+      }
+    }
+
+    final displaysImage = action == 'T' || action == 'p';
+    return displaysImage ? (columns ?? 0) : 0;
+  }
+
+  static String? _kittyGraphicsParameters(String sequence) {
+    late final int start;
+    late final int end;
+
+    if (sequence.startsWith('\x1b_G') && sequence.endsWith('\x1b\\')) {
+      start = 3;
+      end = sequence.length - 2;
+    } else if (sequence.startsWith('\x9fG') && sequence.endsWith('\x9c')) {
+      start = 2;
+      end = sequence.length - 1;
+    } else {
+      return null;
+    }
+
+    if (end <= start) return null;
+    final body = sequence.substring(start, end);
+    final parameterEnd = body.indexOf(';');
+    return parameterEnd == -1 ? body : body.substring(0, parameterEnd);
+  }
+
+  static int _sixelDisplayWidth(String sequence) {
+    if (sequence.startsWith('\x1bPq') && sequence.endsWith('\x1b\\')) {
+      return 1;
+    }
+    if (sequence.startsWith('\x90q') && sequence.endsWith('\x9c')) {
+      return 1;
+    }
+    return 0;
   }
 
   /// Wraps text in ANSI sequences that will be stripped by [stripAnsi].

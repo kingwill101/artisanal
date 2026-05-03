@@ -99,7 +99,13 @@ class TerminalNativeDeltaFrame {
 
   /// Captures only dirty lines from a UV [buffer].
   factory TerminalNativeDeltaFrame.fromBuffer(uv_buffer.Buffer buffer) {
-    final frame = TerminalNativeFrame.fromBuffer(buffer);
+    return TerminalNativeDeltaFrame.fromFrame(
+      TerminalNativeFrame.fromBuffer(buffer),
+    );
+  }
+
+  /// Captures only dirty lines from an existing native [frame].
+  factory TerminalNativeDeltaFrame.fromFrame(TerminalNativeFrame frame) {
     return TerminalNativeDeltaFrame(
       width: frame.width,
       height: frame.height,
@@ -661,24 +667,56 @@ class TerminalNativeColor {
   static TerminalNativeColor? fromUv(UvColor? color) {
     return switch (color) {
       null => null,
-      UvBasic16(:final index, :final bright) => TerminalNativeColor._(
-        kind: 'basic16',
-        index: index,
-        bright: bright,
-      ),
-      UvIndexed256(:final index) => TerminalNativeColor._(
-        kind: 'indexed256',
-        index: index,
-      ),
-      UvRgb(:final r, :final g, :final b, :final a) => TerminalNativeColor._(
-        kind: 'rgb',
-        r: r,
-        g: g,
-        b: b,
-        a: a,
-      ),
+      UvBasic16(:final index, :final bright) => _basic16Color(index, bright),
+      UvIndexed256(:final index) => _indexed256Color(index),
+      UvRgb(:final r, :final g, :final b, :final a) => _rgbColor(r, g, b, a),
     };
   }
+}
+
+final List<TerminalNativeColor?> _terminalBasic16ColorCache =
+    List<TerminalNativeColor?>.filled(16, null);
+final List<TerminalNativeColor?> _terminalIndexed256ColorCache =
+    List<TerminalNativeColor?>.filled(256, null);
+final Map<int, TerminalNativeColor> _terminalRgbColorCache =
+    <int, TerminalNativeColor>{};
+
+TerminalNativeColor _basic16Color(int index, bool bright) {
+  final slot = index + (bright ? 8 : 0);
+  if (slot >= 0 && slot < _terminalBasic16ColorCache.length) {
+    return _terminalBasic16ColorCache[slot] ??= TerminalNativeColor._(
+      kind: 'basic16',
+      index: index,
+      bright: bright,
+    );
+  }
+  return TerminalNativeColor._(kind: 'basic16', index: index, bright: bright);
+}
+
+TerminalNativeColor _indexed256Color(int index) {
+  if (index >= 0 && index < _terminalIndexed256ColorCache.length) {
+    return _terminalIndexed256ColorCache[index] ??= TerminalNativeColor._(
+      kind: 'indexed256',
+      index: index,
+    );
+  }
+  return TerminalNativeColor._(kind: 'indexed256', index: index);
+}
+
+TerminalNativeColor _rgbColor(int r, int g, int b, int a) {
+  final key = r | (g << 8) | (b << 16) | (a << 24);
+  final cached = _terminalRgbColorCache[key];
+  if (cached != null) return cached;
+  if (_terminalRgbColorCache.length >= 1024) {
+    _terminalRgbColorCache.clear();
+  }
+  return _terminalRgbColorCache[key] = TerminalNativeColor._(
+    kind: 'rgb',
+    r: r,
+    g: g,
+    b: b,
+    a: a,
+  );
 }
 
 /// Dirty cell range captured from the UV buffer.

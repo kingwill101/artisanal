@@ -21,6 +21,21 @@ void main() {
         const ansi = '\x1B[1m\x1B[32mBold Green\x1B[0m';
         expect(Layout.visibleLength(ansi), equals(10));
       });
+
+      test('counts Kitty image APC width from c= param', () {
+        const kitty = '\x1b_Ga=T,q=2,c=8,r=4;DATA\x1b\\';
+        expect(Layout.visibleLength(kitty), equals(8));
+      });
+
+      test('counts text adjacent to Kitty image APC', () {
+        const kitty = '\x1b_Ga=T,q=2,c=8,r=4;DATA\x1b\\';
+        expect(Layout.visibleLength('${kitty}OK'), equals(10));
+      });
+
+      test('counts sixel payload cell width', () {
+        const sixel = '\x1bPq#0;2;0;0;0!1~\x1b\\';
+        expect(Layout.visibleLength(sixel), equals(1));
+      });
     });
 
     group('stripAnsi', () {

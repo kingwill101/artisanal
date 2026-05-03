@@ -16,7 +16,7 @@ library;
 import 'dart:async';
 import 'dart:async' as dart_async;
 import 'dart:collection';
-import 'dart:io' show File, HttpClient, Platform;
+import 'dart:io' show File, HttpClient, HttpHeaders, Platform;
 import 'dart:math' as math;
 import 'dart:typed_data' show BytesBuilder, Uint8List;
 
@@ -37,7 +37,8 @@ import 'package:artisanal/uv.dart'
         UvIndexed256,
         UvRgb,
         UnderlineStyle,
-        HalfBlockImageDrawable;
+        HalfBlockImageDrawable,
+        mayContainTerminalGraphics;
 import 'package:artisanal/tui.dart'
     show
         Cmd,

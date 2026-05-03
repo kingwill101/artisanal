@@ -1692,8 +1692,8 @@ class Style {
     s._borderRightVisible = _borderRightVisible;
     s._borderBottomVisible = _borderBottomVisible;
     s._borderLeftVisible = _borderLeftVisible;
-    s.colorProfile = colorProfile;
-    s.hasDarkBackground = hasDarkBackground;
+    s._colorProfile = _colorProfile;
+    s._hasDarkBackground = _hasDarkBackground;
     return s;
   }
 

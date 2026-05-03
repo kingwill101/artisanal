@@ -7,6 +7,7 @@ import 'dart:developer' as dev;
 import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
+        CellSizeMsg,
         Cmd,
         DegradationLevel,
         ColorProfileMsg,
@@ -33,6 +34,7 @@ import 'package:artisanal/tui.dart'
         StreamCmd,
         TuiTrace,
         View,
+        WindowPixelSizeMsg,
         WindowSizeMsg;
 import 'package:artisanal/uv.dart'
     show
@@ -79,6 +81,9 @@ class WidgetApp
     this.backgroundColor,
     this.backgroundColorBuilder,
     ImageAutoMode imageAutoMode = ImageAutoMode.environment,
+    TerminalCapabilities? initialImageCapabilities,
+    int? initialImageCellPixelWidth,
+    int? initialImageCellPixelHeight,
     this.scanZones = false,
     this.useHitTesting = true,
     this.handleFrameTick = false,
@@ -88,6 +93,10 @@ class WidgetApp
     this.debugOverlayPosition = DebugOverlayPosition.topRight,
     bool debugRebuilds = false,
   }) : _mediaQueryData = MediaQueryData.zero,
+       _sessionImageCapabilities =
+           initialImageCapabilities ?? TerminalCapabilities(),
+       _sessionImageCellPixelWidth = initialImageCellPixelWidth,
+       _sessionImageCellPixelHeight = initialImageCellPixelHeight,
        _imageAutoMode = imageAutoMode,
        _debugOverlayEnabled = debugOverlay,
        _metricsHolder = RenderMetricsHolder() {
@@ -196,7 +205,13 @@ class WidgetApp
 
   /// Mutable holder written to by WidgetApp, read by [RenderMetricsProvider].
   final RenderMetricsHolder _metricsHolder;
-  final TerminalCapabilities _sessionImageCapabilities = TerminalCapabilities();
+  final TerminalCapabilities _sessionImageCapabilities;
+  int? _sessionImageCellPixelWidth;
+  int? _sessionImageCellPixelHeight;
+  int? _windowPixelWidth;
+  int? _windowPixelHeight;
+  int? _windowCellWidth;
+  int? _windowCellHeight;
 
   /// Latest runtime-level render metrics received from [RenderMetricsMsg].
   RenderMetrics? _latestRenderMetrics;
@@ -235,7 +250,11 @@ class WidgetApp
 
   @override
   Cmd? init() {
-    final cmds = <Cmd>[Cmd.requestBackgroundColorReport()];
+    final cmds = <Cmd>[
+      Cmd.requestBackgroundColorReport(),
+      Cmd.requestWindowPixelSizeReport(),
+      Cmd.requestCellSizeReport(),
+    ];
     if (_imageAutoMode == ImageAutoMode.sessionCapabilities) {
       cmds.add(Cmd.requestPrimaryDeviceAttributesReport());
       cmds.add(Cmd.requestTerminalVersionReport());
@@ -276,6 +295,66 @@ class WidgetApp
         ),
       _ => false,
     };
+  }
+
+  bool _updateSessionImageCellPixels(Msg msg) {
+    return switch (msg) {
+      CellSizeMsg(:final width, :final height) => _setSessionImageCellPixels(
+        width,
+        height,
+      ),
+      WindowPixelSizeMsg(:final width, :final height) => _updateWindowPixelSize(
+        width,
+        height,
+      ),
+      WindowSizeMsg(:final width, :final height) => _updateWindowCellSize(
+        width,
+        height,
+      ),
+      _ => false,
+    };
+  }
+
+  bool _updateWindowPixelSize(int width, int height) {
+    _windowPixelWidth = width > 0 ? width : null;
+    _windowPixelHeight = height > 0 ? height : null;
+    return _deriveSessionImageCellPixelsFromWindowMetrics();
+  }
+
+  bool _updateWindowCellSize(int width, int height) {
+    _windowCellWidth = width > 0 ? width : null;
+    _windowCellHeight = height > 0 ? height : null;
+    return _deriveSessionImageCellPixelsFromWindowMetrics();
+  }
+
+  bool _deriveSessionImageCellPixelsFromWindowMetrics() {
+    final pixelWidth = _windowPixelWidth;
+    final pixelHeight = _windowPixelHeight;
+    final cellWidth = _windowCellWidth;
+    final cellHeight = _windowCellHeight;
+    if (pixelWidth == null ||
+        pixelHeight == null ||
+        cellWidth == null ||
+        cellHeight == null ||
+        cellWidth <= 0 ||
+        cellHeight <= 0) {
+      return false;
+    }
+
+    final derivedWidth = (pixelWidth / cellWidth).round();
+    final derivedHeight = (pixelHeight / cellHeight).round();
+    return _setSessionImageCellPixels(derivedWidth, derivedHeight);
+  }
+
+  bool _setSessionImageCellPixels(int width, int height) {
+    if (width <= 0 || height <= 0) return false;
+    if (_sessionImageCellPixelWidth == width &&
+        _sessionImageCellPixelHeight == height) {
+      return false;
+    }
+    _sessionImageCellPixelWidth = width;
+    _sessionImageCellPixelHeight = height;
+    return true;
   }
 
   @override
@@ -333,6 +412,7 @@ class WidgetApp
     }
 
     if (msg is WindowSizeMsg) {
+      _updateWindowCellSize(msg.width, msg.height);
       _tree.setRootConstraints(
         BoxConstraints.tight(Size(msg.width.toDouble(), msg.height.toDouble())),
       );
@@ -542,6 +622,7 @@ class WidgetApp
     final imageCapabilitiesChanged =
         _imageAutoMode == ImageAutoMode.sessionCapabilities &&
         _updateSessionImageCapabilities(msg);
+    final imageCellPixelsChanged = _updateSessionImageCellPixels(msg);
 
     root = _currentRoot();
     if (msg is BackgroundColorMsg) {
@@ -557,6 +638,7 @@ class WidgetApp
       _dirty =
           _dirty ||
           imageCapabilitiesChanged ||
+          imageCellPixelsChanged ||
           hadDirtyBeforeDispatch ||
           _tree.hasDirty ||
           _tree.hasPaintDirty;
@@ -604,6 +686,8 @@ class WidgetApp
       baseContent = withImageAutoConfiguration(
         mode: imageAutoMode,
         capabilities: _sessionImageCapabilities,
+        cellPixelWidth: _sessionImageCellPixelWidth,
+        cellPixelHeight: _sessionImageCellPixelHeight,
         callback: _tree.render,
       );
       sw?.stop();

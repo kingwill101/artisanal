@@ -86,6 +86,14 @@ String _renderColoredContent(String content, Color color) {
   }
 
   // Draw content on top.
-  _drawStyledContent(canvas, content, 0, 0, bgStyle);
+  _drawStyledContent(
+    canvas,
+    content,
+    0,
+    0,
+    bgStyle,
+    contentWidth: w,
+    contentHeight: h,
+  );
   return canvas.render();
 }

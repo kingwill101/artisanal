@@ -14,6 +14,72 @@ class ImageData {
   int get height => image.height;
 }
 
+int _nextWidgetKittyImageId = 1;
+
+int _allocateWidgetKittyImageId() => _nextWidgetKittyImageId++;
+
+final _imageDataCache = _ImageDataCache(maximumEntries: 64);
+
+class _ImageDataCache {
+  _ImageDataCache({required this.maximumEntries});
+
+  final int maximumEntries;
+  final LinkedHashMap<Object, ImageData> _completed = LinkedHashMap();
+  final Map<Object, Future<ImageData>> _inFlight =
+      <Object, Future<ImageData>>{};
+
+  Future<ImageData> resolve(Object key, Future<ImageData> Function() loader) {
+    final completed = _completed.remove(key);
+    if (completed != null) {
+      _completed[key] = completed;
+      return Future<ImageData>.value(completed);
+    }
+
+    final inFlight = _inFlight[key];
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = Future<ImageData>.sync(loader);
+    _inFlight[key] = future;
+    future.then(
+      (data) {
+        if (!identical(_inFlight[key], future)) return;
+        _inFlight.remove(key);
+        _completed[key] = data;
+        while (_completed.length > maximumEntries) {
+          _completed.remove(_completed.keys.first);
+        }
+      },
+      onError: (Object _, StackTrace _) {
+        if (identical(_inFlight[key], future)) {
+          _inFlight.remove(key);
+        }
+      },
+    );
+    return future;
+  }
+}
+
+class _NetworkImageCacheKey {
+  _NetworkImageCacheKey(this.url, Map<String, String> headers)
+    : _headers = Map<String, String>.unmodifiable(headers);
+
+  final String url;
+  final Map<String, String> _headers;
+
+  @override
+  bool operator ==(Object other) {
+    return other is _NetworkImageCacheKey &&
+        other.url == url &&
+        _stringMapEquals(other._headers, _headers);
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(_NetworkImageCacheKey, url, _stringMapHash(_headers));
+}
+
 /// Abstract base class for providing images to the [Image] widget.
 ///
 /// Subclasses must implement [resolve] to asynchronously produce an
@@ -45,6 +111,12 @@ class FileImage extends ImageProvider {
     }
     return ImageData(decoded);
   }
+
+  @override
+  bool operator ==(Object other) => other is FileImage && other.path == path;
+
+  @override
+  int get hashCode => Object.hash(FileImage, path);
 }
 
 /// An [ImageProvider] that loads an image from raw bytes.
@@ -66,6 +138,13 @@ class MemoryImage extends ImageProvider {
     }
     return ImageData(decoded);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is MemoryImage && identical(other.bytes, bytes);
+
+  @override
+  int get hashCode => Object.hash(MemoryImage, identityHashCode(bytes));
 }
 
 /// An [ImageProvider] that loads an image from an HTTP(S) URL.
@@ -76,6 +155,8 @@ class MemoryImage extends ImageProvider {
 class NetworkImage extends ImageProvider {
   const NetworkImage(this.url, {this.headers = const {}});
 
+  static const String _defaultUserAgent = 'artisanal-widgets-image/0.1';
+
   /// The URL to fetch.
   final String url;
 
@@ -83,11 +164,21 @@ class NetworkImage extends ImageProvider {
   final Map<String, String> headers;
 
   @override
-  Future<ImageData> resolve() async {
+  Future<ImageData> resolve() {
+    return _imageDataCache.resolve(_NetworkImageCacheKey(url, headers), _load);
+  }
+
+  Future<ImageData> _load() async {
     final client = HttpClient();
     try {
       final request = await client.getUrl(Uri.parse(url));
-      headers.forEach((name, value) => request.headers.add(name, value));
+      if (!_containsHeader(HttpHeaders.userAgentHeader)) {
+        request.headers.set(HttpHeaders.userAgentHeader, _defaultUserAgent);
+      }
+      if (!_containsHeader(HttpHeaders.acceptHeader)) {
+        request.headers.set(HttpHeaders.acceptHeader, 'image/*,*/*;q=0.8');
+      }
+      headers.forEach((name, value) => request.headers.set(name, value));
       final response = await request.close();
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw Exception('Failed to load image: HTTP ${response.statusCode}');
@@ -107,6 +198,41 @@ class NetworkImage extends ImageProvider {
       client.close(force: true);
     }
   }
+
+  bool _containsHeader(String name) {
+    final lowerName = name.toLowerCase();
+    return headers.keys.any((header) => header.toLowerCase() == lowerName);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is NetworkImage &&
+        other.url == url &&
+        _stringMapEquals(other.headers, headers);
+  }
+
+  @override
+  int get hashCode => Object.hash(NetworkImage, url, _stringMapHash(headers));
+}
+
+bool _stringMapEquals(Map<String, String> a, Map<String, String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (final entry in a.entries) {
+    if (!b.containsKey(entry.key) || b[entry.key] != entry.value) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int _stringMapHash(Map<String, String> map) {
+  var hash = Object.hash('StringMap', map.length);
+  final keys = map.keys.toList()..sort();
+  for (final key in keys) {
+    hash = Object.hash(hash, key, map[key]);
+  }
+  return hash;
 }
 
 /// How an image should be inscribed into a box.
@@ -221,26 +347,29 @@ class Image extends StatefulWidget {
 }
 
 class _ImageState extends State<Image> {
+  final int _kittyImageId = _allocateWidgetKittyImageId();
   ImageData? _imageData;
   Object? _error;
   bool _loading = true;
+  int _resolveGeneration = 0;
+  Future<void>? _resolveFuture;
 
   @override
-  Cmd? handleInit() {
+  void initState() {
+    super.initState();
+    _resolveImage(reset: false);
+  }
+
+  @override
+  Cmd? handleInit() => _repaintWhenResolved();
+
+  Cmd _repaintWhenResolved() {
+    final future = _resolveFuture;
     return Cmd(() async {
-      try {
-        final data = await widget.image.resolve();
-        setState(() {
-          _imageData = data;
-          _loading = false;
-        });
-      } catch (e) {
-        setState(() {
-          _error = e;
-          _loading = false;
-        });
+      if (future != null) {
+        await future;
       }
-      return null;
+      return await Cmd.repaint(force: false).execute();
     });
   }
 
@@ -248,14 +377,40 @@ class _ImageState extends State<Image> {
   Cmd? didUpdateWidget(Image oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.image != oldWidget.image) {
+      _resolveImage(reset: true);
+      return _repaintWhenResolved();
+    }
+    return null;
+  }
+
+  void _resolveImage({required bool reset}) {
+    final image = widget.image;
+    final generation = ++_resolveGeneration;
+    if (reset) {
       setState(() {
         _imageData = null;
         _error = null;
         _loading = true;
       });
-      return handleInit();
     }
-    return null;
+    _resolveFuture = () async {
+      try {
+        final data = await image.resolve();
+        if (!mounted || generation != _resolveGeneration) return;
+        setState(() {
+          _imageData = data;
+          _error = null;
+          _loading = false;
+        });
+      } catch (e) {
+        if (!mounted || generation != _resolveGeneration) return;
+        setState(() {
+          _imageData = null;
+          _error = e;
+          _loading = false;
+        });
+      }
+    }();
   }
 
   @override
@@ -272,6 +427,7 @@ class _ImageState extends State<Image> {
       height: widget.height,
       fit: widget.fit,
       renderMode: widget.renderMode,
+      kittyImageId: _kittyImageId,
     );
   }
 }
@@ -284,6 +440,7 @@ class _RawImage extends LeafRenderObjectWidget {
     this.height,
     this.fit = BoxFit.contain,
     this.renderMode = ImageRenderMode.unicodeBlocks,
+    this.kittyImageId,
   });
 
   final ImageData imageData;
@@ -291,6 +448,7 @@ class _RawImage extends LeafRenderObjectWidget {
   final int? height;
   final BoxFit fit;
   final ImageRenderMode renderMode;
+  final int? kittyImageId;
 
   @override
   RenderObject createRenderObject() {
@@ -300,6 +458,7 @@ class _RawImage extends LeafRenderObjectWidget {
       targetHeight: height,
       fit: fit,
       renderMode: renderMode,
+      kittyImageId: kittyImageId,
     );
   }
 
@@ -311,11 +470,19 @@ class _RawImage extends LeafRenderObjectWidget {
       ..targetWidth = width
       ..targetHeight = height
       ..fit = fit
-      ..renderMode = renderMode;
+      ..renderMode = renderMode
+      ..kittyImageId = kittyImageId;
   }
 
   @override
-  Object view() => _renderImage(imageData, width, height, fit, renderMode);
+  Object view() => _renderImage(
+    imageData,
+    width,
+    height,
+    fit,
+    renderMode,
+    kittyImageId: kittyImageId,
+  );
 }
 
 class _RenderImage extends RenderBox {
@@ -325,6 +492,7 @@ class _RenderImage extends RenderBox {
     this.targetHeight,
     required this.fit,
     required this.renderMode,
+    this.kittyImageId,
   });
 
   ImageData imageData;
@@ -332,32 +500,231 @@ class _RenderImage extends RenderBox {
   int? targetHeight;
   BoxFit fit;
   ImageRenderMode renderMode;
-  String? _lastPaint;
+  int? kittyImageId;
+  _RenderedImageCacheKey? _lastRenderedKey;
+  _RenderedImageResult? _lastRendered;
 
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    _lastPaint = _renderImage(
+    final rendered = _resolveRenderedImage();
+    final imageSize = rendered.size;
+    size = constraints.constrain(
+      Size(imageSize.$1.toDouble(), imageSize.$2.toDouble()),
+    );
+  }
+
+  @override
+  String paint() => _resolveRenderedImage().text;
+
+  _RenderedImageResult _resolveRenderedImage() {
+    final key = _RenderedImageCacheKey.capture(
+      imageData: imageData,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+      fit: fit,
+      renderMode: renderMode,
+      kittyImageId: kittyImageId,
+    );
+    final rendered = _lastRendered;
+    if (rendered != null && _lastRenderedKey == key) {
+      return rendered;
+    }
+
+    final nextRendered = _renderImageResult(
       imageData,
       targetWidth,
       targetHeight,
       fit,
       renderMode,
+      kittyImageId: kittyImageId,
     );
-    size = constraints.constrain(
-      Size(
-        Layout.getWidth(_lastPaint!).toDouble(),
-        Layout.getHeight(_lastPaint!).toDouble(),
-      ),
+    _lastRenderedKey = key;
+    _lastRendered = nextRendered;
+    return nextRendered;
+  }
+}
+
+final class _RenderedImageResult {
+  const _RenderedImageResult({required this.text, required this.size});
+
+  final String text;
+  final (int, int) size;
+}
+
+final class _RenderedImageCacheKey {
+  _RenderedImageCacheKey({
+    required this.imageData,
+    required this.targetWidth,
+    required this.targetHeight,
+    required this.fit,
+    required this.renderMode,
+    required this.kittyImageId,
+    required this.autoMode,
+    required this.hasKittyGraphics,
+    required this.hasITerm2,
+    required this.hasSixel,
+    required this.cellPixelWidth,
+    required this.cellPixelHeight,
+    required this.hasConfiguredCellPixelSize,
+  });
+
+  factory _RenderedImageCacheKey.capture({
+    required ImageData imageData,
+    required int? targetWidth,
+    required int? targetHeight,
+    required BoxFit fit,
+    required ImageRenderMode renderMode,
+    required int? kittyImageId,
+  }) {
+    final capabilities = _currentImageCapabilities;
+    return _RenderedImageCacheKey(
+      imageData: imageData,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+      fit: fit,
+      renderMode: renderMode,
+      kittyImageId: kittyImageId,
+      autoMode: _currentImageAutoMode,
+      hasKittyGraphics: capabilities.hasKittyGraphics,
+      hasITerm2: capabilities.hasITerm2,
+      hasSixel: capabilities.hasSixel,
+      cellPixelWidth: _currentImageCellPixelWidth,
+      cellPixelHeight: _currentImageCellPixelHeight,
+      hasConfiguredCellPixelSize: _hasConfiguredImageCellPixelSize,
     );
   }
 
+  final ImageData imageData;
+  final int? targetWidth;
+  final int? targetHeight;
+  final BoxFit fit;
+  final ImageRenderMode renderMode;
+  final int? kittyImageId;
+  final ImageAutoMode autoMode;
+  final bool hasKittyGraphics;
+  final bool hasITerm2;
+  final bool hasSixel;
+  final int cellPixelWidth;
+  final int cellPixelHeight;
+  final bool hasConfiguredCellPixelSize;
+
   @override
-  String paint() => _lastPaint ?? '';
+  bool operator ==(Object other) {
+    return other is _RenderedImageCacheKey &&
+        identical(other.imageData, imageData) &&
+        other.targetWidth == targetWidth &&
+        other.targetHeight == targetHeight &&
+        other.fit == fit &&
+        other.renderMode == renderMode &&
+        other.kittyImageId == kittyImageId &&
+        other.autoMode == autoMode &&
+        other.hasKittyGraphics == hasKittyGraphics &&
+        other.hasITerm2 == hasITerm2 &&
+        other.hasSixel == hasSixel &&
+        other.cellPixelWidth == cellPixelWidth &&
+        other.cellPixelHeight == cellPixelHeight &&
+        other.hasConfiguredCellPixelSize == hasConfiguredCellPixelSize;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    identityHashCode(imageData),
+    targetWidth,
+    targetHeight,
+    fit,
+    renderMode,
+    kittyImageId,
+    autoMode,
+    hasKittyGraphics,
+    hasITerm2,
+    hasSixel,
+    cellPixelWidth,
+    cellPixelHeight,
+    hasConfiguredCellPixelSize,
+  );
 }
 
 /// Renders an image to a terminal string using half-block characters.
 String _renderImage(
+  ImageData imageData,
+  int? targetWidth,
+  int? targetHeight,
+  BoxFit fit,
+  ImageRenderMode renderMode, {
+  int? kittyImageId,
+}) => _renderImageResult(
+  imageData,
+  targetWidth,
+  targetHeight,
+  fit,
+  renderMode,
+  kittyImageId: kittyImageId,
+).text;
+
+_RenderedImageResult _renderImageResult(
+  ImageData imageData,
+  int? targetWidth,
+  int? targetHeight,
+  BoxFit fit,
+  ImageRenderMode renderMode, {
+  int? kittyImageId,
+}) {
+  final (cols, rows) = _resolveImageCellSize(
+    imageData,
+    targetWidth,
+    targetHeight,
+    fit,
+    renderMode,
+  );
+  if (cols <= 0 || rows <= 0) {
+    return const _RenderedImageResult(text: '', size: (0, 0));
+  }
+
+  final drawable = _resolveDrawable(
+    imageData.image,
+    columns: cols,
+    rows: rows,
+    renderMode: renderMode,
+    kittyImageId: kittyImageId,
+  );
+  final canvas = Canvas(cols, rows);
+  drawable.draw(canvas, canvas.bounds());
+  return _RenderedImageResult(
+    text: _normalizeRenderedImage(
+      canvas.render(),
+      columns: cols,
+      renderMode: renderMode,
+    ),
+    size: (cols, rows),
+  );
+}
+
+String _normalizeRenderedImage(
+  String rendered, {
+  required int columns,
+  required ImageRenderMode renderMode,
+}) {
+  if (rendered.isEmpty || columns <= 1) return rendered;
+
+  return switch (renderMode) {
+    ImageRenderMode.sixel => _padTopRowRemainder(
+      rendered,
+      extraColumns: columns - 1,
+    ),
+    _ => rendered,
+  };
+}
+
+String _padTopRowRemainder(String rendered, {required int extraColumns}) {
+  if (extraColumns <= 0) return rendered;
+  final lines = rendered.split('\n');
+  if (lines.isEmpty) return rendered;
+  lines[0] = '${lines[0]}${' ' * extraColumns}';
+  return lines.join('\n');
+}
+
+(int, int) _resolveImageCellSize(
   ImageData imageData,
   int? targetWidth,
   int? targetHeight,
@@ -367,27 +734,11 @@ String _renderImage(
   final srcW = imageData.width;
   final srcH = imageData.height;
 
-  // Default: 1 column per pixel width, 1 row per 2 pixel rows
+  // Default: 1 column per pixel width, 1 row per 2 pixel rows.
   var cols = targetWidth ?? srcW;
   var rows = targetHeight ?? (srcH ~/ 2).clamp(1, srcH);
 
-  // Apply BoxFit scaling
-  final scaledSize = _applyBoxFit(fit, srcW, srcH, cols, rows);
-  cols = scaledSize.$1;
-  rows = scaledSize.$2;
-
-  if (cols <= 0 || rows <= 0) return '';
-
-  final drawable = _resolveDrawable(
-    imageData.image,
-    columns: cols,
-    rows: rows,
-    renderMode: renderMode,
-  );
-
-  final canvas = Canvas(cols, rows);
-  drawable.draw(canvas, canvas.bounds());
-  return canvas.render();
+  return _applyBoxFit(fit, srcW, srcH, cols, rows);
 }
 
 Drawable _resolveDrawable(
@@ -395,17 +746,21 @@ Drawable _resolveDrawable(
   required int columns,
   required int rows,
   required ImageRenderMode renderMode,
+  int? kittyImageId,
 }) {
   return switch (renderMode) {
     ImageRenderMode.auto => _bestDrawableFromCapabilities(
       image,
       columns: columns,
       rows: rows,
+      kittyImageId: kittyImageId,
     ),
     ImageRenderMode.kitty => KittyImageDrawable(
       image,
+      id: kittyImageId,
       columns: columns,
       rows: rows,
+      clearBeforeDraw: kittyImageId != null,
     ),
     ImageRenderMode.iterm2 => ITerm2ImageDrawable(
       image,
@@ -416,6 +771,9 @@ Drawable _resolveDrawable(
       image,
       columns: columns,
       rows: rows,
+      cellPixelWidth: _currentImageCellPixelWidth,
+      cellPixelHeight: _currentImageCellPixelHeight,
+      allowUpscale: _hasConfiguredImageCellPixelSize,
     ),
     ImageRenderMode.unicodeBlocks => HalfBlockImageDrawable(
       image,
@@ -429,6 +787,7 @@ Drawable _bestDrawableFromCapabilities(
   img.Image image, {
   required int columns,
   required int rows,
+  int? kittyImageId,
 }) {
   return switch (_currentImageAutoMode) {
     ImageAutoMode.portableFallback => HalfBlockImageDrawable(
@@ -438,25 +797,43 @@ Drawable _bestDrawableFromCapabilities(
     ),
     ImageAutoMode.environment => switch (_widgetImageCapabilities) {
       TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
-        KittyImageDrawable(image, columns: columns, rows: rows),
+        KittyImageDrawable(
+          image,
+          id: kittyImageId,
+          columns: columns,
+          rows: rows,
+          clearBeforeDraw: kittyImageId != null,
+        ),
       TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
         ITerm2ImageDrawable(image, columns: columns, rows: rows),
       TerminalCapabilities(:final hasSixel) when hasSixel => SixelImageDrawable(
         image,
         columns: columns,
         rows: rows,
+        cellPixelWidth: _currentImageCellPixelWidth,
+        cellPixelHeight: _currentImageCellPixelHeight,
+        allowUpscale: _hasConfiguredImageCellPixelSize,
       ),
       _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
     },
     ImageAutoMode.sessionCapabilities => switch (_currentImageCapabilities) {
       TerminalCapabilities(:final hasKittyGraphics) when hasKittyGraphics =>
-        KittyImageDrawable(image, columns: columns, rows: rows),
+        KittyImageDrawable(
+          image,
+          id: kittyImageId,
+          columns: columns,
+          rows: rows,
+          clearBeforeDraw: kittyImageId != null,
+        ),
       TerminalCapabilities(:final hasITerm2) when hasITerm2 =>
         ITerm2ImageDrawable(image, columns: columns, rows: rows),
       TerminalCapabilities(:final hasSixel) when hasSixel => SixelImageDrawable(
         image,
         columns: columns,
         rows: rows,
+        cellPixelWidth: _currentImageCellPixelWidth,
+        cellPixelHeight: _currentImageCellPixelHeight,
+        allowUpscale: _hasConfiguredImageCellPixelSize,
       ),
       _ => HalfBlockImageDrawable(image, columns: columns, rows: rows),
     },
@@ -470,13 +847,23 @@ T withImageAutoMode<T>(ImageAutoMode mode, T Function() callback) {
 T withImageAutoConfiguration<T>({
   required ImageAutoMode mode,
   TerminalCapabilities? capabilities,
+  int? cellPixelWidth,
+  int? cellPixelHeight,
   required T Function() callback,
 }) {
   final sameMode = _currentImageAutoMode == mode;
   final sameCapabilities =
       capabilities == null ||
       identical(_currentImageCapabilities, capabilities);
-  if (sameMode && sameCapabilities) {
+  final sameCellPixelWidth =
+      cellPixelWidth == null || cellPixelWidth == _currentImageCellPixelWidth;
+  final sameCellPixelHeight =
+      cellPixelHeight == null ||
+      cellPixelHeight == _currentImageCellPixelHeight;
+  if (sameMode &&
+      sameCapabilities &&
+      sameCellPixelWidth &&
+      sameCellPixelHeight) {
     return callback();
   }
   return dart_async.runZoned(
@@ -484,6 +871,9 @@ T withImageAutoConfiguration<T>({
     zoneValues: <Object?, Object?>{
       _imageAutoModeZoneKey: mode,
       _imageCapabilitiesZoneKey: ?capabilities,
+      if (cellPixelWidth != null) _imageCellPixelWidthZoneKey: cellPixelWidth,
+      if (cellPixelHeight != null)
+        _imageCellPixelHeightZoneKey: cellPixelHeight,
     },
   );
 }
@@ -494,6 +884,20 @@ TerminalCapabilities get _currentImageCapabilities =>
     _widgetImageCapabilities;
 
 const Symbol _imageCapabilitiesZoneKey = #artisanal_widgets_imageCapabilities;
+const Symbol _imageCellPixelWidthZoneKey =
+    #artisanal_widgets_imageCellPixelWidth;
+const Symbol _imageCellPixelHeightZoneKey =
+    #artisanal_widgets_imageCellPixelHeight;
+
+int get _currentImageCellPixelWidth =>
+    dart_async.Zone.current[_imageCellPixelWidthZoneKey] as int? ?? 8;
+
+int get _currentImageCellPixelHeight =>
+    dart_async.Zone.current[_imageCellPixelHeightZoneKey] as int? ?? 16;
+
+bool get _hasConfiguredImageCellPixelSize =>
+    dart_async.Zone.current[_imageCellPixelWidthZoneKey] is int &&
+    dart_async.Zone.current[_imageCellPixelHeightZoneKey] is int;
 
 T withImageAutoCapabilities<T>(
   TerminalCapabilities capabilities,
@@ -528,7 +932,6 @@ final TerminalCapabilities _widgetImageCapabilities = TerminalCapabilities(
 ) {
   if (srcWidth <= 0 || srcHeight <= 0) return (targetCols, targetRows);
 
-  // Aspect ratio in terminal space: each row = 2 pixel rows
   final srcCols = srcWidth.toDouble();
   final srcRows = (srcHeight / 2.0);
 

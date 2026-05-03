@@ -39,6 +39,17 @@ void main() {
       expect(cell.packed, hasLength(4));
     });
 
+    test('reuses native color snapshots for repeated UV colors', () {
+      final first = TerminalNativeStyle.fromStyle(
+        const UvStyle(fg: UvColor.rgb(1, 2, 3)),
+      );
+      final second = TerminalNativeStyle.fromStyle(
+        const UvStyle(fg: UvColor.rgb(1, 2, 3)),
+      );
+
+      expect(identical(first.fg, second.fg), isTrue);
+    });
+
     test('preserves zero-width placeholders for wide cells', () {
       final buffer = uv_buffer.Buffer.create(4, 1);
       buffer.setCell(0, 0, Cell(content: '🙂', width: 2));

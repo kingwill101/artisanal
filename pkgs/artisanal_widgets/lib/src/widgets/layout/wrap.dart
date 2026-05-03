@@ -138,7 +138,15 @@ class RenderWrap extends RenderBox {
         final crossDelta = _wrapCrossOffset(run.cross, item.cross);
         final dx = _isHorizontal ? mainOffset : crossOffset + crossDelta;
         final dy = _isHorizontal ? crossOffset + crossDelta : mainOffset;
-        _drawStyledContent(canvas, item.child.paint(), dx, dy, bgStyle);
+        _drawStyledContent(
+          canvas,
+          item.child.paint(),
+          dx,
+          dy,
+          bgStyle,
+          contentWidth: _isHorizontal ? item.main : item.cross,
+          contentHeight: _isHorizontal ? item.cross : item.main,
+        );
         mainOffset += item.main;
         if (i < spacingData.between.length) {
           mainOffset += spacingData.between[i];

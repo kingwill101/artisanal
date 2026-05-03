@@ -1,14 +1,16 @@
 part of 'layout_widgets.dart';
 
-final Map<({Color color, bool darkBackground}), UvColor?> _uvColorCache =
-    <({Color color, bool darkBackground}), UvColor?>{};
+final Expando<_UvColorCacheEntry> _uvColorCache = Expando<_UvColorCacheEntry>(
+  'artisanal_widgets.uvColor',
+);
 
 UvColor? _colorToUvColor(Color? color) {
   if (color == null || color is NoColor) return null;
 
-  final cacheKey = (color: color, darkBackground: hasDarkBackground);
-  if (_uvColorCache.containsKey(cacheKey)) {
-    return _uvColorCache[cacheKey];
+  final cached = _uvColorCache[color];
+  if (cached != null) {
+    if (hasDarkBackground && cached.hasDarkValue) return cached.darkValue;
+    if (!hasDarkBackground && cached.hasLightValue) return cached.lightValue;
   }
 
   Color resolved = color;
@@ -16,24 +18,46 @@ UvColor? _colorToUvColor(Color? color) {
     resolved = hasDarkBackground ? color.dark : color.light;
   }
 
+  final value = _resolvedColorToUvColor(resolved);
+  final entry = cached ?? (_uvColorCache[color] = _UvColorCacheEntry());
+  if (hasDarkBackground) {
+    entry
+      ..hasDarkValue = true
+      ..darkValue = value;
+  } else {
+    entry
+      ..hasLightValue = true
+      ..lightValue = value;
+  }
+  return value;
+}
+
+UvColor? _resolvedColorToUvColor(Color resolved) {
   final hex = resolved.toHex();
   if (hex.isEmpty) {
     if (resolved is AnsiColor) {
-      return _uvColorCache[cacheKey] = UvColor.indexed256(resolved.code);
+      return UvColor.indexed256(resolved.code);
     }
-    return _uvColorCache[cacheKey] = null;
+    return null;
   }
 
   final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
   if (normalized.length != 6) {
-    return _uvColorCache[cacheKey] = null;
+    return null;
   }
 
   final r = int.tryParse(normalized.substring(0, 2), radix: 16) ?? 0;
   final g = int.tryParse(normalized.substring(2, 4), radix: 16) ?? 0;
   final b = int.tryParse(normalized.substring(4, 6), radix: 16) ?? 0;
 
-  return _uvColorCache[cacheKey] = UvColor.rgb(r, g, b);
+  return UvColor.rgb(r, g, b);
+}
+
+final class _UvColorCacheEntry {
+  bool hasDarkValue = false;
+  bool hasLightValue = false;
+  UvColor? darkValue;
+  UvColor? lightValue;
 }
 
 int _roundClamp(num value) => math.max(0, value.round());
@@ -137,6 +161,88 @@ String _padToStackSize(String content, int targetWidth, int targetHeight) {
   return result.join('\n');
 }
 
+String _renderPlainContainerContent({
+  required String content,
+  required int contentHeight,
+  required int targetWidth,
+  required int targetHeight,
+  required int marginLeft,
+  required int marginTop,
+  required int padLeft,
+  required int padTop,
+  required int alignedX,
+  required int alignedY,
+}) {
+  final lines = content.split('\n');
+  final buffer = StringBuffer();
+  final contentX = marginLeft + padLeft + alignedX;
+  final contentY = marginTop + padTop + alignedY;
+  final blankLine = ' ' * targetWidth;
+
+  for (var y = 0; y < targetHeight; y++) {
+    if (y > 0) buffer.write('\n');
+
+    final sourceY = y - contentY;
+    if (sourceY < 0 || sourceY >= contentHeight || sourceY >= lines.length) {
+      buffer.write(blankLine);
+      continue;
+    }
+
+    var line = lines[sourceY];
+    final maxLineWidth = math.max(0, targetWidth - contentX);
+    if (maxLineWidth <= 0) {
+      buffer.write(blankLine);
+      continue;
+    }
+
+    var lineWidth = Layout.visibleLength(line);
+    if (lineWidth > maxLineWidth) {
+      line = Layout.truncate(line, maxLineWidth, ellipsis: '');
+      lineWidth = Layout.visibleLength(line);
+    }
+
+    final prefixWidth = contentX.clamp(0, targetWidth);
+    final suffixWidth = math.max(0, targetWidth - prefixWidth - lineWidth);
+    buffer
+      ..write(' ' * prefixWidth)
+      ..write(line);
+    if (suffixWidth > 0) {
+      if (_mayLeaveTerminalStateOpen(line)) {
+        buffer.write(_ansiResetStyleForPlainComposition);
+      }
+      buffer.write(' ' * suffixWidth);
+    }
+  }
+
+  return buffer.toString();
+}
+
+bool _needsPlainContainerCanvasComposition(String content) {
+  if (mayContainTerminalGraphics(content)) return true;
+  return _hasUnsupportedPlainContainerControls(content);
+}
+
+bool _hasUnsupportedPlainContainerControls(String text) {
+  for (var i = 0; i < text.length; i++) {
+    final code = text.codeUnitAt(i);
+    if (code == 0x1B) {
+      if (i + 1 >= text.length) return true;
+      final next = text.codeUnitAt(i + 1);
+      if (next == 0x5B) continue; // CSI, including SGR.
+      return true;
+    }
+    if (code == 0x9B) continue; // C1 CSI.
+    if (code >= 0x80 && code <= 0x9F) return true;
+  }
+  return false;
+}
+
+bool _mayLeaveTerminalStateOpen(String line) {
+  return line.contains('\x1b[') || line.contains('\x9b');
+}
+
+const _ansiResetStyleForPlainComposition = '\x1b[m';
+
 int _offsetForHorizontal(
   HorizontalAlign align,
   int containerWidth,
@@ -168,6 +274,8 @@ void _drawStyledContent(
   int startY,
   UvStyle bgStyle, {
   bool transparent = false,
+  int? contentWidth,
+  int? contentHeight,
 }) {
   final span = TuiTrace.begin(
     '_drawStyledContent',
@@ -175,13 +283,20 @@ void _drawStyledContent(
     extra:
         'startX=$startX startY=$startY canvasW=${canvas.width()} canvasH=${canvas.height()}',
   );
-  final styledBounds = StyledString(content).bounds();
-  final tempCanvas = Canvas(styledBounds.width, styledBounds.height);
-  StyledString(content).draw(tempCanvas, tempCanvas.bounds());
+  final styled = StyledString(content);
+  final (styledWidth, styledHeight) = switch ((contentWidth, contentHeight)) {
+    (final int width, final int height) => (width, height),
+    _ => () {
+      final bounds = styled.bounds();
+      return (bounds.width, bounds.height);
+    }(),
+  };
+  final tempCanvas = Canvas(styledWidth, styledHeight);
+  styled.draw(tempCanvas, tempCanvas.bounds());
   final terminalBg = _colorToUvColor(currentTheme.background);
 
-  for (var y = 0; y < styledBounds.height; y++) {
-    for (var x = 0; x < styledBounds.width; x++) {
+  for (var y = 0; y < styledHeight; y++) {
+    for (var x = 0; x < styledWidth; x++) {
       final destX = startX + x;
       final destY = startY + y;
 
@@ -230,7 +345,7 @@ void _drawStyledContent(
       );
     }
   }
-  span.end(extra: 'bounds=${styledBounds.width}x${styledBounds.height}');
+  span.end(extra: 'bounds=${styledWidth}x$styledHeight');
 }
 
 String _renderContainerContent({
@@ -277,6 +392,8 @@ String _renderContainerContent({
       : 0;
   final borderH = borderLeft + borderRight;
   final borderV = borderTop + borderBottom;
+  final hasBorder = border != null && border.isVisible;
+  final hasGradient = gradient != null && gradient.colors.length >= 2;
 
   final padLeft = _roundClamp(padding?.left ?? 0);
   final padRight = _roundClamp(padding?.right ?? 0);
@@ -305,51 +422,24 @@ String _renderContainerContent({
     return '';
   }
 
-  final canvas = Canvas(targetWidth, targetHeight);
   final bgColor = _colorToUvColor(color ?? decoration?.color ?? background);
   final fgColor = _colorToUvColor(foregroundDecoration?.color ?? foreground);
   final bgStyle = UvStyle(bg: bgColor, fg: fgColor);
-
-  // Fill entire canvas with blank cells (margin area).
-  final blankCell = Cell(content: ' ', width: 1, style: const UvStyle());
-  for (var y = 0; y < targetHeight; y++) {
-    for (var x = 0; x < targetWidth; x++) {
-      canvas.setCell(x, y, blankCell.clone());
-    }
-  }
-
-  // Fill inner area (inside margin, including border) with background cells.
-  final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
-  for (var y = marginTop; y < marginTop + innerHeight; y++) {
-    for (var x = marginLeft; x < marginLeft + innerWidth; x++) {
-      canvas.setCell(x, y, bgCell.clone());
-    }
-  }
-
-  // Apply gradient to background cells (inside border, row-by-row).
-  if (gradient != null && gradient.colors.length >= 2) {
-    final gradientAreaTop = marginTop + borderTop;
-    final gradientAreaHeight = math.max(0, innerHeight - borderV);
-    if (gradientAreaHeight > 0) {
-      final gradientColors = blend1D(
-        gradientAreaHeight,
-        gradient.colors,
-        hasDarkBackground: hasDarkBackground,
-      );
-      for (var row = 0; row < gradientAreaHeight; row++) {
-        final rowColor = _colorToUvColor(gradientColors[row]);
-        final rowStyle = UvStyle(bg: rowColor, fg: fgColor);
-        final rowCell = Cell(content: ' ', width: 1, style: rowStyle);
-        final y = gradientAreaTop + row;
-        for (
-          var x = marginLeft + borderLeft;
-          x < marginLeft + innerWidth - borderRight;
-          x++
-        ) {
-          canvas.setCell(x, y, rowCell.clone());
-        }
-      }
-    }
+  final hasVisualStyle =
+      bgColor != null || fgColor != null || hasBorder || hasGradient;
+  if (!hasVisualStyle &&
+      padLeft == 0 &&
+      padRight == 0 &&
+      padTop == 0 &&
+      padBottom == 0 &&
+      marginLeft == 0 &&
+      marginRight == 0 &&
+      marginTop == 0 &&
+      marginBottom == 0 &&
+      targetWidth == contentWidth &&
+      targetHeight == contentHeight) {
+    span.end(extra: 'passthrough size=${targetWidth}x$targetHeight');
+    return contentStr;
   }
 
   // Compute alignment and content offset (inside border + padding).
@@ -376,6 +466,64 @@ String _renderContainerContent({
   final offsetX = marginLeft + borderLeft + padLeft + alignedX;
   final offsetY = marginTop + borderTop + padTop + alignedY;
 
+  if (!hasVisualStyle &&
+      offsetX >= 0 &&
+      offsetY >= 0 &&
+      !_needsPlainContainerCanvasComposition(contentStr)) {
+    final result = _renderPlainContainerContent(
+      content: contentStr,
+      contentHeight: contentHeight,
+      targetWidth: targetWidth,
+      targetHeight: targetHeight,
+      marginLeft: marginLeft,
+      marginTop: marginTop,
+      padLeft: padLeft,
+      padTop: padTop,
+      alignedX: alignedX,
+      alignedY: alignedY,
+    );
+    span.end(extra: 'plain size=${targetWidth}x$targetHeight');
+    return result;
+  }
+
+  final canvas = Canvas(targetWidth, targetHeight);
+
+  // Fill inner area (inside margin, including border) with background cells.
+  if (!bgStyle.isZero) {
+    final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
+    for (var y = marginTop; y < marginTop + innerHeight; y++) {
+      for (var x = marginLeft; x < marginLeft + innerWidth; x++) {
+        canvas.setCell(x, y, bgCell.clone());
+      }
+    }
+  }
+
+  // Apply gradient to background cells (inside border, row-by-row).
+  if (hasGradient) {
+    final gradientAreaTop = marginTop + borderTop;
+    final gradientAreaHeight = math.max(0, innerHeight - borderV);
+    if (gradientAreaHeight > 0) {
+      final gradientColors = blend1D(
+        gradientAreaHeight,
+        gradient.colors,
+        hasDarkBackground: hasDarkBackground,
+      );
+      for (var row = 0; row < gradientAreaHeight; row++) {
+        final rowColor = _colorToUvColor(gradientColors[row]);
+        final rowStyle = UvStyle(bg: rowColor, fg: fgColor);
+        final rowCell = Cell(content: ' ', width: 1, style: rowStyle);
+        final y = gradientAreaTop + row;
+        for (
+          var x = marginLeft + borderLeft;
+          x < marginLeft + innerWidth - borderRight;
+          x++
+        ) {
+          canvas.setCell(x, y, rowCell.clone());
+        }
+      }
+    }
+  }
+
   // Draw content.
   if (contentStr.isNotEmpty) {
     // Use the gradient-aware bg style for the content area: if gradient is
@@ -383,11 +531,19 @@ String _renderContainerContent({
     // _drawStyledContent merges bg from bgStyle only when the source cell
     // has no bg. We pass the base bgStyle here; for gradient containers the
     // canvas already has per-row bg so the merge is harmless.
-    _drawStyledContent(canvas, contentStr, offsetX, offsetY, bgStyle);
+    _drawStyledContent(
+      canvas,
+      contentStr,
+      offsetX,
+      offsetY,
+      bgStyle,
+      contentWidth: contentWidth,
+      contentHeight: contentHeight,
+    );
   }
 
   // Draw border characters onto the canvas.
-  if (border != null && border.isVisible) {
+  if (hasBorder) {
     final bx = marginLeft; // border area origin x
     final by = marginTop; // border area origin y
     final bw = innerWidth; // border area width

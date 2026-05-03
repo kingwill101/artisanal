@@ -93,6 +93,8 @@ export 'src/terminal/terminal.dart'
         RawModeGuard,
         Ansi,
         KittyImage,
+        TerminalReportProbe,
+        TerminalReportSnapshot,
         Key,
         KeyType,
         Keys;

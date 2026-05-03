@@ -47,6 +47,8 @@ export 'terminal_base.dart'
         StringTerminal,
         RawModeGuard;
 
+export 'report_probe.dart' show TerminalReportProbe, TerminalReportSnapshot;
+
 export 'backend.dart'
     show
         TerminalDimensions,
