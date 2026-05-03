@@ -83,6 +83,7 @@ export 'halfblock_drawable.dart';
 class Terminal
     implements
         Screen,
+        OwnedCellScreen,
         FillableScreen,
         FillAreaScreen,
         ClearableScreen,
@@ -506,6 +507,11 @@ class Terminal
   @override
   void setCell(int x, int y, Cell? cell) {
     _buf.setCell(x, y, cell);
+  }
+
+  @override
+  void setCellOwned(int x, int y, Cell? cell) {
+    _buf.setCellOwned(x, y, cell);
   }
 
   /// Fills the entire terminal screen with the given [cell].

@@ -30,9 +30,10 @@ import '../unicode/width.dart';
 /// Canvas is a cell-buffer that can be used to compose and draw [Drawable]s.
 ///
 /// Upstream: `third_party/lipgloss/canvas.go` (Canvas backed by `uv.ScreenBuffer`).
-final class Canvas implements Screen, Drawable {
+final class Canvas implements Screen, OwnedCellScreen, Drawable {
   /// Creates a canvas with [width] and [height] in cells.
-  Canvas(int width, int height) : _scr = ScreenBuffer(width, height) {
+  Canvas(int width, int height)
+    : _scr = ScreenBuffer(width, height, tracksDirty: false) {
     // Lip Gloss v2 uses GraphemeWidth for canvas composition.
     _scr.method = WidthMethod.grapheme;
   }
@@ -66,6 +67,9 @@ final class Canvas implements Screen, Drawable {
   /// Sets the cell at ([x], [y]) in the backing buffer.
   @override
   void setCell(int x, int y, Cell? cell) => _scr.setCell(x, y, cell);
+
+  @override
+  void setCellOwned(int x, int y, Cell? cell) => _scr.setCellOwned(x, y, cell);
 
   /// Composes a [Drawable] onto this canvas.
   Canvas compose(Drawable drawer) {

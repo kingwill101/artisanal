@@ -36,6 +36,7 @@ import 'drawable.dart';
 import 'geometry.dart';
 import 'screen.dart';
 import 'style_ops.dart' as style_ops;
+import 'terminal_graphics.dart' as terminal_graphics;
 import '../ansi.dart' as term_ansi;
 import '../unicode/width.dart';
 
@@ -127,7 +128,14 @@ final class LineData {
     required this.lastCell,
     this.spans = const <DirtySpan>[],
     this.overflowed = false,
-  });
+  }) : _mutableSpans = false;
+
+  LineData._tracked({
+    required this.firstCell,
+    required this.lastCell,
+    required this.spans,
+    required this.overflowed,
+  }) : _mutableSpans = true;
 
   static const LineData clean = LineData(firstCell: -1, lastCell: -1);
 
@@ -135,6 +143,7 @@ final class LineData {
   final int lastCell;
   final List<DirtySpan> spans;
   final bool overflowed;
+  final bool _mutableSpans;
 
   bool get isDirty => firstCell != -1 || lastCell != -1;
 
@@ -198,8 +207,20 @@ final class Line {
     _cells[x] = cell;
   }
 
-  /// Replaces the cell at [x] with a clone of [cell].
-  void replaceWithClone(int x, Cell cell) => replace(x, cell.clone());
+  /// Replaces the cell at [x] with a copy of [cell].
+  void replaceWithClone(int x, Cell cell) {
+    if (x < 0 || x >= _cells.length) return;
+    final cachedHash = _renderHash;
+    if (cachedHash != null) {
+      final previous = _cells[x];
+      _renderHash =
+          (cachedHash ^
+              _slotHash(x, previous.renderFingerprint) ^
+              _slotHash(x, cell.renderFingerprint)) &
+          0xFFFFFFFFFFFFFFFF;
+    }
+    _cells[x].copyFrom(cell);
+  }
 
   /// Returns a cached hash of the line's rendered content.
   int renderHash() {
@@ -325,14 +346,20 @@ final class Line {
 ///
 /// Upstream: `third_party/ultraviolet/buffer.go` (`Buffer`).
 final class Buffer {
-  Buffer._(this.lines)
-    : touched = List<LineData?>.filled(lines.length, null),
-      dirtyRows = List<bool>.filled(lines.length, false),
-      dirtyBits = List<Uint32List>.generate(lines.length, (_) => Uint32List(0));
+  Buffer._(this.lines, {required this.tracksDirty})
+    : touched = tracksDirty
+          ? List<LineData?>.filled(lines.length, null)
+          : <LineData?>[],
+      dirtyRows = tracksDirty
+          ? List<bool>.filled(lines.length, false)
+          : <bool>[],
+      dirtyBits = tracksDirty
+          ? List<Uint32List>.generate(lines.length, (_) => Uint32List(0))
+          : <Uint32List>[];
 
-  factory Buffer.create(int width, int height) {
+  factory Buffer.create(int width, int height, {bool tracksDirty = true}) {
     final lines = List<Line>.generate(height, (_) => Line.filled(width));
-    final b = Buffer._(lines);
+    final b = Buffer._(lines, tracksDirty: tracksDirty);
     b.resize(width, height);
     return b;
   }
@@ -343,10 +370,11 @@ final class Buffer {
   /// overwrite logic), so this helper lets Dart parity tests do the same.
   factory Buffer.fromCells(List<List<Cell>> cellLines) {
     final lines = cellLines.map(Line.fromCells).toList(growable: false);
-    return Buffer._(lines);
+    return Buffer._(lines, tracksDirty: true);
   }
 
   final List<Line> lines;
+  final bool tracksDirty;
 
   List<LineData?> touched;
   List<bool> dirtyRows;
@@ -419,22 +447,43 @@ final class Buffer {
   }
 
   /// Sets the cell at ([x], [y]) and updates dirty tracking.
-  void setCell(int x, int y, Cell? cell) {
+  void setCell(int x, int y, Cell? cell) =>
+      _setCell(x, y, cell, takeOwnership: false);
+
+  /// Sets the cell at ([x], [y]) and may take ownership of [cell].
+  void setCellOwned(int x, int y, Cell? cell) =>
+      _setCell(x, y, cell, takeOwnership: true);
+
+  void _setCell(int x, int y, Cell? cell, {required bool takeOwnership}) {
     if (y < 0 || y >= lines.length) return;
-    final current = cellAt(x, y);
+    final line = lines[y];
+    if (x < 0 || x >= line.length) return;
     final rawNext = cell ?? Cell.emptyCell();
-    final next = current == null
-        ? _applyOpacity(rawNext)
-        : _compositeCell(current, _applyOpacity(rawNext));
-    if (_isOutsideScissor(x, y, next.width)) return;
-    if (current != null && current == next) return;
+    if (_isOutsideScissor(x, y, rawNext.width)) return;
+
+    final current = line._cells[x];
+    final opacity = _opacityStack.isEmpty ? 1.0 : _opacityStack.last;
+    final Cell opacityNext;
+    var ownsNext = cell == null;
+    if (opacity >= 1.0) {
+      opacityNext = rawNext;
+    } else {
+      opacityNext = _applyOpacity(rawNext);
+      ownsNext = true;
+    }
+
+    final next = _hasTranslucentOverlay(opacityNext.style)
+        ? _compositeCell(current, opacityNext)
+        : opacityNext;
+    if (current == next) return;
     final w = next.width > 0 ? next.width : 1;
     touchLine(x, y, w);
-    final canTakeOwnership = cell == null || !identical(next, rawNext);
-    if (canTakeOwnership) {
-      lines[y].setOwned(x, next);
+    final shouldTakeOwnership =
+        takeOwnership || ownsNext || !identical(next, rawNext);
+    if (shouldTakeOwnership) {
+      line.setOwned(x, next);
     } else {
-      lines[y].set(x, next);
+      line.set(x, next);
     }
   }
 
@@ -472,6 +521,13 @@ final class Buffer {
       }
     }
 
+    if (!tracksDirty) {
+      touched = <LineData?>[];
+      dirtyRows = <bool>[];
+      dirtyBits = <Uint32List>[];
+      return;
+    }
+
     touched = List<LineData?>.filled(lines.length, null);
     dirtyRows = List<bool>.filled(lines.length, false);
     dirtyBits = List<Uint32List>.generate(
@@ -492,14 +548,17 @@ final class Buffer {
   ///
   /// Upstream: `third_party/ultraviolet/buffer.go` (`FillArea`).
   void fillArea(Cell? cell, Rectangle area) {
+    final clipped = area.intersect(bounds());
+    if (clipped.isEmpty) return;
+
     final opaqueSingleWidth =
         (cell == null || !_hasTranslucentOverlay(cell.style)) &&
         (cell == null || cell.width <= 1);
     if (opaqueSingleWidth) {
       final fillCell = cell ?? Cell.emptyCell();
-      for (var y = area.minY; y < area.maxY; y++) {
-        touchLine(area.minX, y, area.width);
-        for (var x = area.minX; x < area.maxX; x++) {
+      for (var y = clipped.minY; y < clipped.maxY; y++) {
+        touchLine(clipped.minX, y, clipped.width);
+        for (var x = clipped.minX; x < clipped.maxX; x++) {
           lines[y].replaceWithClone(x, fillCell);
         }
       }
@@ -508,8 +567,8 @@ final class Buffer {
 
     var cellWidth = 1;
     if (cell.width > 1) cellWidth = cell.width;
-    for (var y = area.minY; y < area.maxY; y++) {
-      for (var x = area.minX; x < area.maxX; x += cellWidth) {
+    for (var y = clipped.minY; y < clipped.maxY; y++) {
+      for (var x = clipped.minX; x < clipped.maxX; x += cellWidth) {
         setCell(x, y, cell);
       }
     }
@@ -532,7 +591,7 @@ final class Buffer {
     final b = bounds();
     if (!b.containsRect(area)) return null;
 
-    final n = Buffer.create(area.width, area.height);
+    final n = Buffer.create(area.width, area.height, tracksDirty: tracksDirty);
     for (var y = area.minY; y < area.maxY; y++) {
       for (var x = area.minX; x < area.maxX; x++) {
         final c = cellAt(x, y);
@@ -688,6 +747,7 @@ final class Buffer {
   }
 
   void touchLine(int x, int y, int width) {
+    if (!tracksDirty) return;
     if (y < 0 || y >= lines.length) return;
     if (width <= 0) return;
 
@@ -720,10 +780,11 @@ final class Buffer {
     dirtyRows[y] = true;
     _markDirtyBits(y, first, last);
     if (ch == null) {
-      touched[y] = LineData(
+      touched[y] = LineData._tracked(
         firstCell: first,
         lastCell: last,
         spans: <DirtySpan>[DirtySpan(start: first, end: last)],
+        overflowed: false,
       );
     } else {
       final prevFirst = ch.firstCell == -1 ? first : ch.firstCell;
@@ -731,10 +792,17 @@ final class Buffer {
       if (ch.overflowed) {
         final mergedFirst = first < prevFirst ? first : prevFirst;
         final mergedLast = last > prevLast ? last : prevLast;
-        touched[y] = LineData(
+        final spans = ch._mutableSpans && ch.spans.isNotEmpty
+            ? ch.spans
+            : <DirtySpan>[DirtySpan(start: mergedFirst, end: mergedLast)];
+        if (spans.isNotEmpty) {
+          spans[0] = DirtySpan(start: mergedFirst, end: mergedLast);
+          if (spans.length > 1) spans.removeRange(1, spans.length);
+        }
+        touched[y] = LineData._tracked(
           firstCell: mergedFirst,
           lastCell: mergedLast,
-          spans: <DirtySpan>[DirtySpan(start: mergedFirst, end: mergedLast)],
+          spans: spans,
           overflowed: true,
         );
         return;
@@ -742,12 +810,14 @@ final class Buffer {
       if (ch.spans.isNotEmpty) {
         final lastSpan = ch.spans.last;
         if (first <= lastSpan.end && first >= lastSpan.start) {
-          final mergedSpans = List<DirtySpan>.from(ch.spans, growable: false);
+          final mergedSpans = ch._mutableSpans
+              ? ch.spans
+              : List<DirtySpan>.from(ch.spans);
           mergedSpans[mergedSpans.length - 1] = DirtySpan(
             start: lastSpan.start,
             end: last > lastSpan.end ? last : lastSpan.end,
           );
-          touched[y] = LineData(
+          touched[y] = LineData._tracked(
             firstCell: first < prevFirst ? first : prevFirst,
             lastCell: last > prevLast ? last : prevLast,
             spans: mergedSpans,
@@ -759,8 +829,9 @@ final class Buffer {
       final spans = _mergeDirtySpans(
         ch.spans,
         DirtySpan(start: first, end: last),
+        reuseExisting: ch._mutableSpans,
       );
-      touched[y] = LineData(
+      touched[y] = LineData._tracked(
         firstCell: first < prevFirst ? first : prevFirst,
         lastCell: last > prevLast ? last : prevLast,
         spans: spans.spans,
@@ -770,6 +841,7 @@ final class Buffer {
   }
 
   void clearDirtyLine(int y) {
+    if (!tracksDirty) return;
     if (y < 0 || y >= lines.length) return;
     if (y < touched.length) {
       touched[y] = LineData.clean;
@@ -783,6 +855,12 @@ final class Buffer {
   }
 
   void clearDirtyTracking() {
+    if (!tracksDirty) {
+      touched = <LineData?>[];
+      dirtyRows = <bool>[];
+      dirtyBits = <Uint32List>[];
+      return;
+    }
     touched = List<LineData?>.filled(lines.length, LineData.clean);
     dirtyRows = List<bool>.filled(lines.length, false);
     dirtyBits = List<Uint32List>.generate(
@@ -960,42 +1038,47 @@ UvColor? _scaledColor(UvColor? color, double opacity) {
 
 ({List<DirtySpan> spans, bool overflowed}) _mergeDirtySpans(
   List<DirtySpan> existing,
-  DirtySpan next,
-) {
+  DirtySpan next, {
+  bool reuseExisting = false,
+}) {
   const maxTrackedSpans = 4;
   if (existing.isEmpty) {
     return (spans: <DirtySpan>[next], overflowed: false);
   }
 
-  final spans = <DirtySpan>[...existing, next]
-    ..sort((a, b) => a.start.compareTo(b.start));
-  final merged = <DirtySpan>[];
+  final spans = reuseExisting ? existing : <DirtySpan>[...existing];
+  spans.add(next);
+  spans.sort((a, b) => a.start.compareTo(b.start));
+
+  var writeIndex = 0;
   for (final span in spans) {
-    if (merged.isEmpty) {
-      merged.add(span);
+    if (writeIndex == 0) {
+      spans[writeIndex++] = span;
       continue;
     }
-    final last = merged.last;
+    final last = spans[writeIndex - 1];
     if (last.overlapsOrTouches(span)) {
-      merged[merged.length - 1] = DirtySpan(
+      spans[writeIndex - 1] = DirtySpan(
         start: last.start < span.start ? last.start : span.start,
         end: last.end > span.end ? last.end : span.end,
       );
       continue;
     }
-    merged.add(span);
+    spans[writeIndex++] = span;
   }
 
-  if (merged.length <= maxTrackedSpans) {
-    return (spans: merged, overflowed: false);
+  if (writeIndex <= maxTrackedSpans) {
+    if (writeIndex < spans.length) {
+      spans.removeRange(writeIndex, spans.length);
+    }
+    return (spans: spans, overflowed: false);
   }
 
-  final first = merged.first.start;
-  final last = merged.last.end;
-  return (
-    spans: <DirtySpan>[DirtySpan(start: first, end: last)],
-    overflowed: true,
-  );
+  final first = spans.first.start;
+  final last = spans[writeIndex - 1].end;
+  spans[0] = DirtySpan(start: first, end: last);
+  if (spans.length > 1) spans.removeRange(1, spans.length);
+  return (spans: spans, overflowed: true);
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -1098,11 +1181,12 @@ final class ScreenBuffer
         ClearAreaScreen,
         FillableScreen,
         FillAreaScreen,
+        OwnedCellScreen,
         CloneableScreen,
         CloneAreaScreen {
-  ScreenBuffer(int width, int height)
+  ScreenBuffer(int width, int height, {bool tracksDirty = true})
     : method = WidthMethod.wcwidth,
-      buffer = Buffer.create(width, height);
+      buffer = Buffer.create(width, height, tracksDirty: tracksDirty);
 
   WidthMethod method;
   final Buffer buffer;
@@ -1118,6 +1202,10 @@ final class ScreenBuffer
 
   @override
   void setCell(int x, int y, Cell? cell) => buffer.setCell(x, y, cell);
+
+  @override
+  void setCellOwned(int x, int y, Cell? cell) =>
+      buffer.setCellOwned(x, y, cell);
 
   void resize(int width, int height) => buffer.resize(width, height);
 
@@ -1150,7 +1238,7 @@ final class ScreenBuffer
 ///
 /// Upstream: `third_party/ultraviolet/styled.go` (`StyledString.widthHeight`).
 Rectangle styledStringBounds(String text, WidthMethod method) {
-  final normalized = text.replaceAll('\r\n', '\n');
+  final normalized = text.contains('\r') ? text.replaceAll('\r\n', '\n') : text;
   final expanded = term_ansi.Ansi.expandTabs(normalized);
   final lines = expanded.split('\n');
   var maxWidth = 0;
@@ -1162,20 +1250,8 @@ Rectangle styledStringBounds(String text, WidthMethod method) {
 }
 
 int _visibleStringWidth(String line, WidthMethod method) {
-  // Remove CSI and OSC sequences (minimal; enough for our UV parity cases).
-  final stripped = line.replaceAll(
-    RegExp(
-      r'\x1b'
-      r'(?:'
-      r'\[[0-9;:]*[ -/]*[@-~]'
-      r'|'
-      r'\][^\x07]*\x07'
-      r'|'
-      r'\][^\x1b]*\x1b\\'
-      r')',
-    ),
-    '',
-  );
+  final stripped = term_ansi.Ansi.stripAnsi(line);
   final expanded = term_ansi.Ansi.expandTabs(stripped);
-  return method.stringWidth(expanded);
+  return method.stringWidth(expanded) +
+      terminal_graphics.terminalGraphicsCellWidth(line);
 }

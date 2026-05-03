@@ -46,6 +46,16 @@ abstract class Screen {
   WidthMethod widthMethod();
 }
 
+/// Optional fast-path: set a cell that the caller will not reuse.
+///
+/// Implementations may take ownership of [cell] instead of cloning it. Use
+/// this only for freshly created cells that are not shared with another screen
+/// or line.
+abstract class OwnedCellScreen implements Screen {
+  /// Sets the cell at ([x], [y]) and may take ownership of [cell].
+  void setCellOwned(int x, int y, Cell? cell);
+}
+
 /// Optional fast-path: clear the entire screen.
 ///
 /// Upstream: `third_party/ultraviolet/screen` (Clear).
