@@ -280,6 +280,38 @@ void main() {
       expect(selectedItem!.label, equals('First'));
     });
 
+    test('keyboard navigation scrolls selected item into view', () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 18);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: CommandPalette(
+            open: true,
+            maxHeight: 8,
+            items: [
+              for (var i = 0; i < 4; i++)
+                CommandPaletteItem(label: 'Repo $i', group: 'Repository'),
+              for (var i = 0; i < 4; i++)
+                CommandPaletteItem(label: 'Nav $i', group: 'Navigation'),
+            ],
+            child: Text('bg'),
+          ),
+        ),
+      );
+
+      expect(tester.view, contains('Repo 0'));
+      expect(tester.view, isNot(contains('Nav 3')));
+
+      for (var i = 0; i < 7; i++) {
+        tester.sendSpecialKey(KeyType.down);
+      }
+
+      expect(tester.view, contains('Nav 3'));
+      expect(tester.view, isNot(contains('Repo 0')));
+    });
+
     test('up arrow wraps around to last item', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
@@ -308,6 +340,42 @@ void main() {
       tester.sendSpecialKey(KeyType.enter);
       expect(selectedItem, isNotNull);
       expect(selectedItem!.label, equals('Last'));
+    });
+
+    test('hover updates highlighted item without selecting it', () async {
+      final tester = WidgetTester(screenWidth: 60, screenHeight: 18);
+      addTearDown(() => tester.dispose());
+      CommandPaletteItem? selectedItem;
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.dark(),
+          child: CommandPalette(
+            open: true,
+            items: [
+              CommandPaletteItem(label: 'Alpha'),
+              CommandPaletteItem(label: 'Beta'),
+            ],
+            onSelect: (item) {
+              selectedItem = item;
+              return null;
+            },
+            child: Text('bg'),
+          ),
+        ),
+      );
+
+      final lines = tester.view.split('\n');
+      final betaY = lines.indexWhere((line) => line.contains('Beta'));
+      expect(betaY, greaterThanOrEqualTo(0));
+      final betaX = lines[betaY].indexOf('Beta');
+      expect(betaX, greaterThanOrEqualTo(0));
+
+      tester.mouseMove(betaX, betaY);
+      tester.sendSpecialKey(KeyType.enter);
+
+      expect(selectedItem, isNotNull);
+      expect(selectedItem!.label, equals('Beta'));
     });
 
     test('stores widget properties', () {

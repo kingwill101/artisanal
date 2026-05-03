@@ -313,6 +313,7 @@ class _CommandPaletteState extends State<CommandPalette> {
   int _selectedIndex = 0;
   final _scorer = IncrementalScorer();
   final _ranker = const ConformalRanker();
+  final _listController = WidgetScrollController();
   List<CommandPaletteItem> _cachedItems = [];
 
   List<CommandPaletteItem> get _filteredItems {
@@ -345,7 +346,69 @@ class _CommandPaletteState extends State<CommandPalette> {
     setState(() {
       _query = value;
       _selectedIndex = 0;
+      _listController.jumpTo(0);
     });
+  }
+
+  void _setSelectedIndex(
+    int nextIndex, {
+    required List<CommandPaletteItem> items,
+  }) {
+    if (items.isEmpty) {
+      _selectedIndex = 0;
+      return;
+    }
+
+    var normalized = nextIndex % items.length;
+    if (normalized < 0) normalized += items.length;
+    _selectedIndex = normalized;
+    _scrollSelectedItemIntoView(items);
+  }
+
+  void _scrollSelectedItemIntoView(List<CommandPaletteItem> items) {
+    if (items.isEmpty) return;
+    if (_selectedIndex < 0 || _selectedIndex >= items.length) return;
+
+    final viewportExtent = _listController.viewportExtent;
+    if (viewportExtent <= 0) return;
+
+    final row = _itemRowOffset(items, _selectedIndex);
+    final offset = _listController.offset;
+    final viewportEnd = offset + viewportExtent;
+    if (row < offset) {
+      _listController.jumpTo(row);
+      return;
+    }
+    if (row >= viewportEnd) {
+      _listController.jumpTo(row - viewportExtent + 1);
+    }
+  }
+
+  int _itemRowOffset(List<CommandPaletteItem> items, int itemIndex) {
+    var row = 0;
+    String? lastGroup;
+    for (var i = 0; i < items.length; i++) {
+      final item = items[i];
+      if (item.group != null && item.group != lastGroup) {
+        lastGroup = item.group;
+        if (row > 0) row += 1;
+        row += 1;
+      }
+      if (i == itemIndex) return row;
+      row += 1;
+    }
+    return row;
+  }
+
+  Cmd? _highlightHoveredIndex(int index) {
+    final items = _filteredItems;
+    if (index < 0 || index >= items.length) return null;
+    if (_selectedIndex == index) return null;
+    setState(() {
+      _selectedIndex = index;
+      _scrollSelectedItemIntoView(items);
+    });
+    return Cmd.none();
   }
 
   Cmd? _selectCurrent() {
@@ -377,8 +440,7 @@ class _CommandPaletteState extends State<CommandPalette> {
       setState(() {
         final items = _filteredItems;
         if (items.isNotEmpty) {
-          _selectedIndex = (_selectedIndex - 1) % items.length;
-          if (_selectedIndex < 0) _selectedIndex = items.length - 1;
+          _setSelectedIndex(_selectedIndex - 1, items: items);
         }
       });
       return Cmd.none();
@@ -387,7 +449,7 @@ class _CommandPaletteState extends State<CommandPalette> {
       setState(() {
         final items = _filteredItems;
         if (items.isNotEmpty) {
-          _selectedIndex = (_selectedIndex + 1) % items.length;
+          _setSelectedIndex(_selectedIndex + 1, items: items);
         }
       });
       return Cmd.none();
@@ -510,8 +572,12 @@ class _CommandPaletteState extends State<CommandPalette> {
       );
 
       row = GestureDetector(
+        onEnter: (_) => _highlightHoveredIndex(i),
         onTap: () {
-          setState(() => _selectedIndex = i);
+          setState(() {
+            _selectedIndex = i;
+            _scrollSelectedItemIntoView(items);
+          });
           return _selectCurrent();
         },
         child: Container(
@@ -560,6 +626,8 @@ class _CommandPaletteState extends State<CommandPalette> {
             ),
           )
         : SingleChildScrollView(
+            controller: _listController,
+            handleKeys: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: rows,

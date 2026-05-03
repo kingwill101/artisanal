@@ -27,6 +27,12 @@ class GitDiffController {
   /// Current scroll percentage.
   double get scrollPercent => _model.viewport.scrollPercent;
 
+  /// Current vertical scroll offset.
+  int get scrollOffset => _model.viewport.yOffset;
+
+  /// Total rendered line count.
+  int get totalLineCount => _model.viewport.totalLineCount;
+
   /// Sets the raw unified diff text.
   void setDiff(String rawDiff) {
     _model = _model.setDiff(rawDiff);
@@ -36,13 +42,24 @@ class GitDiffController {
   /// Updates the viewport size.
   void setSize(int width, int height) {
     if (_model.width == width && _model.height == height) return;
+    final widthChanged = _model.width != width;
     _model = _model.copyWith(
       width: width,
       height: height,
       viewport: _model.viewport.copyWith(width: width, height: height),
     );
-    // Re-render lines for the new dimensions (e.g. side-by-side panel widths).
-    _model = _model.rerender();
+    if (widthChanged) {
+      // Re-render lines for new dimensions that affect diff composition.
+      _model = _model.rerender();
+    }
+    _notifyListeners();
+  }
+
+  /// Sets the viewport scroll offset.
+  void setScrollOffset(int offset) {
+    final viewport = _model.viewport.setYOffset(offset);
+    if (viewport.yOffset == _model.viewport.yOffset) return;
+    _model = _model.copyWith(viewport: viewport);
     _notifyListeners();
   }
 
@@ -155,6 +172,7 @@ class GitDiffViewer extends StatefulWidget {
     this.viewMode,
     this.styles,
     this.controller,
+    this.scrollController,
     this.handleKeys = true,
     this.scrollable = true,
     this.fitContentHeight = false,
@@ -193,6 +211,12 @@ class GitDiffViewer extends StatefulWidget {
   /// Optional controller for external access to the diff model.
   final GitDiffController? controller;
 
+  /// Optional external widget scroll controller.
+  ///
+  /// When supplied, this controller owns the vertical scroll offset so parent
+  /// layouts can drive the diff viewer without forcing full-content rendering.
+  final ScrollController? scrollController;
+
   /// Whether to handle keyboard input for scrolling.
   final bool handleKeys;
 
@@ -215,6 +239,8 @@ class GitDiffViewer extends StatefulWidget {
 class _GitDiffViewerState extends State<GitDiffViewer> {
   late GitDiffController _controller;
   bool _controllerAttached = false;
+  ScrollController? _scrollController;
+  bool _scrollControllerAttached = false;
   String _lastDiff = '';
   Theme? _cachedTheme;
   DiffStyles? _cachedThemeStyles;
@@ -223,6 +249,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
   void initState() {
     super.initState();
     _attachController(widget.controller);
+    _attachScrollController(widget.scrollController);
     _syncController();
   }
 
@@ -231,6 +258,9 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     super.didUpdateWidget(oldWidget);
     if (widget.controller != oldWidget.controller) {
       _attachController(widget.controller);
+    }
+    if (widget.scrollController != oldWidget.scrollController) {
+      _attachScrollController(widget.scrollController);
     }
     _syncController();
     return null;
@@ -245,10 +275,26 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     _controllerAttached = true;
   }
 
+  void _attachScrollController(ScrollController? controller) {
+    if (_scrollControllerAttached) {
+      _scrollController?.removeListener(_onExternalScrollChanged);
+    }
+    _scrollController = controller;
+    if (controller != null) {
+      controller.addListener(_onExternalScrollChanged);
+      _scrollControllerAttached = true;
+    } else {
+      _scrollControllerAttached = false;
+    }
+  }
+
   @override
   void dispose() {
     if (_controllerAttached) {
       _controller.removeListener(_onChanged);
+    }
+    if (_scrollControllerAttached) {
+      _scrollController?.removeListener(_onExternalScrollChanged);
     }
     super.dispose();
   }
@@ -284,10 +330,43 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
         );
       }
     }
+
+    _syncExternalScrollController();
   }
 
   void _onChanged() {
+    _syncExternalScrollMetrics();
     setState(() {});
+  }
+
+  void _onExternalScrollChanged() {
+    _syncExternalScrollController();
+    setState(() {});
+  }
+
+  void _syncExternalScrollController() {
+    final scroll = _scrollController;
+    if (scroll == null) return;
+    _syncExternalScrollMetrics();
+    _controller.setScrollOffset(scroll.offset);
+  }
+
+  void _syncExternalScrollMetrics() {
+    final scroll = _scrollController;
+    if (scroll is! WidgetScrollController) return;
+    scroll.updateMetrics(
+      viewportExtent: _controller.model.height,
+      contentExtent: _controller.totalLineCount,
+    );
+  }
+
+  void _syncExternalOffsetFromModel() {
+    final scroll = _scrollController;
+    if (scroll == null) return;
+    _syncExternalScrollMetrics();
+    if (scroll.offset != _controller.scrollOffset) {
+      scroll.jumpTo(_controller.scrollOffset);
+    }
   }
 
   @override
@@ -300,6 +379,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     final prev = _controller.model;
     final (next, cmd) = _controller.update(msg);
     if (!identical(prev, next)) {
+      _syncExternalOffsetFromModel();
       setState(() {});
     }
     return cmd;
