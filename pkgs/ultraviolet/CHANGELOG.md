@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.3.0-wip
+
+### Added
+
+- New `terminal_graphics.dart` module exposes shared helpers for Kitty APC
+  and Sixel DCS protocols: `TerminalGraphicsControl`, `TerminalGraphicsFrame`,
+  `TerminalGraphicsProtocol`, `parseTerminalGraphicsControls`,
+  `mayContainTerminalGraphics`, `containsRetainedTerminalGraphics`,
+  `containsSixelDisplay`, `suppressOverflowingTerminalGraphics`,
+  `deleteAllRetainedGraphics`, and `deleteRetainedGraphic`.
+- `OwnedCellScreen` interface with `setCellOwned` allows callers to transfer
+  ownership of freshly created cells without an extra clone.
+- `Buffer.create` and `ScreenBuffer` accept `tracksDirty: false` for offscreen
+  composition buffers that do not need per-frame dirty-tracking bookkeeping.
+- `Canvas` now opts out of dirty tracking in its internal `ScreenBuffer`.
+- `KittyImage.encode` / `encodePng` accept `suppressCursorMovement` (default
+  `true`), emitting `C=1` so retained-mode renderers control cursor state.
+- `KittyImageDrawable` accepts `clearBeforeDraw: true` to emit a Kitty
+  delete-placement sequence before drawing, preventing stale placements after
+  a resize or move.
+- `SixelImageDrawable` accepts `allowUpscale: false` to cap the Sixel raster
+  at its native resolution instead of stretching to fill the cell area.
+- `SixelImage.encode` prefixes a raster-attributes header to declare a 1:1
+  pixel aspect ratio and encoded dimensions for correct rendering in foot and
+  similar terminals.
+- `clampRgbChannel` in `color_utils.dart` clamps a color component to [0, 255].
+
+### Changed
+
+- `UvTerminalRenderer` defers retained-graphics cells (Kitty `C=1`) and Sixel
+  display payloads to end-of-frame to avoid cursor-position conflicts with
+  normal cell output. Retained cells are repositioned via cursor-movement
+  sequences; Sixel payloads use absolute cursor positioning.
+- `UvTerminalRenderer` wraps graphics payloads in a tmux DCS passthrough when
+  `TMUX` is set or `TERM` starts with `tmux`, allowing Kitty and Sixel
+  sequences to pass through a tmux multiplexer.
+- `UvTerminalRenderer` calls `erase()` before rendering any frame that
+  contains a Sixel display to prevent stale data from bleeding through.
+- `StyledString.draw` now treats Kitty APC (`ESC _ G ... ESC \`) and Sixel
+  DCS (`ESC P q ... ESC \`) control strings as terminal-graphics payload cells
+  with the correct display-column width derived from the `c=` parameter.
+- `Ansi.visibleLength` now accounts for Kitty (`c=`) and Sixel (1 cell)
+  display width instead of stripping them to zero.
+- `Ansi.expandTabs` and CRLF normalization use early-exit fast paths when the
+  input contains no tab or CR characters.
+- Truecolor SGR parameters are now clamped to [0, 255] across `style_ops`,
+  `styled_string`, `ansi_slice`, `wrap`, and `terminal_renderer` to prevent
+  invalid CSI sequences from oversized or 16-bit color components.
+- `emojiPresentationWidth` is now a settable property; updates also clear the
+  unicode string-width cache to keep cached values consistent.
+- Unicode string widths are cached (up to 2048 entries, strings up to 4096
+  chars) to reduce repeated grapheme-cluster traversal on the same strings.
+
+### Fixed
+
+- `Cell._setStyle` short-circuits immediately for the zero style, skipping a
+  redundant packed-key encode.
+- `_LinkRegistry.intern` caches the last interned link to avoid a map lookup
+  on repeated calls with the same `Link` value.
+- `_containsControl` now iterates code units instead of runes.
+- `_widthBits` widened from 3 to 16 to support large terminal-graphics cell
+  widths (e.g. an 80-column Kitty image) without overflow in pooled ids.
+- `Buffer.setCell` skips compositing when the new cell is fully opaque.
+- `Buffer.fillArea` clips to the buffer bounds before iterating, preventing
+  out-of-bounds dirty touches.
+- `Buffer.replaceWithClone` copies in-place via `copyFrom` and updates the
+  render hash incrementally.
+- `Ansi.requestPrimaryDeviceAttributes` corrected from `ESC[?c` to `ESC[c`.
+
 ## 0.2.0
 
 ### Changed
