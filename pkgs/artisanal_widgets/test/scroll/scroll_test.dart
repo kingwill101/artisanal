@@ -1,3 +1,4 @@
+import 'package:artisanal/style.dart' show Colors, Style;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/tui.dart'
     show Cmd, KeyMsg, Msg, MouseMsg, MouseAction, MouseButton;
@@ -781,6 +782,170 @@ void main() {
       expect(vlv.separator, equals('---'));
       expect(vlv.handleKeys, isFalse);
       expect(vlv.mouseWheelEnabled, isFalse);
+    });
+
+    test('builder only mounts fixed-height visible children', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      final controller = ListViewController();
+      final built = <int>[];
+      final listView = VirtualListView.builder(
+        width: 30,
+        height: 5,
+        controller: controller,
+        itemCount: 10_000,
+        itemBuilder: (_, i) {
+          built.add(i);
+          return Text('Row $i');
+        },
+      );
+
+      await tester.pumpWidget(Container(height: 5, child: listView));
+
+      expect(built, equals(<int>[0, 1, 2]));
+      final viewport = _findRenderListViewport(listView);
+      expect((viewport as dynamic).debugActiveChildCount, equals(3));
+      expect(
+        (viewport as dynamic).debugActiveChildIndices,
+        equals(<int>{0, 1, 2}),
+      );
+
+      controller.jumpTo(2000);
+      tester.pump();
+
+      expect(tester.locateText('Row 1000'), isNotNull);
+      expect(built, equals(<int>[0, 1, 2, 1000, 1001, 1002]));
+      expect((viewport as dynamic).debugActiveChildCount, equals(3));
+      expect(
+        (viewport as dynamic).debugActiveChildIndices,
+        equals(<int>{1000, 1001, 1002}),
+      );
+    });
+
+    test('builder parent rebuild updates only mounted children', () {
+      var revision = 0;
+      final built = <String>[];
+
+      VirtualListView makeList() {
+        return VirtualListView.builder(
+          width: 30,
+          height: 5,
+          itemCount: 10_000,
+          itemBuilder: (_, i) {
+            built.add('$revision:$i');
+            return Text('R$revision Row $i');
+          },
+        );
+      }
+
+      final tree = ElementTree(makeList());
+      addTearDown(tree.unmount);
+
+      expect(tree.render(), contains('R0 Row 0'));
+      expect(built, equals(<String>['0:0', '0:1', '0:2']));
+
+      built.clear();
+      revision = 1;
+      tree.update(makeList());
+      final output = tree.render();
+
+      expect(output, contains('R1 Row 0'));
+      expect(output, isNot(contains('R1 Row 99')));
+      expect(built, equals(<String>['1:0', '1:1', '1:2']));
+    });
+
+    test('builder preserves multi-line fixed-height children', () {
+      final tree = ElementTree(
+        VirtualListView.builder(
+          width: 40,
+          height: 6,
+          itemExtent: 2,
+          separator: '',
+          itemCount: 3,
+          itemBuilder: (_, i) => SizedBox(
+            height: 2,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: 'Title $i'),
+                  const TextSpan(text: '\n'),
+                  TextSpan(text: 'meta $i'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      addTearDown(tree.unmount);
+
+      final output = tree.render();
+
+      expect(output, contains('Title 0'));
+      expect(output, contains('meta 0'));
+      expect(output, contains('Title 1'));
+      expect(output, contains('meta 1'));
+      expect(output, contains('Title 2'));
+      expect(output, contains('meta 2'));
+    });
+
+    test('builder preserves styled padded fixed-height children', () {
+      final titleStyle = Style()..foreground(Colors.white);
+      final metaStyle = Style()..foreground(Colors.brightBlack);
+      final accentStyle = Style()..foreground(Colors.yellow);
+      final statusStyle = Style()..foreground(Colors.green);
+      final tree = ElementTree(
+        VirtualListView.builder(
+          width: 48,
+          height: 6,
+          itemExtent: 2,
+          separator: '',
+          itemCount: 3,
+          itemBuilder: (_, i) => SizedBox(
+            height: 2,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              color: i.isEven ? Colors.black : Colors.brightBlack,
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(text: '│', style: accentStyle),
+                    const TextSpan(text: ' '),
+                    TextSpan(
+                      text: '#${i + 1} Paged PR ${i + 1}',
+                      style: titleStyle,
+                    ),
+                    const TextSpan(text: ' '),
+                    TextSpan(text: 'ok', style: statusStyle),
+                    const TextSpan(text: '\n  '),
+                    TextSpan(text: 'octo$i / updated now', style: metaStyle),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      addTearDown(tree.unmount);
+
+      final output = tree.render();
+      final plainLines = Style.stripAnsi(output).split('\n');
+      final firstMetaLine = plainLines.indexWhere((line) {
+        return line.contains('octo0 / updated now');
+      });
+      final secondTitleLine = plainLines.indexWhere((line) {
+        return line.contains('#2 Paged PR 2');
+      });
+
+      expect(output, contains('#1 Paged PR 1'));
+      expect(output, contains('octo0'));
+      expect(output, contains('#2 Paged PR 2'));
+      expect(output, contains('octo1'));
+      expect(output, contains('#3 Paged PR 3'));
+      expect(output, contains('octo2'));
+      expect(firstMetaLine, isNonNegative);
+      expect(secondTitleLine, greaterThan(firstMetaLine));
+      expect(plainLines[secondTitleLine], isNot(contains('octo0')));
     });
 
     test('variable height renders visible items', () async {

@@ -16,7 +16,14 @@ import 'package:artisanal/tui.dart'
 import 'package:artisanal/bubbles.dart'
     show ViewportModel, ViewportKeyMap, ScrollbarChars, ViewportScrollPane;
 import 'package:artisanal/style.dart' hide Padding;
-import '../core/element.dart' show elementOf, Element, RenderObjectElement;
+import '../core/element.dart'
+    show
+        elementOf,
+        Element,
+        LazyRenderObjectChildManager,
+        LazyRenderObjectHost,
+        LazyRenderObjectWidget,
+        RenderObjectElement;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
 import '../layout/geometry.dart'
     show BoxConstraints, Size, HitTestResult, Offset;
@@ -27,7 +34,8 @@ import '../theme/theme_scope.dart' show ThemeScope;
 import '../layout/layout_widgets.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/uv.dart' show Canvas, StyledString;
+import 'package:artisanal/uv.dart'
+    show Canvas, StyledString, suppressOverflowingTerminalGraphics;
 
 void _traceScroll(String message) {
   if (!TuiTrace.enabled) return;
@@ -826,7 +834,7 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
     final before = _effectiveController.offset;
     final changed = _effectiveController.scrollBy(delta);
     final after = _effectiveController.offset;
-    if (changed) _markNeedsPaint();
+    if (changed) _markNeedsPaintScrollOnly();
     _traceScroll(
       'single_child_scroll.scrollBy '
       'id=${widget.id} delta=$delta from=$before to=$after '
@@ -850,13 +858,13 @@ class _SingleChildScrollViewState extends State<SingleChildScrollView> {
         return _scrollBy(viewportHeight);
       case terminal_keys.KeyType.home:
         if (_effectiveController.jumpTo(0)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
       case terminal_keys.KeyType.end:
         if (_effectiveController.jumpTo(_effectiveController.maxOffset)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
@@ -1100,8 +1108,6 @@ class _SingleChildViewport extends SingleChildRenderObjectWidget {
     ro
       ..controller = controller
       ..selectionHighlightStyle = selectionHighlightStyle;
-    // The widget tree rebuilt — child content may have changed.
-    ro.invalidateChildPaintCache();
   }
 
   @override
@@ -1145,8 +1151,11 @@ class RenderSingleChildViewport extends RenderBox {
 
   @override
   void markDescendantNeedsPaint() {
+    final shouldInvalidateCache = children.any((child) => child.paintDirty);
     super.markDescendantNeedsPaint();
-    invalidateChildPaintCache();
+    if (shouldInvalidateCache) {
+      invalidateChildPaintCache();
+    }
   }
 
   /// Returns the cached content lines (all lines before viewport slicing).
@@ -1249,7 +1258,10 @@ class RenderSingleChildViewport extends RenderBox {
       visible.add('');
     }
 
-    return visible.join('\n');
+    return suppressOverflowingTerminalGraphics(
+      visible.join('\n'),
+      viewportHeight,
+    );
   }
 
   @override
@@ -1384,7 +1396,7 @@ class _ScrollViewState extends State<ScrollView> {
     final before = _effectiveController.offset;
     final changed = _effectiveController.scrollBy(delta);
     final after = _effectiveController.offset;
-    if (changed) _markNeedsPaint();
+    if (changed) _markNeedsPaintScrollOnly();
     _traceScroll(
       'scroll_view.scrollBy '
       'id=${widget.id} delta=$delta from=$before to=$after '
@@ -1408,13 +1420,13 @@ class _ScrollViewState extends State<ScrollView> {
         return _scrollBy(viewportHeight);
       case terminal_keys.KeyType.home:
         if (_effectiveController.jumpTo(0)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
       case terminal_keys.KeyType.end:
         if (_effectiveController.jumpTo(_effectiveController.maxOffset)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
@@ -1842,15 +1854,15 @@ class _ScrollbarState extends State<Scrollbar> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(_markNeedsPaint);
+    widget.controller.addListener(_markNeedsPaintScrollOnly);
   }
 
   @override
   Cmd? didUpdateWidget(covariant Scrollbar oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.controller != oldWidget.controller) {
-      oldWidget.controller.removeListener(_markNeedsPaint);
-      widget.controller.addListener(_markNeedsPaint);
+      oldWidget.controller.removeListener(_markNeedsPaintScrollOnly);
+      widget.controller.addListener(_markNeedsPaintScrollOnly);
     }
     return null;
   }
@@ -1858,7 +1870,7 @@ class _ScrollbarState extends State<Scrollbar> {
   @override
   void dispose() {
     _setThumbDragActive(false);
-    widget.controller.removeListener(_markNeedsPaint);
+    widget.controller.removeListener(_markNeedsPaintScrollOnly);
     super.dispose();
   }
 
@@ -1880,12 +1892,12 @@ class _ScrollbarState extends State<Scrollbar> {
     } else {
       _hoveredScrollbars.remove(_zoneId);
     }
-    _markNeedsPaint();
+    _markNeedsPaintScrollOnly();
   }
 
-  void _markNeedsPaint() {
+  void _markNeedsPaintScrollOnly() {
     final element = elementOf(widget);
-    element?.markNeedsPaint();
+    element?.markNeedsPaintScrollOnly();
   }
 
   void _setThumbDragActive(bool active) {
@@ -2068,7 +2080,7 @@ class _ScrollbarState extends State<Scrollbar> {
     final nextOffset = ((thumbTop / metrics.maxThumbTop) * maxOffset).round();
     final before = widget.controller.offset;
     if (widget.controller.jumpTo(nextOffset)) {
-      _markNeedsPaint();
+      _markNeedsPaintScrollOnly();
     }
     _traceScroll(
       'scrollbar.jump '
@@ -2168,7 +2180,7 @@ class _ScrollbarState extends State<Scrollbar> {
       if (delta == 0) return null;
       final before = widget.controller.offset;
       if (widget.controller.scrollBy(delta)) {
-        _markNeedsPaint();
+        _markNeedsPaintScrollOnly();
       }
       _traceScroll(
         'scrollbar.wheel '
@@ -2461,9 +2473,16 @@ class RenderScrollbar extends RenderBox {
     final layoutW = child.size.width.toInt();
     final layoutH = child.size.height.toInt();
     // Fall back to painted dimensions only when layout reports zero.
-    final paintedSize = Layout.getSize(content);
-    final stableW = layoutW > 0 ? layoutW : paintedSize.width;
-    final stableH = layoutH > 0 ? layoutH : paintedSize.height;
+    int stableW;
+    int stableH;
+    if (layoutW > 0 && layoutH > 0) {
+      stableW = layoutW;
+      stableH = layoutH;
+    } else {
+      final paintedSize = Layout.getSize(content);
+      stableW = layoutW > 0 ? layoutW : paintedSize.width;
+      stableH = layoutH > 0 ? layoutH : paintedSize.height;
+    }
     if (stableW <= 0 || stableH <= 0) {
       return content;
     }
@@ -2519,15 +2538,25 @@ class RenderScrollbar extends RenderBox {
     if (bar.isEmpty) return content;
 
     if (!overlay) {
-      // Use a canvas to position the scrollbar at a stable offset based on
-      // the layout-allocated width rather than the painted content width.
       final gapW = math.max(0, gap);
       final totalW = stableW + gapW + trackWidth;
-      final canvas = Canvas(totalW, stableH);
-      _drawStyledContent(canvas, content, 0, 0);
-      final barX = stableW + gapW;
-      _drawStyledContent(canvas, bar, barX, 0);
-      return canvas.render();
+      if (!_needsScrollbarCanvasComposition(content)) {
+        return _composeScrollbarBesideContent(
+          content: content,
+          bar: bar,
+          contentWidth: stableW,
+          height: stableH,
+          gapWidth: gapW,
+          trackWidth: trackWidth,
+        );
+      }
+      return _composeScrollbarWithCanvas(
+        content: content,
+        bar: bar,
+        width: totalW,
+        height: stableH,
+        barX: stableW + gapW,
+      );
     }
 
     final canvas = Canvas(stableW, stableH);
@@ -2548,6 +2577,86 @@ class RenderScrollbar extends RenderBox {
     return canvas.render();
   }
 }
+
+String _composeScrollbarWithCanvas({
+  required String content,
+  required String bar,
+  required int width,
+  required int height,
+  required int barX,
+}) {
+  // Use a canvas when control sequences require real cell compositing.
+  final canvas = Canvas(width, height);
+  _drawStyledContent(canvas, content, 0, 0);
+  _drawStyledContent(canvas, bar, barX, 0);
+  return canvas.render();
+}
+
+String _composeScrollbarBesideContent({
+  required String content,
+  required String bar,
+  required int contentWidth,
+  required int height,
+  required int gapWidth,
+  required int trackWidth,
+}) {
+  final contentLines = content.split('\n');
+  final barLines = bar.split('\n');
+  final gap = gapWidth > 0 ? ' ' * gapWidth : '';
+  final buffer = StringBuffer();
+
+  for (var y = 0; y < height; y++) {
+    if (y > 0) buffer.write('\n');
+    final contentLine = y < contentLines.length ? contentLines[y] : '';
+    final barLine = y < barLines.length ? barLines[y] : '';
+    buffer
+      ..write(_padOrClipScrollbarLine(contentLine, contentWidth))
+      ..write(gap)
+      ..write(_padOrClipScrollbarLine(barLine, trackWidth));
+  }
+
+  return buffer.toString();
+}
+
+String _padOrClipScrollbarLine(String line, int width) {
+  if (width <= 0) return '';
+  final visibleWidth = Layout.visibleLength(line);
+  if (visibleWidth > width) {
+    return Layout.truncate(line, width, ellipsis: '');
+  }
+  if (visibleWidth == width) return line;
+  final padding = ' ' * (width - visibleWidth);
+  if (_mayLeaveTerminalStateOpen(line)) {
+    return '$line$_ansiResetStyle$padding';
+  }
+  return '$line$padding';
+}
+
+bool _needsScrollbarCanvasComposition(String content) {
+  return _hasUnsupportedScrollbarFastPathControls(content);
+}
+
+bool _hasUnsupportedScrollbarFastPathControls(String text) {
+  var escapeIndex = text.indexOf('\x1b');
+  while (escapeIndex >= 0) {
+    if (escapeIndex + 1 >= text.length) return true;
+    final next = text.codeUnitAt(escapeIndex + 1);
+    if (next != 0x5B) return true; // Only CSI, including SGR, is safe.
+    escapeIndex = text.indexOf('\x1b', escapeIndex + 2);
+  }
+
+  // 8-bit CSI is safe, but 8-bit APC/DCS graphics controls must use canvas
+  // composition so graphics display cells are interpreted correctly.
+  if (text.contains('\x9fG') || text.contains('\x90q')) return true;
+
+  return false;
+}
+
+bool _mayLeaveTerminalStateOpen(String line) {
+  return line.contains('\x1b[') || line.contains('\x9b');
+}
+
+const _ansiResetStyle = '\x1b[m';
 
 String _renderScrollbar({
   required ScrollController controller,
@@ -2702,6 +2811,10 @@ Style _resolveScrollbarStyle({
   required ScrollbarGradient? gradient,
   required bool useBackground,
 }) {
+  if (gradient == null && base.hasDarkBackground == hasDarkBackground) {
+    return base;
+  }
+
   final style = base.copy();
   style.hasDarkBackground = hasDarkBackground;
 
@@ -2934,14 +3047,9 @@ class _ListViewState extends State<ListView> {
     element?.markNeedsPaintScrollOnly();
   }
 
-  void _markNeedsPaint() {
-    final element = elementOf(widget);
-    element?.markNeedsPaint();
-  }
-
   bool _scrollBy(int delta) {
     final changed = _effectiveController.scrollBy(delta);
-    if (changed) _markNeedsPaint();
+    if (changed) _markNeedsPaintScrollOnly();
     return changed;
   }
 
@@ -2960,13 +3068,13 @@ class _ListViewState extends State<ListView> {
         return _scrollBy(viewportHeight);
       case terminal_keys.KeyType.home:
         if (_effectiveController.jumpTo(0)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
       case terminal_keys.KeyType.end:
         if (_effectiveController.jumpTo(_effectiveController.maxOffset)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
@@ -3068,11 +3176,12 @@ class _ListViewViewport extends MultiChildRenderObjectWidget {
   @override
   void updateRenderObject(RenderObject renderObject) {
     final rv = renderObject as RenderListViewScrollViewport;
+    if (rv.separator != separator) {
+      rv.invalidateChildPaintCache();
+    }
     rv
       ..controller = controller
       ..separator = separator;
-    // The widget tree rebuilt — child content may have changed.
-    rv.invalidateChildPaintCache();
   }
 
   @override
@@ -3080,8 +3189,14 @@ class _ListViewViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      buffer.write(_renderWidget(children[i]));
-      if (i < children.length - 1) buffer.write(separator);
+      final text = _renderWidget(children[i]);
+      buffer.write(text);
+      _writeListItemBoundary(
+        buffer,
+        itemText: text,
+        separator: separator,
+        hasNext: i < children.length - 1,
+      );
     }
     return buffer.toString();
   }
@@ -3115,8 +3230,11 @@ class RenderListViewScrollViewport extends RenderBox {
 
   @override
   void markDescendantNeedsPaint() {
+    final shouldInvalidateCache = children.any((child) => child.paintDirty);
     super.markDescendantNeedsPaint();
-    invalidateChildPaintCache();
+    if (shouldInvalidateCache) {
+      invalidateChildPaintCache();
+    }
   }
 
   @override
@@ -3241,10 +3359,14 @@ class RenderListViewScrollViewport extends RenderBox {
   List<String> _paintAndCacheChildren() {
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      buffer.write(children[i].paint());
-      if (i < children.length - 1 && separator.isNotEmpty) {
-        buffer.write(separator);
-      }
+      final text = children[i].paint();
+      buffer.write(text);
+      _writeListItemBoundary(
+        buffer,
+        itemText: text,
+        separator: separator,
+        hasNext: i < children.length - 1,
+      );
     }
     final allContent = buffer.toString();
     _cachedChildPaintLines = allContent.split('\n');
@@ -3394,12 +3516,13 @@ class ListViewController implements ScrollController {
 class VirtualListView extends StatefulWidget {
   /// Creates a virtualized list view.
   VirtualListView({
-    required this.children,
+    required List<Widget> children,
     this.width,
     this.height,
     this.itemExtent = 1,
     this.estimatedItemExtent,
     this.variableHeight = false,
+    this.cacheExtentItems = 0,
     this.separator = '\n',
     this.handleKeys = true,
     this.mouseWheelEnabled = true,
@@ -3412,11 +3535,50 @@ class VirtualListView extends StatefulWidget {
     this.zoneId,
     DateTime Function()? nowProvider,
     super.key,
-  }) : nowProvider = nowProvider ?? _defaultNowProvider;
+  }) : assert(cacheExtentItems >= 0),
+       _children = children,
+       itemBuilder = null,
+       itemCount = children.length,
+       nowProvider = nowProvider ?? _defaultNowProvider;
+
+  /// Creates a virtualized list view that lazily builds children by index.
+  VirtualListView.builder({
+    required this.itemBuilder,
+    required this.itemCount,
+    this.width,
+    this.height,
+    this.itemExtent = 1,
+    this.estimatedItemExtent,
+    this.variableHeight = false,
+    this.cacheExtentItems = 0,
+    this.separator = '\n',
+    this.handleKeys = true,
+    this.mouseWheelEnabled = true,
+    this.mouseWheelDelta = 3,
+    this.enableSelection = false,
+    this.autoCopySelectionOnMouseUp = false,
+    this.autoCopySelectionOnExit = false,
+    this.clearSelectionAfterAutoCopy = true,
+    this.controller,
+    this.zoneId,
+    DateTime Function()? nowProvider,
+    super.key,
+  }) : assert(itemCount >= 0),
+       assert(cacheExtentItems >= 0),
+       _children = null,
+       nowProvider = nowProvider ?? _defaultNowProvider;
 
   /// Child widgets rendered by index.
   @override
-  final List<Widget> children;
+  List<Widget> get children => _children ?? const <Widget>[];
+
+  final List<Widget>? _children;
+
+  /// Item builder used by [VirtualListView.builder].
+  final IndexedWidgetBuilder? itemBuilder;
+
+  /// Number of list items.
+  final int itemCount;
 
   /// Optional explicit width in columns.
   final int? width;
@@ -3434,6 +3596,10 @@ class VirtualListView extends StatefulWidget {
 
   /// Whether to measure children dynamically instead of using [itemExtent].
   final bool variableHeight;
+
+  /// Number of off-screen item elements to retain before and after the
+  /// visible range when using the builder constructor.
+  final int cacheExtentItems;
 
   /// Text inserted between items.
   final String separator;
@@ -3501,17 +3667,17 @@ class _VirtualListViewState extends State<VirtualListView> {
 
   void _attachController(ScrollController? controller) {
     if (_controllerAttached) {
-      _controller.removeListener(_markNeedsPaint);
+      _controller.removeListener(_markNeedsPaintScrollOnly);
     }
     _controller = controller ?? ListViewController();
-    _controller.addListener(_markNeedsPaint);
+    _controller.addListener(_markNeedsPaintScrollOnly);
     _controllerAttached = true;
   }
 
   @override
   void dispose() {
     if (_controllerAttached) {
-      _controller.removeListener(_markNeedsPaint);
+      _controller.removeListener(_markNeedsPaintScrollOnly);
     }
     super.dispose();
   }
@@ -3521,12 +3687,17 @@ class _VirtualListViewState extends State<VirtualListView> {
     element?.markNeedsPaint();
   }
 
+  void _markNeedsPaintScrollOnly() {
+    final element = elementOf(widget);
+    element?.markNeedsPaintScrollOnly();
+  }
+
   bool _scrollBy(int delta) {
     final before = _controller.offset;
     final changed = _controller.scrollBy(delta);
     final after = _controller.offset;
     if (changed) {
-      _markNeedsPaint();
+      _markNeedsPaintScrollOnly();
     }
     _traceScroll(
       'virtual_list.scrollBy '
@@ -3591,13 +3762,13 @@ class _VirtualListViewState extends State<VirtualListView> {
         return _scrollBy(viewportHeight);
       case terminal_keys.KeyType.home:
         if (_controller.jumpTo(0)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
       case terminal_keys.KeyType.end:
         if (_controller.jumpTo(_controller.maxOffset)) {
-          _markNeedsPaint();
+          _markNeedsPaintScrollOnly();
           return true;
         }
         return false;
@@ -3611,6 +3782,23 @@ class _VirtualListViewState extends State<VirtualListView> {
     final selectionHighlightStyle = selectionHighlightStyleForTheme(
       ThemeScope.of(context),
     );
+    final itemBuilder = widget.itemBuilder;
+    if (itemBuilder != null) {
+      return _VirtualListBuilderViewport(
+        controller: _controller,
+        zoneId: _zoneId,
+        width: widget.width,
+        height: widget.height,
+        itemExtent: widget.itemExtent,
+        estimatedItemExtent: widget.estimatedItemExtent,
+        variableHeight: widget.variableHeight,
+        cacheExtentItems: widget.cacheExtentItems,
+        separator: widget.separator,
+        selectionHighlightStyle: selectionHighlightStyle,
+        itemBuilder: itemBuilder,
+        itemCount: widget.itemCount,
+      );
+    }
     return _VirtualListViewport(
       controller: _controller,
       zoneId: _zoneId,
@@ -3619,6 +3807,7 @@ class _VirtualListViewState extends State<VirtualListView> {
       itemExtent: widget.itemExtent,
       estimatedItemExtent: widget.estimatedItemExtent,
       variableHeight: widget.variableHeight,
+      cacheExtentItems: widget.cacheExtentItems,
       separator: widget.separator,
       selectionHighlightStyle: selectionHighlightStyle,
       children: widget.children,
@@ -3842,6 +4031,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     required this.itemExtent,
     required this.estimatedItemExtent,
     required this.variableHeight,
+    required this.cacheExtentItems,
     required this.separator,
     required this.selectionHighlightStyle,
     required super.children,
@@ -3854,6 +4044,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
   final int itemExtent;
   final int? estimatedItemExtent;
   final bool variableHeight;
+  final int cacheExtentItems;
   final String separator;
   final Style selectionHighlightStyle;
 
@@ -3867,6 +4058,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
       itemExtent: itemExtent,
       estimatedItemExtent: estimatedItemExtent,
       variableHeight: variableHeight,
+      cacheExtentItems: cacheExtentItems,
       separator: separator,
       selectionHighlightStyle: selectionHighlightStyle,
     );
@@ -3883,6 +4075,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
       ..itemExtent = itemExtent
       ..estimatedItemExtent = estimatedItemExtent
       ..variableHeight = variableHeight
+      ..cacheExtentItems = cacheExtentItems
       ..separator = separator
       ..selectionHighlightStyle = selectionHighlightStyle;
   }
@@ -3892,18 +4085,98 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      buffer.write(_renderWidget(children[i]));
-      if (i < children.length - 1) buffer.write(separator);
+      final text = _renderWidget(children[i]);
+      buffer.write(text);
+      _writeListItemBoundary(
+        buffer,
+        itemText: text,
+        separator: separator,
+        hasNext: i < children.length - 1,
+      );
     }
     return buffer.toString();
   }
+}
+
+class _VirtualListBuilderViewport extends LazyRenderObjectWidget {
+  _VirtualListBuilderViewport({
+    required this.controller,
+    required this.zoneId,
+    required this.width,
+    required this.height,
+    required this.itemExtent,
+    required this.estimatedItemExtent,
+    required this.variableHeight,
+    required this.cacheExtentItems,
+    required this.separator,
+    required this.selectionHighlightStyle,
+    required this.itemBuilder,
+    required this.itemCount,
+  });
+
+  final ScrollController controller;
+  final String zoneId;
+  final int? width;
+  final int? height;
+  final int itemExtent;
+  final int? estimatedItemExtent;
+  final bool variableHeight;
+  final int cacheExtentItems;
+  final String separator;
+  final Style selectionHighlightStyle;
+  final IndexedWidgetBuilder itemBuilder;
+
+  final int itemCount;
+
+  @override
+  int get childCount => itemCount;
+
+  @override
+  Widget buildChild(BuildContext context, int index) {
+    return itemBuilder(context, index);
+  }
+
+  @override
+  RenderObject createRenderObject() {
+    return RenderListViewport(
+      controller: controller,
+      zoneId: zoneId,
+      width: width,
+      height: height,
+      itemExtent: itemExtent,
+      estimatedItemExtent: estimatedItemExtent,
+      variableHeight: variableHeight,
+      cacheExtentItems: cacheExtentItems,
+      separator: separator,
+      selectionHighlightStyle: selectionHighlightStyle,
+    );
+  }
+
+  @override
+  void updateRenderObject(RenderObject renderObject) {
+    final viewport = renderObject as RenderListViewport;
+    viewport
+      ..controller = controller
+      ..zoneId = zoneId
+      ..width = width
+      ..height = height
+      ..itemExtent = itemExtent
+      ..estimatedItemExtent = estimatedItemExtent
+      ..variableHeight = variableHeight
+      ..cacheExtentItems = cacheExtentItems
+      ..separator = separator
+      ..selectionHighlightStyle = selectionHighlightStyle;
+  }
+
+  @override
+  Object view() => '';
 }
 
 /// Render object backing [VirtualListView].
 ///
 /// It virtualizes painting to only include visible items and supports both
 /// fixed-height and variable-height modes.
-class RenderListViewport extends RenderBox {
+class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   static const int _smallListExactResolutionLimit = 20_000;
 
   RenderListViewport({
@@ -3914,6 +4187,7 @@ class RenderListViewport extends RenderBox {
     required this.itemExtent,
     required this.estimatedItemExtent,
     required this.variableHeight,
+    required this.cacheExtentItems,
     required this.separator,
     required this.selectionHighlightStyle,
   });
@@ -3925,8 +4199,10 @@ class RenderListViewport extends RenderBox {
   int itemExtent;
   int? estimatedItemExtent;
   bool variableHeight;
+  int cacheExtentItems;
   String separator;
   Style selectionHighlightStyle;
+  LazyRenderObjectChildManager? _childManager;
 
   final Map<int, int> _measuredHeights = <int, int>{};
   final Map<int, _ChildPaintSnapshot> _childPaintCache =
@@ -3948,6 +4224,33 @@ class RenderListViewport extends RenderBox {
   int _cachedVisibleItemCount = -1;
   int _cachedVisibleSeparatorBreaks = -1;
   bool _cachedVisibleVariableHeight = false;
+
+  @override
+  set childManager(LazyRenderObjectChildManager? manager) {
+    if (identical(_childManager, manager)) return;
+    _childManager = manager;
+    _clearMeasurements();
+  }
+
+  int get _itemCount => _childManager?.childCount ?? children.length;
+
+  int get debugActiveChildCount =>
+      _childManager?.activeChildCount ?? children.length;
+
+  Set<int> get debugActiveChildIndices =>
+      _childManager?.activeChildIndices ?? const <int>{};
+
+  RenderObject _childAt(int index) {
+    final manager = _childManager;
+    if (manager != null) {
+      return manager.resolveRenderObject(index);
+    }
+    return children[index];
+  }
+
+  void _retainActiveChildIndices(Set<int> indices) {
+    _childManager?.retainChildIndices(indices);
+  }
 
   bool _setMetrics({required int viewportExtent, required int contentExtent}) {
     final c = controller;
@@ -4076,9 +4379,12 @@ class RenderListViewport extends RenderBox {
     required int index,
     required int maxWidth,
   }) {
-    final child = children[index];
+    final child = _childAt(index);
     final cached = _childPaintCache[index];
-    if (cached != null && cached.maxWidth == maxWidth && !child.paintDirty) {
+    if (cached != null &&
+        identical(cached.child, child) &&
+        cached.maxWidth == maxWidth &&
+        !child.paintDirty) {
       return (text: cached.text, measured: cached.measured);
     }
 
@@ -4091,6 +4397,7 @@ class RenderListViewport extends RenderBox {
     final text = child.paint();
     final measured = math.max(1, child.size.height.round());
     _childPaintCache[index] = _ChildPaintSnapshot(
+      child: child,
       text: text,
       measured: measured,
       maxWidth: maxWidth,
@@ -4265,7 +4572,8 @@ class RenderListViewport extends RenderBox {
       return false;
     }
 
-    if (children.isEmpty) return false;
+    final itemCount = _itemCount;
+    if (itemCount == 0) return false;
 
     final separatorBreaks = _separatorBreaks(separator);
     final offset = controller.offset.clamp(0, controller.maxOffset);
@@ -4274,11 +4582,11 @@ class RenderListViewport extends RenderBox {
     if (!variableHeight) {
       final stride = math.max(1, itemExtent).toInt() + separatorBreaks;
       final index = stride > 0 ? (contentY ~/ stride).toInt() : 0;
-      if (index < 0 || index >= children.length) return false;
+      if (index < 0 || index >= itemCount) return false;
       final childTop = (index * stride).toInt();
       final childBottom = childTop + math.max(1, itemExtent).toInt();
       if (contentY < childTop || contentY >= childBottom) return false;
-      final child = children[index];
+      final child = _childAt(index);
       final childX = localX - child.offset.dx;
       final childY = contentY - childTop - child.offset.dy;
       return child.hitTest(result, localX: childX, localY: childY);
@@ -4290,7 +4598,7 @@ class RenderListViewport extends RenderBox {
       final bufferY = localY.toInt() + _lastOffsetInItem;
       for (final hit in _lastVisibleHits) {
         if (bufferY >= hit.bufferStart && bufferY < hit.bufferEnd) {
-          final child = children[hit.index];
+          final child = _childAt(hit.index);
           final childX = localX - child.offset.dx;
           final childY = bufferY - hit.bufferStart - child.offset.dy;
           return child.hitTest(result, localX: childX, localY: childY);
@@ -4300,7 +4608,7 @@ class RenderListViewport extends RenderBox {
 
     // Variable-height hit testing favors correctness, with a Fenwick seed.
     final estimate = math.max(1, estimatedItemExtent ?? itemExtent).toInt();
-    _syncCache(children.length, separatorBreaks, estimate);
+    _syncCache(itemCount, separatorBreaks, estimate);
     final resolved = debugResolveOffsetForContentOffset(contentY.toInt());
     var i = resolved.index;
     var top = _itemStartOffset(i);
@@ -4308,18 +4616,18 @@ class RenderListViewport extends RenderBox {
       i--;
       top = _itemStartOffset(i);
     }
-    for (; i < children.length; i++) {
+    for (; i < itemCount; i++) {
       final childHeight = _resolveItemHeight(i, estimate);
       final bottom = top + childHeight;
       if (contentY >= top && contentY < bottom) {
-        final child = children[i];
+        final child = _childAt(i);
         final childX = localX - child.offset.dx;
         final childY = contentY - top - child.offset.dy;
         return child.hitTest(result, localX: childX, localY: childY);
       }
 
       top = bottom;
-      if (i < children.length - 1) {
+      if (i < itemCount - 1) {
         final sepBottom = top + separatorBreaks;
         if (contentY >= top && contentY < sepBottom) return false;
         top = sepBottom;
@@ -4340,7 +4648,7 @@ class RenderListViewport extends RenderBox {
         : null;
     final viewportHeight = height ?? boundedHeight;
     final separatorBreaks = _separatorBreaks(separator);
-    final itemCount = children.length;
+    final itemCount = _itemCount;
     if (variableHeight) {
       if (_lastMaxWidth != maxWidth) {
         _lastMaxWidth = maxWidth;
@@ -4384,13 +4692,14 @@ class RenderListViewport extends RenderBox {
     final maxWidth = size.width.round();
     final viewportHeight = size.height.round();
     final separatorBreaks = _separatorBreaks(separator);
-    final itemCount = children.length;
+    final itemCount = _itemCount;
     final hasSelection =
         controller is WidgetScrollController &&
         (controller as WidgetScrollController).hasSelection;
     if (itemCount == 0 || viewportHeight <= 0) {
       _invalidateVisiblePaintCache();
       _resetVisibleHitCache();
+      _retainActiveChildIndices(const <int>{});
       _resetRepaintFlag();
       return '';
     }
@@ -4416,6 +4725,7 @@ class RenderListViewport extends RenderBox {
           .toInt();
       final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
+      final liveIndices = <int>{};
       ({
         String visible,
         bool heightsChanged,
@@ -4424,6 +4734,7 @@ class RenderListViewport extends RenderBox {
       })
       buildVisibleForOffset(int target) {
         _resetVisibleHitCache();
+        liveIndices.clear();
         final resolved = debugResolveOffsetForContentOffset(target);
         var startIndex = resolved.index;
         var offsetInItem = resolved.offsetInItem;
@@ -4445,6 +4756,7 @@ class RenderListViewport extends RenderBox {
           i < itemCount && lineCount < requiredLines;
           i++
         ) {
+          liveIndices.add(i);
           final itemStart = lineCount;
           final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
           final text = resolved.text;
@@ -4471,8 +4783,13 @@ class RenderListViewport extends RenderBox {
               ),
             );
           }
+          _writeListItemBoundary(
+            buffer,
+            itemText: text,
+            separator: separator,
+            hasNext: i < itemCount - 1,
+          );
           if (i < itemCount - 1 && separator.isNotEmpty) {
-            buffer.write(separator);
             lineCount += separatorBreaks;
           }
         }
@@ -4554,6 +4871,7 @@ class RenderListViewport extends RenderBox {
         isVariableHeight: true,
       );
 
+      _retainBufferedChildIndices(liveIndices, itemCount);
       _resetRepaintFlag();
       return _cachedVisibleContent!;
     }
@@ -4567,14 +4885,21 @@ class RenderListViewport extends RenderBox {
     final requiredLines = offsetInStride + viewportHeight;
 
     final buffer = StringBuffer();
+    final liveIndices = <int>{};
     var lineCount = 0;
     for (var i = startIndex; i < itemCount && lineCount < requiredLines; i++) {
+      liveIndices.add(i);
       final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
       final text = resolved.text;
       buffer.write(text);
       lineCount += resolved.measured;
+      _writeListItemBoundary(
+        buffer,
+        itemText: text,
+        separator: separator,
+        hasNext: i < itemCount - 1,
+      );
       if (i < itemCount - 1 && separator.isNotEmpty) {
-        buffer.write(separator);
         lineCount += separatorBreaks;
       }
     }
@@ -4592,20 +4917,46 @@ class RenderListViewport extends RenderBox {
       separatorBreaks: separatorBreaks,
       isVariableHeight: false,
     );
+    _retainBufferedChildIndices(liveIndices, itemCount);
     _resetRepaintFlag();
     return visible;
   }
 
+  void _retainBufferedChildIndices(Set<int> liveIndices, int itemCount) {
+    if (cacheExtentItems <= 0 || liveIndices.isEmpty) {
+      _retainActiveChildIndices(liveIndices);
+      return;
+    }
+
+    var first = itemCount;
+    var last = -1;
+    for (final index in liveIndices) {
+      if (index < first) first = index;
+      if (index > last) last = index;
+    }
+    final retainStart = math.max(0, first - cacheExtentItems).toInt();
+    final retainEnd = math.min(itemCount - 1, last + cacheExtentItems).toInt();
+    for (var i = retainStart; i <= retainEnd; i++) {
+      liveIndices.add(i);
+    }
+    _retainActiveChildIndices(liveIndices);
+  }
+
   List<String> allContentLinesForSelection() {
-    if (children.isEmpty) return const <String>[];
+    final itemCount = _itemCount;
+    if (itemCount == 0) return const <String>[];
     final maxWidth = size.width.round();
     final buffer = StringBuffer();
-    for (var i = 0; i < children.length; i++) {
+    for (var i = 0; i < itemCount; i++) {
       final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
-      buffer.write(resolved.text);
-      if (i < children.length - 1 && separator.isNotEmpty) {
-        buffer.write(separator);
-      }
+      final text = resolved.text;
+      buffer.write(text);
+      _writeListItemBoundary(
+        buffer,
+        itemText: text,
+        separator: separator,
+        hasNext: i < itemCount - 1,
+      );
     }
     return buffer.toString().split('\n');
   }
@@ -4729,11 +5080,13 @@ class _VisibleItemHit {
 
 class _ChildPaintSnapshot {
   const _ChildPaintSnapshot({
+    required this.child,
     required this.text,
     required this.measured,
     required this.maxWidth,
   });
 
+  final RenderObject child;
   final String text;
   final int measured;
   final int maxWidth;
@@ -4778,7 +5131,23 @@ String _sliceLines(String text, int startLine, int maxLines) {
   if (out.endsWith('\n')) {
     out = out.substring(0, out.length - 1);
   }
-  return out;
+  return suppressOverflowingTerminalGraphics(out, maxLines);
+}
+
+void _writeListItemBoundary(
+  StringBuffer buffer, {
+  required String itemText,
+  required String separator,
+  required bool hasNext,
+}) {
+  if (!hasNext) return;
+  if (separator.isNotEmpty) {
+    buffer.write(separator);
+    return;
+  }
+  if (itemText.isEmpty || !itemText.endsWith('\n')) {
+    buffer.write('\n');
+  }
 }
 
 bool _isWheelEvent(MouseMsg msg) {

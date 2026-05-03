@@ -229,6 +229,46 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test('styled variable-width lines keep scrollbar column stable', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      try {
+        final ctrl = ListViewController();
+        ctrl.setViewportHeight(3);
+        ctrl.setContentHeight(20);
+
+        await tester.pumpWidget(
+          Container(
+            width: 20,
+            height: 3,
+            child: Scrollbar(
+              controller: ctrl,
+              gap: 1,
+              thumbChar: '#',
+              trackChar: '.',
+              child: Column(
+                children: [
+                  Text('A', style: Style().foreground(Colors.red)),
+                  Text('BBBB'),
+                  Text('🙂'),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        final lines = Layout.stripAnsi(tester.view).split('\n');
+        final barColumns = lines.map((line) {
+          final thumb = line.indexOf('#');
+          if (thumb >= 0) return thumb;
+          return line.indexOf('.');
+        }).toList();
+
+        expect(barColumns, everyElement(equals(barColumns.first)));
+      } finally {
+        await tester.dispose();
+      }
+    });
   });
 
   // ---------------------------------------------------------------------------

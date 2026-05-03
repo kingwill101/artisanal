@@ -154,11 +154,15 @@ class RenderRow extends RenderBox {
 
   @override
   void layout(BoxConstraints constraints) {
-    final span = TuiTrace.begin(
-      'RenderRow.layout',
-      tag: TraceTag.layout,
-      extra: 'children=${children.length}',
-    );
+    final traceLayout =
+        TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.layout);
+    final span = traceLayout
+        ? TuiTrace.begin(
+            'RenderRow.layout',
+            tag: TraceTag.layout,
+            extra: 'children=${children.length}',
+          )
+        : null;
     super.layout(constraints);
     var width = 0.0;
     var height = 0.0;
@@ -284,7 +288,9 @@ class RenderRow extends RenderBox {
 
     // Compute child offsets matching the paint layout logic.
     _computeChildOffsets();
-    span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    if (span != null) {
+      span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    }
   }
 
   void _computeChildOffsets() {
@@ -350,11 +356,15 @@ class RenderRow extends RenderBox {
   @override
   String paint() {
     if (children.isEmpty) return '';
-    final span = TuiTrace.begin(
-      'RenderRow.paint',
-      tag: TraceTag.paint,
-      extra: 'children=${children.length}',
-    );
+    final tracePaint =
+        TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.paint);
+    final span = tracePaint
+        ? TuiTrace.begin(
+            'RenderRow.paint',
+            tag: TraceTag.paint,
+            extra: 'children=${children.length}',
+          )
+        : null;
     _pruneChildPaintCache();
     final blocks = children.map(_paintChild).toList(growable: false);
     final flexData = children.map(_flexDataFor).toList(growable: false);
@@ -445,7 +455,9 @@ class RenderRow extends RenderBox {
       vertical: VerticalAlign.top,
       content: _joinHorizontalWithSpacing(aligned, spacing),
     );
-    span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    if (span != null) {
+      span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    }
     return result;
   }
 }
@@ -508,11 +520,15 @@ class RenderColumn extends RenderBox {
 
   @override
   void layout(BoxConstraints constraints) {
-    final span = TuiTrace.begin(
-      'RenderColumn.layout',
-      tag: TraceTag.layout,
-      extra: 'children=${children.length}',
-    );
+    final traceLayout =
+        TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.layout);
+    final span = traceLayout
+        ? TuiTrace.begin(
+            'RenderColumn.layout',
+            tag: TraceTag.layout,
+            extra: 'children=${children.length}',
+          )
+        : null;
     super.layout(constraints);
     var width = 0.0;
     var height = 0.0;
@@ -649,7 +665,9 @@ class RenderColumn extends RenderBox {
 
     // Compute child offsets matching the paint layout logic.
     _computeChildOffsets();
-    span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    if (span != null) {
+      span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    }
   }
 
   void _computeChildOffsets() {
@@ -715,11 +733,15 @@ class RenderColumn extends RenderBox {
   @override
   String paint() {
     if (children.isEmpty) return '';
-    final span = TuiTrace.begin(
-      'RenderColumn.paint',
-      tag: TraceTag.paint,
-      extra: 'children=${children.length}',
-    );
+    final tracePaint =
+        TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.paint);
+    final span = tracePaint
+        ? TuiTrace.begin(
+            'RenderColumn.paint',
+            tag: TraceTag.paint,
+            extra: 'children=${children.length}',
+          )
+        : null;
     _pruneChildPaintCache();
     final blocks = children.map(_paintChild).toList(growable: false);
     final flexData = children.map(_flexDataFor).toList(growable: false);
@@ -810,7 +832,9 @@ class RenderColumn extends RenderBox {
       vertical: VerticalAlign.top,
       content: _joinVerticalWithSpacing(aligned, spacing),
     );
-    span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    if (span != null) {
+      span.end(extra: 'size=${size.width.toInt()}x${size.height.toInt()}');
+    }
     return result;
   }
 }

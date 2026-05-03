@@ -248,6 +248,17 @@ void main() {
       );
       expect(output, contains('beta: 0'));
     });
+
+    test('leaf render object updates repaint after parent rebuild', () {
+      final app = tui.WidgetApp(_LeafRenderUpdateWidget());
+      expect(app.view(), contains('leaf: 0'));
+
+      app.update(const _IncrementMsg());
+
+      final output = app.view();
+      expect(output, contains('leaf: 1'));
+      expect(output, isNot(contains('leaf: 0')));
+    });
   });
 
   group('setState triggers rebuild', () {
@@ -1380,6 +1391,30 @@ class _CmdReturnerState extends w.State<_CmdReturner> {
   @override
   w.Widget build(w.BuildContext context) {
     return w.Text('cmd returner');
+  }
+}
+
+class _LeafRenderUpdateWidget extends w.StatefulWidget {
+  _LeafRenderUpdateWidget();
+
+  @override
+  w.State createState() => _LeafRenderUpdateWidgetState();
+}
+
+class _LeafRenderUpdateWidgetState extends w.State<_LeafRenderUpdateWidget> {
+  int _count = 0;
+
+  @override
+  tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is _IncrementMsg) {
+      setState(() => _count++);
+    }
+    return null;
+  }
+
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text('leaf: $_count');
   }
 }
 

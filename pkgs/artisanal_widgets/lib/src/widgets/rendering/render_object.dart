@@ -33,8 +33,23 @@ abstract class RenderObject {
   }
 
   void detach(RenderObject child) {
+    if (!identical(child.parent, this)) return;
     children.remove(child);
     child.parent = null;
+  }
+
+  void detachAll(Iterable<RenderObject> detachedChildren) {
+    final detachedSet = detachedChildren is Set<RenderObject>
+        ? detachedChildren
+        : detachedChildren.toSet();
+    if (detachedSet.isEmpty) return;
+
+    children.removeWhere(detachedSet.contains);
+    for (final child in detachedSet) {
+      if (identical(child.parent, this)) {
+        child.parent = null;
+      }
+    }
   }
 
   void layout(BoxConstraints constraints) {

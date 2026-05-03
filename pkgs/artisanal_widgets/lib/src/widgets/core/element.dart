@@ -54,6 +54,14 @@ void _bindElement(Widget widget, Element element) {
   _elementForWidget[widget] = element;
 }
 
+bool _sameWidgetInstances(List<Widget> a, List<Widget> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (!identical(a[i], b[i])) return false;
+  }
+  return true;
+}
+
 /// Creates an element for a widget.
 Element createElement(Widget widget) {
   if (widget is StatefulWidget) {
@@ -64,6 +72,9 @@ Element createElement(Widget widget) {
   }
   if (widget is InheritedWidget) {
     return InheritedElement(widget);
+  }
+  if (widget is LazyRenderObjectWidget) {
+    return LazyRenderObjectElement(widget);
   }
   if (widget is RenderObjectWidget) {
     return RenderObjectElement(widget);
@@ -302,13 +313,25 @@ abstract class Element {
     if (_children.isEmpty && newWidgets.isEmpty) return;
     if (_children.length == newWidgets.length) {
       var allIdentical = true;
+      var allCanUpdateInPlace = true;
       for (var i = 0; i < newWidgets.length; i++) {
         if (!identical(_children[i].widget, newWidgets[i])) {
           allIdentical = false;
-          break;
+          if (!Widget.canUpdate(_children[i].widget, newWidgets[i])) {
+            allCanUpdateInPlace = false;
+            break;
+          }
         }
       }
       if (allIdentical) return;
+      if (allCanUpdateInPlace) {
+        for (var i = 0; i < newWidgets.length; i++) {
+          if (!identical(_children[i].widget, newWidgets[i])) {
+            _children[i].update(newWidgets[i]);
+          }
+        }
+        return;
+      }
     }
 
     var structureChanged = false;
@@ -970,6 +993,48 @@ class StatefulElement extends Element implements StateSetter {
   }
 }
 
+/// A render-object widget whose children are mounted lazily by index.
+///
+/// This is for render objects that can compute their visible child range
+/// without first reconciling every child widget. The render object should
+/// implement [LazyRenderObjectHost] and request concrete render children from
+/// the provided [LazyRenderObjectChildManager].
+abstract class LazyRenderObjectWidget extends RenderObjectWidget {
+  LazyRenderObjectWidget({super.key});
+
+  /// Number of index-addressable children.
+  int get childCount;
+
+  /// Builds the child widget for [index].
+  Widget buildChild(BuildContext context, int index);
+
+  @override
+  List<Widget> get children => const <Widget>[];
+}
+
+/// Render object contract for receiving a lazy child manager.
+abstract interface class LazyRenderObjectHost {
+  set childManager(LazyRenderObjectChildManager? manager);
+}
+
+/// Supplies lazily mounted render children to a render object.
+abstract interface class LazyRenderObjectChildManager {
+  /// Number of index-addressable children.
+  int get childCount;
+
+  /// Number of children currently mounted in the element tree.
+  int get activeChildCount;
+
+  /// Currently mounted child indices.
+  Set<int> get activeChildIndices;
+
+  /// Returns the concrete render object for [index], mounting or updating it.
+  RenderObject resolveRenderObject(int index);
+
+  /// Keeps only [indices] mounted, unmounting children outside the set.
+  void retainChildIndices(Set<int> indices);
+}
+
 /// Element for render object widgets.
 class RenderObjectElement extends Element {
   RenderObjectElement(RenderObjectWidget super.widget)
@@ -984,9 +1049,16 @@ class RenderObjectElement extends Element {
 
   @override
   void update(Widget newWidget) {
+    if (identical(widget, newWidget)) return;
+    final oldChildren = widget.children;
     super.update(newWidget);
-    (newWidget as RenderObjectWidget).updateRenderObject(renderObject);
-    markNeedsBuild();
+    final renderWidget = newWidget as RenderObjectWidget;
+    renderWidget.updateRenderObject(renderObject);
+    if (_sameWidgetInstances(oldChildren, renderWidget.children)) {
+      markNeedsPaint();
+    } else {
+      markNeedsBuild();
+    }
   }
 
   @override
@@ -1281,11 +1353,256 @@ class RenderObjectElement extends Element {
     var current = parent;
     while (current != null) {
       if (current is RenderObjectElement) {
-        current.renderObject.detach(renderObject);
+        if (identical(renderObject.parent, current.renderObject)) {
+          current.renderObject.detach(renderObject);
+        }
         break;
       }
       current = current.parent;
     }
+  }
+}
+
+/// Element implementation for [LazyRenderObjectWidget].
+class LazyRenderObjectElement extends RenderObjectElement
+    implements LazyRenderObjectChildManager {
+  LazyRenderObjectElement(LazyRenderObjectWidget super.widget) {
+    final host = renderObject;
+    if (host is LazyRenderObjectHost) {
+      (host as LazyRenderObjectHost).childManager = this;
+    }
+  }
+
+  final Map<int, Element> _lazyChildren = <int, Element>{};
+  final Map<int, int> _childEpochs = <int, int>{};
+  final Map<int, RenderObject> _lazyRenderChildren = <int, RenderObject>{};
+  final List<int> _retainRemoveScratch = <int>[];
+
+  int _configurationEpoch = 0;
+  DegradationLevel _renderDegradationLevel = DegradationLevel.full;
+
+  LazyRenderObjectWidget get _lazyWidget => widget as LazyRenderObjectWidget;
+
+  @override
+  int get childCount => _lazyWidget.childCount;
+
+  @override
+  int get activeChildCount => _lazyChildren.length;
+
+  @override
+  Set<int> get activeChildIndices => Set<int>.unmodifiable(_lazyChildren.keys);
+
+  @override
+  void update(Widget newWidget) {
+    super.update(newWidget);
+    _configurationEpoch++;
+    _dropOutOfRangeChildren();
+    renderObject.markDescendantNeedsPaint();
+  }
+
+  @override
+  void rebuild() {
+    if (!_dirty) return;
+    _isRebuilding = true;
+    try {
+      _dirty = false;
+      _owner?.didRebuild(this);
+    } finally {
+      _isRebuilding = false;
+    }
+  }
+
+  @override
+  String render({
+    BoxConstraints? constraints,
+    DegradationLevel degradationLevel = DegradationLevel.full,
+  }) {
+    if (!_shouldRender(degradationLevel)) {
+      return '';
+    }
+    if (_dirty) {
+      _owner?.buildScopeFor(_rootOfTree(this), this);
+    }
+
+    _renderDegradationLevel = degradationLevel;
+    final roType = TuiTrace.enabled ? renderObject.runtimeType.toString() : '';
+    final span = TuiTrace.begin(
+      'ro.render',
+      tag: TraceTag.render,
+      extra: roType,
+    );
+    final layoutSw = Stopwatch()..start();
+    renderObject.layout(constraints ?? BoxConstraints());
+    layoutSw.stop();
+
+    final paintSw = Stopwatch()..start();
+    final result = renderObject.paint();
+    paintSw.stop();
+
+    renderObject.clearPaintDirtySubtree();
+    _owner?.recordLayout(layoutSw.elapsed);
+    _owner?.recordPaint(paintSw.elapsed);
+
+    span.end(
+      extra:
+          'layout=${layoutSw.elapsedMicroseconds}us '
+          'paint=${paintSw.elapsedMicroseconds}us '
+          'size=${renderObject.size.width.toInt()}x${renderObject.size.height.toInt()}',
+    );
+
+    return result;
+  }
+
+  @override
+  RenderObject resolveRenderObject(int index) {
+    RangeError.checkValidIndex(index, null, 'index', childCount);
+    var element = _lazyChildren[index];
+    final needsConfiguration = _childEpochs[index] != _configurationEpoch;
+
+    if (element == null || needsConfiguration) {
+      final nextWidget = _lazyWidget.buildChild(context, index);
+      if (element != null && Widget.canUpdate(element.widget, nextWidget)) {
+        element.update(nextWidget);
+        element.markNeedsPaint();
+      } else {
+        if (element != null) {
+          _unmountLazyChild(index);
+        }
+        element = createElement(nextWidget);
+        _lazyChildren[index] = element;
+        _childEpochs[index] = _configurationEpoch;
+        element._attachOwner(_owner);
+        element.mount(this);
+        _syncLazyChildList();
+      }
+      _childEpochs[index] = _configurationEpoch;
+      element = _lazyChildren[index]!;
+    }
+
+    _ensureSubtreeBuilt(element, degradationLevel: _renderDegradationLevel);
+    final renderChildren = _collectRenderChildren(
+      element,
+      degradationLevel: _renderDegradationLevel,
+    ).toList(growable: false);
+    if (renderChildren.length != 1) {
+      throw StateError(
+        'Lazy render child at index $index produced '
+        '${renderChildren.length} render objects; expected exactly one.',
+      );
+    }
+
+    final renderChild = renderChildren.single;
+    _syncAttachedRenderChild(index, renderChild);
+    return renderChild;
+  }
+
+  @override
+  void retainChildIndices(Set<int> indices) {
+    if (_lazyChildren.isEmpty) return;
+    final removeIndices = _retainRemoveScratch;
+    removeIndices.clear();
+    final limit = childCount;
+    for (final index in _lazyChildren.keys) {
+      if (index >= 0 && index < limit && indices.contains(index)) continue;
+      removeIndices.add(index);
+    }
+    final changed = _unmountLazyChildren(removeIndices, syncChildList: false);
+    removeIndices.clear();
+    if (changed) {
+      _syncLazyChildList();
+    }
+  }
+
+  @override
+  void unmount() {
+    final host = renderObject;
+    if (host is LazyRenderObjectHost) {
+      (host as LazyRenderObjectHost).childManager = null;
+    }
+    if (_unmountLazyChildren(
+      _lazyChildren.keys.toList(),
+      syncChildList: false,
+    )) {
+      _syncLazyChildList();
+    }
+    super.unmount();
+  }
+
+  void _dropOutOfRangeChildren() {
+    final removeIndices = <int>[];
+    for (final index in _lazyChildren.keys.toList()) {
+      if (index < childCount) continue;
+      removeIndices.add(index);
+    }
+    final changed = _unmountLazyChildren(removeIndices, syncChildList: false);
+    if (changed) {
+      _syncLazyChildList();
+    }
+  }
+
+  void _syncAttachedRenderChild(int index, RenderObject renderChild) {
+    final previous = _lazyRenderChildren[index];
+    if (identical(previous, renderChild)) {
+      if (!identical(renderChild.parent, renderObject)) {
+        renderObject.attach(renderChild);
+      }
+      return;
+    }
+
+    if (previous != null && identical(previous.parent, renderObject)) {
+      renderObject.detach(previous);
+    }
+    _lazyRenderChildren[index] = renderChild;
+    if (!identical(renderChild.parent, renderObject)) {
+      renderObject.attach(renderChild);
+    }
+  }
+
+  void _unmountLazyChild(int index, {bool syncChildList = true}) {
+    _unmountLazyChildren(<int>[index], syncChildList: syncChildList);
+  }
+
+  bool _unmountLazyChildren(
+    Iterable<int> indices, {
+    required bool syncChildList,
+  }) {
+    final renderChildren = <RenderObject>[];
+    final elements = <Element>[];
+    var changed = false;
+
+    for (final index in indices) {
+      final renderChild = _lazyRenderChildren.remove(index);
+      if (renderChild != null) {
+        changed = true;
+        if (identical(renderChild.parent, renderObject)) {
+          renderChildren.add(renderChild);
+        }
+      }
+
+      final child = _lazyChildren.remove(index);
+      if (child != null) {
+        changed = true;
+        elements.add(child);
+      }
+      _childEpochs.remove(index);
+    }
+
+    renderObject.detachAll(renderChildren);
+    for (final child in elements) {
+      child.unmount();
+    }
+    if (changed && syncChildList) {
+      _syncLazyChildList();
+    }
+    return changed;
+  }
+
+  void _syncLazyChildList() {
+    final entries = _lazyChildren.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    _children
+      ..clear()
+      ..addAll(entries.map((entry) => entry.value));
   }
 }
 
