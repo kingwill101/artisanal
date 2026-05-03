@@ -32,6 +32,7 @@ export 'styled_string.dart';
 export 'tabstop.dart';
 export 'terminal.dart';
 export 'terminal_reader.dart';
+export 'terminal_graphics.dart';
 export 'terminal_renderer.dart';
 export 'ansi_slice.dart';
 export 'winch.dart';
