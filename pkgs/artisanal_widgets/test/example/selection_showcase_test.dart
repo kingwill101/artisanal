@@ -57,7 +57,7 @@ void main() {
     'selection showcase double click selects the current word only',
     () async {
       final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
-      final controller = s.SelectionController();
+      final controller = _multiClickController();
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
@@ -80,7 +80,7 @@ void main() {
     'selection showcase triple click selects an entire shared line',
     () async {
       final tester = WidgetTester(screenWidth: 110, screenHeight: 90);
-      final controller = s.SelectionController();
+      final controller = _multiClickController();
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
@@ -287,4 +287,8 @@ void main() {
 
     expect(controller.getSelectedRegisteredText(), contains('Editor-backed'));
   });
+}
+
+s.SelectionController _multiClickController() {
+  return s.SelectionController(nowProvider: () => DateTime.utc(2026));
 }

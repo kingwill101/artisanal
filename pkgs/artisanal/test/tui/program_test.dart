@@ -1824,7 +1824,7 @@ void main() {
         await program.run();
 
         final output = terminal.output.join();
-        expect(output, contains('\x1b[?c'));
+        expect(output, contains('\x1b[c'));
         expect(output, contains('\x1b[>c'));
         expect(output, contains('\x1b[=c'));
         expect(output, contains('\x1b[>0q'));

@@ -142,8 +142,9 @@ void main() {
       });
 
       test('renders task list checkboxes', () {
-        expect(rendered, contains('\u2611')); // Checked checkbox
-        expect(rendered, contains('\u2610')); // Unchecked checkbox
+        final stripped = Ansi.stripAnsi(rendered);
+        expect(stripped, contains('[x]')); // Checked checkbox
+        expect(stripped, contains('[ ]')); // Unchecked checkbox
       });
     });
 

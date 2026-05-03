@@ -1,5 +1,5 @@
 import 'package:artisanal/bubbles.dart' show TextAreaModel, TextCommandResult;
-import 'package:artisanal/style.dart' show AnsiColor;
+import 'package:artisanal/style.dart' show AnsiColor, Style;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart' as tui;
@@ -520,10 +520,11 @@ void main() {
         ),
       );
 
-      expect(tester.view, contains('1 '));
-      expect(tester.view, contains('2 '));
-      expect(tester.view, contains('first'));
-      expect(tester.view, contains('second'));
+      final view = Style.stripAnsi(tester.view);
+      expect(view, contains('1 '));
+      expect(view, contains('2 '));
+      expect(view, contains('first'));
+      expect(view, contains('second'));
     });
 
     test('programmatic controller changes update the rendered view', () async {
@@ -543,8 +544,9 @@ void main() {
       ctrl.setCursor(1, 6);
       tester.pump();
 
-      expect(tester.view, contains('first'));
-      expect(tester.view, contains('second'));
+      final view = Style.stripAnsi(tester.view);
+      expect(view, contains('first'));
+      expect(view, contains('second'));
     });
 
     test('ctrl+z and ctrl+y undo and redo coalesced edits', () async {
