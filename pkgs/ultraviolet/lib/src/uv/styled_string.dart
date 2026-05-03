@@ -22,9 +22,11 @@ library;
 
 import 'buffer.dart';
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 import 'drawable.dart';
 import 'geometry.dart';
 import 'screen.dart';
+import 'terminal_graphics.dart' as terminal_graphics;
 import '../unicode/width.dart';
 import '../ansi.dart' as term_ansi;
 
@@ -69,7 +71,9 @@ final class StyledString implements Drawable {
     }
 
     // Normalize CRLF to NL to emulate raw terminal output.
-    final normalized = text.replaceAll('\r\n', '\n');
+    final normalized = text.contains('\r')
+        ? text.replaceAll('\r\n', '\n')
+        : text;
     final expanded = term_ansi.Ansi.expandTabs(normalized);
 
     _printString(
@@ -256,9 +260,9 @@ void readStyle(List<SgrParam> params, StyleState out) {
                 : style.copyWith(bg: UvColor.indexed256(idx));
           } else if (mode == 2 && p.sub.length >= 5) {
             // 38:2::<r>:<g>:<b>
-            final r = p.sub[2];
-            final g = p.sub[3];
-            final b = p.sub[4];
+            final r = color_utils.shift(p.sub[2]);
+            final g = color_utils.shift(p.sub[3]);
+            final b = color_utils.shift(p.sub[4]);
             style = isFg
                 ? style.copyWith(fg: UvColor.rgb(r, g, b))
                 : style.copyWith(bg: UvColor.rgb(r, g, b));
@@ -275,9 +279,9 @@ void readStyle(List<SgrParam> params, StyleState out) {
               : style.copyWith(bg: UvColor.indexed256(idx));
           i += 2;
         } else if (mode == 2 && i + 4 < params.length) {
-          final r = params[i + 2].value;
-          final g = params[i + 3].value;
-          final b = params[i + 4].value;
+          final r = color_utils.shift(params[i + 2].value);
+          final g = color_utils.shift(params[i + 3].value);
+          final b = color_utils.shift(params[i + 4].value);
           style = isFg
               ? style.copyWith(fg: UvColor.rgb(r, g, b))
               : style.copyWith(bg: UvColor.rgb(r, g, b));
@@ -298,14 +302,14 @@ void readStyle(List<SgrParam> params, StyleState out) {
             // 58:2::r:g:b  -> sub = [2,0,r,g,b]
             // 58:2:r:g:b   -> sub = [2,r,g,b]
             if (p.sub.length >= 5) {
-              final r = p.sub[2];
-              final g = p.sub[3];
-              final b = p.sub[4];
+              final r = color_utils.shift(p.sub[2]);
+              final g = color_utils.shift(p.sub[3]);
+              final b = color_utils.shift(p.sub[4]);
               style = style.copyWith(underlineColor: UvColor.rgb(r, g, b));
             } else if (p.sub.length >= 4) {
-              final r = p.sub[1];
-              final g = p.sub[2];
-              final b = p.sub[3];
+              final r = color_utils.shift(p.sub[1]);
+              final g = color_utils.shift(p.sub[2]);
+              final b = color_utils.shift(p.sub[3]);
               style = style.copyWith(underlineColor: UvColor.rgb(r, g, b));
             }
           }
@@ -320,9 +324,9 @@ void readStyle(List<SgrParam> params, StyleState out) {
           );
           i += 2;
         } else if (mode == 2 && i + 4 < params.length) {
-          final r = params[i + 2].value;
-          final g = params[i + 3].value;
-          final b = params[i + 4].value;
+          final r = color_utils.shift(params[i + 2].value);
+          final g = color_utils.shift(params[i + 3].value);
+          final b = color_utils.shift(params[i + 4].value);
           style = style.copyWith(underlineColor: UvColor.rgb(r, g, b));
           i += 4;
         }
@@ -362,9 +366,41 @@ void _printString(
   var y = startY;
   final pen = StyleState(const UvStyle());
   final link = LinkState(const Link());
+  var currentStyle = const UvStyle();
+  var currentLink = const Link();
+  var hasCurrentAttributes = false;
+  final OwnedCellScreen? ownedScreen = screen is OwnedCellScreen
+      ? screen
+      : null;
   final pendingEscapes = StringBuffer();
+  var pendingGraphicsDisplaysImage = false;
   int? lastCellX;
   int? lastCellY;
+
+  void refreshCurrentAttributes() {
+    currentStyle = pen.style;
+    currentLink = link.link;
+    hasCurrentAttributes = !currentStyle.isZero || !currentLink.isZero;
+  }
+
+  void applyCurrentAttributes(Cell cell) {
+    if (!currentStyle.isZero) cell.style = currentStyle;
+    if (!currentLink.isZero) cell.link = currentLink;
+  }
+
+  void setFreshCell(int cellX, int cellY, Cell cell) {
+    final owned = ownedScreen;
+    if (owned == null) {
+      screen.setCell(cellX, cellY, cell);
+    } else {
+      owned.setCellOwned(cellX, cellY, cell);
+    }
+  }
+
+  void clearPendingEscapes() {
+    pendingEscapes.clear();
+    pendingGraphicsDisplaysImage = false;
+  }
 
   void flushPendingToLastCell() {
     if (pendingEscapes.isEmpty) return;
@@ -375,7 +411,30 @@ void _printString(
     if (cell == null || cell.isZero) return;
     cell.content = '${cell.content}${pendingEscapes.toString()}';
     screen.setCell(cellX, cellY, cell);
-    pendingEscapes.clear();
+    clearPendingEscapes();
+  }
+
+  void writePendingControlCell() {
+    if (pendingEscapes.isEmpty) return;
+    final cellWidth = _pendingControlCellWidth(pendingEscapes.toString());
+    if (!truncate &&
+        cellWidth > 0 &&
+        x + cellWidth > bounds.maxX &&
+        y + 1 < bounds.maxY) {
+      x = bounds.minX;
+      y++;
+    }
+
+    final pos = Position(x, y);
+    if (bounds.contains(pos)) {
+      final cell = Cell(content: pendingEscapes.toString(), width: cellWidth);
+      if (hasCurrentAttributes) applyCurrentAttributes(cell);
+      setFreshCell(x, y, cell);
+      lastCellX = x;
+      lastCellY = y;
+    }
+    clearPendingEscapes();
+    x += cellWidth;
   }
 
   var i = 0;
@@ -393,6 +452,7 @@ void _printString(
           final paramsRaw = input.substring(i + 2, finalIndex);
           if (finalByte == 0x6D /* 'm' */ ) {
             readStyle(_parseSgrParams(paramsRaw), pen);
+            refreshCurrentAttributes();
           } else if (_isPrivateCsiFinal(finalByte)) {
             pendingEscapes.write(input.substring(i, finalIndex + 1));
           }
@@ -406,10 +466,63 @@ void _printString(
           if (osc.cmd == 8) {
             // For cmd=8, `data` is "<params>;<url>".
             readLink(osc.data, link);
+            refreshCurrentAttributes();
           }
           i = osc.endIndex;
           continue;
         }
+      } else if (_isControlStringIntroducer(next)) {
+        // DCS/SOS/PM/APC control strings. Graphics protocols such as Sixel
+        // (DCS) and Kitty (APC) are terminal payloads, not printable text.
+        final endIndex = _findStringTerminator(input, i + 2);
+        if (endIndex != -1) {
+          final sequence = input.substring(i, endIndex);
+          pendingEscapes.write(sequence);
+          final (
+            :sawControl,
+            :firstHasMoreChunks,
+            :firstDisplaysImage,
+            :anyDisplaysImage,
+          ) = _scanGraphicsControls(
+            sequence,
+          );
+          pendingGraphicsDisplaysImage =
+              pendingGraphicsDisplaysImage || anyDisplaysImage;
+          if (sawControl &&
+              (firstHasMoreChunks ||
+                  (!firstDisplaysImage && !pendingGraphicsDisplaysImage))) {
+            i = endIndex;
+            continue;
+          }
+          writePendingControlCell();
+          i = endIndex;
+          continue;
+        }
+      }
+    } else if (_isEightBitControlStringIntroducer(codeUnit)) {
+      final endIndex = _findEightBitStringTerminator(input, i + 1);
+      if (endIndex != -1) {
+        final sequence = input.substring(i, endIndex);
+        pendingEscapes.write(sequence);
+        final (
+          :sawControl,
+          :firstHasMoreChunks,
+          :firstDisplaysImage,
+          :anyDisplaysImage,
+        ) = _scanGraphicsControls(
+          sequence,
+        );
+        pendingGraphicsDisplaysImage =
+            pendingGraphicsDisplaysImage || anyDisplaysImage;
+        if (sawControl &&
+            (firstHasMoreChunks ||
+                (!firstDisplaysImage && !pendingGraphicsDisplaysImage))) {
+          i = endIndex;
+          continue;
+        }
+        writePendingControlCell();
+        i = endIndex;
+        continue;
       }
     }
 
@@ -432,10 +545,9 @@ void _printString(
     var cell = Cell.newCell(method, grapheme);
     if (pendingEscapes.isNotEmpty) {
       cell.content = '${pendingEscapes.toString()}${cell.content}';
-      pendingEscapes.clear();
+      clearPendingEscapes();
     }
-    cell.style = pen.style;
-    cell.link = link.link;
+    if (hasCurrentAttributes) applyCurrentAttributes(cell);
 
     if (!truncate && x + cell.width > bounds.maxX && y + 1 < bounds.maxY) {
       // Wrap to next line.
@@ -450,16 +562,15 @@ void _printString(
           tailCell.width > 0 &&
           x + cell.width > bounds.maxX - tailCell.width) {
         final t = tailCell.clone();
-        t.style = pen.style;
-        t.link = link.link;
-        screen.setCell(x, y, t);
+        if (hasCurrentAttributes) applyCurrentAttributes(t);
+        setFreshCell(x, y, t);
         lastCellX = x;
         lastCellY = y;
         x += t.width;
         // Stop drawing further content on this line.
         x = bounds.maxX;
       } else {
-        screen.setCell(x, y, cell);
+        setFreshCell(x, y, cell);
         lastCellX = x;
         lastCellY = y;
         x += cell.width;
@@ -474,6 +585,41 @@ void _printString(
   flushPendingToLastCell();
 }
 
+int _pendingControlCellWidth(String controls) {
+  return terminal_graphics.terminalGraphicsControlCellWidth(controls);
+}
+
+({
+  bool sawControl,
+  bool firstHasMoreChunks,
+  bool firstDisplaysImage,
+  bool anyDisplaysImage,
+})
+_scanGraphicsControls(String sequence) {
+  var sawControl = false;
+  var firstHasMoreChunks = false;
+  var firstDisplaysImage = false;
+  var anyDisplaysImage = false;
+
+  for (final control in terminal_graphics.parseTerminalGraphicsControls(
+    sequence,
+  )) {
+    if (!sawControl) {
+      sawControl = true;
+      firstHasMoreChunks = control.hasMoreChunks;
+      firstDisplaysImage = control.displaysImage;
+    }
+    anyDisplaysImage = anyDisplaysImage || control.displaysImage;
+  }
+
+  return (
+    sawControl: sawControl,
+    firstHasMoreChunks: firstHasMoreChunks,
+    firstDisplaysImage: firstDisplaysImage,
+    anyDisplaysImage: anyDisplaysImage,
+  );
+}
+
 int _findCsiFinal(String s, int start) {
   for (var i = start; i < s.length; i++) {
     final c = s.codeUnitAt(i);
@@ -485,6 +631,37 @@ int _findCsiFinal(String s, int start) {
 
 bool _isPrivateCsiFinal(int byte) {
   return byte >= 0x70 && byte <= 0x7E; // 'p'..'~'
+}
+
+bool _isControlStringIntroducer(int byte) {
+  return byte == 0x50 || // DCS: ESC P
+      byte == 0x58 || // SOS: ESC X
+      byte == 0x5E || // PM: ESC ^
+      byte == 0x5F; // APC: ESC _
+}
+
+bool _isEightBitControlStringIntroducer(int byte) {
+  return byte == 0x90 || // DCS
+      byte == 0x98 || // SOS
+      byte == 0x9E || // PM
+      byte == 0x9F; // APC
+}
+
+int _findStringTerminator(String s, int start) {
+  for (var i = start; i < s.length - 1; i++) {
+    if (s.codeUnitAt(i) == 0x1B /* ESC */ &&
+        s.codeUnitAt(i + 1) == 0x5C /* '\\' */ ) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
+int _findEightBitStringTerminator(String s, int start) {
+  for (var i = start; i < s.length; i++) {
+    if (s.codeUnitAt(i) == 0x9C) return i + 1;
+  }
+  return -1;
 }
 
 final class _Osc {
