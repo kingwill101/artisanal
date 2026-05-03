@@ -561,8 +561,12 @@ final class Cell {
 
   void _setStyle(UvStyle value) {
     _style = value;
+    if (value.isZero) {
+      _styleId = 0;
+      return;
+    }
     final packed = value.packedKey;
-    _styleId = value.isZero ? 0 : (packed == 0 ? 1 : packed);
+    _styleId = packed == 0 ? 1 : packed;
   }
 
   void _setLink(Link value) {
@@ -574,7 +578,7 @@ final class Cell {
     }
     final id = _linkRegistry.intern(value);
     _linkId = id;
-    _link = _linkRegistry.resolve(id);
+    _link = value;
     _attachLinkFinalizerIfNeeded();
   }
 
@@ -752,18 +756,29 @@ final class _GraphemeEntry {
 
 final class _LinkRegistry {
   int intern(Link link) {
-    _validateLinkText(link);
+    final cachedId = _lastId;
+    if (cachedId != 0 && _lastUrl == link.url && _lastParams == link.params) {
+      final entry = _entryForId(cachedId);
+      if (entry != null) {
+        entry.refCount++;
+        return cachedId;
+      }
+      _clearLast();
+    }
+
     final key = (url: link.url, params: link.params);
     final existing = _idsByKey[key];
     if (existing != null) {
       final entry = _entryForId(existing);
       if (entry != null) {
         entry.refCount++;
+        _cacheLast(entry);
         return existing;
       }
       _idsByKey.remove(key);
     }
 
+    _validateLinkText(link);
     final slotIndex = _freeSlots.isEmpty
         ? _allocateSlot()
         : _freeSlots.removeLast();
@@ -786,6 +801,7 @@ final class _LinkRegistry {
     );
     _slots[slotIndex] = entry;
     _idsByKey[key] = id;
+    _cacheLast(entry);
     return id;
   }
 
@@ -802,6 +818,7 @@ final class _LinkRegistry {
     if (entry.refCount > 0) return;
     final key = (url: entry.url, params: entry.params);
     _idsByKey.remove(key);
+    if (_lastId == id) _clearLast();
     final slotIndex = _decodeSlotIndex(id);
     _freeSlots.add(slotIndex);
   }
@@ -839,10 +856,25 @@ final class _LinkRegistry {
   int _encodeId(int slotIndex, int generation) =>
       (generation << _linkSlotBits) | ((slotIndex + 1) & _linkSlotMask);
 
+  void _cacheLast(_LinkEntry entry) {
+    _lastId = entry.id;
+    _lastUrl = entry.url;
+    _lastParams = entry.params;
+  }
+
+  void _clearLast() {
+    _lastId = 0;
+    _lastUrl = null;
+    _lastParams = null;
+  }
+
   final Map<({String url, String params}), int> _idsByKey =
       <({String url, String params}), int>{};
   final List<_LinkEntry?> _slots = <_LinkEntry?>[];
   final List<int> _freeSlots = <int>[];
+  int _lastId = 0;
+  String? _lastUrl;
+  String? _lastParams;
 }
 
 final class _LinkEntry {
@@ -867,8 +899,15 @@ void _validateLinkText(Link link) {
   }
 }
 
-bool _containsControl(String value) =>
-    value.runes.any((r) => r < 0x20 || r == 0x7f);
+bool _containsControl(String value) => _containsControlCodeUnit(value);
+
+bool _containsControlCodeUnit(String value) {
+  for (var i = 0; i < value.length; i++) {
+    final codeUnit = value.codeUnitAt(i);
+    if (codeUnit < 0x20 || codeUnit == 0x7f) return true;
+  }
+  return false;
+}
 
 /// Returns the pooled grapheme refcount for [id].
 ///
@@ -900,7 +939,7 @@ int debugLinkSlot(int id) => _linkRegistry.slot(id);
 int debugLinkGeneration(int id) => _linkRegistry.generation(id);
 
 const int _slotBits = 16;
-const int _widthBits = 3;
+const int _widthBits = 16;
 const int _slotMask = (1 << _slotBits) - 1;
 const int _widthMask = (1 << _widthBits) - 1;
 const int _linkSlotBits = 16;
