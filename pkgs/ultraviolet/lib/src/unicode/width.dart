@@ -15,15 +15,26 @@ import 'grapheme.dart' as uni;
 /// graphemes during incremental updates.
 ///
 /// Default is 2 (Unicode wide emoji behavior).
-int emojiPresentationWidth = 2;
+int get emojiPresentationWidth => _emojiPresentationWidth;
+
+set emojiPresentationWidth(int width) => setEmojiPresentationWidth(width);
+
+int _emojiPresentationWidth = 2;
 
 /// Sets the display width used for emoji presentation characters.
 ///
 /// Values outside {1,2} are ignored.
 void setEmojiPresentationWidth(int width) {
   if (width != 1 && width != 2) return;
-  emojiPresentationWidth = width;
+  if (_emojiPresentationWidth == width) return;
+  _emojiPresentationWidth = width;
+  _unicodeStringWidthCache.clear();
 }
+
+const _unicodeStringWidthCacheLimit = 2048;
+const _unicodeStringWidthCacheMaxLength = 4096;
+
+final _unicodeStringWidthCache = <String, int>{};
 
 /// Specifies the method used to calculate character display width.
 enum WidthMethod { grapheme, wcwidth }
@@ -39,8 +50,14 @@ extension WidthMethodX on WidthMethod {
     final asciiWidth = _asciiStringWidth(s);
     if (asciiWidth != null) return asciiWidth;
 
+    final cachedWidth = _unicodeStringWidthCache[s];
+    if (cachedWidth != null) return cachedWidth;
+
     final simpleUnicodeWidth = _simpleUnicodeStringWidth(s);
-    if (simpleUnicodeWidth != null) return simpleUnicodeWidth;
+    if (simpleUnicodeWidth != null) {
+      _cacheUnicodeStringWidth(s, simpleUnicodeWidth);
+      return simpleUnicodeWidth;
+    }
 
     var width = 0;
     // Count display width per grapheme cluster to avoid double-counting
@@ -67,6 +84,7 @@ extension WidthMethodX on WidthMethod {
       }
       width += w;
     }
+    _cacheUnicodeStringWidth(s, width);
     return width;
   }
 }
@@ -76,6 +94,14 @@ extension WidthMethodX on WidthMethod {
 /// This is a convenience wrapper around [WidthMethodX.stringWidth] using the
 /// default grapheme-based method.
 int stringWidth(String s) => WidthMethod.grapheme.stringWidth(s);
+
+void _cacheUnicodeStringWidth(String s, int width) {
+  if (s.length > _unicodeStringWidthCacheMaxLength) return;
+  if (_unicodeStringWidthCache.length >= _unicodeStringWidthCacheLimit) {
+    _unicodeStringWidthCache.clear();
+  }
+  _unicodeStringWidthCache[s] = width;
+}
 
 /// Returns the maximum display width across all lines in [s].
 ///
