@@ -104,4 +104,24 @@ void main() {
       r.flush();
     }
   });
+
+  test('UvTerminalRenderer tolerates cursor parked at line width', () {
+    final out = _TestSink();
+    final r = UvTerminalRenderer(out, env: const ['TERM=xterm-256color']);
+
+    final before = Buffer.create(40, 24);
+    before.setCell(0, 0, Cell(content: 'A', width: 1));
+    r.render(before);
+    r.flush();
+
+    // Rapid host resizes can leave the renderer with a phantom cursor position
+    // exactly one column past the last visible cell.
+    r.setPosition(before.width(), 0);
+
+    final after = Buffer.create(40, 24);
+    after.setCell(0, 0, Cell(content: 'B', width: 1));
+
+    expect(() => r.render(after), returnsNormally);
+    expect(() => r.flush(), returnsNormally);
+  });
 }

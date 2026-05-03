@@ -593,6 +593,24 @@ void main() {
       expect(b.touched, everyElement(LineData.clean));
     });
 
+    test(
+      'dirty tracking can be disabled for offscreen composition buffers',
+      () {
+        final b = Buffer.create(5, 2, tracksDirty: false);
+        b.setCell(1, 0, Cell(content: 'A', width: 1));
+        b.touchLine(0, 1, 3);
+
+        expect(b.render(), contains('A'));
+        expect(b.touched, isEmpty);
+        expect(b.dirtyRows, isEmpty);
+        expect(b.dirtyBitSpans(0), isEmpty);
+
+        b.clearDirtyTracking();
+        expect(b.touched, isEmpty);
+        expect(b.dirtyRows, isEmpty);
+      },
+    );
+
     test('dirty bitsets track individual dirty cells and spans', () {
       final b = Buffer.create(40, 2);
       b.touchLine(2, 0, 2);

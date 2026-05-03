@@ -60,5 +60,30 @@ void main() {
         );
       },
     );
+
+    test('Kitty drawable can clear a stable image id before display', () {
+      final image = img.Image(width: 1, height: 1);
+      image.setPixelRgba(0, 0, 255, 0, 0, 255);
+      final canvas = Canvas(2, 3);
+
+      KittyImageDrawable(
+        image,
+        id: 42,
+        columns: 2,
+        rows: 3,
+        clearBeforeDraw: true,
+      ).draw(canvas, canvas.bounds());
+
+      expect(canvas.cellAt(0, 0)?.width, 2);
+      expect(canvas.cellAt(1, 0)?.isZero, isTrue);
+      expect(canvas.cellAt(0, 1)?.isZero, isTrue);
+      expect(canvas.cellAt(1, 1)?.isZero, isTrue);
+      expect(canvas.cellAt(0, 2)?.isZero, isTrue);
+      expect(canvas.cellAt(1, 2)?.isZero, isTrue);
+
+      final rendered = canvas.render();
+      expect(rendered, startsWith('\x1b_Ga=d,d=I,i=42,q=2\x1b\\'));
+      expect(rendered, contains('\x1b_Ga=T,f=100,i=42,c=2,r=3,C=1,q=2'));
+    });
   });
 }

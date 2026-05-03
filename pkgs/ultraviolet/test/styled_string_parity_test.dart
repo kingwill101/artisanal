@@ -728,5 +728,75 @@ void main() {
         }
       }
     });
+
+    test('normalizes oversized truecolor SGR components to byte RGB', () {
+      final scr = ScreenBuffer(3, 1);
+
+      newStyledString(
+        '\x1b[38:2::57531:4369:65535m'
+        'F'
+        '\x1b[48;2;65535;0;57531m'
+        'B'
+        '\x1b[58:2::4369:57531:65535m'
+        'U',
+      ).draw(scr, scr.bounds());
+
+      expect(scr.cellAt(0, 0)?.style.fg, const UvRgb(224, 17, 255));
+      expect(scr.cellAt(1, 0)?.style.bg, const UvRgb(255, 0, 224));
+      expect(scr.cellAt(2, 0)?.style.underlineColor, const UvRgb(17, 224, 255));
+    });
+
+    test('preserves APC and DCS control strings as terminal payload cells', () {
+      const kitty = '\x1b_Ga=T,f=100,i=1,c=2,r=1,C=1,q=2,m=0;AAAA\x1b\\';
+      const sixel = '\x1bPq#0;2;0;0;0!1~\x1b\\';
+      final scr = ScreenBuffer(8, 2);
+
+      newStyledString('${kitty}X\n${sixel}Y').draw(scr, scr.bounds());
+
+      expect(scr.cellAt(0, 0)?.content, kitty);
+      expect(scr.cellAt(0, 0)?.width, 2);
+      expect(scr.cellAt(1, 0)?.isZero, isTrue);
+      expect(scr.cellAt(2, 0)?.content, 'X');
+      expect(scr.cellAt(0, 1)?.content, sixel);
+      expect(scr.cellAt(0, 1)?.width, 1);
+      expect(scr.cellAt(1, 1)?.content, 'Y');
+    });
+
+    test('groups chunked Kitty APC sequences into one image cell', () {
+      const kitty =
+          '\x1b_Ga=T,f=100,i=7,c=4,r=2,C=1,q=2,m=1;AAAA\x1b\\'
+          '\x1b_Gm=0;BBBB\x1b\\';
+      final scr = ScreenBuffer(8, 2);
+
+      newStyledString('${kitty}Z').draw(scr, scr.bounds());
+
+      expect(scr.cellAt(0, 0)?.content, kitty);
+      expect(scr.cellAt(0, 0)?.width, 4);
+      expect(scr.cellAt(1, 0)?.isZero, isTrue);
+      expect(scr.cellAt(2, 0)?.isZero, isTrue);
+      expect(scr.cellAt(3, 0)?.isZero, isTrue);
+      expect(scr.cellAt(4, 0)?.content, 'Z');
+    });
+
+    test('combines Kitty delete commands with the next display cell', () {
+      const delete = '\x1b_Ga=d,d=I,i=9,q=2\x1b\\';
+      const kitty = '\x1b_Ga=T,f=100,i=9,c=3,r=1,C=1,q=2,m=0;AAAA\x1b\\';
+      final scr = ScreenBuffer(8, 1);
+
+      newStyledString('$delete$kitty!').draw(scr, scr.bounds());
+
+      expect(scr.cellAt(0, 0)?.content, '$delete$kitty');
+      expect(scr.cellAt(0, 0)?.width, 3);
+      expect(scr.cellAt(1, 0)?.isZero, isTrue);
+      expect(scr.cellAt(2, 0)?.isZero, isTrue);
+      expect(scr.cellAt(3, 0)?.content, '!');
+    });
+
+    test('bounds account for Kitty image cell width', () {
+      const kitty = '\x1b_Ga=T,f=100,i=9,c=8,r=4,C=1,q=2,m=0;AAAA\x1b\\';
+
+      expect(newStyledString(kitty).bounds(), rect(0, 0, 8, 1));
+      expect(newStyledString('${kitty}X').bounds(), rect(0, 0, 9, 1));
+    });
   });
 }

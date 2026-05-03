@@ -29,7 +29,11 @@ void main() {
       final out = _TestSink();
       final renderer = UvTerminalRenderer(
         out,
-        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+        env: const [
+          'TERM=xterm-256color',
+          'COLORTERM=truecolor',
+          'TTY_FORCE=1',
+        ],
       );
 
       renderer.setFullscreen(true);
@@ -93,5 +97,174 @@ void main() {
       out.value,
       anyOf(contains('\x1b[3G'), contains('\x1b[2C'), contains('\x1b[3`')),
     );
+  });
+
+  test(
+    'UvTerminalRenderer clamps oversized RGB channels before writing SGR',
+    () {
+      final out = _TestSink();
+      final renderer = UvTerminalRenderer(
+        out,
+        env: const [
+          'TERM=xterm-256color',
+          'COLORTERM=truecolor',
+          'TTY_FORCE=1',
+        ],
+      );
+
+      renderer.setFullscreen(true);
+      renderer.setRelativeCursor(false);
+      renderer.saveCursor();
+      renderer.erase();
+
+      final buffer = Buffer.create(1, 1);
+      buffer.setCell(
+        0,
+        0,
+        Cell(
+          content: 'X',
+          width: 1,
+          style: const UvStyle(fg: UvRgb(57531, -1, 999999)),
+        ),
+      );
+
+      renderer.render(buffer);
+      renderer.flush();
+
+      expect(out.value, contains('\x1b[38;2;255;0;255mX'));
+    },
+  );
+
+  test('UvTerminalRenderer advances after Kitty no-cursor display cells', () {
+    const kitty = '\x1b_Ga=T,f=100,i=7,c=3,r=1,C=1,q=2,m=0;AAAA\x1b\\';
+    final out = _TestSink();
+    final renderer = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    );
+
+    renderer.setFullscreen(true);
+    renderer.setRelativeCursor(false);
+    renderer.saveCursor();
+    renderer.erase();
+    renderer.resize(8, 1);
+
+    final buffer = Buffer.create(8, 1);
+    buffer.setCell(0, 0, Cell(content: kitty, width: 3));
+    buffer.setCell(3, 0, Cell(content: 'X', width: 1));
+
+    renderer.render(buffer);
+    renderer.flush();
+
+    final output = out.value;
+    final markerIndex = output.indexOf('X');
+    final kittyIndex = output.indexOf(kitty);
+
+    expect(output, contains('${UvAnsi.cursorForward(3)}X'));
+    expect(output, contains('$kitty${UvAnsi.cursorForward(3)}'));
+    expect(markerIndex, isNonNegative);
+    expect(kittyIndex, isNonNegative);
+    expect(kittyIndex, greaterThan(markerIndex));
+  });
+
+  test('UvTerminalRenderer defers sixel payloads and restores cursor', () {
+    const sixel = 'Pq#0;2;0;0;0!1~\\';
+    final out = _TestSink();
+    final renderer = UvTerminalRenderer(
+      out,
+      env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+    );
+
+    renderer.setFullscreen(true);
+    renderer.setRelativeCursor(false);
+    renderer.saveCursor();
+    renderer.erase();
+    renderer.resize(8, 1);
+
+    final buffer = Buffer.create(8, 1);
+    buffer.setCell(0, 0, Cell(content: sixel, width: 1));
+    buffer.setCell(1, 0, Cell(content: 'X', width: 1));
+
+    renderer.render(buffer);
+    renderer.flush();
+
+    final output = out.value;
+    final markerIndex = output.indexOf('X');
+    final sixelIndex = output.indexOf(sixel);
+
+    expect(output, contains('${UvAnsi.cursorForward(1)}X'));
+    expect(
+      output,
+      contains(
+        '${UvAnsi.cursorPosition(1, 1)}$sixel${UvAnsi.cursorPosition(3, 1)}',
+      ),
+    );
+    expect(markerIndex, isNonNegative);
+    expect(sixelIndex, isNonNegative);
+    expect(sixelIndex, greaterThan(markerIndex));
+    expect(output, isNot(contains('\x1b7')));
+    expect(output, isNot(contains('\x1b8')));
+  });
+
+  test(
+    'UvTerminalRenderer forces full clear when sixel is present or removed',
+    () {
+      const sixel = 'Pq#0;2;0;0;0!1~\\';
+      final out = _TestSink();
+      final renderer = UvTerminalRenderer(
+        out,
+        env: const ['TERM=xterm-256color', 'COLORTERM=truecolor'],
+      );
+
+      renderer.setFullscreen(true);
+      renderer.setRelativeCursor(false);
+      renderer.saveCursor();
+      renderer.erase();
+      renderer.resize(8, 1);
+
+      final withSixel = Buffer.create(8, 1);
+      withSixel.setCell(0, 0, Cell(content: sixel, width: 1));
+      withSixel.setCell(1, 0, Cell(content: 'X', width: 1));
+      renderer.render(withSixel);
+      renderer.flush();
+
+      out.reset();
+      renderer.setPosition(0, 0);
+
+      final withoutSixel = Buffer.create(8, 1);
+      withoutSixel.setCell(0, 0, Cell(content: 'A', width: 1));
+      renderer.render(withoutSixel);
+      renderer.flush();
+
+      expect(out.value, contains(UvAnsi.eraseEntireScreen));
+      expect(out.value, contains('A'));
+    },
+  );
+
+  test('UvTerminalRenderer wraps sixel payloads for tmux passthrough', () {
+    const sixel = 'Pq#0;2;0;0;0!1~\\';
+    final out = _TestSink();
+    final renderer = UvTerminalRenderer(
+      out,
+      env: const [
+        'TERM=tmux-256color',
+        'TMUX=/tmp/tmux-1000/default,123,0',
+        'COLORTERM=truecolor',
+      ],
+    );
+
+    renderer.setFullscreen(true);
+    renderer.setRelativeCursor(false);
+    renderer.saveCursor();
+    renderer.erase();
+    renderer.resize(8, 1);
+
+    final buffer = Buffer.create(8, 1);
+    buffer.setCell(0, 0, Cell(content: sixel, width: 1));
+    renderer.render(buffer);
+    renderer.flush();
+
+    expect(out.value, contains('\x1bPtmux;'));
+    expect(out.value, contains('\x1b\x1bPq#0;2;0;0;0!1~\x1b\x1b\\'));
   });
 }

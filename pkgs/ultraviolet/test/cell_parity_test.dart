@@ -105,12 +105,16 @@ void main() {
     test('encodes grapheme width in pooled ids', () {
       final wide = Cell(content: '👩‍💻', width: 2);
       final combining = Cell(content: '\u0065\u0301', width: 1);
+      final terminalPayload = Cell(content: '\x1b_Gpayload\x1b\\', width: 80);
 
       expect(debugGraphemeWidth(wide.pooledContentId!), 2);
       expect(debugGraphemeWidth(combining.pooledContentId!), 1);
+      expect(debugGraphemeWidth(terminalPayload.pooledContentId!), 80);
+      expect(terminalPayload.content, '\x1b_Gpayload\x1b\\');
 
       wide.dispose();
       combining.dispose();
+      terminalPayload.dispose();
     });
 
     test('pools links by URL and params with refcount tracking', () {
