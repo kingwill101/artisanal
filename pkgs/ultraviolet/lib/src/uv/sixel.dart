@@ -88,6 +88,11 @@ class SixelImage {
     // DCS (Device Control String) start with Sixel introducer.
     buffer.write('\x1bPq');
 
+    // Declare a 1:1 pixel aspect ratio and the encoded raster dimensions.
+    // Terminals like foot can otherwise apply their own defaults and render
+    // the bitmap at the wrong height.
+    buffer.write('"1;1;$width;$height');
+
     // Write color definitions: #<register>;2;<r%>;<g%>;<b%>
     // RGB values are scaled from 0–255 to 0–100 percentages.
     for (final entry in palette.entries) {

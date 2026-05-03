@@ -34,6 +34,7 @@ final class SixelImageDrawable implements Drawable {
     this.maxColors = SixelImage.maxPaletteSize,
     this.cellPixelWidth = 8,
     this.cellPixelHeight = 16,
+    this.allowUpscale = true,
   });
 
   /// The raw RGBA image data.
@@ -54,6 +55,9 @@ final class SixelImageDrawable implements Drawable {
   /// Estimated pixel height of a single terminal cell.
   final int cellPixelHeight;
 
+  /// Whether the drawable may enlarge the source raster beyond its native size.
+  final bool allowUpscale;
+
   @override
   Rectangle bounds() {
     return Rectangle(minX: 0, minY: 0, maxX: columns ?? 0, maxY: rows ?? 0);
@@ -66,20 +70,7 @@ final class SixelImageDrawable implements Drawable {
 
     if (cols <= 0 || rws <= 0) return;
 
-    // Resize the image to fit the target cell dimensions before encoding.
-    // Each cell is cellPixelWidth × cellPixelHeight pixels, so the Sixel
-    // output needs to be cols*cellPixelWidth wide and rws*cellPixelHeight tall.
-    final targetWidth = cols * cellPixelWidth;
-    // Round target height up to the next multiple of 6 for clean Sixel bands.
-    final rawHeight = rws * cellPixelHeight;
-    final targetHeight = ((rawHeight + 5) ~/ 6) * 6;
-
-    final resized = img.copyResize(
-      image,
-      width: targetWidth,
-      height: targetHeight,
-      interpolation: img.Interpolation.average,
-    );
+    final resized = _resizeForTarget(cols, rws);
 
     final sequence = SixelImage.encode(resized, maxColors: maxColors);
 
@@ -92,5 +83,37 @@ final class SixelImageDrawable implements Drawable {
         }
       }
     }
+  }
+
+  img.Image _resizeForTarget(int cols, int rows) {
+    // Each cell is cellPixelWidth x cellPixelHeight pixels, so the Sixel
+    // output wants cols*cellPixelWidth by rows*cellPixelHeight pixels.
+    final targetWidth = cols * cellPixelWidth;
+    final rawHeight = rows * cellPixelHeight;
+    final targetHeight = ((rawHeight + 5) ~/ 6) * 6;
+
+    if (allowUpscale) {
+      return img.copyResize(
+        image,
+        width: targetWidth,
+        height: targetHeight,
+        interpolation: img.Interpolation.average,
+      );
+    }
+
+    final scale = [
+      targetWidth / image.width,
+      targetHeight / image.height,
+      1.0,
+    ].reduce((a, b) => a < b ? a : b);
+
+    if (scale >= 1.0) return image;
+
+    return img.copyResize(
+      image,
+      width: (image.width * scale).round().clamp(1, image.width),
+      height: (image.height * scale).round().clamp(1, image.height),
+      interpolation: img.Interpolation.average,
+    );
   }
 }
