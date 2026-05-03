@@ -152,6 +152,9 @@ final class RenderMetricsProgramMonitor extends ProgramInterceptor {
 
   final ProgramRenderMonitor _monitor = ProgramRenderMonitor();
 
+  @override
+  bool get wantsNativeFrames => _monitor.wantsNativeFrames;
+
   /// Current aggregated render statistics.
   ProgramRenderStats get stats => _monitor.stats;
 

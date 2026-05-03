@@ -138,6 +138,9 @@ final class ProgramRenderFeed extends ProgramInterceptor {
   final StreamController<ProgramRenderEvent> _controller =
       StreamController<ProgramRenderEvent>.broadcast();
 
+  @override
+  bool get wantsNativeFrames => true;
+
   /// Broadcast stream of live render events.
   Stream<ProgramRenderEvent> get stream => _controller.stream;
 
@@ -342,6 +345,9 @@ final class ProgramRenderMonitor extends ProgramInterceptor {
   int? _lastRenderGeneration;
   DegradationLevel? _lastDegradationLevel;
   ProgramRenderChangeSummary? _lastChangeSummary;
+
+  @override
+  bool get wantsNativeFrames => true;
 
   /// Current aggregated statistics.
   ProgramRenderStats get stats => ProgramRenderStats(

@@ -202,6 +202,9 @@ final class ProgramRenderRecorder extends ProgramInterceptor {
   final List<ProgramRenderSnapshot> _snapshots = <ProgramRenderSnapshot>[];
   int _sequence = 0;
 
+  @override
+  bool get wantsNativeFrames => true;
+
   /// Recorded snapshots in capture order.
   List<ProgramRenderSnapshot> get snapshots =>
       List<ProgramRenderSnapshot>.unmodifiable(_snapshots);
@@ -413,6 +416,9 @@ final class ProgramRenderCapturePayload {
 final class ProgramRenderCapture extends ProgramInterceptor {
   final ProgramRenderRecorder _recorder = ProgramRenderRecorder();
   final ProgramRenderMonitor _monitor = ProgramRenderMonitor();
+
+  @override
+  bool get wantsNativeFrames => true;
 
   /// Recorded snapshots in capture order.
   List<ProgramRenderSnapshot> get snapshots => _recorder.snapshots;

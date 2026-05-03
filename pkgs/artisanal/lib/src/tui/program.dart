@@ -109,6 +109,12 @@ typedef MessageFilter = Msg? Function(Model model, Msg msg);
 /// Use this to observe/transform queued messages, inject automation events,
 /// and collect timing metrics for test harnesses.
 abstract class ProgramInterceptor {
+  /// Whether this interceptor needs native cell snapshots after each render.
+  ///
+  /// Capturing native frames is intentionally opt-in because it snapshots the
+  /// whole terminal cell buffer and can dominate render-heavy workloads.
+  bool get wantsNativeFrames => false;
+
   /// Called once after program initialization.
   ///
   /// Use [send] to inject messages (for example, replay scripts).
@@ -3843,25 +3849,41 @@ class Program<M extends Model> with HotReloadMixin {
       _lastView = null;
     }
 
+    final shouldCaptureNativeFrames =
+        (_options.interceptor?.wantsNativeFrames ?? false) ||
+        TuiEvidence.captureFramesEnabled;
+    switch (_renderer) {
+      case NativeFrameInspectableRenderer inspector:
+        inspector.setNativeFrameCaptureEnabled(shouldCaptureNativeFrames);
+      case _:
+        break;
+    }
+
     final renderSw = Stopwatch()..start();
     _renderer!.render(effectiveView);
     _renderGeneration += 1;
     renderSw.stop();
-    final nativeFrame = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeFrame(),
-      _ => null,
-    };
-    final nativeDelta = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeDelta(),
-      _ => null,
-    };
-    final nativeCellDelta = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeCellDelta(),
-      _ => null,
-    };
+    final nativeFrame = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeFrame(),
+            _ => null,
+          }
+        : null;
+    final nativeDelta = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeDelta(),
+            _ => null,
+          }
+        : null;
+    final nativeCellDelta = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeCellDelta(),
+            _ => null,
+          }
+        : null;
     final nativeSpanDelta = nativeCellDelta?.spanDeltas;
     TuiEvidence.logRenderFrame(
       view: effectiveView,
@@ -4025,8 +4047,10 @@ class Program<M extends Model> with HotReloadMixin {
     // synchronously so the scheduled microtask would be redundant.
     _needsRender = false;
 
-    // Clear the renderer's cached view to force a full redraw
-    _renderer!.clear();
+    // Clear the renderer's cached view to force a full redraw without
+    // performing immediate terminal I/O. Calling clear() here can delete
+    // retained terminal-image placements before the replacement frame is ready.
+    _renderer!.invalidate();
     final view = _model!.view();
     final degradationLevel = _renderBudgetController.level;
     final effectiveView = _applyRenderDegradation(view, degradationLevel);
@@ -4039,23 +4063,39 @@ class Program<M extends Model> with HotReloadMixin {
       _lastView = null;
     }
 
+    final shouldCaptureNativeFrames =
+        (_options.interceptor?.wantsNativeFrames ?? false) ||
+        TuiEvidence.captureFramesEnabled;
+    switch (_renderer) {
+      case NativeFrameInspectableRenderer inspector:
+        inspector.setNativeFrameCaptureEnabled(shouldCaptureNativeFrames);
+      case _:
+        break;
+    }
+
     _renderer!.render(effectiveView);
     _renderGeneration += 1;
-    final nativeFrame = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeFrame(),
-      _ => null,
-    };
-    final nativeDelta = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeDelta(),
-      _ => null,
-    };
-    final nativeCellDelta = switch (_renderer) {
-      NativeFrameInspectableRenderer inspector =>
-        inspector.captureNativeCellDelta(),
-      _ => null,
-    };
+    final nativeFrame = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeFrame(),
+            _ => null,
+          }
+        : null;
+    final nativeDelta = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeDelta(),
+            _ => null,
+          }
+        : null;
+    final nativeCellDelta = shouldCaptureNativeFrames
+        ? switch (_renderer) {
+            NativeFrameInspectableRenderer inspector =>
+              inspector.captureNativeCellDelta(),
+            _ => null,
+          }
+        : null;
     final nativeSpanDelta = nativeCellDelta?.spanDeltas;
     _options.interceptor?.onRendered(
       renderGeneration: _renderGeneration,

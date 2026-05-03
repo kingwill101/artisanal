@@ -215,6 +215,9 @@ class ArtisanalDevTools extends ProgramInterceptor {
   // -----------------------------------------------------------------------
 
   @override
+  bool get wantsNativeFrames => inner?.wantsNativeFrames ?? false;
+
+  @override
   void onStart(void Function(Msg msg) send) {
     _send = send;
     _running = true;

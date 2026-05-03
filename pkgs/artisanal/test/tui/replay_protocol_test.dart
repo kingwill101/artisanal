@@ -47,6 +47,25 @@ void main() {
       expect(conversion.scenario.actions[2].value, 'q');
     });
 
+    test('preserves initial delay before first replay action', () async {
+      final tracePath = await _writeTrace(<String>[
+        '# trace start: 2026-02-13T00:00:00.000000',
+        '[+10us] [input] @event {"v":1,"type":"window.size","width":120,"height":40}',
+        '[+3500000us] [input] @event {"v":1,"type":"input.batch","parser":"uv","flush":false,"messages":[{"kind":"key","keyType":"runes","runes":[50]}]}',
+      ]);
+      addTearDown(() async {
+        await File(tracePath).delete();
+      });
+
+      final conversion = await ReplayTraceConverter.convertFile(tracePath);
+
+      expect(conversion.scenario.actions, hasLength(2));
+      expect(conversion.scenario.actions[0].type, 'sleep');
+      expect(conversion.scenario.actions[0].ms, 3500);
+      expect(conversion.scenario.actions[1].type, 'text');
+      expect(conversion.scenario.actions[1].value, '2');
+    });
+
     test('throws when trace lacks structured input events', () async {
       final tracePath = await _writeTrace(<String>[
         '# trace start: 2026-02-13T00:00:00.000000',

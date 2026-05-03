@@ -818,6 +818,7 @@ final class ReplayTraceConverter {
 
     final converted = _toActions(
       filteredEvents,
+      replayStartUs: options.fromUs ?? 0,
       minSleepUs: math.max(0, options.minSleepUs),
       includeHoverMoves: options.includeHoverMoves,
     );
@@ -989,12 +990,13 @@ final class ReplayTraceConverter {
 
   static _ActionConversion _toActions(
     List<_ParsedEvent> events, {
+    required int replayStartUs,
     required int minSleepUs,
     required bool includeHoverMoves,
   }) {
     final actions = <ReplayAction>[];
     var skipped = 0;
-    int? prevKeptTs;
+    int? prevKeptTs = math.max(0, replayStartUs);
     var i = 0;
 
     void maybeSleep(int tsUs) {
