@@ -746,6 +746,21 @@ void main() {
       expect(scr.cellAt(2, 0)?.style.underlineColor, const UvRgb(17, 224, 255));
     });
 
+    test('draws mixed ASCII and complex graphemes in the same scan', () {
+      final scr = ScreenBuffer(10, 1);
+
+      newStyledString('A😀e\u0301Z').draw(scr, scr.bounds());
+
+      expect(scr.cellAt(0, 0)?.content, 'A');
+      expect(scr.cellAt(0, 0)?.width, 1);
+      expect(scr.cellAt(1, 0)?.content, '😀');
+      expect(scr.cellAt(1, 0)?.width, 2);
+      expect(scr.cellAt(3, 0)?.content, 'e\u0301');
+      expect(scr.cellAt(3, 0)?.width, 1);
+      expect(scr.cellAt(4, 0)?.content, 'Z');
+      expect(scr.cellAt(4, 0)?.width, 1);
+    });
+
     test('preserves APC and DCS control strings as terminal payload cells', () {
       const kitty = '\x1b_Ga=T,f=100,i=1,c=2,r=1,C=1,q=2,m=0;AAAA\x1b\\';
       const sixel = '\x1bPq#0;2;0;0;0!1~\x1b\\';

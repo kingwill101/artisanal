@@ -52,6 +52,16 @@
   unicode string-width cache to keep cached values consistent.
 - Unicode string widths are cached (up to 2048 entries, strings up to 4096
   chars) to reduce repeated grapheme-cluster traversal on the same strings.
+- `Rectangle.isEmpty` now checks precomputed edges directly in hot render
+  paths.
+
+### Performance
+
+- Optimized packed cell construction for styled text and printable ASCII cells.
+- Cached repeated style ids and ASCII scalar strings so Markdown-heavy render
+  paths avoid repeated packed-style encoding and `String.fromCharCode` churn.
+- Reduced offscreen composition overhead by using non-dirty-tracked buffers and
+  updating line cells in place.
 
 ### Fixed
 

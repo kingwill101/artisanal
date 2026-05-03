@@ -1196,28 +1196,35 @@ final class UvTerminalRenderer {
       drawable.draw(_screen, rect(_cur.x, _cur.y, cell.width, 1));
     } else {
       final rawWidth = cell?.width;
-      final content = cell?.content ?? ' ';
       if (rawWidth == 0) return;
 
       final cellWidth = (rawWidth == null || rawWidth < 0) ? 1 : rawWidth;
-      if (!terminal_graphics.mayContainTerminalGraphics(content)) {
-        _buf.write(content);
-      } else if (terminal_graphics.containsRetainedTerminalGraphics(content)) {
-        _deferredRetainedGraphics.add(
-          _DeferredRetainedGraphic(_cur.x, _cur.y, content, cellWidth),
-        );
-        _buf.write(UvAnsi.cursorForward(cellWidth));
-      } else if (terminal_graphics.containsSixelDisplay(content)) {
-        _deferredDisplayPayloads.add(
-          _DeferredDisplayPayload(_cur.x, _cur.y, content, cellWidth),
-        );
-        _buf.write(UvAnsi.cursorForward(cellWidth));
+      final asciiCodeUnit = cell?.asciiCodeUnit;
+      if (asciiCodeUnit != null) {
+        _buf.writeCharCode(asciiCodeUnit);
       } else {
-        _buf.write(content);
-        if (terminal_graphics.terminalGraphicsSuppressesCursorMovement(
+        final content = cell?.content ?? ' ';
+        if (!terminal_graphics.mayContainTerminalGraphics(content)) {
+          _buf.write(content);
+        } else if (terminal_graphics.containsRetainedTerminalGraphics(
           content,
         )) {
+          _deferredRetainedGraphics.add(
+            _DeferredRetainedGraphic(_cur.x, _cur.y, content, cellWidth),
+          );
           _buf.write(UvAnsi.cursorForward(cellWidth));
+        } else if (terminal_graphics.containsSixelDisplay(content)) {
+          _deferredDisplayPayloads.add(
+            _DeferredDisplayPayload(_cur.x, _cur.y, content, cellWidth),
+          );
+          _buf.write(UvAnsi.cursorForward(cellWidth));
+        } else {
+          _buf.write(content);
+          if (terminal_graphics.terminalGraphicsSuppressesCursorMovement(
+            content,
+          )) {
+            _buf.write(UvAnsi.cursorForward(cellWidth));
+          }
         }
       }
 

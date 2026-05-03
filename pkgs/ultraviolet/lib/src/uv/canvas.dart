@@ -30,7 +30,15 @@ import '../unicode/width.dart';
 /// Canvas is a cell-buffer that can be used to compose and draw [Drawable]s.
 ///
 /// Upstream: `third_party/lipgloss/canvas.go` (Canvas backed by `uv.ScreenBuffer`).
-final class Canvas implements Screen, OwnedCellScreen, Drawable {
+final class Canvas
+    implements
+        Screen,
+        OwnedCellScreen,
+        ClearableScreen,
+        ClearAreaScreen,
+        FillableScreen,
+        FillAreaScreen,
+        Drawable {
   /// Creates a canvas with [width] and [height] in cells.
   Canvas(int width, int height)
     : _scr = ScreenBuffer(width, height, tracksDirty: false) {
@@ -44,7 +52,17 @@ final class Canvas implements Screen, OwnedCellScreen, Drawable {
   void resize(int width, int height) => _scr.resize(width, height);
 
   /// Clears the entire canvas to empty cells.
+  @override
   void clear() => _scr.clear();
+
+  @override
+  void clearArea(Rectangle area) => _scr.clearArea(area);
+
+  @override
+  void fill(Cell? cell) => _scr.fill(cell);
+
+  @override
+  void fillArea(Cell? cell, Rectangle area) => _scr.fillArea(cell, area);
 
   /// The current canvas width in cells.
   int width() => _scr.width();

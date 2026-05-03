@@ -68,7 +68,7 @@ final class Rectangle {
   int get height => maxY - minY;
 
   /// Whether this rectangle has no area.
-  bool get isEmpty => width <= 0 || height <= 0;
+  bool get isEmpty => maxX <= minX || maxY <= minY;
 
   /// Returns whether [p] lies within this rectangle.
   bool contains(Position p) =>

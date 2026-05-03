@@ -292,6 +292,9 @@ final class Cell {
   String get content => switch (_contentKind) {
     _CellContentKind.empty => '',
     _CellContentKind.space => ' ',
+    _CellContentKind.singleScalar
+        when _contentValue < _asciiScalarStrings.length =>
+      _asciiScalarStrings[_contentValue],
     _CellContentKind.singleScalar => String.fromCharCode(_contentValue),
     _CellContentKind.complex => _graphemePool.resolve(_contentValue),
     _ => '',
@@ -534,10 +537,65 @@ final class Cell {
 
   /// Creates a new cell from a grapheme, computing its display width.
   static Cell newCell(WidthMethod method, String grapheme) {
-    if (grapheme.isEmpty) return Cell();
+    if (grapheme.isEmpty) return Cell.zeroCell();
     if (grapheme == ' ') return Cell.emptyCell();
-    return Cell(content: grapheme, width: method.stringWidth(grapheme));
+    final width = method.stringWidth(grapheme);
+    final scalar = _trySingleScalar(grapheme);
+    if (scalar != null) {
+      return Cell._packed(
+        style: const UvStyle(),
+        link: const Link(),
+        width: width,
+        contentKind: _CellContentKind.singleScalar,
+        contentValue: scalar,
+        styleId: 0,
+        linkId: 0,
+      );
+    }
+    return Cell._packed(
+      style: const UvStyle(),
+      link: const Link(),
+      width: width,
+      contentKind: _CellContentKind.complex,
+      contentValue: _graphemePool.intern(grapheme, width),
+      styleId: 0,
+      linkId: 0,
+    );
   }
+
+  /// Creates a one-cell printable ASCII cell without width/grapheme scanning.
+  static Cell ascii(int codeUnit) => asciiStyled(codeUnit);
+
+  /// Creates a styled one-cell printable ASCII cell without setter churn.
+  static Cell asciiStyled(
+    int codeUnit, {
+    UvStyle style = const UvStyle(),
+    Link link = const Link(),
+  }) {
+    assert(codeUnit >= 0x20 && codeUnit < 0x7F);
+    final styleId = _styleIdFor(style);
+    final linkId = link.isZero ? 0 : _linkRegistry.intern(link);
+    return Cell._packed(
+      style: style,
+      link: link,
+      width: 1,
+      contentKind: codeUnit == 0x20
+          ? _CellContentKind.space
+          : _CellContentKind.singleScalar,
+      contentValue: codeUnit == 0x20 ? 0 : codeUnit,
+      styleId: styleId,
+      linkId: linkId,
+    );
+  }
+
+  /// Returns the printable ASCII code unit for this cell, if it has one.
+  int? get asciiCodeUnit => switch (_contentKind) {
+    _CellContentKind.space when _width == 1 => 0x20,
+    _CellContentKind.singleScalar
+        when _contentValue >= 0x20 && _contentValue < 0x7F =>
+      _contentValue,
+    _ => null,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -561,12 +619,7 @@ final class Cell {
 
   void _setStyle(UvStyle value) {
     _style = value;
-    if (value.isZero) {
-      _styleId = 0;
-      return;
-    }
-    final packed = value.packedKey;
-    _styleId = packed == 0 ? 1 : packed;
+    _styleId = _styleIdFor(value);
   }
 
   void _setLink(Link value) {
@@ -651,6 +704,24 @@ abstract final class _CellContentKind {
 
 final _GraphemePool _graphemePool = _GraphemePool();
 final _LinkRegistry _linkRegistry = _LinkRegistry();
+final List<String> _asciiScalarStrings = List<String>.generate(
+  0x80,
+  String.fromCharCode,
+  growable: false,
+);
+UvStyle? _lastStyleIdStyle;
+int _lastStyleId = 0;
+
+int _styleIdFor(UvStyle style) {
+  if (style.isZero) return 0;
+  final cachedStyle = _lastStyleIdStyle;
+  if (identical(cachedStyle, style)) return _lastStyleId;
+  final packed = style.packedKey;
+  final styleId = packed == 0 ? 1 : packed;
+  _lastStyleIdStyle = style;
+  _lastStyleId = styleId;
+  return styleId;
+}
 
 final class _GraphemePool {
   final Map<({String value, int width}), int> _idsByKey =

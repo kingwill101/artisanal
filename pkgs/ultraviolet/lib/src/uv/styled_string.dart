@@ -63,11 +63,16 @@ final class StyledString implements Drawable {
   @override
   /// Draws this styled string into [screen] inside [area], clearing first.
   void draw(Screen screen, Rectangle area) {
-    // Clear the area before drawing.
-    for (var y = area.minY; y < area.maxY; y++) {
-      for (var x = area.minX; x < area.maxX; x++) {
-        screen.setCell(x, y, null);
+    final clearable = screen is ClearAreaScreen ? screen : null;
+    if (clearable == null) {
+      // Clear the area before drawing.
+      for (var y = area.minY; y < area.maxY; y++) {
+        for (var x = area.minX; x < area.maxX; x++) {
+          screen.setCell(x, y, null);
+        }
       }
+    } else {
+      clearable.clearArea(area);
     }
 
     // Normalize CRLF to NL to emulate raw terminal output.
@@ -94,6 +99,9 @@ StyledString newStyledString(String str) => StyledString(str);
 
 // --- ANSI parsing helpers ----------------------------------------------------
 
+const _sgrParamCacheLimit = 256;
+final _sgrParamCache = <String, List<SgrParam>>{};
+
 /// Represents a parsed SGR (Select Graphic Rendition) parameter.
 final class SgrParam {
   /// Creates an SGR parameter with [value] and optional [sub]-parameters.
@@ -111,6 +119,9 @@ final class SgrParam {
 
 List<SgrParam> _parseSgrParams(String raw) {
   if (raw.isEmpty) return const [];
+  final cached = _sgrParamCache[raw];
+  if (cached != null) return cached;
+
   final parts = raw.split(';');
   final out = <SgrParam>[];
   for (final part in parts) {
@@ -127,6 +138,10 @@ List<SgrParam> _parseSgrParams(String raw) {
     }
     out.add(SgrParam(value, sub));
   }
+  if (_sgrParamCache.length >= _sgrParamCacheLimit) {
+    _sgrParamCache.clear();
+  }
+  _sgrParamCache[raw] = out;
   return out;
 }
 
@@ -437,6 +452,47 @@ void _printString(
     x += cellWidth;
   }
 
+  void writePrintableCell(Cell cell, {bool attributesApplied = false}) {
+    if (pendingEscapes.isNotEmpty) {
+      cell.content = '${pendingEscapes.toString()}${cell.content}';
+      clearPendingEscapes();
+      attributesApplied = false;
+    }
+    if (hasCurrentAttributes && !attributesApplied) {
+      applyCurrentAttributes(cell);
+    }
+
+    if (!truncate && x + cell.width > bounds.maxX && y + 1 < bounds.maxY) {
+      // Wrap to next line.
+      x = bounds.minX;
+      y++;
+    }
+
+    final pos = Position(x, y);
+    if (bounds.contains(pos)) {
+      if (truncate &&
+          tailCell != null &&
+          tailCell.width > 0 &&
+          x + cell.width > bounds.maxX - tailCell.width) {
+        final t = tailCell.clone();
+        if (hasCurrentAttributes) applyCurrentAttributes(t);
+        setFreshCell(x, y, t);
+        lastCellX = x;
+        lastCellY = y;
+        x += t.width;
+        // Stop drawing further content on this line.
+        x = bounds.maxX;
+      } else {
+        setFreshCell(x, y, cell);
+        lastCellX = x;
+        lastCellY = y;
+        x += cell.width;
+      }
+    } else {
+      x += cell.width;
+    }
+  }
+
   var i = 0;
   while (i < input.length) {
     final codeUnit = input.codeUnitAt(i);
@@ -541,43 +597,18 @@ void _printString(
       continue;
     }
 
+    if (_isStandalonePrintableAscii(input, i, codeUnit)) {
+      final attributesApplied = pendingEscapes.isEmpty && hasCurrentAttributes;
+      final cell = attributesApplied
+          ? Cell.asciiStyled(codeUnit, style: currentStyle, link: currentLink)
+          : Cell.ascii(codeUnit);
+      writePrintableCell(cell, attributesApplied: attributesApplied);
+      i++;
+      continue;
+    }
+
     final (:grapheme, :nextIndex) = uni.readGraphemeAt(input, i);
-    var cell = Cell.newCell(method, grapheme);
-    if (pendingEscapes.isNotEmpty) {
-      cell.content = '${pendingEscapes.toString()}${cell.content}';
-      clearPendingEscapes();
-    }
-    if (hasCurrentAttributes) applyCurrentAttributes(cell);
-
-    if (!truncate && x + cell.width > bounds.maxX && y + 1 < bounds.maxY) {
-      // Wrap to next line.
-      x = bounds.minX;
-      y++;
-    }
-
-    final pos = Position(x, y);
-    if (bounds.contains(pos)) {
-      if (truncate &&
-          tailCell != null &&
-          tailCell.width > 0 &&
-          x + cell.width > bounds.maxX - tailCell.width) {
-        final t = tailCell.clone();
-        if (hasCurrentAttributes) applyCurrentAttributes(t);
-        setFreshCell(x, y, t);
-        lastCellX = x;
-        lastCellY = y;
-        x += t.width;
-        // Stop drawing further content on this line.
-        x = bounds.maxX;
-      } else {
-        setFreshCell(x, y, cell);
-        lastCellX = x;
-        lastCellY = y;
-        x += cell.width;
-      }
-    } else {
-      x += cell.width;
-    }
+    writePrintableCell(Cell.newCell(method, grapheme));
 
     i = nextIndex;
   }
@@ -587,6 +618,24 @@ void _printString(
 
 int _pendingControlCellWidth(String controls) {
   return terminal_graphics.terminalGraphicsControlCellWidth(controls);
+}
+
+bool _isStandalonePrintableAscii(String input, int index, int codeUnit) {
+  if (codeUnit < 0x20 || codeUnit >= 0x7F) return false;
+  final nextIndex = index + 1;
+  if (nextIndex >= input.length) return true;
+  final next = input.codeUnitAt(nextIndex);
+  return !_continuesPreviousGrapheme(next);
+}
+
+bool _continuesPreviousGrapheme(int codeUnit) {
+  if (codeUnit >= 0x0300 && codeUnit <= 0x036F) return true;
+  if (codeUnit >= 0x1AB0 && codeUnit <= 0x1AFF) return true;
+  if (codeUnit >= 0x1DC0 && codeUnit <= 0x1DFF) return true;
+  if (codeUnit >= 0x20D0 && codeUnit <= 0x20FF) return true;
+  if (codeUnit >= 0xFE20 && codeUnit <= 0xFE2F) return true;
+  if (codeUnit >= 0xFE00 && codeUnit <= 0xFE0F) return true;
+  return codeUnit == 0x200D;
 }
 
 ({
