@@ -36,6 +36,7 @@ final class KittyImageDrawable implements Drawable {
     this.columns,
     this.rows,
     this.quiet = 2,
+    this.clearBeforeDraw = false,
   }) : id = id ?? KittyImage.getNextImageId();
 
   /// The raw PNG-encoded image data.
@@ -59,6 +60,12 @@ final class KittyImageDrawable implements Drawable {
   /// - 2: suppress all responses (default)
   final int quiet;
 
+  /// Whether drawing should first delete existing placements for [id].
+  ///
+  /// This is useful for retained-mode renderers that repaint a stable image ID:
+  /// it prevents stale Kitty placements from surviving after a resize or move.
+  final bool clearBeforeDraw;
+
   @override
   Rectangle bounds() {
     return Rectangle(minX: 0, minY: 0, maxX: columns ?? 0, maxY: rows ?? 0);
@@ -71,25 +78,29 @@ final class KittyImageDrawable implements Drawable {
 
     if (cols <= 0 || rws <= 0) return;
 
-    final sequence = KittyImage.encode(
+    final imageSequence = KittyImage.encode(
       image,
       id: id,
       columns: cols,
       rows: rws,
       quiet: quiet,
     );
+    final sequence = clearBeforeDraw
+        ? '${deleteSequence()}$imageSequence'
+        : imageSequence;
 
-    // Place the escape sequence in the top-left cell of the area.
-    // Mark all other cells in the area as "occupied" (width 0, empty content)
-    // so the renderer doesn't overwrite them with normal cell output.
-    for (var y = area.minY; y < area.minY + rws && y < area.maxY; y++) {
+    // Place the escape sequence in the top-left cell and give that cell the
+    // same width Kitty will advance the real cursor by. `Line.set` marks the
+    // rest of that row as zero-width placeholders; writing those placeholders
+    // manually would clear the wide origin cell again.
+    screen.setCell(area.minX, area.minY, Cell(content: sequence, width: cols));
+
+    // Reserve the remaining image rows without emitting text cells. Real
+    // spaces would be drawn after the Kitty placement and can cover the image
+    // with the terminal background in Ghostty/Kitty-compatible renderers.
+    for (var y = area.minY + 1; y < area.minY + rws && y < area.maxY; y++) {
       for (var x = area.minX; x < area.minX + cols && x < area.maxX; x++) {
-        if (x == area.minX && y == area.minY) {
-          screen.setCell(x, y, Cell(content: sequence, width: 1));
-        } else {
-          // Mark as occupied. Width 0 means it doesn't advance the cursor.
-          screen.setCell(x, y, Cell(content: '', width: 0));
-        }
+        screen.setCell(x, y, Cell.zeroCell());
       }
     }
   }

@@ -28,6 +28,9 @@ class KittyImage {
   /// [rows] is the number of terminal rows the image should occupy.
   /// [quiet] suppresses terminal responses: 0 = no suppression,
   ///   1 = suppress OK responses, 2 = suppress all responses (default).
+  /// [suppressCursorMovement] asks the terminal not to advance after drawing;
+  /// retained renderers can then move the cursor explicitly and keep their
+  /// logical cursor state aligned with the terminal.
   ///
   /// Returns a string containing the escape sequences to display the image.
   static String encode(
@@ -37,6 +40,7 @@ class KittyImage {
     int? columns,
     int? rows,
     int quiet = 2,
+    bool suppressCursorMovement = true,
   }) {
     // Encode as PNG for efficient transmission.
     final pngBytes = img.encodePng(image);
@@ -47,6 +51,7 @@ class KittyImage {
       columns: columns,
       rows: rows,
       quiet: quiet,
+      suppressCursorMovement: suppressCursorMovement,
     );
   }
 
@@ -60,6 +65,8 @@ class KittyImage {
   /// [columns] is the number of terminal columns the image should occupy.
   /// [rows] is the number of terminal rows the image should occupy.
   /// [quiet] suppresses terminal responses (default 2 = suppress all).
+  /// [suppressCursorMovement] emits Kitty `C=1`, preventing the terminal from
+  /// moving the cursor while the retained renderer advances it explicitly.
   ///
   /// Returns a string containing the escape sequences to display the image.
   static String encodePng(
@@ -69,6 +76,7 @@ class KittyImage {
     int? columns,
     int? rows,
     int quiet = 2,
+    bool suppressCursorMovement = true,
   }) {
     final base64Data = base64Encode(pngBytes);
 
@@ -85,6 +93,9 @@ class KittyImage {
     }
     if (rows != null) {
       params.write(',r=$rows');
+    }
+    if (suppressCursorMovement) {
+      params.write(',C=1');
     }
     if (quiet > 0) {
       params.write(',q=$quiet');
