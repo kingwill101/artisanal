@@ -77,7 +77,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
            renderer ??
            TerminalRenderer(
              forceProfile: ansi == true
-                 ? null
+                 ? ColorProfile.trueColor
                  : (ansi == false ? ColorProfile.ascii : null),
              forceNoAnsi: ansi == false,
            ),
@@ -161,9 +161,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       if (ansi == false) {
         _renderer = TerminalRenderer(forceProfile: ColorProfile.ascii);
       } else if (ansi == true) {
-        // If forced on, we use default detection but could optionally force ANSI support.
-        // For now we leave it to auto-detect the best profile.
-        _renderer = TerminalRenderer();
+        _renderer = TerminalRenderer(forceProfile: ColorProfile.trueColor);
       } else {
         _renderer = TerminalRenderer();
       }
@@ -207,19 +205,22 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     }
     buffer.writeln();
 
-    buffer.writeln(_heading('Available commands:'));
-    buffer.writeln(
-      formatCommandListing(
-        _uniqueTopLevelEntries(),
-        namespaceSeparator: namespaceSeparator,
-        styleNamespace: _heading,
-        styleCommand: _command,
-      ),
-    );
-    buffer.writeln();
-    buffer.writeln(
-      'Run ${_emphasize('"$executableName <command> --help"')} for more information about a command.',
-    );
+    final commandEntries = _uniqueTopLevelEntries();
+    if (commandEntries.isNotEmpty) {
+      buffer.writeln(_heading('Available commands:'));
+      buffer.writeln(
+        formatCommandListing(
+          commandEntries,
+          namespaceSeparator: namespaceSeparator,
+          styleNamespace: _heading,
+          styleCommand: _command,
+        ),
+      );
+      buffer.writeln();
+      buffer.writeln(
+        'Run ${_emphasize('"$executableName <command> --help"')} for more information about a command.',
+      );
+    }
 
     return buffer.toString().trimRight();
   }

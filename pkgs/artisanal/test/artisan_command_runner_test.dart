@@ -42,6 +42,50 @@ void main() {
     expect(usage, contains('  schema:describe'));
   });
 
+  test('global usage omits command section when no app commands exist', () {
+    final runner =
+        CommandRunner<void>(
+            'github_cli',
+            'GitHub CLI TUI',
+            ansi: false,
+            out: (_) {},
+            err: (_) {},
+            setExitCode: (_) {},
+          )
+          ..argParser.addOption(
+            'repo',
+            abbr: 'R',
+            help: 'Repository to inspect.',
+            valueHelp: 'owner/repo',
+          );
+
+    final usage = runner.formatGlobalUsage();
+
+    expect(usage, contains('Usage:'));
+    expect(usage, contains('--repo=<owner/repo>'));
+    expect(usage, isNot(contains('Available commands:')));
+    expect(usage, isNot(contains('Run "github_cli <command> --help"')));
+  });
+
+  test('explicit --ansi forces styled global usage output', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final runner = CommandRunner<void>(
+      'github_cli',
+      'GitHub CLI TUI',
+      out: (line) => out.writeln(line),
+      err: (line) => err.writeln(line),
+      setExitCode: (_) {},
+    );
+
+    await runner.run(['--ansi', '--help']);
+
+    expect(err.toString(), isEmpty);
+    expect(out.toString(), contains('\x1b['));
+    expect(out.toString(), contains('Usage:'));
+  });
+
   test(
     'command --help prints sectioned output (Description/Usage/Options)',
     () async {
