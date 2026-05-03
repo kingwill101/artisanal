@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.1-wip
+
+### Changed
+
+- Moved terminal image decoding off the main TUI isolate and cached rendered
+  image output to reduce scroll-time stalls in image-heavy views.
+- Improved large scroll/list rendering by preserving scrollbars beside OSC 8
+  and terminal-graphics content and avoiding unnecessary render-tree hit-test
+  descents.
+- Updated workspace dependency constraints for the current `artisanal` WIP
+  package.
+
+### Fixed
+
+- Kept non-overlay scrollbars visible when content includes Kitty graphics or
+  OSC 8 hyperlinks.
+
 ## 0.2.0
 
 ### Added

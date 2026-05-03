@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1-wip
+
+### Changed
+
+- Reduced UV-backed TUI render overhead by reading the terminal size once per
+  render pass.
+- Updated workspace dependency constraints for the current `ultraviolet` and
+  `artisanal_widgets` WIP packages.
+
 ## 0.3.0
 
 ### Added
