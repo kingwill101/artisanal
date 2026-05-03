@@ -412,7 +412,7 @@ void _demoChangelog() {
 
 ### ✨ Added
 - OSC 8 hyperlink support for clickable links
-- Task list checkbox rendering (☑/☐)
+- Task list checkbox rendering ([x]/[ ])
 - Nested blockquote support
 
 ### 📝 Documentation

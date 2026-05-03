@@ -1007,8 +1007,8 @@ void main() {
       expect(opts.hyperlinks, isTrue);
       expect(opts.hrChar, equals('\u2500'));
       expect(opts.hrWidth, isNull);
-      expect(opts.checkboxChecked, equals('\u2611'));
-      expect(opts.checkboxUnchecked, equals('\u2610'));
+      expect(opts.checkboxChecked, equals('[x]'));
+      expect(opts.checkboxUnchecked, equals('[ ]'));
       expect(opts.listIndent, equals(2));
       expect(opts.codeBlockBorder, isTrue);
       expect(opts.tableBorder, isNull);
@@ -1258,8 +1258,8 @@ void main() {
       expect(plain, contains('Cell1'));
 
       // Task lists
-      expect(result, contains('\u2611')); // checked
-      expect(result, contains('\u2610')); // unchecked
+      expect(plain, contains('[x] Task done'));
+      expect(plain, contains('[ ] Task pending'));
 
       // Link
       expect(plain, contains('Link text'));

@@ -4,12 +4,76 @@
 /// with support for custom color themes using artisanal's Style system.
 library;
 
-import 'package:highlight/highlight.dart' show highlight, Node;
+import 'package:highlight/highlight_core.dart' show Highlight, Mode, Node;
+import 'package:highlight/languages/bash.dart' as highlight_bash;
+import 'package:highlight/languages/cmake.dart' as highlight_cmake;
+import 'package:highlight/languages/cpp.dart' as highlight_cpp;
+import 'package:highlight/languages/cs.dart' as highlight_cs;
+import 'package:highlight/languages/css.dart' as highlight_css;
+import 'package:highlight/languages/dart.dart' as highlight_dart;
+import 'package:highlight/languages/diff.dart' as highlight_diff;
+import 'package:highlight/languages/dockerfile.dart' as highlight_dockerfile;
+import 'package:highlight/languages/fsharp.dart' as highlight_fsharp;
+import 'package:highlight/languages/go.dart' as highlight_go;
+import 'package:highlight/languages/gradle.dart' as highlight_gradle;
+import 'package:highlight/languages/ini.dart' as highlight_ini;
+import 'package:highlight/languages/java.dart' as highlight_java;
+import 'package:highlight/languages/javascript.dart' as highlight_javascript;
+import 'package:highlight/languages/json.dart' as highlight_json;
+import 'package:highlight/languages/kotlin.dart' as highlight_kotlin;
+import 'package:highlight/languages/makefile.dart' as highlight_makefile;
+import 'package:highlight/languages/markdown.dart' as highlight_markdown;
+import 'package:highlight/languages/objectivec.dart' as highlight_objectivec;
+import 'package:highlight/languages/php.dart' as highlight_php;
+import 'package:highlight/languages/plaintext.dart' as highlight_plaintext;
+import 'package:highlight/languages/protobuf.dart' as highlight_protobuf;
+import 'package:highlight/languages/python.dart' as highlight_python;
+import 'package:highlight/languages/ruby.dart' as highlight_ruby;
+import 'package:highlight/languages/rust.dart' as highlight_rust;
+import 'package:highlight/languages/sql.dart' as highlight_sql;
+import 'package:highlight/languages/swift.dart' as highlight_swift;
+import 'package:highlight/languages/typescript.dart' as highlight_typescript;
+import 'package:highlight/languages/xml.dart' as highlight_xml;
+import 'package:highlight/languages/yaml.dart' as highlight_yaml;
 
 import '../../style/style.dart';
 import '../../style/color.dart' show BasicColor;
 import '../../unicode/grapheme.dart' as uni;
 import 'fence_language_resolver.dart';
+
+final Highlight _highlight = Highlight()
+  ..registerLanguages(<String, Mode>{
+    'bash': highlight_bash.bash,
+    'cmake': highlight_cmake.cmake,
+    'cpp': highlight_cpp.cpp,
+    'cs': highlight_cs.cs,
+    'css': highlight_css.css,
+    'dart': highlight_dart.dart,
+    'diff': highlight_diff.diff,
+    'dockerfile': highlight_dockerfile.dockerfile,
+    'fsharp': highlight_fsharp.fsharp,
+    'go': highlight_go.go,
+    'gradle': highlight_gradle.gradle,
+    'ini': highlight_ini.ini,
+    'java': highlight_java.java,
+    'javascript': highlight_javascript.javascript,
+    'json': highlight_json.json,
+    'kotlin': highlight_kotlin.kotlin,
+    'makefile': highlight_makefile.makefile,
+    'markdown': highlight_markdown.markdown,
+    'objectivec': highlight_objectivec.objectivec,
+    'php': highlight_php.php,
+    'plaintext': highlight_plaintext.plaintext,
+    'protobuf': highlight_protobuf.protobuf,
+    'python': highlight_python.python,
+    'ruby': highlight_ruby.ruby,
+    'rust': highlight_rust.rust,
+    'sql': highlight_sql.sql,
+    'swift': highlight_swift.swift,
+    'typescript': highlight_typescript.typescript,
+    'xml': highlight_xml.xml,
+    'yaml': highlight_yaml.yaml,
+  });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Chroma-Style Color Theme
@@ -848,7 +912,7 @@ class SyntaxHighlighter {
     // Try to highlight with the specified language
     if (lang != null && lang.isNotEmpty) {
       try {
-        final result = highlight.parse(code, language: lang);
+        final result = _highlight.parse(code, language: lang);
         if (result.nodes != null && result.nodes!.isNotEmpty) {
           return result.nodes!;
         }
@@ -859,7 +923,7 @@ class SyntaxHighlighter {
 
     // Try auto-detection
     try {
-      final result = highlight.parse(code, autoDetection: true);
+      final result = _highlight.parse(code, autoDetection: true);
       if (result.nodes != null &&
           result.nodes!.isNotEmpty &&
           result.language != null &&

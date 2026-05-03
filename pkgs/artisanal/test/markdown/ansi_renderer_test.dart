@@ -73,6 +73,68 @@ void main() {
       });
     });
 
+    group('raw HTML', () {
+      test('renders inline HTML tags semantically', () {
+        final result = markdownToAnsi(
+          'This is <strong>bold</strong>, <em>em</em>, '
+          '<code>x</code>, and <a href="https://example.test">link</a>.',
+        );
+        final plain = Ansi.stripAnsi(result);
+
+        expect(plain, contains('This is bold, em, x, and link.'));
+        expect(plain, isNot(contains('<strong>')));
+        expect(result, contains('\x1b[1m')); // strong
+        expect(result, contains('\x1b[3m')); // emphasis
+        expect(result, contains('\x1b]8;;https://example.test\x1b\\'));
+      });
+
+      test('renders block HTML tags and lists without leaking tags', () {
+        final result = markdownToAnsi('''
+<p><strong>Upcoming</strong> change</p>
+<ul>
+  <li>First item</li>
+  <li><p>Second item</p></li>
+</ul>
+<blockquote><p>quoted</p></blockquote>
+''');
+        final plain = Ansi.stripAnsi(result);
+
+        expect(plain, contains('Upcoming change'));
+        expect(plain, contains('\u2022 First item'));
+        expect(plain, contains('\u2022 Second item'));
+        expect(plain, contains('\u2502 quoted'));
+        expect(plain, isNot(contains('<p>')));
+        expect(plain, isNot(contains('<li>')));
+      });
+
+      test('renders details as collapsed summaries by default', () {
+        final result = markdownToAnsi('''
+<details>
+<summary>Release notes</summary>
+<p>Hidden release body</p>
+</details>
+''');
+        final plain = Ansi.stripAnsi(result);
+
+        expect(plain, contains('\u25b8 Release notes'));
+        expect(plain, isNot(contains('Hidden release body')));
+        expect(plain, isNot(contains('<details>')));
+      });
+
+      test('renders open details with body content', () {
+        final result = markdownToAnsi('''
+<details open>
+<summary>Release notes</summary>
+<p>Visible release body</p>
+</details>
+''');
+        final plain = Ansi.stripAnsi(result);
+
+        expect(plain, contains('\u25be Release notes'));
+        expect(plain, contains('Visible release body'));
+      });
+    });
+
     group('links', () {
       test('renders links with underline and color', () {
         final result = markdownToAnsi('[Example](https://example.com)');
@@ -220,6 +282,19 @@ void main() {}
         expect(noHighlight != withHighlight, isTrue);
       });
 
+      test('skips syntax highlighting for oversized code blocks', () {
+        final result = markdownToAnsi('''
+```dart
+void main() {
+  print('too large for interactive highlighting');
+}
+```
+''', options: const AnsiRendererOptions(maxSyntaxHighlightCodeUnits: 16));
+
+        expect(Ansi.stripAnsi(result), contains('void main()'));
+        expect(result, isNot(contains('38;2;0;170;255')));
+      });
+
       test('uses default rounded border style', () {
         final result = markdownToAnsi('''
 ```
@@ -338,12 +413,74 @@ void main() {}
     group('task lists', () {
       test('renders unchecked checkbox', () {
         final result = markdownToAnsi('- [ ] Todo item');
-        expect(result, contains('\u2610')); // Unchecked box
+        expect(Ansi.stripAnsi(result), contains('[ ] Todo item'));
       });
 
       test('renders checked checkbox', () {
         final result = markdownToAnsi('- [x] Done item');
-        expect(result, contains('\u2611')); // Checked box
+        expect(Ansi.stripAnsi(result), contains('[x] Done item'));
+      });
+
+      test('renders GitHub task list items without a bullet prefix', () {
+        final result = markdownToAnsi('''
+- [x] PoC `ws_uncompressed_oom_server.py` reproduces OOM kill on unpatched `dart:stable`.
+- [ ] After the fix: parser throws `WebSocketException("Frame payload length 209715200 exceeds maximum 16777216. ...")` immediately.
+''');
+        final stripped = Ansi.stripAnsi(result);
+
+        expect(stripped, contains('[x] PoC'));
+        expect(stripped, contains('[ ] After the fix'));
+        expect(stripped, isNot(contains('\u2022 [x]')));
+        expect(stripped, isNot(contains('\u2022 [ ]')));
+      });
+
+      test('indents wrapped task list continuation lines under text', () {
+        final result = markdownToAnsi(
+          '- [ ] This item has enough words to wrap onto another line cleanly.',
+          options: const AnsiRendererOptions(width: 30),
+        );
+        final lines = Ansi.stripAnsi(
+          result,
+        ).split('\n').where((line) => line.isNotEmpty).toList();
+
+        expect(lines.first, startsWith('[ ] This item'));
+        for (final line in lines.skip(1)) {
+          expect(line, startsWith('    '));
+          expect(line, isNot(startsWith('[ ]')));
+        }
+      });
+
+      test('indents wrapped list items with inline code spans', () {
+        final result = markdownToAnsi(
+          '- [ ] After the fix: parser throws '
+          '`WebSocketException("Frame payload length 209715200 exceeds '
+          'maximum 16777216. ...")` immediately after parsing the 64-bit '
+          'length header.',
+          options: const AnsiRendererOptions(width: 68),
+        );
+        final lines = Ansi.stripAnsi(
+          result,
+        ).split('\n').where((line) => line.isNotEmpty).toList();
+
+        expect(lines.first, startsWith('[ ] After the fix'));
+        for (final line in lines.skip(1)) {
+          expect(line, startsWith('    '));
+          expect(line, isNot(startsWith('[ ]')));
+        }
+      });
+
+      test('indents wrapped unordered list continuations under text', () {
+        final result = markdownToAnsi(
+          '- Generous vs typical WS message sizes including browser caps and '
+          'runtime defaults.',
+          options: const AnsiRendererOptions(width: 44),
+        );
+        final lines = Ansi.stripAnsi(
+          result,
+        ).split('\n').where((line) => line.isNotEmpty).toList();
+
+        expect(lines.first, startsWith('\u2022 Generous'));
+        expect(lines[1], startsWith('  '));
       });
     });
 
@@ -512,6 +649,7 @@ a < b && c > d
       expect(options.hrChar, equals('\u2500'));
       expect(options.listIndent, equals(2));
       expect(options.codeBlockBorder, isTrue);
+      expect(options.maxSyntaxHighlightCodeUnits, equals(8000));
     });
   });
 

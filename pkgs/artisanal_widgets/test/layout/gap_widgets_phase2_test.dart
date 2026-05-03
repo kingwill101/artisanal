@@ -52,6 +52,47 @@ void main() {
       expect(tester.find.text('Short text'), isTrue);
     });
 
+    test('wraps task-list items with layout constraint width', () async {
+      final tester = WidgetTester(screenWidth: 44, screenHeight: 8);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        MarkdownText(
+          data:
+              '- [ ] After the fix: parser throws `WebSocketException("Frame payload length 209715200 exceeds maximum 16777216. ...")` immediately.',
+          maxWidth: 80,
+        ),
+      );
+
+      final lines = Style.stripAnsi(
+        tester.view,
+      ).split('\n').where((line) => line.trim().isNotEmpty).toList();
+      expect(lines.first, startsWith('[ ] After the fix'));
+      for (final line in lines.skip(1)) {
+        expect(line, startsWith('    '));
+      }
+    });
+
+    test('calls onLinkTap for clicked markdown links', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      String? tappedUrl;
+
+      await tester.pumpWidget(
+        MarkdownText(
+          data: '[Example](https://example.test)',
+          onLinkTap: (url) {
+            tappedUrl = url;
+            return null;
+          },
+        ),
+      );
+
+      tester.tap(tester.find.textLocation('Example'));
+
+      expect(tappedUrl, equals('https://example.test'));
+    });
+
     test('renders empty string without error', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());

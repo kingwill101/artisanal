@@ -26,11 +26,14 @@ class GlamourRenderer implements md.NodeVisitor {
   final List<GlamourPrimitiveStyle> _inlineStack = [];
   final List<String> _linkStack = [];
   final HtmlUnescape _htmlUnescape = HtmlUnescape();
+  final List<_DetailsContext> _detailsStack = [];
 
   // Current render state
   final List<int> _listCounters = [];
   final List<bool> _listIsOrdered = [];
+  final List<bool> _taskCheckboxRenderedStack = [];
   int _lastChar = 0;
+  bool _inPreBlock = false;
 
   // Syntax Highlighting
 
@@ -47,9 +50,12 @@ class GlamourRenderer implements md.NodeVisitor {
     _blockStack.clear();
     _inlineStack.clear();
     _linkStack.clear();
+    _detailsStack.clear();
     _listCounters.clear();
     _listIsOrdered.clear();
+    _taskCheckboxRenderedStack.clear();
     _lastChar = 0;
+    _inPreBlock = false;
 
     // Push document root block
     _enterBlock(theme.document, width);
@@ -298,6 +304,10 @@ class GlamourRenderer implements md.NodeVisitor {
 
   @override
   bool visitElementBefore(md.Element element) {
+    if (_insideCollapsedDetailsBody && element.tag != 'summary') {
+      return false;
+    }
+
     switch (element.tag) {
       case 'h1':
         _enterHeading(theme.h1);
@@ -367,12 +377,28 @@ class GlamourRenderer implements md.NodeVisitor {
         _inlineStack.add(theme.emph);
         return true;
       case 'code':
+        if (_inPreBlock) return true;
         _inlineStack.add(theme.code.style);
         return true;
       case 'a':
         _inlineStack.add(theme.linkText);
         _linkStack.add(element.attributes['href'] ?? '');
         return true;
+      case 'del':
+        _inlineStack.add(theme.strikethrough);
+        return true;
+      case 'u':
+        _inlineStack.add(const GlamourPrimitiveStyle(underline: true));
+        return true;
+      case 'mark':
+        _inlineStack.add(const GlamourPrimitiveStyle(inverse: true));
+        return true;
+      case 'br':
+        _ensureNewline();
+        return false;
+      case 'img':
+        _renderImage(element);
+        return false;
 
       case 'hr':
         _ensureNewline();
@@ -382,10 +408,44 @@ class GlamourRenderer implements md.NodeVisitor {
         _ensureNewline();
         return true;
 
+      case 'details':
+        _ensureNewline();
+        _detailsStack.add(
+          _DetailsContext(
+            expanded:
+                element.attributes.containsKey('open') ||
+                element.attributes['open'] == 'true',
+          ),
+        );
+        return true;
+
+      case 'summary':
+        if (_detailsStack.isNotEmpty) {
+          final details = _detailsStack.last;
+          details.inSummary = true;
+          _writeRaw(details.expanded ? '\u25be ' : '\u25b8 ');
+        }
+        return true;
+
+      case 'pre':
+        _ensureNewline();
+        _inPreBlock = true;
+        final style = _cascadeBlock(
+          _blockStack.last.style,
+          theme.codeBlock.style,
+          toBlock: false,
+        );
+        _enterBlock(style, _currentWidth);
+        return true;
+
       case 'input':
         // Handle task list checkboxes
         final type = element.attributes['type'];
         if (type == 'checkbox') {
+          if (_taskCheckboxRenderedStack.isNotEmpty &&
+              _taskCheckboxRenderedStack.last) {
+            return false;
+          }
           final checked = element.attributes['checked'] == 'true';
           _writeStyled(
             checked ? theme.task.ticked : theme.task.unticked,
@@ -435,6 +495,7 @@ class GlamourRenderer implements md.NodeVisitor {
 
   @override
   void visitText(md.Text text) {
+    if (_insideCollapsedDetailsBody) return;
     if (_inTableCell) return; // Don't write text for table cells
     var content = _htmlUnescape.convert(text.text);
     _writeStyled(content, _currentTextStyle());
@@ -459,6 +520,9 @@ class GlamourRenderer implements md.NodeVisitor {
         _exitBlock();
         break;
       case 'li':
+        if (_taskCheckboxRenderedStack.isNotEmpty) {
+          _taskCheckboxRenderedStack.removeLast();
+        }
         _ensureNewline();
         break;
 
@@ -473,11 +537,38 @@ class GlamourRenderer implements md.NodeVisitor {
         _inlineStack.removeLast();
         break;
       case 'code':
-        _inlineStack.removeLast();
+        if (!_inPreBlock) {
+          _inlineStack.removeLast();
+        }
         break;
       case 'a':
         _inlineStack.removeLast();
         _linkStack.removeLast();
+        break;
+      case 'del':
+      case 'u':
+      case 'mark':
+        _inlineStack.removeLast();
+        break;
+
+      case 'summary':
+        if (_detailsStack.isNotEmpty) {
+          _detailsStack.last.inSummary = false;
+          _ensureNewline();
+        }
+        break;
+
+      case 'details':
+        if (_detailsStack.isNotEmpty) {
+          _detailsStack.removeLast();
+        }
+        _ensureNewline();
+        break;
+
+      case 'pre':
+        _inPreBlock = false;
+        _exitBlock();
+        _ensureNewline();
         break;
 
       case 'table':
@@ -580,6 +671,16 @@ class GlamourRenderer implements md.NodeVisitor {
     _ensureNewline();
   }
 
+  void _renderImage(md.Element element) {
+    final alt = element.attributes['alt'] ?? 'image';
+    final src = element.attributes['src'] ?? '';
+    final label = alt.isEmpty ? 'image' : alt;
+    _writeStyled('[Image: $label]', theme.imageText);
+    if (src.isNotEmpty) {
+      _writeStyled(' ($src)', theme.image);
+    }
+  }
+
   void _enterHeading(GlamourBlockStyle specificStyle) {
     final heading = _cascadeBlocks([theme.heading, specificStyle]);
     final merged = _cascadeBlock(
@@ -606,20 +707,54 @@ class GlamourRenderer implements md.NodeVisitor {
       isOrdered ? theme.enumeration : theme.item,
       toBlock: false,
     );
+    final taskInput = _firstTaskListInput(element);
+    final taskCheckbox = taskInput == null
+        ? null
+        : (taskInput.attributes['checked'] == 'true'
+              ? theme.task.ticked
+              : theme.task.unticked);
     if (_listCounters.isNotEmpty) {
       _listCounters.last++;
     }
     final index = _listCounters.isNotEmpty ? _listCounters.last : 1;
-    final prefix = isOrdered
-        ? '$index${theme.enumeration.blockPrefix ?? '. '}'
-        : (theme.item.blockPrefix ?? '* ');
+    final prefix =
+        taskCheckbox ??
+        (isOrdered
+            ? '$index${theme.enumeration.blockPrefix ?? '. '}'
+            : (theme.item.blockPrefix ?? '* '));
     _writeStyled(prefix, itemStyle);
+    _taskCheckboxRenderedStack.add(taskCheckbox != null);
+  }
+
+  md.Element? _firstTaskListInput(md.Element element) {
+    final children = element.children;
+    if (children == null) return null;
+
+    for (final child in children) {
+      if (child is md.Text && child.text.trim().isEmpty) {
+        continue;
+      }
+      if (child is md.Element &&
+          child.tag == 'input' &&
+          child.attributes['type'] == 'checkbox') {
+        return child;
+      }
+      return null;
+    }
+
+    return null;
   }
 
   // --- Output Helpers ---
 
   int get _currentWidth =>
       _blockStack.isNotEmpty ? _blockStack.last.maxWidth : width;
+
+  bool get _insideCollapsedDetailsBody {
+    return _detailsStack.any((details) {
+      return !details.expanded && !details.inSummary;
+    });
+  }
 
   void _writeStyled(String text, GlamourPrimitiveStyle style) {
     if (text.isEmpty) return;
@@ -742,4 +877,11 @@ class GlamourBlockContext {
 
   /// The string buffer accumulating this block's output.
   final StringBuffer buffer = StringBuffer();
+}
+
+class _DetailsContext {
+  _DetailsContext({required this.expanded});
+
+  final bool expanded;
+  bool inSummary = false;
 }
