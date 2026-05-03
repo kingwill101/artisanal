@@ -14,6 +14,7 @@ import '../colorprofile/profile.dart' as cp;
 
 import 'ansi.dart';
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 
 /// Converts a [UvStyle] to respect the given terminal color [profile].
 ///
@@ -283,13 +284,18 @@ String? _simpleRgbStyleToSgr(UvStyle style) {
   final fg = style.fg as UvRgb?;
   final bg = style.bg as UvRgb?;
   if (fg == null && bg == null) return UvAnsi.resetStyle;
+  final fgParams = fg == null ? null : _rgbParams(fg);
+  final bgParams = bg == null ? null : _rgbParams(bg);
   if (fg != null && bg != null) {
-    return '\x1b[38;2;${fg.r};${fg.g};${fg.b};48;2;${bg.r};${bg.g};${bg.b}m';
+    return '\x1b[38;2;${fgParams!};48;2;${bgParams!}'
+        'm';
   }
   if (fg != null) {
-    return '\x1b[38;2;${fg.r};${fg.g};${fg.b}m';
+    return '\x1b[38;2;${fgParams!}'
+        'm';
   }
-  return '\x1b[48;2;${bg!.r};${bg.g};${bg.b}m';
+  return '\x1b[48;2;${bgParams!}'
+      'm';
 }
 
 String? _simpleRgbStyleDiff(UvStyle from, UvStyle? to) {
@@ -329,11 +335,19 @@ String _simpleRgbDiffCode(UvRgb? color, _ColorTarget target) {
   if (color == null) {
     return target == _ColorTarget.fg ? '39' : '49';
   }
+  final rgb = _rgbParams(color);
   return switch (target) {
-    _ColorTarget.fg => '38;2;${color.r};${color.g};${color.b}',
-    _ColorTarget.bg => '48;2;${color.r};${color.g};${color.b}',
+    _ColorTarget.fg => '38;2;$rgb',
+    _ColorTarget.bg => '48;2;$rgb',
     _ColorTarget.underline => '59',
   };
+}
+
+String _rgbParams(UvRgb color) {
+  final r = color_utils.clampRgbChannel(color.r);
+  final g = color_utils.clampRgbChannel(color.g);
+  final b = color_utils.clampRgbChannel(color.b);
+  return '$r;$g;$b';
 }
 
 String _colorDiffCode(UvColor? c, _ColorTarget target) {
@@ -377,12 +391,15 @@ String? _colorCode(UvColor? c, _ColorTarget target) {
         _ColorTarget.underline => '58:5:$index',
       };
     case UvRgb(:final r, :final g, :final b):
+      final rr = color_utils.clampRgbChannel(r);
+      final gg = color_utils.clampRgbChannel(g);
+      final bb = color_utils.clampRgbChannel(b);
       return switch (target) {
-        _ColorTarget.fg => '38;2;$r;$g;$b',
-        _ColorTarget.bg => '48;2;$r;$g;$b',
+        _ColorTarget.fg => '38;2;$rr;$gg;$bb',
+        _ColorTarget.bg => '48;2;$rr;$gg;$bb',
         // Underline color uses xterm-style colon parameters.
         // Example: ESC[58:2::r:g:bm
-        _ColorTarget.underline => '58:2::$r:$g:$b',
+        _ColorTarget.underline => '58:2::$rr:$gg:$bb',
       };
   }
 }

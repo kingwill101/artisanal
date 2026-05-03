@@ -9,11 +9,23 @@ library;
 
 import 'cell.dart';
 
-int _shift16To8(int x) => x > 0xff ? (x >> 8) : x;
+int _shift16To8(int x) {
+  if (x <= 0) return 0;
+  if (x <= 0xff) return x;
+  if (x <= 0xffff) return x >> 8;
+  return 0xff;
+}
 
 /// Upstream: `third_party/ultraviolet/decoder.go` (`shift`).
 /// Shifts a 16-bit color component down to 8-bit.
 int shift(int x) => _shift16To8(x);
+
+/// Clamps a color component to the byte range required by SGR truecolor.
+int clampRgbChannel(int x) {
+  if (x <= 0) return 0;
+  if (x >= 0xff) return 0xff;
+  return x;
+}
 
 /// Upstream: `third_party/ultraviolet/decoder.go` (`colorToHex`).
 /// Formats [c] as a `#RRGGBB` hex string, or empty if null.

@@ -11,6 +11,7 @@ library;
 
 import 'ansi.dart';
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 import '../unicode/width.dart';
 
 import '../unicode/grapheme.dart' as uni;
@@ -168,7 +169,10 @@ String _styleToSgr(UvStyle style) {
       case UvIndexed256(:final index):
         codes.add(prefix == 'fg' ? '38;5;$index' : '48;5;$index');
       case UvRgb(:final r, :final g, :final b):
-        codes.add(prefix == 'fg' ? '38;2;$r;$g;$b' : '48;2;$r;$g;$b');
+        final rr = color_utils.clampRgbChannel(r);
+        final gg = color_utils.clampRgbChannel(g);
+        final bb = color_utils.clampRgbChannel(b);
+        codes.add(prefix == 'fg' ? '38;2;$rr;$gg;$bb' : '48;2;$rr;$gg;$bb');
     }
   }
 
@@ -440,7 +444,14 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
       final g = int.tryParse(params[start + 2]);
       final b = int.tryParse(params[start + 3]);
       if (r != null && g != null && b != null) {
-        return (UvColor.rgb(r, g, b), 4);
+        return (
+          UvColor.rgb(
+            color_utils.shift(r),
+            color_utils.shift(g),
+            color_utils.shift(b),
+          ),
+          4,
+        );
       }
     }
     return (null, 1);

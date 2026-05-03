@@ -9,6 +9,7 @@ library;
 
 import 'ansi.dart' as uv_ansi;
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 import 'style_ops.dart' as uv_ops;
 import '../unicode/grapheme.dart' as uni;
 import '../unicode/width.dart';
@@ -411,9 +412,9 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
                 ? out.copyWith(fg: UvColor.indexed256(idx))
                 : out.copyWith(bg: UvColor.indexed256(idx));
           } else if (mode == 2 && p.sub.length >= 5) {
-            final r = p.sub[2];
-            final g = p.sub[3];
-            final b = p.sub[4];
+            final r = color_utils.shift(p.sub[2]);
+            final g = color_utils.shift(p.sub[3]);
+            final b = color_utils.shift(p.sub[4]);
             out = isFg
                 ? out.copyWith(fg: UvColor.rgb(r, g, b))
                 : out.copyWith(bg: UvColor.rgb(r, g, b));
@@ -430,9 +431,9 @@ UvStyle _applySgr(String rawParams, UvStyle style) {
               : out.copyWith(bg: UvColor.indexed256(idx));
           i += 2;
         } else if (mode == 2 && i + 4 < params.length) {
-          final r = params[i + 2].value;
-          final g = params[i + 3].value;
-          final b = params[i + 4].value;
+          final r = color_utils.shift(params[i + 2].value);
+          final g = color_utils.shift(params[i + 3].value);
+          final b = color_utils.shift(params[i + 4].value);
           out = isFg
               ? out.copyWith(fg: UvColor.rgb(r, g, b))
               : out.copyWith(bg: UvColor.rgb(r, g, b));
