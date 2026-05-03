@@ -30,12 +30,14 @@ import 'dart:typed_data' show Int32List;
 import 'ansi.dart';
 import 'buffer.dart';
 import 'cell.dart';
+import 'color_utils.dart' as color_utils;
 import 'drawable.dart';
 import 'environ.dart';
 import 'geometry.dart';
 import 'screen.dart';
 import 'style_ops.dart' as style_ops;
 import 'tabstop.dart';
+import 'terminal_graphics.dart' as terminal_graphics;
 import '../unicode/width.dart';
 
 import '../colorprofile/detect.dart' as cp_detect;
@@ -372,14 +374,23 @@ final class UvTerminalRenderer {
     _saved = _cur.clone();
     _profile = _detectProfile(_env, isTty);
     _screen = _RendererScreen(this);
+    final environ = Environ(_env);
+    _isTmuxSession =
+        environ.getenv('TMUX').isNotEmpty ||
+        environ.getenv('TERM').startsWith('tmux');
   }
 
   final StringSink _writer;
   final List<String> _env;
   final String _term;
+  late final bool _isTmuxSession;
 
   final StringBuffer _buf = StringBuffer();
   final _FrameArena _arena = _FrameArena();
+  final List<_DeferredRetainedGraphic> _deferredRetainedGraphics =
+      <_DeferredRetainedGraphic>[];
+  final List<_DeferredDisplayPayload> _deferredDisplayPayloads =
+      <_DeferredDisplayPayload>[];
   Buffer? _curbuf;
   String _lastFlushedOutput = '';
   late final Screen _screen;
@@ -883,8 +894,15 @@ final class UvTerminalRenderer {
   void render(Buffer newbuf) {
     metrics.beginFrame();
     _arena.reset();
+    _deferredRetainedGraphics.clear();
+    _deferredDisplayPayloads.clear();
 
     _curbuf ??= Buffer.create(newbuf.width(), newbuf.height());
+
+    if (_bufferContainsSixelDisplay(newbuf) ||
+        (_curbuf != null && _bufferContainsSixelDisplay(_curbuf!))) {
+      erase();
+    }
 
     // Detect stale content: cells that exist in _curbuf from a previous frame
     // but are not marked dirty in newbuf. This happens when content (e.g. an
@@ -990,6 +1008,8 @@ final class UvTerminalRenderer {
 
     // Reset pen after rendering to avoid style/link bleed.
     _updatePen(null);
+    _flushDeferredRetainedGraphics(newbuf);
+    _flushDeferredDisplayPayloads();
     if (useSync) {
       _buf.write(UvAnsi.endSynchronizedUpdate);
     }
@@ -1139,11 +1159,11 @@ final class UvTerminalRenderer {
       return;
     }
     _buf.write(fg ? '38;2;' : '48;2;');
-    _buf.write(_sgrByte[color.r]);
+    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.r)]);
     _buf.write(';');
-    _buf.write(_sgrByte[color.g]);
+    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.g)]);
     _buf.write(';');
-    _buf.write(_sgrByte[color.b]);
+    _buf.write(_sgrByte[color_utils.clampRgbChannel(color.b)]);
   }
 
   void _wrapCursor() {
@@ -1176,8 +1196,30 @@ final class UvTerminalRenderer {
       drawable.draw(_screen, rect(_cur.x, _cur.y, cell.width, 1));
     } else {
       final rawWidth = cell?.width;
-      final cellWidth = (rawWidth == null || rawWidth <= 0) ? 1 : rawWidth;
-      _buf.write(cell?.content ?? ' ');
+      final content = cell?.content ?? ' ';
+      if (rawWidth == 0) return;
+
+      final cellWidth = (rawWidth == null || rawWidth < 0) ? 1 : rawWidth;
+      if (!terminal_graphics.mayContainTerminalGraphics(content)) {
+        _buf.write(content);
+      } else if (terminal_graphics.containsRetainedTerminalGraphics(content)) {
+        _deferredRetainedGraphics.add(
+          _DeferredRetainedGraphic(_cur.x, _cur.y, content, cellWidth),
+        );
+        _buf.write(UvAnsi.cursorForward(cellWidth));
+      } else if (terminal_graphics.containsSixelDisplay(content)) {
+        _deferredDisplayPayloads.add(
+          _DeferredDisplayPayload(_cur.x, _cur.y, content, cellWidth),
+        );
+        _buf.write(UvAnsi.cursorForward(cellWidth));
+      } else {
+        _buf.write(content);
+        if (terminal_graphics.terminalGraphicsSuppressesCursorMovement(
+          content,
+        )) {
+          _buf.write(UvAnsi.cursorForward(cellWidth));
+        }
+      }
 
       _cur.x += cellWidth;
     }
@@ -1185,6 +1227,58 @@ final class UvTerminalRenderer {
     if (_cur.x >= (newbuf?.width() ?? width())) {
       _atPhantom = true;
     }
+  }
+
+  void _flushDeferredRetainedGraphics(Buffer newbuf) {
+    if (_deferredRetainedGraphics.isEmpty) return;
+
+    _updatePen(null);
+    final restoreX = _cur.x;
+    final restoreY = _cur.y;
+    for (final graphic in _deferredRetainedGraphics) {
+      _move(newbuf, graphic.x, graphic.y);
+      _buf.write(_wrapDisplayPayloadForTransport(graphic.content));
+      if (terminal_graphics.terminalGraphicsSuppressesCursorMovement(
+        graphic.content,
+      )) {
+        _buf.write(UvAnsi.cursorForward(graphic.width));
+      }
+      _cur.x = graphic.x + graphic.width;
+      _cur.y = graphic.y;
+    }
+    if (restoreX >= 0 && restoreY >= 0) {
+      _move(newbuf, restoreX, restoreY);
+    }
+    _deferredRetainedGraphics.clear();
+  }
+
+  void _flushDeferredDisplayPayloads() {
+    if (_deferredDisplayPayloads.isEmpty) return;
+
+    _updatePen(null);
+    final restoreX = _cur.x;
+    final restoreY = _cur.y;
+    for (final payload in _deferredDisplayPayloads) {
+      _writeAbsoluteCursorPosition(payload.x, payload.y);
+      _buf.write(_wrapDisplayPayloadForTransport(payload.content));
+    }
+    if (restoreX >= 0 && restoreY >= 0) {
+      _writeAbsoluteCursorPosition(restoreX, restoreY);
+    }
+    _deferredDisplayPayloads.clear();
+  }
+
+  void _writeAbsoluteCursorPosition(int x, int y) {
+    _buf.write(UvAnsi.cursorPosition(x + 1, y + 1));
+    _cur.x = x;
+    _cur.y = y;
+    _atPhantom = false;
+  }
+
+  String _wrapDisplayPayloadForTransport(String content) {
+    if (!_isTmuxSession) return content;
+    final escaped = content.replaceAll('\x1b', '\x1b\x1b');
+    return '\x1bPtmux;$escaped\x1b\\';
   }
 
   void _putCellLR(Buffer? newbuf, Cell? cell) {
@@ -2633,6 +2727,38 @@ String debugDirectRelativeMoveSeq(
   }
 
   return (seq: seq, scrollHeight: scrollHeight);
+}
+
+bool _bufferContainsSixelDisplay(Buffer buffer) {
+  for (var y = 0; y < buffer.height(); y++) {
+    final line = buffer.line(y);
+    if (line == null) continue;
+    for (final cell in line.cells) {
+      if (!terminal_graphics.mayContainTerminalGraphics(cell.content)) {
+        continue;
+      }
+      if (terminal_graphics.containsSixelDisplay(cell.content)) return true;
+    }
+  }
+  return false;
+}
+
+final class _DeferredRetainedGraphic {
+  const _DeferredRetainedGraphic(this.x, this.y, this.content, this.width);
+
+  final int x;
+  final int y;
+  final String content;
+  final int width;
+}
+
+final class _DeferredDisplayPayload {
+  const _DeferredDisplayPayload(this.x, this.y, this.content, this.width);
+
+  final int x;
+  final int y;
+  final String content;
+  final int width;
 }
 
 final class _RendererScreen implements Screen {
