@@ -2627,7 +2627,7 @@ String _padOrClipScrollbarLine(String line, int width) {
   if (visibleWidth == width) return line;
   final padding = ' ' * (width - visibleWidth);
   if (_mayLeaveTerminalStateOpen(line)) {
-    return '$line$_ansiResetStyle$padding';
+    return '$line${_resetOpenTerminalState(line)}$padding';
   }
   return '$line$padding';
 }
@@ -2641,22 +2641,111 @@ bool _hasUnsupportedScrollbarFastPathControls(String text) {
   while (escapeIndex >= 0) {
     if (escapeIndex + 1 >= text.length) return true;
     final next = text.codeUnitAt(escapeIndex + 1);
-    if (next != 0x5B) return true; // Only CSI, including SGR, is safe.
-    escapeIndex = text.indexOf('\x1b', escapeIndex + 2);
+    if (next == 0x5B) {
+      // CSI, including SGR, is safe for line-wise composition.
+      escapeIndex = text.indexOf('\x1b', escapeIndex + 2);
+      continue;
+    }
+    if (next == 0x5D) {
+      // OSC 8 hyperlinks do not occupy cells and are safe to keep in the
+      // content side while appending a separate scrollbar column.
+      final osc8End = _safeOsc8End(text, escapeIndex);
+      if (osc8End < 0) return true;
+      escapeIndex = text.indexOf('\x1b', osc8End);
+      continue;
+    }
+    if (next == 0x5F) {
+      // Kitty graphics controls are safe for non-overlay scrollbar composition:
+      // the bar is appended beside the content, and the final UV renderer
+      // reparses the complete frame into cells before emitting terminal output.
+      final kittyEnd = _safeKittyGraphicsEnd(text, escapeIndex);
+      if (kittyEnd < 0) return true;
+      escapeIndex = text.indexOf('\x1b', kittyEnd);
+      continue;
+    }
+    return true;
   }
 
-  // 8-bit CSI is safe, but 8-bit APC/DCS graphics controls must use canvas
-  // composition so graphics display cells are interpreted correctly.
-  if (text.contains('\x9fG') || text.contains('\x90q')) return true;
+  if (_hasMalformedC1KittyGraphics(text)) return true;
+  // Sixel still uses canvas composition until the text parser can preserve its
+  // display-cell width as precisely as Kitty retained graphics.
+  if (text.contains('\x90q')) return true;
 
   return false;
 }
 
 bool _mayLeaveTerminalStateOpen(String line) {
-  return line.contains('\x1b[') || line.contains('\x9b');
+  return line.contains('\x1b[') ||
+      line.contains('\x9b') ||
+      line.contains('\x1b]8;');
+}
+
+String _resetOpenTerminalState(String line) {
+  final reset = StringBuffer();
+  if (line.contains('\x1b[') || line.contains('\x9b')) {
+    reset.write(_ansiResetStyle);
+  }
+  if (line.contains('\x1b]8;')) {
+    reset.write(_osc8Reset);
+  }
+  return reset.toString();
+}
+
+int _safeOsc8End(String text, int escapeIndex) {
+  final commandStart = escapeIndex + 2;
+  if (commandStart >= text.length) return -1;
+
+  final terminator = _oscTerminatorEnd(text, commandStart);
+  if (terminator < 0) return -1;
+
+  final commandEnd = text.indexOf(';', commandStart);
+  if (commandEnd < 0 || commandEnd >= terminator) return -1;
+  if (text.substring(commandStart, commandEnd) != '8') return -1;
+
+  return terminator;
+}
+
+int _oscTerminatorEnd(String text, int start) {
+  for (var i = start; i < text.length; i++) {
+    final code = text.codeUnitAt(i);
+    if (code == 0x07) return i + 1;
+    if (code == 0x1B && i + 1 < text.length && text.codeUnitAt(i + 1) == 0x5C) {
+      return i + 2;
+    }
+  }
+  return -1;
+}
+
+int _safeKittyGraphicsEnd(String text, int escapeIndex) {
+  if (escapeIndex + 2 >= text.length) return -1;
+  if (text.codeUnitAt(escapeIndex + 1) != 0x5F ||
+      text.codeUnitAt(escapeIndex + 2) != 0x47) {
+    return -1;
+  }
+  return _stringTerminatorEnd(text, escapeIndex + 3);
+}
+
+bool _hasMalformedC1KittyGraphics(String text) {
+  var c1Index = text.indexOf('\x9fG');
+  while (c1Index >= 0) {
+    final end = text.indexOf('\x9c', c1Index + 2);
+    if (end < 0) return true;
+    c1Index = text.indexOf('\x9fG', end + 1);
+  }
+  return false;
+}
+
+int _stringTerminatorEnd(String text, int start) {
+  for (var i = start; i < text.length - 1; i++) {
+    if (text.codeUnitAt(i) == 0x1B && text.codeUnitAt(i + 1) == 0x5C) {
+      return i + 2;
+    }
+  }
+  return -1;
 }
 
 const _ansiResetStyle = '\x1b[m';
+const _osc8Reset = '\x1b]8;;\x1b\\';
 
 String _renderScrollbar({
   required ScrollController controller,

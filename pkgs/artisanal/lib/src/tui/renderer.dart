@@ -800,12 +800,13 @@ class UltravioletTuiRenderer
       View v => v.content,
       _ => view.toString(),
     };
+    final (width: terminalWidth, height: terminalHeight) = terminal.size;
     final targetHeight = _options.isInline
-        ? _options.inlineHeight.clamp(1, terminal.height)
-        : terminal.height;
+        ? _options.inlineHeight.clamp(1, terminalHeight)
+        : terminalHeight;
     final sizeChanged =
         _screen == null ||
-        _screen!.width() != terminal.width ||
+        _screen!.width() != terminalWidth ||
         _screen!.height() != targetHeight;
 
     // Frame rate limiting using Stopwatch (immune to clock adjustments)

@@ -257,6 +257,48 @@ void main() {
           ),
         );
 
+        final lines = tester.view.split('\n');
+        final barColumns = lines.map((line) {
+          final thumb = line.indexOf('#');
+          final barIndex = thumb >= 0 ? thumb : line.indexOf('.');
+          return Layout.visibleLength(line.substring(0, barIndex));
+        }).toList();
+
+        expect(barColumns, everyElement(equals(barColumns.first)));
+      } finally {
+        await tester.dispose();
+      }
+    });
+
+    test('OSC 8 hyperlinks keep scrollbar column stable', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+      try {
+        final ctrl = ListViewController();
+        ctrl.setViewportHeight(3);
+        ctrl.setContentHeight(20);
+
+        await tester.pumpWidget(
+          Container(
+            width: 24,
+            height: 3,
+            child: Scrollbar(
+              controller: ctrl,
+              gap: 1,
+              thumbChar: '#',
+              trackChar: '.',
+              child: Column(
+                children: [
+                  Text('Link', style: Style().hyperlink('https://example.com')),
+                  Text('Plain'),
+                  Text('Tail'),
+                ],
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.view, contains('\x1b]8;;https://example.com'));
+
         final lines = Layout.stripAnsi(tester.view).split('\n');
         final barColumns = lines.map((line) {
           final thumb = line.indexOf('#');
@@ -269,6 +311,43 @@ void main() {
         await tester.dispose();
       }
     });
+
+    test(
+      'Kitty graphics controls keep non-overlay scrollbar visible',
+      () async {
+        final tester = WidgetTester(screenWidth: 40, screenHeight: 10);
+        try {
+          final ctrl = ListViewController();
+          ctrl.setViewportHeight(3);
+          ctrl.setContentHeight(20);
+          const kittyImage = '\x1b_Ga=T,c=4,r=1,C=1,q=2,m=0;AAAA\x1b\\';
+
+          await tester.pumpWidget(
+            Container(
+              width: 24,
+              height: 3,
+              child: Scrollbar(
+                controller: ctrl,
+                gap: 1,
+                thumbChar: '#',
+                trackChar: '.',
+                child: Column(
+                  children: [Text(kittyImage), Text('Plain'), Text('Tail')],
+                ),
+              ),
+            ),
+          );
+
+          expect(tester.view, contains('\x1b_Ga=T'));
+          expect(
+            tester.view.contains('#') || tester.view.contains('.'),
+            isTrue,
+          );
+        } finally {
+          await tester.dispose();
+        }
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------

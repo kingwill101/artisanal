@@ -19,6 +19,7 @@ int _nextWidgetKittyImageId = 1;
 int _allocateWidgetKittyImageId() => _nextWidgetKittyImageId++;
 
 final _imageDataCache = _ImageDataCache(maximumEntries: 64);
+final _renderedImageCache = _RenderedImageCache(maximumEntries: 128);
 
 class _ImageDataCache {
   _ImageDataCache({required this.maximumEntries});
@@ -58,6 +59,29 @@ class _ImageDataCache {
       },
     );
     return future;
+  }
+}
+
+class _RenderedImageCache {
+  _RenderedImageCache({required this.maximumEntries});
+
+  final int maximumEntries;
+  final LinkedHashMap<_RenderedImageCacheKey, _RenderedImageResult> _completed =
+      LinkedHashMap();
+
+  _RenderedImageResult? get(_RenderedImageCacheKey key) {
+    final completed = _completed.remove(key);
+    if (completed == null) return null;
+    _completed[key] = completed;
+    return completed;
+  }
+
+  void put(_RenderedImageCacheKey key, _RenderedImageResult rendered) {
+    _completed.remove(key);
+    _completed[key] = rendered;
+    while (_completed.length > maximumEntries) {
+      _completed.remove(_completed.keys.first);
+    }
   }
 }
 
@@ -105,11 +129,7 @@ class FileImage extends ImageProvider {
   @override
   Future<ImageData> resolve() async {
     final bytes = await File(path).readAsBytes();
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      throw Exception('Failed to decode image: $path');
-    }
-    return ImageData(decoded);
+    return _decodeImageData(bytes, 'image: $path');
   }
 
   @override
@@ -132,11 +152,7 @@ class MemoryImage extends ImageProvider {
 
   @override
   Future<ImageData> resolve() async {
-    final decoded = img.decodeImage(bytes);
-    if (decoded == null) {
-      throw Exception('Failed to decode image from bytes');
-    }
-    return ImageData(decoded);
+    return _decodeImageData(bytes, 'image from bytes');
   }
 
   @override
@@ -189,11 +205,7 @@ class NetworkImage extends ImageProvider {
         builder.add(chunk);
       }
       final bytes = builder.takeBytes();
-      final decoded = img.decodeImage(bytes);
-      if (decoded == null) {
-        throw Exception('Failed to decode image: $url');
-      }
-      return ImageData(decoded);
+      return _decodeImageData(bytes, 'image: $url');
     } finally {
       client.close(force: true);
     }
@@ -213,6 +225,14 @@ class NetworkImage extends ImageProvider {
 
   @override
   int get hashCode => Object.hash(NetworkImage, url, _stringMapHash(headers));
+}
+
+Future<ImageData> _decodeImageData(Uint8List bytes, String source) async {
+  final decoded = await dart_isolate.Isolate.run(() => img.decodeImage(bytes));
+  if (decoded == null) {
+    throw Exception('Failed to decode $source');
+  }
+  return ImageData(decoded);
 }
 
 bool _stringMapEquals(Map<String, String> a, Map<String, String> b) {
@@ -538,6 +558,7 @@ class _RenderImage extends RenderBox {
       fit,
       renderMode,
       kittyImageId: kittyImageId,
+      cacheKey: key,
     );
     _lastRenderedKey = key;
     _lastRendered = nextRendered;
@@ -577,6 +598,7 @@ final class _RenderedImageCacheKey {
     required ImageRenderMode renderMode,
     required int? kittyImageId,
   }) {
+    final autoMode = _currentImageAutoMode;
     final capabilities = _currentImageCapabilities;
     return _RenderedImageCacheKey(
       imageData: imageData,
@@ -584,8 +606,15 @@ final class _RenderedImageCacheKey {
       targetHeight: targetHeight,
       fit: fit,
       renderMode: renderMode,
-      kittyImageId: kittyImageId,
-      autoMode: _currentImageAutoMode,
+      kittyImageId:
+          _renderedImageUsesKittyId(
+            renderMode: renderMode,
+            autoMode: autoMode,
+            capabilities: capabilities,
+          )
+          ? kittyImageId
+          : null,
+      autoMode: autoMode,
       hasKittyGraphics: capabilities.hasKittyGraphics,
       hasITerm2: capabilities.hasITerm2,
       hasSixel: capabilities.hasSixel,
@@ -645,6 +674,22 @@ final class _RenderedImageCacheKey {
   );
 }
 
+bool _renderedImageUsesKittyId({
+  required ImageRenderMode renderMode,
+  required ImageAutoMode autoMode,
+  required TerminalCapabilities capabilities,
+}) {
+  return switch (renderMode) {
+    ImageRenderMode.kitty => true,
+    ImageRenderMode.auto => switch (autoMode) {
+      ImageAutoMode.portableFallback => false,
+      ImageAutoMode.environment => _widgetImageCapabilities.hasKittyGraphics,
+      ImageAutoMode.sessionCapabilities => capabilities.hasKittyGraphics,
+    },
+    _ => false,
+  };
+}
+
 /// Renders an image to a terminal string using half-block characters.
 String _renderImage(
   ImageData imageData,
@@ -669,7 +714,21 @@ _RenderedImageResult _renderImageResult(
   BoxFit fit,
   ImageRenderMode renderMode, {
   int? kittyImageId,
+  _RenderedImageCacheKey? cacheKey,
 }) {
+  final key =
+      cacheKey ??
+      _RenderedImageCacheKey.capture(
+        imageData: imageData,
+        targetWidth: targetWidth,
+        targetHeight: targetHeight,
+        fit: fit,
+        renderMode: renderMode,
+        kittyImageId: kittyImageId,
+      );
+  final cached = _renderedImageCache.get(key);
+  if (cached != null) return cached;
+
   final (cols, rows) = _resolveImageCellSize(
     imageData,
     targetWidth,
@@ -690,7 +749,7 @@ _RenderedImageResult _renderImageResult(
   );
   final canvas = Canvas(cols, rows);
   drawable.draw(canvas, canvas.bounds());
-  return _RenderedImageResult(
+  final rendered = _RenderedImageResult(
     text: _normalizeRenderedImage(
       canvas.render(),
       columns: cols,
@@ -698,6 +757,8 @@ _RenderedImageResult _renderImageResult(
     ),
     size: (cols, rows),
   );
+  _renderedImageCache.put(key, rendered);
+  return rendered;
 }
 
 String _normalizeRenderedImage(

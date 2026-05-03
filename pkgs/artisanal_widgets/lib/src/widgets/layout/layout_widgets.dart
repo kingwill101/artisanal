@@ -17,6 +17,7 @@ import 'dart:async';
 import 'dart:async' as dart_async;
 import 'dart:collection';
 import 'dart:io' show File, HttpClient, HttpHeaders, Platform;
+import 'dart:isolate' as dart_isolate;
 import 'dart:math' as math;
 import 'dart:typed_data' show BytesBuilder, Uint8List;
 

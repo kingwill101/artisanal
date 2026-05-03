@@ -80,6 +80,12 @@ abstract class RenderObject {
       final child = children[i];
       final childX = localX - child.offset.dx;
       final childY = localY - child.offset.dy;
+      if (childX < 0 ||
+          childY < 0 ||
+          childX >= child.size.width ||
+          childY >= child.size.height) {
+        continue;
+      }
       if (child.hitTest(result, localX: childX, localY: childY)) {
         break; // deepest hit found via this child
       }
