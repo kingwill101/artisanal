@@ -31,7 +31,12 @@ import 'package:artisanal/charting.dart'
         drawHorizontalStackedHistogram,
         drawHeatmap,
         drawPieChart,
-        drawRibbonChart;
+        drawRibbonChart,
+        parseSequenceDiagram,
+        drawSequenceDiagram,
+        layoutSequenceDiagram,
+        SequenceDiagram,
+        SequenceDiagramTheme;
 import 'package:artisanal/uv.dart' show Canvas, Cell, Rectangle, UvStyle, rect;
 
 import '../animation/listenable.dart';
@@ -49,6 +54,7 @@ part 'bar_chart.dart';
 part 'heatmap_chart.dart';
 part 'pie_chart.dart';
 part 'ribbon_chart.dart';
+part 'sequence_diagram_chart.dart';
 
 /// Resolves a chart dimension (width or height) from an optional explicit
 /// value and the incoming layout constraint.

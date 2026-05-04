@@ -68,6 +68,7 @@ export 'viewport.dart';
 export 'viewport_scroll_pane.dart';
 export 'text.dart';
 export 'progress.dart';
+export 'sequence_diagram.dart';
 export '../editor_core/text_decorations.dart';
 export '../editor_core/text_diagnostics.dart';
 export '../editor_core/text_highlighting.dart';

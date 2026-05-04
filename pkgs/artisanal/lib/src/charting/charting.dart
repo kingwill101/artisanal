@@ -26,3 +26,32 @@ export 'heatmap.dart' show drawHeatmap;
 export 'ribbon.dart' show drawRibbonChart;
 export 'line.dart' show drawLineChart, drawMultiSeriesLineChart;
 export 'pie.dart' show drawPieChart;
+
+// Sequence diagram
+export 'sequence_diagram.dart'
+    show
+        parseMermaidColor,
+        parseSequenceDiagram,
+        isSequenceDiagram,
+        drawSequenceDiagram,
+        renderSequenceDiagram,
+        layoutSequenceDiagram,
+        SequenceDiagramTheme,
+        SequenceDiagramOptions,
+        SequenceDiagram,
+        LayoutResult,
+        SequenceParticipant,
+        SequenceParticipantGroup,
+        SequenceRect,
+        SequenceMessage,
+        SequenceMessageStyle,
+        SequenceArrowHead,
+        SequenceNote,
+        SequenceActivation,
+        SequenceFragment,
+        SequenceFragmentKind,
+        SequenceStep,
+        SequenceStepMessage,
+        SequenceStepNote,
+        SequenceStepActivation,
+        SequenceStepFragment;
