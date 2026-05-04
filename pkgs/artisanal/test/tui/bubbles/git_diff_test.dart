@@ -260,6 +260,76 @@ void main() {
         expect(headerLines[3].content, startsWith('+++'));
       });
 
+      test('computes comment anchors for GitHub review comments', () {
+        final model = GitDiffModel(width: 80).setDiff(_singleFileDiff);
+
+        final removed = model.commentAnchors.singleWhere(
+          (anchor) => anchor.kind == DiffCommentKind.deletion,
+        );
+        final added = model.commentAnchors.singleWhere(
+          (anchor) => anchor.content == "  print('Hello');",
+        );
+
+        expect(removed.path, 'lib/main.dart');
+        expect(removed.line, 3);
+        expect(removed.side, DiffCommentSide.left);
+        expect(removed.side.githubApiValue, 'LEFT');
+        expect(added.path, 'lib/main.dart');
+        expect(added.line, 4);
+        expect(added.side, DiffCommentSide.right);
+        expect(added.side.githubApiValue, 'RIGHT');
+      });
+
+      test('finds nearest comment anchor for a rendered scroll line', () {
+        final model = GitDiffModel(width: 80).setDiff(_multiFileDiff);
+
+        final anchor = model.nearestCommentAnchor(12);
+
+        expect(anchor, isNotNull);
+        expect(anchor!.path, 'lib/b.dart');
+        expect(anchor.line, 1);
+      });
+
+      test('selects comment anchors by rendered line and side', () {
+        final model = GitDiffModel(
+          width: 100,
+          viewMode: DiffViewMode.sideBySide,
+        ).setDiff(_singleFileDiff);
+
+        final right = model.commentAnchors.firstWhere(
+          (anchor) =>
+              anchor.kind == DiffCommentKind.context &&
+              anchor.side == DiffCommentSide.right,
+        );
+        final left = model.commentAnchorAt(
+          right.renderLine,
+          side: DiffCommentSide.left,
+        );
+
+        expect(left, isNotNull);
+        expect(left!.kind, DiffCommentKind.context);
+        expect(left.side, DiffCommentSide.left);
+        expect(left.renderLine, right.renderLine);
+      });
+
+      test('applies selected comment-line highlights while rendering', () {
+        final base = GitDiffModel(width: 80).setDiff(_singleFileDiff);
+        final anchor = base.commentAnchors.firstWhere(
+          (anchor) => anchor.content == "  print('Hello');",
+        );
+        final highlighted = base
+            .copyWith(
+              commentHighlights: [DiffCommentLineHighlight.selected(anchor)],
+            )
+            .rerender();
+
+        expect(highlighted.view(), isNot(base.view()));
+        expect(
+          Style.stripAnsi(highlighted.view()),
+          Style.stripAnsi(base.view()),
+        );
+      });
+
       test('parses no-newline-at-eof marker', () {
         final model = GitDiffModel().setDiff(_noNewlineDiff);
         expect(model.files, hasLength(1));

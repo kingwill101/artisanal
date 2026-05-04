@@ -115,6 +115,12 @@ class DiffStyles {
     Style? sideBySideContextMarker,
     Style? inlineAddedHighlight,
     Style? inlineRemovedHighlight,
+    Style? selectedCommentLine,
+    Style? selectedCommentGutter,
+    Style? commentRangeLine,
+    Style? commentRangeGutter,
+    Style? commentThreadLine,
+    Style? commentThreadGutter,
   }) : addedLine = addedLine ?? Style().foreground(const BasicColor('#22c55e')),
        removedLine =
            removedLine ?? Style().foreground(const BasicColor('#ef4444')),
@@ -193,7 +199,23 @@ class DiffStyles {
            Style().background(const BasicColor('#2a4a2a')),
        inlineRemovedHighlight =
            inlineRemovedHighlight ??
-           Style().background(const BasicColor('#4a2a2a'));
+           Style().background(const BasicColor('#4a2a2a')),
+       selectedCommentLine =
+           selectedCommentLine ??
+           Style().background(const BasicColor('#2f3f5f')),
+       selectedCommentGutter =
+           selectedCommentGutter ??
+           Style().background(const BasicColor('#50668f')),
+       commentRangeLine =
+           commentRangeLine ?? Style().background(const BasicColor('#263847')),
+       commentRangeGutter =
+           commentRangeGutter ??
+           Style().background(const BasicColor('#3f6374')),
+       commentThreadLine =
+           commentThreadLine ?? Style().background(const BasicColor('#3b3320')),
+       commentThreadGutter =
+           commentThreadGutter ??
+           Style().background(const BasicColor('#6f5b26'));
 
   /// Creates a dark-theme diff style preset (identical to the defaults).
   ///
@@ -268,6 +290,24 @@ class DiffStyles {
       inlineRemovedHighlight: Style()
           .foreground(darkText)
           .background(inlineRemovedBg),
+      selectedCommentLine: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#bfd7ff')),
+      selectedCommentGutter: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#9dbcf8')),
+      commentRangeLine: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#d6e8ff')),
+      commentRangeGutter: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#b8d7ff')),
+      commentThreadLine: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#fff0c2')),
+      commentThreadGutter: Style()
+          .foreground(darkText)
+          .background(const BasicColor('#ffd166')),
     );
   }
 
@@ -339,6 +379,12 @@ class DiffStyles {
       inlineRemovedHighlight: Style().background(
         inlineRemovedBg ?? const BasicColor('#4a2a2a'),
       ),
+      selectedCommentLine: Style().background(const BasicColor('#2f3f5f')),
+      selectedCommentGutter: Style().background(const BasicColor('#50668f')),
+      commentRangeLine: Style().background(const BasicColor('#263847')),
+      commentRangeGutter: Style().background(const BasicColor('#3f6374')),
+      commentThreadLine: Style().background(const BasicColor('#3b3320')),
+      commentThreadGutter: Style().background(const BasicColor('#6f5b26')),
     );
   }
 
@@ -431,6 +477,24 @@ class DiffStyles {
   /// changed line. Applied on top of the line's base style.
   final Style inlineRemovedHighlight;
 
+  /// Full-line style layered onto the selected diff comment line.
+  final Style selectedCommentLine;
+
+  /// Gutter style layered onto the selected diff comment line.
+  final Style selectedCommentGutter;
+
+  /// Full-line style layered onto lines in the selected comment range.
+  final Style commentRangeLine;
+
+  /// Gutter style layered onto lines in the selected comment range.
+  final Style commentRangeGutter;
+
+  /// Full-line style layered onto lines that already have review threads.
+  final Style commentThreadLine;
+
+  /// Gutter style layered onto lines that already have review threads.
+  final Style commentThreadGutter;
+
   /// Creates a copy with the given fields replaced.
   DiffStyles copyWith({
     Style? addedLine,
@@ -460,6 +524,12 @@ class DiffStyles {
     Style? sideBySideContextMarker,
     Style? inlineAddedHighlight,
     Style? inlineRemovedHighlight,
+    Style? selectedCommentLine,
+    Style? selectedCommentGutter,
+    Style? commentRangeLine,
+    Style? commentRangeGutter,
+    Style? commentThreadLine,
+    Style? commentThreadGutter,
   }) {
     return DiffStyles(
       addedLine: addedLine ?? this.addedLine,
@@ -498,6 +568,13 @@ class DiffStyles {
       inlineAddedHighlight: inlineAddedHighlight ?? this.inlineAddedHighlight,
       inlineRemovedHighlight:
           inlineRemovedHighlight ?? this.inlineRemovedHighlight,
+      selectedCommentLine: selectedCommentLine ?? this.selectedCommentLine,
+      selectedCommentGutter:
+          selectedCommentGutter ?? this.selectedCommentGutter,
+      commentRangeLine: commentRangeLine ?? this.commentRangeLine,
+      commentRangeGutter: commentRangeGutter ?? this.commentRangeGutter,
+      commentThreadLine: commentThreadLine ?? this.commentThreadLine,
+      commentThreadGutter: commentThreadGutter ?? this.commentThreadGutter,
     );
   }
 }
@@ -521,6 +598,165 @@ enum DiffLineType {
 
   /// Empty/separator line.
   empty,
+}
+
+/// Which side of a pull-request diff a commentable line belongs to.
+enum DiffCommentSide {
+  /// The old/deleted side of the diff.
+  left,
+
+  /// The new/added side of the diff.
+  right;
+
+  /// GitHub's review-comment API literal for this side.
+  String get githubApiValue => switch (this) {
+    DiffCommentSide.left => 'LEFT',
+    DiffCommentSide.right => 'RIGHT',
+  };
+}
+
+/// The kind of diff line represented by a [DiffCommentAnchor].
+enum DiffCommentKind {
+  /// Added line on the new side.
+  addition,
+
+  /// Deleted line on the old side.
+  deletion,
+
+  /// Unchanged context line, commentable on the new side.
+  context,
+}
+
+/// The visual role of a commentable diff line.
+enum DiffCommentLineHighlightKind {
+  /// A line with an existing review thread.
+  thread,
+
+  /// A line inside the currently selected multi-line comment range.
+  range,
+
+  /// The active keyboard/mouse-selected line.
+  selected,
+}
+
+/// Stable identity for a commentable line in a pull-request diff.
+class DiffCommentLineKey {
+  /// Creates a stable diff comment line key.
+  const DiffCommentLineKey({
+    required this.path,
+    required this.line,
+    required this.side,
+  });
+
+  /// Creates a key from a rendered comment anchor.
+  factory DiffCommentLineKey.fromAnchor(DiffCommentAnchor anchor) {
+    return DiffCommentLineKey(
+      path: anchor.path,
+      line: anchor.line,
+      side: anchor.side,
+    );
+  }
+
+  /// File path in the pull request diff.
+  final String path;
+
+  /// Blob line number on [side].
+  final int line;
+
+  /// Diff side for [line].
+  final DiffCommentSide side;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is DiffCommentLineKey &&
+            path == other.path &&
+            line == other.line &&
+            side == other.side;
+  }
+
+  @override
+  int get hashCode => Object.hash(path, line, side);
+}
+
+/// A visual highlight request for a commentable diff line.
+class DiffCommentLineHighlight {
+  /// Creates a diff comment line highlight.
+  const DiffCommentLineHighlight({required this.key, required this.kind});
+
+  /// Creates a selected-line highlight from [anchor].
+  factory DiffCommentLineHighlight.selected(DiffCommentAnchor anchor) {
+    return DiffCommentLineHighlight(
+      key: anchor.key,
+      kind: DiffCommentLineHighlightKind.selected,
+    );
+  }
+
+  /// Creates a selected-range highlight from [anchor].
+  factory DiffCommentLineHighlight.range(DiffCommentAnchor anchor) {
+    return DiffCommentLineHighlight(
+      key: anchor.key,
+      kind: DiffCommentLineHighlightKind.range,
+    );
+  }
+
+  /// Creates an existing-thread highlight from [anchor].
+  factory DiffCommentLineHighlight.thread(DiffCommentAnchor anchor) {
+    return DiffCommentLineHighlight(
+      key: anchor.key,
+      kind: DiffCommentLineHighlightKind.thread,
+    );
+  }
+
+  /// Comment line identity.
+  final DiffCommentLineKey key;
+
+  /// Highlight role.
+  final DiffCommentLineHighlightKind kind;
+}
+
+/// A commentable position in the rendered diff.
+class DiffCommentAnchor {
+  /// Creates a diff comment anchor.
+  const DiffCommentAnchor({
+    required this.path,
+    required this.line,
+    required this.side,
+    required this.kind,
+    required this.renderLine,
+    required this.content,
+    int? renderLineEnd,
+  }) : renderLineEnd = renderLineEnd ?? renderLine + 1;
+
+  /// File path for GitHub's review-comment API.
+  final String path;
+
+  /// Blob line number on [side].
+  final int line;
+
+  /// Diff side for [line].
+  final DiffCommentSide side;
+
+  /// Type of source diff line.
+  final DiffCommentKind kind;
+
+  /// First rendered row occupied by this source line.
+  final int renderLine;
+
+  /// First rendered row after this source line.
+  final int renderLineEnd;
+
+  /// Source line content without the diff marker.
+  final String content;
+
+  /// Stable identity for this anchor.
+  DiffCommentLineKey get key => DiffCommentLineKey.fromAnchor(this);
+
+  /// Compact label for UI hints.
+  String get label {
+    final marker = side == DiffCommentSide.right ? '+' : '-';
+    return '$path:$marker$line';
+  }
 }
 
 /// A single parsed line from a unified diff.
@@ -603,10 +839,12 @@ class GitDiffModel extends ViewComponent {
     ViewportModel? viewport,
     List<DiffFile>? files,
     List<String>? renderedLines,
+    List<DiffCommentLineHighlight>? commentHighlights,
   }) : styles = styles ?? DiffStyles(),
        keyMap = keyMap ?? GitDiffKeyMap(),
        _files = files ?? const [],
        _renderedLines = renderedLines ?? const [],
+       commentHighlights = commentHighlights ?? const [],
        _viewport = viewport ?? ViewportModel(width: width, height: height);
 
   /// Width of the diff viewer in columns.
@@ -645,6 +883,9 @@ class GitDiffModel extends ViewComponent {
   /// The styles used for rendering.
   final DiffStyles styles;
 
+  /// Visual highlights applied to commentable diff lines.
+  final List<DiffCommentLineHighlight> commentHighlights;
+
   /// Key bindings for diff viewer actions.
   final GitDiffKeyMap keyMap;
 
@@ -669,6 +910,61 @@ class GitDiffModel extends ViewComponent {
   /// Total number of deletions across all files.
   late final int totalDeletions = _files.fold(0, (sum, f) => sum + f.deletions);
 
+  /// Commentable anchors in the current rendered diff.
+  ///
+  /// The [DiffCommentAnchor.renderLine] values match the model's current
+  /// [viewMode], [wrapLines], [width], and line-number settings.
+  late final List<DiffCommentAnchor> commentAnchors = List.unmodifiable(
+    _computeCommentAnchors(_files),
+  );
+
+  late final Map<DiffCommentLineKey, DiffCommentLineHighlightKind>
+  _commentHighlightByKey = _buildCommentHighlightMap(commentHighlights);
+
+  /// Returns the nearest comment anchor at or after [renderLine].
+  DiffCommentAnchor? nearestCommentAnchor(int renderLine) {
+    if (commentAnchors.isEmpty) return null;
+    final index = nearestCommentAnchorIndex(renderLine);
+    return commentAnchors[index];
+  }
+
+  /// Returns the nearest comment-anchor index at or after [renderLine].
+  int nearestCommentAnchorIndex(int renderLine) {
+    if (commentAnchors.isEmpty) return 0;
+    final index = commentAnchors.indexWhere(
+      (anchor) => anchor.renderLine >= renderLine,
+    );
+    return index >= 0 ? index : commentAnchors.length - 1;
+  }
+
+  /// Returns the comment anchor occupying [renderLine], optionally preferring
+  /// the requested [side] when multiple anchors share the same rendered row.
+  DiffCommentAnchor? commentAnchorAt(int renderLine, {DiffCommentSide? side}) {
+    if (commentAnchors.isEmpty) return null;
+    DiffCommentAnchor? fallback;
+    for (final anchor in commentAnchors) {
+      if (renderLine < anchor.renderLine) break;
+      if (renderLine >= anchor.renderLineEnd) continue;
+      fallback ??= anchor;
+      if (side == null || anchor.side == side) return anchor;
+    }
+    return fallback;
+  }
+
+  /// Returns the index of the comment anchor occupying [renderLine].
+  int? commentAnchorIndexAt(int renderLine, {DiffCommentSide? side}) {
+    if (commentAnchors.isEmpty) return null;
+    int? fallback;
+    for (var index = 0; index < commentAnchors.length; index++) {
+      final anchor = commentAnchors[index];
+      if (renderLine < anchor.renderLine) break;
+      if (renderLine >= anchor.renderLineEnd) continue;
+      fallback ??= index;
+      if (side == null || anchor.side == side) return index;
+    }
+    return fallback;
+  }
+
   /// Creates a copy with the given fields replaced.
   GitDiffModel copyWith({
     int? width,
@@ -683,6 +979,7 @@ class GitDiffModel extends ViewComponent {
     ViewportModel? viewport,
     List<DiffFile>? files,
     List<String>? renderedLines,
+    List<DiffCommentLineHighlight>? commentHighlights,
   }) {
     return GitDiffModel(
       width: width ?? this.width,
@@ -697,6 +994,7 @@ class GitDiffModel extends ViewComponent {
       viewport: viewport ?? _viewport,
       files: files ?? _files,
       renderedLines: renderedLines ?? _renderedLines,
+      commentHighlights: commentHighlights ?? this.commentHighlights,
     );
   }
 
@@ -987,6 +1285,372 @@ class GitDiffModel extends ViewComponent {
     return max;
   }
 
+  List<DiffCommentAnchor> _computeCommentAnchors(List<DiffFile> files) {
+    if (files.isEmpty) return const <DiffCommentAnchor>[];
+    return switch (viewMode) {
+      DiffViewMode.sideBySide => _computeSideBySideCommentAnchors(files),
+      DiffViewMode.pretty => _computePrettyCommentAnchors(files),
+      DiffViewMode.unified => _computeUnifiedCommentAnchors(files),
+    };
+  }
+
+  List<DiffCommentAnchor> _computeUnifiedCommentAnchors(List<DiffFile> files) {
+    final maxLineNum = _computeMaxLineNumber(files);
+    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
+    final contentWidth = _unifiedContentWidth(numWidth);
+    final anchors = <DiffCommentAnchor>[];
+    var renderLine = 0;
+
+    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      final file = files[fileIndex];
+      if (fileIndex > 0) renderLine++;
+      for (final line in file.lines) {
+        final height = _renderedUnifiedLineHeight(line, contentWidth);
+        final anchor = _anchorForLine(
+          file,
+          line,
+          renderLine,
+          renderLineEnd: renderLine + height,
+        );
+        if (anchor != null) anchors.add(anchor);
+        renderLine += height;
+      }
+    }
+
+    return anchors;
+  }
+
+  List<DiffCommentAnchor> _computePrettyCommentAnchors(List<DiffFile> files) {
+    final maxLineNum = _computeMaxLineNumber(files);
+    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
+    final contentWidth = _prettyContentWidth(numWidth);
+    final anchors = <DiffCommentAnchor>[];
+    var renderLine = 0;
+
+    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      final file = files[fileIndex];
+      if (fileIndex > 0) renderLine++;
+      renderLine++; // Pretty file header.
+
+      var previousWasHunk = false;
+      for (final line in file.lines) {
+        if (line.type == DiffLineType.fileHeader) continue;
+        if (line.type == DiffLineType.hunkHeader) {
+          if (!previousWasHunk) renderLine++;
+          previousWasHunk = true;
+          continue;
+        }
+        previousWasHunk = false;
+        if (line.type == DiffLineType.empty) {
+          renderLine++;
+          continue;
+        }
+
+        final height = _renderedLineHeight(line.content, contentWidth);
+        final anchor = _anchorForLine(
+          file,
+          line,
+          renderLine,
+          renderLineEnd: renderLine + height,
+        );
+        if (anchor != null) anchors.add(anchor);
+        renderLine += height;
+      }
+    }
+
+    return anchors;
+  }
+
+  List<DiffCommentAnchor> _computeSideBySideCommentAnchors(
+    List<DiffFile> files,
+  ) {
+    final maxLineNum = _computeMaxLineNumber(files);
+    final numWidth = '$maxLineNum'.length < 4 ? 4 : '$maxLineNum'.length;
+    const separatorWidth = 1;
+    const markerWidth = 2;
+    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
+    final gutterWidth = lineNumWidth + markerWidth;
+    final availableWidth = width - separatorWidth;
+    final leftPanelWidth = availableWidth ~/ 2;
+    final rightPanelWidth = availableWidth - leftPanelWidth;
+    final leftContentWidth = leftPanelWidth - gutterWidth;
+    final rightContentWidth = rightPanelWidth - gutterWidth;
+
+    if (leftContentWidth <= 0 || rightContentWidth <= 0) {
+      return _computeUnifiedCommentAnchors(files);
+    }
+
+    final anchors = <DiffCommentAnchor>[];
+    var renderLine = 0;
+
+    for (var fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      final file = files[fileIndex];
+      if (fileIndex > 0) renderLine++;
+      renderLine++; // Side-by-side file header.
+
+      final lines = file.lines;
+      var index = 0;
+      while (index < lines.length) {
+        final line = lines[index];
+        if (line.type == DiffLineType.fileHeader) {
+          index++;
+          continue;
+        }
+        if (line.type == DiffLineType.hunkHeader ||
+            line.type == DiffLineType.empty) {
+          renderLine++;
+          index++;
+          continue;
+        }
+        if (line.type == DiffLineType.context) {
+          final height = _renderedLineHeight(line.content, rightContentWidth);
+          final leftAnchor = _anchorForLine(
+            file,
+            line,
+            renderLine,
+            side: DiffCommentSide.left,
+            renderLineEnd: renderLine + height,
+          );
+          if (leftAnchor != null) anchors.add(leftAnchor);
+          final rightAnchor = _anchorForLine(
+            file,
+            line,
+            renderLine,
+            side: DiffCommentSide.right,
+            renderLineEnd: renderLine + height,
+          );
+          if (rightAnchor != null) anchors.add(rightAnchor);
+          renderLine += height;
+          index++;
+          continue;
+        }
+
+        final removedLines = <DiffLine>[];
+        final addedLines = <DiffLine>[];
+        while (index < lines.length &&
+            lines[index].type == DiffLineType.removed) {
+          removedLines.add(lines[index]);
+          index++;
+        }
+        while (index < lines.length &&
+            lines[index].type == DiffLineType.added) {
+          addedLines.add(lines[index]);
+          index++;
+        }
+
+        final pairCount = removedLines.length > addedLines.length
+            ? removedLines.length
+            : addedLines.length;
+        for (var pairIndex = 0; pairIndex < pairCount; pairIndex++) {
+          final removed = pairIndex < removedLines.length
+              ? removedLines[pairIndex]
+              : null;
+          final added = pairIndex < addedLines.length
+              ? addedLines[pairIndex]
+              : null;
+          final leftHeight = removed == null
+              ? 1
+              : _renderedLineHeight(removed.content, leftContentWidth);
+          final rightHeight = added == null
+              ? 1
+              : _renderedLineHeight(added.content, rightContentWidth);
+          if (removed != null) {
+            final anchor = _anchorForLine(
+              file,
+              removed,
+              renderLine,
+              renderLineEnd: renderLine + leftHeight,
+            );
+            if (anchor != null) anchors.add(anchor);
+          }
+          if (added != null) {
+            final anchor = _anchorForLine(
+              file,
+              added,
+              renderLine,
+              renderLineEnd: renderLine + rightHeight,
+            );
+            if (anchor != null) anchors.add(anchor);
+          }
+          renderLine += leftHeight > rightHeight ? leftHeight : rightHeight;
+        }
+      }
+    }
+
+    return anchors;
+  }
+
+  DiffCommentAnchor? _anchorForLine(
+    DiffFile file,
+    DiffLine line,
+    int renderLine, {
+    DiffCommentSide? side,
+    required int renderLineEnd,
+  }) {
+    return switch (line.type) {
+      DiffLineType.added when line.newLineNumber != null => DiffCommentAnchor(
+        path: _commentPath(file, DiffCommentSide.right),
+        line: line.newLineNumber!,
+        side: DiffCommentSide.right,
+        kind: DiffCommentKind.addition,
+        renderLine: renderLine,
+        renderLineEnd: renderLineEnd,
+        content: line.content,
+      ),
+      DiffLineType.removed when line.oldLineNumber != null => DiffCommentAnchor(
+        path: _commentPath(file, DiffCommentSide.left),
+        line: line.oldLineNumber!,
+        side: DiffCommentSide.left,
+        kind: DiffCommentKind.deletion,
+        renderLine: renderLine,
+        renderLineEnd: renderLineEnd,
+        content: line.content,
+      ),
+      DiffLineType.context
+          when (side == DiffCommentSide.left && line.oldLineNumber != null) =>
+        DiffCommentAnchor(
+          path: _commentPath(file, DiffCommentSide.left),
+          line: line.oldLineNumber!,
+          side: DiffCommentSide.left,
+          kind: DiffCommentKind.context,
+          renderLine: renderLine,
+          renderLineEnd: renderLineEnd,
+          content: line.content,
+        ),
+      DiffLineType.context when line.newLineNumber != null => DiffCommentAnchor(
+        path: _commentPath(file, DiffCommentSide.right),
+        line: line.newLineNumber!,
+        side: DiffCommentSide.right,
+        kind: DiffCommentKind.context,
+        renderLine: renderLine,
+        renderLineEnd: renderLineEnd,
+        content: line.content,
+      ),
+      _ => null,
+    };
+  }
+
+  Map<DiffCommentLineKey, DiffCommentLineHighlightKind>
+  _buildCommentHighlightMap(List<DiffCommentLineHighlight> highlights) {
+    if (highlights.isEmpty) {
+      return const <DiffCommentLineKey, DiffCommentLineHighlightKind>{};
+    }
+    final result = <DiffCommentLineKey, DiffCommentLineHighlightKind>{};
+    for (final highlight in highlights) {
+      final current = result[highlight.key];
+      if (current == null || highlight.kind.index >= current.index) {
+        result[highlight.key] = highlight.kind;
+      }
+    }
+    return result;
+  }
+
+  DiffCommentLineKey? _lineKeyForLine(
+    DiffFile file,
+    DiffLine line, {
+    DiffCommentSide? side,
+  }) {
+    return switch (line.type) {
+      DiffLineType.added when line.newLineNumber != null => DiffCommentLineKey(
+        path: _commentPath(file, DiffCommentSide.right),
+        line: line.newLineNumber!,
+        side: DiffCommentSide.right,
+      ),
+      DiffLineType.removed when line.oldLineNumber != null =>
+        DiffCommentLineKey(
+          path: _commentPath(file, DiffCommentSide.left),
+          line: line.oldLineNumber!,
+          side: DiffCommentSide.left,
+        ),
+      DiffLineType.context
+          when side == DiffCommentSide.left && line.oldLineNumber != null =>
+        DiffCommentLineKey(
+          path: _commentPath(file, DiffCommentSide.left),
+          line: line.oldLineNumber!,
+          side: DiffCommentSide.left,
+        ),
+      DiffLineType.context when line.newLineNumber != null =>
+        DiffCommentLineKey(
+          path: _commentPath(file, DiffCommentSide.right),
+          line: line.newLineNumber!,
+          side: DiffCommentSide.right,
+        ),
+      _ => null,
+    };
+  }
+
+  DiffCommentLineHighlightKind? _highlightForLine(
+    DiffFile file,
+    DiffLine line, {
+    DiffCommentSide? side,
+  }) {
+    final key = _lineKeyForLine(file, line, side: side);
+    return key == null ? null : _commentHighlightByKey[key];
+  }
+
+  Style _contentStyleWithHighlight(
+    Style base,
+    DiffCommentLineHighlightKind? highlight,
+  ) {
+    final overlay = switch (highlight) {
+      DiffCommentLineHighlightKind.selected => styles.selectedCommentLine,
+      DiffCommentLineHighlightKind.range => styles.commentRangeLine,
+      DiffCommentLineHighlightKind.thread => styles.commentThreadLine,
+      null => null,
+    };
+    if (overlay == null) return base;
+    return base.copy()..inherit(overlay);
+  }
+
+  Style _gutterStyleWithHighlight(
+    Style base,
+    DiffCommentLineHighlightKind? highlight,
+  ) {
+    final overlay = switch (highlight) {
+      DiffCommentLineHighlightKind.selected => styles.selectedCommentGutter,
+      DiffCommentLineHighlightKind.range => styles.commentRangeGutter,
+      DiffCommentLineHighlightKind.thread => styles.commentThreadGutter,
+      null => null,
+    };
+    if (overlay == null) return base;
+    return base.copy()..inherit(overlay);
+  }
+
+  String _commentPath(DiffFile file, DiffCommentSide side) {
+    final path = side == DiffCommentSide.left ? file.oldPath : file.newPath;
+    if (path.isNotEmpty && path != '/dev/null') return path;
+    return side == DiffCommentSide.left ? file.newPath : file.oldPath;
+  }
+
+  int _unifiedContentWidth(int numWidth) {
+    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
+    const gutterCharWidth = 2;
+    return width - lineNumWidth - gutterCharWidth;
+  }
+
+  int _prettyContentWidth(int numWidth) {
+    final lineNumWidth = showLineNumbers ? numWidth + 1 : 0;
+    const markerWidth = 3;
+    return width - lineNumWidth - markerWidth;
+  }
+
+  int _renderedLineHeight(String text, int contentWidth) {
+    if (!wrapLines || contentWidth <= 0 || text.length <= contentWidth) {
+      return 1;
+    }
+    return (text.length / contentWidth).ceil();
+  }
+
+  int _renderedUnifiedLineHeight(DiffLine line, int contentWidth) {
+    if (line.type == DiffLineType.fileHeader ||
+        line.type == DiffLineType.hunkHeader ||
+        line.type == DiffLineType.empty ||
+        line.content.startsWith('\\')) {
+      return 1;
+    }
+    return _renderedLineHeight(line.content, contentWidth);
+  }
+
   /// Renders all parsed diff files into styled string lines.
   List<String> _renderLines(
     List<DiffFile> files, {
@@ -1013,7 +1677,7 @@ class GitDiffModel extends ViewComponent {
       }
 
       for (final line in file.lines) {
-        result.addAll(_renderLine(line, effectiveNumWidth));
+        result.addAll(_renderLine(file, line, effectiveNumWidth));
       }
     }
 
@@ -1025,7 +1689,7 @@ class GitDiffModel extends ViewComponent {
   /// Returns a list of rendered strings. When [wrapLines] is enabled and the
   /// content exceeds the available width, continuation lines are generated
   /// with blank padding in the gutter area.
-  List<String> _renderLine(DiffLine line, int numWidth) {
+  List<String> _renderLine(DiffFile file, DiffLine line, int numWidth) {
     switch (line.type) {
       case DiffLineType.fileHeader:
         return [styles.fileHeader.render(line.content)];
@@ -1034,24 +1698,32 @@ class GitDiffModel extends ViewComponent {
         return [styles.hunkHeader.render(line.content)];
 
       case DiffLineType.added:
-        final gutter = styles.addedGutter.render('+');
+        final highlight = _highlightForLine(file, line);
+        final gutter = _gutterStyleWithHighlight(
+          styles.addedGutter,
+          highlight,
+        ).render('+');
         final lineNums = _formatLineNumbers(null, line.newLineNumber, numWidth);
         return _wrapUnifiedLine(
           line.content,
           lineNums,
           gutter,
-          styles.addedLine,
+          _contentStyleWithHighlight(styles.addedLine, highlight),
           numWidth,
         );
 
       case DiffLineType.removed:
-        final gutter = styles.removedGutter.render('-');
+        final highlight = _highlightForLine(file, line);
+        final gutter = _gutterStyleWithHighlight(
+          styles.removedGutter,
+          highlight,
+        ).render('-');
         final lineNums = _formatLineNumbers(line.oldLineNumber, null, numWidth);
         return _wrapUnifiedLine(
           line.content,
           lineNums,
           gutter,
-          styles.removedLine,
+          _contentStyleWithHighlight(styles.removedLine, highlight),
           numWidth,
         );
 
@@ -1059,7 +1731,11 @@ class GitDiffModel extends ViewComponent {
         if (line.content.startsWith('\\')) {
           return [styles.contextLine.render(line.content)];
         }
-        final gutter = styles.contextGutter.render(' ');
+        final highlight = _highlightForLine(file, line);
+        final gutter = _gutterStyleWithHighlight(
+          styles.contextGutter,
+          highlight,
+        ).render(' ');
         final lineNums = _formatLineNumbers(
           line.oldLineNumber,
           line.newLineNumber,
@@ -1069,7 +1745,7 @@ class GitDiffModel extends ViewComponent {
           line.content,
           lineNums,
           gutter,
-          styles.contextLine,
+          _contentStyleWithHighlight(styles.contextLine, highlight),
           numWidth,
         );
 
@@ -1191,7 +1867,7 @@ class GitDiffModel extends ViewComponent {
           continue;
         }
 
-        result.addAll(_renderLinePretty(line, effectiveNumWidth));
+        result.addAll(_renderLinePretty(file, line, effectiveNumWidth));
       }
     }
 
@@ -1206,7 +1882,7 @@ class GitDiffModel extends ViewComponent {
   /// Returns a list of rendered strings. When [wrapLines] is enabled and the
   /// content exceeds the available width, continuation lines are generated
   /// with blank padding in the gutter area.
-  List<String> _renderLinePretty(DiffLine line, int numWidth) {
+  List<String> _renderLinePretty(DiffFile file, DiffLine line, int numWidth) {
     // Determine the line number to show (single column).
     final int? lineNum;
     final Style lineNumStyle;
@@ -1235,17 +1911,23 @@ class GitDiffModel extends ViewComponent {
       default:
         return [''];
     }
+    final highlight = _highlightForLine(file, line);
+    final effectiveLineNumStyle = _gutterStyleWithHighlight(
+      lineNumStyle,
+      highlight,
+    );
+    final effectiveLineStyle = _contentStyleWithHighlight(lineStyle, highlight);
 
     // Format single-column line number, zero-padded or space-padded.
     final padChar = zeroPadLineNumbers ? '0' : ' ';
     final numStr = showLineNumbers
-        ? lineNumStyle.render(
+        ? effectiveLineNumStyle.render(
             '${lineNum != null ? '$lineNum'.padLeft(numWidth, padChar) : ' ' * numWidth} ',
           )
         : '';
 
     // Gutter marker.
-    final gutter = lineStyle.render(' $marker ');
+    final gutter = effectiveLineStyle.render(' $marker ');
 
     // Content padded to fill available width for full-width background.
     // Account for line number width + gutter width (3 chars: space+marker+space).
@@ -1260,7 +1942,7 @@ class GitDiffModel extends ViewComponent {
       final paddedContent = contentWidth > 0
           ? line.content.padRight(contentWidth)
           : line.content;
-      final content = lineStyle.render(paddedContent);
+      final content = effectiveLineStyle.render(paddedContent);
       return ['$numStr$gutter$content'];
     }
 
@@ -1276,15 +1958,19 @@ class GitDiffModel extends ViewComponent {
       if (offset == 0) {
         // First line: line number + gutter + content.
         final paddedChunk = chunk.padRight(contentWidth);
-        result.add('$numStr$gutter${lineStyle.render(paddedChunk)}');
+        result.add('$numStr$gutter${effectiveLineStyle.render(paddedChunk)}');
       } else {
         // Continuation line: blank padding for line number + blank gutter.
         final blankNum = showLineNumbers
-            ? lineNumStyle.render('${' ' * numWidth} ')
+            ? effectiveLineNumStyle.render('${' ' * numWidth} ')
             : '';
-        final blankGutter = lineStyle.render('   '); // 3 spaces matching marker
+        final blankGutter = effectiveLineStyle.render(
+          '   ',
+        ); // 3 spaces matching marker
         final paddedChunk = chunk.padRight(contentWidth);
-        result.add('$blankNum$blankGutter${lineStyle.render(paddedChunk)}');
+        result.add(
+          '$blankNum$blankGutter${effectiveLineStyle.render(paddedChunk)}',
+        );
       }
 
       offset = end;
@@ -1388,6 +2074,16 @@ class GitDiffModel extends ViewComponent {
 
         // Context line — same content on both sides.
         if (line.type == DiffLineType.context) {
+          final leftHighlight = _highlightForLine(
+            file,
+            line,
+            side: DiffCommentSide.left,
+          );
+          final rightHighlight = _highlightForLine(
+            file,
+            line,
+            side: DiffCommentSide.right,
+          );
           final leftRows = _sbsCell(
             lineNum: line.oldLineNumber,
             content: line.content,
@@ -1398,6 +2094,7 @@ class GitDiffModel extends ViewComponent {
             numWidth: effectiveNumWidth,
             cellWidth: leftPanelWidth,
             contentWidth: leftContentWidth,
+            highlight: leftHighlight,
           );
           final rightRows = _sbsCell(
             lineNum: line.newLineNumber,
@@ -1409,6 +2106,7 @@ class GitDiffModel extends ViewComponent {
             numWidth: effectiveNumWidth,
             cellWidth: rightPanelWidth,
             contentWidth: rightContentWidth,
+            highlight: rightHighlight,
           );
           _sbsJoinRows(
             result,
@@ -1473,6 +2171,7 @@ class GitDiffModel extends ViewComponent {
                   contentWidth: leftContentWidth,
                   inlineSpans: inlinePairs[p].$1,
                   inlineHighlight: styles.inlineRemovedHighlight,
+                  highlight: _highlightForLine(file, removedLines[p]),
                 )
               : [_sbsEmptyCell(leftPanelWidth)];
 
@@ -1489,6 +2188,7 @@ class GitDiffModel extends ViewComponent {
                   contentWidth: rightContentWidth,
                   inlineSpans: inlinePairs[p].$2,
                   inlineHighlight: styles.inlineAddedHighlight,
+                  highlight: _highlightForLine(file, addedLines[p]),
                 )
               : [_sbsEmptyCell(rightPanelWidth)];
 
@@ -1528,16 +2228,23 @@ class GitDiffModel extends ViewComponent {
     required int contentWidth,
     List<_InlineSpan> inlineSpans = const [],
     Style? inlineHighlight,
+    DiffCommentLineHighlightKind? highlight,
   }) {
+    final effectiveStyle = _contentStyleWithHighlight(style, highlight);
+    final effectiveNumStyle = _gutterStyleWithHighlight(numStyle, highlight);
+    final effectiveMarkerStyle = _gutterStyleWithHighlight(
+      markerStyle,
+      highlight,
+    );
     final padChar = zeroPadLineNumbers ? '0' : ' ';
     final numStr = showLineNumbers
-        ? numStyle.render(
+        ? effectiveNumStyle.render(
             '${lineNum != null ? '$lineNum'.padLeft(numWidth, padChar) : ' ' * numWidth} ',
           )
         : '';
 
     // Render the marker with its dedicated style.
-    final markerStr = markerStyle.render('$marker ');
+    final markerStr = effectiveMarkerStyle.render('$marker ');
 
     if (!wrapLines || contentWidth <= 0 || content.length <= contentWidth) {
       // Side-by-side cells must have fixed width to maintain panel alignment.
@@ -1563,7 +2270,7 @@ class GitDiffModel extends ViewComponent {
         displayContent,
         displayOffset,
         contentWidth,
-        style,
+        effectiveStyle,
         inlineSpans,
         inlineHighlight,
       );
@@ -1580,7 +2287,7 @@ class GitDiffModel extends ViewComponent {
         chunk,
         offset,
         contentWidth,
-        style,
+        effectiveStyle,
         inlineSpans,
         inlineHighlight,
       );
@@ -1588,9 +2295,9 @@ class GitDiffModel extends ViewComponent {
         rows.add('$numStr$markerStr$styledChunk');
       } else {
         final blankNum = showLineNumbers
-            ? numStyle.render('${' ' * numWidth} ')
+            ? effectiveNumStyle.render('${' ' * numWidth} ')
             : '';
-        final blankMarker = markerStyle.render(
+        final blankMarker = effectiveMarkerStyle.render(
           '  ',
         ); // 2 spaces matching marker
         rows.add('$blankNum$blankMarker$styledChunk');
