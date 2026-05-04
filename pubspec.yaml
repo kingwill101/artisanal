@@ -3,6 +3,7 @@ publish_to: none
 workspace:
   - pkgs/artisanal
   - pkgs/artisanal_widgets
+  - pkgs/artisanal_widgets/example/github_cli
   - pkgs/ultraviolet
 
 funding:

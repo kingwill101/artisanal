@@ -1,0 +1,20 @@
+name: github_cli
+description: GitHub terminal dashboard example for artisanal_widgets.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+executables:
+  github_cli:
+
+dependencies:
+  artisanal: ^0.3.1-wip
+  artisanal_widgets: ^0.2.1-wip
+  devtools_region_profiler: ^0.1.0
+
+dev_dependencies:
+  image: ^4.7.1
+  lints: ^6.0.0
+  test: ^1.28.0
