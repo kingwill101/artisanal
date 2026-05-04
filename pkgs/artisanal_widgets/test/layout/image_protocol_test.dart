@@ -19,6 +19,19 @@ Uint8List _encodeTestImage() {
   return Uint8List.fromList(img.encodePng(image));
 }
 
+Uint8List _encodeAnimatedGif() {
+  final first = img.Image(width: 4, height: 4);
+  final second = img.Image(width: 4, height: 4);
+  for (var y = 0; y < first.height; y++) {
+    for (var x = 0; x < first.width; x++) {
+      first.setPixelRgba(x, y, 220, 40, 40, 255);
+      second.setPixelRgba(x, y, 40, 220, 40, 255);
+    }
+  }
+  first.addFrame(second);
+  return Uint8List.fromList(img.encodeGif(first));
+}
+
 Future<void> _pumpUntil(
   WidgetTester tester,
   bool Function() predicate, {
@@ -90,6 +103,87 @@ void main() {
     expect(data.width, 4);
     expect(data.height, 4);
     expect(userAgent, contains('artisanal-widgets-image'));
+  });
+
+  test('NetworkImage rejects blocked content types', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+
+    final bytes = _encodeTestImage();
+    server.listen((request) async {
+      request.response.headers.contentType = ContentType('image', 'gif');
+      request.response.add(bytes);
+      await request.response.close();
+    });
+
+    final provider = w.NetworkImage(
+      'http://${server.address.address}:${server.port}/animated.gif',
+      blockedContentTypes: const {'image/gif'},
+    );
+
+    await expectLater(
+      provider.resolve(),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('blocked'),
+        ),
+      ),
+    );
+  });
+
+  test('NetworkImage can decode one frame from animated GIFs', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+
+    final bytes = _encodeAnimatedGif();
+    server.listen((request) async {
+      request.response.headers.contentType = ContentType('image', 'gif');
+      request.response.add(bytes);
+      await request.response.close();
+    });
+
+    final provider = w.NetworkImage(
+      'http://${server.address.address}:${server.port}/animated.gif',
+      allowedContentTypes: const {'image/gif'},
+      decodeFrame: 0,
+    );
+
+    final data = await provider.resolve();
+
+    expect(data.width, 4);
+    expect(data.height, 4);
+    expect(data.image.numFrames, 1);
+  });
+
+  test('NetworkImage enforces maximum response size', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+
+    final bytes = _encodeTestImage();
+    server.listen((request) async {
+      request.response.headers.contentType = ContentType('image', 'png');
+      request.response.contentLength = bytes.length;
+      request.response.add(bytes);
+      await request.response.close();
+    });
+
+    final provider = w.NetworkImage(
+      'http://${server.address.address}:${server.port}/large-image.png',
+      maximumBytes: bytes.length - 1,
+    );
+
+    await expectLater(
+      provider.resolve(),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'message',
+          contains('too large'),
+        ),
+      ),
+    );
   });
 
   test('NetworkImage reuses cached data for the same URL', () async {

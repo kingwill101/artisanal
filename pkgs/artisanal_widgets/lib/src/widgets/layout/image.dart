@@ -86,22 +86,45 @@ class _RenderedImageCache {
 }
 
 class _NetworkImageCacheKey {
-  _NetworkImageCacheKey(this.url, Map<String, String> headers)
-    : _headers = Map<String, String>.unmodifiable(headers);
+  _NetworkImageCacheKey(
+    this.url,
+    Map<String, String> headers, {
+    required this.maximumBytes,
+    required this.decodeFrame,
+    required Set<String> allowedContentTypes,
+    required Set<String> blockedContentTypes,
+  }) : _headers = Map<String, String>.unmodifiable(headers),
+       _allowedContentTypes = Set<String>.unmodifiable(allowedContentTypes),
+       _blockedContentTypes = Set<String>.unmodifiable(blockedContentTypes);
 
   final String url;
+  final int? maximumBytes;
+  final int? decodeFrame;
   final Map<String, String> _headers;
+  final Set<String> _allowedContentTypes;
+  final Set<String> _blockedContentTypes;
 
   @override
   bool operator ==(Object other) {
     return other is _NetworkImageCacheKey &&
         other.url == url &&
-        _stringMapEquals(other._headers, _headers);
+        other.maximumBytes == maximumBytes &&
+        other.decodeFrame == decodeFrame &&
+        _stringMapEquals(other._headers, _headers) &&
+        _stringSetEquals(other._allowedContentTypes, _allowedContentTypes) &&
+        _stringSetEquals(other._blockedContentTypes, _blockedContentTypes);
   }
 
   @override
-  int get hashCode =>
-      Object.hash(_NetworkImageCacheKey, url, _stringMapHash(_headers));
+  int get hashCode => Object.hash(
+    _NetworkImageCacheKey,
+    url,
+    maximumBytes,
+    decodeFrame,
+    _stringMapHash(_headers),
+    _stringSetHash(_allowedContentTypes),
+    _stringSetHash(_blockedContentTypes),
+  );
 }
 
 /// Abstract base class for providing images to the [Image] widget.
@@ -121,22 +144,28 @@ abstract class ImageProvider {
 /// Image(image: FileImage('/path/to/photo.png'))
 /// ```
 class FileImage extends ImageProvider {
-  const FileImage(this.path);
+  const FileImage(this.path, {this.decodeFrame});
 
   /// The file system path to the image.
   final String path;
 
+  /// Optional frame index to decode for animated image formats.
+  final int? decodeFrame;
+
   @override
   Future<ImageData> resolve() async {
     final bytes = await File(path).readAsBytes();
-    return _decodeImageData(bytes, 'image: $path');
+    return _decodeImageData(bytes, 'image: $path', frame: decodeFrame);
   }
 
   @override
-  bool operator ==(Object other) => other is FileImage && other.path == path;
+  bool operator ==(Object other) =>
+      other is FileImage &&
+      other.path == path &&
+      other.decodeFrame == decodeFrame;
 
   @override
-  int get hashCode => Object.hash(FileImage, path);
+  int get hashCode => Object.hash(FileImage, path, decodeFrame);
 }
 
 /// An [ImageProvider] that loads an image from raw bytes.
@@ -145,22 +174,28 @@ class FileImage extends ImageProvider {
 /// Image(image: MemoryImage(myPngBytes))
 /// ```
 class MemoryImage extends ImageProvider {
-  const MemoryImage(this.bytes);
+  const MemoryImage(this.bytes, {this.decodeFrame});
 
   /// The raw image bytes (PNG, JPEG, etc.).
   final Uint8List bytes;
 
+  /// Optional frame index to decode for animated image formats.
+  final int? decodeFrame;
+
   @override
   Future<ImageData> resolve() async {
-    return _decodeImageData(bytes, 'image from bytes');
+    return _decodeImageData(bytes, 'image from bytes', frame: decodeFrame);
   }
 
   @override
   bool operator ==(Object other) =>
-      other is MemoryImage && identical(other.bytes, bytes);
+      other is MemoryImage &&
+      identical(other.bytes, bytes) &&
+      other.decodeFrame == decodeFrame;
 
   @override
-  int get hashCode => Object.hash(MemoryImage, identityHashCode(bytes));
+  int get hashCode =>
+      Object.hash(MemoryImage, identityHashCode(bytes), decodeFrame);
 }
 
 /// An [ImageProvider] that loads an image from an HTTP(S) URL.
@@ -169,7 +204,14 @@ class MemoryImage extends ImageProvider {
 /// Image(image: NetworkImage('https://example.com/photo.png'))
 /// ```
 class NetworkImage extends ImageProvider {
-  const NetworkImage(this.url, {this.headers = const {}});
+  const NetworkImage(
+    this.url, {
+    this.headers = const {},
+    this.maximumBytes,
+    this.decodeFrame,
+    this.allowedContentTypes = const <String>{},
+    this.blockedContentTypes = const <String>{},
+  });
 
   static const String _defaultUserAgent = 'artisanal-widgets-image/0.1';
 
@@ -179,9 +221,41 @@ class NetworkImage extends ImageProvider {
   /// Optional request headers.
   final Map<String, String> headers;
 
+  /// Optional maximum response size in bytes.
+  ///
+  /// When set, responses with a known larger `Content-Length` are rejected
+  /// before reading the body. Chunked responses are rejected once the streamed
+  /// byte count exceeds this value.
+  final int? maximumBytes;
+
+  /// Optional frame index to decode for animated image formats.
+  ///
+  /// Passing `0` lets callers render an animated GIF/WebP as a static preview
+  /// without decoding every frame.
+  final int? decodeFrame;
+
+  /// Optional allow-list of MIME types such as `image/png` or `image/*`.
+  ///
+  /// Empty means any content type is allowed unless it matches
+  /// [blockedContentTypes].
+  final Set<String> allowedContentTypes;
+
+  /// Optional deny-list of MIME types such as `image/gif`.
+  final Set<String> blockedContentTypes;
+
   @override
   Future<ImageData> resolve() {
-    return _imageDataCache.resolve(_NetworkImageCacheKey(url, headers), _load);
+    return _imageDataCache.resolve(
+      _NetworkImageCacheKey(
+        url,
+        headers,
+        maximumBytes: maximumBytes,
+        decodeFrame: decodeFrame,
+        allowedContentTypes: allowedContentTypes,
+        blockedContentTypes: blockedContentTypes,
+      ),
+      _load,
+    );
   }
 
   Future<ImageData> _load() async {
@@ -200,12 +274,33 @@ class NetworkImage extends ImageProvider {
         throw Exception('Failed to load image: HTTP ${response.statusCode}');
       }
 
+      final contentType = response.headers.contentType?.mimeType.toLowerCase();
+      _checkContentType(contentType);
+      final maximumBytes = this.maximumBytes;
+      final contentLength = response.contentLength;
+      if (maximumBytes != null &&
+          contentLength >= 0 &&
+          contentLength > maximumBytes) {
+        throw Exception(
+          'Image response is too large: $contentLength bytes '
+          '(limit $maximumBytes)',
+        );
+      }
+
       final builder = BytesBuilder(copy: false);
+      var receivedBytes = 0;
       await for (final chunk in response) {
+        receivedBytes += chunk.length;
+        if (maximumBytes != null && receivedBytes > maximumBytes) {
+          throw Exception(
+            'Image response is too large: $receivedBytes bytes '
+            '(limit $maximumBytes)',
+          );
+        }
         builder.add(chunk);
       }
       final bytes = builder.takeBytes();
-      return _decodeImageData(bytes, 'image: $url');
+      return _decodeImageData(bytes, 'image: $url', frame: decodeFrame);
     } finally {
       client.close(force: true);
     }
@@ -216,19 +311,48 @@ class NetworkImage extends ImageProvider {
     return headers.keys.any((header) => header.toLowerCase() == lowerName);
   }
 
+  void _checkContentType(String? contentType) {
+    if (contentType == null || contentType.isEmpty) return;
+    if (_matchesContentType(blockedContentTypes, contentType)) {
+      throw Exception('Image content type is blocked: $contentType');
+    }
+    if (allowedContentTypes.isNotEmpty &&
+        !_matchesContentType(allowedContentTypes, contentType)) {
+      throw Exception('Image content type is not allowed: $contentType');
+    }
+  }
+
   @override
   bool operator ==(Object other) {
     return other is NetworkImage &&
         other.url == url &&
-        _stringMapEquals(other.headers, headers);
+        other.maximumBytes == maximumBytes &&
+        other.decodeFrame == decodeFrame &&
+        _stringMapEquals(other.headers, headers) &&
+        _stringSetEquals(other.allowedContentTypes, allowedContentTypes) &&
+        _stringSetEquals(other.blockedContentTypes, blockedContentTypes);
   }
 
   @override
-  int get hashCode => Object.hash(NetworkImage, url, _stringMapHash(headers));
+  int get hashCode => Object.hash(
+    NetworkImage,
+    url,
+    maximumBytes,
+    decodeFrame,
+    _stringMapHash(headers),
+    _stringSetHash(allowedContentTypes),
+    _stringSetHash(blockedContentTypes),
+  );
 }
 
-Future<ImageData> _decodeImageData(Uint8List bytes, String source) async {
-  final decoded = await dart_isolate.Isolate.run(() => img.decodeImage(bytes));
+Future<ImageData> _decodeImageData(
+  Uint8List bytes,
+  String source, {
+  int? frame,
+}) async {
+  final decoded = await dart_isolate.Isolate.run(
+    () => img.decodeImage(bytes, frame: frame),
+  );
   if (decoded == null) {
     throw Exception('Failed to decode $source');
   }
@@ -253,6 +377,43 @@ int _stringMapHash(Map<String, String> map) {
     hash = Object.hash(hash, key, map[key]);
   }
   return hash;
+}
+
+bool _stringSetEquals(Set<String> a, Set<String> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (final value in a) {
+    if (!b.contains(value)) return false;
+  }
+  return true;
+}
+
+int _stringSetHash(Set<String> set) {
+  var hash = Object.hash('StringSet', set.length);
+  final values = set.toList()..sort();
+  for (final value in values) {
+    hash = Object.hash(hash, value);
+  }
+  return hash;
+}
+
+bool _matchesContentType(Set<String> filters, String contentType) {
+  final normalizedContentType = _normalizeContentType(contentType);
+  for (final filter in filters) {
+    final normalizedFilter = _normalizeContentType(filter);
+    if (normalizedFilter.isEmpty) continue;
+    if (normalizedFilter.endsWith('/*')) {
+      final prefix = normalizedFilter.substring(0, normalizedFilter.length - 1);
+      if (normalizedContentType.startsWith(prefix)) return true;
+    } else if (normalizedContentType == normalizedFilter) {
+      return true;
+    }
+  }
+  return false;
+}
+
+String _normalizeContentType(String value) {
+  return value.split(';').first.trim().toLowerCase();
 }
 
 /// How an image should be inscribed into a box.
