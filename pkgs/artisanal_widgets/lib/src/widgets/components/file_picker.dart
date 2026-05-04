@@ -855,17 +855,26 @@ class _FilePickerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final background = selected ? theme.primary : theme.surface;
+    final background = selected
+        ? theme.listRowSelectedBackground
+        : theme.listRowBackground;
     final foreground = selected
-        ? theme.onPrimary
+        ? entry.isDirectoryLike
+              ? theme.listRowSelectedAccentForeground
+              : theme.listRowSelectedForeground
         : disabled
         ? theme.muted
         : entry.isDirectoryLike
         ? theme.secondary
-        : theme.onSurface;
-    final meta = selected ? theme.onPrimary : theme.muted;
+        : theme.listRowForeground;
+    final meta = selected
+        ? theme.listRowSelectedMutedForeground
+        : theme.listRowMutedForeground;
+    final cursor = selected
+        ? theme.listRowSelectedMarkerForeground
+        : theme.listRowMutedForeground;
 
-    final cursorStyle = theme.labelMedium.copy()..foreground(meta);
+    final cursorStyle = theme.labelMedium.copy()..foreground(cursor);
     final metaStyle = theme.bodySmall.copy()..foreground(meta);
     final nameStyle = theme.bodyMedium.copy()..foreground(foreground);
     if (selected) {

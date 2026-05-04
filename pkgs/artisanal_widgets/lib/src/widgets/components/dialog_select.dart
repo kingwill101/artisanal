@@ -305,11 +305,11 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
     final selectedBg =
         dTheme?.buttonSelectedBackground ??
         cpTheme?.selectedBackground ??
-        theme.primary;
+        theme.listRowSelectedBackground;
     final selectedFg =
         dTheme?.buttonSelectedForeground ??
         cpTheme?.selectedForeground ??
-        theme.onPrimary;
+        theme.listRowSelectedForeground;
     final headerFg = cpTheme?.headerForeground ?? theme.muted;
     final searchBg = cpTheme?.searchBackground ?? theme.background;
     final hintFg = dTheme?.hintForeground ?? theme.muted;
@@ -470,12 +470,20 @@ class _DialogSelectState<T> extends State<DialogSelect<T>> {
 
       final labelStyle = _copyStyle(theme.bodyMedium)..foreground(fg);
       final descStyle = _copyStyle(theme.bodySmall)
-        ..foreground(isSelected ? selectedFg : theme.muted);
+        ..foreground(
+          isSelected
+              ? theme.listRowSelectedMutedForeground
+              : theme.listRowMutedForeground,
+        );
 
       // Marker for current item
       final marker = item.isCurrent ? '●' : ' ';
       final markerStyle = _copyStyle(theme.bodySmall)
-        ..foreground(isSelected ? selectedFg : theme.primary);
+        ..foreground(
+          isSelected
+              ? theme.listRowSelectedMarkerForeground
+              : theme.listRowMarkerForeground,
+        );
 
       final index = i;
       Widget row = Frame(

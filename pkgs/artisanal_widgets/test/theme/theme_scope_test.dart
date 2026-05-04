@@ -26,6 +26,7 @@ void main() {
       expect(theme.onError, isA<AnsiColor>());
       expect(theme.muted, isA<AnsiColor>());
       expect(theme.border, isA<AnsiColor>());
+      expect(theme.listRowTheme, isNotNull);
     });
 
     test('Theme.light() creates a light theme with AnsiColor values', () {
@@ -190,6 +191,20 @@ void main() {
         );
       },
     );
+
+    test('OpenCode default keeps selected list rows visible', () {
+      final theme = OpenCodeThemes.opencode();
+
+      expect(theme.listRowSelectedBackground, isNot(isA<NoColor>()));
+      expect(
+        identical(theme.listRowSelectedBackground, theme.listRowBackground),
+        isFalse,
+      );
+      expect(
+        theme.commandPaletteTheme?.selectedBackground,
+        same(theme.listRowSelectedBackground),
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -226,6 +241,7 @@ void main() {
       expect(copy.onError, same(original.onError));
       expect(copy.muted, same(original.muted));
       expect(copy.border, same(original.border));
+      expect(copy.listRowTheme, same(original.listRowTheme));
     });
 
     test('copyWith overrides text styles', () {
@@ -271,6 +287,117 @@ void main() {
       expect(modified.onError, same(c));
       expect(modified.muted, same(c));
       expect(modified.border, same(c));
+    });
+
+    test('copyWith can override list row theme', () {
+      final original = Theme.dark();
+      const listRows = ListRowThemeData(
+        background: AnsiColor(1),
+        selectedBackground: AnsiColor(2),
+        selectedForeground: AnsiColor(3),
+      );
+      final modified = original.copyWith(listRowTheme: listRows);
+
+      expect(modified.listRowTheme, same(listRows));
+      expect(
+        modified.listRowSelectedBackground,
+        same(listRows.selectedBackground),
+      );
+      expect(
+        modified.listRowSelectedForeground,
+        same(listRows.selectedForeground),
+      );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Theme — list row resolution
+  // ---------------------------------------------------------------------------
+  group('Theme list row resolution', () {
+    test('falls back to global surface and highlight tokens', () {
+      const highlight = AnsiColor(11);
+      const onHighlight = AnsiColor(12);
+      final theme = _themeWithoutListRows(
+        highlight: highlight,
+        onHighlight: onHighlight,
+      );
+
+      expect(theme.listRowBackground, same(theme.surface));
+      expect(
+        theme.listRowAlternateBackground,
+        same(theme.resolvedSurfaceVariant),
+      );
+      expect(theme.listRowForeground, same(theme.onSurface));
+      expect(theme.listRowMutedForeground, same(theme.muted));
+      expect(theme.listRowAccentForeground, same(theme.primary));
+      expect(
+        theme.listRowMarkerForeground,
+        same(theme.listRowAccentForeground),
+      );
+      expect(theme.listRowSeparatorForeground, same(theme.resolvedOutline));
+      expect(theme.listRowSelectedBackground, same(highlight));
+      expect(theme.listRowSelectedForeground, same(onHighlight));
+      expect(
+        theme.listRowSelectedMutedForeground,
+        same(theme.listRowSelectedForeground),
+      );
+      expect(
+        theme.listRowSelectedAccentForeground,
+        same(theme.listRowSelectedForeground),
+      );
+      expect(
+        theme.listRowSelectedMarkerForeground,
+        same(theme.listRowSelectedAccentForeground),
+      );
+      expect(
+        theme.listRowSelectedSeparatorForeground,
+        same(theme.listRowSelectedMutedForeground),
+      );
+    });
+
+    test('uses explicit list row token overrides', () {
+      const rows = ListRowThemeData(
+        background: AnsiColor(1),
+        alternateBackground: AnsiColor(2),
+        foreground: AnsiColor(3),
+        mutedForeground: AnsiColor(4),
+        accentForeground: AnsiColor(5),
+        markerForeground: AnsiColor(6),
+        separatorForeground: AnsiColor(7),
+        selectedBackground: AnsiColor(8),
+        selectedForeground: AnsiColor(9),
+        selectedMutedForeground: AnsiColor(10),
+        selectedAccentForeground: AnsiColor(11),
+        selectedMarkerForeground: AnsiColor(12),
+        selectedSeparatorForeground: AnsiColor(13),
+      );
+      final theme = Theme.dark().copyWith(listRowTheme: rows);
+
+      expect(theme.listRowBackground, same(rows.background));
+      expect(theme.listRowAlternateBackground, same(rows.alternateBackground));
+      expect(theme.listRowForeground, same(rows.foreground));
+      expect(theme.listRowMutedForeground, same(rows.mutedForeground));
+      expect(theme.listRowAccentForeground, same(rows.accentForeground));
+      expect(theme.listRowMarkerForeground, same(rows.markerForeground));
+      expect(theme.listRowSeparatorForeground, same(rows.separatorForeground));
+      expect(theme.listRowSelectedBackground, same(rows.selectedBackground));
+      expect(theme.listRowSelectedForeground, same(rows.selectedForeground));
+      expect(
+        theme.listRowSelectedMutedForeground,
+        same(rows.selectedMutedForeground),
+      );
+      expect(
+        theme.listRowSelectedAccentForeground,
+        same(rows.selectedAccentForeground),
+      );
+      expect(
+        theme.listRowSelectedMarkerForeground,
+        same(rows.selectedMarkerForeground),
+      );
+      expect(
+        theme.listRowSelectedSeparatorForeground,
+        same(rows.selectedSeparatorForeground),
+      );
     });
   });
 
@@ -568,4 +695,49 @@ class _ContextThemeWidget extends StatelessWidget {
     // Prove it works by rendering with theme
     return Text('has-theme', style: theme.bodyMedium);
   }
+}
+
+Theme _themeWithoutListRows({Color? highlight, Color? onHighlight}) {
+  final base = Theme.dark();
+  return Theme(
+    primary: base.primary,
+    secondary: base.secondary,
+    surface: base.surface,
+    background: base.background,
+    error: base.error,
+    success: base.success,
+    warning: base.warning,
+    onPrimary: base.onPrimary,
+    onSecondary: base.onSecondary,
+    onSurface: base.onSurface,
+    onBackground: base.onBackground,
+    onError: base.onError,
+    muted: base.muted,
+    border: base.border,
+    surfaceVariant: base.surfaceVariant,
+    onSurfaceVariant: base.onSurfaceVariant,
+    outline: base.outline,
+    info: base.info,
+    onSuccess: base.onSuccess,
+    onWarning: base.onWarning,
+    onInfo: base.onInfo,
+    highlight: highlight ?? base.highlight,
+    onHighlight: onHighlight ?? base.onHighlight,
+    shadow: base.shadow,
+    titleLarge: base.titleLarge,
+    titleMedium: base.titleMedium,
+    titleSmall: base.titleSmall,
+    bodyLarge: base.bodyLarge,
+    bodyMedium: base.bodyMedium,
+    bodySmall: base.bodySmall,
+    labelLarge: base.labelLarge,
+    labelMedium: base.labelMedium,
+    labelSmall: base.labelSmall,
+    statusBarTheme: base.statusBarTheme,
+    accentPanelTheme: base.accentPanelTheme,
+    commandPaletteTheme: base.commandPaletteTheme,
+    dialogTheme: base.dialogTheme,
+    gitDiffTheme: base.gitDiffTheme,
+    editorTheme: base.editorTheme,
+  );
 }

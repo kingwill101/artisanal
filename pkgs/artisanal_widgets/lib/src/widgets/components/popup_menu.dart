@@ -488,9 +488,11 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
 
       if (entry is! PopupMenuItem<T>) continue;
       final selected = i == _highlightedIndex;
-      final selectedBg = widget.menuSelectedBackground ?? theme.primary;
-      final selectedFg = widget.menuSelectedForeground ?? theme.onPrimary;
-      final normalFg = widget.menuForeground ?? theme.onSurface;
+      final selectedBg =
+          widget.menuSelectedBackground ?? theme.listRowSelectedBackground;
+      final selectedFg =
+          widget.menuSelectedForeground ?? theme.listRowSelectedForeground;
+      final normalFg = widget.menuForeground ?? theme.listRowForeground;
       final foreground = selected ? selectedFg : normalFg;
       final textStyle = _copyStyle(bodyMedium)..foreground(foreground);
       if (!entry.enabled) {

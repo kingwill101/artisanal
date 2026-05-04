@@ -85,13 +85,13 @@ class _ActionButtonState extends State<ActionButton> {
     final selectedBg =
         widget.selectedBackground ??
         dTheme?.buttonSelectedBackground ??
-        theme.primary;
+        theme.resolvedHighlight;
     final defaultFg =
         widget.foreground ?? dTheme?.buttonForeground ?? theme.onSurface;
     final selectedFg =
         widget.selectedForeground ??
         dTheme?.buttonSelectedForeground ??
-        theme.onPrimary;
+        theme.resolvedOnHighlight;
 
     final isActive = widget.isSelected || _hovered;
     final bg = widget.isDisabled

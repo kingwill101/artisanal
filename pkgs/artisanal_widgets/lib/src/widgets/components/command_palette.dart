@@ -490,11 +490,11 @@ class _CommandPaletteState extends State<CommandPalette> {
     final selBg =
         widget.selectedBackground ??
         cpTheme?.selectedBackground ??
-        theme.resolvedHighlight;
+        theme.listRowSelectedBackground;
     final selFg =
         widget.selectedForeground ??
         cpTheme?.selectedForeground ??
-        theme.resolvedOnHighlight;
+        theme.listRowSelectedForeground;
     final headerFg = cpTheme?.headerForeground ?? theme.muted;
     final shortcutFg = cpTheme?.shortcutForeground ?? theme.muted;
     final searchBg = cpTheme?.searchBackground ?? theme.background;
@@ -517,7 +517,7 @@ class _CommandPaletteState extends State<CommandPalette> {
       ..bold();
     final shortcutStyle = _copyStyle(theme.labelSmall)..foreground(shortcutFg);
     final selectedShortcutStyle = _copyStyle(theme.labelSmall)
-      ..foreground(selFg);
+      ..foreground(theme.listRowSelectedMutedForeground);
 
     // Build grouped item list
     final rows = <Widget>[];

@@ -76,14 +76,14 @@ class ListTile extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final active = enabled && onTap != null;
     final fg = selected
-        ? (selectedForeground ?? theme.onPrimary)
-        : (foreground ?? (enabled ? theme.onSurface : theme.muted));
+        ? (selectedForeground ?? theme.listRowSelectedForeground)
+        : (foreground ?? (enabled ? theme.listRowForeground : theme.muted));
     final secondaryFg = selected
-        ? (selectedForeground ?? theme.onPrimary)
-        : (enabled ? theme.muted : theme.muted);
+        ? (selectedForeground ?? theme.listRowSelectedMutedForeground)
+        : theme.listRowMutedForeground;
     final bg = selected
-        ? (selectedBackground ?? theme.primary)
-        : (background ?? theme.surface);
+        ? (selectedBackground ?? theme.listRowSelectedBackground)
+        : (background ?? theme.listRowBackground);
 
     final resolvedTitleStyle = _copyStyle(titleStyle ?? theme.bodyMedium)
       ..foreground(fg);

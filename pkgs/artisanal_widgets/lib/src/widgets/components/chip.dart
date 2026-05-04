@@ -269,10 +269,12 @@ class _InputChipState extends State<InputChip> {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final selectedBg = widget.selectedColor ?? theme.primary;
+    final selectedBg = widget.selectedColor ?? theme.resolvedHighlight;
     final baseBg = widget.backgroundColor ?? theme.surface;
     final background = widget.selected ? selectedBg : baseBg;
-    final foreground = widget.selected ? theme.onPrimary : theme.onSurface;
+    final foreground = widget.selected
+        ? theme.resolvedOnHighlight
+        : theme.onSurface;
 
     final labelStyle = _copyStyle(theme.labelMedium)..foreground(foreground);
     if (_hovered || _focused) {

@@ -908,12 +908,19 @@ final class _WizardChoiceButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: selected ? theme.resolvedHighlight : theme.background,
+        color: selected
+            ? theme.listRowSelectedBackground
+            : theme.listRowBackground,
         padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
         child: Center(
           child: Text(
             label,
-            style: (selected ? theme.labelLarge : theme.bodyMedium).copy(),
+            style: (selected ? theme.labelLarge : theme.bodyMedium).copy()
+              ..foreground(
+                selected
+                    ? theme.listRowSelectedForeground
+                    : theme.listRowForeground,
+              ),
           ),
         ),
       ),
@@ -938,12 +945,16 @@ final class _WizardOptionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final style = (selected ? theme.labelLarge : theme.bodyMedium).copy()
-      ..foreground(selected ? theme.onSurface : theme.onSurface);
+      ..foreground(
+        selected ? theme.listRowSelectedForeground : theme.listRowForeground,
+      );
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        color: selected ? theme.resolvedHighlight : null,
+        color: selected
+            ? theme.listRowSelectedBackground
+            : theme.listRowBackground,
         padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 0),
         child: Row(
           gap: 1,

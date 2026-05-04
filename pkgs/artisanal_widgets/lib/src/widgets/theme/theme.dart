@@ -180,11 +180,11 @@ class CommandPaletteThemeData {
   final Color? foreground;
 
   /// Background color for the selected/highlighted item.
-  /// Defaults to [Theme.primary].
+  /// Defaults to [Theme.listRowSelectedBackground].
   final Color? selectedBackground;
 
   /// Text color for the selected/highlighted item.
-  /// Defaults to [Theme.onPrimary].
+  /// Defaults to [Theme.listRowSelectedForeground].
   final Color? selectedForeground;
 
   /// Text color for section headers.
@@ -248,6 +248,119 @@ class CommandPaletteThemeData {
   }
 }
 
+/// Theme data for list-like rows with a highlighted/selected state.
+///
+/// This is intentionally more expressive than the global
+/// [Theme.highlight]/[Theme.onHighlight] pair because list rows often contain
+/// title text, secondary metadata, semantic accents, markers, and separators.
+/// All fields are optional; widgets fall back through the parent [Theme].
+class ListRowThemeData {
+  const ListRowThemeData({
+    this.background,
+    this.alternateBackground,
+    this.foreground,
+    this.mutedForeground,
+    this.accentForeground,
+    this.markerForeground,
+    this.separatorForeground,
+    this.selectedBackground,
+    this.selectedForeground,
+    this.selectedMutedForeground,
+    this.selectedAccentForeground,
+    this.selectedMarkerForeground,
+    this.selectedSeparatorForeground,
+  });
+
+  /// Default row background.
+  /// Defaults to [Theme.surface].
+  final Color? background;
+
+  /// Background for alternating rows.
+  /// Defaults to [Theme.resolvedSurfaceVariant].
+  final Color? alternateBackground;
+
+  /// Primary row text color.
+  /// Defaults to [Theme.onSurface].
+  final Color? foreground;
+
+  /// Secondary row text color.
+  /// Defaults to [Theme.muted].
+  final Color? mutedForeground;
+
+  /// Semantic accent color for row markers or important tokens.
+  /// Defaults to [Theme.primary].
+  final Color? accentForeground;
+
+  /// Row marker/caret color.
+  /// Defaults to [accentForeground].
+  final Color? markerForeground;
+
+  /// Separator/divider color between rows.
+  /// Defaults to [Theme.resolvedOutline].
+  final Color? separatorForeground;
+
+  /// Selected row background.
+  /// Defaults to [Theme.resolvedHighlight].
+  final Color? selectedBackground;
+
+  /// Primary selected row text color.
+  /// Defaults to [Theme.resolvedOnHighlight].
+  final Color? selectedForeground;
+
+  /// Secondary selected row text color.
+  /// Defaults to [selectedForeground].
+  final Color? selectedMutedForeground;
+
+  /// Selected row accent color.
+  /// Defaults to [selectedForeground].
+  final Color? selectedAccentForeground;
+
+  /// Selected row marker/caret color.
+  /// Defaults to [selectedAccentForeground].
+  final Color? selectedMarkerForeground;
+
+  /// Selected row separator/divider color.
+  /// Defaults to [selectedMutedForeground].
+  final Color? selectedSeparatorForeground;
+
+  /// Copy with selective overrides.
+  ListRowThemeData copyWith({
+    Color? background,
+    Color? alternateBackground,
+    Color? foreground,
+    Color? mutedForeground,
+    Color? accentForeground,
+    Color? markerForeground,
+    Color? separatorForeground,
+    Color? selectedBackground,
+    Color? selectedForeground,
+    Color? selectedMutedForeground,
+    Color? selectedAccentForeground,
+    Color? selectedMarkerForeground,
+    Color? selectedSeparatorForeground,
+  }) {
+    return ListRowThemeData(
+      background: background ?? this.background,
+      alternateBackground: alternateBackground ?? this.alternateBackground,
+      foreground: foreground ?? this.foreground,
+      mutedForeground: mutedForeground ?? this.mutedForeground,
+      accentForeground: accentForeground ?? this.accentForeground,
+      markerForeground: markerForeground ?? this.markerForeground,
+      separatorForeground: separatorForeground ?? this.separatorForeground,
+      selectedBackground: selectedBackground ?? this.selectedBackground,
+      selectedForeground: selectedForeground ?? this.selectedForeground,
+      selectedMutedForeground:
+          selectedMutedForeground ?? this.selectedMutedForeground,
+      selectedAccentForeground:
+          selectedAccentForeground ?? this.selectedAccentForeground,
+      selectedMarkerForeground:
+          selectedMarkerForeground ?? this.selectedMarkerForeground,
+      selectedSeparatorForeground:
+          selectedSeparatorForeground ?? this.selectedSeparatorForeground,
+    );
+  }
+}
+
 /// Theme data for dialog widgets ([DialogConfirm], [DialogAlert],
 /// [DialogPrompt], [DialogSelect]).
 ///
@@ -289,7 +402,7 @@ class DialogThemeData {
   final Color? buttonBackground;
 
   /// Background color for the selected/active action button.
-  /// Defaults to [Theme.primary].
+  /// Defaults to [Theme.resolvedHighlight].
   final Color? buttonSelectedBackground;
 
   /// Text color for action buttons in their default state.
@@ -297,7 +410,7 @@ class DialogThemeData {
   final Color? buttonForeground;
 
   /// Text color for the selected/active action button.
-  /// Defaults to [Theme.onPrimary].
+  /// Defaults to [Theme.resolvedOnHighlight].
   final Color? buttonSelectedForeground;
 
   /// Text color for keyboard hint labels.
@@ -663,6 +776,7 @@ class Theme {
     this.statusBarTheme,
     this.accentPanelTheme,
     this.commandPaletteTheme,
+    this.listRowTheme,
     this.dialogTheme,
     this.gitDiffTheme,
     this.editorTheme,
@@ -792,6 +906,56 @@ class Theme {
   /// Resolved [shadow], falling back to [muted].
   Color get resolvedShadow => shadow ?? muted;
 
+  /// Resolved default list row background.
+  Color get listRowBackground => listRowTheme?.background ?? surface;
+
+  /// Resolved alternating list row background.
+  Color get listRowAlternateBackground =>
+      listRowTheme?.alternateBackground ?? resolvedSurfaceVariant;
+
+  /// Resolved default list row foreground.
+  Color get listRowForeground => listRowTheme?.foreground ?? onSurface;
+
+  /// Resolved muted list row foreground.
+  Color get listRowMutedForeground => listRowTheme?.mutedForeground ?? muted;
+
+  /// Resolved accent list row foreground.
+  Color get listRowAccentForeground =>
+      listRowTheme?.accentForeground ?? primary;
+
+  /// Resolved marker list row foreground.
+  Color get listRowMarkerForeground =>
+      listRowTheme?.markerForeground ?? listRowAccentForeground;
+
+  /// Resolved separator list row foreground.
+  Color get listRowSeparatorForeground =>
+      listRowTheme?.separatorForeground ?? resolvedOutline;
+
+  /// Resolved selected list row background.
+  Color get listRowSelectedBackground =>
+      listRowTheme?.selectedBackground ?? resolvedHighlight;
+
+  /// Resolved selected list row foreground.
+  Color get listRowSelectedForeground =>
+      listRowTheme?.selectedForeground ?? resolvedOnHighlight;
+
+  /// Resolved selected list row muted foreground.
+  Color get listRowSelectedMutedForeground =>
+      listRowTheme?.selectedMutedForeground ?? listRowSelectedForeground;
+
+  /// Resolved selected list row accent foreground.
+  Color get listRowSelectedAccentForeground =>
+      listRowTheme?.selectedAccentForeground ?? listRowSelectedForeground;
+
+  /// Resolved selected list row marker foreground.
+  Color get listRowSelectedMarkerForeground =>
+      listRowTheme?.selectedMarkerForeground ?? listRowSelectedAccentForeground;
+
+  /// Resolved selected list row separator foreground.
+  Color get listRowSelectedSeparatorForeground =>
+      listRowTheme?.selectedSeparatorForeground ??
+      listRowSelectedMutedForeground;
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Text Styles
   // ─────────────────────────────────────────────────────────────────────────────
@@ -835,6 +999,9 @@ class Theme {
 
   /// Theme overrides for [CommandPalette] widgets.
   final CommandPaletteThemeData? commandPaletteTheme;
+
+  /// Theme overrides for selectable/highlighted list rows.
+  final ListRowThemeData? listRowTheme;
 
   /// Theme overrides for dialog widgets.
   final DialogThemeData? dialogTheme;
@@ -902,6 +1069,21 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      listRowTheme: const ListRowThemeData(
+        background: surface,
+        alternateBackground: AnsiColor(234),
+        foreground: onSurface,
+        mutedForeground: muted,
+        accentForeground: primary,
+        markerForeground: primary,
+        separatorForeground: AnsiColor(240),
+        selectedBackground: AnsiColor(25),
+        selectedForeground: AnsiColor(255),
+        selectedMutedForeground: AnsiColor(250),
+        selectedAccentForeground: AnsiColor(39),
+        selectedMarkerForeground: AnsiColor(39),
+        selectedSeparatorForeground: AnsiColor(250),
+      ),
       editorTheme: EditorThemeData(
         shellBackground: const AnsiColor(236),
         inactiveShellBackground: const AnsiColor(234),
@@ -988,6 +1170,21 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      listRowTheme: const ListRowThemeData(
+        background: surface,
+        alternateBackground: AnsiColor(253),
+        foreground: onSurface,
+        mutedForeground: muted,
+        accentForeground: primary,
+        markerForeground: primary,
+        separatorForeground: AnsiColor(248),
+        selectedBackground: AnsiColor(153),
+        selectedForeground: AnsiColor(232),
+        selectedMutedForeground: AnsiColor(240),
+        selectedAccentForeground: AnsiColor(33),
+        selectedMarkerForeground: AnsiColor(33),
+        selectedSeparatorForeground: AnsiColor(240),
+      ),
       editorTheme: EditorThemeData(
         shellBackground: const AnsiColor(254),
         inactiveShellBackground: const AnsiColor(253),
@@ -1063,6 +1260,7 @@ class Theme {
     StatusBarThemeData? statusBarTheme,
     AccentPanelThemeData? accentPanelTheme,
     CommandPaletteThemeData? commandPaletteTheme,
+    ListRowThemeData? listRowTheme,
     DialogThemeData? dialogTheme,
     GitDiffThemeData? gitDiffTheme,
     EditorThemeData? editorTheme,
@@ -1104,6 +1302,7 @@ class Theme {
       statusBarTheme: statusBarTheme ?? this.statusBarTheme,
       accentPanelTheme: accentPanelTheme ?? this.accentPanelTheme,
       commandPaletteTheme: commandPaletteTheme ?? this.commandPaletteTheme,
+      listRowTheme: listRowTheme ?? this.listRowTheme,
       dialogTheme: dialogTheme ?? this.dialogTheme,
       gitDiffTheme: gitDiffTheme ?? this.gitDiffTheme,
       editorTheme: editorTheme ?? this.editorTheme,
@@ -1227,6 +1426,39 @@ class Theme {
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
       labelSmall: Style().dim().foreground(muted),
+      listRowTheme: const ListRowThemeData(
+        background: surface,
+        alternateBackground: AdaptiveColor(
+          light: AnsiColor(253),
+          dark: AnsiColor(234),
+        ),
+        foreground: onSurface,
+        mutedForeground: muted,
+        accentForeground: primary,
+        markerForeground: primary,
+        separatorForeground: AdaptiveColor(
+          light: AnsiColor(248),
+          dark: AnsiColor(240),
+        ),
+        selectedBackground: AdaptiveColor(
+          light: AnsiColor(153),
+          dark: AnsiColor(25),
+        ),
+        selectedForeground: AdaptiveColor(
+          light: AnsiColor(232),
+          dark: AnsiColor(255),
+        ),
+        selectedMutedForeground: AdaptiveColor(
+          light: AnsiColor(240),
+          dark: AnsiColor(250),
+        ),
+        selectedAccentForeground: primary,
+        selectedMarkerForeground: primary,
+        selectedSeparatorForeground: AdaptiveColor(
+          light: AnsiColor(240),
+          dark: AnsiColor(250),
+        ),
+      ),
       editorTheme: const EditorThemeData(
         shellBackground: AdaptiveColor(
           light: AnsiColor(254),
