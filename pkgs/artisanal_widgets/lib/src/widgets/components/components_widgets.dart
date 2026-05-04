@@ -105,7 +105,17 @@ import '../core/element.dart' show Element, elementOf;
 import '../rendering/render_object.dart'
     show RenderObject, RenderBox, SingleChildRenderObjectWidget;
 export 'package:artisanal/bubbles.dart'
-    show GitDiffModel, DiffFile, DiffStyles, DiffViewMode;
+    show
+        DiffCommentAnchor,
+        DiffCommentLineHighlight,
+        DiffCommentLineHighlightKind,
+        DiffCommentLineKey,
+        DiffCommentKind,
+        DiffCommentSide,
+        DiffFile,
+        DiffStyles,
+        DiffViewMode,
+        GitDiffModel;
 
 part '_component_utils.dart';
 part '_text_area_controller_core_bridge.dart';

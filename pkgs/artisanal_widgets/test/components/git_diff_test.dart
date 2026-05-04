@@ -1,4 +1,5 @@
 import 'package:artisanal/testing.dart';
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/widgets.dart';
 import 'package:test/test.dart';
 
@@ -15,6 +16,20 @@ index abc1234..def5678 100644
 +void main(List<String> args) {
 +  print('Hello');
    exit(0);
+ }''';
+
+final _longDiff =
+    '''
+diff --git a/lib/main.dart b/lib/main.dart
+index abc1234..def5678 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,3 +1,33 @@
+ void main() {
+${List<String>.generate(30, (index) {
+      final line = (index + 1).toString().padLeft(3, '0');
+      return "+  print('line $line');";
+    }).join('\n')}
  }''';
 
 void main() {
@@ -100,6 +115,37 @@ void main() {
       final v1 = GitDiffViewer(diff: '');
       final v2 = GitDiffViewer(diff: '');
       expect(v1.id, isNot(equals(v2.id)));
+    });
+
+    test('mouse wheel scrolls when comment hit-testing is enabled', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        GitDiffViewer(
+          diff: _longDiff,
+          width: 80,
+          height: 8,
+          onCommentAnchorSelected: (_) => tui.Cmd.none(),
+        ),
+      );
+
+      expect(tester.view, contains('line 001'));
+      expect(tester.view, isNot(contains('line 010')));
+
+      for (var i = 0; i < 3; i++) {
+        tester.sendMsg(
+          const tui.MouseMsg(
+            action: tui.MouseAction.press,
+            button: tui.MouseButton.wheelDown,
+            x: 4,
+            y: 2,
+          ),
+        );
+      }
+
+      expect(tester.view, isNot(contains('line 001')));
+      expect(tester.view, contains('line 010'));
     });
   });
 

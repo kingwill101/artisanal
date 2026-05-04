@@ -33,6 +33,28 @@ class GitDiffController {
   /// Total rendered line count.
   int get totalLineCount => _model.viewport.totalLineCount;
 
+  /// Commentable anchors in the currently rendered diff.
+  List<DiffCommentAnchor> get commentAnchors => _model.commentAnchors;
+
+  /// Comment line highlights in the current model.
+  List<DiffCommentLineHighlight> get commentHighlights =>
+      _model.commentHighlights;
+
+  /// Returns the nearest comment anchor at or after [renderLine].
+  DiffCommentAnchor? nearestCommentAnchor(int renderLine) {
+    return _model.nearestCommentAnchor(renderLine);
+  }
+
+  /// Returns the comment anchor occupying [renderLine].
+  DiffCommentAnchor? commentAnchorAt(int renderLine, {DiffCommentSide? side}) {
+    return _model.commentAnchorAt(renderLine, side: side);
+  }
+
+  /// Returns the index of the comment anchor occupying [renderLine].
+  int? commentAnchorIndexAt(int renderLine, {DiffCommentSide? side}) {
+    return _model.commentAnchorIndexAt(renderLine, side: side);
+  }
+
   /// Sets the raw unified diff text.
   void setDiff(String rawDiff) {
     _model = _model.setDiff(rawDiff);
@@ -74,6 +96,7 @@ class GitDiffController {
     bool? zeroPadLineNumbers,
     DiffViewMode? viewMode,
     DiffStyles? styles,
+    List<DiffCommentLineHighlight>? commentHighlights,
   }) {
     final needsRerender =
         (viewMode != null && viewMode != _model.viewMode) ||
@@ -82,7 +105,12 @@ class GitDiffController {
         (wrapLines != null && wrapLines != _model.wrapLines) ||
         (zeroPadLineNumbers != null &&
             zeroPadLineNumbers != _model.zeroPadLineNumbers) ||
-        (styles != null && styles != _model.styles);
+        (styles != null && styles != _model.styles) ||
+        (commentHighlights != null &&
+            !_sameCommentHighlights(
+              commentHighlights,
+              _model.commentHighlights,
+            ));
 
     if (!needsRerender) return;
 
@@ -92,6 +120,7 @@ class GitDiffController {
       zeroPadLineNumbers: zeroPadLineNumbers,
       viewMode: viewMode,
       styles: styles,
+      commentHighlights: commentHighlights,
     );
 
     _model = _model.rerender();
@@ -123,6 +152,20 @@ class GitDiffController {
     for (final listener in List<void Function()>.from(_listeners)) {
       listener();
     }
+  }
+
+  bool _sameCommentHighlights(
+    List<DiffCommentLineHighlight> left,
+    List<DiffCommentLineHighlight> right,
+  ) {
+    if (identical(left, right)) return true;
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      final l = left[index];
+      final r = right[index];
+      if (l.key != r.key || l.kind != r.kind) return false;
+    }
+    return true;
   }
 }
 
@@ -176,6 +219,8 @@ class GitDiffViewer extends StatefulWidget {
     this.handleKeys = true,
     this.scrollable = true,
     this.fitContentHeight = false,
+    this.commentHighlights = const <DiffCommentLineHighlight>[],
+    this.onCommentAnchorSelected,
     super.key,
   });
 
@@ -231,6 +276,12 @@ class GitDiffViewer extends StatefulWidget {
   /// Useful when embedding the viewer inside a parent scroll container and
   /// wanting no internal blank fill area.
   final bool fitContentHeight;
+
+  /// Visual highlights for selected/ranged/threaded diff comment lines.
+  final List<DiffCommentLineHighlight> commentHighlights;
+
+  /// Called when a commentable diff line is selected with the mouse.
+  final Cmd? Function(DiffCommentAnchor anchor)? onCommentAnchorSelected;
 
   @override
   State createState() => _GitDiffViewerState();
@@ -306,6 +357,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       zeroPadLineNumbers: widget.zeroPadLineNumbers,
       viewMode: widget.viewMode, // null = don't override model's current mode
       styles: widget.styles,
+      commentHighlights: widget.commentHighlights,
     );
     if (widget.width != null || widget.height != null) {
       _controller.setSize(
@@ -371,11 +423,23 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
 
   @override
   Cmd? handleUpdate(Msg msg) {
-    if (!widget.scrollable && (msg is KeyMsg || msg is MouseMsg)) {
+    if (!widget.scrollable &&
+        (msg is KeyMsg || msg is MouseMsg || msg is HitTestMouseMsg)) {
       return null;
     }
     if (!widget.handleKeys && msg is KeyMsg) return null;
 
+    if (msg is HitTestMouseMsg) {
+      if (!_isWheelEvent(msg.event)) return null;
+      return _updateController(
+        msg.event.copyWith(x: msg.localX.toInt(), y: msg.localY.toInt()),
+      );
+    }
+
+    return _updateController(msg);
+  }
+
+  Cmd? _updateController(Msg msg) {
     final prev = _controller.model;
     final (next, cmd) = _controller.update(msg);
     if (!identical(prev, next)) {
@@ -383,6 +447,14 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       setState(() {});
     }
     return cmd;
+  }
+
+  bool _isWheelEvent(MouseMsg msg) {
+    return msg.action == MouseAction.wheel ||
+        msg.button == MouseButton.wheelUp ||
+        msg.button == MouseButton.wheelDown ||
+        msg.button == MouseButton.wheelLeft ||
+        msg.button == MouseButton.wheelRight;
   }
 
   @override
@@ -412,6 +484,29 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       _cachedTheme = null;
       _cachedThemeStyles = null;
     }
-    return Text(_controller.model.view(), softWrap: false);
+    final text = Text(_controller.model.view(), softWrap: false);
+    if (widget.onCommentAnchorSelected == null) return text;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: _handleTapDown,
+      child: text,
+    );
+  }
+
+  Cmd? _handleTapDown(TapDownDetails details) {
+    final localY = details.localPosition.dy.floor();
+    final localX = details.localPosition.dx.floor();
+    final renderLine = _controller.scrollOffset + localY;
+    final side = _sideForLocalX(localX);
+    final anchor = _controller.commentAnchorAt(renderLine, side: side);
+    if (anchor == null) return null;
+    return widget.onCommentAnchorSelected?.call(anchor);
+  }
+
+  DiffCommentSide? _sideForLocalX(int localX) {
+    if (_controller.model.viewMode != DiffViewMode.sideBySide) return null;
+    return localX < (_controller.model.width ~/ 2)
+        ? DiffCommentSide.left
+        : DiffCommentSide.right;
   }
 }
