@@ -113,9 +113,53 @@ void main() {
 - `StringRenderer` writes to `stringOutput`; `output` is null.
 - `defaultRenderer` is global; always reset it in tests.
 
+## Color Matrix and Post-Processing Effects
+
+The UV system exposes a `BufferFilter` pipeline that can transform terminal
+cell colors and apply spatial/temporal effects. Filters operate on a
+`Buffer` (rather than raw ANSI) and compose cleanly with the renderer.
+
+### Color Matrix Effects
+
+`ColorMatrixFilter` applies a 4×5 RGBA transform to cell style colors
+(foreground, background, and underline color). Built-in presets cover the
+most common transformations:
+
+```dart
+import 'package:ultraviolet/ultraviolet.dart';
+
+final sink = BufferRenderSink(width: 80, height: 24);
+
+// Desaturate the entire frame
+final gray = ColorMatrixFilter.grayscale();
+final result = sink.render(sourceBuffer, [gray], dt: 1 / 60);
+renderer.render(result);
+```
+
+See [UV.md → Color Matrix Effects](UV.md#color-matrix-effects) for the full
+`ColorMatrix` API, chaining examples, and per-channel control.
+
+### Post-Processing Filters
+
+`filters.dart` provides spatial and temporal effects including `LiquifyFilter`,
+`VignetteFilter`, `ScanlineFilter`, `WaveDistortionFilter`, and `GhostingFilter`.
+High-level presets (`CrtFilter`, `AmberTerminalFilter`, `PhosphorFilter`) compose
+these into ready-to-use retro display effects.
+
+```dart
+// CRT-style preset
+final crt = CrtFilter(distortion: 0.22, vignette: 0.16);
+final result = sink.render(sourceBuffer, [crt], dt: elapsedSeconds);
+renderer.render(result);
+```
+
+See [UV.md → Post-Processing Filters](UV.md#post-processing-filters) for the
+full filter catalog and `BufferRenderSink` usage.
+
 ## Related Docs
 
 - [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
 - [TERMINAL.md](TERMINAL.md)
 - [STYLE.md](STYLE.md)
 - [COLORPROFILE.md](COLORPROFILE.md)
+- [UV.md](UV.md) - UV system and buffer filter pipeline

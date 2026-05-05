@@ -2,6 +2,22 @@
 
 Artisanal is a full-stack terminal toolkit for Dart, providing everything needed to build polished CLI applications and interactive TUIs. It's inspired by Charm's ecosystem (Lip Gloss, Bubble Tea, Ultraviolet).
 
+## Two Programming Models
+
+Artisanal offers two independent ways to build an interactive TUI. Both sit on top of the same `Program` runtime and UV renderer, but they present very different developer experiences:
+
+| | TEA Model | Widget System |
+|---|---|---|
+| **Location** | `pkgs/artisanal` | `pkgs/artisanal_widgets` |
+| **Import** | `package:artisanal/runtime.dart` | `package:artisanal_widgets/widgets.dart` |
+| **Root type** | Your class `implements Model` | `ArtisanalApp(...)` / `WidgetApp(root)` |
+| **Runner** | `runProgram(myModel)` | `runArtisanalApp(...)` / `runWidgetApp(...)` |
+| **State** | Immutable — return a new model | `setState()` in `StatefulWidget`; immutable fields in plain `Widget` |
+| **Rendering** | `view()` → `String` / `View` (ANSI output) | `build(BuildContext)` → `Widget` subtree; element tree renders it |
+| **Docs** | [TUI.md](TUI.md) | [WIDGETS.md](WIDGETS.md) |
+
+The two are not exclusive — the Widget system's `WidgetApp` is itself a `Model`, so it runs inside the same `Program` runtime.
+
 ## High-Level Architecture
 
 ```
@@ -260,13 +276,23 @@ stdin → KeyParser → Msg → Model.update() → Model → Model.view() → Re
 
 ### UV Rendering
 
+There are two separate rendering paths depending on which programming model is in use:
+
+**TEA model path** (bare `Model`, no widget tree):
 ```
-Model.view() → Widget.view() → Canvas → Buffer → UvTerminalRenderer → stdout
-                                          ↓
-                                    Diff with previous
-                                          ↓
-                                    Minimal ANSI output
+Model.view() → String/View → UvTerminalRenderer → diff → stdout
 ```
+
+**Widget system path** (`WidgetApp` wraps a widget tree):
+```
+WidgetApp.view()
+  └── ElementTree.render()
+        └── RenderObject tree → Canvas → Buffer
+                                              ↓
+                                        UvTerminalRenderer → diff → stdout
+```
+
+In both cases the `Program` runtime calls `model.view()` — the difference is that `WidgetApp.view()` triggers a full element-tree traversal before producing a string.
 
 ## Terminal Capabilities
 
@@ -312,8 +338,10 @@ lib/
 └── src/
     ├── style/          # Lip Gloss-inspired styling
     ├── tui/            # Bubble Tea-inspired TUI
-    │   ├── bubbles/    # Pre-built components
-    │   └── widgets/    # Declarative widgets
+    │   └── bubbles/    # Pre-built TEA components
+    │
+    │   # Widget system lives in a separate package:
+    │   # pkgs/artisanal_widgets/lib/src/widgets/
     ├── uv/             # Ultraviolet cell renderer
     ├── io/             # Console I/O utilities
     ├── terminal/       # Terminal abstraction

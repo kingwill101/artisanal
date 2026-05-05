@@ -36,6 +36,7 @@ The Console class provides a high-level API for building polished CLI applicatio
   - [Interactive Mode](#interactive-mode)
   - [Terminal Detection](#terminal-detection)
   - [Inline Animations](#inline-animations)
+  - [Diff Comments](#diff-comments)
 - [Configuration](#configuration)
 - [Integration with Args](#integration-with-args)
 - [Related Documentation](#related-documentation)
@@ -509,6 +510,196 @@ Future<void> main() async {
   );
 }
 ```
+
+### Diff Comments
+
+The Console provides diff rendering with anchor links and selection exposure for interactive diff browsing. These features are useful for code review tools, CLI git clients, and any application that needs to display or interact with unified diffs.
+
+#### Diff Comment Anchors
+
+Diff comment anchors are hyperlinks embedded within diff output that point to specific lines or hunks. They enable direct navigation to exact changes, making them ideal for code review systems where users need to reference or comment on specific modifications.
+
+The `console.diff()` method renders a unified diff with line number anchors. In terminals that support hyperlinks (e.g., iTerm2, Kitty, GNOME Terminal), the line numbers become clickable links that can be used to reference specific locations.
+
+**Example: Rendering a unified diff with line number anchors**
+
+```dart
+final console = Console();
+
+final unifiedDiff = '''
+diff --git a/lib/example.dart b/lib/example.dart
+--- a/lib/example.dart
++++ b/lib/example.dart
+@@ -10,6 +10,7 @@ void main() {
+   print('Hello');
+   print('World');
+   print('Foo');
++  print('Bar');
+   print('Baz');
+ }
+''';
+
+console.diff(unifiedDiff);
+```
+
+The output includes anchored line numbers for changed lines. The anchors encode file path, side (left/right), and line number, enabling other tools to parse and link back to those exact locations.
+
+**Programmatic anchor access**
+
+If you need to retrieve or work with the anchors programmatically (e.g., to build custom UI or generate external links), you can access them via the underlying model:
+
+```dart
+final model = console.diffModel; // Access the GitDiffModel
+final anchors = model.commentAnchors;
+
+for (final anchor in anchors) {
+  print('${anchor.path}:${anchor.side.name} line ${anchor.line}');
+  // anchor.key provides a stable DiffCommentLineKey for identification
+}
+```
+
+#### Diff Comment Selection
+
+The Console exposes selected diff hunks or lines for further processing. This allows building interactive diff viewers where users can select a region and perform actions like adding a review comment, copying the selected text, or applying a patch.
+
+Use `console.diffSelection()` to retrieve the currently selected diff hunk or line content. This returns a `DiffSelection?` object containing the selected file path, line range, and text.
+
+**Example: Selecting a diff hunk and getting its content**
+
+```dart
+final console = Console(interactive: true);
+
+// Render an interactive diff (user can navigate with arrow keys)
+console.diff(unifiedDiff, interactive: true);
+
+// Later, retrieve the user's selection
+final selected = console.diffSelection();
+if (selected != null) {
+  console.info('Selected hunk in ${selected.path}:');
+  console.text(selected.content);
+  
+  // Use selection to add a comment, copy to clipboard, etc.
+  await addReviewComment(selected.path, selected.line, selected.side);
+}
+```
+
+The selection updates as the user moves the cursor in interactive mode. You can also set the selection programmatically for custom navigation controls:
+
+```dart
+// Jump to a specific line
+console.setDiffSelection(
+  file: 'lib/example.dart',
+  line: 12,
+  side: DiffCommentSide.right,
+);
+```
+
+**Selection state access**
+
+For more control, the Console exposes the selection state through properties:
+
+```dart
+// Check if a selection exists
+if (console.hasDiffSelection) {
+  final anchor = console.selectedDiffAnchor;
+  final range = console.selectedDiffRange;
+  // Process selection...
+}
+
+// Clear current selection
+console.clearDiffSelection();
+```
+
+#### Interactive Diff Navigation
+
+When `interactive: true`, the diff viewer supports full keyboard navigation:
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Move between commentable lines |
+| `←` / `→` | Jump between hunk boundaries |
+| `Enter` | Select the current line/hunk |
+| `Space` | Toggle multi-line range selection |
+| `Esc` | Cancel selection / exit |
+| `?` | Show key binding help |
+| `v` | Cycle view mode (unified / side-by-side / pretty) |
+
+Navigation state is maintained in the `GitDiffModel`'s viewport and can be queried or controlled via the model's properties and methods.
+
+#### Diff Display Modes
+
+The diff viewer supports multiple display modes, configurable via `console.diffViewMode` or per-call:
+
+- **Unified** — Traditional `git diff` format with `+`/`-` markers in a single column.
+- **Side-by-side** — Old version on left, new version on right, separated by `│`.
+- **Pretty** — Clean layout with single line-number column and minimal noise.
+
+```dart
+// Set globally
+console.diffViewMode = DiffViewMode.sideBySide;
+
+// Or per call
+console.diff(diffText, viewMode: DiffViewMode.pretty);
+```
+
+#### Customizing Diff Appearance
+
+Diff styling can be customized via `DiffStyles`. The Console provides theme-aware defaults, but you can override specific elements:
+
+```dart
+console.diffStyles = DiffStyles(
+  addedLine: Style().foreground(Colors.green).bold(),
+  removedLine: Style().foreground(Colors.red),
+  selectedCommentLine: Style().background(Colors.blue).foreground(Colors.white),
+);
+```
+
+The `DiffStyles.fromColors()` factory maps semantic colors from your theme:
+
+```dart
+console.diffStyles = DiffStyles.fromColors(
+  success: Colors.green,      // added (+) lines
+  error: Colors.red,          // removed (-) lines
+  muted: Colors.gray,         // line numbers, gutters
+  surface: Colors.gray850,    // panel background
+  onSurface: Colors.white,    // file headers
+  onBackground: Colors.gray200, // context lines
+  border: Colors.gray600,     // separators
+);
+```
+
+#### Diff Model API
+
+When working with diffs programmatically, you can access the underlying `GitDiffModel` directly:
+
+```dart
+final model = console.diffModel;
+
+// Parse diff without rendering
+final files = model.files;
+for (final file in files) {
+  print('File: ${file.oldPath} → ${file.newPath}');
+  print('  +${file.additions} -${file.deletions}');
+}
+
+// Get rendered output (useful for testing or custom rendering)
+final output = model.view();
+
+// Programmatic navigation
+model.viewport.scrollTo(10);
+final anchor = model.nearestCommentAnchor(renderLine: 5);
+```
+
+#### Non-Interactive Mode
+
+In non-interactive environments (CI/CD, logging), diffs are rendered without anchors or interactive prompts:
+
+```dart
+final console = Console(interactive: false);
+console.diff(diffText); // Plain text diff, no hyperlinks or key handling
+```
+
+The rendering remains fully styled with ANSI colors but omits terminal-specific features like hyperlink OSC sequences.
 
 ---
 

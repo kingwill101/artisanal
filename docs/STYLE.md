@@ -1096,7 +1096,98 @@ theme.error        // Error indicators (red)
 theme.info         // Info indicators (blue)
 theme.highlight    // Special highlights (purple)
 theme.background   // Optional background color
+theme.listRow          // Base list row background
+theme.listRowEven      // Even row background
+theme.listRowOdd       // Odd row background
+theme.listRowSelected  // Selected row background/highlight
+theme.listRowHover     // Hover state background
 ```
+
+#### List Row Theme Tokens
+
+The theme system includes tokens for styling list rows in `LipList` and other list-based components:
+
+```dart
+theme.listRow          // Base style for list rows
+theme.listRowEven      // Background for even-numbered rows
+theme.listRowOdd       // Background for odd-numbered rows
+theme.listRowSelected  // Highlighted selected row
+theme.listRowHover     // Hover state for rows
+```
+
+##### Using List Row Tokens with LipList
+
+Apply theme-based styling to lists using `itemStyleFunc`:
+
+```dart
+import 'package:artisanal/style.dart';
+
+final theme = ThemePalette.dracula;
+
+final list = LipList.create(['Apples', 'Bananas', 'Cherries', ' Dates'])
+  .itemStyleFunc((items, index) {
+    final base = Style()
+        .foreground(theme.text)
+        .background(
+          index.isEven ? theme.listRowEven : theme.listRowOdd,
+        );
+    return base;
+  });
+```
+
+For interactive lists with hover and selection:
+
+```dart
+LipList.create(items)
+    .itemStyleFunc((items, index) {
+      final isSelected = index == selectedIndex;
+      final isHovered = index == hoveredIndex;
+
+      var style = Style()
+          .foreground(theme.text)
+          .background(theme.listRow);
+
+      if (isSelected) {
+        style = style
+            .foreground(theme.accent)
+            .background(theme.listRowSelected);
+      } else if (isHovered) {
+        style = style.background(theme.listRowHover);
+      } else {
+        style = style.background(
+          index.isEven ? theme.listRowEven : theme.listRowOdd,
+        );
+      }
+
+      return style;
+    })
+```
+
+Use `listRow` as a base for uniform row styling:
+
+```dart
+LipList.create(['Item 1', 'Item 2', 'Item 3'])
+  .itemStyle(Style()
+      .foreground(theme.text)
+      .background(theme.listRow));
+```
+
+##### Customizing List Row Tokens
+
+When creating a custom theme, define these properties to style lists:
+
+```dart
+final myTheme = ThemePalette(
+  // ... other theme properties
+  listRow: Colors.gray900,
+  listRowEven: Colors.gray800,
+  listRowOdd: Colors.gray900,
+  listRowSelected: Colors.blue.withAlpha(200),
+  listRowHover: Colors.gray700,
+);
+```
+
+For alternating row backgrounds, `listRowEven` and `listRowOdd` create visual separation. The `listRowSelected` token typically uses the theme's accent color for emphasis. The `listRowHover` token provides immediate visual feedback during mouse or keyboard navigation.
 
 ### Getting Themes by Name
 
@@ -1120,6 +1211,11 @@ final myTheme = ThemePalette(
   error: Colors.red,
   info: Colors.blue,
   highlight: Colors.pink,
+  listRow: Colors.gray900,
+  listRowEven: Colors.gray800,
+  listRowOdd: Colors.gray900,
+  listRowSelected: Colors.blue.withAlpha(200),
+  listRowHover: Colors.gray700,
 );
 ```
 

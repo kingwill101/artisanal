@@ -28,6 +28,8 @@ export during the transition.
 16. [Image Drawables](#image-drawables)
 17. [Style Bridge](#style-bridge)
 18. [Quick Start](#quick-start)
+19. [Color Matrix Effects](#color-matrix-effects)
+20. [Post-Processing Filters](#post-processing-filters)
 
 ---
 
@@ -263,6 +265,32 @@ buf.insertCell(10, 5, 3, null);  // Insert 3 cells at (10, 5)
 buf.deleteCell(10, 5, 2, null);  // Delete 2 cells at (10, 5)
 ```
 
+### Dirty Tracking
+
+`Buffer` supports optional per-cell dirty tracking to allow renderers to skip
+unchanged regions. Enable it at creation time:
+
+```dart
+// Create a buffer with dirty-bit tracking enabled
+final buf = Buffer.create(80, 24, tracksDirty: true);
+
+// Mark a single cell as dirty explicitly
+buf.markDirty(x, y);
+
+// Check whether any row is dirty
+if (buf.dirtyRows[y]) { ... }
+
+// Check the dirty-bit for a specific cell column
+// dirtyBits is a List<Uint32List>; each word covers 32 columns.
+final word = buf.dirtyBits[y][x >> 5];
+final bit = (word >> (x & 31)) & 1;
+```
+
+When `tracksDirty` is `false` (the default), `dirtyRows` and `dirtyBits` are
+empty lists and dirty marking is a no-op. The UV terminal renderer uses dirty
+tracking internally when it operates on an `OwnedCellScreen` to limit the
+number of ANSI sequences emitted per frame.
+
 ### Cloning
 
 ```dart
@@ -332,7 +360,14 @@ abstract class CloneableScreen implements Screen {
 abstract class CloneAreaScreen implements Screen {
   Object? cloneArea(Rectangle area);
 }
+
+// OwnedCellScreen - take ownership of a cell (zero-copy fast path)
+abstract class OwnedCellScreen implements Screen {
+  void setCellOwned(int x, int y, Cell? cell);
+}
 ```
+
+`OwnedCellScreen` lets implementations take ownership of an already-allocated `Cell` instead of cloning it, reducing allocations in high-frequency paint loops. Only pass cells that are not shared with another buffer or line.
 
 ### ScreenBuffer
 
@@ -946,6 +981,38 @@ renderer.setTabStops(8);
 renderer.setBackspace(true);
 ```
 
+### Performance Internals
+
+The UV system applies several optimizations that are transparent to callers but
+relevant when diagnosing performance or porting the library:
+
+**Cell style/link packing** — `UvStyle` and `Link` are stored as compact
+integer bitfields rather than heap-allocated objects. Cell display width is
+stored in the same word with widened bit capacity so wide characters (width 2)
+and image cells are represented without extra allocations. This keeps
+per-cell memory low and improves cache locality for large buffers.
+
+**Unicode string width caching** — `visibleLength` and `stringWidth` calls
+for multi-character grapheme strings are memoized in a bounded `LruCache`.
+This avoids re-scanning long styled strings (e.g. repeated `StyledString`
+draws). Emoji presentation sequences (`\uFE0F`) are guarded with a separate
+fast-path to prevent double-counting their display width.
+
+**`expandTabs` fast-path** — Tab-expansion uses a protocol-aware path that
+correctly handles Kitty and Sixel display widths. A fast-path skips tab
+expansion entirely for strings that contain no `\t` characters, which is the
+common case in programmatically generated output.
+
+**Truecolor SGR clamping** — RGB components in `UvRgb` are clamped and
+normalized to the `[0, 255]` byte range when generating ANSI SGR sequences.
+This prevents invalid escape sequences from truncating or wrapping terminals
+that do not clamp out-of-range values themselves.
+
+**Render primitive microbenchmarks** — The UV renderer suite is covered by a
+suite of focused microbenchmarks (`pkg:ultraviolet/benchmark/`) that track
+per-frame buffer diff time, cell write throughput, and ANSI serialization
+speed. Run with `dart run benchmark/` from the `ultraviolet` package.
+
 ---
 
 ## Buffer Filters and Render Sinks
@@ -1006,6 +1073,159 @@ void _setCell(Buffer buffer, int x, int y, String ch) {
   line.set(x, Cell(content: ch));
 }
 ```
+
+---
+
+## Color Matrix Effects
+
+`effects.dart` provides a `ColorMatrix` primitive (a 4×5 RGBA coefficient
+matrix) and a `ColorMatrixFilter` that plugs into the `BufferFilter` pipeline.
+Effects operate on cell style colors (fg, bg, underline color) while leaving
+glyph content, display width, links, and drawables untouched.
+
+### ColorMatrix
+
+A `ColorMatrix` is a row-major 4×5 matrix of `double` coefficients. Each of
+the four rows transforms one channel (R, G, B, A). The fifth column in each
+row is an additive bias.
+
+```dart
+import 'package:ultraviolet/ultraviolet.dart';
+
+// Built-in presets
+final grayscale = ColorMatrix.grayscale();   // sRGB luminance
+final inverted  = ColorMatrix.invert();      // flip RGB
+final brightened = ColorMatrix.gain(1.25);   // scale all channels
+final dimmed    = ColorMatrix.attenuation(0.6);
+
+// Tint toward a color
+final warmed = ColorMatrix.tint(const UvRgb(255, 180, 80), amount: 0.4);
+
+// Chain two matrices
+final combined = grayscale.followedBy(warmed);
+
+// Collapse a list of matrices in order
+final stacked = ColorMatrix.compose([grayscale, inverted, dimmed]);
+
+// Apply directly to a UvStyle
+final styled = UvStyle(fg: const UvRgb(0, 200, 255));
+final transformed = grayscale.transformStyle(styled);
+```
+
+### ColorMatrixFilter
+
+`ColorMatrixFilter` wraps a `ColorMatrix` as a `BufferFilter` so it can be
+used directly in a `BufferRenderSink`:
+
+```dart
+import 'package:ultraviolet/ultraviolet.dart';
+
+final sink = BufferRenderSink(width: 80, height: 24);
+
+// Grayscale all foreground colors (preserve background)
+final grayFg = ColorMatrixFilter.grayscale(background: false);
+
+// Tint everything toward amber
+final amber = ColorMatrixFilter.tint(
+  const UvRgb(255, 191, 96),
+  amount: 0.6,
+);
+
+final filtered = sink.render(sourceBuffer, [grayFg, amber], dt: 1 / 60);
+renderer.render(filtered);
+```
+
+Named factory constructors on `ColorMatrixFilter`:
+
+| Constructor | Effect |
+|---|---|
+| `ColorMatrixFilter.identity()` | No-op pass-through |
+| `ColorMatrixFilter.grayscale()` | sRGB luminance desaturation |
+| `ColorMatrixFilter.invert()` | Flip RGB channels |
+| `ColorMatrixFilter.gain(amount)` | Scale all channels |
+| `ColorMatrixFilter.attenuation(amount)` | Scale channels ≤ 1 |
+| `ColorMatrixFilter.tint(color, amount)` | Blend toward a color |
+| `ColorMatrixFilter.multiply(color)` | Per-channel multiply |
+
+Each factory accepts `foreground`, `background`, and `underlineColor` boolean
+flags to restrict which style components are transformed.
+
+---
+
+## Post-Processing Filters
+
+`filters.dart` provides spatial and temporal post-processing filters that
+extend the `BufferFilter` base class. They are designed to compose with
+`ColorMatrixFilter` inside a `BufferRenderSink` pipeline.
+
+```dart
+import 'package:ultraviolet/ultraviolet.dart';
+
+final sink = BufferRenderSink(width: 80, height: 24);
+
+// Combine several filters in one pass
+final crt = CrtFilter(
+  distortion: 0.22,
+  vignette: 0.16,
+  scanline: 0.10,
+  rollingBar: 0.08,
+);
+
+final filtered = sink.render(sourceBuffer, [crt], dt: elapsedSeconds);
+renderer.render(filtered);
+```
+
+### Available Filters
+
+| Filter | Effect |
+|---|---|
+| `LiquifyFilter` | Damped noise-field displacement |
+| `VignetteFilter` | Radial edge darkening |
+| `ScanlineFilter` | CRT horizontal scan-line dimming |
+| `WaveDistortionFilter` | Sinusoidal cell displacement |
+| `GhostingFilter` | Temporal afterimage persistence trail |
+| `CrtFilter` | Composite CRT preset (wave + vignette + scanlines) |
+| `AtmosphereFilter` | Gentle background bloom and vignette |
+
+### Composite Presets
+
+High-level presets compose multiple primitives into a single `CompositeFilter`:
+
+```dart
+// Warm amber monochrome monitor
+final amber = AmberTerminalFilter(tint: 0.62, attenuation: 0.96);
+
+// Green phosphor CRT
+final phosphor = PhosphorFilter(tint: 0.58, distortion: 0.08);
+
+// Phosphor with persistence trail
+final trail = PhosphorTrailFilter(persistence: 0.42);
+
+// Amber with trail
+final amberTrail = AmberTrailFilter(persistence: 0.38);
+
+// CRT with trail
+final crtTrail = CrtTrailFilter(persistence: 0.32);
+```
+
+### BufferRenderSink
+
+`BufferRenderSink` is the entry point for all filter pipelines:
+
+```dart
+final sink = BufferRenderSink(width: 80, height: 24);
+
+// Resize when the terminal changes
+sink.resize(newWidth, newHeight);
+
+// Apply a filter list each frame
+final result = sink.render(myBuffer, [filter1, filter2], dt: 1 / 60);
+```
+
+Internally the sink double-buffers render targets so filters never
+read and write the same buffer simultaneously.
+
+For detailed source API, see `package:ultraviolet/ultraviolet.dart`.
 
 ---
 
@@ -1381,4 +1601,5 @@ TerminalCapabilities
 
 - [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
 - [TERMINAL.md](TERMINAL.md) - Terminal abstraction
+- [TERMINAL_GRAPHICS.md](TERMINAL_GRAPHICS.md) - Sixel / Kitty / iTerm2 image protocols
 - [CHARTING.md](CHARTING.md) - Charting primitives

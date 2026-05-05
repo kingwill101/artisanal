@@ -2,6 +2,15 @@
 
 The TUI system provides an Elm Architecture-based framework for building interactive terminal user interfaces. It's inspired by [Charm's Bubble Tea](https://github.com/charmbracelet/bubbletea) for Go.
 
+> **Two ways to build a TUI in Artisanal**
+>
+> | Model | Best for | Key entry point |
+> |-------|----------|-----------------|
+> | **TEA model** (this doc) | Direct control, simple apps, custom pipelines | `runProgram(MyModel())` |
+> | **Widget system** ([WIDGETS.md](WIDGETS.md)) | Composable layouts, Flutter-style state, rich interactions | `runArtisanalApp(ArtisanalApp(...))` |
+>
+> This document covers the **TEA model only**. If you want the Flutter-like widget tree (`StatelessWidget`, `StatefulWidget`, `WidgetApp`), go to [WIDGETS.md](WIDGETS.md).
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -22,6 +31,9 @@ The TUI system provides an Elm Architecture-based framework for building interac
 - [Message Filtering](#message-filtering)
 - [Program Interceptors](#program-interceptors)
 - [Replay Automation](#replay-automation)
+- [Trace Logging](#trace-logging)
+- [Hot Reload Support](#hot-reload-support)
+- [TUI Runtime Instrumentation](#tui-runtime-instrumentation)
 - [UV Renderer Integration](#uv-renderer-integration)
 - [Helper Functions](#helper-functions)
 - [Best Practices](#best-practices)
@@ -56,12 +68,13 @@ The Elm Architecture (TEA) is a pattern for building interactive applications wi
 
 ## Quick Start
 
-Focused stable entrypoints:
+TEA model entrypoints:
 
-- `package:artisanal/runtime.dart` for the supported `Model`/`Msg`/`Cmd`/`Program` surface, including `StringTerminal` for deterministic tests and runtime messages like `ZoneInBoundsMsg`
-- `package:artisanal/hosts.dart` for backends, bridges, and browser/socket hosts
-- `package:artisanal/app.dart`, `package:artisanal/editors.dart`, `package:artisanal/selection.dart`, and `package:artisanal/testing.dart` for the stable widget modules re-exported by the umbrella package
-- `package:artisanal/tui.dart` for the broader compatibility barrel, including bubbles and the widget re-export
+- `package:artisanal/runtime.dart` — `Model`, `Msg`, `Cmd`, `Program`, `runProgram`, `StringTerminal` (for tests), runtime messages
+- `package:artisanal/hosts.dart` — backends, browser/socket hosts, `ProgramHost`
+- `package:artisanal/tui.dart` — broader compatibility barrel (includes bubbles and Bubbles components)
+
+> **Widget system?** Use `package:artisanal_widgets/widgets.dart` and `package:artisanal_widgets/app.dart`. See [WIDGETS.md](WIDGETS.md).
 
 ```dart
 import 'package:artisanal/runtime.dart';
@@ -1489,6 +1502,152 @@ For a runnable end-to-end example, use
 For a built-in runtime event example (render-budget transitions), use
 `pkgs/artisanal/example/tui/examples/evidence-logging/render_budget.dart`.
 
+## Hot Reload Support
+
+Widget apps can detect and apply live source-code changes without restarting
+the process. Hot reload is powered by the `hotreloader` package and is wired
+into the widget host through `HotReloadMixin`.
+
+### Enabling Hot Reload
+
+Hot reload requires the Dart VM service. Launch your app with:
+
+```sh
+dart run --enable-vm-service bin/my_app.dart
+# or via the convenience helpers
+dart run --enable-vm-service example/my_example.dart
+```
+
+The `runWatchedArtisanalApp` and `runReloadableArtisanalApp` helpers from
+`package:artisanal/app.dart` activate the file-watcher automatically when the
+VM service is reachable:
+
+```dart
+import 'package:artisanal/app.dart';
+import 'package:artisanal_widgets/widgets.dart';
+
+void main() async {
+  await runWatchedArtisanalApp(MyApp());
+}
+```
+
+### HotReloadStatusMsg
+
+The host dispatches a `HotReloadStatusMsg` through the normal `Program.send`
+path whenever the reload lifecycle transitions. Models can react to it:
+
+```dart
+@override
+(Model, Cmd?) update(Msg msg) {
+  return switch (msg) {
+    HotReloadStatusMsg(status: HotReloadStatus.changeDetected, :final detail) =>
+      (copyWith(reloadBanner: 'Reloading: ${detail ?? \'\'}'), null),
+    HotReloadStatusMsg(status: HotReloadStatus.succeeded) =>
+      (copyWith(reloadBanner: null), null),
+    HotReloadStatusMsg(status: HotReloadStatus.failed, :final detail) =>
+      (copyWith(reloadBanner: 'Reload failed: ${detail ?? \'\'}'), null),
+    _ => (this, null),
+  };
+}
+```
+
+### HotReloadStatus Values
+
+| Status | Meaning |
+|--------|--------|
+| `initializing` | Mixin is starting the file-watcher |
+| `ready` | Watching for file changes |
+| `changeDetected` | A source file changed; reload is about to start |
+| `reassembling` | Reload succeeded; widget tree is being reassembled |
+| `succeeded` | Reassembly complete; app reflects latest code |
+| `failed` | Compilation error or reassemble error |
+| `unavailable` | VM service not reachable or not in debug mode |
+
+Hot reload is automatically disabled in AOT/release builds
+(`dart compile exe`, `flutter --release`). In those modes the mixin skips
+all initialization and `HotReloadStatusMsg` is never dispatched.
+
+## TUI Runtime Instrumentation
+
+`TuiTrace` is a zero-overhead structured tracer for the TUI render and input
+pipeline. It writes tagged, timestamped log lines (with optional span timing)
+to a file. All methods are static and guarded behind `TuiTrace.enabled`, so
+they add negligible overhead in production builds where tracing is off.
+
+### Enabling Tracing
+
+Set environment variables before running your app:
+
+```sh
+# Enable tracing (writes to ./traces/)
+ARTISANAL_TUI_TRACE=1 dart run bin/my_app.dart
+
+# Write to a specific file
+ARTISANAL_TUI_TRACE_PATH=/tmp/my_trace.log dart run bin/my_app.dart
+
+# Capture message-dispatch events (higher volume)
+ARTISANAL_TUI_TRACE_CAPTURE=1 ARTISANAL_TUI_TRACE=1 dart run bin/my_app.dart
+
+# Filter to specific subsystems
+ARTISANAL_TUI_TRACE_TAGS=render,layout dart run bin/my_app.dart
+```
+
+### TraceTag Values
+
+Each log line is tagged with a pipeline phase:
+
+| Tag | Phase |
+|-----|-------|
+| `input` | Terminal input parsing and message coalescing |
+| `queue` | Message queue management and drain loop |
+| `dispatch` | Message dispatch to the widget/element tree |
+| `rebuild` | Widget tree dirty marking and rebuild |
+| `layout` | Constraint propagation and size computation |
+| `paint` | RenderObject paint phase |
+| `render` | Canvas → ANSI string serialization |
+| `flush` | UV renderer: diff, buffer draw, ANSI flush |
+| `focus` | Focus system operations |
+| `scroll` | Scroll position and optimization |
+| `metrics` | Frame counter and FPS tracking |
+| `cmd` | Command execution |
+| `general` | Uncategorized |
+
+### Logging and Spans
+
+```dart
+import 'package:artisanal/runtime.dart'; // TuiTrace and TraceTag are exported
+
+// Simple tagged log
+TuiTrace.log('custom message', tag: TraceTag.render);
+
+// Span-based timing
+final span = TuiTrace.begin('my_view', tag: TraceTag.render);
+// ... do work ...
+span.end(); // logs: [render] my_view 1234us
+
+// Structured event
+TuiTrace.event('my.event', tag: TraceTag.general, fields: {'key': 'value'});
+```
+
+### Testing
+
+```dart
+TuiTrace.configureForTest(enabled: true, path: '/tmp/test_trace.log');
+// run test code
+TuiTrace.clearTestOverrides();
+```
+
+### Trace Output Format
+
+Each line in the trace file is:
+
+```
+[+NNNus] [tag] message
+```
+
+For structured events the message starts with `@event ` followed by a
+JSON object: `{"v":1,"type":"input.batch",...}`.
+
 ## Replay + Trace Workflow (OpenCode Example)
 
 Record a manual run:
@@ -1579,6 +1738,8 @@ import 'package:artisanal/bubbles.dart';
 ## Related Docs
 
 - [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [BUBBLES.md](BUBBLES.md) - Interactive components
+- [WIDGETS.md](WIDGETS.md) - Flutter-like Widget system (the alternative UI model)
+- [REPLAY.md](REPLAY.md) - Replay automation system
+- [BUBBLES.md](BUBBLES.md) - TEA-composable interactive components
 - [UV.md](UV.md) - UV renderer integration
 - [MARKDOWN.md](MARKDOWN.md) - Markdown rendering

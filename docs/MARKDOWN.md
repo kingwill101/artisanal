@@ -156,8 +156,180 @@ Some **bold** text.
 - `markdown.dart`: faster, simpler, ideal for inline docs and logs.
 - `glamour.dart`: richer formatting and consistent document styling.
 
-## Related Docs
+## Rendering Fidelity
 
+Artisanal provides two markdown renderers with different fidelity levels. The `glamour.dart` renderer delivers high-fidelity markdown-to-ANSI conversion with theme-driven formatting, while `markdown.dart` offers a lightweight, fast alternative for simpler use cases.
+
+### Table Rendering Accuracy
+
+The Glamour renderer calculates column widths dynamically based on content, producing properly aligned tables with clean borders:
+
+```markdown
+| Feature | Status |
+|---------|--------|
+| Tables  | ✅     |
+| Nesting | ✅     |
+```
+
+Features:
+- Measures column widths from both headers and data cells
+- Pads cells consistently with proper alignment
+- Draws complete borders with `+---+---+` and `|` separators
+- Handles nested tables within cells
+- Respects alignment hints (left, center, right) in table headers
+
+The ANSI renderer provides basic table borders with fixed-width columns, while Glamour adapts column widths to fit content optimally.
+
+### Code Block Handling with Chroma Syntax Highlighting
+
+Fenced code blocks support comprehensive syntax highlighting via integrated Chroma themes:
+
+```dart
+import 'package:artisanal/glamour.dart';
+
+final renderer = GlamourRenderer(
+  theme: GlamourTheme.dark,
+);
+renderer.render(nodes); // Code blocks render with Chroma colors
+```
+
+Features:
+- Language detection from fence labels (```dart, ```rust, ```python, etc.)
+- Integration with `ChromaTheme` for accurate syntax highlighting across 100+ languages
+- Margin and padding control via `GlamourCodeBlockStyle`
+- Borderless option for embedded code snippets
+- Line number support and range highlighting
+- Adaptive theme switching (light/dark background detection)
+
+Both renderers support syntax highlighting, but Glamour provides deeper Chroma integration with theme-aware token coloring and customizable code block presentation.
+
+### Nested Lists and Proper Indentation
+
+Nested lists maintain proper indentation at each level with configurable depth:
+
+```markdown
+- Item 1
+  - Nested item 1.1
+    - Deeply nested 1.1.1
+      - Level 4 item
+  - Nested item 1.2
+- Item 2
+```
+
+The renderer tracks list depth and applies:
+- Per-level indentation configurable via `GlamourListStyle.levelIndent`
+- Correct counters for ordered lists at each nesting level (1.1, 1.2, etc.)
+- Task list checkbox state preservation ([x] and [ ])
+- Mixed list type handling (ordered within unordered and vice versa)
+
+Glamour provides enhanced indentation control compared to the basic ANSI renderer, particularly for deeply nested structures.
+
+### Heading Hierarchy with Theme-Driven Styling
+
+Headings use theme-driven styling with H1 receiving special treatment:
+
+```markdown
+# H1 Title (background highlight in dark theme)
+## H2 Heading
+### H3 Heading
+#### H4 Heading
+```
+
+Each heading level (`h1` through `h6`) has dedicated theme configuration supporting:
+- Foreground colors per level with semantic differentiation
+- Background colors (H1 in dark/light themes)
+- Prefix/suffix text for visual distinction
+- Bold weight for hierarchy emphasis
+- Underline styles for secondary headings
+- Vertical spacing control before/after
+
+See [STYLE.md](STYLE.md) for detailed theme configuration options.
+
+### Blockquotes with Border Markers
+
+Blockquotes render with distinctive vertical border markers:
+
+```markdown
+> This is a blockquote
+> Multiple lines are supported
+> 
+> > Nested blockquote levels also work
+```
+
+Features:
+- `│ ` prefix marker repeated per nesting level
+- Configurable `indentToken` in `GlamourBlockStyle`
+- Continuous markers across wrapped lines
+- Proper spacing and margin control
+- Theme-aware border and text colors
+- Support for multiple nesting levels
+
+### Horizontal Rules
+
+Horizontal rules adapt to the current theme:
+
+```markdown
+---
+```
+
+Rendered using the theme's `horizontalRule.format` property (default: `--------` in light themes, `────────` in dark themes), with theme-appropriate coloring. Custom formats can include Unicode box-drawing characters for visual variety.
+
+### Inline HTML Handling
+
+Raw HTML is rendered using appropriate text styling where applicable:
+
+```html
+<strong>Bold</strong> and <em>italic</em>
+<span style="color: red">Colored text</span>
+```
+
+The renderer applies semantic text styles (bold, italic, underline) instead of passing through raw HTML tags. Color information from inline styles is mapped to theme-appropriate colors where possible. Security-sensitive tags are stripped to prevent injection.
+
+### Link Reference Definitions
+
+Standard markdown links and reference-style definitions render with optional hyperlinks:
+
+```markdown
+[Link text](https://example.com)
+
+[Reference link][1]
+
+[1]: https://example.com "Optional title"
+```
+
+Both renderers support OSC 8 hyperlinks (configurable via `hyperlinks` option in `AnsiRendererOptions` or theme configuration). Links can be styled with custom colors and underline settings, and are interactive in terminals that support OSC 8 URL detection.
+
+### Emoji Shortcodes
+
+Emoji shortcodes are supported via the standard `:shortcode:` syntax:
+
+```markdown
+Success! :tada: :sparkles:
+Warning :warning: - Check the docs
+```
+
+Supported shortcodes follow the GitHub emoji specification, with rendering that respects the current theme's color palette. Emoji display varies by terminal capability, with fallbacks to shortcode text where emoji rendering is unavailable.
+
+### ANSI vs Glamour Renderer Comparison
+
+| Feature | ANSI Renderer (`markdown.dart`) | Glamour Renderer (`glamour.dart`) |
+|---------|---------------------------------|-----------------------------------|
+| **Speed** | Faster - lightweight parsing | Moderate - theme processing overhead |
+| **Tables** | Basic borders, fixed widths | Dynamic column widths, alignment hints |
+| **Code blocks** | Syntax highlighting only | Chroma-integrated with theme adaptation |
+| **Nesting** | Supported, basic indentation | Enhanced indentation with per-level control |
+| **Blockquotes** | Simple `>` prefix | Styled with border markers and nesting |
+| **Headings** | Color per level | Full theme-driven styling with backgrounds |
+| **Customization** | Style options per render | Comprehensive theme system |
+| **Inline HTML** | Basic tag stripping | Semantic style mapping |
+| **Link handling** | Standard and OSC 8 | Standard, OSC 8, and themed styling |
+| **Emoji support** | Basic shortcodes | Full GitHub shortcode set with theme awareness |
+| **Horizontal rules** | Static characters | Theme-adaptive formats |
+| **Best for** | Logs, inline docs, speed-critical | Documents, reports, rich output |
+
+### Related Docs
+
+- [STYLE.md](STYLE.md) - Style system for terminal output
+- [CONSOLE.md](CONSOLE.md) - Console output and markdown integration  
 - [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [STYLE.md](STYLE.md)
 - [TERMINAL.md](TERMINAL.md)

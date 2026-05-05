@@ -1,6 +1,23 @@
 # Widget Composition System
 
-Artisanal's Widget system provides a composable, hierarchical approach to building terminal user interfaces. Built on top of the Model pattern (Elm Architecture), Widgets extend it with automatic message forwarding, theme access, and layout primitives.
+Artisanal provides **two distinct ways to build a terminal UI**. This document covers the **Widget system** — a Flutter-inspired, composable tree model. For the lower-level TEA (Elm Architecture) model, see [TUI.md](TUI.md).
+
+## Choosing a UI Model
+
+| | TEA Model ([TUI.md](TUI.md)) | Widget System (this doc) |
+|---|---|---|
+| **State model** | Immutable — return a new model from `update()` | Mutable `State` via `setState()` for `StatefulWidget`; immutable fields for plain `Widget` |
+| **Rendering** | `view()` returns a `String` or `View` object (rendered ANSI) | `build(BuildContext)` returns a `Widget` subtree; rendering is managed by the element tree |
+| **Message handling** | Override `update(Msg)` directly | Override `handleUpdate(Msg)` — base `update()` auto-fans out to children |
+| **Composition** | Manual — concatenate strings in `view()` | Declarative `children` list, `Row`/`Column`/`Container`, `InheritedWidget` context |
+| **Context / theming** | None — access globals manually | `BuildContext`, `InheritedWidget`, `Theme` via `context.dependOn...` |
+| **Runner** | `runProgram(MyModel())` | `runWidgetApp(WidgetApp(root))` or `runArtisanalApp(ArtisanalApp(...))` |
+| **`StatefulWidget`** | N/A | Requires `WidgetApp` — element tree manages `State` lifecycle |
+| **Best for** | Simple apps, custom pipelines, bubbles integration | Rich layouts, forms, navigation, reusable component libraries |
+
+The Widget system is built on the same `Program` runtime as the TEA model — `WidgetApp` is itself a `Model` that wraps an element tree. You do not need to understand TEA to use the Widget system.
+
+---
 
 ## Table of Contents
 
@@ -15,11 +32,13 @@ Artisanal's Widget system provides a composable, hierarchical approach to buildi
 - [Scroll Widgets](#scroll-widgets)
 - [Components Widgets](#components-widgets)
   - [Flutter-style ports](#flutter-style-ports)
+- [Widget Slot Registry](#widget-slot-registry)
 - [Navigation Widgets](#navigation-widgets)
 - [Selection Widgets](#selection-widgets)
 - [Chart Widgets](#chart-widgets)
 - [Media Widgets](#media-widgets)
 - [Animation Widgets](#animation-widgets)
+- [Widget Testing](#widget-testing)
 - [Creating Custom Widgets](#creating-custom-widgets)
   - [RenderObject widgets](#renderobject-widgets)
 - [Widget Composition](#widget-composition)
@@ -323,6 +342,100 @@ await runReloadableArtisanalApp(
 );
 ```
 
+### Widget Runtime Metrics
+
+`WidgetApp` integrates a three-layer performance model that makes runtime
+metrics available to the widget tree without triggering extra rebuilds.
+
+**Three layers:**
+
+1. **`RenderMetrics`** — TUI runtime FPS, frame times, render durations
+   (from `UvTerminalRenderer`). Enabled when `enableRenderMetrics: true`
+   (the default).
+2. **`WidgetFrameTiming`** — widget-layer breakdown per frame: build,
+   layout, and paint durations. Always collected when the widget tree runs.
+3. **`PerformanceMetricsSnapshot`** — combined view of both layers.
+
+#### Accessing Metrics from Code
+
+```dart
+// From the WidgetApp instance (outside the widget tree)
+final snapshot = widgetApp.performanceSnapshot;
+print(snapshot.averageBuildDuration);   // widget build phase
+print(snapshot.averageLayoutDuration);  // layout phase
+print(snapshot.averagePaintDuration);   // paint phase
+print(snapshot.slowFrameCount);         // frames > 16.67ms
+print(snapshot.renderMetrics?.averageFps); // runtime FPS
+
+// Register a per-frame callback
+widgetApp.addFrameTimingCallback((timing) {
+  if (timing.isSlowFrame) {
+    debugPrint('Slow frame #${timing.frameNumber}: ${timing.totalDuration}');
+  }
+});
+```
+
+#### Injecting Custom Metrics into Debug Overlays
+
+`RenderMetricsInjector` is a global bus for pushing custom key-value lines
+into `DebugOverlay` without modifying the widget tree:
+
+```dart
+import 'package:artisanal_widgets/app.dart';
+
+// Inject a custom metric line
+RenderMetricsInjector.instance.setMetric('cache_size', '1,024 items');
+
+// Inject many at once
+RenderMetricsInjector.instance.setMetrics({
+  'requests': 42,
+  'latency_ms': 12,
+});
+
+// Remove a key
+RenderMetricsInjector.instance.removeMetric('cache_size');
+
+// Clear all custom entries
+RenderMetricsInjector.instance.clearMetrics();
+```
+
+#### Forwarding Runtime Monitor Stats
+
+`RenderMetricsProgramMonitor` is a `ProgramInterceptor` that automatically
+forwards `UvTerminalRenderer` stats into overlays:
+
+```dart
+final monitor = RenderMetricsProgramMonitor(prefix: 'Render');
+
+await runArtisanalApp(
+  ArtisanalApp(home: MyApp()),
+  options: ProgramOptions(interceptors: [monitor]),
+);
+```
+
+#### Debug Overlay
+
+Set `debugOverlay: true` on `ArtisanalApp` (or `WidgetApp`) to show an
+always-on HUD that displays FPS, frame timing, and any custom metrics
+injected via `RenderMetricsInjector`. Press **F12** at runtime to toggle.
+
+```dart
+ArtisanalApp(
+  debugOverlay: true,
+  debugOverlayPosition: DebugOverlayPosition.topRight,
+  home: MyApp(),
+)
+```
+
+#### WidgetApp Constructor Options
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enableRenderMetrics` | `true` | Subscribe to `RenderMetricsMsg` from TUI runtime |
+| `enableRenderMetricsInjection` | `true` | Listen to `RenderMetricsInjector` stream |
+| `debugOverlay` | `false` | Show runtime debug overlay on startup |
+| `debugOverlayPosition` | `topRight` | Where the overlay appears |
+
 ### Build Owner and Dirty Elements
 
 `BuildOwner` tracks dirty elements that need rebuilding. When an element
@@ -368,6 +481,8 @@ class AccentLabel extends StatelessWidget {
 
 ### StatelessWidget and StatefulWidget
 
+> **`WidgetApp` required.** `StatelessWidget` and `StatefulWidget` rely on the element tree managed by `WidgetApp`. Calling `runProgram(StatefulWidget(...))` directly will throw at runtime because no element tree exists to manage `State` lifecycles and `BuildContext`. Always use `runWidgetApp` or `runArtisanalApp` when your tree contains `StatelessWidget` or `StatefulWidget`.
+
 ```dart
 class Title extends StatelessWidget {
   Title({super.key, required this.text});
@@ -405,15 +520,19 @@ class _CounterState extends State<Counter> {
 }
 ```
 
-### Key Differences from Model
+### Key Differences from TEA Model
 
-| Feature | Model | Widget |
-|---------|-------|--------|
-| Message handling | Manual | Auto-forwards to children first |
-| Theme access | Manual | Built-in `theme` getter |
+| Feature | TEA `Model` | `Widget` / `StatefulWidget` |
+|---------|-------------|-----------------------------|
+| Message handling | Override `update(Msg)` directly | Override `handleUpdate(Msg)`; base `update()` fans out to children automatically |
+| State update | Return a new model instance | Return `(this, null)` from `handleUpdate`; for `StatefulWidget`, call `setState(() { ... })` |
+| Runner | `runProgram(model)` | `runWidgetApp(WidgetApp(root))` / `runArtisanalApp(ArtisanalApp(...))` |
+| `view()` return type | `String` or `View` (ANSI output) | `Widget` subtree (further traversed by element tree); `StatelessWidget.build()` returns a `Widget` |
+| Theme access | Manual | Built-in `theme` getter; `BuildContext` for `InheritedWidget` ancestors |
 | Identification | None | Key-based identity |
-| Composition | Manual | Declarative `children` list |
+| Composition | Manual string/View building | Declarative `children` list, layout widgets |
 | Background detection | Manual | Automatic via `BackgroundColorMsg` |
+| `StatelessWidget` / `StatefulWidget` | N/A | **Only valid inside `WidgetApp`** — bare `Program(widget)` does not manage the element tree |
 
 ---
 
@@ -1804,6 +1923,61 @@ Container(
 
 ---
 
+### List and Scroll Keyboard Navigation
+
+All scroll widgets (`ScrollView`, `SingleChildScrollView`, `ListView`,
+`VirtualListView`) respond to the same keyboard shortcuts when focused:
+
+| Key | Action |
+|-----|--------|
+| ↑ | Scroll up 1 row |
+| ↓ | Scroll down 1 row |
+| Page Up | Scroll up one full viewport height |
+| Page Down | Scroll down one full viewport height |
+| Home | Jump to the top (offset 0) |
+| End | Jump to the bottom (max offset) |
+| Mouse wheel ↑ | Scroll up `mouseWheelDelta` rows (default: 3) |
+| Mouse wheel ↓ | Scroll down `mouseWheelDelta` rows (default: 3) |
+
+**Customizing scroll speed:**
+
+```dart
+ScrollView(
+  controller: controller,
+  mouseWheelDelta: 5,  // scroll 5 rows per wheel tick instead of 3
+  child: content,
+)
+```
+
+**Making a scroll widget focusable:**
+
+Wrap the scroll widget with `Focusable` so it can receive keyboard events:
+
+```dart
+final focus = FocusController();
+
+Focusable(
+  controller: focus,
+  child: ScrollView(
+    controller: scrollController,
+    child: content,
+  ),
+)
+```
+
+`VirtualListView` also accepts `autofocus: true` for cases where the list
+should automatically take focus on mount.
+
+**List row theming:**
+
+List rows can be styled using the theme's dedicated row tokens
+(`listRow`, `listRowOdd`, `listRowHover`, `listRowEven`, `listRowSelected`)
+so hover, selection, and alternating stripe states all react consistently to
+theme switches. See [STYLE.md → List Row Theme Tokens](STYLE.md#list-row-theme-tokens)
+for the full token reference and usage examples with `LipList`.
+
+---
+
 ## Components Widgets
 
 Higher-level widgets built from layout primitives. These are exported from
@@ -1986,6 +2160,101 @@ ScrollArea(height: 6, showScrollbar: true, child: longContent)
 
 ---
 
+## Widget Slot Registry
+
+The widget slot registry provides a typed, ordered plugin system for in-process
+widget contributions. Applications define named slots; independent modules
+register widget builders for those slots; a `SlotBuilder` widget resolves and
+renders all registered contributions at the right point in the UI.
+
+This enables plugin-style extensibility without hard-coding every contributor
+into the host widget tree.
+
+### SlotRegistry
+
+`SlotRegistry<TSlot, TData>` holds a mutable list of typed contributions.
+Create one per plugin extension point and share it through `SlotScope`:
+
+```dart
+// Define a typed slot key
+enum DashboardSlot { sidebar, toolbar, statusBar }
+
+// Create a registry (typically app-level singleton)
+final registry = SlotRegistry<DashboardSlot, DashboardData>();
+
+// Register a contribution (returns a disposer)
+final dispose = registry.register(
+  pluginId: 'my_plugin',
+  slot: DashboardSlot.sidebar,
+  builder: (context, data) => MyPluginSidebarWidget(data: data),
+  order: 10, // lower = rendered first
+);
+
+// Later, unregister
+dispose();
+```
+
+### SlotScope and SlotBuilder
+
+Expose the registry to the widget tree with `SlotScope`, then render a slot
+with `SlotBuilder`:
+
+```dart
+SlotScope<DashboardSlot, DashboardData>(
+  registry: registry,
+  child: Column(children: [
+    // Render all sidebar contributions stacked
+    SlotBuilder<DashboardSlot, DashboardData>(
+      slot: DashboardSlot.sidebar,
+      data: currentDashboardData,
+      mode: SlotBuildMode.column,  // or SlotBuildMode.first for highest priority only
+      fallback: Text('No sidebar plugins registered'),
+    ),
+  ]),
+)
+```
+
+### Declarative Plugin Registration
+
+Use `SlotPlugin` and `SlotPluginMount` to register contributions
+declaratively from anywhere in the widget tree:
+
+```dart
+final myPlugin = SlotPlugin<DashboardSlot, DashboardData>(
+  pluginId: 'analytics_plugin',
+  slots: {
+    DashboardSlot.toolbar: SlotPluginContribution(
+      builder: (context, data) => AnalyticsToolbarButton(data: data),
+      order: 5,
+    ),
+  },
+);
+
+// Mount it from a subtree (auto-unregisters on unmount)
+SlotPluginMount<DashboardSlot, DashboardData>(
+  plugin: myPlugin,
+  child: MySubtree(),
+)
+```
+
+### Mixed Local and Remote Slots
+
+`SlotRegion` combines local `SlotRegistry` contributions with remote plugin
+surfaces from the out-of-process plugin system. Local content renders first;
+remote surfaces are positioned using their declared coordinates:
+
+```dart
+SlotRegion<DashboardSlot, DashboardData>(
+  slot: DashboardSlot.sidebar,
+  data: currentDashboardData,
+  remoteEntries: resolveRemotePluginSlotEntries(workspace.surfaces, 'sidebar'),
+)
+```
+
+For remote plugin surfaces, see [PLUGINS.md](PLUGINS.md).
+
+---
+
 ## Navigation Widgets
 
 Navigation is provided by a Flutter-like route stack API:
@@ -2120,12 +2389,45 @@ final mq = MediaQuery.of(context);
 Text('Terminal size: ${mq.width}x${mq.height}');
 ```
 
+### NetworkImage
+
+`NetworkImage` is an `ImageProvider` that fetches images over HTTP(S) with
+built-in caching, content-type filtering, and size constraints:
+
+```dart
+Image(
+  image: NetworkImage(
+    'https://example.com/photo.png',
+    headers: {'Authorization': 'Bearer $token'},
+    maximumBytes: 5 * 1024 * 1024,  // reject responses > 5 MB
+    decodeFrame: 0,                  // static preview of animated GIF/WebP
+    allowedContentTypes: {'image/png', 'image/jpeg'},
+    blockedContentTypes: {'image/gif'},
+  ),
+)
+```
+
+**Constructor parameters:**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `url` | `String` | HTTPS or HTTP URL to fetch |
+| `headers` | `Map<String, String>` | Optional request headers |
+| `maximumBytes` | `int?` | Max response size; rejects oversized responses |
+| `decodeFrame` | `int?` | Frame index to decode (0 = first frame / static preview) |
+| `allowedContentTypes` | `Set<String>` | MIME allow-list; empty = allow all |
+| `blockedContentTypes` | `Set<String>` | MIME deny-list |
+
+Responses are deduplicated and cached in an in-process `LruCache` keyed by
+`(url, headers, maximumBytes, decodeFrame, allowedContentTypes, blockedContentTypes)`.
+
 ---
 
 ## Animation Widgets
 
 Animation support in `artisanal_widgets` includes both controller primitives and
-rebuild helpers:
+rebuild helpers. For the full animation timeline, curve, tween, and implicit
+animation API see **[ANIMATION.md](ANIMATION.md)**.
 
 - `AnimationController`, `AnimationMixin`, `AnimationTickMsg`
 - `AnimatedBuilder`, `ListenableBuilder`, `ValueListenableBuilder`
@@ -2158,6 +2460,44 @@ class _PulseLabelState extends State<PulseLabel> with AnimationMixin {
   }
 }
 ```
+
+---
+
+## Widget Testing
+
+Artisanal ships a dedicated testing infrastructure for widget apps. Import
+`package:artisanal/testing.dart` or `package:artisanal_widgets/testing.dart`
+to access the harness.
+
+```dart
+import 'package:artisanal/testing.dart';
+import 'package:test/test.dart';
+
+void main() {
+  test('counter increments', () async {
+    final tester = WidgetTester(CounterWidget());
+    await tester.pump();
+    tester.expect(find.text('0'), findsOneWidget);
+
+    await tester.sendKey(Key(type: KeyType.up));
+    tester.expect(find.text('1'), findsOneWidget);
+  });
+}
+```
+
+Key testing types:
+
+| Type | File | Purpose |
+|------|------|---------|
+| `WidgetTester` | `widget_testing.dart` | Drive widget builds, dispatch msgs, assert on output |
+| `WidgetGauntlet` | `widget_gauntlet.dart` | Stress-test a widget under varied sizes and inputs |
+| `WidgetStorm` | `widget_storm.dart` | Fuzz builds with random message sequences |
+| `FlickerAnalyzer` | `flicker_analyzer.dart` | Detect render-frame visual instability |
+| `HarnessArtifactManifest` | `harness_artifacts.dart` | Record / replay widget render artifacts in CI |
+| `ManualClock` | `harness_artifacts.dart` | Override `DateTime.now()` for deterministic timing |
+
+For full harness configuration, `HarnessArtifactManifest` CI integration, and
+all `WidgetGauntlet`/`WidgetStorm` options see **[TESTING.md](TESTING.md)**.
 
 ---
 
@@ -2487,46 +2827,57 @@ class TextInput extends Widget with FocusableWidget {
 
 ---
 
-## Integration with TUI Program
+## Running a Widget App
 
-Widgets implement the `Model` interface and can be run directly with `Program`:
+There are three runners, ordered from highest-level to lowest:
 
-```dart
-void main() async {
-  final app = MyApp();
-  final program = Program(app);
-  await program.run();
-}
-```
+### `runArtisanalApp` (recommended)
 
-### With Program Options
+Full app shell with title, theme, routing, and sensible defaults:
 
 ```dart
 void main() async {
-  final app = MyApp();
-  final program = Program(
-    app,
-    options: ProgramOptions(
-      altScreen: true,
-      mouseMode: MouseMode.allMotion,
-      fps: 60,
+  await runArtisanalApp(
+    ArtisanalApp(
+      title: 'My App',
+      themeMode: ThemeMode.system,
+      home: MyRootWidget(),
     ),
   );
-  await program.run();
 }
 ```
 
-`mouse: true` alone enables `MouseMode.cellMotion`, which is enough for clicks,
-drags, and wheel events. Use `MouseMode.allMotion` for passive hover behaviors
-such as tooltips, hover styles, and `MouseRegion` enter/exit callbacks.
+### `runWidgetApp`
 
-### Convenience Helper
+Lightweight shell — no built-in routing or theming, but enables the element tree:
 
 ```dart
 void main() async {
-  await runProgram(MyApp());
+  await runWidgetApp(WidgetApp(MyRootWidget()));
 }
 ```
+
+### `WidgetApp` + `runProgram` (advanced / low-level)
+
+Use when you need direct control over `ProgramOptions` or are composing with a
+custom `Program` host. `WidgetApp` **is** a `Model`, so it can be passed to the
+TEA runner. This is appropriate for non-`StatefulWidget` trees or specialised
+embedded scenarios:
+
+```dart
+void main() async {
+  final app = WidgetApp(MyRoot(), scanZones: true);
+  await runProgram(
+    app,
+    options: const ProgramOptions(mouseMode: MouseMode.allMotion),
+  );
+}
+```
+
+> **Note:** `runWidgetApp` / `runArtisanalApp` call `runProgram` internally with
+> widget-appropriate defaults (`altScreen: true`, `mouseMode: allMotion`). Prefer
+> them over calling `runProgram(WidgetApp(...))` directly unless you have a
+> specific reason to override those defaults.
 
 ### Key Messages
 
@@ -2759,5 +3110,8 @@ Alignment.bottomRight
 ## Related Docs
 
 - [DOCS_INDEX.md](DOCS_INDEX.md) - Full documentation index
-- [TUI.md](TUI.md) - TUI runtime
+- [TUI.md](TUI.md) - TEA programming model (the alternative to the Widget system)
 - [UV.md](UV.md) - UV renderer
+- [ANIMATION.md](ANIMATION.md) - Animation timeline and tween system
+- [TESTING.md](TESTING.md) - Widget testing infrastructure
+- [PLUGINS.md](PLUGINS.md) - Remote plugin surfaces and slot registry

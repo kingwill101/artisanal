@@ -4,15 +4,12 @@ This index links the current primary documentation across the workspace.
 
 ## Getting Started
 
-- Workspace README: [../README.md](../README.md)
-- `artisanal` package README: [../pkgs/artisanal/README.md](../pkgs/artisanal/README.md)
-- `ultraviolet` package README: [../pkgs/ultraviolet/README.md](../pkgs/ultraviolet/README.md)
-- `artisanal_widgets` package README: [../pkgs/artisanal_widgets/README.md](../pkgs/artisanal_widgets/README.md)
+> **Package READMEs** are in the repository root: `pkgs/artisanal/`, `pkgs/ultraviolet/`, and `pkgs/artisanal_widgets/`.
 
 ## Core Toolkit
 
 - Architecture overview (detailed): [ARCHITECTURE.md](ARCHITECTURE.md)
-- Architecture overview (concise): [architecture.md](architecture.md)
+- Architecture overview (concise): [ARCHITECTURE.md](ARCHITECTURE.md)
 - Console I/O: [CONSOLE.md](CONSOLE.md)
 - Args runner: [ARGS.md](ARGS.md)
 - Terminal abstraction: [TERMINAL.md](TERMINAL.md)
@@ -25,19 +22,34 @@ This index links the current primary documentation across the workspace.
 - Unicode utilities: [UNICODE.md](UNICODE.md)
 - Color profiles: [COLORPROFILE.md](COLORPROFILE.md)
 
-## TUI and Components
+## TEA Programming Model
+
+> Build UIs with `implements Model` + `runProgram()`. Direct, lightweight, composable with Bubbles.
 
 - TUI runtime and inline mode: [TUI.md](TUI.md)
+- Replay automation: [REPLAY.md](REPLAY.md)
+- TEA-composable Bubbles components: [BUBBLES.md](BUBBLES.md)
+- Console component helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)
+
+## Widget System
+
+> Flutter-inspired widget tree. Use `StatelessWidget` / `StatefulWidget` + `runArtisanalApp()`.
+
 - Widget catalog: [WIDGETS.md](WIDGETS.md)
-- Bubbles components: [BUBBLES.md](BUBBLES.md)
-- Console components helpers: [IO_COMPONENTS.md](IO_COMPONENTS.md)
-- Remote plugin surfaces: [PLUGINS.md](PLUGINS.md)
+- Animation timeline and tween system: [ANIMATION.md](ANIMATION.md)
+- Remote plugin surfaces and slot registry: [PLUGINS.md](PLUGINS.md)
 
 ## Rendering and Content
 
 - UV system: [UV.md](UV.md)
 - Markdown rendering (ANSI + Glamour): [MARKDOWN.md](MARKDOWN.md)
 - Charting primitives: [CHARTING.md](CHARTING.md)
+- Terminal graphics (Sixel / Kitty / iTerm2): [TERMINAL_GRAPHICS.md](TERMINAL_GRAPHICS.md)
+
+## Testing and Debugging
+
+- Widget testing harness and utilities: [TESTING.md](TESTING.md)
+- TUI replay automation: [REPLAY.md](REPLAY.md)
 
 ## Experimental
 

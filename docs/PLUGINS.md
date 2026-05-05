@@ -3,8 +3,6 @@
 `package:artisanal/plugins.dart` provides the supported out-of-process plugin
 surface for remote-rendered plugins.
 
-## Architecture
-
 The current model is host-rendered composition with plugin-rendered content:
 
 - The host normally launches a plugin process through
@@ -415,4 +413,58 @@ dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart
 dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --manifest
 dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --message-type=plugin.service.request
 dart run pkgs/artisanal/example/tui/remote_plugin_schema_dump.dart --built-in-services
+```
+
+---
+
+## Widget Slot Registry
+
+The widget slot registry extends the remote plugin model to in-process widget
+contributions. While `RemotePluginHostConnection` manages out-of-process plugin
+surfaces, `SlotRegistry` manages typed in-process widget builders that can be
+mixed with remote surfaces in the same UI region.
+
+### Core Types
+
+- **`SlotRegistry<TSlot, TData>`** — holds ordered widget contributions keyed
+  by a typed slot value. Contributions are resolved in
+  `(order, registrationOrder, pluginId)` order, ensuring deterministic output.
+- **`SlotPlugin<TSlot, TData>`** — declarative registration bundle
+  (`pluginId` + a map of slot → `SlotPluginContribution`).
+- **`SlotScope<TSlot, TData>`** — `InheritedWidget` that exposes a registry to
+  descendants and triggers rebuilds when registrations change.
+- **`SlotBuilder<TSlot, TData>`** — widget that resolves a named slot and
+  renders its contributions (all stacked, or first-only).
+- **`SlotPluginMount<TSlot, TData>`** — declaratively mounts a `SlotPlugin`
+  into the nearest `SlotScope`; auto-unregisters on dispose.
+- **`SlotRegion<TSlot, TData>`** — combines local `SlotRegistry` contributions
+  with remote `RemotePluginSlotEntry` surfaces for mixed local/remote panels.
+- **`RemotePluginSurfaceView`** — renders a `RemotePluginSurfaceState` as a
+  text widget inside the widget tree.
+
+### Connecting Remote Surfaces to Slots
+
+`RemotePluginSlotEntry` values (resolved from a `RemotePluginWorkspace`) can
+be passed directly to `SlotRegion` so remote plugin surfaces appear alongside
+in-process contributions:
+
+```dart
+final remoteEntries = resolveRemotePluginSlotEntries(
+  workspace.surfaces,
+  'sidebar',  // slot name
+);
+
+SlotRegion<AppSlot, AppData>(
+  slot: AppSlot.sidebar,
+  data: currentData,
+  remoteEntries: remoteEntries,
+  // local contributions from SlotRegistry via SlotScope ancestor
+)
+```
+
+The `RemotePluginSlotInputRouter` (from `package:artisanal/plugins.dart`)
+routes keyboard, mouse, and focus input to the correct remote surface when
+multiple remote slots are active.
+
+See [WIDGETS.md](WIDGETS.md#widget-slot-registry) for the full widget-layer API.
 ```

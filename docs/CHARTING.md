@@ -2,6 +2,19 @@
 
 Artisanal provides terminal-native chart renderers that draw into UV buffers. Use `renderChartLines` to produce printable output.
 
+## Table of Contents
+
+- [Quick Start (Sparkline)](#quick-start-sparkline)
+- [Line Chart](#line-chart)
+- [Ribbon / Area Chart](#ribbon--area-chart)
+- [Histogram](#histogram)
+- [Heatmap](#heatmap)
+- [Pie Chart](#pie-chart)
+- [Crosshair Overlay](#crosshair-overlay)
+- [Legend and Palette](#legend-and-palette)
+- [Sequence Diagrams](#sequence-diagrams)
+- [Related Docs](#related-docs)
+
 ## Quick Start (Sparkline)
 
 ```dart
@@ -288,6 +301,415 @@ void main() {
   });
 
   print(lines.join('\n'));
+}
+```
+
+## Sequence Diagrams
+
+Sequence diagrams visualize interactions between actors/participants over time, showing message flows and control structures. Artisanal implements Mermaid-compatible syntax for terminal rendering.
+
+### Overview
+
+Sequence diagrams are ideal for documenting:
+- API call flows between services
+- User authentication workflows
+- Request/response patterns
+- State machine transitions
+- Protocol negotiations
+
+The renderer produces clean ASCII-art output with Unicode box-drawing characters, suitable for terminal display.
+
+### API Options
+
+#### String Convenience API
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+
+void main() {
+  final text = chart.renderSequenceDiagram('''
+    sequenceDiagram
+      participant U as User
+      participant S as Server
+      U->>S: GET /api
+      S-->>U: 200 OK
+  ''');
+  print(text);
+}
+```
+
+#### UV Canvas API
+
+For fine-grained control over rendering:
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect;
+
+void main() {
+  final source = '''
+    sequenceDiagram
+      participant A as Alice
+      participant B as Bob
+      A->>B: Hello Bob
+  ''';
+
+  final diagram = chart.parseSequenceDiagram(source);
+  if (diagram != null) {
+    final layout = chart.layoutSequenceDiagram(diagram);
+    final canvas = Canvas(layout.width, layout.height);
+    chart.drawSequenceDiagram(
+      canvas,
+      rect(0, 0, layout.width, layout.height),
+      diagram,
+    );
+    print(canvas.render());
+  }
+}
+```
+
+#### Widget API
+
+For TUI applications using `artisanal_widgets`:
+
+```dart
+import 'package:artisanal_widgets/charting.dart';
+
+// In your widget tree:
+SequenceDiagramChart(
+  mermaid: '''
+    sequenceDiagram
+      participant C as Client
+      participant S as Server
+      C->>S: Request
+      S-->>C: Response
+  ''',
+  width: 80,
+  height: 20,
+)
+```
+
+### Mermaid Syntax
+
+Supported Mermaid sequence diagram syntax:
+
+#### Participant Declarations
+
+```mermaid
+sequenceDiagram
+  participant A as Alice
+  participant B as Bob
+  participant C
+```
+
+Participants can be declared with or without an alias using `as`. Undeclared participants are auto-created when referenced in messages.
+
+#### Message Arrows
+
+| Arrow | Style | Description |
+|-------|-------|-------------|
+| `->>` | solid | Synchronous request |
+| `-->>` | dashed | Asynchronous response |
+| `->` | solid | Simple message |
+| `-->` | dashed | Return message |
+| `-x` | solid | Lost message |
+| `--x` | dashed | Lost response |
+| `-\)` | solid | Open arrow |
+| `--\)` | dashed | Dashed open arrow |
+
+Activate/deactivate lifelines with `+` and `-`:
+
+```mermaid
+sequenceDiagram
+  A->>+B: Activate B
+  B-->>-A: Deactivate A
+```
+
+#### Notes
+
+```mermaid
+sequenceDiagram
+  participant A as Alice
+  participant B as Bob
+  note right of A: Local note
+  note over A,B: Spanning both
+```
+
+Position notes with `right of`, `left of`, or `over` participants.
+
+#### Control Fragments
+
+```mermaid
+sequenceDiagram
+  alt Authentication Success
+    A->>B: Authenticated
+  else Authentication Failed
+    A->>B: Rejected
+  end
+
+  loop Retry Logic
+    A->>B: Try again
+    B-->>A: Response
+  end
+
+  opt Cache Miss
+    A->>C: Fetch data
+  end
+
+  critical Database Write
+    A->>D: Commit
+  end
+```
+
+Supported fragments: `alt/else/end`, `loop`, `opt`, `critical`, `par/and/end`, and `rect`.
+
+#### Autonumbering
+
+```mermaid
+sequenceDiagram
+  autonumber
+  A->>B: First
+  B-->>A: Second
+
+  autonumber 10 5
+  A->>B: Tenth (starts at 10, increments by 5)
+```
+
+#### CSS Color Names
+
+Use CSS color names for inline styling:
+
+```mermaid
+sequenceDiagram
+  A->>B: Blue message #blue
+  B-->>A: Red response #red
+```
+
+Color names are parsed from Mermaid `style` declarations and arrow colors.
+
+### Customization
+
+#### SequenceDiagramTheme
+
+Configure visual appearance with a custom theme:
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvStyle;
+
+final customTheme = const chart.SequenceDiagramTheme(
+  participantBox: UvStyle(fg: UvColor.rgb(100, 150, 200)),
+  participantLabel: UvStyle(fg: UvColor.rgb(255, 255, 255)),
+  lifeline: UvStyle(fg: UvColor.rgb(80, 80, 80)),
+  request: UvStyle(fg: UvColor.rgb(100, 255, 150)),
+  response: UvStyle(fg: UvColor.rgb(255, 150, 100)),
+  note: UvStyle(fg: UvColor.rgb(200, 200, 150)),
+  noteBackground: UvStyle(bg: UvColor.rgb(40, 40, 40)),
+  fragment: UvStyle(fg: UvColor.rgb(150, 200, 150)),
+  fragmentLabel: UvStyle(fg: UvColor.rgb(150, 200, 150), bg: UvColor.rgb(30, 45, 35)),
+  group: UvStyle(fg: UvColor.rgb(120, 140, 130)),
+  rect: UvStyle(fg: UvColor.rgb(150, 150, 150), bg: UvColor.rgb(35, 35, 35)),
+);
+
+final text = chart.renderSequenceDiagram(source, theme: customTheme);
+```
+
+#### Participant Ordering
+
+Participants appear in declaration order. For custom ordering, declare participants explicitly before messages:
+
+```mermaid
+sequenceDiagram
+  participant C as Database
+  participant B as Service
+  participant A as Client
+  A->>B: Call service
+  B->>C: Query database
+```
+
+#### RTL Support
+
+The renderer respects implicit participant ordering. For right-to-left diagrams, declare participants in reverse order:
+
+```mermaid
+sequenceDiagram
+  participant C
+  participant B
+  participant A
+  A->>C: Flows right-to-left
+```
+
+#### Width/Height Constraints
+
+Control diagram dimensions:
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+
+final layout = chart.layoutSequenceDiagram(
+  diagram,
+  options: const chart.SequenceDiagramOptions(
+    minParticipantGap: 20,
+  ),
+);
+```
+
+### Examples
+
+#### Basic Sequence Diagram
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+
+void main() {
+  final text = chart.renderSequenceDiagram('''
+    sequenceDiagram
+      participant U as User
+      participant A as Auth Service
+      participant D as Database
+
+      U->>A: Login request
+      A->>D: Query user
+      D-->>A: User data
+      A-->>U: Auth token
+  ''');
+  print(text);
+}
+```
+
+#### Parsed Diagram with Custom Rendering
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect, UvColor, UvStyle;
+
+void main() {
+  final source = '''
+    sequenceDiagram
+      participant W as WebClient
+      participant S as Server
+      participant D as Database
+
+      autonumber
+      W->>S: POST /users
+      S->>+D: INSERT user
+      D-->>-S: OK
+      S-->>W: 201 Created
+  ''';
+
+  final diagram = chart.parseSequenceDiagram(source);
+  if (diagram != null) {
+    final layout = chart.layoutSequenceDiagram(diagram);
+    final canvas = Canvas(layout.width, layout.height);
+    chart.drawSequenceDiagram(canvas, rect(0, 0, layout.width, layout.height), diagram);
+    print(canvas.render());
+  }
+}
+```
+
+#### Widget Usage in TUI App
+
+```dart
+import 'package:artisanal/src/tui/bubbles/sequence_diagram.dart';
+
+void main() {
+  final diagram = SequenceDiagramModel(
+    mermaid: '''
+      sequenceDiagram
+        participant C as Client
+        participant S as Server
+        C->>S: GET /health
+        S-->>C: 200 OK
+    ''',
+    width: 60,
+    height: 15,
+  );
+
+  print(diagram.view());
+}
+```
+
+#### Theme Customization
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvStyle;
+
+void main() {
+  final darkTheme = const chart.SequenceDiagramTheme(
+    participantBox: UvStyle(fg: UvColor.rgb(80, 120, 100)),
+    participantLabel: UvStyle(fg: UvColor.rgb(200, 220, 210)),
+    lifeline: UvStyle(fg: UvColor.rgb(60, 80, 70)),
+    request: UvStyle(fg: UvColor.rgb(100, 255, 180)),
+    response: UvStyle(fg: UvColor.rgb(255, 200, 100)),
+    note: UvStyle(fg: UvColor.rgb(180, 200, 170), bg: UvColor.rgb(30, 45, 35)),
+    fragment: UvStyle(fg: UvColor.rgb(120, 180, 140)),
+    fragmentLabel: UvStyle(fg: UvColor.rgb(120, 180, 140), bg: UvColor.rgb(25, 40, 30)),
+    group: UvStyle(fg: UvColor.rgb(90, 110, 100)),
+    rect: UvStyle(fg: UvColor.rgb(140, 140, 140), bg: UvColor.rgb(35, 35, 35)),
+  );
+
+  final text = chart.renderSequenceDiagram('''
+    sequenceDiagram
+      participant A as Alice
+      participant B as Bob
+      A->>B: Hello #green
+      B-->>A: Hi back #blue
+  ''', theme: darkTheme);
+
+  print(text);
+}
+```
+
+### Integration
+
+#### UV-based Rendering
+
+Use in any context where you have a UV Canvas:
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+import 'package:ultraviolet/ultraviolet.dart' show Canvas, rect;
+
+String renderDiagram(String mermaid) {
+  final diagram = chart.parseSequenceDiagram(mermaid);
+  if (diagram == null) return 'Invalid diagram';
+
+  final layout = chart.layoutSequenceDiagram(diagram);
+  final canvas = Canvas(layout.width, layout.height);
+  chart.drawSequenceDiagram(
+    canvas,
+    rect(0, 0, layout.width, layout.height),
+    diagram,
+  );
+  return canvas.render();
+}
+```
+
+#### Widget-based TUI Apps
+
+The `SequenceDiagramChart` widget integrates with `artisanal_widgets`:
+
+```dart
+import 'package:artisanal_widgets/charting.dart';
+
+// Direct usage
+SequenceDiagramChart(
+  mermaid: source,
+  width: 100,
+  height: 30,
+)
+```
+
+Combine with other charting primitives in a single view:
+
+```dart
+import 'package:artisanal/charting.dart' as chart;
+
+// Render multiple diagrams
+for (final source in sources) {
+  print(chart.renderSequenceDiagram(source));
+  print(''); // blank line between
 }
 ```
 

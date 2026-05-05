@@ -235,6 +235,80 @@ Available commands:
 Run "myapp <command> --help" for more information about a command.
 ```
 
+### HelpColorScheme
+
+`HelpColorScheme` controls the colors applied to different elements of help
+output. Pass it as the `helpColorScheme` argument to `CommandRunner`:
+
+```dart
+final runner = CommandRunner(
+  'myapp',
+  'My Application',
+  helpColorScheme: HelpColorScheme.dark(),
+);
+```
+
+#### Built-in Presets
+
+| Preset | Description |
+|--------|-------------|
+| `HelpColorScheme.default_` | Default scheme (same amber/green palette, auto-adaptive) |
+| `HelpColorScheme.dark()` | Optimized for dark terminals (amber headings, green commands) |
+| `HelpColorScheme.light()` | Optimized for light terminals (darker shades) |
+| `HelpColorScheme.minimal(color)` | Single foreground color for all elements |
+
+#### Customizing Colors
+
+Each field accepts any Artisanal `Color` (`AdaptiveColor`, `BasicColor`,
+`AnsiColor`, etc.). Use `AdaptiveColor` to supply different values for light
+and dark backgrounds:
+
+```dart
+final runner = CommandRunner(
+  'myapp',
+  'My Application',
+  helpColorScheme: HelpColorScheme(
+    heading: AdaptiveColor(
+      light: BasicColor('#7c3aed'),
+      dark: BasicColor('#a78bfa'),
+    ),
+    command: AdaptiveColor(
+      light: BasicColor('#0369a1'),
+      dark: BasicColor('#38bdf8'),
+    ),
+    option: AdaptiveColor(
+      light: BasicColor('#047857'),
+      dark: BasicColor('#34d399'),
+    ),
+    error: AdaptiveColor(
+      light: BasicColor('#b91c1c'),
+      dark: BasicColor('#f87171'),
+    ),
+  ),
+);
+```
+
+Use `copyWith` to extend an existing scheme without respecifying every field:
+
+```dart
+final myScheme = HelpColorScheme.dark().copyWith(
+  heading: const BasicColor('#ff9900'),
+  namespace: const BasicColor('#cc77ff'),
+);
+```
+
+#### Color Fields
+
+| Field | Applies to |
+|-------|-----------|
+| `heading` | Section labels: `Description:`, `Usage:`, `Options:`, `Available commands:` |
+| `command` | Command names in the listing |
+| `option` | Option flags: `--port`, `-p` |
+| `description` | Option description text (defaults to no extra color) |
+| `error` | Error prefix in usage exceptions |
+| `emphasis` | Quoted items like `"myapp <command> --help"` |
+| `namespace` | Namespace prefixes in grouped command listings (e.g., `db:`) |
+
 ### Command Listing Utilities
 
 ```dart
