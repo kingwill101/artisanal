@@ -207,19 +207,20 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
 
     final commandEntries = _uniqueTopLevelEntries();
     if (commandEntries.isNotEmpty) {
-      buffer.writeln(_heading('Available commands:'));
-      buffer.writeln(
-        formatCommandListing(
-          commandEntries,
-          namespaceSeparator: namespaceSeparator,
-          styleNamespace: _heading,
-          styleCommand: _command,
-        ),
+      final listing = formatCommandListing(
+        commandEntries,
+        namespaceSeparator: namespaceSeparator,
+        styleNamespace: _heading,
+        styleCommand: _command,
       );
-      buffer.writeln();
-      buffer.writeln(
-        'Run ${_emphasize('"$executableName <command> --help"')} for more information about a command.',
-      );
+      if (listing.isNotEmpty) {
+        buffer.writeln(_heading('Available commands:'));
+        buffer.writeln(listing);
+        buffer.writeln();
+        buffer.writeln(
+          'Run ${_emphasize('"$executableName <command> --help"')} for more information about a command.',
+        );
+      }
     }
 
     return buffer.toString().trimRight();
@@ -252,12 +253,12 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     );
   }
 
-  Iterable<CommandListingEntry> _uniqueTopLevelEntries() {
+  List<CommandListingEntry> _uniqueTopLevelEntries() {
     final seen = <args_pkg.Command<T>>{};
     final unique = <CommandListingEntry>[];
     for (final cmd in commands.values) {
       if (!seen.add(cmd)) continue;
-      if (cmd.name == 'help') continue;
+      if (cmd.name == 'help' || cmd.hidden) continue;
       unique.add(CommandListingEntry(name: cmd.name, description: cmd.summary));
     }
     unique.sort((a, b) => a.name.compareTo(b.name));
