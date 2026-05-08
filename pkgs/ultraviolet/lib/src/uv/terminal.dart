@@ -37,7 +37,6 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:image/image.dart' as img;
 import '../colorprofile/profile.dart' as cp;
@@ -56,10 +55,15 @@ import 'screen.dart';
 import 'sixel_drawable.dart';
 import 'halfblock_drawable.dart';
 import 'terminal_reader.dart';
+import 'renderer/renderer.dart';
 import 'terminal_renderer.dart';
 import '../unicode/width.dart';
 import 'winch.dart';
 import 'ansi_slice.dart' as ranges;
+
+import 'terminal_stub.dart'
+    if (dart.library.io) 'terminal_io.dart'
+    if (dart.library.html) 'terminal_web.dart';
 
 export 'buffer.dart';
 export 'capabilities.dart';
@@ -89,24 +93,21 @@ class Terminal
         ClearableScreen,
         CloneableScreen,
         CloneAreaScreen {
-  Terminal({Stream<List<int>>? input, IOSink? output, List<String>? env})
-    : _input = input ?? stdin,
-      _output = output ?? stdout,
-      _env =
-          env ??
-          Platform.environment.entries
-              .map((e) => '${e.key}=${e.value}')
-              .toList(),
+  Terminal(
+      {Stream<List<int>>? input,
+      StringSink? output,
+      List<String>? env,
+      bool? isWindows,
+      bool? isTty})
+    : _input = input ?? defaultInput,
+      _output = output ?? defaultOutput,
+      _env = env ?? defaultEnv,
+      _isWindows = isWindows ?? defaultIsWindows,
+      _isTty = isTty ?? defaultIsTty,
       _buf = Buffer.create(0, 0),
-      capabilities = TerminalCapabilities(
-        env:
-            env ??
-            Platform.environment.entries
-                .map((e) => '${e.key}=${e.value}')
-                .toList(),
-      ) {
-    final isTty = _output is Stdout && (_output).hasTerminal;
-    _renderer = UvTerminalRenderer(_output, env: _env, isTty: isTty);
+      capabilities = TerminalCapabilities(env: env ?? defaultEnv) {
+    _renderer = UvTerminalRenderer(_output,
+        env: _env, isTty: _isTty, isWindows: _isWindows);
     _reader = TerminalReader(
       CancelReader(_input),
       term: Environ(_env).getenv('TERM'),
@@ -115,10 +116,12 @@ class Terminal
   }
 
   final Stream<List<int>> _input;
-  final IOSink _output;
+  final StringSink _output;
   final List<String> _env;
+  final bool _isWindows;
+  final bool _isTty;
 
-  late final UvTerminalRenderer _renderer;
+  late final TerminalRenderer _renderer;
   late final TerminalReader _reader;
   late final SizeNotifier _winch;
 
@@ -137,7 +140,7 @@ class Terminal
   final _eventController = StreamController<Event>.broadcast();
   StreamSubscription? _readerSubscription;
   StreamSubscription? _winchSubscription;
-  StreamSubscription? _sigintSubscription;
+  StreamSubscription<Object?>? _sigintSubscription;
 
   /// A stream of decoded terminal [Event]s.
   Stream<Event> get events => _eventController.stream;
@@ -162,11 +165,10 @@ class Terminal
     _running = true;
 
     // Enter raw mode.
-    if (_input == stdin) {
+    if (isStdin(_input)) {
       try {
-        if (stdin.hasTerminal) {
-          stdin.echoMode = false;
-          stdin.lineMode = false;
+        if (stdinHasTerminal) {
+          enterRawMode();
         }
       } catch (_) {
         // Terminal mode changes may fail if stdin is not a TTY or has been
@@ -177,9 +179,9 @@ class Terminal
 
     // Handle SIGINT to ensure terminal state is restored.
     if (handleSignals) {
-      _sigintSubscription = ProcessSignal.sigint.watch().listen((_) async {
+      _sigintSubscription = watchSigint(() async {
         await stop();
-        exit(0);
+        exitProcess();
       });
     }
 
@@ -248,11 +250,10 @@ class Terminal
     }
 
     // Restore terminal mode.
-    if (_input == stdin) {
+    if (isStdin(_input)) {
       try {
-        if (stdin.hasTerminal) {
-          stdin.echoMode = true;
-          stdin.lineMode = true;
+        if (stdinHasTerminal) {
+          exitRawMode();
         }
       } catch (_) {
         // Best-effort cleanup: terminal may already be closed or in an
