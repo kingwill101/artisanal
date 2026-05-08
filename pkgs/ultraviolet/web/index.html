@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>UV Canvas Renderer Demo</title>
+  <style>
+    body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    canvas { display: block; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <canvas id="screen"></canvas>
+  <script type="module">
+    import { compileStreaming } from './web_canvas.mjs';
+    try {
+      const compiled = await compileStreaming(fetch('./web_canvas.wasm'));
+      const app = await compiled.instantiate({});
+      app.invokeMain();
+    } catch (e) {
+      document.body.innerHTML = `<pre style="color:red">${e}</pre>`;
+    }
+  </script>
+</body>
+</html>
