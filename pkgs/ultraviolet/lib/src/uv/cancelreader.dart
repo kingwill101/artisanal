@@ -11,7 +11,6 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
 
 import 'stdin_stream.dart';
 
