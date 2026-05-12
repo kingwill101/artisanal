@@ -206,12 +206,26 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     // a selected queue item) can inherit the colour from its neighbours.
     // We keep a small look-ahead cache: dominant[y] is the first non-null
     // effective background on row y, or null when the row is all-default.
+    // dominant[y] = the background CSS of the first non-space cell on row y,
+    // or null when the row contains only spaces / empty cells.
+    //
+    // We deliberately look at non-space cells because:
+    //  - Content rows (title, meta, separator lines) have at least one glyph
+    //    cell whose bg is explicitly set to the row highlight colour.
+    //  - Pure-space padding rows carry only the terminal default background on
+    //    every cell; those are the rows that need vertical inheritance.
+    //  - Using _cellBackgroundCss (direct, no bridge) avoids picking up the
+    //    explicit rgba(10,10,10,1) default that space cells carry, which would
+    //    falsely mark a padding row as "has a real colour".
     final dominant = List<String?>.filled(height, null);
     for (var y = 0; y < height; y++) {
       final line = buf.line(y);
       if (line == null) continue;
       for (var x = 0; x < width; x++) {
-        final c = _effectiveCellBackgroundCss(line, x, width);
+        final cell = line.at(x);
+        if (cell == null) continue;
+        if (cell.content == ' ' || cell.content.isEmpty) continue;
+        final c = _cellBackgroundCss(cell);
         if (c != null) {
           dominant[y] = c;
           break;
