@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
-import 'dart:io' as io;
+
+import '../platform/platform.dart' show environment, isWindows;
 
 import 'program.dart' show ScreenMode, UiAnchor;
 import 'terminal.dart';
@@ -634,6 +635,13 @@ class UltravioletTuiRenderer
   static const int _maxPrintLines = 2000;
 
   uv_buffer.ScreenBuffer? _screen;
+
+  /// The current screen buffer, populated after each render/flush cycle.
+  ///
+  /// Useful for custom renderers (e.g. web canvas) that need direct access
+  /// to the cell buffer without going through ANSI output.
+  uv_buffer.ScreenBuffer? get screenBuffer => _screen;
+
   uv_term.UvTerminalRenderer? _renderer;
   int _nativeFrameRevision = 0;
   int _nativeFrameCacheRevision = -1;
@@ -719,7 +727,7 @@ class UltravioletTuiRenderer
     final renderHeight = isInline ? _options.inlineHeight.clamp(1, h) : h;
     _screen = uv_buffer.ScreenBuffer(w, renderHeight);
 
-    final envMap = io.Platform.environment;
+    final envMap = environment;
     final env = envMap.entries.map((e) => '${e.key}=${e.value}').toList();
     if (terminal.isTerminal && !envMap.containsKey('TTY_FORCE')) {
       env.add('TTY_FORCE=1');
@@ -746,7 +754,7 @@ class UltravioletTuiRenderer
       _renderer = uv_term.UvTerminalRenderer(sink, env: env);
       _renderer!.setFullscreen(true);
       _renderer!.setRelativeCursor(false);
-      final mapNewline = !io.Platform.isWindows && terminal.isTerminal;
+      final mapNewline = !isWindows && terminal.isTerminal;
       _renderer!.setMapNewline(mapNewline);
       _renderer!.setScrollOptim(true);
     }

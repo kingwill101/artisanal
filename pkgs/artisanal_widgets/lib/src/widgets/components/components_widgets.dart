@@ -5,7 +5,15 @@
 library;
 
 import 'dart:async';
-import 'dart:io';
+import '_io_stub.dart'
+    if (dart.library.io) '_io_impl.dart'
+    show
+        Directory,
+        FileSystemEntity,
+        FileSystemEntityType,
+        FileStat,
+        Link,
+        Platform;
 
 import 'package:artisanal/widgets.dart';
 import 'package:artisanal/scoring.dart'

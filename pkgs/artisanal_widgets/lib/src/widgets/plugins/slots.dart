@@ -1,14 +1,15 @@
 library;
 
-import 'package:artisanal/plugins.dart'
-    show
-        RemotePluginMouseAction,
-        RemotePluginMouseButton,
-        RemotePluginSlotHit,
-        RemotePluginSlotInputRouter,
-        RemotePluginSlotEntry,
-        RemotePluginSurfaceDrawable,
-        RemotePluginSurfaceState;
+import 'package:artisanal/src/plugins/remote_surface_protocol.dart'
+    show RemotePluginMouseAction, RemotePluginMouseButton;
+import 'package:artisanal/src/plugins/remote_surface_drawable.dart'
+    show RemotePluginSurfaceDrawable;
+import 'package:artisanal/src/plugins/remote_surface_state.dart'
+    show RemotePluginSurfaceState;
+import 'package:artisanal/src/plugins/remote_surface_slots.dart'
+    show RemotePluginSlotEntry;
+import 'package:artisanal/src/plugins/remote_surface_slot_input.dart'
+    show RemotePluginSlotHit, RemotePluginSlotInputRouter;
 import 'package:artisanal/tui.dart'
     show Cmd, KeyMsg, KeyType, MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal/uv.dart' show Canvas;

@@ -88,7 +88,6 @@ export 'src/tui/bubbles/data_table.dart' show DataTableStyles;
 export 'src/terminal/terminal.dart'
     show
         Terminal,
-        StdioTerminal,
         StringTerminal,
         RawModeGuard,
         Ansi,
@@ -116,7 +115,6 @@ export 'src/style/color.dart'
 export 'src/renderer/renderer.dart'
     show
         Renderer,
-        TerminalRenderer,
         StringRenderer,
         NullRenderer,
         defaultRenderer,

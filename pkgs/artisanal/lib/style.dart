@@ -139,9 +139,6 @@ export 'src/style/writer.dart'
         SprintlnAll,
         Sprintf,
         SprintfAll,
-        Fprint,
-        Fprintln,
-        Fprintf,
         stringForProfile;
 export 'src/style/theme.dart' show ThemePalette;
 export 'src/style/tag_parser.dart'

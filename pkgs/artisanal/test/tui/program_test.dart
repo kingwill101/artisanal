@@ -7,6 +7,8 @@ import 'package:artisanal/src/tui/key.dart' show Key, KeyType;
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
+import 'package:artisanal/src/tui/program_host_io.dart'
+    show jsonChannelHost, webSocketHost, socketHost;
 import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/view.dart';
 import 'package:artisanal/src/uv/terminal_renderer.dart' show RenderMetrics;
@@ -682,7 +684,7 @@ void main() {
 
     test('jsonChannel host resolves to a BackendTerminal', () async {
       final inbound = StreamController<Object?>();
-      final binding = ProgramHost.jsonChannel(
+      final binding = jsonChannelHost(
         sendMessage: (_) {},
         inboundMessages: inbound.stream,
       ).resolve(const ProgramOptions());
@@ -705,7 +707,7 @@ void main() {
       );
       final serverSocket = await acceptedSocket;
 
-      final binding = ProgramHost.webSocket(
+      final binding = webSocketHost(
         serverSocket,
       ).resolve(const ProgramOptions());
 
@@ -729,7 +731,7 @@ void main() {
       );
       final serverSocket = await accepted;
 
-      final binding = ProgramHost.socket(
+      final binding = socketHost(
         serverSocket,
       ).resolve(const ProgramOptions());
 

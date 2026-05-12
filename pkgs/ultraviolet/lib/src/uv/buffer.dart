@@ -198,10 +198,9 @@ final class Line {
     if (cachedHash != null) {
       final previous = _cells[x];
       _renderHash =
-          (cachedHash ^
-              _slotHash(x, previous.renderFingerprint) ^
-              _slotHash(x, cell.renderFingerprint)) &
-          0xFFFFFFFFFFFFFFFF;
+          cachedHash ^
+          _slotHash(x, previous.renderFingerprint) ^
+          _slotHash(x, cell.renderFingerprint);
     }
     _cells[x].dispose();
     _cells[x] = cell;
@@ -214,10 +213,9 @@ final class Line {
     if (cachedHash != null) {
       final previous = _cells[x];
       _renderHash =
-          (cachedHash ^
-              _slotHash(x, previous.renderFingerprint) ^
-              _slotHash(x, cell.renderFingerprint)) &
-          0xFFFFFFFFFFFFFFFF;
+          cachedHash ^
+          _slotHash(x, previous.renderFingerprint) ^
+          _slotHash(x, cell.renderFingerprint);
     }
     _cells[x].copyFrom(cell);
   }
@@ -230,7 +228,7 @@ final class Line {
     for (var i = 0; i < _cells.length; i++) {
       hash ^= _slotHash(i, _cells[i].renderFingerprint);
     }
-    _renderHash = hash & 0xFFFFFFFFFFFFFFFF;
+    _renderHash = hash;
     return hash;
   }
 
@@ -1093,15 +1091,19 @@ bool _listEquals<T>(List<T> a, List<T> b) {
 int _dirtyWordCount(int width) => width <= 0 ? 0 : ((width - 1) >> 5) + 1;
 
 int _slotHash(int index, int value) {
-  var hash = 0xcbf29ce484222325;
+  // FNV-1a style hash using values safe for both native and JS/WASM platforms.
+  // Uses the 32-bit FNV offset basis and prime to avoid 64-bit literal issues.
+  const int fnvBasis = 0x811c9dc5; // 2166136261 — safe on JS
+  const int fnvPrime = 0x01000193; // 16777619 — safe on JS
+  var hash = fnvBasis;
   hash ^= index & 0xFFFFFFFF;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= index >>> 32;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= value & 0xFFFFFFFF;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   hash ^= value >>> 32;
-  hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+  hash = (hash * fnvPrime) & 0xFFFFFFFF;
   return hash;
 }
 

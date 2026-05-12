@@ -6,6 +6,7 @@ export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
+import '../renderer/renderer_impl.dart' show TerminalRenderer;
 import '../style/verbosity.dart';
 import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';

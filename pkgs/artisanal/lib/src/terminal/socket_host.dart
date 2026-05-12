@@ -5,6 +5,7 @@ import 'dart:io' as io;
 import '../style/color.dart';
 import '../tui/model.dart';
 import '../tui/program.dart';
+import '../tui/program_host_io.dart' show socketHost;
 import 'backend.dart';
 
 /// Session handler invoked for each accepted raw socket terminal connection.
@@ -76,7 +77,7 @@ final class SocketTerminalHostServer {
         await runProgram(
           modelBuilder(),
           options: options,
-          host: ProgramHost.socket(
+          host: socketHost(
             socket,
             initialSize: initialSize,
             supportsAnsi: supportsAnsi,

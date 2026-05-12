@@ -1,5 +1,4 @@
-import 'package:artisanal/args.dart'
-    show ArgParser, ArgParserException, ArgResults;
+import 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
 
 import '../utils/repository_input.dart';
 import 'compile_time_flags.dart';

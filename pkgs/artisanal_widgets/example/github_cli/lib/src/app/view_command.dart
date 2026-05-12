@@ -2,9 +2,12 @@ import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, Command;
 import 'package:artisanal_widgets/widgets.dart'
-    show ImageAutoMode, WidgetApp, defaultWidgetProgramOptions, runWidgetApp;
+    show ImageAutoMode, WidgetApp;
+import 'package:artisanal_widgets/src/widgets/app/run_app.dart'
+    show defaultWidgetProgramOptions, runWidgetApp;
 
 import '../client/client.dart';
+import '../client/client_cli.dart';
 import '../utils/pull_request_input.dart';
 import 'compile_time_flags.dart';
 import 'pull_request_view.dart';

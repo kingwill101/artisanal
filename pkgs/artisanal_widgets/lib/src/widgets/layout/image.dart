@@ -274,7 +274,7 @@ class NetworkImage extends ImageProvider {
         throw Exception('Failed to load image: HTTP ${response.statusCode}');
       }
 
-      final contentType = response.headers.contentType?.mimeType.toLowerCase();
+      final contentType = response.headers.contentType?.mimeType?.toLowerCase();
       _checkContentType(contentType);
       final maximumBytes = this.maximumBytes;
       final contentLength = response.contentLength;

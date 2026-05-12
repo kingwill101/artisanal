@@ -4,6 +4,7 @@ import 'dart:io' as io;
 import 'remote_surface_generic_service.dart';
 import 'remote_surface_host_connection.dart';
 import 'remote_surface_input_router.dart';
+import 'remote_surface_input_router_impl.dart';
 import 'remote_surface_slot_input.dart';
 import 'remote_surface_manifest.dart';
 import 'remote_surface_protocol.dart';
@@ -119,7 +120,7 @@ final class RemotePluginWorkspace {
         manifests: manifests,
         surfaces: sharedSurfaces,
         connections: connections,
-        router: RemotePluginSurfaceInputRouter.forConnections(
+        router: RemotePluginSurfaceInputRouterConnectionExtension.forConnections(
           surfaces: sharedSurfaces,
           connectionsBySurfaceId: connectionsBySurfaceId,
           placements: manifests.map(

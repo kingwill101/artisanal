@@ -3,27 +3,6 @@
 /// This module provides a single source of truth for terminal operations
 /// used throughout the package, including both static components and the
 /// TUI runtime.
-///
-/// {@category Terminal}
-///
-/// {@macro artisanal_terminal_overview}
-/// {@macro artisanal_terminal_raw_mode}
-/// {@macro artisanal_terminal_ansi_sequences}
-///
-/// ## Quick Start
-///
-/// ```dart
-/// import 'package:artisanal/terminal.dart';
-///
-/// // Create a terminal
-/// final terminal = StdioTerminal();
-///
-/// // Use terminal operations
-/// terminal.hideCursor();
-/// terminal.write('Hello, ');
-/// terminal.writeln('World!');
-/// terminal.showCursor();
-/// ```
 library;
 
 // ANSI escape sequences
@@ -37,44 +16,41 @@ export 'sixel.dart' show SixelImage;
 // Key types and constants
 export 'keys.dart' show Key, KeyType, Keys;
 
-// Terminal interface and implementations
+// Terminal interface and implementations (always available — io-free)
 export 'terminal_base.dart'
     show
         Terminal,
         SplitTerminal,
-        StdioTerminal,
-        TtyTerminal,
         StringTerminal,
         RawModeGuard;
 
-export 'report_probe.dart' show TerminalReportProbe, TerminalReportSnapshot;
+// Io-dependent terminal implementations (native only)
+export 'terminal_io_stub.dart'
+    if (dart.library.io) 'terminal_io_impl.dart';
 
+// Report probe (probe function is io-dependent, snapshot type is io-free)
+export 'report_probe_stub.dart'
+    if (dart.library.io) 'report_probe.dart';
+
+// Backend interface and io-free implementations
 export 'backend.dart'
     show
         TerminalDimensions,
         TerminalBackend,
         BackendTerminal,
-        StdioTerminalBackend,
         EmbeddedTerminalBackend,
-        TerminalBridge,
-        SocketTerminalBackend;
+        TerminalBridge;
 
-export 'bridge_protocol.dart'
-    show
-        TerminalBridgeMessageType,
-        TerminalBridgeMessage,
-        TerminalBridgeJsonChannel,
-        JsonTerminalBackend,
-        WebSocketTerminalBackend;
+// Io-dependent backends (native only)
+export 'backend_io_stub.dart'
+    if (dart.library.io) 'backend_io_impl.dart';
 
-export 'browser_host.dart'
-    show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
-
-export 'socket_host.dart'
-    show SocketTerminalSessionHandler, SocketTerminalHostServer;
-
-export 'stdin_stream.dart'
-    show
-        sharedStdinStream,
-        isSharedStdinStreamStarted,
-        shutdownSharedStdinStream;
+// Io-dependent bridge protocol, hosts, and stdin stream (native only)
+export 'bridge_protocol_stub.dart'
+    if (dart.library.io) 'bridge_protocol.dart';
+export 'browser_host_stub.dart'
+    if (dart.library.io) 'browser_host.dart';
+export 'socket_host_stub.dart'
+    if (dart.library.io) 'socket_host.dart';
+export 'stdin_stream_stub.dart'
+    if (dart.library.io) 'stdin_stream.dart';

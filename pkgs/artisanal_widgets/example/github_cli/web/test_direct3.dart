@@ -1,0 +1,33 @@
+import 'package:artisanal/tui.dart' show Model, Cmd, View, runProgram, Msg;
+import 'package:artisanal/web.dart' show WebTerminalBackend, WebUltravioletRenderer;
+import 'package:artisanal/terminal.dart' show BackendTerminal;
+import 'package:artisanal_widgets/widgets.dart' show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
+import 'package:ultraviolet/web.dart' show CanvasTerminalRenderer;
+import 'package:web/web.dart' as web;
+
+class Hello extends StatelessWidget {
+  Hello({super.key});
+  @override
+  Widget build(BuildContext context) => Text('Hello!');
+}
+
+void main() async {
+  final canvas = web.document.createElement('canvas') as web.HTMLCanvasElement;
+  web.document.body!.appendChild(canvas);
+  final ctx = canvas.getContext('2d') as web.CanvasRenderingContext2D;
+
+  final cr = CanvasTerminalRenderer(ctx, fontSize: 14);
+  cr.measureFont();
+  cr.resize(80, 24);
+  canvas.width = (80 * cr.cellWidth).ceil();
+  canvas.height = (24 * cr.cellHeight).ceil();
+
+  final backend = WebTerminalBackend(initialSize: (width: 80, height: 24));
+  final terminal = BackendTerminal(backend);
+  final app = WidgetApp(Hello());
+
+  await runProgram(app, terminal: terminal, renderer: WebUltravioletRenderer(
+    terminal: terminal,
+    canvasRenderer: cr,
+  ));
+}

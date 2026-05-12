@@ -16,7 +16,7 @@ import 'components.dart';
 import 'inline_animation.dart';
 import 'output_theme.dart';
 import 'validators.dart';
-import '../tui/terminal.dart' show StdioTerminal;
+import '../terminal/terminal_io_impl.dart' show StdioTerminal;
 import '../tui/bubbles/password.dart' show PasswordModel;
 import '../tui/bubbles/select.dart'
     show MultiSelectModel, SelectModel, SelectStyles, MultiSelectStyles;

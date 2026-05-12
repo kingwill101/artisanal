@@ -1,10 +1,14 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, CommandRunner;
+import 'package:artisanal/hosts.dart' show ProgramHost;
+import 'package:artisanal/runtime.dart' show ProgramOptions;
 import 'package:artisanal_widgets/widgets.dart'
-    show ImageAutoMode, WidgetApp, defaultWidgetProgramOptions, runWidgetApp;
+    show ImageAutoMode, WidgetApp;
+import 'package:artisanal_widgets/src/widgets/app/run_app.dart'
+    show defaultWidgetProgramOptions, runWidgetApp;
 
-import '../client/client.dart';
+import '../client/client_cli.dart';
 import 'compile_time_flags.dart';
 import 'config.dart';
 import 'dashboard.dart';
@@ -78,6 +82,8 @@ final class GithubCliRunner extends CommandRunner<void> {
 Future<void> runGithubCli(
   GithubCliConfig config, {
   GithubCliReplayPlan? replayPlan,
+  ProgramHost? host,
+  ProgramOptions Function(ProgramOptions defaults)? options,
 }) async {
   final app = WidgetApp(
     GithubCliDashboard(
@@ -88,16 +94,21 @@ Future<void> runGithubCli(
     ),
   );
 
+  var resolvedOptions = options?.call(defaultWidgetProgramOptions) ??
+      defaultWidgetProgramOptions;
+  if (replayPlan != null) {
+    resolvedOptions = resolvedOptions.copyWith(
+      replay: replayPlan.replay,
+      interceptor: replayPlan.interceptor,
+      blockInputWhileReplay: replayPlan.blockInput,
+    );
+  }
+
   await runWidgetApp(
     app,
     imageAutoMode: ImageAutoMode.sessionCapabilities,
-    options: replayPlan == null
-        ? null
-        : defaultWidgetProgramOptions.copyWith(
-            replay: replayPlan.replay,
-            interceptor: replayPlan.interceptor,
-            blockInputWhileReplay: replayPlan.blockInput,
-          ),
+    options: resolvedOptions,
+    host: host,
   );
 }
 

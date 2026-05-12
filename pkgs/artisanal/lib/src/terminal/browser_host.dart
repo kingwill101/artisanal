@@ -3,6 +3,7 @@ import 'dart:io' as io;
 
 import '../tui/model.dart';
 import '../tui/program.dart';
+import '../tui/program_host_io.dart' show webSocketHost;
 
 /// Session handler invoked for each accepted browser websocket connection.
 typedef BrowserTerminalSessionHandler =
@@ -98,7 +99,7 @@ final class BrowserTerminalHostServer {
         await runProgram(
           modelBuilder(),
           options: options,
-          host: ProgramHost.webSocket(socket),
+          host: webSocketHost(socket),
         );
       },
     );

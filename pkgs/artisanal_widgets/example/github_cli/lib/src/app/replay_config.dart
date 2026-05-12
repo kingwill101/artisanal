@@ -1,4 +1,4 @@
-import 'package:artisanal/args.dart' show ArgParser, ArgResults;
+import 'package:args/args.dart' show ArgParser, ArgResults;
 
 final class GithubCliReplayConfig {
   const GithubCliReplayConfig({

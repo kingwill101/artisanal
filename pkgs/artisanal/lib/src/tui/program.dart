@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:developer' as dev;
-import 'dart:io' as io;
 
-import 'package:artisanal/terminal.dart';
+import '../platform/platform.dart' as platform;
 
 import '../unicode/width.dart' as uni_width;
 import 'cmd.dart';
@@ -22,7 +21,7 @@ import 'trace.dart';
 import 'resize_coalescer.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
-import '../style/color.dart' show Color, ColorProfile;
+import '../style/color.dart' show Color;
 import 'background_color_probe.dart';
 import 'uv_capability_probe.dart';
 import '../uv/cursor.dart';
@@ -888,11 +887,13 @@ final class ProgramHostBinding {
 /// - [ProgramHost.stdio] for the built-in stdio host
 /// - [ProgramHost.backend] for backend-driven embedded/native hosts
 /// - [ProgramHost.bridge] for ergonomic embedded/web bridge hosts
-/// - [ProgramHost.jsonChannel] for message-oriented JSON transports
-/// - [ProgramHost.webSocket] for websocket JSON bridge hosts
 /// - [ProgramHost.terminal] for an already-created terminal
 /// - [ProgramHost.split] for separate control/output terminals
 /// - [ProgramHost.custom] for embedding adapters and future backends
+///
+/// For `io.WebSocket`-backed and `io.Socket`-backed hosts, use the
+/// top-level `webSocketHost()` and `socketHost()` helpers from
+/// `package:artisanal/src/tui/program_host_io.dart`.
 abstract interface class ProgramHost {
   /// Creates a stdio-backed host.
   ///
@@ -908,75 +909,6 @@ abstract interface class ProgramHost {
   /// Creates a host backed by [bridge].
   factory ProgramHost.bridge(TerminalBridge bridge) =>
       _BackendProgramHost(bridge.backend);
-
-  /// Creates a host backed by a JSON message channel.
-  factory ProgramHost.jsonChannel({
-    required void Function(String message) sendMessage,
-    required Stream<Object?> inboundMessages,
-    Future<void> Function()? flushMessages,
-    Future<void> Function()? closeTransport,
-    TerminalDimensions initialSize = const (width: 80, height: 24),
-    bool supportsAnsi = true,
-    bool isTerminal = true,
-    ColorProfile colorProfile = ColorProfile.trueColor,
-    ({bool useTabs, bool useBackspace}) movementCaps = const (
-      useTabs: false,
-      useBackspace: true,
-    ),
-  }) => _BackendProgramHost(
-    JsonTerminalBackend(
-      sendMessage: sendMessage,
-      inboundMessages: inboundMessages,
-      flushMessages: flushMessages,
-      closeTransport: closeTransport,
-      initialSize: initialSize,
-      supportsAnsi: supportsAnsi,
-      isTerminal: isTerminal,
-      colorProfile: colorProfile,
-      movementCaps: movementCaps,
-    ),
-  );
-
-  /// Creates a websocket-backed host using the JSON bridge protocol.
-  factory ProgramHost.webSocket(
-    io.WebSocket socket, {
-    TerminalDimensions initialSize = const (width: 80, height: 24),
-    bool supportsAnsi = true,
-    bool isTerminal = true,
-    ColorProfile colorProfile = ColorProfile.trueColor,
-    ({bool useTabs, bool useBackspace}) movementCaps = const (
-      useTabs: false,
-      useBackspace: true,
-    ),
-    bool closeSocketOnDispose = true,
-  }) => _BackendProgramHost(
-    WebSocketTerminalBackend(
-      socket,
-      initialSize: initialSize,
-      supportsAnsi: supportsAnsi,
-      isTerminal: isTerminal,
-      colorProfile: colorProfile,
-      movementCaps: movementCaps,
-      closeSocketOnDispose: closeSocketOnDispose,
-    ),
-  );
-
-  /// Creates a socket-backed host for remote or shell-mode terminals.
-  factory ProgramHost.socket(
-    io.Socket socket, {
-    TerminalDimensions initialSize = const (width: 80, height: 24),
-    bool supportsAnsi = true,
-    ColorProfile colorProfile = ColorProfile.trueColor,
-    bool closeSocketOnDispose = true,
-  }) => _BackendProgramHost(
-    SocketTerminalBackend(
-      socket,
-      initialSize: initialSize,
-      supportsAnsi: supportsAnsi,
-      colorProfile: colorProfile,
-      closeSocketOnDispose: closeSocketOnDispose,
-    ),
-  );
 
   /// Creates a host that always uses [terminal].
   factory ProgramHost.terminal(TuiTerminal terminal) =>
@@ -1172,18 +1104,32 @@ class Program<M extends Model> with HotReloadMixin {
     ProgramOptions options = const ProgramOptions(),
     ProgramHost? host,
     TuiTerminal? terminal,
+    TuiRenderer? renderer,
   }) : this._resolved(
          initialModel,
          _resolveProgramHost(options: options, host: host, terminal: terminal),
+         renderer: renderer,
        );
 
-  Program._resolved(this._initialModel, ProgramHostBinding binding)
-    : _options = binding.options,
-      _terminal = binding.terminal;
+  Program._resolved(
+    this._initialModel,
+    ProgramHostBinding binding, {
+    TuiRenderer? renderer,
+  }) : _options = binding.options,
+      _terminal = binding.terminal,
+      _customRenderer = renderer;
 
   final M _initialModel;
   final ProgramOptions _options;
   TuiTerminal? _terminal;
+
+  /// An optional custom renderer provided by the caller.
+  ///
+  /// When set, [Program] uses this renderer instead of creating one via
+  /// [_createRenderer]. This allows callers (e.g. web bootstrap) to inject
+  /// a renderer that bridges the UV screen buffer to an alternative output
+  /// target such as an HTML5 canvas.
+  final TuiRenderer? _customRenderer;
 
   /// The current render-budget state.
   ///
@@ -1390,8 +1336,8 @@ class Program<M extends Model> with HotReloadMixin {
   M? _finalModel;
 
   /// Signal subscriptions.
-  StreamSubscription<io.ProcessSignal>? _sigintSubscription;
-  StreamSubscription<io.ProcessSignal>? _sigwinchSubscription;
+  StreamSubscription<void>? _sigintSubscription;
+  StreamSubscription<void>? _sigwinchSubscription;
   StreamSubscription<TerminalDimensions>? _backendResizeSubscription;
   StreamSubscription<void>? _backendShutdownSubscription;
   bool _backendShutdownRequested = false;
@@ -1527,8 +1473,6 @@ class Program<M extends Model> with HotReloadMixin {
 
   /// Prints a formatted panic message to stderr.
   void _printPanic(Object error, StackTrace? stackTrace) {
-    final stderr = io.stderr;
-
     // ANSI color codes
     const reset = '\x1b[0m';
     const red = '\x1b[31m';
@@ -1544,28 +1488,28 @@ class Program<M extends Model> with HotReloadMixin {
       return useColor ? '$color$text$reset' : text;
     }
 
-    stderr.writeln();
-    stderr.writeln(colored('  PANIC  ', '$bold$red'));
-    stderr.writeln();
+    platform.stderrWriteln('');
+    platform.stderrWriteln(colored('  PANIC  ', '$bold$red'));
+    platform.stderrWriteln('');
 
     // Exception type and message
     final errorType = error.runtimeType.toString();
     final errorMessage = error.toString();
 
-    stderr.writeln(colored('  $errorType', '$bold$yellow'));
-    stderr.writeln();
+    platform.stderrWriteln(colored('  $errorType', '$bold$yellow'));
+    platform.stderrWriteln('');
 
     // Exception message lines
     final messageLines = errorMessage.split('\n');
     for (final line in messageLines) {
-      stderr.writeln('  ${colored(line, yellow)}');
+      platform.stderrWriteln('  ${colored(line, yellow)}');
     }
 
     // Stack trace
     if (stackTrace != null) {
-      stderr.writeln();
-      stderr.writeln(colored('  Stack trace:', dim));
-      stderr.writeln();
+      platform.stderrWriteln('');
+      platform.stderrWriteln(colored('  Stack trace:', dim));
+      platform.stderrWriteln('');
 
       final lines = stackTrace.toString().split('\n');
       var frameCount = 0;
@@ -1573,7 +1517,7 @@ class Program<M extends Model> with HotReloadMixin {
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
         if (frameCount >= _options.maxStackFrames) {
-          stderr.writeln(colored('  ... and more frames', dim));
+          platform.stderrWriteln(colored('  ... and more frames', dim));
           break;
         }
 
@@ -1585,52 +1529,33 @@ class Program<M extends Model> with HotReloadMixin {
           final member = match.group(2)!;
           final location = match.group(3)!;
 
-          stderr.writeln('  ${colored(number, dim)}  ${colored(member, cyan)}');
-          stderr.writeln('      ${colored(location, dim)}');
+          platform.stderrWriteln('  ${colored(number, dim)}  ${colored(member, cyan)}');
+          platform.stderrWriteln('      ${colored(location, dim)}');
           frameCount++;
         } else {
           // Fallback for non-standard format
-          stderr.writeln('  ${colored(line.trim(), dim)}');
+          platform.stderrWriteln('  ${colored(line.trim(), dim)}');
           frameCount++;
         }
       }
     }
 
-    stderr.writeln();
+    platform.stderrWriteln('');
   }
 
   /// Checks if the terminal supports ANSI color codes.
   bool _supportsAnsiColors() {
-    try {
-      // Check NO_COLOR environment variable (https://no-color.org/)
-      if (io.Platform.environment.containsKey('NO_COLOR')) {
-        return false;
-      }
-
-      // Check stderr for ANSI support
-      return io.stderr.supportsAnsiEscapes;
-    } catch (_) {
+    // Check NO_COLOR environment variable (https://no-color.org/)
+    if (platform.environment.containsKey('NO_COLOR')) {
       return false;
     }
+    return platform.stderrSupportsAnsi;
   }
 
   /// Sets up the terminal and renderer.
   Future<void> _setup() async {
-    // Create terminal if not provided.
-    //
-    // If inputTTY is requested, we try to split control/input from output:
-    // - control: `/dev/tty` (raw mode, size probing, input reporting toggles)
-    // - output: stdout (may be redirected)
-    if (_terminal == null && _options.inputTTY) {
-      final control = TtyTerminal.tryOpen();
-      if (control != null) {
-        _terminal = SplitTerminal(control: control, output: StdioTerminal());
-      } else {
-        _terminal = StdioTerminal();
-      }
-    } else {
-      _terminal ??= StdioTerminal();
-    }
+    _terminal ??=
+        platform.createDefaultTerminal(inputTTY: _options.inputTTY);
 
     // Enable raw mode for character-by-character input
     _terminal!.enableRawMode();
@@ -1669,7 +1594,7 @@ class Program<M extends Model> with HotReloadMixin {
       uiAnchor: _options.uiAnchor,
     );
 
-    _createRenderer(rendererOptions);
+    _setupRenderer(rendererOptions);
 
     // Enable mouse tracking if requested
     _applyMouseMode();
@@ -1715,6 +1640,16 @@ class Program<M extends Model> with HotReloadMixin {
       _renderer = InlineTuiRenderer(terminal: _terminal!, options: options);
     }
     _renderer!.initialize();
+  }
+
+  /// Sets up the renderer, respecting a custom renderer if one was provided.
+  void _setupRenderer(TuiRendererOptions options) {
+    if (_customRenderer != null) {
+      _renderer = _customRenderer;
+      _renderer!.initialize();
+    } else {
+      _createRenderer(options);
+    }
   }
 
   /// Initializes the model and renders initial view.
@@ -2063,28 +1998,20 @@ class Program<M extends Model> with HotReloadMixin {
     required bool handleResize,
   }) {
     if (handleInterrupt) {
-      try {
-        _sigintSubscription = io.ProcessSignal.sigint.watch().listen((_) {
-          if (_options.sendInterrupt) {
-            send(const InterruptMsg());
-          } else {
-            send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
-          }
-        });
-      } catch (_) {
-        // Signal handling not supported on this platform
-      }
+      _sigintSubscription = platform.watchSigint(() {
+        if (_options.sendInterrupt) {
+          send(const InterruptMsg());
+        } else {
+          send(const KeyMsg(Key(KeyType.runes, runes: [0x63], ctrl: true)));
+        }
+      });
     }
 
     if (handleResize) {
-      try {
-        _sigwinchSubscription = io.ProcessSignal.sigwinch.watch().listen((_) {
-          final size = _terminal!.size;
-          _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
-        });
-      } catch (_) {
-        // SIGWINCH not available on this platform
-      }
+      _sigwinchSubscription = platform.watchSigwinch(() {
+        final size = _terminal!.size;
+        _sendWindowSizeIfChanged(size.width, size.height, coalesce: true);
+      });
     }
   }
 
@@ -2137,9 +2064,7 @@ class Program<M extends Model> with HotReloadMixin {
     // Use custom input stream if provided, otherwise use terminal input
     final inputStream =
         _options.input ??
-        ((_options.inputTTY &&
-                _terminal is! TtyTerminal &&
-                _terminal is! SplitTerminal)
+        ((_options.inputTTY && _terminal is! SplitTerminal)
             ? _openTtyInput()
             : null) ??
         _terminal!.input;
@@ -2161,18 +2086,7 @@ class Program<M extends Model> with HotReloadMixin {
     );
   }
 
-  Stream<List<int>>? _openTtyInput() {
-    try {
-      if (io.Platform.isWindows) return null;
-      final tty = io.File('/dev/tty');
-      if (tty.existsSync()) {
-        return tty.openRead();
-      }
-    } catch (_) {
-      // ignore failures, will fall back to default input
-    }
-    return null;
-  }
+  Stream<List<int>>? _openTtyInput() => platform.ttyOpenRead();
 
   void _trace(String message, {TraceTag tag = TraceTag.general}) {
     if (!TuiTrace.enabled) return;
@@ -2585,8 +2499,8 @@ class Program<M extends Model> with HotReloadMixin {
     // always override via UV_EMOJI_WIDTH/EMOJI_WIDTH if needed.
     if (_options.effectiveScreenMode == ScreenMode.fullScreen) {
       final override =
-          io.Platform.environment['UV_EMOJI_WIDTH'] ??
-          io.Platform.environment['EMOJI_WIDTH'];
+          platform.environment['UV_EMOJI_WIDTH'] ??
+          platform.environment['EMOJI_WIDTH'];
       if (override != null) {
         final v = int.tryParse(override.trim());
         if (v != null) uni_width.setEmojiPresentationWidth(v);
@@ -2611,10 +2525,7 @@ class Program<M extends Model> with HotReloadMixin {
     if (!term.supportsAnsi || !term.isTerminal) return false;
     final explicit = _options.startupProbes;
     if (explicit != null) return explicit;
-    return term is StdioTerminal ||
-        term is SplitTerminal ||
-        term is TtyTerminal ||
-        term is BackendTerminal;
+    return platform.canProbeTerminal(term);
   }
 
   /// Sends a message to the program.
@@ -3241,13 +3152,16 @@ class Program<M extends Model> with HotReloadMixin {
 
     try {
       // Run the external process
-      final process = await io.Process.run(
+      final processResult = await platform.runProcess(
         executable,
         arguments,
         workingDirectory: workingDirectory,
         environment: environment,
-        runInShell: io.Platform.isWindows,
       );
+
+      if (processResult == null) {
+        throw Exception('Process execution not available on this platform');
+      }
 
       if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
 
@@ -3269,9 +3183,9 @@ class Program<M extends Model> with HotReloadMixin {
 
       // Send result message
       final result = ExecResult(
-        exitCode: process.exitCode,
-        stdout: process.stdout.toString(),
-        stderr: process.stderr.toString(),
+        exitCode: processResult.exitCode,
+        stdout: processResult.stdout,
+        stderr: processResult.stderr,
       );
 
       final deferCompletionUntilAfterInitialRender = !_initialRenderComplete;
@@ -3404,7 +3318,7 @@ class Program<M extends Model> with HotReloadMixin {
       inlineHeight: _options.inlineHeight,
       uiAnchor: _options.uiAnchor,
     );
-    _createRenderer(rendererOptions);
+    _setupRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
     _applyWindowTitle(_restoreWindowTitle());
     _releasedWindowTitle = null;
@@ -3745,11 +3659,7 @@ class Program<M extends Model> with HotReloadMixin {
     // Send SIGTSTP to suspend (Unix only) unless the caller explicitly wants
     // the release/restore lifecycle without suspending the parent process.
     if (_options.sendSuspendSignal) {
-      try {
-        io.Process.killPid(io.pid, io.ProcessSignal.sigtstp);
-      } catch (_) {
-        // Suspend not supported on this platform
-      }
+      platform.killProcess(platform.processId);
     }
 
     // When resumed, restore terminal state
@@ -3771,7 +3681,7 @@ class Program<M extends Model> with HotReloadMixin {
       inlineHeight: _options.inlineHeight,
       uiAnchor: _options.uiAnchor,
     );
-    _createRenderer(rendererOptions);
+    _setupRenderer(rendererOptions);
     _appliedCursorVisibilityOverride = null;
     _applyWindowTitle(_restoreWindowTitle());
     _releasedWindowTitle = null;
@@ -4540,12 +4450,14 @@ Future<void> runProgram<M extends Model>(
   ProgramOptions options = const ProgramOptions(),
   ProgramHost? host,
   TuiTerminal? terminal,
+  TuiRenderer? renderer,
 }) async {
   final program = Program<M>(
     model,
     options: options,
     host: host,
     terminal: terminal,
+    renderer: renderer,
   );
   await program.run();
 }
@@ -4556,12 +4468,14 @@ Future<M> runProgramWithResult<M extends Model>(
   ProgramOptions options = const ProgramOptions(),
   ProgramHost? host,
   TuiTerminal? terminal,
+  TuiRenderer? renderer,
 }) async {
   final program = Program<M>(
     model,
     options: options,
     host: host,
     terminal: terminal,
+    renderer: renderer,
   );
   await program.run();
   return program.finalModel ?? model;

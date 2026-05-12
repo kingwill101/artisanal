@@ -53,6 +53,19 @@ UvColor? _resolvedColorToUvColor(Color resolved) {
   return UvColor.rgb(r, g, b);
 }
 
+bool _sameResolvedUvColor(UvColor? a, UvColor? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null) return false;
+  if (a == b) return true;
+
+  return switch ((a, b)) {
+    (UvRgb(:final r, :final g, :final b, :final a),
+      UvRgb(r: final rr, g: final gg, b: final bb, a: final aa)) =>
+      r == rr && g == gg && b == bb && a == aa,
+    _ => false,
+  };
+}
+
 final class _UvColorCacheEntry {
   bool hasDarkValue = false;
   bool hasLightValue = false;
@@ -305,33 +318,39 @@ void _drawStyledContent(
 
       final srcCell = tempCanvas.cellAt(x, y);
       if (srcCell == null || srcCell.isZero) continue;
-      // Skip plain unstyled spaces so that the container's pre-filled
-      // background color shows through.  This applies in transparent mode
-      // (Stack overlays) AND whenever the container has a background color,
-      // because Layout.place() padding produces isEmpty cells that would
-      // otherwise overwrite the bg-filled canvas.
-      if (srcCell.isEmpty && (transparent || bgStyle.bg != null)) continue;
-
-      // Styled text often ends with a reset that reverts to terminal default
-      // background. When those reset-derived spaces are parsed back into cells,
-      // they look like explicitly colored spaces and would incorrectly punch
-      // holes through container backgrounds. Treat this specific shape as
-      // transparent so the container's prefilled background remains visible.
-      if (bgStyle.bg != null &&
+      var normalizedStyle = srcCell.style;
+      final isSingleWidthSpace = srcCell.content == ' ' && srcCell.width == 1;
+      final shouldTreatDefaultBgAsTransparent =
+          isSingleWidthSpace &&
+          bgStyle.bg != null &&
           terminalBg != null &&
-          srcCell.content == ' ' &&
-          srcCell.width == 1 &&
-          srcCell.style.fg == null &&
-          srcCell.style.bg == terminalBg &&
+          _sameResolvedUvColor(srcCell.style.bg, terminalBg) &&
           srcCell.style.underlineColor == null &&
-          srcCell.style.underline == UnderlineStyle.none &&
-          srcCell.style.attrs == 0) {
+          srcCell.style.underline == UnderlineStyle.none;
+      if (shouldTreatDefaultBgAsTransparent) {
+        normalizedStyle = normalizedStyle.copyWith(clearBg: true);
+      }
+
+      // Skip layout/padding spaces that have no visible styling of their own so
+      // the destination background remains visible. This covers both plain empty
+      // cells and spaces that only carried a foreground/default-background style
+      // after ANSI round-tripping.
+      final hasVisibleSpaceAttrs = (normalizedStyle.attrs & 32) != 0;
+      final isTransparentSpace =
+          isSingleWidthSpace &&
+          normalizedStyle.bg == null &&
+          normalizedStyle.underlineColor == null &&
+          normalizedStyle.underline == UnderlineStyle.none &&
+          !hasVisibleSpaceAttrs &&
+          srcCell.link.isZero;
+      if ((srcCell.isEmpty && (transparent || bgStyle.bg != null)) ||
+          (bgStyle.bg != null && isTransparentSpace)) {
         continue;
       }
 
-      final mergedStyle = srcCell.style.bg == null && bgStyle.bg != null
-          ? srcCell.style.copyWith(bg: bgStyle.bg)
-          : srcCell.style;
+      final mergedStyle = normalizedStyle.bg == null && bgStyle.bg != null
+          ? normalizedStyle.copyWith(bg: bgStyle.bg)
+          : normalizedStyle;
 
       canvas.setCell(
         destX,
