@@ -53,19 +53,6 @@ UvColor? _resolvedColorToUvColor(Color resolved) {
   return UvColor.rgb(r, g, b);
 }
 
-bool _sameResolvedUvColor(UvColor? a, UvColor? b) {
-  if (identical(a, b)) return true;
-  if (a == null || b == null) return false;
-  if (a == b) return true;
-
-  return switch ((a, b)) {
-    (UvRgb(:final r, :final g, :final b, :final a),
-      UvRgb(r: final rr, g: final gg, b: final bb, a: final aa)) =>
-      r == rr && g == gg && b == bb && a == aa,
-    _ => false,
-  };
-}
-
 final class _UvColorCacheEntry {
   bool hasDarkValue = false;
   bool hasLightValue = false;
@@ -306,7 +293,6 @@ void _drawStyledContent(
   };
   final tempCanvas = Canvas(styledWidth, styledHeight);
   styled.draw(tempCanvas, tempCanvas.bounds());
-  final terminalBg = _colorToUvColor(currentTheme.background);
 
   for (var y = 0; y < styledHeight; y++) {
     for (var x = 0; x < styledWidth; x++) {
@@ -318,18 +304,8 @@ void _drawStyledContent(
 
       final srcCell = tempCanvas.cellAt(x, y);
       if (srcCell == null || srcCell.isZero) continue;
-      var normalizedStyle = srcCell.style;
+      final normalizedStyle = srcCell.style;
       final isSingleWidthSpace = srcCell.content == ' ' && srcCell.width == 1;
-      final shouldTreatDefaultBgAsTransparent =
-          isSingleWidthSpace &&
-          bgStyle.bg != null &&
-          terminalBg != null &&
-          _sameResolvedUvColor(srcCell.style.bg, terminalBg) &&
-          srcCell.style.underlineColor == null &&
-          srcCell.style.underline == UnderlineStyle.none;
-      if (shouldTreatDefaultBgAsTransparent) {
-        normalizedStyle = normalizedStyle.copyWith(clearBg: true);
-      }
 
       // Skip layout/padding spaces that have no visible styling of their own so
       // the destination background remains visible. This covers both plain empty

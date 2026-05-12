@@ -29,8 +29,6 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
   int _cols = 0;
   int _rows = 0;
   final String _lastOutput = '';
-  final Set<String> _debugLoggedBackgroundGaps = <String>{};
-  final Set<String> _debugLoggedSelectedRows = <String>{};
 
   /// Measure font metrics so cells are sized correctly.
   void measureFont() {
@@ -108,7 +106,7 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
         final py = bounds.top;
         final cellWidth = bounds.right - bounds.left;
         final cellHeight = bounds.bottom - bounds.top;
-        final baseline = py + (_baseline * scale);
+        final baseline = (py + (_baseline * scale)).roundToDouble();
 
         final bg = style.bg;
         final fg = style.fg ?? const UvRgb(204, 204, 204);
@@ -121,6 +119,7 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
           final isBold = (attrs & Attr.bold) != 0;
           final isItalic = (attrs & Attr.italic) != 0;
           final isFaint = (attrs & Attr.faint) != 0;
+          final alpha = isFaint ? 0.7 : 1.0;
           final drawFgCss = _colorToCss(drawFg);
 
           if (_paintShapeGlyph(
@@ -130,24 +129,24 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
             cellWidth: cellWidth,
             cellHeight: cellHeight,
             colorCss: drawFgCss,
-            alpha: isFaint ? 0.5 : 1.0,
+            alpha: alpha,
           )) {
             continue;
           }
 
-          var fontStr = '${fontSize * scale}px $fontFamily';
+          var fontStr = '${_scaledFontSize(scale)}px $fontFamily';
           if (isItalic) fontStr = 'italic $fontStr';
           if (isBold) fontStr = 'bold $fontStr';
           context.font = fontStr;
 
           context.fillStyle = drawFgCss.toJS;
-          if (isFaint) {
-            context.globalAlpha = 0.5;
-          }
+          context.globalAlpha = alpha;
           context.fillText(c, px, baseline);
-          if (isFaint) {
-            context.globalAlpha = 1.0;
+          if (isBold) {
+            final boldOffset = math.min(1.0, math.max(0.5, scale * 0.12));
+            context.fillText(c, px + boldOffset, baseline);
           }
+          context.globalAlpha = 1.0;
 
           if (style.underline != UnderlineStyle.none) {
             context.lineWidth = math.max(1.0, scale);
@@ -197,13 +196,56 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     );
   }
 
+  double _scaledFontSize(double scale) {
+    return math.max(1.0, (fontSize * scale).roundToDouble());
+  }
+
   void _paintBackgroundRuns(Buffer buf, int width, int height, double scale) {
+    // Track the dominant (first non-null) background seen on each row so that
+    // an entirely-default-background row (e.g. the blank separator line inside
+    // a selected queue item) can inherit the colour from its neighbours.
+    // We keep a small look-ahead cache: dominant[y] is the first non-null
+    // effective background on row y, or null when the row is all-default.
+    final dominant = List<String?>.filled(height, null);
+    for (var y = 0; y < height; y++) {
+      final line = buf.line(y);
+      if (line == null) continue;
+      for (var x = 0; x < width; x++) {
+        final c = _effectiveCellBackgroundCss(line, x, width);
+        if (c != null) {
+          dominant[y] = c;
+          break;
+        }
+      }
+    }
+
     for (var y = 0; y < height; y++) {
       final line = buf.line(y);
       if (line == null) continue;
 
-      _debugLogSelectedBackgroundRow(line, y, width);
-      _debugLogBackgroundGapRow(line, y, width);
+      // If this row has no non-default background of its own, check whether
+      // the nearest non-empty row above and below agree on a colour. If they
+      // do, fill the entire row with that colour so the selected-row highlight
+      // covers padding/separator lines that only carry the terminal default bg.
+      if (dominant[y] == null) {
+        String? above;
+        for (var a = y - 1; a >= 0; a--) {
+          if (dominant[a] != null) { above = dominant[a]; break; }
+        }
+        String? below;
+        for (var b = y + 1; b < height; b++) {
+          if (dominant[b] != null) { below = dominant[b]; break; }
+        }
+        if (above != null && above == below) {
+          final top = (y * _cellHeight * scale).roundToDouble();
+          final bottom = ((y + 1) * _cellHeight * scale).roundToDouble();
+          final rowW = (width * _cellWidth * scale).roundToDouble();
+          context.fillStyle = above.toJS;
+          context.fillRect(0, top, math.max(1, rowW).toDouble(),
+              math.max(1, bottom - top).toDouble());
+          continue; // no per-cell run needed for this row
+        }
+      }
 
       String? runColorCss;
       var runStart = 0;
@@ -233,126 +275,6 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     }
   }
 
-  void _debugLogBackgroundGapRow(Line line, int y, int width) {
-    if (_debugLoggedBackgroundGaps.length >= 8) return;
-
-    var x = 0;
-    while (x < width) {
-      if (_cellBackgroundCss(line.at(x)) != null) {
-        x++;
-        continue;
-      }
-
-      final start = x;
-      while (x + 1 < width && _cellBackgroundCss(line.at(x + 1)) == null) {
-        x++;
-      }
-      final end = x;
-
-      final left = start > 0 ? _cellBackgroundCss(line.at(start - 1)) : null;
-      final right = end + 1 < width ? _cellBackgroundCss(line.at(end + 1)) : null;
-      if (left == null || left != right) {
-        x++;
-        continue;
-      }
-
-      var hasUnpaintedGap = false;
-      for (var i = start; i <= end; i++) {
-        if (_effectiveCellBackgroundCss(line, i, width) == null) {
-          hasUnpaintedGap = true;
-          break;
-        }
-      }
-      if (!hasUnpaintedGap) {
-        x++;
-        continue;
-      }
-
-      final windowStart = math.max(0, start - 3);
-      final windowEnd = math.min(width - 1, end + 3);
-      final signature = '$y:$start:$end:$left:${_debugDescribeCells(line, windowStart, windowEnd, width)}';
-      if (_debugLoggedBackgroundGaps.add(signature)) {
-        final message =
-            'UVDBG gap row=$y cols=$start-$end color=$left '
-            'window=$windowStart-$windowEnd '
-            '${_debugDescribeCells(line, windowStart, windowEnd, width)}';
-        print(message);
-        _debugWriteDomLog(message);
-      }
-
-      x++;
-    }
-  }
-
-  void _debugLogSelectedBackgroundRow(Line line, int y, int width) {
-    if (_debugLoggedSelectedRows.length >= 12) return;
-
-    var hasBackground = false;
-    for (var x = 0; x < width; x++) {
-      if (_effectiveCellBackgroundCss(line, x, width) != null) {
-        hasBackground = true;
-        break;
-      }
-    }
-    if (!hasBackground) return;
-
-    final start = math.min(18, math.max(0, width - 1));
-    final end = math.min(width - 1, 40);
-    final message =
-        'UVDBG row=$y window=$start-$end '
-        '${_debugDescribeCells(line, start, end, width)}';
-    if (_debugLoggedSelectedRows.add(message)) {
-      print(message);
-      _debugWriteDomLog(message);
-    }
-  }
-
-  String _debugDescribeCells(Line line, int start, int end, int width) {
-    final cells = <String>[];
-    for (var x = start; x <= end; x++) {
-      final cell = line.at(x);
-      cells.add(
-        '$x:${_debugCellContent(cell)}'
-        '/w=${cell?.width ?? -1}'
-        '/bg=${_cellBackgroundCss(cell) ?? '-'}'
-        '/eff=${_effectiveCellBackgroundCss(line, x, width) ?? '-'}'
-        '/attrs=${cell?.style.attrs ?? -1}',
-      );
-    }
-    return cells.join(' | ');
-  }
-
-  String _debugCellContent(Cell? cell) {
-    if (cell == null) return 'null';
-    final content = cell.content;
-    if (content.isEmpty) return 'EMPTY';
-    if (content == ' ') return 'SP';
-
-    final codeUnits = content.runes
-        .map((rune) => rune <= 0x7e && rune >= 0x20
-            ? String.fromCharCode(rune)
-            : 'U+${rune.toRadixString(16).padLeft(4, '0')}')
-        .join();
-    return '"$codeUnits"';
-  }
-
-  void _debugWriteDomLog(String message) {
-    final document = web.document;
-    final existing = document.getElementById('uvdbg-log');
-    final host = existing is web.HTMLPreElement
-        ? existing
-        : document.createElement('pre') as web.HTMLPreElement;
-    if (existing == null) {
-      host.id = 'uvdbg-log';
-      host.style.display = 'none';
-      document.body?.appendChild(host);
-    }
-    final current = host.textContent;
-    host.textContent = current == null || current.isEmpty
-        ? message
-        : '$current\n$message';
-  }
-
   String? _effectiveCellBackgroundCss(Line line, int x, int width) {
     final cell = line.at(x);
     final direct = _cellBackgroundCss(cell);
@@ -371,9 +293,11 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
     }
 
     final left = start > 0 ? _cellBackgroundCss(line.at(start - 1)) : null;
-    if (left == null) return direct;
     final right = end + 1 < width ? _cellBackgroundCss(line.at(end + 1)) : null;
-    return left == right ? left : direct;
+    if (left != null && right != null) {
+      return left == right ? left : direct;
+    }
+    return left ?? right ?? direct;
   }
 
   bool _isBackgroundBridgeSpace(Cell? cell) {
