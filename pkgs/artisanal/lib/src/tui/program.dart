@@ -3118,8 +3118,8 @@ class Program<M extends Model> with HotReloadMixin {
           executable,
           arguments,
           onComplete,
-          workingDirectory,
-          environment,
+          workingDirectory: workingDirectory,
+          environment: environment,
         );
         return true;
 
@@ -3137,122 +3137,68 @@ class Program<M extends Model> with HotReloadMixin {
     }
   }
 
-  /// Executes an external process, releasing the terminal during execution.
+  /// Executes an external process, blocking until it completes.
+  ///
+  /// The terminal is released before the process starts and restored after
+  /// it finishes. The [onComplete] callback receives the process result.
   Future<void> _executeExternalProcess(
     String executable,
     List<String> arguments,
-    Msg Function(ExecResult result) onComplete,
+    Msg Function(ExecResult result) onComplete, {
     String? workingDirectory,
     Map<String, String>? environment,
-  ) async {
+  }) async {
     final releaseGeneration = ++_terminalReleaseGeneration;
-
-    // Release terminal for external process
     await _releaseTerminal();
 
+    ExecResult result;
     try {
-      // Run the external process
-      final processResult = await platform.runProcess(
+      final r = await platform.runProcess(
         executable,
         arguments,
         workingDirectory: workingDirectory,
         environment: environment,
       );
-
-      if (processResult == null) {
-        throw Exception('Process execution not available on this platform');
+      if (r != null) {
+        result = ExecResult(exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr);
+      } else {
+        result = const ExecResult(exitCode: -1, stdout: '', stderr: '');
       }
+    } catch (_) {
+      result = const ExecResult(exitCode: -1, stdout: '', stderr: '');
+    }
 
-      if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
+    if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
+    _restoreTerminal();
+    final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
+    var restoredInitialFrame = false;
+    if (!_initialRenderComplete) {
+      if (!restoreSizeChanged) {
+        _renderAfterTerminalRestore(skipSizeDispatch: true);
+      }
+      if (_renderGeneration != 0) {
+        _initialRenderComplete = true;
+        restoredInitialFrame = true;
+        _drainDeferredUntilAfterInitialRender();
+      }
+    }
 
-      // Restore terminal
-      _restoreTerminal();
-      final renderGenerationBeforeRestore = _renderGeneration;
-      final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
-      var restoredInitialFrame = false;
-      if (!_initialRenderComplete) {
-        if (!restoreSizeChanged) {
+    if (!_initialRenderComplete) {
+      _deferredUntilAfterInitialRender.add(onComplete(result));
+    } else {
+      final msg = onComplete(result);
+      if (msg is QuitMsg) {
+        if (!restoreSizeChanged && !restoredInitialFrame) {
           _renderAfterTerminalRestore(skipSizeDispatch: true);
         }
-        if (_renderGeneration != renderGenerationBeforeRestore) {
-          _initialRenderComplete = true;
-          restoredInitialFrame = true;
-          _drainDeferredUntilAfterInitialRender();
-        }
-      }
-
-      // Send result message
-      final result = ExecResult(
-        exitCode: processResult.exitCode,
-        stdout: processResult.stdout,
-        stderr: processResult.stderr,
-      );
-
-      final deferCompletionUntilAfterInitialRender = !_initialRenderComplete;
-      final completionMsg = onComplete(result);
-      if (deferCompletionUntilAfterInitialRender) {
-        _deferredUntilAfterInitialRender.add(completionMsg);
+        send(msg);
       } else {
-        if (completionMsg is QuitMsg) {
-          if (!restoreSizeChanged && !restoredInitialFrame) {
-            _renderAfterTerminalRestore(skipSizeDispatch: true);
-          }
-          send(completionMsg);
-        } else {
-          // Route completion through the normal send/queue path so
-          // interceptors, coalescing, and ordering semantics are consistent
-          // with all other runtime messages.
-          final renderGenerationBeforeCompletion = _renderGeneration;
-          send(completionMsg);
-          if (!restoreSizeChanged &&
-              _running &&
-              _renderGeneration == renderGenerationBeforeCompletion) {
-            _renderAfterTerminalRestore(skipSizeDispatch: true);
-          }
-        }
-      }
-    } catch (e) {
-      // Restore terminal even on error
-      if (!_canRestoreReleasedTerminal(releaseGeneration)) return;
-      _restoreTerminal();
-      final renderGenerationBeforeRestore = _renderGeneration;
-      final restoreSizeChanged = _dispatchRestoreSizeIfChanged();
-      var restoredInitialFrame = false;
-      if (!_initialRenderComplete) {
-        if (!restoreSizeChanged) {
+        final renderGenerationBeforeCompletion = _renderGeneration;
+        send(msg);
+        if (!restoreSizeChanged &&
+            _running &&
+            _renderGeneration == renderGenerationBeforeCompletion) {
           _renderAfterTerminalRestore(skipSizeDispatch: true);
-        }
-        if (_renderGeneration != renderGenerationBeforeRestore) {
-          _initialRenderComplete = true;
-          restoredInitialFrame = true;
-          _drainDeferredUntilAfterInitialRender();
-        }
-      }
-
-      // Send error result
-      final result = ExecResult(exitCode: -1, stdout: '', stderr: e.toString());
-
-      final deferCompletionUntilAfterInitialRender = !_initialRenderComplete;
-      final completionMsg = onComplete(result);
-      if (deferCompletionUntilAfterInitialRender) {
-        _deferredUntilAfterInitialRender.add(completionMsg);
-      } else {
-        if (completionMsg is QuitMsg) {
-          if (!restoreSizeChanged && !restoredInitialFrame) {
-            _renderAfterTerminalRestore(skipSizeDispatch: true);
-          }
-          send(completionMsg);
-        } else {
-          // Route completion through the normal send/queue path so
-          // interceptors, coalescing, and ordering semantics are consistent
-          // with all other runtime messages.
-          final renderGenerationBeforeCompletion = _renderGeneration;
-          send(completionMsg);
-          if (!restoreSizeChanged &&
-              _running &&
-              _renderGeneration == renderGenerationBeforeCompletion) {
-            _renderAfterTerminalRestore(skipSizeDispatch: true);
-          }
         }
       }
     }
