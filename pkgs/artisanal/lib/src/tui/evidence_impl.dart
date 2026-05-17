@@ -134,32 +134,52 @@ final class TuiEvidence {
         'lineCount': frame.lines.length,
         'content': frame.content,
         'plainText': frame.plainText,
-        'lines': frame.lines.map((line) => <String, Object?>{
-          'raw': line.raw,
-          'statePrefix': line.statePrefix,
-          'plainText': line.plainText,
-          'visibleWidth': line.visibleWidth,
-        }).toList(growable: false),
+        'lines': frame.lines
+            .map(
+              (line) => <String, Object?>{
+                'raw': line.raw,
+                'statePrefix': line.statePrefix,
+                'plainText': line.plainText,
+                'visibleWidth': line.visibleWidth,
+              },
+            )
+            .toList(growable: false),
         if (nativeSpanDelta != null)
-          'nativeSpanDelta': nativeSpanDelta.map((line) => <String, Object?>{
-            'index': line.index,
-            'spans': line.spans.map((span) => <String, Object?>{
-              'lineIndex': span.lineIndex,
-              'startColumn': span.startColumn,
-              'endColumn': span.endColumn,
-              'text': span.text,
-              'hasDrawable': span.hasDrawable,
-              'style': <String, Object?>{
-                'attrs': span.style.attrs,
-                'underline': span.style.underline.name,
-                'packedKey': span.style.packedKey,
-              },
-              'link': <String, Object?>{
-                'url': span.link.url,
-                'params': span.link.params,
-              },
-            }).toList(growable: false),
-          }).toList(growable: false),
+          'nativeSpanDelta': nativeSpanDelta
+              .map(
+                (line) => <String, Object?>{
+                  'index': line.index,
+                  'spans': line.spans
+                      .map(
+                        (span) => <String, Object?>{
+                          'lineIndex': span.lineIndex,
+                          'startColumn': span.startColumn,
+                          'endColumn': span.endColumn,
+                          'text': span.text,
+                          'hasDrawable': span.hasDrawable,
+                          if (span.style.fg != null)
+                            'fg': _nativeColorToJson(span.style.fg!),
+                          if (span.style.bg != null)
+                            'bg': _nativeColorToJson(span.style.bg!),
+                          if (span.style.underlineColor != null)
+                            'underlineColor': _nativeColorToJson(
+                              span.style.underlineColor!,
+                            ),
+                          'style': <String, Object?>{
+                            'attrs': span.style.attrs,
+                            'underline': span.style.underline.name,
+                            'packedKey': span.style.packedKey,
+                          },
+                          'link': <String, Object?>{
+                            'url': span.link.url,
+                            'params': span.link.params,
+                          },
+                        },
+                      )
+                      .toList(growable: false),
+                },
+              )
+              .toList(growable: false),
       },
     );
   }
@@ -295,7 +315,8 @@ final class TuiEvidence {
 
   static String _generateDateBasedPath() {
     final now = _nowProvider();
-    final ts = '${now.year.toString().padLeft(4, '0')}'
+    final ts =
+        '${now.year.toString().padLeft(4, '0')}'
         '-${now.month.toString().padLeft(2, '0')}'
         '-${now.day.toString().padLeft(2, '0')}'
         'T${now.hour.toString().padLeft(2, '0')}'
@@ -313,6 +334,18 @@ final class TuiEvidence {
         normalized == 'yes' ||
         normalized == 'on';
   }
+}
+
+Map<String, Object?> _nativeColorToJson(TerminalNativeColor color) {
+  return <String, Object?>{
+    'kind': color.kind,
+    if (color.index != null) 'index': color.index,
+    if (color.bright != null) 'bright': color.bright,
+    if (color.r != null) 'r': color.r,
+    if (color.g != null) 'g': color.g,
+    if (color.b != null) 'b': color.b,
+    if (color.a != null) 'a': color.a,
+  };
 }
 
 Map<String, dynamic>? _decodeJsonObject(String raw) {
