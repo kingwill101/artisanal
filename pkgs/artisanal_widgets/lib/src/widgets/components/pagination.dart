@@ -20,7 +20,7 @@ class Pagination extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final clampedPage = page.clamp(1, math.max(1, pageCount)).toInt();
-    final labelStyle = _copyStyle(theme.labelSmall)..foreground(theme.muted);
+    final labelStyle = copyStyle(theme.labelSmall)..foreground(theme.muted);
 
     final controls = <Widget>[];
     if (showEdges) {

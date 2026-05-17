@@ -69,7 +69,7 @@ class Badge extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final bg = background ?? theme.secondary;
     final fg = foreground ?? theme.onSecondary;
-    final style = _copyStyle(textStyle ?? theme.labelSmall)..foreground(fg);
+    final style = copyStyle(textStyle ?? theme.labelSmall)..foreground(fg);
     return Frame(
       padding: _resolvedPadding,
       background: bg,

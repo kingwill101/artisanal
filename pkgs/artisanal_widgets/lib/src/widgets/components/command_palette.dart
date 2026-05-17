@@ -508,15 +508,15 @@ class _CommandPaletteState extends State<CommandPalette> {
         widget.maxHeight ?? cpTheme?.maxHeight ?? media.size.height.toInt() - 6;
 
     final items = _filteredItems;
-    final headerStyle = _copyStyle(theme.labelSmall)
+    final headerStyle = copyStyle(theme.labelSmall)
       ..foreground(headerFg)
       ..bold();
-    final normalStyle = _copyStyle(theme.bodyMedium)..foreground(fg);
-    final selectedStyle = _copyStyle(theme.bodyMedium)
+    final normalStyle = copyStyle(theme.bodyMedium)..foreground(fg);
+    final selectedStyle = copyStyle(theme.bodyMedium)
       ..foreground(selFg)
       ..bold();
-    final shortcutStyle = _copyStyle(theme.labelSmall)..foreground(shortcutFg);
-    final selectedShortcutStyle = _copyStyle(theme.labelSmall)
+    final shortcutStyle = copyStyle(theme.labelSmall)..foreground(shortcutFg);
+    final selectedShortcutStyle = copyStyle(theme.labelSmall)
       ..foreground(theme.listRowSelectedMutedForeground);
 
     // Build grouped item list
@@ -597,14 +597,14 @@ class _CommandPaletteState extends State<CommandPalette> {
               Expanded(
                 child: Text(
                   widget.title!,
-                  style: _copyStyle(theme.titleSmall)
+                  style: copyStyle(theme.titleSmall)
                     ..foreground(fg)
                     ..bold(),
                 ),
               ),
               Text(
                 'esc',
-                style: _copyStyle(theme.labelSmall)..foreground(theme.muted),
+                style: copyStyle(theme.labelSmall)..foreground(theme.muted),
               ),
             ],
           )
@@ -622,7 +622,7 @@ class _CommandPaletteState extends State<CommandPalette> {
             padding: const EdgeInsets.only(left: 3, right: 3),
             child: Text(
               'No results found',
-              style: _copyStyle(theme.bodySmall)..foreground(theme.muted),
+              style: copyStyle(theme.bodySmall)..foreground(theme.muted),
             ),
           )
         : SingleChildScrollView(

@@ -109,7 +109,7 @@ class _ActionButtonState extends State<ActionButton> {
         widget.padding ??
         const EdgeInsets.symmetric(horizontal: 1, vertical: 0);
 
-    final style = _copyStyle(theme.labelMedium)..foreground(fg);
+    final style = copyStyle(theme.labelMedium)..foreground(fg);
 
     Widget button = Frame(
       padding: pad,

@@ -23,10 +23,10 @@ class Accordion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final titleStyle = _copyStyle(theme.bodyMedium)
+    final titleStyle = copyStyle(theme.bodyMedium)
       ..foreground(theme.onSurface)
       ..bold();
-    final chevronStyle = _copyStyle(theme.labelMedium)..foreground(theme.muted);
+    final chevronStyle = copyStyle(theme.labelMedium)..foreground(theme.muted);
 
     Widget header = Row(
       gap: 1,

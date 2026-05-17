@@ -85,9 +85,9 @@ class ListTile extends StatelessWidget {
         ? (selectedBackground ?? theme.listRowSelectedBackground)
         : (background ?? theme.listRowBackground);
 
-    final resolvedTitleStyle = _copyStyle(titleStyle ?? theme.bodyMedium)
+    final resolvedTitleStyle = copyStyle(titleStyle ?? theme.bodyMedium)
       ..foreground(fg);
-    final resolvedSubtitleStyle = _copyStyle(subtitleStyle ?? theme.bodySmall)
+    final resolvedSubtitleStyle = copyStyle(subtitleStyle ?? theme.bodySmall)
       ..foreground(secondaryFg);
     if (!enabled) {
       resolvedTitleStyle.dim();
@@ -387,7 +387,7 @@ class _ExpansionTileState extends State<ExpansionTile> {
         widget.trailing ??
         Text(
           _expanded ? 'v' : '>',
-          style: _copyStyle(theme.labelMedium)..foreground(theme.muted),
+          style: copyStyle(theme.labelMedium)..foreground(theme.muted),
         );
 
     return Column(

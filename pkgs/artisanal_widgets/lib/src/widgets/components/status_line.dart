@@ -179,7 +179,7 @@ class StatusLine extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final bg = background ?? theme.surface;
     final fg = foreground ?? theme.onSurface;
-    final fgStyle = _copyStyle(theme.bodySmall)..foreground(fg);
+    final fgStyle = copyStyle(theme.bodySmall)..foreground(fg);
 
     return Container(
       padding:

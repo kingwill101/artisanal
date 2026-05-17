@@ -110,15 +110,15 @@ class HistoryPanel extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final bg = background ?? theme.surface;
 
-    final tStyle = _copyStyle(titleStyle ?? theme.titleSmall)
+    final tStyle = copyStyle(titleStyle ?? theme.titleSmall)
       ..foreground(theme.onSurface)
       ..bold();
-    final uStyle = _copyStyle(undoStyle ?? theme.bodySmall)
+    final uStyle = copyStyle(undoStyle ?? theme.bodySmall)
       ..foreground(theme.onSurface);
-    final rStyle = _copyStyle(redoStyle ?? theme.bodySmall)
+    final rStyle = copyStyle(redoStyle ?? theme.bodySmall)
       ..foreground(theme.muted)
       ..dim();
-    final mStyle = _copyStyle(markerStyle ?? theme.bodySmall)
+    final mStyle = copyStyle(markerStyle ?? theme.bodySmall)
       ..foreground(theme.muted)
       ..bold();
 

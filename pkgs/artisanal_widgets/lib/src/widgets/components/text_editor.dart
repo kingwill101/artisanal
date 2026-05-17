@@ -1,4 +1,12 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/bubbles.dart' hide Text, Row, Column;
+import 'package:artisanal/style.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMsg, KeyMap;
+import 'package:artisanal/widgets.dart';
+
+import 'text_area_controller_core_bridge.dart' show TextAreaControllerCoreBridge;
 
 /// A higher-level editor surface built on top of [TextArea].
 ///
@@ -340,8 +348,8 @@ class _TextEditorState extends State<TextEditor> {
   String get _focusId => widget.focusId ?? '${widget.id}.editor';
   String get _searchFocusId => '$_focusId.search';
   String get _gotoFocusId => '$_focusId.goto';
-  _TextAreaControllerCoreBridge get _coreBridge =>
-      _TextAreaControllerCoreBridge(_controller);
+  TextAreaControllerCoreBridge get _coreBridge =>
+      TextAreaControllerCoreBridge(_controller);
 
   @override
   void initState() {
@@ -1135,13 +1143,13 @@ class _TextEditorState extends State<TextEditor> {
         ...widget.extraHelpBindings,
       ],
     );
-    final statsStyle = _copyStyle(theme.labelSmall)
+    final statsStyle = copyStyle(theme.labelSmall)
       ..foreground(
         isEditorActive
             ? (editorTheme?.metaForeground ?? theme.resolvedOnSurfaceVariant)
             : (editorTheme?.inactiveMetaForeground ?? theme.muted),
       );
-    final statusStyle = _copyStyle(theme.labelSmall)
+    final statusStyle = copyStyle(theme.labelSmall)
       ..foreground(
         _isDirty
             ? theme.warning
@@ -1153,9 +1161,9 @@ class _TextEditorState extends State<TextEditor> {
     final activeDiagnostic = bodyController.activeDiagnostic;
     final diagnosticStyle = activeDiagnostic == null
         ? null
-        : (_copyStyle(theme.labelSmall)
+        : (copyStyle(theme.labelSmall)
             ..foreground(_diagnosticColor(theme, activeDiagnostic.severity)));
-    final titleStyle = _copyStyle(theme.titleMedium)
+    final titleStyle = copyStyle(theme.titleMedium)
       ..foreground(
         isEditorActive
             ? (editorTheme?.titleForeground ?? theme.onSurface)

@@ -26,7 +26,7 @@ class Card extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final resolvedStyle = (textStyle != null || foreground != null)
-        ? (_copyStyle(textStyle ?? theme.bodyMedium)
+        ? (copyStyle(textStyle ?? theme.bodyMedium)
             ..foreground(foreground ?? theme.onSurface))
         : null;
     return Frame(

@@ -46,5 +46,6 @@ export 'package:artisanal/bubbles.dart'
         TextPositionDiagnosticRange,
         TextPatternDiagnosticRule,
         textPatternDiagnostics;
-export 'src/widgets/components/components_widgets.dart'
-    show TextEditor, CodeEditor, MarkdownEditor;
+export 'src/widgets/components/text_editor.dart' show TextEditor;
+export 'src/widgets/components/code_editor.dart' show CodeEditor;
+export 'src/widgets/components/markdown_editor.dart' show MarkdownEditor;

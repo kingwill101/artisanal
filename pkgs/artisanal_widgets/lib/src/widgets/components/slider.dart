@@ -168,11 +168,11 @@ class _SliderState extends State<Slider> {
     final width = math.max(1, widget.width);
     final thumbIndex = _thumbIndexForValue(widget.value);
 
-    final activeStyle = _copyStyle(Style())
+    final activeStyle = copyStyle(Style())
       ..foreground(widget.activeColor ?? theme.primary);
-    final inactiveStyle = _copyStyle(Style())
+    final inactiveStyle = copyStyle(Style())
       ..foreground(widget.inactiveColor ?? theme.border);
-    final thumbStyle = _copyStyle(Style())
+    final thumbStyle = copyStyle(Style())
       ..foreground(widget.thumbColor ?? widget.activeColor ?? theme.primary);
 
     if (_hovered || _focused || _dragging) {
@@ -197,7 +197,7 @@ class _SliderState extends State<Slider> {
 
     Widget result = Text(buffer.toString());
     if (widget.label != null && widget.label!.isNotEmpty) {
-      final labelStyle = _copyStyle(theme.labelSmall)..foreground(theme.muted);
+      final labelStyle = copyStyle(theme.labelSmall)..foreground(theme.muted);
       result = Row(
         gap: 1,
         children: [
@@ -455,13 +455,13 @@ class _RangeSliderState extends State<RangeSlider> {
     final startIndex = _thumbIndexForValue(values.start);
     final endIndex = _thumbIndexForValue(values.end);
 
-    final activeStyle = _copyStyle(Style())
+    final activeStyle = copyStyle(Style())
       ..foreground(widget.activeColor ?? theme.primary);
-    final inactiveStyle = _copyStyle(Style())
+    final inactiveStyle = copyStyle(Style())
       ..foreground(widget.inactiveColor ?? theme.border);
-    final startThumbStyle = _copyStyle(Style())
+    final startThumbStyle = copyStyle(Style())
       ..foreground(widget.thumbColor ?? widget.activeColor ?? theme.primary);
-    final endThumbStyle = _copyStyle(Style())
+    final endThumbStyle = copyStyle(Style())
       ..foreground(widget.thumbColor ?? widget.activeColor ?? theme.primary);
 
     if ((_hovered || _focused || _dragging) && _activeStartThumb) {
@@ -493,7 +493,7 @@ class _RangeSliderState extends State<RangeSlider> {
 
     Widget result = Text(buffer.toString());
     if (widget.label != null && widget.label!.isNotEmpty) {
-      final labelStyle = _copyStyle(theme.labelSmall)..foreground(theme.muted);
+      final labelStyle = copyStyle(theme.labelSmall)..foreground(theme.muted);
       result = Row(
         gap: 1,
         children: [

@@ -25,10 +25,10 @@ class Breadcrumbs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final activeStyle = _copyStyle(theme.labelMedium)
+    final activeStyle = copyStyle(theme.labelMedium)
       ..foreground(theme.onSurface)
       ..bold();
-    final inactiveStyle = _copyStyle(theme.labelMedium)
+    final inactiveStyle = copyStyle(theme.labelMedium)
       ..foreground(theme.muted);
 
     return Row(

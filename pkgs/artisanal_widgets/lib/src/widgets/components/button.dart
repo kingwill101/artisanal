@@ -90,7 +90,7 @@ class _ButtonState extends State<Button> {
     );
 
     final padding = widget.padding ?? _defaultPadding(widget.size);
-    final labelStyle = _copyStyle(widget.textStyle ?? theme.labelMedium)
+    final labelStyle = copyStyle(widget.textStyle ?? theme.labelMedium)
       ..foreground(colors.foreground);
 
     if (!_enabled) {
@@ -109,7 +109,7 @@ class _ButtonState extends State<Button> {
     if (widget.variant == ButtonVariant.outline) {
       frameBorder = null;
       frameBorderColor = null;
-      frameStyle = _copyStyle(null)
+      frameStyle = copyStyle(null)
         ..border(
           Border.normal,
           top: false,

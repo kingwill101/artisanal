@@ -41,7 +41,7 @@ class Select<T> extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final selected = _selectedOption();
     final label = selected?.label ?? placeholder;
-    final style = _copyStyle(textStyle ?? theme.bodyMedium)
+    final style = copyStyle(textStyle ?? theme.bodyMedium)
       ..foreground(theme.onSurface);
     final content = Row(
       gap: 1,

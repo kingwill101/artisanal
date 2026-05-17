@@ -61,7 +61,7 @@ class StatusBar extends StatelessWidget {
     final bg = background ?? sbTheme?.background ?? theme.surface;
     final fg = foreground ?? sbTheme?.foreground ?? theme.onSurface;
     final sep = separator ?? sbTheme?.separator;
-    final fgStyle = _copyStyle(theme.bodySmall)..foreground(fg);
+    final fgStyle = copyStyle(theme.bodySmall)..foreground(fg);
 
     final children = <Widget>[];
 

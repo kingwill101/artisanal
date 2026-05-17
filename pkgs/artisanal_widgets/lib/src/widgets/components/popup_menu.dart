@@ -474,7 +474,7 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
             padding: EdgeInsets.symmetric(horizontal: 1),
             child: Text(
               '-' * width,
-              style: _copyStyle(bodySmall)..foreground(theme.border),
+              style: copyStyle(bodySmall)..foreground(theme.border),
             ),
           );
           _menuRowWidgetCache[dividerKey] = divider;
@@ -494,12 +494,12 @@ class _PopupMenuButtonState<T> extends State<PopupMenuButton<T>> {
           widget.menuSelectedForeground ?? theme.listRowSelectedForeground;
       final normalFg = widget.menuForeground ?? theme.listRowForeground;
       final foreground = selected ? selectedFg : normalFg;
-      final textStyle = _copyStyle(bodyMedium)..foreground(foreground);
+      final textStyle = copyStyle(bodyMedium)..foreground(foreground);
       if (!entry.enabled) {
         textStyle.dim();
       }
 
-      final markerStyle = _copyStyle(labelSmall)..foreground(foreground);
+      final markerStyle = copyStyle(labelSmall)..foreground(foreground);
       if (selected) markerStyle.bold();
       if (!entry.enabled) markerStyle.dim();
 

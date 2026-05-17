@@ -90,8 +90,8 @@ class StepIndicator extends StatelessWidget {
       final effectiveStatus = _resolveStatus(step, i);
       final (icon, iconColor) = _iconForStatus(effectiveStatus, theme);
 
-      final iconStyle = _copyStyle(Style())..foreground(iconColor);
-      final labelStyle = _copyStyle(theme.bodyMedium)
+      final iconStyle = copyStyle(Style())..foreground(iconColor);
+      final labelStyle = copyStyle(theme.bodyMedium)
         ..foreground(
           effectiveStatus == StepStatus.active
               ? theme.onSurface
@@ -117,7 +117,7 @@ class StepIndicator extends StatelessWidget {
       children.add(stepRow);
 
       if (step.description != null && step.description!.isNotEmpty) {
-        final descStyle = _copyStyle(theme.bodySmall)..foreground(theme.muted);
+        final descStyle = copyStyle(theme.bodySmall)..foreground(theme.muted);
         children.add(
           Row(
             gap: 0,
@@ -134,7 +134,7 @@ class StepIndicator extends StatelessWidget {
         final connectorColor = effectiveStatus == StepStatus.completed
             ? theme.success
             : theme.border;
-        final connectorStyle = _copyStyle(Style())..foreground(connectorColor);
+        final connectorStyle = copyStyle(Style())..foreground(connectorColor);
         children.add(Text('│', style: connectorStyle));
       }
     }

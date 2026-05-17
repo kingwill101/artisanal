@@ -82,9 +82,9 @@ class _DialogAlertState extends State<DialogAlert> {
     final hintFg = dTheme?.hintForeground ?? theme.muted;
     final w = dTheme?.width ?? 60;
 
-    final titleStyle = _copyStyle(theme.titleMedium)..foreground(fg);
-    final msgStyle = _copyStyle(theme.bodyMedium)..foreground(hintFg);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final titleStyle = copyStyle(theme.titleMedium)..foreground(fg);
+    final msgStyle = copyStyle(theme.bodyMedium)..foreground(hintFg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return SizedBox(
       width: w,

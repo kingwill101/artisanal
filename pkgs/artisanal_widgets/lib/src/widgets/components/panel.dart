@@ -31,9 +31,9 @@ class PanelBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final headerStyle = _copyStyle(titleStyle ?? theme.titleSmall)
+    final headerStyle = copyStyle(titleStyle ?? theme.titleSmall)
       ..foreground(foreground ?? theme.onSurface);
-    final contentStyle = _copyStyle(bodyStyle ?? theme.bodyMedium)
+    final contentStyle = copyStyle(bodyStyle ?? theme.bodyMedium)
       ..foreground(foreground ?? theme.onSurface);
 
     final hasHeader = title != null || actions.isNotEmpty;

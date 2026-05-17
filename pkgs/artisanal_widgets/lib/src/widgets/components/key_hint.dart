@@ -57,9 +57,9 @@ class KeyHint extends StatelessWidget {
     final kFg = keyForeground ?? sbTheme?.keyForeground ?? theme.onSurface;
     final dFg = descriptionForeground ?? theme.muted;
 
-    final kStyle = _copyStyle(keyStyle ?? sbTheme?.keyStyle ?? theme.labelSmall)
+    final kStyle = copyStyle(keyStyle ?? sbTheme?.keyStyle ?? theme.labelSmall)
       ..foreground(kFg);
-    final dStyle = _copyStyle(
+    final dStyle = copyStyle(
       descriptionStyle ?? sbTheme?.labelStyle ?? theme.bodySmall,
     )..foreground(dFg);
 

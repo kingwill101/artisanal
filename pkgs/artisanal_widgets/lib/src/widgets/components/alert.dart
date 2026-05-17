@@ -29,13 +29,13 @@ class AlertBox extends StatelessWidget {
     final theme = ThemeScope.of(context);
     final accent = _accentFor(theme);
 
-    final markerStyle = _copyStyle(theme.labelMedium)
+    final markerStyle = copyStyle(theme.labelMedium)
       ..foreground(accent)
       ..bold();
-    final titleStyle = _copyStyle(theme.titleSmall)
+    final titleStyle = copyStyle(theme.titleSmall)
       ..foreground(theme.onSurface)
       ..bold();
-    final bodyStyle = _copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
+    final bodyStyle = copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
 
     final header = title == null ? null : Text(title!, style: titleStyle);
     final content = child ?? Text(message ?? '', style: bodyStyle);

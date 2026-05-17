@@ -47,7 +47,7 @@ class HyperlinkText extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final color = linkColor ?? theme.resolvedInfo;
-    final resolvedStyle = _copyStyle(style ?? theme.bodyMedium)
+    final resolvedStyle = copyStyle(style ?? theme.bodyMedium)
       ..foreground(color)
       ..underline()
       ..hyperlink(url);
@@ -57,7 +57,7 @@ class HyperlinkText extends StatelessWidget {
 
     // Show URL in parens when label is different and showUrl is enabled.
     if (showUrl && label != null && label != url) {
-      final urlStyle = _copyStyle(Style())..foreground(theme.muted);
+      final urlStyle = copyStyle(Style())..foreground(theme.muted);
       return Row(
         gap: 1,
         children: [Text(styledLink), Text('(${urlStyle.render(url)})')],

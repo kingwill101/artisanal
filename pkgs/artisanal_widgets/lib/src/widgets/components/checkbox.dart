@@ -66,12 +66,12 @@ class _CheckboxState extends State<Checkbox> {
     final mark = widget.value ? 'x' : ' ';
     final boxText = '[$mark]';
 
-    final boxStyle = _copyStyle(theme.labelMedium)
+    final boxStyle = copyStyle(theme.labelMedium)
       ..foreground(widget.value ? theme.primary : theme.muted);
     if (_hovered || _focused) boxStyle.bold();
     if (!_enabled) boxStyle.dim();
 
-    final labelStyle = _copyStyle(theme.bodyMedium)
+    final labelStyle = copyStyle(theme.bodyMedium)
       ..foreground(theme.onSurface);
     if (!_enabled) labelStyle.dim();
 

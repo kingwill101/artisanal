@@ -53,7 +53,7 @@ class Chip extends StatelessWidget {
       final text = label as Text;
       final data = text.data;
       if (data != null) {
-        final style = _copyStyle(text.style ?? theme.labelMedium);
+        final style = copyStyle(text.style ?? theme.labelMedium);
         if (!enabled) {
           style.dim();
         }
@@ -276,7 +276,7 @@ class _InputChipState extends State<InputChip> {
         ? theme.resolvedOnHighlight
         : theme.onSurface;
 
-    final labelStyle = _copyStyle(theme.labelMedium)..foreground(foreground);
+    final labelStyle = copyStyle(theme.labelMedium)..foreground(foreground);
     if (_hovered || _focused) {
       labelStyle.bold();
     }
@@ -287,7 +287,7 @@ class _InputChipState extends State<InputChip> {
     final children = <Widget>[
       if (widget.avatar != null) widget.avatar!,
       if (widget.showCheckmark && widget.selected)
-        Text('+', style: _copyStyle(theme.labelSmall)..foreground(foreground)),
+        Text('+', style: copyStyle(theme.labelSmall)..foreground(foreground)),
       _styledLabel(widget.label, labelStyle),
       if (widget.onDeleted != null)
         GestureDetector(
@@ -351,7 +351,7 @@ class _InputChipState extends State<InputChip> {
     if (icon is! Text) return icon;
     final data = icon.data;
     if (data == null) return icon;
-    final style = _copyStyle(icon.style ?? theme.labelSmall)
+    final style = copyStyle(icon.style ?? theme.labelSmall)
       ..foreground(foreground);
     if (!widget.enabled) style.dim();
     return Text(data, style: style);

@@ -1,4 +1,40 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/bubbles.dart'
+    show
+        CodeLanguageProfile,
+        CursorModel,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles,
+        TextDecorationRange,
+        TextSyntaxBuildResult,
+        TextSyntaxDecorationPatch,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextSyntaxProvider,
+        TextDocument,
+        TextDocumentChange,
+        keyMatchesSingle,
+        codeHandleClosingDelimiterAlignment,
+        codeHandlePairBackspace,
+        codeHandleAutoPair,
+        codeInsertIndentedNewline,
+        codeToggleBlockComments,
+        resolveCodeLanguageProfile,
+        textSyntaxChangeWindow,
+        textSyntaxDecorationLayerKey,
+        textSyntaxDecorationLayerPriority;
+import 'package:artisanal/markdown.dart'
+    show
+        AdaptiveChromaTheme,
+        ChromaTheme,
+        SyntaxHighlighter,
+        highlightCodeString;
+import 'package:artisanal/style.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMsg;
+import 'package:artisanal/widgets.dart';
+
+import 'text_area_controller_core_bridge.dart' show TextAreaControllerCoreBridge;
 
 /// A higher-level code editor built on top of [TextEditor].
 ///
@@ -116,8 +152,8 @@ class _CodeEditorState extends State<CodeEditor> {
   TextAreaController get _controller =>
       widget.controller ??
       (_internalController ??= TextAreaController(model: widget.model));
-  _TextAreaControllerCoreBridge get _coreBridge =>
-      _TextAreaControllerCoreBridge(_controller);
+  TextAreaControllerCoreBridge get _coreBridge =>
+      TextAreaControllerCoreBridge(_controller);
 
   @override
   void initState() {
@@ -496,7 +532,7 @@ class _CodeEditorState extends State<CodeEditor> {
 
   Widget _buildPreviewPane(Theme theme, String previewTitle) {
     final editorTheme = theme.editorTheme;
-    final titleStyle = _copyStyle(theme.titleSmall)
+    final titleStyle = copyStyle(theme.titleSmall)
       ..foreground(
         editorTheme?.inactiveTitleForeground ?? theme.resolvedOnSurfaceVariant,
       );

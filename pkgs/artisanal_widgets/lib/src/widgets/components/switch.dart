@@ -64,7 +64,7 @@ class _SwitchState extends State<Switch> {
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
     final text = widget.value ? '[ON]' : '[OFF]';
-    final toggleStyle = _copyStyle(theme.labelMedium)
+    final toggleStyle = copyStyle(theme.labelMedium)
       ..foreground(widget.value ? theme.success : theme.muted);
     if (_hovered || _focused) toggleStyle.bold();
     if (!_enabled) toggleStyle.dim();

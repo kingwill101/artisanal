@@ -60,9 +60,9 @@ class MetricDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final lStyle = _copyStyle(labelStyle ?? theme.labelMedium)
+    final lStyle = copyStyle(labelStyle ?? theme.labelMedium)
       ..foreground(theme.muted);
-    final vStyle = _copyStyle(valueStyle ?? theme.titleMedium)
+    final vStyle = copyStyle(valueStyle ?? theme.titleMedium)
       ..foreground(theme.onSurface)
       ..bold();
 
@@ -79,7 +79,7 @@ class MetricDisplay extends StatelessWidget {
         MetricTrend.down => ('▼', theme.error),
         MetricTrend.flat => ('─', theme.muted),
       };
-      final tStyle = _copyStyle(Style())
+      final tStyle = copyStyle(Style())
         ..foreground(trendColor ?? defaultColor);
       children.add(Text(trendChar, style: tStyle));
     }

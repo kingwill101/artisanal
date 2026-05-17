@@ -120,9 +120,9 @@ class _DialogPromptState extends State<DialogPrompt> {
         theme.commandPaletteTheme?.searchBackground ?? theme.background;
     final w = dTheme?.width ?? 60;
 
-    final titleStyle = _copyStyle(theme.titleMedium)..foreground(fg);
-    final escStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
-    final hintStyle = _copyStyle(theme.bodySmall)..foreground(hintFg);
+    final titleStyle = copyStyle(theme.titleMedium)..foreground(fg);
+    final escStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
+    final hintStyle = copyStyle(theme.bodySmall)..foreground(hintFg);
 
     return SizedBox(
       width: w,

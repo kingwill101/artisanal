@@ -1,4 +1,15 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/bubbles.dart'
+    show
+        CursorModel,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles;
+import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
+import 'package:artisanal/style.dart';
+import 'package:artisanal/tui.dart' show Cmd;
+import 'package:artisanal/widgets.dart';
+
+
 
 /// A higher-level Markdown editor with a live rendered preview.
 ///

@@ -69,12 +69,12 @@ class _RadioState<T> extends State<Radio<T>> {
     final mark = _selected ? '*' : ' ';
     final radioText = '($mark)';
 
-    final radioStyle = _copyStyle(theme.labelMedium)
+    final radioStyle = copyStyle(theme.labelMedium)
       ..foreground(_selected ? theme.primary : theme.muted);
     if (_hovered || _focused) radioStyle.bold();
     if (!_enabled) radioStyle.dim();
 
-    final labelStyle = _copyStyle(theme.bodyMedium)
+    final labelStyle = copyStyle(theme.bodyMedium)
       ..foreground(theme.onSurface);
     if (!_enabled) labelStyle.dim();
 

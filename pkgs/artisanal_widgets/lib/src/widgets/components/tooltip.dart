@@ -169,7 +169,7 @@ class _TooltipState extends State<Tooltip> {
 
   Widget _buildBubble(BuildContext context) {
     final theme = ThemeScope.of(context);
-    final labelStyle = _copyStyle(widget.textStyle ?? theme.bodySmall)
+    final labelStyle = copyStyle(widget.textStyle ?? theme.bodySmall)
       ..foreground(widget.foreground ?? theme.onSurface);
     return Frame(
       padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 1),
