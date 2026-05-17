@@ -12,6 +12,26 @@ const String textDefaultLineDecorationLayerKey = 'line.default';
 const String textDiagnosticsLineDecorationLayerKey = 'line.diagnostics';
 const String textActiveLineDecorationLayerKey = 'line.active';
 
+enum TextDecorationLayerKey {
+  default_,
+  syntax,
+  search,
+  diagnostics,
+  lineDefault,
+  lineDiagnostics,
+  lineActive;
+
+  String get key => switch (this) {
+    TextDecorationLayerKey.default_ => textDefaultDecorationLayerKey,
+    TextDecorationLayerKey.syntax => textSyntaxDecorationLayerKey,
+    TextDecorationLayerKey.search => textSearchDecorationLayerKey,
+    TextDecorationLayerKey.diagnostics => textDiagnosticsDecorationLayerKey,
+    TextDecorationLayerKey.lineDefault => textDefaultLineDecorationLayerKey,
+    TextDecorationLayerKey.lineDiagnostics => textDiagnosticsLineDecorationLayerKey,
+    TextDecorationLayerKey.lineActive => textActiveLineDecorationLayerKey,
+  };
+}
+
 const int textDefaultDecorationLayerPriority = 0;
 const int textSyntaxDecorationLayerPriority = 50;
 const int textDiagnosticsDecorationLayerPriority = 75;
@@ -143,7 +163,15 @@ final class TextLineDecoration {
   }
 }
 
-enum TextDiagnosticSeverity { error, warning, info, hint }
+enum TextDiagnosticSeverity { error, warning, info, hint;
+
+  int get rank => switch (this) {
+    TextDiagnosticSeverity.error => 3,
+    TextDiagnosticSeverity.warning => 2,
+    TextDiagnosticSeverity.info => 1,
+    TextDiagnosticSeverity.hint => 0,
+  };
+}
 
 final class TextDiagnosticRange {
   const TextDiagnosticRange({
@@ -327,9 +355,7 @@ List<TextDiagnosticRange> normalizeTextDiagnostics(
           if (endComparison != 0) {
             return endComparison;
           }
-          return _diagnosticSeverityRank(
-            b.severity,
-          ).compareTo(_diagnosticSeverityRank(a.severity));
+          return b.severity.rank.compareTo(a.severity.rank);
         });
   return List<TextDiagnosticRange>.unmodifiable(normalized);
 }
@@ -616,8 +642,7 @@ List<TextLineDecoration> textDiagnosticLineDecorationsForDocument({
     for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
       final existing = lineSeverities[lineIndex];
       if (existing == null ||
-          _diagnosticSeverityRank(normalized.severity) >
-              _diagnosticSeverityRank(existing)) {
+          normalized.severity.rank > existing.rank) {
         lineSeverities[lineIndex] = normalized.severity;
       }
     }
@@ -635,15 +660,6 @@ List<TextLineDecoration> textDiagnosticLineDecorationsForDocument({
         ),
       ),
   ]);
-}
-
-int _diagnosticSeverityRank(TextDiagnosticSeverity severity) {
-  return switch (severity) {
-    TextDiagnosticSeverity.error => 3,
-    TextDiagnosticSeverity.warning => 2,
-    TextDiagnosticSeverity.info => 1,
-    TextDiagnosticSeverity.hint => 0,
-  };
 }
 
 int _compareTextPositions(
