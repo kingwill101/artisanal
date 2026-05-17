@@ -3655,8 +3655,8 @@ void main() {
       );
 
       final msg = await cmd.execute() as ExecProcessMsg;
-      // Command varies by platform
-      expect(msg.executable, isNotEmpty);
+      expect(msg.arguments.last, 'https://example.com');
+      expect(['open', 'xdg-open', 'cmd'], contains(msg.executable));
     });
 
     test('ExecProcessMsg releases and restores terminal', () async {

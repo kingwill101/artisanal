@@ -678,7 +678,7 @@ class Cmd {
     String url, {
     required Msg Function(ExecResult result) onComplete,
   }) {
-    return exec('xdg-open', [url], onComplete: onComplete);
+    return exec('open', [url], onComplete: onComplete);
   }
 
   /// A command that sends a message after a delay.

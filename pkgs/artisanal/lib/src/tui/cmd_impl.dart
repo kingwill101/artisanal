@@ -707,6 +707,11 @@ class Cmd {
 
   /// A command that opens a URL in the default browser.
   ///
+  /// Uses the platform-appropriate command:
+  /// - macOS: `open <url>`
+  /// - Linux: `xdg-open <url>`
+  /// - Windows: `cmd /c start "" <url>`
+  ///
   /// ```dart
   /// Cmd.openUrl(
   ///   'https://example.com',
@@ -717,22 +722,11 @@ class Cmd {
     String url, {
     required Msg Function(ExecResult result) onComplete,
   }) {
-    final String command;
-    final List<String> args;
-
-    if (io.Platform.isMacOS) {
-      command = 'open';
-      args = [url];
-    } else if (io.Platform.isWindows) {
-      command = 'cmd';
-      args = ['/c', 'start', '', url];
-    } else {
-      // Linux and other Unix-like systems
-      command = 'xdg-open';
-      args = [url];
-    }
-
-    return exec(command, args, onComplete: onComplete);
+    final executable = io.Platform.isMacOS ? 'open'
+        : io.Platform.isWindows ? 'cmd'
+        : 'xdg-open';
+    final arguments = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
+    return exec(executable, arguments, onComplete: onComplete);
   }
 
   /// A command that sends a message after a delay.
