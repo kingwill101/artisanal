@@ -18,19 +18,13 @@ export 'keys.dart' show Key, KeyType, Keys;
 
 // Terminal interface and implementations (always available — io-free)
 export 'terminal_base.dart'
-    show
-        Terminal,
-        SplitTerminal,
-        StringTerminal,
-        RawModeGuard;
+    show Terminal, SplitTerminal, StringTerminal, RawModeGuard;
 
 // Io-dependent terminal implementations (native only)
-export 'terminal_io_stub.dart'
-    if (dart.library.io) 'terminal_io_impl.dart';
+export 'terminal_io_impl.dart' if (dart.library.html) 'terminal_io_stub.dart';
 
 // Report probe (probe function is io-dependent, snapshot type is io-free)
-export 'report_probe_stub.dart'
-    if (dart.library.io) 'report_probe.dart';
+export 'report_probe.dart' if (dart.library.html) 'report_probe_stub.dart';
 
 // Backend interface and io-free implementations
 export 'backend.dart'
@@ -42,15 +36,11 @@ export 'backend.dart'
         TerminalBridge;
 
 // Io-dependent backends (native only)
-export 'backend_io_stub.dart'
-    if (dart.library.io) 'backend_io_impl.dart';
+export 'backend_io_impl.dart' if (dart.library.html) 'backend_io_stub.dart';
 
 // Io-dependent bridge protocol, hosts, and stdin stream (native only)
-export 'bridge_protocol_stub.dart'
-    if (dart.library.io) 'bridge_protocol.dart';
-export 'browser_host_stub.dart'
-    if (dart.library.io) 'browser_host.dart';
-export 'socket_host_stub.dart'
-    if (dart.library.io) 'socket_host.dart';
-export 'stdin_stream_stub.dart'
-    if (dart.library.io) 'stdin_stream.dart';
+export 'bridge_protocol.dart'
+    if (dart.library.html) 'bridge_protocol_stub.dart';
+export 'browser_host.dart' if (dart.library.html) 'browser_host_stub.dart';
+export 'socket_host.dart' if (dart.library.html) 'socket_host_stub.dart';
+export 'stdin_stream.dart' if (dart.library.html) 'stdin_stream_stub.dart';

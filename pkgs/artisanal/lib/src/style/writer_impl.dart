@@ -7,7 +7,6 @@ import 'dart:io' as io;
 import '../colorprofile/downsample.dart' as cp_downsample;
 import '../colorprofile/profile.dart' as cp;
 import '../renderer/renderer.dart' as r;
-import '../renderer/renderer_impl.dart' as r;
 import '../terminal/ansi.dart' show Ansi;
 import 'color.dart' show ColorProfile;
 

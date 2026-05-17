@@ -1,2 +1,1 @@
-export 'detect_stub.dart'
-    if (dart.library.io) 'detect_impl.dart';
+export 'detect_impl.dart' if (dart.library.html) 'detect_stub.dart';

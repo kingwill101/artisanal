@@ -20,20 +20,20 @@ export 'src/terminal/terminal.dart'
         BackendTerminal,
         EmbeddedTerminalBackend,
         TerminalBridge;
-export 'src/terminal/backend_io_stub.dart'
-    if (dart.library.io) 'src/terminal/backend_io_impl.dart'
+export 'src/terminal/backend_io_impl.dart'
+    if (dart.library.html) 'src/terminal/backend_io_stub.dart'
     show StdioTerminalBackend, SocketTerminalBackend;
-export 'src/terminal/bridge_protocol_stub.dart'
-    if (dart.library.io) 'src/terminal/bridge_protocol.dart'
+export 'src/terminal/bridge_protocol.dart'
+    if (dart.library.html) 'src/terminal/bridge_protocol_stub.dart'
     show
         TerminalBridgeMessageType,
         TerminalBridgeMessage,
         TerminalBridgeJsonChannel,
         JsonTerminalBackend,
         WebSocketTerminalBackend;
-export 'src/terminal/browser_host_stub.dart'
-    if (dart.library.io) 'src/terminal/browser_host.dart'
+export 'src/terminal/browser_host.dart'
+    if (dart.library.html) 'src/terminal/browser_host_stub.dart'
     show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
-export 'src/terminal/socket_host_stub.dart'
-    if (dart.library.io) 'src/terminal/socket_host.dart'
+export 'src/terminal/socket_host.dart'
+    if (dart.library.html) 'src/terminal/socket_host_stub.dart'
     show SocketTerminalSessionHandler, SocketTerminalHostServer;

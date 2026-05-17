@@ -1,2 +1,1 @@
-export 'filepicker_stub.dart'
-    if (dart.library.io) 'filepicker_impl.dart';
+export 'filepicker_impl.dart' if (dart.library.html) 'filepicker_stub.dart';

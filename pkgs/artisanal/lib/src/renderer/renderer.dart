@@ -11,11 +11,13 @@
 library;
 
 import '../style/color.dart';
+import 'renderer_default_io.dart'
+    if (dart.library.html) 'renderer_default_stub.dart'
+    as renderer_default;
 
 export '../style/color.dart' show ColorProfile;
 
-export 'renderer_stub.dart'
-    if (dart.library.io) 'renderer_impl.dart';
+export 'renderer_impl.dart' if (dart.library.html) 'renderer_stub.dart';
 
 /// Abstract interface for rendering styled output.
 ///
@@ -182,7 +184,8 @@ Renderer? _defaultRenderer;
 ///
 /// Returns a [NullRenderer] if not explicitly set
 /// (or [TerminalRenderer] when `dart:io` is available).
-Renderer get defaultRenderer => _defaultRenderer ??= NullRenderer();
+Renderer get defaultRenderer =>
+    _defaultRenderer ??= renderer_default.createDefaultRenderer();
 
 /// Sets the default renderer.
 ///

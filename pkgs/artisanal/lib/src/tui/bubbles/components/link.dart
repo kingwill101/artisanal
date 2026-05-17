@@ -1,2 +1,1 @@
-export 'link_stub.dart'
-    if (dart.library.io) 'link_impl.dart';
+export 'link_impl.dart' if (dart.library.html) 'link_stub.dart';

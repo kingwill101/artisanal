@@ -97,7 +97,7 @@ Future<String> _readWebSocketOutputUntil(
       if (message.type != hosts.TerminalBridgeMessageType.output) {
         return;
       }
-      buffer.write(message.data ?? '');
+      buffer.write(message.data);
       if (predicate(buffer.toString())) {
         finish();
       }

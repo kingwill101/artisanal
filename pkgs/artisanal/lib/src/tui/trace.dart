@@ -1,2 +1,1 @@
-export 'trace_stub.dart'
-    if (dart.library.io) 'trace_impl.dart';
+export 'trace_impl.dart' if (dart.library.html) 'trace_stub.dart';

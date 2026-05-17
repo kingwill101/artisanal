@@ -631,6 +631,7 @@ class UltravioletTuiRenderer
   bool _initialized = false;
   bool _dirty = false;
   String _pendingView = '';
+
   final List<String> _printLines = <String>[];
   static const int _maxPrintLines = 2000;
 

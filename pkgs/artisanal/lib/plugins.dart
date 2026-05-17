@@ -1,1 +1,1 @@
-export 'plugins_stub.dart' if (dart.library.io) 'plugins_impl.dart';
+export 'plugins_impl.dart' if (dart.library.html) 'plugins_stub.dart';

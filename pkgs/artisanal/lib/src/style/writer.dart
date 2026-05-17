@@ -1,2 +1,1 @@
-export 'writer_stub.dart'
-    if (dart.library.io) 'writer_impl.dart';
+export 'writer_impl.dart' if (dart.library.html) 'writer_stub.dart';

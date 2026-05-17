@@ -1,2 +1,1 @@
-export 'cmd_stub.dart'
-    if (dart.library.io) 'cmd_impl.dart';
+export 'cmd_impl.dart' if (dart.library.html) 'cmd_stub.dart';
