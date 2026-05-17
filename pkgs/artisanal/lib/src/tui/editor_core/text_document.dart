@@ -3,6 +3,7 @@ library;
 import 'package:characters/characters.dart';
 import 'package:meta/meta.dart' show visibleForTesting;
 
+import 'editor_core_config.dart';
 import 'editor_state.dart';
 import 'text_change.dart';
 
@@ -10,7 +11,8 @@ const _TextDocumentStorageBuilder _storageBuilder =
     _ChunkedTextDocumentStorageBuilder();
 
 final class TextDocument {
-  static const int _sourceBackedReplacementTextThreshold = 8192;
+  static int get _sourceBackedReplacementTextThreshold =>
+      EditorCoreConfig.current.sourceBackedReplacementTextThreshold;
 
   TextDocument({String text = ''}) {
     _storage = _storageBuilder.fromText(text, revision: 0);

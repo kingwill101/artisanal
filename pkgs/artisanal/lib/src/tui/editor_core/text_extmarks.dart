@@ -2,6 +2,7 @@ library;
 
 import 'package:characters/characters.dart';
 
+import 'editor_core_config.dart';
 import 'editor_state.dart';
 import 'text_document.dart';
 
@@ -153,7 +154,7 @@ final class TextExtmarksController {
       styleKey: options.styleKey,
       priority: options.priority,
       data: options.data,
-    ).normalized().clamp(1 << 30);
+    ).normalized().clamp(EditorCoreConfig.current.extmarkMaxOffset);
 
     _extmarks[id] = extmark;
     (_extmarksByType[extmark.type] ??= <int>{}).add(id);
@@ -201,7 +202,7 @@ final class TextExtmarksController {
   }
 
   void applyInsertion({required int offset, required String text}) {
-    final insertOffset = offset.clamp(0, 1 << 30);
+    final insertOffset = offset.clamp(0, EditorCoreConfig.current.extmarkMaxOffset);
     final length = text.characters.length;
     if (length <= 0) {
       return;
