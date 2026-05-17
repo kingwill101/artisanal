@@ -95,15 +95,10 @@ final class TuiTrace {
   static bool _testOverride = false;
   static String? _path;
   static io.File? _file;
-  static io.IOSink? _sink;
   static bool _headerWritten = false;
-  static List<String>? _pendingWrites;
-  static int _pendingWriteBytes = 0;
-  static bool _flushScheduled = false;
   static bool? _captureEnabled;
   static Set<TraceTag>? _enabledTags;
   static bool _resolved = false;
-  static const int _flushThresholdBytes = 32 * 1024;
   static final Map<String, TraceTag> _traceTagByName = <String, TraceTag>{
     for (final tag in TraceTag.values) tag.name: tag,
   };
@@ -198,28 +193,40 @@ final class TuiTrace {
   static TraceEventRecord? parseEventLine(String line) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) return null;
-    if (!trimmed.startsWith(_eventMarker)) return null;
-    final json = trimmed.substring(_eventMarker.length);
+    final markerIndex = trimmed.indexOf(_eventMarker);
+    if (markerIndex == -1) return null;
+    final prefix = trimmed.substring(0, markerIndex).trimRight();
+    final json = trimmed.substring(markerIndex + _eventMarker.length);
     try {
       final decoded = jsonDecode(json);
       if (decoded is! Map) return null;
       final data = Map<String, Object?>.from(decoded);
       final version = data['v'];
       if (version is! int || version != _eventSchemaVersion) return null;
-      final ts = data['ts'];
+      final ts = data['ts'] ?? _parseTimestampUs(prefix);
       if (ts is! int) return null;
-      final tagName = data['tag'];
+      final tagName = data['tag'] ?? _parseTagName(prefix);
       if (tagName is! String) return null;
       final tag = _traceTagByName[tagName];
       if (tag == null) return null;
       final type = data['type'];
       if (type is! String) return null;
-      final fields = data['fields'];
+      final explicitFields = data['fields'];
+      final fields = explicitFields is Map
+          ? Map<String, Object?>.from(explicitFields)
+          : <String, Object?>{
+              for (final entry in data.entries)
+                if (entry.key != 'v' &&
+                    entry.key != 'ts' &&
+                    entry.key != 'tag' &&
+                    entry.key != 'type')
+                  entry.key: entry.value,
+            };
       return TraceEventRecord(
         timestampUs: ts,
         tag: tag,
         type: type,
-        fields: fields is Map<String, Object?> ? fields : const {},
+        fields: fields,
       );
     } catch (_) {
       return null;
@@ -230,15 +237,7 @@ final class TuiTrace {
       parseEventLine(line);
 
   static void close() {
-    if (_sink != null) {
-      _flushPendingWrites(_sink!);
-      _sink!.close();
-    }
-    _sink = null;
     _file = null;
-    _pendingWrites = null;
-    _pendingWriteBytes = 0;
-    _flushScheduled = false;
     _resolved = false;
   }
 
@@ -297,56 +296,36 @@ final class TuiTrace {
     return file;
   }
 
-  static io.IOSink _ensureSink() {
-    if (_sink != null) return _sink!;
+  static void _writeRaw(String message) {
     final file = _file ?? _openFile();
-    final sink = file.openWrite(mode: io.FileMode.append);
-    _sink = sink;
     if (!_headerWritten) {
-      _writeHeader(sink, file.path);
+      _writeHeaderSync(file);
       _headerWritten = true;
     }
-    return sink;
+    file.writeAsStringSync('$message\n', mode: io.FileMode.append);
   }
 
-  static void _flushPendingWrites(io.IOSink sink) {
-    if (_pendingWrites == null || _pendingWrites!.isEmpty) return;
-    for (final line in _pendingWrites!) {
-      sink.writeln(line);
-    }
-    _pendingWrites = null;
-    _pendingWriteBytes = 0;
-    _flushScheduled = false;
-  }
-
-  static void _writeHeader(io.IOSink sink, String path) {
+  static void _writeHeaderSync(io.File file) {
+    final now = _testNowProvider != null ? _testNowProvider!() : DateTime.now();
+    final buffer = StringBuffer();
     final header = <String>[
+      '# trace start: ${now.toUtc().toIso8601String()}',
       '# pid: ${io.pid}',
       '# cwd: ${io.Directory.current.path}',
       '# executable: ${io.Platform.executable}',
-      '# started: ${DateTime.now().toIso8601String()}',
       '# os: ${io.Platform.operatingSystem} ${io.Platform.operatingSystemVersion}',
       '# dart: ${io.Platform.version}',
     ];
     for (final line in header) {
-      sink.writeln(line);
+      buffer.writeln(line);
     }
-  }
-
-  static void _writeRaw(String message) {
-    final sink = _ensureSink();
-    _pendingWrites ??= <String>[];
-    _pendingWrites!.add(message);
-    _pendingWriteBytes += message.length + 1;
-    if (_pendingWriteBytes >= _flushThresholdBytes && !_flushScheduled) {
-      _flushScheduled = true;
-      _flushPendingWrites(sink);
-    }
+    file.writeAsStringSync(buffer.toString(), mode: io.FileMode.append);
   }
 
   static String _generateDateBasedPath() {
     final now = _testNowProvider != null ? _testNowProvider!() : DateTime.now();
-    final ts = '${now.year.toString().padLeft(4, '0')}'
+    final ts =
+        '${now.year.toString().padLeft(4, '0')}'
         '-${now.month.toString().padLeft(2, '0')}'
         '-${now.day.toString().padLeft(2, '0')}'
         'T${now.hour.toString().padLeft(2, '0')}'
@@ -354,7 +333,19 @@ final class TuiTrace {
         '-${now.second.toString().padLeft(2, '0')}';
     final dir = io.Directory('traces');
     if (!dir.existsSync()) dir.createSync(recursive: true);
-    return 'traces/tui-trace-${now.microsecond}-$ts.log';
+    return 'traces/artisanal-$ts.log';
+  }
+
+  static int? _parseTimestampUs(String prefix) {
+    final match = RegExp(r'\[\+(\d+)us\]').firstMatch(prefix);
+    if (match == null) return null;
+    return int.tryParse(match.group(1)!);
+  }
+
+  static String? _parseTagName(String prefix) {
+    final matches = RegExp(r'\[([^\]]+)\]').allMatches(prefix).toList();
+    if (matches.isEmpty) return null;
+    return matches.last.group(1);
   }
 
   static bool _isEnabled(String value) {
