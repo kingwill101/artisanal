@@ -311,7 +311,15 @@ void _drawStyledContent(
       // the destination background remains visible. This covers both plain empty
       // cells and spaces that only carried a foreground/default-background style
       // after ANSI round-tripping.
-      final hasVisibleSpaceAttrs = (normalizedStyle.attrs & 32) != 0;
+      //
+      // We unconditionally skip empty cells and transparent spaces — regardless
+      // of whether the current container has a background color — so that
+      // Layout.place/pad trailing-space padding never overwrites background fill
+      // cells laid down by an inner widget. Without this, a no-bg intermediate
+      // container (e.g. Container(width: 58) with no color) would pass empty
+      // Layout.place spaces through to the parent canvas, overwriting the inner
+      // widget's bg=highlight fill cells.
+      final hasVisibleSpaceAttrs = (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
       final isTransparentSpace =
           isSingleWidthSpace &&
           normalizedStyle.bg == null &&
@@ -319,8 +327,7 @@ void _drawStyledContent(
           normalizedStyle.underline == UnderlineStyle.none &&
           !hasVisibleSpaceAttrs &&
           srcCell.link.isZero;
-      if ((srcCell.isEmpty && (transparent || bgStyle.bg != null)) ||
-          (bgStyle.bg != null && isTransparentSpace)) {
+      if (srcCell.isEmpty || isTransparentSpace) {
         continue;
       }
 
