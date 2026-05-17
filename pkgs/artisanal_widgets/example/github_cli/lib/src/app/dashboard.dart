@@ -122,6 +122,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
       openSelectedRepositoryLabels: _detailLoader.openSelectedRepositoryLabels,
       openActionPrompt: _actions.openActionPrompt,
       toggleSelectedPullRequestDraft: _actions.toggleSelectedPullRequestDraft,
+      openSearch: _detailLoader.openSearch,
     );
   }
 
@@ -167,6 +168,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
   tui.Cmd? _handleKey(tui.KeyMsg msg) {
     if (_uiState.commandPaletteOpen) return null;
     if (_detail.repoPromptOpen ||
+        _detail.searchOpen ||
         _detail.repositoryListOpen ||
         _detail.detailItem != null ||
         _detail.mergeInfoItem != null ||
@@ -178,6 +180,10 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
     final shortcut = githubDashboardShortcutFor(msg);
     if (_uiState.layoutMode.isFocused && msg.key.type == tui.KeyType.escape) {
       return _navigation.setLayoutMode(GithubDashboardLayoutMode.split);
+    }
+    if (msg.key.type == tui.KeyType.escape && _queue.isSearchActive) {
+      _queue.clearSearch();
+      return tui.Cmd.none();
     }
     if (_detailLoader.diffTabActive) {
       final command = _handleDiffInteractionKey(msg, shortcut);
@@ -206,9 +212,9 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
         (_queue.tabIndex + githubDashboardTabCount - 1) %
             githubDashboardTabCount,
       ),
-      GithubDashboardShortcut.loadNextPage => _dataCoordinator.loadCurrentPage(
-        replace: false,
-      ),
+      GithubDashboardShortcut.loadNextPage => _queue.isSearchActive
+          ? _detailLoader.loadNextSearchPage()
+          : _dataCoordinator.loadCurrentPage(replace: false),
       GithubDashboardShortcut.openBrowser => _detailLoader.openSelectedUrl(),
       GithubDashboardShortcut.viewDetails => _detailLoader.openSelectedDetail(),
       GithubDashboardShortcut.viewDiff => _detailLoader.openSelectedDiff(),
@@ -236,6 +242,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
       GithubDashboardShortcut.toggleFocusedView =>
         _navigation.toggleFocusedView(),
       GithubDashboardShortcut.cycleTheme => _navigation.cycleTheme(),
+      GithubDashboardShortcut.search => _detailLoader.openSearch(),
       null => null,
     };
   }
@@ -469,6 +476,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
           actionPromptError: _detail.actionPromptError,
           actionRunning: _detail.actionRunning,
           repoPromptOpen: _detail.repoPromptOpen,
+          searchOpen: _detail.searchOpen,
           repositoryListOpen: _detail.repositoryListOpen,
           dashboard: _data.dashboard,
           repositories: _data.dashboard?.repositories ?? const [],
@@ -485,6 +493,8 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
           onSubmitActionPrompt: _actions.submitActionPrompt,
           onCloseRepositoryPrompt: _actions.closeRepositoryPrompt,
           onSubmitRepository: _actions.submitRepository,
+          onCloseSearch: _detailLoader.closeSearch,
+          onSubmitSearch: _detailLoader.submitSearch,
           onCloseRepositoryList: _actions.closeRepositoryList,
           onSelectRepository: _openRepositoryFromOverview,
         ),

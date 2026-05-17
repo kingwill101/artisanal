@@ -97,6 +97,7 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
       openSelectedRepositoryLabels: _detailLoader.openSelectedRepositoryLabels,
       openActionPrompt: _actions.openActionPrompt,
       toggleSelectedPullRequestDraft: _actions.toggleSelectedPullRequestDraft,
+      openSearch: _detailLoader.openSearch,
     );
   }
 
@@ -149,6 +150,13 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
   tui.Cmd? _handleKey(tui.KeyMsg msg) {
     final key = msg.key;
     if (_modalOpen) return null;
+    if (msg.key.type == tui.KeyType.escape && _queue.isSearchActive) {
+      _queue.clearSearch();
+      return tui.Cmd.none();
+    }
+    if (key.isChar('/') && !key.shift) {
+      return _detailLoader.openSearch();
+    }
     if (_detailLoader.diffTabActive) {
       final command = _handleDiffKey(msg);
       if (command != null) return command;
@@ -525,6 +533,7 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
             actionPromptError: _detail.actionPromptError,
             actionRunning: _detail.actionRunning,
             repoPromptOpen: false,
+            searchOpen: _detail.searchOpen,
             repositoryListOpen: false,
             dashboard: _data.dashboard,
             repositories: const [],
@@ -543,6 +552,8 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
             onSubmitRepository: (_) => tui.Cmd.none(),
             onCloseRepositoryList: () => tui.Cmd.none(),
             onSelectRepository: (_) => tui.Cmd.none(),
+            onCloseSearch: _detailLoader.closeSearch,
+            onSubmitSearch: _detailLoader.submitSearch,
           );
         },
         child: w.CommandPalette(

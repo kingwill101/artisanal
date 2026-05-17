@@ -487,6 +487,77 @@ final class GhCliClient
   }
 
   @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    if (query.trim().isEmpty) {
+      return (
+        bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+        hasMore: false,
+      );
+    }
+    final futures = <Future<Object?>>[
+      _runJson(_searchArgs(scope: scope, query: query, pullRequests: false, limit: limit, page: page)),
+      _runJson(_searchArgs(scope: scope, query: query, pullRequests: true, limit: limit, page: page)),
+    ];
+    final results = await Future.wait(futures);
+    final issues = ghList(results[0])
+        .map((item) => GithubIssueItem.fromJson(ghMap(item)))
+        .toList(growable: false);
+    final prs = ghList(results[1])
+        .map((item) => GithubPullRequestItem.fromJson(ghMap(item)))
+        .toList(growable: false);
+    return (
+      bucket: GithubOverviewBucket(issues: issues, pullRequests: prs),
+      hasMore: issues.length == limit || prs.length == limit,
+    );
+  }
+
+  List<String> _searchArgs({
+    required GithubDashboardScope scope,
+    required String query,
+    required bool pullRequests,
+    required int limit,
+    required int page,
+  }) {
+    final args = <String>[
+      'search',
+      pullRequests ? 'prs' : 'issues',
+      query,
+      '--state',
+      'open',
+      '--limit',
+      '$limit',
+      '--page',
+      '$page',
+      '--sort',
+      'updated',
+      '--order',
+      'desc',
+      '--json',
+      (pullRequests ? _overviewPullRequestFields : _overviewIssueFields).join(','),
+    ];
+
+    switch (scope.kind) {
+      case GithubDashboardScopeKind.repository:
+        args
+          ..add('--repo')
+          ..add(scope.repository!);
+      case GithubDashboardScopeKind.organization:
+        args
+          ..add('--owner')
+          ..add(scope.owner!);
+      case GithubDashboardScopeKind.user:
+        break;
+    }
+
+    return args;
+  }
+
+  @override
   Future<List<GithubRepositoryLabel>> loadRepositoryLabels({
     required String repository,
   }) async {

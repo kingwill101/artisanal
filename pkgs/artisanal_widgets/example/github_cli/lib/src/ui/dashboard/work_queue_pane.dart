@@ -27,6 +27,12 @@ w.Widget githubWorkQueuePane({
   required tui.Cmd? Function(GithubOverviewFilter filter)
   onOverviewFilterChanged,
   required void Function(int index) onItemSelected,
+  String? searchQuery,
+  bool searchLoading = false,
+  String? searchError,
+  int searchPage = 1,
+  bool searchHasMore = false,
+  bool searchPageLoading = false,
 }) {
   // Pre-compute the four text-style variants once per render call instead of
   // once per row.  Each style.copy() allocates; with 30 rows × 4 copies that
@@ -62,13 +68,23 @@ w.Widget githubWorkQueuePane({
         overviewFilter,
         pageStatus,
         onOverviewFilterChanged,
+        searchQuery: searchQuery,
+        searchLoading: searchLoading,
+        searchError: searchError,
+        searchPage: searchPage,
+        searchHasMore: searchHasMore,
+        searchPageLoading: searchPageLoading,
       ),
       w.Expanded(
         child: items.isEmpty
             ? w.ScrollArea(
                 controller: controller,
                 showScrollbar: true,
-                child: _emptyQueue(theme, tabIndex),
+                child: _emptyQueue(
+                  theme,
+                  tabIndex,
+                  searchQuery: searchQuery,
+                ),
               )
             : w.Scrollbar(
                 controller: controller,
@@ -151,9 +167,54 @@ w.Widget _queueHeader(
   int tabIndex,
   GithubOverviewFilter overviewFilter,
   GithubPageStatus pageStatus,
-  tui.Cmd? Function(GithubOverviewFilter filter) onOverviewFilterChanged,
-) {
+  tui.Cmd? Function(GithubOverviewFilter filter) onOverviewFilterChanged, {
+  String? searchQuery,
+  bool searchLoading = false,
+  String? searchError,
+  int searchPage = 1,
+  bool searchHasMore = false,
+  bool searchPageLoading = false,
+}) {
   final muted = theme.bodyMedium.copy()..foreground(theme.muted);
+  final errorStyle = theme.bodySmall.copy()..foreground(theme.error);
+
+  if (searchQuery != null) {
+    final statusText = searchLoading
+        ? 'searching...'
+        : searchPageLoading
+            ? 'loading page...'
+            : searchHasMore
+                ? 'page $searchPage · n more'
+                : 'page $searchPage done';
+    return w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
+      children: [
+        w.Row(
+          children: [
+            w.Text(
+              'SEARCH',
+              style: theme.titleMedium.copy()..foreground(Colors.warning),
+            ),
+            w.Spacer(),
+            w.Text(
+              statusText,
+              style: muted,
+              overflow: w.TextOverflow.ellipsis,
+              maxWidth: 28,
+            ),
+          ],
+        ),
+        if (searchError != null)
+          w.Text(searchError, style: errorStyle),
+        w.Text(
+          searchQuery,
+          style: theme.bodySmall.copy()..foreground(theme.muted),
+          overflow: w.TextOverflow.ellipsis,
+          maxWidth: 96,
+        ),
+      ],
+    );
+  }
 
   return w.Column(
     crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -176,7 +237,7 @@ w.Widget _queueHeader(
       if (pageStatus.error != null)
         w.Text(
           pageStatus.error!,
-          style: theme.bodySmall.copy()..foreground(theme.error),
+          style: errorStyle,
           overflow: w.TextOverflow.ellipsis,
           maxWidth: 96,
         ),
@@ -197,7 +258,16 @@ w.Widget _queueHeader(
   );
 }
 
-w.Widget _emptyQueue(w.Theme theme, int tabIndex) {
+w.Widget _emptyQueue(w.Theme theme, int tabIndex, {String? searchQuery}) {
+  if (searchQuery != null) {
+    return w.PanelBox(
+      title: 'Empty',
+      child: w.Text(
+        'No results for "$searchQuery".',
+        style: theme.bodyMedium,
+      ),
+    );
+  }
   final label = switch (tabIndex) {
     1 => 'No open issues returned by gh.',
     2 => 'No open pull requests returned by gh.',

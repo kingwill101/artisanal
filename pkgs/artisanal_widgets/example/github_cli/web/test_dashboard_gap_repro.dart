@@ -259,4 +259,17 @@ final class _FakeDashboardClient implements GithubDashboardClient {
       GithubRepositoryLabel(name: 'vm/io', color: '#808080'),
     ];
   }
+
+  @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    return (
+      bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+      hasMore: false,
+    );
+  }
 }

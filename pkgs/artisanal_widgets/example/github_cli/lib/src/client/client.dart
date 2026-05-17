@@ -121,6 +121,13 @@ abstract interface class GithubDashboardClient {
   Future<List<GithubRepositoryLabel>> loadRepositoryLabels({
     required String repository,
   });
+
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  });
 }
 
 abstract interface class GithubPullRequestDiffStreamingClient {

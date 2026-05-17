@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Model, Cmd, View, runProgram, Msg;
+import 'package:artisanal/tui.dart' show runProgram;
 import 'package:artisanal/web.dart' show WebTerminalBackend, WebUltravioletRenderer;
 import 'package:artisanal/terminal.dart' show BackendTerminal;
 import 'package:artisanal_widgets/widgets.dart' show WidgetApp, StatelessWidget, BuildContext, Widget, Text;

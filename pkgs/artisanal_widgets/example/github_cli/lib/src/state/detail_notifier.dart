@@ -413,10 +413,24 @@ final class GithubDetailNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _searchOpen = false;
   bool _repoPromptOpen = false;
   bool _repositoryListOpen = false;
   String? _repoPromptError;
   String? _notice;
+
+  bool get searchOpen => _searchOpen;
+
+  void openSearch() {
+    _searchOpen = true;
+    notifyListeners();
+  }
+
+  void closeSearch() {
+    if (!_searchOpen) return;
+    _searchOpen = false;
+    notifyListeners();
+  }
 
   bool get repoPromptOpen => _repoPromptOpen;
   bool get repositoryListOpen => _repositoryListOpen;

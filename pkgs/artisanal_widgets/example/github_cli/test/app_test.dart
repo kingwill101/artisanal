@@ -2517,6 +2517,19 @@ final class _RecordingGithubClient implements GithubDashboardClient {
   }) async {
     return const <GithubRepositoryLabel>[];
   }
+
+  @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    return (
+      bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+      hasMore: false,
+    );
+  }
 }
 
 final class _FakeGithubClient
@@ -2799,6 +2812,19 @@ final class _FakeGithubClient
       GithubRepositoryLabel(name: 'enhancement', color: '#a2eeef'),
     ];
   }
+
+  @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    return (
+      bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+      hasMore: false,
+    );
+  }
 }
 
 final class _LazyPagingGithubClient implements GithubDashboardClient {
@@ -3013,6 +3039,19 @@ final class _LazyPagingGithubClient implements GithubDashboardClient {
   }) async {
     return const <GithubRepositoryLabel>[];
   }
+
+  @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    return (
+      bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+      hasMore: false,
+    );
+  }
 }
 
 final class _FlakyGithubClient implements GithubDashboardClient {
@@ -3215,5 +3254,18 @@ final class _FlakyGithubClient implements GithubDashboardClient {
     required String repository,
   }) async {
     return const <GithubRepositoryLabel>[];
+  }
+
+  @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    return (
+      bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+      hasMore: false,
+    );
   }
 }

@@ -642,6 +642,72 @@ final class GithubHttpClient
   }
 
   @override
+  Future<({GithubOverviewBucket bucket, bool hasMore})> searchIssuesAndPrs({
+    required GithubDashboardScope scope,
+    required String query,
+    required int limit,
+    required int page,
+  }) async {
+    if (query.trim().isEmpty) {
+      return (
+        bucket: GithubOverviewBucket(issues: const [], pullRequests: const []),
+        hasMore: false,
+      );
+    }
+    final futures = <Future<({List<Object?> items, int totalCount})>>[
+      _searchHttp(scope: scope, query: query, pullRequests: false, limit: limit, page: page),
+      _searchHttp(scope: scope, query: query, pullRequests: true, limit: limit, page: page),
+    ];
+    final results = await Future.wait(futures);
+    final hasMore = results.any((r) => r.totalCount > page * limit);
+    return (
+      bucket: GithubOverviewBucket(
+        issues: results[0].items
+            .map((item) => GithubIssueItem.fromJson(ghMap(item)))
+            .toList(growable: false),
+        pullRequests: results[1].items
+            .map((item) => GithubPullRequestItem.fromJson(ghMap(item)))
+            .toList(growable: false),
+      ),
+      hasMore: hasMore,
+    );
+  }
+
+  Future<({List<Object?> items, int totalCount})> _searchHttp({
+    required GithubDashboardScope scope,
+    required String query,
+    required bool pullRequests,
+    required int limit,
+    required int page,
+  }) async {
+    final q = StringBuffer();
+    q.write(pullRequests ? 'is:pr' : 'is:issue');
+    q.write(' state:open');
+    q.write(' $query');
+
+    switch (scope.kind) {
+      case GithubDashboardScopeKind.repository:
+        q.write(' repo:${scope.repository}');
+      case GithubDashboardScopeKind.organization:
+        q.write(' org:${scope.owner}');
+      case GithubDashboardScopeKind.user:
+        break;
+    }
+
+    q.write('&per_page=$limit');
+    q.write('&page=$page');
+    final json = ghMap(await _get('/search/issues?q=${Uri.encodeComponent(q.toString())}'));
+    final items = ghList(json['items']);
+    final totalCount = ghInt(json['total_count']);
+    return (
+      items: items
+          .map((item) => _searchItemToGhStyle(ghMap(item)))
+          .toList(growable: false),
+      totalCount: totalCount,
+    );
+  }
+
+  @override
   Future<List<GithubRepositoryLabel>> loadRepositoryLabels({
     required String repository,
   }) async {

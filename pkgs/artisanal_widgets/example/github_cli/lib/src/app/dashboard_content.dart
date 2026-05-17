@@ -378,6 +378,12 @@ final class _QueueRegion extends w.StatelessWidget {
           width: width,
           onOverviewFilterChanged: onOverviewFilterChanged,
           onItemSelected: onItemSelected,
+          searchQuery: queue.searchQuery,
+          searchLoading: queue.searchLoading,
+          searchError: queue.searchError,
+          searchPage: queue.searchPage,
+          searchHasMore: queue.searchHasMore,
+          searchPageLoading: queue.searchPageLoading,
         );
       },
     );

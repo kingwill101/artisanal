@@ -173,6 +173,21 @@ final class GithubRunDetailFailedMsg extends tui.Msg {
   final String message;
 }
 
+final class GithubSearchLoadedMsg extends tui.Msg {
+  const GithubSearchLoadedMsg(this.query, this.results, this.hasMore);
+
+  final String query;
+  final GithubOverviewBucket results;
+  final bool hasMore;
+}
+
+final class GithubSearchFailedMsg extends tui.Msg {
+  const GithubSearchFailedMsg(this.query, this.message);
+
+  final String query;
+  final String message;
+}
+
 final class GithubActionCompletedMsg extends tui.Msg {
   const GithubActionCompletedMsg(this.message);
 

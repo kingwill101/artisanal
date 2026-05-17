@@ -149,15 +149,6 @@ w.Widget githubDetailPane({
           error: reviewCommentsError,
           controller: controller,
         )
-      else if (showingComments)
-        _inlineComments(
-          theme: theme,
-          item: selectedItem,
-          comments: comments,
-          loading: commentsLoading,
-          error: commentsError,
-          controller: controller,
-        )
       else if (navigating)
         // While the user scrolls rapidly, skip the expensive markdown /
         // avatar-image render and show a cheap spinner placeholder instead.
@@ -165,7 +156,15 @@ w.Widget githubDetailPane({
         // once the user pauses, triggering a full render of the real content.
         w.Expanded(child: githubNavigatingPanel(theme))
       else
-        _inlineBody(theme, selectedItem, controller),
+        _inlineBody(
+          theme,
+          selectedItem,
+          controller,
+          showingComments: showingComments,
+          comments: comments,
+          commentsLoading: commentsLoading,
+          commentsError: commentsError,
+        ),
     ],
   );
 }
@@ -218,8 +217,13 @@ w.Widget _detailTabs({
 w.Widget _inlineBody(
   w.Theme theme,
   GithubDisplayItem item,
-  w.ScrollController controller,
-) {
+  w.ScrollController controller, {
+  bool showingComments = false,
+  List<GithubCommentItem> comments = const [],
+  bool commentsLoading = false,
+  String? commentsError,
+}) {
+  final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Expanded(
     child: w.ScrollArea(
       controller: controller,
@@ -240,6 +244,27 @@ w.Widget _inlineBody(
             fallbackMarkdown: '_No description provided._',
             rawText: item.body,
           ),
+          if (showingComments) ...[
+            w.Divider(
+              width: 80,
+              style: theme.bodySmall.copy()..foreground(theme.border),
+            ),
+            w.Text(
+              'All comments ${item.kind.toUpperCase()} #${item.number}',
+              style: theme.titleMedium,
+            ),
+            if (commentsError != null)
+              w.Text(
+                commentsError,
+                style: theme.bodyMedium.copy()..foreground(theme.error),
+              ),
+            if (commentsLoading && comments.isEmpty)
+              w.Text('Loading comments from gh...', style: hint),
+            if (!commentsLoading && comments.isEmpty && commentsError == null)
+              w.Text('No comments returned by gh.', style: hint),
+            for (final comment in comments)
+              _commentCard(theme, comment),
+          ],
         ],
       ),
     ),
@@ -309,29 +334,6 @@ w.Widget _checkItem(
   );
 }
 
-w.Widget _inlineComments({
-  required w.Theme theme,
-  required GithubDisplayItem item,
-  required List<GithubCommentItem> comments,
-  required bool loading,
-  required String? error,
-  required w.ScrollController controller,
-}) {
-  return w.Expanded(
-    child: w.Scrollbar(
-      controller: controller,
-      child: _commentList(
-        theme: theme,
-        item: item,
-        comments: comments,
-        loading: loading,
-        error: error,
-        controller: controller,
-      ),
-    ),
-  );
-}
-
 w.Widget _inlineReviewComments({
   required w.Theme theme,
   required GithubDisplayItem item,
@@ -375,69 +377,6 @@ w.Widget _inlineCommits({
         controller: controller,
       ),
     ),
-  );
-}
-
-w.Widget _commentList({
-  required w.Theme theme,
-  required GithubDisplayItem item,
-  required List<GithubCommentItem> comments,
-  required bool loading,
-  required String? error,
-  required w.ScrollController controller,
-}) {
-  final hasBody = item.body.trim().isNotEmpty;
-  final statusCount =
-      (error == null ? 0 : 1) +
-      (loading && comments.isEmpty ? 1 : 0) +
-      (!loading && comments.isEmpty ? 1 : 0);
-  final commentStart = 2 + (hasBody ? 1 : 0) + statusCount;
-  return w.VirtualListView.builder(
-    controller: controller,
-    variableHeight: true,
-    estimatedItemExtent: 7,
-    separator: '\n',
-    itemCount: commentStart + comments.length,
-    itemBuilder: (context, index) {
-      var cursor = 0;
-      if (index == cursor++) {
-        return w.Text(
-          'All comments ${item.kind.toUpperCase()} #${item.number}',
-          style: theme.titleMedium,
-        );
-      }
-      if (hasBody && index == cursor++) {
-        return _timelineCard(
-          theme: theme,
-          author: item.author,
-          avatarUrl: item.authorAvatarUrl,
-          metadata:
-              '${item.author} / updated ${relativeGithubTime(item.updatedAt)}',
-          fallbackMarkdown: '_No description provided._',
-          rawText: item.body,
-        );
-      }
-      if (index == cursor++) {
-        return w.Divider(
-          width: 80,
-          style: theme.bodySmall.copy()..foreground(theme.border),
-        );
-      }
-      if (error != null && index == cursor++) {
-        return w.Text(
-          error,
-          style: theme.bodyMedium.copy()..foreground(theme.error),
-        );
-      }
-      final hint = theme.bodySmall.copy()..foreground(theme.muted);
-      if (loading && comments.isEmpty && index == cursor++) {
-        return w.Text('Loading comments from gh...', style: hint);
-      }
-      if (!loading && comments.isEmpty && index == cursor++) {
-        return w.Text('No comments returned by gh.', style: hint);
-      }
-      return _commentCard(theme, comments[index - cursor]);
-    },
   );
 }
 

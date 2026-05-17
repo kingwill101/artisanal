@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io' as io;
+
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -43,7 +46,9 @@ final class GithubDashboardDetailLoader {
         msg is GithubRepositoryLabelsLoadedMsg ||
         msg is GithubRepositoryLabelsFailedMsg ||
         msg is GithubRunDetailLoadedMsg ||
-        msg is GithubRunDetailFailedMsg;
+        msg is GithubRunDetailFailedMsg ||
+        msg is GithubSearchLoadedMsg ||
+        msg is GithubSearchFailedMsg;
   }
 
   tui.Cmd? handleMessage(tui.Msg msg) {
@@ -115,6 +120,14 @@ final class GithubDashboardDetailLoader {
       detail.applyRunDetailError(msg.message);
       return null;
     }
+    if (msg is GithubSearchLoadedMsg) {
+      queue.applySearchResults(msg.query, msg.results, msg.hasMore);
+      return null;
+    }
+    if (msg is GithubSearchFailedMsg) {
+      queue.applySearchError(msg.query, msg.message);
+      return null;
+    }
     return null;
   }
 
@@ -127,7 +140,20 @@ final class GithubDashboardDetailLoader {
     final item = queue.selectedItem;
     final url = item?.url ?? data.dashboard?.repository.url;
     if (url == null || url.isEmpty) return tui.Cmd.none();
-    return tui.Cmd.openUrl(url, onComplete: (_) => const GithubOpenedUrlMsg());
+    return _openUrl(url);
+  }
+
+  tui.Cmd _openUrl(String url) {
+    return tui.Cmd(() async {
+      final executable = io.Platform.isMacOS ? 'open'
+          : io.Platform.isWindows ? 'cmd'
+          : 'xdg-open';
+      final args = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
+      unawaited(
+        io.Process.start(executable, args, mode: io.ProcessStartMode.detached),
+      );
+      return const GithubOpenedUrlMsg();
+    });
   }
 
   tui.Cmd openSelectedDetail() {
@@ -211,6 +237,10 @@ final class GithubDashboardDetailLoader {
 
   tui.Cmd openSelectedComments() {
     final item = queue.selectedItem;
+    if (item != null && _isActiveDetailItem(item, detail.commentsItem)) {
+      detail.closeComments();
+      return tui.Cmd.none();
+    }
     final repository = data.repositoryFor(item);
     final kind = _kindFor(item);
     if (item == null || repository == null || kind == null) {
@@ -369,6 +399,68 @@ final class GithubDashboardDetailLoader {
   tui.Cmd closeRepositoryLabels() {
     detail.closeRepositoryLabels();
     return tui.Cmd.none();
+  }
+
+  tui.Cmd openSearch() {
+    // If search results are already shown, clear instead.
+    if (queue.isSearchActive) {
+      queue.clearSearch();
+      return tui.Cmd.none();
+    }
+    detail.openSearch();
+    return tui.Cmd.none();
+  }
+
+  tui.Cmd closeSearch() {
+    detail.closeSearch();
+    return tui.Cmd.none();
+  }
+
+  tui.Cmd submitSearch(String query) {
+    detail.closeSearch();
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return tui.Cmd.none();
+    final dashboard = data.dashboard;
+    if (dashboard == null) return tui.Cmd.none();
+    final scope = dashboard.resolvedScope;
+    queue.openSearch(trimmed);
+    detailScrollController.jumpTo(0);
+    return tui.Cmd(() async {
+      try {
+        final result = await client().searchIssuesAndPrs(
+          scope: scope,
+          query: trimmed,
+          limit: 20,
+          page: 1,
+        );
+        return GithubSearchLoadedMsg(trimmed, result.bucket, result.hasMore);
+      } catch (error) {
+        return GithubSearchFailedMsg(trimmed, error.toString());
+      }
+    });
+  }
+
+  tui.Cmd loadNextSearchPage() {
+    final trimmed = queue.searchQuery;
+    if (trimmed == null || trimmed.isEmpty) return tui.Cmd.none();
+    final dashboard = data.dashboard;
+    if (dashboard == null) return tui.Cmd.none();
+    final scope = dashboard.resolvedScope;
+    if (!queue.searchHasMore || queue.searchPageLoading) return tui.Cmd.none();
+    queue.startSearchNextPage();
+    return tui.Cmd(() async {
+      try {
+        final result = await client().searchIssuesAndPrs(
+          scope: scope,
+          query: trimmed,
+          limit: 20,
+          page: queue.searchPage,
+        );
+        return GithubSearchLoadedMsg(trimmed, result.bucket, result.hasMore);
+      } catch (error) {
+        return GithubSearchFailedMsg(trimmed, error.toString());
+      }
+    });
   }
 
   GithubItemKind? _kindFor(GithubDisplayItem? item) {
