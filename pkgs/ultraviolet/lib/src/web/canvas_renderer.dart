@@ -316,7 +316,12 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
 
   bool _isBackgroundBridgeSpace(Cell? cell) {
     if (cell == null) return false;
-    return cell.content == ' ' && cell.width == 1;
+    // Bridge through ANY cell that has no explicit background color —
+    // not just spaces. This covers dots (·), text glyphs, and separator
+    // characters that carry only a foreground style but no bg. Cells with
+    // an explicit bg (fill cells, reverse-video cells) act as anchors that
+    // stop the bridge walk.
+    return _cellBackgroundCss(cell) == null;
   }
 
   String? _cellBackgroundCss(Cell? cell) {
