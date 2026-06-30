@@ -452,6 +452,7 @@ final class _DetailRegion extends w.StatelessWidget {
           diffFileIndex: detail.diffFileIndex,
           diffLoading: detail.diffLoading,
           diffError: detail.diffError,
+          diffReviewComments: detail.diffReviewComments,
           diffViewMode: uiState.diffViewMode,
           diffController: diffController,
           diffCommentHighlights: diffCommentHighlights,

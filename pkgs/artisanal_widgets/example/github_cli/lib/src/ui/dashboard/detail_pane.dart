@@ -6,9 +6,11 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import '../../app/compile_time_flags.dart';
 import '../../models/dashboard_data.dart';
 import '../../models/display_item.dart';
+import '../../models/review_comment.dart';
 import 'panels.dart';
 import '../label_style.dart';
 import '../../utils/time.dart';
+import '../../utils/diff_comment_mapper.dart';
 import '../markdown/body.dart';
 import '../../utils/text_format.dart';
 
@@ -36,6 +38,7 @@ w.Widget githubDetailPane({
   required int diffFileIndex,
   required bool diffLoading,
   required String? diffError,
+  List<GithubPullRequestReviewComment> diffReviewComments = const [],
   required w.DiffViewMode diffViewMode,
   w.GitDiffController? diffController,
   List<w.DiffCommentLineHighlight> diffCommentHighlights =
@@ -63,7 +66,6 @@ w.Widget githubDetailPane({
   }
   final showingComments = _sameItem(selectedItem, commentsItem);
   final showingCommits = _sameItem(selectedItem, commitsItem);
-  final showingReviewComments = _sameItem(selectedItem, reviewCommentsItem);
   final showingDiff = _sameItem(selectedItem, diffItem);
   final showingMergeInfo = _sameItem(selectedItem, mergeInfoItem);
   final showingRepositoryLabels = _sameItem(selectedItem, repositoryLabelsItem);
@@ -78,9 +80,9 @@ w.Widget githubDetailPane({
         item: selectedItem,
         showingComments: showingComments,
         showingCommits: showingCommits,
-        showingReviewComments: showingReviewComments,
         showingDiff: showingDiff,
         showingRun: showingRun,
+        reviewCommentCount: diffReviewComments.length,
         onChanged: onTabChanged,
       ),
       w.Divider(
@@ -96,6 +98,7 @@ w.Widget githubDetailPane({
           diffFileIndex: diffFileIndex,
           loading: diffLoading,
           error: diffError,
+          diffReviewComments: diffReviewComments,
           viewMode: diffViewMode,
           diffController: diffController,
           diffCommentHighlights: diffCommentHighlights,
@@ -140,15 +143,6 @@ w.Widget githubDetailPane({
           error: commitsError,
           controller: controller,
         )
-      else if (showingReviewComments)
-        _inlineReviewComments(
-          theme: theme,
-          item: selectedItem,
-          comments: reviewComments,
-          loading: reviewCommentsLoading,
-          error: reviewCommentsError,
-          controller: controller,
-        )
       else if (navigating)
         // While the user scrolls rapidly, skip the expensive markdown /
         // avatar-image render and show a cheap spinner placeholder instead.
@@ -174,9 +168,9 @@ w.Widget _detailTabs({
   required GithubDisplayItem item,
   required bool showingComments,
   required bool showingCommits,
-  required bool showingReviewComments,
   required bool showingDiff,
   required bool showingRun,
+  required int reviewCommentCount,
   required tui.Cmd? Function(int index) onChanged,
 }) {
   final tabs = <w.TabItem>[
@@ -185,9 +179,9 @@ w.Widget _detailTabs({
     if (item.target == GithubDisplayTarget.pullRequest)
       w.TabItem('Commits${_commitCountLabel(item)}'),
     if (item.target == GithubDisplayTarget.pullRequest)
-      const w.TabItem('Reviews'),
-    if (item.target == GithubDisplayTarget.pullRequest)
-      w.TabItem('Files changed${_fileCountLabel(item)}'),
+      w.TabItem(
+        'Files changed${_fileCountLabel(item)}${_reviewCountLabel(reviewCommentCount)}',
+      ),
     if (item.target == GithubDisplayTarget.workflowRun)
       const w.TabItem('Run info'),
   ];
@@ -195,8 +189,7 @@ w.Widget _detailTabs({
 
   final index = switch (item.target) {
     GithubDisplayTarget.pullRequest when showingCommits => 1,
-    GithubDisplayTarget.pullRequest when showingReviewComments => 2,
-    GithubDisplayTarget.pullRequest when showingDiff => 3,
+    GithubDisplayTarget.pullRequest when showingDiff => 2,
     GithubDisplayTarget.workflowRun => 0,
     _ => 0,
   };
@@ -262,8 +255,7 @@ w.Widget _inlineBody(
               w.Text('Loading comments from gh...', style: hint),
             if (!commentsLoading && comments.isEmpty && commentsError == null)
               w.Text('No comments returned by gh.', style: hint),
-            for (final comment in comments)
-              _commentCard(theme, comment),
+            for (final comment in comments) _commentCard(theme, comment),
           ],
         ],
       ),
@@ -818,6 +810,7 @@ w.Widget _inlineDiff({
   required int diffFileIndex,
   required bool loading,
   required String? error,
+  required List<GithubPullRequestReviewComment> diffReviewComments,
   required w.DiffViewMode viewMode,
   w.GitDiffController? diffController,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
@@ -878,6 +871,7 @@ w.Widget _inlineDiff({
                   scrollController: controller,
                   diffCommentHighlights: diffCommentHighlights,
                   onDiffCommentAnchorSelected: onDiffCommentAnchorSelected,
+                  diffReviewComments: diffReviewComments,
                 )
               : w.Row(
                   crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -906,6 +900,7 @@ w.Widget _inlineDiff({
                         diffCommentHighlights: diffCommentHighlights,
                         onDiffCommentAnchorSelected:
                             onDiffCommentAnchorSelected,
+                        diffReviewComments: diffReviewComments,
                       ),
                     ),
                   ],
@@ -1152,7 +1147,57 @@ w.Widget _selectedFileDiff({
   required w.ScrollController scrollController,
   required List<w.DiffCommentLineHighlight> diffCommentHighlights,
   tui.Cmd? Function(w.DiffCommentAnchor anchor)? onDiffCommentAnchorSelected,
+  required List<GithubPullRequestReviewComment> diffReviewComments,
 }) {
+  if (diffReviewComments.isEmpty) {
+    return w.GitDiffViewer(
+      diff: diff,
+      width: width,
+      height: height,
+      wrapLines: true,
+      viewMode: selectedFile?.isCollapsed == true
+          ? w.DiffViewMode.unified
+          : viewMode,
+      controller: controller,
+      scrollController: scrollController,
+      handleKeys: false,
+      commentHighlights: selectedFile?.isCollapsed == true
+          ? const <w.DiffCommentLineHighlight>[]
+          : diffCommentHighlights,
+      onCommentAnchorSelected: selectedFile?.isCollapsed == true
+          ? null
+          : onDiffCommentAnchorSelected,
+    );
+  }
+
+  final diffController = controller ?? w.GitDiffController();
+  if (diff.isNotEmpty) {
+    diffController.setDiff(diff);
+  }
+  diffController.setSize(width, height);
+
+  final model = diffController.model;
+  final anchors = model.commentAnchors;
+
+  final commentsByLine = mapReviewCommentsToRenderLines(
+    diffReviewComments,
+    anchors,
+  );
+
+  List<w.DiffCommentLineHighlight> reviewHighlights = [];
+  for (final entry in commentsByLine.entries) {
+    final anchor = anchors.where((a) => a.renderLine == entry.key).firstOrNull;
+    if (anchor != null) {
+      for (final comment in entry.value) {
+        reviewHighlights.add(w.DiffCommentLineHighlight.thread(anchor));
+      }
+    }
+  }
+
+  final combinedHighlights = selectedFile?.isCollapsed == true
+      ? <w.DiffCommentLineHighlight>[]
+      : [...diffCommentHighlights, ...reviewHighlights];
+
   return w.GitDiffViewer(
     diff: diff,
     width: width,
@@ -1161,12 +1206,10 @@ w.Widget _selectedFileDiff({
     viewMode: selectedFile?.isCollapsed == true
         ? w.DiffViewMode.unified
         : viewMode,
-    controller: controller,
+    controller: diffController,
     scrollController: scrollController,
     handleKeys: false,
-    commentHighlights: selectedFile?.isCollapsed == true
-        ? const <w.DiffCommentLineHighlight>[]
-        : diffCommentHighlights,
+    commentHighlights: combinedHighlights,
     onCommentAnchorSelected: selectedFile?.isCollapsed == true
         ? null
         : onDiffCommentAnchorSelected,
@@ -1185,6 +1228,10 @@ String _fileCountLabel(GithubDisplayItem item) {
 
 String _commitCountLabel(GithubDisplayItem item) {
   return item.commitCount == 0 ? '' : ' ${item.commitCount}';
+}
+
+String _reviewCountLabel(int count) {
+  return count == 0 ? '' : ' ($count inline)';
 }
 
 ({int additions, int deletions, int files}) _changeTotals(

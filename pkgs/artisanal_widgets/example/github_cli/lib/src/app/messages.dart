@@ -136,6 +136,12 @@ final class GithubDiffFailedMsg extends tui.Msg {
   final int? token;
 }
 
+final class GithubDiffReviewCommentsLoadedMsg extends tui.Msg {
+  const GithubDiffReviewCommentsLoadedMsg(this.comments);
+
+  final List<GithubPullRequestReviewComment> comments;
+}
+
 final class GithubMergeInfoLoadedMsg extends tui.Msg {
   const GithubMergeInfoLoadedMsg(this.info);
 

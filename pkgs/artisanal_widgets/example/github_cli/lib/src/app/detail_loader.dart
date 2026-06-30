@@ -41,6 +41,7 @@ final class GithubDashboardDetailLoader {
         msg is GithubDiffChunkLoadedMsg ||
         msg is GithubDiffFinishedMsg ||
         msg is GithubDiffFailedMsg ||
+        msg is GithubDiffReviewCommentsLoadedMsg ||
         msg is GithubMergeInfoLoadedMsg ||
         msg is GithubMergeInfoFailedMsg ||
         msg is GithubRepositoryLabelsLoadedMsg ||
@@ -96,6 +97,10 @@ final class GithubDashboardDetailLoader {
       detail.applyDiffError(msg.message);
       return null;
     }
+    if (msg is GithubDiffReviewCommentsLoadedMsg) {
+      detail.applyDiffReviewCommentsLoaded(msg.comments);
+      return null;
+    }
     if (msg is GithubMergeInfoLoadedMsg) {
       detail.applyMergeInfoLoaded(msg.info);
       return null;
@@ -145,8 +150,10 @@ final class GithubDashboardDetailLoader {
 
   tui.Cmd _openUrl(String url) {
     return tui.Cmd(() async {
-      final executable = io.Platform.isMacOS ? 'open'
-          : io.Platform.isWindows ? 'cmd'
+      final executable = io.Platform.isMacOS
+          ? 'open'
+          : io.Platform.isWindows
+          ? 'cmd'
           : 'xdg-open';
       final args = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
       unawaited(

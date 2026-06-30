@@ -212,10 +212,10 @@ class DiffStyles {
            commentRangeGutter ??
            Style().background(const BasicColor('#3f6374')),
        commentThreadLine =
-           commentThreadLine ?? Style().background(const BasicColor('#3b3320')),
+           commentThreadLine ?? Style().background(const BasicColor('#5d4037')),
        commentThreadGutter =
            commentThreadGutter ??
-           Style().background(const BasicColor('#6f5b26'));
+           Style().background(const BasicColor('#8d6e63'));
 
   /// Creates a dark-theme diff style preset (identical to the defaults).
   ///
@@ -304,10 +304,10 @@ class DiffStyles {
           .background(const BasicColor('#b8d7ff')),
       commentThreadLine: Style()
           .foreground(darkText)
-          .background(const BasicColor('#fff0c2')),
+          .background(const BasicColor('#ffeb3b')),
       commentThreadGutter: Style()
           .foreground(darkText)
-          .background(const BasicColor('#ffd166')),
+          .background(const BasicColor('#fbc02d')),
     );
   }
 
@@ -383,8 +383,8 @@ class DiffStyles {
       selectedCommentGutter: Style().background(const BasicColor('#50668f')),
       commentRangeLine: Style().background(const BasicColor('#263847')),
       commentRangeGutter: Style().background(const BasicColor('#3f6374')),
-      commentThreadLine: Style().background(const BasicColor('#3b3320')),
-      commentThreadGutter: Style().background(const BasicColor('#6f5b26')),
+      commentThreadLine: Style().background(const BasicColor('#5d4037')),
+      commentThreadGutter: Style().background(const BasicColor('#8d6e63')),
     );
   }
 
