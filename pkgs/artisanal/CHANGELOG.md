@@ -2,6 +2,15 @@
 
 ## 0.3.1-wip
 
+### Added
+
+- Added automatic shell tab-completion for `CommandRunner` via `ShellCompleter`,
+  covering top-level commands, subcommands, option flags, and allowed values.
+  Enabled by default; opt out with `enableShellCompletion: false`.
+- Added `ShellCompleter.generate(executableName)` and `generateAll(names)` for
+  producing bash/zsh/tcsh completion scripts that can be sourced from shell rc files.
+- Added `completion: ^1.0.2` dependency.
+
 ### Changed
 
 - Reduced UV-backed TUI render overhead by reading the terminal size once per

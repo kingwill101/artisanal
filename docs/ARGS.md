@@ -6,6 +6,7 @@ The Artisanal Args library provides a polished command-line interface framework 
 
 - [Overview](#overview)
 - [Quick Start](#quick-start)
+- [Shell Completion](#shell-completion)
 - [CommandRunner](#commandrunner)
   - [Creating a Runner](#creating-a-runner)
   - [Constructor and I/O Hooks](#constructor-and-io-hooks)
@@ -36,6 +37,7 @@ Artisanal's Args library provides:
 - **ANSI Control**: `--ansi`/`--no-ansi` flags to force color output
 - **Seamless Console Integration**: Each command gets automatic access to the [Console](CONSOLE.md)
 - **Deterministic Testing Hooks**: Injectable output, input, and exit-code callbacks
+- **Automatic Shell Completion**: Tab-completion for commands, options, and allowed values (bash, zsh, tcsh)
 
 ```dart
 import 'package:artisanal/args.dart';
@@ -105,6 +107,78 @@ Output:
 Hello, John!
 ```
 
+## Shell Completion
+
+Artisanal can automatically generate shell completion scripts for your CLI. This
+is enabled by default on every `CommandRunner` — no extra setup required.
+
+### How It Works
+
+When the shell invokes your executable with `completion -- <args>`, Artisanal
+detects the call, computes matching command names, option flags, and allowed
+values, prints them to stdout, and exits. Normal runs are completely unaffected.
+
+### Installing
+
+Print the completion script from your compiled binary (or `dart run`) and
+source it in your shell rc file:
+
+```bash
+# One-shot evaluation (bash / zsh)
+eval "$(./github_cli --completion-script)"
+
+# Or for a dart-run script
+eval "$(dart run bin/myapp.dart --completion-script)"
+
+# Persistent: append to your rc file
+./github_cli --completion-script >> ~/.bashrc   # bash
+./github_cli --completion-script >> ~/.zshrc    # zsh
+```
+
+After adding to your rc file, restart your shell or `source ~/.bashrc` /
+`source ~/.zshrc`.
+
+Alternatively, call `ShellCompleter.generate('myapp')` from Dart to embed the
+script in a release artifact or installer.
+
+### Opting Out
+
+Disable completion per runner if you need to:
+
+```dart
+final runner = CommandRunner('myapp', 'My Application', enableShellCompletion: false);
+```
+
+### What Gets Completed
+
+The completer walks your full command tree:
+
+- **Top-level commands** — names and aliases
+- **Subcommands** — recursively through nested `addSubcommand` chains
+- **Option names** — `--flag` and `--no-flag` for negatable options
+- **Allowed values** — completion lists from `argParser.addOption(..., allowed: [...])`
+
+All of the above respect the same `namespaceSeparator` grouping your help already uses.
+
+### Programmatic Access
+
+```dart
+import 'package:artisanal/args.dart';
+
+final runner = CommandRunner('myapp', 'My Application');
+runner.addCommand(ServeCommand());
+
+// Lazy-initialized completer bound to this runner's arg tree
+final completer = runner.shellCompleter;
+
+// Generate a standalone completion script
+final script = runner.shellCompletionScript;
+```
+
+`ShellCompleter` is also re-exported directly so you can call
+`ShellCompleter.generate('myapp')` or `ShellCompleter.generateAll(['myapp', 'myapp-dev'])`
+without a runner instance.
+
 ---
 
 ## CommandRunner
@@ -133,6 +207,7 @@ The runner automatically adds these global flags:
 | `--quiet`, `-q` / `--silent` | Suppress all output |
 | `--no-interaction`, `-n` | Disable interactive prompts |
 | `--verbose`, `-v`, `-vv`, `-vvv` | Increase verbosity (verbose, very verbose, debug) |
+| `--completion-script` | Print a shell completion script to stdout |
 
 ### Constructor and I/O Hooks
 

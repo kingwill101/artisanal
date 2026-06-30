@@ -6,6 +6,7 @@
 /// - Support for subcommands and nested command structures.
 /// - Integration with [Console] for verbosity-aware output.
 /// - Custom usage formatting and command listing.
+/// - Automatic shell tab-completion with `--completion-script` flag (enabled by default, opt-out available).
 ///
 /// {@category Core}
 ///
@@ -65,6 +66,7 @@ export 'src/runner/command_listing.dart'
 export 'src/runner/command_runner.dart'
     show
         CommandRunner,
+        ShellCompleter,
         ArgParser,
         ArgParserException,
         ArgResults,

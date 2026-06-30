@@ -3,6 +3,9 @@ import 'dart:io' as dartio;
 import 'package:args/command_runner.dart' as args_pkg;
 export 'package:args/command_runner.dart' show UsageException;
 export 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
+export 'shell_completion.dart' show ShellCompleter;
+
+import 'package:completion/completion.dart' as completion;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
@@ -10,6 +13,7 @@ import '../style/verbosity.dart';
 import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';
 import 'help_color_scheme.dart';
+import 'shell_completion.dart';
 
 /// Callback for writing a line to output.
 typedef Write = void Function(String line);
@@ -51,11 +55,13 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// - [usageExitCode]: Exit code for usage errors (default: 64).
   /// - [ansi]: Force ANSI output on/off (auto-detected by default).
   /// - [helpColorScheme]: Color scheme for help output (default: [HelpColorScheme.default_]).
+  /// - [enableShellCompletion]: Enable automatic shell tab-completion (default: true).
   CommandRunner(
     super.executableName,
     super.description, {
     this.namespaceSeparator = ':',
     this.usageExitCode = 64,
+    this.enableShellCompletion = true,
     bool? ansi,
     Renderer? renderer,
     Write? out,
@@ -92,6 +98,12 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// Exit code set when a [UsageException] occurs.
   final int usageExitCode;
 
+  /// Whether automatic shell tab-completion is enabled.
+  ///
+  /// Defaults to `true`. Set to `false` to disable the built-in completion
+  /// handler that responds to `completion --` invocations from the shell.
+  final bool enableShellCompletion;
+
   final Write _out;
   final Write _err;
   final WriteRaw _outRaw;
@@ -127,6 +139,15 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// The I/O helper for console output.
   Console get io => _io ??= _buildIo();
 
+  ShellCompleter? _shellCompleter;
+
+  /// The shell completion helper for this runner.
+  ShellCompleter get shellCompleter =>
+      _shellCompleter ??= ShellCompleter(argParser);
+
+  /// A generated shell completion script for this executable.
+  String get shellCompletionScript => ShellCompleter.generate(executableName);
+
   @override
   String get usage => formatGlobalUsage();
 
@@ -147,7 +168,23 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
 
   @override
   Future<T?> run(Iterable<String> args) async {
-    final ansi = _resolveAnsiForArgs(args);
+    final argsList = args.toList();
+
+    if (argsList.contains('--completion-script')) {
+      writeOut(shellCompletionScript);
+      _setExitCode(0);
+      return null;
+    }
+
+    if (enableShellCompletion) {
+      completion.tryCompletion(
+        argsList,
+        (compArgs, compLine, compPoint) =>
+            shellCompleter.complete(compArgs, compLine, compPoint),
+      );
+    }
+
+    final ansi = _resolveAnsiForArgs(argsList);
     if (_rendererInjected) {
       // Deterministic behavior for tests: respect explicit --ansi/--no-ansi but
       // do not auto-detect terminal capabilities.
@@ -167,12 +204,12 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       }
     }
 
-    _verbosity = _resolveVerbosityForArgs(args);
-    _interactive = _resolveInteractiveForArgs(args);
+    _verbosity = _resolveVerbosityForArgs(argsList);
+    _interactive = _resolveInteractiveForArgs(argsList);
     _io = null;
 
     try {
-      return await super.run(args);
+      return await super.run(argsList);
     } on args_pkg.UsageException catch (e) {
       _printUsageError(e);
       _setExitCode(usageExitCode);
@@ -250,6 +287,11 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
       negatable: false,
       help:
           'Increase verbosity of messages: 1 for normal output, 2 for more verbose output and 3 for debug.',
+    );
+    argParser.addFlag(
+      'completion-script',
+      negatable: false,
+      help: 'Print a shell completion script to stdout.',
     );
   }
 
