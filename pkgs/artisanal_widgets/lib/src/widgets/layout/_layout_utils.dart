@@ -319,9 +319,11 @@ void _drawStyledContent(
       // container (e.g. Container(width: 58) with no color) would pass empty
       // Layout.place spaces through to the parent canvas, overwriting the inner
       // widget's bg=highlight fill cells.
-      final hasVisibleSpaceAttrs = (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
+      final hasVisibleSpaceAttrs =
+          (normalizedStyle.attrs & 32) != 0; // 32 == Attr.reverse
       final isTransparentSpace =
           isSingleWidthSpace &&
+          normalizedStyle.fg == null &&
           normalizedStyle.bg == null &&
           normalizedStyle.underlineColor == null &&
           normalizedStyle.underline == UnderlineStyle.none &&

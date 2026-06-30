@@ -2446,7 +2446,10 @@ class RenderScrollbar extends RenderBox {
       if (overlay || !constraints.hasBoundedWidth) {
         child.layout(constraints);
         size = constraints.constrain(
-          Size(child.size.width + (overlay ? 0.0 : reserved), child.size.height),
+          Size(
+            child.size.width + (overlay ? 0.0 : reserved),
+            child.size.height,
+          ),
         );
         return;
       }
@@ -2454,7 +2457,8 @@ class RenderScrollbar extends RenderBox {
       // First measure at full width so the child can publish accurate scroll
       // metrics. Only reserve a gutter when scrolling is actually needed.
       child.layout(constraints);
-      final needsScrollbar = controller.contentExtent > controller.viewportExtent;
+      final needsScrollbar =
+          controller.contentExtent > controller.viewportExtent;
       if (needsScrollbar) {
         final maxWidth = math.max(0.0, constraints.maxWidth - reserved);
         final minWidth = math.min(constraints.minWidth, maxWidth);
@@ -4407,6 +4411,9 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     _childPaintCache.clear();
     _invalidateVisiblePaintCache();
     _strideTree.resize(0);
+    _cachedItemCount = -1;
+    _cachedSeparatorBreaks = -1;
+    _cachedEstimated = -1;
   }
 
   @override
