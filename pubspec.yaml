@@ -4,6 +4,7 @@ workspace:
   - pkgs/artisanal
   - pkgs/artisanal_widgets
   - pkgs/artisanal_widgets/example/github_cli
+  - pkgs/artisanal_widgets/example/flutter_cli_port
   - pkgs/ultraviolet
 
 funding:

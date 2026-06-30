@@ -1,0 +1,18 @@
+name: flutter_cli_port
+description: Artisanal Widgets port of the Ratatui flutter-cli dashboard.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ">=3.10.0 <4.0.0"
+
+executables:
+  flutter-cli: main
+  flutter_cli_port: main
+
+dependencies:
+  artisanal: ^0.3.1-wip
+  artisanal_widgets: ^0.2.1-wip
+
+dev_dependencies:
+  test: ^1.28.0
