@@ -45,21 +45,22 @@ class InlineStatusModel implements Model {
 
   @override
   (Model, Cmd?) update(Msg msg) {
+    if (msg is _LogMsg && !running) {
+      return (this, null);
+    }
+
     return switch (msg) {
-      // Timer tick — increment activity counter.
+      // Timer tick: increment activity counter and print a real line above the
+      // pinned bottom UI. This exercises the inline scrollback path.
       _LogMsg() => (
         InlineStatusModel(count: count + 1, running: running),
-        null,
+        Cmd.println('[${(count + 1).toString().padLeft(3, '0')}] ${msg.text}'),
       ),
 
       // Space toggles running state.
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x20])) => (
         InlineStatusModel(count: count, running: !running),
-        running
-            ? null
-            : every(const Duration(milliseconds: 800), (_) {
-                return _LogMsg(_logMessages[_rng.nextInt(_logMessages.length)]);
-              }),
+        null,
       ),
 
       // Quit.

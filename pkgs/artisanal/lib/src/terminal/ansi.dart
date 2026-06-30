@@ -318,6 +318,16 @@ abstract final class Ansi {
   /// Scrolls screen down by [n] lines.
   static String scrollDownBy(int n) => '\x1b[${n}T';
 
+  /// Sets the vertical scrolling region using DECSTBM.
+  ///
+  /// [top] and [bottom] are 1-based terminal rows. While a scroll region is
+  /// active, line feeds at the bottom margin scroll only that region, leaving
+  /// rows outside the margins untouched.
+  static String setScrollRegion(int top, int bottom) => '\x1b[$top;${bottom}r';
+
+  /// Resets the vertical scrolling region to the full terminal.
+  static const resetScrollRegion = '\x1b[r';
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Alternate Screen Buffer
   // ─────────────────────────────────────────────────────────────────────────────
