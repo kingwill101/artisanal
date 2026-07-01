@@ -26,7 +26,7 @@ runtime.ProgramOptions flutterCliInlineOptions({required int height}) {
     screenMode: runtime.ScreenMode.inline,
     inlineHeight: height,
     uiAnchor: runtime.UiAnchor.bottom,
-    mouseMode: runtime.MouseMode.allMotion,
+    mouseMode: runtime.MouseMode.none,
     fps: 30,
     startupProbes: false,
   );
