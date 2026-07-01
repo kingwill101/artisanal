@@ -1,6 +1,5 @@
-import 'package:artisanal/src/colorprofile/detect.dart';
-import 'package:artisanal/src/colorprofile/profile.dart';
 import 'package:test/test.dart';
+import 'package:ultraviolet/colorprofile.dart' show detect, Profile;
 
 void main() {
   group('colorprofile.detect', () {

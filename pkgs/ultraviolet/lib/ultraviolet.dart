@@ -36,6 +36,7 @@
 library;
 
 export 'src/uv/terminal.dart';
+export 'src/colorprofile/colorprofile.dart';
 export 'src/uv/buffer.dart' show Buffer, Line, LineData;
 export 'src/uv/cell.dart'
     show
