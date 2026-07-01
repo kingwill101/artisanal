@@ -1,6 +1,16 @@
 # Changelog
 
-## 0.2.1-wip
+## 0.2.1
+
+### Added
+
+- Added a widget-based `flutter_cli_port` example that ports the Ratatui
+  `flutter-cli` dashboard onto Artisanal Widgets and the Artisanal command
+  runner.
+- Added an inline widget dashboard example for bottom-pinned non-alt-screen
+  status panels with streaming logs.
+- Added review-comment mapping support for the GitHub CLI diff pane so inline
+  review comments can be highlighted beside rendered diffs.
 
 ### Changed
 
@@ -9,13 +19,21 @@
 - Improved large scroll/list rendering by preserving scrollbars beside OSC 8
   and terminal-graphics content and avoiding unnecessary render-tree hit-test
   descents.
-- Updated workspace dependency constraints for the current `artisanal` WIP
-  package.
+- Updated workspace dependency constraints for the current `artisanal` release.
 
 ### Fixed
 
 - Kept non-overlay scrollbars visible when content includes Kitty graphics or
   OSC 8 hyperlinks.
+- Preserved styled foreground spaces in canvas/layout rendering instead of
+  treating every space as transparent.
+- Reset virtual-list measurement caches correctly after invalidation so scroll
+  metrics do not collapse after resize or content changes.
+- Updated the flutter-cli port to delegate unknown commands through
+  `CommandRunner.unknownCommandFallback`, keeping built-in completion automatic
+  while still forwarding non-dashboard Flutter commands.
+- Disabled mouse capture in the flutter-cli port inline dashboard so native
+  terminal scrollback remains available by default.
 
 ## 0.2.0
 

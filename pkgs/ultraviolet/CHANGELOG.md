@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0-wip
+## 0.3.0
 
 ### Added
 
@@ -26,6 +26,9 @@
   pixel aspect ratio and encoded dimensions for correct rendering in foot and
   similar terminals.
 - `clampRgbChannel` in `color_utils.dart` clamps a color component to [0, 255].
+- Added `CanvasTerminalRenderer` for browser/wasm rendering on an HTML canvas.
+- Added a web canvas example and demo page for exercising UV rendering outside
+  native terminals.
 
 ### Changed
 
@@ -54,6 +57,10 @@
   chars) to reduce repeated grapheme-cluster traversal on the same strings.
 - `Rectangle.isEmpty` now checks precomputed edges directly in hot render
   paths.
+- Split terminal, stdin, and window-size helpers across IO, web, and stub
+  implementations so UV can be used from browser targets.
+- Extracted the common terminal renderer abstraction from `UvTerminalRenderer`
+  for reuse by native and canvas-backed renderers.
 
 ### Performance
 
@@ -78,6 +85,9 @@
 - `Buffer.replaceWithClone` copies in-place via `copyFrom` and updates the
   render hash incrementally.
 - `Ansi.requestPrimaryDeviceAttributes` corrected from `ESC[?c` to `ESC[c`.
+- Fixed web canvas background inheritance so selected rows, dominant
+  backgrounds, default-background rows, and non-background cells bridge
+  consistently during canvas rendering.
 
 ## 0.2.0
 

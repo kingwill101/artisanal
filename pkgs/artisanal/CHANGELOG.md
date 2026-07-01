@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.1-wip
+## 0.3.1
 
 ### Added
 
@@ -9,14 +9,27 @@
   Enabled by default; opt out with `enableShellCompletion: false`.
 - Added `ShellCompleter.generate(executableName)` and `generateAll(names)` for
   producing bash/zsh/tcsh completion scripts that can be sourced from shell rc files.
+- Added `unknownCommandFallback` to `CommandRunner` for shim-style CLIs that
+  delegate unknown commands while keeping built-in completion automatic.
 - Added `completion: ^1.0.2` dependency.
+- Added a scrollback-preserving inline TUI guide plus richer inline examples
+  and trace inspection tooling for bottom-pinned command dashboards.
+- Added inline renderer regression coverage for native scrollback, resizing,
+  log insertion, cleanup, and non-alt-screen behavior.
 
 ### Changed
 
 - Reduced UV-backed TUI render overhead by reading the terminal size once per
   render pass.
 - Updated workspace dependency constraints for the current `ultraviolet` and
-  `artisanal_widgets` WIP packages.
+  `artisanal_widgets` releases.
+
+### Fixed
+
+- Fixed bottom-anchored inline rendering so `Cmd.println` output is inserted
+  above the pinned UI without clearing scrollback or pushing the panel down.
+- Fixed inline resize handling so renderer clears stay scoped to the inline
+  viewport instead of erasing prior terminal history.
 
 ## 0.3.0
 
