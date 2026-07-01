@@ -202,7 +202,10 @@ final class TextExtmarksController {
   }
 
   void applyInsertion({required int offset, required String text}) {
-    final insertOffset = offset.clamp(0, EditorCoreConfig.current.extmarkMaxOffset);
+    final insertOffset = offset.clamp(
+      0,
+      EditorCoreConfig.current.extmarkMaxOffset,
+    );
     final length = text.characters.length;
     if (length <= 0) {
       return;

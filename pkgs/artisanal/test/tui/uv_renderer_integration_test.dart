@@ -4,7 +4,6 @@ import 'package:artisanal/src/tui/terminal.dart';
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/key.dart';
 import 'package:test/test.dart';
 
 class MockTerminal extends StringTerminal {

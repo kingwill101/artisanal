@@ -74,8 +74,7 @@ class _RadioState<T> extends State<Radio<T>> {
     if (_hovered || _focused) radioStyle.bold();
     if (!_enabled) radioStyle.dim();
 
-    final labelStyle = copyStyle(theme.bodyMedium)
-      ..foreground(theme.onSurface);
+    final labelStyle = copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
     if (!_enabled) labelStyle.dim();
 
     final row = Row(

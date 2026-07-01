@@ -1,4 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart' show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
+import 'package:artisanal_widgets/widgets.dart'
+    show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
 import 'package:artisanal/web.dart' show runWidgetAppInBrowser;
 
 class Hello extends StatelessWidget {

@@ -342,12 +342,15 @@ final class UvTerminalRenderer extends TerminalRenderer {
   ///
   /// Optional [env] provides environment variables for capability detection.
   /// Set [isTty] to force TTY mode when the sink is not a real terminal.
-  UvTerminalRenderer(this._writer,
-      {List<String>? env, bool? isTty, bool isWindows = false})
-    : _isWindows = isWindows,
-      _env = env ?? const [],
-      _term = Environ(env ?? const []).getenv('TERM'),
-      _caps = _xtermCaps(Environ(env ?? const []).getenv('TERM')) {
+  UvTerminalRenderer(
+    this._writer, {
+    List<String>? env,
+    bool? isTty,
+    bool isWindows = false,
+  }) : _isWindows = isWindows,
+       _env = env ?? const [],
+       _term = Environ(env ?? const []).getenv('TERM'),
+       _caps = _xtermCaps(Environ(env ?? const []).getenv('TERM')) {
     _cur = _Cursor(x: -1, y: -1);
     _saved = _cur.clone();
     _profile = _detectProfile(_env, isTty, isWindows);
@@ -2351,11 +2354,7 @@ cp.Profile _detectProfile(List<String> env, bool? isTty, bool isWindows) {
   final forceTty = isTty ?? _parseBool(m['TTY_FORCE']);
   // UvTerminalRenderer can be used with arbitrary sinks; default to non-TTY
   // unless explicitly forced.
-  return cp_detect.detect(
-    isTty: forceTty,
-    env: m,
-    isWindows: isWindows,
-  );
+  return cp_detect.detect(isTty: forceTty, env: m, isWindows: isWindows);
 }
 
 bool _parseBool(String? value) {

@@ -6,7 +6,6 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import '../../app/compile_time_flags.dart';
 import '../../models/dashboard_data.dart';
 import '../../models/display_item.dart';
-import '../../models/review_comment.dart';
 import 'panels.dart';
 import '../label_style.dart';
 import '../../utils/time.dart';

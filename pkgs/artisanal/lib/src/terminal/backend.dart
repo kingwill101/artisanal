@@ -122,8 +122,7 @@ class BackendTerminal implements Terminal {
   }
 
   @override
-  void writeln([String text = '']) =>
-      write('$text$lineTerminator');
+  void writeln([String text = '']) => write('$text$lineTerminator');
 
   @override
   Future<void> flush() => backend.flush();
@@ -425,8 +424,6 @@ class BackendTerminal implements Terminal {
   }
 }
 
-
-
 /// Generic embedded backend backed by callbacks and externally supplied streams.
 class EmbeddedTerminalBackend implements TerminalBackend {
   /// Creates an embedded backend.
@@ -684,5 +681,3 @@ final class TerminalBridge {
     _outputController.close();
   }
 }
-
-

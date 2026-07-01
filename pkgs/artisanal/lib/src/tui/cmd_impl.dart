@@ -722,8 +722,10 @@ class Cmd {
     String url, {
     required Msg Function(ExecResult result) onComplete,
   }) {
-    final executable = io.Platform.isMacOS ? 'open'
-        : io.Platform.isWindows ? 'cmd'
+    final executable = io.Platform.isMacOS
+        ? 'open'
+        : io.Platform.isWindows
+        ? 'cmd'
         : 'xdg-open';
     final arguments = io.Platform.isWindows ? ['/c', 'start', '', url] : [url];
     return exec(executable, arguments, onComplete: onComplete);

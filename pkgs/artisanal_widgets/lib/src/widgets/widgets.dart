@@ -48,8 +48,7 @@ export 'core/element.dart';
 export 'focus/focus.dart';
 export 'app/widget_app.dart';
 export 'app/artisanal_app.dart';
-export 'app/run_app_stub.dart'
-    if (dart.library.io) 'app/run_app.dart';
+export 'app/run_app_stub.dart' if (dart.library.io) 'app/run_app.dart';
 export 'app/reload.dart';
 export 'app/reload_watcher.dart';
 export 'app/performance.dart';

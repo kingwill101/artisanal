@@ -1,7 +1,9 @@
 import 'package:artisanal/tui.dart' show runProgram;
-import 'package:artisanal/web.dart' show WebTerminalBackend, WebUltravioletRenderer;
+import 'package:artisanal/web.dart'
+    show WebTerminalBackend, WebUltravioletRenderer;
 import 'package:artisanal/terminal.dart' show BackendTerminal;
-import 'package:artisanal_widgets/widgets.dart' show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
+import 'package:artisanal_widgets/widgets.dart'
+    show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
 import 'package:ultraviolet/web.dart' show CanvasTerminalRenderer;
 import 'package:web/web.dart' as web;
 
@@ -26,8 +28,9 @@ void main() async {
   final terminal = BackendTerminal(backend);
   final app = WidgetApp(Hello());
 
-  await runProgram(app, terminal: terminal, renderer: WebUltravioletRenderer(
+  await runProgram(
+    app,
     terminal: terminal,
-    canvasRenderer: cr,
-  ));
+    renderer: WebUltravioletRenderer(terminal: terminal, canvasRenderer: cr),
+  );
 }

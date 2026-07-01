@@ -144,5 +144,3 @@ bool _isWordGrapheme(String grapheme) {
   final isAsciiLower = codePoint >= 0x61 && codePoint <= 0x7a;
   return isAsciiDigit || isAsciiUpper || isAsciiLower || codePoint == 0x5f;
 }
-
-

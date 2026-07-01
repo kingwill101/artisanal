@@ -70,7 +70,10 @@ Future<void> main() async {
               w.Expanded(
                 child: w.Container(
                   padding: const w.EdgeInsets.only(left: 2),
-                  child: w.Text('detail pane placeholder', style: theme.bodyMedium),
+                  child: w.Text(
+                    'detail pane placeholder',
+                    style: theme.bodyMedium,
+                  ),
                 ),
               ),
             ],

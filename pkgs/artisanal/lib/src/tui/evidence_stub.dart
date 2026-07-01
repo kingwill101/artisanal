@@ -1,6 +1,8 @@
 // ignore_for_file: unused_field
 
 /// Web stub for `evidence_impl.dart` — no-op evidence logger.
+library;
+
 
 import 'dart:convert';
 
@@ -43,7 +45,7 @@ final class TuiEvidence {
 
   static String? _path;
   static String? _runId;
-  static bool _captureFrames = false;
+  static final bool _captureFrames = false;
 
   static void configureForTest({
     bool? enabled,
@@ -98,9 +100,7 @@ final class TuiEvidence {
     int maxFrameLines = 3,
   }) {}
 
-  static void logRenderCapturePayload({
-    required Object payload,
-  }) {}
+  static void logRenderCapturePayload({required Object payload}) {}
 
   static TuiEvidenceRecord? tryParseLine(String line) {
     final trimmed = line.trim();

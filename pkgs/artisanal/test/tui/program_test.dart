@@ -3,7 +3,6 @@ import 'dart:io' as io;
 
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/key.dart' show Key, KeyType;
 import 'package:artisanal/src/tui/model.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/program.dart';
@@ -731,9 +730,7 @@ void main() {
       );
       final serverSocket = await accepted;
 
-      final binding = socketHost(
-        serverSocket,
-      ).resolve(const ProgramOptions());
+      final binding = socketHost(serverSocket).resolve(const ProgramOptions());
 
       expect(binding.terminal, isA<BackendTerminal>());
       expect(binding.options.inputTTY, isFalse);

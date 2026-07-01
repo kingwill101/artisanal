@@ -120,13 +120,14 @@ final class RemotePluginWorkspace {
         manifests: manifests,
         surfaces: sharedSurfaces,
         connections: connections,
-        router: RemotePluginSurfaceInputRouterConnectionExtension.forConnections(
-          surfaces: sharedSurfaces,
-          connectionsBySurfaceId: connectionsBySurfaceId,
-          placements: manifests.map(
-            (manifest) => manifest.placement.toSurfacePlacement(),
-          ),
-        ),
+        router:
+            RemotePluginSurfaceInputRouterConnectionExtension.forConnections(
+              surfaces: sharedSurfaces,
+              connectionsBySurfaceId: connectionsBySurfaceId,
+              placements: manifests.map(
+                (manifest) => manifest.placement.toSurfacePlacement(),
+              ),
+            ),
         pluginIdBySurfaceId: pluginIdBySurfaceId,
       );
     } catch (_) {

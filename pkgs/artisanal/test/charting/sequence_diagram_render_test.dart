@@ -138,23 +138,26 @@ sequenceDiagram
     });
 
     test('custom theme applies', () {
-      final output = renderSequenceDiagram('''
+      final output = renderSequenceDiagram(
+        '''
 sequenceDiagram
   participant A
   participant B
   A->>B: Hello
-''', theme: const SequenceDiagramTheme(
-        participantBox: UvStyle(fg: UvColor.rgb(255, 0, 0)),
-        participantLabel: UvStyle(fg: UvColor.rgb(0, 255, 0)),
-        lifeline: UvStyle(fg: UvColor.rgb(0, 0, 255)),
-        request: UvStyle(fg: UvColor.rgb(255, 255, 0)),
-        response: UvStyle(fg: UvColor.rgb(255, 0, 255)),
-        note: UvStyle(fg: UvColor.rgb(100, 100, 100)),
-        fragment: UvStyle(fg: UvColor.rgb(200, 200, 200)),
-        fragmentLabel: UvStyle(fg: UvColor.rgb(150, 150, 150)),
-        group: UvStyle(fg: UvColor.rgb(50, 50, 50)),
-        rect: UvStyle(fg: UvColor.rgb(30, 30, 30)),
-      ));
+''',
+        theme: const SequenceDiagramTheme(
+          participantBox: UvStyle(fg: UvColor.rgb(255, 0, 0)),
+          participantLabel: UvStyle(fg: UvColor.rgb(0, 255, 0)),
+          lifeline: UvStyle(fg: UvColor.rgb(0, 0, 255)),
+          request: UvStyle(fg: UvColor.rgb(255, 255, 0)),
+          response: UvStyle(fg: UvColor.rgb(255, 0, 255)),
+          note: UvStyle(fg: UvColor.rgb(100, 100, 100)),
+          fragment: UvStyle(fg: UvColor.rgb(200, 200, 200)),
+          fragmentLabel: UvStyle(fg: UvColor.rgb(150, 150, 150)),
+          group: UvStyle(fg: UvColor.rgb(50, 50, 50)),
+          rect: UvStyle(fg: UvColor.rgb(30, 30, 30)),
+        ),
+      );
       expect(output, isNotEmpty);
       expect(output, contains('Hello'));
     });
@@ -251,7 +254,11 @@ sequenceDiagram
           break;
         }
       }
-      expect(foundTopLeft, isTrue, reason: 'should have at least one box corner');
+      expect(
+        foundTopLeft,
+        isTrue,
+        reason: 'should have at least one box corner',
+      );
     });
 
     test('draws participant labels', () {

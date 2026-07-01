@@ -8,7 +8,6 @@ import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
-import 'package:github_cli/github_cli.dart';
 import 'package:github_cli/src/app/app_io.dart';
 import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/utils/text_format.dart';

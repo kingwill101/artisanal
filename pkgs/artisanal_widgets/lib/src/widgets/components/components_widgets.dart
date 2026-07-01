@@ -20,8 +20,7 @@ import 'package:artisanal/scoring.dart'
     show IncrementalScorer, MatchType, ConformalRanker;
 import 'dart:math' as math;
 
-import 'package:artisanal/bubbles.dart'
-    show EchoMode;
+import 'package:artisanal/bubbles.dart' show EchoMode;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart'

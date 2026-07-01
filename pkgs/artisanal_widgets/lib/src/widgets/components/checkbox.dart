@@ -71,8 +71,7 @@ class _CheckboxState extends State<Checkbox> {
     if (_hovered || _focused) boxStyle.bold();
     if (!_enabled) boxStyle.dim();
 
-    final labelStyle = copyStyle(theme.bodyMedium)
-      ..foreground(theme.onSurface);
+    final labelStyle = copyStyle(theme.bodyMedium)..foreground(theme.onSurface);
     if (!_enabled) labelStyle.dim();
 
     final row = Row(

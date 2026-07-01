@@ -27,7 +27,8 @@ enum TextDecorationLayerKey {
     TextDecorationLayerKey.search => textSearchDecorationLayerKey,
     TextDecorationLayerKey.diagnostics => textDiagnosticsDecorationLayerKey,
     TextDecorationLayerKey.lineDefault => textDefaultLineDecorationLayerKey,
-    TextDecorationLayerKey.lineDiagnostics => textDiagnosticsLineDecorationLayerKey,
+    TextDecorationLayerKey.lineDiagnostics =>
+      textDiagnosticsLineDecorationLayerKey,
     TextDecorationLayerKey.lineActive => textActiveLineDecorationLayerKey,
   };
 }
@@ -163,7 +164,11 @@ final class TextLineDecoration {
   }
 }
 
-enum TextDiagnosticSeverity { error, warning, info, hint;
+enum TextDiagnosticSeverity {
+  error,
+  warning,
+  info,
+  hint;
 
   int get rank => switch (this) {
     TextDiagnosticSeverity.error => 3,
@@ -641,8 +646,7 @@ List<TextLineDecoration> textDiagnosticLineDecorationsForDocument({
 
     for (var lineIndex = startLine; lineIndex <= endLine; lineIndex++) {
       final existing = lineSeverities[lineIndex];
-      if (existing == null ||
-          normalized.severity.rank > existing.rank) {
+      if (existing == null || normalized.severity.rank > existing.rank) {
         lineSeverities[lineIndex] = normalized.severity;
       }
     }

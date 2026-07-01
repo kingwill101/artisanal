@@ -500,8 +500,24 @@ final class GhCliClient
       );
     }
     final futures = <Future<Object?>>[
-      _runJson(_searchArgs(scope: scope, query: query, pullRequests: false, limit: limit, page: page)),
-      _runJson(_searchArgs(scope: scope, query: query, pullRequests: true, limit: limit, page: page)),
+      _runJson(
+        _searchArgs(
+          scope: scope,
+          query: query,
+          pullRequests: false,
+          limit: limit,
+          page: page,
+        ),
+      ),
+      _runJson(
+        _searchArgs(
+          scope: scope,
+          query: query,
+          pullRequests: true,
+          limit: limit,
+          page: page,
+        ),
+      ),
     ];
     final results = await Future.wait(futures);
     final issues = ghList(results[0])
@@ -538,7 +554,9 @@ final class GhCliClient
       '--order',
       'desc',
       '--json',
-      (pullRequests ? _overviewPullRequestFields : _overviewIssueFields).join(','),
+      (pullRequests ? _overviewPullRequestFields : _overviewIssueFields).join(
+        ',',
+      ),
     ];
 
     switch (scope.kind) {

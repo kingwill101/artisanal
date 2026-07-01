@@ -18,13 +18,16 @@ abstract final class BrowserTerminalHostServer {
     String? pageHtml,
     required M Function() modelBuilder,
     Object? options,
-  }) => throw UnsupportedError('BrowserTerminalHostServer not available on web');
+  }) =>
+      throw UnsupportedError('BrowserTerminalHostServer not available on web');
 
   /// Stub: not available on web.
-  Uri get pageUri => throw UnsupportedError('BrowserTerminalHostServer not available on web');
+  Uri get pageUri =>
+      throw UnsupportedError('BrowserTerminalHostServer not available on web');
 
   /// Stub: not available on web.
-  Uri get webSocketUri => throw UnsupportedError('BrowserTerminalHostServer not available on web');
+  Uri get webSocketUri =>
+      throw UnsupportedError('BrowserTerminalHostServer not available on web');
 
   /// Stub: not available on web.
   Future<void> close({bool force = false}) =>

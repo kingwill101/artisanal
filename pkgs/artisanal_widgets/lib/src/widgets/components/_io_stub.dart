@@ -17,7 +17,8 @@ class Directory implements FileSystemEntity {
   Future<bool> exists() async => false;
   @override
   Future<FileStat> stat() async => const FileStat._();
-  Stream<FileSystemEntity> list({bool recursive = false}) => const Stream.empty();
+  Stream<FileSystemEntity> list({bool recursive = false}) =>
+      const Stream.empty();
   Future<String> resolveSymbolicLinks() async => path;
   Directory get parent => Directory(path);
 }
@@ -52,9 +53,13 @@ class FileSystemEntityType {
   String toString() => _name;
 
   static const FileSystemEntityType file = FileSystemEntityType._('file');
-  static const FileSystemEntityType directory = FileSystemEntityType._('directory');
+  static const FileSystemEntityType directory = FileSystemEntityType._(
+    'directory',
+  );
   static const FileSystemEntityType link = FileSystemEntityType._('link');
-  static const FileSystemEntityType notFound = FileSystemEntityType._('notFound');
+  static const FileSystemEntityType notFound = FileSystemEntityType._(
+    'notFound',
+  );
 }
 
 /// Stub for [dart:io Platform].

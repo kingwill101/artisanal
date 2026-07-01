@@ -266,5 +266,3 @@ query PullRequestMerge($owner: String!, $name: String!, $number: Int!) {
   }
 }
 ''';
-
-

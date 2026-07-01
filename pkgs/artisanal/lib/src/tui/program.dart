@@ -1116,8 +1116,8 @@ class Program<M extends Model> with HotReloadMixin {
     ProgramHostBinding binding, {
     TuiRenderer? renderer,
   }) : _options = binding.options,
-      _terminal = binding.terminal,
-      _customRenderer = renderer;
+       _terminal = binding.terminal,
+       _customRenderer = renderer;
 
   final M _initialModel;
   final ProgramOptions _options;
@@ -1529,7 +1529,9 @@ class Program<M extends Model> with HotReloadMixin {
           final member = match.group(2)!;
           final location = match.group(3)!;
 
-          platform.stderrWriteln('  ${colored(number, dim)}  ${colored(member, cyan)}');
+          platform.stderrWriteln(
+            '  ${colored(number, dim)}  ${colored(member, cyan)}',
+          );
           platform.stderrWriteln('      ${colored(location, dim)}');
           frameCount++;
         } else {
@@ -1554,8 +1556,7 @@ class Program<M extends Model> with HotReloadMixin {
 
   /// Sets up the terminal and renderer.
   Future<void> _setup() async {
-    _terminal ??=
-        platform.createDefaultTerminal(inputTTY: _options.inputTTY);
+    _terminal ??= platform.createDefaultTerminal(inputTTY: _options.inputTTY);
 
     // Enable raw mode for character-by-character input
     _terminal!.enableRawMode();
@@ -3160,7 +3161,11 @@ class Program<M extends Model> with HotReloadMixin {
         environment: environment,
       );
       if (r != null) {
-        result = ExecResult(exitCode: r.exitCode, stdout: r.stdout, stderr: r.stderr);
+        result = ExecResult(
+          exitCode: r.exitCode,
+          stdout: r.stdout,
+          stderr: r.stderr,
+        );
       } else {
         result = const ExecResult(exitCode: -1, stdout: '', stderr: '');
       }

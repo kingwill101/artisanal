@@ -86,7 +86,7 @@ final class TuiTrace {
   static bool? _testCaptureEnabled;
   static String? _testTagsRaw;
   static DateTime Function()? _testNowProvider;
-  static bool _testOverride = false;
+  static final bool _testOverride = false;
 
   static bool get enabled => false;
   static bool get captureEnabled => false;

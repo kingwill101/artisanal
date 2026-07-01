@@ -93,21 +93,25 @@ class Terminal
         ClearableScreen,
         CloneableScreen,
         CloneAreaScreen {
-  Terminal(
-      {Stream<List<int>>? input,
-      StringSink? output,
-      List<String>? env,
-      bool? isWindows,
-      bool? isTty})
-    : _input = input ?? defaultInput,
-      _output = output ?? defaultOutput,
-      _env = env ?? defaultEnv,
-      _isWindows = isWindows ?? defaultIsWindows,
-      _isTty = isTty ?? defaultIsTty,
-      _buf = Buffer.create(0, 0),
-      capabilities = TerminalCapabilities(env: env ?? defaultEnv) {
-    _renderer = UvTerminalRenderer(_output,
-        env: _env, isTty: _isTty, isWindows: _isWindows);
+  Terminal({
+    Stream<List<int>>? input,
+    StringSink? output,
+    List<String>? env,
+    bool? isWindows,
+    bool? isTty,
+  }) : _input = input ?? defaultInput,
+       _output = output ?? defaultOutput,
+       _env = env ?? defaultEnv,
+       _isWindows = isWindows ?? defaultIsWindows,
+       _isTty = isTty ?? defaultIsTty,
+       _buf = Buffer.create(0, 0),
+       capabilities = TerminalCapabilities(env: env ?? defaultEnv) {
+    _renderer = UvTerminalRenderer(
+      _output,
+      env: _env,
+      isTty: _isTty,
+      isWindows: _isWindows,
+    );
     _reader = TerminalReader(
       CancelReader(_input),
       term: Environ(_env).getenv('TERM'),

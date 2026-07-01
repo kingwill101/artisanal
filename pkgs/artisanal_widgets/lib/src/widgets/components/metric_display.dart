@@ -79,8 +79,7 @@ class MetricDisplay extends StatelessWidget {
         MetricTrend.down => ('▼', theme.error),
         MetricTrend.flat => ('─', theme.muted),
       };
-      final tStyle = copyStyle(Style())
-        ..foreground(trendColor ?? defaultColor);
+      final tStyle = copyStyle(Style())..foreground(trendColor ?? defaultColor);
       children.add(Text(trendChar, style: tStyle));
     }
 

@@ -24,7 +24,10 @@ void main() {
   canvas.height = height;
   canvas.style.width = '${width}px';
   canvas.style.height = '${height}px';
-  renderer.configureViewport(width: width.toDouble(), height: height.toDouble());
+  renderer.configureViewport(
+    width: width.toDouble(),
+    height: height.toDouble(),
+  );
 
   final buffer = Buffer.create(cols, rows, tracksDirty: false);
 
@@ -42,11 +45,20 @@ void main() {
 
 void _writeLabel(Buffer buffer, int y, String text) {
   for (var x = 0; x < text.length && x < buffer.width(); x++) {
-    buffer.setCell(x, y, Cell.asciiStyled(text.codeUnitAt(x), style: const UvStyle(fg: _fg)));
+    buffer.setCell(
+      x,
+      y,
+      Cell.asciiStyled(text.codeUnitAt(x), style: const UvStyle(fg: _fg)),
+    );
   }
 }
 
-void _fillStyledText(Buffer buffer, int y, String text, {required bool styleSpaces}) {
+void _fillStyledText(
+  Buffer buffer,
+  int y,
+  String text, {
+  required bool styleSpaces,
+}) {
   for (var x = 0; x < text.length && x < buffer.width(); x++) {
     final ch = text.codeUnitAt(x);
     final isSpace = ch == 0x20;

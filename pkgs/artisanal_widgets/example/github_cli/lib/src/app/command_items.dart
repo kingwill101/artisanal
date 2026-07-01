@@ -169,7 +169,8 @@ final class GithubDashboardCommandItems {
       ),
       w.CommandPaletteItem(
         label: 'Search PRs & Issues',
-        description: 'Search across open PRs and issues with a free-text query.',
+        description:
+            'Search across open PRs and issues with a free-text query.',
         shortcut: '/',
         group: 'Navigation',
         tags: const ['search', 'find', 'query', 'filter'],

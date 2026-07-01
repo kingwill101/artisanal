@@ -13,8 +13,11 @@ import '../uv/renderer/renderer.dart';
 /// a text glyph. Supports foreground/background colors (16-color, 256-color,
 /// true color), bold, italic, faint, underline, and strikethrough.
 final class CanvasTerminalRenderer extends TerminalRenderer {
-  CanvasTerminalRenderer(this.context,
-      {this.fontSize = 14, this.fontFamily = 'monospace'});
+  CanvasTerminalRenderer(
+    this.context, {
+    this.fontSize = 14,
+    this.fontFamily = 'monospace',
+  });
 
   final web.CanvasRenderingContext2D context;
   final double fontSize;
@@ -150,9 +153,11 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
 
           if (style.underline != UnderlineStyle.none) {
             context.lineWidth = math.max(1.0, scale);
-            context.strokeStyle = (style.underlineColor != null
-                    ? _colorToCss(style.underlineColor!)
-                    : _colorToCss(drawFg)).toJS;
+            context.strokeStyle =
+                (style.underlineColor != null
+                        ? _colorToCss(style.underlineColor!)
+                        : _colorToCss(drawFg))
+                    .toJS;
             context.beginPath();
             context.moveTo(px, py + cellHeight - scale);
             context.lineTo(px + cellWidth, py + cellHeight - scale);
@@ -244,19 +249,29 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
       if (dominant[y] == null) {
         String? above;
         for (var a = y - 1; a >= 0; a--) {
-          if (dominant[a] != null) { above = dominant[a]; break; }
+          if (dominant[a] != null) {
+            above = dominant[a];
+            break;
+          }
         }
         String? below;
         for (var b = y + 1; b < height; b++) {
-          if (dominant[b] != null) { below = dominant[b]; break; }
+          if (dominant[b] != null) {
+            below = dominant[b];
+            break;
+          }
         }
         if (above != null && above == below) {
           final top = (y * _cellHeight * scale).roundToDouble();
           final bottom = ((y + 1) * _cellHeight * scale).roundToDouble();
           final rowW = (width * _cellWidth * scale).roundToDouble();
           context.fillStyle = above.toJS;
-          context.fillRect(0, top, math.max(1, rowW).toDouble(),
-              math.max(1, bottom - top).toDouble());
+          context.fillRect(
+            0,
+            top,
+            math.max(1, rowW).toDouble(),
+            math.max(1, bottom - top).toDouble(),
+          );
           continue; // no per-cell run needed for this row
         }
       }
@@ -370,20 +385,32 @@ final class CanvasTerminalRenderer extends TerminalRenderer {
   }
 
   String _colorToCss(UvColor color) => switch (color) {
-        UvRgb(r: final r, g: final g, b: final b, a: final a) =>
-          'rgba($r,$g,$b,${a / 255})',
-        UvBasic16(:final index, :final bright) => _basic16(index, bright),
-        UvIndexed256(:final index) => _indexed256(index),
-      };
+    UvRgb(r: final r, g: final g, b: final b, a: final a) =>
+      'rgba($r,$g,$b,${a / 255})',
+    UvBasic16(:final index, :final bright) => _basic16(index, bright),
+    UvIndexed256(:final index) => _indexed256(index),
+  };
 
   static const _basicColors = [
-    '#000000', '#cc0000', '#00cc00', '#cccc00',
-    '#0000cc', '#cc00cc', '#00cccc', '#cccccc',
+    '#000000',
+    '#cc0000',
+    '#00cc00',
+    '#cccc00',
+    '#0000cc',
+    '#cc00cc',
+    '#00cccc',
+    '#cccccc',
   ];
 
   static const _brightColors = [
-    '#555555', '#ff5555', '#55ff55', '#ffff55',
-    '#5555ff', '#ff55ff', '#55ffff', '#ffffff',
+    '#555555',
+    '#ff5555',
+    '#55ff55',
+    '#ffff55',
+    '#5555ff',
+    '#ff55ff',
+    '#55ffff',
+    '#ffffff',
   ];
 
   String _basic16(int index, bool bright) {

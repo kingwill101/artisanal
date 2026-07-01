@@ -1,5 +1,6 @@
 import 'package:artisanal/tui.dart' show Model, Cmd, View, runProgram, Msg;
-import 'package:artisanal/web.dart' show WebTerminalBackend, WebUltravioletRenderer;
+import 'package:artisanal/web.dart'
+    show WebTerminalBackend, WebUltravioletRenderer;
 import 'package:artisanal/terminal.dart' show BackendTerminal;
 import 'package:ultraviolet/web.dart' show CanvasTerminalRenderer;
 import 'package:web/web.dart' as web;

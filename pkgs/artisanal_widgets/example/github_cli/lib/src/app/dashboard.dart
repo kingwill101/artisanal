@@ -212,9 +212,10 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
         (_queue.tabIndex + githubDashboardTabCount - 1) %
             githubDashboardTabCount,
       ),
-      GithubDashboardShortcut.loadNextPage => _queue.isSearchActive
-          ? _detailLoader.loadNextSearchPage()
-          : _dataCoordinator.loadCurrentPage(replace: false),
+      GithubDashboardShortcut.loadNextPage =>
+        _queue.isSearchActive
+            ? _detailLoader.loadNextSearchPage()
+            : _dataCoordinator.loadCurrentPage(replace: false),
       GithubDashboardShortcut.openBrowser => _detailLoader.openSelectedUrl(),
       GithubDashboardShortcut.viewDetails => _detailLoader.openSelectedDetail(),
       GithubDashboardShortcut.viewDiff => _detailLoader.openSelectedDiff(),

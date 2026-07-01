@@ -10,8 +10,9 @@ const _defaultRepo = 'dart-lang/sdk';
 
 void main() async {
   final rawSearch = web.window.location.search;
-  final query = Uri.tryParse(rawSearch.isNotEmpty ? rawSearch : '?')
-      ?.queryParameters;
+  final query = Uri.tryParse(
+    rawSearch.isNotEmpty ? rawSearch : '?',
+  )?.queryParameters;
   final token = (query?['token'] ?? '').trim();
   final repo = (query?['repo'] ?? '').trim();
   final prNumber = (query?['pr'] ?? '').trim();

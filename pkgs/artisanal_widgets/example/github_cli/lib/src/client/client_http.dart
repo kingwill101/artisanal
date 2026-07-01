@@ -10,7 +10,7 @@ import 'json.dart';
 final class GithubHttpClient
     implements GithubDashboardClient, GithubPullRequestDiffStreamingClient {
   GithubHttpClient({required this.token, http.Client? client})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final String token;
   final http.Client _client;
@@ -21,9 +21,9 @@ final class GithubHttpClient
   static const _restBase = 'https://api.github.com';
 
   Map<String, String> get _headers => <String, String>{
-        'Authorization': 'Bearer $token',
-        'Accept': 'application/vnd.github.v3+json',
-      };
+    'Authorization': 'Bearer $token',
+    'Accept': 'application/vnd.github.v3+json',
+  };
 
   Future<Object?> _get(String path) async {
     final uri = Uri.parse('$_restBase$path');
@@ -46,7 +46,10 @@ final class GithubHttpClient
     if (fields != null) {
       response = await _client.post(
         uri,
-        headers: {..._headers, 'Content-Type': 'application/x-www-form-urlencoded'},
+        headers: {
+          ..._headers,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
         body: fields,
       );
     } else {
@@ -172,12 +175,18 @@ final class GithubHttpClient
     for (final error in errorList) {
       final map = ghMap(error);
       if (ghString(map['type']) == 'NOT_FOUND') {
-        final path = ghList(map['path']).map((item) => item.toString()).toList();
-        if (path.length >= 2 && path[0] == 'repository' && path[1] == 'pullRequest') {
+        final path = ghList(
+          map['path'],
+        ).map((item) => item.toString()).toList();
+        if (path.length >= 2 &&
+            path[0] == 'repository' &&
+            path[1] == 'pullRequest') {
           final repo = ghString(variables['name']);
           final owner = ghString(variables['owner']);
           final number = ghInt(variables['number']);
-          final target = owner.isEmpty || repo.isEmpty ? 'the selected repository' : '$owner/$repo';
+          final target = owner.isEmpty || repo.isEmpty
+              ? 'the selected repository'
+              : '$owner/$repo';
           return number > 0
               ? 'Pull request #$number was not found in $target.'
               : 'The requested pull request was not found in $target.';
@@ -224,11 +233,21 @@ final class GithubHttpClient
     final parseIssues = filter != GithubOverviewFilter.reviewRequested;
     if (parseIssues) {
       futures.add(
-        _searchIssues(scope: scope, filter: filter, pullRequests: false, limit: limit),
+        _searchIssues(
+          scope: scope,
+          filter: filter,
+          pullRequests: false,
+          limit: limit,
+        ),
       );
     }
     futures.add(
-      _searchIssues(scope: scope, filter: filter, pullRequests: true, limit: limit),
+      _searchIssues(
+        scope: scope,
+        filter: filter,
+        pullRequests: true,
+        limit: limit,
+      ),
     );
 
     final results = await Future.wait(futures);
@@ -282,7 +301,9 @@ final class GithubHttpClient
     }
 
     query.write('&per_page=$limit');
-    final json = ghMap(await _get('/search/issues?q=${Uri.encodeComponent(query.toString())}'));
+    final json = ghMap(
+      await _get('/search/issues?q=${Uri.encodeComponent(query.toString())}'),
+    );
     final items = ghList(json['items']);
     return items
         .map((item) => _searchItemToGhStyle(ghMap(item)))
@@ -296,15 +317,14 @@ final class GithubHttpClient
     String? after,
   }) async {
     final parts = _repositoryParts(repository);
-    final json = ghMap(await _graphql(
-      issuesPageQuery,
-      <String, Object?>{
+    final json = ghMap(
+      await _graphql(issuesPageQuery, <String, Object?>{
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
         if (after != null) 'after': after,
-      },
-    ));
+      }),
+    );
     final issues = ghMap(ghMap(ghMap(json['data'])['repository'])['issues']);
     final pageInfo = ghMap(issues['pageInfo']);
     return GithubPage<GithubIssueItem>(
@@ -324,15 +344,14 @@ final class GithubHttpClient
     String? after,
   }) async {
     final parts = _repositoryParts(repository);
-    final json = ghMap(await _graphql(
-      pullRequestsPageQuery,
-      <String, Object?>{
+    final json = ghMap(
+      await _graphql(pullRequestsPageQuery, <String, Object?>{
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
         if (after != null) 'after': after,
-      },
-    ));
+      }),
+    );
     final prs = ghMap(ghMap(ghMap(json['data'])['repository'])['pullRequests']);
     final pageInfo = ghMap(prs['pageInfo']);
     return GithubPage<GithubPullRequestItem>(
@@ -351,14 +370,13 @@ final class GithubHttpClient
     required int number,
   }) async {
     final parts = _repositoryParts(repository);
-    final json = ghMap(await _graphql(
-      pullRequestQuery,
-      <String, Object?>{
+    final json = ghMap(
+      await _graphql(pullRequestQuery, <String, Object?>{
         'owner': parts.owner,
         'name': parts.name,
         'number': number,
-      },
-    ));
+      }),
+    );
     final pr = ghMap(ghMap(ghMap(json['data'])['repository'])['pullRequest']);
     return GithubPullRequestItem.fromJson(pr);
   }
@@ -479,14 +497,13 @@ final class GithubHttpClient
     required int number,
   }) async {
     final parts = _repositoryParts(repository);
-    final json = ghMap(await _graphql(
-      pullRequestMergeQuery,
-      <String, Object?>{
+    final json = ghMap(
+      await _graphql(pullRequestMergeQuery, <String, Object?>{
         'owner': parts.owner,
         'name': parts.name,
         'number': number,
-      },
-    ));
+      }),
+    );
     final pr = ghMap(ghMap(ghMap(json['data'])['repository'])['pullRequest']);
     return GithubPullRequestMergeInfo.fromJson(pr);
   }
@@ -544,13 +561,14 @@ final class GithubHttpClient
     };
     if (startLine != null) payload['start_line'] = startLine;
     if (startSide != null) payload['start_side'] = startSide;
-    final json = ghMap(await _post(
-      '/repos/$repository/pulls/$number/comments',
-      body: payload,
-    ));
+    final json = ghMap(
+      await _post('/repos/$repository/pulls/$number/comments', body: payload),
+    );
     final comment = GithubPullRequestReviewComment.fromJson(json);
     if (comment == null) {
-      throw const GhCliException('GitHub API returned an invalid review comment.');
+      throw const GhCliException(
+        'GitHub API returned an invalid review comment.',
+      );
     }
     return comment;
   }
@@ -598,24 +616,18 @@ final class GithubHttpClient
     final mergeMethod = switch (action) {
       GithubPullRequestMergeAction.merge ||
       GithubPullRequestMergeAction.autoMerge ||
-      GithubPullRequestMergeAction.adminMerge =>
-        'merge',
+      GithubPullRequestMergeAction.adminMerge => 'merge',
       GithubPullRequestMergeAction.squash ||
       GithubPullRequestMergeAction.autoSquash ||
-      GithubPullRequestMergeAction.adminSquash =>
-        'squash',
+      GithubPullRequestMergeAction.adminSquash => 'squash',
       GithubPullRequestMergeAction.rebase ||
       GithubPullRequestMergeAction.autoRebase ||
-      GithubPullRequestMergeAction.adminRebase =>
-        'rebase',
+      GithubPullRequestMergeAction.adminRebase => 'rebase',
       GithubPullRequestMergeAction.disableAuto => 'merge', // N/A for REST
     };
-    await _put(
-      '/repos/$repository/pulls/$number/merge',
-      <String, Object?>{
-        'merge_method': mergeMethod,
-      },
-    );
+    await _put('/repos/$repository/pulls/$number/merge', <String, Object?>{
+      'merge_method': mergeMethod,
+    });
   }
 
   @override
@@ -623,10 +635,9 @@ final class GithubHttpClient
     required String repository,
     required int number,
   }) async {
-    await _patch(
-      '/repos/$repository/pulls/$number',
-      <String, Object?>{'state': 'closed'},
-    );
+    await _patch('/repos/$repository/pulls/$number', <String, Object?>{
+      'state': 'closed',
+    });
   }
 
   @override
@@ -635,10 +646,9 @@ final class GithubHttpClient
     required int number,
     required bool isDraft,
   }) async {
-    await _patch(
-      '/repos/$repository/pulls/$number',
-      <String, Object?>{'draft': isDraft},
-    );
+    await _patch('/repos/$repository/pulls/$number', <String, Object?>{
+      'draft': isDraft,
+    });
   }
 
   @override
@@ -655,8 +665,20 @@ final class GithubHttpClient
       );
     }
     final futures = <Future<({List<Object?> items, int totalCount})>>[
-      _searchHttp(scope: scope, query: query, pullRequests: false, limit: limit, page: page),
-      _searchHttp(scope: scope, query: query, pullRequests: true, limit: limit, page: page),
+      _searchHttp(
+        scope: scope,
+        query: query,
+        pullRequests: false,
+        limit: limit,
+        page: page,
+      ),
+      _searchHttp(
+        scope: scope,
+        query: query,
+        pullRequests: true,
+        limit: limit,
+        page: page,
+      ),
     ];
     final results = await Future.wait(futures);
     final hasMore = results.any((r) => r.totalCount > page * limit);
@@ -696,7 +718,9 @@ final class GithubHttpClient
 
     q.write('&per_page=$limit');
     q.write('&page=$page');
-    final json = ghMap(await _get('/search/issues?q=${Uri.encodeComponent(q.toString())}'));
+    final json = ghMap(
+      await _get('/search/issues?q=${Uri.encodeComponent(q.toString())}'),
+    );
     final items = ghList(json['items']);
     final totalCount = ghInt(json['total_count']);
     return (
@@ -744,7 +768,10 @@ final class GithubHttpClient
       '/${scope.kind == GithubDashboardScopeKind.organization ? 'orgs' : 'users'}/${scope.owner}/repos?per_page=$limit&sort=updated&type=all',
     );
     return ghList(raw)
-        .map((item) => GithubRepositorySummary.fromJson(_repoToGhStyle(ghMap(item))))
+        .map(
+          (item) =>
+              GithubRepositorySummary.fromJson(_repoToGhStyle(ghMap(item))),
+        )
         .toList(growable: false);
   }
 
@@ -830,7 +857,9 @@ final class GithubHttpClient
       'url': rest['html_url'],
       if (defaultBranch.isNotEmpty)
         'defaultBranchRef': <String, Object?>{'name': defaultBranch},
-      'stargazerCount': ghInt(rest['stargazers_count'] ?? rest['stargazerCount']),
+      'stargazerCount': ghInt(
+        rest['stargazers_count'] ?? rest['stargazerCount'],
+      ),
       'forkCount': ghInt(rest['forks_count'] ?? rest['forks'] ?? 0),
       'isPrivate': rest['private'] == true,
       'viewerPermission': _permissionToViewerPermission(rest['permissions']),

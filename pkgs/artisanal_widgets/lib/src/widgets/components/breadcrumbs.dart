@@ -28,8 +28,7 @@ class Breadcrumbs extends StatelessWidget {
     final activeStyle = copyStyle(theme.labelMedium)
       ..foreground(theme.onSurface)
       ..bold();
-    final inactiveStyle = copyStyle(theme.labelMedium)
-      ..foreground(theme.muted);
+    final inactiveStyle = copyStyle(theme.labelMedium)..foreground(theme.muted);
 
     return Row(
       gap: gap,

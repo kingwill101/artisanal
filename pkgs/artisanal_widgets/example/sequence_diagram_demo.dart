@@ -227,35 +227,21 @@ sequenceDiagram
             mermaid: example.mermaid,
             diagramTheme: _showTheme
                 ? SequenceDiagramTheme(
-                    participantBox: UvStyle(
-                      fg: UvColor.rgb(134, 225, 200),
-                    ),
-                    participantLabel: UvStyle(
-                      fg: UvColor.rgb(228, 239, 232),
-                    ),
-                    lifeline: UvStyle(
-                      fg: UvColor.rgb(134, 225, 200),
-                    ),
-                    request: UvStyle(
-                      fg: UvColor.rgb(134, 225, 200),
-                    ),
-                    response: UvStyle(
-                      fg: UvColor.rgb(230, 177, 126),
-                    ),
+                    participantBox: UvStyle(fg: UvColor.rgb(134, 225, 200)),
+                    participantLabel: UvStyle(fg: UvColor.rgb(228, 239, 232)),
+                    lifeline: UvStyle(fg: UvColor.rgb(134, 225, 200)),
+                    request: UvStyle(fg: UvColor.rgb(134, 225, 200)),
+                    response: UvStyle(fg: UvColor.rgb(230, 177, 126)),
                     note: UvStyle(
                       fg: UvColor.rgb(215, 229, 221),
                       bg: UvColor.rgb(36, 56, 47),
                     ),
-                    fragment: UvStyle(
-                      fg: UvColor.rgb(154, 184, 169),
-                    ),
+                    fragment: UvStyle(fg: UvColor.rgb(154, 184, 169)),
                     fragmentLabel: UvStyle(
                       fg: UvColor.rgb(154, 184, 169),
                       bg: UvColor.rgb(28, 43, 36),
                     ),
-                    group: UvStyle(
-                      fg: UvColor.rgb(76, 99, 89),
-                    ),
+                    group: UvStyle(fg: UvColor.rgb(76, 99, 89)),
                     rect: UvStyle(
                       fg: UvColor.rgb(180, 180, 180),
                       bg: UvColor.rgb(40, 40, 40),

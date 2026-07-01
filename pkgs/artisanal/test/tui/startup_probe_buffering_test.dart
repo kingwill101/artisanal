@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:artisanal/src/style/color.dart';
 import 'package:artisanal/src/tui/cmd.dart';
-import 'package:artisanal/src/tui/key.dart';
 import 'package:artisanal/src/tui/msg.dart';
 import 'package:artisanal/src/tui/startup_probe.dart';
 import 'package:artisanal/src/tui/terminal.dart';

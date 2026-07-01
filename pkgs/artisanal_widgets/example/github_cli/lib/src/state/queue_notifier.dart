@@ -91,7 +91,11 @@ final class GithubQueueNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  void applySearchResults(String query, GithubOverviewBucket results, bool hasMore) {
+  void applySearchResults(
+    String query,
+    GithubOverviewBucket results,
+    bool hasMore,
+  ) {
     if (_searchQuery != query) return;
     if (_searchPage == 1) {
       _searchResults = results;

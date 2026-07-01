@@ -80,11 +80,7 @@ w.Widget githubWorkQueuePane({
             ? w.ScrollArea(
                 controller: controller,
                 showScrollbar: true,
-                child: _emptyQueue(
-                  theme,
-                  tabIndex,
-                  searchQuery: searchQuery,
-                ),
+                child: _emptyQueue(theme, tabIndex, searchQuery: searchQuery),
               )
             : w.Scrollbar(
                 controller: controller,
@@ -182,10 +178,10 @@ w.Widget _queueHeader(
     final statusText = searchLoading
         ? 'searching...'
         : searchPageLoading
-            ? 'loading page...'
-            : searchHasMore
-                ? 'page $searchPage · n more'
-                : 'page $searchPage done';
+        ? 'loading page...'
+        : searchHasMore
+        ? 'page $searchPage · n more'
+        : 'page $searchPage done';
     return w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
@@ -204,8 +200,7 @@ w.Widget _queueHeader(
             ),
           ],
         ),
-        if (searchError != null)
-          w.Text(searchError, style: errorStyle),
+        if (searchError != null) w.Text(searchError, style: errorStyle),
         w.Text(
           searchQuery,
           style: theme.bodySmall.copy()..foreground(theme.muted),
@@ -262,10 +257,7 @@ w.Widget _emptyQueue(w.Theme theme, int tabIndex, {String? searchQuery}) {
   if (searchQuery != null) {
     return w.PanelBox(
       title: 'Empty',
-      child: w.Text(
-        'No results for "$searchQuery".',
-        style: theme.bodyMedium,
-      ),
+      child: w.Text('No results for "$searchQuery".', style: theme.bodyMedium),
     );
   }
   final label = switch (tabIndex) {

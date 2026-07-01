@@ -132,8 +132,7 @@ class ProgressIndicator extends StatelessWidget {
     // Build border-wrapped bar.
     String bar;
     if (showBorder && (borderLeft.isNotEmpty || borderRight.isNotEmpty)) {
-      final bStyle = copyStyle(Style())
-        ..foreground(borderColor ?? theme.muted);
+      final bStyle = copyStyle(Style())..foreground(borderColor ?? theme.muted);
       final left = borderLeft.isNotEmpty ? bStyle.render(borderLeft) : '';
       final right = borderRight.isNotEmpty ? bStyle.render(borderRight) : '';
       bar = '$left$barContent$right';

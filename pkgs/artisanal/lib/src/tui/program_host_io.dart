@@ -23,20 +23,19 @@ ProgramHost jsonChannelHost({
     useTabs: false,
     useBackspace: true,
   ),
-}) =>
-    ProgramHost.backend(
-      JsonTerminalBackend(
-        sendMessage: sendMessage,
-        inboundMessages: inboundMessages,
-        flushMessages: flushMessages,
-        closeTransport: closeTransport,
-        initialSize: initialSize,
-        supportsAnsi: supportsAnsi,
-        isTerminal: isTerminal,
-        colorProfile: colorProfile,
-        movementCaps: movementCaps,
-      ),
-    );
+}) => ProgramHost.backend(
+  JsonTerminalBackend(
+    sendMessage: sendMessage,
+    inboundMessages: inboundMessages,
+    flushMessages: flushMessages,
+    closeTransport: closeTransport,
+    initialSize: initialSize,
+    supportsAnsi: supportsAnsi,
+    isTerminal: isTerminal,
+    colorProfile: colorProfile,
+    movementCaps: movementCaps,
+  ),
+);
 
 /// Creates a [ProgramHost] backed by a WebSocket using the JSON bridge protocol.
 ProgramHost webSocketHost(
@@ -50,18 +49,17 @@ ProgramHost webSocketHost(
     useBackspace: true,
   ),
   bool closeSocketOnDispose = true,
-}) =>
-    ProgramHost.backend(
-      WebSocketTerminalBackend(
-        socket,
-        initialSize: initialSize,
-        supportsAnsi: supportsAnsi,
-        isTerminal: isTerminal,
-        colorProfile: colorProfile,
-        movementCaps: movementCaps,
-        closeSocketOnDispose: closeSocketOnDispose,
-      ),
-    );
+}) => ProgramHost.backend(
+  WebSocketTerminalBackend(
+    socket,
+    initialSize: initialSize,
+    supportsAnsi: supportsAnsi,
+    isTerminal: isTerminal,
+    colorProfile: colorProfile,
+    movementCaps: movementCaps,
+    closeSocketOnDispose: closeSocketOnDispose,
+  ),
+);
 
 /// Creates a [ProgramHost] backed by a raw Socket for remote or shell-mode terminals.
 ProgramHost socketHost(
@@ -70,13 +68,12 @@ ProgramHost socketHost(
   bool supportsAnsi = true,
   ColorProfile colorProfile = ColorProfile.trueColor,
   bool closeSocketOnDispose = true,
-}) =>
-    ProgramHost.backend(
-      SocketTerminalBackend(
-        socket,
-        initialSize: initialSize,
-        supportsAnsi: supportsAnsi,
-        colorProfile: colorProfile,
-        closeSocketOnDispose: closeSocketOnDispose,
-      ),
-    );
+}) => ProgramHost.backend(
+  SocketTerminalBackend(
+    socket,
+    initialSize: initialSize,
+    supportsAnsi: supportsAnsi,
+    colorProfile: colorProfile,
+    closeSocketOnDispose: closeSocketOnDispose,
+  ),
+);

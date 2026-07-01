@@ -6,7 +6,8 @@ import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyBinding, KeyMsg, KeyMap;
 import 'package:artisanal/widgets.dart';
 
-import 'text_area_controller_core_bridge.dart' show TextAreaControllerCoreBridge;
+import 'text_area_controller_core_bridge.dart'
+    show TextAreaControllerCoreBridge;
 
 /// A higher-level editor surface built on top of [TextArea].
 ///

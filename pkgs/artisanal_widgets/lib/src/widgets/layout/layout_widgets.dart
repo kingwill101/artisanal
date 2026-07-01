@@ -22,7 +22,8 @@ import '_io_stub.dart'
     if (dart.library.io) '_io_impl.dart'
     show File, HttpClient, HttpHeaders, Platform;
 import '_isolate_stub.dart'
-    if (dart.library.io) '_isolate_impl.dart' as dart_isolate;
+    if (dart.library.io) '_isolate_impl.dart'
+    as dart_isolate;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/uv.dart'

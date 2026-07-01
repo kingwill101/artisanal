@@ -159,15 +159,15 @@ Future<void> runWidgetAppInBrowser<M extends /* Model */ Object>(
 }) async {
   // 1. Set up canvas
   final canvas = options.canvasId != null
-      ? (web.document.getElementById(options.canvasId!) as web.HTMLCanvasElement)
+      ? (web.document.getElementById(options.canvasId!)
+            as web.HTMLCanvasElement)
       : web.document.createElement('canvas') as web.HTMLCanvasElement;
 
   if (options.appendToBody && canvas.parentNode == null) {
     web.document.body!.appendChild(canvas);
   }
 
-  final context =
-      canvas.getContext('2d') as web.CanvasRenderingContext2D;
+  final context = canvas.getContext('2d') as web.CanvasRenderingContext2D;
 
   final canvasRenderer = CanvasTerminalRenderer(
     context,
@@ -179,9 +179,7 @@ Future<void> runWidgetAppInBrowser<M extends /* Model */ Object>(
   _resizeCanvasToTerminal(canvas, canvasRenderer, initialSize);
 
   // 2. Set up backend
-  final backend = WebTerminalBackend(
-    initialSize: initialSize,
-  );
+  final backend = WebTerminalBackend(initialSize: initialSize);
   final terminal = BackendTerminal(backend);
 
   // 3. Create the UV->canvas renderer
@@ -248,7 +246,8 @@ Future<void> runWidgetAppInBrowser<M extends /* Model */ Object>(
     if (activeMouseButton < 0) return;
     event.preventDefault();
     final position = _mouseCellPosition(mouse, canvas, canvasRenderer);
-    final cb = 32 + _mouseButtonCode(activeMouseButton) + _mouseModifiers(mouse);
+    final cb =
+        32 + _mouseButtonCode(activeMouseButton) + _mouseModifiers(mouse);
     backend.addInput(
       _encodeMouseEvent(
         cb: cb,
