@@ -244,6 +244,9 @@ print(compressed);
 Inline mode renders a bounded TUI region on the terminal's primary screen
 instead of switching to the alternate screen buffer.
 
+For a complete guide to scrollback-preserving command dashboards, child-process
+logs, and widget-based inline panels, see [INLINE_TUI.md](INLINE_TUI.md).
+
 ```dart
 await runProgram(
   const StatusModel(),
