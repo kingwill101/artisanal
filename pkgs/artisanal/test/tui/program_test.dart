@@ -467,14 +467,10 @@ class MockTerminal implements TuiTerminal {
   }
 
   @override
-  void restoreCursor() {
-    // TODO: implement restoreCursor
-  }
+  void restoreCursor() {}
 
   @override
-  void saveCursor() {
-    // TODO: implement saveCursor
-  }
+  void saveCursor() {}
 }
 
 final class _NonTerminalMockTerminal extends MockTerminal {

@@ -3,7 +3,6 @@
 /// Web stub for `evidence_impl.dart` — no-op evidence logger.
 library;
 
-
 import 'dart:convert';
 
 /// A decoded evidence event line.

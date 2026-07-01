@@ -3,9 +3,8 @@ import 'dart:io' as io;
 import 'package:artisanal/args.dart' show ArgResults, CommandRunner;
 import 'package:artisanal/hosts.dart' show ProgramHost;
 import 'package:artisanal/runtime.dart' show ProgramOptions;
-import 'package:artisanal_widgets/widgets.dart' show ImageAutoMode, WidgetApp;
-import 'package:artisanal_widgets/src/widgets/app/run_app.dart'
-    show defaultWidgetProgramOptions, runWidgetApp;
+import 'package:artisanal_widgets/widgets.dart'
+    show ImageAutoMode, WidgetApp, defaultWidgetProgramOptions, runWidgetApp;
 
 import '../client/client_cli.dart';
 import 'compile_time_flags.dart';

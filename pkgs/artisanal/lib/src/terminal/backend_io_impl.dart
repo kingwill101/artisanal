@@ -334,7 +334,9 @@ class SocketTerminalBackend implements TerminalBackend {
     if (_disposed) return;
     try {
       await socket.flush();
-    } on StateError {}
+    } on StateError {
+      //ignore
+    }
   }
 
   @override
