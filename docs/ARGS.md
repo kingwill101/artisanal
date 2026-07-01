@@ -111,6 +111,8 @@ Hello, John!
 
 Artisanal can automatically generate shell completion scripts for your CLI. This
 is enabled by default on every `CommandRunner` — no extra setup required.
+You do not need to add a `completion` command, read `COMP_LINE`, or call the
+completion parser from your app.
 
 ### How It Works
 
@@ -138,8 +140,9 @@ eval "$(dart run bin/myapp.dart --completion-script)"
 After adding to your rc file, restart your shell or `source ~/.bashrc` /
 `source ~/.zshrc`.
 
-Alternatively, call `ShellCompleter.generate('myapp')` from Dart to embed the
-script in a release artifact or installer.
+Most apps never call completion APIs directly. For installers or release
+tooling, `ShellCompleter.generate('myapp')` can produce the same script without
+constructing a runner.
 
 ### Opting Out
 
@@ -148,6 +151,25 @@ Disable completion per runner if you need to:
 ```dart
 final runner = CommandRunner('myapp', 'My Application', enableShellCompletion: false);
 ```
+
+### Unknown Command Fallbacks
+
+Shim-style CLIs sometimes need to delegate unknown commands to another
+executable. Use `unknownCommandFallback` for that case instead of pre-parsing
+the argument list before `CommandRunner.run`.
+
+```dart
+final runner = CommandRunner<void>(
+  'flutter-cli',
+  'Flutter CLI shim',
+  unknownCommandFallback: (args) async {
+    await runExternalFlutter(args);
+  },
+);
+```
+
+The fallback runs only after the runner has handled built-in completion
+requests, so `completion -- ...` and `--completion-script` remain automatic.
 
 ### What Gets Completed
 
@@ -160,7 +182,7 @@ The completer walks your full command tree:
 
 All of the above respect the same `namespaceSeparator` grouping your help already uses.
 
-### Programmatic Access
+### Advanced Programmatic Access
 
 ```dart
 import 'package:artisanal/args.dart';
@@ -168,7 +190,8 @@ import 'package:artisanal/args.dart';
 final runner = CommandRunner('myapp', 'My Application');
 runner.addCommand(ServeCommand());
 
-// Lazy-initialized completer bound to this runner's arg tree
+// Lazy-initialized completer bound to this runner's arg tree.
+// Most applications do not need to call this directly.
 final completer = runner.shellCompleter;
 
 // Generate a standalone completion script

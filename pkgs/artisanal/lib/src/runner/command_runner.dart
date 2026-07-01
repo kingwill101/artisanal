@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' as dartio;
 
 import 'package:args/command_runner.dart' as args_pkg;
@@ -26,6 +27,9 @@ typedef ReadLine = String? Function();
 
 /// Callback for setting the process exit code.
 typedef ExitCodeSetter = void Function(int code);
+
+/// Callback for handling arguments that do not match any top-level command.
+typedef UnknownCommandFallback<T> = FutureOr<T> Function(List<String> args);
 
 /// An Artisanal-inspired wrapper around `package:args` [CommandRunner].
 ///
@@ -56,6 +60,8 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// - [ansi]: Force ANSI output on/off (auto-detected by default).
   /// - [helpColorScheme]: Color scheme for help output (default: [HelpColorScheme.default_]).
   /// - [enableShellCompletion]: Enable automatic shell tab-completion (default: true).
+  /// - [unknownCommandFallback]: Optional fallback for shim-style CLIs that
+  ///   delegate unknown commands to another executable.
   CommandRunner(
     super.executableName,
     super.description, {
@@ -72,6 +78,7 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     ExitCodeSetter? setExitCode,
     super.usageLineLength,
     HelpColorScheme? helpColorScheme,
+    this.unknownCommandFallback,
   }) : _out = out ?? ((line) => dartio.stdout.writeln(line)),
        _err = err ?? ((line) => dartio.stderr.writeln(line)),
        _outRaw = outRaw ?? ((text) => dartio.stdout.write(text)),
@@ -103,6 +110,13 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// Defaults to `true`. Set to `false` to disable the built-in completion
   /// handler that responds to `completion --` invocations from the shell.
   final bool enableShellCompletion;
+
+  /// Optional handler for unknown top-level commands.
+  ///
+  /// This is useful for shim-style CLIs that wrap another executable. The
+  /// fallback runs only after built-in completion handling has had a chance to
+  /// respond, so completion remains automatic for the Artisanal command tree.
+  final UnknownCommandFallback<T>? unknownCommandFallback;
 
   final Write _out;
   final Write _err;
@@ -182,6 +196,10 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
         (compArgs, compLine, compPoint) =>
             shellCompleter.complete(compArgs, compLine, compPoint),
       );
+    }
+
+    if (_shouldRunUnknownCommandFallback(argsList)) {
+      return await unknownCommandFallback!(List.unmodifiable(argsList));
     }
 
     final ansi = _resolveAnsiForArgs(argsList);
@@ -305,6 +323,16 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     }
     unique.sort((a, b) => a.name.compareTo(b.name));
     return unique;
+  }
+
+  bool _shouldRunUnknownCommandFallback(List<String> args) {
+    if (unknownCommandFallback == null || args.isEmpty) return false;
+
+    final first = args.first;
+    if (first.startsWith('-')) return false;
+    if (commands.containsKey(first)) return false;
+
+    return true;
   }
 
   void _printUsageError(args_pkg.UsageException e) {

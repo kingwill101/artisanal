@@ -2,12 +2,18 @@ import 'package:artisanal/args.dart';
 import 'package:test/test.dart';
 
 class _NoopCommand extends Command<void> {
-  _NoopCommand(this._name, this._description, {void Function()? configure}) {
+  _NoopCommand(
+    this._name,
+    this._description, {
+    void Function()? configure,
+    Future<void> Function()? onRun,
+  }) : _onRun = onRun {
     configure?.call();
   }
 
   final String _name;
   final String _description;
+  final Future<void> Function()? _onRun;
 
   @override
   String get name => _name;
@@ -16,7 +22,9 @@ class _NoopCommand extends Command<void> {
   String get description => _description;
 
   @override
-  Future<void> run() async {}
+  Future<void> run() async {
+    await _onRun?.call();
+  }
 }
 
 void main() {
@@ -194,15 +202,95 @@ void main() {
           setExitCode: (_) {},
         );
 
-        final doThing = _NoopCommand('do-thing', 'Does a thing.');
+        final doThing = _NoopCommand(
+          'do-thing',
+          'Does a thing.',
+          onRun: () async {
+            ran = true;
+          },
+        );
         doThing.argParser.addFlag('force', negatable: false, help: 'Force it.');
         runner.addCommand(doThing);
 
         await runner.run(['do-thing', '--force', '--completion-script']);
 
-        // The --completion-script flag short-circuits before command dispatch.
+        expect(ran, isFalse);
       },
     );
+
+    test('--completion-script flag exits before unknown fallback', () async {
+      final out = StringBuffer();
+      List<String>? fallbackArgs;
+
+      final runner = CommandRunner<void>(
+        'mytool',
+        'My tool.',
+        ansi: false,
+        out: (line) => out.writeln(line),
+        err: (_) {},
+        setExitCode: (_) {},
+        unknownCommandFallback: (args) async {
+          fallbackArgs = args;
+        },
+      );
+
+      await runner.run(['unknown', '--completion-script']);
+
+      expect(fallbackArgs, isNull);
+      expect(out.toString(), contains('mytool'));
+      expect(out.toString(), contains('completion'));
+    });
+
+    test('unknownCommandFallback handles unknown top-level commands', () async {
+      List<String>? fallbackArgs;
+
+      final runner = CommandRunner<void>(
+        'mytool',
+        'My tool.',
+        ansi: false,
+        out: (_) {},
+        err: (_) {},
+        setExitCode: (_) {},
+        unknownCommandFallback: (args) async {
+          fallbackArgs = args;
+        },
+      )..addCommand(_NoopCommand('known', 'Known command.'));
+
+      await runner.run(['external', '--flag']);
+
+      expect(fallbackArgs, ['external', '--flag']);
+    });
+
+    test('unknownCommandFallback does not intercept known commands', () async {
+      var ranKnown = false;
+      List<String>? fallbackArgs;
+
+      final runner =
+          CommandRunner<void>(
+            'mytool',
+            'My tool.',
+            ansi: false,
+            out: (_) {},
+            err: (_) {},
+            setExitCode: (_) {},
+            unknownCommandFallback: (args) async {
+              fallbackArgs = args;
+            },
+          )..addCommand(
+            _NoopCommand(
+              'known',
+              'Known command.',
+              onRun: () async {
+                ranKnown = true;
+              },
+            ),
+          );
+
+      await runner.run(['known']);
+
+      expect(ranKnown, isTrue);
+      expect(fallbackArgs, isNull);
+    });
 
     test('shellCompleter getter returns an instance', () {
       final runner = CommandRunner<void>(

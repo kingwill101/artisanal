@@ -16,18 +16,7 @@ import 'commands/init.dart';
 
 const flutterCliVersion = '0.4.10';
 
-const _knownCommands = {'devices', 'run', 'build', 'test', 'init', 'help'};
-
 Future<void> runFlutterCli(List<String> args) async {
-  if (args.isNotEmpty &&
-      !_knownCommands.contains(args.first) &&
-      args.first != '-h' &&
-      args.first != '--help' &&
-      args.first != '-V' &&
-      args.first != '--version') {
-    await runExternalCommand(args);
-    return;
-  }
   await FlutterCliRunner().run(args);
 }
 
@@ -48,6 +37,7 @@ final class FlutterCliRunner extends CommandRunner<void> {
     : super(
         'flutter-cli',
         'A modern Flutter CLI with seamless USB→WiFi hot reload',
+        unknownCommandFallback: runExternalCommand,
       ) {
     argParser.addFlag(
       'version',

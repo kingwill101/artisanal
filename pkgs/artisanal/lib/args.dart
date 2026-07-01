@@ -67,6 +67,7 @@ export 'src/runner/command_runner.dart'
     show
         CommandRunner,
         ShellCompleter,
+        UnknownCommandFallback,
         ArgParser,
         ArgParserException,
         ArgResults,
