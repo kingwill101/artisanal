@@ -10,6 +10,7 @@
 /// Press q to quit, space to pause/resume.
 library;
 
+// tui:allow-stdout — standalone inline CLI utility used for diagnostics.
 import 'dart:math';
 import 'dart:io';
 

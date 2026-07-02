@@ -237,7 +237,7 @@ void main() {
           totalPages: 5,
           type: PaginationType.dots,
         );
-        expect(paginator.view(), '•○○○○');
+        expect(paginator.view(), '●○○○○');
       });
 
       test('renders dots with custom characters', () {
@@ -257,7 +257,7 @@ void main() {
           totalPages: 1,
           type: PaginationType.dots,
         );
-        expect(paginator.view(), '•');
+        expect(paginator.view(), '●');
       });
     });
 

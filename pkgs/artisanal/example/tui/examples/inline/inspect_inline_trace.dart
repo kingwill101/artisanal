@@ -1,3 +1,4 @@
+// tui:allow-stdout — standalone CLI tool, not a TUI program.
 /// Inspect raw inline renderer trace events captured by pinned_build_dashboard.
 ///
 /// Run:
