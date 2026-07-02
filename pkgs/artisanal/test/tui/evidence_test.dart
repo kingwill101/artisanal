@@ -283,15 +283,13 @@ void main() {
       'date-based evidence path can be driven by an injected clock',
       () async {
         final tempDir = await Directory.systemTemp.createTemp('tui-evidence-');
-        final previousCwd = Directory.current;
-        Directory.current = tempDir.path;
         addTearDown(() async {
-          Directory.current = previousCwd.path;
           await tempDir.delete(recursive: true);
         });
 
         TuiEvidence.configureForTest(
           enabled: true,
+          baseDirectory: tempDir.path,
           nowProvider: () => DateTime.utc(2026, 3, 29, 8, 9, 10, 123, 456),
         );
         addTearDown(() {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:json_schema_builder/json_schema_builder.dart';
+import 'package:path/path.dart' as p;
 
 import 'remote_surface_layers.dart';
 
@@ -101,6 +102,9 @@ final class RemotePluginManifest {
   /// Resolves [entrypoint] relative to the manifest file when needed.
   String resolveEntrypoint({String? currentWorkingDirectory}) {
     final manifestPath = this.manifestPath;
+    if (p.isAbsolute(entrypoint)) {
+      return p.normalize(entrypoint);
+    }
     if (manifestPath == null) {
       return io.Directory(
         currentWorkingDirectory ?? io.Directory.current.path,

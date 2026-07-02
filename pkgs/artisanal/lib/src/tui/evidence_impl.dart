@@ -41,6 +41,7 @@ final class TuiEvidence {
   static bool? _testCaptureFrames;
   static String? _testPath;
   static String? _testRunId;
+  static String? _testBaseDirectory;
   static DateTime Function()? _testNowProvider;
   static bool _testOverride = false;
   static bool _resolved = false;
@@ -57,6 +58,7 @@ final class TuiEvidence {
     bool captureFrames = false,
     String? path,
     String? runId,
+    String? baseDirectory,
     DateTime Function()? nowProvider,
     bool clear = false,
   }) {
@@ -65,6 +67,7 @@ final class TuiEvidence {
     _testCaptureFrames = clear ? false : captureFrames;
     _testPath = clear ? null : path;
     _testRunId = clear ? null : runId;
+    _testBaseDirectory = clear ? null : baseDirectory;
     _testNowProvider = clear ? null : nowProvider;
     _resolved = false;
     close();
@@ -76,6 +79,7 @@ final class TuiEvidence {
     _testCaptureFrames = null;
     _testPath = null;
     _testRunId = null;
+    _testBaseDirectory = null;
     _testNowProvider = null;
     _resolved = false;
     close();
@@ -322,9 +326,10 @@ final class TuiEvidence {
         'T${now.hour.toString().padLeft(2, '0')}'
         '-${now.minute.toString().padLeft(2, '0')}'
         '-${now.second.toString().padLeft(2, '0')}';
-    final dir = io.Directory('evidence');
+    final baseDir = _testBaseDirectory ?? io.Directory.current.path;
+    final dir = io.Directory('$baseDir/evidence');
     if (!dir.existsSync()) dir.createSync(recursive: true);
-    return 'evidence/artisanal-${now.microsecond}-$ts.jsonl';
+    return '${dir.path}/artisanal-${now.microsecond}-$ts.jsonl';
   }
 
   static bool _isEnabledFlag(String value) {

@@ -89,6 +89,7 @@ final class TuiTrace {
 
   static bool? _testEnabled;
   static String? _testPath;
+  static String? _testBaseDirectory;
   static bool? _testCaptureEnabled;
   static String? _testTagsRaw;
   static DateTime Function()? _testNowProvider;
@@ -118,6 +119,7 @@ final class TuiTrace {
   static void configureForTest({
     bool? enabled,
     String? path,
+    String? baseDirectory,
     bool captureEnabled = false,
     String? tagsRaw,
     DateTime Function()? nowProvider,
@@ -126,6 +128,7 @@ final class TuiTrace {
     _testOverride = true;
     _testEnabled = enabled;
     _testPath = path;
+    _testBaseDirectory = baseDirectory;
     _testCaptureEnabled = captureEnabled ? true : null;
     _testTagsRaw = tagsRaw;
     _testNowProvider = nowProvider;
@@ -136,6 +139,7 @@ final class TuiTrace {
     _testOverride = false;
     _testEnabled = null;
     _testPath = null;
+    _testBaseDirectory = null;
     _testCaptureEnabled = null;
     _testTagsRaw = null;
     _testNowProvider = null;
@@ -331,9 +335,10 @@ final class TuiTrace {
         'T${now.hour.toString().padLeft(2, '0')}'
         '-${now.minute.toString().padLeft(2, '0')}'
         '-${now.second.toString().padLeft(2, '0')}';
-    final dir = io.Directory('traces');
+    final baseDir = _testBaseDirectory ?? io.Directory.current.path;
+    final dir = io.Directory('$baseDir/traces');
     if (!dir.existsSync()) dir.createSync(recursive: true);
-    return 'traces/artisanal-$ts.log';
+    return '${dir.path}/artisanal-$ts.log';
   }
 
   static int? _parseTimestampUs(String prefix) {

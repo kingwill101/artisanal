@@ -83,6 +83,7 @@ final class TuiTrace {
 
   static bool? _testEnabled;
   static String? _testPath;
+  static String? _testBaseDirectory;
   static bool? _testCaptureEnabled;
   static String? _testTagsRaw;
   static DateTime Function()? _testNowProvider;
@@ -95,6 +96,7 @@ final class TuiTrace {
   static void configureForTest({
     bool? enabled,
     String? path,
+    String? baseDirectory,
     bool captureEnabled = false,
     String? tagsRaw,
     DateTime Function()? nowProvider,
