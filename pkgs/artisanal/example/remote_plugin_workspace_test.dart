@@ -1,10 +1,21 @@
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
+
 final String _artisanalRootDirectory = io.Directory.current.path;
+final _kernelCache = RemotePluginKernelCache(packageRoot: _artisanalRootDirectory);
+final String _precompiledWorkspaceDirectory = p.join(
+  _artisanalRootDirectory,
+  '.dart_tool',
+  'artisanal',
+  'precompiled-plugins',
+  'remote-plugin-workspace',
+);
 
 void main() {
   late _CompiledWorkspaceHarness harness;
@@ -190,13 +201,15 @@ final class _CompiledWorkspaceHarness {
         'host',
         'main.dart',
       ]);
-      final hostKernelPath = p.join(tempDirectory.path, 'workspace_host.dill');
-      await _compileKernel(hostSource, hostKernelPath);
+      final hostKernelPath = await _kernelCache.ensureKernelSnapshot(
+        entrypointPath: hostSource,
+        outputPath: p.join(_precompiledWorkspaceDirectory, 'host.dill'),
+      );
 
-      final compiledPluginDirectory = io.Directory(
+      final manifestDirectory = io.Directory(
         p.join(tempDirectory.path, 'plugins'),
       );
-      await compiledPluginDirectory.create(recursive: true);
+      await manifestDirectory.create(recursive: true);
 
       for (final plugin in const <(String, String)>[
         ('activity', 'activity_plugin.dart'),
@@ -210,11 +223,18 @@ final class _CompiledWorkspaceHarness {
           'plugins',
           plugin.$2,
         ]);
-        final outputPath = p.join(
-          compiledPluginDirectory.path,
+        final outputPath = await _kernelCache.ensureKernelSnapshot(
+          entrypointPath: sourcePath,
+          outputPath: p.join(
+            _precompiledWorkspaceDirectory,
+            '${plugin.$1}.dill',
+          ),
+        );
+        final compiledPluginPath = p.join(
+          manifestDirectory.path,
           '${plugin.$1}.dill',
         );
-        await _compileKernel(sourcePath, outputPath);
+        await io.File(outputPath).copy(compiledPluginPath);
 
         final manifestSource = io.File(
           _resolveArtisanalPath(<String>[
@@ -228,9 +248,9 @@ final class _CompiledWorkspaceHarness {
         final manifestJson =
             jsonDecode(await manifestSource.readAsString())
                 as Map<String, Object?>;
-        manifestJson['entrypoint'] = '${plugin.$1}.dill';
+        manifestJson['entrypoint'] = p.basename(compiledPluginPath);
         final manifestTarget = io.File(
-          p.join(compiledPluginDirectory.path, '${plugin.$1}.plugin.json'),
+          p.join(manifestDirectory.path, '${plugin.$1}.plugin.json'),
         );
         await manifestTarget.writeAsString(
           const JsonEncoder.withIndent('  ').convert(manifestJson),
@@ -240,7 +260,7 @@ final class _CompiledWorkspaceHarness {
       return _CompiledWorkspaceHarness._(
         tempDirectory: tempDirectory,
         hostKernelPath: hostKernelPath,
-        pluginDirectoryPath: compiledPluginDirectory.path,
+        pluginDirectoryPath: manifestDirectory.path,
       );
     } catch (_) {
       await tempDirectory.delete(recursive: true);
@@ -260,21 +280,6 @@ final class _CompiledWorkspaceHarness {
   }
 
   Future<void> dispose() => tempDirectory.delete(recursive: true);
-}
-
-Future<void> _compileKernel(String sourcePath, String outputPath) async {
-  final result = await io.Process.run(io.Platform.resolvedExecutable, <String>[
-    'compile',
-    'kernel',
-    sourcePath,
-    '-o',
-    outputPath,
-  ], workingDirectory: _artisanalRootDirectory);
-  if (result.exitCode != 0) {
-    throw StateError(
-      'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',
-    );
-  }
 }
 
 String _resolveArtisanalPath(List<String> relativeSegments) {

@@ -57,5 +57,9 @@ jobs:
       - name: Get dependencies
         run: dart pub get
 
+      - name: Precompile remote plugins
+        working-directory: pkgs/artisanal
+        run: dart run tool/precompile_remote_plugins.dart
+
       - name: Test ${{ matrix.package }}
         run: dart test ${{ matrix.package }} -r compact

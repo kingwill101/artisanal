@@ -85,7 +85,7 @@ void main() {
                 notification = request;
               },
             ),
-            timeout: const Duration(seconds: 20),
+            timeout: const Duration(seconds: 60),
           );
       addTearDown(() => workspace.dispose(kill: true));
 

@@ -1,12 +1,21 @@
 import 'dart:convert';
 import 'dart:io' as io;
 
+import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 import '_path_utils.dart';
 
 final String _artisanalRootDirectory = io.Directory.current.path;
+final _kernelCache = RemotePluginKernelCache(packageRoot: _artisanalRootDirectory);
+final String _precompiledSchemaDumpDirectory = p.join(
+  _artisanalRootDirectory,
+  '.dart_tool',
+  'artisanal',
+  'precompiled-plugins',
+  'schema-dump',
+);
 
 void main() {
   late _CompiledSchemaDumpHarness harness;
@@ -90,11 +99,13 @@ final class _CompiledSchemaDumpHarness {
         'tui',
         'remote_plugin_schema_dump.dart',
       ]);
-      final kernelPath = p.join(
-        tempDirectory.path,
-        'remote_plugin_schema_dump.dill',
+      final kernelPath = await _kernelCache.ensureKernelSnapshot(
+        entrypointPath: sourcePath,
+        outputPath: p.join(
+          _precompiledSchemaDumpDirectory,
+          'remote_plugin_schema_dump.dill',
+        ),
       );
-      await _compileKernel(sourcePath, kernelPath);
       return _CompiledSchemaDumpHarness._(
         tempDirectory: tempDirectory,
         kernelPath: kernelPath,
@@ -113,19 +124,4 @@ final class _CompiledSchemaDumpHarness {
   }
 
   Future<void> dispose() => tempDirectory.delete(recursive: true);
-}
-
-Future<void> _compileKernel(String sourcePath, String outputPath) async {
-  final result = await io.Process.run(io.Platform.resolvedExecutable, <String>[
-    'compile',
-    'kernel',
-    sourcePath,
-    '-o',
-    outputPath,
-  ], workingDirectory: _artisanalRootDirectory);
-  if (result.exitCode != 0) {
-    throw StateError(
-      'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',
-    );
-  }
 }
