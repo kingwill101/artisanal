@@ -6,6 +6,8 @@ import 'package:test/test.dart';
 
 import '_path_utils.dart';
 
+final String _artisanalRootDirectory = io.Directory.current.path;
+
 void main() {
   late _CompiledSchemaDumpHarness harness;
 
@@ -107,7 +109,7 @@ final class _CompiledSchemaDumpHarness {
     return io.Process.run(io.Platform.resolvedExecutable, <String>[
       kernelPath,
       ...args,
-    ], workingDirectory: io.Directory.current.path);
+    ], workingDirectory: _artisanalRootDirectory);
   }
 
   Future<void> dispose() => tempDirectory.delete(recursive: true);
@@ -120,7 +122,7 @@ Future<void> _compileKernel(String sourcePath, String outputPath) async {
     sourcePath,
     '-o',
     outputPath,
-  ], workingDirectory: io.Directory.current.path);
+  ], workingDirectory: _artisanalRootDirectory);
   if (result.exitCode != 0) {
     throw StateError(
       'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',

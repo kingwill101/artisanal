@@ -4,6 +4,8 @@ import 'dart:io' as io;
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+final String _artisanalRootDirectory = io.Directory.current.path;
+
 void main() {
   late _CompiledWorkspaceHarness harness;
 
@@ -250,7 +252,7 @@ final class _CompiledWorkspaceHarness {
     return io.Process.run(
       io.Platform.resolvedExecutable,
       <String>[hostKernelPath, ...args],
-      workingDirectory: io.Directory.current.path,
+      workingDirectory: _artisanalRootDirectory,
       environment: <String, String>{
         'ARTISANAL_REMOTE_PLUGIN_WORKSPACE_PLUGIN_DIR': pluginDirectoryPath,
       },
@@ -267,7 +269,7 @@ Future<void> _compileKernel(String sourcePath, String outputPath) async {
     sourcePath,
     '-o',
     outputPath,
-  ], workingDirectory: io.Directory.current.path);
+  ], workingDirectory: _artisanalRootDirectory);
   if (result.exitCode != 0) {
     throw StateError(
       'Failed to compile $sourcePath:\n${result.stdout}\n${result.stderr}',
@@ -276,11 +278,10 @@ Future<void> _compileKernel(String sourcePath, String outputPath) async {
 }
 
 String _resolveArtisanalPath(List<String> relativeSegments) {
-  final currentDirectory = io.Directory.current.path;
   final candidates = <String>[
-    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[_artisanalRootDirectory, ...relativeSegments]),
     p.joinAll(<String>[
-      currentDirectory,
+      _artisanalRootDirectory,
       'pkgs',
       'artisanal',
       ...relativeSegments,

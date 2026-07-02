@@ -2,12 +2,13 @@ import 'dart:io' as io;
 
 import 'package:path/path.dart' as p;
 
+final String _artisanalRootDirectory = io.Directory.current.path;
+
 String resolveArtisanalPath(List<String> relativeSegments) {
-  final currentDirectory = io.Directory.current.path;
   final candidates = <String>[
-    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[_artisanalRootDirectory, ...relativeSegments]),
     p.joinAll(<String>[
-      currentDirectory,
+      _artisanalRootDirectory,
       'pkgs',
       'artisanal',
       ...relativeSegments,

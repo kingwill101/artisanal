@@ -2,6 +2,8 @@ import 'dart:io' as io;
 
 import 'package:path/path.dart' as p;
 
+final String _artisanalRootDirectory = io.Directory.current.path;
+
 final class CompiledPluginFixtures {
   CompiledPluginFixtures._(this._tempDirectory, this._compiledPaths);
 
@@ -45,7 +47,7 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
       final result = await io.Process.run(
         io.Platform.resolvedExecutable,
         <String>['compile', 'kernel', sourcePath, '-o', outputPath],
-        workingDirectory: io.Directory.current.path,
+        workingDirectory: _artisanalRootDirectory,
       );
       if (result.exitCode != 0) {
         throw StateError(
@@ -63,11 +65,10 @@ Future<CompiledPluginFixtures> compilePluginFixtures(
 }
 
 String _resolveArtisanalPath(List<String> relativeSegments) {
-  final currentDirectory = io.Directory.current.path;
   final candidates = <String>[
-    p.joinAll(<String>[currentDirectory, ...relativeSegments]),
+    p.joinAll(<String>[_artisanalRootDirectory, ...relativeSegments]),
     p.joinAll(<String>[
-      currentDirectory,
+      _artisanalRootDirectory,
       'pkgs',
       'artisanal',
       ...relativeSegments,
