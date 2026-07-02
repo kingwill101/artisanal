@@ -51,6 +51,12 @@ void main() {
         expect(output, contains('\x1B[38;5;9m')); // ANSI 256 code 9
         expect(output, contains('Bright'));
       });
+
+      test('default color uses terminal default foreground', () {
+        final output = parser.render('<fg=default>Default</>');
+        expect(output, contains('\x1B[39m'));
+        expect(output, contains('Default'));
+      });
     });
 
     group('background colors', () {

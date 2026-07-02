@@ -271,6 +271,8 @@ void main() {
             .underlineSpaces()
             .strikethroughSpaces()
             .marginBackground(Colors.blue)
+            .whitespaceChars('·')
+            .whitespaceForeground(Colors.red)
             .setString('hello');
 
         final copied = original.copy();
@@ -287,7 +289,9 @@ void main() {
         final other = Style()
             .tabWidth(4)
             .underlineSpaces()
-            .marginBackground(Colors.green);
+            .marginBackground(Colors.green)
+            .whitespaceChars('·')
+            .whitespaceForeground(Colors.cyan);
 
         base.inherit(other);
 
@@ -322,7 +326,9 @@ void main() {
             .padding(2)
             .margin(1)
             .border(Border.thick)
-            .align(HorizontalAlign.right);
+            .align(HorizontalAlign.right)
+            .whitespaceChars('·')
+            .whitespaceForeground(Colors.yellow);
 
         final copied = original.copy();
 
@@ -445,6 +451,17 @@ void main() {
 
         // "Hi" centered in 10 chars = "    Hi    "
         expect(Style.visibleLength(result), equals(10));
+      });
+
+      test('render applies vertical alignment when height is larger', () {
+        final style = Style().height(3).alignVertical(VerticalAlign.center);
+        style.colorProfile = ColorProfile.ascii;
+
+        final result = style.render('Hi');
+        final lines = result.split('\n');
+
+        expect(lines.length, equals(3));
+        expect(lines[1], equals('Hi'));
       });
 
       test('render applies border', () {

@@ -612,26 +612,7 @@ class ConsoleTagParser {
 
   /// Merges two styles, with [override] taking precedence.
   Style _mergeStyles(Style base, Style override) {
-    var result = base.copy();
-
-    // Copy over non-null properties from override
-    // This is a simplified merge - for full inheritance we'd need
-    // to check each property
-    if (override.getForeground != null) {
-      result = result.foreground(override.getForeground!);
-    }
-    if (override.getBackground != null) {
-      result = result.background(override.getBackground!);
-    }
-    if (override.isBold) result = result.bold();
-    if (override.isDim) result = result.faint();
-    if (override.isItalic) result = result.italic();
-    if (override.isUnderline) result = result.underline();
-    if (override.isBlink) result = result.blink();
-    if (override.isInverse) result = result.reverse();
-    if (override.isStrikethrough) result = result.strikethrough();
-
-    return result;
+    return base.copy()..inherit(override);
   }
 
   /// Parses a color string into a Color object.
@@ -663,7 +644,7 @@ class ConsoleTagParser {
       'bright-magenta': AnsiColor(13),
       'bright-cyan': AnsiColor(14),
       'bright-white': AnsiColor(15),
-      'default': AnsiColor(9), // Default foreground
+      'default': DefaultColor(),
     };
 
     if (namedColors.containsKey(lower)) {

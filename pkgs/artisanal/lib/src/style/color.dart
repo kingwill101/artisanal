@@ -108,7 +108,8 @@ class BasicColor extends Color {
   final String value;
 
   /// Whether this is a hex color.
-  bool get isHex => value.startsWith('#') || _isHexString(value);
+  bool get isHex =>
+      _isHexString(value.startsWith('#') ? value.substring(1) : value);
 
   static bool _isHexString(String s) {
     if (s.length != 6 && s.length != 3) return false;
@@ -139,6 +140,10 @@ class BasicColor extends Color {
     bool underline = false,
     bool hasDarkBackground = true,
   }) {
+    if (value.startsWith('#') && !isHex) {
+      throw FormatException('Invalid hex color: $value');
+    }
+
     if (isHex) {
       if (profile == ColorProfile.ascii || profile == ColorProfile.noColor) {
         return '';
@@ -157,7 +162,10 @@ class BasicColor extends Color {
         return '';
       }
 
-      final code = (int.tryParse(value) ?? 0).clamp(0, 255);
+      final code = int.tryParse(value);
+      if (code == null || code < 0 || code > 255) {
+        throw FormatException('Invalid ANSI color: $value');
+      }
 
       // lipgloss v2 parity: prefer 16-color SGR codes when possible.
       // Note: Underline color (SGR 58) does not have 16-color variants.
@@ -208,6 +216,38 @@ class BasicColor extends Color {
 
   @override
   String toString() => 'BasicColor($value)';
+}
+
+/// The terminal default color.
+class DefaultColor extends Color {
+  const DefaultColor();
+
+  @override
+  String toAnsi(
+    ColorProfile profile, {
+    bool background = false,
+    bool underline = false,
+    bool hasDarkBackground = true,
+  }) {
+    if (profile == ColorProfile.ascii || profile == ColorProfile.noColor) {
+      return '';
+    }
+
+    if (underline) return '\x1b[59m';
+    return background ? '\x1b[49m' : '\x1b[39m';
+  }
+
+  @override
+  String toHex() => '';
+
+  @override
+  bool operator ==(Object other) => other is DefaultColor;
+
+  @override
+  int get hashCode => 1;
+
+  @override
+  String toString() => 'DefaultColor()';
 }
 
 /// An explicit ANSI color code (0-255).
@@ -694,6 +734,14 @@ class Colors {
 
   /// Creates a color from RGB values.
   static BasicColor rgb(int r, int g, int b) {
+    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      throw ArgumentError.value(
+        (r, g, b),
+        'rgb',
+        'RGB values must be between 0 and 255',
+      );
+    }
+
     final hex =
         '#${r.toRadixString(16).padLeft(2, '0')}'
         '${g.toRadixString(16).padLeft(2, '0')}'

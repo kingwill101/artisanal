@@ -100,6 +100,8 @@ class _PropBits {
   static const int underlineColor = 1 << 15;
   static const int paddingChar = 1 << 16;
   static const int marginChar = 1 << 17;
+  static const int whitespaceChar = 1 << 18;
+  static const int whitespaceForeground = 1 << 19;
 }
 
 /// Fluent, chainable style builder for terminal output.
@@ -555,6 +557,20 @@ class Style {
   Style unsetMarginChar() {
     _marginChar = ' ';
     _clearFlag2(_PropBits.marginChar);
+    return this;
+  }
+
+  /// Removes custom whitespace characters.
+  Style unsetWhitespaceChars() {
+    _whitespaceChar = ' ';
+    _clearFlag2(_PropBits.whitespaceChar);
+    return this;
+  }
+
+  /// Removes whitespace foreground styling.
+  Style unsetWhitespaceForeground() {
+    _whitespaceForeground = null;
+    _clearFlag2(_PropBits.whitespaceForeground);
     return this;
   }
 
@@ -1058,12 +1074,14 @@ class Style {
   /// ```
   Style whitespaceChars(String chars) {
     _whitespaceChar = chars;
+    _setFlag2(_PropBits.whitespaceChar);
     return this;
   }
 
   /// Sets the foreground color for whitespace fill.
   Style whitespaceForeground(Color color) {
     _whitespaceForeground = color;
+    _setFlag2(_PropBits.whitespaceForeground);
     return this;
   }
 
@@ -1427,7 +1445,7 @@ class Style {
       _hasFlag2(_PropBits.borderLeft) ? _borderLeftVisible : true;
 
   /// Gets the pre-set string value.
-  String? get value => _hasFlag2(_PropBits.stringValue) ? _string : _string;
+  String? get value => _hasFlag2(_PropBits.stringValue) ? _string : null;
 
   /// Gets the foreground color if set.
   Color? get getForeground =>
@@ -1565,8 +1583,8 @@ class Style {
   int get getHorizontalFrameSize {
     var size = _padding.horizontal;
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
-      if (_borderSides.left) size += 1;
-      if (_borderSides.right) size += 1;
+      if (_borderSides.left) size += _border!.getLeftSize();
+      if (_borderSides.right) size += _border!.getRightSize();
     }
     return size;
   }
@@ -1575,8 +1593,8 @@ class Style {
   int get getVerticalFrameSize {
     var size = _padding.vertical;
     if (_hasFlag(_PropBits.border) && _border != null && _border!.isVisible) {
-      if (_borderSides.top) size += 1;
-      if (_borderSides.bottom) size += 1;
+      if (_borderSides.top) size += _border!.getTopSize();
+      if (_borderSides.bottom) size += _border!.getBottomSize();
     }
     return size;
   }
@@ -1663,7 +1681,7 @@ class Style {
     s._borderBottomBackground = _borderBottomBackground;
     s._borderLeftForeground = _borderLeftForeground;
     s._borderLeftBackground = _borderLeftBackground;
-    s._borderForegroundBlend = _borderForegroundBlend;
+    s._borderForegroundBlend = List<Color>.from(_borderForegroundBlend);
     s._borderForegroundBlendOffset = _borderForegroundBlendOffset;
     s._borderProps = _borderProps;
     s._width = _width;
@@ -1886,7 +1904,7 @@ class Style {
       _setFlag2(_PropBits.colorWhitespace);
     }
     if (other._hasFlag2(_PropBits.borderForegroundBlend)) {
-      _borderForegroundBlend = other._borderForegroundBlend;
+      _borderForegroundBlend = List<Color>.from(other._borderForegroundBlend);
       _setFlag2(_PropBits.borderForegroundBlend);
     }
     if (other._hasFlag2(_PropBits.borderForegroundBlendOffset)) {
@@ -1921,6 +1939,14 @@ class Style {
     if (other._hasFlag2(_PropBits.borderLeft)) {
       _borderLeftVisible = other._borderLeftVisible;
       _setFlag2(_PropBits.borderLeft);
+    }
+    if (other._hasFlag2(_PropBits.whitespaceChar)) {
+      _whitespaceChar = other._whitespaceChar;
+      _setFlag2(_PropBits.whitespaceChar);
+    }
+    if (other._hasFlag2(_PropBits.whitespaceForeground)) {
+      _whitespaceForeground = other._whitespaceForeground;
+      _setFlag2(_PropBits.whitespaceForeground);
     }
     return this;
   }
@@ -2141,13 +2167,15 @@ class Style {
     }
 
     final buf = StringBuffer();
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (char == ' ' || char == '\t' || char == '\u00A0') {
-        buf.write(_applyStylesToString(char, isSpace: true));
+    var i = 0;
+    while (i < text.length) {
+      final (:grapheme, :nextIndex) = uni.readGraphemeAt(text, i);
+      if (grapheme == ' ' || grapheme == '\t' || grapheme == '\u00A0') {
+        buf.write(_applyStylesToString(grapheme, isSpace: true));
       } else {
-        buf.write(_applyStylesToString(char, isSpace: false));
+        buf.write(_applyStylesToString(grapheme, isSpace: false));
       }
+      i = nextIndex;
     }
     return buf.toString();
   }
@@ -2438,22 +2466,21 @@ class Style {
     var i = 0;
 
     while (i < line.length && currentLen < targetLen) {
-      // Check for ANSI escape sequence
       final match = ansiPattern.matchAsPrefix(line, i);
       if (match != null) {
-        // Include the ANSI code but don't count its length
         buffer.write(match.group(0));
         i += match.group(0)!.length;
         continue;
       }
 
-      // Regular character
-      buffer.write(line[i]);
-      currentLen++;
-      i++;
+      final (:grapheme, :nextIndex) = uni.readGraphemeAt(line, i);
+      final width = visibleLength(grapheme);
+      if (currentLen + width > targetLen) break;
+      buffer.write(grapheme);
+      currentLen += width;
+      i = nextIndex;
     }
 
-    // Add reset and ellipsis
     buffer.write('\x1B[0m${EllipsisChars.horizontal}');
     return buffer.toString();
   }
@@ -2462,25 +2489,8 @@ class Style {
   ///
   /// Breaks lines at word boundaries when possible, preserving ANSI codes.
   List<String> _wrapText(List<String> lines, int maxWidth) {
-    if (_wrapAnsi) {
-      final joined = lines.join('\n');
-      final wrapped = uv_wrap.wrapAnsiPreserving(joined, maxWidth);
-      return wrapped.split('\n');
-    }
-
-    final result = <String>[];
-
-    for (final line in lines) {
-      if (visibleLength(line) <= maxWidth) {
-        result.add(line);
-        continue;
-      }
-
-      // Need to wrap this line
-      result.addAll(_wrapLine(line, maxWidth));
-    }
-
-    return result;
+    final joined = lines.join('\n');
+    return uv_wrap.wrapAnsiPreserving(joined, maxWidth).split('\n');
   }
 
   /// Wraps a single line to fit within maxWidth.
@@ -3132,9 +3142,30 @@ class Style {
     }
 
     final result = List<String>.from(lines);
-    final width = lines.isNotEmpty ? visibleLength(lines.first) : 0;
-    while (result.length < targetHeight) {
-      result.add(' ' * width);
+    final width = _getMaxLineWidth(lines);
+    final fillLine = _styleWhitespace(' ' * width);
+    final remaining = targetHeight - result.length;
+
+    var top = 0;
+    var bottom = 0;
+    switch (_alignVertical) {
+      case VerticalAlign.top:
+        bottom = remaining;
+        break;
+      case VerticalAlign.center:
+        top = remaining ~/ 2;
+        bottom = remaining - top;
+        break;
+      case VerticalAlign.bottom:
+        top = remaining;
+        break;
+    }
+
+    for (var i = 0; i < top; i++) {
+      result.insert(0, fillLine);
+    }
+    for (var i = 0; i < bottom; i++) {
+      result.add(fillLine);
     }
     return result;
   }

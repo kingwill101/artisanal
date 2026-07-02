@@ -22,6 +22,7 @@
 library;
 
 import '../unicode/grapheme.dart' as uni;
+import '../layout/layout.dart';
 import 'package:artisanal/style.dart';
 
 /// Defines the characters used to draw borders.
@@ -32,7 +33,52 @@ import 'package:artisanal/style.dart';
 /// - Optional middle connectors for tables (middleLeft, middleRight, etc.)
 class Border {
   /// Creates a border with the specified characters.
-  const Border({
+  factory Border({
+    required String top,
+    required String bottom,
+    required String left,
+    required String right,
+    required String topLeft,
+    required String topRight,
+    required String bottomLeft,
+    required String bottomRight,
+    String? middleLeft,
+    String? middleRight,
+    String? middleTop,
+    String? middleBottom,
+    String? middle,
+  }) {
+    _validateSingleCell('top', top);
+    _validateSingleCell('bottom', bottom);
+    _validateSingleCell('left', left);
+    _validateSingleCell('right', right);
+    _validateSingleCell('topLeft', topLeft);
+    _validateSingleCell('topRight', topRight);
+    _validateSingleCell('bottomLeft', bottomLeft);
+    _validateSingleCell('bottomRight', bottomRight);
+    _validateOptionalSingleCell('middleLeft', middleLeft);
+    _validateOptionalSingleCell('middleRight', middleRight);
+    _validateOptionalSingleCell('middleTop', middleTop);
+    _validateOptionalSingleCell('middleBottom', middleBottom);
+    _validateOptionalSingleCell('middle', middle);
+    return Border._(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      topLeft: topLeft,
+      topRight: topRight,
+      bottomLeft: bottomLeft,
+      bottomRight: bottomRight,
+      middleLeft: middleLeft,
+      middleRight: middleRight,
+      middleTop: middleTop,
+      middleBottom: middleBottom,
+      middle: middle,
+    );
+  }
+
+  const Border._({
     required this.top,
     required this.bottom,
     required this.left,
@@ -104,7 +150,7 @@ class Border {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /// Normal/single-line border (┌─┐│└─┘).
-  static const normal = Border(
+  static const normal = Border._(
     top: '─',
     bottom: '─',
     left: '│',
@@ -121,7 +167,7 @@ class Border {
   );
 
   /// Rounded border with curved corners (╭─╮│╰─╯).
-  static const rounded = Border(
+  static const rounded = Border._(
     top: '─',
     bottom: '─',
     left: '│',
@@ -138,7 +184,7 @@ class Border {
   );
 
   /// Thick/heavy border (┏━┓┃┗━┛).
-  static const thick = Border(
+  static const thick = Border._(
     top: '━',
     bottom: '━',
     left: '┃',
@@ -155,7 +201,7 @@ class Border {
   );
 
   /// Double-line border (╔═╗║╚═╝).
-  static const double = Border(
+  static const double = Border._(
     top: '═',
     bottom: '═',
     left: '║',
@@ -172,7 +218,7 @@ class Border {
   );
 
   /// Block border using full block characters (█).
-  static const block = Border(
+  static const block = Border._(
     top: BlockShades.full,
     bottom: BlockShades.full,
     left: BlockShades.full,
@@ -189,7 +235,7 @@ class Border {
   );
 
   /// Outer half-block border (▛▀▜▌▐▙▄▟).
-  static const outerHalfBlock = Border(
+  static const outerHalfBlock = Border._(
     top: BlockShades.upper,
     bottom: BlockShades.lower,
     left: BlockShades.left,
@@ -201,7 +247,7 @@ class Border {
   );
 
   /// Inner half-block border (▗▄▖▐▌▝▀▘).
-  static const innerHalfBlock = Border(
+  static const innerHalfBlock = Border._(
     top: BlockShades.lower,
     bottom: BlockShades.upper,
     left: BlockShades.right,
@@ -213,7 +259,7 @@ class Border {
   );
 
   /// Hidden border using spaces (preserves layout without visible border).
-  static const hidden = Border(
+  static const hidden = Border._(
     top: ' ',
     bottom: ' ',
     left: ' ',
@@ -230,7 +276,7 @@ class Border {
   );
 
   /// ASCII border for maximum compatibility (+--+||+--+).
-  static const ascii = Border(
+  static const ascii = Border._(
     top: '-',
     bottom: '-',
     left: '|',
@@ -247,7 +293,7 @@ class Border {
   );
 
   /// Markdown-style border for tables.
-  static const markdown = Border(
+  static const markdown = Border._(
     top: '-',
     bottom: '-',
     left: '|',
@@ -267,7 +313,7 @@ class Border {
   ///
   /// Matches a vertical split line style: no top/bottom edge, only the left
   /// and right rails.
-  static const split = Border(
+  static const split = Border._(
     top: '',
     bottom: '',
     left: '┃',
@@ -279,7 +325,7 @@ class Border {
   );
 
   /// No border (empty strings).
-  static const none = Border(
+  static const none = Border._(
     top: '',
     bottom: '',
     left: '',
@@ -366,6 +412,29 @@ class Border {
     return maxWidth;
   }
 
+  static bool _isSingleCell(String s) =>
+      s.isEmpty || Layout.visibleLength(s) == 1;
+
+  static void _validateSingleCell(String name, String value) {
+    if (!_isSingleCell(value)) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Border glyphs must occupy one cell',
+      );
+    }
+  }
+
+  static void _validateOptionalSingleCell(String name, String? value) {
+    if (value != null && !_isSingleCell(value)) {
+      throw ArgumentError.value(
+        value,
+        name,
+        'Border glyphs must occupy one cell',
+      );
+    }
+  }
+
   /// Returns the display width of a single rune.
   static int _runeWidth(int rune) {
     // Full-width characters (CJK, emoji, etc.)
@@ -401,7 +470,7 @@ class Border {
     String? middleBottom,
     String? middle,
   }) {
-    return Border(
+    return Border._(
       top: top ?? this.top,
       bottom: bottom ?? this.bottom,
       left: left ?? this.left,
