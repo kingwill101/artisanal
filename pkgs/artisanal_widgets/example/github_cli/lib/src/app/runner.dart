@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, CommandRunner;
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/hosts.dart' show ProgramHost;
 import 'package:artisanal/runtime.dart' show ProgramOptions;
 import 'package:artisanal_widgets/widgets.dart'
@@ -10,22 +11,24 @@ import '../client/client_cli.dart';
 import 'compile_time_flags.dart';
 import 'config.dart';
 import 'dashboard.dart';
-import 'profile_harness.dart';
 import 'replay.dart';
-import 'replay_harness.dart';
 import 'view_command.dart';
 
-final class GithubCliRunner extends CommandRunner<void> {
+final class GithubCliRunner extends CommandRunner<void>
+    with tui.HarnessCommandsMixin {
   GithubCliRunner() : super('github_cli', 'GitHub CLI TUI') {
     argParser.registerGithubCliFlags(includeHelp: false);
     addCommand(GithubCliViewCommand());
-    if (githubCliProfileCliEnabled) {
-      addCommand(GithubCliProfileHarnessCommand());
-    }
-    if (githubCliReplayCliEnabled) {
-      addCommand(GithubCliReplayHarnessCommand());
-    }
   }
+
+  @override
+  String get harnessEntrypointPath => 'bin/github_cli.dart';
+
+  @override
+  bool get enableReplayHarness => githubCliReplayCliEnabled;
+
+  @override
+  bool get enableProfileHarness => githubCliProfileCliEnabled;
 
   @override
   String get invocation => '$executableName [owner|org|owner/repo]';
@@ -48,7 +51,7 @@ final class GithubCliRunner extends CommandRunner<void> {
       usageException(config.error!);
     }
 
-    final replayPlan = await _loadReplayPlan(config);
+    final replayPlan = await _loadReplayPlan(config.replay);
     if (replayPlan?.convertOnly ?? false) {
       final conversion = replayPlan!.traceConversion;
       writeOut(
@@ -65,9 +68,11 @@ final class GithubCliRunner extends CommandRunner<void> {
     await runGithubCli(config, replayPlan: replayPlan);
   }
 
-  Future<GithubCliReplayPlan?> _loadReplayPlan(GithubCliConfig config) async {
+  Future<tui.ResolvedReplay?> _loadReplayPlan(
+    tui.ReplayHarnessConfig config,
+  ) async {
     try {
-      return await loadGithubCliReplayPlan(config.replay);
+      return await loadGithubCliReplayPlan(config);
     } on FormatException catch (error) {
       usageException(error.message);
     } on io.FileSystemException catch (error) {
@@ -79,7 +84,7 @@ final class GithubCliRunner extends CommandRunner<void> {
 
 Future<void> runGithubCli(
   GithubCliConfig config, {
-  GithubCliReplayPlan? replayPlan,
+  tui.ResolvedReplay? replayPlan,
   ProgramHost? host,
   ProgramOptions Function(ProgramOptions defaults)? options,
 }) async {
@@ -110,7 +115,7 @@ Future<void> runGithubCli(
   );
 }
 
-String _formatReplaySummary(GithubCliReplayPlan replayPlan) {
+String _formatReplaySummary(tui.ResolvedReplay replayPlan) {
   return '[github_cli] replay=${replayPlan.name} '
       'actions=${replayPlan.actionCount} '
       'loop=${replayPlan.loop} '

@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, Command;
+import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart'
     show defaultWidgetProgramOptions, runWidgetApp, WidgetApp, ImageAutoMode;
 
@@ -10,12 +11,11 @@ import '../utils/pull_request_input.dart';
 import 'compile_time_flags.dart';
 import 'pull_request_view.dart';
 import 'replay.dart';
-import 'replay_config.dart';
 
 final class GithubCliViewCommand extends Command<void> {
   GithubCliViewCommand() {
     if (githubCliReplayCliEnabled) {
-      argParser.registerGithubCliReplayFlags();
+      argParser.registerReplayFlags();
     }
   }
 
@@ -56,8 +56,8 @@ final class GithubCliViewCommand extends Command<void> {
     await runGithubPullRequestView(config, replayPlan: replayPlan);
   }
 
-  Future<GithubCliReplayPlan?> _loadReplayPlan(
-    GithubCliReplayConfig config,
+  Future<tui.ResolvedReplay?> _loadReplayPlan(
+    tui.ReplayHarnessConfig config,
   ) async {
     try {
       return await loadGithubCliReplayPlan(config);
@@ -73,18 +73,38 @@ final class GithubCliViewCommand extends Command<void> {
 final class GithubCliViewConfig {
   const GithubCliViewConfig({
     required this.target,
-    this.replay = const GithubCliReplayConfig(),
+    this.replay = const tui.ReplayHarnessConfig(
+      scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '',
+      scenarioOut: null, scenarioName: '', scenarioDescription: '',
+      speed: 1, minSleepUs: 30000, leadInMs: 3500,
+      screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+      blockInput: false, loop: false, keepOpen: false,
+      timeoutSeconds: 180, convertOnly: false, captureTrace: false,
+      traceOut: '', traceTags: '', captureDispatch: false,
+      summaryCount: 0, maxSpanUs: 0,
+      traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+    ),
     this.error,
   });
 
   final GithubPullRequestTarget? target;
-  final GithubCliReplayConfig replay;
+  final tui.ReplayHarnessConfig replay;
   final String? error;
 
   static GithubCliViewConfig fromArgResults(ArgResults results) {
     final replay = githubCliReplayCliEnabled
-        ? GithubCliReplayConfig.fromArgResults(results)
-        : (config: const GithubCliReplayConfig(), error: null);
+        ? tui.ReplayHarnessConfig.fromArgResults(results)
+        : const tui.ReplayHarnessConfig(
+            scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '',
+            scenarioOut: null, scenarioName: '', scenarioDescription: '',
+            speed: 1, minSleepUs: 30000, leadInMs: 3500,
+            screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+            blockInput: false, loop: false, keepOpen: false,
+            timeoutSeconds: 180, convertOnly: false, captureTrace: false,
+            traceOut: '', traceTags: '', captureDispatch: false,
+            summaryCount: 0, maxSpanUs: 0,
+            traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+          );
     if (replay.error != null) {
       return GithubCliViewConfig(target: null, error: replay.error);
     }
@@ -105,14 +125,14 @@ final class GithubCliViewConfig {
             'owner/repo/pr/number, owner/repo#number, or a GitHub pull URL.',
       );
     }
-    return GithubCliViewConfig(target: target, replay: replay.config);
+    return GithubCliViewConfig(target: target, replay: replay);
   }
 }
 
 Future<void> runGithubPullRequestView(
   GithubCliViewConfig config, {
   GithubDashboardClient client = const GhCliClient(),
-  GithubCliReplayPlan? replayPlan,
+  tui.ResolvedReplay? replayPlan,
 }) async {
   final target = config.target;
   if (target == null) {
@@ -131,7 +151,7 @@ Future<void> runGithubPullRequestView(
   );
 }
 
-String _formatReplaySummary(GithubCliReplayPlan replayPlan) {
+String _formatReplaySummary(tui.ResolvedReplay replayPlan) {
   return '[github_cli] replay=${replayPlan.name} '
       'actions=${replayPlan.actionCount} '
       'loop=${replayPlan.loop} '

@@ -4,7 +4,6 @@ export 'compile_time_flags.dart';
 export 'config.dart';
 export 'dashboard.dart';
 export 'pull_request_view.dart';
-export 'replay_config.dart';
 export '../client/client.dart';
 export '../models/dashboard_data.dart';
 export '../models/item_kind.dart';

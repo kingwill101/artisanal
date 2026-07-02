@@ -2,23 +2,26 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:devtools_region_profiler/devtools_region_profiler.dart'
     as profiler;
 
-const githubCliProfileRegionStartEvent = 'github_cli.profile.start';
-const githubCliProfileRegionStopEvent = 'github_cli.profile.stop';
-
 final class GithubCliReplayProfileRegionHook {
+  GithubCliReplayProfileRegionHook({this.eventPrefix = 'github_cli.profile'});
+
+  final String eventPrefix;
+
+  String get _startEvent => '$eventPrefix.start';
+  String get _stopEvent => '$eventPrefix.stop';
+
   profiler.ProfileRegionHandle? _activeRegion;
 
   Future<tui.ReplayEventDirective?> call(tui.ReplayCustomEvent event) async {
-    switch (event.type) {
-      case githubCliProfileRegionStartEvent:
-        await _start(event);
-        return tui.ReplayEventDirective.proceed;
-      case githubCliProfileRegionStopEvent:
-        await _stop();
-        return tui.ReplayEventDirective.proceed;
-      default:
-        return null;
+    if (event.type == _startEvent) {
+      await _start(event);
+      return tui.ReplayEventDirective.proceed;
     }
+    if (event.type == _stopEvent) {
+      await _stop();
+      return tui.ReplayEventDirective.proceed;
+    }
+    return null;
   }
 
   Future<void> _start(tui.ReplayCustomEvent event) async {

@@ -375,6 +375,9 @@ export 'evidence.dart' show TuiEvidence, TuiEvidenceRecord;
 export 'devtools.dart'
     show ArtisanalDevTools, DevToolsMessageEntry, DevToolsRenderStats;
 
+// Replay harness mixin + profile harness mixin
+export 'replay_harness_mixin.dart';
+
 // Stable high-level widget system for composable components.
 //
 // This keeps `package:artisanal/tui.dart` backward-compatible while routing

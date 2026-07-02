@@ -38,11 +38,12 @@ Uint8List _encodeAvatarImage() {
   return Uint8List.fromList(img.encodePng(image));
 }
 
-({GithubCliReplayConfig config, String? error}) _parseReplayConfig(
+({tui.ReplayHarnessConfig config, String? error}) _parseReplayConfig(
   List<String> arguments,
 ) {
-  final parsed = (ArgParser()..registerGithubCliReplayFlags()).parse(arguments);
-  return GithubCliReplayConfig.fromArgResults(parsed);
+  final parsed = (ArgParser()..registerReplayFlags()).parse(arguments);
+  final config = tui.ReplayHarnessConfig.fromArgResults(parsed);
+  return (config: config, error: config.error);
 }
 
 void main() {
@@ -200,7 +201,7 @@ void main() {
     expect(commands, isNot(contains('replay')));
   });
 
-  test('GithubCliReplayConfig parses replay flags', () {
+  test('ReplayHarnessConfig parses replay flags', () {
     final replay = _parseReplayConfig([
       '--replay-scenario',
       'issues_scroll_detail',
@@ -210,12 +211,12 @@ void main() {
     ]);
 
     expect(replay.error, isNull);
-    expect(replay.config.scenario, 'issues_scroll_detail');
+    expect(replay.config.scenarioPath, 'issues_scroll_detail');
     expect(replay.config.speed, 6);
     expect(replay.config.blockInput, isTrue);
   });
 
-  test('GithubCliReplayConfig rejects multiple replay sources', () {
+  test('ReplayHarnessConfig rejects multiple replay sources', () {
     final replay = _parseReplayConfig([
       '--replay-scenario',
       'issues_scroll_detail',
@@ -223,12 +224,23 @@ void main() {
       'trace.log',
     ]);
 
-    expect(replay.error, contains('Use only one replay source'));
+    expect(replay.error, contains('Use only one'));
   });
 
   test('loadGithubCliReplayPlan resolves built-in scenarios', () async {
     final plan = await loadGithubCliReplayPlan(
-      const GithubCliReplayConfig(scenario: 'issues_scroll_detail'),
+      const tui.ReplayHarnessConfig(
+        scenarioPath: 'issues_scroll_detail', tracePath: null,
+        scriptFilter: '', sessionOut: '', scenarioOut: null,
+        scenarioName: 'replay', scenarioDescription: '',
+        speed: 1, minSleepUs: 30000, leadInMs: 3500,
+        screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+        blockInput: false, loop: false, keepOpen: false,
+        timeoutSeconds: 180, convertOnly: false, captureTrace: false,
+        traceOut: '', traceTags: '', captureDispatch: false,
+        summaryCount: 0, maxSpanUs: 0,
+        traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+      ),
     );
 
     expect(plan, isNotNull);
@@ -252,10 +264,18 @@ void main() {
     );
 
     final plan = await loadGithubCliReplayPlan(
-      GithubCliReplayConfig(
-        trace: trace.path,
-        traceOut: out.path,
-        convertOnly: true,
+      tui.ReplayHarnessConfig(
+        scenarioPath: null, tracePath: trace.path,
+        scriptFilter: '', sessionOut: '',
+        scenarioOut: out.path,
+        scenarioName: 'replay', scenarioDescription: '',
+        speed: 1, minSleepUs: 30000, leadInMs: 3500,
+        screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+        blockInput: false, loop: false, keepOpen: false,
+        timeoutSeconds: 180, convertOnly: true, captureTrace: false,
+        traceOut: '', traceTags: '', captureDispatch: false,
+        summaryCount: 0, maxSpanUs: 0,
+        traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
       ),
     );
 
@@ -264,251 +284,6 @@ void main() {
     expect(plan.traceConversion?.eventCount, 1);
     expect(out.existsSync(), isTrue);
   });
-
-  test('selectGithubCliTraceSession extracts latest app session', () async {
-    final dir = await Directory.systemTemp.createTemp(
-      'github-cli-replay-test-',
-    );
-    addTearDown(() => dir.delete(recursive: true));
-    final trace = File('${dir.path}/manual.log');
-    final out = File('${dir.path}/selected.log');
-    await trace.writeAsString('''
-# trace start: first
-# script: /tmp/bin/github_cli.dart
-[+10us] [input] @event {"v":1,"type":"input.batch","messages":[{"kind":"key","keyType":"runes","runes":[49]}]}
-# trace start: profiler
-# script: /tmp/devtools_profiler.dart.snapshot
-[+10us] [general] profiler noise 1us
-# trace start: latest
-# script: /tmp/bin/github_cli.dart
-[+20us] [input] @event {"v":1,"type":"input.batch","messages":[{"kind":"key","keyType":"runes","runes":[50]}]}
-''');
-
-    final selection = await selectGithubCliTraceSession(
-      trace.path,
-      scriptFilter: 'bin/github_cli.dart',
-      outPath: out.path,
-    );
-
-    expect(selection.sessionIndex, 3);
-    expect(selection.sessionCount, 3);
-    expect(await out.readAsString(), contains('"runes":[50]'));
-    expect(await out.readAsString(), isNot(contains('"runes":[49]')));
-  });
-
-  test('resolveGithubCliTracePath selects newest log from directory', () async {
-    final dir = await Directory.systemTemp.createTemp(
-      'github-cli-replay-test-',
-    );
-    addTearDown(() => dir.delete(recursive: true));
-    final oldTrace = File('${dir.path}/old.log');
-    final newTrace = File('${dir.path}/new.log');
-    await oldTrace.writeAsString('# trace start: old\n');
-    await newTrace.writeAsString('# trace start: new\n');
-    await oldTrace.setLastModified(DateTime(2026));
-    await newTrace.setLastModified(DateTime(2026, 1, 2));
-
-    final resolved = resolveGithubCliTracePath(dir.path);
-
-    expect(resolved, newTrace.path);
-  });
-
-  test('summarizeGithubCliReplayTrace reports slow spans', () async {
-    final dir = await Directory.systemTemp.createTemp(
-      'github-cli-replay-test-',
-    );
-    addTearDown(() => dir.delete(recursive: true));
-    final trace = File('${dir.path}/replay.log');
-    await trace.writeAsString('''
-[+10us] [render] widget_view render 9000us
-[+20us] [paint] RenderColumn.paint children=4 size=10x3 12000us
-''');
-
-    final summary = await summarizeGithubCliReplayTrace(trace.path, limit: 1);
-
-    expect(summary.spanCount, 2);
-    expect(summary.maxDurationUs, 12000);
-    expect(summary.spans.single.tag, 'paint');
-  });
-
-  test('GithubCliProfileHarnessConfig parses profiler flags', () {
-    final command = GithubCliProfileHarnessCommand();
-    final parsed = command.argParser.parse([
-      '--artifact-dir',
-      '.dart_tool/profile/run',
-      '--profiler-command',
-      'devtools-profiler',
-      '--duration',
-      '20s',
-      '--vm-service-timeout',
-      '60s',
-      '--speed',
-      '12',
-      '--lead-in-ms',
-      '5000',
-      '--capture-trace',
-      '--region-name',
-      'github_cli.issues',
-      '--no-forward-output',
-      'https://github.com/dart-lang/sdk',
-    ]);
-
-    final config = GithubCliProfileHarnessConfig.fromArgResults(parsed);
-
-    expect(config.error, isNull);
-    expect(config.replay.repository, 'dart-lang/sdk');
-    expect(config.replay.speed, 12);
-    expect(config.replay.leadInMs, 5000);
-    expect(config.replay.captureTrace, isTrue);
-    expect(config.artifactDir, '.dart_tool/profile/run');
-    expect(config.duration, '20s');
-    expect(config.vmServiceTimeout, '60s');
-    expect(config.forwardOutput, isFalse);
-    expect(config.profileRegion, isTrue);
-    expect(config.regionName, 'github_cli.issues');
-  });
-
-  test('buildGithubCliProfilerRunArgs wires replay scenario', () {
-    final command = GithubCliProfileHarnessCommand();
-    final parsed = command.argParser.parse([
-      '--artifact-dir',
-      '.dart_tool/profile/run',
-      '--duration',
-      '15s',
-      '--speed',
-      '100',
-      '--no-terminal',
-      '--no-forward-output',
-      'dart-lang/sdk',
-    ]);
-    final config = GithubCliProfileHarnessConfig.fromArgResults(parsed);
-
-    final args = buildGithubCliProfilerRunArgs(
-      config,
-      '.dart_tool/replay/issues.json',
-      cwd: '/tmp/github_cli',
-      entrypoint: 'bin/github_cli.dart',
-    );
-
-    expect(args, isNot(contains('--terminal')));
-    expect(
-      args,
-      containsAllInOrder([
-        'run',
-        '--cwd',
-        '/tmp/github_cli',
-        '--artifact-dir',
-        '.dart_tool/profile/run',
-        '--duration',
-        '15s',
-        '--vm-service-timeout',
-        '180s',
-        '--no-forward-output',
-        '--',
-        'dart',
-        'run',
-        githubCliReplayCliDartDefineArgument,
-        'bin/github_cli.dart',
-        '--replay-scenario',
-        '.dart_tool/replay/issues.json',
-        '--replay-speed',
-        '100.0',
-        '--replay-block-input',
-        '--limit',
-        '20',
-        'dart-lang/sdk',
-      ]),
-    );
-  });
-
-  test('buildGithubCliProfilerRunArgs wires single pull request view', () {
-    final command = GithubCliProfileHarnessCommand();
-    final parsed = command.argParser.parse([
-      '--artifact-dir',
-      '.dart_tool/profile/view',
-      '--speed',
-      '25',
-      '--no-terminal',
-      '--no-forward-output',
-      '--view',
-      'https://github.com/dart-lang/sdk/pull/63254',
-    ]);
-    final config = GithubCliProfileHarnessConfig.fromArgResults(parsed);
-
-    final args = buildGithubCliProfilerRunArgs(
-      config,
-      '.dart_tool/replay/pr-63254-view.json',
-      cwd: '/tmp/github_cli',
-      entrypoint: 'bin/github_cli.dart',
-    );
-
-    expect(config.error, isNull);
-    expect(config.replay.usesView, isTrue);
-    expect(
-      config.replay.targetLabel,
-      'https://github.com/dart-lang/sdk/pull/63254',
-    );
-    expect(args, isNot(contains('--limit')));
-    expect(args, isNot(contains('dart-lang/sdk')));
-    expect(
-      args,
-      containsAllInOrder([
-        'run',
-        '--cwd',
-        '/tmp/github_cli',
-        '--artifact-dir',
-        '.dart_tool/profile/view',
-        '--vm-service-timeout',
-        '180s',
-        '--no-forward-output',
-        '--',
-        'dart',
-        'run',
-        githubCliReplayCliDartDefineArgument,
-        'bin/github_cli.dart',
-        'view',
-        '--replay-scenario',
-        '.dart_tool/replay/pr-63254-view.json',
-        '--replay-speed',
-        '25.0',
-        '--replay-block-input',
-        'https://github.com/dart-lang/sdk/pull/63254',
-      ]),
-    );
-  });
-
-  test(
-    'instrumentGithubCliReplayProfileRegion brackets replay actions',
-    () async {
-      final dir = await Directory.systemTemp.createTemp(
-        'github-cli-replay-test-',
-      );
-      addTearDown(() => dir.delete(recursive: true));
-      final scenarioPath = '${dir.path}/scenario.json';
-      await tui.ReplayScenario(
-        name: 'issues',
-        actions: const [
-          tui.ReplayAction(type: 'sleep', ms: 3500),
-          tui.ReplayAction(type: 'special', key: 'down'),
-        ],
-      ).save(scenarioPath);
-
-      final actionCount = await instrumentGithubCliReplayProfileRegion(
-        scenarioPath,
-        regionName: 'github_cli.issues',
-        repository: 'dart-lang/sdk',
-      );
-      final scenario = await tui.ReplayScenario.load(scenarioPath);
-
-      expect(actionCount, 3);
-      expect(scenario.actions[0].eventType, githubCliProfileRegionStartEvent);
-      expect(scenario.actions[0].eventFields['name'], 'github_cli.issues');
-      expect(scenario.actions[0].eventFields['repository'], 'dart-lang/sdk');
-      expect(scenario.actions[0].eventFields['warmupMs'], 3500);
-      expect(scenario.actions[1].type, 'special');
-      expect(scenario.actions.last.eventType, githubCliProfileRegionStopEvent);
-    },
-  );
 
   test('GithubDashboardData parses gh JSON payloads', () {
     final dashboard = GithubDashboardData.fromJson(

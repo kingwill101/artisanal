@@ -14,3 +14,4 @@ pkgs/artisanal_widgets/example/opencode/traces/profile-*.json
 pkgs/artisanal_widgets/example/opencode/traces/metrics.csv
 third_party/
 .prebuilt/
+.kilo/

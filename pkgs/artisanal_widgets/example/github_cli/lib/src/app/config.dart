@@ -1,15 +1,25 @@
 import 'package:args/args.dart' show ArgParser, ArgParserException, ArgResults;
+import 'package:artisanal/tui.dart' show ReplayHarnessConfig, ReplayFlagsArgParser;
 
 import '../utils/repository_input.dart';
 import 'compile_time_flags.dart';
-import 'replay_config.dart';
 
 final class GithubCliConfig {
   const GithubCliConfig({
     this.repository,
     this.owner,
     this.limit = 20,
-    this.replay = const GithubCliReplayConfig(),
+    this.replay = const ReplayHarnessConfig(
+      scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '',
+      scenarioOut: null, scenarioName: '', scenarioDescription: '',
+      speed: 1, minSleepUs: 30000, leadInMs: 3500,
+      screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+      blockInput: false, loop: false, keepOpen: false,
+      timeoutSeconds: 180, convertOnly: false, captureTrace: false,
+      traceOut: '', traceTags: '', captureDispatch: false,
+      summaryCount: 0, maxSpanUs: 0,
+      traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+    ),
     this.help = false,
     this.error,
   });
@@ -17,7 +27,7 @@ final class GithubCliConfig {
   final String? repository;
   final String? owner;
   final int limit;
-  final GithubCliReplayConfig replay;
+  final ReplayHarnessConfig replay;
   final bool help;
   final String? error;
 
@@ -45,8 +55,18 @@ final class GithubCliConfig {
     }
 
     final replay = githubCliReplayCliEnabled
-        ? GithubCliReplayConfig.fromArgResults(parsed)
-        : (config: const GithubCliReplayConfig(), error: null);
+        ? ReplayHarnessConfig.fromArgResults(parsed)
+        : const ReplayHarnessConfig(
+            scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '',
+            scenarioOut: null, scenarioName: '', scenarioDescription: '',
+            speed: 1, minSleepUs: 30000, leadInMs: 3500,
+            screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
+            blockInput: false, loop: false, keepOpen: false,
+            timeoutSeconds: 180, convertOnly: false, captureTrace: false,
+            traceOut: '', traceTags: '', captureDispatch: false,
+            summaryCount: 0, maxSpanUs: 0,
+            traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+          );
     if (replay.error != null) return GithubCliConfig(error: replay.error);
 
     final repositoryOption = parsed['repo'] as String?;
@@ -78,7 +98,7 @@ final class GithubCliConfig {
       repository: target.repository,
       owner: target.owner,
       limit: limit,
-      replay: replay.config,
+      replay: replay,
     );
   }
 
@@ -110,7 +130,7 @@ extension GithubCliArgumentRegistration on ArgParser {
       valueHelp: 'count',
     );
     if (githubCliReplayCliEnabled) {
-      registerGithubCliReplayFlags();
+      registerReplayFlags();
     }
     if (includeHelp) {
       addFlag('help', abbr: 'h', negatable: false, help: 'Show this help.');
