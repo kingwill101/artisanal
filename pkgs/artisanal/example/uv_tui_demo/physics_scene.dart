@@ -256,7 +256,11 @@ List<String> renderPhysicsScene({
       final vx = pos.x - vel.x * 0.05;
       final vy = pos.y - vel.y * 0.05;
       _plotLine(toX(pos.x), toY(pos.y), toX(vx), toY(vy), (x, y) {
-        setCell(x, y, Style().foreground(theme.palette.textDim).render(DotChars.middle));
+        setCell(
+          x,
+          y,
+          Style().foreground(theme.palette.textDim).render(DotChars.middle),
+        );
       });
     }
   }

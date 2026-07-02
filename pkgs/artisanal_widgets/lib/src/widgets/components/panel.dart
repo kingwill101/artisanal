@@ -1,5 +1,17 @@
 part of 'components_widgets.dart';
 
+/// A panel with an optional title bar and action buttons.
+///
+/// A simplified wrapper combining [Frame], [Container], and common layout
+/// patterns for grouping content with a header. Often used as the base for
+/// list items, dropdowns, and configuration panels.
+///
+/// ```dart
+/// PanelBox(
+///   title: 'Settings',
+///   child: Column(children: [Toggle('Auto-save'), Toggle('Dark mode')]),
+/// )
+/// ```
 class PanelBox extends StatelessWidget {
   PanelBox({
     required this.child,

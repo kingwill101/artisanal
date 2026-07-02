@@ -18,10 +18,18 @@ class PaginatorKeyMap implements KeyMap {
   PaginatorKeyMap({KeyBinding? prevPage, KeyBinding? nextPage})
     : prevPage =
           prevPage ??
-          KeyBinding.withHelp(['pgup', 'left', 'h'], '${Arrows.left}/pgup', 'prev page'),
+          KeyBinding.withHelp(
+            ['pgup', 'left', 'h'],
+            '${Arrows.left}/pgup',
+            'prev page',
+          ),
       nextPage =
           nextPage ??
-          KeyBinding.withHelp(['pgdown', 'right', 'l'], '${Arrows.right}/pgdn', 'next page');
+          KeyBinding.withHelp(
+            ['pgdown', 'right', 'l'],
+            '${Arrows.right}/pgdn',
+            'next page',
+          );
 
   /// Key binding for previous page.
   final KeyBinding prevPage;

@@ -1123,7 +1123,9 @@ class CommandCenterModel implements tui.Model {
   List<String> _buildHeaderPanel(int panelHeight) {
     // Title line
     final blocks = '${BlockShades.full}${BlockShades.full}${BlockShades.full}';
-    final title = _accentBoldStyle().render('◆ $blocks $blocks COMMAND CENTER ◆');
+    final title = _accentBoldStyle().render(
+      '◆ $blocks $blocks COMMAND CENTER ◆',
+    );
 
     // Theme indicator - style based on theme name
     final themeLabel = switch (theme) {

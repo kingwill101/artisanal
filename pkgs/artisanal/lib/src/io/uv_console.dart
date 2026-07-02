@@ -174,14 +174,14 @@ class UVConsole {
           final check =
               (console.getStyle('success') ??
                       Style().foreground(Colors.success))
-                   .render(StatusChars.check);
+                  .render(StatusChars.check);
           print('$check $message');
         }
       } catch (e) {
         if (showCheckmarks) {
           final cross =
               (console.getStyle('error') ?? Style().foreground(Colors.error))
-                   .render(StatusChars.cross);
+                  .render(StatusChars.cross);
           print('$cross $message');
         }
         rethrow;

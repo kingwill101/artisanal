@@ -1,5 +1,20 @@
 part of 'components_widgets.dart';
 
+/// A single row in a Material-style list with optional leading/trailing controls.
+///
+/// The [ListTile] widget arranges [title], [subtitle], [leading], and [trailing]
+/// widgets in a standard list row layout. Use [onTap] for interactivity.
+///
+/// Example:
+/// ```dart
+/// ListTile(
+///   title: 'Settings',
+///   subtitle: 'Configure preferences',
+///   leading: Icon('⚙'),
+///   trailing: Icon('>'),
+///   onTap: () => navigate('/settings'),
+/// )
+/// ```
 class ListTile extends StatelessWidget {
   /// Creates a Material-style list tile.
   ///

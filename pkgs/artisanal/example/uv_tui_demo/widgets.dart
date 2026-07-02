@@ -197,7 +197,11 @@ List<String> renderTopology({
     for (var x = 0; x < width; x++) {
       final noise = math.sin(x * 0.18 + y * 0.32 + phase);
       if (noise > 0.92) {
-        setCell(x, y, Style().foreground(theme.palette.textDim).render(DotChars.middle));
+        setCell(
+          x,
+          y,
+          Style().foreground(theme.palette.textDim).render(DotChars.middle),
+        );
       }
     }
   }

@@ -10,9 +10,12 @@
 /// The legacy `package:artisanal_widgets/artisanal_widgets.dart` entrypoint
 /// remains available for backward compatibility and still exposes additional
 /// experimental internals and modules.
+///
+/// {@category Charts}
 library;
 
 export 'widgets.dart';
-export 'src/widgets/charting/chart_widgets.dart';
+export 'src/widgets/charting/chart_models.dart';
+export 'src/widgets/charting/chart_renderers.dart';
 export 'package:artisanal/charting.dart'
     show ChartLegendEntry, ChartRamp, ChartPainter, BrailleCanvas;

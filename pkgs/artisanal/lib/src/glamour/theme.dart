@@ -409,7 +409,10 @@ class GlamourTheme {
       ),
     ),
     h2: GlamourBlockStyle(
-      style: GlamourPrimitiveStyle(prefix: '${BlockShades.left} ', blockSuffix: '\n'),
+      style: GlamourPrimitiveStyle(
+        prefix: '${BlockShades.left} ',
+        blockSuffix: '\n',
+      ),
     ),
     h3: GlamourBlockStyle(
       style: GlamourPrimitiveStyle(prefix: '┃ ', blockSuffix: '\n'),

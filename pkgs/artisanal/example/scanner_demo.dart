@@ -32,7 +32,10 @@ void main() async {
 
   print('\n3. Scanner + esc label (interrupt indicator, 5s auto-quit):');
   final escLabel = Style().dim().foreground(Colors.muted).render('esc');
-  final quitMsg = Style().dim().foreground(Colors.muted).render('(auto-quit in 5s)');
+  final quitMsg = Style()
+      .dim()
+      .foreground(Colors.muted)
+      .render('(auto-quit in 5s)');
   await _task(
     'Scanning... $escLabel $quitMsg',
     Spinners.scanner(),
@@ -93,7 +96,12 @@ void main() async {
   ];
   for (final msg in messages) {
     final delay = Random().nextInt(2000) + 1000;
-    await _task(msg, Spinners.scanner(), terminal, Duration(milliseconds: delay));
+    await _task(
+      msg,
+      Spinners.scanner(),
+      terminal,
+      Duration(milliseconds: delay),
+    );
   }
 
   print('\nAll scanner demos completed!');
@@ -117,7 +125,3 @@ Future<String> _task(
     },
   );
 }
-
-
-
-

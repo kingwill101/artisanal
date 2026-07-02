@@ -1,5 +1,18 @@
 part of 'components_widgets.dart';
 
+/// An animated spinner indicator for loading states.
+///
+/// The [SpinnerIndicator] cycles through [frames] at the specified [interval].
+/// Set [active] to false to pause the animation. Customize the appearance with
+/// [color] and [textStyle].
+///
+/// Example:
+/// ```dart
+/// SpinnerIndicator(
+///   frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧'],
+///   interval: Duration(milliseconds: 100),
+/// )
+/// ```
 class SpinnerIndicator extends StatefulWidget {
   SpinnerIndicator({
     this.frames = const ['|', '/', '-', '\\'],

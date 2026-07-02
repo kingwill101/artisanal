@@ -507,7 +507,10 @@ final class LogViewerModel implements tui.Model {
 
     // Scrollback indicator
     final followIndicator = viewport.atBottom
-        ? Style().foreground(Colors.green).dim().render('${Circles.filled} Following new logs')
+        ? Style()
+              .foreground(Colors.green)
+              .dim()
+              .render('${Circles.filled} Following new logs')
         : Style()
               .foreground(Colors.yellow)
               .render('▲ Scrollback mode - Press G to follow');

@@ -9,6 +9,8 @@
 ///
 /// This library remains available for backward compatibility and continues to
 /// expose additional experimental internals and modules.
+///
+/// {@category TUI}
 library;
 
 export 'src/widgets/widgets.dart' hide StateSetter;

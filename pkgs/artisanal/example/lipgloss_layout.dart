@@ -152,7 +152,10 @@ String listHeader(String text) => baseStyle()
 String listItem(String text) => baseStyle().paddingLeft(2).render(text);
 
 // checkMark using setString and toString() like lipgloss
-final checkMark = Style().foreground(special).paddingRight(1).setString(StatusChars.check);
+final checkMark = Style()
+    .foreground(special)
+    .paddingRight(1)
+    .setString(StatusChars.check);
 
 // listDone now uses checkMark with setString
 String listDone(String s) =>

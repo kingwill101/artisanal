@@ -1,6 +1,19 @@
 part of 'components_widgets.dart';
 
-/// Flutter-style non-interactive chip.
+/// A non-interactive chip with optional delete affordance.
+///
+/// The [Chip] widget displays a label in a bordered rounded frame with an
+/// optional [avatar] and delete button. Use [onDeleted] to handle delete.
+///
+/// Example:
+/// ```dart
+/// Wrap(
+///   children: [
+///     Chip(label: Text('Dart')),
+///     Chip(label: Text('Flutter'), onDeleted: () => removeTag('Flutter')),
+///   ],
+/// )
+/// ```
 class Chip extends StatelessWidget {
   Chip({
     required this.label,
@@ -64,7 +77,7 @@ class Chip extends StatelessWidget {
   }
 }
 
-/// Flutter-style action chip.
+/// An actionable chip that invokes [onPressed] when activated.
 class ActionChip extends StatelessWidget {
   ActionChip({
     required this.label,
@@ -93,7 +106,7 @@ class ActionChip extends StatelessWidget {
   }
 }
 
-/// Flutter-style single-select chip.
+/// A selectable chip that displays selected state via [ButtonVariant.primary].
 class ChoiceChip extends StatelessWidget {
   ChoiceChip({
     required this.label,
@@ -128,7 +141,10 @@ class ChoiceChip extends StatelessWidget {
   }
 }
 
-/// Flutter-style multi-select chip.
+/// A multi-select chip with optional checkmark indicator.
+///
+/// When [selected], displays with a filled background and optionally the
+/// checkmark ('+') when [showCheckmark] is true.
 class FilterChip extends StatelessWidget {
   FilterChip({
     required this.label,

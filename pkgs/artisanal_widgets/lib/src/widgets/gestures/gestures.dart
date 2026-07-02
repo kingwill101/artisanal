@@ -2,6 +2,8 @@
 ///
 /// Exports all gesture-related types: detail classes, callback signatures,
 /// gesture recognizers, hit-test behavior, and the gesture arena manager.
+///
+/// {@category Widgets}
 library;
 
 export 'events.dart';

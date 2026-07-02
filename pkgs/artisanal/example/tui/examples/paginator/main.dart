@@ -11,8 +11,12 @@ class PaginatorExampleModel implements tui.Model {
           tui.PaginatorModel(
             type: tui.PaginationType.dots,
             perPage: 10,
-            activeDot: Style().foreground(const AnsiColor(235)).render(PaginationDots.active),
-            inactiveDot: Style().foreground(const AnsiColor(250)).render(PaginationDots.inactive),
+            activeDot: Style()
+                .foreground(const AnsiColor(235))
+                .render(PaginationDots.active),
+            inactiveDot: Style()
+                .foreground(const AnsiColor(250))
+                .render(PaginationDots.inactive),
           ).setTotalPages(items.length);
 
   final List<String> items;

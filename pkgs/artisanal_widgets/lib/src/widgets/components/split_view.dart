@@ -1,5 +1,23 @@
 part of 'components_widgets.dart';
 
+/// A two-pane view that arranges children along an axis.
+///
+/// The [SplitView] widget displays [first] and [second] children with optional
+/// [separator] and [gap]. Use [firstFlex] and [secondFlex] to control the
+/// relative sizes of the panes.
+///
+/// By default, axes are horizontal (side-by-side). Set [axis] to
+/// [Axis.vertical] for top-to-bottom arrangement.
+///
+/// Example:
+/// ```dart
+/// SplitView(
+///   first: ListView(children: [Text('Pane 1')]),
+///   second: EditorArea(),
+///   gap: 1,
+///   separator: VerticalDivider(),
+/// )
+/// ```
 class SplitView extends StatelessWidget {
   SplitView({
     required this.first,

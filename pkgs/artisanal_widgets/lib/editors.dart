@@ -11,6 +11,8 @@
 /// - `TextEditor`
 /// - `CodeEditor`
 /// - `MarkdownEditor`
+///
+/// {@category Editors}
 library;
 
 export 'src/widgets/input/input_widgets.dart'

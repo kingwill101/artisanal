@@ -116,12 +116,24 @@ void drawRibbonChart(
         // Only the lower half has content — draw ▄ (lower half block).
         final sty = palette[lowerIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, BlockShades.lower, UvStyle(fg: fgColor));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.lower,
+          UvStyle(fg: fgColor),
+        );
       } else if (lowerIdx == -1) {
         // Only the upper half has content — draw ▀ (upper half block).
         final sty = palette[upperIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, BlockShades.upper, UvStyle(fg: fgColor));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.upper,
+          UvStyle(fg: fgColor),
+        );
       } else {
         // Two different series meet — draw ▀ with fg = upper color,
         // bg = lower color.
@@ -129,7 +141,13 @@ void drawRibbonChart(
         final lowerSty = palette[lowerIdx % palette.length];
         final fg = upperSty.bg ?? upperSty.fg;
         final bg = lowerSty.bg ?? lowerSty.fg;
-        putCell(screen, area.minX + x, screenY, BlockShades.upper, UvStyle(fg: fg, bg: bg));
+        putCell(
+          screen,
+          area.minX + x,
+          screenY,
+          BlockShades.upper,
+          UvStyle(fg: fg, bg: bg),
+        );
       }
     }
   }

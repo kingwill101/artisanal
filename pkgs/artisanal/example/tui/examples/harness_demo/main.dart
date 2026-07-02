@@ -34,7 +34,10 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  await runProgram(const _CounterModel(0), options: const ProgramOptions(altScreen: false));
+  await runProgram(
+    const _CounterModel(0),
+    options: const ProgramOptions(altScreen: false),
+  );
 }
 
 /// Command runner with harness mixin.
@@ -42,7 +45,8 @@ class HarnessDemoRunner extends CommandRunner<void> with HarnessCommandsMixin {
   HarnessDemoRunner() : super('harness_demo', 'TUI harness demo');
 
   @override
-  String get harnessEntrypointPath => 'example/tui/examples/harness_demo/main.dart';
+  String get harnessEntrypointPath =>
+      'example/tui/examples/harness_demo/main.dart';
 }
 
 /// Mixin that adds replay and profile commands to a runner.
@@ -62,7 +66,8 @@ mixin HarnessCommandsMixin on CommandRunner<void> {
   bool _initialized = false;
 }
 
-final class _ReplayHarnessCommand extends Command<void> with ReplayHarnessMixin<void> {
+final class _ReplayHarnessCommand extends Command<void>
+    with ReplayHarnessMixin<void> {
   _ReplayHarnessCommand(this.entrypointPath) {
     registerHarnessFlags();
   }
@@ -85,7 +90,8 @@ final class _ReplayHarnessCommand extends Command<void> with ReplayHarnessMixin<
   }
 }
 
-final class _ProfileHarnessCommand extends Command<void> with ReplayHarnessMixin<void>, ProfileHarnessMixin<void> {
+final class _ProfileHarnessCommand extends Command<void>
+    with ReplayHarnessMixin<void>, ProfileHarnessMixin<void> {
   _ProfileHarnessCommand(this.entrypointPath) {
     registerHarnessFlags();
     registerProfileHarnessFlags();
@@ -114,7 +120,10 @@ final class _ProfileHarnessCommand extends Command<void> with ReplayHarnessMixin
   @override
   Future<void> run() async {
     final replayConfig = ReplayHarnessConfig.fromArgResults(argResults!);
-    final profileConfig = ProfileHarnessConfig.fromArgResults(replayConfig, argResults!);
+    final profileConfig = ProfileHarnessConfig.fromArgResults(
+      replayConfig,
+      argResults!,
+    );
     await executeProfile(replayConfig, profileConfig);
   }
 }

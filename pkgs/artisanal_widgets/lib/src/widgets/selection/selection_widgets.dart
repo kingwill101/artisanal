@@ -5,6 +5,8 @@
 ///
 /// [SelectionArea] wraps a subtree and enables cross-widget text selection
 /// for all [SelectableText] descendants.
+///
+/// {@category Selection}
 @experimental
 library;
 

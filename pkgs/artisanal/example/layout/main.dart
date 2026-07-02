@@ -33,7 +33,10 @@ final special = AdaptiveColor(
 final base = Style().foreground(normal);
 
 // Divider
-final divider = Style().padding(0, 1).foreground(subtle).render(DotChars.bullet);
+final divider = Style()
+    .padding(0, 1)
+    .foreground(subtle)
+    .render(DotChars.bullet);
 
 // URL styling
 String url(String s) => Style().foreground(special).render(s);
@@ -140,7 +143,10 @@ String listItem(String s) {
   return style.render(s);
 }
 
-final checkMark = Style().foreground(special).paddingRight(1).render(StatusChars.check);
+final checkMark = Style()
+    .foreground(special)
+    .paddingRight(1)
+    .render(StatusChars.check);
 
 String listDone(String s) =>
     checkMark +

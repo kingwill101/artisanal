@@ -1,5 +1,19 @@
 part of 'components_widgets.dart';
 
+/// A container with optional padding, margin, background and border.
+///
+/// The [Frame] widget wraps its [child] in a [Container] with optional
+/// [padding] and [margin], and renders a [border] with [borderColor].
+///
+/// Example:
+/// ```dart
+/// Frame(
+///   padding: EdgeInsets.all(1),
+///   background: Colors.blue,
+///   border: Border.rounded,
+///   child: Text('Content'),
+/// )
+/// ```
 class Frame extends StatelessWidget {
   Frame({
     required this.child,

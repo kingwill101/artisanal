@@ -1,9 +1,27 @@
 part of 'components_widgets.dart';
 
+/// Visual style variants for [Button].
 enum ButtonVariant { primary, secondary, outline, ghost, danger }
 
+/// Size variants for [Button].
 enum ButtonSize { small, medium, large }
 
+/// Flutter-style button widget for triggering callbacks.
+///
+/// The [Button] widget is the base button implementation used by
+/// [ElevatedButton], [FilledButton], [TextButton], and [OutlinedButton].
+/// It supports hover and focus states, keyboard activation, and custom styling
+/// through [ButtonVariant] and [ButtonSize].
+///
+/// The [variant] controls the visual appearance:
+/// - [ButtonVariant.primary] - filled with primary color background
+/// - [ButtonVariant.secondary] - filled with secondary/surface color
+/// - [ButtonVariant.danger] - filled with error color background
+/// - [ButtonVariant.outline] - transparent with border outline
+/// - [ButtonVariant.ghost] - transparent, no border
+///
+/// The button is disabled when [enabled] is `false` or when [onPressed] is `null`.
+/// Use [autofocus] and [focusController] to control keyboard focus behavior.
 class Button extends StatefulWidget {
   Button({
     this.label,

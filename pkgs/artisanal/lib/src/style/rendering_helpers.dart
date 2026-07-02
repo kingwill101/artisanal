@@ -15,7 +15,8 @@ export 'ranges.dart'
         overlayBackgroundRangesPreservingAnsi,
         Ranges,
         cutAnsiByCells;
-export 'tag_parser.dart' show ConsoleTagParser, TagSegment, TextSegment, StyledSegment;
+export 'tag_parser.dart'
+    show ConsoleTagParser, TagSegment, TextSegment, StyledSegment;
 export 'writer.dart'
     show
         Writer,

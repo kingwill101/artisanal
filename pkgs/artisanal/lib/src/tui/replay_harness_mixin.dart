@@ -32,10 +32,14 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   String get harnessEntrypointPath;
 
   /// Override to add app-specific arguments after the entrypoint.
-  List<String> buildAppSpecificReplayArgs(ReplayHarnessConfig config, String scenarioPath) => <String>[];
+  List<String> buildAppSpecificReplayArgs(
+    ReplayHarnessConfig config,
+    String scenarioPath,
+  ) => <String>[];
 
   /// Override to customize environment variables for the child process.
-  Map<String, String>? customizeReplayEnvironment(ReplayHarnessConfig config) => null;
+  Map<String, String>? customizeReplayEnvironment(ReplayHarnessConfig config) =>
+      null;
 
   /// Override to transform the replay scenario before execution.
   ///
@@ -51,7 +55,8 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   /// Return a file system path, or throw if resolution fails.
   String resolveTracePath(String path) {
     final trimmed = path.trim();
-    if (trimmed.isEmpty) throw const io.FileSystemException('Trace path is empty');
+    if (trimmed.isEmpty)
+      throw const io.FileSystemException('Trace path is empty');
     if (io.File(trimmed).existsSync()) return trimmed;
     throw io.FileSystemException('Trace file not found', path);
   }
@@ -62,7 +67,8 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   /// also searches candidates like `scenarios/<name>.json`.
   String resolveScenarioPath(String path) {
     final trimmed = path.trim();
-    if (trimmed.isEmpty) throw const io.FileSystemException('Scenario path is empty');
+    if (trimmed.isEmpty)
+      throw const io.FileSystemException('Scenario path is empty');
     if (io.File(trimmed).existsSync()) return trimmed;
 
     final withJson = trimmed.endsWith('.json') ? trimmed : '$trimmed.json';
@@ -84,7 +90,8 @@ mixin ReplayHarnessMixin<T> on Command<T> {
     final trimmed = path.trim();
     if (trimmed.isEmpty) return null;
 
-    final latestAlias = trimmed == 'latest' ||
+    final latestAlias =
+        trimmed == 'latest' ||
         trimmed == 'traces/latest' ||
         trimmed == 'traces/latest.log';
     if (!latestAlias) {
@@ -103,7 +110,9 @@ mixin ReplayHarnessMixin<T> on Command<T> {
     }
 
     if (candidates.isEmpty) return null;
-    candidates.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+    candidates.sort(
+      (a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()),
+    );
     return candidates.first.path;
   }
 
@@ -118,11 +127,18 @@ mixin ReplayHarnessMixin<T> on Command<T> {
 
   /// Override to customize trace session selection (script filtering, etc).
   /// Return the selected session index or let the mixin pick the last matching.
-  int? selectTraceSessionIndex(List<TraceSessionSplit> sessions, String scriptFilter) => null;
+  int? selectTraceSessionIndex(
+    List<TraceSessionSplit> sessions,
+    String scriptFilter,
+  ) => null;
 
   /// Override to customize lead-in sleep handling.
   /// Return the final action count or use the mixin default.
-  Future<int>? customizeLeadInSleep(ReplayHarnessConfig config, String scenarioPath, int actionCount) => null;
+  Future<int>? customizeLeadInSleep(
+    ReplayHarnessConfig config,
+    String scenarioPath,
+    int actionCount,
+  ) => null;
 
   /// Called after replay preparation but before execution.
   /// Use to print custom status or perform app-specific setup.
@@ -130,7 +146,12 @@ mixin ReplayHarnessMixin<T> on Command<T> {
 
   /// Called after replay execution completes.
   /// Use to analyze trace output or report custom status.
-  void onReplayCompleted(PreparedReplay prepared, int exitCode, {String? tracePath, int summaryCount = 0}) {}
+  void onReplayCompleted(
+    PreparedReplay prepared,
+    int exitCode, {
+    String? tracePath,
+    int summaryCount = 0,
+  }) {}
 
   // ===== Argument Registration =====
 
@@ -156,7 +177,10 @@ mixin ReplayHarnessMixin<T> on Command<T> {
       return;
     }
 
-    final customized = await customizeReplayScenario(prepared.scenario, prepared.scenarioPath);
+    final customized = await customizeReplayScenario(
+      prepared.scenario,
+      prepared.scenarioPath,
+    );
     if (customized != null) {
       await customized.save(prepared.scenarioPath);
       prepared = PreparedReplay(
@@ -176,17 +200,29 @@ mixin ReplayHarnessMixin<T> on Command<T> {
       }
     }
 
-    final childArgs = <String>['dart', 'run', harnessEntrypointPath, ...buildAppSpecificReplayArgs(config, prepared.scenarioPath)];
+    final childArgs = <String>[
+      'dart',
+      'run',
+      harnessEntrypointPath,
+      ...buildAppSpecificReplayArgs(config, prepared.scenarioPath),
+    ];
     final env = customizeReplayEnvironment(config) ?? io.Platform.environment;
 
     final process = await io.Process.start(
-      io.Platform.resolvedExecutable, childArgs,
-      environment: env, mode: io.ProcessStartMode.inheritStdio,
+      io.Platform.resolvedExecutable,
+      childArgs,
+      environment: env,
+      mode: io.ProcessStartMode.inheritStdio,
       workingDirectory: io.Directory.current.path,
     );
 
     final exitCode = await _waitForExit(process, config.timeoutSeconds);
-    onReplayCompleted(prepared, exitCode, tracePath: config.traceOut, summaryCount: config.summaryCount);
+    onReplayCompleted(
+      prepared,
+      exitCode,
+      tracePath: config.traceOut,
+      summaryCount: config.summaryCount,
+    );
     if (exitCode != 0) {
       io.exitCode = exitCode;
     }
@@ -196,54 +232,88 @@ mixin ReplayHarnessMixin<T> on Command<T> {
 
   Future<PreparedReplay> _prepare(ReplayHarnessConfig config) async {
     if (config.scenarioPath != null && config.tracePath == null) {
-      final resolved = await tryResolveScenarioPath(config.scenarioPath!) ?? config.scenarioPath!;
+      final resolved =
+          await tryResolveScenarioPath(config.scenarioPath!) ??
+          config.scenarioPath!;
       final actionCount = await _applyLeadInSleep(resolved, config.leadInMs);
       final finalScenario = await ReplayScenario.load(resolved);
       return PreparedReplay(
         selection: TraceSessionSelection(
-          sourcePath: resolved, outPath: resolved,
-          sessionIndex: 1, sessionCount: 1, startLine: 1, endLine: 0,
+          sourcePath: resolved,
+          outPath: resolved,
+          sessionIndex: 1,
+          sessionCount: 1,
+          startLine: 1,
+          endLine: 0,
           script: null,
         ),
-        scenario: finalScenario, actionCount: actionCount,
+        scenario: finalScenario,
+        actionCount: actionCount,
       );
     }
 
     final resolvedPath = await tryResolveTracePath(config.tracePath!);
     final tracePath = resolvedPath ?? resolveTracePath(config.tracePath!);
     final selection = await _selectSession(
-      tracePath, scriptFilter: config.scriptFilter, outPath: config.sessionOut,
+      tracePath,
+      scriptFilter: config.scriptFilter,
+      outPath: config.sessionOut,
     );
     final scenarioPath = config.scenarioOut ?? selection.outPath;
     final actionCount = await _applyLeadInSleep(scenarioPath, config.leadInMs);
     final finalScenario = await ReplayScenario.load(scenarioPath);
-    return PreparedReplay(selection: selection, scenario: finalScenario, actionCount: actionCount);
+    return PreparedReplay(
+      selection: selection,
+      scenario: finalScenario,
+      actionCount: actionCount,
+    );
   }
 
-  Future<TraceSessionSelection> _selectSession(String sourcePath, {required String scriptFilter, required String outPath}) async {
+  Future<TraceSessionSelection> _selectSession(
+    String sourcePath, {
+    required String scriptFilter,
+    required String outPath,
+  }) async {
     final file = io.File(sourcePath);
     final lines = await file.readAsLines();
     final sessions = splitTraceSessions(lines);
     if (sessions.isEmpty) {
       await writeLines(outPath, lines);
-      return TraceSessionSelection(sourcePath: sourcePath, outPath: outPath, sessionIndex: 1, sessionCount: 1, startLine: 1, endLine: lines.length, script: null);
+      return TraceSessionSelection(
+        sourcePath: sourcePath,
+        outPath: outPath,
+        sessionIndex: 1,
+        sessionCount: 1,
+        startLine: 1,
+        endLine: lines.length,
+        script: null,
+      );
     }
     final selected = selectTraceSession(sessions, scriptFilter);
     await writeLines(outPath, selected.lines);
     return TraceSessionSelection(
-      sourcePath: sourcePath, outPath: outPath, sessionIndex: selected.index,
-      sessionCount: sessions.length, startLine: selected.startLine,
-      endLine: selected.endLine, script: selected.script,
+      sourcePath: sourcePath,
+      outPath: outPath,
+      sessionIndex: selected.index,
+      sessionCount: sessions.length,
+      startLine: selected.startLine,
+      endLine: selected.endLine,
+      script: selected.script,
     );
   }
 
-  TraceSessionSplit selectTraceSession(List<TraceSessionSplit> sessions, String scriptFilter) {
+  TraceSessionSplit selectTraceSession(
+    List<TraceSessionSplit> sessions,
+    String scriptFilter,
+  ) {
     final normalizedFilter = scriptFilter.trim();
     if (selectTraceSessionIndex(sessions, scriptFilter) case final index?) {
       return sessions[index];
     }
     return sessions.lastWhere(
-      (session) => normalizedFilter.isEmpty || (session.script?.contains(normalizedFilter) ?? false),
+      (session) =>
+          normalizedFilter.isEmpty ||
+          (session.script?.contains(normalizedFilter) ?? false),
       orElse: () => sessions.last,
     );
   }
@@ -251,18 +321,39 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   Future<int> _applyLeadInSleep(String scenarioPath, int leadInMs) async {
     final actionCount = await loadReplayScenarioActionCount(scenarioPath);
     if (customizeLeadInSleep(
-      ReplayHarnessConfig(
-        scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '', scenarioOut: null,
-        scenarioName: '', scenarioDescription: '', speed: 1, minSleepUs: 0, leadInMs: leadInMs,
-        screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
-        blockInput: false, loop: false, keepOpen: false, timeoutSeconds: 180,
-        convertOnly: false, captureTrace: false, traceOut: '', traceTags: '',
-        captureDispatch: false, summaryCount: 0, maxSpanUs: 0,
-        traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
-      ),
-      scenarioPath,
-      actionCount,
-    ) case final count?) {
+          ReplayHarnessConfig(
+            scenarioPath: null,
+            tracePath: null,
+            scriptFilter: '',
+            sessionOut: '',
+            scenarioOut: null,
+            scenarioName: '',
+            scenarioDescription: '',
+            speed: 1,
+            minSleepUs: 0,
+            leadInMs: leadInMs,
+            screenWidth: 0,
+            screenHeight: 0,
+            fixedRightWidth: 0,
+            blockInput: false,
+            loop: false,
+            keepOpen: false,
+            timeoutSeconds: 180,
+            convertOnly: false,
+            captureTrace: false,
+            traceOut: '',
+            traceTags: '',
+            captureDispatch: false,
+            summaryCount: 0,
+            maxSpanUs: 0,
+            traceFromUs: null,
+            traceToUs: null,
+            traceIncludeHoverMoves: false,
+          ),
+          scenarioPath,
+          actionCount,
+        )
+        case final count?) {
       return count;
     }
 
@@ -275,7 +366,10 @@ mixin ReplayHarnessMixin<T> on Command<T> {
         actions.insert(0, ReplayAction(type: 'sleep', ms: leadInMs));
       }
       await ReplayScenario(
-        name: scenario.name, description: scenario.description, screen: scenario.screen, actions: actions,
+        name: scenario.name,
+        description: scenario.description,
+        screen: scenario.screen,
+        actions: actions,
       ).save(scenarioPath);
     }
     return actions.length;
@@ -336,7 +430,11 @@ final class ReplayTraceSummary {
 ///
 /// Returns null if the line does not match the expected format:
 /// `[+123us] [tag] message 456us`
-ReplayTraceSummarySpan? tryParseTraceSpan(String path, int lineNumber, String line) {
+ReplayTraceSummarySpan? tryParseTraceSpan(
+  String path,
+  int lineNumber,
+  String line,
+) {
   final durationMatch = RegExp(r' (\d+)us$').firstMatch(line);
   if (durationMatch == null) return null;
   final durationUs = int.tryParse(durationMatch.group(1)!);
@@ -355,10 +453,18 @@ ReplayTraceSummarySpan? tryParseTraceSpan(String path, int lineNumber, String li
 }
 
 /// Analyze a trace file and return the slowest spans.
-Future<ReplayTraceSummary> analyzeReplayTrace(String path, {int limit = 12}) async {
+Future<ReplayTraceSummary> analyzeReplayTrace(
+  String path, {
+  int limit = 12,
+}) async {
   final file = io.File(path);
   if (!await file.exists()) {
-    return ReplayTraceSummary(path: path, spanCount: 0, maxDurationUs: 0, spans: const <ReplayTraceSummarySpan>[]);
+    return ReplayTraceSummary(
+      path: path,
+      spanCount: 0,
+      maxDurationUs: 0,
+      spans: const <ReplayTraceSummarySpan>[],
+    );
   }
 
   final spans = <ReplayTraceSummarySpan>[];
@@ -481,14 +587,19 @@ Future<ResolvedReplay?> loadReplayPlan(
 
 String _resolveTracePath(String path) {
   final trimmed = path.trim();
-  if (trimmed.isEmpty) throw const io.FileSystemException('Trace path is empty');
+  if (trimmed.isEmpty)
+    throw const io.FileSystemException('Trace path is empty');
   if (io.File(trimmed).existsSync()) return trimmed;
   throw io.FileSystemException('Trace file not found', path);
 }
 
 /// Prepared replay data including session selection and scenario.
 final class PreparedReplay {
-  const PreparedReplay({required this.selection, required this.scenario, required this.actionCount});
+  const PreparedReplay({
+    required this.selection,
+    required this.scenario,
+    required this.actionCount,
+  });
   final TraceSessionSelection selection;
   final ReplayScenario scenario;
   final int actionCount;
@@ -499,8 +610,13 @@ final class PreparedReplay {
 /// Selected trace session information.
 final class TraceSessionSelection {
   const TraceSessionSelection({
-    required this.sourcePath, required this.outPath, required this.sessionIndex,
-    required this.sessionCount, required this.startLine, required this.endLine, required this.script,
+    required this.sourcePath,
+    required this.outPath,
+    required this.sessionIndex,
+    required this.sessionCount,
+    required this.startLine,
+    required this.endLine,
+    required this.script,
   });
 
   final String sourcePath;
@@ -514,14 +630,20 @@ final class TraceSessionSelection {
 
 /// Session data from splitting trace logs.
 final class TraceSessionSplit {
-  const TraceSessionSplit({required this.index, required this.startLine, required this.endLine, required this.lines});
+  const TraceSessionSplit({
+    required this.index,
+    required this.startLine,
+    required this.endLine,
+    required this.lines,
+  });
   final int index;
   final int startLine;
   final int endLine;
   final List<String> lines;
   String? get script {
     for (final line in lines) {
-      if (line.startsWith('# script:')) return line.substring('# script:'.length).trim();
+      if (line.startsWith('# script:'))
+        return line.substring('# script:'.length).trim();
     }
     return null;
   }
@@ -542,7 +664,14 @@ List<TraceSessionSplit> splitTraceSessions(List<String> lines) {
 
   void finish(int endLine) {
     if (current.isEmpty) return;
-    sessions.add(TraceSessionSplit(index: sessions.length + 1, startLine: startLine, endLine: endLine, lines: List<String>.unmodifiable(current)));
+    sessions.add(
+      TraceSessionSplit(
+        index: sessions.length + 1,
+        startLine: startLine,
+        endLine: endLine,
+        lines: List<String>.unmodifiable(current),
+      ),
+    );
     current = <String>[];
   }
 
@@ -574,17 +703,37 @@ mixin ProfileHarnessMixin<T> on ReplayHarnessMixin<T> {
 
   String get profileEventPrefix => 'profile.harness';
 
-  Map<String, Object?> profileRegionMetadata(String? scenarioPath) => const <String, Object?>{};
+  Map<String, Object?> profileRegionMetadata(String? scenarioPath) =>
+      const <String, Object?>{};
 
   ReplayHarnessConfig defaultProfileReplayConfig() => ReplayHarnessConfig(
-    scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '', scenarioOut: null,
-    scenarioName: 'profile', scenarioDescription: 'Profile replay',
-    speed: 1, minSleepUs: 30000, leadInMs: 3500,
-    screenWidth: 0, screenHeight: 0, fixedRightWidth: 60,
-    blockInput: false, loop: false, keepOpen: false, timeoutSeconds: 180,
-    convertOnly: false, captureTrace: false, traceOut: '',
-    traceTags: '', captureDispatch: false, summaryCount: 0, maxSpanUs: 0,
-    traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+    scenarioPath: null,
+    tracePath: null,
+    scriptFilter: '',
+    sessionOut: '',
+    scenarioOut: null,
+    scenarioName: 'profile',
+    scenarioDescription: 'Profile replay',
+    speed: 1,
+    minSleepUs: 30000,
+    leadInMs: 3500,
+    screenWidth: 0,
+    screenHeight: 0,
+    fixedRightWidth: 60,
+    blockInput: false,
+    loop: false,
+    keepOpen: false,
+    timeoutSeconds: 180,
+    convertOnly: false,
+    captureTrace: false,
+    traceOut: '',
+    traceTags: '',
+    captureDispatch: false,
+    summaryCount: 0,
+    maxSpanUs: 0,
+    traceFromUs: null,
+    traceToUs: null,
+    traceIncludeHoverMoves: false,
   );
 
   /// Override to prepare the artifact directory before profiling.
@@ -602,13 +751,25 @@ mixin ProfileHarnessMixin<T> on ReplayHarnessMixin<T> {
   }
 
   /// Override to build profiler-specific arguments.
-  List<String> buildProfileArgs(ProfileHarnessConfig config, String scenarioPath) =>
-      buildDevtoolsProfilerRunArgs(config, scenarioPath);
+  List<String> buildProfileArgs(
+    ProfileHarnessConfig config,
+    String scenarioPath,
+  ) => buildDevtoolsProfilerRunArgs(config, scenarioPath);
 
-  List<String> buildDevtoolsProfilerRunArgs(ProfileHarnessConfig config, String scenarioPath) => <String>[
-    'run', '--cwd', io.Directory.current.path,
-    '--artifact-dir', config.artifactDir,
-    '--terminal', '--', 'dart', 'run', harnessEntrypointPath,
+  List<String> buildDevtoolsProfilerRunArgs(
+    ProfileHarnessConfig config,
+    String scenarioPath,
+  ) => <String>[
+    'run',
+    '--cwd',
+    io.Directory.current.path,
+    '--artifact-dir',
+    config.artifactDir,
+    '--terminal',
+    '--',
+    'dart',
+    'run',
+    harnessEntrypointPath,
     ...buildAppSpecificReplayArgs(defaultProfileReplayConfig(), scenarioPath),
   ];
 
@@ -635,13 +796,19 @@ mixin ProfileHarnessMixin<T> on ReplayHarnessMixin<T> {
     return _instrumentProfileRegion(scenario, profileRegionName, scenarioPath);
   }
 
-  Future<void> executeProfile(ReplayHarnessConfig replayConfig, ProfileHarnessConfig config) async {
+  Future<void> executeProfile(
+    ReplayHarnessConfig replayConfig,
+    ProfileHarnessConfig config,
+  ) async {
     if (config.error case final error?) {
       usageException(error);
     }
 
     var prepared = await _prepare(replayConfig);
-    final customized = await customizeReplayScenario(prepared.scenario, prepared.scenarioPath);
+    final customized = await customizeReplayScenario(
+      prepared.scenario,
+      prepared.scenarioPath,
+    );
     if (customized != null) {
       await customized.save(prepared.scenarioPath);
       prepared = PreparedReplay(
@@ -654,11 +821,14 @@ mixin ProfileHarnessMixin<T> on ReplayHarnessMixin<T> {
     await prepareProfileArtifactDir(config.artifactDir);
 
     final profilerArgs = buildProfileArgs(config, prepared.scenarioPath);
-    final env = customizeReplayEnvironment(replayConfig) ?? io.Platform.environment;
+    final env =
+        customizeReplayEnvironment(replayConfig) ?? io.Platform.environment;
 
     final process = await io.Process.start(
-      config.profilerCommand, profilerArgs,
-      environment: env, mode: io.ProcessStartMode.inheritStdio,
+      config.profilerCommand,
+      profilerArgs,
+      environment: env,
+      mode: io.ProcessStartMode.inheritStdio,
       workingDirectory: io.Directory.current.path,
     );
 
@@ -677,26 +847,41 @@ mixin ProfileHarnessMixin<T> on ReplayHarnessMixin<T> {
     final actions = scenario.actions.toList();
     final metadata = profileRegionMetadata(outPath);
     final start = ReplayAction(
-      type: 'event', eventType: '$profileEventPrefix.start',
+      type: 'event',
+      eventType: '$profileEventPrefix.start',
       eventFields: <String, Object?>{
         'name': regionName,
         'source': 'profile_harness',
         ...metadata,
       },
     );
-    final stop = ReplayAction(type: 'event', eventType: '$profileEventPrefix.stop');
+    final stop = ReplayAction(
+      type: 'event',
+      eventType: '$profileEventPrefix.stop',
+    );
 
-    final warmupMs = actions.isNotEmpty && actions.first.type == 'sleep' ? actions.removeAt(0).ms : 0;
+    final warmupMs = actions.isNotEmpty && actions.first.type == 'sleep'
+        ? actions.removeAt(0).ms
+        : 0;
     final startWithWarmup = warmupMs > 0
-        ? ReplayAction(type: start.type, eventType: start.eventType,
-            eventFields: <String, Object?>{...start.eventFields, 'warmupMs': warmupMs})
+        ? ReplayAction(
+            type: start.type,
+            eventType: start.eventType,
+            eventFields: <String, Object?>{
+              ...start.eventFields,
+              'warmupMs': warmupMs,
+            },
+          )
         : start;
 
     actions.insert(0, startWithWarmup);
     actions.add(stop);
 
     return ReplayScenario(
-      name: scenario.name, description: scenario.description, screen: scenario.screen, actions: actions,
+      name: scenario.name,
+      description: scenario.description,
+      screen: scenario.screen,
+      actions: actions,
     );
   }
 }
@@ -723,17 +908,31 @@ final class ProfileHarnessConfig {
   final String regionName;
   final String? error;
 
-  static ProfileHarnessConfig fromArgResults(ReplayHarnessConfig replay, ArgResults parsed) {
-    final profilerCommand = (parsed['profile-profiler-command'] as String?)?.trim() ?? 'devtools-profiler';
-    final artifactDir = (parsed['profile-artifact-dir'] as String?)?.trim() ?? '.dart_tool/profile';
-    final regionName = (parsed['profile-region-name'] as String?)?.trim() ?? 'app.replay';
-    final timeoutSeconds = int.tryParse((parsed['profile-timeout-seconds'] as String?) ?? '240') ?? 240;
+  static ProfileHarnessConfig fromArgResults(
+    ReplayHarnessConfig replay,
+    ArgResults parsed,
+  ) {
+    final profilerCommand =
+        (parsed['profile-profiler-command'] as String?)?.trim() ??
+        'devtools-profiler';
+    final artifactDir =
+        (parsed['profile-artifact-dir'] as String?)?.trim() ??
+        '.dart_tool/profile';
+    final regionName =
+        (parsed['profile-region-name'] as String?)?.trim() ?? 'app.replay';
+    final timeoutSeconds =
+        int.tryParse((parsed['profile-timeout-seconds'] as String?) ?? '240') ??
+        240;
 
     return ProfileHarnessConfig(
-      replay: replay, profilerCommand: profilerCommand, artifactDir: artifactDir,
+      replay: replay,
+      profilerCommand: profilerCommand,
+      artifactDir: artifactDir,
       cleanArtifactDir: parsed['profile-clean-artifact-dir'] != false,
-      timeoutSeconds: timeoutSeconds, profileRegion: parsed['profile-region'] != false,
-      regionName: regionName, error: null,
+      timeoutSeconds: timeoutSeconds,
+      profileRegion: parsed['profile-region'] != false,
+      regionName: regionName,
+      error: null,
     );
   }
 }
@@ -818,7 +1017,8 @@ class ReplayHarnessCommand extends Command<void> with ReplayHarnessMixin<void> {
 }
 
 /// Profile subcommand provided by [HarnessCommandsMixin].
-class ProfileHarnessCommand extends Command<void> with ReplayHarnessMixin<void>, ProfileHarnessMixin<void> {
+class ProfileHarnessCommand extends Command<void>
+    with ReplayHarnessMixin<void>, ProfileHarnessMixin<void> {
   ProfileHarnessCommand(this.entrypointPath) {
     registerHarnessFlags();
     registerProfileHarnessFlags();
@@ -853,7 +1053,10 @@ class ProfileHarnessCommand extends Command<void> with ReplayHarnessMixin<void>,
   @override
   Future<void> run() async {
     final replayConfig = ReplayHarnessConfig.fromArgResults(argResults!);
-    final profileConfig = ProfileHarnessConfig.fromArgResults(replayConfig, argResults!);
+    final profileConfig = ProfileHarnessConfig.fromArgResults(
+      replayConfig,
+      argResults!,
+    );
     await executeProfile(replayConfig, profileConfig);
   }
 }
@@ -927,14 +1130,33 @@ final class ReplayHarnessConfig {
     final scenario = parsed['replay-scenario'] as String?;
     if (trace != null && scenario != null) {
       return const ReplayHarnessConfig(
-        scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '', scenarioOut: null,
-        scenarioName: 'replay', scenarioDescription: 'Generated from trace',
-        speed: 1, minSleepUs: 30000, leadInMs: 3500,
-        screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
-        blockInput: false, loop: false, keepOpen: false,
-        timeoutSeconds: 180, convertOnly: false, captureTrace: false,
-        traceOut: '', traceTags: '', captureDispatch: false, summaryCount: 0, maxSpanUs: 0,
-        traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+        scenarioPath: null,
+        tracePath: null,
+        scriptFilter: '',
+        sessionOut: '',
+        scenarioOut: null,
+        scenarioName: 'replay',
+        scenarioDescription: 'Generated from trace',
+        speed: 1,
+        minSleepUs: 30000,
+        leadInMs: 3500,
+        screenWidth: 0,
+        screenHeight: 0,
+        fixedRightWidth: 0,
+        blockInput: false,
+        loop: false,
+        keepOpen: false,
+        timeoutSeconds: 180,
+        convertOnly: false,
+        captureTrace: false,
+        traceOut: '',
+        traceTags: '',
+        captureDispatch: false,
+        summaryCount: 0,
+        maxSpanUs: 0,
+        traceFromUs: null,
+        traceToUs: null,
+        traceIncludeHoverMoves: false,
         error: 'Use only one: --replay-scenario or --replay-trace.',
       );
     }
@@ -944,12 +1166,27 @@ final class ReplayHarnessConfig {
       return ReplayHarnessConfig._error(err);
     }
 
-    final minSleep = _parseInt(parsed['replay-trace-min-sleep-us'], '--replay-trace-min-sleep-us');
+    final minSleep = _parseInt(
+      parsed['replay-trace-min-sleep-us'],
+      '--replay-trace-min-sleep-us',
+    );
     final leadInMs = _parseOptionalInt(parsed['replay-lead-in-ms'], 3500);
-    final screenWidth = _parseInt(parsed['replay-trace-screen-width'], '--replay-trace-screen-width');
-    final screenHeight = _parseInt(parsed['replay-trace-screen-height'], '--replay-trace-screen-height');
-    final fixedRightWidth = _parseInt(parsed['replay-trace-fixed-right-width'], '--replay-trace-fixed-right-width');
-    final timeoutSeconds = _parseInt(parsed['replay-timeout-seconds'], '--replay-timeout-seconds');
+    final screenWidth = _parseInt(
+      parsed['replay-trace-screen-width'],
+      '--replay-trace-screen-width',
+    );
+    final screenHeight = _parseInt(
+      parsed['replay-trace-screen-height'],
+      '--replay-trace-screen-height',
+    );
+    final fixedRightWidth = _parseInt(
+      parsed['replay-trace-fixed-right-width'],
+      '--replay-trace-fixed-right-width',
+    );
+    final timeoutSeconds = _parseInt(
+      parsed['replay-timeout-seconds'],
+      '--replay-timeout-seconds',
+    );
 
     final normalizedTrace = _blankToNull(trace);
     final normalizedScenario = _blankToNull(scenario);
@@ -964,7 +1201,9 @@ final class ReplayHarnessConfig {
 
     String resolveDesc(String? value) {
       final trimmed = value?.trim();
-      return (trimmed == null || trimmed.isEmpty) ? 'Generated from trace' : trimmed;
+      return (trimmed == null || trimmed.isEmpty)
+          ? 'Generated from trace'
+          : trimmed;
     }
 
     final traceFromUs = _parseOptionalIntOrNull(parsed['replay-trace-from-us']);
@@ -974,22 +1213,36 @@ final class ReplayHarnessConfig {
       scenarioPath: normalizedScenario.isEmpty ? null : normalizedScenario,
       tracePath: normalizedTrace.isEmpty ? null : normalizedTrace,
       scriptFilter: (parsed['replay-script-filter'] as String?) ?? 'bin/*.dart',
-      sessionOut: (parsed['replay-session-out'] as String?) ?? '.dart_tool/replay/session.log',
+      sessionOut:
+          (parsed['replay-session-out'] as String?) ??
+          '.dart_tool/replay/session.log',
       scenarioOut: scenarioOut.isEmpty ? null : scenarioOut,
       scenarioName: resolveName(scenarioName),
       scenarioDescription: resolveDesc(scenarioDesc),
-      speed: speed.value, minSleepUs: minSleep.value, leadInMs: leadInMs,
-      screenWidth: screenWidth.value, screenHeight: screenHeight.value, fixedRightWidth: fixedRightWidth.value,
+      speed: speed.value,
+      minSleepUs: minSleep.value,
+      leadInMs: leadInMs,
+      screenWidth: screenWidth.value,
+      screenHeight: screenHeight.value,
+      fixedRightWidth: fixedRightWidth.value,
       blockInput: parsed['replay-block-input'] == true,
-      loop: parsed['replay-loop'] == true, keepOpen: parsed['replay-keep-open'] == true,
+      loop: parsed['replay-loop'] == true,
+      keepOpen: parsed['replay-keep-open'] == true,
       timeoutSeconds: timeoutSeconds.value,
       convertOnly: parsed['replay-convert-only'] == true,
       captureTrace: parsed['replay-capture-trace'] != false,
-      traceOut: (parsed['replay-trace-out'] as String?) ?? '.dart_tool/replay/trace.log',
-      traceTags: (parsed['replay-trace-tags'] as String?) ?? 'general,render,layout,paint,scroll',
+      traceOut:
+          (parsed['replay-trace-out'] as String?) ??
+          '.dart_tool/replay/trace.log',
+      traceTags:
+          (parsed['replay-trace-tags'] as String?) ??
+          'general,render,layout,paint,scroll',
       captureDispatch: parsed['replay-capture-dispatch'] == true,
-      summaryCount: int.tryParse((parsed['replay-summary-count'] as String?) ?? '12') ?? 12,
-      maxSpanUs: int.tryParse((parsed['replay-max-span-us'] as String?) ?? '0') ?? 0,
+      summaryCount:
+          int.tryParse((parsed['replay-summary-count'] as String?) ?? '12') ??
+          12,
+      maxSpanUs:
+          int.tryParse((parsed['replay-max-span-us'] as String?) ?? '0') ?? 0,
       traceFromUs: traceFromUs,
       traceToUs: traceToUs,
       traceIncludeHoverMoves: parsed['replay-trace-include-hover'] == true,
@@ -999,19 +1252,41 @@ final class ReplayHarnessConfig {
 
   factory ReplayHarnessConfig._error(String message) {
     return ReplayHarnessConfig(
-      scenarioPath: null, tracePath: null, scriptFilter: '', sessionOut: '', scenarioOut: null,
-      scenarioName: 'replay', scenarioDescription: 'Generated from trace',
-      speed: 1, minSleepUs: 30000, leadInMs: 3500,
-      screenWidth: 0, screenHeight: 0, fixedRightWidth: 0,
-      blockInput: false, loop: false, keepOpen: false, timeoutSeconds: 180,
-      convertOnly: false, captureTrace: false, traceOut: '',
-      traceTags: '', captureDispatch: false, summaryCount: 0, maxSpanUs: 0,
-      traceFromUs: null, traceToUs: null, traceIncludeHoverMoves: false,
+      scenarioPath: null,
+      tracePath: null,
+      scriptFilter: '',
+      sessionOut: '',
+      scenarioOut: null,
+      scenarioName: 'replay',
+      scenarioDescription: 'Generated from trace',
+      speed: 1,
+      minSleepUs: 30000,
+      leadInMs: 3500,
+      screenWidth: 0,
+      screenHeight: 0,
+      fixedRightWidth: 0,
+      blockInput: false,
+      loop: false,
+      keepOpen: false,
+      timeoutSeconds: 180,
+      convertOnly: false,
+      captureTrace: false,
+      traceOut: '',
+      traceTags: '',
+      captureDispatch: false,
+      summaryCount: 0,
+      maxSpanUs: 0,
+      traceFromUs: null,
+      traceToUs: null,
+      traceIncludeHoverMoves: false,
       error: message,
     );
   }
 
-  static ({double value, String? error}) _parseDouble(Object? value, String optionName) {
+  static ({double value, String? error}) _parseDouble(
+    Object? value,
+    String optionName,
+  ) {
     final raw = (value as String? ?? '').trim();
     final parsed = double.tryParse(raw);
     if (parsed == null || !parsed.isFinite || parsed <= 0) {
@@ -1020,7 +1295,10 @@ final class ReplayHarnessConfig {
     return (value: parsed, error: null);
   }
 
-  static ({int value, String? error}) _parseInt(Object? value, String optionName) {
+  static ({int value, String? error}) _parseInt(
+    Object? value,
+    String optionName,
+  ) {
     final raw = (value as String? ?? '').trim();
     final parsed = int.tryParse(raw);
     if (parsed == null || parsed < 0) {
@@ -1051,33 +1329,146 @@ final class ReplayHarnessConfig {
 /// Extension to register replay flags on any [ArgParser] (standalone usage).
 extension ReplayFlagsArgParser on ArgParser {
   void registerReplayFlags() {
-    addOption('replay-trace', help: 'Convert a TuiTrace log into a replay scenario.', valueHelp: 'path');
-    addOption('replay-scenario', help: 'Load a replay scenario JSON file.', valueHelp: 'name|path');
-    addOption('replay-scenario-out', help: 'Write converted scenario.', valueHelp: 'path');
-    addOption('replay-scenario-name', help: 'Name for converted scenario.', valueHelp: 'name');
-    addOption('replay-scenario-description', help: 'Description for converted scenario.', valueHelp: 'text');
-    addOption('replay-speed', defaultsTo: '1.0', help: 'Replay speed.', valueHelp: 'factor');
-    addOption('replay-trace-min-sleep-us', defaultsTo: '30000', help: 'Min sleep.', valueHelp: 'micros');
-    addOption('replay-trace-from-us', help: 'First trace timestamp to include.', valueHelp: 'micros');
-    addOption('replay-trace-to-us', help: 'Last trace timestamp to include.', valueHelp: 'micros');
-    addOption('replay-lead-in-ms', defaultsTo: '3500', help: 'Initial wait before first replay input.', valueHelp: 'ms');
-    addOption('replay-trace-screen-width', defaultsTo: '0', help: 'Override source screen width.', valueHelp: 'cols');
-    addOption('replay-trace-screen-height', defaultsTo: '0', help: 'Override source screen height.', valueHelp: 'rows');
-    addOption('replay-trace-fixed-right-width', defaultsTo: '60', help: 'Right pane anchor width.', valueHelp: 'cols');
-    addFlag('replay-trace-include-hover', negatable: false, help: 'Preserve hover move events when converting traces.');
-    addOption('replay-script-filter', defaultsTo: 'bin/*.dart', help: 'Script filter for session selection.', valueHelp: 'text');
-    addOption('replay-session-out', defaultsTo: '.dart_tool/replay/session.log', help: 'Session output path.', valueHelp: 'path');
-    addFlag('replay-block-input', negatable: false, help: 'Block manual input.');
+    addOption(
+      'replay-trace',
+      help: 'Convert a TuiTrace log into a replay scenario.',
+      valueHelp: 'path',
+    );
+    addOption(
+      'replay-scenario',
+      help: 'Load a replay scenario JSON file.',
+      valueHelp: 'name|path',
+    );
+    addOption(
+      'replay-scenario-out',
+      help: 'Write converted scenario.',
+      valueHelp: 'path',
+    );
+    addOption(
+      'replay-scenario-name',
+      help: 'Name for converted scenario.',
+      valueHelp: 'name',
+    );
+    addOption(
+      'replay-scenario-description',
+      help: 'Description for converted scenario.',
+      valueHelp: 'text',
+    );
+    addOption(
+      'replay-speed',
+      defaultsTo: '1.0',
+      help: 'Replay speed.',
+      valueHelp: 'factor',
+    );
+    addOption(
+      'replay-trace-min-sleep-us',
+      defaultsTo: '30000',
+      help: 'Min sleep.',
+      valueHelp: 'micros',
+    );
+    addOption(
+      'replay-trace-from-us',
+      help: 'First trace timestamp to include.',
+      valueHelp: 'micros',
+    );
+    addOption(
+      'replay-trace-to-us',
+      help: 'Last trace timestamp to include.',
+      valueHelp: 'micros',
+    );
+    addOption(
+      'replay-lead-in-ms',
+      defaultsTo: '3500',
+      help: 'Initial wait before first replay input.',
+      valueHelp: 'ms',
+    );
+    addOption(
+      'replay-trace-screen-width',
+      defaultsTo: '0',
+      help: 'Override source screen width.',
+      valueHelp: 'cols',
+    );
+    addOption(
+      'replay-trace-screen-height',
+      defaultsTo: '0',
+      help: 'Override source screen height.',
+      valueHelp: 'rows',
+    );
+    addOption(
+      'replay-trace-fixed-right-width',
+      defaultsTo: '60',
+      help: 'Right pane anchor width.',
+      valueHelp: 'cols',
+    );
+    addFlag(
+      'replay-trace-include-hover',
+      negatable: false,
+      help: 'Preserve hover move events when converting traces.',
+    );
+    addOption(
+      'replay-script-filter',
+      defaultsTo: 'bin/*.dart',
+      help: 'Script filter for session selection.',
+      valueHelp: 'text',
+    );
+    addOption(
+      'replay-session-out',
+      defaultsTo: '.dart_tool/replay/session.log',
+      help: 'Session output path.',
+      valueHelp: 'path',
+    );
+    addFlag(
+      'replay-block-input',
+      negatable: false,
+      help: 'Block manual input.',
+    );
     addFlag('replay-loop', negatable: false, help: 'Loop replay.');
     addFlag('replay-keep-open', negatable: false, help: 'Keep app open.');
-    addFlag('replay-convert-only', negatable: false, help: 'Only convert, do not run.');
-    addFlag('replay-capture-trace', defaultsTo: true, help: 'Capture trace during replay.');
-    addOption('replay-trace-out', defaultsTo: '.dart_tool/replay/trace.log', help: 'Trace output path.', valueHelp: 'path');
-    addOption('replay-trace-tags', defaultsTo: 'general,render,layout,paint,scroll', help: 'Trace tags.', valueHelp: 'tags');
-    addFlag('replay-capture-dispatch', negatable: false, help: 'Include dispatch capture.');
-    addOption('replay-summary-count', defaultsTo: '12', help: 'Summary span count.', valueHelp: 'count');
-    addOption('replay-max-span-us', defaultsTo: '0', help: 'Fail on span exceeding this.', valueHelp: 'micros');
-    addOption('replay-timeout-seconds', defaultsTo: '180', help: 'Timeout.', valueHelp: 'seconds');
+    addFlag(
+      'replay-convert-only',
+      negatable: false,
+      help: 'Only convert, do not run.',
+    );
+    addFlag(
+      'replay-capture-trace',
+      defaultsTo: true,
+      help: 'Capture trace during replay.',
+    );
+    addOption(
+      'replay-trace-out',
+      defaultsTo: '.dart_tool/replay/trace.log',
+      help: 'Trace output path.',
+      valueHelp: 'path',
+    );
+    addOption(
+      'replay-trace-tags',
+      defaultsTo: 'general,render,layout,paint,scroll',
+      help: 'Trace tags.',
+      valueHelp: 'tags',
+    );
+    addFlag(
+      'replay-capture-dispatch',
+      negatable: false,
+      help: 'Include dispatch capture.',
+    );
+    addOption(
+      'replay-summary-count',
+      defaultsTo: '12',
+      help: 'Summary span count.',
+      valueHelp: 'count',
+    );
+    addOption(
+      'replay-max-span-us',
+      defaultsTo: '0',
+      help: 'Fail on span exceeding this.',
+      valueHelp: 'micros',
+    );
+    addOption(
+      'replay-timeout-seconds',
+      defaultsTo: '180',
+      help: 'Timeout.',
+      valueHelp: 'seconds',
+    );
   }
 }
 
@@ -1088,11 +1479,39 @@ extension ProfileFlagsArgParser on ArgParser {
     String artifactDir = '.dart_tool/profile',
     String regionName = 'app.replay',
   }) {
-    addOption('profile-profiler-command', defaultsTo: profilerCommand, help: 'Profiler executable.', valueHelp: 'cmd');
-    addOption('profile-artifact-dir', defaultsTo: artifactDir, help: 'Artifact directory.', valueHelp: 'path');
-    addFlag('profile-clean-artifact-dir', defaultsTo: true, help: 'Clean artifact dir first.');
-    addFlag('profile-region', defaultsTo: true, help: 'Mark the active replay window as a devtools profile region.');
-    addOption('profile-region-name', defaultsTo: regionName, help: 'Profile region name.', valueHelp: 'name');
-    addOption('profile-timeout-seconds', defaultsTo: '240', help: 'Timeout.', valueHelp: 'seconds');
+    addOption(
+      'profile-profiler-command',
+      defaultsTo: profilerCommand,
+      help: 'Profiler executable.',
+      valueHelp: 'cmd',
+    );
+    addOption(
+      'profile-artifact-dir',
+      defaultsTo: artifactDir,
+      help: 'Artifact directory.',
+      valueHelp: 'path',
+    );
+    addFlag(
+      'profile-clean-artifact-dir',
+      defaultsTo: true,
+      help: 'Clean artifact dir first.',
+    );
+    addFlag(
+      'profile-region',
+      defaultsTo: true,
+      help: 'Mark the active replay window as a devtools profile region.',
+    );
+    addOption(
+      'profile-region-name',
+      defaultsTo: regionName,
+      help: 'Profile region name.',
+      valueHelp: 'name',
+    );
+    addOption(
+      'profile-timeout-seconds',
+      defaultsTo: '240',
+      help: 'Timeout.',
+      valueHelp: 'seconds',
+    );
   }
 }

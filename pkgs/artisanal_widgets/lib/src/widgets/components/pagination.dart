@@ -1,5 +1,22 @@
 part of 'components_widgets.dart';
 
+/// A page navigation control with prev/next buttons.
+///
+/// The [Pagination] widget displays a page indicator with navigation buttons.
+/// The [page] is the current page (1-indexed) and [pageCount] is the total
+/// number of pages. Use [onChanged] to receive page change callbacks.
+///
+/// Set [showEdges] to true to also display First/Last buttons.
+///
+/// Example:
+/// ```dart
+/// Pagination(
+///   page: _currentPage,
+///   pageCount: 10,
+///   showEdges: true,
+///   onChanged: (p) => setState(() => _currentPage = p),
+/// )
+/// ```
 class Pagination extends StatelessWidget {
   Pagination({
     required this.page,

@@ -1,3 +1,4 @@
+/// Layout primitives for terminal UIs.
 ///
 /// Provides Row, Column, and other layout primitives that use
 /// the Layout API internally.
@@ -11,6 +12,8 @@
 ///   ],
 /// )
 /// ```
+///
+/// {@category Widgets}
 library;
 
 import 'dart:async';

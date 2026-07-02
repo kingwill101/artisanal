@@ -1,5 +1,6 @@
 part of 'components_widgets.dart';
 
+/// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }
 
 /// A hover-triggered message bubble for a child widget.
@@ -10,6 +11,14 @@ enum TooltipPosition { above, below }
 /// Passive hover requires `MouseMode.allMotion` when widgets are launched
 /// through the low-level runtime directly. The higher-level widget runners
 /// already opt into that mode by default.
+///
+/// Example:
+/// ```dart
+/// Tooltip(
+///   message: 'Save your changes before closing',
+///   child: IconButton(icon: Icon('💾')),
+/// )
+/// ```
 class Tooltip extends StatefulWidget {
   Tooltip({
     required this.message,

@@ -1191,7 +1191,8 @@ void _drawMessage(
     );
   }
 
-  final headChar = msg.head?.char ?? (toX > fromX ? Triangles.right : Triangles.left);
+  final headChar =
+      msg.head?.char ?? (toX > fromX ? Triangles.right : Triangles.left);
   for (var x = left + 1; x < right; x++) {
     putCell(
       canvas,

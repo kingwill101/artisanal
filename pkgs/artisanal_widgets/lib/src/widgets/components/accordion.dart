@@ -1,5 +1,23 @@
 part of 'components_widgets.dart';
 
+/// An expandable/collapsible section with a header.
+///
+/// The [Accordion] widget shows a [title] and expands to reveal its [child]
+/// when [expanded] is `true`. Clicking the header toggles the expanded state
+/// if [onChanged] is provided.
+///
+/// Use [leading] to add an icon or indicator before the title.
+///
+/// Example:
+/// ```dart
+/// Accordion(
+///   title: 'Advanced Settings',
+///   leading: Icon('⚙'),
+///   expanded: _expanded,
+///   onChanged: (v) => setState(() => _expanded = v),
+///   child: Column(children: [Toggle('Option 1'), Toggle('Option 2')]),
+/// )
+/// ```
 class Accordion extends StatelessWidget {
   Accordion({
     required this.title,

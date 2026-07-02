@@ -1,6 +1,6 @@
 part of 'components_widgets.dart';
 
-/// Immutable pair of values used by [RangeSlider].
+/// An immutable pair of values used by [RangeSlider].
 class RangeValues {
   const RangeValues(this.start, this.end) : assert(start <= end);
 
@@ -21,6 +21,24 @@ class RangeValues {
 }
 
 /// Flutter-style slider for selecting a single value.
+///
+/// The slider renders a horizontal track with a draggable thumb that represents
+/// a value within the range defined by [min] and [max]. Users can interact
+/// via mouse clicks, drag gestures, or keyboard arrows.
+///
+/// The slider is disabled when [enabled] is `false` or when [onChanged] is `null`.
+/// Use [divisions] to snap the value to discrete steps.
+///
+/// Example:
+/// ```dart
+/// Slider(
+///   value: 0.5,
+///   min: 0.0,
+///   max: 1.0,
+///   divisions: 10,
+///   onChanged: (v) => print('value: $v'),
+/// )
+/// ```
 class Slider extends StatefulWidget {
   Slider({
     required this.value,
@@ -256,6 +274,26 @@ class _SliderState extends State<Slider> {
 }
 
 /// Flutter-style range slider for selecting a start/end interval.
+///
+/// The [RangeSlider] displays two thumbs on a single track, allowing users
+/// to select a range of values. Press `s` to select the start thumb and `e`
+/// to select the end thumb when focused.
+///
+/// Like [Slider], it supports mouse and keyboard interaction. Use [divisions]
+/// to snap values to discrete steps.
+///
+/// The slider is disabled when [enabled] is `false` or when [onChanged] is `null`.
+///
+/// Example:
+/// ```dart
+/// RangeSlider(
+///   values: RangeValues(0.2, 0.8),
+///   min: 0.0,
+///   max: 1.0,
+///   divisions: 10,
+///   onChanged: (v) => print('range: ${v.start} - ${v.end}'),
+/// )
+/// ```
 class RangeSlider extends StatefulWidget {
   RangeSlider({
     required this.values,

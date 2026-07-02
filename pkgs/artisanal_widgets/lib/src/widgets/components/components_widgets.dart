@@ -2,6 +2,8 @@
 ///
 /// This library groups reusable UI components such as cards, buttons,
 /// overlays, command palette utilities, and the git diff viewer.
+///
+/// {@category Widgets}
 library;
 
 import 'dart:async';

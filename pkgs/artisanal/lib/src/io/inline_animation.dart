@@ -371,7 +371,7 @@ class InlineAnimation {
           spinner: spinner,
           clearOnDone: clearOnDone,
           doneMessage: showCheckmarks && !clearOnDone
-               ? '${Style().foreground(Colors.success).render(StatusChars.check)} $message'
+              ? '${Style().foreground(Colors.success).render(StatusChars.check)} $message'
               : null,
         );
         results.add(result);

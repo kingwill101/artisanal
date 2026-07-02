@@ -45,7 +45,7 @@ class FilePicker extends StatefulWidget {
   final CmdCallback? onExit;
 
   @override
-  State createState() => _FilePickerState();
+  State<FilePicker> createState() => _FilePickerState();
 }
 
 class _FilePickerState extends State<FilePicker> {

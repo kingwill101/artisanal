@@ -72,4 +72,5 @@ export 'animation/animations.dart';
 export 'components/overlay.dart';
 export 'navigation/navigation.dart';
 export 'selection/selection_widgets.dart';
-export 'charting/chart_widgets.dart';
+export 'charting/chart_models.dart';
+export 'charting/chart_renderers.dart';
