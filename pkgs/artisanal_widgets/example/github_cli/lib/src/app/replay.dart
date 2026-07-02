@@ -10,16 +10,15 @@ Future<tui.ResolvedReplay?> loadGithubCliReplayPlan(
   tui.ReplayHarnessConfig config,
 ) async {
   final resolved = config.scenarioPath != null && config.tracePath == null
-      ? config.copyWith(scenarioPath: _resolveScenarioPath(config.scenarioPath!))
+      ? config.copyWith(
+          scenarioPath: _resolveScenarioPath(config.scenarioPath!),
+        )
       : config;
 
   final profileRegions = GithubCliReplayProfileRegionHook(
     eventPrefix: 'github_cli.profile',
   );
-  return tui.loadReplayPlan(
-    resolved,
-    eventHook: profileRegions.call,
-  );
+  return tui.loadReplayPlan(resolved, eventHook: profileRegions.call);
 }
 
 String _resolveScenarioPath(String scenarioArg) {
