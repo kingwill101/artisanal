@@ -21,11 +21,6 @@ List<Color> blend1D(
   if (steps == 0) return const [];
   if (stops.isEmpty) return const [];
 
-  // If they requested <= number of stops, return the stops (like upstream).
-  if (steps <= stops.length) {
-    return stops.take(steps).toList(growable: false);
-  }
-
   final rgbStops = <cp.Rgb>[];
   for (final c in stops) {
     final rgb = _toRgb(c, hasDarkBackground: hasDarkBackground);
@@ -38,32 +33,38 @@ List<Color> blend1D(
     return List<Color>.filled(steps, single, growable: false);
   }
 
-  final numSegments = rgbStops.length - 1;
-  final defaultSize = steps ~/ numSegments;
-  final remaining = steps % numSegments;
+  if (steps == 1) {
+    return [_colorFromRgb(rgbStops.first)];
+  }
 
   final out = List<Color>.filled(
     steps,
     _colorFromRgb(rgbStops.first),
     growable: false,
   );
+  final maxPos = rgbStops.length - 1;
 
-  var outIndex = 0;
-  for (var i = 0; i < numSegments; i++) {
-    final from = rgbStops[i];
-    final to = rgbStops[i + 1];
-    var segmentSize = defaultSize;
-    if (i < remaining) segmentSize++;
+  for (var i = 0; i < steps; i++) {
+    final pos = i / (steps - 1);
+    final target = pos * maxPos;
+    final leftIndex = target.floor().clamp(0, maxPos).toInt();
+    final rightIndex = (leftIndex + 1).clamp(0, maxPos).toInt();
+    final t = target - leftIndex;
 
-    final divisor = segmentSize > 1 ? (segmentSize - 1) : 1;
-    for (var j = 0; j < segmentSize; j++) {
-      final t = segmentSize > 1 ? (j / divisor) : 0.0;
-      final r = _lerp(from.r, to.r, t);
-      final g = _lerp(from.g, to.g, t);
-      final b = _lerp(from.b, to.b, t);
-      out[outIndex++] = BasicColor(_hexFromRgb(r, g, b));
-      if (outIndex >= steps) break;
+    if (leftIndex == rightIndex) {
+      out[i] = _colorFromRgb(rgbStops[leftIndex]);
+      continue;
     }
+
+    final from = rgbStops[leftIndex];
+    final to = rgbStops[rightIndex];
+    out[i] = BasicColor(
+      _hexFromRgb(
+        _lerp(from.r, to.r, t),
+        _lerp(from.g, to.g, t),
+        _lerp(from.b, to.b, t),
+      ),
+    );
   }
 
   return out;

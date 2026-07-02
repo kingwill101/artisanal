@@ -316,12 +316,6 @@ class Style {
   /// Character used for margins.
   String _marginChar = ' ';
 
-  /// Individual border side visibility.
-  bool _borderTopVisible = true;
-  bool _borderRightVisible = true;
-  bool _borderBottomVisible = true;
-  bool _borderLeftVisible = true;
-
   // ─────────────────────────────────────────────────────────────────────────────
   // Rendering Context
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1073,6 +1067,13 @@ class Style {
   ///     .whitespaceChars('·');
   /// ```
   Style whitespaceChars(String chars) {
+    if (Layout.visibleLength(chars) != 1) {
+      throw ArgumentError.value(
+        chars,
+        'chars',
+        'Whitespace characters must occupy one cell',
+      );
+    }
     _whitespaceChar = chars;
     _setFlag2(_PropBits.whitespaceChar);
     return this;
@@ -1234,28 +1235,24 @@ class Style {
 
   /// Unsets top border visibility.
   Style unsetBorderTop() {
-    _borderTopVisible = true;
     _clearFlag2(_PropBits.borderTop);
     return this;
   }
 
   /// Unsets right border visibility.
   Style unsetBorderRight() {
-    _borderRightVisible = true;
     _clearFlag2(_PropBits.borderRight);
     return this;
   }
 
   /// Unsets bottom border visibility.
   Style unsetBorderBottom() {
-    _borderBottomVisible = true;
     _clearFlag2(_PropBits.borderBottom);
     return this;
   }
 
   /// Unsets left border visibility.
   Style unsetBorderLeft() {
-    _borderLeftVisible = true;
     _clearFlag2(_PropBits.borderLeft);
     return this;
   }
@@ -1430,19 +1427,19 @@ class Style {
 
   /// Gets whether top border is visible.
   bool get getBorderTop =>
-      _hasFlag2(_PropBits.borderTop) ? _borderTopVisible : true;
+      _hasFlag2(_PropBits.borderTop) ? _borderSides.top : true;
 
   /// Gets whether right border is visible.
   bool get getBorderRight =>
-      _hasFlag2(_PropBits.borderRight) ? _borderRightVisible : true;
+      _hasFlag2(_PropBits.borderRight) ? _borderSides.right : true;
 
   /// Gets whether bottom border is visible.
   bool get getBorderBottom =>
-      _hasFlag2(_PropBits.borderBottom) ? _borderBottomVisible : true;
+      _hasFlag2(_PropBits.borderBottom) ? _borderSides.bottom : true;
 
   /// Gets whether left border is visible.
   bool get getBorderLeft =>
-      _hasFlag2(_PropBits.borderLeft) ? _borderLeftVisible : true;
+      _hasFlag2(_PropBits.borderLeft) ? _borderSides.left : true;
 
   /// Gets the pre-set string value.
   String? get value => _hasFlag2(_PropBits.stringValue) ? _string : null;
@@ -1707,10 +1704,6 @@ class Style {
     s._hyperlinkUrl = _hyperlinkUrl;
     s._hyperlinkParams = _hyperlinkParams;
     s._marginBackground = _marginBackground;
-    s._borderTopVisible = _borderTopVisible;
-    s._borderRightVisible = _borderRightVisible;
-    s._borderBottomVisible = _borderBottomVisible;
-    s._borderLeftVisible = _borderLeftVisible;
     s._colorProfile = _colorProfile;
     s._hasDarkBackground = _hasDarkBackground;
     return s;
@@ -1925,19 +1918,19 @@ class Style {
       _setFlag2(_PropBits.hyperlink);
     }
     if (other._hasFlag2(_PropBits.borderTop)) {
-      _borderTopVisible = other._borderTopVisible;
+      _borderSides = _borderSides.copyWith(top: other._borderSides.top);
       _setFlag2(_PropBits.borderTop);
     }
     if (other._hasFlag2(_PropBits.borderRight)) {
-      _borderRightVisible = other._borderRightVisible;
+      _borderSides = _borderSides.copyWith(right: other._borderSides.right);
       _setFlag2(_PropBits.borderRight);
     }
     if (other._hasFlag2(_PropBits.borderBottom)) {
-      _borderBottomVisible = other._borderBottomVisible;
+      _borderSides = _borderSides.copyWith(bottom: other._borderSides.bottom);
       _setFlag2(_PropBits.borderBottom);
     }
     if (other._hasFlag2(_PropBits.borderLeft)) {
-      _borderLeftVisible = other._borderLeftVisible;
+      _borderSides = _borderSides.copyWith(left: other._borderSides.left);
       _setFlag2(_PropBits.borderLeft);
     }
     if (other._hasFlag2(_PropBits.whitespaceChar)) {
@@ -2329,7 +2322,10 @@ class Style {
   bool get _styleWhitespaceEnabled {
     final reverse = _hasFlag(_PropBits.inverse) && _inverse;
     final hasBg = _hasFlag(_PropBits.background) && _background != null;
-    return reverse || (_colorWhitespace && hasBg);
+    return reverse ||
+        (_colorWhitespace && hasBg) ||
+        _hasFlag2(_PropBits.whitespaceForeground) ||
+        _hasFlag2(_PropBits.whitespaceChar);
   }
 
   /// Styles whitespace outside the core text (padding/alignment fill).
@@ -2344,8 +2340,23 @@ class Style {
 
     final reverse = _hasFlag(_PropBits.inverse) && _inverse;
 
-    var styled = text;
+    var styled = _hasFlag2(_PropBits.whitespaceChar)
+        ? _whitespaceChar * Layout.visibleLength(text)
+        : text;
     var hasAnsi = false;
+
+    if (_hasFlag2(_PropBits.whitespaceForeground) &&
+        _whitespaceForeground != null) {
+      final ansi = _whitespaceForeground!.toAnsi(
+        colorProfile,
+        background: false,
+        hasDarkBackground: hasDarkBackground,
+      );
+      if (ansi.isNotEmpty) {
+        styled = '$ansi$styled';
+        hasAnsi = true;
+      }
+    }
 
     // Apply background only if colorWhitespace is enabled.
     if (_colorWhitespace &&

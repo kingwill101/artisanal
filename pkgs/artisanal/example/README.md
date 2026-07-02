@@ -150,6 +150,9 @@ dart run main.dart ui:exception --ansi
 ```bash
 # Advanced chalk colors
 dart run main.dart ui:chalk --ansi
+
+# Rendering invariants and parser demo
+dart run main.dart demo --ansi
 ```
 
 ### Utilities

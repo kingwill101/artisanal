@@ -46,7 +46,7 @@ class Ranges {
 /// Existing ANSI styles are preserved outside the styled ranges. Ranges MUST
 /// not overlap.
 String styleRanges(String s, Iterable<StyleRange> ranges) {
-  final rs = ranges.toList(growable: false);
+  final rs = _validatedRanges(ranges);
   if (rs.isEmpty) return s;
 
   final buf = StringBuffer();
@@ -79,7 +79,7 @@ String overlayBackgroundRangesPreservingAnsi(
   String s,
   Iterable<StyleRange> ranges,
 ) {
-  final rs = ranges.toList(growable: false);
+  final rs = _validatedRanges(ranges);
   if (rs.isEmpty) return s;
 
   final buf = StringBuffer();
@@ -97,6 +97,31 @@ String overlayBackgroundRangesPreservingAnsi(
 
   buf.write(_truncateLeftAnsiByCells(s, lastIdx));
   return buf.toString();
+}
+
+List<StyleRange> _validatedRanges(Iterable<StyleRange> ranges) {
+  final rs = ranges.toList(growable: false)
+    ..sort((a, b) {
+      final byStart = a.start.compareTo(b.start);
+      if (byStart != 0) return byStart;
+      return a.end.compareTo(b.end);
+    });
+
+  var lastEnd = 0;
+  for (final r in rs) {
+    if (r.start < 0 || r.end < 0) {
+      throw ArgumentError.value(r, 'ranges', 'Range indices must be >= 0');
+    }
+    if (r.end < r.start) {
+      throw ArgumentError.value(r, 'ranges', 'Range end must be >= start');
+    }
+    if (r.start < lastEnd) {
+      throw ArgumentError.value(r, 'ranges', 'Ranges must not overlap');
+    }
+    lastEnd = r.end;
+  }
+
+  return rs;
 }
 
 /// Cuts an ANSI string by visible cell indices, preserving any active SGR/OSC 8

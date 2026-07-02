@@ -299,6 +299,20 @@ void main() {
         expect(base.isUnderlineSpaces, isTrue);
         expect(base.getMarginBackground, equals(Colors.green));
       });
+
+      test('whitespace styling affects rendered fills', () {
+        final style = Style()
+            .width(4)
+            .align(HorizontalAlign.center)
+            .whitespaceChars('·')
+            .whitespaceForeground(Colors.red);
+        style.colorProfile = ColorProfile.trueColor;
+
+        final result = style.render('X');
+
+        expect(result, contains('·'));
+        expect(result, contains('\x1B['));
+      });
     });
 
     group('copy', () {

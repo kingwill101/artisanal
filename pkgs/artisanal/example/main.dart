@@ -224,7 +224,7 @@ class DemoCommand extends Command<void> {
 
   @override
   String get description =>
-      'Showcase basic output helpers (title/section/blocks/listing).';
+      'Showcase output helpers plus rendering invariants.';
 
   @override
   Future<void> run() async {
@@ -254,6 +254,40 @@ class DemoCommand extends Command<void> {
         return TaskResult.success;
       },
     );
+
+    io.section('Rendering Invariants');
+
+    final centered = Style()
+        .width(12)
+        .height(3)
+        .align(HorizontalAlign.center, VerticalAlign.center)
+        .whitespaceChars('·')
+        .whitespaceForeground(Colors.brightMagenta)
+        .border(Border.rounded)
+        .render('Hi');
+    io.writeln(centered);
+
+    final parser = ConsoleTagParser();
+    io.writeln(parser.render('<fg=default>Terminal default foreground</>'));
+
+    final gradient = blend1D(8, [
+      Colors.red,
+      Colors.yellow,
+      Colors.green,
+    ], hasDarkBackground: true);
+    final swatch = gradient
+        .map((color) => Style().foreground(color).render('█'))
+        .join();
+    io.writeln(swatch);
+
+    try {
+      styleRanges('hello world', [
+        StyleRange(0, 5, Style().bold()),
+        StyleRange(4, 8, Style().italic()),
+      ]);
+    } catch (err) {
+      io.note('Overlapping ranges are rejected: $err');
+    }
   }
 }
 // #endregion
