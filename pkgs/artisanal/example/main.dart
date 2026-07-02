@@ -46,6 +46,7 @@ Future<void> main(List<String> args) async {
     ..addCommand(UiSpinnerCommand())
     ..addCommand(UiSpinnerStylesCommand())
     ..addCommand(UiPanelCommand())
+    ..addCommand(UiFooterCommand())
     ..addCommand(UiTreeCommand())
     ..addCommand(UiTreeConvenienceCommand())
     ..addCommand(UiSearchCommand())
@@ -1072,6 +1073,41 @@ class UiPanelCommand extends Command<void> {
   }
 }
 
+/// Demonstrate a split footer similar to opencode.
+class UiFooterCommand extends Command<void> {
+  @override
+  String get name => 'ui:footer';
+
+  @override
+  String get description => 'Demonstrate a split-border footer strip.';
+
+  @override
+  Future<void> run() async {
+    io.title('Split Footer');
+    io.text('This uses Border.split with only the left rail visible.');
+    io.newLine();
+
+    final footer = Style()
+        .foreground(Colors.gray)
+        .borderForeground(Colors.gray)
+        .padding(0, 2)
+        .border(
+          Border.split,
+          left: true,
+          right: false,
+          top: false,
+          bottom: false,
+        )
+        .render(
+          'Subagent 2 of 5 · 12.4k tokens · \$0.14\nParent  p  ·  Prev  ${Arrows.left}  ·  Next  ${Arrows.right}',
+        );
+
+    io.writeln(footer);
+    io.newLine();
+    io.text('The rail is Border.split, matching the opencode footer style.');
+  }
+}
+
 /// Demonstrate tree rendering.
 class UiTreeCommand extends Command<void> {
   @override
@@ -1587,7 +1623,9 @@ class UiHorizontalTableCommand extends Command<void> {
     );
     HorizontalTableComponent(
       data: {
-        'Status': io.style.foreground(Colors.success).render('${Circles.filled} Online'),
+        'Status': io.style
+            .foreground(Colors.success)
+            .render('${Circles.filled} Online'),
         'Uptime': '3 days, 14 hours',
         'Memory': '256 MB / 1 GB',
         'CPU': '12%',
@@ -2530,9 +2568,15 @@ class UiComponentSystemCommand extends Command<void> {
     io.writeln('Row composition:');
     RowComponent(
       children: [
-        StyledText.success('${StatusChars.check} Pass', renderConfig: renderConfig),
+        StyledText.success(
+          '${StatusChars.check} Pass',
+          renderConfig: renderConfig,
+        ),
         bubbles.Text(' | '),
-        StyledText.error('${StatusChars.cross} Fail', renderConfig: renderConfig),
+        StyledText.error(
+          '${StatusChars.cross} Fail',
+          renderConfig: renderConfig,
+        ),
         bubbles.Text(' | '),
         StyledText.warning('⚠ Warn', renderConfig: renderConfig),
       ],

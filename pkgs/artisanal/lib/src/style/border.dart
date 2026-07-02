@@ -263,6 +263,21 @@ class Border {
     middle: '|',
   );
 
+  /// Split border for single-side rails and separators.
+  ///
+  /// Matches a vertical split line style: no top/bottom edge, only the left
+  /// and right rails.
+  static const split = Border(
+    top: '',
+    bottom: '',
+    left: '┃',
+    right: '┃',
+    topLeft: '',
+    topRight: '',
+    bottomLeft: '',
+    bottomRight: '',
+  );
+
   /// No border (empty strings).
   static const none = Border(
     top: '',
