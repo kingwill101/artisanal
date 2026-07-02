@@ -25,6 +25,30 @@ import '../unicode/grapheme.dart' as uni;
 import '../layout/layout.dart';
 import 'package:artisanal/style.dart';
 
+/// Measured border thickness in terminal cells/rows.
+final class BorderMetrics {
+  const BorderMetrics({
+    required this.leftCells,
+    required this.rightCells,
+    required this.topRows,
+    required this.bottomRows,
+  });
+
+  const BorderMetrics.none()
+      : leftCells = 0,
+        rightCells = 0,
+        topRows = 0,
+        bottomRows = 0;
+
+  final int leftCells;
+  final int rightCells;
+  final int topRows;
+  final int bottomRows;
+
+  int get horizontal => leftCells + rightCells;
+  int get vertical => topRows + bottomRows;
+}
+
 /// Defines the characters used to draw borders.
 ///
 /// A border consists of:
@@ -354,6 +378,17 @@ class Border {
       middleTop != null ||
       middleBottom != null ||
       middle != null;
+
+  /// Measures the border geometry for the visible sides.
+  BorderMetrics measure([BorderSides sides = BorderSides.all]) {
+    if (!isVisible) return const BorderMetrics.none();
+    return BorderMetrics(
+      leftCells: sides.left ? getLeftSize() : 0,
+      rightCells: sides.right ? getRightSize() : 0,
+      topRows: sides.top ? getTopSize() : 0,
+      bottomRows: sides.bottom ? getBottomSize() : 0,
+    );
+  }
 
   /// Returns the width of the top border.
   ///

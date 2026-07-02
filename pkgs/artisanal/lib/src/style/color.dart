@@ -734,13 +734,9 @@ class Colors {
 
   /// Creates a color from RGB values.
   static BasicColor rgb(int r, int g, int b) {
-    if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-      throw ArgumentError.value(
-        (r, g, b),
-        'rgb',
-        'RGB values must be between 0 and 255',
-      );
-    }
+    r = r.clamp(0, 255).toInt();
+    g = g.clamp(0, 255).toInt();
+    b = b.clamp(0, 255).toInt();
 
     final hex =
         '#${r.toRadixString(16).padLeft(2, '0')}'

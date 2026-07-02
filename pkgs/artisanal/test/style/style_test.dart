@@ -1140,4 +1140,59 @@ void main() {
       );
     });
   });
+
+  group('render context and snapshots', () {
+    test('render context does not mutate the style', () {
+      final style = Style().foreground(Colors.red);
+
+      final output = style.renderWithContext(
+        'x',
+        const RenderContext(
+          colorProfile: ColorProfile.ascii,
+          hasDarkBackground: false,
+        ),
+      );
+
+      expect(output, equals('x'));
+      expect(style.colorProfile, equals(ColorProfile.trueColor));
+      expect(style.hasDarkBackground, isTrue);
+    });
+
+    test('data returns an immutable snapshot of the current style', () {
+      final style = Style().bold().foreground(Colors.green).padding(1, 2);
+      final data = style.data;
+
+      expect(data.bold, isTrue);
+      expect(data.foreground, equals(Colors.green));
+      expect(data.padding.left, equals(2));
+      expect(data.padding.top, equals(1));
+    });
+
+    test('Colors.rgb clamps out-of-range values', () {
+      expect(Colors.rgb(300, -20, 10), equals(BasicColor('#ff000a')));
+    });
+
+    test('box metrics include measured border geometry', () {
+      final style = Style().padding(1, 2).border(Border.double).borderSides(
+            BorderSides(top: true, bottom: true, left: true, right: false),
+          );
+
+      final metrics = style.boxMetrics;
+
+      expect(metrics.padding.horizontal, equals(4));
+      expect(metrics.border.leftCells, equals(Border.double.getLeftSize()));
+      expect(metrics.border.rightCells, equals(0));
+      expect(metrics.border.topRows, equals(Border.double.getTopSize()));
+      expect(metrics.border.bottomRows, equals(Border.double.getBottomSize()));
+    });
+
+    test('vertical alignment fills top before bottom when bottom aligned', () {
+      final output = Style().height(3).alignVertical(VerticalAlign.bottom).render(
+            'x',
+          );
+
+      expect(output.split('\n').length, equals(3));
+      expect(output.split('\n').last, contains('x'));
+    });
+  });
 }

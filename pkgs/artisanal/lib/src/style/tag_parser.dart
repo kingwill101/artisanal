@@ -57,6 +57,7 @@ library;
 
 import 'color.dart';
 import 'style.dart';
+import 'style_model.dart';
 
 /// A parsed segment of tagged text.
 sealed class TagSegment {
@@ -562,11 +563,13 @@ class ConsoleTagParser {
 
   /// Renders text with the given style.
   String _renderStyledText(String text, Style style) {
-    // Use Style's inline rendering for proper ANSI code generation
-    final s = style.copy()
-      ..colorProfile = _colorProfile
-      ..hasDarkBackground = _hasDarkBackground;
-    return s.inline(true).render(text);
+    return style.inline(true).renderWithContext(
+      text,
+      RenderContext(
+        colorProfile: _colorProfile,
+        hasDarkBackground: _hasDarkBackground,
+      ),
+    );
   }
 
   /// Builds a style from a styled segment, inheriting from parent.
