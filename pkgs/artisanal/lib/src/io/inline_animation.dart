@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../style/color.dart';
 import '../style/style.dart';
+import '../style/chars.dart';
 import '../terminal/terminal.dart';
 import '../tui/bubbles/spinner.dart';
 import '../tui/bubbles/components/base.dart';
@@ -370,7 +371,7 @@ class InlineAnimation {
           spinner: spinner,
           clearOnDone: clearOnDone,
           doneMessage: showCheckmarks && !clearOnDone
-              ? '${Style().foreground(Colors.success).render('✓')} $message'
+               ? '${Style().foreground(Colors.success).render(StatusChars.check)} $message'
               : null,
         );
         results.add(result);
@@ -378,7 +379,7 @@ class InlineAnimation {
         if (showCheckmarks && !clearOnDone) {
           terminal.clearLine();
           terminal.writeln(
-            '${Style().foreground(Colors.error).render('✗')} $message',
+            '${Style().foreground(Colors.error).render(StatusChars.cross)} $message',
           );
         }
         rethrow;

@@ -27,6 +27,8 @@
 /// ```
 library;
 
+import '../style/chars.dart';
+
 import 'dart:collection';
 import 'dart:math' as math;
 
@@ -917,7 +919,11 @@ class Layout {
   /// truncation). Uses grapheme-cluster iteration and proper display-width
   /// accounting so that CJK, emoji, and variation-selector characters are
   /// measured correctly.
-  static String truncate(String text, int maxWidth, {String ellipsis = '…'}) {
+  static String truncate(
+    String text,
+    int maxWidth, {
+    String ellipsis = EllipsisChars.horizontal,
+  }) {
     final visible = visibleLength(text);
     if (visible <= maxWidth) return text;
 

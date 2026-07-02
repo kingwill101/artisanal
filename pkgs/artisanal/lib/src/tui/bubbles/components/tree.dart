@@ -1,7 +1,4 @@
-import '../../../style/color.dart';
-import '../../../style/properties.dart';
-import '../../../style/style.dart';
-import '../../../layout/layout.dart';
+import 'package:artisanal/style.dart';
 import 'base.dart';
 
 /// Callback for per-item styling in trees.
@@ -106,8 +103,8 @@ class TreeEnumerator {
   /// Bullet-style list (• for all items).
   static const bullet = TreeEnumerator(
     pipe: ' ',
-    tee: '•',
-    elbow: '•',
+    tee: DotChars.bullet,
+    elbow: DotChars.bullet,
     dash: ' ',
     indent: '  ',
   );

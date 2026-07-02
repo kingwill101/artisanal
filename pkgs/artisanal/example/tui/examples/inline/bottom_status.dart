@@ -12,6 +12,7 @@ library;
 import 'dart:math';
 
 import 'package:artisanal/runtime.dart';
+import 'package:artisanal/style.dart';
 
 final _rng = Random();
 
@@ -75,8 +76,8 @@ class InlineStatusModel implements Model {
   @override
   View view() {
     final status = running
-        ? '\x1b[32m● RUNNING\x1b[0m'
-        : '\x1b[33m● PAUSED\x1b[0m';
+        ? '\x1b[32m${Circles.filled} RUNNING\x1b[0m'
+        : '\x1b[33m${Circles.filled} PAUSED\x1b[0m';
     final content =
         '''
 \x1b[1m Inline Status Bar\x1b[0m ───────────────────────

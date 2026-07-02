@@ -23,6 +23,7 @@ import 'package:html/parser.dart' as html;
 
 import 'border.dart';
 import 'blending.dart' as blend;
+import 'chars.dart';
 import 'color.dart';
 import 'properties.dart';
 import '../layout/layout.dart';
@@ -2429,7 +2430,7 @@ class Style {
     if (visible <= maxWidth) return line;
 
     final targetLen = maxWidth - 1; // Leave room for ellipsis
-    if (targetLen <= 0) return '…';
+    if (targetLen <= 0) return EllipsisChars.horizontal;
 
     final buffer = StringBuffer();
     final ansiPattern = Ansi.ansiPattern;
@@ -2453,7 +2454,7 @@ class Style {
     }
 
     // Add reset and ellipsis
-    buffer.write('\x1B[0m…');
+    buffer.write('\x1B[0m${EllipsisChars.horizontal}');
     return buffer.toString();
   }
 

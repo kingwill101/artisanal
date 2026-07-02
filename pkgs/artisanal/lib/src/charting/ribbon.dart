@@ -5,6 +5,7 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Draws a stacked ribbon chart of multiple [series] into [area] on [screen].
 ///
@@ -18,7 +19,7 @@ void drawRibbonChart(
   List<List<double>> series, {
   List<UvStyle>? styles,
   bool normalizeTotals = true,
-  String fillChar = '█',
+  String fillChar = BlockShades.full,
   bool showGrid = false,
   int gridRows = 3,
   int gridCols = 0,
@@ -115,12 +116,12 @@ void drawRibbonChart(
         // Only the lower half has content — draw ▄ (lower half block).
         final sty = palette[lowerIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, '▄', UvStyle(fg: fgColor));
+        putCell(screen, area.minX + x, screenY, BlockShades.lower, UvStyle(fg: fgColor));
       } else if (lowerIdx == -1) {
         // Only the upper half has content — draw ▀ (upper half block).
         final sty = palette[upperIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;
-        putCell(screen, area.minX + x, screenY, '▀', UvStyle(fg: fgColor));
+        putCell(screen, area.minX + x, screenY, BlockShades.upper, UvStyle(fg: fgColor));
       } else {
         // Two different series meet — draw ▀ with fg = upper color,
         // bg = lower color.
@@ -128,7 +129,7 @@ void drawRibbonChart(
         final lowerSty = palette[lowerIdx % palette.length];
         final fg = upperSty.bg ?? upperSty.fg;
         final bg = lowerSty.bg ?? lowerSty.fg;
-        putCell(screen, area.minX + x, screenY, '▀', UvStyle(fg: fg, bg: bg));
+        putCell(screen, area.minX + x, screenY, BlockShades.upper, UvStyle(fg: fg, bg: bg));
       }
     }
   }

@@ -6,10 +6,7 @@
 /// Based on the Bubble Tea table component.
 library;
 
-import '../../style/style.dart';
-import '../../style/color.dart';
-import '../../style/properties.dart';
-import '../../layout/layout.dart';
+import 'package:artisanal/style.dart';
 import '../tui.dart';
 import 'key_binding.dart';
 import 'runeutil.dart';
@@ -47,13 +44,13 @@ class TableKeyMap implements KeyMap {
            lineUp ??
            KeyBinding(
              keys: ['up', 'k'],
-             help: Help(key: '↑/k', desc: 'up'),
+             help: Help(key: '${Arrows.up}/k', desc: 'up'),
            ),
        lineDown =
            lineDown ??
            KeyBinding(
              keys: ['down', 'j'],
-             help: Help(key: '↓/j', desc: 'down'),
+             help: Help(key: '${Arrows.down}/j', desc: 'down'),
            ),
        pageUp =
            pageUp ??
@@ -400,7 +397,7 @@ class TableModel extends ViewComponent {
     for (final col in _columns) {
       if (col.width <= 0) continue;
 
-      final content = truncate(col.title, col.width, '…');
+      final content = truncate(col.title, col.width, EllipsisChars.horizontal);
       final padded = content.padRight(col.width);
       cells.add(styles.header.render(padded));
     }
@@ -414,7 +411,7 @@ class TableModel extends ViewComponent {
       if (col.width <= 0) continue;
 
       final value = _rows[r][i];
-      final content = truncate(value, col.width, '…');
+      final content = truncate(value, col.width, EllipsisChars.horizontal);
       final padded = content.padRight(col.width);
       cells.add(styles.cell.render(padded));
     }

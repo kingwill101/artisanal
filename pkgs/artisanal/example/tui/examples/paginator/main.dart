@@ -1,7 +1,7 @@
 /// Paginator example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/artisanal.dart' show Style, AnsiColor;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 class PaginatorExampleModel implements tui.Model {
@@ -11,8 +11,8 @@ class PaginatorExampleModel implements tui.Model {
           tui.PaginatorModel(
             type: tui.PaginationType.dots,
             perPage: 10,
-            activeDot: Style().foreground(const AnsiColor(235)).render('•'),
-            inactiveDot: Style().foreground(const AnsiColor(250)).render('•'),
+            activeDot: Style().foreground(const AnsiColor(235)).render(PaginationDots.active),
+            inactiveDot: Style().foreground(const AnsiColor(250)).render(PaginationDots.inactive),
           ).setTotalPages(items.length);
 
   final List<String> items;
@@ -40,10 +40,10 @@ class PaginatorExampleModel implements tui.Model {
     buffer.write('\n  Paginator Example\n\n');
     final (start, end) = paginator.getSliceBounds(items.length);
     for (final item in items.sublist(start, end)) {
-      buffer.write('  • $item\n\n');
+      buffer.write('  ${DotChars.bullet} $item\n\n');
     }
     buffer.write('  ${paginator.view()}');
-    buffer.write('\n\n  h/l ←/→ page • q: quit\n');
+    buffer.write('\n\n  h/l ←/→ page ${DotChars.bullet} q: quit\n');
     return buffer.toString();
   }
 }

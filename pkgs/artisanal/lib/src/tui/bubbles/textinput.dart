@@ -9,8 +9,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:artisanal/src/tui/tui.dart';
-import 'package:artisanal/src/style/style.dart';
-import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/style.dart';
 
 import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
@@ -219,31 +218,34 @@ class TextInputKeyMap implements KeyMap {
            characterForward ??
            KeyBinding(
              keys: ['right', 'ctrl+f'],
-             help: Help(key: '→/^f', desc: 'Move forward'),
+             help: Help(key: '${Arrows.right}/^f', desc: 'Move forward'),
            ),
        characterBackward =
            characterBackward ??
            KeyBinding(
              keys: ['left', 'ctrl+b'],
-             help: Help(key: '←/^b', desc: 'Move backward'),
+             help: Help(key: '${Arrows.left}/^b', desc: 'Move backward'),
            ),
        wordForward =
            wordForward ??
            KeyBinding(
              keys: ['alt+right', 'ctrl+right', 'alt+f'],
-             help: Help(key: 'alt+→', desc: 'Move word forward'),
+             help: Help(key: 'alt+${Arrows.right}', desc: 'Move word forward'),
            ),
        wordBackward =
            wordBackward ??
            KeyBinding(
              keys: ['alt+left', 'ctrl+left', 'alt+b'],
-             help: Help(key: 'alt+←', desc: 'Move word backward'),
+             help: Help(key: 'alt+${Arrows.left}', desc: 'Move word backward'),
            ),
        deleteWordBackward =
            deleteWordBackward ??
            KeyBinding(
              keys: ['alt+backspace', 'ctrl+w'],
-             help: Help(key: 'alt+⌫', desc: 'Delete word backward'),
+             help: Help(
+               key: 'alt+${KeyboardChars.backspace}',
+               desc: 'Delete word backward',
+             ),
            ),
        deleteWordForward =
            deleteWordForward ??
@@ -267,7 +269,7 @@ class TextInputKeyMap implements KeyMap {
            deleteCharacterBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'Delete character'),
+             help: Help(key: KeyboardChars.backspace, desc: 'Delete character'),
            ),
        deleteCharacterForward =
            deleteCharacterForward ??
@@ -292,25 +294,31 @@ class TextInputKeyMap implements KeyMap {
            selectCharacterForward ??
            KeyBinding(
              keys: ['shift+right'],
-             help: Help(key: 'shift+→', desc: 'Select forward'),
+             help: Help(key: 'shift+${Arrows.right}', desc: 'Select forward'),
            ),
        selectCharacterBackward =
            selectCharacterBackward ??
            KeyBinding(
              keys: ['shift+left'],
-             help: Help(key: 'shift+←', desc: 'Select backward'),
+             help: Help(key: 'shift+${Arrows.left}', desc: 'Select backward'),
            ),
        selectWordForward =
            selectWordForward ??
            KeyBinding(
              keys: ['ctrl+shift+right', 'alt+shift+right'],
-             help: Help(key: 'ctrl+shift+→', desc: 'Select word forward'),
+             help: Help(
+               key: 'ctrl+shift+${Arrows.right}',
+               desc: 'Select word forward',
+             ),
            ),
        selectWordBackward =
            selectWordBackward ??
            KeyBinding(
              keys: ['ctrl+shift+left', 'alt+shift+left'],
-             help: Help(key: 'ctrl+shift+←', desc: 'Select word backward'),
+             help: Help(
+               key: 'ctrl+shift+${Arrows.left}',
+               desc: 'Select word backward',
+             ),
            ),
        selectLineStart =
            selectLineStart ??
@@ -371,13 +379,13 @@ class TextInputKeyMap implements KeyMap {
            nextSuggestion ??
            KeyBinding(
              keys: ['down', 'ctrl+n'],
-             help: Help(key: '↓', desc: 'Next suggestion'),
+             help: Help(key: Arrows.down, desc: 'Next suggestion'),
            ),
        prevSuggestion =
            prevSuggestion ??
            KeyBinding(
              keys: ['up', 'ctrl+p'],
-             help: Help(key: '↑', desc: 'Previous suggestion'),
+             help: Help(key: Arrows.up, desc: 'Previous suggestion'),
            ),
 
        // Multi-line bindings
@@ -385,31 +393,31 @@ class TextInputKeyMap implements KeyMap {
            newline ??
            KeyBinding(
              keys: ['enter', 'shift+enter'],
-             help: Help(key: '↵', desc: 'New line'),
+             help: Help(key: KeyboardChars.enter, desc: 'New line'),
            ),
        lineUp =
            lineUp ??
            KeyBinding(
              keys: ['up'],
-             help: Help(key: '↑', desc: 'Line up'),
+             help: Help(key: Arrows.up, desc: 'Line up'),
            ),
        lineDown =
            lineDown ??
            KeyBinding(
              keys: ['down'],
-             help: Help(key: '↓', desc: 'Line down'),
+             help: Help(key: Arrows.down, desc: 'Line down'),
            ),
        selectLineUp =
            selectLineUp ??
            KeyBinding(
              keys: ['shift+up'],
-             help: Help(key: 'shift+↑', desc: 'Select line up'),
+             help: Help(key: 'shift+${Arrows.up}', desc: 'Select line up'),
            ),
        selectLineDown =
            selectLineDown ??
            KeyBinding(
              keys: ['shift+down'],
-             help: Help(key: 'shift+↓', desc: 'Select line down'),
+             help: Help(key: 'shift+${Arrows.down}', desc: 'Select line down'),
            ),
        documentStart =
            documentStart ??
@@ -2959,7 +2967,11 @@ class TextInputModel extends ViewComponent {
       final promptWidth = stringWidth(prompt);
       final cursorWidth = stringWidth(v);
       final availWidth = width - promptWidth - cursorWidth;
-      final placeholderRest = truncate(result.rest, availWidth, '…');
+      final placeholderRest = truncate(
+        result.rest,
+        availWidth,
+        EllipsisChars.horizontal,
+      );
       final restWidth = stringWidth(placeholderRest);
       final paddingWidth = math.max(0, availWidth - restWidth);
       v +=

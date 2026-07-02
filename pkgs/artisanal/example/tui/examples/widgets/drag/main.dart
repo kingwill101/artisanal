@@ -122,7 +122,7 @@ class _DragDemoState extends w.State<DragDemo> {
         ? Style().foreground(theme.secondary).bold()
         : Style().foreground(theme.primary).bold();
     final before = trackStyle.render('─' * pos);
-    final thumb = thumbStyle.render('●');
+    final thumb = thumbStyle.render(Circles.filled);
     final after = trackStyle.render('─' * (_sliderWidth - pos - 1));
     return '$before$thumb$after';
   }

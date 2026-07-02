@@ -1,8 +1,7 @@
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import 'key_binding.dart';
 import 'paginator.dart';
 
@@ -43,13 +42,13 @@ class SelectKeyMap implements KeyMap {
            up ??
            KeyBinding(
              keys: ['up', 'k'],
-             help: Help(key: '↑/k', desc: 'up'),
+             help: Help(key: '${Arrows.up}/k', desc: 'up'),
            ),
        down =
            down ??
            KeyBinding(
              keys: ['down', 'j'],
-             help: Help(key: '↓/j', desc: 'down'),
+             help: Help(key: '${Arrows.down}/j', desc: 'down'),
            ),
        home =
            home ??
@@ -79,7 +78,7 @@ class SelectKeyMap implements KeyMap {
            select ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'select'),
+             help: Help(key: KeyboardChars.enter, desc: 'select'),
            ),
        cancel =
            cancel ??
@@ -210,8 +209,8 @@ class SelectModel<T> extends ViewComponent {
        _height = height {
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _updatePagination();
   }
@@ -321,8 +320,8 @@ class SelectModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 
@@ -461,13 +460,13 @@ class MultiSelectKeyMap implements KeyMap {
            up ??
            KeyBinding(
              keys: ['up', 'k'],
-             help: Help(key: '↑/k', desc: 'up'),
+             help: Help(key: '${Arrows.up}/k', desc: 'up'),
            ),
        down =
            down ??
            KeyBinding(
              keys: ['down', 'j'],
-             help: Help(key: '↓/j', desc: 'down'),
+             help: Help(key: '${Arrows.down}/j', desc: 'down'),
            ),
        home =
            home ??
@@ -509,7 +508,7 @@ class MultiSelectKeyMap implements KeyMap {
            confirm ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'confirm'),
+             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
            ),
        cancel =
            cancel ??
@@ -581,8 +580,8 @@ class MultiSelectStyles {
        unselectedIcon = unselectedIcon ?? Style().foreground(AnsiColor(8)),
        dimmed = dimmed ?? Style().foreground(AnsiColor(8)),
        cursorPrefix = cursorPrefix ?? '❯',
-       selectedIconChar = selectedIconChar ?? '●',
-       unselectedIconChar = unselectedIconChar ?? '○';
+       selectedIconChar = selectedIconChar ?? PaginationDots.active,
+       unselectedIconChar = unselectedIconChar ?? PaginationDots.inactive;
 
   /// Style for the title/prompt.
   final Style title;
@@ -658,8 +657,8 @@ class MultiSelectModel<T> extends ViewComponent {
        _height = height {
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _updatePagination();
   }
@@ -799,8 +798,8 @@ class MultiSelectModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 

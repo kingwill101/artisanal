@@ -2,8 +2,7 @@ import '../cmd.dart';
 import '../key.dart';
 import '../component.dart';
 import '../msg.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import '../../unicode/grapheme.dart' as uni;
 import 'key_binding.dart';
 
@@ -51,7 +50,7 @@ class ConfirmKeyMap implements KeyMap {
            confirm ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'confirm'),
+             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
            ),
        cancel =
            cancel ??
@@ -63,13 +62,13 @@ class ConfirmKeyMap implements KeyMap {
            toggleLeft ??
            KeyBinding(
              keys: ['left', 'h'],
-             help: Help(key: '←', desc: 'yes'),
+             help: Help(key: Arrows.left, desc: 'yes'),
            ),
        toggleRight =
            toggleRight ??
            KeyBinding(
              keys: ['right', 'l'],
-             help: Help(key: '→', desc: 'no'),
+             help: Help(key: Arrows.right, desc: 'no'),
            );
 
   /// Confirm with 'y'.

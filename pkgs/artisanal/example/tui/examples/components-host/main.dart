@@ -9,7 +9,7 @@
 ///   --uv-renderer      Use the UV renderer (cell-buffer diff)
 library;
 
-import 'package:artisanal/artisanal.dart' show Style;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 class _ProgressStepMsg extends tui.Msg {
@@ -114,12 +114,12 @@ class _ComponentsHostModel extends tui.Model {
     final mode =
         'input=${useUvInput ? 'uv' : 'legacy'}  renderer=${useUvRenderer ? 'uv' : 'default'}';
     final help =
-        'q quit • p pause • Enter/Space/r reset • g complete • ←/→ page';
+        'q quit ${DotChars.bullet} p pause ${DotChars.bullet} Enter/Space/r reset ${DotChars.bullet} g complete ${DotChars.bullet} ←/→ page';
 
     final (start, end) = paginator.getSliceBounds(_items.length);
     final pageItems = _items.sublist(start, end);
     final pageText = pageItems
-        .map((it) => '  ${Style().dim().render('•')} $it')
+        .map((it) => '  ${Style().dim().render(DotChars.bullet)} $it')
         .join('\n');
 
     final status =

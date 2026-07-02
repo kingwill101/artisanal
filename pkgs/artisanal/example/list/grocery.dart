@@ -20,10 +20,10 @@ final purchased = [
 String groceryEnumerator(ListItems items, int i) {
   for (final p in purchased) {
     if (items.at(i).value == p) {
-      return '✓';
+      return StatusChars.check;
     }
   }
-  return '•';
+  return DotChars.bullet;
 }
 
 final dimEnumStyle = Style().foreground(AnsiColor(240)).marginRight(1);

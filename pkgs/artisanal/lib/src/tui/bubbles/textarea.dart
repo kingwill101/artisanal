@@ -3,8 +3,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/src/style/color.dart';
-import 'package:artisanal/src/style/style.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/src/tui/view.dart';
 import 'package:artisanal/src/uv/cursor.dart';
 import '../../uv/geometry.dart';
@@ -462,10 +461,18 @@ class TextAreaKeyMap implements KeyMap {
     KeyBinding? redo,
   }) : characterForward =
            characterForward ??
-           KeyBinding.withHelp(['right', 'ctrl+f'], '→', 'character forward'),
+           KeyBinding.withHelp(
+             ['right', 'ctrl+f'],
+             Arrows.right,
+             'character forward',
+           ),
        characterBackward =
            characterBackward ??
-           KeyBinding.withHelp(['left', 'ctrl+b'], '←', 'character backward'),
+           KeyBinding.withHelp(
+             ['left', 'ctrl+b'],
+             Arrows.left,
+             'character backward',
+           ),
        wordForward =
            wordForward ??
            KeyBinding.withHelp(['Alt+f'], 'alt+f', 'word forward'),
@@ -483,22 +490,34 @@ class TextAreaKeyMap implements KeyMap {
            lineEnd ?? KeyBinding.withHelp(['end', 'Ctrl+e'], 'end', 'line end'),
        lineNext =
            lineNext ??
-           KeyBinding.withHelp(['down', 'ctrl+n'], '↓', 'next line'),
+           KeyBinding.withHelp(['down', 'ctrl+n'], Arrows.down, 'next line'),
        linePrevious =
            linePrevious ??
-           KeyBinding.withHelp(['up', 'ctrl+p'], '↑', 'previous line'),
+           KeyBinding.withHelp(['up', 'ctrl+p'], Arrows.up, 'previous line'),
        insertNewline =
            insertNewline ??
-           KeyBinding.withHelp(['enter'], '↵', 'insert newline'),
+           KeyBinding.withHelp(
+             ['enter'],
+             KeyboardChars.enter,
+             'insert newline',
+           ),
        deleteBeforeCursor =
            deleteBeforeCursor ??
-           KeyBinding.withHelp(['backspace'], '⌫', 'delete'),
+           KeyBinding.withHelp(
+             ['backspace'],
+             KeyboardChars.backspace,
+             'delete',
+           ),
        deleteCharacterForward =
            deleteCharacterForward ??
            KeyBinding.withHelp(['delete', 'ctrl+d'], 'del', 'del char forward'),
        deleteWordBackward =
            deleteWordBackward ??
-           KeyBinding.withHelp(['alt+backspace'], 'alt+⌫', 'delete word'),
+           KeyBinding.withHelp(
+             ['alt+backspace'],
+             'alt+${KeyboardChars.backspace}',
+             'delete word',
+           ),
        deleteWordForward =
            deleteWordForward ??
            KeyBinding.withHelp(['Alt+delete', 'Alt+d'], 'alt+del', 'del word'),

@@ -41,6 +41,7 @@ import 'package:ultraviolet/ultraviolet.dart'
     show Canvas, Rectangle, UvColor, UvStyle, rect;
 
 import 'package:artisanal/src/charting/core.dart' show putCell, putText;
+import 'package:artisanal/style.dart';
 
 // ─── CSS color name lookup ────────────────────────────────────────────────
 
@@ -266,7 +267,7 @@ enum SequenceMessageStyle {
 /// Arrow head shape.
 enum SequenceArrowHead {
   open('>'),
-  cross('✕'),
+  cross(StatusChars.x),
   async(')');
 
   const SequenceArrowHead(this.char);
@@ -1190,7 +1191,7 @@ void _drawMessage(
     );
   }
 
-  final headChar = msg.head?.char ?? (toX > fromX ? '▶' : '◀');
+  final headChar = msg.head?.char ?? (toX > fromX ? Triangles.right : Triangles.left);
   for (var x = left + 1; x < right; x++) {
     putCell(
       canvas,
@@ -1250,7 +1251,7 @@ void _drawSelfMessage(
   for (var x = centerX + 1; x < centerX + w - 1; x++) {
     putCell(canvas, area.minX + x, area.minY + arrowY, '─', theme.response);
   }
-  final headChar = msg.head?.char ?? '◀';
+  final headChar = msg.head?.char ?? Triangles.left;
   putCell(canvas, area.minX + centerX, area.minY + arrowY, '└', theme.response);
   putCell(
     canvas,

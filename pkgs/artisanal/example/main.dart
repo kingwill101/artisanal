@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io' as dartio;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/bubbles.dart' as bubbles;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 
 // #region verbosity_usage
@@ -1586,7 +1587,7 @@ class UiHorizontalTableCommand extends Command<void> {
     );
     HorizontalTableComponent(
       data: {
-        'Status': io.style.foreground(Colors.success).render('● Online'),
+        'Status': io.style.foreground(Colors.success).render('${Circles.filled} Online'),
         'Uptime': '3 days, 14 hours',
         'Memory': '256 MB / 1 GB',
         'CPU': '12%',
@@ -1819,12 +1820,12 @@ class UiColumnsCommand extends Command<void> {
     io.section('Status Items');
     ColumnsComponent(
       items: [
-        '${io.style.foreground(Colors.success).render("●")} Online',
-        '${io.style.foreground(Colors.error).render("●")} Offline',
-        '${io.style.foreground(Colors.warning).render("●")} Degraded',
-        '${io.style.foreground(Colors.info).render("●")} Maintenance',
-        '${io.style.foreground(Colors.success).render("●")} Healthy',
-        '${io.style.foreground(Colors.error).render("●")} Critical',
+        '${io.style.foreground(Colors.success).render(Circles.filled)} Online',
+        '${io.style.foreground(Colors.error).render(Circles.filled)} Offline',
+        '${io.style.foreground(Colors.warning).render(Circles.filled)} Degraded',
+        '${io.style.foreground(Colors.info).render(Circles.filled)} Maintenance',
+        '${io.style.foreground(Colors.success).render(Circles.filled)} Healthy',
+        '${io.style.foreground(Colors.error).render(Circles.filled)} Critical',
       ],
       columnCount: 3,
       renderConfig: renderConfig,
@@ -2501,8 +2502,8 @@ class UiComponentSystemCommand extends Command<void> {
     ProgressBar(
       current: 3,
       total: 10,
-      fillChar: '▓',
-      emptyChar: '░',
+      fillChar: BlockShades.dark,
+      emptyChar: BlockShades.light,
     ).writelnTo(io);
     io.newLine();
 
@@ -2529,9 +2530,9 @@ class UiComponentSystemCommand extends Command<void> {
     io.writeln('Row composition:');
     RowComponent(
       children: [
-        StyledText.success('✓ Pass', renderConfig: renderConfig),
+        StyledText.success('${StatusChars.check} Pass', renderConfig: renderConfig),
         bubbles.Text(' | '),
-        StyledText.error('✗ Fail', renderConfig: renderConfig),
+        StyledText.error('${StatusChars.cross} Fail', renderConfig: renderConfig),
         bubbles.Text(' | '),
         StyledText.warning('⚠ Warn', renderConfig: renderConfig),
       ],

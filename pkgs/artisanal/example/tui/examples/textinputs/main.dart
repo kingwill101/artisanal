@@ -1,7 +1,7 @@
 /// Multiple text inputs example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/artisanal.dart' show Style, AnsiColor;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 class TextInputsModel implements tui.Model {
@@ -18,7 +18,7 @@ class TextInputsModel implements tui.Model {
       tui.TextInputModel(
         placeholder: 'Password',
         echoMode: tui.EchoMode.password,
-        echoCharacter: '•',
+        echoCharacter: DotChars.bullet,
         charLimit: 32,
       ),
     ];

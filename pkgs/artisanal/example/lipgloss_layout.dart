@@ -44,7 +44,7 @@ Style baseStyle() => Style().foreground(normal);
 
 // Divider using setString like lipgloss
 final divider = Style()
-    .setString('•')
+    .setString(DotChars.bullet)
     .padding(0, 1)
     .foreground(subtle)
     .toString();
@@ -152,7 +152,7 @@ String listHeader(String text) => baseStyle()
 String listItem(String text) => baseStyle().paddingLeft(2).render(text);
 
 // checkMark using setString and toString() like lipgloss
-final checkMark = Style().foreground(special).paddingRight(1).setString('✓');
+final checkMark = Style().foreground(special).paddingRight(1).setString(StatusChars.check);
 
 // listDone now uses checkMark with setString
 String listDone(String s) =>

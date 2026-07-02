@@ -8,8 +8,7 @@ library;
 
 import 'package:artisanal/src/tui/bubbles/key_binding.dart';
 import 'package:artisanal/src/tui/tui.dart';
-import 'package:artisanal/src/style/style.dart';
-import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/style.dart';
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;
 
 /// Configuration for anticipate/autocomplete component.
@@ -48,19 +47,19 @@ class AnticipateKeyMap implements KeyMap {
            acceptSuggestion ??
            KeyBinding(
              keys: ['enter', 'tab'],
-             help: Help(key: '↵/tab', desc: 'accept'),
+             help: Help(key: '${KeyboardChars.enter}/tab', desc: 'accept'),
            ),
        nextSuggestion =
            nextSuggestion ??
            KeyBinding(
              keys: ['down', 'ctrl+n'],
-             help: Help(key: '↓', desc: 'next'),
+             help: Help(key: Arrows.down, desc: 'next'),
            ),
        prevSuggestion =
            prevSuggestion ??
            KeyBinding(
              keys: ['up', 'ctrl+p'],
-             help: Help(key: '↑', desc: 'prev'),
+             help: Help(key: Arrows.up, desc: 'prev'),
            ),
        cancel =
            cancel ??
@@ -72,7 +71,7 @@ class AnticipateKeyMap implements KeyMap {
            deleteCharacterBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'delete char'),
+             help: Help(key: KeyboardChars.backspace, desc: 'delete char'),
            );
 
   /// Accept current suggestion or typed input.

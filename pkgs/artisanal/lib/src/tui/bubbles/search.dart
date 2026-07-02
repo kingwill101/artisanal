@@ -2,8 +2,7 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import '../view.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import 'key_binding.dart';
 import 'textinput.dart';
 import 'paginator.dart';
@@ -111,13 +110,13 @@ class SearchKeyMap implements KeyMap {
            up ??
            KeyBinding(
              keys: ['up', 'ctrl+p'],
-             help: Help(key: '↑', desc: 'up'),
+             help: Help(key: Arrows.up, desc: 'up'),
            ),
        down =
            down ??
            KeyBinding(
              keys: ['down', 'ctrl+n'],
-             help: Help(key: '↓', desc: 'down'),
+             help: Help(key: Arrows.down, desc: 'down'),
            ),
        home =
            home ??
@@ -147,7 +146,7 @@ class SearchKeyMap implements KeyMap {
            select ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'select'),
+             help: Help(key: KeyboardChars.enter, desc: 'select'),
            ),
        cancel =
            cancel ??
@@ -240,8 +239,8 @@ class SearchStyles {
     noResults: noResults ?? Style().foreground(AnsiColor(8)).italic(),
     selectedIcon: selectedIcon ?? Style().foreground(AnsiColor(10)),
     unselectedIcon: unselectedIcon ?? Style().foreground(AnsiColor(8)),
-    selectedIconChar: selectedIconChar ?? '●',
-    unselectedIconChar: unselectedIconChar ?? '○',
+    selectedIconChar: selectedIconChar ?? PaginationDots.active,
+    unselectedIconChar: unselectedIconChar ?? PaginationDots.inactive,
     cursorPrefix: cursorPrefix ?? '❯ ',
     itemPrefix: itemPrefix ?? '  ',
   );
@@ -335,7 +334,7 @@ class MultiSearchKeyMap extends SearchKeyMap {
            confirm ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'confirm'),
+             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
            );
 
   /// Toggle current item selection.
@@ -407,8 +406,8 @@ class SearchModel<T> extends ViewComponent {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _runFilter();
     _cursor = initialIndex.clamp(
@@ -580,8 +579,8 @@ class SearchModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 
@@ -745,8 +744,8 @@ class MultiSearchModel<T> extends ViewComponent {
     _input = TextInputModel(prompt: '🔍 ', placeholder: placeholder);
     _paginator = PaginatorModel(
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
     _runFilter();
     _cursor = initialIndex.clamp(
@@ -911,8 +910,8 @@ class MultiSearchModel<T> extends ViewComponent {
       perPage: pageSize,
       totalPages: totalPages,
       type: PaginationType.dots,
-      activeDot: '●',
-      inactiveDot: '○',
+      activeDot: PaginationDots.active,
+      inactiveDot: PaginationDots.inactive,
     );
   }
 

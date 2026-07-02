@@ -1,5 +1,4 @@
-import 'package:artisanal/src/style/style.dart';
-import 'package:artisanal/src/style/color.dart';
+import 'package:artisanal/style.dart';
 
 import 'key_binding.dart';
 
@@ -7,8 +6,8 @@ import 'key_binding.dart';
 class HelpStyles {
   /// Creates help styles with defaults.
   HelpStyles({
-    this.ellipsis = '…',
-    this.shortSeparator = ' • ',
+    this.ellipsis = EllipsisChars.horizontal,
+    this.shortSeparator = ' ${DotChars.bullet} ',
     this.fullSeparator = '    ',
     Style? keyStyle,
     Style? descStyle,

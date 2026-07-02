@@ -1,8 +1,7 @@
 import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
-import '../../style/style.dart';
-import '../../style/color.dart';
+import 'package:artisanal/style.dart';
 import '../../unicode/grapheme.dart' as uni;
 import 'key_binding.dart';
 import 'cursor.dart';
@@ -54,7 +53,7 @@ class PasswordKeyMap implements KeyMap {
            submit ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'submit'),
+             help: Help(key: KeyboardChars.enter, desc: 'submit'),
            ),
        cancel =
            cancel ??
@@ -66,7 +65,7 @@ class PasswordKeyMap implements KeyMap {
            deleteBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'delete'),
+             help: Help(key: KeyboardChars.backspace, desc: 'delete'),
            ),
        deleteForward =
            deleteForward ??
@@ -84,13 +83,13 @@ class PasswordKeyMap implements KeyMap {
            cursorLeft ??
            KeyBinding(
              keys: ['left', 'ctrl+b'],
-             help: Help(key: '←', desc: 'left'),
+             help: Help(key: Arrows.left, desc: 'left'),
            ),
        cursorRight =
            cursorRight ??
            KeyBinding(
              keys: ['right', 'ctrl+f'],
-             help: Help(key: '→', desc: 'right'),
+             help: Help(key: Arrows.right, desc: 'right'),
            ),
        cursorStart =
            cursorStart ??

@@ -1144,11 +1144,11 @@ final class NexusModel implements tui.Model {
     );
     final statusLine = switch (page) {
       Page.physics =>
-        'bodies ${physics.bodies.length} · gravity ${physics.gravityEnabled ? 'on' : 'off'} · world ${physics.worldWidth.toStringAsFixed(0)}x${physics.worldHeight.toStringAsFixed(0)}',
+        'bodies ${physics.bodies.length} ${DotChars.middle} gravity ${physics.gravityEnabled ? 'on' : 'off'} ${DotChars.middle} world ${physics.worldWidth.toStringAsFixed(0)}x${physics.worldHeight.toStringAsFixed(0)}',
       Page.charts =>
-        'charts palette ${_chartPalettes[chartPaletteIndex].name} · heatmap ${heatmap.width}x${heatmap.height} · series ${telemetry.cpuSeries.values.length}',
+        'charts palette ${_chartPalettes[chartPaletteIndex].name} ${DotChars.middle} heatmap ${heatmap.width}x${heatmap.height} ${DotChars.middle} series ${telemetry.cpuSeries.values.length}',
       _ =>
-        'telemetry ${telemetry.cpu.toStringAsFixed(1)}% cpu · ${telemetry.netIn.toStringAsFixed(0)} mb/s in · ${telemetry.netOut.toStringAsFixed(0)} mb/s out',
+        'telemetry ${telemetry.cpu.toStringAsFixed(1)}% cpu ${DotChars.middle} ${telemetry.netIn.toStringAsFixed(0)} mb/s in ${DotChars.middle} ${telemetry.netOut.toStringAsFixed(0)} mb/s out',
     };
     final line2 = Layout.pad(dim.render(statusLine), width);
 

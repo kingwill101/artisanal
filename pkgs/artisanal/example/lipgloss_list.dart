@@ -5,7 +5,6 @@
 /// Run with: dart run example/lipgloss_list.dart
 library;
 
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart';
 
@@ -97,7 +96,7 @@ void _groceryList() {
 
   for (final item in items) {
     final isPurchased = purchased.contains(item);
-    final marker = isPurchased ? '✓' : '•';
+    final marker = isPurchased ? StatusChars.check : DotChars.bullet;
 
     final markerStyle = isPurchased
         ? Style().foreground(AnsiColor(10)).margin(0, 1, 0, 0)

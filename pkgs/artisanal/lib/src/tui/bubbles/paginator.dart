@@ -2,6 +2,7 @@ import '../cmd.dart';
 import '../component.dart';
 import '../msg.dart';
 import 'key_binding.dart';
+import 'package:artisanal/style.dart';
 
 /// Pagination rendering type.
 enum PaginationType {
@@ -17,10 +18,10 @@ class PaginatorKeyMap implements KeyMap {
   PaginatorKeyMap({KeyBinding? prevPage, KeyBinding? nextPage})
     : prevPage =
           prevPage ??
-          KeyBinding.withHelp(['pgup', 'left', 'h'], '←/pgup', 'prev page'),
+          KeyBinding.withHelp(['pgup', 'left', 'h'], '${Arrows.left}/pgup', 'prev page'),
       nextPage =
           nextPage ??
-          KeyBinding.withHelp(['pgdown', 'right', 'l'], '→/pgdn', 'next page');
+          KeyBinding.withHelp(['pgdown', 'right', 'l'], '${Arrows.right}/pgdn', 'next page');
 
   /// Key binding for previous page.
   final KeyBinding prevPage;
@@ -81,8 +82,8 @@ class PaginatorModel extends ViewComponent {
     this.page = 0,
     this.perPage = 1,
     this.totalPages = 1,
-    this.activeDot = '•',
-    this.inactiveDot = '○',
+    this.activeDot = PaginationDots.active,
+    this.inactiveDot = PaginationDots.inactive,
     this.arabicFormat = '%d/%d',
     PaginatorKeyMap? keyMap,
   }) : keyMap = keyMap ?? PaginatorKeyMap();

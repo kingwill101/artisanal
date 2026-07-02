@@ -1,13 +1,13 @@
 /// Multi-view demo with progress animation (Bubble Tea "views" example).
 library;
 
-import 'package:artisanal/artisanal.dart' show BasicColor, Style;
+import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 const _progressBarWidth = 71;
-const _progressFullChar = '█';
-const _progressEmptyChar = '░';
-const _dotChar = ' • ';
+const _progressFullChar = BlockShades.full;
+const _progressEmptyChar = BlockShades.light;
+const _dotChar = ' ${DotChars.bullet} ';
 
 // Styles
 final _keywordStyle = Style().foreground(const BasicColor('211'));

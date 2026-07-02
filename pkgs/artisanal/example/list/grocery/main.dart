@@ -15,9 +15,9 @@ final purchased = [
 String groceryEnumerator(ListItems items, int i) {
   final value = items.at(i).value;
   if (purchased.contains(value)) {
-    return '✓';
+    return StatusChars.check;
   }
-  return '•';
+  return DotChars.bullet;
 }
 
 final dimEnumStyle = Style().foreground(AnsiColor(240)).marginRight(1);

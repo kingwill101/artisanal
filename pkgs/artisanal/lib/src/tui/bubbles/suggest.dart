@@ -5,8 +5,7 @@
 /// arrow keys and accept one with Enter or Tab, or keep typing freely.
 library;
 
-import '../../style/color.dart';
-import '../../style/style.dart';
+import 'package:artisanal/style.dart';
 import '../../unicode/grapheme.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
@@ -58,13 +57,13 @@ class SuggestKeyMap implements KeyMap {
            moveUp ??
            KeyBinding(
              keys: ['up', 'ctrl+p', 'shift+tab'],
-             help: Help(key: '↑', desc: 'up'),
+             help: Help(key: Arrows.up, desc: 'up'),
            ),
        moveDown =
            moveDown ??
            KeyBinding(
              keys: ['down', 'ctrl+n', 'tab'],
-             help: Help(key: '↓', desc: 'down'),
+             help: Help(key: Arrows.down, desc: 'down'),
            ),
        moveFirst =
            moveFirst ??
@@ -82,25 +81,25 @@ class SuggestKeyMap implements KeyMap {
            accept ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'accept'),
+             help: Help(key: KeyboardChars.enter, desc: 'accept'),
            ),
        deleteBackward =
            deleteBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'delete'),
+             help: Help(key: KeyboardChars.backspace, desc: 'delete'),
            ),
        moveCursorLeft =
            moveCursorLeft ??
            KeyBinding(
              keys: ['left', 'ctrl+b'],
-             help: Help(key: '←', desc: 'cursor left'),
+             help: Help(key: Arrows.left, desc: 'cursor left'),
            ),
        moveCursorRight =
            moveCursorRight ??
            KeyBinding(
              keys: ['right', 'ctrl+f'],
-             help: Help(key: '→', desc: 'cursor right'),
+             help: Help(key: Arrows.right, desc: 'cursor right'),
            ),
        cancel =
            cancel ??

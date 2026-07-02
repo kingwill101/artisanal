@@ -492,13 +492,13 @@ final class LogViewerModel implements tui.Model {
   List<String> _buildLogPanel() {
     // Panel title with count and live indicator
     final liveIndicator = liveMode
-        ? Style().foreground(Colors.green).render('● LIVE')
-        : Style().foreground(Colors.yellow).render('● PAUSED');
+        ? Style().foreground(Colors.green).render('${Circles.filled} LIVE')
+        : Style().foreground(Colors.yellow).render('${Circles.filled} PAUSED');
     final countStyle = Style().foreground(Colors.cyan);
     final titleStyle = Style().foreground(Colors.cyan).bold();
 
     final panelTitle =
-        '${titleStyle.render('● LOGS')} '
+        '${titleStyle.render('${Circles.filled} LOGS')} '
         '[${countStyle.render(logs.length.toString())}] '
         '$liveIndicator';
 
@@ -507,7 +507,7 @@ final class LogViewerModel implements tui.Model {
 
     // Scrollback indicator
     final followIndicator = viewport.atBottom
-        ? Style().foreground(Colors.green).dim().render('● Following new logs')
+        ? Style().foreground(Colors.green).dim().render('${Circles.filled} Following new logs')
         : Style()
               .foreground(Colors.yellow)
               .render('▲ Scrollback mode - Press G to follow');

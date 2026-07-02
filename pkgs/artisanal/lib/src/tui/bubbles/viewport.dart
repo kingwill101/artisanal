@@ -1,10 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/style.dart';
 import '../../style/ranges.dart' as ranges;
-import '../../style/color.dart';
-import '../../style/style.dart';
 import '../../terminal/ansi.dart';
-import '../../layout/layout.dart';
 import '../../unicode/grapheme.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
@@ -41,10 +39,16 @@ class ViewportKeyMap implements KeyMap {
        halfPageDown =
            halfPageDown ??
            KeyBinding.withHelp(['d', 'ctrl+d'], 'd', '½ page down'),
-       down = down ?? KeyBinding.withHelp(['down', 'j'], '↓/j', 'down'),
-       up = up ?? KeyBinding.withHelp(['up', 'k'], '↑/k', 'up'),
-       left = left ?? KeyBinding.withHelp(['left', 'h'], '←/h', 'left'),
-       right = right ?? KeyBinding.withHelp(['right', 'l'], '→/l', 'right'),
+       down =
+           down ??
+           KeyBinding.withHelp(['down', 'j'], '${Arrows.down}/j', 'down'),
+       up = up ?? KeyBinding.withHelp(['up', 'k'], '${Arrows.up}/k', 'up'),
+       left =
+           left ??
+           KeyBinding.withHelp(['left', 'h'], '${Arrows.left}/h', 'left'),
+       right =
+           right ??
+           KeyBinding.withHelp(['right', 'l'], '${Arrows.right}/l', 'right'),
        copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy');
 
   /// Key binding for scrolling one page down.

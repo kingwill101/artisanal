@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../style/chars.dart';
 import '../style/color.dart';
 import '../style/style.dart';
 import '../tui/bubbles/spinner.dart';
@@ -173,14 +174,14 @@ class UVConsole {
           final check =
               (console.getStyle('success') ??
                       Style().foreground(Colors.success))
-                  .render('✓');
+                   .render(StatusChars.check);
           print('$check $message');
         }
       } catch (e) {
         if (showCheckmarks) {
           final cross =
               (console.getStyle('error') ?? Style().foreground(Colors.error))
-                  .render('✗');
+                   .render(StatusChars.cross);
           print('$cross $message');
         }
         rethrow;
@@ -247,7 +248,7 @@ class _SpinModel implements Model {
   View view() {
     final frame = spinner.frames.isNotEmpty
         ? spinner.frames[frameIndex.clamp(0, spinner.frames.length - 1)]
-        : '●';
+        : Circles.filled;
     final frameStyled = (theme.info != null)
         ? Style().foreground(theme.info!).render(frame)
         : frame;

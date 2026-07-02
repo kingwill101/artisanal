@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:artisanal/src/style/color.dart';
-import 'package:artisanal/src/style/style.dart';
+import 'package:artisanal/style.dart';
 import 'package:path/path.dart' as p;
 
 import '../cmd.dart';
@@ -45,8 +44,12 @@ class FilePickerKeyMap {
   FilePickerKeyMap()
     : goToTop = KeyBinding.withHelp(['g', 'home'], 'g/home', 'go to start'),
       goToLast = KeyBinding.withHelp(['G', 'end'], 'G/end', 'go to end'),
-      down = KeyBinding.withHelp(['j', 'down', 'ctrl+n'], 'j/↓', 'down'),
-      up = KeyBinding.withHelp(['k', 'up', 'ctrl+p'], 'k/↑', 'up'),
+      down = KeyBinding.withHelp(
+        ['j', 'down', 'ctrl+n'],
+        'j/${Arrows.down}',
+        'down',
+      ),
+      up = KeyBinding.withHelp(['k', 'up', 'ctrl+p'], 'k/${Arrows.up}', 'up'),
       pageUp = KeyBinding.withHelp(
         ['K', 'pgup', 'ctrl+u'],
         'K/pgup',
@@ -60,10 +63,14 @@ class FilePickerKeyMap {
       toggleHidden = KeyBinding.withHelp(['.'], '.', 'toggle hidden'),
       back = KeyBinding.withHelp(
         ['h', 'backspace', 'left', 'esc'],
-        'h/←',
+        'h/${Arrows.left}',
         'go back',
       ),
-      open = KeyBinding.withHelp(['l', 'right', 'enter'], 'l/→/enter', 'open'),
+      open = KeyBinding.withHelp(
+        ['l', 'right', 'enter'],
+        'l/${Arrows.right}/enter',
+        'open',
+      ),
       select = KeyBinding.withHelp(['enter'], 'enter', 'select');
 
   /// Move cursor to the first item.
@@ -992,7 +999,7 @@ class FilePickerModel extends ViewComponent {
     if (file.isSymlink) {
       try {
         final target = Link(file.entity.path).targetSync();
-        content.write(' → $target');
+        content.write(' ${Arrows.right} $target');
       } catch (_) {
         // Symlink target may be unreadable; just skip showing it.
       }
@@ -1037,7 +1044,7 @@ class FilePickerModel extends ViewComponent {
     if (file.isSymlink) {
       try {
         final target = Link(file.entity.path).targetSync();
-        buffer.write(' → $target');
+        buffer.write(' ${Arrows.right} $target');
       } catch (_) {
         // Symlink may be broken or inaccessible.
       }

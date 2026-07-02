@@ -74,4 +74,5 @@ void main() async {
   }
 
   print('\nAll spinners tested!');
+  await shutdownSharedStdinStream();
 }

@@ -22,6 +22,7 @@
 library;
 
 import '../unicode/grapheme.dart' as uni;
+import 'package:artisanal/style.dart';
 
 /// Defines the characters used to draw borders.
 ///
@@ -172,43 +173,43 @@ class Border {
 
   /// Block border using full block characters (█).
   static const block = Border(
-    top: '█',
-    bottom: '█',
-    left: '█',
-    right: '█',
-    topLeft: '█',
-    topRight: '█',
-    bottomLeft: '█',
-    bottomRight: '█',
-    middleLeft: '█',
-    middleRight: '█',
-    middleTop: '█',
-    middleBottom: '█',
-    middle: '█',
+    top: BlockShades.full,
+    bottom: BlockShades.full,
+    left: BlockShades.full,
+    right: BlockShades.full,
+    topLeft: BlockShades.full,
+    topRight: BlockShades.full,
+    bottomLeft: BlockShades.full,
+    bottomRight: BlockShades.full,
+    middleLeft: BlockShades.full,
+    middleRight: BlockShades.full,
+    middleTop: BlockShades.full,
+    middleBottom: BlockShades.full,
+    middle: BlockShades.full,
   );
 
   /// Outer half-block border (▛▀▜▌▐▙▄▟).
   static const outerHalfBlock = Border(
-    top: '▀',
-    bottom: '▄',
-    left: '▌',
-    right: '▐',
-    topLeft: '▛',
-    topRight: '▜',
-    bottomLeft: '▙',
-    bottomRight: '▟',
+    top: BlockShades.upper,
+    bottom: BlockShades.lower,
+    left: BlockShades.left,
+    right: BlockShades.right,
+    topLeft: BlockQuadrants.allButLowerRight,
+    topRight: BlockQuadrants.allButLowerLeft,
+    bottomLeft: BlockQuadrants.allButUpperRight,
+    bottomRight: BlockQuadrants.allButUpperLeft,
   );
 
   /// Inner half-block border (▗▄▖▐▌▝▀▘).
   static const innerHalfBlock = Border(
-    top: '▄',
-    bottom: '▀',
-    left: '▐',
-    right: '▌',
-    topLeft: '▗',
-    topRight: '▖',
-    bottomLeft: '▝',
-    bottomRight: '▘',
+    top: BlockShades.lower,
+    bottom: BlockShades.upper,
+    left: BlockShades.right,
+    right: BlockShades.left,
+    topLeft: BlockQuadrants.lowerRight,
+    topRight: BlockQuadrants.lowerLeft,
+    bottomLeft: BlockQuadrants.upperRight,
+    bottomRight: BlockQuadrants.upperLeft,
   );
 
   /// Hidden border using spaces (preserves layout without visible border).

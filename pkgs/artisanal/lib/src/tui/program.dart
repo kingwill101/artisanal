@@ -21,6 +21,7 @@ import 'trace.dart';
 import 'resize_coalescer.dart';
 import 'view.dart';
 import '../layout/layout.dart' show Layout;
+import '../style/chars.dart';
 import '../style/color.dart' show Color;
 import 'background_color_probe.dart';
 import 'uv_capability_probe.dart';
@@ -2180,7 +2181,7 @@ class Program<M extends Model> with HotReloadMixin {
       final b = bytes[i];
       parts.add(b.toRadixString(16).padLeft(2, '0'));
     }
-    final suffix = bytes.length > limit ? '…' : '';
+    final suffix = bytes.length > limit ? EllipsisChars.horizontal : '';
     return '${parts.join(' ')}$suffix';
   }
 

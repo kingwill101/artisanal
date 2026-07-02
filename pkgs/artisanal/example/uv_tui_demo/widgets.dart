@@ -17,8 +17,8 @@ String renderBar(
   double value,
   int width,
   Color color, {
-  String fillChar = '█',
-  String emptyChar = '░',
+  String fillChar = BlockShades.full,
+  String emptyChar = BlockShades.light,
 }) {
   final clamped = value.clamp(0.0, 1.0);
   final filled = (clamped * width).round().clamp(0, width);
@@ -30,7 +30,7 @@ String renderBar(
 
 String renderSparkline(List<double> values, int width, Color color) {
   if (values.isEmpty) return ' ' * width;
-  final chars = const ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+  final chars = SparkBars.levels;
   final maxValue = values.reduce(math.max);
   final buffer = StringBuffer();
   final step = values.length > width ? values.length / width : 1.0;
@@ -39,7 +39,7 @@ String renderSparkline(List<double> values, int width, Color color) {
     final idx = (i * step).floor().clamp(0, values.length - 1);
     final value = values[idx];
     final normalized = maxValue > 0 ? (value / maxValue).clamp(0.0, 1.0) : 0.0;
-    final charIdx = (normalized * (chars.length - 1)).round();
+    final charIdx = 1 + (normalized * (chars.length - 2)).round();
     buffer.write(chars[charIdx]);
   }
 
@@ -133,15 +133,15 @@ final class NodeDelegate implements tui.ItemDelegate {
       ServiceStatus.offline => Colors.gray,
     };
     final statusIcon = switch (node.status) {
-      ServiceStatus.online => '●',
-      ServiceStatus.warming => '◐',
-      ServiceStatus.degraded => '◑',
-      ServiceStatus.offline => '○',
+      ServiceStatus.online => Circles.filled,
+      ServiceStatus.warming => ArcSegments.leftHalf,
+      ServiceStatus.degraded => ArcSegments.lowerHalfCircle,
+      ServiceStatus.offline => Circles.empty,
     };
 
     final prefix = selected
-        ? Style().foreground(theme.palette.accentBold).render('▶')
-        : Style().foreground(theme.palette.textDim).render('•');
+        ? Style().foreground(theme.palette.accentBold).render(Triangles.right)
+        : Style().foreground(theme.palette.textDim).render(DotChars.bullet);
 
     final name = node.name.padRight(8);
     final region = Style()
@@ -197,7 +197,7 @@ List<String> renderTopology({
     for (var x = 0; x < width; x++) {
       final noise = math.sin(x * 0.18 + y * 0.32 + phase);
       if (noise > 0.92) {
-        setCell(x, y, Style().foreground(theme.palette.textDim).render('·'));
+        setCell(x, y, Style().foreground(theme.palette.textDim).render(DotChars.middle));
       }
     }
   }
@@ -212,7 +212,7 @@ List<String> renderTopology({
     final y1 = (b.y * (height - 1)).round();
     _plotLine(x0, y0, x1, y1, (x, y) {
       final pulse = math.sin(phase + (x + y) * 0.3);
-      final char = pulse > 0.6 ? '•' : '·';
+      final char = pulse > 0.6 ? DotChars.bullet : DotChars.middle;
       final color = pulse > 0.6 ? theme.palette.accent : theme.palette.border;
       setCell(x, y, Style().foreground(color).render(char));
     });
@@ -224,7 +224,7 @@ List<String> renderTopology({
     final x = (node.x * (width - 1)).round();
     final y = (node.y * (height - 1)).round();
     final isSelected = i == selectedIndex;
-    final glyph = isSelected ? '◆' : '●';
+    final glyph = isSelected ? '◆' : Circles.filled;
     final color = isSelected ? theme.palette.accentBold : theme.palette.info;
     setCell(x, y, Style().foreground(color).bold().render(glyph));
   }

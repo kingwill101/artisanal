@@ -7,9 +7,10 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Fractional top glyphs used by FTUI-style grouped vertical bars.
-const _barChars = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const _barChars = SparkBars.levels;
 
 // ---------------------------------------------------------------------------
 // Single-series vertical histogram (backward-compatible)
@@ -35,7 +36,7 @@ void drawHistogram(
   int gridCols = 0,
   List<String>? xLabels,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int? barWidth,
   bool drawAxisLine = true,
@@ -94,7 +95,7 @@ void drawGroupedHistogram(
   int gridCols = 0,
   List<String>? xLabels,
   List<String>? yLabels,
-  String barChar = '█',
+  String barChar = BlockShades.full,
   int barGap = 1,
   int groupGap = 1,
   int? barWidth,

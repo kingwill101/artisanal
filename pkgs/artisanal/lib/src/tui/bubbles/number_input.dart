@@ -6,8 +6,7 @@ library;
 
 import 'dart:math' as math;
 
-import '../../style/color.dart';
-import '../../style/style.dart';
+import 'package:artisanal/style.dart';
 import '../../unicode/grapheme.dart' as uni;
 import '../cmd.dart';
 import '../component.dart';
@@ -55,25 +54,25 @@ class NumberInputKeyMap implements KeyMap {
            increment ??
            KeyBinding(
              keys: ['up', 'ctrl+p'],
-             help: Help(key: '↑', desc: 'increment'),
+             help: Help(key: Arrows.up, desc: 'increment'),
            ),
        decrement =
            decrement ??
            KeyBinding(
              keys: ['down', 'ctrl+n'],
-             help: Help(key: '↓', desc: 'decrement'),
+             help: Help(key: Arrows.down, desc: 'decrement'),
            ),
        deleteBackward =
            deleteBackward ??
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
-             help: Help(key: '⌫', desc: 'delete'),
+             help: Help(key: KeyboardChars.backspace, desc: 'delete'),
            ),
        submit =
            submit ??
            KeyBinding(
              keys: ['enter'],
-             help: Help(key: '↵', desc: 'submit'),
+             help: Help(key: KeyboardChars.enter, desc: 'submit'),
            ),
        cancel =
            cancel ??

@@ -55,7 +55,7 @@ final class SparklineData {
 
   String render(int width) {
     if (values.isEmpty) return '─' * width;
-    final chars = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    final chars = SparkBars.levels;
     final buffer = StringBuffer();
     final step = values.length > width ? values.length / width : 1.0;
 
@@ -65,13 +65,13 @@ final class SparklineData {
       final normalized = maxValue > 0
           ? (value / maxValue).clamp(0.0, 1.0)
           : 0.0;
-      final charIdx = (normalized * (chars.length - 1)).round();
+      final charIdx = 1 + (normalized * (chars.length - 2)).round();
       buffer.write(chars[charIdx]);
     }
 
     // Pad with baseline if needed
     while (buffer.length < width) {
-      buffer.write('▁');
+      buffer.write(SparkBars.levels[1]);
     }
     return buffer.toString();
   }
@@ -170,7 +170,14 @@ final class LogStats {
 
 final _random = math.Random();
 
-const _logProjects = ['kasm', '███', 'vault', 'sync', 'api', 'auth'];
+const _logProjects = [
+  'kasm',
+  '${BlockShades.full}${BlockShades.full}${BlockShades.full}',
+  'vault',
+  'sync',
+  'api',
+  'auth',
+];
 const _logEnvironments = ['PROD', 'STAG', 'DEV'];
 
 const _logSources = [
@@ -1115,7 +1122,8 @@ class CommandCenterModel implements tui.Model {
 
   List<String> _buildHeaderPanel(int panelHeight) {
     // Title line
-    final title = _accentBoldStyle().render('◆ ███ ███ COMMAND CENTER ◆');
+    final blocks = '${BlockShades.full}${BlockShades.full}${BlockShades.full}';
+    final title = _accentBoldStyle().render('◆ $blocks $blocks COMMAND CENTER ◆');
 
     // Theme indicator - style based on theme name
     final themeLabel = switch (theme) {
@@ -1180,7 +1188,7 @@ class CommandCenterModel implements tui.Model {
   }
 
   String _buildProjectLine() {
-    final label = _accentStyle().render('● PROJECT:');
+    final label = _accentStyle().render('${Circles.filled} PROJECT:');
     final countStr = _textStyle().render(
       ' ${projects.length} total projects: ',
     );
@@ -1252,7 +1260,7 @@ class CommandCenterModel implements tui.Model {
 
   String _buildSubTabsLine() {
     final buffer = StringBuffer();
-    buffer.write('▶ ');
+    buffer.write('${Triangles.right} ');
 
     final keys = ['A', 'B', 'C', 'D'];
 
@@ -1280,12 +1288,12 @@ class CommandCenterModel implements tui.Model {
     // Calculate content height (panel height - 2 for border)
     final contentHeight = math.max(3, panelHeight - 2);
 
-    // Title line: "◎ LOGS [1,908,196] ● LIVE"
+    // Title line with project count and live indicator.
     final titlePart = _accentBoldStyle().render('◎ LOGS');
     final countPart = '[${_formatNumber(totalLogs)}]';
     final liveIndicator = liveMode
-        ? _successStyle().render('● LIVE')
-        : _warningStyle().render('● PAUSED');
+        ? _successStyle().render('${Circles.filled} LIVE')
+        : _warningStyle().render('${Circles.filled} PAUSED');
     final panelTitle = '$titlePart $countPart $liveIndicator';
 
     // Search/Filter bar
@@ -1301,7 +1309,7 @@ class CommandCenterModel implements tui.Model {
 
     // Follow indicator
     final followIndicator = viewport.atBottom
-        ? _successStyle().render('● Following new logs')
+        ? _successStyle().render('${Circles.filled} Following new logs')
         : _warningStyle().render('▲ Scrollback mode - Press G to follow');
 
     // Panel controls line

@@ -1,5 +1,6 @@
 import '../style/color.dart';
 import '../style/style.dart';
+import '../style/chars.dart';
 import '../tui/markdown/syntax_highlighter.dart';
 
 /// Configuration for Glamour markdown rendering.
@@ -214,7 +215,7 @@ class GlamourTheme {
       color: BasicColor('240'), // #585858
       format: '\n--------\n',
     ),
-    item: GlamourPrimitiveStyle(blockPrefix: '• '),
+    item: GlamourPrimitiveStyle(blockPrefix: '${DotChars.bullet} '),
     enumeration: GlamourPrimitiveStyle(blockPrefix: '. '),
     task: GlamourTaskStyle(ticked: '[✓] ', unticked: '[ ] '),
     link: GlamourPrimitiveStyle(
@@ -312,7 +313,7 @@ class GlamourTheme {
       color: BasicColor('249'), // #B2B2B2
       format: '\n--------\n',
     ),
-    item: GlamourPrimitiveStyle(blockPrefix: '• '),
+    item: GlamourPrimitiveStyle(blockPrefix: '${DotChars.bullet} '),
     enumeration: GlamourPrimitiveStyle(blockPrefix: '. '),
     task: GlamourTaskStyle(ticked: '[✓] ', unticked: '[ ] '),
     link: GlamourPrimitiveStyle(
@@ -408,7 +409,7 @@ class GlamourTheme {
       ),
     ),
     h2: GlamourBlockStyle(
-      style: GlamourPrimitiveStyle(prefix: '▌ ', blockSuffix: '\n'),
+      style: GlamourPrimitiveStyle(prefix: '${BlockShades.left} ', blockSuffix: '\n'),
     ),
     h3: GlamourBlockStyle(
       style: GlamourPrimitiveStyle(prefix: '┃ ', blockSuffix: '\n'),
@@ -433,7 +434,7 @@ class GlamourTheme {
       color: BasicColor('212'),
       format: '\n──────\n',
     ),
-    item: GlamourPrimitiveStyle(blockPrefix: '• '),
+    item: GlamourPrimitiveStyle(blockPrefix: '${DotChars.bullet} '),
     enumeration: GlamourPrimitiveStyle(blockPrefix: '. '),
     task: GlamourTaskStyle(ticked: '[✓] ', unticked: '[ ] '),
     link: GlamourPrimitiveStyle(

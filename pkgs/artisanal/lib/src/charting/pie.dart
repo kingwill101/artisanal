@@ -7,6 +7,7 @@ import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
 import 'core.dart';
+import 'package:artisanal/style.dart';
 
 /// Returns the slice index for a point at distance [dist] from the center
 /// at the given [angle], or -1 if outside the pie.
@@ -141,7 +142,7 @@ void drawPieChart(
                   ? baseStyle
                   : baseStyle.copyWith(bg: baseStyle.fg, clearFg: true))
             : baseStyle.copyWith(clearBg: true);
-        final drawGlyph = useBg ? glyph : '█';
+        final drawGlyph = useBg ? glyph : BlockShades.full;
         putCell(screen, x, y, drawGlyph, cellStyle);
         continue;
       }
@@ -151,13 +152,13 @@ void drawPieChart(
       if (mask == 0xF && ul == ur && ll == lr && ul != ll) {
         final fg = _sliceColor(palette[ul]);
         final bg = _sliceColor(palette[ll]);
-        putCell(screen, x, y, '▀', UvStyle(fg: fg, bg: bg));
+        putCell(screen, x, y, BlockShades.upper, UvStyle(fg: fg, bg: bg));
         continue;
       }
       if (mask == 0xF && ul == ll && ur == lr && ul != ur) {
         final fg = _sliceColor(palette[ul]);
         final bg = _sliceColor(palette[ur]);
-        putCell(screen, x, y, '▌', UvStyle(fg: fg, bg: bg));
+        putCell(screen, x, y, BlockShades.left, UvStyle(fg: fg, bg: bg));
         continue;
       }
 
@@ -214,21 +215,21 @@ int _dominantSlice(int ul, int ur, int ll, int lr) {
 
 String _maskToBlockGlyph(int mask) {
   return switch (mask) {
-    0x1 => '▘', // upper-left
-    0x2 => '▝', // upper-right
-    0x3 => '▀', // top half
-    0x4 => '▖', // lower-left
-    0x5 => '▌', // left half
-    0x6 => '▞', // upper-right + lower-left
-    0x7 => '▛', // all but lower-right
-    0x8 => '▗', // lower-right
-    0x9 => '▚', // upper-left + lower-right
-    0xA => '▐', // right half
-    0xB => '▜', // all but lower-left
-    0xC => '▄', // bottom half
-    0xD => '▙', // all but upper-right
-    0xE => '▟', // all but upper-left
-    0xF => '█', // full
+    0x1 => BlockQuadrants.upperLeft, // upper-left
+    0x2 => BlockQuadrants.upperRight, // upper-right
+    0x3 => BlockShades.upper, // top half
+    0x4 => BlockQuadrants.lowerLeft, // lower-left
+    0x5 => BlockShades.left, // left half
+    0x6 => BlockQuadrants.rightHalves, // upper-right + lower-left
+    0x7 => BlockQuadrants.allButLowerRight, // all but lower-right
+    0x8 => BlockQuadrants.lowerRight, // lower-right
+    0x9 => BlockQuadrants.leftHalves, // upper-left + lower-right
+    0xA => BlockShades.right, // right half
+    0xB => BlockQuadrants.allButLowerLeft, // all but lower-left
+    0xC => BlockShades.lower, // bottom half
+    0xD => BlockQuadrants.allButUpperRight, // all but upper-right
+    0xE => BlockQuadrants.allButUpperLeft, // all but upper-left
+    0xF => BlockShades.full, // full
     _ => '',
   };
 }

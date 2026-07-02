@@ -7,6 +7,7 @@ import '../uv/canvas.dart';
 import '../uv/cell.dart';
 import '../uv/geometry.dart';
 import '../uv/screen.dart';
+import 'package:artisanal/style.dart';
 
 /// Signature for chart painters.
 typedef ChartPainter = void Function(Screen screen, Rectangle area);
@@ -193,7 +194,7 @@ final class ChartLegendEntry {
   const ChartLegendEntry({
     required this.label,
     required this.style,
-    this.glyph = '■',
+    this.glyph = SparseBlocks.solid,
     this.labelStyle = const UvStyle(),
   });
 

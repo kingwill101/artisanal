@@ -1,3 +1,5 @@
+import 'package:artisanal/style.dart';
+
 import '../key.dart';
 import '../msg.dart';
 
@@ -220,19 +222,35 @@ class CommonKeyBindings {
   CommonKeyBindings._();
 
   /// Up navigation (↑ or k).
-  static final up = KeyBinding.withHelp(['up', 'k'], '↑/k', 'up');
+  static final up = KeyBinding.withHelp(['up', 'k'], '${Arrows.up}/k', 'up');
 
   /// Down navigation (↓ or j).
-  static final down = KeyBinding.withHelp(['down', 'j'], '↓/j', 'down');
+  static final down = KeyBinding.withHelp(
+    ['down', 'j'],
+    '${Arrows.down}/j',
+    'down',
+  );
 
   /// Left navigation (← or h).
-  static final left = KeyBinding.withHelp(['left', 'h'], '←/h', 'left');
+  static final left = KeyBinding.withHelp(
+    ['left', 'h'],
+    '${Arrows.left}/h',
+    'left',
+  );
 
   /// Right navigation (→ or l).
-  static final right = KeyBinding.withHelp(['right', 'l'], '→/l', 'right');
+  static final right = KeyBinding.withHelp(
+    ['right', 'l'],
+    '${Arrows.right}/l',
+    'right',
+  );
 
   /// Enter/confirm.
-  static final enter = KeyBinding.withHelp(['enter'], '↵', 'confirm');
+  static final enter = KeyBinding.withHelp(
+    ['enter'],
+    KeyboardChars.enter,
+    'confirm',
+  );
 
   /// Escape/cancel.
   static final escape = KeyBinding.withHelp(['esc'], 'esc', 'cancel');
