@@ -24,7 +24,10 @@ typedef _LocalAllocD = int Function(int, int);
 typedef _LocalFreeC = IntPtr Function(IntPtr);
 typedef _LocalFreeD = int Function(int);
 
-int? _savedMode;
+// Stack of saved modes so overlapping enable/restore pairs (e.g. suspending
+// raw mode to shell out, then resuming an outer raw-mode session) each
+// restore only their own snapshot instead of clobbering one another.
+final List<int> _savedModes = [];
 
 /// Puts the Windows console **input** handle into virtual-terminal mode so
 /// arrow keys, Home/End/PgUp/PgDn, function keys, Esc, Alt-modified keys and
@@ -38,52 +41,64 @@ int? _savedMode;
 /// `ENABLE_QUICK_EDIT_MODE` lets mouse events through instead of being
 /// captured as console text selection.
 ///
-/// The previous mode is saved once for [restoreWindowsVtInput]. Call while
-/// entering raw mode.
+/// The previous mode is pushed onto a stack for [restoreWindowsVtInput]. Any
+/// Win32 FFI failure here is swallowed so callers (`enterRawMode`) can always
+/// finish without leaving `stdin.echoMode`/`lineMode` in a half-set state.
+/// Call while entering raw mode.
 void enableWindowsVtInput() {
   if (!Platform.isWindows) return;
-  final k32 = DynamicLibrary.open('kernel32.dll');
-  final getStdHandle =
-      k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
-  final getConsoleMode =
-      k32.lookupFunction<_GetConsoleModeC, _GetConsoleModeD>('GetConsoleMode');
-  final setConsoleMode =
-      k32.lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
-  // Scratch DWORD from the Win32 heap so this file needs no allocator
-  // dependency (package:ffi).
-  final localAlloc =
-      k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
-  final localFree = k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
-
-  final handle = getStdHandle(_stdInputHandle);
-  final mem = localAlloc(_lmemZeroInit, 4);
-  if (mem == 0) return;
-  final modePtr = Pointer<Uint32>.fromAddress(mem);
   try {
-    if (getConsoleMode(handle, modePtr) == 0) return; // not a console
-    _savedMode ??= modePtr.value;
-    final next = (modePtr.value |
-            _enableVirtualTerminalInput |
-            _enableExtendedFlags |
-            _enableMouseInput) &
-        ~(_enableQuickEditMode | _enableLineInput | _enableEchoInput);
-    setConsoleMode(handle, next);
-  } finally {
-    localFree(mem);
+    final k32 = DynamicLibrary.open('kernel32.dll');
+    final getStdHandle =
+        k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
+    final getConsoleMode = k32
+        .lookupFunction<_GetConsoleModeC, _GetConsoleModeD>('GetConsoleMode');
+    final setConsoleMode = k32
+        .lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
+    // Scratch DWORD from the Win32 heap so this file needs no allocator
+    // dependency (package:ffi).
+    final localAlloc =
+        k32.lookupFunction<_LocalAllocC, _LocalAllocD>('LocalAlloc');
+    final localFree =
+        k32.lookupFunction<_LocalFreeC, _LocalFreeD>('LocalFree');
+
+    final handle = getStdHandle(_stdInputHandle);
+    final mem = localAlloc(_lmemZeroInit, 4);
+    if (mem == 0) return;
+    final modePtr = Pointer<Uint32>.fromAddress(mem);
+    try {
+      if (getConsoleMode(handle, modePtr) == 0) return; // not a console
+      _savedModes.add(modePtr.value);
+      final next = (modePtr.value |
+              _enableVirtualTerminalInput |
+              _enableExtendedFlags |
+              _enableMouseInput) &
+          ~(_enableQuickEditMode | _enableLineInput | _enableEchoInput);
+      setConsoleMode(handle, next);
+    } finally {
+      localFree(mem);
+    }
+  } catch (_) {
+    // Best-effort: leave the console mode untouched if the Win32 calls fail.
   }
 }
 
-/// Restores the console input mode captured by the first
+/// Restores the console input mode captured by the matching
 /// [enableWindowsVtInput] call. No-op if it never ran.
 void restoreWindowsVtInput() {
   if (!Platform.isWindows) return;
-  final saved = _savedMode;
-  if (saved == null) return;
-  final k32 = DynamicLibrary.open('kernel32.dll');
-  final getStdHandle =
-      k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
-  final setConsoleMode =
-      k32.lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
-  setConsoleMode(getStdHandle(_stdInputHandle), saved);
-  _savedMode = null;
+  if (_savedModes.isEmpty) return;
+  // Pop before the FFI calls so a failure below can't leave a stale
+  // snapshot around to be misapplied by a later restore.
+  final saved = _savedModes.removeLast();
+  try {
+    final k32 = DynamicLibrary.open('kernel32.dll');
+    final getStdHandle =
+        k32.lookupFunction<_GetStdHandleC, _GetStdHandleD>('GetStdHandle');
+    final setConsoleMode = k32
+        .lookupFunction<_SetConsoleModeC, _SetConsoleModeD>('SetConsoleMode');
+    setConsoleMode(getStdHandle(_stdInputHandle), saved);
+  } catch (_) {
+    // Best-effort: leave the console mode untouched if the Win32 calls fail.
+  }
 }
