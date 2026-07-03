@@ -1,4 +1,5 @@
-export 'theme.dart' show TerminalThemeState, TerminalThemeHost;
+export 'theme.dart'
+    show TerminalThemeState, TerminalColorSchemeState, TerminalThemeHost;
 
 export 'terminal_palette.dart'
     show TerminalPaletteSnapshot, TerminalPaletteService;

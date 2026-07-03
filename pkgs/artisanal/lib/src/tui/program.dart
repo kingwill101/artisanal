@@ -28,6 +28,7 @@ import 'uv_capability_probe.dart';
 import '../uv/cursor.dart';
 import '../uv/tui_adapter.dart' show UvTuiInputParser;
 import 'hot_reload_mixin.dart';
+import '../uv/event.dart' as uvev;
 
 /// The TUI program runtime.
 ///
@@ -2102,7 +2103,7 @@ class Program<M extends Model> with HotReloadMixin {
         'MouseMsg($action $button @ $x,$y)',
       WindowSizeMsg(:final width, :final height) =>
         'WindowSizeMsg($width,$height)',
-      UvEventMsg(:final event) => 'UvEventMsg(${event.runtimeType})',
+      UvEventMsg(:final event) => _traceUvEventSummary(event),
       _ => msg.runtimeType.toString(),
     };
   }
@@ -2146,11 +2147,51 @@ class Program<M extends Model> with HotReloadMixin {
         'kind': 'paste',
         'length': content.length,
       },
+      UvEventMsg(:final event) => <String, Object?>{
+        'kind': 'uv_event',
+        'eventType': event.runtimeType.toString(),
+        if (event is uvev.UnknownOscEvent) 'osc': event.value,
+        if (event is uvev.ForegroundColorEvent) 'osc': '10',
+        if (event is uvev.BackgroundColorEvent) 'osc': '11',
+        if (event is uvev.CursorColorEvent) 'osc': '12',
+        if (event is uvev.ColorPaletteEvent) 'osc': '4',
+        if (event is uvev.WindowOpEvent) 'osc': '7/11',
+        if (event is uvev.ClipboardEvent) 'osc': '52',
+        if (event is uvev.DarkColorSchemeEvent ||
+            event is uvev.LightColorSchemeEvent)
+          'osc': '997',
+      },
       _ => <String, Object?>{
         'kind': 'other',
         'runtimeType': msg.runtimeType.toString(),
       },
     };
+  }
+
+  String _traceUvEventSummary(Object event) {
+    return switch (event) {
+      uvev.ForegroundColorEvent(:final color) =>
+        'UvEventMsg(ForegroundColorEvent ${color == null ? '(null)' : color.toString()})',
+      uvev.BackgroundColorEvent(:final color) =>
+        'UvEventMsg(BackgroundColorEvent ${color == null ? '(null)' : color.toString()})',
+      uvev.CursorColorEvent(:final color) =>
+        'UvEventMsg(CursorColorEvent ${color == null ? '(null)' : color.toString()})',
+      uvev.ColorPaletteEvent(:final index, :final color) =>
+        'UvEventMsg(ColorPaletteEvent $index ${color == null ? '(null)' : color.toString()})',
+      uvev.DarkColorSchemeEvent() => 'UvEventMsg(DarkColorSchemeEvent osc=997;1)',
+      uvev.LightColorSchemeEvent() => 'UvEventMsg(LightColorSchemeEvent osc=997;2)',
+      uvev.UnknownOscEvent(:final value) => 'UvEventMsg(UnknownOscEvent osc=${_shortenForTrace(value)})',
+      uvev.WindowOpEvent(:final op, :final args) =>
+        'UvEventMsg(WindowOpEvent osc=$op args=$args)',
+      uvev.ClipboardEvent(:final selection, :final content) =>
+        'UvEventMsg(ClipboardEvent osc=52 sel=$selection len=${content.length})',
+      _ => 'UvEventMsg(${event.runtimeType})',
+    };
+  }
+
+  String _shortenForTrace(String value) {
+    final oneLine = value.replaceAll('\n', r'\n');
+    return oneLine.length <= 64 ? oneLine : '${oneLine.substring(0, 61)}...';
   }
 
   void _traceInputBatch({

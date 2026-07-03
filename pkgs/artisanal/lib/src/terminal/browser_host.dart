@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import '../style/accessibility.dart' show isDarkColorRgb;
 import '../tui/model.dart';
 import '../tui/program.dart';
 import '../tui/program_host_io.dart' show webSocketHost;
@@ -509,9 +510,17 @@ final class BrowserTerminalHostServer {
         if ([red, green, blue].some((value) => Number.isNaN(value))) {
           return true;
         }
+        function linearize(channel) {
+          const value = channel / 255.0;
+          return value <= 0.04045
+            ? value / 12.92
+            : Math.pow((value + 0.055) / 1.055, 2.4);
+        }
         const luminance =
-          ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
-        return luminance < 0.5;
+          (0.2126 * linearize(red)) +
+          (0.7152 * linearize(green)) +
+          (0.0722 * linearize(blue));
+        return luminance < 0.179128784747792;
       }
 
       function normalizeOscColor(value) {
@@ -1603,8 +1612,7 @@ bool _prefersDarkColorScheme(String background) {
   final red = int.parse(hex.substring(0, 2), radix: 16);
   final green = int.parse(hex.substring(2, 4), radix: 16);
   final blue = int.parse(hex.substring(4, 6), radix: 16);
-  final luminance = ((0.2126 * red) + (0.7152 * green) + (0.0722 * blue)) / 255;
-  return luminance < 0.5;
+  return isDarkColorRgb(red: red, green: green, blue: blue);
 }
 
 String? _normalizedHexColor(String color) {

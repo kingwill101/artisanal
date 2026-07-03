@@ -292,6 +292,16 @@ void main() {
       expect(html, contains('color-scheme: light dark;'));
     });
 
+    test('defaultPageHtml prefers dark scheme for dark backgrounds', () {
+      final html = BrowserTerminalHostServer.defaultPageHtml(
+        title: 'Dark Browser Test',
+        webSocketPath: '/ws',
+        background: '#282c34',
+      );
+
+      expect(html, contains('color-scheme: dark light;'));
+    });
+
     test(
       'defaultPageHtml exposes a light fallback theme for browser hosts',
       () {

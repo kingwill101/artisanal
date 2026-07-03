@@ -1,9 +1,11 @@
 import 'msg.dart';
 import 'cmd.dart';
 import 'terminal_palette.dart';
+import '../style/accessibility.dart' show isDarkColorRgb;
 import '../uv/uv.dart' as uvev;
+import 'trace.dart';
 
-/// Tracks terminal theme information (background + dark/light heuristic).
+/// Tracks terminal-reported colors and background truth.
 ///
 /// This is a lightweight helper that apps/components can keep in their model to
 /// avoid re-implementing background color parsing and dark-mode heuristics.
@@ -45,30 +47,6 @@ final class TerminalThemeState {
         cursorHex: hex,
         hasDarkBackground: hasDarkBackground,
       ),
-      ColorSchemeMsg(dark: final dark) => TerminalThemeState(
-        backgroundHex: backgroundHex,
-        foregroundHex: foregroundHex,
-        cursorHex: cursorHex,
-        hasDarkBackground: dark,
-      ),
-
-      // Backward-compatible fallback for code still looking at raw UV events.
-      UvEventMsg(event: final ev) when ev is uvev.DarkColorSchemeEvent =>
-        TerminalThemeState(
-          backgroundHex: backgroundHex,
-          foregroundHex: foregroundHex,
-          cursorHex: cursorHex,
-          hasDarkBackground: true,
-        ),
-
-      UvEventMsg(event: final ev) when ev is uvev.LightColorSchemeEvent =>
-        TerminalThemeState(
-          backgroundHex: backgroundHex,
-          foregroundHex: foregroundHex,
-          cursorHex: cursorHex,
-          hasDarkBackground: false,
-        ),
-
       _ => this,
     };
   }
@@ -102,9 +80,28 @@ final class TerminalThemeState {
     final g = int.tryParse(h.substring(2, 4), radix: 16);
     final b = int.tryParse(h.substring(4, 6), radix: 16);
     if (r == null || g == null || b == null) return null;
-    // Perceived luminance; threshold tuned for terminals.
-    final lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
-    return lum < 0.5;
+    return isDarkColorRgb(red: r, green: g, blue: b);
+  }
+}
+
+/// Tracks terminal color-scheme preference separately from terminal colors.
+final class TerminalColorSchemeState {
+  const TerminalColorSchemeState({this.hasDarkColorScheme});
+
+  /// Whether the terminal or host prefers a dark color scheme.
+  final bool? hasDarkColorScheme;
+
+  TerminalColorSchemeState update(Msg msg) {
+    return switch (msg) {
+      ColorSchemeMsg(dark: final dark) => TerminalColorSchemeState(
+        hasDarkColorScheme: dark,
+      ),
+      UvEventMsg(event: final ev) when ev is uvev.DarkColorSchemeEvent =>
+        const TerminalColorSchemeState(hasDarkColorScheme: true),
+      UvEventMsg(event: final ev) when ev is uvev.LightColorSchemeEvent =>
+        const TerminalColorSchemeState(hasDarkColorScheme: false),
+      _ => this,
+    };
   }
 }
 
@@ -112,15 +109,23 @@ final class TerminalThemeState {
 /// boilerplate.
 mixin TerminalThemeHost {
   TerminalThemeState terminalTheme = const TerminalThemeState();
+  TerminalColorSchemeState terminalColorScheme = const TerminalColorSchemeState();
   final TerminalPaletteService terminalPalette = TerminalPaletteService();
 
-  /// Updates [terminalTheme] if [msg] carries theme information.
+  /// Updates terminal color state and color-scheme preference if [msg] carries
+  /// terminal appearance information.
   void updateTerminalTheme(Msg msg) {
+    final beforeTheme = terminalTheme;
+    final beforeColorScheme = terminalColorScheme;
     if (terminalPalette.handle(msg)) {
       terminalTheme = terminalTheme.mergePalette(terminalPalette.snapshot);
-      return;
+    } else {
+      terminalTheme = terminalTheme.update(msg);
     }
-    terminalTheme = terminalTheme.update(msg);
+
+    terminalColorScheme = terminalColorScheme.update(msg);
+
+    _traceTerminalThemeUpdate(msg, beforeTheme, terminalTheme, beforeColorScheme, terminalColorScheme);
   }
 
   /// Requests foreground/background/cursor reports for terminal theme probing.
@@ -139,5 +144,38 @@ mixin TerminalThemeHost {
         terminalPalette.requestAnsiPalette(count: paletteCount),
     ];
     return Cmd.batch(commands);
+  }
+}
+
+void _traceTerminalThemeUpdate(
+  Msg msg,
+  TerminalThemeState before,
+  TerminalThemeState after,
+  TerminalColorSchemeState beforeColorScheme,
+  TerminalColorSchemeState afterColorScheme,
+) {
+  if (before != after) {
+    TuiTrace.event(
+      'terminal.background.update',
+      tag: TraceTag.input,
+      fields: <String, Object?>{
+        'message': msg.runtimeType.toString(),
+        'background': after.backgroundHex,
+        'foreground': after.foregroundHex,
+        'cursor': after.cursorHex,
+        'dark': after.hasDarkBackground,
+      },
+    );
+  }
+
+  if (beforeColorScheme.hasDarkColorScheme != afterColorScheme.hasDarkColorScheme) {
+    TuiTrace.event(
+      'terminal.color_scheme.update',
+      tag: TraceTag.input,
+      fields: <String, Object?>{
+        'message': msg.runtimeType.toString(),
+        'dark': afterColorScheme.hasDarkColorScheme,
+      },
+    );
   }
 }

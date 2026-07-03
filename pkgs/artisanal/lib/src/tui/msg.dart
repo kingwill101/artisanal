@@ -1,4 +1,5 @@
 import '../style/color.dart';
+import '../style/accessibility.dart' show isDarkColorRgb;
 import '../uv/terminal_renderer.dart' show RenderMetrics;
 import 'degradation.dart' show RenderBudgetState;
 import 'key.dart';
@@ -433,13 +434,7 @@ final class BackgroundColorMsg extends Msg {
     final rgb = _parseHexRgb(hex);
     if (rgb == null) return true;
     final (:r, :g, :b) = rgb;
-    final rn = r / 255.0;
-    final gn = g / 255.0;
-    final bn = b / 255.0;
-    final max = rn > gn ? (rn > bn ? rn : bn) : (gn > bn ? gn : bn);
-    final min = rn < gn ? (rn < bn ? rn : bn) : (gn < bn ? gn : bn);
-    final l = (max + min) / 2.0;
-    return l < 0.5;
+    return isDarkColorRgb(red: r, green: g, blue: b);
   }
 
   @override
