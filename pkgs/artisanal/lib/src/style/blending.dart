@@ -3,6 +3,7 @@ library;
 import 'dart:math' as math;
 
 import '../colorprofile/convert.dart' as cp;
+import 'uv_color_bridge.dart';
 import 'color.dart';
 
 /// Blends a series of [Color] stops into [steps] colors (1D gradient).
@@ -23,7 +24,7 @@ List<Color> blend1D(
 
   final rgbStops = <cp.Rgb>[];
   for (final c in stops) {
-    final rgb = _toRgb(c, hasDarkBackground: hasDarkBackground);
+    final rgb = c.toRgb(hasDarkBackground: hasDarkBackground);
     if (rgb != null) rgbStops.add(rgb);
   }
 
@@ -147,8 +148,8 @@ Color blendColor(
   if (t <= 0.0) return from;
   if (t >= 1.0) return to;
 
-  final fromRgb = _toRgb(from, hasDarkBackground: hasDarkBackground);
-  final toRgb = _toRgb(to, hasDarkBackground: hasDarkBackground);
+  final fromRgb = from.toRgb(hasDarkBackground: hasDarkBackground);
+  final toRgb = to.toRgb(hasDarkBackground: hasDarkBackground);
   if (fromRgb == null || toRgb == null) {
     return t < 0.5 ? from : to;
   }
@@ -170,49 +171,3 @@ String _hexFromRgb(int r, int g, int b) =>
     '${b.toRadixString(16).padLeft(2, '0')}';
 
 Color _colorFromRgb(cp.Rgb rgb) => BasicColor(_hexFromRgb(rgb.r, rgb.g, rgb.b));
-
-cp.Rgb? _toRgb(Color c, {required bool hasDarkBackground}) {
-  switch (c) {
-    case NoColor():
-      return null;
-    case AnsiColor(:final code):
-      return cp.ansi256ToRgb(code);
-    case BasicColor(:final value):
-      if (!c.isHex) {
-        final code = (int.tryParse(value) ?? 0).clamp(0, 255);
-        return cp.ansi256ToRgb(code);
-      }
-      final hex = _normalizeHex(value);
-      final r = _parseHexChannel(hex.substring(1, 3));
-      final g = _parseHexChannel(hex.substring(3, 5));
-      final b = _parseHexChannel(hex.substring(5, 7));
-      return cp.Rgb(r, g, b);
-    case AdaptiveColor(:final light, :final dark):
-      return _toRgb(
-        hasDarkBackground ? dark : light,
-        hasDarkBackground: hasDarkBackground,
-      );
-    case CompleteColor(:final trueColor):
-      return _toRgb(
-        BasicColor(trueColor),
-        hasDarkBackground: hasDarkBackground,
-      );
-    case CompleteAdaptiveColor(:final light, :final dark):
-      return _toRgb(
-        hasDarkBackground ? dark : light,
-        hasDarkBackground: hasDarkBackground,
-      );
-    default:
-      return null;
-  }
-}
-
-String _normalizeHex(String value) {
-  var hex = value.startsWith('#') ? value.substring(1) : value;
-  if (hex.length == 3) {
-    hex = hex.split('').map((c) => '$c$c').join();
-  }
-  return '#$hex';
-}
-
-int _parseHexChannel(String value) => int.tryParse(value, radix: 16) ?? 0;

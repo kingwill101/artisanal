@@ -9,18 +9,34 @@ library;
 
 import 'dart:math' as math;
 
-import '../colorprofile/convert.dart' as cp;
+import 'uv_color_bridge.dart';
 import 'color.dart';
 
 /// Returns WCAG-style relative luminance for a color.
 ///
 /// The result is normalized between 0.0 (black) and 1.0 (white).
 double relativeLuminance(Color color, {bool hasDarkBackground = true}) {
-  final rgb = _toRgb(color, hasDarkBackground: hasDarkBackground);
+  final rgb = color.toRgb(hasDarkBackground: hasDarkBackground);
   if (rgb == null) {
     throw ArgumentError('Unable to resolve color to RGB for contrast math');
   }
-  return _relativeLuminanceFromRgb(rgb.r, rgb.g, rgb.b);
+  return relativeLuminanceRgb(rgb.r, rgb.g, rgb.b);
+}
+
+/// Returns WCAG-style relative luminance for explicit sRGB channels.
+///
+/// The result is normalized between 0.0 (black) and 1.0 (white).
+double relativeLuminanceRgb(int red, int green, int blue) {
+  return _relativeLuminanceFromRgb(red, green, blue);
+}
+
+/// Returns `true` when the supplied sRGB color is dark enough to prefer white text.
+bool isDarkColorRgb({
+  required int red,
+  required int green,
+  required int blue,
+}) {
+  return relativeLuminanceRgb(red, green, blue) < 0.179128784747792;
 }
 
 /// Computes the WCAG contrast ratio of [foreground] vs [background].
@@ -115,55 +131,4 @@ double _relativeLuminanceFromRgb(int r, int g, int b) {
 double _srgbToLinear(double channel) {
   if (channel <= 0.03928) return channel / 12.92;
   return math.pow((channel + 0.055) / 1.055, 2.4) as double;
-}
-
-cp.Rgb? _toRgb(Color color, {required bool hasDarkBackground}) {
-  return switch (color) {
-    NoColor() => null,
-    AnsiColor(:final code) => cp.ansi256ToRgb(code),
-    BasicColor(:final value) when _isHexString(value) => _parseHexColor(value),
-    BasicColor(:final value) => cp.ansi256ToRgb(
-      (int.tryParse(value) ?? 0).clamp(0, 255),
-    ),
-    AdaptiveColor(:final light, :final dark) => _toRgb(
-      hasDarkBackground ? dark : light,
-      hasDarkBackground: hasDarkBackground,
-    ),
-    CompleteColor(:final trueColor) => _parseHexColor(_toHexValue(trueColor)),
-    CompleteAdaptiveColor(:final light, :final dark) => _toRgb(
-      hasDarkBackground ? dark : light,
-      hasDarkBackground: hasDarkBackground,
-    ),
-    _ => null,
-  };
-}
-
-String _toHexValue(String hex) => hex.startsWith('#') ? hex : '#$hex';
-
-String _normalizeHex(String value) {
-  var hex = value.startsWith('#') ? value.substring(1) : value;
-  if (hex.length == 3) {
-    hex = hex.split('').map((c) => '$c$c').join();
-  }
-  return '#$hex';
-}
-
-cp.Rgb? _parseHexColor(String value) {
-  final hex = _normalizeHex(value);
-  final normalized = hex.startsWith('#') ? hex.substring(1) : hex;
-  if (normalized.length != 6) return null;
-  final r = int.tryParse(normalized.substring(0, 2), radix: 16);
-  final g = int.tryParse(normalized.substring(2, 4), radix: 16);
-  final b = int.tryParse(normalized.substring(4, 6), radix: 16);
-  if (r == null || g == null || b == null) return null;
-  return cp.Rgb(r, g, b);
-}
-
-bool _isHexString(String value) {
-  final trimmed = value.startsWith('#') ? value.substring(1) : value;
-  if (trimmed.length != 3 && trimmed.length != 6) return false;
-  if (trimmed.length == 3 && RegExp(r'^[0-9]+$').hasMatch(trimmed)) {
-    return false;
-  }
-  return int.tryParse(trimmed, radix: 16) != null;
 }

@@ -23,7 +23,7 @@
 library;
 
 import '../colorprofile/convert.dart' as cp;
-import '../colorprofile/profile.dart' as cp;
+import '../colorprofile/profile.dart' as cp_profile;
 
 /// Color profile indicating terminal color capabilities.
 enum ColorProfile {
@@ -49,13 +49,14 @@ enum ColorProfile {
 /// Extension to convert from internal [cp.Profile] to [ColorProfile].
 extension ColorProfileConverter on ColorProfile {
   /// Converts an internal [cp.Profile] to a [ColorProfile].
-  static ColorProfile fromProfile(cp.Profile profile) {
+  static ColorProfile fromProfile(cp_profile.Profile profile) {
     return switch (profile) {
-      cp.Profile.unknown || cp.Profile.noTty => ColorProfile.ascii,
-      cp.Profile.ascii => ColorProfile.ascii,
-      cp.Profile.ansi => ColorProfile.ansi,
-      cp.Profile.ansi256 => ColorProfile.ansi256,
-      cp.Profile.trueColor => ColorProfile.trueColor,
+      cp_profile.Profile.unknown || cp_profile.Profile.noTty =>
+        ColorProfile.ascii,
+      cp_profile.Profile.ascii => ColorProfile.ascii,
+      cp_profile.Profile.ansi => ColorProfile.ansi,
+      cp_profile.Profile.ansi256 => ColorProfile.ansi256,
+      cp_profile.Profile.trueColor => ColorProfile.trueColor,
     };
   }
 }
@@ -279,7 +280,7 @@ class AnsiColor extends Color {
     if (profile == ColorProfile.ansi && code >= 16) {
       // Degrade to ANSI-16.
       return cp.sgrColor(
-        profile: cp.Profile.ansi,
+        profile: cp_profile.Profile.ansi,
         background: background,
         underline: underline,
         ansi16: cp.ansi256ToAnsi16(code),
@@ -750,13 +751,13 @@ class Colors {
 // Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
 
-cp.Profile _toInternalProfile(ColorProfile profile) {
+cp_profile.Profile _toInternalProfile(ColorProfile profile) {
   return switch (profile) {
-    ColorProfile.trueColor => cp.Profile.trueColor,
-    ColorProfile.ansi256 => cp.Profile.ansi256,
-    ColorProfile.ansi => cp.Profile.ansi,
-    ColorProfile.noColor => cp.Profile.ascii,
-    ColorProfile.ascii => cp.Profile.noTty,
+    ColorProfile.trueColor => cp_profile.Profile.trueColor,
+    ColorProfile.ansi256 => cp_profile.Profile.ansi256,
+    ColorProfile.ansi => cp_profile.Profile.ansi,
+    ColorProfile.noColor => cp_profile.Profile.ascii,
+    ColorProfile.ascii => cp_profile.Profile.noTty,
   };
 }
 

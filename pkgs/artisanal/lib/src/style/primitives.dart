@@ -9,6 +9,7 @@ export 'color.dart'
         AdaptiveColor,
         CompleteColor,
         CompleteAdaptiveColor,
+        DefaultColor,
         NoColor,
         Colors,
         ColorProfile;

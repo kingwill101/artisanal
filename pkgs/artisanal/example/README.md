@@ -151,6 +151,9 @@ dart run main.dart ui:exception --ansi
 # Advanced chalk colors
 dart run main.dart ui:chalk --ansi
 
+# Full color stress demo
+dart run example/color_stress_demo.dart
+
 # Rendering invariants and parser demo
 dart run main.dart demo --ansi
 ```
