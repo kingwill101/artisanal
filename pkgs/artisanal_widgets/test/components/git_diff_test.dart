@@ -1,3 +1,4 @@
+import 'package:artisanal/style.dart' show BasicColor;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/widgets.dart';
@@ -253,15 +254,26 @@ void main() {
     test('renders with light theme', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
+      final controller = GitDiffController();
+      final originalDarkBackground = hasDarkBackground;
+      addTearDown(() => setHasDarkBackground(originalDarkBackground));
+      setHasDarkBackground(false);
 
       await tester.pumpWidget(
         ThemeScope(
           theme: Theme.light(),
-          child: GitDiffViewer(diff: _sampleDiff, width: 80, height: 40),
+          child: GitDiffViewer(
+            diff: _sampleDiff,
+            width: 80,
+            height: 40,
+            controller: controller,
+          ),
         ),
       );
 
       expect(tester.find.text('main.dart'), isTrue);
+      expect(controller.model.styles.addedLine.hasDarkBackground, isFalse);
+      expect(controller.model.styles.fileHeader.hasDarkBackground, isFalse);
     });
 
     test('custom DiffStyles override theme defaults', () async {
@@ -324,6 +336,91 @@ void main() {
       );
 
       expect(tester.find.text('main.dart'), isTrue);
+    });
+
+    test('comment highlights adapt to terminal background', () {
+      final dark = DiffStyles.fromColors(
+        success: const BasicColor('#22c55e'),
+        error: const BasicColor('#ef4444'),
+        muted: const BasicColor('#6b7280'),
+        surface: const BasicColor('#1e1e1e'),
+        onSurface: const BasicColor('#ffffff'),
+        onBackground: const BasicColor('#d4d4d4'),
+        border: const BasicColor('#444444'),
+        hasDarkBackground: true,
+      );
+      final light = DiffStyles.fromColors(
+        success: const BasicColor('#22c55e'),
+        error: const BasicColor('#ef4444'),
+        muted: const BasicColor('#6b7280'),
+        surface: const BasicColor('#1e1e1e'),
+        onSurface: const BasicColor('#ffffff'),
+        onBackground: const BasicColor('#d4d4d4'),
+        border: const BasicColor('#444444'),
+        hasDarkBackground: false,
+      );
+
+      expect(
+        dark.selectedCommentLine.render('x'),
+        isNot(equals(light.selectedCommentLine.render('x'))),
+      );
+      expect(
+        dark.commentRangeLine.render('x'),
+        isNot(equals(light.commentRangeLine.render('x'))),
+      );
+      expect(
+        dark.commentThreadLine.render('x'),
+        isNot(equals(light.commentThreadLine.render('x'))),
+      );
+    });
+
+    test('comment range accepts custom theme styling', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+      final controller = GitDiffController();
+      final originalDarkBackground = hasDarkBackground;
+      addTearDown(() => setHasDarkBackground(originalDarkBackground));
+      setHasDarkBackground(false);
+
+      const rangeBg = BasicColor('#cfe8ff');
+      const rangeGutterBg = BasicColor('#9bc7ff');
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.light().copyWith(
+            gitDiffTheme: const GitDiffThemeData(
+              commentRangeLineBackground: rangeBg,
+              commentRangeGutterBackground: rangeGutterBg,
+            ),
+          ),
+          child: GitDiffViewer(
+            diff: _sampleDiff,
+            width: 80,
+            height: 24,
+            controller: controller,
+            commentHighlights: const [
+              DiffCommentLineHighlight(
+                key: DiffCommentLineKey(
+                  path: 'lib/main.dart',
+                  line: 3,
+                  side: DiffCommentSide.right,
+                ),
+                kind: DiffCommentLineHighlightKind.range,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(tester.find.text('main.dart'), isTrue);
+      expect(
+        controller.model.styles.commentRangeLine.render('x'),
+        contains('48;2;207;232;255'),
+      );
+      expect(
+        controller.model.styles.commentRangeGutter.render('x'),
+        contains('48;2;155;199;255'),
+      );
     });
   });
 }

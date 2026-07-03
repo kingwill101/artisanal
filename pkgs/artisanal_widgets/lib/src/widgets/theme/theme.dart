@@ -474,6 +474,12 @@ class GitDiffThemeData {
     this.removedForeground,
     this.contextForeground,
     this.headerForeground,
+    this.selectedCommentLineBackground,
+    this.selectedCommentGutterBackground,
+    this.commentRangeLineBackground,
+    this.commentRangeGutterBackground,
+    this.commentThreadLineBackground,
+    this.commentThreadGutterBackground,
   });
 
   /// Background color for added lines.
@@ -500,6 +506,24 @@ class GitDiffThemeData {
   /// Defaults to [Theme.primary].
   final Color? headerForeground;
 
+  /// Background for the selected comment line overlay.
+  final Color? selectedCommentLineBackground;
+
+  /// Background for the selected comment gutter overlay.
+  final Color? selectedCommentGutterBackground;
+
+  /// Background for the comment-range line overlay.
+  final Color? commentRangeLineBackground;
+
+  /// Background for the comment-range gutter overlay.
+  final Color? commentRangeGutterBackground;
+
+  /// Background for the threaded comment line overlay.
+  final Color? commentThreadLineBackground;
+
+  /// Background for the threaded comment gutter overlay.
+  final Color? commentThreadGutterBackground;
+
   /// Copy with selective overrides.
   GitDiffThemeData copyWith({
     Color? addedBackground,
@@ -508,6 +532,12 @@ class GitDiffThemeData {
     Color? removedForeground,
     Color? contextForeground,
     Color? headerForeground,
+    Color? selectedCommentLineBackground,
+    Color? selectedCommentGutterBackground,
+    Color? commentRangeLineBackground,
+    Color? commentRangeGutterBackground,
+    Color? commentThreadLineBackground,
+    Color? commentThreadGutterBackground,
   }) {
     return GitDiffThemeData(
       addedBackground: addedBackground ?? this.addedBackground,
@@ -516,6 +546,18 @@ class GitDiffThemeData {
       removedForeground: removedForeground ?? this.removedForeground,
       contextForeground: contextForeground ?? this.contextForeground,
       headerForeground: headerForeground ?? this.headerForeground,
+      selectedCommentLineBackground:
+          selectedCommentLineBackground ?? this.selectedCommentLineBackground,
+      selectedCommentGutterBackground:
+          selectedCommentGutterBackground ?? this.selectedCommentGutterBackground,
+      commentRangeLineBackground:
+          commentRangeLineBackground ?? this.commentRangeLineBackground,
+      commentRangeGutterBackground:
+          commentRangeGutterBackground ?? this.commentRangeGutterBackground,
+      commentThreadLineBackground:
+          commentThreadLineBackground ?? this.commentThreadLineBackground,
+      commentThreadGutterBackground:
+          commentThreadGutterBackground ?? this.commentThreadGutterBackground,
     );
   }
 }
@@ -735,33 +777,33 @@ class EditorThemeData {
 
 /// Theme containing semantic colors, text styles, and component themes.
 class Theme {
-  const Theme({
+  Theme({
     // Core semantic colors (required)
-    required this.primary,
-    required this.secondary,
-    required this.surface,
-    required this.background,
-    required this.error,
-    required this.success,
-    required this.warning,
-    required this.onPrimary,
-    required this.onSecondary,
-    required this.onSurface,
-    required this.onBackground,
-    required this.onError,
-    required this.muted,
-    required this.border,
+    required Color primary,
+    required Color secondary,
+    required Color surface,
+    required Color background,
+    required Color error,
+    required Color success,
+    required Color warning,
+    required Color onPrimary,
+    required Color onSecondary,
+    required Color onSurface,
+    required Color onBackground,
+    required Color onError,
+    required Color muted,
+    required Color border,
     // Extended semantic colors (optional)
-    this.surfaceVariant,
-    this.onSurfaceVariant,
-    this.outline,
-    this.info,
-    this.onSuccess,
-    this.onWarning,
-    this.onInfo,
-    this.highlight,
-    this.onHighlight,
-    this.shadow,
+    Color? surfaceVariant,
+    Color? onSurfaceVariant,
+    Color? outline,
+    Color? info,
+    Color? onSuccess,
+    Color? onWarning,
+    Color? onInfo,
+    Color? highlight,
+    Color? onHighlight,
+    Color? shadow,
     // Text styles (required)
     required this.titleLarge,
     required this.titleMedium,
@@ -780,97 +822,183 @@ class Theme {
     this.dialogTheme,
     this.gitDiffTheme,
     this.editorTheme,
-  });
+  }) : _primary = primary,
+       _secondary = secondary,
+       _surface = surface,
+       _background = background,
+       _error = error,
+       _success = success,
+       _warning = warning,
+       _onPrimary = onPrimary,
+       _onSecondary = onSecondary,
+       _onSurface = onSurface,
+       _onBackground = onBackground,
+       _onError = onError,
+       _muted = muted,
+       _border = border,
+       _surfaceVariant = surfaceVariant,
+       _onSurfaceVariant = onSurfaceVariant,
+       _outline = outline,
+       _info = info,
+       _onSuccess = onSuccess,
+       _onWarning = onWarning,
+       _onInfo = onInfo,
+       _highlight = highlight,
+       _onHighlight = onHighlight,
+       _shadow = shadow;
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Core Semantic Colors
   // ─────────────────────────────────────────────────────────────────────────────
 
+  final Color _primary;
+
   /// Primary accent color for interactive elements.
-  final Color primary;
+  Color get primary => _resolve(_primary);
+
+  final Color _secondary;
 
   /// Secondary accent color for less prominent elements.
-  final Color secondary;
+  Color get secondary => _resolve(_secondary);
+
+  final Color _surface;
 
   /// Surface color for cards, panels, etc.
-  final Color surface;
+  Color get surface => _resolve(_surface);
+
+  final Color _background;
 
   /// Background color for the main area.
-  final Color background;
+  Color get background => _resolve(_background);
+
+  final Color _error;
 
   /// Error/danger color.
-  final Color error;
+  Color get error => _resolve(_error);
+
+  final Color _success;
 
   /// Success color.
-  final Color success;
+  Color get success => _resolve(_success);
+
+  final Color _warning;
 
   /// Warning color.
-  final Color warning;
+  Color get warning => _resolve(_warning);
+
+  final Color _onPrimary;
 
   /// Text color on primary backgrounds.
-  final Color onPrimary;
+  Color get onPrimary => _resolve(_onPrimary);
+
+  final Color _onSecondary;
 
   /// Text color on secondary backgrounds.
-  final Color onSecondary;
+  Color get onSecondary => _resolve(_onSecondary);
+
+  final Color _onSurface;
 
   /// Text color on surface backgrounds.
-  final Color onSurface;
+  Color get onSurface => _resolve(_onSurface);
+
+  final Color _onBackground;
 
   /// Text color on main background.
-  final Color onBackground;
+  Color get onBackground => _resolve(_onBackground);
+
+  final Color _onError;
 
   /// Text color on error backgrounds.
-  final Color onError;
+  Color get onError => _resolve(_onError);
+
+  final Color _muted;
 
   /// Muted/dimmed text color.
-  final Color muted;
+  Color get muted => _resolve(_muted);
+
+  final Color _border;
 
   /// Border color.
-  final Color border;
+  Color get border => _resolve(_border);
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Extended Semantic Colors
   // ─────────────────────────────────────────────────────────────────────────────
 
+  final Color? _surfaceVariant;
+
   /// Alternate surface color for visual differentiation (e.g., sidebar vs main).
   /// Falls back to [surface] when null.
-  final Color? surfaceVariant;
+  Color? get surfaceVariant => _resolveOrNull(_surfaceVariant);
+
+  final Color? _onSurfaceVariant;
 
   /// Text color on [surfaceVariant] backgrounds.
   /// Falls back to [onSurface] when null.
-  final Color? onSurfaceVariant;
+  Color? get onSurfaceVariant => _resolveOrNull(_onSurfaceVariant);
+
+  final Color? _outline;
 
   /// Subtle outline/divider color, lighter than [border].
   /// Falls back to [border] when null.
-  final Color? outline;
+  Color? get outline => _resolveOrNull(_outline);
+
+  final Color? _info;
 
   /// Informational color (e.g., help text, info badges).
   /// Falls back to [primary] when null.
-  final Color? info;
+  Color? get info => _resolveOrNull(_info);
+
+  final Color? _onSuccess;
 
   /// Text color on [success] backgrounds.
   /// Falls back to [onPrimary] when null.
-  final Color? onSuccess;
+  Color? get onSuccess => _resolveOrNull(_onSuccess);
+
+  final Color? _onWarning;
 
   /// Text color on [warning] backgrounds.
   /// Falls back to [onPrimary] when null.
-  final Color? onWarning;
+  Color? get onWarning => _resolveOrNull(_onWarning);
+
+  final Color? _onInfo;
 
   /// Text color on [info] backgrounds.
   /// Falls back to [onPrimary] when null.
-  final Color? onInfo;
+  Color? get onInfo => _resolveOrNull(_onInfo);
+
+  final Color? _highlight;
 
   /// Selection/highlight background color.
   /// Falls back to [primary] when null.
-  final Color? highlight;
+  Color? get highlight => _resolveOrNull(_highlight);
+
+  final Color? _onHighlight;
 
   /// Text color on [highlight] backgrounds.
   /// Falls back to [onPrimary] when null.
-  final Color? onHighlight;
+  Color? get onHighlight => _resolveOrNull(_onHighlight);
+
+  final Color? _shadow;
 
   /// Shadow/elevation hint color.
   /// Falls back to [muted] when null.
-  final Color? shadow;
+  Color? get shadow => _resolveOrNull(_shadow);
+
+  /// Resolves [AdaptiveColor] to a concrete [Color] based on the current
+  /// terminal background, or passes through other color types unchanged.
+  static Color _resolve(Color c) {
+    if (c is AdaptiveColor) {
+      return hasDarkBackground ? c.dark : c.light;
+    }
+    return c;
+  }
+
+  /// Like [_resolve] but preserves null.
+  static Color? _resolveOrNull(Color? c) {
+    if (c == null) return null;
+    return _resolve(c);
+  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Resolved Extended Colors (convenience getters)
@@ -1068,7 +1196,7 @@ class Theme {
       bodySmall: Style().foreground(muted),
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
-      labelSmall: Style().dim().foreground(muted),
+      labelSmall: Style().foreground(muted),
       listRowTheme: const ListRowThemeData(
         background: surface,
         alternateBackground: AnsiColor(234),
@@ -1169,7 +1297,7 @@ class Theme {
       bodySmall: Style().foreground(muted),
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
-      labelSmall: Style().dim().foreground(muted),
+      labelSmall: Style().foreground(muted),
       listRowTheme: const ListRowThemeData(
         background: surface,
         alternateBackground: AnsiColor(253),
@@ -1425,7 +1553,7 @@ class Theme {
       bodySmall: Style().foreground(muted),
       labelLarge: Style().foreground(onSurface),
       labelMedium: Style().foreground(muted),
-      labelSmall: Style().dim().foreground(muted),
+      labelSmall: Style().foreground(muted),
       listRowTheme: const ListRowThemeData(
         background: surface,
         alternateBackground: AdaptiveColor(
@@ -1619,7 +1747,5 @@ void updateThemeFromBackground(String? hex) {
   final b = int.tryParse(h.substring(4, 6), radix: 16);
   if (r == null || g == null || b == null) return;
 
-  // Perceived luminance; threshold tuned for terminals
-  final lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0;
-  _hasDarkBackground = lum < 0.5;
+  _hasDarkBackground = isDarkColorRgb(red: r, green: g, blue: b);
 }

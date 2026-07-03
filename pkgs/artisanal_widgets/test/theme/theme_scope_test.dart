@@ -36,27 +36,21 @@ void main() {
       expect(theme.background, isA<AnsiColor>());
     });
 
-    test('Theme.adaptive() creates theme with AdaptiveColor values', () {
+    test('Theme.adaptive() resolves AdaptiveColor on access', () {
+      // Colors are resolved at access time against the global hasDarkBackground
       final theme = Theme.adaptive();
-      expect(theme.primary, isA<AdaptiveColor>());
-      expect(theme.secondary, isA<AdaptiveColor>());
-      expect(theme.surface, isA<AdaptiveColor>());
-      expect(theme.background, isA<AdaptiveColor>());
-      expect(theme.error, isA<AdaptiveColor>());
-      expect(theme.success, isA<AdaptiveColor>());
-      expect(theme.warning, isA<AdaptiveColor>());
-      expect(theme.onPrimary, isA<AdaptiveColor>());
-      expect(theme.onSurface, isA<AdaptiveColor>());
-      expect(theme.onBackground, isA<AdaptiveColor>());
-      expect(theme.muted, isA<AdaptiveColor>());
-      expect(theme.border, isA<AdaptiveColor>());
-    });
-
-    test('Theme.adaptive() has some non-adaptive colors', () {
-      // onSecondary and onError are plain AnsiColor(255) in adaptive
-      final theme = Theme.adaptive();
-      expect(theme.onSecondary, isA<AnsiColor>());
-      expect(theme.onError, isA<AnsiColor>());
+      expect(theme.primary, isA<AnsiColor>());
+      expect(theme.secondary, isA<AnsiColor>());
+      expect(theme.surface, isA<AnsiColor>());
+      expect(theme.background, isA<AnsiColor>());
+      expect(theme.error, isA<AnsiColor>());
+      expect(theme.success, isA<AnsiColor>());
+      expect(theme.warning, isA<AnsiColor>());
+      expect(theme.onPrimary, isA<AnsiColor>());
+      expect(theme.onSurface, isA<AnsiColor>());
+      expect(theme.onBackground, isA<AnsiColor>());
+      expect(theme.muted, isA<AnsiColor>());
+      expect(theme.border, isA<AnsiColor>());
     });
 
     test('Theme has 9 text style fields', () {
@@ -419,8 +413,8 @@ void main() {
     });
 
     test('currentTheme defaults to Theme.adaptive()', () {
-      // The default is Theme.adaptive() — it should have AdaptiveColor fields
-      expect(currentTheme.primary, isA<AdaptiveColor>());
+      // The default is Theme.adaptive() — colors are resolved on access
+      expect(currentTheme.primary, isA<AnsiColor>());
     });
 
     test('setTheme replaces global theme', () {

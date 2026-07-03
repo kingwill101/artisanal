@@ -294,6 +294,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
   bool _scrollControllerAttached = false;
   String _lastDiff = '';
   Theme? _cachedTheme;
+  bool? _cachedHasDarkBackground;
   DiffStyles? _cachedThemeStyles;
 
   @override
@@ -462,27 +463,76 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     // Derive styles from the theme when no custom styles are provided.
     // Cache the derived DiffStyles so we only re-render when the theme
     // actually changes, not on every frame.
-    if (widget.styles == null) {
-      final theme = ThemeScope.of(context);
-      if (!identical(theme, _cachedTheme)) {
-        _cachedTheme = theme;
-        final gdTheme = theme.gitDiffTheme;
-        _cachedThemeStyles = DiffStyles.fromColors(
-          success: gdTheme?.addedBackground ?? theme.success,
-          error: gdTheme?.removedBackground ?? theme.error,
-          muted: gdTheme?.contextForeground ?? theme.muted,
-          surface: theme.surface,
-          onSurface: gdTheme?.addedForeground ?? theme.onSurface,
-          onBackground: gdTheme?.headerForeground ?? theme.onBackground,
-          border: theme.border,
-        );
-        _controller.configure(styles: _cachedThemeStyles);
+    final theme = ThemeScope.of(context);
+    final terminalHasDarkBackground = hasDarkBackground;
+    final needsThemeStylesUpdate =
+        widget.styles == null
+            ? !identical(theme, _cachedTheme) ||
+                _cachedHasDarkBackground != terminalHasDarkBackground
+            : !identical(widget.styles, _cachedThemeStyles) ||
+                _cachedHasDarkBackground != terminalHasDarkBackground;
+
+    if (needsThemeStylesUpdate) {
+      _cachedTheme = theme;
+      _cachedHasDarkBackground = terminalHasDarkBackground;
+      _cachedThemeStyles = (widget.styles ??
+              DiffStyles.fromColors(
+                success: theme.gitDiffTheme?.addedBackground ?? theme.success,
+                error: theme.gitDiffTheme?.removedBackground ?? theme.error,
+                muted: theme.gitDiffTheme?.contextForeground ?? theme.muted,
+                surface: theme.surface,
+                onSurface: theme.gitDiffTheme?.addedForeground ?? theme.onSurface,
+                onBackground:
+                    theme.gitDiffTheme?.headerForeground ?? theme.onBackground,
+                border: theme.border,
+              ))
+          .withHasDarkBackground(terminalHasDarkBackground);
+
+      final gdTheme = theme.gitDiffTheme;
+      if (gdTheme != null) {
+        Style bgStyle(Color color) {
+          return Style()
+            ..hasDarkBackground = terminalHasDarkBackground
+            ..background(color);
+        }
+
+        final overrides = <String, Style>{};
+        if (gdTheme.selectedCommentLineBackground != null) {
+          overrides['selectedCommentLine'] =
+              bgStyle(gdTheme.selectedCommentLineBackground!);
+        }
+        if (gdTheme.selectedCommentGutterBackground != null) {
+          overrides['selectedCommentGutter'] =
+              bgStyle(gdTheme.selectedCommentGutterBackground!);
+        }
+        if (gdTheme.commentRangeLineBackground != null) {
+          overrides['commentRangeLine'] =
+              bgStyle(gdTheme.commentRangeLineBackground!);
+        }
+        if (gdTheme.commentRangeGutterBackground != null) {
+          overrides['commentRangeGutter'] =
+              bgStyle(gdTheme.commentRangeGutterBackground!);
+        }
+        if (gdTheme.commentThreadLineBackground != null) {
+          overrides['commentThreadLine'] =
+              bgStyle(gdTheme.commentThreadLineBackground!);
+        }
+        if (gdTheme.commentThreadGutterBackground != null) {
+          overrides['commentThreadGutter'] =
+              bgStyle(gdTheme.commentThreadGutterBackground!);
+        }
+        if (overrides.isNotEmpty) {
+          _cachedThemeStyles = _cachedThemeStyles!.copyWith(
+            selectedCommentLine: overrides['selectedCommentLine'],
+            selectedCommentGutter: overrides['selectedCommentGutter'],
+            commentRangeLine: overrides['commentRangeLine'],
+            commentRangeGutter: overrides['commentRangeGutter'],
+            commentThreadLine: overrides['commentThreadLine'],
+            commentThreadGutter: overrides['commentThreadGutter'],
+          );
+        }
       }
-    } else {
-      // Custom styles provided via widget prop — clear cache so theme
-      // styles are re-derived if custom styles are later removed.
-      _cachedTheme = null;
-      _cachedThemeStyles = null;
+      _controller.configure(styles: _cachedThemeStyles);
     }
     final text = Text(_controller.model.view(), softWrap: false);
     if (widget.onCommentAnchorSelected == null) return text;

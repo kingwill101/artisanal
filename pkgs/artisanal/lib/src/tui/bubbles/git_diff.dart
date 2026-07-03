@@ -335,6 +335,7 @@ class DiffStyles {
     required Color onSurface,
     required Color onBackground,
     required Color border,
+    bool hasDarkBackground = true,
     Color? successBg,
     Color? errorBg,
     Color? inlineAddedBg,
@@ -345,47 +346,137 @@ class DiffStyles {
 
     return DiffStyles(
       // Unified mode
-      addedLine: Style().foreground(success),
-      removedLine: Style().foreground(error),
-      contextLine: Style().foreground(onBackground),
-      fileHeader: Style().bold().foreground(onSurface),
-      hunkHeader: Style().foreground(muted),
-      addedGutter: Style().foreground(success).bold(),
-      removedGutter: Style().foreground(error).bold(),
-      contextGutter: Style().foreground(muted),
-      lineNumber: Style().foreground(muted),
+      addedLine: _bgAware(Style().foreground(success), hasDarkBackground),
+      removedLine: _bgAware(Style().foreground(error), hasDarkBackground),
+      contextLine: _bgAware(Style().foreground(onBackground), hasDarkBackground),
+      fileHeader: _bgAware(
+        Style().bold().foreground(onSurface),
+        hasDarkBackground,
+      ),
+      hunkHeader: _bgAware(Style().foreground(muted), hasDarkBackground),
+      addedGutter: _bgAware(Style().foreground(success).bold(), hasDarkBackground),
+      removedGutter: _bgAware(Style().foreground(error).bold(), hasDarkBackground),
+      contextGutter: _bgAware(Style().foreground(muted), hasDarkBackground),
+      lineNumber: _bgAware(Style().foreground(muted), hasDarkBackground),
       // Pretty mode
-      prettyAddedLine: Style().foreground(success).background(addedBg),
-      prettyRemovedLine: Style().foreground(error).background(removedBg),
-      prettyContextLine: Style().foreground(onBackground),
-      prettyFileHeader: Style().foreground(muted),
-      prettyAddedLineNumber: Style().foreground(success).background(addedBg),
-      prettyRemovedLineNumber: Style().foreground(error).background(removedBg),
-      prettyContextLineNumber: Style().foreground(muted),
+      prettyAddedLine: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      prettyRemovedLine: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      prettyContextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
+      prettyFileHeader: _bgAware(Style().foreground(muted), hasDarkBackground),
+      prettyAddedLineNumber: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      prettyRemovedLineNumber: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      prettyContextLineNumber: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
       // Side-by-side mode
-      sideBySideSeparator: Style().foreground(border),
-      sideBySideAddedLine: Style().foreground(success).background(addedBg),
-      sideBySideRemovedLine: Style().foreground(error).background(removedBg),
-      sideBySideContextLine: Style().foreground(onBackground),
-      sideBySideLineNumber: Style().foreground(muted),
-      sideBySideEmptyCell: Style().foreground(surface),
-      sideBySideAddedMarker: Style().foreground(success),
-      sideBySideRemovedMarker: Style().foreground(error),
-      sideBySideContextMarker: Style().foreground(muted),
+      sideBySideSeparator: _bgAware(Style().foreground(border), hasDarkBackground),
+      sideBySideAddedLine: _bgAware(
+        Style().foreground(success).background(addedBg),
+        hasDarkBackground,
+      ),
+      sideBySideRemovedLine: _bgAware(
+        Style().foreground(error).background(removedBg),
+        hasDarkBackground,
+      ),
+      sideBySideContextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
+      sideBySideLineNumber: _bgAware(Style().foreground(muted), hasDarkBackground),
+      sideBySideEmptyCell: _bgAware(Style().foreground(surface), hasDarkBackground),
+      sideBySideAddedMarker: _bgAware(Style().foreground(success), hasDarkBackground),
+      sideBySideRemovedMarker: _bgAware(Style().foreground(error), hasDarkBackground),
+      sideBySideContextMarker: _bgAware(Style().foreground(muted), hasDarkBackground),
       // Inline diff highlighting
-      inlineAddedHighlight: Style().background(
+      inlineAddedHighlight: _bgAware(
+        Style().background(
         inlineAddedBg ?? const BasicColor('#2a4a2a'),
       ),
-      inlineRemovedHighlight: Style().background(
+        hasDarkBackground,
+      ),
+      inlineRemovedHighlight: _bgAware(
+        Style().background(
         inlineRemovedBg ?? const BasicColor('#4a2a2a'),
       ),
-      selectedCommentLine: Style().background(const BasicColor('#2f3f5f')),
-      selectedCommentGutter: Style().background(const BasicColor('#50668f')),
-      commentRangeLine: Style().background(const BasicColor('#263847')),
-      commentRangeGutter: Style().background(const BasicColor('#3f6374')),
-      commentThreadLine: Style().background(const BasicColor('#5d4037')),
-      commentThreadGutter: Style().background(const BasicColor('#8d6e63')),
+        hasDarkBackground,
+      ),
+      selectedCommentLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#2f3f5f'),
+            light: const BasicColor('#bfd7ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      selectedCommentGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#50668f'),
+            light: const BasicColor('#9dbcf8'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentRangeLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#263847'),
+            light: const BasicColor('#d6e8ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentRangeGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#3f6374'),
+            light: const BasicColor('#b8d7ff'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentThreadLine: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#5d4037'),
+            light: const BasicColor('#ffeb3b'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
+      commentThreadGutter: _bgAware(
+        Style().background(
+          AdaptiveColor(
+            dark: const BasicColor('#8d6e63'),
+            light: const BasicColor('#fbc02d'),
+          ),
+        ),
+        hasDarkBackground,
+      ),
     );
+  }
+
+  static Style _bgAware(Style style, bool hasDarkBackground) {
+    final copy = style.copy();
+    copy.hasDarkBackground = hasDarkBackground;
+    return copy;
   }
 
   /// Style for added (+) lines.
@@ -575,6 +666,51 @@ class DiffStyles {
       commentRangeGutter: commentRangeGutter ?? this.commentRangeGutter,
       commentThreadLine: commentThreadLine ?? this.commentThreadLine,
       commentThreadGutter: commentThreadGutter ?? this.commentThreadGutter,
+    );
+  }
+
+  /// Returns a copy whose adaptive colors resolve against [hasDarkBackground].
+  DiffStyles withHasDarkBackground(bool hasDarkBackground) {
+    Style bgAware(Style style) {
+      final copy = style.copy();
+      copy.hasDarkBackground = hasDarkBackground;
+      return copy;
+    }
+
+    return DiffStyles(
+      addedLine: bgAware(addedLine),
+      removedLine: bgAware(removedLine),
+      contextLine: bgAware(contextLine),
+      fileHeader: bgAware(fileHeader),
+      hunkHeader: bgAware(hunkHeader),
+      addedGutter: bgAware(addedGutter),
+      removedGutter: bgAware(removedGutter),
+      contextGutter: bgAware(contextGutter),
+      lineNumber: bgAware(lineNumber),
+      prettyAddedLine: bgAware(prettyAddedLine),
+      prettyRemovedLine: bgAware(prettyRemovedLine),
+      prettyContextLine: bgAware(prettyContextLine),
+      prettyFileHeader: bgAware(prettyFileHeader),
+      prettyAddedLineNumber: bgAware(prettyAddedLineNumber),
+      prettyRemovedLineNumber: bgAware(prettyRemovedLineNumber),
+      prettyContextLineNumber: bgAware(prettyContextLineNumber),
+      sideBySideSeparator: bgAware(sideBySideSeparator),
+      sideBySideAddedLine: bgAware(sideBySideAddedLine),
+      sideBySideRemovedLine: bgAware(sideBySideRemovedLine),
+      sideBySideContextLine: bgAware(sideBySideContextLine),
+      sideBySideLineNumber: bgAware(sideBySideLineNumber),
+      sideBySideEmptyCell: bgAware(sideBySideEmptyCell),
+      sideBySideAddedMarker: bgAware(sideBySideAddedMarker),
+      sideBySideRemovedMarker: bgAware(sideBySideRemovedMarker),
+      sideBySideContextMarker: bgAware(sideBySideContextMarker),
+      inlineAddedHighlight: bgAware(inlineAddedHighlight),
+      inlineRemovedHighlight: bgAware(inlineRemovedHighlight),
+      selectedCommentLine: bgAware(selectedCommentLine),
+      selectedCommentGutter: bgAware(selectedCommentGutter),
+      commentRangeLine: bgAware(commentRangeLine),
+      commentRangeGutter: bgAware(commentRangeGutter),
+      commentThreadLine: bgAware(commentThreadLine),
+      commentThreadGutter: bgAware(commentThreadGutter),
     );
   }
 }
