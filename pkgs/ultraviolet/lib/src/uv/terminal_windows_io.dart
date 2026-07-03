@@ -26,8 +26,11 @@ typedef _LocalFreeD = int Function(int);
 
 // Stack of saved modes so overlapping enable/restore pairs (e.g. suspending
 // raw mode to shell out, then resuming an outer raw-mode session) each
-// restore only their own snapshot instead of clobbering one another.
-final List<int> _savedModes = [];
+// restore only their own snapshot instead of clobbering one another. Every
+// enableWindowsVtInput() call that reaches the Windows branch pushes exactly
+// one entry -- null if it didn't actually capture a mode -- so the paired
+// restoreWindowsVtInput() call always pops the right slot.
+final List<int?> _savedModes = [];
 
 /// Puts the Windows console **input** handle into virtual-terminal mode so
 /// arrow keys, Home/End/PgUp/PgDn, function keys, Esc, Alt-modified keys and
@@ -47,6 +50,7 @@ final List<int> _savedModes = [];
 /// Call while entering raw mode.
 void enableWindowsVtInput() {
   if (!Platform.isWindows) return;
+  int? snapshot;
   try {
     final k32 = DynamicLibrary.open('kernel32.dll');
     final getStdHandle =
@@ -68,7 +72,7 @@ void enableWindowsVtInput() {
     final modePtr = Pointer<Uint32>.fromAddress(mem);
     try {
       if (getConsoleMode(handle, modePtr) == 0) return; // not a console
-      _savedModes.add(modePtr.value);
+      snapshot = modePtr.value;
       final next = (modePtr.value |
               _enableVirtualTerminalInput |
               _enableExtendedFlags |
@@ -80,6 +84,10 @@ void enableWindowsVtInput() {
     }
   } catch (_) {
     // Best-effort: leave the console mode untouched if the Win32 calls fail.
+  } finally {
+    // Always push -- even on failure -- so this call has exactly one
+    // matching entry for the paired restoreWindowsVtInput() to pop.
+    _savedModes.add(snapshot);
   }
 }
 
@@ -91,6 +99,7 @@ void restoreWindowsVtInput() {
   // Pop before the FFI calls so a failure below can't leave a stale
   // snapshot around to be misapplied by a later restore.
   final saved = _savedModes.removeLast();
+  if (saved == null) return; // the paired enable never captured a mode
   try {
     final k32 = DynamicLibrary.open('kernel32.dll');
     final getStdHandle =
