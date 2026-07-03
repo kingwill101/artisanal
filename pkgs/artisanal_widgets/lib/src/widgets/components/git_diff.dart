@@ -98,6 +98,21 @@ class GitDiffController {
     DiffStyles? styles,
     List<DiffCommentLineHighlight>? commentHighlights,
   }) {
+    if (TuiTrace.enabled) {
+      TuiTrace.event(
+        'git_diff.configure',
+        tag: TraceTag.general,
+        fields: <String, Object?>{
+          'showLineNumbers': showLineNumbers,
+          'wrapLines': wrapLines,
+          'zeroPadLineNumbers': zeroPadLineNumbers,
+          'viewMode': viewMode?.name,
+          'stylesChanged': styles != null,
+          'commentHighlights': commentHighlights?.length,
+        },
+      );
+    }
+
     final needsRerender =
         (viewMode != null && viewMode != _model.viewMode) ||
         (showLineNumbers != null &&
@@ -460,6 +475,20 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
 
   @override
   Widget build(BuildContext context) {
+    if (TuiTrace.enabled) {
+      TuiTrace.event(
+        'git_diff.build',
+        tag: TraceTag.general,
+        fields: <String, Object?>{
+          'hasCustomStyles': widget.styles != null,
+          'hasController': widget.controller != null,
+          'hasDarkBackground': hasDarkBackground,
+          'width': widget.width,
+          'height': widget.height,
+        },
+      );
+    }
+
     // Derive styles from the theme when no custom styles are provided.
     // Cache the derived DiffStyles so we only re-render when the theme
     // actually changes, not on every frame.
@@ -534,7 +563,21 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       }
       _controller.configure(styles: _cachedThemeStyles);
     }
-    final text = Text(_controller.model.view(), softWrap: false);
+    final model = _controller.model;
+    if (TuiTrace.enabled) {
+      TuiTrace.event(
+        'git_diff.model_view',
+        tag: TraceTag.general,
+        fields: <String, Object?>{
+          'files': model.files.length,
+          'lineCount': model.viewport.totalLineCount,
+          'viewMode': model.viewMode.name,
+          'wrapLines': model.wrapLines,
+        },
+      );
+    }
+
+    final text = Text(model.view(), softWrap: false);
     if (widget.onCommentAnchorSelected == null) return text;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
