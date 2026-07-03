@@ -1232,6 +1232,7 @@ class SessionContentPane extends w.StatelessWidget {
                   child: ChatBody(
                     messages: model.messages,
                     scrollController: scrollController,
+                    showDiffs: false,
                   ),
                 ),
                 w.SizedBox(height: 1),

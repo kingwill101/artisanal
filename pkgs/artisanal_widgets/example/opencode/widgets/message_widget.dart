@@ -32,12 +32,14 @@ class MessageWidget extends w.StatelessWidget {
   MessageWidget({
     required this.message,
     this.index = 0,
+    this.showDiffs = true,
     this.showDiffContextBackground = false,
     super.key,
   });
 
   final ChatMessage message;
   final int index;
+  final bool showDiffs;
   final bool showDiffContextBackground;
 
   @override
@@ -51,6 +53,7 @@ class MessageWidget extends w.StatelessWidget {
         return _AssistantMessage(
           key: w.ValueKey('assistant-${message.id}'),
           message: message,
+          showDiffs: showDiffs,
           showDiffContextBackground: showDiffContextBackground,
         );
     }
@@ -227,11 +230,13 @@ class _SystemMessage extends w.StatelessWidget {
 class _AssistantMessage extends w.StatefulWidget {
   _AssistantMessage({
     required this.message,
+    required this.showDiffs,
     required this.showDiffContextBackground,
     super.key,
   });
 
   final ChatMessage message;
+  final bool showDiffs;
   final bool showDiffContextBackground;
 
   @override
@@ -248,6 +253,10 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
     final cmd = super.didUpdateWidget(oldWidget);
     if (oldWidget.showDiffContextBackground !=
         widget.showDiffContextBackground) {
+      _cachedDiffStyles = null;
+      _cachedDiffStylesContextBg = null;
+    }
+    if (oldWidget.showDiffs != widget.showDiffs) {
       _cachedDiffStyles = null;
       _cachedDiffStylesContextBg = null;
     }
@@ -573,10 +582,18 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
                 ],
               ),
             ),
-            if (hasDiff)
+            if (hasDiff && widget.showDiffs)
               w.Padding(
                 padding: const w.EdgeInsets.only(left: 1),
                 child: _buildDiffViewer(part.diff!),
+              )
+            else if (hasDiff)
+              w.Padding(
+                padding: const w.EdgeInsets.only(left: 1),
+                child: w.Text(
+                  '[diff disabled]',
+                  style: style.Style()..foreground(OC.textMuted),
+                ),
               )
             else if (part.output.isNotEmpty && !isRunning && !isPending)
               w.Text(part.output, style: style.Style()..foreground(OC.text)),
@@ -602,6 +619,16 @@ class _AssistantMessageState extends w.State<_AssistantMessage> {
   }
 
   w.Widget _buildDiffPart(w.BuildContext context, DiffPart part) {
+    if (!widget.showDiffs) {
+      return w.Padding(
+        padding: const w.EdgeInsets.only(top: 1, left: 3),
+        child: w.Text(
+          '[diff disabled]',
+          style: style.Style()..foreground(OC.textMuted),
+        ),
+      );
+    }
+
     return w.Padding(
       padding: const w.EdgeInsets.only(top: 1, left: 3),
       child: _buildDiffViewer(part.diff),
