@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'terminal_windows_io.dart';
+
 Stream<List<int>> get defaultInput => stdin;
 
 StringSink get defaultOutput => stdout;
@@ -26,9 +28,11 @@ bool get stdinHasTerminal => stdin.hasTerminal;
 void enterRawMode() {
   stdin.echoMode = false;
   stdin.lineMode = false;
+  enableWindowsVtInput();
 }
 
 void exitRawMode() {
+  restoreWindowsVtInput();
   stdin.echoMode = true;
   stdin.lineMode = true;
 }

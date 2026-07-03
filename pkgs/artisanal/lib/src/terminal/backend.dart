@@ -3,6 +3,7 @@ import 'dart:io' as io;
 import 'dart:convert';
 
 import '../colorprofile/detect.dart' as cp_detect;
+import '../uv/terminal_windows_io.dart';
 import '../style/color.dart';
 import 'ansi.dart';
 import 'stdin_stream.dart';
@@ -641,6 +642,7 @@ class StdioTerminalBackend implements TerminalBackend {
         wasLineMode = _originalLineMode ?? true;
         _stdin.echoMode = false;
         _stdin.lineMode = false;
+        if (identical(_stdin, io.stdin)) enableWindowsVtInput();
         _rawModeEnabled = true;
       } catch (_) {}
     }
@@ -656,6 +658,7 @@ class StdioTerminalBackend implements TerminalBackend {
   void disableRawMode() {
     if (!_rawModeEnabled) return;
     try {
+      if (identical(_stdin, io.stdin)) restoreWindowsVtInput();
       if (_originalEchoMode != null) {
         _stdin.echoMode = _originalEchoMode!;
       }
