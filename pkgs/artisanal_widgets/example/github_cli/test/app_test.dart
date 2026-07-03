@@ -9,7 +9,9 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/testing.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:github_cli/src/app/app_io.dart';
+import 'package:github_cli/src/app/theme.dart';
 import 'package:github_cli/src/client/fields.dart';
+import 'package:github_cli/src/ui/markdown/body.dart';
 import 'package:github_cli/src/utils/text_format.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
@@ -820,6 +822,50 @@ Outro paragraph.
     );
     expect(plain, isNot(contains('github.com/actions/upload-artifact/commit')));
     expect(plain, isNot(contains('redirect.github.com')));
+  });
+
+  test('markdown probe prints rendered ANSI output', () {
+    const markdown = '''
+Fixes #63435
+
+`dart build cli` currently produces a separate executable with an appended AOT snapshot for each entrypoint. On Linux, this keeps the snapshot opaque to native symbolizers and duplicates the runtime in bundles with multiple executables.
+
+This implements the BusyBox-style layout discussed in the issue:
+
+- adds a Linux `dartcliruntime` that resolves `../lib/dartaotsnapshot<executable-name>` from `argv[0]`
+- falls back to the resolved executable name so invoking a bundle executable through an external symlink still works
+- distributes normal and ASan/MSan/TSan variants of `dartcliruntime` in the SDK
+- changes Linux `dart build cli` bundles to contain one runtime, symlink additional entrypoints to it, and keep each AOT snapshot under `bundle/lib/`
+- leaves the existing bundle behavior unchanged on other platforms
+
+The native-assets tests cover the new layout, execution through symlinks, custom entrypoints, and sanitizer runtimes.
+
+Tested with:
+
+```text
+python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/native_assets/build_test.dart
+```
+''';
+    final theme = githubDashboardThemes
+        .firstWhere((choice) => choice.label == 'github')
+        .theme();
+    final renderedDark = markdownToAnsi(
+      markdown,
+      options: githubMarkdownOptions(theme, hasDarkBackground: true),
+    );
+    final renderedLight = markdownToAnsi(
+      markdown,
+      options: githubMarkdownOptions(theme, hasDarkBackground: false),
+    );
+
+    print('--- plain ---');
+    print(Style.stripAnsi(renderedLight));
+    print('--- ansi light ---');
+    print(renderedLight);
+    print('--- ansi dark ---');
+    print(renderedDark);
+
+    expect(renderedLight, contains('dart build cli'));
   });
 
   test('detail pane expands GitHub details blocks', () async {

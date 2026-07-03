@@ -1,5 +1,4 @@
-import 'package:artisanal/style.dart'
-    show Border, Colors, HorizontalAlign, VerticalAlign;
+import 'package:artisanal/style.dart' show Border, HorizontalAlign, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -71,7 +70,7 @@ final class _GithubSplashScreenState extends w.State<GithubSplashScreen> {
                 children: [
                   w.Text(
                     _splashFrames[phase],
-                    style: theme.titleMedium.copy()..foreground(Colors.warning),
+                    style: theme.titleMedium.copy()..foreground(theme.warning),
                   ),
                   w.Spacer(size: 1),
                   w.Expanded(
@@ -87,7 +86,7 @@ final class _GithubSplashScreenState extends w.State<GithubSplashScreen> {
                 value: progress,
                 width: panelWidth - 16,
                 progressStyle: w.ProgressStyle.block,
-                color: Colors.cyan,
+                color: theme.primary,
                 trackColor: theme.border,
                 showLabel: true,
                 label: 'gh',
@@ -121,7 +120,7 @@ final class _GithubSplashScreenState extends w.State<GithubSplashScreen> {
 }
 
 w.Widget _logo(w.Theme theme, int phase) {
-  final active = phase.isEven ? Colors.cyan : Colors.warning;
+  final active = phase.isEven ? theme.primary : theme.warning;
   return w.Row(
     children: [
       w.Container(
@@ -132,7 +131,7 @@ w.Widget _logo(w.Theme theme, int phase) {
         verticalAlign: VerticalAlign.center,
         child: w.Text(
           'GH',
-          style: theme.titleMedium.copy()..foreground(Colors.black),
+          style: theme.titleMedium.copy()..foreground(theme.onPrimary),
         ),
       ),
       w.Spacer(size: 1),
@@ -154,8 +153,8 @@ w.Widget _chip(w.Theme theme, String label, int phase, int index) {
   final active = phase == index || phase == index + 5;
   return w.Badge(
     label,
-    background: active ? Colors.cyan : theme.surfaceVariant ?? theme.surface,
-    foreground: active ? Colors.black : theme.muted,
+    background: active ? theme.primary : theme.surfaceVariant ?? theme.surface,
+    foreground: active ? theme.onPrimary : theme.muted,
     paddingLeft: 1,
     paddingRight: 1,
   );

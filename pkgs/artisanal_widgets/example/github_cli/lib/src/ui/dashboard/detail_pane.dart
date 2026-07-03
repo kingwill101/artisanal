@@ -1,5 +1,4 @@
-import 'package:artisanal/style.dart'
-    show Color, Colors, HorizontalAlign, Style, VerticalAlign;
+import 'package:artisanal/style.dart' show Color, HorizontalAlign, Style, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -305,11 +304,11 @@ w.Widget _checkItem(
   required int maxWidth,
 }) {
   final color = check.failing
-      ? Colors.red
+      ? theme.error
       : check.passing
-      ? Colors.green
+      ? theme.success
       : check.status == 'in_progress'
-      ? Colors.warning
+      ? theme.warning
       : theme.muted;
   return w.Row(
     children: [
@@ -418,7 +417,7 @@ w.Widget _commitList({
 w.Widget _commitRow(w.Theme theme, GithubPullRequestCommit commit) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   final verifiedStyle = theme.bodySmall.copy()
-    ..foreground(commit.verified ? Colors.green : Colors.warning);
+    ..foreground(commit.verified ? theme.success : theme.warning);
   final author = commit.displayAuthor;
   return w.Frame(
     background: theme.surface,
@@ -517,8 +516,8 @@ w.Widget _inlineMergeInfo({
   required w.ScrollController controller,
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
-  final ok = theme.bodyMedium.copy()..foreground(Colors.green);
-  final warn = theme.bodyMedium.copy()..foreground(Colors.warning);
+  final ok = theme.bodyMedium.copy()..foreground(theme.success);
+  final warn = theme.bodyMedium.copy()..foreground(theme.warning);
   return w.Expanded(
     child: w.ScrollArea(
       controller: controller,
@@ -919,10 +918,10 @@ w.Widget _diffHeader({
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   final addStyle = theme.bodySmall.copy()
-    ..foreground(Colors.green)
+    ..foreground(theme.success)
     ..bold();
   final deleteStyle = theme.bodySmall.copy()
-    ..foreground(Colors.red)
+    ..foreground(theme.error)
     ..bold();
   final total = _changeTotals(item, files);
   final hasTotals = total.files > 0;
@@ -1103,10 +1102,10 @@ w.Widget _diffFileRow({
   final metaStyle = theme.bodySmall.copy()..foreground(muted);
   final addStyle = theme.bodySmall.copy()
     ..foreground(
-      selected ? theme.listRowSelectedAccentForeground : Colors.green,
+      selected ? theme.listRowSelectedAccentForeground : theme.success,
     );
   final deleteStyle = theme.bodySmall.copy()
-    ..foreground(selected ? theme.listRowSelectedAccentForeground : Colors.red);
+    ..foreground(selected ? theme.listRowSelectedAccentForeground : theme.error);
   final statusStyle = theme.bodySmall.copy()
     ..foreground(selected ? theme.listRowSelectedMutedForeground : theme.muted);
   final title = _ellipsizePath(file.filename, (width - 2).clamp(8, 80));
@@ -1312,7 +1311,7 @@ w.Widget _inlineRunDetail({
 
 w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
   final run = detail.run;
-  final statusColor = run.hasFailures ? Colors.red : Colors.green;
+  final statusColor = run.hasFailures ? theme.error : theme.success;
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Column(
     crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -1324,7 +1323,7 @@ w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
           w.Badge(
             run.statusLabel,
             background: statusColor,
-            foreground: Colors.black,
+            foreground: theme.onError,
           ),
           w.Badge(
             run.workflowName,
@@ -1354,7 +1353,7 @@ w.Widget _runDetailBody(w.Theme theme, GithubWorkflowRunDetail detail) {
 }
 
 w.Widget _jobCard(w.Theme theme, GithubWorkflowJobItem job) {
-  final color = job.hasFailures ? Colors.red : Colors.green;
+  final color = job.hasFailures ? theme.error : theme.success;
   return w.Frame(
     background: theme.surface,
     padding: const w.EdgeInsets.symmetric(horizontal: 1, vertical: 1),
@@ -1375,7 +1374,7 @@ w.Widget _jobCard(w.Theme theme, GithubWorkflowJobItem job) {
           w.Text(
             '${step.hasFailures ? 'x' : 'v'} ${step.number}. ${step.name} (${step.statusLabel})',
             style: theme.bodySmall.copy()
-              ..foreground(step.hasFailures ? Colors.red : theme.muted),
+              ..foreground(step.hasFailures ? theme.error : theme.muted),
             overflow: w.TextOverflow.ellipsis,
             maxWidth: 120,
           ),
@@ -1400,7 +1399,7 @@ bool _sameItem(GithubDisplayItem? left, GithubDisplayItem? right) {
 }
 
 w.Widget _detailHeader(w.Theme theme, GithubDisplayItem item) {
-  final statusColor = item.hasWarning ? Colors.red : Colors.green;
+  final statusColor = item.hasWarning ? theme.error : theme.success;
   final statusText = item.target == GithubDisplayTarget.issue
       ? ''
       : item.status;
@@ -1467,7 +1466,7 @@ List<w.Widget> _detailLabelBadges(
       for (final label in labels.take(4))
         w.Badge(
           label.name,
-          background: labelBackgroundColor(label, fallback: Colors.warning),
+          background: labelBackgroundColor(label, fallback: theme.warning),
           foreground: labelForegroundColor(label),
         ),
     ];
@@ -1494,7 +1493,7 @@ w.Widget _repositorySummary(w.Theme theme, GithubDashboardData dashboard) {
     children: [
       w.Text(
         repo.nameWithOwner,
-        style: theme.titleLarge.copy()..foreground(Colors.warning),
+        style: theme.titleLarge.copy()..foreground(theme.warning),
       ),
       if (repo.description.isNotEmpty)
         w.Text(repo.description, style: theme.bodyMedium),
@@ -1504,8 +1503,8 @@ w.Widget _repositorySummary(w.Theme theme, GithubDashboardData dashboard) {
           if (repo.primaryLanguage.isNotEmpty)
             w.Badge(
               repo.primaryLanguage,
-              background: Colors.cyan,
-              foreground: Colors.black,
+              background: theme.primary,
+              foreground: theme.onPrimary,
             ),
           w.Badge(
             '${repo.stars} stars',

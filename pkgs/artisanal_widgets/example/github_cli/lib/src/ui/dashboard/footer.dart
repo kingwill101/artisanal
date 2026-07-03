@@ -1,4 +1,3 @@
-import 'package:artisanal/style.dart' show Colors;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../app/layout_mode.dart';
@@ -9,9 +8,9 @@ w.Widget githubDashboardFooter(
   required String themeName,
   String? notice,
 }) {
-  final keyStyle = theme.bodyMedium.copy()..foreground(Colors.warning);
+  final keyStyle = theme.bodyMedium.copy()..foreground(theme.warning);
   final hintStyle = theme.bodyMedium.copy()..foreground(theme.muted);
-  final noticeStyle = theme.bodySmall.copy()..foreground(Colors.green);
+  final noticeStyle = theme.bodySmall.copy()..foreground(theme.success);
 
   w.Widget key(String value) => w.Text(value, style: keyStyle);
   w.Widget label(String value) => w.Text(value, style: hintStyle);

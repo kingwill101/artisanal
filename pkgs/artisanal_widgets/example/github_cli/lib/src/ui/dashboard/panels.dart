@@ -1,4 +1,3 @@
-import 'package:artisanal/style.dart' show Colors;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 w.Widget githubLoadingPanel(w.Theme theme) {
@@ -17,12 +16,12 @@ w.Widget githubLoadingPanel(w.Theme theme) {
 w.Widget githubErrorPanel(w.Theme theme, String error) {
   return w.PanelBox(
     title: 'gh error',
-    borderColor: Colors.red,
+    borderColor: theme.error,
     child: w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.start,
       gap: 1,
       children: [
-        w.Text(error, style: theme.bodyMedium.copy()..foreground(Colors.red)),
+        w.Text(error, style: theme.bodyMedium.copy()..foreground(theme.error)),
         w.Text('Press r to retry or q to quit.', style: theme.bodySmall),
       ],
     ),

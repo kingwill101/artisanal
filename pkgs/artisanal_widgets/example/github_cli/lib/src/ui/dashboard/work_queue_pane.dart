@@ -1,4 +1,4 @@
-import 'package:artisanal/style.dart' show Color, Colors, Style;
+import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -189,7 +189,7 @@ w.Widget _queueHeader(
           children: [
             w.Text(
               'SEARCH',
-              style: theme.titleMedium.copy()..foreground(Colors.warning),
+              style: theme.titleMedium.copy()..foreground(theme.warning),
             ),
             w.Spacer(),
             w.Text(
@@ -218,7 +218,7 @@ w.Widget _queueHeader(
         children: [
           w.Text(
             _queueTitle(tabIndex),
-            style: theme.titleMedium.copy()..foreground(Colors.warning),
+            style: theme.titleMedium.copy()..foreground(theme.warning),
           ),
           w.Spacer(),
           w.Text(
@@ -296,7 +296,7 @@ w.Widget _queueRow(
       : rowIndex.isOdd
       ? theme.listRowAlternateBackground
       : theme.listRowBackground;
-  final statusColor = item.hasWarning ? Colors.red : Colors.green;
+  final statusColor = item.hasWarning ? theme.error : theme.success;
   final titleMaxWidth = (width - 8).clamp(12, 160).toInt();
   final labelMaxWidth = (width - 5).clamp(12, 160).toInt();
   final metaMaxWidth = (width - 5).clamp(12, 120).toInt();
@@ -310,7 +310,7 @@ w.Widget _queueRow(
       : normalSeparatorStyle;
 
   // Accent and status colours depend on per-item data so a copy is still needed.
-  final accentStyle = theme.bodyMedium.copy()..foreground(_accentColor(item));
+  final accentStyle = theme.bodyMedium.copy()..foreground(_accentColor(theme, item));
   final statusStyle = theme.bodyMedium.copy()
     ..foreground(statusColor)
     ..bold();
@@ -327,7 +327,7 @@ w.Widget _queueRow(
     item,
     maxWidth: labelMaxWidth,
     selected: selected,
-    fallbackColor: _accentColor(item),
+    fallbackColor: _accentColor(theme, item),
     separatorStyle: separatorStyle,
     statusStyle: statusStyle,
   );
@@ -393,12 +393,12 @@ String _queueStatus(GithubPageStatus pageStatus) {
   return '${pageStatus.countLabel} loaded';
 }
 
-Color _accentColor(GithubDisplayItem item) {
-  if (item.hasWarning) return Colors.red;
+Color _accentColor(w.Theme theme, GithubDisplayItem item) {
+  if (item.hasWarning) return theme.error;
   return switch (item.target) {
-    GithubDisplayTarget.issue => Colors.teal,
-    GithubDisplayTarget.pullRequest => Colors.warning,
-    GithubDisplayTarget.workflowRun => Colors.green,
+    GithubDisplayTarget.issue => theme.primary,
+    GithubDisplayTarget.pullRequest => theme.warning,
+    GithubDisplayTarget.workflowRun => theme.success,
   };
 }
 
