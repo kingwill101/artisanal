@@ -643,5 +643,6 @@ void main() {
       expect(output, contains('38;5;231'));
       expect(output, isNot(contains('48;5;7')));
     });
+
   });
 }

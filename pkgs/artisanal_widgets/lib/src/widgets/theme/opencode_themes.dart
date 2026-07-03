@@ -2556,7 +2556,7 @@ class OpenCodeThemes {
       bodySmall: Style().foreground(textMuted),
       labelLarge: Style().foreground(text),
       labelMedium: Style().foreground(textMuted),
-      labelSmall: Style().dim().foreground(textMuted),
+      labelSmall: Style().foreground(textMuted),
       // Component themes
       statusBarTheme: StatusBarThemeData(
         background: background,

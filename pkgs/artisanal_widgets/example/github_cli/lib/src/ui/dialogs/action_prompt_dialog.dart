@@ -50,7 +50,7 @@ final class _GithubActionPromptDialogState
     }
     return null;
   }
-
+final tui.FocusController _editorFocus = tui.FocusController();
   @override
   w.Widget build(w.BuildContext context) {
     final theme = w.ThemeScope.of(context);
@@ -78,10 +78,11 @@ final class _GithubActionPromptDialogState
             ),
             w.Text(widget.prompt.description, style: hint),
             w.Frame(
-              background: theme.background,
+              background: theme.resolvedSurfaceVariant,
               padding: const w.EdgeInsets.symmetric(horizontal: 1),
               child: w.TextField(
                 controller: _controller,
+                focusController: _editorFocus,
                 prompt: '> ',
                 placeholder: widget.prompt.placeholder,
                 autofocus: true,

@@ -138,6 +138,26 @@ void main() {
       await tester.pumpWidget(TextField(model: model, autofocus: true));
       expect(tester.locateText('cmd'), isNotNull);
     });
+
+    test('uses a readable foreground in light theme', () async {
+      final tester = WidgetTester(screenWidth: 40, screenHeight: 5);
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        ThemeScope(
+          theme: Theme.light(),
+          child: FocusScope(
+            child: TextField(
+              controller: (TextFieldController()..model.value = 'hello'),
+              prompt: '> ',
+              autofocus: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.view, contains('\x1b[38;5;232m'));
+    });
   });
 
   // ---------------------------------------------------------------------------

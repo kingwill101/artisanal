@@ -140,21 +140,22 @@ class TextInputStyles {
 ///
 /// Returns a [TextInputStyles] with appropriate colors for the background type.
 TextInputStyles defaultTextInputStyles({bool isDark = true}) {
+  final foreground = isDark ? AnsiColor(7) : AnsiColor(0);
   return TextInputStyles(
     focused: TextInputStyleState(
-      placeholder: Style().foreground(AnsiColor(240)),
-      suggestion: Style().foreground(AnsiColor(240)),
-      prompt: Style().foreground(AnsiColor(7)),
-      text: Style(),
+      placeholder: Style().foreground(isDark ? AnsiColor(240) : AnsiColor(245)),
+      suggestion: Style().foreground(isDark ? AnsiColor(240) : AnsiColor(245)),
+      prompt: Style().foreground(foreground),
+      text: Style().foreground(foreground),
     ),
     blurred: TextInputStyleState(
-      placeholder: Style().foreground(AnsiColor(240)),
-      suggestion: Style().foreground(AnsiColor(240)),
-      prompt: Style().foreground(AnsiColor(7)),
-      text: Style().foreground(isDark ? AnsiColor(7) : AnsiColor(245)),
+      placeholder: Style().foreground(isDark ? AnsiColor(240) : AnsiColor(245)),
+      suggestion: Style().foreground(isDark ? AnsiColor(240) : AnsiColor(245)),
+      prompt: Style().foreground(foreground),
+      text: Style().foreground(foreground),
     ),
     cursor: TextInputCursorStyle(
-      color: AnsiColor(7),
+      color: foreground,
       shape: CursorShape.block,
       blink: true,
     ),

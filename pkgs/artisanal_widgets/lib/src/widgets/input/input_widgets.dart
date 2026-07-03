@@ -340,16 +340,16 @@ TextInputStyles _textInputStylesFromTheme(Theme theme) {
       .foreground(theme.resolvedOnHighlight);
   return TextInputStyles(
     focused: TextInputStyleState(
-      prompt: theme.labelLarge.copy(),
-      text: theme.bodyMedium.copy(),
-      placeholder: theme.labelSmall.copy(),
+      prompt: theme.labelLarge.copy().foreground(theme.onBackground),
+      text: theme.bodyMedium.copy().foreground(theme.onBackground),
+      placeholder: theme.labelSmall.copy().foreground(theme.muted),
       suggestion: theme.labelSmall.copy(),
       selection: selection,
     ),
     blurred: TextInputStyleState(
-      prompt: theme.labelSmall.copy(),
-      text: theme.bodySmall.copy(),
-      placeholder: theme.labelSmall.copy(),
+      prompt: theme.labelSmall.copy().foreground(theme.onBackground),
+      text: theme.bodySmall.copy().foreground(theme.onBackground),
+      placeholder: theme.labelSmall.copy().foreground(theme.muted),
       suggestion: theme.labelSmall.copy(),
       selection: selection,
     ),
@@ -471,7 +471,10 @@ TextAreaStyles textAreaStylesFromTheme(Theme theme) {
         ),
       },
       lineDecorationStyles: <String, Style>{
-        textActiveLineDecorationKey: Style().background(theme.surface),
+        textActiveLineDecorationKey: Style().background(
+          editorTheme?.blurredCursorLineBackground ??
+              theme.resolvedSurfaceVariant,
+        ),
         textActiveLineNumberDecorationKey: theme.labelSmall.copy().foreground(
           theme.primary,
         ),

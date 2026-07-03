@@ -87,7 +87,7 @@ final class _GithubRepositoryPromptState
             if (widget.currentRepository != null)
               w.Text('Current: ${widget.currentRepository}', style: hint),
             w.Frame(
-              background: theme.background,
+              background: theme.resolvedSurfaceVariant,
               padding: const w.EdgeInsets.symmetric(horizontal: 1),
               child: w.TextField(
                 controller: _controller,
