@@ -451,17 +451,14 @@ class NavigatorState extends State<Navigator> {
     }
   }
 
-  Cmd? _handleKeyPress(KeyMsg msg) {
+  Cmd? _popFor(KeyMsg msg) {
     if (!canPop()) return null;
 
     if (widget.popBehavior.shouldPop(msg)) {
       final currentRoute = _routes.last;
 
-      // Check async pop confirmation.
       final onPopInvoked = widget.popBehavior.onPopInvoked;
       if (onPopInvoked != null) {
-        // Schedule the async confirmation. We can't await in handleIntercept,
-        // so we fire-and-forget and pop in the callback.
         onPopInvoked(currentRoute).then((shouldPop) {
           if (shouldPop && _routes.contains(currentRoute)) {
             pop();
@@ -479,8 +476,13 @@ class NavigatorState extends State<Navigator> {
 
   @override
   Cmd? handleIntercept(Msg msg) {
+    return null;
+  }
+
+  @override
+  Cmd? handleUpdate(Msg msg) {
     if (msg is KeyMsg) {
-      return _handleKeyPress(msg);
+      return _popFor(msg);
     }
     return null;
   }

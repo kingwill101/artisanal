@@ -173,3 +173,17 @@ export 'program.dart'
         runProgram,
         runProgramWithResult,
         runProgramDebug;
+
+export 'key_chord.dart'
+    show
+        KeyChordInterceptor,
+        KeyChordBinding;
+
+export 'bubbles/spinner.dart'
+    show
+        Spinner,
+        Spinners,
+        SpinnerModel,
+        SpinnerTickMsg,
+        deriveTrail,
+        deriveInactive;

@@ -86,6 +86,50 @@ class KeyMsg extends Msg {
   int get hashCode => key.hashCode;
 }
 
+/// Message emitted when a chord prefix key is recognized.
+final class KeyChordPrefixMsg extends Msg {
+  const KeyChordPrefixMsg(this.prefix);
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+}
+
+/// Message emitted when a chord resolves to a configured binding.
+final class KeyChordResolvedMsg extends Msg {
+  const KeyChordResolvedMsg({
+    required this.id,
+    required this.prefix,
+    required this.key,
+  });
+
+  /// The resolved chord identifier.
+  final String id;
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+
+  /// The continuation key that completed the chord.
+  final Key key;
+}
+
+/// Message emitted when a pending chord is cancelled or times out.
+final class KeyChordCancelledMsg extends Msg {
+  const KeyChordCancelledMsg({
+    required this.prefix,
+    this.key,
+    this.timedOut = false,
+  });
+
+  /// The prefix key that started the chord.
+  final Key prefix;
+
+  /// The key that cancelled the chord, if cancellation came from a key.
+  final Key? key;
+
+  /// Whether the cancellation was caused by a timeout.
+  final bool timedOut;
+}
+
 /// Message used by the runtime to deliver collapsed large rune bursts as a
 /// single text payload (paste-like behavior).
 class PasteTextMsg extends Msg {

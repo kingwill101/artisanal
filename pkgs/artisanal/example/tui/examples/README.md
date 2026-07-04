@@ -155,6 +155,17 @@ application.
   <img width="750" src="./http/http.gif" />
 </a>
 
+### Key Chord
+
+The `key-chord` example demonstrates engine-level chord key bindings using
+`KeyChordInterceptor`. Prefix keys like `Ctrl+X` are intercepted and a
+second key (e.g., `t` or `m`) resolves the chord. Timeout and cancellation
+are also shown.
+
+<a href="./key-chord/main.dart">
+  Code
+</a>
+
 ### Inline
 
 The `inline` examples run on the primary terminal screen and preserve native
