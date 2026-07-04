@@ -105,6 +105,19 @@ class SessionSummary {
   }
 }
 
+/// A single item in the model list dialog.
+class ModelOption {
+  const ModelOption({
+    required this.modelName,
+    required this.providerName,
+    this.displayName,
+  });
+  final String modelName;
+  final String providerName;
+  final String? displayName;
+  String get label => displayName ?? modelName;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Application state
 // ─────────────────────────────────────────────────────────────────────────────

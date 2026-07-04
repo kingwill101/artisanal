@@ -60,6 +60,78 @@ class _PushPageState extends w.State<_PushPage> {
   }
 }
 
+/// A page that intercepts Escape to simulate a modal overlay.
+///
+/// When [modalOpen] is true, `handleIntercept` consumes Escape so the
+/// Navigator does NOT pop the route. When false, Escape passes through
+/// and the Navigator pops normally.
+class _EscapeModalPage extends w.StatefulWidget {
+  _EscapeModalPage({required this.label, this.modalOpen = false});
+  final String label;
+  final bool modalOpen;
+
+  @override
+  w.State<_EscapeModalPage> createState() => _EscapeModalPageState();
+}
+
+class _EscapeModalPageState extends w.State<_EscapeModalPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg &&
+        msg.key.type == KeyType.escape &&
+        widget.modalOpen) {
+      return tui.Cmd.none();
+    }
+    return null;
+  }
+}
+
+/// A page that can push a page that intercepts Escape.
+///
+/// Pushes [_EscapeModalPage] on 'p'. Used to test that a child widget's
+/// Escape interception prevents the Navigator from popping.
+class _EscapeModalPushPage extends w.StatefulWidget {
+  _EscapeModalPushPage({
+    required this.label,
+    this.childModalOpen = false,
+    this.childLabel = 'Child',
+  });
+  final String label;
+  final bool childModalOpen;
+  final String childLabel;
+
+  @override
+  w.State<_EscapeModalPushPage> createState() => _EscapeModalPushPageState();
+}
+
+class _EscapeModalPushPageState extends w.State<_EscapeModalPushPage> {
+  @override
+  w.Widget build(w.BuildContext context) {
+    return w.Text(widget.label);
+  }
+
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    if (msg is tui.KeyMsg && msg.key.type == KeyType.runes) {
+      if (String.fromCharCodes(msg.key.runes) == 'p') {
+        w.Navigator.of(context).pushWidget(
+          _EscapeModalPage(
+            label: widget.childLabel,
+            modalOpen: widget.childModalOpen,
+          ),
+        );
+        return tui.Cmd.none();
+      }
+    }
+    return null;
+  }
+}
+
 /// A page that pops itself when 'b' is pressed, optionally with a result.
 class _PopPage extends w.StatefulWidget {
   _PopPage({required this.label, this.result});
@@ -550,6 +622,58 @@ void main() {
       // Press 'u' to popUntil root.
       tester.sendKey('u');
       expect(tester.find.text('Root'), isTrue);
+    });
+
+    test('child handling Escape prevents Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(
+          home: _EscapeModalPushPage(
+            label: 'Home',
+            childModalOpen: true,
+            childLabel: 'Modal Open',
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push page that intercepts Escape.
+      tester.sendKey('p');
+      expect(tester.find.text('Modal Open'), isTrue);
+
+      // Escape should be consumed by the child — route stays.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Modal Open'), isTrue);
+      expect(tester.find.text('Home'), isFalse);
+    });
+
+    test('child not handling Escape allows Navigator pop', () async {
+      final tester = WidgetTester();
+      addTearDown(() => tester.dispose());
+
+      await tester.pumpWidget(
+        w.Navigator(
+          home: _EscapeModalPushPage(
+            label: 'Home',
+            childModalOpen: false,
+            childLabel: 'Modal Closed',
+          ),
+        ),
+      );
+
+      expect(tester.find.text('Home'), isTrue);
+
+      // Push page that does NOT intercept Escape.
+      tester.sendKey('p');
+      expect(tester.find.text('Modal Closed'), isTrue);
+
+      // Escape should pop back to Home.
+      tester.sendSpecialKey(KeyType.escape);
+      expect(tester.find.text('Home'), isTrue);
+      expect(tester.find.text('Modal Closed'), isFalse);
     });
 
     test('empty navigator renders shrink box', () async {

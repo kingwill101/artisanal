@@ -40,7 +40,7 @@ export 'src/widgets/plugins/slots.dart';
 export 'src/widgets/components/components_widgets.dart';
 export 'src/widgets/components/overlay.dart';
 export 'package:artisanal/runtime.dart' show ZoneInBoundsMsg;
-export 'package:artisanal/tui.dart' show KeyBinding, KeyMap;
+export 'package:artisanal/tui.dart' show KeyBinding, KeyMap, Spinner, Spinners;
 export 'src/widgets/input/input_widgets.dart';
 export 'src/widgets/input/text_decoration_binding.dart';
 export 'src/widgets/input/text_diagnostics_binding.dart';
