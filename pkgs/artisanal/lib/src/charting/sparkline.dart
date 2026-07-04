@@ -114,14 +114,14 @@ void drawSparkline(
     for (var r = 0; r < fullRows; r++) {
       final cellY = area.maxY - 1 - r;
       if (cellY < area.minY) break;
-      putCell(screen, area.minX + x, cellY, BlockShades.full, cellStyle);
+      putSolidChartCell(screen, area.minX + x, cellY, cellStyle, BlockShades.full);
     }
 
     if (remainder > 0) {
       final cellY = area.maxY - 1 - fullRows;
       if (cellY >= area.minY) {
         final glyph = sparkChars[remainder];
-        putCell(screen, area.minX + x, cellY, glyph, cellStyle);
+        putSolidChartCell(screen, area.minX + x, cellY, cellStyle, glyph);
       }
     }
   }

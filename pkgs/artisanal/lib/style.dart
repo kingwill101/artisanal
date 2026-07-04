@@ -76,7 +76,7 @@ library;
 
 export 'src/style/style.dart';
 export 'src/style/style_model.dart'
-    show BoxSizing, BorderMetrics, BoxMetrics, RenderContext, StyleData;
+    show BoxSizing, BoxMetrics, RenderContext, StyleData;
 export 'src/layout/layout.dart'
     show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
 export 'src/style/primitives.dart';

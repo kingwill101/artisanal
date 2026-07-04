@@ -50,6 +50,26 @@ void putCell(Screen screen, int x, int y, String glyph, UvStyle style) {
   screen.setCell(x, y, Cell(content: glyph, style: style));
 }
 
+/// Places a solid chart cell at ([x], [y]) on the [screen].
+///
+/// When the resulting style has a background color, the cell content is
+/// rendered as a space with the background color applied (solid fill).  When
+/// there is no background color, the [glyph] is drawn with the background
+/// cleared so that only the foreground is visible.
+void putSolidChartCell(
+  Screen screen,
+  int x,
+  int y,
+  UvStyle style,
+  String glyph,
+) {
+  final bg = style.bg;
+  final useBg = bg != null;
+  final drawGlyph = useBg ? ' ' : glyph;
+  final cellStyle = useBg ? style : style.copyWith(clearBg: true);
+  putCell(screen, x, y, drawGlyph, cellStyle);
+}
+
 void putText(
   Screen screen,
   Rectangle area,
