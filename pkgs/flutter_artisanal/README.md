@@ -8,23 +8,15 @@ Runs TUI programs built with the [artisanal](https://github.com/anomalousco/arti
 
 - **`TerminalWidget`** — pure Flutter `CustomPaint` renderer for UV `Buffer`s
 - **`TuiController`** — runs a TUI `Model` in-process and exposes a repaint `Listenable`
+- **`WidgetAppBinding` / `ArtisanalAppBinding`** — drive `artisanal_widgets` apps with Flutter-friendly defaults
 - **Keyboard input** — Flutter `Focus`/raw-key events translated to terminal byte sequences
 - **Desktop + Web** — works with `flutter run` on Linux/macOS/Windows and `flutter run -d chrome`
 
-## Getting started
+## Two supported patterns
 
-Add the package to your `pubspec.yaml`:
+### Model pattern
 
-```yaml
-dependencies:
-  flutter_artisanal: ^0.1.0
-```
-
-Because `flutter_artisanal` depends on `artisanal` and `ultraviolet`, add those to your workspace `pubspec.yaml` or use path overrides in your example app.
-
-## Usage
-
-Wrap a `TerminalWidget` in a widget tree and drive it with a `TuiController`:
+Implement `Model` directly. Your `view()` returns a styled string:
 
 ```dart
 import 'package:flutter/material.dart';
@@ -94,18 +86,72 @@ class _TuiExampleState extends State<TuiExample> {
 void main() => uv.runFlutterApp(const TuiExample());
 ```
 
-### Key input
+### WidgetApp pattern
 
-`TerminalWidget.onKey` receives raw terminal byte sequences. Pass `controller.addInput` to forward keystrokes into the TUI runtime. Supported keys include:
+Build UIs with [`artisanal_widgets`](https://github.com/kingwill101/artisanal) widgets (StatelessWidget, Text, Container, etc.) and drive them with `WidgetAppBinding` or `ArtisanalAppBinding`:
 
-- Printable characters (UTF-8)
-- Enter, Backspace, Tab, Escape
-- Arrow keys, Home, End, Delete, Insert, PageUp, PageDown
-- F1–F4
+```dart
+import 'package:flutter_artisanal/flutter_artisanal.dart';
 
-### Repaint loop
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
 
-`TuiController.repaint` is a `Listenable` that fires every time the UV renderer flushes a new frame. `TerminalWidget` rebuilds automatically when it fires, so the screen stays in sync with the TUI state.
+  @override
+  Widget build(BuildContext context) {
+    return Text('Hello from artisanal_widgets in Flutter!');
+  }
+}
+
+class ArtisanalAppExample extends StatefulWidget {
+  const ArtisanalAppExample({super.key});
+
+  @override
+  State<ArtisanalAppExample> createState() => _ArtisanalAppExampleState();
+}
+
+class _ArtisanalAppExampleState extends State<ArtisanalAppExample> {
+  late final ArtisanalAppBinding _binding;
+
+  @override
+  void initState() {
+    super.initState();
+    _binding = ArtisanalAppBinding(
+      app: ArtisanalApp(
+        title: 'WidgetApp Demo',
+        home: const HomeScreen(),
+      ),
+    );
+    _binding.start();
+    _binding.repaint.addListener(_onRepaint);
+  }
+
+  @override
+  void dispose() {
+    _binding.repaint.removeListener(_onRepaint);
+    _binding.dispose();
+    super.dispose();
+  }
+
+  void _onRepaint() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TerminalWidget(
+      buffer: _binding.buffer,
+      repaint: _binding.repaint,
+      onKey: _binding.addInput,
+    );
+  }
+}
+```
+
+`ArtisanalAppBinding` supports the same app-shell features as `runArtisanalApp`: theming (`Theme`, `ThemeMode`), navigation (`home`, `routes`), debug console capture, and `ImageAutoMode`.
+
+## Repaint loop
+
+`TuiController.repaint` (and `WidgetAppBinding.repaint` / `ArtisanalAppBinding.repaint`) is a `Listenable` that fires every time the UV renderer flushes a new frame. `TerminalWidget` rebuilds automatically when it fires, so the screen stays in sync with the TUI state.
 
 ## Running the example
 
@@ -117,8 +163,8 @@ flutter run -d linux   # or -d macos, -d windows, -d chrome
 
 ```
 Flutter app
-  └── TuiExample (StatefulWidget)
-        ├── TuiController (artisanal runtime host)
+  └── StatefulWidget (TuiExample / ArtisanalAppExample)
+        ├── TuiController / WidgetAppBinding / ArtisanalAppBinding
         │     ├── EmbeddedTerminalBackend
         │     ├── FlutterTerminalRenderer (UltravioletTuiRenderer)
         │     └── runProgram(model, host, renderer)

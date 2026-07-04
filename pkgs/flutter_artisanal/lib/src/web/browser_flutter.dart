@@ -2,10 +2,12 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 
 import '../terminal_painter.dart';
+import '../input_encoder.dart';
 
 class TerminalWidget extends StatefulWidget {
   const TerminalWidget({
@@ -20,6 +22,8 @@ class TerminalWidget extends StatefulWidget {
     this.cursorColor,
     this.repaint,
     this.onKey,
+    this.onResize,
+    this.onPlatformBrightnessChanged,
   });
 
   final uv.Buffer? buffer;
@@ -32,6 +36,8 @@ class TerminalWidget extends StatefulWidget {
   final ui.Color? cursorColor;
   final Listenable? repaint;
   final void Function(List<int> bytes)? onKey;
+  final void Function(int width, int height)? onResize;
+  final void Function(bool isDark)? onPlatformBrightnessChanged;
 
   @override
   State<TerminalWidget> createState() => _TerminalWidgetState();
@@ -40,11 +46,63 @@ class TerminalWidget extends StatefulWidget {
 class _TerminalWidgetState extends State<TerminalWidget> {
   late final FocusNode _focusNode;
 
+  static List<int> _encodeSgrMouse({
+    required int x,
+    required int y,
+    required int button,
+    required bool press,
+    bool motion = false,
+    bool shift = false,
+    bool alt = false,
+    bool ctrl = false,
+  }) {
+    return InputEncoder.encodeSgrMouse(
+      x: x,
+      y: y,
+      button: button,
+      press: press,
+      motion: motion,
+      shift: shift,
+      alt: alt,
+      ctrl: ctrl,
+    );
+  }
+
+  void _sendMouse(int x, int y, int button, bool press,
+      {bool motion = false, bool shift = false, bool alt = false, bool ctrl = false}) {
+    final bytes = _encodeSgrMouse(
+      x: x,
+      y: y,
+      button: button,
+      press: press,
+      motion: motion,
+      shift: shift,
+      alt: alt,
+      ctrl: ctrl,
+    );
+    widget.onKey?.call(bytes);
+  }
+
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode()..requestFocus();
+    _focusNode = FocusNode();
     widget.repaint?.addListener(_onRepaint);
+    // RawKeyboard listener captures hardware keys regardless of Focus state.
+    // This is the reliable low-level path on desktop Linux where Focus
+    // autofocus is not guaranteed without a parent WidgetsApp/MaterialApp.
+    // ignore: deprecated_member_use
+    RawKeyboard.instance.addListener(_onRawKey);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = MediaQuery.of(context).platformBrightness;
+    widget.onPlatformBrightnessChanged?.call(brightness == Brightness.dark);
   }
 
   @override
@@ -58,6 +116,8 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   @override
   void dispose() {
+    // ignore: deprecated_member_use
+    RawKeyboard.instance.removeListener(_onRawKey);
     _focusNode.dispose();
     widget.repaint?.removeListener(_onRepaint);
     super.dispose();
@@ -67,53 +127,75 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     if (mounted) setState(() {});
   }
 
+  // ignore: deprecated_member_use
+  void _onRawKey(RawKeyEvent event) {
+    if (widget.onKey == null) return;
+    if (event is! RawKeyDownEvent) return;
+
+    final bytes = <int>[];
+    final character = event.character;
+    if (character != null && character.isNotEmpty) {
+      final codeUnit = character.codeUnitAt(0);
+      if (codeUnit >= 0x20 && codeUnit != 0x7f) {
+        bytes.addAll(utf8.encode(character));
+      }
+    }
+
+    if (bytes.isEmpty) {
+      final mapped = InputEncoder.encodeSpecialKey(event.logicalKey);
+      if (mapped.isNotEmpty) {
+        bytes.addAll(mapped);
+      }
+    }
+
+    if (bytes.isEmpty) {
+      final label = event.logicalKey.keyLabel;
+      if (label.isNotEmpty) {
+        final codeUnit = label.codeUnitAt(0);
+        if (codeUnit >= 0x20 && codeUnit != 0x7f) {
+          bytes.addAll(utf8.encode(label));
+        }
+      }
+    }
+
+    if (bytes.isNotEmpty) {
+      widget.onKey!(bytes);
+    }
+  }
+
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (widget.onKey == null) {
       return KeyEventResult.ignored;
     }
 
+    if (event is KeyUpEvent) {
+      return KeyEventResult.handled;
+    }
+
     final bytes = <int>[];
     final character = event.character;
     if (character != null && character.isNotEmpty) {
-      bytes.addAll(utf8.encode(character));
-    } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-      bytes.add(0x1b);
-    } else if (event.logicalKey == LogicalKeyboardKey.enter) {
-      bytes.add(0x0d);
-    } else if (event.logicalKey == LogicalKeyboardKey.backspace) {
-      bytes.add(0x08);
-    } else if (event.logicalKey == LogicalKeyboardKey.tab) {
-      bytes.add(0x09);
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-      bytes.addAll([0x1b, 0x5b, 0x41]);
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-      bytes.addAll([0x1b, 0x5b, 0x42]);
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-      bytes.addAll([0x1b, 0x5b, 0x43]);
-    } else if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-      bytes.addAll([0x1b, 0x5b, 0x44]);
-    } else if (event.logicalKey == LogicalKeyboardKey.home) {
-      bytes.addAll([0x1b, 0x5b, 0x48]);
-    } else if (event.logicalKey == LogicalKeyboardKey.end) {
-      bytes.addAll([0x1b, 0x5b, 0x46]);
-    } else if (event.logicalKey == LogicalKeyboardKey.delete) {
-      bytes.addAll([0x1b, 0x5b, 0x33, 0x7e]);
-    } else if (event.logicalKey == LogicalKeyboardKey.insert) {
-      bytes.addAll([0x1b, 0x5b, 0x32, 0x7e]);
-    } else if (event.logicalKey == LogicalKeyboardKey.pageUp) {
-      bytes.addAll([0x1b, 0x5b, 0x35, 0x7e]);
-    } else if (event.logicalKey == LogicalKeyboardKey.pageDown) {
-      bytes.addAll([0x1b, 0x5b, 0x36, 0x7e]);
-    } else if (event.logicalKey == LogicalKeyboardKey.f1) {
-      bytes.addAll([0x1b, 0x4f, 0x50]);
-    } else if (event.logicalKey == LogicalKeyboardKey.f2) {
-      bytes.addAll([0x1b, 0x4f, 0x51]);
-    } else if (event.logicalKey == LogicalKeyboardKey.f3) {
-      bytes.addAll([0x1b, 0x4f, 0x52]);
-    } else if (event.logicalKey == LogicalKeyboardKey.f4) {
-      bytes.addAll([0x1b, 0x4f, 0x53]);
-    } else {
-      return KeyEventResult.ignored;
+      final codeUnit = character.codeUnitAt(0);
+      if (codeUnit >= 0x20 && codeUnit != 0x7f) {
+        bytes.addAll(utf8.encode(character));
+      }
+    }
+
+    if (bytes.isEmpty) {
+      final mapped = InputEncoder.encodeSpecialKey(event.logicalKey);
+      if (mapped.isNotEmpty) {
+        bytes.addAll(mapped);
+      }
+    }
+
+    if (bytes.isEmpty && event is KeyDownEvent) {
+      final label = event.logicalKey.keyLabel;
+      if (label.isNotEmpty) {
+        final codeUnit = label.codeUnitAt(0);
+        if (codeUnit >= 0x20 && codeUnit != 0x7f) {
+          bytes.addAll(utf8.encode(label));
+        }
+      }
     }
 
     if (bytes.isNotEmpty) {
@@ -130,23 +212,121 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     final cw = widget.cellWidth ?? widget.fontSize * 0.6;
     final ch = widget.cellHeight ?? widget.fontSize * 1.2;
 
-    return Focus(
-      focusNode: _focusNode,
-      onKeyEvent: _handleKey,
-      child: CustomPaint(
-        size: Size(cw * buf.width(), ch * buf.height()),
-        painter: TerminalPainter(
-          screen: buf,
-          cellWidth: cw,
-          cellHeight: ch,
-          fontFamily: widget.fontFamily,
-          fontSize: widget.fontSize,
-          defaultFg: widget.defaultFg ?? const ui.Color(0xFFE5E5E5),
-          defaultBg: widget.defaultBg ?? const ui.Color(0xFF000000),
-          cursorColor: widget.cursorColor ?? const ui.Color(0xFF00FF00),
-          repaint: widget.repaint,
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final maxHeight = constraints.maxHeight;
+        final cols = maxWidth > 0 ? (maxWidth / cw).floor() : 80;
+        final rows = maxHeight > 0 ? (maxHeight / ch).floor() : 24;
+
+        if (widget.onResize != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) widget.onResize!(cols, rows);
+          });
+        }
+
+        final paintWidth = cw * cols;
+        final paintHeight = ch * rows;
+
+        final terminal = SizedBox.expand(
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                _focusNode.requestFocus();
+              },
+              child: Focus(
+                focusNode: _focusNode,
+                autofocus: true,
+                onKeyEvent: _handleKey,
+                child: CustomPaint(
+                  size: Size(paintWidth, paintHeight),
+                  painter: TerminalPainter(
+                    screen: buf,
+                    cellWidth: cw,
+                    cellHeight: ch,
+                    fontFamily: widget.fontFamily,
+                    fontSize: widget.fontSize,
+                    defaultFg: widget.defaultFg ?? const ui.Color(0xFFE5E5E5),
+                    defaultBg: widget.defaultBg ?? const ui.Color(0xFF000000),
+                    cursorColor: widget.cursorColor ?? const ui.Color(0xFF00FF00),
+                    repaint: widget.repaint,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        if (widget.onKey == null) return terminal;
+
+        return MouseRegion(
+          child: Listener(
+            onPointerHover: (event) {
+              final x = (event.localPosition.dx / cw).floor();
+              final y = (event.localPosition.dy / ch).floor();
+              final buttons = event.buttons;
+              int button = 0;
+              bool press = false;
+              if (buttons == kPrimaryButton) {
+                button = 0;
+                press = true;
+              } else if (buttons == kSecondaryButton) {
+                button = 2;
+                press = true;
+              } else if (buttons == 4) {
+                button = 1;
+                press = true;
+              }
+              if (button == 0 && !press) {
+                button = 3;
+              }
+              _sendMouse(x, y, button, press, motion: true);
+            },
+            onPointerDown: (event) {
+              final x = (event.localPosition.dx / cw).floor();
+              final y = (event.localPosition.dy / ch).floor();
+              int button = 0;
+              if (event.buttons == kSecondaryButton) {
+                button = 2;
+              } else if (event.buttons == 4) {
+                button = 1;
+              } else {
+                button = 0;
+              }
+              _sendMouse(x, y, button, true);
+            },
+            onPointerUp: (event) {
+              final x = (event.localPosition.dx / cw).floor();
+              final y = (event.localPosition.dy / ch).floor();
+              int button = 3;
+              _sendMouse(x, y, button, false);
+            },
+            onPointerSignal: (event) {
+              if (event is PointerScrollEvent) {
+                final x = (event.localPosition.dx / cw).floor();
+                final y = (event.localPosition.dy / ch).floor();
+                final scroll = event.scrollDelta;
+                int button = 0;
+                if (scroll.dy > 0) {
+                  button = 65;
+                } else if (scroll.dy < 0) {
+                  button = 64;
+                } else if (scroll.dx > 0) {
+                  button = 67;
+                } else if (scroll.dx < 0) {
+                  button = 66;
+                }
+                if (button != 0) {
+                  _sendMouse(x, y, button, true);
+                }
+              }
+            },
+            child: terminal,
+          ),
+        );
+      },
     );
   }
 }

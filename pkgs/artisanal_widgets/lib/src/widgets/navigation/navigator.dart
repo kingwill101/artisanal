@@ -452,7 +452,9 @@ class NavigatorState extends State<Navigator> {
   }
 
   Cmd? _popFor(KeyMsg msg) {
-    if (!canPop()) return null;
+    if (!canPop()) {
+      return null;
+    }
 
     if (widget.popBehavior.shouldPop(msg)) {
       final currentRoute = _routes.last;
@@ -596,11 +598,8 @@ class _RouteEntryState extends State<_RouteEntry> {
     );
   }
 
-  /// Intercepts ALL messages when offstage to prevent the child subtree
-  /// from processing input events or executing side effects.
   @override
   Cmd? handleIntercept(Msg msg) {
-    if (widget.offstage) return Cmd.none();
     return null;
   }
 }

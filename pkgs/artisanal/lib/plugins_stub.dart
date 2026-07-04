@@ -40,6 +40,15 @@ Never _unsupportedRemotePlugins() {
   throw UnsupportedError('Remote plugins are not available on this platform.');
 }
 
+final class RemotePluginSurfaceDrawable {
+  const RemotePluginSurfaceDrawable(this.surface);
+  final state.RemotePluginSurfaceState surface;
+
+  Object bounds() => throw UnsupportedError('RemotePluginSurfaceDrawable.bounds is not available on this platform.');
+
+  void draw(Object screen, Object area) {}
+}
+
 final class RemotePluginServiceException implements Exception {
   RemotePluginServiceException(this.message);
 

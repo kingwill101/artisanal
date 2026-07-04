@@ -60,11 +60,12 @@
 /// {@endtemplate}
 library;
 
-export 'src/runner/command.dart' show Command;
-export 'src/runner/command_listing.dart'
-    show CommandListingEntry, formatCommandListing, indentBlock;
-export 'src/runner/command_runner.dart'
+export 'src/runner/runner.dart'
     show
+        Command,
+        CommandListingEntry,
+        formatCommandListing,
+        indentBlock,
         CommandRunner,
         ShellCompleter,
         UnknownCommandFallback,
