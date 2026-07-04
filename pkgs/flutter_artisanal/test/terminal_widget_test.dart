@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_artisanal/flutter_artisanal.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
@@ -75,6 +76,26 @@ void main() {
 
       final focusFinder = find.byType(Focus);
       expect(focusFinder, findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('sends Tab key through Focus handler', (tester) async {
+      final received = <List<int>>[];
+      final buffer = uv.Buffer.create(80, 24);
+
+      await tester.pumpWidget(
+        TerminalWidget(
+          buffer: buffer,
+          repaint: ValueNotifier(0),
+          onKey: (bytes) => received.add(bytes),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.tab);
+
+      expect(received, equals([[0x09]]));
     });
   });
 }

@@ -148,6 +148,7 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
   final w.WidgetScrollController _scrollController = w.WidgetScrollController();
   int _tabIndex = 0;
   final _rng = math.Random(42);
+  final _tabNames = ['Sparkline', 'Line', 'Bar', 'Heatmap', 'Pie', 'Ribbon'];
 
   // Model-driven line chart data (updated via key press)
   late final w.ChartModel _lineModel;
@@ -187,8 +188,6 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
     final titleStyle = theme.titleLarge.copy()..foreground(theme.primary);
     final labelStyle = theme.labelSmall.copy()..foreground(theme.onBackground);
 
-    final tabNames = ['Sparkline', 'Line', 'Bar', 'Heatmap', 'Pie', 'Ribbon'];
-
     return w.Container(
       padding: const w.EdgeInsets.all(1),
       color: theme.background,
@@ -211,7 +210,7 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
               w.SizedBox(height: 1),
               // Tab bar
               w.Row(
-                children: List.generate(tabNames.length, (i) {
+                children: List.generate(_tabNames.length, (i) {
                   final selected = i == _tabIndex;
                   final tabStyle =
                       (selected ? theme.labelLarge : theme.labelSmall).copy()
@@ -231,7 +230,7 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
                       decoration: selected
                           ? w.BoxDecoration(border: Border.rounded)
                           : null,
-                      child: w.Text(tabNames[i], style: tabStyle),
+                      child: w.Text(_tabNames[i], style: tabStyle),
                     ),
                   );
                 }),
@@ -572,6 +571,7 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
   tui.Cmd? handleUpdate(tui.Msg msg) {
     if (msg is tui.KeyMsg) {
       final key = msg.key;
+      print('[key] char=${key.char ?? 'null'} type=${key.type} bytes=${key.char?.codeUnits ?? []}');
       if (key.char == 'q' || key.char == 'Q') {
         return tui.Cmd.quit();
       }
@@ -579,10 +579,15 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
         _refreshLineData();
         return null;
       }
-      // Tab switching: number keys 1-6
+      if (key.type == tui.KeyType.tab) {
+        print('[tab] switching tab');
+        setState(() => _tabIndex = (_tabIndex + 1) % _tabNames.length);
+        return null;
+      }
       if (key.char != null &&
           key.char!.codeUnitAt(0) >= 49 &&
           key.char!.codeUnitAt(0) <= 54) {
+        print('[tab] switching to tab ${key.char!.codeUnitAt(0) - 49}');
         setState(() => _tabIndex = key.char!.codeUnitAt(0) - 49);
         return null;
       }

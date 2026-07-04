@@ -88,13 +88,10 @@ class _TerminalWidgetState extends State<TerminalWidget> {
     super.initState();
     _focusNode = FocusNode();
     widget.repaint?.addListener(_onRepaint);
-    // RawKeyboard listener captures hardware keys regardless of Focus state.
-    // This is the reliable low-level path on desktop Linux where Focus
-    // autofocus is not guaranteed without a parent WidgetsApp/MaterialApp.
-    // ignore: deprecated_member_use
-    RawKeyboard.instance.addListener(_onRawKey);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
     });
   }
 
@@ -116,8 +113,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   @override
   void dispose() {
-    // ignore: deprecated_member_use
-    RawKeyboard.instance.removeListener(_onRawKey);
     _focusNode.dispose();
     widget.repaint?.removeListener(_onRepaint);
     super.dispose();
@@ -125,42 +120,6 @@ class _TerminalWidgetState extends State<TerminalWidget> {
 
   void _onRepaint() {
     if (mounted) setState(() {});
-  }
-
-  // ignore: deprecated_member_use
-  void _onRawKey(RawKeyEvent event) {
-    if (widget.onKey == null) return;
-    if (event is! RawKeyDownEvent) return;
-
-    final bytes = <int>[];
-    final character = event.character;
-    if (character != null && character.isNotEmpty) {
-      final codeUnit = character.codeUnitAt(0);
-      if (codeUnit >= 0x20 && codeUnit != 0x7f) {
-        bytes.addAll(utf8.encode(character));
-      }
-    }
-
-    if (bytes.isEmpty) {
-      final mapped = InputEncoder.encodeSpecialKey(event.logicalKey);
-      if (mapped.isNotEmpty) {
-        bytes.addAll(mapped);
-      }
-    }
-
-    if (bytes.isEmpty) {
-      final label = event.logicalKey.keyLabel;
-      if (label.isNotEmpty) {
-        final codeUnit = label.codeUnitAt(0);
-        if (codeUnit >= 0x20 && codeUnit != 0x7f) {
-          bytes.addAll(utf8.encode(label));
-        }
-      }
-    }
-
-    if (bytes.isNotEmpty) {
-      widget.onKey!(bytes);
-    }
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -236,11 +195,12 @@ class _TerminalWidgetState extends State<TerminalWidget> {
               onTap: () {
                 _focusNode.requestFocus();
               },
-              child: Focus(
-                focusNode: _focusNode,
-                autofocus: true,
-                onKeyEvent: _handleKey,
-                child: CustomPaint(
+                child: Focus(
+                  focusNode: _focusNode,
+                  autofocus: true,
+                  skipTraversal: true,
+                  onKeyEvent: _handleKey,
+                  child: CustomPaint(
                   size: Size(paintWidth, paintHeight),
                   painter: TerminalPainter(
                     screen: buf,

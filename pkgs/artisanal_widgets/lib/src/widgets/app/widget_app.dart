@@ -7,28 +7,33 @@ import 'dart:developer' as dev;
 import 'package:artisanal/tui.dart'
     show
         BackgroundColorMsg,
+        CapabilityMsg,
         CellSizeMsg,
         Cmd,
-        DegradationLevel,
         ColorProfileMsg,
-        PrimaryDeviceAttributesMsg,
+        ColorSchemeMsg,
         DebugOverlayModel,
+        DegradationLevel,
         EveryCmd,
+        KeyboardEnhancementsMsg,
         RenderBudgetMsg,
         FrameTickModel,
         FrameTickMsg,
         HitTestMouseMsg,
         KeyMsg,
         Model,
+        ModeReportMsg,
         MouseAction,
         MouseButton,
         MouseMsg,
         Msg,
         ParallelCmd,
+        PrimaryDeviceAttributesMsg,
         ReassemblableModel,
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
+        SecondaryDeviceAttributesMsg,
         TerminalVersionMsg,
         TraceTag,
         StreamCmd,
@@ -57,7 +62,7 @@ import '../core/widget.dart';
 import '../core/accessibility.dart';
 import '../components/components_widgets.dart'
     show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
-import '../theme/theme.dart' show hasDarkBackground;
+import '../theme/theme.dart' show hasDarkBackground, setHasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
 
@@ -442,6 +447,27 @@ class WidgetApp
     if (msg is ColorProfileMsg) {
       // Color profile updates affect renderer strategy outside the widget tree.
       // Skipping dispatch avoids an O(N) widget-tree traversal during startup.
+      return (this, _coalesceCommands(cmds));
+    }
+
+    if (msg is ColorSchemeMsg) {
+      if (msg.dark != hasDarkBackground) {
+        setHasDarkBackground(msg.dark);
+        _markElementTreeDirty(_tree.root);
+        _dirty = true;
+      }
+      return (this, _coalesceCommands(cmds));
+    }
+
+    if (msg is ModeReportMsg) {
+      return (this, _coalesceCommands(cmds));
+    }
+
+    if (msg is CapabilityMsg) {
+      return (this, _coalesceCommands(cmds));
+    }
+
+    if (msg is KeyboardEnhancementsMsg) {
       return (this, _coalesceCommands(cmds));
     }
 

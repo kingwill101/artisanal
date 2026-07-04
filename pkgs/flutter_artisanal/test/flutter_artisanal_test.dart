@@ -40,14 +40,6 @@ class _TestModel implements Model {
 }
 
 void main() {
-  Future<void> _waitForFirstFrame(Listenable repaint) async {
-    final completer = Completer<void>();
-    repaint.addListener(() {
-      if (!completer.isCompleted) completer.complete();
-    });
-    await completer.future;
-  }
-
   group('TuiController', () {
     test('start initializes backend and renderer', () async {
       final controller = TuiController<_TestModel>(
