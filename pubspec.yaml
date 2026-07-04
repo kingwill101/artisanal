@@ -6,6 +6,7 @@ workspace:
   - pkgs/artisanal_widgets/example/github_cli
   - pkgs/artisanal_widgets/example/flutter_cli_port
   - pkgs/ultraviolet
+  - pkgs/flutter_artisanal
 
 funding:
   - https://www.buymeacoffee.com/kingwill101
