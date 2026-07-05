@@ -279,6 +279,9 @@ class NavigatorState extends State<Navigator> {
   Future<T?> pushNamed<T>(String routeName, {Object? arguments}) {
     final settings = RouteSettings(name: routeName, arguments: arguments);
     final route = _createRoute(settings);
+    if (route == null && widget.onUnknownRoute != null) {
+      return push<T>(widget.onUnknownRoute!(settings) as Route<T>);
+    }
     if (route == null) {
       throw StateError(
         'Navigator.pushNamed called with a route name that could not be '
@@ -548,7 +551,7 @@ class NavigatorState extends State<Navigator> {
           _RouteEntry(
             key: key,
             offstage: true,
-            child: entries[i].builder(context),
+            child: Builder(builder: (ctx) => entries[i].builder(ctx)),
           ),
         );
       }
@@ -557,7 +560,12 @@ class NavigatorState extends State<Navigator> {
     // Active entries last (from opaqueIndex onward).
     for (var i = opaqueIndex; i < entries.length; i++) {
       final key = _entryKeys[entries[i]];
-      children.add(_RouteEntry(key: key, child: entries[i].builder(context)));
+      children.add(
+        _RouteEntry(
+          key: key,
+          child: Builder(builder: (ctx) => entries[i].builder(ctx)),
+        ),
+      );
     }
 
     // Always use a Stack — even for a single child — so the element tree

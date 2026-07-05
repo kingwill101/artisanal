@@ -136,7 +136,7 @@ class _HomeViewState extends w.State<HomeView> {
         ),
         w.SizedBox(width: 2),
         w.Text(
-          'tab',
+          'tabb',
           style: style.Style()
             ..foreground(OC.text)
             ..dim(),

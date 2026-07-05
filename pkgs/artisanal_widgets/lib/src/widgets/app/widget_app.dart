@@ -47,21 +47,22 @@ import 'package:artisanal/uv.dart'
         TerminalCapabilities,
         TerminalVersionEvent;
 import 'package:artisanal/style.dart'
-    show Color, AdaptiveColor, CompleteAdaptiveColor;
+    show AdaptiveColor, Color, Colors, CompleteAdaptiveColor, Style;
 import 'package:artisanal/terminal.dart' show KeyType;
 import '../core/element.dart'
     show BuildOwner, Element, ElementTree, HitTestElementEntry, StatefulElement;
-import '../core/framework.dart' show BuildContext, StatelessWidget;
+import '../core/framework.dart' show BuildContext, State, StatefulWidget, StatelessWidget;
 import '../focus/focus.dart' show FocusScope;
 import '../layout/geometry.dart' show BoxConstraints, Size;
 import '../layout/layout_widgets.dart'
-    show ImageAutoMode, withImageAutoConfiguration;
+    show Column, Expanded, ImageAutoMode, Text, withImageAutoConfiguration;
+import '../scroll/scroll_widgets.dart' show SingleChildScrollView;
 import '../core/key.dart';
 import '../media/media_query.dart' show MediaQuery, MediaQueryData;
 import '../core/widget.dart';
 import '../core/accessibility.dart';
 import '../components/components_widgets.dart'
-    show DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
+    show Button, CmdCallback, DebugOverlay, DebugOverlayPosition, PerformanceOverlay;
 import '../theme/theme.dart' show hasDarkBackground, setHasDarkBackground;
 import 'performance.dart';
 import 'render_metrics_provider.dart';
@@ -123,6 +124,9 @@ class WidgetApp
   }
 
   Widget root;
+
+  Object? _lastError;
+  Widget? _savedRootBeforeError;
 
   /// Optional terminal background color.
   ///
@@ -374,7 +378,8 @@ class WidgetApp
       _recordKeyTimestamp();
     }
 
-    if (msg is FrameTickMsg) {
+    try {
+      if (msg is FrameTickMsg) {
       if (_debugOverlayEnabled) {
         _overlayDirty = true;
       }
@@ -670,11 +675,47 @@ class WidgetApp
           _tree.hasPaintDirty;
     }
 
+    } catch (error, stackTrace) {
+      _showErrorScreen(error, stackTrace);
+      return (this, null);
+    }
+
     if (TuiTrace.captureDispatchEnabled) {
       TuiTrace.log('widget_app.update end dirty=$_dirty');
     }
 
     return (this, _coalesceCommands(cmds));
+  }
+
+  void _showErrorScreen(Object error, StackTrace stackTrace) {
+    if (_lastError != null) return;
+    _savedRootBeforeError = _currentRoot();
+    _lastError = error;
+    _tree.update(
+      _ErrorScreen(
+        error: error.toString(),
+        stackTrace: stackTrace.toString(),
+        onDismiss: _clearError,
+      ),
+    );
+    _dirty = true;
+  }
+
+  Cmd? _clearError() {
+    _lastError = null;
+    if (_savedRootBeforeError != null) {
+      _tree.update(
+        _MediaQueryHost(
+          key: _mediaQueryKey,
+          data: _mediaQueryData,
+          metricsHolder: _metricsHolder,
+          child: _savedRootBeforeError!,
+        ),
+      );
+      _savedRootBeforeError = null;
+    }
+    _dirty = true;
+    return null;
   }
 
   @override
@@ -978,6 +1019,65 @@ class _MediaQueryHost extends StatelessWidget {
         child: FocusScope(child: child),
       ),
     );
+  }
+}
+
+class _ErrorScreen extends StatefulWidget {
+  _ErrorScreen({
+    required this.error,
+    required this.stackTrace,
+    required CmdCallback onDismiss,
+  }) : _onDismiss = onDismiss;
+
+  final String error;
+  final String stackTrace;
+  final CmdCallback _onDismiss;
+
+  @override
+  State<_ErrorScreen> createState() => _ErrorScreenState();
+}
+
+class _ErrorScreenState extends State<_ErrorScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final errorStyle = Style()
+      ..foreground(Colors.red)
+      ..bold(true);
+    final detailStyle = Style()..foreground(Colors.red);
+
+    return Column(
+      children: [
+        Text('Unhandled exception', style: errorStyle),
+        Text(widget.error, style: detailStyle),
+        Expanded(
+          child: SingleChildScrollView(
+            child: Text(widget.stackTrace, style: detailStyle),
+          ),
+        ),
+        Button(
+          label: 'Copy',
+          onPressed: () => Cmd.setClipboard(
+            '${widget.error}\n${widget.stackTrace}',
+          ),
+        ),
+        Button(
+          label: 'Dismiss',
+          onPressed: widget._onDismiss,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Cmd? handleIntercept(Msg msg) {
+    if (msg is KeyMsg) {
+      final key = msg.key;
+      if (key.type == KeyType.escape) {
+        widget._onDismiss();
+        return Cmd.none();
+      }
+    }
+    return null;
   }
 }
 
