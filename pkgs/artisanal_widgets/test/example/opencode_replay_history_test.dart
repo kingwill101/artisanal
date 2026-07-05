@@ -5,6 +5,7 @@ import 'package:test/test.dart';
 
 import '../../example/opencode/main.dart' as example;
 import '../../example/opencode/models/chat_model.dart';
+import '../../example/opencode/screens/session.dart';
 import '../../example/opencode/theme.dart';
 
 void main() {
@@ -26,7 +27,7 @@ void main() {
     await tester.pumpWidget(
       w.ThemeScope(
         theme: openCodeTheme(),
-        child: example.SessionContentPane(
+        child: SessionContentPane(
           model: model,
           scrollController: w.WidgetScrollController(),
           promptController: w.TextFieldController(),

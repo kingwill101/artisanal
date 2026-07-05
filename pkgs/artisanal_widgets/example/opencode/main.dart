@@ -12,6 +12,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'dart:io';
 
 import 'app.dart';
+export 'app.dart';
 import 'theme.dart';
 import 'replay_driver.dart';
 

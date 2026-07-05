@@ -11,11 +11,15 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'data.dart';
 import 'models/chat_model.dart';
+import 'models/message.dart';
+import 'screens/agent_overview.dart';
 import 'screens/home.dart';
 import 'screens/session.dart';
 import 'theme.dart';
 import 'widgets/copy_toast.dart';
 import 'widgets/session_list_dialog.dart';
+import 'widgets/state/build_mode.dart';
+import 'widgets/state/open_code_ui_state.dart';
 import 'widgets/theme_list_dialog.dart';
 
 
@@ -54,10 +58,17 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
   final List<tui.ReplayEventPresentation> _recentReplayPresentations =
       <tui.ReplayEventPresentation>[];
 
+  // UI state
+  bool _chordActive = false;
+  BuildMode _mode = BuildMode.build;
+  String? _scannerFrame;
+  EnterBehavior _enterBehavior = EnterBehavior.send;
+
   @override
   void initState() {
     super.initState();
     _model = initialModel();
+    _scrollController.autoScrollToBottom = true;
     if (_model.inputText.isNotEmpty) {
       _promptController.text = _model.inputText;
     }
@@ -94,35 +105,68 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     });
   }
 
-  bool _isCtrlCShortcut(tui.Key key) {
-    if (!key.ctrl || key.alt || key.meta || key.hyper || key.superKey) {
+  bool _isSubmitEnter(tui.KeyMsg msg) {
+    final key = msg.key;
+    if (key.shift || key.alt || key.meta || key.hyper || key.superKey) {
       return false;
     }
-    if (key.runes.isEmpty) return false;
-    if (key.runes.length == 1 && key.runes.first == 0x03) {
-      return true;
+    if (_enterBehavior == EnterBehavior.send) {
+      return key.isEnterLike;
     }
-    final char = key.char;
-    return char != null && char.toLowerCase() == 'c';
+    return key.isEnterLike && key.ctrl;
   }
 
-  @override
-  tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (msg is tui.InterruptMsg) {
-      return tui.Cmd.quit();
-    }
-    if (msg is tui.KeyMsg && _isCtrlCShortcut(msg.key)) {
-      return tui.Cmd.quit();
-    }
-    return null;
+  void _handleSubmit(String text) {
+    if (text.trim().isEmpty) return;
+
+    _promptController.text = '';
+    final updatedMessages = List<ChatMessage>.of(_model.messages)
+      ..add(ChatMessage.user(text));
+
+    setState(() {
+      _model = ChatModel(
+        route: _model.route,
+        messages: updatedMessages,
+        inputText: '',
+        modelName: _model.modelName,
+        providerName: _model.providerName,
+        agentName: _model.agentName,
+        sessionTitle: _model.sessionTitle,
+        contextTokens: _model.contextTokens,
+        contextPercentage: _model.contextPercentage,
+        cost: _model.cost,
+        sidebar: _model.sidebar,
+        sidebarOpen: _model.sidebarOpen,
+        todos: _model.todos,
+        modifiedFiles: _model.modifiedFiles,
+        mcpServers: _model.mcpServers,
+        lspServers: _model.lspServers,
+        workingDirectory: _model.workingDirectory,
+      );
+    });
+
+    _chordActive = true;
+    _scannerFrame = 'processing...';
+
+    Future<void>.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      setState(() {
+        _scannerFrame = 'parsing...';
+      });
+    });
+
+    Future<void>.delayed(const Duration(seconds: 4), () {
+      if (!mounted) return;
+      setState(() {
+        _scannerFrame = null;
+        _chordActive = false;
+      });
+    });
   }
 
   @override
   w.Widget build(w.BuildContext context) {
     final theme = openCodeTheme();
-    setOpenCodeRouteBackground(
-      _model.route == AppRoute.home ? OC.background : OC.background,
-    );
 
     // Helper to wrap content with theme list + session list + command palette
     w.Widget wrapWithOverlays(w.Widget content) {
@@ -147,49 +191,27 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           onSelect: (session) {
             setState(() {
               _sessionListOpen = false;
-              // Navigate to the selected session (or stay on current)
-              if (!session.isCurrent) {
-                _model = ChatModel(
-                  route: AppRoute.session,
-                  messages: _model.messages,
-                  inputText: _promptController.text,
-                  modelName: _model.modelName,
-                  providerName: _model.providerName,
-                  agentName: _model.agentName,
-                  sessionTitle: session.title,
-                  contextTokens: _model.contextTokens,
-                  contextPercentage: _model.contextPercentage,
-                  cost: _model.cost,
-                  sidebar: _model.sidebar,
-                  sidebarOpen: _model.sidebarOpen,
-                  todos: _model.todos,
-                  modifiedFiles: _model.modifiedFiles,
-                  mcpServers: _model.mcpServers,
-                  lspServers: _model.lspServers,
-                  workingDirectory: _model.workingDirectory,
-                );
-              } else {
-                _model = ChatModel(
-                  route: AppRoute.session,
-                  messages: _model.messages,
-                  inputText: _promptController.text,
-                  modelName: _model.modelName,
-                  providerName: _model.providerName,
-                  agentName: _model.agentName,
-                  sessionTitle: _model.sessionTitle,
-                  contextTokens: _model.contextTokens,
-                  contextPercentage: _model.contextPercentage,
-                  cost: _model.cost,
-                  sidebar: _model.sidebar,
-                  sidebarOpen: _model.sidebarOpen,
-                  todos: _model.todos,
-                  modifiedFiles: _model.modifiedFiles,
-                  mcpServers: _model.mcpServers,
-                  lspServers: _model.lspServers,
-                  workingDirectory: _model.workingDirectory,
-                );
-              }
+              _model = ChatModel(
+                route: _model.route,
+                messages: _model.messages,
+                inputText: _promptController.text,
+                modelName: _model.modelName,
+                providerName: _model.providerName,
+                agentName: _model.agentName,
+                sessionTitle: session.title,
+                contextTokens: _model.contextTokens,
+                contextPercentage: _model.contextPercentage,
+                cost: _model.cost,
+                sidebar: _model.sidebar,
+                sidebarOpen: _model.sidebarOpen,
+                todos: _model.todos,
+                modifiedFiles: _model.modifiedFiles,
+                mcpServers: _model.mcpServers,
+                lspServers: _model.lspServers,
+                workingDirectory: _model.workingDirectory,
+              );
             });
+            w.Navigator.of(context).pushNamed('/session');
           },
           child: w.CommandPalette(
             open: _commandPaletteOpen,
@@ -215,6 +237,15 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
                 }
                 if (item.label == 'Toggle Theme') {
                   _themeListOpen = true;
+                }
+                if (item.label == 'Go to Home') {
+                  w.Navigator.of(context).popUntil((route) => route.settings.name == '/');
+                }
+                if (item.label == 'Go to Session') {
+                  w.Navigator.of(context).pushNamed('/session');
+                }
+                if (item.label == 'Go to Agent Overview') {
+                  w.Navigator.of(context).pushNamed('/agent-overview');
                 }
               });
               return null;
@@ -246,66 +277,71 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       );
     }
 
-    // Home view — landing screen
-    if (_model.route == AppRoute.home) {
-      return w.ThemeScope(
-        theme: theme,
-        child: wrapWithOverlays(
-          HomeView(
-            model: _model,
-            statusHint: _footerStatusHint,
-            promptController: _promptController,
-            onSubmit: (text) {
-              setState(() {
-                _model = ChatModel(
-                  route: AppRoute.session,
-                  messages: _model.messages,
-                  inputText: text,
-                  modelName: _model.modelName,
-                  providerName: _model.providerName,
-                  agentName: _model.agentName,
-                  sessionTitle: _model.sessionTitle,
-                  contextTokens: _model.contextTokens,
-                  contextPercentage: _model.contextPercentage,
-                  cost: _model.cost,
-                  sidebar: _model.sidebar,
-                  sidebarOpen: _model.sidebarOpen,
-                  todos: _model.todos,
-                  modifiedFiles: _model.modifiedFiles,
-                  mcpServers: _model.mcpServers,
-                  lspServers: _model.lspServers,
-                  workingDirectory: _model.workingDirectory,
-                );
-              });
-            },
-          ),
+    final navigator = w.Navigator(
+      initialRoute: '/',
+      routes: {
+        '/': (ctx) => HomeView(
+          model: _model,
+          statusHint: _footerStatusHint,
+          promptController: _promptController,
+          onSubmit: (text) {
+            setState(() {
+              _model = ChatModel(
+                route: _model.route,
+                messages: _model.messages,
+                inputText: text,
+                modelName: _model.modelName,
+                providerName: _model.providerName,
+                agentName: _model.agentName,
+                sessionTitle: _model.sessionTitle,
+                contextTokens: _model.contextTokens,
+                contextPercentage: _model.contextPercentage,
+                cost: _model.cost,
+                sidebar: _model.sidebar,
+                sidebarOpen: _model.sidebarOpen,
+                todos: _model.todos,
+                modifiedFiles: _model.modifiedFiles,
+                mcpServers: _model.mcpServers,
+                lspServers: _model.lspServers,
+                workingDirectory: _model.workingDirectory,
+              );
+            });
+            w.Navigator.of(ctx).pushNamed('/session');
+            _handleSubmit(text);
+          },
         ),
-      );
-    }
-
-    final mainLayout = SessionShell(
-      model: _model,
-      scrollController: _scrollController,
-      promptController: _promptController,
-      statusHint: _footerStatusHint,
-      replayEvents: _recentReplayPresentations,
-      replayHistory: _replayHistory,
-      onReplayHistoryModeSelected: (mode) {
-        setState(() {
-          _replayHistory = _replayHistory.withMode(mode);
-        });
-        return tui.Cmd.none();
-      },
-      onReplayHistoryExpandedChanged: (expanded) {
-        setState(() {
-          _replayHistory = _replayHistory.withExpanded(expanded);
-        });
-        return tui.Cmd.none();
+        '/session': (ctx) => SessionShell(
+          model: _model,
+          scrollController: _scrollController,
+          promptController: _promptController,
+          statusHint: _footerStatusHint,
+          chordActive: _chordActive,
+          mode: _mode,
+          scannerFrame: _scannerFrame,
+          enterBehavior: _enterBehavior,
+          replayEvents: _recentReplayPresentations,
+          replayHistory: _replayHistory,
+          onReplayHistoryModeSelected: (mode) {
+            setState(() {
+              _replayHistory = _replayHistory.withMode(mode);
+            });
+            return tui.Cmd.none();
+          },
+          onReplayHistoryExpandedChanged: (expanded) {
+            setState(() {
+              _replayHistory = _replayHistory.withExpanded(expanded);
+            });
+            return tui.Cmd.none();
+          },
+        ),
+        '/agent-overview': (ctx) => AgentOverview(model: _model),
       },
     );
 
-    // Wrap with theme + session list + command palette
-    return w.ThemeScope(theme: theme, child: wrapWithOverlays(mainLayout));
+    return w.ThemeScope(
+      theme: theme,
+      child: wrapWithOverlays(navigator),
+    );
   }
 
   @override
@@ -391,8 +427,13 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         });
         return tui.Cmd.none();
       }
+
+      // Enter intercept for session prompt when behavior is send
+      if (_isSubmitEnter(msg)) {
+        _handleSubmit(_promptController.text);
+        return tui.Cmd.none();
+      }
     }
     return null;
   }
 }
-

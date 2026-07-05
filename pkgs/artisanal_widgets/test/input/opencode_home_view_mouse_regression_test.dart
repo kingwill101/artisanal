@@ -4,7 +4,7 @@ import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 import '../../example/opencode/models/chat_model.dart';
-import '../../example/opencode/widgets/home_view.dart';
+import '../../example/opencode/screens/home.dart';
 
 void main() {
   test('home view click maps to expected character index', () async {

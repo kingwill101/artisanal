@@ -6,6 +6,8 @@ import '../models/chat_model.dart';
 import '../widgets/chat_body.dart';
 import '../widgets/prompt_input.dart';
 import '../widgets/session_header.dart';
+import '../widgets/state/build_mode.dart';
+import '../widgets/state/open_code_ui_state.dart';
 import 'session/sidebar.dart';
 
 class SessionShell extends w.StatelessWidget {
@@ -16,6 +18,10 @@ class SessionShell extends w.StatelessWidget {
     required this.statusHint,
     required this.replayEvents,
     required this.replayHistory,
+    this.chordActive = false,
+    this.mode = BuildMode.build,
+    this.scannerFrame,
+    this.enterBehavior = EnterBehavior.send,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -25,6 +31,10 @@ class SessionShell extends w.StatelessWidget {
   final w.WidgetScrollController scrollController;
   final w.TextFieldController promptController;
   final String statusHint;
+  final bool chordActive;
+  final BuildMode mode;
+  final String? scannerFrame;
+  final EnterBehavior enterBehavior;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
@@ -40,6 +50,10 @@ class SessionShell extends w.StatelessWidget {
       statusHint: statusHint,
       replayEvents: replayEvents,
       replayHistory: replayHistory,
+      chordActive: chordActive,
+      mode: mode,
+      scannerFrame: scannerFrame,
+      enterBehavior: enterBehavior,
       onReplayHistoryModeSelected: onReplayHistoryModeSelected,
       onReplayHistoryExpandedChanged: onReplayHistoryExpandedChanged,
     );
@@ -62,6 +76,10 @@ class SessionContentPane extends w.StatelessWidget {
     required this.statusHint,
     required this.replayEvents,
     required this.replayHistory,
+    this.chordActive = false,
+    this.mode = BuildMode.build,
+    this.scannerFrame,
+    this.enterBehavior = EnterBehavior.send,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -71,6 +89,10 @@ class SessionContentPane extends w.StatelessWidget {
   final w.WidgetScrollController scrollController;
   final w.TextFieldController promptController;
   final String statusHint;
+  final bool chordActive;
+  final BuildMode mode;
+  final String? scannerFrame;
+  final EnterBehavior enterBehavior;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
@@ -100,6 +122,8 @@ class SessionContentPane extends w.StatelessWidget {
                   contextTokens: model.contextTokens,
                   contextPercentage: model.contextPercentage,
                   cost: model.cost,
+                  mode: mode,
+                  dimmed: chordActive,
                 ),
                 w.SizedBox(height: 1),
                 w.Expanded(
@@ -115,6 +139,8 @@ class SessionContentPane extends w.StatelessWidget {
                   agentName: model.agentName,
                   modelName: model.modelName,
                   providerName: model.providerName,
+                  enterBehavior: enterBehavior,
+                  dimmed: chordActive,
                 ),
                 if (replayEvents.isNotEmpty) ...[
                   w.SizedBox(height: 1),
@@ -144,6 +170,9 @@ class SessionContentPane extends w.StatelessWidget {
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
           statusHint: statusHint,
+          scannerFrame: scannerFrame,
+          tokenCount: model.contextTokens,
+          mode: mode,
         ),
       ],
     );

@@ -4,7 +4,7 @@ import 'package:test/test.dart';
 
 import '../../example/opencode/models/chat_model.dart';
 import '../../example/opencode/theme.dart';
-import '../../example/opencode/widgets/home_view.dart';
+import '../../example/opencode/screens/home.dart';
 
 void main() {
   test('OpenCode home hero sits near vertical center', () async {

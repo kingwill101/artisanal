@@ -3,6 +3,8 @@ library;
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
+import '../theme.dart';
+
 class LeftAccentPane extends w.StatelessWidget {
   LeftAccentPane({
     required this.accentColor,
@@ -21,7 +23,7 @@ class LeftAccentPane extends w.StatelessWidget {
 
   @override
   w.Widget build(w.BuildContext context) {
-    final resolvedAccent = dimmed ? style.BasicColor('#808080') : accentColor;
+    final resolvedAccent = dimmed ? OC.borderSubtle : accentColor;
     return w.Row(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [

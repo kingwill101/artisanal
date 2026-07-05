@@ -45,7 +45,7 @@ class HomeView extends w.StatefulWidget {
 class _HomeViewState extends w.State<HomeView> {
   bool _isSubmitEnter(tui.KeyMsg msg) {
     final key = msg.key;
-    if (key.shift || key.alt || key.meta || key.hyper || key.superKey) {
+    if (key.ctrl || key.shift || key.alt || key.meta || key.hyper || key.superKey) {
       return false;
     }
     return key.isEnterLike;

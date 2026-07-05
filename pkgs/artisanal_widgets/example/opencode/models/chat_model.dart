@@ -123,7 +123,7 @@ class ModelOption {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Which route is active.
-enum AppRoute { home, session }
+enum AppRoute { home, session, agentOverview }
 
 /// Full app state.
 class ChatModel {

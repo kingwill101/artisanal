@@ -382,6 +382,21 @@ List<w.CommandPaletteItem> sampleCommands() {
     ),
     w.CommandPaletteItem(label: 'Toggle Theme', group: 'View'),
     w.CommandPaletteItem(
+      label: 'Go to Home',
+      shortcut: 'ctrl+h',
+      group: 'Navigate',
+    ),
+    w.CommandPaletteItem(
+      label: 'Go to Session',
+      shortcut: 'ctrl+s',
+      group: 'Navigate',
+    ),
+    w.CommandPaletteItem(
+      label: 'Go to Agent Overview',
+      shortcut: 'ctrl+shift+a',
+      group: 'Navigate',
+    ),
+    w.CommandPaletteItem(
       label: 'Switch Model',
       shortcut: 'ctrl+k',
       group: 'Model',
