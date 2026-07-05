@@ -586,6 +586,82 @@ class DiffStyles {
   /// Gutter style layered onto lines that already have review threads.
   final Style commentThreadGutter;
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! DiffStyles) return false;
+    return addedLine == other.addedLine &&
+        removedLine == other.removedLine &&
+        contextLine == other.contextLine &&
+        fileHeader == other.fileHeader &&
+        hunkHeader == other.hunkHeader &&
+        addedGutter == other.addedGutter &&
+        removedGutter == other.removedGutter &&
+        contextGutter == other.contextGutter &&
+        lineNumber == other.lineNumber &&
+        prettyAddedLine == other.prettyAddedLine &&
+        prettyRemovedLine == other.prettyRemovedLine &&
+        prettyContextLine == other.prettyContextLine &&
+        prettyFileHeader == other.prettyFileHeader &&
+        prettyAddedLineNumber == other.prettyAddedLineNumber &&
+        prettyRemovedLineNumber == other.prettyRemovedLineNumber &&
+        prettyContextLineNumber == other.prettyContextLineNumber &&
+        sideBySideSeparator == other.sideBySideSeparator &&
+        sideBySideAddedLine == other.sideBySideAddedLine &&
+        sideBySideRemovedLine == other.sideBySideRemovedLine &&
+        sideBySideContextLine == other.sideBySideContextLine &&
+        sideBySideLineNumber == other.sideBySideLineNumber &&
+        sideBySideEmptyCell == other.sideBySideEmptyCell &&
+        sideBySideAddedMarker == other.sideBySideAddedMarker &&
+        sideBySideRemovedMarker == other.sideBySideRemovedMarker &&
+        sideBySideContextMarker == other.sideBySideContextMarker &&
+        inlineAddedHighlight == other.inlineAddedHighlight &&
+        inlineRemovedHighlight == other.inlineRemovedHighlight &&
+        selectedCommentLine == other.selectedCommentLine &&
+        selectedCommentGutter == other.selectedCommentGutter &&
+        commentRangeLine == other.commentRangeLine &&
+        commentRangeGutter == other.commentRangeGutter &&
+        commentThreadLine == other.commentThreadLine &&
+        commentThreadGutter == other.commentThreadGutter;
+  }
+
+  @override
+  int get hashCode => Object.hashAll([
+    addedLine,
+    removedLine,
+    contextLine,
+    fileHeader,
+    hunkHeader,
+    addedGutter,
+    removedGutter,
+    contextGutter,
+    lineNumber,
+    prettyAddedLine,
+    prettyRemovedLine,
+    prettyContextLine,
+    prettyFileHeader,
+    prettyAddedLineNumber,
+    prettyRemovedLineNumber,
+    prettyContextLineNumber,
+    sideBySideSeparator,
+    sideBySideAddedLine,
+    sideBySideRemovedLine,
+    sideBySideContextLine,
+    sideBySideLineNumber,
+    sideBySideEmptyCell,
+    sideBySideAddedMarker,
+    sideBySideRemovedMarker,
+    sideBySideContextMarker,
+    inlineAddedHighlight,
+    inlineRemovedHighlight,
+    selectedCommentLine,
+    selectedCommentGutter,
+    commentRangeLine,
+    commentRangeGutter,
+    commentThreadLine,
+    commentThreadGutter,
+  ]);
+
   /// Creates a copy with the given fields replaced.
   DiffStyles copyWith({
     Style? addedLine,
