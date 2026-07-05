@@ -49,6 +49,7 @@ class AgentOverview extends w.StatelessWidget {
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
           statusHint: '/agent',
+          mode: model.mode
         ),
       ],
     );

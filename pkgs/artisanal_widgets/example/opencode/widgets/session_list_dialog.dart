@@ -12,6 +12,7 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import '../models/chat_model.dart';
 import '../theme.dart';
 
+//TODO replace me with style defined constants
 /// Braille spinner frames for busy session indicator.
 const _brailleFrames = [
   '\u280b',

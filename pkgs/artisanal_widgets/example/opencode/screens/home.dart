@@ -57,7 +57,7 @@ class _HomeViewState extends w.State<HomeView> {
       widget.onSubmit?.call(widget.promptController?.text ?? '');
       return tui.Cmd.none();
     }
-    return null;
+    return tui.Cmd.none();
   }
 
   @override
@@ -88,7 +88,7 @@ class _HomeViewState extends w.State<HomeView> {
                           w.SizedBox(height: 1),
                           PromptInput(
                             controller: widget.promptController,
-                            agentName: model.agentName,
+                            agentName: model.mode.name,
                             modelName: model.modelName,
                             providerName: model.providerName,
                             onChanged: widget.onInputChanged,
@@ -108,6 +108,7 @@ class _HomeViewState extends w.State<HomeView> {
           ),
         ),
         FooterBar(
+          mode: model.mode,
           workingDirectory: model.workingDirectory,
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
@@ -136,7 +137,7 @@ class _HomeViewState extends w.State<HomeView> {
         ),
         w.SizedBox(width: 2),
         w.Text(
-          'tabb',
+          'tab',
           style: style.Style()
             ..foreground(OC.text)
             ..dim(),

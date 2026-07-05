@@ -6,11 +6,9 @@ import '../models/chat_model.dart';
 import '../widgets/chat_body.dart';
 import '../widgets/prompt_input.dart';
 import '../widgets/session_header.dart';
-import '../widgets/state/build_mode.dart';
-import '../widgets/state/open_code_ui_state.dart';
 import 'session/sidebar.dart';
 
-class SessionShell extends w.StatelessWidget {
+class SessionShell extends w.StatefulWidget {
   SessionShell({
     required this.model,
     required this.scrollController,
@@ -19,9 +17,7 @@ class SessionShell extends w.StatelessWidget {
     required this.replayEvents,
     required this.replayHistory,
     this.chordActive = false,
-    this.mode = BuildMode.build,
     this.scannerFrame,
-    this.enterBehavior = EnterBehavior.send,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -32,9 +28,7 @@ class SessionShell extends w.StatelessWidget {
   final w.TextFieldController promptController;
   final String statusHint;
   final bool chordActive;
-  final BuildMode mode;
   final String? scannerFrame;
-  final EnterBehavior enterBehavior;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
@@ -42,33 +36,36 @@ class SessionShell extends w.StatelessWidget {
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
+  w.State<SessionShell> createState() => _SessionShellState();
+}
+
+class _SessionShellState extends w.State<SessionShell> {
+  @override
   w.Widget build(w.BuildContext context) {
     final content = SessionContentPane(
-      model: model,
-      scrollController: scrollController,
-      promptController: promptController,
-      statusHint: statusHint,
-      replayEvents: replayEvents,
-      replayHistory: replayHistory,
-      chordActive: chordActive,
-      mode: mode,
-      scannerFrame: scannerFrame,
-      enterBehavior: enterBehavior,
-      onReplayHistoryModeSelected: onReplayHistoryModeSelected,
-      onReplayHistoryExpandedChanged: onReplayHistoryExpandedChanged,
+      model: widget.model,
+      scrollController: widget.scrollController,
+      promptController: widget.promptController,
+      statusHint: widget.statusHint,
+      replayEvents: widget.replayEvents,
+      replayHistory: widget.replayHistory,
+      chordActive: widget.chordActive,
+      scannerFrame: widget.scannerFrame,
+      onReplayHistoryModeSelected: widget.onReplayHistoryModeSelected,
+      onReplayHistoryExpandedChanged: widget.onReplayHistoryExpandedChanged,
     );
-    if (!model.sidebarOpen) return content;
+
     return w.Row(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
         w.Expanded(child: content),
-        SessionSidebarPane(model: model),
+        if (widget.model.sidebarOpen) SessionSidebarPane(model: widget.model),
       ],
     );
   }
 }
 
-class SessionContentPane extends w.StatelessWidget {
+class SessionContentPane extends w.StatefulWidget {
   SessionContentPane({
     required this.model,
     required this.scrollController,
@@ -77,9 +74,7 @@ class SessionContentPane extends w.StatelessWidget {
     required this.replayEvents,
     required this.replayHistory,
     this.chordActive = false,
-    this.mode = BuildMode.build,
     this.scannerFrame,
-    this.enterBehavior = EnterBehavior.send,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -90,14 +85,45 @@ class SessionContentPane extends w.StatelessWidget {
   final w.TextFieldController promptController;
   final String statusHint;
   final bool chordActive;
-  final BuildMode mode;
   final String? scannerFrame;
-  final EnterBehavior enterBehavior;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
   onReplayHistoryModeSelected;
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
+
+  @override
+  w.State<SessionContentPane> createState() => _SessionContentPaneState();
+}
+
+class _SessionContentPaneState extends w.State<SessionContentPane> {
+  @override
+  tui.Cmd? handleIntercept(tui.Msg msg) {
+    //TODO extract and make usable between home and session screen prompt inputs
+    switch (msg) {
+      case tui.KeyMsg(:final key) when key.isEnterLike:
+        if (widget.model.enterBehavior == .send) {
+          //send message
+          final usrMesage = _textController.value;
+          _textController.clear();
+          //sendUSerEssage(_usrMessage);
+          return null;
+        } else {
+          if (key.shift) {
+            //send message
+            final usrMesage = _textController.value;
+            _textController.clear();
+            //sendUSerEssage(_usrMessage);
+            return null;
+          }
+        }
+        break;
+    }
+
+    return null;
+  }
+
+  final _textController = tui.TextEditingController();
 
   @override
   w.Widget build(w.BuildContext context) {
@@ -116,44 +142,46 @@ class SessionContentPane extends w.StatelessWidget {
               crossAxisAlignment: w.CrossAxisAlignment.stretch,
               children: [
                 SessionHeader(
-                  title: model.sessionTitle.isNotEmpty
-                      ? model.sessionTitle
+                  title: widget.model.sessionTitle.isNotEmpty
+                      ? widget.model.sessionTitle
                       : 'New Session',
-                  contextTokens: model.contextTokens,
-                  contextPercentage: model.contextPercentage,
-                  cost: model.cost,
-                  mode: mode,
-                  dimmed: chordActive,
+                  contextTokens: widget.model.contextTokens,
+                  contextPercentage: widget.model.contextPercentage,
+                  cost: widget.model.cost,
+                  mode: widget.model.mode,
+                  dimmed: widget.chordActive,
                 ),
                 w.SizedBox(height: 1),
                 w.Expanded(
                   child: ChatBody(
-                    messages: model.messages,
-                    scrollController: scrollController,
+                    messages: widget.model.messages,
+                    scrollController: widget.scrollController,
                     showDiffs: true,
                   ),
                 ),
                 w.SizedBox(height: 1),
                 PromptInput(
-                  controller: promptController,
-                  agentName: model.agentName,
-                  modelName: model.modelName,
-                  providerName: model.providerName,
-                  enterBehavior: enterBehavior,
-                  dimmed: chordActive,
+                  controller: _textController,
+                  agentName: widget.model.agentName,
+                  modelName: widget.model.modelName,
+                  providerName: widget.model.providerName,
+                  enterBehavior: widget.model.enterBehavior,
+                  dimmed: widget.chordActive,
                 ),
-                if (replayEvents.isNotEmpty) ...[
+                if (widget.replayEvents.isNotEmpty) ...[
                   w.SizedBox(height: 1),
                   w.ReplayEventHistoryBrowser.renderCaptures(
                     title: 'Replay History',
-                    events: replayEvents,
-                    state: replayHistory,
+                    events: widget.replayEvents,
+                    state: widget.replayHistory,
                     onStateChanged: (state) {
-                      if (state.mode != replayHistory.mode) {
-                        return onReplayHistoryModeSelected?.call(state.mode);
+                      if (state.mode != widget.replayHistory.mode) {
+                        return widget.onReplayHistoryModeSelected?.call(
+                          state.mode,
+                        );
                       }
-                      if (state.expanded != replayHistory.expanded) {
-                        return onReplayHistoryExpandedChanged?.call(
+                      if (state.expanded != widget.replayHistory.expanded) {
+                        return widget.onReplayHistoryExpandedChanged?.call(
                           state.expanded,
                         );
                       }
@@ -166,13 +194,13 @@ class SessionContentPane extends w.StatelessWidget {
           ),
         ),
         FooterBar(
-          workingDirectory: model.workingDirectory,
-          lspCount: model.lspServers.length,
-          mcpCount: model.mcpServers.length,
-          statusHint: statusHint,
-          scannerFrame: scannerFrame,
-          tokenCount: model.contextTokens,
-          mode: mode,
+          workingDirectory: widget.model.workingDirectory,
+          lspCount: widget.model.lspServers.length,
+          mcpCount: widget.model.mcpServers.length,
+          statusHint: widget.statusHint,
+          scannerFrame: widget.scannerFrame,
+          tokenCount: widget.model.contextTokens,
+          mode: widget.model.mode,
         ),
       ],
     );

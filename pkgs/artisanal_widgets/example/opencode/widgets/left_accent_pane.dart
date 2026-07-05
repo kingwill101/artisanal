@@ -24,18 +24,13 @@ class LeftAccentPane extends w.StatelessWidget {
   @override
   w.Widget build(w.BuildContext context) {
     final resolvedAccent = dimmed ? OC.borderSubtle : accentColor;
-    return w.Row(
-      crossAxisAlignment: w.CrossAxisAlignment.stretch,
-      children: [
-        w.Container(color: resolvedAccent, width: 1),
-        w.Expanded(
-          child: w.Container(
-            color: backgroundColor,
-            padding: padding,
-            child: child,
-          ),
-        ),
-      ],
+
+    return w.Frame(
+      border: style.Border.split.copyWith(right: ''),
+      borderColor: resolvedAccent,
+      background: backgroundColor,
+      padding: padding ?? w.EdgeInsets.zero,
+      child: child,
     );
   }
 }

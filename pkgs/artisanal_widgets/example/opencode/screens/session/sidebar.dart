@@ -19,14 +19,14 @@ class _SessionSidebarPaneState extends w.State<SessionSidebarPane> {
   @override
   void initState() {
     super.initState();
-    _state = _copySidebarState(widget.model.sidebar);
+    _state = widget.model.sidebar.copyWith();
   }
 
   @override
   tui.Cmd? didUpdateWidget(covariant SessionSidebarPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.model != widget.model) {
-      _state = _copySidebarState(widget.model.sidebar);
+      _state = widget.model.sidebar.copyWith();
     }
     return null;
   }
@@ -37,26 +37,27 @@ class _SessionSidebarPaneState extends w.State<SessionSidebarPane> {
       model: widget.model,
       sidebarState: _state,
       onToggleMcp: () {
-        setState(() => _state.mcpExpanded = !_state.mcpExpanded);
+        setState(() {
+          _state.copyWith(mcpExpanded: !_state.mcpExpanded);
+        });
       },
       onToggleLsp: () {
-        setState(() => _state.lspExpanded = !_state.lspExpanded);
+        setState(() {
+          _state.copyWith(lspExpanded: !_state.lspExpanded);
+        });
       },
       onToggleTodo: () {
-        setState(() => _state.todoExpanded = !_state.todoExpanded);
+        setState(() {
+          _state.copyWith(todoExpanded: !_state.todoExpanded);
+        });
       },
       onToggleFiles: () {
-        setState(() => _state.filesExpanded = !_state.filesExpanded);
+        setState(() {
+          _state.copyWith(filesExpanded: !_state.filesExpanded);
+        });
       },
     );
   }
 }
 
-SidebarState _copySidebarState(SidebarState source) {
-  final state = SidebarState();
-  state.mcpExpanded = source.mcpExpanded;
-  state.lspExpanded = source.lspExpanded;
-  state.todoExpanded = source.todoExpanded;
-  state.filesExpanded = source.filesExpanded;
-  return state;
-}
+

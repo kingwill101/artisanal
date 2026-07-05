@@ -13,9 +13,9 @@ import 'dart:io';
 
 import 'app.dart';
 export 'app.dart';
+import 'models/chat_model.dart';
 import 'theme.dart';
 import 'replay_driver.dart';
-
 
 String? _themeOverrideFromArgs(List<String> args) {
   for (var i = 0; i < args.length; i++) {
@@ -94,6 +94,23 @@ void main(List<String> args) async {
     backgroundColorBuilder: currentOpenCodeRouteBackground,
   );
 
+  final chordInterceptor = tui.KeyChordInterceptor(
+    bindings: [
+      tui.KeyChordBinding(
+        id: AppChord.sidebar.id,
+        prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
+        key: tui.KeyBinding.withHelp(['b'], 'b', 'sidebar'),
+      ),
+      tui.KeyChordBinding(
+        id: AppChord.models.id,
+        prefix: tui.KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
+        key: tui.KeyBinding.withHelp(['m'], 'm', 'models'),
+      ),
+    ],
+    timeout: null,
+    inner: replayPlan?.interceptor,
+  );
+
   try {
     await tui.runProgram(
       app,
@@ -102,7 +119,7 @@ void main(List<String> args) async {
         mouse: true,
         mouseMode: tui.MouseMode.allMotion,
         replay: replayPlan?.replay,
-        interceptor: replayPlan?.interceptor,
+        interceptor: chordInterceptor,
         blockInputWhileReplay: replayPlan?.blockInput ?? false,
       ),
     );

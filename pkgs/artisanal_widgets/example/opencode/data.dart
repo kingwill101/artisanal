@@ -263,6 +263,7 @@ ChatModel initialModel() {
       ),
       ..._loadTestMessages(),
     ],
+    enterBehavior: .send
   );
 }
 

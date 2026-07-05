@@ -22,7 +22,6 @@ import 'widgets/state/build_mode.dart';
 import 'widgets/state/open_code_ui_state.dart';
 import 'widgets/theme_list_dialog.dart';
 
-
 // ---------------------------------------------------------------------------
 // Root widget
 // ---------------------------------------------------------------------------
@@ -60,9 +59,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
   // UI state
   bool _chordActive = false;
-  BuildMode _mode = BuildMode.build;
   String? _scannerFrame;
-  EnterBehavior _enterBehavior = EnterBehavior.send;
 
   @override
   void initState() {
@@ -105,17 +102,6 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     });
   }
 
-  bool _isSubmitEnter(tui.KeyMsg msg) {
-    final key = msg.key;
-    if (key.shift || key.alt || key.meta || key.hyper || key.superKey) {
-      return false;
-    }
-    if (_enterBehavior == EnterBehavior.send) {
-      return key.isEnterLike;
-    }
-    return key.isEnterLike && key.ctrl;
-  }
-
   void _handleSubmit(String text) {
     if (text.trim().isEmpty) return;
 
@@ -124,13 +110,12 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       ..add(ChatMessage.user(text));
 
     setState(() {
-      _model = ChatModel(
+      _model = _model.copyWith(
         route: _model.route,
         messages: updatedMessages,
         inputText: '',
         modelName: _model.modelName,
         providerName: _model.providerName,
-        agentName: _model.agentName,
         sessionTitle: _model.sessionTitle,
         contextTokens: _model.contextTokens,
         contextPercentage: _model.contextPercentage,
@@ -239,7 +224,9 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
                   _themeListOpen = true;
                 }
                 if (item.label == 'Go to Home') {
-                  w.Navigator.of(context).popUntil((route) => route.settings.name == '/');
+                  w.Navigator.of(
+                    context,
+                  ).popUntil((route) => route.settings.name == '/');
                 }
                 if (item.label == 'Go to Session') {
                   w.Navigator.of(context).pushNamed('/session');
@@ -286,25 +273,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           promptController: _promptController,
           onSubmit: (text) {
             setState(() {
-              _model = ChatModel(
-                route: _model.route,
-                messages: _model.messages,
-                inputText: text,
-                modelName: _model.modelName,
-                providerName: _model.providerName,
-                agentName: _model.agentName,
-                sessionTitle: _model.sessionTitle,
-                contextTokens: _model.contextTokens,
-                contextPercentage: _model.contextPercentage,
-                cost: _model.cost,
-                sidebar: _model.sidebar,
-                sidebarOpen: _model.sidebarOpen,
-                todos: _model.todos,
-                modifiedFiles: _model.modifiedFiles,
-                mcpServers: _model.mcpServers,
-                lspServers: _model.lspServers,
-                workingDirectory: _model.workingDirectory,
-              );
+              _model = _model.copyWith(inputText: text);
             });
             w.Navigator.of(ctx).pushNamed('/session');
             _handleSubmit(text);
@@ -316,9 +285,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           promptController: _promptController,
           statusHint: _footerStatusHint,
           chordActive: _chordActive,
-          mode: _mode,
           scannerFrame: _scannerFrame,
-          enterBehavior: _enterBehavior,
           replayEvents: _recentReplayPresentations,
           replayHistory: _replayHistory,
           onReplayHistoryModeSelected: (mode) {
@@ -338,14 +305,38 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       },
     );
 
-    return w.ThemeScope(
-      theme: theme,
-      child: wrapWithOverlays(navigator),
-    );
+    return w.ThemeScope(theme: theme, child: wrapWithOverlays(navigator));
   }
 
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
+    switch (msg) {
+      case tui.KeyChordResolvedMsg(:final id):
+        setState(() {
+          _chordActive = false;
+
+          if (id == AppChord.sidebar.id) {
+            _model = _model.copyWith(sidebarOpen: !_model.sidebarOpen);
+          }
+        });
+
+        break;
+
+      // Prefix detected: show "waiting for second key"
+      case tui.KeyChordPrefixMsg():
+        setState(() {
+          _chordActive = true;
+        });
+        break;
+
+      // Cancelled (timeout or unmatched key)
+      case tui.KeyChordCancelledMsg():
+        setState(() {
+          _chordActive = false;
+        });
+        break;
+    }
+
     if (msg is tui.ClipboardSetMsg) {
       final token = ++_copyToastToken;
       setState(() {
@@ -383,6 +374,17 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
     if (msg is tui.KeyMsg) {
       final key = msg.key;
+
+      if (key.isTab) {
+        setState(() {
+          _model = _model.copyWith(
+            mode: switch (_model.mode) {
+              BuildMode.build => .plan,
+              BuildMode.plan => .build,
+            },
+          );
+        });
+      }
 
       // ctrl+p to toggle command palette
       if (key == tui.Keys.ctrl('p')) {
@@ -428,9 +430,13 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         return tui.Cmd.none();
       }
 
-      // Enter intercept for session prompt when behavior is send
-      if (_isSubmitEnter(msg)) {
+      if (key.isEnterLike) {
+        if (_model.enterBehavior == EnterBehavior.newline && !key.shift) {
+          return tui.Cmd.none();
+        }
+
         _handleSubmit(_promptController.text);
+
         return tui.Cmd.none();
       }
     }
