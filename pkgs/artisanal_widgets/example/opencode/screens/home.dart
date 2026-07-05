@@ -14,10 +14,10 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../models/chat_model.dart';
 import '../theme.dart';
-import 'footer_bar.dart';
-import 'logo_widget.dart';
-import 'prompt_input.dart';
-import 'tips_widget.dart';
+import '../widgets/footer_bar.dart';
+import '../widgets/logo_widget.dart';
+import '../widgets/prompt_input.dart';
+import '../widgets/tips_widget.dart';
 
 /// The home / landing view before a chat session starts.
 class HomeView extends w.StatefulWidget {
