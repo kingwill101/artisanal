@@ -330,7 +330,14 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       _attachScrollController(widget.scrollController);
     }
     _syncController();
+    _updateThemeStyles();
     return null;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateThemeStyles();
   }
 
   void _attachController(GitDiffController? controller) {
@@ -353,6 +360,80 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     } else {
       _scrollControllerAttached = false;
     }
+  }
+
+  void _updateThemeStyles() {
+    final theme = ThemeScope.of(context);
+    final terminalHasDarkBackground = hasDarkBackground;
+    final needsThemeStylesUpdate =
+        widget.styles == null
+            ? !identical(theme, _cachedTheme) ||
+                _cachedHasDarkBackground != terminalHasDarkBackground
+            : _cachedThemeStyles != widget.styles ||
+                _cachedHasDarkBackground != terminalHasDarkBackground;
+
+    if (!needsThemeStylesUpdate) return;
+
+    _cachedTheme = theme;
+    _cachedHasDarkBackground = terminalHasDarkBackground;
+    _cachedThemeStyles = (widget.styles ??
+            DiffStyles.fromColors(
+              success: theme.gitDiffTheme?.addedBackground ?? theme.success,
+              error: theme.gitDiffTheme?.removedBackground ?? theme.error,
+              muted: theme.gitDiffTheme?.contextForeground ?? theme.muted,
+              surface: theme.surface,
+              onSurface: theme.gitDiffTheme?.addedForeground ?? theme.onSurface,
+              onBackground:
+                  theme.gitDiffTheme?.headerForeground ?? theme.onBackground,
+              border: theme.border,
+            ))
+        .withHasDarkBackground(terminalHasDarkBackground);
+
+    final gdTheme = theme.gitDiffTheme;
+    if (gdTheme != null) {
+      Style bgStyle(Color color) {
+        return Style()
+          ..hasDarkBackground = terminalHasDarkBackground
+          ..background(color);
+      }
+
+      final overrides = <String, Style>{};
+      if (gdTheme.selectedCommentLineBackground != null) {
+        overrides['selectedCommentLine'] =
+            bgStyle(gdTheme.selectedCommentLineBackground!);
+      }
+      if (gdTheme.selectedCommentGutterBackground != null) {
+        overrides['selectedCommentGutter'] =
+            bgStyle(gdTheme.selectedCommentGutterBackground!);
+      }
+      if (gdTheme.commentRangeLineBackground != null) {
+        overrides['commentRangeLine'] =
+            bgStyle(gdTheme.commentRangeLineBackground!);
+      }
+      if (gdTheme.commentRangeGutterBackground != null) {
+        overrides['commentRangeGutter'] =
+            bgStyle(gdTheme.commentRangeGutterBackground!);
+      }
+      if (gdTheme.commentThreadLineBackground != null) {
+        overrides['commentThreadLine'] =
+            bgStyle(gdTheme.commentThreadLineBackground!);
+      }
+      if (gdTheme.commentThreadGutterBackground != null) {
+        overrides['commentThreadGutter'] =
+            bgStyle(gdTheme.commentThreadGutterBackground!);
+      }
+      if (overrides.isNotEmpty) {
+        _cachedThemeStyles = _cachedThemeStyles!.copyWith(
+          selectedCommentLine: overrides['selectedCommentLine'],
+          selectedCommentGutter: overrides['selectedCommentGutter'],
+          commentRangeLine: overrides['commentRangeLine'],
+          commentRangeGutter: overrides['commentRangeGutter'],
+          commentThreadLine: overrides['commentThreadLine'],
+          commentThreadGutter: overrides['commentThreadGutter'],
+        );
+      }
+    }
+    _controller.configure(styles: _cachedThemeStyles);
   }
 
   @override
@@ -498,7 +579,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
         widget.styles == null
             ? !identical(theme, _cachedTheme) ||
                 _cachedHasDarkBackground != terminalHasDarkBackground
-            : !identical(widget.styles, _cachedThemeStyles) ||
+            : _cachedThemeStyles != widget.styles ||
                 _cachedHasDarkBackground != terminalHasDarkBackground;
 
     if (needsThemeStylesUpdate) {
@@ -561,7 +642,6 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
           );
         }
       }
-      _controller.configure(styles: _cachedThemeStyles);
     }
     final model = _controller.model;
     if (TuiTrace.enabled) {
