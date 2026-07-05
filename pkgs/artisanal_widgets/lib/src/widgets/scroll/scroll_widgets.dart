@@ -111,6 +111,10 @@ class WidgetScrollController implements ScrollController {
   // Shrinks are deferred until drag ends to avoid mid-drag remapping/clamping.
   int? _deferredContentExtent;
 
+  // When true, _contentExtent can only grow (never shrink) in updateMetrics.
+  // Set after thumb drag release to prevent snap-back until user scrolls.
+  bool _contentFrozen = false;
+
   // ---- Selection state ----
 
   /// Start of selection in content coordinates (x, y) where Y includes
@@ -153,8 +157,12 @@ class WidgetScrollController implements ScrollController {
     if (_thumbDragActive == active) return;
     _thumbDragActive = active;
     if (!active && _deferredContentExtent != null) {
-      final target = _deferredContentExtent!;
+      assert(_deferredContentExtent! >= _contentExtent,
+          'setThumbDragActive: deferred content extent $_deferredContentExtent '
+          '< current content extent $_contentExtent');
+      final target = math.max(_contentExtent, _deferredContentExtent!);
       _deferredContentExtent = null;
+      _contentFrozen = true;
       if (target != _contentExtent) {
         final beforeContent = _contentExtent;
         final beforeOffset = _offset;
@@ -167,6 +175,8 @@ class WidgetScrollController implements ScrollController {
           'clamped=$clamped',
         );
       }
+      assert(_contentExtent >= 0,
+          'setThumbDragActive: content extent must be non-negative');
     }
   }
 
@@ -226,19 +236,36 @@ class WidgetScrollController implements ScrollController {
     final prevOffset = _offset;
     final nextViewport = math.max(0, viewportExtent);
     final incomingContent = math.max(0, contentExtent);
+    assert(
+      !_thumbDragActive || _deferredContentExtent == null ||
+          _deferredContentExtent! >= incomingContent,
+      'updateMetrics: deferred content shrank during drag '
+      '($_deferredContentExtent -> $incomingContent)',
+    );
 
     _viewportExtent = nextViewport;
     if (_thumbDragActive) {
-      _deferredContentExtent = incomingContent;
-      // Keep content extent fixed while thumb drag is active so the
-      // thumb-to-offset mapping remains stable and does not remap as
-      // variable-height measurements fluctuate.
+      // Track the max content extent observed during drag so releasing at
+      // the bottom never snaps the offset upward even if measurements
+      // temporarily shrink the estimate.
+      _deferredContentExtent = math.max(
+        _deferredContentExtent ?? incomingContent,
+        incomingContent,
+      );
     } else {
       _deferredContentExtent = null;
-      _contentExtent = incomingContent;
+      if (_contentFrozen) {
+        assert(incomingContent >= 0);
+        _contentExtent = math.max(_contentExtent, incomingContent);
+      } else {
+        _contentExtent = incomingContent;
+      }
     }
 
     final clamped = _clampOffset();
+    assert(_offset >= 0, 'updateMetrics: offset must be non-negative');
+    assert(_offset <= maxOffset,
+        'updateMetrics: offset $_offset exceeds max $maxOffset');
     if (prevViewport != _viewportExtent ||
         prevContent != _contentExtent ||
         clamped) {
@@ -4319,7 +4346,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   final _FenwickTree _strideTree = _FenwickTree(0);
   int _cachedItemCount = -1;
   int _cachedSeparatorBreaks = -1;
-  int _cachedEstimated = -1;
   int? _lastMaxWidth;
   bool _needsRepaint = false;
   int _lastPaintOffset = -1;
@@ -4406,6 +4432,8 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   }
 
   void _clearMeasurements() {
+    assert(_strideTree.total >= 0,
+        '_clearMeasurements: stride tree total must be non-negative (was ${_strideTree.total})');
     _invalidateMeasurements();
     _measuredHeights.clear();
     _childPaintCache.clear();
@@ -4413,7 +4441,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     _strideTree.resize(0);
     _cachedItemCount = -1;
     _cachedSeparatorBreaks = -1;
-    _cachedEstimated = -1;
   }
 
   @override
@@ -4471,19 +4498,26 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
 
   void _syncCache(int itemCount, int separatorBreaks, int estimate) {
     if (_cachedItemCount != itemCount ||
-        _cachedSeparatorBreaks != separatorBreaks ||
-        _cachedEstimated != estimate) {
+        _cachedSeparatorBreaks != separatorBreaks) {
+      _traceScroll(
+        'virtual_list.sync_cache_rebuild '
+        'zone=$zoneId items=$itemCount estimate=$estimate '
+        'sep=$separatorBreaks prevItems=$_cachedItemCount prevSep=$_cachedSeparatorBreaks',
+      );
       _cachedItemCount = itemCount;
       _cachedSeparatorBreaks = separatorBreaks;
-      _cachedEstimated = estimate;
       _measuredHeights.removeWhere((index, _) => index >= itemCount);
       _childPaintCache.removeWhere((index, _) => index >= itemCount);
       _strideTree.setAll(itemCount, 0);
+      int expectedTotal = 0;
       for (var i = 0; i < itemCount; i++) {
         final height = _resolveItemHeight(i, estimate);
         final stride = height + (i < itemCount - 1 ? separatorBreaks : 0);
         _strideTree.set(i, stride);
+        expectedTotal += stride;
       }
+      assert(_strideTree.total == expectedTotal,
+          '_syncCache: stride tree total $_strideTree.total != $expectedTotal');
     }
   }
 
@@ -4646,6 +4680,11 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     required int separatorBreaks,
   }) {
     if (_measuredHeights[index] == measured) return;
+    assert(measured >= 1, '_storeMeasuredHeight: height $measured < 1');
+    assert(
+      index >= 0 && index < _strideTree.size,
+      '_storeMeasuredHeight: index $index out of range [0, $_strideTree.size)',
+    );
     _measuredHeights[index] = measured;
     _strideTree.set(
       index,
@@ -4763,8 +4802,25 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     final itemCount = _itemCount;
     if (variableHeight) {
       if (_lastMaxWidth != maxWidth) {
+        assert(
+          _lastMaxWidth == null ||
+              (_lastMaxWidth! - maxWidth).abs() <= 100,
+          'layout: maxWidth jumped from $_lastMaxWidth to $maxWidth',
+        );
+        final widthDiff =
+            _lastMaxWidth != null ? (_lastMaxWidth! - maxWidth).abs() : 0;
+        _traceScroll(
+          'virtual_list.clear_measurements '
+          'zone=$zoneId reason=_lastMaxWidth($_lastMaxWidth)!=maxWidth($maxWidth)'
+          ' diff=$widthDiff',
+        );
         _lastMaxWidth = maxWidth;
-        _clearMeasurements();
+        if (widthDiff > 4) {
+          _clearMeasurements();
+        } else {
+          _childPaintCache.clear();
+          _invalidateVisiblePaintCache();
+        }
       }
       final baseEstimate = math
           .max(1, estimatedItemExtent ?? itemExtent)
@@ -5095,6 +5151,8 @@ class _FenwickTree {
 
   int _size;
   late List<int> _tree;
+
+  int get size => _size;
 
   void resize(int length) {
     if (_size == length) return;
