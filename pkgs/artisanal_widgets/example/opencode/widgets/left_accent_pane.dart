@@ -9,6 +9,7 @@ class LeftAccentPane extends w.StatelessWidget {
     required this.child,
     this.backgroundColor,
     this.padding,
+    this.dimmed = false,
     super.key,
   });
 
@@ -16,13 +17,15 @@ class LeftAccentPane extends w.StatelessWidget {
   final style.Color? backgroundColor;
   final w.EdgeInsets? padding;
   final w.Widget child;
+  final bool dimmed;
 
   @override
   w.Widget build(w.BuildContext context) {
+    final resolvedAccent = dimmed ? style.BasicColor('#808080') : accentColor;
     return w.Row(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
       children: [
-        w.Container(color: accentColor, width: 1),
+        w.Container(color: resolvedAccent, width: 1),
         w.Expanded(
           child: w.Container(
             color: backgroundColor,

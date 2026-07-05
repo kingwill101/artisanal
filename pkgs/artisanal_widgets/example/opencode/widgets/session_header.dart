@@ -1,12 +1,13 @@
-/// Session header widget — shows title, context tokens, and cost.
+/// Session header widget — shows title, context tokens, cost, and mode.
 ///
 /// Matches the real OpenCode header: left ┃ border, backgroundPanel,
-/// `# {title}` on left, `{tokens}  {percentage}% ($cost)` on right.
+/// `# {title}` on left, `{mode} • {tokens}  {percentage}% ($cost)` on right.
 library;
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
+import 'state/build_mode.dart';
 import '../theme.dart';
 
 class SessionHeader extends w.StatelessWidget {
@@ -15,6 +16,8 @@ class SessionHeader extends w.StatelessWidget {
     this.contextTokens = 0,
     this.contextPercentage = 0,
     this.cost = 0.0,
+    this.mode = BuildMode.build,
+    this.dimmed = false,
     super.key,
   });
 
@@ -22,10 +25,14 @@ class SessionHeader extends w.StatelessWidget {
   final int contextTokens;
   final int contextPercentage;
   final double cost;
+  final BuildMode mode;
+  final bool dimmed;
 
   @override
   w.Widget build(w.BuildContext context) {
     final theme = w.ThemeScope.of(context);
+
+    final leftAccent = dimmed ? OC.borderSubtle : theme.border;
 
     final contextText = contextTokens > 0
         ? '${_formatTokens(contextTokens)}  $contextPercentage% '
@@ -37,14 +44,18 @@ class SessionHeader extends w.StatelessWidget {
       padding: const w.EdgeInsets.only(left: 2, right: 1, top: 1, bottom: 1),
       child: w.Row(
         children: [
-          // Left accent + title
-          w.Container(color: theme.border, width: 1),
+          w.Container(color: leftAccent, width: 1),
           w.SizedBox(width: 1),
           w.Text(
             '# $title',
             style: style.Style()
-              ..foreground(OC.text)
+              ..foreground(dimmed ? OC.textMuted : OC.text)
               ..bold(),
+          ),
+          w.SizedBox(width: 2),
+          w.Text(
+            mode.label,
+            style: style.Style()..foreground(OC.info),
           ),
           w.Spacer(),
           if (contextText.isNotEmpty)

@@ -115,6 +115,10 @@ class WidgetScrollController implements ScrollController {
   // Set after thumb drag release to prevent snap-back until user scrolls.
   bool _contentFrozen = false;
 
+  /// When true, scrolls to the bottom (maxOffset) on the next updateMetrics
+  /// call that has non-zero content. Auto-cleared after the jump.
+  bool autoScrollToBottom = false;
+
   // ---- Selection state ----
 
   /// Start of selection in content coordinates (x, y) where Y includes
@@ -167,7 +171,12 @@ class WidgetScrollController implements ScrollController {
         final beforeContent = _contentExtent;
         final beforeOffset = _offset;
         _contentExtent = target;
-        final clamped = _clampOffset();
+    if (autoScrollToBottom && _contentExtent > _viewportExtent) {
+      autoScrollToBottom = false;
+      _offset = maxOffset;
+    }
+
+    final clamped = _clampOffset();
         _traceScroll(
           'widget_scroll.metrics.deferred '
           'content=$beforeContent->$_contentExtent '
@@ -4359,6 +4368,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   int _cachedVisibleItemCount = -1;
   int _cachedVisibleSeparatorBreaks = -1;
   bool _cachedVisibleVariableHeight = false;
+  int _measuredWarmupCount = 0;
 
   @override
   set childManager(LazyRenderObjectChildManager? manager) {
@@ -4441,6 +4451,34 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     _strideTree.resize(0);
     _cachedItemCount = -1;
     _cachedSeparatorBreaks = -1;
+    _measuredWarmupCount = 0;
+  }
+
+  static const int _warmupItemLimit = 500;
+
+  void _preMeasureItems({
+    required int itemCount,
+    required int maxWidth,
+    required int estimate,
+    required int separatorBreaks,
+  }) {
+    if (maxWidth <= 0) return;
+    final warmUntil =
+        math.min(_measuredWarmupCount + _warmupItemLimit, itemCount);
+    if (_measuredWarmupCount >= warmUntil) return;
+    for (var i = _measuredWarmupCount; i < warmUntil; i++) {
+      final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
+      if (_measuredHeights[i] != resolved.measured) {
+        _storeMeasuredHeight(
+          index: i,
+          measured: resolved.measured,
+          itemCount: itemCount,
+          estimate: estimate,
+          separatorBreaks: separatorBreaks,
+        );
+      }
+    }
+    _measuredWarmupCount = warmUntil;
   }
 
   @override
@@ -4472,7 +4510,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     if (_needsRepaint || _cachedVisibleContent == null) return false;
     return _cachedVisibleOffset == offset &&
         _cachedVisibleViewportHeight == viewportHeight &&
-        _cachedVisibleMaxWidth == maxWidth &&
+        (_cachedVisibleMaxWidth - maxWidth).abs() <= 4 &&
         _cachedVisibleItemCount == itemCount &&
         _cachedVisibleSeparatorBreaks == separatorBreaks &&
         _cachedVisibleVariableHeight == isVariableHeight;
@@ -4529,7 +4567,7 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     final cached = _childPaintCache[index];
     if (cached != null &&
         identical(cached.child, child) &&
-        cached.maxWidth == maxWidth &&
+        (cached.maxWidth - maxWidth).abs() <= 4 &&
         !child.paintDirty) {
       return (text: cached.text, measured: cached.measured);
     }
@@ -4817,9 +4855,6 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
         _lastMaxWidth = maxWidth;
         if (widthDiff > 4) {
           _clearMeasurements();
-        } else {
-          _childPaintCache.clear();
-          _invalidateVisiblePaintCache();
         }
       }
       final baseEstimate = math
@@ -4827,6 +4862,12 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
           .toInt();
       final estimate = _resolveAdaptiveEstimate(baseEstimate);
       _syncCache(itemCount, separatorBreaks, estimate);
+      _preMeasureItems(
+        itemCount: itemCount,
+        maxWidth: maxWidth,
+        estimate: estimate,
+        separatorBreaks: separatorBreaks,
+      );
       final contentHeight = _estimatedContentHeight();
       final layoutHeight = viewportHeight ?? contentHeight;
       _setMetrics(
