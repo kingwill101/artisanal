@@ -459,6 +459,19 @@ class NavigatorState extends State<Navigator> {
     if (widget.popBehavior.shouldPop(msg)) {
       final currentRoute = _routes.last;
 
+      if (currentRoute.willHandlePopInternally) {
+        return null;
+      }
+
+      final popCanPop = widget.popBehavior.canPop;
+      if (popCanPop != null && !popCanPop(currentRoute)) {
+        return null;
+      }
+
+      if (currentRoute.popDisposition == RoutePopDisposition.doNotPop) {
+        return null;
+      }
+
       final onPopInvoked = widget.popBehavior.onPopInvoked;
       if (onPopInvoked != null) {
         onPopInvoked(currentRoute).then((shouldPop) {

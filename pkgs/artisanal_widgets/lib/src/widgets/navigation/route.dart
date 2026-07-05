@@ -83,6 +83,25 @@ abstract class Route<T> {
   ///
   /// Override to prevent popping (e.g., for routes with unsaved changes).
   bool canPop() => true;
+
+  /// Whether calling [Navigator.pop] when this route is current should do anything.
+  RoutePopDisposition get popDisposition => RoutePopDisposition.pop;
+
+  /// Whether calling [didPop] would return false.
+  ///
+  /// Routes that can handle pops internally (e.g., because they have their
+  /// own stack of internal state) should return `true` here.
+  bool get willHandlePopInternally => false;
+}
+
+/// Indicates whether the current route should be popped.
+enum RoutePopDisposition {
+  /// Pop the route.
+  pop,
+  /// Do not pop the route.
+  doNotPop,
+  /// Delegate this to the next level of navigation.
+  bubble,
 }
 
 /// A full-screen page route.
