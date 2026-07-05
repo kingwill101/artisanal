@@ -211,6 +211,7 @@ class _TerminalWidgetState extends State<TerminalWidget> {
                     defaultFg: widget.defaultFg ?? const ui.Color(0xFFE5E5E5),
                     defaultBg: widget.defaultBg ?? const ui.Color(0xFF000000),
                     cursorColor: widget.cursorColor ?? const ui.Color(0xFF00FF00),
+                    devicePixelRatio: MediaQuery.of(context).devicePixelRatio,
                     repaint: widget.repaint,
                   ),
                 ),
