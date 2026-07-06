@@ -102,6 +102,43 @@ void main() {
       expect(terminal.output, contains('beta'));
     });
 
+    test('a frame taller than the terminal is clipped and never becomes a '
+        'diff baseline', () {
+      // Mid-resize the app can briefly render a frame built for the old,
+      // larger size. Writing its extra rows would scroll the screen and
+      // corrupt every absolute row address; caching it as the diff baseline
+      // would leave the corruption permanent. It must be drawn clipped, and
+      // the first frame that fits must repaint in full.
+      final terminal = StringTerminal(terminalHeight: 3);
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('row0\nrow1\nrow2\nrow3\nrow4\nrow5');
+      expect(terminal.output, contains('row2'));
+      expect(terminal.output, isNot(contains('row3')));
+
+      terminal.clear();
+      renderer.render('row0\nrowX\nrow2');
+
+      // A span diff would skip the unchanged rows; the invalid baseline must
+      // force a full repaint instead.
+      expect(terminal.output, contains('row0'));
+      expect(terminal.output, contains('rowX'));
+      expect(terminal.output, contains('row2'));
+    });
+
+    test('disables auto-wrap for the session and restores it on dispose', () {
+      // With auto-wrap on, an over-wide row (transient mid-resize state)
+      // wraps and scrolls the screen; clipped at the margin it is harmless.
+      final terminal = StringTerminal();
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('x');
+      expect(terminal.output, contains('\x1b[?7l'));
+
+      renderer.dispose();
+      expect(terminal.output, contains('\x1b[?7h'));
+    });
+
     test('wraps diff writes in synchronized-update guards', () {
       final terminal = StringTerminal();
       final renderer = buildRenderer(terminal);
