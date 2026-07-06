@@ -5,6 +5,7 @@ library;
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal_widgets/src/widgets/animation/spinner_controller.dart';
 
 import 'state/build_mode.dart';
 import '../theme.dart';
@@ -15,7 +16,7 @@ class FooterBar extends w.StatelessWidget {
     this.lspCount = 0,
     this.mcpCount = 0,
     this.statusHint = '/status',
-    this.scannerFrame,
+    this.scanner,
     this.tokenCount,
     this.mode = BuildMode.build,
     super.key,
@@ -25,7 +26,7 @@ class FooterBar extends w.StatelessWidget {
   final int lspCount;
   final int mcpCount;
   final String statusHint;
-  final String? scannerFrame;
+  final SpinnerController? scanner;
   final int? tokenCount;
   final BuildMode mode;
 
@@ -35,16 +36,25 @@ class FooterBar extends w.StatelessWidget {
         ? '...${workingDirectory.substring(workingDirectory.length - 27)}'
         : workingDirectory;
 
-    final scannerWidget = scannerFrame != null
-        ? w.Row(
-            gap: 1,
-            children: [
-              w.Text('\u25D4', style: style.Style()..foreground(OC.warning)),
-              w.Text(
-                scannerFrame!,
-                style: style.Style()..foreground(OC.warning),
-              ),
-            ],
+    final activeScanner = scanner;
+    final scannerWidget = activeScanner != null && activeScanner.isRunning
+        ? w.ValueListenableBuilder<String>(
+            valueListenable: activeScanner,
+            builder: (context, frame, child) {
+              return w.Row(
+                gap: 1,
+                children: [
+                  w.Text(
+                    frame,
+                    style: style.Style()..foreground(OC.warning),
+                  ),
+                  w.Text(
+                    'Esc to interrupt',
+                    style: style.Style()..foreground(OC.warning),
+                  ),
+                ],
+              );
+            },
           )
         : null;
 

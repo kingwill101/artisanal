@@ -27,6 +27,7 @@ class HomeView extends w.StatefulWidget {
     this.promptController,
     this.onInputChanged,
     this.onSubmit,
+    this.scanner,
     super.key,
   });
 
@@ -37,6 +38,7 @@ class HomeView extends w.StatefulWidget {
 
   /// Called when the user submits text from the prompt.
   final void Function(String text)? onSubmit;
+  final w.SpinnerController? scanner;
 
   @override
   w.State createState() => _HomeViewState();
@@ -55,9 +57,9 @@ class _HomeViewState extends w.State<HomeView> {
   tui.Cmd? handleIntercept(tui.Msg msg) {
     if (msg is tui.KeyMsg && _isSubmitEnter(msg)) {
       widget.onSubmit?.call(widget.promptController?.text ?? '');
-      return tui.Cmd.none();
+      return null;
     }
-    return tui.Cmd.none();
+    return null;
   }
 
   @override
@@ -113,6 +115,7 @@ class _HomeViewState extends w.State<HomeView> {
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
           statusHint: widget.statusHint,
+          scanner: widget.scanner,
         ),
       ],
     );

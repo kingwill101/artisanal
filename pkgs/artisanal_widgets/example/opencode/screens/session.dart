@@ -18,6 +18,8 @@ class SessionShell extends w.StatefulWidget {
     required this.replayHistory,
     this.chordActive = false,
     this.scannerFrame,
+    this.scanner,
+    this.onSubmit,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -29,10 +31,12 @@ class SessionShell extends w.StatefulWidget {
   final String statusHint;
   final bool chordActive;
   final String? scannerFrame;
+  final w.SpinnerController? scanner;
+  final void Function(String text)? onSubmit;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
-  onReplayHistoryModeSelected;
+      onReplayHistoryModeSelected;
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
@@ -51,6 +55,8 @@ class _SessionShellState extends w.State<SessionShell> {
       replayHistory: widget.replayHistory,
       chordActive: widget.chordActive,
       scannerFrame: widget.scannerFrame,
+      scanner: widget.scanner,
+      onSubmit: widget.onSubmit,
       onReplayHistoryModeSelected: widget.onReplayHistoryModeSelected,
       onReplayHistoryExpandedChanged: widget.onReplayHistoryExpandedChanged,
     );
@@ -75,6 +81,8 @@ class SessionContentPane extends w.StatefulWidget {
     required this.replayHistory,
     this.chordActive = false,
     this.scannerFrame,
+    this.scanner,
+    this.onSubmit,
     this.onReplayHistoryModeSelected,
     this.onReplayHistoryExpandedChanged,
     super.key,
@@ -86,10 +94,12 @@ class SessionContentPane extends w.StatefulWidget {
   final String statusHint;
   final bool chordActive;
   final String? scannerFrame;
+  final w.SpinnerController? scanner;
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
+  final void Function(String text)? onSubmit;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
-  onReplayHistoryModeSelected;
+      onReplayHistoryModeSelected;
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
@@ -99,21 +109,17 @@ class SessionContentPane extends w.StatefulWidget {
 class _SessionContentPaneState extends w.State<SessionContentPane> {
   @override
   tui.Cmd? handleIntercept(tui.Msg msg) {
-    //TODO extract and make usable between home and session screen prompt inputs
     switch (msg) {
       case tui.KeyMsg(:final key) when key.isEnterLike:
+        final text = _textController.value.text;
         if (widget.model.enterBehavior == .send) {
-          //send message
-          final usrMesage = _textController.value;
           _textController.clear();
-          //sendUSerEssage(_usrMessage);
+          widget.onSubmit?.call(text);
           return null;
         } else {
           if (key.shift) {
-            //send message
-            final usrMesage = _textController.value;
             _textController.clear();
-            //sendUSerEssage(_usrMessage);
+            widget.onSubmit?.call(text);
             return null;
           }
         }
@@ -198,7 +204,7 @@ class _SessionContentPaneState extends w.State<SessionContentPane> {
           lspCount: widget.model.lspServers.length,
           mcpCount: widget.model.mcpServers.length,
           statusHint: widget.statusHint,
-          scannerFrame: widget.scannerFrame,
+          scanner: widget.scanner,
           tokenCount: widget.model.contextTokens,
           mode: widget.model.mode,
         ),
