@@ -3,6 +3,24 @@ import 'package:artisanal/src/terminal/terminal_base.dart';
 import 'package:artisanal/src/tui/renderer.dart';
 import 'package:test/test.dart';
 
+/// A [StringTerminal] whose reported size can change between renders,
+/// simulating a live console resize.
+class _ResizableStringTerminal extends StringTerminal {
+  int _width = 80;
+  int _height = 24;
+
+  @override
+  int get width => _width;
+
+  @override
+  int get height => _height;
+
+  void resize(int width, int height) {
+    _width = width;
+    _height = height;
+  }
+}
+
 void main() {
   group('FullScreenTuiRenderer', () {
     FullScreenTuiRenderer buildRenderer(StringTerminal terminal) {
@@ -65,6 +83,23 @@ void main() {
       expect(terminal.output, isNot(contains('38;2;1;2;3')));
       expect(terminal.output, isNot(contains(Ansi.clearLine)));
       expect(terminal.output, isNot(contains(Ansi.cursorTo(2, 1))));
+    });
+
+    test('a size change clears and repaints in full, never diffs', () {
+      // A resize reflows the terminal's existing content, so diffing against
+      // the previous frame would leave reflowed fragments inside every
+      // skipped span. Even an unchanged view must repaint after a resize.
+      final terminal = _ResizableStringTerminal();
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('alpha\nbeta');
+      terminal.clear();
+      terminal.resize(100, 30);
+
+      renderer.render('alpha\nbeta');
+
+      expect(terminal.output, contains('alpha'));
+      expect(terminal.output, contains('beta'));
     });
 
     test('wraps diff writes in synchronized-update guards', () {
