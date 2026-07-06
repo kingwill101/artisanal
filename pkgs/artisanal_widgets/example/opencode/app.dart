@@ -9,6 +9,7 @@
 
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
+import 'package:artisanal_widgets/src/widgets/animation/spinner_controller.dart';
 import 'data.dart';
 import 'models/chat_model.dart';
 import 'models/message.dart';
@@ -17,6 +18,7 @@ import 'screens/home.dart';
 import 'screens/session.dart';
 import 'theme.dart';
 import 'widgets/copy_toast.dart';
+import 'widgets/model_list_dialog.dart';
 import 'widgets/session_list_dialog.dart';
 import 'widgets/state/build_mode.dart';
 import 'widgets/state/open_code_ui_state.dart';
@@ -39,12 +41,11 @@ class _HideCopyToastMsg extends tui.Msg {
 }
 
 class _OpenCodeAppState extends w.State<OpenCodeApp> {
+  w.NavigatorState? _navigator;
   late ChatModel _model;
   final _scrollController = w.WidgetScrollController();
   final _promptController = w.TextFieldController();
   bool _commandPaletteOpen = false;
-  bool _sessionListOpen = false;
-  bool _themeListOpen = false;
   String _currentThemeName = openCodeDefaultThemeName;
   List<String> _themeOptions = const [openCodeDefaultThemeName];
   String? _copyToastMessage;
@@ -56,10 +57,10 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
   );
   final List<tui.ReplayEventPresentation> _recentReplayPresentations =
       <tui.ReplayEventPresentation>[];
+  late final SpinnerController _scannerController;
 
   // UI state
   bool _chordActive = false;
-  String? _scannerFrame;
 
   @override
   void initState() {
@@ -71,10 +72,13 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     }
     _currentThemeName = currentOpenCodeThemeName();
     _loadThemeOptions();
+    _scannerController = SpinnerController(tui.Spinners.scanner());
+    _scannerController.stop();
   }
 
   @override
   void dispose() {
+    _scannerController.dispose();
     _promptController.dispose();
     super.dispose();
   }
@@ -90,19 +94,13 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
   Future<void> _applyTheme(String themeName) async {
     final ok = await applyOpenCodeThemeOverride(themeName);
     if (!mounted) return;
-    if (!ok) {
-      setState(() {
-        _themeListOpen = false;
-      });
-      return;
-    }
+    if (!ok) return;
     setState(() {
       _currentThemeName = currentOpenCodeThemeName();
-      _themeListOpen = false;
     });
   }
 
-  void _handleSubmit(String text) {
+  void _addUserMessage(String text) {
     if (text.trim().isEmpty) return;
 
     _promptController.text = '';
@@ -129,24 +127,24 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         workingDirectory: _model.workingDirectory,
       );
     });
+  }
 
+  void _startScanner() {
     _chordActive = true;
-    _scannerFrame = 'processing...';
+    _scannerController.start();
 
-    Future<void>.delayed(const Duration(seconds: 2), () {
+    Future<void>.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;
+      _scannerController.stop();
       setState(() {
-        _scannerFrame = 'parsing...';
-      });
-    });
-
-    Future<void>.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
-      setState(() {
-        _scannerFrame = null;
         _chordActive = false;
       });
     });
+  }
+
+  void _handleSubmit(String text) {
+    _addUserMessage(text);
+    _startScanner();
   }
 
   @override
@@ -155,139 +153,120 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
     // Helper to wrap content with theme list + session list + command palette
     w.Widget wrapWithOverlays(w.Widget content) {
-      final overlays = ThemeListDialog(
-        open: _themeListOpen,
-        themes: _themeOptions,
-        currentTheme: _currentThemeName,
-        onDismiss: () {
-          setState(() => _themeListOpen = false);
-          return null;
-        },
-        onSelect: (themeName) {
-          _applyTheme(themeName);
-        },
-        child: SessionListDialog(
-          open: _sessionListOpen,
-          sessions: sampleSessions(),
-          onDismiss: () {
-            setState(() => _sessionListOpen = false);
-            return null;
-          },
-          onSelect: (session) {
-            setState(() {
-              _sessionListOpen = false;
-              _model = ChatModel(
-                route: _model.route,
-                messages: _model.messages,
-                inputText: _promptController.text,
-                modelName: _model.modelName,
-                providerName: _model.providerName,
-                agentName: _model.agentName,
-                sessionTitle: session.title,
-                contextTokens: _model.contextTokens,
-                contextPercentage: _model.contextPercentage,
-                cost: _model.cost,
-                sidebar: _model.sidebar,
-                sidebarOpen: _model.sidebarOpen,
-                todos: _model.todos,
-                modifiedFiles: _model.modifiedFiles,
-                mcpServers: _model.mcpServers,
-                lspServers: _model.lspServers,
-                workingDirectory: _model.workingDirectory,
-              );
-            });
-            w.Navigator.of(context).pushNamed('/session');
-          },
-          child: w.CommandPalette(
-            open: _commandPaletteOpen,
-            title: 'Commands',
-            hint: 'Search',
-            backdropOpacity: 0.7,
-            items: sampleCommands(),
-            onDismiss: () {
-              setState(() => _commandPaletteOpen = false);
-              return null;
-            },
-            onSelect: (item) {
-              if (item.label == 'Exit') {
-                setState(() {
-                  _commandPaletteOpen = false;
-                });
-                return tui.Cmd.quit();
-              }
-              setState(() {
-                _commandPaletteOpen = false;
-                if (item.label == 'Session List') {
-                  _sessionListOpen = true;
-                }
-                if (item.label == 'Toggle Theme') {
-                  _themeListOpen = true;
-                }
-                if (item.label == 'Go to Home') {
-                  w.Navigator.of(
-                    context,
-                  ).popUntil((route) => route.settings.name == '/');
-                }
-                if (item.label == 'Go to Session') {
-                  w.Navigator.of(context).pushNamed('/session');
-                }
-                if (item.label == 'Go to Agent Overview') {
-                  w.Navigator.of(context).pushNamed('/agent-overview');
-                }
-              });
-              return null;
-            },
-            child: content,
-          ),
-        ),
-      );
-
       return w.Stack(
         fit: w.StackFit.expand,
         children: [
-          overlays,
-          if (_copyToastMessage != null)
-            w.Positioned(
-              top: 1,
-              left: 0,
-              right: 0,
-              child: w.IgnorePointer(
-                child: w.Center(
-                  child: w.ConstrainedBox(
-                    constraints: w.BoxConstraints(maxWidth: 38),
-                    child: CopyToast(message: _copyToastMessage!),
-                  ),
-                ),
-              ),
+          content,
+          if (_commandPaletteOpen)
+            w.CommandPalette(
+              open: _commandPaletteOpen,
+              title: 'Commands',
+              hint: 'Search',
+              backdropOpacity: 0.7,
+              items: sampleCommands(),
+              onDismiss: () {
+                setState(() => _commandPaletteOpen = false);
+                return null;
+              },
+              onSelect: (item) {
+                if (item.label == 'Exit') {
+                  setState(() {
+                    _commandPaletteOpen = false;
+                  });
+                  return tui.Cmd.quit();
+                }
+                setState(() {
+                  _commandPaletteOpen = false;
+                  if (item.label == 'Session List') {
+                    final n = _navigator;
+                    if (n != null) SessionListDialog.show(
+                      n,
+                      sessions: sampleSessions(),
+                      onSelect: (session) {
+                        setState(() {
+                          _model = ChatModel(
+                            route: _model.route,
+                            messages: _model.messages,
+                            inputText: _promptController.text,
+                            modelName: _model.modelName,
+                            providerName: _model.providerName,
+                            agentName: _model.agentName,
+                            sessionTitle: session.title,
+                            contextTokens: _model.contextTokens,
+                            contextPercentage: _model.contextPercentage,
+                            cost: _model.cost,
+                            sidebar: _model.sidebar,
+                            sidebarOpen: _model.sidebarOpen,
+                            todos: _model.todos,
+                            modifiedFiles: _model.modifiedFiles,
+                            mcpServers: _model.mcpServers,
+                            lspServers: _model.lspServers,
+                            workingDirectory: _model.workingDirectory,
+                          );
+                        });
+                        _navigator?.pushNamed('/session');
+                      },
+                    );
+                  }
+                  if (item.label == 'Toggle Theme') {
+                    final n = _navigator;
+                    if (n != null) ThemeListDialog.show(
+                      n,
+                      themes: _themeOptions,
+                      currentTheme: _currentThemeName,
+                      onSelect: (themeName) {
+                        _applyTheme(themeName);
+                      },
+                    );
+                  }
+                  if (item.label == 'Go to Home') {
+                    _navigator
+                        ?.popUntil((route) => route.settings.name == '/');
+                  }
+                  if (item.label == 'Go to Session') {
+                    _navigator?.pushNamed('/session');
+                  }
+                  if (item.label == 'Go to Agent Overview') {
+                    _navigator?.pushNamed('/agent-overview');
+                  }
+                });
+                return null;
+              },
+              child: content,
             ),
         ],
       );
     }
 
     final navigator = w.Navigator(
+      key: const w.ValueKey('app-navigator'),
+      popBehavior: const w.PopBehavior(escapeEnabled: false),
       initialRoute: '/',
       routes: {
-        '/': (ctx) => HomeView(
+        '/': (ctx) {
+          _navigator ??= w.Navigator.of(ctx);
+          return HomeView(
           model: _model,
           statusHint: _footerStatusHint,
           promptController: _promptController,
+          scanner: _scannerController,
           onSubmit: (text) {
-            setState(() {
-              _model = _model.copyWith(inputText: text);
-            });
-            w.Navigator.of(ctx).pushNamed('/session');
-            _handleSubmit(text);
+            _addUserMessage(text);
+            _navigator?.pushNamed('/session');
+            _startScanner();
           },
-        ),
+        );
+        },
         '/session': (ctx) => SessionShell(
           model: _model,
           scrollController: _scrollController,
           promptController: _promptController,
           statusHint: _footerStatusHint,
           chordActive: _chordActive,
-          scannerFrame: _scannerFrame,
+          scanner: _scannerController,
           replayEvents: _recentReplayPresentations,
           replayHistory: _replayHistory,
+          onSubmit: _handleSubmit,
           onReplayHistoryModeSelected: (mode) {
             setState(() {
               _replayHistory = _replayHistory.withMode(mode);
@@ -310,6 +289,10 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
   @override
   tui.Cmd? handleUpdate(tui.Msg msg) {
+    if (msg is tui.InterruptMsg) {
+      return tui.Cmd.quit();
+    }
+
     switch (msg) {
       case tui.KeyChordResolvedMsg(:final id):
         setState(() {
@@ -317,6 +300,22 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
 
           if (id == AppChord.sidebar.id) {
             _model = _model.copyWith(sidebarOpen: !_model.sidebarOpen);
+          }
+          if (id == AppChord.models.id) {
+            final n = _navigator;
+            if (n != null) ModelListDialog.show(
+              n,
+              models: sampleModels(),
+              currentModelName: _model.modelName,
+              onSelect: (model) {
+                setState(() {
+                  _model = _model.copyWith(
+                    modelName: model.modelName,
+                    providerName: model.providerName,
+                  );
+                });
+              },
+            );
           }
         });
 
@@ -375,6 +374,10 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     if (msg is tui.KeyMsg) {
       final key = msg.key;
 
+      if(key.isCtrlD){
+        return tui.Cmd.quit();
+      }
+
       if (key.isTab) {
         setState(() {
           _model = _model.copyWith(
@@ -386,21 +389,66 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         });
       }
 
+      
       // ctrl+p to toggle command palette
       if (key == tui.Keys.ctrl('p')) {
         setState(() => _commandPaletteOpen = !_commandPaletteOpen);
         return tui.Cmd.none();
       }
+      // ctr\l+p to toggle command palette
+      if (key == tui.Keys.ctrl('q')) {
+        return tui.Cmd.quit();
+      }
+   // ctr\l+p to toggle command palette
+      if (key == tui.Keys.ctrl('c')) {
+        return tui.Cmd.quit();
+      }
 
-      // ctrl+l to toggle session list dialog
+      // ctrl+l to open session list dialog
       if (key == tui.Keys.ctrl('l')) {
-        setState(() => _sessionListOpen = !_sessionListOpen);
+        final n = _navigator;
+        if (n != null) SessionListDialog.show(
+          n,
+          sessions: sampleSessions(),
+          onSelect: (session) {
+            setState(() {
+              _model = ChatModel(
+                route: _model.route,
+                messages: _model.messages,
+                inputText: _promptController.text,
+                modelName: _model.modelName,
+                providerName: _model.providerName,
+                agentName: _model.agentName,
+                sessionTitle: session.title,
+                contextTokens: _model.contextTokens,
+                contextPercentage: _model.contextPercentage,
+                cost: _model.cost,
+                sidebar: _model.sidebar,
+                sidebarOpen: _model.sidebarOpen,
+                todos: _model.todos,
+                modifiedFiles: _model.modifiedFiles,
+                mcpServers: _model.mcpServers,
+                lspServers: _model.lspServers,
+                workingDirectory: _model.workingDirectory,
+              );
+            });
+            _navigator?.pushNamed('/session');
+          },
+        );
         return tui.Cmd.none();
       }
 
-      // ctrl+t to toggle theme list dialog
+      // ctrl+t to open theme list dialog
       if (key == tui.Keys.ctrl('t')) {
-        setState(() => _themeListOpen = !_themeListOpen);
+        final n = _navigator;
+        if (n != null) ThemeListDialog.show(
+          n,
+          themes: _themeOptions,
+          currentTheme: _currentThemeName,
+          onSelect: (themeName) {
+            _applyTheme(themeName);
+          },
+        );
         return tui.Cmd.none();
       }
 
