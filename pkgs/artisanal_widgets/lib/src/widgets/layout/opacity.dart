@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+import '../core/widget.dart';
+import '../rendering/render_object.dart';
+import '../theme/theme.dart' show hasDarkBackground;
+import '_layout_utils.dart';
+import 'geometry.dart';
+
 
 class _RenderOpacity extends RenderBox {
   _RenderOpacity({required this.opacity});
@@ -62,7 +68,7 @@ class Opacity extends SingleChildRenderObjectWidget {
   Object view() => _render();
 
   Object _render() {
-    final content = child == null ? '' : _renderWidget(child!);
+    final content = child == null ? '' : renderWidget(child!);
     if (opacity <= 0) return '';
     if (opacity >= 1) return content;
     final style = Style().dim();

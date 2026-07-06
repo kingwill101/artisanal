@@ -96,7 +96,7 @@ List<FilteredSearchItem<T>> defaultSearchFilter<T>(
 }
 
 /// Key bindings for the search component.
-class SearchKeyMap implements KeyMap {
+class SearchKeyMap extends KeyMap {
   SearchKeyMap({
     KeyBinding? up,
     KeyBinding? down,
@@ -153,7 +153,13 @@ class SearchKeyMap implements KeyMap {
            KeyBinding(
              keys: ['esc'],
              help: Help(key: 'esc', desc: 'cancel'),
-           );
+            ) {
+    shortHelp = [this.up, this.down, this.select, this.cancel];
+    fullHelp = [
+      [this.up, this.down, this.home, this.end],
+      [this.pageUp, this.pageDown, this.select, this.cancel],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding up;
@@ -179,18 +185,7 @@ class SearchKeyMap implements KeyMap {
   /// Cancel search.
   final KeyBinding cancel;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, select, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [pageUp, pageDown, select, cancel],
-    ];
-  }
 }
 
 /// Styles for the search component.
@@ -335,7 +330,13 @@ class MultiSearchKeyMap extends SearchKeyMap {
            KeyBinding(
              keys: ['enter'],
              help: Help(key: KeyboardChars.enter, desc: 'confirm'),
-           );
+            ) {
+    shortHelp = [up, down, this.toggle, this.confirm, cancel];
+    fullHelp = [
+      [up, down, home, end],
+      [pageUp, pageDown, this.toggle, this.toggleAll, this.confirm, cancel],
+    ];
+  }
 
   /// Toggle current item selection.
   final KeyBinding toggle;
@@ -346,18 +347,7 @@ class MultiSearchKeyMap extends SearchKeyMap {
   /// Confirm multi-selection.
   final KeyBinding confirm;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, toggle, confirm, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [pageUp, pageDown, toggle, toggleAll, confirm, cancel],
-    ];
-  }
 }
 
 /// A search/filter component following the Model architecture.
@@ -703,7 +693,7 @@ class SearchModel<T> extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
@@ -1032,7 +1022,7 @@ class MultiSearchModel<T> extends ViewComponent {
     }
 
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')

@@ -3,9 +3,8 @@ import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart' show Layout;
-import 'package:artisanal/terminal.dart' show StringTerminal;
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 import '../../example/help_view/main.dart';
@@ -259,8 +258,8 @@ void main() {
   test('diagnostic: trace UV terminal rendering while scrolling', () async {
     if (Platform.environment[_traceEnv] != '1') return;
 
-    final initialDarkBackground = w.hasDarkBackground;
-    w.setHasDarkBackground(false);
+    final initialDarkBackground = hasDarkBackground;
+    setHasDarkBackground(false);
 
     const width = 100;
     const height = 24;
@@ -269,13 +268,13 @@ void main() {
       terminalHeight: height,
     );
     final grid = _TermGrid(width, height);
-    final program = tui.Program<tui.WidgetApp>(
+    final program = Program<WidgetApp>(
       createHelpViewApp(),
-      options: const tui.ProgramOptions(
+      options: const ProgramOptions(
         useUltravioletRenderer: true,
         altScreen: true,
         mouse: true,
-        mouseMode: tui.MouseMode.allMotion,
+        mouseMode: MouseMode.allMotion,
         signalHandlers: false,
         catchPanics: false,
       ),
@@ -292,9 +291,9 @@ void main() {
       for (var step = 0; step <= 8; step++) {
         if (step > 0) {
           program.send(
-            const tui.MouseMsg(
-              action: tui.MouseAction.wheel,
-              button: tui.MouseButton.wheelDown,
+            const MouseMsg(
+              action: MouseAction.wheel,
+              button: MouseButton.wheelDown,
               x: 10,
               y: 10,
             ),
@@ -317,7 +316,7 @@ void main() {
 
         final currentView = program.currentModel!.view();
         final widgetView = switch (currentView) {
-          tui.View(:final content) => content,
+          View(:final content) => content,
           final other => other.toString(),
         };
         _dumpLines('widget view $step', widgetView.split('\n'));
@@ -325,7 +324,7 @@ void main() {
         terminal.clear();
       }
     } finally {
-      w.setHasDarkBackground(initialDarkBackground);
+      setHasDarkBackground(initialDarkBackground);
       program.quit();
       try {
         await runFuture.timeout(const Duration(seconds: 2));

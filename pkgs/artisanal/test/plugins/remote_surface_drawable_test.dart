@@ -1,4 +1,4 @@
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:artisanal/uv.dart' as uv;
 import 'package:test/test.dart';
 

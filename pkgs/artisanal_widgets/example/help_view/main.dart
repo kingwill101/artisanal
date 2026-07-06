@@ -5,10 +5,10 @@
 //
 // Run with: dart run example/help_view/main.dart
 
-import 'package:artisanal/app.dart' as app;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/style.dart'
     show AdaptiveColor, BasicColor, Color, CompleteAdaptiveColor;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/widgets.dart' as w;
 
 app.WidgetApp createHelpViewApp() => app.WidgetApp(
@@ -156,7 +156,16 @@ class _HelpViewShowcaseState extends w.State<HelpViewShowcase> {
   }
 }
 
-class _HelpExampleKeyMap implements w.KeyMap {
+class _HelpExampleKeyMap extends w.KeyMap {
+  _HelpExampleKeyMap() {
+    shortHelp = [palette, search, help, quit];
+    fullHelp = [
+      [previous, next, open],
+      [palette, search, filter],
+      [help, quit],
+    ];
+  }
+
   final next = w.KeyBinding.withHelp(['down', 'j'], '↓/j', 'next item');
   final previous = w.KeyBinding.withHelp(['up', 'k'], '↑/k', 'previous item');
   final open = w.KeyBinding.withHelp(['enter'], '↵', 'open item');
@@ -165,14 +174,4 @@ class _HelpExampleKeyMap implements w.KeyMap {
   final filter = w.KeyBinding.withHelp(['f'], 'f', 'filter');
   final help = w.KeyBinding.withHelp(['?'], '?', 'toggle help');
   final quit = w.KeyBinding.withHelp(['q'], 'q', 'quit');
-
-  @override
-  List<w.KeyBinding> shortHelp() => [palette, search, help, quit];
-
-  @override
-  List<List<w.KeyBinding>> fullHelp() => [
-    [previous, next, open],
-    [palette, search, filter],
-    [help, quit],
-  ];
 }

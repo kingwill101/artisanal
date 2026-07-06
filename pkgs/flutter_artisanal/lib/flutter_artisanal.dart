@@ -15,7 +15,7 @@ export 'package:artisanal/uv.dart'
         WidthMethod,
         runeWidth,
         stringWidth;
-export 'package:artisanal/hosts.dart' show ProgramOptions;
+export 'package:artisanal/artisanal.dart' show ProgramOptions;
 export 'package:artisanal/tui.dart'
     show TuiRendererOptions, Model, Cmd, Msg, KeyMsg, Key, KeyType, ColorSchemeMsg;
 export 'package:artisanal_widgets/app.dart'

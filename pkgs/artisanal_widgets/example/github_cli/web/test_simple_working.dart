@@ -1,6 +1,7 @@
 import 'package:artisanal_widgets/widgets.dart'
+import 'package:artisanal_widgets/artisanal_widgets.dart';
     show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
-import 'package:artisanal/web.dart' show runWidgetAppInBrowser;
+import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
 
 class Hello extends StatelessWidget {
   Hello({super.key});

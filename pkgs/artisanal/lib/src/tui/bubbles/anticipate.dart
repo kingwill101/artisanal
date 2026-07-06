@@ -35,7 +35,7 @@ class AnticipateConfig {
 }
 
 /// Key map for anticipate navigation and selection.
-class AnticipateKeyMap implements KeyMap {
+class AnticipateKeyMap extends KeyMap {
   /// Creates an anticipate key map with default bindings.
   AnticipateKeyMap({
     KeyBinding? acceptSuggestion,
@@ -72,7 +72,13 @@ class AnticipateKeyMap implements KeyMap {
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
              help: Help(key: KeyboardChars.backspace, desc: 'delete char'),
-           );
+            ) {
+    shortHelp = [this.acceptSuggestion, this.cancel];
+    fullHelp = [
+      [this.acceptSuggestion, this.cancel],
+      [this.nextSuggestion, this.prevSuggestion],
+    ];
+  }
 
   /// Accept current suggestion or typed input.
   final KeyBinding acceptSuggestion;
@@ -89,14 +95,6 @@ class AnticipateKeyMap implements KeyMap {
   /// Delete character backward (backspace).
   final KeyBinding deleteCharacterBackward;
 
-  @override
-  List<KeyBinding> shortHelp() => [acceptSuggestion, cancel];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [acceptSuggestion, cancel],
-    [nextSuggestion, prevSuggestion],
-  ];
 }
 
 /// Anticipate model for autocomplete input.

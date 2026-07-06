@@ -1,10 +1,7 @@
-import 'package:artisanal/app.dart' as app;
-import 'package:artisanal/editors.dart' as editors;
-import 'package:artisanal/hosts.dart' as hosts;
-import 'package:artisanal/plugins.dart' as plugins;
-import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/selection.dart' as selection;
-import 'package:artisanal/testing.dart' as testing;
+import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/tui.dart' as runtime;
+import 'package:artisanal/artisanal.dart' as testing;
 import 'package:artisanal/widgets.dart' as widgets;
 import 'package:test/test.dart';
 
@@ -21,18 +18,17 @@ class _DemoModel implements runtime.Model {
   String view() => 'demo';
 }
 
-class _DemoKeyMap implements widgets.KeyMap {
+class _DemoKeyMap extends widgets.KeyMap {
+  _DemoKeyMap() {
+    shortHelp = [help, quit];
+    fullHelp = [
+      [help],
+      [quit],
+    ];
+  }
+
   final help = widgets.KeyBinding.withHelp(['?'], '?', 'help');
   final quit = widgets.KeyBinding.withHelp(['ctrl+c'], 'ctrl+c', 'quit');
-
-  @override
-  List<widgets.KeyBinding> shortHelp() => [help, quit];
-
-  @override
-  List<List<widgets.KeyBinding>> fullHelp() => [
-    [help],
-    [quit],
-  ];
 }
 
 void main() {
@@ -101,19 +97,17 @@ void main() {
   );
 
   test('stable widget re-export entrypoints stay available from artisanal', () {
-    final shell = app.ArtisanalApp(
+    final shell = widgets.ArtisanalApp(
       title: 'Demo',
-      home: selection.Text('hello'),
+      home: widgets.Text('hello'),
     );
-    final textField = editors.TextField(
-      controller: editors.TextEditingController(text: 'hello'),
+    final textField = widgets.TextField(
+      controller: widgets.TextEditingController(text: 'hello'),
     );
-    final selectionArea = selection.SelectionArea(child: selection.Text('hi'));
     final tester = testing.WidgetTester();
 
-    expect(shell, isA<app.ArtisanalApp>());
-    expect(textField, isA<editors.TextField>());
-    expect(selectionArea, isA<selection.SelectionArea>());
+    expect(shell, isA<widgets.ArtisanalApp>());
+    expect(textField, isA<widgets.TextField>());
     expect(tester, isA<testing.WidgetTester>());
   });
 
@@ -126,7 +120,7 @@ void main() {
 
     expect(shell, isA<widgets.ArtisanalApp>());
     expect(keyMap, isA<widgets.KeyMap>());
-    expect(keyMap.shortHelp(), hasLength(2));
+    expect(keyMap.shortHelp, hasLength(2));
     expect(widgets.ZoneInBoundsMsg, isA<Type>());
     expect(widgets.runArtisanalApp, isA<Function>());
   });

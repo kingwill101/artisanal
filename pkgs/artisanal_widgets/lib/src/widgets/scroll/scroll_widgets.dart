@@ -25,13 +25,14 @@ import '../core/element.dart'
         LazyRenderObjectWidget,
         RenderObjectElement;
 import '../core/framework.dart' show BuildContext, StatefulWidget, State;
+import '../layout/_layout_utils.dart';
 import '../layout/geometry.dart'
     show BoxConstraints, Size, HitTestResult, Offset;
 import '../rendering/render_object.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground;
 import '../theme/theme_scope.dart' show ThemeScope;
-import '../layout/layout_widgets.dart' show EdgeInsets, Padding;
+import '../layout/layout.dart' show EdgeInsets, Padding;
 import '../selection/selection_text_utils.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/uv.dart'
@@ -161,9 +162,11 @@ class WidgetScrollController implements ScrollController {
     if (_thumbDragActive == active) return;
     _thumbDragActive = active;
     if (!active && _deferredContentExtent != null) {
-      assert(_deferredContentExtent! >= _contentExtent,
-          'setThumbDragActive: deferred content extent $_deferredContentExtent '
-          '< current content extent $_contentExtent');
+      assert(
+        _deferredContentExtent! >= _contentExtent,
+        'setThumbDragActive: deferred content extent $_deferredContentExtent '
+        '< current content extent $_contentExtent',
+      );
       final target = math.max(_contentExtent, _deferredContentExtent!);
       _deferredContentExtent = null;
       _contentFrozen = true;
@@ -171,12 +174,12 @@ class WidgetScrollController implements ScrollController {
         final beforeContent = _contentExtent;
         final beforeOffset = _offset;
         _contentExtent = target;
-    if (autoScrollToBottom && _contentExtent > _viewportExtent) {
-      autoScrollToBottom = false;
-      _offset = maxOffset;
-    }
+        if (autoScrollToBottom && _contentExtent > _viewportExtent) {
+          autoScrollToBottom = false;
+          _offset = maxOffset;
+        }
 
-    final clamped = _clampOffset();
+        final clamped = _clampOffset();
         _traceScroll(
           'widget_scroll.metrics.deferred '
           'content=$beforeContent->$_contentExtent '
@@ -184,8 +187,10 @@ class WidgetScrollController implements ScrollController {
           'clamped=$clamped',
         );
       }
-      assert(_contentExtent >= 0,
-          'setThumbDragActive: content extent must be non-negative');
+      assert(
+        _contentExtent >= 0,
+        'setThumbDragActive: content extent must be non-negative',
+      );
     }
   }
 
@@ -246,7 +251,8 @@ class WidgetScrollController implements ScrollController {
     final nextViewport = math.max(0, viewportExtent);
     final incomingContent = math.max(0, contentExtent);
     assert(
-      !_thumbDragActive || _deferredContentExtent == null ||
+      !_thumbDragActive ||
+          _deferredContentExtent == null ||
           _deferredContentExtent! >= incomingContent,
       'updateMetrics: deferred content shrank during drag '
       '($_deferredContentExtent -> $incomingContent)',
@@ -273,8 +279,10 @@ class WidgetScrollController implements ScrollController {
 
     final clamped = _clampOffset();
     assert(_offset >= 0, 'updateMetrics: offset must be non-negative');
-    assert(_offset <= maxOffset,
-        'updateMetrics: offset $_offset exceeds max $maxOffset');
+    assert(
+      _offset <= maxOffset,
+      'updateMetrics: offset $_offset exceeds max $maxOffset',
+    );
     if (prevViewport != _viewportExtent ||
         prevContent != _contentExtent ||
         clamped) {
@@ -3334,7 +3342,7 @@ class _ListViewViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      final text = _renderWidget(children[i]);
+      final text = renderWidget(children[i]);
       buffer.write(text);
       _writeListItemBoundary(
         buffer,
@@ -4230,7 +4238,7 @@ class _VirtualListViewport extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final buffer = StringBuffer();
     for (var i = 0; i < children.length; i++) {
-      final text = _renderWidget(children[i]);
+      final text = renderWidget(children[i]);
       buffer.write(text);
       _writeListItemBoundary(
         buffer,
@@ -4442,8 +4450,10 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
   }
 
   void _clearMeasurements() {
-    assert(_strideTree.total >= 0,
-        '_clearMeasurements: stride tree total must be non-negative (was ${_strideTree.total})');
+    assert(
+      _strideTree.total >= 0,
+      '_clearMeasurements: stride tree total must be non-negative (was ${_strideTree.total})',
+    );
     _invalidateMeasurements();
     _measuredHeights.clear();
     _childPaintCache.clear();
@@ -4463,8 +4473,10 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     required int separatorBreaks,
   }) {
     if (maxWidth <= 0) return;
-    final warmUntil =
-        math.min(_measuredWarmupCount + _warmupItemLimit, itemCount);
+    final warmUntil = math.min(
+      _measuredWarmupCount + _warmupItemLimit,
+      itemCount,
+    );
     if (_measuredWarmupCount >= warmUntil) return;
     for (var i = _measuredWarmupCount; i < warmUntil; i++) {
       final resolved = _resolveChildPaint(index: i, maxWidth: maxWidth);
@@ -4554,8 +4566,10 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
         _strideTree.set(i, stride);
         expectedTotal += stride;
       }
-      assert(_strideTree.total == expectedTotal,
-          '_syncCache: stride tree total $_strideTree.total != $expectedTotal');
+      assert(
+        _strideTree.total == expectedTotal,
+        '_syncCache: stride tree total $_strideTree.total != $expectedTotal',
+      );
     }
   }
 
@@ -4841,12 +4855,12 @@ class RenderListViewport extends RenderBox implements LazyRenderObjectHost {
     if (variableHeight) {
       if (_lastMaxWidth != maxWidth) {
         assert(
-          _lastMaxWidth == null ||
-              (_lastMaxWidth! - maxWidth).abs() <= 100,
+          _lastMaxWidth == null || (_lastMaxWidth! - maxWidth).abs() <= 100,
           'layout: maxWidth jumped from $_lastMaxWidth to $maxWidth',
         );
-        final widthDiff =
-            _lastMaxWidth != null ? (_lastMaxWidth! - maxWidth).abs() : 0;
+        final widthDiff = _lastMaxWidth != null
+            ? (_lastMaxWidth! - maxWidth).abs()
+            : 0;
         _traceScroll(
           'virtual_list.clear_measurements '
           'zone=$zoneId reason=_lastMaxWidth($_lastMaxWidth)!=maxWidth($maxWidth)'
@@ -5555,9 +5569,3 @@ String _renderViewportString({
   return result;
 }
 
-String _renderWidget(Widget widget) {
-  final element = elementOf(widget);
-  if (element != null) return element.render();
-  final view = widget.view();
-  return view is String ? view : view.toString();
-}

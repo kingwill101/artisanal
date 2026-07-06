@@ -38,7 +38,7 @@ enum PasswordEchoMode {
 }
 
 /// Key bindings for the password component.
-class PasswordKeyMap implements KeyMap {
+class PasswordKeyMap extends KeyMap {
   PasswordKeyMap({
     KeyBinding? submit,
     KeyBinding? cancel,
@@ -102,7 +102,13 @@ class PasswordKeyMap implements KeyMap {
            KeyBinding(
              keys: ['end', 'ctrl+e'],
              help: Help(key: 'end', desc: 'end'),
-           );
+            ) {
+    shortHelp = [this.submit, this.cancel];
+    fullHelp = [
+      [this.submit, this.cancel],
+      [this.deleteBackward, this.deleteAll],
+    ];
+  }
 
   /// Submit the password.
   final KeyBinding submit;
@@ -131,18 +137,7 @@ class PasswordKeyMap implements KeyMap {
   /// Move cursor to end.
   final KeyBinding cursorEnd;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [submit, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [submit, cancel],
-      [deleteBackward, deleteAll],
-    ];
-  }
 }
 
 /// Styles for the password component.
@@ -463,7 +458,7 @@ class PasswordModel extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')

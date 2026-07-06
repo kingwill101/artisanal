@@ -14,7 +14,7 @@ import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/key.dart' show Key, UniqueKey;
 import '../core/widget.dart';
 import '../focus/focus.dart' show FocusScope;
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 import 'navigator_observer.dart';
 import 'pop_behavior.dart';
 import 'route.dart';

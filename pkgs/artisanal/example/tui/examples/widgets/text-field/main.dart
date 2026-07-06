@@ -1,8 +1,9 @@
 //
+import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as tui hide Key, TextSelection;
 // Run with: dart run example/tui/examples/widgets/text-field/main.dart
 
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart' as w;
 
 void main() async {
   final app = tui.WidgetApp(TextFieldDemo());

@@ -1,4 +1,5 @@
 // Builder Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates using Builder to create widgets with inline callbacks
 // that have access to BuildContext.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(BuilderExample());
+  final app = WidgetApp(BuilderExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

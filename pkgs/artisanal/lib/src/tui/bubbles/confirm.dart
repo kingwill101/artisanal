@@ -26,7 +26,7 @@ class ConfirmCancelledMsg extends Msg {
 }
 
 /// Key bindings for the confirm component.
-class ConfirmKeyMap implements KeyMap {
+class ConfirmKeyMap extends KeyMap {
   ConfirmKeyMap({
     KeyBinding? yes,
     KeyBinding? no,
@@ -69,7 +69,13 @@ class ConfirmKeyMap implements KeyMap {
            KeyBinding(
              keys: ['right', 'l'],
              help: Help(key: Arrows.right, desc: 'no'),
-           );
+            ) {
+    shortHelp = [this.yes, this.no, this.confirm, this.cancel];
+    fullHelp = [
+      [this.yes, this.no],
+      [this.toggleLeft, this.toggleRight, this.confirm, this.cancel],
+    ];
+  }
 
   /// Confirm with 'y'.
   final KeyBinding yes;
@@ -89,18 +95,7 @@ class ConfirmKeyMap implements KeyMap {
   /// Toggle selection right (to No).
   final KeyBinding toggleRight;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [yes, no, confirm, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [yes, no],
-      [toggleLeft, toggleRight, confirm, cancel],
-    ];
-  }
 }
 
 /// Styles for the confirm component.
@@ -295,7 +290,7 @@ class ConfirmModel extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')

@@ -1,6 +1,6 @@
 library;
 
-import 'package:artisanal/plugins.dart'
+import 'package:artisanal/artisanal.dart'
     show
         RemotePluginMouseAction,
         RemotePluginMouseButton,
@@ -17,7 +17,7 @@ import '../core/framework.dart';
 import '../core/widget.dart';
 import '../focus/focus.dart';
 import '../gestures/events.dart' show TapDownDetails;
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 
 /// Builds one widget contribution for a typed slot payload.
 typedef SlotWidgetBuilder<TData> =

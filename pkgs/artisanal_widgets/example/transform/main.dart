@@ -1,4 +1,5 @@
 // Transform Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Transform widget with translate, flipHorizontal,
 // and flipVertical operations. Press 'h' to toggle horizontal flip,
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(TransformDemo());
+  final app = WidgetApp(TransformDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

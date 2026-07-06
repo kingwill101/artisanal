@@ -1,4 +1,8 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/artisanal.dart' show Style;
+import 'package:artisanal/style.dart' show Color, Border;
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
 
 /// A container with optional padding, margin, background and border.
 ///

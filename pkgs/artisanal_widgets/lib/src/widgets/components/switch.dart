@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg;
+import 'package:artisanal/widgets.dart';
+
 
 class Switch extends StatefulWidget {
   Switch({

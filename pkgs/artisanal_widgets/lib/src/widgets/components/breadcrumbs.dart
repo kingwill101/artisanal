@@ -1,4 +1,10 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart';
+import 'package:artisanal_widgets/src/widgets/components/button.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 
 /// An item in a breadcrumb navigation trail.
 class BreadcrumbItem {

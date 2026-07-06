@@ -1,6 +1,6 @@
 import 'package:artisanal/style.dart';
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -374,7 +374,7 @@ void main() {
   // ---------------------------------------------------------------------------
   // BoxDecoration rendering — Bug 6 regression tests
   // border, borderRadius, and gradient are now rendered by
-  // _renderContainerContent.
+  // renderContainerContent.
   // ---------------------------------------------------------------------------
   group('BoxDecoration rendering', () {
     test('decoration color is applied as background', () async {

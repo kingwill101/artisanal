@@ -1,4 +1,5 @@
 // Container & Alignment Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Container, Align, Center, Padding, SizedBox,
 // ConstrainedBox, and ShrinkWrap widgets.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ContainerAlignShowcase());
+  final app = WidgetApp(ContainerAlignShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

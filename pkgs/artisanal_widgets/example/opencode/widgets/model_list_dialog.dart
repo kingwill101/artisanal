@@ -214,7 +214,10 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
                     children: rows.isEmpty
                         ? [
                             w.Padding(
-                              padding: const w.EdgeInsets.only(left: 3, right: 3),
+                              padding: const w.EdgeInsets.only(
+                                left: 3,
+                                right: 3,
+                              ),
                               child: w.Text(
                                 'No models matching "$_searchQuery"',
                                 style: style.Style()..foreground(shortcutFg),

@@ -1,4 +1,5 @@
-part of 'layout_widgets.dart';
+
+
 
 /// Represents a single ASCII art character glyph.
 class AsciiGlyph {
@@ -71,7 +72,7 @@ abstract class AsciiFont {
   // Built-in fonts
 
   /// Standard block-style ASCII font (5 lines high).
-  static const AsciiFont standard = _StandardFont();
+  static const AsciiFont standard = StandardFont();
 
   /// Banner-style font with larger characters (7 lines high).
   static const AsciiFont banner = _BannerFont();
@@ -84,8 +85,8 @@ abstract class AsciiFont {
 }
 
 /// Standard ASCII art font - 5 lines high, clean block style.
-class _StandardFont extends AsciiFont {
-  const _StandardFont();
+class StandardFont extends AsciiFont {
+  const StandardFont();
 
   @override
   int get height => 5;

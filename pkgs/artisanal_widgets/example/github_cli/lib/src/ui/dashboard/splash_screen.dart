@@ -1,4 +1,5 @@
-import 'package:artisanal/style.dart' show Border, HorizontalAlign, VerticalAlign;
+import 'package:artisanal/style.dart'
+    show Border, HorizontalAlign, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 

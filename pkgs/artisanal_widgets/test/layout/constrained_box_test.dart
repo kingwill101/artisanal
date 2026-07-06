@@ -36,7 +36,7 @@ void main() {
             child: Text('ABCDEFGHIJ'),
           ),
         );
-        // The 10-char text should be truncated by _constrainContent
+        // The 10-char text should be truncated by constrainContent
         // using Layout.truncateLines with ellipsis='...'
         // Full 10-char text should NOT appear
         expect(tester.find.text('ABCDEFGHIJ'), isFalse);

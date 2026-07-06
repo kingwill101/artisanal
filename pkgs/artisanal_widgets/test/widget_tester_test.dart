@@ -15,7 +15,7 @@
 /// approach) rather than zone-based dispatch.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/tui.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal_widgets/testing.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
@@ -996,9 +996,9 @@ void main() {
       );
 
       tester.sendMsg(
-        tui.MouseMsg(
-          action: tui.MouseAction.wheel,
-          button: tui.MouseButton.wheelUp,
+        MouseMsg(
+          action: MouseAction.wheel,
+          button: MouseButton.wheelUp,
           x: 0,
           y: 0,
         ),
@@ -1177,8 +1177,8 @@ class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
   int _counter = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       if (msg.key.char == '+' || msg.key.char == '=') {
         setState(() => _counter++);
       }
@@ -1326,8 +1326,8 @@ class _KeyTabWidgetState extends w.State<_KeyTabWidget> {
   int _tab = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       final c = msg.key.char;
       if (c == '1') setState(() => _tab = 0);
       if (c == '2') setState(() => _tab = 1);
@@ -1357,8 +1357,8 @@ class _KeyAndClickWidgetState extends w.State<_KeyAndClickWidget> {
   int _clicks = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == '+') {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == '+') {
       setState(() => _counter++);
     }
     return null;
@@ -1394,8 +1394,8 @@ class _NestedCountersState extends w.State<_NestedCounters> {
   int _outerCount = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == 'o') {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'o') {
       setState(() => _outerCount++);
     }
     return null;
@@ -1418,8 +1418,8 @@ class _InnerCounterState extends w.State<_InnerCounter> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == 'i') {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'i') {
       setState(() => _count++);
     }
     return null;
@@ -1446,8 +1446,8 @@ class _KeyedReorderWidgetState extends w.State<_KeyedReorderWidget> {
   bool _reversed = false;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == 'r') {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == 'r') {
       setState(() => _reversed = !_reversed);
     }
     return null;
@@ -1476,8 +1476,8 @@ class _KeyedCounterState extends w.State<_KeyedCounter> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.char == widget.label.toLowerCase()) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.char == widget.label.toLowerCase()) {
       setState(() => _count++);
     }
     return null;
@@ -1502,8 +1502,8 @@ class _SpecialKeyWidget extends w.StatefulWidget {
 
 class _SpecialKeyWidgetState extends w.State<_SpecialKeyWidget> {
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg && msg.key.type == terminal_keys.KeyType.escape) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg && msg.key.type == terminal_keys.KeyType.escape) {
       widget.onEscape();
     }
     return null;
@@ -1538,10 +1538,10 @@ class _ManualClockAnimationWidgetState
   }
 
   @override
-  tui.Cmd? handleInit() => _controller.forward();
+  Cmd? handleInit() => _controller.forward();
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is w.AnimationTickMsg && msg.controllerId == controllerId) {
       return _controller.processTick(msg.time);
     }
@@ -1565,8 +1565,8 @@ class _TypedTextRecorderState extends w.State<_TypedTextRecorder> {
   var _typed = '';
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg case tui.KeyMsg(:final key) when key.char != null) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg case KeyMsg(:final key) when key.char != null) {
       setState(() => _typed += key.char!);
     }
     return null;
@@ -1589,9 +1589,9 @@ class _PasteRecorderState extends w.State<_PasteRecorder> {
   String _lastContent = '';
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     switch (msg) {
-      case tui.PasteMsg(:final content):
+      case PasteMsg(:final content):
         setState(() => _lastContent = content);
       default:
         break;
@@ -1618,8 +1618,8 @@ class _ThrowOnKeyWidget extends w.StatefulWidget {
 
 class _ThrowOnKeyWidgetState extends w.State<_ThrowOnKeyWidget> {
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       throw StateError('fuzz key ${msg.key.char}');
     }
     return null;
@@ -1675,8 +1675,8 @@ class _ExampleAppState extends w.State<_ExampleApp> {
   int _selectedTab = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       final c = msg.key.char;
       if (c == '+' || c == '=') setState(() => _counter++);
       if (c == '-') setState(() => _counter--);

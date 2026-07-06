@@ -1,7 +1,6 @@
+import 'package:artisanal/uv.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
-import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
-import 'package:artisanal/uv.dart' show UvStyle, UvColor;
+import 'package:artisanal_widgets/charting.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -1,4 +1,5 @@
 // Drag Interaction Demo
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates drag gestures with the recognizer-based gesture system:
 //   - Draggable slider with live value feedback
@@ -13,7 +14,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(DragDemo());
+  final app = WidgetApp(DragDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

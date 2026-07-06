@@ -2,8 +2,8 @@ import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, CommandRunner;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/hosts.dart' show ProgramHost;
-import 'package:artisanal/runtime.dart' show ProgramOptions;
+import 'package:artisanal/artisanal.dart' show ProgramHost;
+import 'package:artisanal/tui.dart' show ProgramOptions;
 import 'package:artisanal_widgets/widgets.dart'
     show ImageAutoMode, WidgetApp, defaultWidgetProgramOptions, runWidgetApp;
 

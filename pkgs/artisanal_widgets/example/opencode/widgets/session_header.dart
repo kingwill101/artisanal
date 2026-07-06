@@ -53,10 +53,7 @@ class SessionHeader extends w.StatelessWidget {
               ..bold(),
           ),
           w.SizedBox(width: 2),
-          w.Text(
-            mode.label,
-            style: style.Style()..foreground(OC.info),
-          ),
+          w.Text(mode.label, style: style.Style()..foreground(OC.info)),
           w.Spacer(),
           if (contextText.isNotEmpty)
             w.Text(

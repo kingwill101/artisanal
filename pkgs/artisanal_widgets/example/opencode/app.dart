@@ -17,7 +17,6 @@ import 'screens/agent_overview.dart';
 import 'screens/home.dart';
 import 'screens/session.dart';
 import 'theme.dart';
-import 'widgets/copy_toast.dart';
 import 'widgets/model_list_dialog.dart';
 import 'widgets/session_list_dialog.dart';
 import 'widgets/state/build_mode.dart';
@@ -179,49 +178,52 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
                   _commandPaletteOpen = false;
                   if (item.label == 'Session List') {
                     final n = _navigator;
-                    if (n != null) SessionListDialog.show(
-                      n,
-                      sessions: sampleSessions(),
-                      onSelect: (session) {
-                        setState(() {
-                          _model = ChatModel(
-                            route: _model.route,
-                            messages: _model.messages,
-                            inputText: _promptController.text,
-                            modelName: _model.modelName,
-                            providerName: _model.providerName,
-                            agentName: _model.agentName,
-                            sessionTitle: session.title,
-                            contextTokens: _model.contextTokens,
-                            contextPercentage: _model.contextPercentage,
-                            cost: _model.cost,
-                            sidebar: _model.sidebar,
-                            sidebarOpen: _model.sidebarOpen,
-                            todos: _model.todos,
-                            modifiedFiles: _model.modifiedFiles,
-                            mcpServers: _model.mcpServers,
-                            lspServers: _model.lspServers,
-                            workingDirectory: _model.workingDirectory,
-                          );
-                        });
-                        _navigator?.pushNamed('/session');
-                      },
-                    );
+                    if (n != null) {
+                      SessionListDialog.show(
+                        n,
+                        sessions: sampleSessions(),
+                        onSelect: (session) {
+                          setState(() {
+                            _model = ChatModel(
+                              route: _model.route,
+                              messages: _model.messages,
+                              inputText: _promptController.text,
+                              modelName: _model.modelName,
+                              providerName: _model.providerName,
+                              agentName: _model.agentName,
+                              sessionTitle: session.title,
+                              contextTokens: _model.contextTokens,
+                              contextPercentage: _model.contextPercentage,
+                              cost: _model.cost,
+                              sidebar: _model.sidebar,
+                              sidebarOpen: _model.sidebarOpen,
+                              todos: _model.todos,
+                              modifiedFiles: _model.modifiedFiles,
+                              mcpServers: _model.mcpServers,
+                              lspServers: _model.lspServers,
+                              workingDirectory: _model.workingDirectory,
+                            );
+                          });
+                          _navigator?.pushNamed('/session');
+                        },
+                      );
+                    }
                   }
                   if (item.label == 'Toggle Theme') {
                     final n = _navigator;
-                    if (n != null) ThemeListDialog.show(
-                      n,
-                      themes: _themeOptions,
-                      currentTheme: _currentThemeName,
-                      onSelect: (themeName) {
-                        _applyTheme(themeName);
-                      },
-                    );
+                    if (n != null) {
+                      ThemeListDialog.show(
+                        n,
+                        themes: _themeOptions,
+                        currentTheme: _currentThemeName,
+                        onSelect: (themeName) {
+                          _applyTheme(themeName);
+                        },
+                      );
+                    }
                   }
                   if (item.label == 'Go to Home') {
-                    _navigator
-                        ?.popUntil((route) => route.settings.name == '/');
+                    _navigator?.popUntil((route) => route.settings.name == '/');
                   }
                   if (item.label == 'Go to Session') {
                     _navigator?.pushNamed('/session');
@@ -246,16 +248,16 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         '/': (ctx) {
           _navigator ??= w.Navigator.of(ctx);
           return HomeView(
-          model: _model,
-          statusHint: _footerStatusHint,
-          promptController: _promptController,
-          scanner: _scannerController,
-          onSubmit: (text) {
-            _addUserMessage(text);
-            _navigator?.pushNamed('/session');
-            _startScanner();
-          },
-        );
+            model: _model,
+            statusHint: _footerStatusHint,
+            promptController: _promptController,
+            scanner: _scannerController,
+            onSubmit: (text) {
+              _addUserMessage(text);
+              _navigator?.pushNamed('/session');
+              _startScanner();
+            },
+          );
         },
         '/session': (ctx) => SessionShell(
           model: _model,
@@ -303,19 +305,21 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
           }
           if (id == AppChord.models.id) {
             final n = _navigator;
-            if (n != null) ModelListDialog.show(
-              n,
-              models: sampleModels(),
-              currentModelName: _model.modelName,
-              onSelect: (model) {
-                setState(() {
-                  _model = _model.copyWith(
-                    modelName: model.modelName,
-                    providerName: model.providerName,
-                  );
-                });
-              },
-            );
+            if (n != null) {
+              ModelListDialog.show(
+                n,
+                models: sampleModels(),
+                currentModelName: _model.modelName,
+                onSelect: (model) {
+                  setState(() {
+                    _model = _model.copyWith(
+                      modelName: model.modelName,
+                      providerName: model.providerName,
+                    );
+                  });
+                },
+              );
+            }
           }
         });
 
@@ -374,7 +378,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
     if (msg is tui.KeyMsg) {
       final key = msg.key;
 
-      if(key.isCtrlD){
+      if (key.isCtrlD) {
         return tui.Cmd.quit();
       }
 
@@ -389,7 +393,6 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
         });
       }
 
-      
       // ctrl+p to toggle command palette
       if (key == tui.Keys.ctrl('p')) {
         setState(() => _commandPaletteOpen = !_commandPaletteOpen);
@@ -399,7 +402,7 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       if (key == tui.Keys.ctrl('q')) {
         return tui.Cmd.quit();
       }
-   // ctr\l+p to toggle command palette
+      // ctr\l+p to toggle command palette
       if (key == tui.Keys.ctrl('c')) {
         return tui.Cmd.quit();
       }
@@ -407,48 +410,52 @@ class _OpenCodeAppState extends w.State<OpenCodeApp> {
       // ctrl+l to open session list dialog
       if (key == tui.Keys.ctrl('l')) {
         final n = _navigator;
-        if (n != null) SessionListDialog.show(
-          n,
-          sessions: sampleSessions(),
-          onSelect: (session) {
-            setState(() {
-              _model = ChatModel(
-                route: _model.route,
-                messages: _model.messages,
-                inputText: _promptController.text,
-                modelName: _model.modelName,
-                providerName: _model.providerName,
-                agentName: _model.agentName,
-                sessionTitle: session.title,
-                contextTokens: _model.contextTokens,
-                contextPercentage: _model.contextPercentage,
-                cost: _model.cost,
-                sidebar: _model.sidebar,
-                sidebarOpen: _model.sidebarOpen,
-                todos: _model.todos,
-                modifiedFiles: _model.modifiedFiles,
-                mcpServers: _model.mcpServers,
-                lspServers: _model.lspServers,
-                workingDirectory: _model.workingDirectory,
-              );
-            });
-            _navigator?.pushNamed('/session');
-          },
-        );
+        if (n != null) {
+          SessionListDialog.show(
+            n,
+            sessions: sampleSessions(),
+            onSelect: (session) {
+              setState(() {
+                _model = ChatModel(
+                  route: _model.route,
+                  messages: _model.messages,
+                  inputText: _promptController.text,
+                  modelName: _model.modelName,
+                  providerName: _model.providerName,
+                  agentName: _model.agentName,
+                  sessionTitle: session.title,
+                  contextTokens: _model.contextTokens,
+                  contextPercentage: _model.contextPercentage,
+                  cost: _model.cost,
+                  sidebar: _model.sidebar,
+                  sidebarOpen: _model.sidebarOpen,
+                  todos: _model.todos,
+                  modifiedFiles: _model.modifiedFiles,
+                  mcpServers: _model.mcpServers,
+                  lspServers: _model.lspServers,
+                  workingDirectory: _model.workingDirectory,
+                );
+              });
+              _navigator?.pushNamed('/session');
+            },
+          );
+        }
         return tui.Cmd.none();
       }
 
       // ctrl+t to open theme list dialog
       if (key == tui.Keys.ctrl('t')) {
         final n = _navigator;
-        if (n != null) ThemeListDialog.show(
-          n,
-          themes: _themeOptions,
-          currentTheme: _currentThemeName,
-          onSelect: (themeName) {
-            _applyTheme(themeName);
-          },
-        );
+        if (n != null) {
+          ThemeListDialog.show(
+            n,
+            themes: _themeOptions,
+            currentTheme: _currentThemeName,
+            onSelect: (themeName) {
+              _applyTheme(themeName);
+            },
+          );
+        }
         return tui.Cmd.none();
       }
 

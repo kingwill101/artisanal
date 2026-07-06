@@ -17,7 +17,7 @@ import 'key_binding.dart';
 const undefined = Object();
 
 /// Key bindings for viewport navigation.
-class ViewportKeyMap implements KeyMap {
+class ViewportKeyMap extends KeyMap {
   /// Creates a key mapping configuration for viewport navigation.
   ViewportKeyMap({
     KeyBinding? pageDown,
@@ -49,7 +49,13 @@ class ViewportKeyMap implements KeyMap {
        right =
            right ??
            KeyBinding.withHelp(['right', 'l'], '${Arrows.right}/l', 'right'),
-       copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy');
+        copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy') {
+    shortHelp = [this.up, this.down, this.pageUp, this.pageDown, this.copy];
+    fullHelp = [
+      [this.up, this.down, this.pageUp, this.pageDown],
+      [this.halfPageUp, this.halfPageDown, this.left, this.right, this.copy],
+    ];
+  }
 
   /// Key binding for scrolling one page down.
   final KeyBinding pageDown;
@@ -78,14 +84,6 @@ class ViewportKeyMap implements KeyMap {
   /// Key binding for copying selected text.
   final KeyBinding copy;
 
-  @override
-  List<KeyBinding> shortHelp() => [up, down, pageUp, pageDown, copy];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [up, down, pageUp, pageDown],
-    [halfPageUp, halfPageDown, left, right, copy],
-  ];
 }
 
 /// GutterContext provides context to a [GutterFunc].

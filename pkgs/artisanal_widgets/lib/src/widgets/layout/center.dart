@@ -1,5 +1,7 @@
-part of 'layout_widgets.dart';
+
+import 'align.dart';
+
 
 class Center extends Align {
-  Center({super.key, super.child}) : super(alignment: Alignment.center);
+  Center({super.key, super.child}) : super(alignment: .center);
 }

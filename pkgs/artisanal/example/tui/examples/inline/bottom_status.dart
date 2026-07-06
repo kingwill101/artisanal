@@ -11,7 +11,7 @@ library;
 
 import 'dart:math';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart';
 
 final _rng = Random();

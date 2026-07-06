@@ -1,4 +1,10 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+import '../rendering/rendering.dart';
+import '../theme.dart';
+import '../style.dart';
+import 'enums.dart';
+import 'text.dart';
+
 
 /// A widget that displays styled text using a [TextSpan] tree.
 ///
@@ -62,7 +68,7 @@ class RichText extends LeafRenderObjectWidget {
 
   String _render() {
     return buildCachedView<String>(() {
-      var content = _renderSpan(text, null);
+      var content = renderSpan(text, null);
 
       if (softWrap) {
         final wrapWidth = Layout.getWidth(content);

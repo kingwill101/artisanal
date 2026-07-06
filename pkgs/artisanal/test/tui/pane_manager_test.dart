@@ -1,4 +1,4 @@
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 import 'package:test/test.dart';
 
 void main() {

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';

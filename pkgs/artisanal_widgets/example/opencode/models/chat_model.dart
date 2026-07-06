@@ -5,7 +5,6 @@ import '../widgets/state/build_mode.dart';
 import '../widgets/state/open_code_ui_state.dart';
 import 'message.dart';
 
-
 enum AppChord {
   sidebar('toggle-sidebar'),
   models('toggle-models');
@@ -13,7 +12,6 @@ enum AppChord {
   final String id;
   const AppChord(this.id);
 }
-
 
 /// Collapsible section expansion state.
 class SidebarState {

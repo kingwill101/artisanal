@@ -36,7 +36,7 @@ class SessionShell extends w.StatefulWidget {
   final List<tui.ReplayEventPresentation> replayEvents;
   final w.ReplayEventHistoryState replayHistory;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
-      onReplayHistoryModeSelected;
+  onReplayHistoryModeSelected;
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override
@@ -99,7 +99,7 @@ class SessionContentPane extends w.StatefulWidget {
   final w.ReplayEventHistoryState replayHistory;
   final void Function(String text)? onSubmit;
   final w.ValueCmdCallback<w.ReplayEventHistoryMode>?
-      onReplayHistoryModeSelected;
+  onReplayHistoryModeSelected;
   final w.ValueCmdCallback<bool>? onReplayHistoryExpandedChanged;
 
   @override

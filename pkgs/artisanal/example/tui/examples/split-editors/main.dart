@@ -1,8 +1,9 @@
 /// Split editors example ported from Bubble Tea.
 library;
+import 'package:artisanal/bubbles.dart' as tui hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
+import 'package:artisanal/bubbles.dart' hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
 
 import 'package:artisanal/style.dart';
-import 'package:artisanal/tui.dart';
 import 'package:artisanal/tui.dart' as tui;
 
 const _initialInputs = 2;
@@ -23,27 +24,24 @@ final _focusedBorderStyle = Style()
     .borderForeground(const BasicColor('#6e6e6e'));
 final _blurredBorderStyle = Style().border(Border.hidden);
 
-class SplitKeys implements tui.KeyMap {
+class SplitKeys extends tui.KeyMap {
   SplitKeys()
     : next = tui.KeyBinding.withHelp(['tab'], 'tab', 'next'),
       prev = tui.KeyBinding.withHelp(['shift+tab'], 'shift+tab', 'prev'),
       add = tui.KeyBinding.withHelp(['ctrl+n'], 'ctrl+n', 'add editor'),
       remove = tui.KeyBinding.withHelp(['ctrl+w'], 'ctrl+w', 'remove editor'),
-      quit = tui.KeyBinding.withHelp(['esc', 'ctrl+c'], 'esc', 'quit');
+      quit = tui.KeyBinding.withHelp(['esc', 'ctrl+c'], 'esc', 'quit') {
+    shortHelp = [next, prev, add, remove, quit];
+    fullHelp = [
+      [next, prev, add, remove, quit],
+    ];
+  }
 
   final tui.KeyBinding next;
   final tui.KeyBinding prev;
   final tui.KeyBinding add;
   final tui.KeyBinding remove;
   final tui.KeyBinding quit;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [next, prev, add, remove, quit];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [next, prev, add, remove, quit],
-  ];
 }
 
 class SplitEditorsModel implements tui.Model {

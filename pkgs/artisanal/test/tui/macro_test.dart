@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:test/test.dart';
 
 void main() {

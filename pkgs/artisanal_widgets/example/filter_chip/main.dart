@@ -1,4 +1,5 @@
 // FilterChip Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates multi-selection behavior with FilterChip.
 //
@@ -8,7 +9,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(FilterChipShowcase());
+  final app = WidgetApp(FilterChipShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

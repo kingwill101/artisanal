@@ -22,7 +22,6 @@
 library;
 
 import '../unicode/grapheme.dart' as uni;
-import '../layout/layout.dart';
 import 'package:artisanal/style.dart';
 
 /// Measured border thickness in terminal cells/rows.

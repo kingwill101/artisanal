@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 
 const _surfaceId = 'generic.panel';
 const _width = 38;

@@ -27,8 +27,10 @@
 /// ```
 library;
 
-import 'package:artisanal/style.dart';
-import '../layout/layout_widgets.dart' show EdgeInsets;
+import 'package:artisanal/style.dart'
+    show Color, Style, Border, AdaptiveColor, AnsiColor, isDarkColorRgb;
+
+import '../layout/spacing.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Component Theme Data Classes
@@ -549,7 +551,8 @@ class GitDiffThemeData {
       selectedCommentLineBackground:
           selectedCommentLineBackground ?? this.selectedCommentLineBackground,
       selectedCommentGutterBackground:
-          selectedCommentGutterBackground ?? this.selectedCommentGutterBackground,
+          selectedCommentGutterBackground ??
+          this.selectedCommentGutterBackground,
       commentRangeLineBackground:
           commentRangeLineBackground ?? this.commentRangeLineBackground,
       commentRangeGutterBackground:

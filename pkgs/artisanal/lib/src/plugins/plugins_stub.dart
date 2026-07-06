@@ -7,16 +7,16 @@ library;
 
 export 'package:json_schema_builder/json_schema_builder.dart'
     show Schema, SchemaValidation, ValidationError;
-export 'src/plugins/core_exports.dart';
+export 'package:artisanal/src/plugins/core_exports.dart';
 
 import 'dart:async';
 
-import 'src/plugins/remote_surface_channel.dart' as channel;
-import 'src/plugins/remote_surface_protocol.dart' as protocol;
-import 'src/plugins/remote_surface_session.dart' as session;
-import 'src/plugins/remote_surface_state.dart' as state;
-import 'src/plugins/remote_surface_slots.dart' as slots;
-import 'src/plugins/remote_surface_slot_input.dart' as slot_input;
+import 'package:artisanal/src/plugins/remote_surface_channel.dart' as channel;
+import 'package:artisanal/src/plugins/remote_surface_protocol.dart' as protocol;
+import 'package:artisanal/src/plugins/remote_surface_session.dart' as session;
+import 'package:artisanal/src/plugins/remote_surface_state.dart' as state;
+import 'package:artisanal/src/plugins/remote_surface_slots.dart' as slots;
+import 'package:artisanal/src/plugins/remote_surface_slot_input.dart' as slot_input;
 
 typedef RemotePluginClipboardReader =
     FutureOr<String> Function(

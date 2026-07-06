@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A compact sparkline widget rendered with Unicode block characters.
 ///

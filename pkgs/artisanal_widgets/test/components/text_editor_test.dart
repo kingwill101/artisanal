@@ -6,8 +6,8 @@ import 'package:artisanal/bubbles.dart'
         TextPositionDiagnosticRange,
         TextDiagnosticSeverity,
         textSearchActiveMatchDecorationKey;
-import 'package:artisanal/testing.dart';
-import 'package:artisanal/widgets.dart';
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {

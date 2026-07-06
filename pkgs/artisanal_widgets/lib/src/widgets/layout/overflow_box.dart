@@ -1,4 +1,7 @@
-part of 'layout_widgets.dart';
+import '../render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
+import 'spacing.dart';
 
 /// A widget that imposes different constraints on its child than it gets
 /// from its parent, possibly allowing the child to overflow the parent.
@@ -70,7 +73,7 @@ class OverflowBox extends SingleChildRenderObjectWidget {
   @override
   Object view() {
     if (child == null) return '';
-    return _renderWidget(child!);
+    return renderWidget(child!);
   }
 }
 
@@ -168,7 +171,7 @@ class SizedOverflowBox extends SingleChildRenderObjectWidget {
   @override
   Object view() {
     if (child == null) return '';
-    return _renderWidget(child!);
+    return renderWidget(child!);
   }
 }
 

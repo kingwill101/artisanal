@@ -1,12 +1,7 @@
-import 'dart:async';
 import 'dart:convert';
 
-import 'package:artisanal/runtime.dart' show Model, Cmd, Msg;
 import 'package:artisanal_widgets/artisanal_widgets.dart'
     show StatelessWidget, Widget, BuildContext, WidgetApp, SizedBox;
-import 'package:artisanal_widgets/widgets.dart'
-    show ArtisanalApp;
-import 'package:flutter/foundation.dart';
 import 'package:flutter_artisanal/flutter_artisanal.dart';
 import 'package:flutter_test/flutter_test.dart';
 

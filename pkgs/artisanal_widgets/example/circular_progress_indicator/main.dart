@@ -1,4 +1,5 @@
 // CircularProgressIndicator Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates determinate and indeterminate CircularProgressIndicator.
 //
@@ -8,7 +9,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(CircularProgressIndicatorShowcase());
+  final app = WidgetApp(CircularProgressIndicatorShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

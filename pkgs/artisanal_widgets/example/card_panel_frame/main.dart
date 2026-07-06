@@ -1,4 +1,5 @@
 // Card, PanelBox, Frame, AlertBox & Toast Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates container-style component widgets: Card, PanelBox
 // (with title and actions), Frame, AlertBox (info/success/warning/error),
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(CardPanelShowcase());
+  final app = WidgetApp(CardPanelShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

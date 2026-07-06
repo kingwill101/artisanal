@@ -1,4 +1,5 @@
 // Badge & StatusLine Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Badge widget with per-side padding and width calculation,
 // and the StatusLine widget with 3-region layout (left/center/right),
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(StatusLineShowcase());
+  final app = WidgetApp(StatusLineShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

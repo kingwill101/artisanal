@@ -1,4 +1,9 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import '../rendering/rendering.dart';
+import '../theme.dart';
+import '../style.dart';
+import 'enums.dart';
 
 class TextSpan {
   const TextSpan({
@@ -69,7 +74,7 @@ class Text extends LeafRenderObjectWidget {
     return buildCachedView<String>(() {
       String content;
       if (textSpan != null) {
-        content = _renderSpan(textSpan!, style);
+        content = renderSpan(textSpan!, style);
       } else {
         content = data ?? '';
         if (style != null) {
@@ -128,7 +133,7 @@ class Text extends LeafRenderObjectWidget {
   );
 }
 
-String _renderSpan(TextSpan span, Style? baseStyle) {
+String renderSpan(TextSpan span, Style? baseStyle) {
   final buffer = StringBuffer();
   Style? resolvedStyle;
   if (baseStyle != null || span.style != null) {
@@ -150,7 +155,7 @@ String _renderSpan(TextSpan span, Style? baseStyle) {
 
   if (span.children.isNotEmpty) {
     for (final child in span.children) {
-      buffer.write(_renderSpan(child, resolvedStyle ?? baseStyle));
+      buffer.write(renderSpan(child, resolvedStyle ?? baseStyle));
     }
   }
 

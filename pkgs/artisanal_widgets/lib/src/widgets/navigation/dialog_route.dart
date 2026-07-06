@@ -14,10 +14,9 @@ import '../animation/animation_mixin.dart' show AnimationMixin;
 import '../animation/animations.dart' show AnimationStatus;
 import '../animation/curves.dart' show Curves;
 import '../components/overlay.dart' show OverlayEntry;
-import '../core/framework.dart'
-    show BuildContext, State, StatefulWidget;
+import '../core/framework.dart' show BuildContext, State, StatefulWidget;
 import '../core/widget.dart';
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 import '../theme/theme.dart' show Theme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'animation_style.dart' show AnimationStyle;
@@ -166,8 +165,7 @@ class _DialogFrame<T> extends StatefulWidget {
   State<_DialogFrame<T>> createState() => _DialogFrameState<T>();
 }
 
-class _DialogFrameState<T> extends State<_DialogFrame<T>>
-    with AnimationMixin {
+class _DialogFrameState<T> extends State<_DialogFrame<T>> with AnimationMixin {
   late AnimationController _controller;
   bool _isDismissing = false;
 
@@ -175,8 +173,8 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>>
   void initState() {
     super.initState();
     _controller = createAnimationController(
-      duration: widget.animationStyle?.duration ??
-          const Duration(milliseconds: 150),
+      duration:
+          widget.animationStyle?.duration ?? const Duration(milliseconds: 150),
       reverseDuration: widget.animationStyle?.reverseDuration,
     );
     _controller.addListener(() => setState(() {}));
@@ -203,7 +201,8 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>>
     if (_isDismissing) return null;
     _isDismissing = true;
     return _controller.reverse(
-      curve: widget.animationStyle?.reverseCurve ??
+      curve:
+          widget.animationStyle?.reverseCurve ??
           widget.animationStyle?.curve ??
           Curves.easeOut,
     );
@@ -239,9 +238,7 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>>
       onTap: widget.barrierDismissible ? _dismiss : null,
       child: Opacity(
         opacity: effectiveOpacity,
-        child: Container(
-          color: widget.barrierColor ?? theme.background,
-        ),
+        child: Container(color: widget.barrierColor ?? theme.background),
       ),
     );
 
@@ -258,18 +255,16 @@ class _DialogFrameState<T> extends State<_DialogFrame<T>>
     // The useSafeArea parameter is accepted for API parity with Flutter.
 
     if (widget.width != null || widget.height != null) {
-      dialog = SizedBox(width: widget.width, height: widget.height, child: dialog);
+      dialog = SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: dialog,
+      );
     }
     dialog = Align(alignment: widget.alignment, child: dialog);
 
     // -- Assemble stack --
-    return Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        barrier,
-        dialog,
-      ],
-    );
+    return Stack(fit: StackFit.expand, children: <Widget>[barrier, dialog]);
   }
 }
 

@@ -1,4 +1,5 @@
 // Theme & MediaQuery Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Theme (dark/light/adaptive), ThemeScope for propagating
 // themes down the widget tree, theme color palette, typography styles,
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ThemeShowcase());
+  final app = WidgetApp(ThemeShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

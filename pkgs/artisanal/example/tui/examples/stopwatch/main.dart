@@ -1,29 +1,27 @@
 /// Stopwatch example ported from Bubble Tea.
 library;
+import 'package:artisanal/bubbles.dart' as tui hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
 
 import 'package:artisanal/tui.dart' as tui;
 
 const _interval = Duration(milliseconds: 100);
 
-class StopwatchKeys implements tui.KeyMap {
+class StopwatchKeys extends tui.KeyMap {
   StopwatchKeys()
     : start = tui.KeyBinding.withHelp(['s'], 's', 'start/stop'),
       stop = tui.KeyBinding.withHelp(['s'], 's', 'start/stop'),
       reset = tui.KeyBinding.withHelp(['r'], 'r', 'reset'),
-      quit = tui.KeyBinding.withHelp(['q', 'ctrl+c'], 'q', 'quit');
+      quit = tui.KeyBinding.withHelp(['q', 'ctrl+c'], 'q', 'quit') {
+    shortHelp = [start, reset, quit];
+    fullHelp = [
+      [start, reset, quit],
+    ];
+  }
 
   final tui.KeyBinding start;
   final tui.KeyBinding stop;
   final tui.KeyBinding reset;
   final tui.KeyBinding quit;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [start, reset, quit];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [start, reset, quit],
-  ];
 }
 
 class StopwatchExampleModel implements tui.Model {

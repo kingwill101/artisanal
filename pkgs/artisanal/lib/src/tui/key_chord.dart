@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'bubbles/key_binding.dart' show KeyBinding, keyMatchesSingle;
+import 'bubbles/key_binding.dart' show KeyBinding, KeyMap, keyMatchesSingle;
 import 'key.dart';
 import 'msg.dart';
 import 'program.dart' show ProgramInterceptor;
@@ -176,4 +176,20 @@ final class KeyChordInterceptor extends ProgramInterceptor {
     _timer = null;
     _active = null;
   }
+}
+
+/// Extracts chord bindings from [keyMap] for use with [KeyChordInterceptor].
+///
+/// ```dart
+/// final interceptor = KeyChordInterceptor(
+///   bindings: chordBindings(myKeyMap),
+/// );
+/// ```
+List<KeyChordBinding> chordBindings(KeyMap keyMap) {
+  final chords = keyMap.chords;
+  if (chords == null || chords.isEmpty) return [];
+  return [
+    for (final c in chords)
+      KeyChordBinding(id: c.id, prefix: c.prefix, key: c.key),
+  ];
 }

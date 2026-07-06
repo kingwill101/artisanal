@@ -1,4 +1,8 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+
 
 /// A text widget that renders as a clickable hyperlink using OSC 8 escape
 /// sequences in terminals that support them.

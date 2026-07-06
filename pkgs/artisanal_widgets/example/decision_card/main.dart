@@ -1,4 +1,5 @@
 // DecisionCard Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the DecisionCard widget with all 4 progressive-disclosure
 // levels: traffic-light badge, plain-English explanation, evidence terms,
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(DecisionCardShowcase());
+  final app = WidgetApp(DecisionCardShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

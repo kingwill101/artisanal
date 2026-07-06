@@ -1,4 +1,5 @@
-import 'package:artisanal/style.dart' show Color, HorizontalAlign, Style, VerticalAlign;
+import 'package:artisanal/style.dart'
+    show Color, HorizontalAlign, Style, VerticalAlign;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -1105,7 +1106,9 @@ w.Widget _diffFileRow({
       selected ? theme.listRowSelectedAccentForeground : theme.success,
     );
   final deleteStyle = theme.bodySmall.copy()
-    ..foreground(selected ? theme.listRowSelectedAccentForeground : theme.error);
+    ..foreground(
+      selected ? theme.listRowSelectedAccentForeground : theme.error,
+    );
   final statusStyle = theme.bodySmall.copy()
     ..foreground(selected ? theme.listRowSelectedMutedForeground : theme.muted);
   final title = _ellipsizePath(file.filename, (width - 2).clamp(8, 80));

@@ -220,7 +220,10 @@ class _ThemeListDialogState extends w.State<ThemeListDialog> {
                     children: rows.isEmpty
                         ? [
                             w.Padding(
-                              padding: const w.EdgeInsets.only(left: 3, right: 3),
+                              padding: const w.EdgeInsets.only(
+                                left: 3,
+                                right: 3,
+                              ),
                               child: w.Text(
                                 'No themes matching "$_searchQuery"',
                                 style: style.Style()..foreground(shortcutFg),

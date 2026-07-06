@@ -3,7 +3,7 @@
 /// Run with: dart run example/markdown_demo.dart
 library;
 
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 
 void main() {

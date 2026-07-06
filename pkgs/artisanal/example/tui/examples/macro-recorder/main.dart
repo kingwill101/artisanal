@@ -4,7 +4,7 @@ library;
 
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 const _delayBetweenInputs = Duration(milliseconds: 25);
 

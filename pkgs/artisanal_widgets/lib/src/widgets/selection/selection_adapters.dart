@@ -1,4 +1,4 @@
-part of 'selection_widgets.dart';
+part of 'selection.dart';
 
 /// Convenience adapters that let read-only text widgets opt into the shared
 /// selection model without changing their layout role.

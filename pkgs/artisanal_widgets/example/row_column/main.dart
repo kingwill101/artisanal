@@ -1,4 +1,5 @@
 // Row & Column Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Row, Column, HBox, VBox with gap, mainAxisAlignment,
 // crossAxisAlignment, and mainAxisSize options.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(RowColumnShowcase());
+  final app = WidgetApp(RowColumnShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

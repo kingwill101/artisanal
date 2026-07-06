@@ -1,9 +1,42 @@
+
 import 'package:artisanal/bubbles.dart'
-    show CursorModel, TextAreaKeyMap, TextAreaModel, TextAreaStyles;
-import 'package:artisanal/markdown.dart' show AnsiRendererOptions;
-import 'package:artisanal/style.dart';
-import 'package:artisanal/tui.dart' show Cmd;
+    show
+        CodeLanguageProfile,
+        CursorModel,
+        TextAreaKeyMap,
+        TextAreaModel,
+        TextAreaStyles,
+        TextDecorationRange,
+        TextSyntaxBuildResult,
+        TextSyntaxDecorationPatch,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextSyntaxProvider,
+        TextDocument,
+        TextDocumentChange,
+        keyMatchesSingle,
+        codeHandleClosingDelimiterAlignment,
+        codeHandlePairBackspace,
+        codeHandleAutoPair,
+        codeInsertIndentedNewline,
+        codeToggleBlockComments,
+        resolveCodeLanguageProfile,
+        textSyntaxChangeWindow,
+        textSyntaxDecorationLayerKey,
+        textSyntaxDecorationLayerPriority;
+import 'package:artisanal/artisanal.dart'
+    show
+        AdaptiveChromaTheme,
+        ChromaTheme,
+        SyntaxHighlighter,
+        highlightCodeString,
+        AnsiRendererOptions;
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
 import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+
 
 /// A higher-level Markdown editor with a live rendered preview.
 ///

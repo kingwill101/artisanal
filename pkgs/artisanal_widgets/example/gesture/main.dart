@@ -1,4 +1,5 @@
 // Gesture & Mouse Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates GestureDetector (tap, drag, wheel), MouseRegion
 // (hover enter/exit), and Zone widgets with interactive feedback.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(GestureShowcase());
+  final app = WidgetApp(GestureShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

@@ -1,16 +1,15 @@
 /// Stub for `run_app.dart` when `dart:io` is not available.
 library;
 
-import 'package:artisanal/hosts.dart' as hosts;
-import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/style.dart' show ColorProfile;
-
+import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/tui.dart' as runtime;
+import '../layout/image.dart' show ImageAutoMode;
 import 'artisanal_app.dart';
 import 'reload.dart';
 import 'reload_watcher.dart';
-import '../layout/layout_widgets.dart' show ImageAutoMode;
 import '../theme/theme.dart';
 import 'widget_app.dart';
+import '../style.dart';
 
 const runtime.ProgramOptions defaultWidgetProgramOptions =
     runtime.ProgramOptions(

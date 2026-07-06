@@ -258,7 +258,10 @@ class _SessionListDialogState extends w.State<SessionListDialog> {
                     children: listItems.isEmpty
                         ? [
                             w.Padding(
-                              padding: const w.EdgeInsets.only(left: 3, right: 3),
+                              padding: const w.EdgeInsets.only(
+                                left: 3,
+                                right: 3,
+                              ),
                               child: w.Text(
                                 _searchQuery.isEmpty
                                     ? 'No sessions'

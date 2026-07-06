@@ -1,11 +1,12 @@
 //
+import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal/widgets.dart' as tui hide Key, TextSelection;
 // Demonstrates widgets, layout, theming, and hit-test-driven mouse events.
 //
 // Run with: dart run example/tui/examples/widgets/main.dart
 
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/widgets.dart' as w;
 import 'package:artisanal/src/tui/trace.dart';
 
 void _trace(String msg) {

@@ -1,4 +1,12 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/style.dart' show Border, Color;
+import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
+
+import '../theme.dart';
 
 enum AlertVariant { info, success, warning, error, neutral }
 

@@ -3,7 +3,7 @@ library;
 
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 class SequenceModel implements tui.Model {
   @override

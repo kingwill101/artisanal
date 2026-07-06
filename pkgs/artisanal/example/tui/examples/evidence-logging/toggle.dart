@@ -4,7 +4,7 @@ library;
 
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 Future<void> main(List<String> args) async {
   final mode = args.isEmpty ? 'enabled' : args.first.toLowerCase();

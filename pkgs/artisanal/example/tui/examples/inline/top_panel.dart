@@ -12,7 +12,7 @@ library;
 
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 class TopPanelModel implements Model {
   const TopPanelModel({this.tick = 0});

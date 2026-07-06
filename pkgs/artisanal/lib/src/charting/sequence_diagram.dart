@@ -8,7 +8,7 @@
 /// (box/end), rect regions, autonumbering, and inline CSS color names.
 ///
 /// ```dart
-/// import 'package:artisanal/charting.dart';
+/// import 'package:artisanal/artisanal.dart';
 ///
 /// void main() {
 ///   // String convenience API

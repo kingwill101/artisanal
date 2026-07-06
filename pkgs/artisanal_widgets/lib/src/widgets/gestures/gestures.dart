@@ -6,10 +6,11 @@
 /// {@category Widgets}
 library;
 
+
+export 'drag.dart';
 export 'events.dart';
 export 'hit_testing.dart';
-export 'recognizer.dart';
-export 'timer.dart';
-export 'tap.dart';
 export 'long_press.dart';
-export 'drag.dart';
+export 'recognizer.dart';
+export 'tap.dart';
+export 'timer.dart';

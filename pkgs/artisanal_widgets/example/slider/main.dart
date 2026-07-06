@@ -1,4 +1,5 @@
 // Slider Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Slider with keyboard and mouse interactions.
 //
@@ -8,7 +9,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(SliderShowcase());
+  final app = WidgetApp(SliderShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

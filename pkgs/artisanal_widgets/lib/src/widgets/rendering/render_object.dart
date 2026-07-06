@@ -2,6 +2,7 @@
 @experimental
 library;
 
+import 'package:artisanal_widgets/src/widgets/element.dart';
 import 'package:meta/meta.dart' show experimental;
 
 import '../core/widget.dart';
@@ -208,4 +209,37 @@ abstract class MultiChildRenderObjectWidget extends RenderObjectWidget {
 
   @override
   final List<Widget> children;
+}
+
+/// Returns the global offset of a [RenderObject].
+({double x, double y}) globalOffset(RenderObject renderObject) {
+  var x = 0.0;
+  var y = 0.0;
+  RenderObject? current = renderObject;
+  while (current != null) {
+    x += current.offset.dx;
+    y += current.offset.dy;
+    current = current.parent;
+  }
+  return (x: x, y: y);
+}
+
+/// Returns all [RenderObject]s in the subtree of [element].
+Iterable<RenderObject> renderObjectsInSubtree(Element element) sync* {
+  final ro = element.renderObject;
+  if (ro != null) yield ro;
+  for (final child in element.children) {
+    yield* renderObjectsInSubtree(child);
+  }
+}
+
+/// Returns the first [RenderOb] in the subtree of [element].
+RenderObject? firstRenderObject(Element element) {
+  final direct = element.renderObject;
+  if (direct != null) return direct;
+  for (final child in element.children) {
+    final nested = firstRenderObject(child);
+    if (nested != null) return nested;
+  }
+  return null;
 }

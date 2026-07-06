@@ -5,9 +5,9 @@
 //
 // Run with: dart run example/selection/main.dart
 
-import 'package:artisanal/app.dart' as app;
-import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/selection.dart' as s;
+import 'package:artisanal_widgets/app.dart' as app;
+import 'package:artisanal/tui.dart' as runtime;
+import 'package:artisanal_widgets/selection.dart' as s;
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' show View;
 import 'package:artisanal/widgets.dart' as w;

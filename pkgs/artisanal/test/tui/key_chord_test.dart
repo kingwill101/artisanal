@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/bubbles.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -17,12 +18,12 @@ void main() {
         bindings: [
           tui.KeyChordBinding(
             id: 'open-themes',
-            prefix: tui.KeyBinding.withHelp(
+            prefix: KeyBinding.withHelp(
               ['ctrl+x'],
               'ctrl+x',
               'prefix',
             ),
-            key: tui.KeyBinding.withHelp(['t'], 't', 'themes'),
+            key: KeyBinding.withHelp(['t'], 't', 'themes'),
           ),
         ],
       );
@@ -61,12 +62,12 @@ void main() {
         bindings: [
           tui.KeyChordBinding(
             id: 'open-themes',
-            prefix: tui.KeyBinding.withHelp(
+            prefix: KeyBinding.withHelp(
               ['ctrl+x'],
               'ctrl+x',
               'prefix',
             ),
-            key: tui.KeyBinding.withHelp(['t'], 't', 'themes'),
+            key: KeyBinding.withHelp(['t'], 't', 'themes'),
           ),
         ],
       );
@@ -106,12 +107,12 @@ void main() {
         bindings: [
           tui.KeyChordBinding(
             id: 'open-themes',
-            prefix: tui.KeyBinding.withHelp(
+            prefix: KeyBinding.withHelp(
               ['ctrl+x'],
               'ctrl+x',
               'prefix',
             ),
-            key: tui.KeyBinding.withHelp(['t'], 't', 'themes'),
+            key: KeyBinding.withHelp(['t'], 't', 'themes'),
           ),
         ],
         timeout: const Duration(milliseconds: 100),

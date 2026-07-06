@@ -7,7 +7,7 @@ import '../components/components_widgets.dart'
     show DebugConsoleController, DebugConsoleHost, DebugOverlayPosition;
 import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../core/widget.dart';
-import '../layout/layout_widgets.dart' show ImageAutoMode;
+import '../layout/layout.dart' show ImageAutoMode;
 import '../navigation/navigation.dart'
     show
         Navigator,

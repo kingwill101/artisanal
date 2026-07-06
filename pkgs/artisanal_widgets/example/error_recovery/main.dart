@@ -1,4 +1,5 @@
 // Error Recovery Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the global error boundary in WidgetApp. Unhandled exceptions
 // during update/build no longer crash the TUI. Instead, an error screen is
@@ -19,7 +20,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ErrorRecoveryDemo());
+  final app = WidgetApp(ErrorRecoveryDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(
@@ -106,7 +107,10 @@ class _ErrorRecoveryDemoState extends w.State<ErrorRecoveryDemo> {
         gap: 1,
         children: [
           w.Text('Error Recovery Demo', style: theme.titleLarge),
-          w.Text('Up/Down = select | Enter = trigger error | q = quit', style: label),
+          w.Text(
+            'Up/Down = select | Enter = trigger error | q = quit',
+            style: label,
+          ),
           w.Divider(width: 55),
           ...menuItems,
           w.Divider(width: 55),

@@ -29,7 +29,7 @@ class Column {
 typedef Row = List<String>;
 
 /// Key map for table navigation.
-class TableKeyMap implements KeyMap {
+class TableKeyMap extends KeyMap {
   /// Creates a table key map with default bindings.
   TableKeyMap({
     KeyBinding? lineUp,
@@ -87,7 +87,15 @@ class TableKeyMap implements KeyMap {
            KeyBinding(
              keys: ['end', 'G'],
              help: Help(key: 'G/end', desc: 'go to end'),
-           );
+            ) {
+    shortHelp = [this.lineUp, this.lineDown];
+    fullHelp = [
+      [this.lineUp, this.lineDown],
+      [this.gotoTop, this.gotoBottom],
+      [this.pageUp, this.pageDown],
+      [this.halfPageUp, this.halfPageDown],
+    ];
+  }
 
   /// Move selection up one row.
   final KeyBinding lineUp;
@@ -113,16 +121,6 @@ class TableKeyMap implements KeyMap {
   /// Move selection to last row.
   final KeyBinding gotoBottom;
 
-  @override
-  List<KeyBinding> shortHelp() => [lineUp, lineDown];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [lineUp, lineDown],
-    [gotoTop, gotoBottom],
-    [pageUp, pageDown],
-    [halfPageUp, halfPageDown],
-  ];
 }
 
 /// Styles for table rendering.

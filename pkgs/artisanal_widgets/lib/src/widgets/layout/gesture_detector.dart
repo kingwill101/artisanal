@@ -1,4 +1,24 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/tui.dart'
+    show
+        Cmd,
+        Msg,
+        KeyType,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View,
+        TuiTrace,
+        TraceTag;
+import 'geometry.dart';
+import '../core/element.dart' show elementOf;
+import '../core/framework.dart'
+    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/widget.dart';
+import '../focus/focus.dart' show Focusable;
+import '../gestures/gestures.dart';
+
 
 class GestureDetector extends StatefulWidget {
   GestureDetector({

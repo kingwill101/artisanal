@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:artisanal/app.dart' as app;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/widgets.dart' as w;
 
 Future<void> main(List<String> args) async {

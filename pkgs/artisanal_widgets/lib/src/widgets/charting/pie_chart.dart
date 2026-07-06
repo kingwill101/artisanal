@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A pie or donut chart widget.
 ///

@@ -25,13 +25,13 @@ abstract class Command<T> extends args.Command<T> {
 
   String formatUsage({bool includeDescription = true}) => '';
 
+  @override
   Never usageException(String message) =>
       throw args.UsageException(message, formatUsage(includeDescription: true));
 }
 
 class CommandRunner<T> extends args.CommandRunner<T> {
-  CommandRunner(String executableName, String description)
-      : super(executableName, description);
+  CommandRunner(super.executableName, super.description);
 }
 
 class ShellCompleter {

@@ -1,31 +1,30 @@
-import 'package:artisanal/tui.dart'
-    show DegradationLevel, RenderBudgetMsg, RenderBudgetState;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('Widget degradation policies', () {
     test('Widget.shouldRenderAt follows priority rules by level', () {
-      final essential = w.Budgeted(
-        priority: w.WidgetDegradationPriority.essential,
-        child: w.Text('essential'),
+      final essential = Budgeted(
+        priority: WidgetDegradationPriority.essential,
+        child: Text('essential'),
       );
-      final standard = w.Budgeted(
-        priority: w.WidgetDegradationPriority.standard,
-        child: w.Text('standard'),
+      final standard = Budgeted(
+        priority: WidgetDegradationPriority.standard,
+        child: Text('standard'),
       );
-      final low = w.Budgeted(
-        priority: w.WidgetDegradationPriority.low,
-        child: w.Text('low'),
+      final low = Budgeted(
+        priority: WidgetDegradationPriority.low,
+        child: Text('low'),
       );
-      final decorative = w.Budgeted(
-        priority: w.WidgetDegradationPriority.decorative,
-        child: w.Text('decorative'),
+      final decorative = Budgeted(
+        priority: WidgetDegradationPriority.decorative,
+        child: Text('decorative'),
       );
-      final staleStandard = w.Budgeted(
-        priority: w.WidgetDegradationPriority.standard,
+      final staleStandard = Budgeted(
+        priority: WidgetDegradationPriority.standard,
         stale: true,
-        child: w.Text('stale-standard'),
+        child: Text('stale-standard'),
       );
 
       expect(
@@ -83,9 +82,9 @@ void main() {
       'focus boosts visibility while standard-priority subtree is focused',
       () {
         final focused = _FocusableText('focused');
-        final tree = w.ElementTree(
-          w.Budgeted(
-            priority: w.WidgetDegradationPriority.standard,
+        final tree = ElementTree(
+          Budgeted(
+            priority: WidgetDegradationPriority.standard,
             focusBoost: true,
             child: focused,
           ),
@@ -112,29 +111,29 @@ void main() {
 
   group('WidgetApp budget-aware rendering', () {
     test('RenderBudgetMsg updates tree degradation level without restart', () {
-      final app = w.WidgetApp(
-        w.Column(
+      final app = WidgetApp(
+        Column(
           children: [
-            w.Budgeted(
-              priority: w.WidgetDegradationPriority.decorative,
-              child: w.Text('decorative'),
+            Budgeted(
+              priority: WidgetDegradationPriority.decorative,
+              child: Text('decorative'),
             ),
-            w.Budgeted(
-              priority: w.WidgetDegradationPriority.standard,
-              child: w.Text('standard'),
+            Budgeted(
+              priority: WidgetDegradationPriority.standard,
+              child: Text('standard'),
             ),
-            w.Budgeted(
-              priority: w.WidgetDegradationPriority.low,
-              child: w.Text('low'),
+            Budgeted(
+              priority: WidgetDegradationPriority.low,
+              child: Text('low'),
             ),
-            w.Budgeted(
-              priority: w.WidgetDegradationPriority.essential,
-              child: w.Text('essential'),
+            Budgeted(
+              priority: WidgetDegradationPriority.essential,
+              child: Text('essential'),
             ),
-            w.Budgeted(
-              priority: w.WidgetDegradationPriority.standard,
+            Budgeted(
+              priority: WidgetDegradationPriority.standard,
               stale: true,
-              child: w.Text('stale-standard'),
+              child: Text('stale-standard'),
             ),
           ],
         ),
@@ -187,14 +186,14 @@ void main() {
   });
 }
 
-class _FocusableText extends w.StatelessWidget with w.FocusableWidget {
+class _FocusableText extends StatelessWidget with FocusableWidget {
   _FocusableText(this.text);
 
   final String text;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text(text);
+  Widget build(BuildContext context) {
+    return Text(text);
   }
 }
 

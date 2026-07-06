@@ -23,6 +23,7 @@ class AnimationStyle {
       reverseDuration = null,
       curve = null,
       reverseCurve = null;
+
   /// Creates an [AnimationStyle] with the given properties.
   ///
   /// All parameters are optional. When null, the default values of the
@@ -62,7 +63,8 @@ class AnimationStyle {
   }
 
   @override
-  int get hashCode => Object.hash(duration, reverseDuration, curve, reverseCurve);
+  int get hashCode =>
+      Object.hash(duration, reverseDuration, curve, reverseCurve);
 
   @override
   String toString() {

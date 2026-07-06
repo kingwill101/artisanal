@@ -1,4 +1,27 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart'
+    show
+        Cmd,
+        Msg,
+        KeyType,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View,
+        TuiTrace,
+        TraceTag;
+import '../core/framework.dart'
+    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../core/widget.dart';
+import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+import '../animation/animation_controller.dart';
+import '../animation/animation_mixin.dart';
+
+
+import 'tint.dart';
+
 
 /// A widget that applies an animated color tint over its child.
 ///

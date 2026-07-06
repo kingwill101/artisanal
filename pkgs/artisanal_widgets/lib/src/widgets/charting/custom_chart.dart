@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A generic chart widget backed by a custom [ChartPainter].
 ///

@@ -1,4 +1,5 @@
 // ChoiceChip Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates single-selection behavior with ChoiceChip.
 //
@@ -8,7 +9,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ChoiceChipShowcase());
+  final app = WidgetApp(ChoiceChipShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

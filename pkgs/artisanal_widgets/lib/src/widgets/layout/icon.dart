@@ -1,4 +1,9 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+
+import '../rendering/render_layout.dart';
+import '../rendering/render_object.dart';
+import '../theme/theme.dart' show hasDarkBackground;
+import '_layout_utils.dart';
 
 class IconData {
   const IconData(this.codePoint);
@@ -43,17 +48,13 @@ class Icon extends LeafRenderObjectWidget {
 
   String _render() {
     final glyph = icon.glyph;
-    final resolvedSize = _resolveDimension(size);
+    final resolvedSize = resolveDimension(size);
     final resolvedStyle = _resolveIconStyle();
     final content = resolvedStyle == null ? glyph : resolvedStyle.render(glyph);
 
     if (resolvedSize == null) return content;
 
-    return _constrainContent(
-      content,
-      width: resolvedSize,
-      height: resolvedSize,
-    );
+    return constrainContent(content, width: resolvedSize, height: resolvedSize);
   }
 
   Style? _resolveIconStyle() {

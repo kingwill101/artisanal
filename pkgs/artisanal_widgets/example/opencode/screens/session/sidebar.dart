@@ -59,5 +59,3 @@ class _SessionSidebarPaneState extends w.State<SessionSidebarPane> {
     );
   }
 }
-
-

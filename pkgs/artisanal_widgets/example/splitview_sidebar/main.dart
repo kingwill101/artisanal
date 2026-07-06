@@ -1,4 +1,5 @@
 // SplitView & Sidebar Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates SplitView (horizontal/vertical with flex ratios),
 // Sidebar (left/right side panels with fixed width).
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(SplitViewShowcase());
+  final app = WidgetApp(SplitViewShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

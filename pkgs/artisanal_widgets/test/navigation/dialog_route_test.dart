@@ -127,8 +127,7 @@ void main() {
       expect(tester.find.text('Sticky'), isTrue);
     });
 
-    test('showDialog returns Future that completes with pop result',
-        () async {
+    test('showDialog returns Future that completes with pop result', () async {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 

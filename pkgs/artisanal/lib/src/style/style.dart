@@ -2618,7 +2618,6 @@ class Style {
     return Ansi.expandTabs(text, tabWidth: tw);
   }
 
-  static const _resetAnsi = '\x1B[0m';
 
   String _applyConsoleTags(String text) {
     return ConsoleTagParser(

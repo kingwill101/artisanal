@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal_widgets/widgets.dart' as w;

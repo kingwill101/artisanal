@@ -7,7 +7,7 @@
 /// The screen should update automatically without a keypress.
 library;
 
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/widgets.dart' as tui;
 
 // ── Change this string and save to test hot reload ──────────────────────

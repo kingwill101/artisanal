@@ -1,12 +1,12 @@
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('Viewport handles wheel events via hit-testing', () {
-    final controller = w.ViewportController();
-    final app = tui.WidgetApp(
-      w.Viewport(
+    final controller = ViewportController();
+    final app = WidgetApp(
+      Viewport(
         content: _contentLines(40),
         width: 12,
         height: 4,
@@ -19,9 +19,9 @@ void main() {
     final output = app.view();
     expect(output, isNotEmpty);
 
-    final mouse = tui.MouseMsg(
-      action: tui.MouseAction.wheel,
-      button: tui.MouseButton.wheelDown,
+    final mouse = MouseMsg(
+      action: MouseAction.wheel,
+      button: MouseButton.wheelDown,
       x: 0,
       y: 0,
     );

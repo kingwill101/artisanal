@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A line chart widget supporting single or multi-series data.
 ///

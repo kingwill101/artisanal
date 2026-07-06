@@ -1,4 +1,30 @@
-part of 'components_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/artisanal.dart' show Style;
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color;
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/scroll_widgets.dart'
+    show WidgetScrollController;
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal/bubbles.dart'
+    show
+        DiffCommentAnchor,
+        DiffCommentLineHighlight,
+        DiffCommentLineHighlightKind,
+        DiffCommentLineKey,
+        DiffCommentKind,
+        DiffCommentSide,
+        DiffFile,
+        DiffStyles,
+        DiffViewMode,
+        GitDiffModel;
+
+import 'package:artisanal_widgets/src/widgets/gestures/events.dart';
+import 'package:artisanal_widgets/src/widgets/gestures/hit_testing.dart';
+import 'package:artisanal_widgets/src/widgets/theme/theme.dart';
 
 /// Controller for [GitDiffViewer].
 ///
@@ -275,7 +301,7 @@ class GitDiffViewer extends StatefulWidget {
   ///
   /// When supplied, this controller owns the vertical scroll offset so parent
   /// layouts can drive the diff viewer without forcing full-content rendering.
-  final ScrollController? scrollController;
+  final WidgetScrollController? scrollController;
 
   /// Whether to handle keyboard input for scrolling.
   final bool handleKeys;
@@ -305,7 +331,7 @@ class GitDiffViewer extends StatefulWidget {
 class _GitDiffViewerState extends State<GitDiffViewer> {
   late GitDiffController _controller;
   bool _controllerAttached = false;
-  ScrollController? _scrollController;
+  WidgetScrollController? _scrollController;
   bool _scrollControllerAttached = false;
   String _lastDiff = '';
   Theme? _cachedTheme;
@@ -349,7 +375,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     _controllerAttached = true;
   }
 
-  void _attachScrollController(ScrollController? controller) {
+  void _attachScrollController(WidgetScrollController? controller) {
     if (_scrollControllerAttached) {
       _scrollController?.removeListener(_onExternalScrollChanged);
     }
@@ -365,18 +391,18 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
   void _updateThemeStyles() {
     final theme = ThemeScope.of(context);
     final terminalHasDarkBackground = hasDarkBackground;
-    final needsThemeStylesUpdate =
-        widget.styles == null
-            ? !identical(theme, _cachedTheme) ||
-                _cachedHasDarkBackground != terminalHasDarkBackground
-            : _cachedThemeStyles != widget.styles ||
-                _cachedHasDarkBackground != terminalHasDarkBackground;
+    final needsThemeStylesUpdate = widget.styles == null
+        ? !identical(theme, _cachedTheme) ||
+              _cachedHasDarkBackground != terminalHasDarkBackground
+        : _cachedThemeStyles != widget.styles ||
+              _cachedHasDarkBackground != terminalHasDarkBackground;
 
     if (!needsThemeStylesUpdate) return;
 
     _cachedTheme = theme;
     _cachedHasDarkBackground = terminalHasDarkBackground;
-    _cachedThemeStyles = widget.styles ??
+    _cachedThemeStyles =
+        widget.styles ??
         DiffStyles.fromColors(
           success: theme.gitDiffTheme?.addedBackground ?? theme.success,
           error: theme.gitDiffTheme?.removedBackground ?? theme.error,
@@ -398,28 +424,34 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
 
       final overrides = <String, Style>{};
       if (gdTheme.selectedCommentLineBackground != null) {
-        overrides['selectedCommentLine'] =
-            bgStyle(gdTheme.selectedCommentLineBackground!);
+        overrides['selectedCommentLine'] = bgStyle(
+          gdTheme.selectedCommentLineBackground!,
+        );
       }
       if (gdTheme.selectedCommentGutterBackground != null) {
-        overrides['selectedCommentGutter'] =
-            bgStyle(gdTheme.selectedCommentGutterBackground!);
+        overrides['selectedCommentGutter'] = bgStyle(
+          gdTheme.selectedCommentGutterBackground!,
+        );
       }
       if (gdTheme.commentRangeLineBackground != null) {
-        overrides['commentRangeLine'] =
-            bgStyle(gdTheme.commentRangeLineBackground!);
+        overrides['commentRangeLine'] = bgStyle(
+          gdTheme.commentRangeLineBackground!,
+        );
       }
       if (gdTheme.commentRangeGutterBackground != null) {
-        overrides['commentRangeGutter'] =
-            bgStyle(gdTheme.commentRangeGutterBackground!);
+        overrides['commentRangeGutter'] = bgStyle(
+          gdTheme.commentRangeGutterBackground!,
+        );
       }
       if (gdTheme.commentThreadLineBackground != null) {
-        overrides['commentThreadLine'] =
-            bgStyle(gdTheme.commentThreadLineBackground!);
+        overrides['commentThreadLine'] = bgStyle(
+          gdTheme.commentThreadLineBackground!,
+        );
       }
       if (gdTheme.commentThreadGutterBackground != null) {
-        overrides['commentThreadGutter'] =
-            bgStyle(gdTheme.commentThreadGutterBackground!);
+        overrides['commentThreadGutter'] = bgStyle(
+          gdTheme.commentThreadGutterBackground!,
+        );
       }
       if (overrides.isNotEmpty) {
         _cachedThemeStyles = _cachedThemeStyles!.copyWith(

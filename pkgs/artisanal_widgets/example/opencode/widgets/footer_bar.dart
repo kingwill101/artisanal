@@ -44,10 +44,7 @@ class FooterBar extends w.StatelessWidget {
               return w.Row(
                 gap: 1,
                 children: [
-                  w.Text(
-                    frame,
-                    style: style.Style()..foreground(OC.warning),
-                  ),
+                  w.Text(frame, style: style.Style()..foreground(OC.warning)),
                   w.Text(
                     'Esc to interrupt',
                     style: style.Style()..foreground(OC.warning),
@@ -76,14 +73,8 @@ class FooterBar extends w.StatelessWidget {
 
           w.Expanded(child: w.SizedBox.shrink()),
 
-          if (scannerWidget != null) ...[
-            scannerWidget,
-            w.SizedBox(width: 2),
-          ],
-          if (tokensWidget != null) ...[
-            tokensWidget,
-            w.SizedBox(width: 2),
-          ],
+          if (scannerWidget != null) ...[scannerWidget, w.SizedBox(width: 2)],
+          if (tokensWidget != null) ...[tokensWidget, w.SizedBox(width: 2)],
           w.Text(mode.label, style: style.Style()..foreground(OC.info)),
           w.SizedBox(width: 2),
 

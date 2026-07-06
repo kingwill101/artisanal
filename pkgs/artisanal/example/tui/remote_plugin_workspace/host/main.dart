@@ -2,8 +2,8 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:artisanal/plugins.dart' as plugins;
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' as uv;
 
 const _connectTimeout = Duration(seconds: 30);

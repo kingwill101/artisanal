@@ -1,4 +1,6 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
 
 class Zone extends SingleChildRenderObjectWidget {
   Zone({required Widget super.child, this.zoneId, super.key});
@@ -6,7 +8,7 @@ class Zone extends SingleChildRenderObjectWidget {
   final String? zoneId;
 
   @override
-  Object view() => _renderWidget(child!);
+  Object view() => renderWidget(child!);
 
   @override
   RenderObject createRenderObject() {

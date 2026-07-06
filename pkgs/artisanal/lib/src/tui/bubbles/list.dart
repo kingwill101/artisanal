@@ -13,7 +13,6 @@ import 'package:artisanal/style.dart';
 import '../tui.dart';
 import 'key_binding.dart';
 import 'paginator.dart';
-import 'spinner.dart';
 import 'textinput.dart';
 import 'help.dart';
 
@@ -205,7 +204,7 @@ int _scoreRank(Rank rank, String target) {
 }
 
 /// Key map for list navigation.
-class ListKeyMap implements KeyMap {
+class ListKeyMap extends KeyMap {
   /// Creates a list key map with default bindings.
   ListKeyMap({
     KeyBinding? cursorUp,
@@ -300,7 +299,16 @@ class ListKeyMap implements KeyMap {
            KeyBinding(
              keys: ['?'],
              help: Help(key: '?', desc: 'less'),
-           );
+            ) {
+    shortHelp = [this.cursorUp, this.cursorDown, this.filter, this.quit];
+    fullHelp = [
+      [this.cursorUp, this.cursorDown],
+      [this.nextPage, this.prevPage],
+      [this.goToStart, this.goToEnd],
+      [this.filter, this.clearFilter],
+      [this.quit, this.forceQuit],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding cursorUp;
@@ -344,17 +352,7 @@ class ListKeyMap implements KeyMap {
   /// Close full help.
   final KeyBinding closeFullHelp;
 
-  @override
-  List<KeyBinding> shortHelp() => [cursorUp, cursorDown, filter, quit];
 
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [cursorUp, cursorDown],
-    [nextPage, prevPage],
-    [goToStart, goToEnd],
-    [filter, clearFilter],
-    [quit, forceQuit],
-  ];
 }
 
 /// Styles for list rendering.
@@ -1246,8 +1244,9 @@ class ListModel extends ViewComponent {
       final filtered = _filterState == FilterState.filterApplied;
       if (filtered) {
         var f = filterInput.value.trim();
-        if (f.length > 10)
+        if (f.length > 10) {
           f = '${f.substring(0, 9)}${EllipsisChars.horizontal}';
+        }
         status += '“$f” ';
       }
       status += itemsDisplay;

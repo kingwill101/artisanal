@@ -1,4 +1,5 @@
 // VerticalDivider Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates using VerticalDivider to separate content horizontally
 // with various characters, heights, and styles.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(VerticalDividerExample());
+  final app = WidgetApp(VerticalDividerExample());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

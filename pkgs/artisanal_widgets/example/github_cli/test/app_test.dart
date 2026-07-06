@@ -3,10 +3,9 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:artisanal/args.dart' show ArgParser;
-import 'package:artisanal/markdown.dart' show markdownToAnsi;
-import 'package:artisanal/style.dart' show Style;
+import 'package:artisanal/artisanal.dart';
+import 'package:artisanal/artisanal.dart' show markdownToAnsi;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/testing.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:github_cli/src/app/app_io.dart';
 import 'package:github_cli/src/app/theme.dart';

@@ -13,7 +13,7 @@ import '../components/components_widgets.dart'
 import '../components/overlay.dart';
 import '../core/framework.dart' show BuildContext;
 import '../core/widget.dart';
-import '../layout/layout_widgets.dart';
+import '../layout/layout.dart';
 import 'route_settings.dart';
 
 /// A builder that creates a widget for a route.
@@ -98,8 +98,10 @@ abstract class Route<T> {
 enum RoutePopDisposition {
   /// Pop the route.
   pop,
+
   /// Do not pop the route.
   doNotPop,
+
   /// Delegate this to the next level of navigation.
   bubble,
 }

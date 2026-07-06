@@ -42,7 +42,7 @@ class NumberCancelledMsg extends Msg {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Key bindings for [NumberInputModel].
-class NumberInputKeyMap implements KeyMap {
+class NumberInputKeyMap extends KeyMap {
   /// Creates a key map with default bindings.
   NumberInputKeyMap({
     KeyBinding? increment,
@@ -79,7 +79,13 @@ class NumberInputKeyMap implements KeyMap {
            KeyBinding(
              keys: ['esc', 'ctrl+c'],
              help: Help(key: 'esc', desc: 'cancel'),
-           );
+            ) {
+    shortHelp = [this.increment, this.decrement, this.submit, this.cancel];
+    fullHelp = [
+      [this.increment, this.decrement],
+      [this.deleteBackward, this.submit, this.cancel],
+    ];
+  }
 
   /// Increment the value by step.
   final KeyBinding increment;
@@ -96,14 +102,6 @@ class NumberInputKeyMap implements KeyMap {
   /// Cancel the prompt.
   final KeyBinding cancel;
 
-  @override
-  List<KeyBinding> shortHelp() => [increment, decrement, submit, cancel];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [increment, decrement],
-    [deleteBackward, submit, cancel],
-  ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -336,7 +334,7 @@ class NumberInputModel extends ViewComponent {
     // Help.
     if (showHelp) {
       final helpText = keyMap
-          .shortHelp()
+          .shortHelp
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
           .join('  ');

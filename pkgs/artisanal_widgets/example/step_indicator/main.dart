@@ -1,4 +1,5 @@
 // StepIndicator Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates StepIndicator with all step statuses (pending, active,
 // completed, error, skipped), descriptions, and dynamic step progression.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(StepIndicatorShowcase());
+  final app = WidgetApp(StepIndicatorShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

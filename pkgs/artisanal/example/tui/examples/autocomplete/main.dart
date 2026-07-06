@@ -1,11 +1,12 @@
 /// Autocomplete example (fetches Charm repos) ported from Bubble Tea.
 library;
+import 'package:artisanal/bubbles.dart' as tui hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
+import 'package:artisanal/bubbles.dart' hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
 
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:artisanal/artisanal.dart' show AnsiColor, Style;
-import 'package:artisanal/tui.dart' show defaultTextInputStyles;
 import 'package:artisanal/tui.dart' as tui;
 
 const _reposUrl = 'https://api.github.com/orgs/charmbracelet/repos';
@@ -70,22 +71,18 @@ class AutocompleteModel implements tui.Model {
   }
 }
 
-class _AutoKeyMap implements tui.KeyMap {
-  _AutoKeyMap()
-    : bindings = [
-        tui.KeyBinding.withHelp(['tab'], 'tab', 'complete'),
-        tui.KeyBinding.withHelp(['ctrl+n'], 'ctrl+n', 'next'),
-        tui.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'prev'),
-        tui.KeyBinding.withHelp(['esc'], 'esc', 'quit'),
-      ];
+class _AutoKeyMap extends tui.KeyMap {
+  _AutoKeyMap() : bindings = [
+    tui.KeyBinding.withHelp(['tab'], 'tab', 'complete'),
+    tui.KeyBinding.withHelp(['ctrl+n'], 'ctrl+n', 'next'),
+    tui.KeyBinding.withHelp(['ctrl+p'], 'ctrl+p', 'prev'),
+    tui.KeyBinding.withHelp(['esc'], 'esc', 'quit'),
+  ] {
+    shortHelp = bindings;
+    fullHelp = [bindings];
+  }
 
   final List<tui.KeyBinding> bindings;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => bindings;
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [bindings];
 }
 
 tui.Cmd _getRepos() {

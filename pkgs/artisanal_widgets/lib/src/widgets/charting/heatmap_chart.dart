@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A 2D heatmap widget that maps grid values to colours via a [ChartRamp].
 ///

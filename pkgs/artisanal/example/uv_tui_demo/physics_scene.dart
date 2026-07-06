@@ -2,7 +2,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/physics.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 
 import 'theme.dart';

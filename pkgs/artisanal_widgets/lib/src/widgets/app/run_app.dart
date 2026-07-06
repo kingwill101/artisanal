@@ -1,13 +1,13 @@
 import 'dart:io' as io;
 
-import 'package:artisanal/hosts.dart' as hosts;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show ColorProfile;
 
 import 'artisanal_app.dart';
 import 'reload.dart';
 import 'reload_watcher.dart';
-import '../layout/layout_widgets.dart' show ImageAutoMode;
+import '../layout/layout.dart' show ImageAutoMode;
 import '../theme/theme.dart';
 import 'widget_app.dart';
 

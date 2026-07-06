@@ -17,11 +17,11 @@ import '../animation/listenable.dart' show ChangeNotifier, ValueListenable;
 import '../focus/focus.dart' show FocusController, FocusScope;
 import '../core/framework.dart'
     show BuildContext, State, StatefulWidget, StatelessWidget;
-import '../layout/layout_widgets.dart' show Text, TextAlign, TextOverflow;
+import '../layout/layout.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../selection/selection_widgets.dart'
+import '../selection/selection.dart'
     show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;

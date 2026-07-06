@@ -1,4 +1,4 @@
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:test/test.dart';
 

@@ -3,7 +3,6 @@ import 'package:artisanal_widgets/widgets.dart' as w;
 import 'models/chat_model.dart';
 import 'models/message.dart';
 
-
 ChatModel initialModel() {
   return ChatModel(
     route: AppRoute.home,
@@ -263,7 +262,7 @@ ChatModel initialModel() {
       ),
       ..._loadTestMessages(),
     ],
-    enterBehavior: .send
+    enterBehavior: .send,
   );
 }
 
@@ -487,8 +486,14 @@ List<SessionSummary> sampleSessions() {
 List<ModelOption> sampleModels() {
   return const [
     ModelOption(modelName: 'claude-opus-4-20250514', providerName: 'Anthropic'),
-    ModelOption(modelName: 'claude-sonnet-4-20250514', providerName: 'Anthropic'),
-    ModelOption(modelName: 'claude-3-5-haiku-20241022', providerName: 'Anthropic'),
+    ModelOption(
+      modelName: 'claude-sonnet-4-20250514',
+      providerName: 'Anthropic',
+    ),
+    ModelOption(
+      modelName: 'claude-3-5-haiku-20241022',
+      providerName: 'Anthropic',
+    ),
     ModelOption(modelName: 'gpt-5.3-codex', providerName: 'OpenAI'),
     ModelOption(modelName: 'gpt-4o', providerName: 'OpenAI'),
     ModelOption(modelName: 'gpt-4o-mini', providerName: 'OpenAI'),

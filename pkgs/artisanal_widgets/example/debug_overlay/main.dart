@@ -1,4 +1,5 @@
 // DebugOverlay Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the built-in debug overlay via WidgetApp's debugOverlay
 // parameter and the F12 toggle.  Also shows manual PerformanceOverlay
@@ -19,7 +20,7 @@ void main() async {
   final monitor = w.RenderMetricsProgramMonitor(prefix: 'Monitor');
   // The simplest way: set debugOverlay: true.
   // Press F12 at runtime to toggle it on/off.
-  final app = tui.WidgetApp(
+  final app = WidgetApp(
     DebugOverlayDemo(),
     debugOverlay: true,
     debugOverlayPosition: w.DebugOverlayPosition.topRight,

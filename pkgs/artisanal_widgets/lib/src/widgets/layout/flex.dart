@@ -1,4 +1,12 @@
-part of 'layout_widgets.dart';
+import '../core/widget.dart';
+import '../rendering/render_layout.dart';
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'enums.dart';
+import 'flexible.dart';
+import 'geometry.dart';
+import 'spacer.dart';
+
 
 class Flex extends MultiChildRenderObjectWidget {
   Flex({
@@ -71,7 +79,7 @@ class Flex extends MultiChildRenderObjectWidget {
     if (children.isEmpty) return '';
     final render = createRenderObject() as RenderBox;
     for (final child in children) {
-      final renderChild = RenderDelegateBox(() => _renderWidget(child));
+      final renderChild = RenderDelegateBox(() => renderWidget(child));
       final info = _flexInfoFor(child);
       if (info != null) {
         renderChild.parentData = info;

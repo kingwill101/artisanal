@@ -15,4 +15,4 @@
 library;
 
 export 'widgets.dart';
-export 'src/widgets/selection/selection_widgets.dart';
+export 'src/widgets/selection/selection.dart';

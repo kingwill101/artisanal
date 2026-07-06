@@ -1,4 +1,6 @@
-part of 'layout_widgets.dart';
+import '../render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
 
 /// A render object that never reports a hit, causing hit-testing to skip
 /// its subtree and continue to siblings in the parent's child list.
@@ -77,5 +79,5 @@ class IgnorePointer extends SingleChildRenderObjectWidget {
   }
 
   @override
-  Object view() => child == null ? '' : _renderWidget(child!);
+  Object view() => child == null ? '' : renderWidget(child!);
 }

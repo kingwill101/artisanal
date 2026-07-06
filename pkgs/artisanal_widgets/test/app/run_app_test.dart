@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:artisanal/hosts.dart' as hosts;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/artisanal.dart' as hosts;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/terminal.dart' show Ansi;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
 

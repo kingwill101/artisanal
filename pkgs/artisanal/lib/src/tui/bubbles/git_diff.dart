@@ -66,22 +66,20 @@ enum DiffViewMode {
 ///
 /// Provides a [cycleViewMode] binding (default: `v`) to cycle between
 /// [DiffViewMode] values (unified → sideBySide → pretty → unified…).
-class GitDiffKeyMap implements KeyMap {
+class GitDiffKeyMap extends KeyMap {
   /// Creates a git diff key map with optional overrides.
   GitDiffKeyMap({KeyBinding? cycleViewMode})
     : cycleViewMode =
-          cycleViewMode ?? KeyBinding.withHelp(['v'], 'v', 'cycle view mode');
+          cycleViewMode ?? KeyBinding.withHelp(['v'], 'v', 'cycle view mode') {
+    shortHelp = [this.cycleViewMode];
+    fullHelp = [
+      [this.cycleViewMode],
+    ];
+  }
 
   /// Key to cycle through view modes.
   final KeyBinding cycleViewMode;
 
-  @override
-  List<KeyBinding> shortHelp() => [cycleViewMode];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [cycleViewMode],
-  ];
 }
 
 /// Configuration for diff styling.

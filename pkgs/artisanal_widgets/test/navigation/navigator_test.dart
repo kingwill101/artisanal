@@ -681,9 +681,7 @@ void main() {
       addTearDown(() => tester.dispose());
 
       await tester.pumpWidget(
-        w.Navigator(
-          home: _WillHandlePopPage(label: 'Home'),
-        ),
+        w.Navigator(home: _WillHandlePopPage(label: 'Home')),
       );
 
       expect(tester.find.text('Home'), isTrue);
@@ -702,11 +700,7 @@ void main() {
       final tester = WidgetTester();
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
-        w.Navigator(
-          home: _NoPopPage(label: 'Home'),
-        ),
-      );
+      await tester.pumpWidget(w.Navigator(home: _NoPopPage(label: 'Home')));
 
       expect(tester.find.text('Home'), isTrue);
 
@@ -998,11 +992,7 @@ class _HandlePopInternallyRoute extends w.Route<void> {
   @override
   List<w.OverlayEntry> createOverlayEntries() {
     return [
-      w.OverlayEntry(
-        opaque: true,
-        maintainState: true,
-        builder: builder,
-      ),
+      w.OverlayEntry(opaque: true, maintainState: true, builder: builder),
     ];
   }
 }
@@ -1019,11 +1009,7 @@ class _NoPopRoute extends w.Route<void> {
   @override
   List<w.OverlayEntry> createOverlayEntries() {
     return [
-      w.OverlayEntry(
-        opaque: true,
-        maintainState: true,
-        builder: builder,
-      ),
+      w.OverlayEntry(opaque: true, maintainState: true, builder: builder),
     ];
   }
 }
@@ -1064,7 +1050,7 @@ class _SimplePageState extends w.State<_SimplePage> {
 /// Page used in the PopBehavior.canPop test. Any pushed child page will
 /// display "Blocked" and is named `/blocked` so the canPop callback blocks it.
 class _BlockedPage extends _SimplePage {
-  _BlockedPage({required String label}) : super(label: label);
+  _BlockedPage({required super.label});
 }
 
 class _NoPopPage extends w.StatefulWidget {

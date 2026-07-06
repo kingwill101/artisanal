@@ -1,4 +1,4 @@
-part of 'chart_widgets.dart';
+part of 'charting.dart';
 
 /// A convenience widget that rebuilds whenever a [ChartModel] changes.
 ///

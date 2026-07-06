@@ -1,4 +1,4 @@
-part of 'layout_widgets.dart';
+import '../core/core.dart';
 
 class ShrinkWrap extends Widget {
   ShrinkWrap({required this.child, super.key});

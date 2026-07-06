@@ -6,7 +6,7 @@
 /// Run with: dart run example/tui_countdown.dart
 library;
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 /// Custom message for timer ticks.
 class TickMsg extends Msg {

@@ -1,4 +1,4 @@
-part of 'layout_widgets.dart';
+
 
 class Alignment {
   const Alignment(this.x, this.y);

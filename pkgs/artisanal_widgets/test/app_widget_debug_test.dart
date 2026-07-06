@@ -13,9 +13,9 @@
 /// leaving stale render objects in the tree.
 library;
 
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart' show BasicColor;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 
 // Import the actual example app widget.

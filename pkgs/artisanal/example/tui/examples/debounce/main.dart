@@ -1,7 +1,7 @@
 /// Debounce example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 const _debounceDuration = Duration(seconds: 1);
 

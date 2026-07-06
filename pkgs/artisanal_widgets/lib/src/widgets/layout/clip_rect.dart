@@ -1,4 +1,8 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/style.dart' hide Padding, Align;
+import '_layout_utils.dart';
+import 'geometry.dart';
+import '../rendering/render_object.dart';
+
 
 /// A widget that clips its child to its allocated size.
 ///
@@ -37,7 +41,7 @@ class ClipRect extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child != null ? _renderWidget(child!) : '';
+    final content = child != null ? renderWidget(child!) : '';
     return _clipContent(content, width, height);
   }
 }

@@ -2,12 +2,9 @@ import 'dart:math' as math;
 
 
 
-import 'dart:math' as math;
 
-import 'package:artisanal/charting.dart' show ChartLegendEntry, ChartRamp;
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/uv.dart' show UvStyle, UvColor;
 import 'package:artisanal_widgets/charting.dart' as w;
 
 import 'package:artisanal/artisanal.dart';
@@ -16,7 +13,6 @@ import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:flutter/widgets.dart' as ui;
 import 'package:artisanal_widgets/widgets.dart' as aw;
 import 'package:flutter_artisanal/flutter_artisanal.dart';
-import 'package:flutter_artisanal/flutter_artisanal.dart' as tui;
 
 class HomeScreen extends aw.StatelessWidget {
   HomeScreen({super.key});

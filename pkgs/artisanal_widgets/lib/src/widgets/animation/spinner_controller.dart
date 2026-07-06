@@ -29,7 +29,7 @@ class SpinnerController extends ValueNotifier<String> {
   ///
   /// If [autoStart] is true (default), the animation starts immediately.
   SpinnerController(this.spinner, {bool autoStart = true})
-      : super(spinner.frames.first) {
+    : super(spinner.frames.first) {
     if (autoStart) _start();
   }
 

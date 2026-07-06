@@ -1,7 +1,7 @@
 /// Suspend / resume example ported from Bubble Tea.
 library;
 
-import 'package:artisanal/runtime.dart' as tui;
+import 'package:artisanal/tui.dart' as tui;
 
 class SuspendModel implements tui.Model {
   const SuspendModel({this.quitting = false, this.suspending = false});

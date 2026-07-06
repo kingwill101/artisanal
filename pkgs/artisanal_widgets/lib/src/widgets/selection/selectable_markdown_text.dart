@@ -1,4 +1,4 @@
-part of 'selection_widgets.dart';
+part of 'selection.dart';
 
 /// A markdown widget that supports click-drag selection and Ctrl+C copy.
 ///

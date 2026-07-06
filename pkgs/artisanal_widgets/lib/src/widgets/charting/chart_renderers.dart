@@ -1,4 +1,4 @@
-export 'chart_widgets.dart'
+export 'charting.dart'
     show
         ChartLegendPosition,
         BarChartDirection,

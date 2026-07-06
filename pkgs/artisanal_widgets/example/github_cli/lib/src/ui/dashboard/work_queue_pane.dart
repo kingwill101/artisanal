@@ -310,7 +310,8 @@ w.Widget _queueRow(
       : normalSeparatorStyle;
 
   // Accent and status colours depend on per-item data so a copy is still needed.
-  final accentStyle = theme.bodyMedium.copy()..foreground(_accentColor(theme, item));
+  final accentStyle = theme.bodyMedium.copy()
+    ..foreground(_accentColor(theme, item));
   final statusStyle = theme.bodyMedium.copy()
     ..foreground(statusColor)
     ..bold();

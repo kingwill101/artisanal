@@ -1,4 +1,30 @@
-part of 'layout_widgets.dart';
+import 'dart:collection';
+import 'dart:math' as math;
+import 'package:artisanal/style.dart' hide Padding, Align;
+import 'package:artisanal/tui.dart'
+    show
+        Cmd,
+        Msg,
+        KeyType,
+        KeyMsg,
+        MouseMsg,
+        MouseAction,
+        MouseButton,
+        HitTestMouseMsg,
+        View,
+        TuiTrace,
+        TraceTag;
+import 'package:artisanal/artisanal.dart'
+    show markdownToAnsi, AnsiRendererOptions;
+import 'geometry.dart';
+import '../core/element.dart' show elementOf;
+import '../core/framework.dart'
+    show BuildContext, StatelessWidget, StatefulWidget, State;
+import '../rendering/render_object.dart';
+import '../rendering/render_layout.dart';
+import '../core/widget.dart';
+import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+
 
 typedef MarkdownLinkTapCallback = Cmd? Function(String url);
 

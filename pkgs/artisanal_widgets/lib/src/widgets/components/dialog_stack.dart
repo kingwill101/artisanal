@@ -1,4 +1,10 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+
 
 /// Manages a stack of modal dialogs.
 ///

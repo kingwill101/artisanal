@@ -1,4 +1,12 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/style.dart' hide Padding, Align;
+
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'geometry.dart';
+import 'spacing.dart';
+
 
 class RenderPadding extends RenderBox {
   RenderPadding({this.padding});
@@ -11,10 +19,10 @@ class RenderPadding extends RenderBox {
   @override
   void layout(BoxConstraints constraints) {
     super.layout(constraints);
-    final padLeft = _roundClamp(padding?.left ?? 0);
-    final padRight = _roundClamp(padding?.right ?? 0);
-    final padTop = _roundClamp(padding?.top ?? 0);
-    final padBottom = _roundClamp(padding?.bottom ?? 0);
+    final padLeft = roundClamp(padding?.left ?? 0);
+    final padRight = roundClamp(padding?.right ?? 0);
+    final padTop = roundClamp(padding?.top ?? 0);
+    final padBottom = roundClamp(padding?.bottom ?? 0);
     final padH = padLeft + padRight;
     final padV = padTop + padBottom;
 
@@ -39,7 +47,7 @@ class RenderPadding extends RenderBox {
     );
 
     final content = child?.paint() ?? '';
-    final rendered = _renderContainerContent(
+    final rendered = renderContainerContent(
       contentStr: content,
       padding: padding,
       width: size.width.toInt(),
@@ -63,7 +71,7 @@ class RenderPadding extends RenderBox {
     final cached = _lastPaint;
     if (cached != null) return cached;
     final content = _child?.paint() ?? '';
-    final rendered = _renderContainerContent(
+    final rendered = renderContainerContent(
       contentStr: content,
       padding: padding,
       width: size.width.toInt(),
@@ -89,8 +97,8 @@ class Padding extends SingleChildRenderObjectWidget {
   }
 
   @override
-  Object view() => _renderContainerContent(
-    contentStr: child == null ? '' : _renderWidget(child!),
+  Object view() => renderContainerContent(
+    contentStr: child == null ? '' : renderWidget(child!),
     padding: padding,
   );
 }

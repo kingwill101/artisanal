@@ -1,4 +1,9 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+
 
 /// A convenience widget that wraps [SingleChildScrollView] with optional
 /// sizing and an optional [Scrollbar].

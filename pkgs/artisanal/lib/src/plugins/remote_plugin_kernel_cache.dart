@@ -1,6 +1,5 @@
 import 'dart:io' as io;
 
-import 'package:path/path.dart' as p;
 
 /// Small helper for fixed-path kernel snapshots used by remote plugin tests.
 final class RemotePluginKernelCache {

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 import 'package:json_schema_builder/json_schema_builder.dart' as jsb;
 import 'package:test/test.dart';
 

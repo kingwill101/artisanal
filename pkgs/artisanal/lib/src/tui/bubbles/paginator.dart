@@ -14,7 +14,7 @@ enum PaginationType {
 }
 
 /// Key bindings for paginator navigation.
-class PaginatorKeyMap implements KeyMap {
+class PaginatorKeyMap extends KeyMap {
   PaginatorKeyMap({KeyBinding? prevPage, KeyBinding? nextPage})
     : prevPage =
           prevPage ??
@@ -29,7 +29,12 @@ class PaginatorKeyMap implements KeyMap {
             ['pgdown', 'right', 'l'],
             '${Arrows.right}/pgdn',
             'next page',
-          );
+           ) {
+    shortHelp = [this.prevPage, this.nextPage];
+    fullHelp = [
+      [this.prevPage, this.nextPage],
+    ];
+  }
 
   /// Key binding for previous page.
   final KeyBinding prevPage;
@@ -37,13 +42,6 @@ class PaginatorKeyMap implements KeyMap {
   /// Key binding for next page.
   final KeyBinding nextPage;
 
-  @override
-  List<KeyBinding> shortHelp() => [prevPage, nextPage];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [prevPage, nextPage],
-  ];
 }
 
 /// A paginator widget for handling pagination state and rendering.

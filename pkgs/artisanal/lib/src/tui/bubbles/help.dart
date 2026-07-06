@@ -53,16 +53,15 @@ class HelpStyles {
 /// ## Example
 ///
 /// ```dart
-/// class MyKeyMap implements KeyMap {
+/// class MyKeyMap extends KeyMap {
+///   MyKeyMap() {
+///     shortHelp = [up, down, quit];
+///     fullHelp = [[up, down], [quit]];
+///   }
+///
 ///   final up = KeyBinding.withHelp(['up', 'k'], '↑/k', 'move up');
 ///   final down = KeyBinding.withHelp(['down', 'j'], '↓/j', 'move down');
 ///   final quit = KeyBinding.withHelp(['q'], 'q', 'quit');
-///
-///   @override
-///   List<KeyBinding> shortHelp() => [up, down, quit];
-///
-///   @override
-///   List<List<KeyBinding>> fullHelp() => [[up, down], [quit]];
 /// }
 ///
 /// class MyModel implements Model {
@@ -115,9 +114,9 @@ class HelpModel {
   /// Renders the help view using the given key map.
   String view(KeyMap keyMap) {
     if (showAll) {
-      return fullHelpView(keyMap.fullHelp());
+      return fullHelpView(keyMap.fullHelp);
     }
-    return shortHelpView(keyMap.shortHelp());
+    return shortHelpView(keyMap.shortHelp);
   }
 
   /// Renders a short help view from a list of key bindings.
@@ -311,10 +310,9 @@ class HelpModel {
 }
 
 /// Empty key map for default view().
-class _EmptyKeyMap implements KeyMap {
-  @override
-  List<KeyBinding> shortHelp() => [];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [];
+class _EmptyKeyMap extends KeyMap {
+  _EmptyKeyMap() {
+    shortHelp = [];
+    fullHelp = [];
+  }
 }

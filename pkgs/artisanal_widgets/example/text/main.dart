@@ -1,4 +1,5 @@
 // Text Widget Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Text, Text.rich, TextSpan, Label, TextAlign, TextOverflow,
 // and styled text with theme typography.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(TextShowcase());
+  final app = WidgetApp(TextShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

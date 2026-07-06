@@ -112,9 +112,26 @@ export 'zone/zone.dart'
         hasGlobalZone,
         initGlobalZone,
         closeGlobalZone;
+export 'zone/zone_info.dart';
+export 'zone/zone_manager.dart';
+export 'zone/zone_scanner.dart';
 
-// Stable high-level widget system for composable components.
-//
-// This keeps `package:artisanal/tui.dart` backward-compatible while routing
-// consumers through the package-level stabilized widget entrypoint.
-export '../../widgets.dart' hide Key, LocalKey, UniqueKey, ValueKey;
+// Low-level text editing primitives
+export 'editor_core/editor_core.dart' hide TextSelection;
+
+// Markdown to ANSI rendering
+export 'markdown/markdown.dart';
+
+// Capability / startup probes
+export 'background_color_probe.dart';
+export 'emoji_width_probe.dart';
+export 'startup_probe.dart';
+export 'uv_capability_probe.dart';
+
+// Hot reload (conditional per-platform stub on web)
+export 'hot_reload_mixin.dart';
+
+// Misc runtime helpers
+export 'replay_harness_mixin.dart';
+export 'resize_coalescer.dart';
+export 'program_host_io.dart';

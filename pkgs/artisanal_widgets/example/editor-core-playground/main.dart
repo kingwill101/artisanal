@@ -3,10 +3,10 @@
 // Run with:
 //   dart run example/editor-core-playground/main.dart
 
-import 'package:artisanal/app.dart' as app;
+import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/bubbles.dart' as b;
-import 'package:artisanal/editors.dart' as editors;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/editors.dart' as editors;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Border, Color, Style;
 import 'package:artisanal/terminal.dart' as terminal;
 import 'package:artisanal/widgets.dart' as w;

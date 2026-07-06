@@ -1,6 +1,6 @@
 import 'package:artisanal/style.dart' show Border, Style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/markdown.dart' as markdown;
+import 'package:artisanal/artisanal.dart' as markdown;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../../utils/text_format.dart';
@@ -70,7 +70,10 @@ final class _GithubMarkdownBodyState extends w.State<GithubMarkdownBody> {
     int index,
   ) {
     return switch (segment) {
-      GithubMarkdownTextSegment(:final markdown) => _markdownText(theme, markdown),
+      GithubMarkdownTextSegment(:final markdown) => _markdownText(
+        theme,
+        markdown,
+      ),
       GithubMarkdownDetailsSegment(
         :final summary,
         :final markdown,
@@ -137,24 +140,44 @@ markdown.AnsiRendererOptions githubMarkdownOptions(
   Style themedStyle() => Style()..hasDarkBackground = hasDarkBackground;
   return markdown.AnsiRendererOptions(
     textStyle: themedStyle()..foreground(theme.onBackground),
-    h1Style: themedStyle()..bold()..foreground(theme.primary),
-    h2Style: themedStyle()..bold()..foreground(theme.primary),
-    h3Style: themedStyle()..bold()..foreground(theme.primary),
-    h4Style: themedStyle()..bold()..foreground(theme.primary),
-    h5Style: themedStyle()..bold()..foreground(theme.primary),
-    h6Style: themedStyle()..bold()..foreground(theme.primary),
-    emphasisStyle: themedStyle()..italic()..foreground(theme.warning),
-    strongStyle: themedStyle()..bold()..foreground(theme.onBackground),
+    h1Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h2Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h3Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h4Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h5Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    h6Style: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
+    emphasisStyle: themedStyle()
+      ..italic()
+      ..foreground(theme.warning),
+    strongStyle: themedStyle()
+      ..bold()
+      ..foreground(theme.onBackground),
     codeStyle: themedStyle()
       ..foreground(theme.primary)
       ..background(codeSurface),
     codeBlockStyle: themedStyle()
       ..foreground(theme.onBackground)
       ..background(codeSurface),
-    linkStyle: themedStyle()..foreground(theme.primary)..underline(),
+    linkStyle: themedStyle()
+      ..foreground(theme.primary)
+      ..underline(),
     blockquoteStyle: themedStyle()..foreground(theme.warning),
     blockquoteBorderColor: theme.warning,
-    tableHeaderStyle: themedStyle()..bold()..foreground(theme.primary),
+    tableHeaderStyle: themedStyle()
+      ..bold()
+      ..foreground(theme.primary),
     tableCellStyle: themedStyle()..foreground(theme.onBackground),
     tableBorderStyle: themedStyle()..foreground(theme.border),
     codeBlockBorderStyle: Border.rounded,

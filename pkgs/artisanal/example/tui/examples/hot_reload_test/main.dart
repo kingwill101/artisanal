@@ -4,7 +4,7 @@
 /// Then edit the `_greeting` string below and save to trigger hot reload.
 library;
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 // ── Change this string and save to test hot reload ──────────────────────
 const _greeting = 'Hello from hot reload test! (v1)';

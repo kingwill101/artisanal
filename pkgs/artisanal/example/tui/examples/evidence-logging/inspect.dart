@@ -4,7 +4,7 @@ library;
 
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart' show TuiEvidence;
+import 'package:artisanal/tui.dart' show TuiEvidence;
 
 Future<void> main(List<String> args) async {
   if (args.isEmpty) {

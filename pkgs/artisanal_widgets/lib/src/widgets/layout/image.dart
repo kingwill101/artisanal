@@ -1,4 +1,20 @@
-part of 'layout_widgets.dart';
+import 'dart:async' as dart_async;
+import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
+import 'dart:typed_data' show BytesBuilder, Uint8List;
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/uv.dart' show Canvas, Drawable, TerminalCapabilities, KittyImageDrawable, ITerm2ImageDrawable, SixelImageDrawable, HalfBlockImageDrawable;
+import 'package:image/image.dart' as img;
+
+import 'package:artisanal/compat.dart';
+import '../core/widget.dart';
+import '../framework.dart';
+import '../render_object.dart';
+import 'geometry.dart';
+import 'text.dart';
+
 
 /// Data class holding a decoded image.
 class ImageData {
@@ -350,7 +366,7 @@ Future<ImageData> _decodeImageData(
   String source, {
   int? frame,
 }) async {
-  final decoded = await dart_isolate.Isolate.run(
+  final decoded = await Isolate.run(
     () => img.decodeImage(bytes, frame: frame),
   );
   if (decoded == null) {

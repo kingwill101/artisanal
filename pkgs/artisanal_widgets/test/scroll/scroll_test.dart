@@ -1254,10 +1254,7 @@ void main() {
       // 38 items: first 3 tall (50 lines), rest short (1 line).
       // Simulates chat with a few diffs followed by short text messages.
       const itemCount = 38;
-      final itemHeights = List<int>.generate(
-        itemCount,
-        (i) => i < 3 ? 50 : 1,
-      );
+      final itemHeights = List<int>.generate(itemCount, (i) => i < 3 ? 50 : 1);
       final children = List<Widget>.generate(
         itemCount,
         (i) => Text(_variableHeightItem(i, itemHeights[i])),
@@ -1285,11 +1282,7 @@ void main() {
 
       // Visit items in chunks to converge measurements across all items.
       for (var i = 0; i < itemCount; i += 5) {
-        final targetOffset = _variableItemHeightOffset(
-          itemHeights,
-          i,
-          1,
-        );
+        final targetOffset = _variableItemHeightOffset(itemHeights, i, 1);
         controller.jumpTo(targetOffset.clamp(0, controller.maxOffset));
         tester.pump();
         extents.add(controller.contentExtent);
@@ -1305,7 +1298,8 @@ void main() {
         expect(
           extents[i],
           greaterThanOrEqualTo(extents[i - 1]),
-          reason: 'content dropped from ${extents[i - 1]} to ${extents[i]} '
+          reason:
+              'content dropped from ${extents[i - 1]} to ${extents[i]} '
               '-- _syncCache rebuilt with inflated adaptive estimate',
         );
       }

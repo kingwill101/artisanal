@@ -1,4 +1,4 @@
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 /// Strips all ANSI escape sequences from a string for plain-text comparison.

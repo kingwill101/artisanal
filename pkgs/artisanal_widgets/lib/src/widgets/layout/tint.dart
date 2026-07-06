@@ -1,4 +1,11 @@
-part of 'layout_widgets.dart';
+import 'package:artisanal/uv.dart' show UvColor, StyledString, UvStyle, UvRgb, UvIndexed256, UvBasic16, Canvas;
+
+import '../rendering/render_object.dart';
+import '../theme.dart';
+import '../style.dart';
+import '_layout_utils.dart' show renderWidget, colorToUvColor;
+import 'geometry.dart';
+
 
 final Map<UvColor, Color> _uvToStyleColorCache = <UvColor, Color>{};
 
@@ -42,7 +49,7 @@ class Tint extends SingleChildRenderObjectWidget {
 
   @override
   Object view() {
-    final content = child != null ? _renderWidget(child!) : '';
+    final content = child != null ? renderWidget(child!) : '';
     return _applyTint(content, color, opacity);
   }
 }
@@ -87,7 +94,7 @@ class _RenderTint extends RenderBox {
 String _applyTint(String content, Color color, double opacity) {
   if (content.isEmpty || opacity <= 0.0) return content;
 
-  final tintFg = _colorToUvColor(color);
+  final tintFg = colorToUvColor(color);
   if (tintFg == null) return content;
 
   final w = Layout.getWidth(content);
@@ -96,8 +103,8 @@ String _applyTint(String content, Color color, double opacity) {
 
   final canvas = Canvas(w, h);
   StyledString(content).draw(canvas, canvas.bounds());
-  final defaultFg = _colorToUvColor(currentTheme.onBackground);
-  final defaultBg = _colorToUvColor(currentTheme.background);
+  final defaultFg = colorToUvColor(currentTheme.onBackground);
+  final defaultBg = colorToUvColor(currentTheme.background);
   final styleCache = <({int styleKey, bool visibleContent}), UvStyle>{};
   final colorCache = <({UvColor? source, UvColor? fallback}), UvColor?>{};
 
@@ -159,7 +166,7 @@ UvColor? _blendTintColor(
         : source ?? fallback;
   }
 
-  final blended = _colorToUvColor(
+  final blended = colorToUvColor(
     blendColor(
       sourceColor,
       tintColor,

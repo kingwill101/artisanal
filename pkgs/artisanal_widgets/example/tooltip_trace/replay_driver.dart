@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 
 final class TooltipTraceReplayPlan {
   const TooltipTraceReplayPlan({

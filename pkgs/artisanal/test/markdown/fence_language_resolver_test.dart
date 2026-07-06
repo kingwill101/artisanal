@@ -1,4 +1,4 @@
-import 'package:artisanal/markdown.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 void main() {

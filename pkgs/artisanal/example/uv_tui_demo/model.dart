@@ -1,10 +1,11 @@
 library;
+import 'package:artisanal/bubbles.dart' as tui hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
+import 'package:artisanal/bubbles.dart' hide CodeBlockCommentDelimiters, CodeLanguageProfile, Column, CommonKeyBindings, EditBuffer, EditHistoryCoalescePredicate, EditHistoryController, EditHistoryMarkerBuilder, EditHistoryStateEquals, EditorCoreConfig, EditorState, GraphemePredicate, GraphemeReader, Help, KeyBinding, KeyMap, PasteMsg, Row, Spinner, SpinnerModel, SpinnerTickMsg, Spinners, Text, TextCommandResult, TextCursorCommandResult, TextDecorationLayerKey, TextDecorationRange, TextDiagnosticRange, TextDiagnosticSeverity, TextDocument, TextDocumentChange, TextDocumentEditResult, TextEditResult, TextExtmark, TextExtmarkOptions, TextExtmarkPositionRange, TextExtmarksController, TextHighlightRange, TextHitResult, TextLineCommandResult, TextLineDecoration, TextLineStateCommandExtensions, TextLineStateSnapshot, TextOffsetStateCommandExtensions, TextOffsetStateDocumentEditingExtensions, TextOffsetStateSnapshot, TextPasteChunk, TextPasteChunkStep, TextPasteController, TextPasteMode, TextPastePlan, TextPasteReference, TextPasteReferenceStore, TextPasteSession, TextPatternDiagnosticRule, TextPosition, TextPositionDiagnosticRange, TextSelection, TextSyntaxBuildResult, TextSyntaxChangeWindow, TextSyntaxDecorationPatch, TextSyntaxLineWindow, TextSyntaxProvider, TextSyntaxSession, TextSyntaxSnapshot, TextView, TextViewLine, TextViewport, TextVisualCursorPosition, UndoCommandDecoder, UndoCommandJournalEntry, UndoManager, UndoableCommand;
 
 import 'dart:math' as math;
 
-import 'package:artisanal/bubbles.dart' show TableComponent;
-import 'package:artisanal/charting.dart' as chart;
-import 'package:artisanal/physics.dart';
+import 'package:artisanal/artisanal.dart' as chart;
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/style.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show Cell, Rectangle, Screen, UvStyle;
@@ -77,7 +78,7 @@ const _chartPalettes = [
   ),
 ];
 
-final class NexusKeys implements tui.KeyMap {
+final class NexusKeys extends tui.KeyMap {
   NexusKeys()
     : next = tui.KeyBinding.withHelp(['tab'], 'tab', 'next focus'),
       prev = tui.KeyBinding.withHelp(['shift+tab'], 'shift+tab', 'prev focus'),
@@ -96,7 +97,25 @@ final class NexusKeys implements tui.KeyMap {
       physicsGravity = tui.KeyBinding.withHelp(['g'], 'g', 'toggle gravity'),
       chartsPalette = tui.KeyBinding.withHelp(['m'], 'm', 'chart palette'),
       quit = tui.KeyBinding.withHelp(['esc', 'ctrl+c', 'q'], 'esc/q', 'quit'),
-      enter = tui.KeyBinding.withHelp(['enter'], 'enter', 'run cmd');
+      enter = tui.KeyBinding.withHelp(['enter'], 'enter', 'run cmd') {
+    shortHelp = [
+      next,
+      prev,
+      pagePrev,
+      pageNext,
+      toggleHelp,
+      togglePause,
+      toggleFollow,
+      theme,
+      quit,
+    ];
+    fullHelp = [
+      [next, prev, pagePrev, pageNext, toggleHelp, enter],
+      [togglePause, toggleFollow, theme, reseed, clear, debug],
+      [physicsSpawn, physicsGravity, physicsBlast, physicsReset, chartsPalette],
+      [quit],
+    ];
+  }
 
   final tui.KeyBinding next;
   final tui.KeyBinding prev;
@@ -116,27 +135,6 @@ final class NexusKeys implements tui.KeyMap {
   final tui.KeyBinding chartsPalette;
   final tui.KeyBinding quit;
   final tui.KeyBinding enter;
-
-  @override
-  List<tui.KeyBinding> shortHelp() => [
-    next,
-    prev,
-    pagePrev,
-    pageNext,
-    toggleHelp,
-    togglePause,
-    toggleFollow,
-    theme,
-    quit,
-  ];
-
-  @override
-  List<List<tui.KeyBinding>> fullHelp() => [
-    [next, prev, pagePrev, pageNext, toggleHelp, enter],
-    [togglePause, toggleFollow, theme, reseed, clear, debug],
-    [physicsSpawn, physicsGravity, physicsBlast, physicsReset, chartsPalette],
-    [quit],
-  ];
 }
 
 final class LayoutSpec {

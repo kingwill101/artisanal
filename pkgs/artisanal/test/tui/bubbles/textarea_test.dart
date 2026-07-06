@@ -1898,13 +1898,13 @@ void main() {
 
     test('shortHelp returns bindings', () {
       final keyMap = TextAreaKeyMap();
-      final help = keyMap.shortHelp();
+      final help = keyMap.shortHelp;
       expect(help.length, greaterThanOrEqualTo(4));
     });
 
     test('fullHelp returns grouped bindings', () {
       final keyMap = TextAreaKeyMap();
-      final help = keyMap.fullHelp();
+      final help = keyMap.fullHelp;
       expect(help, isNotEmpty);
       expect(help.expand((group) => group), contains(keyMap.selectAll));
       expect(help.expand((group) => group), contains(keyMap.selectLine));

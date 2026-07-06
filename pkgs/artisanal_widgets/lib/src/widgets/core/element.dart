@@ -29,7 +29,7 @@ import '../layout/geometry.dart' show BoxConstraints, HitTestResult;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart'
     show RenderRow, RenderColumn, FlexParentData, RenderFlexFit;
-import '../layout/layout_widgets.dart'
+import '../layout/layout.dart'
     show
         Flexible,
         Spacer,
@@ -876,12 +876,12 @@ class InheritedElement extends Element {
     markNeedsBuild();
 
     if ((newWidget as InheritedWidget).updateShouldNotify(oldWidget)) {
-    for (final dependent in _dependents) {
-      dependent.markNeedsBuild();
-      if (dependent is StatefulElement) {
-        dependent.state.didChangeDependencies();
+      for (final dependent in _dependents) {
+        dependent.markNeedsBuild();
+        if (dependent is StatefulElement) {
+          dependent.state.didChangeDependencies();
+        }
       }
-    }
     }
   }
 }

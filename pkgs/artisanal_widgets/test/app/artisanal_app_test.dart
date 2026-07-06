@@ -1,5 +1,5 @@
 import 'package:artisanal/style.dart' show Layout;
-import 'package:artisanal/widgets.dart' as w;
+import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:artisanal/tui.dart'
     show BackgroundColorMsg, KeyMsg, View, WindowSizeMsg;
 import 'package:artisanal/terminal.dart' show Key, KeyType;

@@ -1,4 +1,4 @@
-part of 'selection_widgets.dart';
+part of 'selection.dart';
 
 /// A generic string/View wrapper that participates in text selection.
 ///

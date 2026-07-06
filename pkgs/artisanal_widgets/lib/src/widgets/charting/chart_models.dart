@@ -1,2 +1,2 @@
-export 'chart_widgets.dart'
+export 'charting.dart'
     show ChartType, ChartSeries, ChartModel, ChartLegendPosition, ChartBuilder;

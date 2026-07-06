@@ -2941,7 +2941,7 @@ Object view() {
   final canvas = Canvas(targetWidth, targetHeight);
   
   // Fill with background
-  final bgColor = _colorToUvColor(background);
+  final bgColor = colorToUvColor(background);
   final bgStyle = UvStyle(bg: bgColor, fg: fgColor);
   final bgCell = Cell(content: ' ', width: 1, style: bgStyle);
   
@@ -2963,7 +2963,7 @@ Object view() {
 Colors are converted from the Style system to UV colors:
 
 ```dart
-UvColor? _colorToUvColor(Color? color) {
+UvColor? colorToUvColor(Color? color) {
   if (color == null || color is NoColor) return null;
 
   // Resolve AdaptiveColor based on hasDarkBackground

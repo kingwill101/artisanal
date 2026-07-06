@@ -1,4 +1,7 @@
-part of 'components_widgets.dart';
+
+import 'package:artisanal/style.dart' show Color, Style;
+import 'package:artisanal/widgets.dart';
+
 
 /// A typed item that can be displayed in a [StatusLine].
 ///

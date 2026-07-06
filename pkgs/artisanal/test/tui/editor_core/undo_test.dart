@@ -1,4 +1,4 @@
-import 'package:artisanal/editor_core.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 final class _CounterState {

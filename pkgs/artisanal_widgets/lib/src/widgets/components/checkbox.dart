@@ -1,4 +1,10 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/focus/focus.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
 
 class Checkbox extends StatefulWidget {
   Checkbox({
@@ -53,9 +59,7 @@ class _CheckboxState extends State<Checkbox> {
     if (!_enabled) return null;
     final key = msg.key;
     final isToggle =
-        key.type == terminal_keys.KeyType.enter ||
-        key.type == terminal_keys.KeyType.space ||
-        key.char == ' ';
+        key.type == .enter || key.type == .space || key.char == ' ';
     if (!isToggle) return null;
     return _toggle();
   }

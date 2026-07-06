@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/uv.dart' show UvColor, UvStyle;
 import 'package:test/test.dart';
 

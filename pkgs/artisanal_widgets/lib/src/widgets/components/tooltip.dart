@@ -1,4 +1,13 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/artisanal.dart' show Layout;
+import 'package:artisanal_widgets/src/widgets/core/element.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
+import 'dart:math' as math;
+
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+
 
 /// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }
@@ -112,10 +121,10 @@ class _TooltipState extends State<Tooltip> {
   ({int x, int y, int width, int height})? _triggerGeometry() {
     final host = elementOf(widget);
     if (host == null) return null;
-    final root = _firstRenderObject(host);
+    final root = firstRenderObject(host);
     if (root == null) return null;
-    final anchor = _bestPopupAnchorRenderObject(host, root);
-    final global = _globalOffset(anchor);
+    final anchor = bestPopupAnchorRenderObject(host, root);
+    final global = globalOffset(anchor);
     return (
       x: global.x.floor(),
       y: global.y.floor(),

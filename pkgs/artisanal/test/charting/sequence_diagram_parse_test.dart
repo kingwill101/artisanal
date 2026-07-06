@@ -1,7 +1,7 @@
 /// Tests for the sequence diagram parser.
 library;
 
-import 'package:artisanal/charting.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 import 'package:ultraviolet/ultraviolet.dart' show UvColor, UvRgb;
 

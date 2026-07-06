@@ -41,7 +41,7 @@ class SuggestCancelledMsg extends Msg {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// Key bindings for [SuggestModel].
-class SuggestKeyMap implements KeyMap {
+class SuggestKeyMap extends KeyMap {
   /// Creates a key map with default bindings.
   SuggestKeyMap({
     KeyBinding? moveUp,
@@ -106,7 +106,13 @@ class SuggestKeyMap implements KeyMap {
            KeyBinding(
              keys: ['esc', 'ctrl+c'],
              help: Help(key: 'esc', desc: 'cancel'),
-           );
+            ) {
+    shortHelp = [this.moveUp, this.moveDown, this.accept, this.cancel];
+    fullHelp = [
+      [this.moveUp, this.moveDown, this.moveFirst, this.moveLast],
+      [this.deleteBackward, this.accept, this.cancel],
+    ];
+  }
 
   /// Move selection up in the dropdown.
   final KeyBinding moveUp;
@@ -135,14 +141,6 @@ class SuggestKeyMap implements KeyMap {
   /// Cancel the prompt.
   final KeyBinding cancel;
 
-  @override
-  List<KeyBinding> shortHelp() => [moveUp, moveDown, accept, cancel];
-
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [moveUp, moveDown, moveFirst, moveLast],
-    [deleteBackward, accept, cancel],
-  ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -431,7 +429,7 @@ class SuggestModel extends ViewComponent {
     // Help.
     if (showHelp) {
       final helpText = keyMap
-          .shortHelp()
+          .shortHelp
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
           .join('  ');

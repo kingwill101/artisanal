@@ -1,4 +1,5 @@
-part of 'layout_widgets.dart';
+import '../core/core.dart';
+
 
 /// A widget that delegates its build to a callback.
 ///

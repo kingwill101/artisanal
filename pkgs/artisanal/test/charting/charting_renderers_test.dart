@@ -2,7 +2,7 @@
 library;
 
 import 'package:artisanal/uv.dart';
-import 'package:artisanal/charting.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 /// Helper to render a chart into a Canvas and extract the cell content at

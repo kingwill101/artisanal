@@ -1,4 +1,16 @@
-part of 'components_widgets.dart';
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style;
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal_widgets/src/widgets/components/button.dart';
+import 'package:artisanal_widgets/src/widgets/components/frame.dart';
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/focus.dart';
+import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
+import 'package:artisanal_widgets/src/widgets/components/component_style.dart';
+
+import '../theme/theme.dart' show Theme;
 
 /// A non-interactive chip with optional delete affordance.
 ///
@@ -84,7 +96,7 @@ class ActionChip extends StatelessWidget {
     this.avatar,
     this.onPressed,
     this.enabled = true,
-    this.size = ButtonSize.small,
+    this.size = .small,
     super.key,
   });
 

@@ -1,4 +1,10 @@
-part of 'components_widgets.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
+
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+import 'package:artisanal/style.dart' show Color, Border, Style, Colors, Layout;
+
 
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '

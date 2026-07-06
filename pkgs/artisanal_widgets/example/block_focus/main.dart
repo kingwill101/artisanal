@@ -1,4 +1,5 @@
 // BlockFocus Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates blocking keyboard events from reaching child widgets.
 // Toggle blocking on/off with 'b' and observe key events being consumed
@@ -11,7 +12,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(BlockFocusDemo());
+  final app = WidgetApp(BlockFocusDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

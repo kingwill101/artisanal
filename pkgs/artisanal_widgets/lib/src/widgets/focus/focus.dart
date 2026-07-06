@@ -4,8 +4,9 @@ import 'package:artisanal/tui.dart' show Cmd, Msg, KeyMsg, TuiTrace;
 import '../core/framework.dart'
     show BuildContext, InheritedWidget, State, StatefulWidget;
 
-import '../layout/layout_widgets.dart' show GestureDetector;
-import '../core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/layout/layout.dart'
+    show GestureDetector;
+import 'package:artisanal_widgets/src/widgets/core/widget.dart';
 
 typedef FocusListener = void Function();
 typedef VoidCallback = void Function();

@@ -7,7 +7,7 @@ library;
 
 import 'dart:async';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 import 'package:artisanal/widgets.dart' as tui;
 import 'package:test/test.dart';
 

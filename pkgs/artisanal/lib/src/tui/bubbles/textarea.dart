@@ -430,7 +430,7 @@ const Map<String, String> _selectionSurroundPairs = {
 // Key map
 // ─────────────────────────────────────────────────────────────────────────────
 
-class TextAreaKeyMap implements KeyMap {
+class TextAreaKeyMap extends KeyMap {
   TextAreaKeyMap({
     KeyBinding? characterForward,
     KeyBinding? characterBackward,
@@ -552,7 +552,42 @@ class TextAreaKeyMap implements KeyMap {
        undo = undo ?? KeyBinding.withHelp(['ctrl+z'], 'ctrl+z', 'undo'),
        redo =
            redo ??
-           KeyBinding.withHelp(['ctrl+y', 'ctrl+shift+z'], 'ctrl+y', 'redo');
+           KeyBinding.withHelp(['ctrl+y', 'ctrl+shift+z'], 'ctrl+y', 'redo'            ) {
+    shortHelp = [
+      this.characterForward,
+      this.characterBackward,
+      this.wordForward,
+      this.wordBackward,
+      this.lineNext,
+      this.linePrevious,
+    ];
+    fullHelp = [
+      [this.characterBackward, this.characterForward],
+      [this.wordBackward, this.wordForward],
+      [this.selectAll, this.selectLine],
+      [this.lineStart, this.lineEnd],
+      [this.linePrevious, this.lineNext],
+      [
+        this.deleteBeforeCursor,
+        this.deleteCharacterForward,
+        this.deleteWordBackward,
+        this.deleteWordForward,
+        this.deleteToLineStart,
+        this.deleteToLineEnd,
+        this.deleteAfterCursor,
+      ],
+      [
+        this.inputBegin,
+        this.inputEnd,
+        this.undo,
+        this.redo,
+        this.transposeCharacterBackward,
+        this.uppercaseWordForward,
+        this.lowercaseWordForward,
+        this.capitalizeWordForward,
+      ],
+    ];
+  }
 
   final KeyBinding characterForward;
   final KeyBinding characterBackward;
@@ -645,43 +680,7 @@ class TextAreaKeyMap implements KeyMap {
     );
   }
 
-  @override
-  List<KeyBinding> shortHelp() => [
-    characterForward,
-    characterBackward,
-    wordForward,
-    wordBackward,
-    lineNext,
-    linePrevious,
-  ];
 
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [characterBackward, characterForward],
-    [wordBackward, wordForward],
-    [selectAll, selectLine],
-    [lineStart, lineEnd],
-    [linePrevious, lineNext],
-    [
-      deleteBeforeCursor,
-      deleteCharacterForward,
-      deleteWordBackward,
-      deleteWordForward,
-      deleteToLineStart,
-      deleteToLineEnd,
-      deleteAfterCursor,
-    ],
-    [
-      inputBegin,
-      inputEnd,
-      undo,
-      redo,
-      transposeCharacterBackward,
-      uppercaseWordForward,
-      lowercaseWordForward,
-      capitalizeWordForward,
-    ],
-  ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

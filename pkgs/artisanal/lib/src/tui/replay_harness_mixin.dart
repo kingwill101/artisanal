@@ -55,8 +55,9 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   /// Return a file system path, or throw if resolution fails.
   String resolveTracePath(String path) {
     final trimmed = path.trim();
-    if (trimmed.isEmpty)
+    if (trimmed.isEmpty) {
       throw const io.FileSystemException('Trace path is empty');
+    }
     if (io.File(trimmed).existsSync()) return trimmed;
     throw io.FileSystemException('Trace file not found', path);
   }
@@ -67,8 +68,9 @@ mixin ReplayHarnessMixin<T> on Command<T> {
   /// also searches candidates like `scenarios/<name>.json`.
   String resolveScenarioPath(String path) {
     final trimmed = path.trim();
-    if (trimmed.isEmpty)
+    if (trimmed.isEmpty) {
       throw const io.FileSystemException('Scenario path is empty');
+    }
     if (io.File(trimmed).existsSync()) return trimmed;
 
     final withJson = trimmed.endsWith('.json') ? trimmed : '$trimmed.json';
@@ -587,8 +589,9 @@ Future<ResolvedReplay?> loadReplayPlan(
 
 String _resolveTracePath(String path) {
   final trimmed = path.trim();
-  if (trimmed.isEmpty)
+  if (trimmed.isEmpty) {
     throw const io.FileSystemException('Trace path is empty');
+  }
   if (io.File(trimmed).existsSync()) return trimmed;
   throw io.FileSystemException('Trace file not found', path);
 }
@@ -642,8 +645,9 @@ final class TraceSessionSplit {
   final List<String> lines;
   String? get script {
     for (final line in lines) {
-      if (line.startsWith('# script:'))
+      if (line.startsWith('# script:')) {
         return line.substring('# script:'.length).trim();
+      }
     }
     return null;
   }

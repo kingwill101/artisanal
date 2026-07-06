@@ -1,4 +1,5 @@
 // Flex Layout Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Flexible, Expanded, Flex, and Spacer widgets.
 // Shows how flex distribution works in Row and Column.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(FlexShowcase());
+  final app = WidgetApp(FlexShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

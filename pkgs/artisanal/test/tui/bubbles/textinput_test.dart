@@ -1010,13 +1010,13 @@ void main() {
 
     test('shortHelp returns bindings', () {
       final keyMap = TextInputKeyMap();
-      final help = keyMap.shortHelp();
+      final help = keyMap.shortHelp;
       expect(help.length, greaterThanOrEqualTo(3));
     });
 
     test('fullHelp returns grouped bindings', () {
       final keyMap = TextInputKeyMap();
-      final help = keyMap.fullHelp();
+      final help = keyMap.fullHelp;
       expect(help, isNotEmpty);
     });
   });

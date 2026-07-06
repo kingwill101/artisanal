@@ -4,8 +4,8 @@
 // Run with: dart run example/sequence_diagram_demo.dart
 //
 
-import 'package:artisanal/runtime.dart' as runtime;
-import 'package:artisanal/charting.dart' show SequenceDiagramTheme;
+import 'package:artisanal/tui.dart' as runtime;
+import 'package:artisanal/artisanal.dart' show SequenceDiagramTheme;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor;
 import 'package:artisanal_widgets/charting.dart' as tui;
 

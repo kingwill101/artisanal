@@ -1,4 +1,5 @@
 // Buttons & Badge Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates Button with all variants (primary, secondary, outline,
 // ghost, danger), Flutter-style wrappers (ElevatedButton, FilledButton,
@@ -22,7 +23,7 @@ void main() async {
     ),
   );
 
-  final app = tui.WidgetApp(ButtonShowcase());
+  final app = WidgetApp(ButtonShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

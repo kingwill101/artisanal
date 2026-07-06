@@ -1,4 +1,4 @@
-import 'package:artisanal/testing.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:test/test.dart';
 
 import '../example/tui/examples/widgets/main.dart' show AppWidget;

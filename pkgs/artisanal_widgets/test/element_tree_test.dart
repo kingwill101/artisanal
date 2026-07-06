@@ -12,8 +12,8 @@
 /// approach) rather than zone-based dispatch.
 library;
 
-import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
+import 'package:artisanal/tui.dart'  hide Key;
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/style.dart' show Layout;
 import 'package:test/test.dart';
@@ -23,7 +23,7 @@ void main() {
     test(
       'state survives rebuild when widget has same runtimeType and no key',
       () {
-        final app = tui.WidgetApp(_CounterWidget());
+        final app = WidgetApp(_CounterWidget());
         final output1 = app.view();
         expect(output1, contains('count: 0'));
 
@@ -40,7 +40,7 @@ void main() {
     );
 
     test('state survives window resize', () {
-      final app = tui.WidgetApp(_CounterWidget());
+      final app = WidgetApp(_CounterWidget());
       app.view();
 
       // Increment to 3
@@ -51,7 +51,7 @@ void main() {
       expect(beforeResize, contains('count: 3'));
 
       // Simulate window resize
-      app.update(tui.WindowSizeMsg(120, 40));
+      app.update(WindowSizeMsg(120, 40));
       final afterResize = app.view();
       expect(
         afterResize,
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('state survives multiple rapid rebuilds', () {
-      final app = tui.WidgetApp(_CounterWidget());
+      final app = WidgetApp(_CounterWidget());
       app.view();
 
       for (var i = 0; i < 10; i++) {
@@ -74,7 +74,7 @@ void main() {
 
   group('GestureDetector tap via hit-testing', () {
     test('tap increments counter through hit-test click', () {
-      final app = tui.WidgetApp(_ClickableCounter());
+      final app = WidgetApp(_ClickableCounter());
 
       // Initial render
       final output1 = app.view();
@@ -92,7 +92,7 @@ void main() {
     });
 
     test('multiple taps increment counter correctly', () {
-      final app = tui.WidgetApp(_ClickableCounter());
+      final app = WidgetApp(_ClickableCounter());
       app.view();
 
       _simulateTapOnText(app, 'clicks: 0');
@@ -104,7 +104,7 @@ void main() {
     });
 
     test('tap on correct target among multiple GestureDetectors', () {
-      final app = tui.WidgetApp(_MultiButtonWidget());
+      final app = WidgetApp(_MultiButtonWidget());
       app.view();
 
       // Tap Button A
@@ -119,7 +119,7 @@ void main() {
 
   group('Tab switching', () {
     test('clicking a tab changes the selected tab', () {
-      final app = tui.WidgetApp(_TabWidget());
+      final app = WidgetApp(_TabWidget());
       final output1 = app.view();
       expect(output1, contains('Content: Tab 0'));
 
@@ -134,7 +134,7 @@ void main() {
     });
 
     test('multiple tab switches work', () {
-      final app = tui.WidgetApp(_TabWidget());
+      final app = WidgetApp(_TabWidget());
       app.view();
 
       _simulateTapOnText(app, 'Tab 2');
@@ -150,7 +150,7 @@ void main() {
     test('tab switching works without explicit zoneId (auto hit-test)', () {
       // This reproduces the exact pattern from the example app's _tab() method:
       // GestureDetector with a ValueKey but NO explicit zoneId.
-      final app = tui.WidgetApp(_TabWidgetNoZone());
+      final app = WidgetApp(_TabWidgetNoZone());
       final output1 = app.view();
       expect(output1, contains('Content: Tab 0'));
 
@@ -167,7 +167,7 @@ void main() {
     });
 
     test('tab state survives rebuild after resize', () {
-      final app = tui.WidgetApp(_TabWidget());
+      final app = WidgetApp(_TabWidget());
       app.view();
 
       // Switch to tab 2
@@ -175,7 +175,7 @@ void main() {
       expect(app.view(), contains('Content: Tab 2'));
 
       // Simulate resize — state should survive
-      app.update(tui.WindowSizeMsg(100, 30));
+      app.update(WindowSizeMsg(100, 30));
       expect(
         app.view(),
         contains('Content: Tab 2'),
@@ -186,14 +186,14 @@ void main() {
 
   group('Element reconciliation', () {
     test('canUpdate matches widgets with same type and null keys', () {
-      expect(w.Widget.canUpdate(w.Text('a'), w.Text('b')), isTrue);
+      expect(Widget.canUpdate(Text('a'), Text('b')), isTrue);
     });
 
     test('canUpdate matches widgets with same type and same key', () {
       expect(
-        w.Widget.canUpdate(
-          w.Text('a', key: const w.Key('k')),
-          w.Text('b', key: const w.Key('k')),
+        Widget.canUpdate(
+          Text('a', key: const Key('k')),
+          Text('b', key: const Key('k')),
         ),
         isTrue,
       );
@@ -201,20 +201,20 @@ void main() {
 
     test('canUpdate rejects widgets with same type but different keys', () {
       expect(
-        w.Widget.canUpdate(
-          w.Text('a', key: const w.Key('k1')),
-          w.Text('b', key: const w.Key('k2')),
+        Widget.canUpdate(
+          Text('a', key: const Key('k1')),
+          Text('b', key: const Key('k2')),
         ),
         isFalse,
       );
     });
 
     test('canUpdate rejects widgets with different types', () {
-      expect(w.Widget.canUpdate(w.Text('a'), w.Spacer()), isFalse);
+      expect(Widget.canUpdate(Text('a'), Spacer()), isFalse);
     });
 
     test('unkeyed children preserve state by position', () {
-      final app = tui.WidgetApp(_PositionalStateTest());
+      final app = WidgetApp(_PositionalStateTest());
       app.view();
 
       // Increment child A
@@ -229,7 +229,7 @@ void main() {
     });
 
     test('keyed children preserve state when reordered', () {
-      final app = tui.WidgetApp(_KeyedReorderTest());
+      final app = WidgetApp(_KeyedReorderTest());
       app.view();
 
       // Increment the first child (named 'alpha')
@@ -250,7 +250,7 @@ void main() {
     });
 
     test('leaf render object updates repaint after parent rebuild', () {
-      final app = tui.WidgetApp(_LeafRenderUpdateWidget());
+      final app = WidgetApp(_LeafRenderUpdateWidget());
       expect(app.view(), contains('leaf: 0'));
 
       app.update(const _IncrementMsg());
@@ -263,7 +263,7 @@ void main() {
 
   group('setState triggers rebuild', () {
     test('setState marks element dirty and triggers rebuild', () {
-      final app = tui.WidgetApp(_SetStateTester(), debugRebuilds: true);
+      final app = WidgetApp(_SetStateTester(), debugRebuilds: true);
       final output1 = app.view();
       expect(output1, contains('value: initial'));
 
@@ -273,7 +273,7 @@ void main() {
     });
 
     test('nested setState propagates correctly', () {
-      final app = tui.WidgetApp(_NestedSetStateWidget());
+      final app = WidgetApp(_NestedSetStateWidget());
       app.view();
 
       app.update(const _IncrementMsg());
@@ -291,7 +291,7 @@ void main() {
 
   group('Mouse capture flow', () {
     test('press captures and release fires onTap', () {
-      final app = tui.WidgetApp(_ClickableCounter());
+      final app = WidgetApp(_ClickableCounter());
       app.view();
 
       // Find the text location for hit-testing
@@ -303,9 +303,9 @@ void main() {
 
       // Press
       app.update(
-        tui.MouseMsg(
-          action: tui.MouseAction.press,
-          button: tui.MouseButton.left,
+        MouseMsg(
+          action: MouseAction.press,
+          button: MouseButton.left,
           x: x,
           y: y,
         ),
@@ -314,9 +314,9 @@ void main() {
 
       // Release at same position
       app.update(
-        tui.MouseMsg(
-          action: tui.MouseAction.release,
-          button: tui.MouseButton.left,
+        MouseMsg(
+          action: MouseAction.release,
+          button: MouseButton.left,
           x: x,
           y: y,
         ),
@@ -331,7 +331,7 @@ void main() {
     });
 
     test('release outside bounds does not fire onTap when using capture', () {
-      final app = tui.WidgetApp(_ClickableCounter());
+      final app = WidgetApp(_ClickableCounter());
       app.view();
 
       final loc = _locateText(app.view() as String, 'clicks: 0');
@@ -339,9 +339,9 @@ void main() {
 
       // Press inside the widget
       app.update(
-        tui.MouseMsg(
-          action: tui.MouseAction.press,
-          button: tui.MouseButton.left,
+        MouseMsg(
+          action: MouseAction.press,
+          button: MouseButton.left,
           x: loc!.x,
           y: loc.y,
         ),
@@ -352,9 +352,9 @@ void main() {
       // capture owner. The GestureDetector's capture path will fire onTap
       // on release regardless of position (since the element owns the capture).
       app.update(
-        tui.MouseMsg(
-          action: tui.MouseAction.release,
-          button: tui.MouseButton.left,
+        MouseMsg(
+          action: MouseAction.release,
+          button: MouseButton.left,
           x: 79,
           y: 23,
         ),
@@ -376,7 +376,7 @@ void main() {
 
   group('Example app tab pattern (exact reproduction)', () {
     test('GestureDetector without zoneId works via hit-testing', () {
-      final app = tui.WidgetApp(_ExampleTabPattern());
+      final app = WidgetApp(_ExampleTabPattern());
       final output1 = app.view();
       expect(output1, contains('selected: 0'));
 
@@ -390,7 +390,7 @@ void main() {
     });
 
     test('tap on auto-hit-tested GestureDetector fires onTap callback', () {
-      final app = tui.WidgetApp(_ExampleTabPattern());
+      final app = WidgetApp(_ExampleTabPattern());
       final output1 = app.view();
       expect(output1, contains('selected: 0'));
 
@@ -415,7 +415,7 @@ void main() {
       //     GestureDetector(key: ValueKey(i), onTap: (_) {
       //       setState(() => _selected = i);  // closure over loop var
       //     })
-      final app = tui.WidgetApp(_ClosureCaptureTabWidget());
+      final app = WidgetApp(_ClosureCaptureTabWidget());
       app.view();
 
       // Tap T1
@@ -437,20 +437,20 @@ void main() {
 
   group('WidgetApp integration', () {
     test('initial render produces output', () {
-      final app = tui.WidgetApp(w.Text('Hello'));
+      final app = WidgetApp(Text('Hello'));
       final output = app.view();
       expect(output, contains('Hello'));
     });
 
     test('window size message updates media query', () {
-      final app = tui.WidgetApp(_MediaQueryReader());
-      app.update(tui.WindowSizeMsg(80, 24));
+      final app = WidgetApp(_MediaQueryReader());
+      app.update(WindowSizeMsg(80, 24));
       final output = app.view();
       expect(output, contains('80x24'));
     });
 
     test('dispatch returns commands from handlers', () {
-      final app = tui.WidgetApp(_CmdReturner());
+      final app = WidgetApp(_CmdReturner());
       app.view();
 
       final (_, cmd) = app.update(const _TriggerCmdMsg());
@@ -460,8 +460,8 @@ void main() {
 
   group('Full example app structure reproduction', () {
     test('counter increments with nested MediaQuery + tabs + body', () {
-      final app = tui.WidgetApp(_FullExampleApp());
-      app.update(tui.WindowSizeMsg(120, 40));
+      final app = WidgetApp(_FullExampleApp());
+      app.update(WindowSizeMsg(120, 40));
       final output1 = app.view();
       expect(output1, contains('Counter: 0'));
       expect(output1, contains('Tab: 0'));
@@ -477,8 +477,8 @@ void main() {
     });
 
     test('tab switches via key in full app structure', () {
-      final app = tui.WidgetApp(_FullExampleApp());
-      app.update(tui.WindowSizeMsg(120, 40));
+      final app = WidgetApp(_FullExampleApp());
+      app.update(WindowSizeMsg(120, 40));
       app.view();
 
       app.update(_keyMsg('2'));
@@ -492,8 +492,8 @@ void main() {
     });
 
     test('tab switches via click in full app structure', () {
-      final app = tui.WidgetApp(_FullExampleApp());
-      app.update(tui.WindowSizeMsg(120, 40));
+      final app = WidgetApp(_FullExampleApp());
+      app.update(WindowSizeMsg(120, 40));
       app.view();
 
       _simulateTapOnText(app, 'Tab2');
@@ -506,8 +506,8 @@ void main() {
     });
 
     test('counter + tabs + click counter all work together', () {
-      final app = tui.WidgetApp(_FullExampleApp());
-      app.update(tui.WindowSizeMsg(120, 40));
+      final app = WidgetApp(_FullExampleApp());
+      app.update(WindowSizeMsg(120, 40));
       app.view();
 
       // Increment counter via key
@@ -533,7 +533,7 @@ void main() {
       expect(app.view(), contains('Tab: 1'));
 
       // Resize
-      app.update(tui.WindowSizeMsg(80, 24));
+      app.update(WindowSizeMsg(80, 24));
       final output = app.view();
       expect(output, contains('Counter: 2'));
       expect(output, contains('Tab: 1'));
@@ -541,15 +541,15 @@ void main() {
     });
 
     test('state survives rapid key + resize + click sequence', () {
-      final app = tui.WidgetApp(_FullExampleApp());
-      app.update(tui.WindowSizeMsg(120, 40));
+      final app = WidgetApp(_FullExampleApp());
+      app.update(WindowSizeMsg(120, 40));
       app.view();
 
       app.update(_keyMsg('+'));
       app.update(_keyMsg('+'));
       app.update(_keyMsg('+'));
       app.update(_keyMsg('4'));
-      app.update(tui.WindowSizeMsg(100, 30));
+      app.update(WindowSizeMsg(100, 30));
       _simulateTapOnText(app, 'clicks: 0');
       _simulateTapOnText(app, 'clicks: 1');
       app.update(_keyMsg('+'));
@@ -563,7 +563,7 @@ void main() {
 
   group('KeyMsg dispatch (example app pattern)', () {
     test('pressing + increments counter via handleUpdate', () {
-      final app = tui.WidgetApp(_KeyCounterWidget());
+      final app = WidgetApp(_KeyCounterWidget());
       final output1 = app.view();
       expect(output1, contains('Counter: 0'));
 
@@ -578,7 +578,7 @@ void main() {
     });
 
     test('pressing + multiple times increments correctly', () {
-      final app = tui.WidgetApp(_KeyCounterWidget());
+      final app = WidgetApp(_KeyCounterWidget());
       app.view();
 
       app.update(_keyMsg('+'));
@@ -589,7 +589,7 @@ void main() {
     });
 
     test('pressing 1-4 switches tabs via handleUpdate', () {
-      final app = tui.WidgetApp(_KeyTabWidget());
+      final app = WidgetApp(_KeyTabWidget());
       final output1 = app.view();
       expect(output1, contains('Tab: 0'));
 
@@ -607,7 +607,7 @@ void main() {
     });
 
     test('key dispatch + mouse tap coexist without state loss', () {
-      final app = tui.WidgetApp(_KeyAndClickWidget());
+      final app = WidgetApp(_KeyAndClickWidget());
       app.view();
 
       // Increment counter via key
@@ -627,7 +627,7 @@ void main() {
     });
 
     test('key dispatch after resize preserves state', () {
-      final app = tui.WidgetApp(_KeyCounterWidget());
+      final app = WidgetApp(_KeyCounterWidget());
       app.view();
 
       app.update(_keyMsg('+'));
@@ -635,7 +635,7 @@ void main() {
       expect(app.view(), contains('Counter: 2'));
 
       // Resize
-      app.update(tui.WindowSizeMsg(100, 30));
+      app.update(WindowSizeMsg(100, 30));
       expect(
         app.view(),
         contains('Counter: 2'),
@@ -650,7 +650,7 @@ void main() {
 
   group('Hit-test specifics', () {
     test('hitTestAt returns deepest element first', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
 
       final hits = app.hitTestAt(0, 0);
@@ -659,7 +659,7 @@ void main() {
     });
 
     test('hit-test outside render bounds returns empty', () {
-      final app = tui.WidgetApp(w.Text('hello'));
+      final app = WidgetApp(Text('hello'));
       app.view();
 
       final hits = app.hitTestAt(79, 23);
@@ -667,7 +667,7 @@ void main() {
     });
 
     test('hit-test dispatches to correct GestureDetector in Column', () {
-      final app = tui.WidgetApp(_MultiButtonWidget());
+      final app = WidgetApp(_MultiButtonWidget());
       app.view();
 
       _simulateTapOnText(app, 'Button A');
@@ -687,8 +687,8 @@ void main() {
 // Helper: create a KeyMsg from a character
 // ---------------------------------------------------------------------------
 
-tui.KeyMsg _keyMsg(String char) {
-  return tui.KeyMsg(
+KeyMsg _keyMsg(String char) {
+  return KeyMsg(
     terminal_keys.Key(terminal_keys.KeyType.runes, runes: char.codeUnits),
   );
 }
@@ -714,13 +714,13 @@ tui.KeyMsg _keyMsg(String char) {
 // Helper: simulate a tap (press + release) on visible text via hit-testing
 // ---------------------------------------------------------------------------
 
-void _simulateTapOnText(tui.WidgetApp app, String text) {
+void _simulateTapOnText(WidgetApp app, String text) {
   final view = app.view() as String;
   final loc = _locateText(view, text);
   if (loc == null) {
     final snippet = view.length > 500 ? '${view.substring(0, 500)}...' : view;
     fail(
-      'Text "$text" not found in rendered view.\n'
+      'Text "$text" not found in rendered vie\n'
       'View:\n$snippet',
     );
   }
@@ -730,9 +730,9 @@ void _simulateTapOnText(tui.WidgetApp app, String text) {
 
   // Press
   app.update(
-    tui.MouseMsg(
-      action: tui.MouseAction.press,
-      button: tui.MouseButton.left,
+    MouseMsg(
+      action: MouseAction.press,
+      button: MouseButton.left,
       x: x,
       y: y,
     ),
@@ -742,9 +742,9 @@ void _simulateTapOnText(tui.WidgetApp app, String text) {
 
   // Release at same position
   app.update(
-    tui.MouseMsg(
-      action: tui.MouseAction.release,
-      button: tui.MouseButton.left,
+    MouseMsg(
+      action: MouseAction.release,
+      button: MouseButton.left,
       x: x,
       y: y,
     ),
@@ -758,18 +758,18 @@ void _simulateTapOnText(tui.WidgetApp app, String text) {
 // ---------------------------------------------------------------------------
 
 /// A simple counter that increments on _IncrementMsg via setState.
-class _CounterWidget extends w.StatefulWidget {
+class _CounterWidget extends StatefulWidget {
   _CounterWidget();
 
   @override
-  w.State createState() => _CounterWidgetState();
+  State createState() => _CounterWidgetState();
 }
 
-class _CounterWidgetState extends w.State<_CounterWidget> {
+class _CounterWidgetState extends State<_CounterWidget> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementMsg) {
       setState(() => _count++);
     }
@@ -777,152 +777,152 @@ class _CounterWidgetState extends w.State<_CounterWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('count: $_count');
+  Widget build(BuildContext context) {
+    return Text('count: $_count');
   }
 }
 
 /// A counter that increments on tap (hit-test based).
-class _ClickableCounter extends w.StatefulWidget {
+class _ClickableCounter extends StatefulWidget {
   _ClickableCounter();
 
   @override
-  w.State createState() => _ClickableCounterState();
+  State createState() => _ClickableCounterState();
 }
 
-class _ClickableCounterState extends w.State<_ClickableCounter> {
+class _ClickableCounterState extends State<_ClickableCounter> {
   int _clicks = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.GestureDetector(
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: () {
         setState(() => _clicks++);
         return null;
       },
-      child: w.Text('clicks: $_clicks'),
+      child: Text('clicks: $_clicks'),
     );
   }
 }
 
 /// Two buttons, tracks which one was last tapped.
-class _MultiButtonWidget extends w.StatefulWidget {
+class _MultiButtonWidget extends StatefulWidget {
   _MultiButtonWidget();
 
   @override
-  w.State createState() => _MultiButtonWidgetState();
+  State createState() => _MultiButtonWidgetState();
 }
 
-class _MultiButtonWidgetState extends w.State<_MultiButtonWidget> {
+class _MultiButtonWidgetState extends State<_MultiButtonWidget> {
   String _tapped = 'none';
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.GestureDetector(
+        GestureDetector(
           onTap: () {
             setState(() => _tapped = 'A');
             return null;
           },
-          child: w.Text('Button A'),
+          child: Text('Button A'),
         ),
-        w.GestureDetector(
+        GestureDetector(
           onTap: () {
             setState(() => _tapped = 'B');
             return null;
           },
-          child: w.Text('Button B'),
+          child: Text('Button B'),
         ),
-        w.Text('tapped: $_tapped'),
+        Text('tapped: $_tapped'),
       ],
     );
   }
 }
 
 /// Tab widget with GestureDetectors (no zoneId).
-class _TabWidget extends w.StatefulWidget {
+class _TabWidget extends StatefulWidget {
   _TabWidget();
 
   @override
-  w.State createState() => _TabWidgetState();
+  State createState() => _TabWidgetState();
 }
 
-class _TabWidgetState extends w.State<_TabWidget> {
+class _TabWidgetState extends State<_TabWidget> {
   int _selectedTab = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Row(
+        Row(
           children: [
             for (var i = 0; i < 3; i++)
-              w.GestureDetector(
-                key: w.ValueKey<int>(i),
+              GestureDetector(
+                key: ValueKey<int>(i),
                 onTap: () {
                   setState(() => _selectedTab = i);
                   return null;
                 },
-                child: w.Text('Tab $i'),
+                child: Text('Tab $i'),
               ),
           ],
         ),
-        w.Text('Content: Tab $_selectedTab'),
+        Text('Content: Tab $_selectedTab'),
       ],
     );
   }
 }
 
 /// Tab widget WITHOUT explicit zoneId — hit-test-only path.
-class _TabWidgetNoZone extends w.StatefulWidget {
+class _TabWidgetNoZone extends StatefulWidget {
   _TabWidgetNoZone();
 
   @override
-  w.State createState() => _TabWidgetNoZoneState();
+  State createState() => _TabWidgetNoZoneState();
 }
 
-class _TabWidgetNoZoneState extends w.State<_TabWidgetNoZone> {
+class _TabWidgetNoZoneState extends State<_TabWidgetNoZone> {
   int _selectedTab = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Row(
+        Row(
           children: [
             for (var i = 0; i < 3; i++)
-              w.GestureDetector(
-                key: w.ValueKey<int>(i),
+              GestureDetector(
+                key: ValueKey<int>(i),
                 onTap: () {
                   setState(() => _selectedTab = i);
                   return null;
                 },
-                child: w.Container(
-                  padding: const w.EdgeInsets.symmetric(horizontal: 2),
-                  child: w.Text('Tab $i'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Text('Tab $i'),
                 ),
               ),
           ],
         ),
-        w.Text('Content: Tab $_selectedTab'),
+        Text('Content: Tab $_selectedTab'),
       ],
     );
   }
 }
 
 /// Tests positional state preservation for unkeyed children.
-class _PositionalStateTest extends w.StatefulWidget {
+class _PositionalStateTest extends StatefulWidget {
   _PositionalStateTest();
 
   @override
-  w.State createState() => _PositionalStateTestState();
+  State createState() => _PositionalStateTestState();
 }
 
-class _PositionalStateTestState extends w.State<_PositionalStateTest> {
+class _PositionalStateTestState extends State<_PositionalStateTest> {
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
         _NamedCounter(name: 'A'),
         _NamedCounter(name: 'B'),
@@ -931,19 +931,19 @@ class _PositionalStateTestState extends w.State<_PositionalStateTest> {
   }
 }
 
-class _NamedCounter extends w.StatefulWidget {
+class _NamedCounter extends StatefulWidget {
   _NamedCounter({required this.name, super.key});
   final String name;
 
   @override
-  w.State createState() => _NamedCounterState();
+  State createState() => _NamedCounterState();
 }
 
-class _NamedCounterState extends w.State<_NamedCounter> {
+class _NamedCounterState extends State<_NamedCounter> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementChildMsg && msg.name == widget.name) {
       setState(() => _count++);
     }
@@ -951,24 +951,24 @@ class _NamedCounterState extends w.State<_NamedCounter> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('${widget.name}: $_count');
+  Widget build(BuildContext context) {
+    return Text('${widget.name}: $_count');
   }
 }
 
 /// Tests that keyed children preserve state when reordered.
-class _KeyedReorderTest extends w.StatefulWidget {
+class _KeyedReorderTest extends StatefulWidget {
   _KeyedReorderTest();
 
   @override
-  w.State createState() => _KeyedReorderTestState();
+  State createState() => _KeyedReorderTestState();
 }
 
-class _KeyedReorderTestState extends w.State<_KeyedReorderTest> {
+class _KeyedReorderTestState extends State<_KeyedReorderTest> {
   bool _reversed = false;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _ReorderMsg) {
       setState(() => _reversed = !_reversed);
     }
@@ -976,30 +976,30 @@ class _KeyedReorderTestState extends w.State<_KeyedReorderTest> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
+  Widget build(BuildContext context) {
     final children = [
-      _NamedCounter(name: 'alpha', key: const w.Key('alpha')),
-      _NamedCounter(name: 'beta', key: const w.Key('beta')),
+      _NamedCounter(name: 'alpha', key: const Key('alpha')),
+      _NamedCounter(name: 'beta', key: const Key('beta')),
     ];
-    return w.Column(
+    return Column(
       children: _reversed ? children.reversed.toList() : children,
     );
   }
 }
 
 /// Tests that setState updates the rendered value.
-class _SetStateTester extends w.StatefulWidget {
+class _SetStateTester extends StatefulWidget {
   _SetStateTester();
 
   @override
-  w.State createState() => _SetStateTesterState();
+  State createState() => _SetStateTesterState();
 }
 
-class _SetStateTesterState extends w.State<_SetStateTester> {
+class _SetStateTesterState extends State<_SetStateTester> {
   String _value = 'initial';
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _ChangeValueMsg) {
       setState(() => _value = msg.newValue);
     }
@@ -1007,24 +1007,24 @@ class _SetStateTesterState extends w.State<_SetStateTester> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('value: $_value');
+  Widget build(BuildContext context) {
+    return Text('value: $_value');
   }
 }
 
 /// Tests nested stateful widgets with independent setState.
-class _NestedSetStateWidget extends w.StatefulWidget {
+class _NestedSetStateWidget extends StatefulWidget {
   _NestedSetStateWidget();
 
   @override
-  w.State createState() => _NestedSetStateWidgetState();
+  State createState() => _NestedSetStateWidgetState();
 }
 
-class _NestedSetStateWidgetState extends w.State<_NestedSetStateWidget> {
+class _NestedSetStateWidgetState extends State<_NestedSetStateWidget> {
   int _outerCount = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementMsg) {
       setState(() => _outerCount++);
     }
@@ -1032,23 +1032,23 @@ class _NestedSetStateWidgetState extends w.State<_NestedSetStateWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(children: [w.Text('outer: $_outerCount'), _InnerCounter()]);
+  Widget build(BuildContext context) {
+    return Column(children: [Text('outer: $_outerCount'), _InnerCounter()]);
   }
 }
 
-class _InnerCounter extends w.StatefulWidget {
+class _InnerCounter extends StatefulWidget {
   _InnerCounter();
 
   @override
-  w.State createState() => _InnerCounterState();
+  State createState() => _InnerCounterState();
 }
 
-class _InnerCounterState extends w.State<_InnerCounter> {
+class _InnerCounterState extends State<_InnerCounter> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementInnerMsg) {
       setState(() => _count++);
     }
@@ -1056,28 +1056,28 @@ class _InnerCounterState extends w.State<_InnerCounter> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('inner: $_count');
+  Widget build(BuildContext context) {
+    return Text('inner: $_count');
   }
 }
 
 /// Full example app structure: MediaQuery-aware, with header, tabs, body,
 /// click counter — reproduces the exact nesting pattern from the example.
-class _FullExampleApp extends w.StatefulWidget {
+class _FullExampleApp extends StatefulWidget {
   _FullExampleApp();
 
   @override
-  w.State createState() => _FullExampleAppState();
+  State createState() => _FullExampleAppState();
 }
 
-class _FullExampleAppState extends w.State<_FullExampleApp> {
+class _FullExampleAppState extends State<_FullExampleApp> {
   int _counter = 0;
   int _selectedTab = 0;
   int? _hoveredTab;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       final key = msg.key;
       if (key.char == '+' || key.char == '=') {
         setState(() => _counter++);
@@ -1094,27 +1094,27 @@ class _FullExampleAppState extends w.State<_FullExampleApp> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    final media = w.MediaQuery.of(context);
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
     final width = media.size.width.round();
 
-    return w.Column(
+    return Column(
       gap: 1,
       children: [
         // Header (like example)
-        w.SizedBox(
+        SizedBox(
           width: width > 0 ? width : null,
-          child: w.Row(
-            children: [w.Text('Widget Demo'), w.Text('Counter: $_counter')],
+          child: Row(
+            children: [Text('Widget Demo'), Text('Counter: $_counter')],
           ),
         ),
         // Tabs (like example)
-        w.Row(gap: 2, children: [for (var i = 0; i < 4; i++) _tab(i, 'Tab$i')]),
+        Row(gap: 2, children: [for (var i = 0; i < 4; i++) _tab(i, 'Tab$i')]),
         // Body (like example)
-        w.Column(
+        Column(
           children: [
-            w.Text('Tab: $_selectedTab'),
-            w.Text('Content for tab $_selectedTab'),
+            Text('Tab: $_selectedTab'),
+            Text('Content for tab $_selectedTab'),
           ],
         ),
         // Click counter (like example)
@@ -1123,10 +1123,10 @@ class _FullExampleAppState extends w.State<_FullExampleApp> {
     );
   }
 
-  w.Widget _tab(int index, String label) {
+  Widget _tab(int index, String label) {
     final isSelected = _selectedTab == index;
-    return w.GestureDetector(
-      key: w.ValueKey<int>(index),
+    return GestureDetector(
+      key: ValueKey<int>(index),
       onTap: () {
         setState(() => _selectedTab = index);
         return null;
@@ -1141,50 +1141,50 @@ class _FullExampleAppState extends w.State<_FullExampleApp> {
         }
         return null;
       },
-      child: w.Container(
-        padding: const w.EdgeInsets.symmetric(horizontal: 2),
-        child: w.Text(isSelected ? '[$label]' : label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Text(isSelected ? '[$label]' : label),
       ),
     );
   }
 }
 
-class _FullClickCounter extends w.StatefulWidget {
+class _FullClickCounter extends StatefulWidget {
   _FullClickCounter();
 
   @override
-  w.State createState() => _FullClickCounterState();
+  State createState() => _FullClickCounterState();
 }
 
-class _FullClickCounterState extends w.State<_FullClickCounter> {
+class _FullClickCounterState extends State<_FullClickCounter> {
   int _clicks = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.GestureDetector(
+  Widget build(BuildContext context) {
+    return GestureDetector(
       onTap: () {
         setState(() => _clicks++);
         return null;
       },
-      child: w.Text('clicks: $_clicks'),
+      child: Text('clicks: $_clicks'),
     );
   }
 }
 
 /// Counter widget that increments via KeyMsg handleUpdate (like example app).
-class _KeyCounterWidget extends w.StatefulWidget {
+class _KeyCounterWidget extends StatefulWidget {
   _KeyCounterWidget();
 
   @override
-  w.State createState() => _KeyCounterWidgetState();
+  State createState() => _KeyCounterWidgetState();
 }
 
-class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
+class _KeyCounterWidgetState extends State<_KeyCounterWidget> {
   int _counter = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       final key = msg.key;
       if (key.char == '+' || key.char == '=') {
         setState(() => _counter++);
@@ -1197,25 +1197,25 @@ class _KeyCounterWidgetState extends w.State<_KeyCounterWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('Counter: $_counter');
+  Widget build(BuildContext context) {
+    return Text('Counter: $_counter');
   }
 }
 
 /// Tab widget that switches via key 1-4 (like example app).
-class _KeyTabWidget extends w.StatefulWidget {
+class _KeyTabWidget extends StatefulWidget {
   _KeyTabWidget();
 
   @override
-  w.State createState() => _KeyTabWidgetState();
+  State createState() => _KeyTabWidgetState();
 }
 
-class _KeyTabWidgetState extends w.State<_KeyTabWidget> {
+class _KeyTabWidgetState extends State<_KeyTabWidget> {
   int _selectedTab = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       final key = msg.key;
       if (key.char == '1') setState(() => _selectedTab = 0);
       if (key.char == '2') setState(() => _selectedTab = 1);
@@ -1226,31 +1226,31 @@ class _KeyTabWidgetState extends w.State<_KeyTabWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Text('Tab: $_selectedTab'),
-        w.Text('Content for tab $_selectedTab'),
+        Text('Tab: $_selectedTab'),
+        Text('Content for tab $_selectedTab'),
       ],
     );
   }
 }
 
 /// Widget with both key-driven counter and click-driven counter.
-class _KeyAndClickWidget extends w.StatefulWidget {
+class _KeyAndClickWidget extends StatefulWidget {
   _KeyAndClickWidget();
 
   @override
-  w.State createState() => _KeyAndClickWidgetState();
+  State createState() => _KeyAndClickWidgetState();
 }
 
-class _KeyAndClickWidgetState extends w.State<_KeyAndClickWidget> {
+class _KeyAndClickWidgetState extends State<_KeyAndClickWidget> {
   int _counter = 0;
   int _clicks = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
-    if (msg is tui.KeyMsg) {
+  Cmd? handleUpdate(Msg msg) {
+    if (msg is KeyMsg) {
       if (msg.key.char == '+') {
         setState(() => _counter++);
       }
@@ -1259,16 +1259,16 @@ class _KeyAndClickWidgetState extends w.State<_KeyAndClickWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Text('counter: $_counter'),
-        w.GestureDetector(
+        Text('counter: $_counter'),
+        GestureDetector(
           onTap: () {
             setState(() => _clicks++);
             return null;
           },
-          child: w.Text('clicks: $_clicks'),
+          child: Text('clicks: $_clicks'),
         ),
       ],
     );
@@ -1277,31 +1277,31 @@ class _KeyAndClickWidgetState extends w.State<_KeyAndClickWidget> {
 
 /// Reproduces the example app's exact tab construction pattern:
 /// GestureDetector with ValueKey, onTap, onEnter, onExit, wrapping Container.
-class _ExampleTabPattern extends w.StatefulWidget {
+class _ExampleTabPattern extends StatefulWidget {
   _ExampleTabPattern();
 
   @override
-  w.State createState() => _ExampleTabPatternState();
+  State createState() => _ExampleTabPatternState();
 }
 
-class _ExampleTabPatternState extends w.State<_ExampleTabPattern> {
+class _ExampleTabPatternState extends State<_ExampleTabPattern> {
   int _selectedTab = 0;
   int? _hoveredTab;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Row(gap: 2, children: [for (var i = 0; i < 4; i++) _tab(i, 'Tab$i')]),
-        w.Text('selected: $_selectedTab'),
-        w.Text('hovered: $_hoveredTab'),
+        Row(gap: 2, children: [for (var i = 0; i < 4; i++) _tab(i, 'Tab$i')]),
+        Text('selected: $_selectedTab'),
+        Text('hovered: $_hoveredTab'),
       ],
     );
   }
 
-  w.Widget _tab(int index, String label) {
-    return w.GestureDetector(
-      key: w.ValueKey<int>(index),
+  Widget _tab(int index, String label) {
+    return GestureDetector(
+      key: ValueKey<int>(index),
       onTap: () {
         setState(() => _selectedTab = index);
         return null;
@@ -1316,96 +1316,96 @@ class _ExampleTabPatternState extends w.State<_ExampleTabPattern> {
         }
         return null;
       },
-      child: w.Container(
-        padding: const w.EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-        child: w.Text(label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+        child: Text(label),
       ),
     );
   }
 }
 
 /// Tab widget to test closure capture.
-class _ClosureCaptureTabWidget extends w.StatefulWidget {
+class _ClosureCaptureTabWidget extends StatefulWidget {
   _ClosureCaptureTabWidget();
 
   @override
-  w.State createState() => _ClosureCaptureTabWidgetState();
+  State createState() => _ClosureCaptureTabWidgetState();
 }
 
-class _ClosureCaptureTabWidgetState extends w.State<_ClosureCaptureTabWidget> {
+class _ClosureCaptureTabWidgetState extends State<_ClosureCaptureTabWidget> {
   int _selected = 0;
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Column(
+  Widget build(BuildContext context) {
+    return Column(
       children: [
-        w.Row(
+        Row(
           children: [
             for (var i = 0; i < 4; i++)
-              w.GestureDetector(
-                key: w.ValueKey<int>(i),
+              GestureDetector(
+                key: ValueKey<int>(i),
                 onTap: () {
                   setState(() => _selected = i);
                   return null;
                 },
-                child: w.Text('T$i'),
+                child: Text('T$i'),
               ),
           ],
         ),
-        w.Text('selected: $_selected'),
+        Text('selected: $_selected'),
       ],
     );
   }
 }
 
 /// Reads MediaQuery data and displays it.
-class _MediaQueryReader extends w.StatelessWidget {
+class _MediaQueryReader extends StatelessWidget {
   _MediaQueryReader();
 
   @override
-  w.Widget build(w.BuildContext context) {
-    final media = w.MediaQuery.of(context);
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
     final mw = media.size.width.round();
     final mh = media.size.height.round();
-    return w.Text('${mw}x$mh');
+    return Text('${mw}x$mh');
   }
 }
 
 /// Returns a command when it receives _TriggerCmdMsg.
-class _CmdReturner extends w.StatefulWidget {
+class _CmdReturner extends StatefulWidget {
   _CmdReturner();
 
   @override
-  w.State createState() => _CmdReturnerState();
+  State createState() => _CmdReturnerState();
 }
 
-class _CmdReturnerState extends w.State<_CmdReturner> {
+class _CmdReturnerState extends State<_CmdReturner> {
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _TriggerCmdMsg) {
-      return tui.Cmd.none();
+      return Cmd.none();
     }
     return null;
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('cmd returner');
+  Widget build(BuildContext context) {
+    return Text('cmd returner');
   }
 }
 
-class _LeafRenderUpdateWidget extends w.StatefulWidget {
+class _LeafRenderUpdateWidget extends StatefulWidget {
   _LeafRenderUpdateWidget();
 
   @override
-  w.State createState() => _LeafRenderUpdateWidgetState();
+  State createState() => _LeafRenderUpdateWidgetState();
 }
 
-class _LeafRenderUpdateWidgetState extends w.State<_LeafRenderUpdateWidget> {
+class _LeafRenderUpdateWidgetState extends State<_LeafRenderUpdateWidget> {
   int _count = 0;
 
   @override
-  tui.Cmd? handleUpdate(tui.Msg msg) {
+  Cmd? handleUpdate(Msg msg) {
     if (msg is _IncrementMsg) {
       setState(() => _count++);
     }
@@ -1413,8 +1413,8 @@ class _LeafRenderUpdateWidgetState extends w.State<_LeafRenderUpdateWidget> {
   }
 
   @override
-  w.Widget build(w.BuildContext context) {
-    return w.Text('leaf: $_count');
+  Widget build(BuildContext context) {
+    return Text('leaf: $_count');
   }
 }
 
@@ -1422,28 +1422,28 @@ class _LeafRenderUpdateWidgetState extends w.State<_LeafRenderUpdateWidget> {
 // Test messages
 // ---------------------------------------------------------------------------
 
-class _IncrementMsg extends tui.Msg {
+class _IncrementMsg extends Msg {
   const _IncrementMsg();
 }
 
-class _IncrementChildMsg extends tui.Msg {
+class _IncrementChildMsg extends Msg {
   const _IncrementChildMsg(this.name);
   final String name;
 }
 
-class _IncrementInnerMsg extends tui.Msg {
+class _IncrementInnerMsg extends Msg {
   const _IncrementInnerMsg();
 }
 
-class _ReorderMsg extends tui.Msg {
+class _ReorderMsg extends Msg {
   const _ReorderMsg();
 }
 
-class _ChangeValueMsg extends tui.Msg {
+class _ChangeValueMsg extends Msg {
   const _ChangeValueMsg(this.newValue);
   final String newValue;
 }
 
-class _TriggerCmdMsg extends tui.Msg {
+class _TriggerCmdMsg extends Msg {
   const _TriggerCmdMsg();
 }

@@ -6,10 +6,7 @@ import '../theme.dart';
 import '../widgets/footer_bar.dart';
 
 class AgentOverview extends w.StatelessWidget {
-  AgentOverview({
-    required this.model,
-    super.key,
-  });
+  AgentOverview({required this.model, super.key});
 
   final ChatModel model;
 
@@ -30,13 +27,20 @@ class AgentOverview extends w.StatelessWidget {
       children: [
         w.Expanded(
           child: w.Padding(
-            padding: const w.EdgeInsets.only(left: 2, right: 2, top: 1, bottom: 1),
+            padding: const w.EdgeInsets.only(
+              left: 2,
+              right: 2,
+              top: 1,
+              bottom: 1,
+            ),
             child: w.Column(
               crossAxisAlignment: w.CrossAxisAlignment.stretch,
               children: [
                 w.Text(
                   'Agent Overview',
-                  style: style.Style()..foreground(OC.text)..bold(),
+                  style: style.Style()
+                    ..foreground(OC.text)
+                    ..bold(),
                 ),
                 w.SizedBox(height: 1),
                 ...rows,
@@ -49,7 +53,7 @@ class AgentOverview extends w.StatelessWidget {
           lspCount: model.lspServers.length,
           mcpCount: model.mcpServers.length,
           statusHint: '/agent',
-          mode: model.mode
+          mode: model.mode,
         ),
       ],
     );
@@ -58,15 +62,9 @@ class AgentOverview extends w.StatelessWidget {
   w.Widget _row(String label, String value) {
     return w.Row(
       children: [
-        w.Text(
-          '$label:',
-          style: style.Style()..foreground(OC.textMuted),
-        ),
+        w.Text('$label:', style: style.Style()..foreground(OC.textMuted)),
         w.SizedBox(width: 2),
-        w.Text(
-          value,
-          style: style.Style()..foreground(OC.text),
-        ),
+        w.Text(value, style: style.Style()..foreground(OC.text)),
       ],
     );
   }

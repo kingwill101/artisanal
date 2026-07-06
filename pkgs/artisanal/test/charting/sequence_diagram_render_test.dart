@@ -1,7 +1,7 @@
 /// Tests for the sequence diagram renderer.
 library;
 
-import 'package:artisanal/charting.dart';
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/uv.dart';
 import 'package:test/test.dart';
 

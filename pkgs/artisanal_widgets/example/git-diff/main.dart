@@ -1,4 +1,5 @@
 // Git Diff Viewer — Widget Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates GitDiffViewer widget with a hardcoded sample diff.
 // Scroll with j/k or pgup/pgdn. Press q to quit.
@@ -7,10 +8,11 @@
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;
+import 'package:artisanal/bubbles.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 /// Light-theme diff styles.
-final _lightStyles = tui.DiffStyles.light();
+final _lightStyles = DiffStyles.light();
 
 /// Status bar style matching the light theme.
 final _statusBarStyle = style.Style()
@@ -75,7 +77,7 @@ index abcdef0..1234567 100644
 ''';
 
 void main() async {
-  final app = tui.WidgetApp(DiffShowcase());
+  final app = WidgetApp(DiffShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(
@@ -123,9 +125,9 @@ class _DiffShowcaseState extends w.State<DiffShowcase> {
     final fileCount = _controller.files.length;
     final pct = (_controller.scrollPercent * 100).toStringAsFixed(0);
     final modeName = switch (_controller.model.viewMode) {
-      tui.DiffViewMode.unified => 'unified',
-      tui.DiffViewMode.sideBySide => 'side-by-side',
-      tui.DiffViewMode.pretty => 'pretty',
+      DiffViewMode.unified => 'unified',
+      DiffViewMode.sideBySide => 'side-by-side',
+      DiffViewMode.pretty => 'pretty',
     };
 
     // Title + status take 2 rows; use the rest for the diff viewer

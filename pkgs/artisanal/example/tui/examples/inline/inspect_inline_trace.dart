@@ -8,7 +8,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:artisanal/runtime.dart';
+import 'package:artisanal/tui.dart';
 
 void main(List<String> args) {
   if (args.isEmpty || args.contains('--help') || args.contains('-h')) {

@@ -1,4 +1,5 @@
 // Focused OpenCode diff-scroll repro.
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Minimal chat layout that isolates diff-heavy messages inside a single
 // variable-height scroll area.
@@ -11,7 +12,7 @@ import '../opencode/theme.dart';
 import '../opencode/widgets/chat_body.dart';
 
 void main() async {
-  final app = tui.WidgetApp(_DiffScrollReproApp());
+  final app = WidgetApp(_DiffScrollReproApp());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

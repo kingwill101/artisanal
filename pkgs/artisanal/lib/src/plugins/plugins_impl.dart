@@ -13,5 +13,5 @@ library;
 
 export 'package:json_schema_builder/json_schema_builder.dart'
     show Schema, SchemaValidation, ValidationError;
-export 'src/plugins/core_exports.dart';
-export 'src/plugins/host_exports.dart';
+export 'package:artisanal/src/plugins/core_exports.dart';
+export 'package:artisanal/src/plugins/host_exports.dart';

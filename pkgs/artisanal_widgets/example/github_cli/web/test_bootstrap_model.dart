@@ -1,4 +1,5 @@
-import 'package:artisanal/web.dart' show runWidgetAppInBrowser;
+import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/widgets.dart'
     show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
 

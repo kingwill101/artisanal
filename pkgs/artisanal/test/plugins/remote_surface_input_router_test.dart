@@ -1,5 +1,5 @@
-import 'package:artisanal/plugins.dart' as plugins;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/artisanal.dart' as plugins;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:test/test.dart';
 
 void main() {

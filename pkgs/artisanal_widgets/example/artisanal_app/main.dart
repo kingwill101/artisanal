@@ -4,8 +4,8 @@
 // theming, and built-in navigator wiring.
 
 import 'package:artisanal/terminal.dart' show KeyType;
-import 'package:artisanal/app.dart' as app;
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal_widgets/app.dart' as app;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/widgets.dart' as w;
 
 void main() async {

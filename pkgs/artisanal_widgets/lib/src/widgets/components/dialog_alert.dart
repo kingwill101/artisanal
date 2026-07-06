@@ -1,4 +1,10 @@
-part of 'components_widgets.dart';
+import 'dart:async';
+
+import 'package:artisanal/terminal.dart' as terminal_keys;
+import 'package:artisanal/widgets.dart';
+
+import 'package:artisanal/tui.dart';
+
 
 /// A simple alert dialog with a title, message, and OK button.
 ///
@@ -45,18 +51,20 @@ class DialogAlert extends StatefulWidget {
     String buttonLabel = 'OK',
     CmdCallback? onDismiss,
   }) {
-    return Navigator.of(context).showDialog<void>(
-      builder: (ctx) => DialogAlert(
-        title: title,
-        message: message,
-        buttonLabel: buttonLabel,
-        onDismiss: () {
-          Navigator.of(ctx).pop();
-          onDismiss?.call();
-          return null;
-        },
-      ),
-    ).then((_) => null);
+    return Navigator.of(context)
+        .showDialog<void>(
+          builder: (ctx) => DialogAlert(
+            title: title,
+            message: message,
+            buttonLabel: buttonLabel,
+            onDismiss: () {
+              Navigator.of(ctx).pop();
+              onDismiss?.call();
+              return null;
+            },
+          ),
+        )
+        .then((_) => null);
   }
 
   @override

@@ -1,4 +1,5 @@
 // Data Visualization Demo
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Matches the Frankentui ftui-demo-showcase DataViz screen layout:
 //   Top:    Sparklines | Bar Chart (Grouped) | Spectrum Bars (Stacked)
@@ -12,14 +13,14 @@
 import 'dart:math' as math;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/charting.dart' show BrailleCanvas;
+import 'package:artisanal/artisanal.dart' show BrailleCanvas;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal/uv.dart' show UvStyle, UvColor, Cell;
 import 'package:artisanal_widgets/widgets.dart' as w;
 import 'package:artisanal_widgets/charting.dart' as charting;
 
 void main() async {
-  final app = tui.WidgetApp(DataVizDemo());
+  final app = WidgetApp(DataVizDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

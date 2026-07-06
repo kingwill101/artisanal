@@ -1,4 +1,5 @@
 // ProgressIndicator & SpinnerIndicator Showcase
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates ProgressIndicator with value, custom chars, labels,
 // colors, and SpinnerIndicator with different frame sets.
@@ -10,7 +11,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(ProgressSpinnerShowcase());
+  final app = WidgetApp(ProgressSpinnerShowcase());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

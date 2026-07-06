@@ -1,4 +1,5 @@
 // Navigator Example
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 //
 // Demonstrates the Navigator widget for stack-based page navigation.
 // Features push, pop, named routes, push result handling, and popUntil.
@@ -15,7 +16,7 @@ import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 void main() async {
-  final app = tui.WidgetApp(NavigatorDemo());
+  final app = WidgetApp(NavigatorDemo());
   await tui.runProgram(
     app,
     options: const tui.ProgramOptions(

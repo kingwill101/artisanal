@@ -1,5 +1,5 @@
 import 'package:artisanal/artisanal.dart' show Style;
-import 'package:artisanal/tui.dart';
+import 'package:artisanal/bubbles.dart';
 import 'package:test/test.dart';
 
 void main() {

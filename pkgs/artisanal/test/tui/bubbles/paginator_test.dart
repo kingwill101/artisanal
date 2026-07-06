@@ -308,13 +308,13 @@ void main() {
 
     test('shortHelp returns bindings', () {
       final keyMap = PaginatorKeyMap();
-      final help = keyMap.shortHelp();
+      final help = keyMap.shortHelp;
       expect(help, hasLength(2));
     });
 
     test('fullHelp returns grouped bindings', () {
       final keyMap = PaginatorKeyMap();
-      final help = keyMap.fullHelp();
+      final help = keyMap.fullHelp;
       expect(help, isNotEmpty);
       expect(help.first, hasLength(2));
     });

@@ -1,4 +1,9 @@
-part of 'layout_widgets.dart';
+import 'dart:math' as math;
+import 'package:artisanal/uv.dart' show Canvas, UvStyle;
+import '../rendering/render_object.dart';
+import '_layout_utils.dart';
+import 'enums.dart';
+import 'geometry.dart';
 
 class Wrap extends MultiChildRenderObjectWidget {
   Wrap({
@@ -49,7 +54,7 @@ class Wrap extends MultiChildRenderObjectWidget {
       runSpacing: runSpacing,
     );
     for (final child in children) {
-      render.attach(RenderDelegateBox(() => _renderWidget(child)));
+      render.attach(RenderDelegateBox(() => renderWidget(child)));
     }
     render.layout(BoxConstraints());
     return render.paint();
@@ -138,7 +143,7 @@ class RenderWrap extends RenderBox {
         final crossDelta = _wrapCrossOffset(run.cross, item.cross);
         final dx = _isHorizontal ? mainOffset : crossOffset + crossDelta;
         final dy = _isHorizontal ? crossOffset + crossDelta : mainOffset;
-        _drawStyledContent(
+        drawStyledContent(
           canvas,
           item.child.paint(),
           dx,
@@ -157,7 +162,7 @@ class RenderWrap extends RenderBox {
     }
 
     var result = canvas.render();
-    result = _padToStackSize(result, width, height);
+    result = padToStackSize(result, width, height);
     return result;
   }
 

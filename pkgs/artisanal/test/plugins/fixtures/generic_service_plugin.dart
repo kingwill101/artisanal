@@ -1,4 +1,4 @@
-import 'package:artisanal/plugins.dart' as plugins;
+import 'package:artisanal/artisanal.dart' as plugins;
 
 Future<void> main() async {
   final session = await plugins.RemotePluginGuestSession.bindStdio(

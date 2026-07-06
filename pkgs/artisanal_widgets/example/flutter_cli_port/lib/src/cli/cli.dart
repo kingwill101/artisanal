@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:artisanal/args.dart';
-import 'package:artisanal/runtime.dart' as runtime;
+import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 import '../app.dart';

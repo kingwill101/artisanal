@@ -1,14 +1,13 @@
 import 'dart:io';
-
-import 'package:artisanal/app.dart' as app;
+import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 
 void main() {
   group('ReloadFileWatcher', () {
     test('reloads on matching file changes', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = app.ReloadController();
-      final watcher = await app.ReloadFileWatcher.watch(
+      final controller = ReloadController();
+      final watcher = await ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
@@ -25,13 +24,13 @@ void main() {
       await File('${tempDir.path}/main.dart').writeAsString('void main() {}\n');
 
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, app.ReloadMode.reload);
+      expect(signal.mode, ReloadMode.reload);
     });
 
     test('ignores non-matching extensions', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = app.ReloadController();
-      final watcher = await app.ReloadFileWatcher.watch(
+      final controller = ReloadController();
+      final watcher = await ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
@@ -58,12 +57,12 @@ void main() {
 
     test('can emit restart signals', () async {
       final tempDir = await Directory.systemTemp.createTemp('reload-watch-');
-      final controller = app.ReloadController();
-      final watcher = await app.ReloadFileWatcher.watch(
+      final controller = ReloadController();
+      final watcher = await ReloadFileWatcher.watch(
         controller: controller,
         roots: [tempDir.path],
         debounce: const Duration(milliseconds: 20),
-        mode: app.ReloadMode.restart,
+        mode: ReloadMode.restart,
       );
 
       addTearDown(() async {
@@ -78,7 +77,7 @@ void main() {
       ).writeAsString('class Demo {}\n');
 
       final signal = await signalFuture.timeout(const Duration(seconds: 5));
-      expect(signal.mode, app.ReloadMode.restart);
+      expect(signal.mode, ReloadMode.restart);
     });
   });
 }

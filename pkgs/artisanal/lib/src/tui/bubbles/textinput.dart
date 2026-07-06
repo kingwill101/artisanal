@@ -13,8 +13,6 @@ import 'package:artisanal/style.dart';
 
 import '../../uv/cursor.dart';
 import '../../uv/geometry.dart';
-import '../msg.dart' show PasteTextMsg;
-import '../editor_core/editor_core.dart';
 import '../editor_core/editor_core.dart' as commands;
 import 'cursor.dart';
 import 'key_binding.dart';
@@ -178,7 +176,7 @@ TextInputStyles defaultTextInputStyles({bool isDark = true}) {
 /// See also:
 /// - [KeyBinding] for defining custom key bindings
 /// - [KeyMap] for the interface this implements
-class TextInputKeyMap implements KeyMap {
+class TextInputKeyMap extends KeyMap {
   /// Creates a text input key map with default bindings.
   TextInputKeyMap({
     KeyBinding? characterForward,
@@ -431,7 +429,36 @@ class TextInputKeyMap implements KeyMap {
            KeyBinding(
              keys: ['ctrl+end'],
              help: Help(key: 'ctrl+end', desc: 'Go to document end'),
-           );
+            ) {
+    shortHelp = [
+      this.characterForward,
+      this.characterBackward,
+      this.deleteCharacterBackward,
+    ];
+    fullHelp = [
+      [this.characterForward, this.characterBackward, this.wordForward, this.wordBackward],
+      [this.lineStart, this.lineEnd, this.documentStart, this.documentEnd],
+      [
+        this.deleteCharacterBackward,
+        this.deleteCharacterForward,
+        this.deleteWordBackward,
+        this.deleteWordForward,
+      ],
+      [this.deleteBeforeCursor, this.deleteAfterCursor],
+      [
+        this.selectAll,
+        this.paste,
+        this.copy,
+        this.cut,
+        this.undo,
+        this.redo,
+        this.acceptSuggestion,
+        this.nextSuggestion,
+        this.prevSuggestion,
+      ],
+      [this.newline, this.lineUp, this.lineDown, this.selectLineUp, this.selectLineDown],
+    ];
+  }
 
   /// Move cursor forward one character.
   final KeyBinding characterForward;
@@ -535,37 +562,7 @@ class TextInputKeyMap implements KeyMap {
   /// Move cursor to end of document (multi-line mode only).
   final KeyBinding documentEnd;
 
-  @override
-  List<KeyBinding> shortHelp() => [
-    characterForward,
-    characterBackward,
-    deleteCharacterBackward,
-  ];
 
-  @override
-  List<List<KeyBinding>> fullHelp() => [
-    [characterForward, characterBackward, wordForward, wordBackward],
-    [lineStart, lineEnd, documentStart, documentEnd],
-    [
-      deleteCharacterBackward,
-      deleteCharacterForward,
-      deleteWordBackward,
-      deleteWordForward,
-    ],
-    [deleteBeforeCursor, deleteAfterCursor],
-    [
-      selectAll,
-      paste,
-      copy,
-      cut,
-      undo,
-      redo,
-      acceptSuggestion,
-      nextSuggestion,
-      prevSuggestion,
-    ],
-    [newline, lineUp, lineDown, selectLineUp, selectLineDown],
-  ];
 }
 
 /// Message for paste events.

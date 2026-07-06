@@ -28,7 +28,7 @@ class SelectionCancelledMsg extends Msg {
 }
 
 /// Key bindings for the select component.
-class SelectKeyMap implements KeyMap {
+class SelectKeyMap extends KeyMap {
   SelectKeyMap({
     KeyBinding? up,
     KeyBinding? down,
@@ -74,18 +74,24 @@ class SelectKeyMap implements KeyMap {
              keys: ['pgdown', 'ctrl+d'],
              help: Help(key: 'pgdn', desc: 'page down'),
            ),
-       select =
-           select ??
-           KeyBinding(
-             keys: ['enter'],
-             help: Help(key: KeyboardChars.enter, desc: 'select'),
-           ),
-       cancel =
-           cancel ??
-           KeyBinding(
-             keys: ['esc', 'q'],
-             help: Help(key: 'esc', desc: 'cancel'),
-           );
+        select =
+            select ??
+            KeyBinding(
+              keys: ['enter'],
+              help: Help(key: KeyboardChars.enter, desc: 'select'),
+            ),
+        cancel =
+            cancel ??
+            KeyBinding(
+              keys: ['esc', 'q'],
+              help: Help(key: 'esc', desc: 'cancel'),
+            ) {
+    shortHelp = [this.up, this.down, this.select, this.cancel];
+    fullHelp = [
+      [this.up, this.down, this.home, this.end],
+      [this.pageUp, this.pageDown, this.select, this.cancel],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding up;
@@ -111,18 +117,7 @@ class SelectKeyMap implements KeyMap {
   /// Cancel selection.
   final KeyBinding cancel;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, select, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [pageUp, pageDown, select, cancel],
-    ];
-  }
 }
 
 /// Styles for the select component.
@@ -417,7 +412,7 @@ class SelectModel<T> extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
@@ -444,7 +439,7 @@ class MultiSelectionMadeMsg<T> extends Msg {
 }
 
 /// Key bindings for the multi-select component.
-class MultiSelectKeyMap implements KeyMap {
+class MultiSelectKeyMap extends KeyMap {
   MultiSelectKeyMap({
     KeyBinding? up,
     KeyBinding? down,
@@ -504,18 +499,24 @@ class MultiSelectKeyMap implements KeyMap {
              keys: ['a'],
              help: Help(key: 'a', desc: 'toggle all'),
            ),
-       confirm =
-           confirm ??
-           KeyBinding(
-             keys: ['enter'],
-             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
-           ),
-       cancel =
-           cancel ??
-           KeyBinding(
-             keys: ['esc', 'q'],
-             help: Help(key: 'esc', desc: 'cancel'),
-           );
+        confirm =
+            confirm ??
+            KeyBinding(
+              keys: ['enter'],
+              help: Help(key: KeyboardChars.enter, desc: 'confirm'),
+            ),
+        cancel =
+            cancel ??
+            KeyBinding(
+              keys: ['esc', 'q'],
+              help: Help(key: 'esc', desc: 'cancel'),
+            ) {
+    shortHelp = [this.up, this.down, this.toggle, this.confirm, this.cancel];
+    fullHelp = [
+      [this.up, this.down, this.home, this.end],
+      [this.toggle, this.toggleAll, this.confirm, this.cancel],
+    ];
+  }
 
   /// Move cursor up.
   final KeyBinding up;
@@ -547,18 +548,7 @@ class MultiSelectKeyMap implements KeyMap {
   /// Cancel selection.
   final KeyBinding cancel;
 
-  @override
-  List<KeyBinding> shortHelp() {
-    return [up, down, toggle, confirm, cancel];
-  }
 
-  @override
-  List<List<KeyBinding>> fullHelp() {
-    return [
-      [up, down, home, end],
-      [toggle, toggleAll, confirm, cancel],
-    ];
-  }
 }
 
 /// Styles for the multi-select component.
@@ -903,7 +893,7 @@ class MultiSelectModel<T> extends ViewComponent {
 
     // Help
     if (showHelp) {
-      final helpItems = keyMap.shortHelp();
+      final helpItems = keyMap.shortHelp;
       final helpText = helpItems
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
