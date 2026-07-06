@@ -138,6 +138,9 @@ class AnimationController extends Animation<double> with ChangeNotifier {
   ///
   /// If [from] is provided the controller jumps to that value before
   /// animating. The optional [curve] defaults to [Curves.linear].
+  ///
+  /// When [duration] is `null` or `Duration.zero`, the animation completes
+  /// synchronously and [processTick] is not required.
   Cmd forward({double? from, Curve curve = Curves.linear}) {
     if (from != null) _value = from.clamp(lowerBound, upperBound);
     _targetValue = upperBound;
@@ -147,12 +150,20 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     _startTime = null;
     _repeating = false;
     _notifyStatusListeners();
+    if (duration == null || duration == Duration.zero) {
+      _value = _targetValue;
+      _completeAnimation();
+      return Cmd.none();
+    }
     return _scheduleTick();
   }
 
   /// Starts animating backward (toward [lowerBound]).
   ///
   /// Returns a [Cmd] that schedules the first animation frame tick.
+  ///
+  /// When [reverseDuration] (or [duration]) is `null` or `Duration.zero`,
+  /// the animation completes synchronously and [processTick] is not required.
   Cmd reverse({double? from, Curve curve = Curves.linear}) {
     if (from != null) _value = from.clamp(lowerBound, upperBound);
     _targetValue = lowerBound;
@@ -162,6 +173,12 @@ class AnimationController extends Animation<double> with ChangeNotifier {
     _startTime = null;
     _repeating = false;
     _notifyStatusListeners();
+    final activeDuration = _activeDuration;
+    if (activeDuration == null || activeDuration == Duration.zero) {
+      _value = _targetValue;
+      _completeAnimation();
+      return Cmd.none();
+    }
     return _scheduleTick();
   }
 

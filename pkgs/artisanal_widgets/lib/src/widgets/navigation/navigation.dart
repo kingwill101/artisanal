@@ -21,6 +21,8 @@
 /// ```
 library;
 
+export 'animation_style.dart';
+export 'dialog_route.dart' show DialogRoute, showDialog;
 export 'navigator.dart';
 export 'navigator_observer.dart';
 export 'pop_behavior.dart';

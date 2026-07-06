@@ -19,6 +19,8 @@ import 'navigator_observer.dart';
 import 'pop_behavior.dart';
 import 'route.dart';
 import 'route_settings.dart';
+import 'dialog_route.dart' show DialogRoute;
+import 'animation_style.dart' show AnimationStyle;
 
 /// A widget that manages a stack of [Route] objects.
 ///
@@ -388,10 +390,10 @@ class NavigatorState extends State<Navigator> {
     }
   }
 
-  /// Shows a modal dialog by pushing a [ModalRoute].
+  /// Shows a modal dialog by pushing a [DialogRoute].
   ///
   /// Returns a [Future] that completes with the dialog's result when
-  /// the modal is dismissed.
+  /// the dialog is dismissed.
   ///
   /// ```dart
   /// final result = await Navigator.of(context).showDialog<bool>(
@@ -402,23 +404,25 @@ class NavigatorState extends State<Navigator> {
     required RouteWidgetBuilder builder,
     bool barrierDismissible = true,
     Color? barrierColor,
-    bool animateBarrier = true,
-    Duration barrierAnimationDuration = const Duration(milliseconds: 200),
+    String? barrierLabel,
+    bool useSafeArea = true,
     Alignment alignment = Alignment.center,
     num? width,
     num? height,
-    String? name,
+    RouteSettings? routeSettings,
+    AnimationStyle? animationStyle,
   }) {
-    final route = ModalRoute<T>(
+    final route = DialogRoute<T>(
       builder: builder,
       barrierDismissible: barrierDismissible,
       barrierColor: barrierColor,
-      animateBarrier: animateBarrier,
-      barrierAnimationDuration: barrierAnimationDuration,
+      barrierLabel: barrierLabel,
+      useSafeArea: useSafeArea,
       alignment: alignment,
       width: width,
       height: height,
-      settings: RouteSettings(name: name ?? '/dialog'),
+      animationStyle: animationStyle,
+      settings: routeSettings ?? RouteSettings(name: DialogRoute.routeName),
     );
     return push<T>(route);
   }

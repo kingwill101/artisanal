@@ -142,6 +142,10 @@ class PageRoute<T> extends Route<T> {
 ///   alignment: Alignment.center,
 /// ));
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class ModalRoute<T> extends Route<T> {
   /// Creates a modal route with the given [builder] and barrier options.
   ModalRoute({
