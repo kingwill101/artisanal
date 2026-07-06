@@ -51,8 +51,8 @@ extension ColorProfileConverter on ColorProfile {
   /// Converts an internal [cp.Profile] to a [ColorProfile].
   static ColorProfile fromProfile(cp_profile.Profile profile) {
     return switch (profile) {
-      cp_profile.Profile.unknown || cp_profile.Profile.noTty =>
-        ColorProfile.ascii,
+      cp_profile.Profile.unknown ||
+      cp_profile.Profile.noTty => ColorProfile.ascii,
       cp_profile.Profile.ascii => ColorProfile.ascii,
       cp_profile.Profile.ansi => ColorProfile.ansi,
       cp_profile.Profile.ansi256 => ColorProfile.ansi256,
@@ -83,6 +83,35 @@ abstract class Color {
     bool underline = false,
     bool hasDarkBackground = true,
   });
+
+  /// Creates a basic color from a hex string or ANSI code string.
+  factory Color.basic(String value) => BasicColor(value);
+
+  /// Creates an ANSI color from a code (0-255).
+  factory Color.ansi(int code) => AnsiColor(code);
+
+  /// Creates an adaptive color that switches based on terminal background.
+  factory Color.adaptive({required Color light, required Color dark}) =>
+      AdaptiveColor(light: light, dark: dark);
+  
+  /// Creates a complete color with explicit values for each color profile.
+  factory Color.complete({
+    required String trueColor,
+    String? ansi256,
+    String? ansi,
+  }) => CompleteColor(trueColor: trueColor, ansi256: ansi256, ansi: ansi);
+
+  /// Creates a complete adaptive color with light and dark variants.
+  factory Color.completeAdaptive({
+    required CompleteColor light,
+    required CompleteColor dark,
+  }) => CompleteAdaptiveColor(light: light, dark: dark);
+
+  /// Creates a default color using the terminal's default color.
+  factory Color.defaultColor() => DefaultColor();
+
+  /// Creates a color with no color styling.
+  factory Color.noColor() => NoColor();
 
   /// Returns a dimmed version of this color (if applicable).
   Color get dim => this;
