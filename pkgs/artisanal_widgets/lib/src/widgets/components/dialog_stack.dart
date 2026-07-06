@@ -18,6 +18,10 @@ part of 'components_widgets.dart';
 /// // Close the top dialog
 /// DialogStack.of(context).pop();
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class DialogStack extends StatefulWidget {
   DialogStack({
     required this.child,
@@ -62,6 +66,10 @@ class DialogStack extends StatefulWidget {
 }
 
 /// State for [DialogStack], providing the push/pop/replace/clear API.
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class DialogStackState extends State<DialogStack> {
   final List<Widget> _stack = [];
 

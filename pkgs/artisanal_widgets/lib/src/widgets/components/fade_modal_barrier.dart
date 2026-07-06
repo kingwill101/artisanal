@@ -21,6 +21,10 @@ part of 'components_widgets.dart';
 ///   child: myContent,
 /// )
 /// ```
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class FadeModalBarrier extends StatefulWidget {
   FadeModalBarrier({
     required this.child,

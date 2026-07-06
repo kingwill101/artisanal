@@ -45,28 +45,27 @@ class DialogPrompt extends StatefulWidget {
   /// Called when the user cancels (esc).
   final CmdCallback? onCancel;
 
-  /// Show a text prompt dialog via [DialogStack].
-  static void show(
+  /// Show a text prompt dialog.
+  ///
+  /// Returns the submitted text, or `null` if cancelled.
+  static Future<String?> show(
     BuildContext context, {
     required String title,
     Widget? description,
     String? placeholder,
     String? initialValue,
-    void Function(String value)? onSubmit,
   }) {
-    final stack = DialogStack.of(context);
-    stack.push(
-      DialogPrompt(
+    return Navigator.of(context).showDialog<String>(
+      builder: (ctx) => DialogPrompt(
         title: title,
         description: description,
         placeholder: placeholder,
         initialValue: initialValue,
         onSubmit: (value) {
-          stack.pop();
-          onSubmit?.call(value);
+          Navigator.of(ctx).pop(value);
         },
         onCancel: () {
-          stack.pop();
+          Navigator.of(ctx).pop();
           return null;
         },
       ),

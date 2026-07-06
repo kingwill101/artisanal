@@ -32,27 +32,31 @@ class DialogAlert extends StatefulWidget {
   /// Called when the dialog is dismissed (enter, esc, or button click).
   final CmdCallback? onDismiss;
 
-  /// Show an alert dialog via [DialogStack].
-  static void show(
+  /// Show an alert dialog.
+  ///
+  /// The dialog is pushed via [Navigator.showDialog] and dismissed when
+  /// the user presses Enter, Escape, or clicks the OK button.
+  ///
+  /// Returns a [Future] that completes when the dialog is dismissed.
+  static Future<void> show(
     BuildContext context, {
     required String title,
     String? message,
     String buttonLabel = 'OK',
     CmdCallback? onDismiss,
   }) {
-    final stack = DialogStack.of(context);
-    stack.push(
-      DialogAlert(
+    return Navigator.of(context).showDialog<void>(
+      builder: (ctx) => DialogAlert(
         title: title,
         message: message,
         buttonLabel: buttonLabel,
         onDismiss: () {
-          stack.pop();
+          Navigator.of(ctx).pop();
           onDismiss?.call();
           return null;
         },
       ),
-    );
+    ).then((_) => null);
   }
 
   @override

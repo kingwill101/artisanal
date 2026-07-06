@@ -1,5 +1,9 @@
 part of 'components_widgets.dart';
 
+@Deprecated(
+  'Use DialogRoute via Navigator.of(context).showDialog() instead. '
+  'Will be removed in a future release.',
+)
 class Modal extends StatelessWidget {
   Modal({
     required this.child,

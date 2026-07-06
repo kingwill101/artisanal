@@ -71,6 +71,66 @@ class DialogSelectItem<T> {
 /// )
 /// ```
 class DialogSelect<T> extends StatefulWidget {
+  /// Shows a [DialogSelect] in a modal dialog route.
+  ///
+  /// Returns a [Future] that resolves to the selected [DialogSelectItem] or
+  /// `null` if the dialog is dismissed without selection.
+  ///
+  /// ```dart
+  /// final selected = await DialogSelect.show<String>(
+  ///   context,
+  ///   title: 'Select Model',
+  ///   items: models.map((m) => DialogSelectItem(
+  ///     label: m.name,
+  ///     value: m.id,
+  ///   )).toList(),
+  /// );
+  /// if (selected != null) { ... }
+  /// ```
+  static Future<DialogSelectItem<R>?> show<R>(
+    BuildContext context, {
+    required List<DialogSelectItem<R>> items,
+    String? title,
+    String? searchHint,
+    void Function(DialogSelectItem<R> item)? onSelect,
+    int? width,
+    int? height,
+    List<({String key, String description})> keybinds = const [],
+    Widget Function(int filteredCount, int totalCount)? trailing,
+    void Function(DialogSelectItem<R> item)? onHighlightChanged,
+    Widget Function(String searchQuery)? emptyBuilder,
+    bool barrierDismissible = true,
+    Color? barrierColor,
+    AnimationStyle? animationStyle,
+  }) {
+    return Navigator.of(context).showDialog<DialogSelectItem<R>>(
+      barrierDismissible: barrierDismissible,
+      barrierColor: barrierColor,
+      animationStyle: animationStyle,
+      builder: (ctx) => DialogSelect<R>(
+        items: items,
+        title: title,
+        searchHint: searchHint,
+        onSelect: (item) {
+          Navigator.of(ctx).pop(item);
+          onSelect?.call(item);
+        },
+        onDismiss: barrierDismissible
+            ? () {
+                Navigator.of(ctx).pop();
+                return null;
+              }
+            : null,
+        width: width,
+        height: height,
+        keybinds: keybinds,
+        trailing: trailing,
+        onHighlightChanged: onHighlightChanged,
+        emptyBuilder: emptyBuilder,
+      ),
+    );
+  }
+
   DialogSelect({
     required this.items,
     this.title,
