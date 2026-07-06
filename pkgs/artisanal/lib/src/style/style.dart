@@ -2951,8 +2951,6 @@ List<T> _rotateGradient<T>(List<T> gradient, int offset) {
 
 /// Styles individual runes in a string using a styler function.
 ///
-/// Ported from lipgloss v2:
-/// - `third_party/lipgloss/runes.go`
 String styleRunes(String s, Style Function(int rune, int index) styler) {
   final runes = s.runes.toList(growable: false);
   if (runes.isEmpty) return '';

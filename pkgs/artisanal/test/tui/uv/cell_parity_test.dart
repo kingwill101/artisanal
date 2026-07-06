@@ -4,9 +4,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/cell_test.go`
-// - `third_party/ultraviolet/cell.go` (`ConvertStyle`, `ConvertLink`, `StyleDiff`)
 
 void main() {
   group('Cell parity', () {

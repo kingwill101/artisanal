@@ -2,9 +2,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-// Behavior parity reference:
-// - `third_party/lipgloss/layer.go` (`Layer`, `Compositor`, `Hit`, `Render`)
-
 void main() {
   group('Compositor behavior', () {
     test('renders layers in z-index order (top-most wins)', () {

@@ -1,9 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/lipgloss/canvas_test.go`
-// - `third_party/lipgloss/canvas.go`
 
 void main() {
   group('Canvas parity', () {

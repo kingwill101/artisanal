@@ -9,7 +9,6 @@ library;
 
 /// Tab stop management.
 ///
-/// Upstream: `third_party/ultraviolet/tabstop.go`.
 final class TabStops {
   TabStops._(this.width, this.interval, this.stops);
 

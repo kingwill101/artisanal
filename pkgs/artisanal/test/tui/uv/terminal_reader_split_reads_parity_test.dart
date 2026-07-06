@@ -1,8 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity (scoped):
-// - `third_party/ultraviolet/key_test.go` (TestSplitReads)
 void main() {
   group('UV TerminalReader parity (split reads)', () {
     test('split reads across ESC sequences', () {

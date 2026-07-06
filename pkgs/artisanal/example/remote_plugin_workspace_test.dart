@@ -5,10 +5,10 @@ import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
-import 'package:artisanal/src/plugins/remote_plugin_kernel_cache.dart';
-
 final String _artisanalRootDirectory = io.Directory.current.path;
-final _kernelCache = RemotePluginKernelCache(packageRoot: _artisanalRootDirectory);
+final _kernelCache = RemotePluginKernelCache(
+  packageRoot: _artisanalRootDirectory,
+);
 final String _precompiledWorkspaceDirectory = p.join(
   _artisanalRootDirectory,
   '.dart_tool',

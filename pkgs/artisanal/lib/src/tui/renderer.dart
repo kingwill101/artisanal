@@ -605,8 +605,6 @@ class BufferedTuiRenderer implements TuiRenderer {
 /// surrounding CLI cursor position.
 ///
 /// Upstream references:
-/// - `third_party/ultraviolet/styled.go` (`StyledString.Draw`)
-/// - `third_party/ultraviolet/terminal_renderer.go` (`UvTerminalRenderer.Render`)
 class UltravioletTuiRenderer
     implements TuiRenderer, NativeFrameInspectableRenderer {
   /// Creates a UV renderer targeting the given [terminal].

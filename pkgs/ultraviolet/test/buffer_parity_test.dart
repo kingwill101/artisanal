@@ -5,14 +5,10 @@ import 'package:ultraviolet/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
 import 'dart:typed_data';
 
-// Upstream parity (selected cases for the subset we’ve ported):
-// - `third_party/ultraviolet/buffer_test.go`
-// - `third_party/ultraviolet/buffer.go`
 
 void main() {
   group('Buffer parity (subset)', () {
     test('TestBufferUniseg (ASCII subset)', () {
-      // Upstream: `third_party/ultraviolet/buffer_test.go` (`TestBufferUniseg`).
       final cases = <({String name, String input, String expected})>[
         (name: 'empty buffer', input: '', expected: ''),
         (
@@ -107,7 +103,6 @@ void main() {
     });
 
     test('Line.render (styles and resets)', () {
-      // Upstream: `third_party/ultraviolet/buffer_test.go` (`TestLineRenderLine`).
       final l = Line.filled(5);
       l.set(
         0,
@@ -124,7 +119,6 @@ void main() {
     });
 
     test('Buffer.render (hyperlink open/close)', () {
-      // Upstream: `third_party/ultraviolet/buffer_test.go` (`TestLineRenderLine` hyperlink case).
       final b = Buffer.create(5, 1);
       const link = Link(url: 'http://example.com');
       b.setCell(0, 0, Cell(content: 'L', width: 1, link: link));

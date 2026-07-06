@@ -16,7 +16,6 @@ import 'screen.dart';
 
 /// Screen helpers for clearing/filling/cloning.
 ///
-/// Mirrors upstream `third_party/ultraviolet/screen`.
 
 /// Clears the entire [screen] to empty cells.
 void clear(Screen screen) {

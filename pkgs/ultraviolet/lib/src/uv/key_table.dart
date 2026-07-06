@@ -14,7 +14,6 @@ import 'decoder.dart';
 
 /// Builds a table of key sequences and their corresponding key events.
 ///
-/// Upstream: `third_party/ultraviolet/key_table.go` (`buildKeysTable`).
 Map<String, Key> buildKeysTable(
   LegacyKeyEncoding flags,
   String term, {

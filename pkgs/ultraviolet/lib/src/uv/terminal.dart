@@ -83,7 +83,6 @@ export 'halfblock_drawable.dart';
 /// It manages a [Buffer] representing the screen state, handles input event
 /// decoding, and provides methods for drawing text, shapes, and images.
 ///
-/// Upstream: `third_party/ultraviolet/terminal.go` (`Terminal`).
 class Terminal
     implements
         Screen,
@@ -444,7 +443,6 @@ class Terminal
 
   /// Adds the given string to the top of the terminal screen.
   ///
-  /// Upstream: `third_party/ultraviolet/terminal.go` (`Terminal.PrependString`).
   void prependString(String s) {
     _prepend.add(s);
   }

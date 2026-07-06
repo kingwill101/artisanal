@@ -13,7 +13,6 @@ import 'geometry.dart';
 
 /// Cursor shape primitives.
 ///
-/// Upstream: `third_party/ultraviolet/cursor.go`.
 enum CursorShape {
   /// A block cursor (█).
   block,
@@ -28,7 +27,6 @@ enum CursorShape {
 extension CursorShapeEncode on CursorShape {
   /// Returns the ANSI-encoded cursor shape code.
   ///
-  /// Upstream: `CursorShape.Encode` in `third_party/ultraviolet/cursor.go`.
   int encode({required bool blink}) {
     // s = (s*2)+1; if !blink { s++ }
     var s = (index * 2) + 1;
@@ -41,7 +39,6 @@ extension CursorShapeEncode on CursorShape {
 ///
 /// A cursor has a [position], an optional [color], a [shape], and a [blink] state.
 ///
-/// Upstream: `third_party/ultraviolet/uv.go` (`Cursor`).
 class Cursor {
   Cursor({
     required this.position,

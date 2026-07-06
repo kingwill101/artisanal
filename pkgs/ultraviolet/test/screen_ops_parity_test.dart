@@ -4,9 +4,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:ultraviolet/src/unicode/width.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/screen/screen.go`
-// - `third_party/ultraviolet/screen/screen_test.go`
 
 final class _MockScreen implements Screen {
   _MockScreen(int width, int height)

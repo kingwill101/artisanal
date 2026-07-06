@@ -5,9 +5,6 @@ import 'package:artisanal/src/uv/uv.dart';
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/decoder_test.go`
-// - `third_party/ultraviolet/decoder.go`
 
 UvRgb _rgbFromHex(String hex) {
   final s = hex.startsWith('#') ? hex.substring(1) : hex;

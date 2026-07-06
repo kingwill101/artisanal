@@ -23,12 +23,10 @@ import 'key.dart';
 
 /// Mouse mode.
 ///
-/// Upstream: `third_party/ultraviolet/mouse.go` (`MouseMode`).
 enum MouseMode { none, click, drag, motion }
 
 /// Mouse button codes (X11-style).
 ///
-/// Upstream: `github.com/charmbracelet/x/ansi` (`MouseButton`) + `mouse.go`.
 abstract final class MouseButton {
   static const int none = 0;
   static const int left = 1;
@@ -78,7 +76,6 @@ abstract final class MouseButton {
 
 /// Mouse event payload.
 ///
-/// Upstream: `third_party/ultraviolet/mouse.go` (`Mouse`).
 final class Mouse {
   const Mouse({
     required this.x,

@@ -1,8 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity (scoped subset):
-// - `third_party/ultraviolet/key_test.go` (TestReadInput)
 void main() {
   group('UV TerminalReader parity (read input subset)', () {
     List<Event> scan(String s) {

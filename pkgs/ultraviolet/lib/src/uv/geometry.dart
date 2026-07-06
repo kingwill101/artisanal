@@ -23,7 +23,6 @@ library;
 
 import 'dart:math' as math;
 
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Position`, `Rectangle`).
 /// A 2D integer coordinate in terminal cell space.
 ///
 /// Represents the location of a cell with `x` (column) and `y` (row).
@@ -43,7 +42,6 @@ final class Position {
 
 /// Rectangle with inclusive-exclusive bounds: `[min, max)`.
 ///
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Rectangle`).
 /// A rectangle with inclusive-exclusive bounds: `[min, max)`.
 ///
 /// Describes a region in cell coordinates using top-left ([minX], [minY]) and

@@ -43,8 +43,6 @@ import 'screen.dart';
 import 'styled_string.dart';
 
 /// Layer represents a visual layer with content and positioning.
-///
-/// Upstream: `third_party/lipgloss/layer.go` (`Layer`).
 final class Layer {
   Layer(this.drawable, [List<Layer> layers = const []])
     : _layers = [...layers] {
@@ -184,13 +182,9 @@ final class _CompositeLayer {
 }
 
 /// Compositor manages layer composition, drawing and hit testing.
-///
-/// Upstream: `third_party/lipgloss/layer.go` (`Compositor`).
 final class Compositor implements Drawable {
   Compositor([List<Layer> layers = const []])
     : _root = Layer(StyledString(''))..addLayers(layers) {
-    // Upstream: `third_party/lipgloss/layer.go` (`NewCompositor`) flattens on
-    // construction so `Bounds`, `Hit`, and `GetLayer` work immediately.
     _flatten();
   }
 

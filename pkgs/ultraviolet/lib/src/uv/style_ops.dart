@@ -18,7 +18,6 @@ import 'color_utils.dart' as color_utils;
 
 /// Converts a [UvStyle] to respect the given terminal color [profile].
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (`ConvertStyle`).
 UvStyle convertStyle(UvStyle style, cp.Profile profile) {
   switch (profile) {
     case cp.Profile.trueColor:
@@ -51,7 +50,6 @@ UvStyle convertStyle(UvStyle style, cp.Profile profile) {
 
 /// Converts a [Link] to respect the given terminal color [profile].
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (`ConvertLink`).
 Link convertLink(Link link, cp.Profile profile) {
   if (profile == cp.Profile.noTty) return const Link();
   return link;
@@ -90,7 +88,6 @@ UvBasic16 _basic16FromIdx16(int idx16) {
 
 /// Returns the SGR sequence for [style].
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (`UvStyle.String`).
 String styleToSgr(UvStyle style) {
   if (style.isZero) return UvAnsi.resetStyle;
   final simple = _simpleRgbStyleToSgr(style);
@@ -136,7 +133,6 @@ String styleToSgr(UvStyle style) {
 
 /// Returns the SGR diff needed to transition from [from] to [to].
 ///
-/// Upstream: `third_party/ultraviolet/cell.go` (`StyleDiff`).
 String styleDiff(UvStyle? from, UvStyle? to) {
   if (from == null && to == null) return '';
   if (from != null && to != null && from == to) return '';

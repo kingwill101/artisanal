@@ -1,7 +1,6 @@
 /// Helpers for styling visible cell ranges in ANSI strings.
 ///
 /// Ported from lipgloss v2:
-/// - `third_party/lipgloss/ranges.go`
 ///
 /// The range indices are **cell indices** into the ANSI-stripped string
 /// (i.e., measured in terminal columns, accounting for wide graphemes).
@@ -25,8 +24,6 @@ final class StyleRange {
 
 /// A collection of [StyleRange]s that can be applied to a string.
 ///
-/// Ported from lipgloss v2:
-/// - `third_party/lipgloss/ranges.go`
 class Ranges {
   final List<StyleRange> _ranges = [];
 

@@ -1,9 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/cursor_test.go`
-// - `third_party/ultraviolet/cursor.go`
 
 void main() {
   test('CursorShape.encode', () {

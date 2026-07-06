@@ -24,7 +24,6 @@ const Duration defaultEscTimeout = Duration(milliseconds: 50);
 /// TerminalReader represents an input event loop that reads input events from
 /// a reader and parses them into human-readable events.
 ///
-/// Upstream: `third_party/ultraviolet/terminal_reader.go` (`TerminalReader`).
 class TerminalReader {
   TerminalReader(
     this._reader, {

@@ -26,17 +26,12 @@ class KeyChordModel implements tui.Model {
 
       // Cancelled (timeout or unmatched key)
       tui.KeyChordCancelledMsg(:final timedOut) => (
-        copyWith(
-          status: timedOut ? 'Chord timed out' : 'Chord cancelled',
-        ),
+        copyWith(status: timedOut ? 'Chord timed out' : 'Chord cancelled'),
         null,
       ),
 
       // Regular keys not part of a chord pass through normally
-      tui.KeyMsg(key: final k) when k.rune == 0x71 => (
-        this,
-        tui.Cmd.quit(),
-      ),
+      tui.KeyMsg(key: final k) when k.rune == 0x71 => (this, tui.Cmd.quit()),
 
       _ => (this, null),
     };
@@ -59,8 +54,10 @@ class KeyChordModel implements tui.Model {
     return buffer.toString();
   }
 
-  KeyChordModel copyWith({String? status, String? lastChord}) =>
-    KeyChordModel(status: status ?? this.status, lastChord: lastChord ?? this.lastChord);
+  KeyChordModel copyWith({String? status, String? lastChord}) => KeyChordModel(
+    status: status ?? this.status,
+    lastChord: lastChord ?? this.lastChord,
+  );
 }
 
 void main() async {
@@ -87,9 +84,6 @@ void main() async {
 
   await tui.runProgram(
     const KeyChordModel(),
-    options: tui.ProgramOptions(
-      altScreen: true,
-      interceptor: interceptor,
-    ),
+    options: tui.ProgramOptions(altScreen: true, interceptor: interceptor),
   );
 }

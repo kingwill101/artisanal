@@ -2,9 +2,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/layout_test.go`
-// - `third_party/ultraviolet/layout.go`
 
 void main() {
   group('layout parity', () {

@@ -48,14 +48,12 @@ final class _LargestRemainderCandidate {
 
 /// Layout constraints.
 ///
-/// Upstream: `third_party/ultraviolet/layout.go`.
 abstract interface class Constraint {
   int apply(int size);
 }
 
 /// A constraint that represents a percentage of the available size.
 ///
-/// Upstream: `type Percent int`.
 final class Percent implements Constraint {
   const Percent(this.value);
 
@@ -71,7 +69,6 @@ final class Percent implements Constraint {
 
 /// Syntactic sugar for [Percent].
 ///
-/// Upstream: `Ratio(numerator, denominator int) Percent`.
 Percent ratio(int numerator, int denominator) {
   if (denominator == 0) return const Percent(0);
   return Percent((numerator * 100) ~/ denominator);
@@ -189,7 +186,6 @@ List<int> splitByLargestRemainder(
 
 /// A constraint that represents a fixed size.
 ///
-/// Upstream: `type Fixed int`.
 final class Fixed implements Constraint {
   const Fixed(this.value);
 
@@ -205,7 +201,6 @@ final class Fixed implements Constraint {
 
 /// Splits [area] vertically into top/bottom.
 ///
-/// Upstream: `SplitVertical` in `third_party/ultraviolet/layout.go`.
 ({Rectangle top, Rectangle bottom}) splitVertical(
   Rectangle area,
   Constraint c,
@@ -230,7 +225,6 @@ final class Fixed implements Constraint {
 
 /// Splits [area] horizontally into left/right.
 ///
-/// Upstream: `SplitHorizontal` in `third_party/ultraviolet/layout.go`.
 ({Rectangle left, Rectangle right}) splitHorizontal(
   Rectangle area,
   Constraint c,
@@ -255,7 +249,6 @@ final class Fixed implements Constraint {
 
 /// Returns a new [Rectangle] centered within [area] with [width] and [height].
 ///
-/// Upstream: `CenterRect` in `third_party/ultraviolet/layout.go`.
 Rectangle centerRect(Rectangle area, int width, int height) {
   final centerX = area.minX + area.width ~/ 2;
   final centerY = area.minY + area.height ~/ 2;
@@ -266,14 +259,12 @@ Rectangle centerRect(Rectangle area, int width, int height) {
 
 /// Returns a new [Rectangle] at the top-left of [area] with [width] and [height].
 ///
-/// Upstream: `TopLeftRect` in `third_party/ultraviolet/layout.go`.
 Rectangle topLeftRect(Rectangle area, int width, int height) {
   return rect(area.minX, area.minY, width, height).intersect(area);
 }
 
 /// Returns a new [Rectangle] at the top-center of [area] with [width] and [height].
 ///
-/// Upstream: `TopCenterRect` in `third_party/ultraviolet/layout.go`.
 Rectangle topCenterRect(Rectangle area, int width, int height) {
   final centerX = area.minX + area.width ~/ 2;
   final minX = centerX - width ~/ 2;
@@ -282,14 +273,12 @@ Rectangle topCenterRect(Rectangle area, int width, int height) {
 
 /// Returns a new [Rectangle] at the top-right of [area] with [width] and [height].
 ///
-/// Upstream: `TopRightRect` in `third_party/ultraviolet/layout.go`.
 Rectangle topRightRect(Rectangle area, int width, int height) {
   return rect(area.maxX - width, area.minY, width, height).intersect(area);
 }
 
 /// Returns a new [Rectangle] at the right-center of [area] with [width] and [height].
 ///
-/// Upstream: `RightCenterRect` in `third_party/ultraviolet/layout.go`.
 Rectangle rightCenterRect(Rectangle area, int width, int height) {
   final centerY = area.minY + area.height ~/ 2;
   final minY = centerY - height ~/ 2;
@@ -298,7 +287,6 @@ Rectangle rightCenterRect(Rectangle area, int width, int height) {
 
 /// Returns a new [Rectangle] at the left-center of [area] with [width] and [height].
 ///
-/// Upstream: `LeftCenterRect` in `third_party/ultraviolet/layout.go`.
 Rectangle leftCenterRect(Rectangle area, int width, int height) {
   final centerY = area.minY + area.height ~/ 2;
   final minY = centerY - height ~/ 2;
@@ -307,14 +295,12 @@ Rectangle leftCenterRect(Rectangle area, int width, int height) {
 
 /// Returns a new [Rectangle] at the bottom-left of [area] with [width] and [height].
 ///
-/// Upstream: `BottomLeftRect` in `third_party/ultraviolet/layout.go`.
 Rectangle bottomLeftRect(Rectangle area, int width, int height) {
   return rect(area.minX, area.maxY - height, width, height).intersect(area);
 }
 
 /// Returns a new [Rectangle] at the bottom-center of [area] with [width] and [height].
 ///
-/// Upstream: `BottomCenterRect` in `third_party/ultraviolet/layout.go`.
 Rectangle bottomCenterRect(Rectangle area, int width, int height) {
   final centerX = area.minX + area.width ~/ 2;
   final minX = centerX - width ~/ 2;
@@ -323,7 +309,6 @@ Rectangle bottomCenterRect(Rectangle area, int width, int height) {
 
 /// Returns a new [Rectangle] at the bottom-right of [area] with [width] and [height].
 ///
-/// Upstream: `BottomRightRect` in `third_party/ultraviolet/layout.go`.
 Rectangle bottomRightRect(Rectangle area, int width, int height) {
   return rect(
     area.maxX - width,

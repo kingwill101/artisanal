@@ -28,8 +28,6 @@ import 'screen.dart';
 import '../unicode/width.dart';
 
 /// Canvas is a cell-buffer that can be used to compose and draw [Drawable]s.
-///
-/// Upstream: `third_party/lipgloss/canvas.go` (Canvas backed by `uv.ScreenBuffer`).
 final class Canvas
     implements
         Screen,

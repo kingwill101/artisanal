@@ -3,8 +3,6 @@ import 'dart:math' as math;
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-// Upstream parity (scoped):
-// - `third_party/ultraviolet/key_test.go` (TestSplitSequences)
 
 void _expectEvent(Event actual, Event expected, {required String reason}) {
   expect(actual.runtimeType, expected.runtimeType, reason: reason);

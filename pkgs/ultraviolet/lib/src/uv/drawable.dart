@@ -3,7 +3,6 @@ import 'screen.dart';
 
 /// Drawable can draw itself into a [Screen].
 ///
-/// Upstream: `third_party/ultraviolet/buffer.go` (`Drawable`).
 abstract interface class Drawable {
   /// Draws this drawable into [screen] within [area].
   void draw(Screen screen, Rectangle area);

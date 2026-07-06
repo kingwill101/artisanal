@@ -2,9 +2,6 @@ import 'package:ultraviolet/src/uv/uv.dart';
 import 'package:ultraviolet/src/unicode/width.dart';
 import 'package:test/test.dart';
 
-// Upstream parity:
-// - `third_party/ultraviolet/styled_test.go`
-// - `third_party/ultraviolet/styled.go` (`StyledString.Draw`, `printString`, `ReadStyle`, `ReadLink`)
 
 Cell _newWcCell(String s, UvStyle? style, Link? link) {
   final c = Cell.newCell(WidthMethod.wcwidth, s);

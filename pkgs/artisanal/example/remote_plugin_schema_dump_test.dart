@@ -8,7 +8,9 @@ import 'package:test/test.dart';
 import '_path_utils.dart';
 
 final String _artisanalRootDirectory = io.Directory.current.path;
-final _kernelCache = RemotePluginKernelCache(packageRoot: _artisanalRootDirectory);
+final _kernelCache = RemotePluginKernelCache(
+  packageRoot: _artisanalRootDirectory,
+);
 final String _precompiledSchemaDumpDirectory = p.join(
   _artisanalRootDirectory,
   '.dart_tool',
