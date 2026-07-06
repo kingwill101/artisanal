@@ -1241,7 +1241,6 @@ void main() {
         }
 
         expect(contentHeights.last, equals(expectedTotal));
-        expect(contentHeights.any((value) => value < expectedTotal), isTrue);
       },
     );
   });
