@@ -9,21 +9,39 @@ import '../models/chat_model.dart';
 import '../theme.dart';
 
 class ModelListDialog extends w.StatefulWidget {
+  /// Shows a [ModelListDialog] in a modal dialog route.
+  ///
+  /// Returns a [Future] that resolves to the selected [ModelOption] or
+  /// `null` if the dialog is dismissed without selection.
+  static Future<ModelOption?> show(
+    w.NavigatorState navigator, {
+    required List<ModelOption> models,
+    required String currentModelName,
+    void Function(ModelOption model)? onSelect,
+    bool barrierDismissible = true,
+  }) {
+    return navigator.showDialog<ModelOption>(
+      barrierDismissible: barrierDismissible,
+      builder: (ctx) => ModelListDialog(
+        models: models,
+        currentModelName: currentModelName,
+        onSelect: (model) {
+          w.Navigator.of(ctx).pop(model);
+          onSelect?.call(model);
+        },
+      ),
+    );
+  }
+
   ModelListDialog({
-    required this.child,
     required this.models,
     required this.currentModelName,
-    this.open = false,
-    this.onDismiss,
     this.onSelect,
     super.key,
   });
 
-  final w.Widget child;
   final List<ModelOption> models;
   final String currentModelName;
-  final bool open;
-  final w.CmdCallback? onDismiss;
   final void Function(ModelOption model)? onSelect;
 
   @override
@@ -39,17 +57,6 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
   void initState() {
     super.initState();
     _searchController = w.TextEditingController();
-  }
-
-  @override
-  tui.Cmd? didUpdateWidget(covariant ModelListDialog oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.open && !oldWidget.open) {
-      _searchQuery = '';
-      _searchController.clear();
-      _selectedIndex = _indexOfModel(widget.currentModelName);
-    }
-    return null;
   }
 
   @override
@@ -79,8 +86,6 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
 
   @override
   w.Widget build(w.BuildContext context) {
-    if (!widget.open) return widget.child;
-
     final theme = w.ThemeScope.of(context);
     final cpTheme = theme.commandPaletteTheme;
     final dialogBg = cpTheme?.background ?? OC.backgroundPanel;
@@ -141,7 +146,7 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
       );
     }
 
-    final dialog = w.SizedBox(
+    return w.SizedBox(
       width: 64,
       height: 22,
       child: w.Container(
@@ -209,10 +214,7 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
                     children: rows.isEmpty
                         ? [
                             w.Padding(
-                              padding: const w.EdgeInsets.only(
-                                left: 3,
-                                right: 3,
-                              ),
+                              padding: const w.EdgeInsets.only(left: 3, right: 3),
                               child: w.Text(
                                 'No models matching "$_searchQuery"',
                                 style: style.Style()..foreground(shortcutFg),
@@ -249,14 +251,6 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
         ),
       ),
     );
-
-    return w.Modal(
-      open: true,
-      onDismiss: widget.onDismiss,
-      backdropOpacity: 0.72,
-      child: widget.child,
-      dialog: dialog,
-    );
   }
 
   w.Widget _hintKey(String text) {
@@ -279,32 +273,27 @@ class _ModelListDialogState extends w.State<ModelListDialog> {
 
   @override
   tui.Cmd? handleIntercept(tui.Msg msg) {
-    if (!widget.open) return null;
     if (msg is! tui.KeyMsg) return null;
-
     final key = msg.key;
     final filtered = _filteredModels;
 
-    if (key.type == tui.KeyType.escape) {
-      widget.onDismiss?.call();
-      return tui.Cmd.none();
-    }
-
     if (key.type == tui.KeyType.enter && filtered.isNotEmpty) {
-      final selected = filtered[_selectedIndex];
-      widget.onSelect?.call(selected);
-      widget.onDismiss?.call();
+      widget.onSelect?.call(filtered[_selectedIndex]);
       return tui.Cmd.none();
     }
 
     if (key.type == tui.KeyType.up && filtered.isNotEmpty) {
-      _selectedIndex = (_selectedIndex - 1) % filtered.length;
-      if (_selectedIndex < 0) _selectedIndex = filtered.length - 1;
+      setState(() {
+        _selectedIndex = (_selectedIndex - 1) % filtered.length;
+        if (_selectedIndex < 0) _selectedIndex = filtered.length - 1;
+      });
       return tui.Cmd.none();
     }
 
     if (key.type == tui.KeyType.down && filtered.isNotEmpty) {
-      _selectedIndex = (_selectedIndex + 1) % filtered.length;
+      setState(() {
+        _selectedIndex = (_selectedIndex + 1) % filtered.length;
+      });
       return tui.Cmd.none();
     }
 

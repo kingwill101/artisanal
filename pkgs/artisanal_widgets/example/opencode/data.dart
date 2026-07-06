@@ -481,6 +481,24 @@ List<SessionSummary> sampleSessions() {
 }
 
 // ---------------------------------------------------------------------------
+// Sample models (for model list dialog)
+// ---------------------------------------------------------------------------
+
+List<ModelOption> sampleModels() {
+  return const [
+    ModelOption(modelName: 'claude-opus-4-20250514', providerName: 'Anthropic'),
+    ModelOption(modelName: 'claude-sonnet-4-20250514', providerName: 'Anthropic'),
+    ModelOption(modelName: 'claude-3-5-haiku-20241022', providerName: 'Anthropic'),
+    ModelOption(modelName: 'gpt-5.3-codex', providerName: 'OpenAI'),
+    ModelOption(modelName: 'gpt-4o', providerName: 'OpenAI'),
+    ModelOption(modelName: 'gpt-4o-mini', providerName: 'OpenAI'),
+    ModelOption(modelName: 'gemini-2.5-pro-0325', providerName: 'Google'),
+    ModelOption(modelName: 'gemini-2.5-flash-0325', providerName: 'Google'),
+    ModelOption(modelName: 'deepseek-claude', providerName: 'DeepSeek'),
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Sample diff (unified format)
 // ---------------------------------------------------------------------------
 
