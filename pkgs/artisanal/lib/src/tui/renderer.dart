@@ -179,6 +179,11 @@ class FullScreenTuiRenderer implements TuiRenderer {
   String? _lastView;
   TerminalRenderFrame? _lastFrame;
 
+  /// The terminal size the last frame was rendered at. A size change means
+  /// the terminal has reflowed whatever is on screen, so the last frame is
+  /// no longer a valid diff baseline.
+  ({int width, int height})? _lastSize;
+
   /// Stopwatch for frame timing (immune to NTP/DST clock adjustments).
   final Stopwatch _frameStopwatch = Stopwatch();
 
@@ -221,13 +226,27 @@ class FullScreenTuiRenderer implements TuiRenderer {
       _ => view.toString(),
     };
 
+    // A terminal resize reflows whatever is on screen, so the last rendered
+    // frame no longer matches the terminal's actual content — a diff against
+    // it would leave reflowed fragments in every skipped span. Clear and drop
+    // the baseline so this frame paints in full. (Never rate-limit a resize:
+    // the clear must be followed by its redraw in the same render.)
+    final size = terminal.size;
+    final resized = _lastSize != null && size != _lastSize;
+
     // Frame rate limiting using Stopwatch (immune to clock adjustments)
-    if (_frameStopwatch.isRunning) {
+    if (!resized && _frameStopwatch.isRunning) {
       if (_frameStopwatch.elapsed < _options.frameTime) {
         // Skip this frame
         _metrics.endFrame(skipped: true);
         return;
       }
+    }
+
+    if (resized) {
+      terminal.clearScreen();
+      _lastView = null;
+      _lastFrame = null;
     }
 
     // Skip if view hasn't changed
@@ -248,6 +267,7 @@ class FullScreenTuiRenderer implements TuiRenderer {
     }
 
     _lastView = content;
+    _lastSize = size;
     // Reset and start the stopwatch for next frame timing
     _frameStopwatch.reset();
     _frameStopwatch.start();
