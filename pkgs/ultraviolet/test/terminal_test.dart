@@ -466,21 +466,28 @@ void main() {
     });
 
     test('start queries terminal capabilities', () async {
-      await terminal.start(handleSignals: false);
+      final input = StreamController<List<int>>();
+      final output = StringBuffer();
+      final ttyTerminal = Terminal(
+        input: input.stream,
+        output: _MockIOSink(output),
+        isTty: true,
+      );
 
-      final output = outputBuffer.toString();
-      expect(output, contains('\x1b[?c'));
-      expect(output, contains('\x1b[>c'));
-      expect(output, contains('\x1b[=c'));
-      expect(output, contains('\x1b[>0q'));
-      expect(output, contains('\x1b[?u'));
-      expect(output, contains('\x1b]10;?\x1b\\'));
-      expect(output, contains('\x1b]11;?\x1b\\'));
-      expect(output, contains('\x1b]12;?\x1b\\'));
-      expect(output, contains('\x1b[?996n'));
-      expect(output, contains('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'));
+      await ttyTerminal.start(handleSignals: false);
+      await ttyTerminal.stop();
 
-      await terminal.stop();
+      final result = output.toString();
+      expect(result, contains('\x1b[?c'));
+      expect(result, contains('\x1b[>c'));
+      expect(result, contains('\x1b[=c'));
+      expect(result, contains('\x1b[>0q'));
+      expect(result, contains('\x1b[?u'));
+      expect(result, contains('\x1b]10;?\x1b\\'));
+      expect(result, contains('\x1b]11;?\x1b\\'));
+      expect(result, contains('\x1b]12;?\x1b\\'));
+      expect(result, contains('\x1b[?996n'));
+      expect(result, contains('\x1b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\x1b\\'));
     });
 
     test('startup color probes update capability state', () async {
@@ -581,6 +588,29 @@ void main() {
       expect(output, contains(UvAnsi.disableFocusReporting));
       expect(output, contains(UvAnsi.showCursor));
       expect(output, contains(UvAnsi.resetModeAltScreenSaveCursor));
+    });
+    test('does not emit color queries when not a TTY', () async {
+      final input = StreamController<List<int>>();
+      final output = StringBuffer();
+      final nonTtyTerminal = Terminal(
+        input: input.stream,
+        output: _MockIOSink(output),
+        isTty: false,
+      );
+
+      final sizeFuture = nonTtyTerminal.events.firstWhere(
+        (e) => e is WindowSizeEvent,
+      );
+
+      await nonTtyTerminal.start(handleSignals: false);
+      await sizeFuture;
+      await nonTtyTerminal.stop();
+
+      final result = output.toString();
+      expect(result, isNot(contains('\x1b]11;?\x1b\\')));
+      expect(result, isNot(contains('\x1b]10;?\x1b\\')));
+      expect(result, isNot(contains('\x1b]12;?\x1b\\')));
+      expect(result, isNot(contains('\x1b[?996n')));
     });
   });
 }

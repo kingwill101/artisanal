@@ -178,7 +178,11 @@ class WhitespaceOptions {
     // Cycle through grapheme clusters to fill the width
     while (currentWidth < width) {
       final glyph = glyphs[j];
-      final glyphWidth = Layout.visibleLength(glyph);
+      var glyphWidth = Layout.visibleLength(glyph);
+
+      // Treat zero-width graphemes as having minimum width 1 so we always
+      // make progress and avoid infinite loops (e.g. with combining marks).
+      if (glyphWidth == 0) glyphWidth = 1;
 
       // Don't exceed width
       if (currentWidth + glyphWidth > width) break;

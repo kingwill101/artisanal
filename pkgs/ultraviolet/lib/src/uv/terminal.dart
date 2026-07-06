@@ -394,10 +394,12 @@ class Terminal
     _renderer.queryTerminalVersion();
     _renderer.queryKittyGraphics();
     _renderer.queryKeyboardEnhancements();
-    _renderer.queryForegroundColor();
-    _renderer.queryBackgroundColor();
-    _renderer.queryCursorColor();
-    _renderer.queryColorScheme();
+    if (_isTty) {
+      _renderer.queryForegroundColor();
+      _renderer.queryBackgroundColor();
+      _renderer.queryCursorColor();
+      _renderer.queryColorScheme();
+    }
     _renderer.flush();
   }
 
