@@ -40,6 +40,8 @@ export 'render_recorder.dart'
 export 'terminal_render_inspector.dart'
     show TerminalRenderFrame, TerminalRenderLine;
 
+export 'line_span_diff.dart' show LineSpanEdit, lineSpanEdit;
+
 export 'renderer.dart'
     show
         TuiRenderer,

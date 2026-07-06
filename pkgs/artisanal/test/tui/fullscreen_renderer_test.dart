@@ -45,6 +45,46 @@ void main() {
       expect(terminal.output, contains('\x1b[34mBody'));
     });
 
+    test('a text change left of a rail never touches the rail columns', () {
+      // Row layout mimics a chat column, a separator, and a blank rail that
+      // a sixel image is painted over: when only the chat text changes, the
+      // separator and rail cells must not be rewritten (rewriting them would
+      // destroy the graphics), and no line may be erased.
+      const rail = '\x1b[38;2;1;2;3m          \x1b[39m';
+      final terminal = StringTerminal();
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('one   │$rail\ntwo   │$rail');
+      terminal.clear();
+
+      renderer.render('one!  │$rail\ntwo   │$rail');
+
+      expect(terminal.output, contains(Ansi.cursorTo(1, 4)));
+      expect(terminal.output, contains('!'));
+      expect(terminal.output, isNot(contains('│')));
+      expect(terminal.output, isNot(contains('38;2;1;2;3')));
+      expect(terminal.output, isNot(contains(Ansi.clearLine)));
+      expect(terminal.output, isNot(contains(Ansi.cursorTo(2, 1))));
+    });
+
+    test('wraps diff writes in synchronized-update guards', () {
+      final terminal = StringTerminal();
+      final renderer = buildRenderer(terminal);
+
+      renderer.render('alpha\nbeta');
+      terminal.clear();
+
+      renderer.render('alpha\nBETA');
+
+      final output = terminal.output;
+      final begin = output.indexOf(Ansi.beginSynchronizedUpdate);
+      final write = output.indexOf(Ansi.cursorTo(2, 1));
+      final end = output.indexOf(Ansi.endSynchronizedUpdate);
+      expect(begin, isNot(-1));
+      expect(end, isNot(-1));
+      expect(begin < write && write < end, isTrue);
+    });
+
     test('clears lines removed by a shorter frame', () {
       final terminal = StringTerminal();
       final renderer = buildRenderer(terminal);
