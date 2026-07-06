@@ -116,6 +116,33 @@ class TerminalRenderLine {
   int get hashCode => Object.hash(raw, statePrefix);
 }
 
+/// Applies every escape sequence found in [input] to [styleState] /
+/// [linkState], skipping non-escape bytes. Public counterpart of the frame
+/// parser's internal state tracking, for callers that need the ANSI state in
+/// effect at an arbitrary point of a rendered line (e.g. minimal-span
+/// diffing).
+void applyRenderedAnsiState(
+  String input,
+  uv_styled.StyleState styleState,
+  uv_styled.LinkState linkState,
+) {
+  var i = 0;
+  while (i < input.length) {
+    if (input.codeUnitAt(i) == 0x1B) {
+      final end = Ansi.consumeEscapeSequence(input, i);
+      _applyAnsiState(input.substring(i, end), styleState, linkState);
+      i = end;
+      continue;
+    }
+    i++;
+  }
+}
+
+/// Serializes [style] and [link] as the escape sequences that recreate them
+/// from a reset pen — the same form as [TerminalRenderLine.statePrefix].
+String renderedStatePrefix(UvStyle style, Link link) =>
+    _lineStatePrefix(style, link);
+
 String _lineStatePrefix(UvStyle style, Link link) {
   final buffer = StringBuffer();
   if (!link.isZero) {

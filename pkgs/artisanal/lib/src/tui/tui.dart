@@ -205,6 +205,7 @@ export 'render_recorder.dart'
         ProgramRenderSnapshot;
 export 'terminal_render_inspector.dart'
     show TerminalRenderFrame, TerminalRenderLine;
+export 'line_span_diff.dart' show LineSpanEdit, lineSpanEdit;
 
 // Command system
 export 'cmd.dart'

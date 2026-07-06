@@ -1,6 +1,7 @@
 import 'dart:async' show unawaited;
 import 'dart:io' as io;
 
+import 'line_span_diff.dart';
 import 'program.dart' show ScreenMode, UiAnchor;
 import 'terminal.dart';
 import 'terminal_native_frame.dart';
@@ -155,8 +156,13 @@ String _mapNewlines(String input) {
 
 /// Full-screen renderer using the alternate screen buffer.
 ///
-/// Clears the entire screen and redraws from position (0,0) on each frame.
-/// Best for fullscreen applications that own the entire terminal.
+/// Renders the first frame in full, then diffs subsequent frames line by
+/// line and rewrites only the changed span of each changed line (see
+/// [lineSpanEdit]), inside synchronized-update guards. Cells outside a
+/// changed span are never erased or repainted, so terminal graphics overlaid
+/// on stable regions (e.g. a sixel image beside a text column) survive text
+/// updates on the same rows. Best for fullscreen applications that own the
+/// entire terminal.
 class FullScreenTuiRenderer implements TuiRenderer {
   /// Creates a fullscreen renderer targeting the given [terminal].
   FullScreenTuiRenderer({
@@ -271,12 +277,16 @@ class FullScreenTuiRenderer implements TuiRenderer {
   }
 
   void _renderFullRedraw(String content) {
+    // Synchronized-update guards (DEC mode 2026) make the redraw land
+    // atomically on terminals that support it; others ignore the sequences.
+    terminal.write(Ansi.beginSynchronizedUpdate);
     terminal.cursorHome();
     final mapped = _options.altScreen ? _mapNewlines(content) : content;
     terminal.write(mapped);
 
     // Clear any remaining content from previous render
     _clearToEndOfScreen(content);
+    terminal.write(Ansi.endSynchronizedUpdate);
   }
 
   void _renderDiffFrame(
@@ -294,19 +304,40 @@ class FullScreenTuiRenderer implements TuiRenderer {
 
       if (oldLine == newLine) continue;
 
-      buffer.write(Ansi.cursorTo(i + 1, 1));
-      buffer.write(Ansi.clearLine);
-      buffer.write(Ansi.reset);
-      buffer.write(UvAnsi.resetHyperlink());
+      if (newLine == null) {
+        // The new frame is shorter — blank the leftover row.
+        buffer.write(Ansi.cursorTo(i + 1, 1));
+        buffer.write(Ansi.clearLine);
+        continue;
+      }
 
-      if (newLine != null) {
+      if (oldLine == null) {
+        // The new frame is taller — this row's on-screen content is unknown,
+        // so clear it before writing.
+        buffer.write(Ansi.cursorTo(i + 1, 1));
+        buffer.write(Ansi.clearLine);
+        buffer.write(Ansi.reset);
+        buffer.write(UvAnsi.resetHyperlink());
         buffer.write(newLine.statePrefix);
         buffer.write(newLine.raw);
+        continue;
       }
+
+      // Both frames own the row: rewrite only the changed span. Never erase
+      // or repaint the rest of the row — cells outside the span (and any
+      // terminal graphics overlaid on them) stay untouched.
+      final edit = lineSpanEdit(oldLine, newLine);
+      if (edit == null) continue;
+      buffer.write(Ansi.cursorTo(i + 1, edit.column + 1));
+      buffer.write(edit.text);
     }
 
     if (buffer.isNotEmpty) {
-      terminal.write(buffer.toString());
+      // Atomic frame delivery (DEC 2026): the terminal paints the whole diff
+      // at once, so a cell is never visible mid-rewrite.
+      terminal.write(
+        '${Ansi.beginSynchronizedUpdate}$buffer${Ansi.endSynchronizedUpdate}',
+      );
     }
   }
 
