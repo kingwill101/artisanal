@@ -3,6 +3,7 @@
 // Run with:
 //   dart run example/editor-core-playground/main.dart
 
+import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/bubbles.dart' as b;
 import 'package:artisanal_widgets/editors.dart' as editors;
@@ -95,7 +96,7 @@ void bootstrapEditorCore() {
 ''';
 
 Future<void> main() async {
-  await app.runArtisanalApp(
+  await artisanal.runWidgetApp(
     app.ArtisanalApp(
       title: 'Editor Core Playground',
       home: EditorCorePlaygroundScreen(),

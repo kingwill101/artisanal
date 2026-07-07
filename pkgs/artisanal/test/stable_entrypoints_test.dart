@@ -122,6 +122,5 @@ void main() {
     expect(keyMap, isA<widgets.KeyMap>());
     expect(keyMap.shortHelp, hasLength(2));
     expect(widgets.ZoneInBoundsMsg, isA<Type>());
-    expect(widgets.runArtisanalApp, isA<Function>());
   });
 }

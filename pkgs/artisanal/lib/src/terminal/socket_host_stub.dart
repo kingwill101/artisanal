@@ -19,6 +19,15 @@ abstract class StubServerSocket {
 abstract final class SocketTerminalHostServer {
   SocketTerminalHostServer._();
 
+  /// Stub: returns a resize control sequence string (not available on web).
+  static String resizeControlSequence({
+    required int width,
+    required int height,
+  }) =>
+      throw UnsupportedError(
+        'SocketTerminalHostServer not available on web',
+      );
+
   /// Stub: not available on web.
   static Future<SocketTerminalHostServer> serveProgram<M>({
     Object? address,

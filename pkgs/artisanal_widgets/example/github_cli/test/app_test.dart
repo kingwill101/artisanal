@@ -11,6 +11,7 @@ import 'package:github_cli/src/app/app_io.dart';
 import 'package:github_cli/src/app/theme.dart';
 import 'package:github_cli/src/client/fields.dart';
 import 'package:github_cli/src/ui/markdown/body.dart';
+import 'package:github_cli/src/utils/diff_comment_mapper.dart';
 import 'package:github_cli/src/utils/text_format.dart';
 import 'package:image/image.dart' as img;
 import 'package:test/test.dart';
@@ -708,7 +709,7 @@ void main() {
 
     await tester.pumpWidget(
       GithubCliDashboard(
-        client: _FakeGithubClient(_dashboardWithHtmlBody()),
+        client: _FakeGithubClient(_sampleDashboard()),
         repository: 'kingwill101/artisanal',
       ),
     );
@@ -727,12 +728,26 @@ void main() {
       final tester = WidgetTester(screenWidth: 120, screenHeight: 36);
       addTearDown(() => tester.dispose());
 
-      await tester.pumpWidget(
-        GithubCliDashboard(
-          client: _FakeGithubClient(_dashboardWithTaskListBody()),
-          repository: 'kingwill101/artisanal',
+    await tester.pumpWidget(
+      GithubCliDashboard(
+        client: _FakeGithubClient(
+          _sampleDashboard(),
+          reviewComments: const [
+            GithubPullRequestReviewComment(
+              id: 'review-1',
+              path: 'lib/main.dart',
+              line: 2,
+              side: 'RIGHT',
+              author: 'reviewer',
+              body: 'Inline review note.',
+              url: 'https://example.test/review/1',
+              createdAt: null,
+            ),
+          ],
         ),
-      );
+        repository: 'kingwill101/artisanal',
+      ),
+    );
 
       await _pumpUntil(tester, () => tester.find.text('kingwill101/artisanal'));
       tester.sendKey('3');
@@ -1079,6 +1094,138 @@ python3 tools/test.py -n unittest-asserts-release-linux-x64 pkg/dartdev/test/nat
     expect(comment.path, 'lib/main.dart');
     expect(comment.side, 'RIGHT');
     expect(comment.body, 'Please tighten this line.');
+  });
+
+  test('inline review comments render between diff lines', () async {
+    final tester = WidgetTester(screenWidth: 120, screenHeight: 40);
+    addTearDown(() => tester.dispose());
+    final client = _FakeGithubClient(
+      _sampleDashboard('dart-lang/sdk'),
+      diff: _sampleDiff,
+      reviewComments: const [
+        GithubPullRequestReviewComment(
+          id: 'r1',
+          path: 'lib/main.dart',
+          line: 2,
+          side: 'RIGHT',
+          author: 'reviewer',
+          body: 'INLINE_REVIEW_BODY_SHOULD_APPEAR',
+          url: 'https://example.test/r1',
+          createdAt: null,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      GithubPullRequestView(
+        client: client,
+        target: const GithubPullRequestTarget(
+          repository: 'dart-lang/sdk',
+          number: 9,
+        ),
+      ),
+    );
+
+    await _pumpUntil(tester, () => tester.view.contains('Add gh tui'));
+    tester.sendKey('d');
+    await _pumpUntil(
+      tester,
+      () => tester.view.contains('INLINE_REVIEW_BODY_SHOULD_APPEAR'),
+      timeout: const Duration(seconds: 5),
+    );
+  });
+
+  test('mapReviewCommentsToRenderLines tolerates side/line mismatches', () {
+    final anchors = [
+      const w.DiffCommentAnchor(
+        path: 'lib/main.dart',
+        line: 2,
+        side: w.DiffCommentSide.right,
+        kind: w.DiffCommentKind.addition,
+        renderLine: 5,
+        content: "+  print('new');",
+      ),
+      const w.DiffCommentAnchor(
+        path: 'lib/main.dart',
+        line: 4,
+        side: w.DiffCommentSide.right,
+        kind: w.DiffCommentKind.context,
+        renderLine: 7,
+        content: '  }',
+      ),
+    ];
+
+    // Exact match.
+    final exact = mapReviewCommentsToRenderLines(
+      [
+        const GithubPullRequestReviewComment(
+          id: 'a',
+          path: 'lib/main.dart',
+          line: 2,
+          side: 'RIGHT',
+          author: 'x',
+          body: 'b',
+          url: 'u',
+          createdAt: null,
+        ),
+      ],
+      anchors,
+    );
+    expect(exact[5], hasLength(1));
+
+    // Wrong side but correct line still maps (fallback).
+    final wrongSide = mapReviewCommentsToRenderLines(
+      [
+        const GithubPullRequestReviewComment(
+          id: 'b',
+          path: 'lib/main.dart',
+          line: 2,
+          side: 'LEFT',
+          author: 'x',
+          body: 'b',
+          url: 'u',
+          createdAt: null,
+        ),
+      ],
+      anchors,
+    );
+    expect(wrongSide[5], hasLength(1));
+
+    // Off-by-one line maps to nearest anchor.
+    final offByOne = mapReviewCommentsToRenderLines(
+      [
+        const GithubPullRequestReviewComment(
+          id: 'c',
+          path: 'lib/main.dart',
+          line: 3,
+          side: 'RIGHT',
+          author: 'x',
+          body: 'b',
+          url: 'u',
+          createdAt: null,
+        ),
+      ],
+      anchors,
+    );
+    expect(offByOne[5], hasLength(1));
+
+    // Unrelated path maps to nothing.
+    final noMatch = mapReviewCommentsToRenderLines(
+      [
+        const GithubPullRequestReviewComment(
+          id: 'd',
+          path: 'lib/other.dart',
+          line: 2,
+          side: 'RIGHT',
+          author: 'x',
+          body: 'b',
+          url: 'u',
+          createdAt: null,
+        ),
+      ],
+      anchors,
+    );
+    expect(noMatch, isEmpty);
   });
 
   test(
@@ -2498,19 +2645,7 @@ final class _FakeGithubClient
     required String repository,
     required int number,
   }) async {
-    if (reviewComments.isNotEmpty) return reviewComments;
-    return const <GithubPullRequestReviewComment>[
-      GithubPullRequestReviewComment(
-        id: 'review-1',
-        path: 'lib/main.dart',
-        line: 2,
-        side: 'RIGHT',
-        author: 'reviewer',
-        body: 'Inline review note.',
-        url: 'https://example.test/review/1',
-        createdAt: null,
-      ),
-    ];
+    return reviewComments;
   }
 
   @override

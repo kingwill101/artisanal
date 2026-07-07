@@ -1,4 +1,4 @@
-import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/widgets.dart' show WidgetApp;
 import 'package:github_cli/src/app/dashboard.dart';
@@ -7,7 +7,7 @@ import 'package:github_cli/src/models/dashboard_data.dart';
 import 'package:github_cli/src/models/item_kind.dart';
 
 void main() async {
-  await runWidgetAppInBrowser(
+  await runWidgetApp(
     WidgetApp(
       GithubCliDashboard(
         client: _FakeDashboardClient(),

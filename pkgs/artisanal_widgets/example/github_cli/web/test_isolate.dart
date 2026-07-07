@@ -1,19 +1,14 @@
-// Test 1: runWidgetAppInBrowser with a simple Model (no WidgetApp)
+// Test 1: runWidgetApp with a simple WidgetApp shell
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal/tui.dart' show Model, Cmd, View, Msg;
-import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
 
-class SimpleModel implements Model {
-  @override
-  Cmd? init() => null;
+class Hello extends StatelessWidget {
+  Hello({super.key});
 
   @override
-  (Model, Cmd?) update(Msg msg) => (this, null);
-
-  @override
-  Object view() => View(content: 'Hello!');
+  Widget build(BuildContext context) => Text('Greetings from WASM!');
 }
 
 void main() async {
-  await runWidgetAppInBrowser(SimpleModel());
+  await runWidgetApp(WidgetApp(Hello()));
 }

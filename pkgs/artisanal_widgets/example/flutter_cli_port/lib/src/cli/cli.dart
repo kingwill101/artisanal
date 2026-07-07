@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:artisanal/args.dart';
+import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal_widgets/widgets.dart' as w;
 
@@ -298,7 +299,7 @@ final class InitCommand extends Command<void> {
 }
 
 Future<void> _runInlineWidget(w.Widget root, {required int height}) {
-  return w.runWidgetApp(
+  return artisanal.runWidgetApp(
     w.WidgetApp(root, backgroundColor: FlutterCliTheme.tokyoNight.bg),
     options: flutterCliInlineOptions(height: height),
   );

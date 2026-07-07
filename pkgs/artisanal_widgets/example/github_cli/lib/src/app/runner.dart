@@ -2,10 +2,11 @@ import 'dart:io' as io;
 
 import 'package:artisanal/args.dart' show ArgResults, CommandRunner;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/artisanal.dart' show ProgramHost;
+import 'package:artisanal/artisanal.dart'
+    show ProgramHost, defaultWidgetProgramOptions, runWidgetApp;
 import 'package:artisanal/tui.dart' show ProgramOptions;
 import 'package:artisanal_widgets/widgets.dart'
-    show ImageAutoMode, WidgetApp, defaultWidgetProgramOptions, runWidgetApp;
+    show ImageAutoMode, WidgetApp;
 
 import '../client/client_cli.dart';
 import 'compile_time_flags.dart';

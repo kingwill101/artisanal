@@ -66,16 +66,89 @@ library;
 
 import 'src/io/console.dart' show Console;
 
+// Convenience re-exports for app shell types used by entrypoints
+export 'package:artisanal_widgets/app.dart'
+    show
+        ArtisanalApp,
+        ReloadController,
+        ReloadFileWatcher,
+        ReloadHost,
+        ReloadMode,
+        ReloadWidgetBuilder,
+        WidgetApp;
+// Widget testing
+export 'package:artisanal_widgets/testing.dart';
+export 'package:artisanal_widgets/widgets.dart' show ImageAutoMode;
+export 'package:forge2d/forge2d.dart' show Joint, RevoluteJoint, DistanceJoint;
+
+// Args Aliases
+export 'args.dart' show Command, CommandRunner;
+// Charting
+export 'src/charting/charting.dart';
+export 'src/glamour/renderer.dart';
+// Glamour (GitHub-style markdown rendering)
+export 'src/glamour/theme.dart';
+export 'src/io/components.dart' show Components;
 // I/O
 export 'src/io/console.dart';
-
-export 'src/io/components.dart' show Components;
 export 'src/io/inline_animation.dart'
     show InlineAnimation, InlineAnimationResult;
 export 'src/io/output_theme.dart' show OutputTheme;
 export 'src/io/uv_console.dart' show UVConsole;
 export 'src/io/validators.dart' show Validators;
-
+// Layout
+export 'src/layout/layout.dart'
+    show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
+// Liquify adapters
+export 'src/liquid/liquid.dart';
+// Physics
+export 'src/physics/physics.dart';
+// Remote plugin protocol
+export 'src/plugins/plugins_impl.dart'
+    if (dart.library.html) 'src/plugins/plugins_stub.dart';
+// Renderer
+export 'src/renderer/renderer.dart'
+    show
+        Renderer,
+        TerminalRenderer,
+        StringRenderer,
+        NullRenderer,
+        defaultRenderer,
+        resetDefaultRenderer;
+export 'src/run/run_app.dart';
+// App entrypoints (platform-conditional: IO terminal, web canvas, or stub)
+export 'src/run/transport.dart';
+// Scoring
+export 'src/scoring/scoring.dart';
+export 'src/style/color.dart'
+    show
+        Color,
+        AnsiColor,
+        BasicColor,
+        AdaptiveColor,
+        CompleteAdaptiveColor,
+        Colors,
+        ColorProfile;
+export 'src/style/style.dart';
+// Style - Verbosity
+export 'src/style/verbosity.dart' show Verbosity;
+export 'src/terminal/backend_io_impl.dart'
+    if (dart.library.html) 'src/terminal/backend_io_stub.dart'
+    show StdioTerminalBackend, SocketTerminalBackend;
+export 'src/terminal/bridge_protocol.dart'
+    if (dart.library.html) 'src/terminal/bridge_protocol_stub.dart'
+    show
+        TerminalBridgeMessageType,
+        TerminalBridgeMessage,
+        TerminalBridgeJsonChannel,
+        JsonTerminalBackend,
+        WebSocketTerminalBackend;
+export 'src/terminal/browser_host.dart'
+    if (dart.library.html) 'src/terminal/browser_host_stub.dart'
+    show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
+export 'src/terminal/socket_host.dart'
+    if (dart.library.html) 'src/terminal/socket_host_stub.dart'
+    show SocketTerminalSessionHandler, SocketTerminalHostServer;
 // Terminal utilities
 export 'src/terminal/terminal.dart'
     show
@@ -90,10 +163,6 @@ export 'src/terminal/terminal.dart'
         Key,
         KeyType,
         Keys;
-
-// Hosts (terminal backends, bridges, and host servers)
-export 'src/tui/tui.dart'
-    show ProgramHostResolver, ProgramHostBinding, ProgramHost, ProgramOptions;
 export 'src/terminal/terminal.dart'
     show
         TerminalDimensions,
@@ -101,112 +170,12 @@ export 'src/terminal/terminal.dart'
         BackendTerminal,
         EmbeddedTerminalBackend,
         TerminalBridge;
-export 'src/terminal/backend_io_impl.dart'
-    if (dart.library.html) 'src/terminal/backend_io_stub.dart'
-    show StdioTerminalBackend, SocketTerminalBackend;
-export 'src/terminal/bridge_protocol.dart'
-    if (dart.library.html) 'src/terminal/bridge_protocol_stub.dart'
-    show
-        TerminalBridgeMessageType,
-        TerminalBridgeMessage,
-        TerminalBridgeJsonChannel,
-        JsonTerminalBackend,
-        WebSocketTerminalBackend;
-export 'src/terminal/browser_host.dart'
-    if (dart.library.html) 'src/terminal/browser_host_stub.dart'
-    show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
-export 'src/terminal/socket_host.dart'
-    if (dart.library.html) 'src/terminal/socket_host_stub.dart'
-    show SocketTerminalSessionHandler, SocketTerminalHostServer;
-
-// Style - Verbosity
-export 'src/style/verbosity.dart' show Verbosity;
-export 'src/style/style.dart';
-export 'src/style/color.dart'
-    show
-        Color,
-        AnsiColor,
-        BasicColor,
-        AdaptiveColor,
-        CompleteAdaptiveColor,
-        Colors,
-        ColorProfile;
-
-// Renderer
-export 'src/renderer/renderer.dart'
-    show
-        Renderer,
-        TerminalRenderer,
-        StringRenderer,
-        NullRenderer,
-        defaultRenderer,
-        resetDefaultRenderer;
-
-// Layout
-export 'src/layout/layout.dart'
-    show Layout, WhitespaceOptions, LayoutBreakpoint, ResponsiveBreakpoints;
-
-// Args Aliases
-export 'args.dart' show Command, CommandRunner;
-
-// Charting
-export 'src/charting/charting.dart';
-
-// Liquify adapters
-export 'src/liquid/liquid.dart';
-
 // Stable low-level editor primitives
 export 'src/tui/editor_core/editor_core.dart';
-
 // Markdown rendering
 export 'src/tui/markdown/ansi_renderer.dart';
 export 'src/tui/markdown/fence_language_resolver.dart';
 export 'src/tui/markdown/syntax_highlighter.dart';
-
-// Glamour (GitHub-style markdown rendering)
-export 'src/glamour/theme.dart';
-export 'src/glamour/renderer.dart';
-
-// Physics
-export 'src/physics/physics.dart';
-export 'package:forge2d/forge2d.dart' show Joint, RevoluteJoint, DistanceJoint;
-
-// Scoring
-export 'src/scoring/scoring.dart';
-
-// Web helpers (web/Flutter only — pulls in dart:js_interop)
-export 'src/web/web_stub.dart' if (dart.library.html) 'src/web/web.dart';
-
-// Widget testing
-export 'package:artisanal_widgets/testing.dart';
-
-// Remote plugin protocol
-export 'src/plugins/plugins_impl.dart'
-    if (dart.library.html) 'src/plugins/plugins_stub.dart';
-
-// Hosts / terminal backends (formerly `hosts.dart`)
-export 'src/tui/tui.dart' show ProgramHostResolver, ProgramHostBinding, ProgramHost, ProgramOptions;
-export 'src/terminal/terminal.dart'
-    show
-        TerminalDimensions,
-        TerminalBackend,
-        BackendTerminal,
-        EmbeddedTerminalBackend,
-        TerminalBridge;
-export 'src/terminal/backend_io_impl.dart'
-    if (dart.library.html) 'src/terminal/backend_io_stub.dart'
-    show StdioTerminalBackend, SocketTerminalBackend;
-export 'src/terminal/bridge_protocol.dart'
-    if (dart.library.html) 'src/terminal/bridge_protocol_stub.dart'
-    show
-        TerminalBridgeMessageType,
-        TerminalBridgeMessage,
-        TerminalBridgeJsonChannel,
-        JsonTerminalBackend,
-        WebSocketTerminalBackend;
-export 'src/terminal/browser_host.dart'
-    if (dart.library.html) 'src/terminal/browser_host_stub.dart'
-    show BrowserTerminalSessionHandler, BrowserTerminalHostServer;
-export 'src/terminal/socket_host.dart'
-    if (dart.library.html) 'src/terminal/socket_host_stub.dart'
-    show SocketTerminalSessionHandler, SocketTerminalHostServer;
+// Hosts (terminal backends, bridges, and host servers)
+export 'src/tui/tui.dart'
+    show ProgramHostResolver, ProgramHostBinding, ProgramHost, ProgramOptions;

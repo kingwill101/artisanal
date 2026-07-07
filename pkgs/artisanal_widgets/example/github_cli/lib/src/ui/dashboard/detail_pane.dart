@@ -332,20 +332,23 @@ w.Widget _inlineReviewComments({
   required bool loading,
   required String? error,
   required w.ScrollController controller,
+  int? height,
 }) {
-  return w.Expanded(
-    child: w.Scrollbar(
+  final content = w.Scrollbar(
+    controller: controller,
+    child: _reviewCommentList(
+      theme: theme,
+      item: item,
+      comments: comments,
+      loading: loading,
+      error: error,
       controller: controller,
-      child: _reviewCommentList(
-        theme: theme,
-        item: item,
-        comments: comments,
-        loading: loading,
-        error: error,
-        controller: controller,
-      ),
     ),
   );
+  if (height != null) {
+    return w.SizedBox(height: height, child: content);
+  }
+  return w.Expanded(child: content);
 }
 
 w.Widget _inlineCommits({
@@ -665,6 +668,8 @@ w.Widget _timelineCard({
   required String fallbackMarkdown,
   required String rawText,
   bool showImageGallery = githubCliNetworkImagesEnabled,
+  int bodyMaxWidth = 82,
+  int metadataMaxWidth = 100,
 }) {
   final hint = theme.bodySmall.copy()..foreground(theme.muted);
   return w.Frame(
@@ -683,12 +688,12 @@ w.Widget _timelineCard({
                 metadata,
                 style: hint,
                 overflow: w.TextOverflow.ellipsis,
-                maxWidth: 100,
+                maxWidth: metadataMaxWidth,
               ),
               GithubMarkdownBody(
                 data: rawText,
                 fallbackMarkdown: fallbackMarkdown,
-                maxWidth: 82,
+                maxWidth: bodyMaxWidth,
                 textStyle: theme.bodyMedium,
               ),
               if (showImageGallery) ..._imageGallery(theme, rawText),
@@ -697,6 +702,29 @@ w.Widget _timelineCard({
         ),
       ],
     ),
+  );
+}
+
+/// A single review comment rendered for inline display between diff lines.
+///
+/// Reuses [_timelineCard] so inline comments share the same avatar, metadata,
+/// and markdown body treatment as the Review comments tab.
+w.Widget _inlineReviewCommentCard({
+  required w.Theme theme,
+  required GithubPullRequestReviewComment comment,
+  required int width,
+}) {
+  return _timelineCard(
+    theme: theme,
+    author: comment.author,
+    avatarUrl: comment.avatarUrl,
+    metadata:
+        '${comment.path}:${comment.line} ${comment.side} / ${comment.author} / ${relativeGithubTime(comment.createdAt)}',
+    fallbackMarkdown: '_Empty comment._',
+    rawText: comment.body,
+    showImageGallery: false,
+    bodyMaxWidth: width,
+    metadataMaxWidth: width,
   );
 }
 
@@ -846,6 +874,13 @@ w.Widget _inlineDiff({
   final rightWidth = diffFiles.isEmpty
       ? targetWidth
       : (targetWidth - _diffFileListWidth(targetWidth) - 2).clamp(40, 180);
+  // Inline comments now render between diff lines, so only show the separate
+  // panel when the selected file is collapsed (inline blocks are suppressed
+  // for collapsed files).
+  final reviewCommentsHeight =
+      diffReviewComments.isNotEmpty && selectedFile?.isCollapsed == true
+          ? (height * 0.35).clamp(8, 30).toInt()
+          : 0;
   return w.Expanded(
     child: w.Column(
       crossAxisAlignment: w.CrossAxisAlignment.stretch,
@@ -862,6 +897,7 @@ w.Widget _inlineDiff({
         w.Expanded(
           child: diffFiles.isEmpty
               ? _selectedFileDiff(
+                  theme: theme,
                   diff: diff,
                   width: rightWidth,
                   height: viewportHeight,
@@ -889,6 +925,7 @@ w.Widget _inlineDiff({
                     ),
                     w.Expanded(
                       child: _selectedFileDiff(
+                        theme: theme,
                         diff: diff,
                         selectedFile: selectedFile,
                         width: rightWidth,
@@ -905,6 +942,18 @@ w.Widget _inlineDiff({
                   ],
                 ),
         ),
+        if (reviewCommentsHeight > 0) ...[
+          w.Divider(width: width),
+          _inlineReviewComments(
+            theme: theme,
+            item: item,
+            comments: diffReviewComments,
+            loading: false,
+            error: null,
+            controller: controller,
+            height: reviewCommentsHeight,
+          ),
+        ],
       ],
     ),
   );
@@ -1139,6 +1188,7 @@ w.Widget _diffFileRow({
 }
 
 w.Widget _selectedFileDiff({
+  required w.Theme theme,
   required String diff,
   GithubPullRequestDiffFile? selectedFile,
   required int width,
@@ -1189,7 +1239,7 @@ w.Widget _selectedFileDiff({
   for (final entry in commentsByLine.entries) {
     final anchor = anchors.where((a) => a.renderLine == entry.key).firstOrNull;
     if (anchor != null) {
-      for (final comment in entry.value) {
+      for (final _ in entry.value) {
         reviewHighlights.add(w.DiffCommentLineHighlight.thread(anchor));
       }
     }
@@ -1198,6 +1248,14 @@ w.Widget _selectedFileDiff({
   final combinedHighlights = selectedFile?.isCollapsed == true
       ? <w.DiffCommentLineHighlight>[]
       : [...diffCommentHighlights, ...reviewHighlights];
+
+  final commentBlocks = selectedFile?.isCollapsed == true
+      ? const <w.DiffCommentBlock>[]
+      : _buildDiffCommentBlocks(
+          theme: theme,
+          commentsByLine: commentsByLine,
+          width: width,
+        );
 
   return w.GitDiffViewer(
     diff: diff,
@@ -1211,10 +1269,124 @@ w.Widget _selectedFileDiff({
     scrollController: scrollController,
     handleKeys: false,
     commentHighlights: combinedHighlights,
+    commentBlocks: commentBlocks,
     onCommentAnchorSelected: selectedFile?.isCollapsed == true
         ? null
         : onDiffCommentAnchorSelected,
   );
+}
+
+/// Builds the inline [w.DiffCommentBlock] widgets for review comments mapped
+/// to diff render lines.
+List<w.DiffCommentBlock> _buildDiffCommentBlocks({
+  required w.Theme theme,
+  required Map<int, List<GithubPullRequestReviewComment>> commentsByLine,
+  required int width,
+}) {
+  if (commentsByLine.isEmpty) return const <w.DiffCommentBlock>[];
+  final sortedLines = commentsByLine.keys.toList()..sort();
+  final contentWidth = (width - 4).clamp(20, width);
+  final blocks = <w.DiffCommentBlock>[];
+  for (final renderLine in sortedLines) {
+    final comments = commentsByLine[renderLine]!;
+    final child = _inlineReviewCommentBlock(
+      theme: theme,
+      comments: comments,
+      width: contentWidth,
+    );
+    final blockHeight = _inlineReviewCommentBlockHeight(
+      theme: theme,
+      comments: comments,
+      width: contentWidth,
+    );
+    blocks.add(
+      w.DiffCommentBlock(
+        renderLine: renderLine,
+        child: child,
+        height: blockHeight,
+      ),
+    );
+  }
+  return blocks;
+}
+
+w.Widget _inlineReviewCommentBlock({
+  required w.Theme theme,
+  required List<GithubPullRequestReviewComment> comments,
+  required int width,
+}) {
+  final hint = theme.bodySmall.copy()..foreground(theme.muted);
+  final children = <w.Widget>[
+    w.Text(
+      'Inline comments (${comments.length})',
+      style: hint,
+      overflow: w.TextOverflow.ellipsis,
+      maxWidth: width,
+    ),
+    for (final comment in comments)
+      _inlineReviewCommentCard(theme: theme, comment: comment, width: width),
+  ];
+  return w.Frame(
+    background: theme.surface,
+    padding: const w.EdgeInsets.symmetric(horizontal: 1, vertical: 1),
+    child: w.Column(
+      crossAxisAlignment: w.CrossAxisAlignment.stretch,
+      children: children,
+    ),
+  );
+}
+
+int _inlineReviewCommentBlockHeight({
+  required w.Theme theme,
+  required List<GithubPullRequestReviewComment> comments,
+  required int width,
+}) {
+  // Header + (per comment card height) + 2 frame padding.
+  // Each card wraps a 4-row avatar next to a metadata line plus a markdown
+  // body, so its height is the taller of the two columns plus frame padding.
+  // The body height must match the height [GitDiffViewer]'s virtual scroller
+  // reserves, so estimate it by actually rendering the markdown rather than
+  // word-wrapping plain text (code blocks/lists/hard breaks change the count).
+  var lines = 1;
+  for (final comment in comments) {
+    final bodyLines = _markdownBodyLineCount(comment.body, width, theme);
+    final cardHeight = (bodyLines + 1 > 4 ? bodyLines + 1 : 4) + 2;
+    lines += cardHeight;
+  }
+  return lines + 2;
+}
+
+/// Renders [body] as markdown and returns the number of visual rows it
+/// occupies, mirroring [GithubMarkdownBody] (segmented, with a 1-row gap
+/// between segments) and [_timelineCard]'s nested horizontal padding.
+///
+/// This height must equal the block's real rendered height or inline comment
+/// blocks drift out of the viewport when the diff is scrolled.
+int _markdownBodyLineCount(String body, int width, w.Theme theme) {
+  // The card nests two frames (2 + 2 horizontal padding), an 8-column avatar,
+  // and a 1-column row gap, so the markdown only gets `width - 13` columns to
+  // wrap into.
+  final contentWidth = (width - 13).clamp(1, width);
+  final options = githubMarkdownOptions(theme, hasDarkBackground: w.hasDarkBackground);
+  final segments = githubDisplayMarkdownSegments(body);
+  if (segments.isEmpty) return 1;
+  var total = 0;
+  for (var i = 0; i < segments.length; i++) {
+    final markdown = switch (segments[i]) {
+      GithubMarkdownTextSegment(:final markdown) => markdown,
+      GithubMarkdownDetailsSegment(:final summary) => summary,
+    };
+    final rendered = w.MarkdownText(
+      data: markdown,
+      options: options,
+      softWrap: true,
+      maxWidth: contentWidth,
+      textStyle: theme.bodyMedium,
+    ).view() as String;
+    total += rendered.replaceAll(RegExp(r'\n+$'), '').split('\n').length;
+    if (i > 0) total += 1; // w.Column gap:1 between segments.
+  }
+  return total;
 }
 
 int _diffFileListWidth(int width) {

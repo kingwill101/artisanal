@@ -1,7 +1,5 @@
-import 'package:artisanal_widgets/widgets.dart'
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-    show WidgetApp, StatelessWidget, BuildContext, Widget, Text;
-import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
 
 class Hello extends StatelessWidget {
   Hello({super.key});
@@ -11,5 +9,5 @@ class Hello extends StatelessWidget {
 }
 
 void main() async {
-  await runWidgetAppInBrowser(WidgetApp(Hello()));
+  await runWidgetApp(WidgetApp(Hello()));
 }

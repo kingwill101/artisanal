@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import '../run/transport.dart' show WidgetAppHostServer;
 import '../style/accessibility.dart' show isDarkColorRgb;
 import '../tui/model.dart';
 import '../tui/program.dart';
@@ -15,7 +16,7 @@ typedef BrowserTerminalSessionHandler =
 /// This helper serves a default xterm.js client page and upgrades websocket
 /// connections for terminal sessions. Use [bind] for custom session handling
 /// or [serveProgram] to host a [Model] directly.
-final class BrowserTerminalHostServer {
+final class BrowserTerminalHostServer implements WidgetAppHostServer {
   BrowserTerminalHostServer._({
     required this.server,
     required this.pagePath,
@@ -192,7 +193,7 @@ final class BrowserTerminalHostServer {
     }
   }
 
-  /// Closes the underlying HTTP server.
+  @override
   Future<void> close({bool force = false}) async {
     if (_closed) return;
     _closed = true;

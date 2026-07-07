@@ -1,4 +1,4 @@
-import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal_widgets/widgets.dart' show WidgetApp;
 import 'package:github_cli/src/app/dashboard.dart';
@@ -32,7 +32,7 @@ void main() async {
       _showError('Invalid PR number: "$prNumber". Must be a positive integer.');
       return;
     }
-    await runWidgetAppInBrowser(
+    await runWidgetApp(
       WidgetApp(
         GithubPullRequestView(
           client: client,
@@ -44,7 +44,7 @@ void main() async {
       ),
     );
   } else {
-    await runWidgetAppInBrowser(
+    await runWidgetApp(
       WidgetApp(
         GithubCliDashboard(
           client: client,

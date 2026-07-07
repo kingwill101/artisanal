@@ -1,4 +1,4 @@
-import 'package:artisanal/artisanal.dart' show runWidgetAppInBrowser;
+import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:github_cli/src/app/theme.dart';
@@ -9,7 +9,7 @@ import 'package:github_cli/src/models/repository_label.dart';
 import 'package:github_cli/src/ui/dashboard/work_queue_pane.dart';
 
 void main() async {
-  await runWidgetAppInBrowser(
+  await runWidgetApp(
     w.WidgetApp(
       w.ThemeScope(
         theme: githubDashboardThemes.first.theme(),

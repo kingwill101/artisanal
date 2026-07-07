@@ -129,7 +129,7 @@ class _SessionContentPaneState extends w.State<SessionContentPane> {
     return null;
   }
 
-  final _textController = tui.TextEditingController();
+  final _textController = w.TextEditingController();
 
   @override
   w.Widget build(w.BuildContext context) {

@@ -15,13 +15,15 @@ class _DemoKeyMap extends KeyMap {
 }
 
 void main() {
-  test('stable app entrypoint exposes app shells and runners', () {
+  test('stable app entrypoint exposes app shells', () {
     final shell = ArtisanalApp(title: 'Demo', home: Text('hello'));
 
     expect(shell, isA<ArtisanalApp>());
-    expect(runArtisanalApp, isA<Function>());
-    expect(runWidgetApp, isA<Function>());
-    expect(runReloadableArtisanalApp, isA<Function>());
+    expect(ReloadController, isA<Type>());
+    expect(ReloadHost, isA<Type>());
+    expect(ReloadFileWatcher, isA<Type>());
+    expect(ReloadMode, isA<Type>());
+    expect(WidgetApp, isA<Type>());
   });
 
   test(
@@ -45,7 +47,6 @@ void main() {
       expect(codeEditor, isA<CodeEditor>());
       expect(widget, isA<Widget>());
       expect(ZoneInBoundsMsg, isA<Type>());
-      expect(runArtisanalApp, isA<Function>());
     },
   );
 

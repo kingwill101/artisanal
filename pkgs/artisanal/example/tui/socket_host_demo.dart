@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart';
 
 void main(List<String> args) async {

@@ -135,15 +135,24 @@ final class _TopBarRegion extends w.StatelessWidget {
     return w.ListenableBuilder(
       listenable: w.Listenable.merge([data, queue]),
       builder: (ctx, _) {
+        final issueCount = data.issueTotalCount ??
+            data.dashboard?.openIssueCount ??
+            0;
+        final pullRequestCount = data.pullRequestTotalCount ??
+            data.dashboard?.openPullRequestCount ??
+            0;
+        final workflowRunCount = data.workflowRunTotalCount ??
+            data.dashboard?.workflowRunCount ??
+            0;
         return githubDashboardTopBar(
           theme: theme,
           dashboard: data.dashboard,
           repository: data.targetLabel,
           loading: data.loading,
           tabIndex: queue.tabIndex,
-          issueCount: data.dashboard?.openIssueCount ?? 0,
-          pullRequestCount: data.dashboard?.openPullRequestCount ?? 0,
-          workflowRunCount: data.dashboard?.workflowRunCount ?? 0,
+          issueCount: issueCount,
+          pullRequestCount: pullRequestCount,
+          workflowRunCount: workflowRunCount,
           pageStatus: data.pageStatusForTab(
             queue.tabIndex,
             overviewFilter: queue.overviewFilter,

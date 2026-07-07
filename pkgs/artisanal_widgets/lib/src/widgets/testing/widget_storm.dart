@@ -840,7 +840,7 @@ extension WidgetTesterStorming on WidgetTester {
 final class _StormRandom {
   _StormRandom(int seed) : _state = seed == 0 ? 1 : seed;
 
-  static const int _mask64 = 0xFFFFFFFFFFFFFFFF;
+  static const int _maskAll = -1;
 
   int _state;
 
@@ -853,9 +853,9 @@ final class _StormRandom {
 
   int _next() {
     var value = _state;
-    value = (value ^ (value << 13)) & _mask64;
-    value = (value ^ (value >> 7)) & _mask64;
-    value = (value ^ (value << 17)) & _mask64;
+    value = (value ^ (value << 13)) & _maskAll;
+    value = (value ^ (value >> 7)) & _maskAll;
+    value = (value ^ (value << 17)) & _maskAll;
     _state = value == 0 ? 1 : value;
     return _state;
   }

@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
+import 'package:artisanal/artisanal.dart' as artisanal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal/widgets.dart' as w;
 
 void main() async {
-  await app.runArtisanalApp(
+  await artisanal.runWidgetApp(
     app.ArtisanalApp(title: 'Wizard Showcase', home: WizardShowcaseScreen()),
   );
 }

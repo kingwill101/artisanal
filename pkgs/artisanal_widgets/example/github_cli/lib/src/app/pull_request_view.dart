@@ -179,6 +179,9 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
     if (key.isChar('x')) {
       return _actions.openActionPrompt(GithubActionPromptKind.removeLabels);
     }
+    if (key.type == tui.KeyType.tab && key.shift) {
+      return _cycleDetailTab(-1);
+    }
     if (key.type == tui.KeyType.tab || key.type == tui.KeyType.right) {
       return _cycleDetailTab(1);
     }
@@ -639,6 +642,7 @@ final class _GithubPullRequestViewState extends w.State<GithubPullRequestView> {
           diffFileIndex: _detail.diffFileIndex,
           diffLoading: _detail.diffLoading,
           diffError: _detail.diffError,
+          diffReviewComments: _detail.diffReviewComments,
           diffViewMode: _uiState.diffViewMode,
           diffController: _diffController,
           diffCommentHighlights: _diffInteraction.highlights(

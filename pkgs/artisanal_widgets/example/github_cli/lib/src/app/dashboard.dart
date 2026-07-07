@@ -169,15 +169,26 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
     if (_uiState.commandPaletteOpen) return null;
     if (_detail.repoPromptOpen ||
         _detail.searchOpen ||
-        _detail.repositoryListOpen ||
-        _detail.detailItem != null ||
+        _detail.repositoryListOpen) {
+      return null;
+    }
+
+    final shortcut = githubDashboardShortcutFor(msg);
+
+    // Allow loading more items even when a detail pane is open.
+    if (shortcut == GithubDashboardShortcut.loadNextPage) {
+      return _queue.isSearchActive
+          ? _detailLoader.loadNextSearchPage()
+          : _dataCoordinator.loadCurrentPage(replace: false);
+    }
+
+    if (_detail.detailItem != null ||
         _detail.mergeInfoItem != null ||
         _detail.repositoryLabelsItem != null ||
         _detail.actionPrompt != null) {
       return null;
     }
 
-    final shortcut = githubDashboardShortcutFor(msg);
     if (_uiState.layoutMode.isFocused && msg.key.type == tui.KeyType.escape) {
       return _navigation.setLayoutMode(GithubDashboardLayoutMode.split);
     }
@@ -212,10 +223,7 @@ final class _GithubCliDashboardState extends w.State<GithubCliDashboard> {
         (_queue.tabIndex + githubDashboardTabCount - 1) %
             githubDashboardTabCount,
       ),
-      GithubDashboardShortcut.loadNextPage =>
-        _queue.isSearchActive
-            ? _detailLoader.loadNextSearchPage()
-            : _dataCoordinator.loadCurrentPage(replace: false),
+      GithubDashboardShortcut.loadNextPage => null,
       GithubDashboardShortcut.openBrowser => _detailLoader.openSelectedUrl(),
       GithubDashboardShortcut.viewDetails => _detailLoader.openSelectedDetail(),
       GithubDashboardShortcut.viewDiff => _detailLoader.openSelectedDiff(),

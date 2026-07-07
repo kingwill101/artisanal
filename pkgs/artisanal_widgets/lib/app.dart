@@ -13,7 +13,5 @@ library;
 
 export 'src/widgets/app/widget_app.dart';
 export 'src/widgets/app/artisanal_app.dart';
-export 'src/widgets/app/run_app_stub.dart'
-    if (dart.library.io) 'src/widgets/app/run_app.dart';
 export 'src/widgets/app/reload.dart';
 export 'src/widgets/app/reload_watcher.dart';

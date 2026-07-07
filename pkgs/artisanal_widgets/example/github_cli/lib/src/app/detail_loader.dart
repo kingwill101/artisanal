@@ -80,7 +80,7 @@ final class GithubDashboardDetailLoader {
     if (msg is GithubDiffLoadedMsg) {
       if (!_isCurrentDiffToken(msg.token)) return null;
       detail.applyDiffLoaded(msg.diff);
-      return null;
+      return _loadDiffReviewComments();
     }
     if (msg is GithubDiffChunkLoadedMsg) {
       if (!_isCurrentDiffToken(msg.token)) return null;
@@ -90,7 +90,7 @@ final class GithubDashboardDetailLoader {
     if (msg is GithubDiffFinishedMsg) {
       if (!_isCurrentDiffToken(msg.token)) return null;
       detail.applyDiffFinished();
-      return null;
+      return _loadDiffReviewComments();
     }
     if (msg is GithubDiffFailedMsg) {
       if (!_isCurrentDiffToken(msg.token)) return null;
@@ -170,6 +170,27 @@ final class GithubDashboardDetailLoader {
       return openSelectedRunDetail(focus: true);
     }
     return setLayoutMode(GithubDashboardLayoutMode.focused);
+  }
+
+  tui.Cmd? _loadDiffReviewComments() {
+    final item = detail.diffItem;
+    final repository = data.repositoryFor(item);
+    if (item == null ||
+        repository == null ||
+        item.target != GithubDisplayTarget.pullRequest) {
+      return null;
+    }
+    return tui.Cmd(() async {
+      try {
+        final comments = await client().loadPullRequestReviewComments(
+          repository: repository,
+          number: item.number,
+        );
+        return GithubDiffReviewCommentsLoadedMsg(comments);
+      } catch (_) {
+        return null;
+      }
+    });
   }
 
   tui.Cmd openSelectedDiff() {
@@ -364,8 +385,8 @@ final class GithubDashboardDetailLoader {
     if (item.target == GithubDisplayTarget.pullRequest) {
       return switch (index) {
         1 => openSelectedCommits(),
-        2 => openSelectedReviewComments(),
-        3 => openSelectedDiff(),
+        2 => openSelectedDiff(),
+        3 => openSelectedReviewComments(),
         _ => openSelectedComments(),
       };
     }

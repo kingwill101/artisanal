@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 
+import '../run/transport.dart' show WidgetAppHostServer;
 import '../style/color.dart';
 import '../tui/model.dart';
 import '../tui/program.dart';
@@ -19,7 +20,7 @@ typedef SocketTerminalSessionHandler = Future<void> Function(io.Socket socket);
 ///
 /// Resize events are reported out-of-band using
 /// `OSC 9999;<cols>;<rows>` terminated by `BEL`.
-final class SocketTerminalHostServer {
+final class SocketTerminalHostServer implements WidgetAppHostServer {
   SocketTerminalHostServer._({required this.server, required this.onSession}) {
     _subscription = server.listen((socket) {
       unawaited(_handleSession(socket));
@@ -127,11 +128,7 @@ final class SocketTerminalHostServer {
     }
   }
 
-  /// Closes the underlying TCP server.
-  ///
-  /// When [force] is `true`, all active client sockets are torn down before the
-  /// method returns, and this call still waits for in-flight session cleanup to
-  /// finish.
+  @override
   Future<void> close({bool force = false}) async {
     if (_closed) return;
     _closed = true;
