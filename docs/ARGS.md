@@ -32,9 +32,12 @@ Artisanal's Args library provides:
 
 - **Beautiful Help Output**: Automatically styled with Lip Gloss colors
 - **Command Namespacing**: Group commands with `:` separators (e.g., `db:migrate`, `ui:build`)
+- **Namespace Discovery**: Typing a namespace prefix (e.g., `db`) shows subcommands instead of "command not found"
+- **Laravel-style Argument Helpers**: `option()`, `hasOption()`, `argument()`, `arguments`, `argumentCount`
 - **Verbosity Management**: `-v`, `-vv`, and `-vvv` flags plus quiet/silent modes
 - **Interactive Control**: `--no-interaction` flag for non-interactive mode
 - **ANSI Control**: `--ansi`/`--no-ansi` flags to force color output
+- **Symfony-style Error Blocks**: Styled `<error>` blocks written to stderr with proper exit codes
 - **Seamless Console Integration**: Each command gets automatic access to the [Console](CONSOLE.md)
 - **Deterministic Testing Hooks**: Injectable output, input, and exit-code callbacks
 - **Automatic Shell Completion**: Tab-completion for commands, options, and allowed values (bash, zsh, tcsh)
@@ -57,7 +60,10 @@ class ServeCommand extends Command<void> {
 }
 
 void main(List<String> args) async {
-  final runner = CommandRunner('myapp', 'My Application');
+  final runner = CommandRunner(
+    CommandRunner.detectExecutableName(),
+    'My Application',
+  );
   runner.addCommand(ServeCommand());
   await runner.run(args);
 }
@@ -85,8 +91,9 @@ class HelloCommand extends Command<void> {
   
   @override
   void run() {
-    final name = argResults!['name'] as String? ?? 'World';
-    io.success('Hello, $name!');
+    final name = option('name') as String? ?? 'World';
+    final message = argument(0) ?? '';
+    io.success('Hello, $name! $message');
   }
 }
 
@@ -187,7 +194,10 @@ All of the above respect the same `namespaceSeparator` grouping your help alread
 ```dart
 import 'package:artisanal/args.dart';
 
-final runner = CommandRunner('myapp', 'My Application');
+final runner = CommandRunner(
+  CommandRunner.detectExecutableName(),
+  'My Application',
+);
 runner.addCommand(ServeCommand());
 
 // Lazy-initialized completer bound to this runner's arg tree.
@@ -210,7 +220,10 @@ without a runner instance.
 
 ```dart
 void main(List<String> args) async {
-  final runner = CommandRunner('mycli', 'My CLI application')
+  final runner = CommandRunner(
+    CommandRunner.detectExecutableName(),
+    'My CLI application',
+  )
     ..addCommand(ServeCommand())
     ..addCommand(DbCommand())
     ..addCommand(DbMigrateCommand());
@@ -231,6 +244,41 @@ The runner automatically adds these global flags:
 | `--no-interaction`, `-n` | Disable interactive prompts |
 | `--verbose`, `-v`, `-vv`, `-vvv` | Increase verbosity (verbose, very verbose, debug) |
 | `--completion-script` | Print a shell completion script to stdout |
+
+### Auto-detecting the Executable Name
+
+Pass `CommandRunner.detectExecutableName()` as the executable name to have the
+runner automatically pick up the correct name from the running script:
+
+```dart
+final runner = CommandRunner(
+  CommandRunner.detectExecutableName(),
+  'My CLI application',
+);
+```
+
+When run as a compiled binary, the usage shows the binary's file name:
+
+```bash
+$ ./artisan --help
+Usage: artisan <command> [arguments]
+...
+```
+
+When run via `dart run`, the usage includes the script path:
+
+```bash
+$ dart run bin/myapp.dart --help
+Usage: dart run bin/myapp.dart <command> [arguments]
+...
+```
+
+You can always pass an explicit name if you prefer a fixed value:
+
+```dart
+// Always shows "myapp" regardless of how it's executed
+final runner = CommandRunner('myapp', 'My CLI');
+```
 
 ### Constructor and I/O Hooks
 
@@ -263,32 +311,63 @@ Important constructor options:
 - `readLine`: custom stdin reader for prompts.
 - `setExitCode`: custom exit-code sink.
 
-### Command Namespaces
+#### Argument / Option Accessors
+
+Artisanal's `Command` provides Laravel-style convenience helpers so you don't
+need to reach for raw `argResults!` every time:
+
+```dart
+class GreetCommand extends Command<void> {
+  GreetCommand() {
+    argParser.addOption('name', abbr: 'n', help: 'Who to greet.');
+    argParser.addFlag('shout', help: 'SHOUT the greeting.');
+  }
+
+  @override String get name => 'greet';
+  @override String get description => 'Greet someone.';
+
+  @override
+  void run() {
+    // --name value (or default)
+    final name = option('name') as String? ?? 'World';
+
+    // --shout flag (bool)
+    final shout = option('shout') as bool;
+
+    // First positional argument
+    final message = argument(0);
+
+    // All positional arguments
+    for (final arg in arguments) { ... }
+
+    // Check if --name was explicitly provided
+    if (hasOption('name')) { ... }
+
+    io.success('Hello, $name!');
+  }
+}
+```
+
+#### Available Helpers
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `option(name)` | `Object?` | Value of a named option/flag (e.g., `--name`, `--force`) |
+| `hasOption(name)` | `bool` | Whether the option was explicitly provided on the command line |
+| `argument(index)` | `String?` | Positional argument at `index` (0-based), or `null` if not provided |
+| `arguments` | `List<String>` | All positional arguments |
+| `argumentCount` | `int` | Number of positional arguments |
+
+---
+
+## Command Namespaces
 
 Commands can be grouped using the `:` separator:
 
 ```dart
-class DbCommand extends Command<void> {
-  @override
-  String get name => 'db';
-  
-  @override
-  String get description => 'Database operations';
-  
-  DbCommand() {
-    addSubcommand(DbMigrateCommand());
-    addSubcommand(DbSeedCommand());
-  }
-  
-  @override
-  void run() {
-    printUsage();
-  }
-}
-
 class DbMigrateCommand extends Command<void> {
   @override
-  String get name => 'migrate';
+  String get name => 'db:migrate';
   
   @override
   String get description => 'Run database migrations';
@@ -301,6 +380,21 @@ class DbMigrateCommand extends Command<void> {
     });
   }
 }
+
+class DbSeedCommand extends Command<void> {
+  @override
+  String get name => 'db:seed';
+  
+  @override
+  String get description => 'Seed the database';
+  
+  @override
+  void run() { ... }
+}
+
+final runner = CommandRunner('myapp', 'My Application')
+  ..addCommand(DbMigrateCommand())
+  ..addCommand(DbSeedCommand());
 ```
 
 Run with:
@@ -308,12 +402,57 @@ Run with:
 dart run bin/myapp.dart db:migrate
 ```
 
+### Namespace Discovery (Symfony-style)
+
+When a user types a namespace prefix (e.g., `db` where commands like `db:migrate`,
+`db:seed` exist), the runner displays the subcommands in that namespace instead of
+a "command not found" error:
+
+```bash
+$ dart run bin/myapp.dart db
+Available commands for the "db" namespace:
+db
+  db:migrate   Run database migrations
+  db:seed      Seed the database
+
+Run "myapp db:<subcommand> --help" for more information about a command.
+```
+
+This works for nested namespaces too (e.g., `cache:user` lists `cache:user:list`,
+`cache:user:evict`).
+
+Like Symfony Console, namespace-only invocations exit with code **1** (no command
+was actually executed).
+
+### Namespace APIs
+
+The runner exposes Symfony Console-style APIs for programmatic namespace
+inspection:
+
+```dart
+// Get all unique namespace prefixes
+final namespaces = runner.getNamespaces();
+// -> ['cache', 'cache:user', 'db', 'help', 'project']
+
+// Get all commands within a namespace
+final dbCommands = runner.allCommandsInNamespace('db');
+// -> {'db:migrate': ..., 'db:seed': ...}
+```
+
+- `getNamespaces()` -- equivalent to Symfony's `Application::getNamespaces()`
+- `allCommandsInNamespace(name)` -- equivalent to Symfony's `Application::all($namespace)`
+
+### Help Output Grouping
+
+Commands sharing a namespace prefix are automatically grouped under a heading
+in the help output:
+
 ### Help Output
 
-The runner generates beautiful, styled help output:
+The runner generates beautiful, styled help output with namespaces grouped:
 
 ```
-My CLI application
+My Application
 
 Usage: myapp <command> [arguments]
 
@@ -327,11 +466,21 @@ Options:
                           1 for verbose, 2 for very verbose, 3 for debug.
 
 Available commands:
-  db        Database operations
   serve     Start the development server
+
+db
+  db:migrate   Run database migrations
+  db:seed      Seed the database
+
+cache
+  cache:clear      Clear the cache
+  cache:user:list  List cached users
 
 Run "myapp <command> --help" for more information about a command.
 ```
+
+Commands without a namespace prefix appear first (e.g., `serve`), followed by
+grouped commands under their namespace headings (`db`, `cache`).
 
 ### HelpColorScheme
 
@@ -460,8 +609,8 @@ class BuildCommand extends Command<void> {
   
   @override
   Future<void> run() async {
-    final watch = argResults!['watch'] as bool;
-    final output = argResults!['output'] as String;
+    final watch = option('watch') as bool;
+    final output = option('output') as String? ?? 'build';
     
     io.title('Building application');
     io.text('Output directory: $output');
@@ -600,9 +749,9 @@ class DeployCommand extends Command<void> {
   
   @override
   void run() {
-    final dryRun = argResults!['dry-run'] as bool;
-    final environment = argResults!['environment'] as String;
-    final tags = argResults!['tag'] as List<String>;
+    final dryRun = option('dry-run') as bool;
+    final environment = option('environment') as String;
+    final tags = option('tag') as List<String>? ?? [];
     
     io.info('Deploying to $environment${dryRun ? ' (dry run)' : ''}');
     if (tags.isNotEmpty) {
@@ -614,8 +763,8 @@ class DeployCommand extends Command<void> {
 
 ### Positional Arguments
 
-`package:args` stores trailing positional values in `argResults.rest`. You can
-support both a named `--name` option and a fallback positional value:
+`package:args` stores trailing positional values in `argResults.rest`. Use the
+convenience `argument(index)` and `arguments` helpers:
 
 ```dart
 class HelloCommand extends Command<void> {
@@ -629,10 +778,25 @@ class HelloCommand extends Command<void> {
   
   @override
   void run() {
-    final name = argResults!['name'] as String? ??
-        (argResults!.rest.isNotEmpty ? argResults!.rest.first : 'World');
+    // Named option value
+    final name = option('name') as String? ?? 'World';
+    // First positional argument (or null if not provided)
+    final greeting = argument(0);
     io.success('Hello, $name!');
   }
+}
+```
+
+### Checking if an Option Was Explicitly Provided
+
+Use `hasOption()` to distinguish between "not provided" and "provided with
+default value":
+
+```dart
+if (hasOption('environment')) {
+  io.info('Environment explicitly set to ${option('environment')}');
+} else {
+  io.info('Using default environment');
 }
 ```
 
@@ -667,21 +831,53 @@ try {
 }
 ```
 
-### Usage Errors
+### Symfony-style Error Blocks
 
-The runner automatically catches and formats `UsageException`:
+The runner catches `UsageException` and formats errors as styled blocks
+(written to stderr), matching Symfony Console / Laravel Artisan conventions:
 
 ```bash
-dart run bin/myapp.dart serve --invalid-option
+$ dart run bin/myapp.dart unknown-command
 
-Error: Could not find an option named "invalid-option".
+  Could not find a command named "unknown-command".  
 
-Usage: myapp serve [arguments]
-
-Options:
-      --port            The port to listen on (default: 8080)
-  -h, --help           Print this usage information.
+$ echo $?
+64
 ```
+
+- Errors go to **stderr** (matching Symfony's `$output->getErrorOutput()`)
+- In ANSI mode, the message is rendered with white foreground on red background
+- In ASCII mode (`--no-ansi`), the message is padded with spaces
+- The block is surrounded by blank lines, matching Symfony's `formatBlock(..., large: true)`
+- Exit code is `usageExitCode` (default **64**)
+
+### Usage Errors
+
+For argument-level errors (e.g., missing required options, invalid values),
+the runner prints the error block to stderr without a stack trace:
+
+```bash
+$ dart run bin/myapp.dart serve --invalid-option
+
+  Could not find an option named "invalid-option".  
+```
+
+### Throwing Usage Errors from Commands
+
+Commands can throw structured errors with the `usageException()` helper:
+
+```dart
+@override
+void run() {
+  final port = option('port') as String?;
+  if (port != null && int.tryParse(port) == null) {
+    usageException('The --port option must be a number.');
+  }
+  // ...
+}
+```
+
+This produces the same styled error block output.
 
 ---
 

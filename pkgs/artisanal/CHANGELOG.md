@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+
+- Added `option()`, `hasOption()`, `argument()`, `arguments`, and
+  `argumentCount` convenience methods to `Command` (Laravel/Artisan-style).
+  Instead of raw `argResults!['name']`, commands can now write
+  `option('name') as String?`, `argument(0)`, etc.
+- Added `CommandRunner.detectExecutableName()` static method that
+  auto-detects the binary name from `Platform.script`. Compiled binaries
+  show their filename (`artisan`), while `dart run` invocations show
+  `dart run path/to/script.dart` in usage help.
+- Added `getNamespaces()` and `allCommandsInNamespace()` to `CommandRunner`
+  for programmatic namespace inspection (matching Symfony Console's
+  `Application::getNamespaces()` and `Application::all($namespace)`).
+- Added namespace-aware error recovery: typing a namespace prefix (e.g.,
+  `db` where `db:migrate`, `db:seed` exist) shows subcommands instead of
+  a "command not found" error. Exits with code 1, matching Symfony.
+- Added Symfony-style error blocks: `UsageException` output is now rendered
+  as a styled `<error>` block (white-on-red in ANSI mode) written to stderr,
+  matching Laravel Artisan's `formatBlock($message, 'error', large: true)`.
+- Added `_extractAllNamespaces()` for extracting parent namespace parts from
+  nested command names like `cache:user:list`.
+- Added `example/args/` directory with a comprehensive, self-documented demo
+  covering all 14 args improvements (namespaces, subcommands, verbosity,
+  non-interactive mode, shell completion, error blocks, help themes, etc.).
+
+### Changed
+
+- `CommandRunner.run()` now attempts namespace discovery before falling back
+  to `_printUsageError`. If the missing command matches a namespace prefix,
+  subcommands are listed instead.
+- `_printUsageError()` now writes styled error blocks to stderr instead of
+  plain text to stdout.
+- `_handleMissingCommandAsNamespace()` now exits with code 1 instead of the
+  default `usageExitCode` (64), matching Symfony Console behavior.
+- Removed `_error()` method; replaced by `_styleErrorBlock()` which applies
+  proper white-on-red `<error>` styling.
+- Updated library-level documentation in `args.dart` to include a complete
+  GreetCommand example using the new argument/option helpers.
+
 ## 0.3.1
 
 ### Added

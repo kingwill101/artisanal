@@ -121,24 +121,196 @@ void main() {
     },
   );
 
-  test('unknown command does not throw and sets exit code', () async {
+  test('namespace command shows subcommands without error', () async {
     final out = StringBuffer();
     final err = StringBuffer();
-    var code = 0;
+    var code = -1;
 
-    final runner = CommandRunner<void>(
-      'orm',
-      'Routed ORM CLI',
-      ansi: false,
-      out: (line) => out.writeln(line),
-      err: (line) => err.writeln(line),
-      setExitCode: (value) => code = value,
-    )..addCommand(_NoopCommand('status', 'Show migration status.'));
+    final runner =
+        CommandRunner<void>(
+            'orm',
+            'Routed ORM CLI',
+            ansi: false,
+            out: (line) => out.writeln(line),
+            err: (line) => err.writeln(line),
+            setExitCode: (value) => code = value,
+          )
+          ..addCommand(_NoopCommand('apply', 'Apply pending migrations.'))
+          ..addCommand(_NoopCommand('schema:dump', 'Dump schema.'))
+          ..addCommand(_NoopCommand('schema:describe', 'Describe schema.'));
 
-    await runner.run(['sttus']);
+    await runner.run(['schema']);
 
-    expect(code, 64);
-    expect(err.toString(), contains('Error:'));
-    expect(out.toString(), contains('Available commands:'));
+    expect(
+      code,
+      1,
+      reason: 'should exit with code 1 (no command was executed)',
+    );
+    expect(err.toString(), isEmpty, reason: 'no error output');
+    final output = out.toString();
+    expect(output, contains('Available commands for the "schema" namespace:'));
+    expect(output, contains('schema:dump'));
+    expect(output, contains('schema:describe'));
+    expect(output, contains('Run "orm schema:<subcommand> --help"'));
   });
+
+  test(
+    'namespace command with --help flag shows subcommands without error',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      var code = -1;
+
+      final runner =
+          CommandRunner<void>(
+              'orm',
+              'Routed ORM CLI',
+              ansi: false,
+              out: (line) => out.writeln(line),
+              err: (line) => err.writeln(line),
+              setExitCode: (value) => code = value,
+            )
+            ..addCommand(_NoopCommand('apply', 'Apply pending migrations.'))
+            ..addCommand(_NoopCommand('schema:dump', 'Dump schema.'))
+            ..addCommand(_NoopCommand('schema:describe', 'Describe schema.'));
+
+      await runner.run(['schema', '--help']);
+
+      expect(
+        code,
+        1,
+        reason: 'should exit with code 1 (no command was executed)',
+      );
+      expect(err.toString(), isEmpty, reason: 'no error output');
+      final output = out.toString();
+      expect(
+        output,
+        contains('Available commands for the "schema" namespace:'),
+      );
+      expect(output, contains('schema:dump'));
+      expect(output, contains('schema:describe'));
+      expect(output, contains('Run "orm schema:<subcommand> --help"'));
+    },
+  );
+
+  test('getNamespaces returns all unique namespace prefixes', () {
+    final runner =
+        CommandRunner<void>(
+            'orm',
+            'Routed ORM CLI',
+            ansi: false,
+            out: (_) {},
+            err: (_) {},
+            setExitCode: (_) {},
+          )
+          ..addCommand(_NoopCommand('apply', 'Apply pending migrations.'))
+          ..addCommand(_NoopCommand('schema:dump', 'Dump schema.'))
+          ..addCommand(_NoopCommand('schema:describe', 'Describe schema.'))
+          ..addCommand(_NoopCommand('cache:clear', 'Clear cache.'))
+          ..addCommand(
+            _NoopCommand('cache:foo:bar', 'Nested namespace command.'),
+          );
+
+    final namespaces = runner.getNamespaces();
+
+    expect(namespaces, contains('schema'));
+    expect(namespaces, contains('cache'));
+    expect(namespaces, contains('cache:foo'));
+    expect(namespaces, isNot(contains('apply')));
+    expect(namespaces, isNot(contains('cache:foo:bar')));
+  });
+
+  test(
+    'allCommandsInNamespace returns only commands in the given namespace',
+    () {
+      final runner =
+          CommandRunner<void>(
+              'orm',
+              'Routed ORM CLI',
+              ansi: false,
+              out: (_) {},
+              err: (_) {},
+              setExitCode: (_) {},
+            )
+            ..addCommand(_NoopCommand('apply', 'Apply pending migrations.'))
+            ..addCommand(_NoopCommand('schema:dump', 'Dump schema.'))
+            ..addCommand(_NoopCommand('schema:describe', 'Describe schema.'))
+            ..addCommand(_NoopCommand('cache:clear', 'Clear cache.'));
+
+      final schemaCommands = runner.allCommandsInNamespace('schema');
+      expect(schemaCommands.length, 2);
+      expect(schemaCommands, containsPair('schema:dump', isNotNull));
+      expect(schemaCommands, containsPair('schema:describe', isNotNull));
+
+      final cacheCommands = runner.allCommandsInNamespace('cache');
+      expect(cacheCommands.length, 1);
+      expect(cacheCommands, containsPair('cache:clear', isNotNull));
+
+      final applyCommands = runner.allCommandsInNamespace('apply');
+      expect(applyCommands, isEmpty);
+    },
+  );
+
+  test('namespace command handles nested namespaces', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+    var code = -1;
+
+    final runner =
+        CommandRunner<void>(
+            'myapp',
+            'My CLI',
+            ansi: false,
+            out: (line) => out.writeln(line),
+            err: (line) => err.writeln(line),
+            setExitCode: (value) => code = value,
+          )
+          ..addCommand(_NoopCommand('cache:clear', 'Clear cache.'))
+          ..addCommand(
+            _NoopCommand('cache:foo:bar', 'Nested namespace command.'),
+          )
+          ..addCommand(
+            _NoopCommand('cache:foo:baz', 'Another nested command.'),
+          );
+
+    // Top-level namespace shows all cache:* commands
+    await runner.run(['cache']);
+
+    expect(code, 1);
+    final output = out.toString();
+    expect(output, contains('Available commands for the "cache" namespace:'));
+    expect(output, contains('cache:clear'));
+    expect(output, contains('cache:foo:bar'));
+    expect(output, contains('cache:foo:baz'));
+  });
+
+  test(
+    'unknown command shows error block on stderr and sets usage exit code',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      var code = 0;
+
+      final runner = CommandRunner<void>(
+        'orm',
+        'Routed ORM CLI',
+        ansi: false,
+        out: (line) => out.writeln(line),
+        err: (line) => err.writeln(line),
+        setExitCode: (value) => code = value,
+      )..addCommand(_NoopCommand('status', 'Show migration status.'));
+
+      await runner.run(['sttus']);
+
+      expect(code, 64);
+      // Error block goes to stderr (matching Symfony behavior).
+      expect(
+        err.toString(),
+        contains('Could not find a command named "sttus".'),
+      );
+      expect(err.toString(), contains('Did you mean one of these?'));
+      // Usage text is no longer printed to stdout (matching Symfony).
+      expect(out.toString(), isEmpty);
+    },
+  );
 }
