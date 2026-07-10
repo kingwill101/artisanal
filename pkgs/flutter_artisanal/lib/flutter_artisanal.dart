@@ -15,32 +15,26 @@ export 'package:artisanal/uv.dart'
         WidthMethod,
         runeWidth,
         stringWidth;
-export 'package:artisanal/artisanal.dart' show ProgramOptions;
+export 'package:artisanal/artisanal.dart'
+    show
+        ProgramOptions,
+        runWidgetApp,
+        serveWidgetApp,
+        Transport,
+        WidgetAppHostServer;
 export 'package:artisanal/tui.dart'
     show TuiRendererOptions, Model, Cmd, Msg, KeyMsg, Key, KeyType, ColorSchemeMsg;
 export 'package:artisanal_widgets/app.dart'
-    hide
-      runWidgetApp,
-      runArtisanalApp,
-      runReloadableWidgetApp,
-      runReloadableArtisanalApp,
-      runWatchedWidgetApp,
-      runWatchedArtisanalApp,
-      serveReloadableArtisanalAppInBrowser,
-      serveReloadableArtisanalAppOnSocket,
-      serveWatchedArtisanalAppInBrowser,
-      serveWatchedArtisanalAppOnSocket,
-      serveWidgetAppInBrowser,
-      serveArtisanalAppInBrowser,
-      serveWidgetAppOnSocket,
-      serveArtisanalAppOnSocket,
-      WatchedBrowserArtisanalAppHost,
-      WatchedSocketArtisanalAppHost,
-      ReloadController,
-      ReloadHost,
-      ReloadMode,
-      ReloadWidgetBuilder,
-      ReloadFileWatcher;
+    show
+        ArtisanalApp,
+        ReloadController,
+        ReloadFileWatcher,
+        ReloadHost,
+        ReloadMode,
+        ReloadWidgetBuilder,
+        WidgetApp;
+export 'package:artisanal_widgets/widgets.dart'
+    show ImageAutoMode, Theme, ThemeMode;
 export 'src/terminal_painter.dart';
 export 'src/terminal_colors.dart';
 export 'src/app_shell.dart';

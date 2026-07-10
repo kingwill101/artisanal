@@ -5,11 +5,10 @@ import 'package:artisanal/tui.dart' show TuiRendererOptions;
 import 'package:flutter/widgets.dart';
 import 'package:ultraviolet/ultraviolet.dart' as uv;
 
+import 'package:artisanal/artisanal.dart'
+    show defaultWidgetProgramOptions;
 import 'package:artisanal_widgets/app.dart'
-    show
-        ArtisanalApp,
-        WidgetApp,
-        defaultWidgetProgramOptions;
+    show ArtisanalApp, WidgetApp;
 import 'package:artisanal_widgets/widgets.dart' show ImageAutoMode;
 import 'tui_controller.dart';
 
