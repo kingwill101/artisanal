@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.2
+
+### Changed
+
+- Refactored library exports across all widget modules to simplify import
+  paths and reduce the public API surface to stable, documented types.
+- Reorganized `git_diff.dart` with streamlined imports and cleaner
+  comment-anchor rendering.
+- Cleaned up unused imports, trailing whitespace, and formatting across
+  the entire widget library (176 files touched).
+
+### Fixed
+
+- Fixed various lint warnings and type annotations across layout utilities,
+  gesture handling, and animation tests.
+
 ## 0.2.1
 
 ### Added

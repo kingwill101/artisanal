@@ -1,6 +1,6 @@
 name: flutter_artisanal
 description: Flutter rendering, input bridge, and app shell for Ultraviolet terminal buffers.
-version: 0.1.0
+version: 0.2.0
 resolution: workspace
 
 environment:
