@@ -70,28 +70,40 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   /// );
   /// ```
   static String detectExecutableName() {
-    final scriptPath = dartio.Platform.script.toFilePath();
+    final script = dartio.Platform.script;
+    final scriptPath = script.toFilePath();
+    final basename = script.pathSegments.last;
+
     try {
       final cwd = dartio.Directory.current.path;
       if (scriptPath.startsWith(cwd)) {
         var relative = scriptPath.substring(cwd.length);
-        if (relative.startsWith('/') || relative.startsWith('\\')) {
+        final sep = dartio.Platform.pathSeparator;
+        if (relative.startsWith(sep) || relative.startsWith('/') ||
+            relative.startsWith('\\')) {
           relative = relative.substring(1);
         }
         if (relative.endsWith('.dart')) {
-          final runner = dartio.Platform.executable.split('/').last;
-          return '$runner run $relative';
+          final execName = _executableName();
+          return '$execName run $relative';
         }
-        return relative.split('/').last;
+        return relative.split(sep).last;
       }
     } catch (_) {}
     // Fallback: just use basename
-    final basename = scriptPath.split('/').last;
     if (basename.endsWith('.dart')) {
-      final runner = dartio.Platform.executable.split('/').last;
-      return '$runner run $basename';
+      final execName = _executableName();
+      return '$execName run $basename';
     }
     return basename;
+  }
+
+  /// Returns the platform's Dart/Flutter executable name (e.g. `dart`).
+  static String _executableName() {
+    final path = dartio.Platform.executable;
+    final name = path.split(dartio.Platform.pathSeparator).last;
+    // Strip .exe on Windows for cleaner output.
+    return name.endsWith('.exe') ? name.substring(0, name.length - 4) : name;
   }
 
   /// Creates a new command runner.

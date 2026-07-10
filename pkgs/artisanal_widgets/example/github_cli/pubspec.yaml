@@ -11,7 +11,7 @@ executables:
 
 dependencies:
   args: ^2.6.0
-  artisanal: ^0.3.0
+  artisanal: ^0.4.0
   artisanal_widgets: ^0.2.1
   devtools_region_profiler: ^0.1.0
   http: ^1.2.0
