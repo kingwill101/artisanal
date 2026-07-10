@@ -111,18 +111,9 @@ LineSpanEdit? lineSpanEdit(
       suffix++;
     }
     if (suffix > 0) {
-      final oldStates = _statePrefixesFrom(
-          oldLine.statePrefix, oldTokens, oldTokens.length - suffix);
-      final newStates = _statePrefixesFrom(
-          newLine.statePrefix, newTokens, newTokens.length - suffix);
-      // oldStates[j] / newStates[j] hold the state before the token that
-      // starts a suffix of length (suffix - j); walk j up (suffix down)
-      // until the states agree.
-      var j = 0;
-      while (j < suffix && oldStates[j] != newStates[j]) {
-        j++;
-      }
-      suffix -= j;
+      suffix = _stateMatchedSuffix(
+          oldLine.statePrefix, oldTokens, newLine.statePrefix, newTokens,
+          suffix);
     }
   }
 
@@ -152,23 +143,57 @@ String _tailErase(int oldWidth, int newWidth) => oldWidth > newWidth
     ? '${Ansi.reset}${' ' * (oldWidth - newWidth)}'
     : '';
 
-/// The ANSI state active just before each token index in
-/// `[from, tokens.length]`, serialized like [_statePrefixAt] — one entry per
-/// index, in order. One pass over the line, so probing every candidate
-/// suffix start costs the same as probing one.
-List<String> _statePrefixesFrom(
-    String statePrefix, List<_Token> tokens, int from) {
-  final style = uv_styled.StyleState(const UvStyle());
-  final link = uv_styled.LinkState(const Link());
-  applyRenderedAnsiState(statePrefix, style, link);
-  final out = <String>[];
-  for (var i = 0; i <= tokens.length; i++) {
-    if (i >= from) out.add(renderedStatePrefix(style.style, link.link));
-    if (i < tokens.length && tokens[i].isAnsi) {
-      applyRenderedAnsiState(tokens[i].text, style, link);
+/// The longest suffix, at most [suffix] tokens, that both lines render
+/// identically: its bytes already match (the caller's suffix walk found
+/// them), so it only needs the pen state where it starts to match too.
+///
+/// The two lines' states are advanced in lockstep across the byte-identical
+/// suffix, newest-common token first, and the first token whose state agrees
+/// under both lines begins the answer — from there on the tokens are the
+/// same, so the states stay in agreement. Returns 0 when they never agree.
+/// Style and link values are compared directly rather than serialized, and
+/// the walk stops at the first agreement, so a suffix that is safe from its
+/// very start (the usual case) costs one comparison.
+int _stateMatchedSuffix(
+  String oldStatePrefix,
+  List<_Token> oldTokens,
+  String newStatePrefix,
+  List<_Token> newTokens,
+  int suffix,
+) {
+  final oldStart = oldTokens.length - suffix;
+  final newStart = newTokens.length - suffix;
+
+  final oldStyle = uv_styled.StyleState(const UvStyle());
+  final oldLink = uv_styled.LinkState(const Link());
+  applyRenderedAnsiState(oldStatePrefix, oldStyle, oldLink);
+  for (var i = 0; i < oldStart; i++) {
+    if (oldTokens[i].isAnsi) {
+      applyRenderedAnsiState(oldTokens[i].text, oldStyle, oldLink);
     }
   }
-  return out;
+
+  final newStyle = uv_styled.StyleState(const UvStyle());
+  final newLink = uv_styled.LinkState(const Link());
+  applyRenderedAnsiState(newStatePrefix, newStyle, newLink);
+  for (var i = 0; i < newStart; i++) {
+    if (newTokens[i].isAnsi) {
+      applyRenderedAnsiState(newTokens[i].text, newStyle, newLink);
+    }
+  }
+
+  for (var j = 0; j < suffix; j++) {
+    if (oldStyle.style == newStyle.style && oldLink.link == newLink.link) {
+      return suffix - j;
+    }
+    // The suffix tokens are equal by construction; apply either one to both.
+    final token = newTokens[newStart + j];
+    if (token.isAnsi) {
+      applyRenderedAnsiState(token.text, oldStyle, oldLink);
+      applyRenderedAnsiState(token.text, newStyle, newLink);
+    }
+  }
+  return 0;
 }
 
 /// The ANSI state active just before token [index], serialized as the
