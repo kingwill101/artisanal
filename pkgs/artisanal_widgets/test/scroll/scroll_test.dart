@@ -3,7 +3,6 @@ import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/tui.dart'
     show Cmd, KeyMsg, Msg, MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 class _PaintCounter {

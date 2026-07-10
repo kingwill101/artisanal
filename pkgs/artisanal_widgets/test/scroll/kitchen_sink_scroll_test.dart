@@ -1,7 +1,6 @@
 import 'package:artisanal/tui.dart' show MouseMsg, MouseAction, MouseButton;
 import 'package:artisanal/style.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 /// Full Kitchen Sink markdown content from example/markdown_text/main.dart.

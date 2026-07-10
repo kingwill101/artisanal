@@ -1,4 +1,3 @@
-import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/terminal.dart' as terminal show Key;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart'

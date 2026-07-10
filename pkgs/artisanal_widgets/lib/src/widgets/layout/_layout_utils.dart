@@ -39,7 +39,6 @@ import '../theme/theme.dart' show hasDarkBackground;
 import 'container.dart';
 import 'spacing.dart';
 
-
 final Expando<_UvColorCacheEntry> _uvColorCache = Expando<_UvColorCacheEntry>(
   'artisanal_widgets.uvColor',
 );

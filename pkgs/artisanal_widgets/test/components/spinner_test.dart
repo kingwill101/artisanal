@@ -1,6 +1,5 @@
 library;
 
-import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg, Msg;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';

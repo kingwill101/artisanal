@@ -1,10 +1,8 @@
-
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
-
 
 /// A modal barrier that fades in/out with an animated opacity.
 ///

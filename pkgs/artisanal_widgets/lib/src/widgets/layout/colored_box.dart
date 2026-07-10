@@ -21,7 +21,6 @@ import '_layout_utils.dart';
 import 'geometry.dart';
 import '../rendering/render_object.dart';
 
-
 /// A widget that fills its area with a single solid color.
 ///
 /// This is a simpler alternative to [Container] when you only need a

@@ -5,7 +5,6 @@ import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 
-
 /// A dialog with a text input field.
 ///
 /// Displays a title, optional description, a text input, and submit/cancel

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/testing.dart';
 import 'package:test/test.dart';
 
 void main() {

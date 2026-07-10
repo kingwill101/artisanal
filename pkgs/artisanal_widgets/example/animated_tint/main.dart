@@ -104,8 +104,7 @@ class _AnimatedTintDemoState extends State<AnimatedTintDemo> {
   }
 
   @override
-  Cmd? handleInit() =>
-      _mergeCmds([_timeline.start(), _pulseTimeline.start()]);
+  Cmd? handleInit() => _mergeCmds([_timeline.start(), _pulseTimeline.start()]);
 
   @override
   Cmd? handleUpdate(Msg msg) {
@@ -221,10 +220,7 @@ class _AnimatedTintDemoState extends State<AnimatedTintDemo> {
                     height: 3,
                     color: theme.surface,
                     alignment: Alignment.center,
-                    child: Text(
-                      'Animated color transition',
-                      style: onSurface,
-                    ),
+                    child: Text('Animated color transition', style: onSurface),
                   ),
                 ),
                 Divider(width: 65),

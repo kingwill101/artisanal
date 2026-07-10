@@ -1,6 +1,5 @@
 import '../core/core.dart';
 
-
 /// A widget that delegates its build to a callback.
 ///
 /// Useful for obtaining a [BuildContext] inline or building widget trees

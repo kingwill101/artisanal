@@ -5,7 +5,6 @@ import '../theme/theme.dart' show hasDarkBackground;
 import '_layout_utils.dart';
 import 'geometry.dart';
 
-
 class _RenderOpacity extends RenderBox {
   _RenderOpacity({required this.opacity});
 

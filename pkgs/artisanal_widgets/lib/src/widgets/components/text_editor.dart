@@ -61,8 +61,6 @@ import 'package:artisanal/widgets.dart';
 import 'text_area_controller_core_bridge.dart'
     show TextAreaControllerCoreBridge;
 
-
-
 /// A higher-level editor surface built on top of [TextArea].
 ///
 /// `TextEditor` adds lightweight chrome around the raw textarea:

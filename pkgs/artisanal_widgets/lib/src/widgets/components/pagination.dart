@@ -2,8 +2,6 @@ import 'dart:math' as math;
 
 import 'package:artisanal/widgets.dart';
 
-
-
 /// A page navigation control with prev/next buttons.
 ///
 /// The [Pagination] widget displays a page indicator with navigation buttons.

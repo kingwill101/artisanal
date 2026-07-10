@@ -12,7 +12,7 @@
 /// approach) rather than zone-based dispatch.
 library;
 
-import 'package:artisanal/tui.dart'  hide Key;
+import 'package:artisanal/tui.dart' hide Key;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/style.dart' show Layout;
@@ -730,24 +730,14 @@ void _simulateTapOnText(WidgetApp app, String text) {
 
   // Press
   app.update(
-    MouseMsg(
-      action: MouseAction.press,
-      button: MouseButton.left,
-      x: x,
-      y: y,
-    ),
+    MouseMsg(action: MouseAction.press, button: MouseButton.left, x: x, y: y),
   );
   // Render between press and release so dirty elements are processed
   app.view();
 
   // Release at same position
   app.update(
-    MouseMsg(
-      action: MouseAction.release,
-      button: MouseButton.left,
-      x: x,
-      y: y,
-    ),
+    MouseMsg(action: MouseAction.release, button: MouseButton.left, x: x, y: y),
   );
   // Render to process the rebuild
   app.view();
@@ -981,9 +971,7 @@ class _KeyedReorderTestState extends State<_KeyedReorderTest> {
       _NamedCounter(name: 'alpha', key: const Key('alpha')),
       _NamedCounter(name: 'beta', key: const Key('beta')),
     ];
-    return Column(
-      children: _reversed ? children.reversed.toList() : children,
-    );
+    return Column(children: _reversed ? children.reversed.toList() : children);
   }
 }
 

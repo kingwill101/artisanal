@@ -4,18 +4,17 @@ import 'package:artisanal/artisanal.dart' show Style;
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color;
 import 'package:artisanal_widgets/src/widgets/core/widget.dart';
+import 'package:artisanal_widgets/src/widgets/core/element.dart';
 import 'package:artisanal_widgets/src/widgets/framework.dart';
+import 'package:artisanal_widgets/src/widgets/rendering/render_object.dart';
 import 'package:artisanal_widgets/src/widgets/layout_widgets.dart';
 import 'package:artisanal_widgets/src/widgets/scroll_widgets.dart'
-    show WidgetScrollController;
+    show ScrollController, WidgetScrollController, SingleChildScrollView;
 import 'package:artisanal_widgets/src/widgets/theme_scope.dart';
 import 'package:artisanal/bubbles.dart'
     show
         DiffCommentAnchor,
         DiffCommentLineHighlight,
-        DiffCommentLineHighlightKind,
-        DiffCommentLineKey,
-        DiffCommentKind,
         DiffCommentSide,
         DiffFile,
         DiffStyles,
@@ -25,6 +24,103 @@ import 'package:artisanal/bubbles.dart'
 import 'package:artisanal_widgets/src/widgets/gestures/events.dart';
 import 'package:artisanal_widgets/src/widgets/gestures/hit_testing.dart';
 import 'package:artisanal_widgets/src/widgets/theme/theme.dart';
+
+/// A comment block to render inline in a [GitDiffViewer] at a specific
+/// [renderLine] position. The [child] widget is rendered as an additional row
+/// between diff lines, and [height] tells the viewer how many terminal rows
+/// it occupies so scroll metrics stay correct.
+class DiffCommentBlock {
+  /// Creates a diff comment block.
+  const DiffCommentBlock({
+    required this.renderLine,
+    required this.child,
+    required this.height,
+    this.side,
+  });
+
+  /// The 0-based render line of the diff line above which this block is
+  /// positioned.
+  final int renderLine;
+
+  /// The widget to render inline.
+  final Widget child;
+
+  /// How many terminal rows this block occupies.
+  final int height;
+
+  /// Which diff side this comment belongs to (addition/removal). Used to align
+  /// the block under the correct column in side-by-side view.
+  final DiffCommentSide? side;
+}
+
+/// A single-child render object widget that measures its child's real
+/// post-layout height and reports it (once per layout) via [onHeight].
+///
+/// Unlike a build-time measurement, this probes the child in the real layout
+/// pass, so asynchronous content (e.g. loaded images) contributes to the
+/// measured height. The reported height is in terminal rows (rounded).
+class _CardHeightProbe extends SingleChildRenderObjectWidget {
+  _CardHeightProbe({
+    required this.renderLine,
+    required this.onHeight,
+    required super.child,
+  });
+
+  /// The [DiffCommentBlock.renderLine] the measured child belongs to.
+  final int renderLine;
+
+  /// Called with the child's measured height in rows after each layout.
+  final void Function(int renderLine, int height) onHeight;
+
+  @override
+  RenderObject createRenderObject() =>
+      _RenderCardHeightProbe((height) => onHeight(renderLine, height));
+
+  @override
+  Object view() => child?.view() ?? '';
+}
+
+/// Render object for [_CardHeightProbe].
+///
+/// Lays the child out with unconstrained height and reports its rendered
+/// height back to the parent so scroll metrics can be corrected.
+class _RenderCardHeightProbe extends RenderBox {
+  _RenderCardHeightProbe(this._onHeight);
+
+  final void Function(int height) _onHeight;
+
+  @override
+  void layout(BoxConstraints constraints) {
+    super.layout(constraints);
+    if (children.isEmpty) return;
+
+    final child = children.first;
+    final childConstraints = BoxConstraints(
+      minWidth: constraints.hasBoundedWidth
+          ? constraints.maxWidth
+          : constraints.minWidth,
+      maxWidth: constraints.maxWidth,
+      minHeight: 0,
+      maxHeight: double.infinity,
+    );
+    child.layout(childConstraints);
+
+    size = constraints.constrain(
+      Size(
+        constraints.hasBoundedWidth ? constraints.maxWidth : child.size.width,
+        constraints.maxHeight,
+      ),
+    );
+
+    _onHeight(child.size.height.toInt());
+  }
+
+  @override
+  String paint() {
+    if (children.isEmpty) return '';
+    return children.first.paint();
+  }
+}
 
 /// Controller for [GitDiffViewer].
 ///
@@ -65,6 +161,9 @@ class GitDiffController {
   /// Comment line highlights in the current model.
   List<DiffCommentLineHighlight> get commentHighlights =>
       _model.commentHighlights;
+
+  /// The full list of rendered diff lines (before viewport clipping).
+  List<String> get renderedLines => _model.renderedLines;
 
   /// Returns the nearest comment anchor at or after [renderLine].
   DiffCommentAnchor? nearestCommentAnchor(int renderLine) {
@@ -261,6 +360,7 @@ class GitDiffViewer extends StatefulWidget {
     this.scrollable = true,
     this.fitContentHeight = false,
     this.commentHighlights = const <DiffCommentLineHighlight>[],
+    this.commentBlocks = const [],
     this.onCommentAnchorSelected,
     super.key,
   });
@@ -297,11 +397,17 @@ class GitDiffViewer extends StatefulWidget {
   /// Optional controller for external access to the diff model.
   final GitDiffController? controller;
 
-  /// Optional external widget scroll controller.
+  /// Optional external scroll controller.
   ///
   /// When supplied, this controller owns the vertical scroll offset so parent
   /// layouts can drive the diff viewer without forcing full-content rendering.
-  final WidgetScrollController? scrollController;
+  final ScrollController? scrollController;
+
+  /// Inline comment blocks rendered as widgets between diff lines. When empty,
+  /// the viewer renders the diff as a plain text proxy. When non-empty, the
+  /// viewer composes a scrollable column of diff lines interleaved with these
+  /// rich comment widgets.
+  final List<DiffCommentBlock> commentBlocks;
 
   /// Whether to handle keyboard input for scrolling.
   final bool handleKeys;
@@ -331,18 +437,85 @@ class GitDiffViewer extends StatefulWidget {
 class _GitDiffViewerState extends State<GitDiffViewer> {
   late GitDiffController _controller;
   bool _controllerAttached = false;
-  WidgetScrollController? _scrollController;
+  ScrollController? _scrollController;
   bool _scrollControllerAttached = false;
   String _lastDiff = '';
   Theme? _cachedTheme;
   bool? _cachedHasDarkBackground;
   DiffStyles? _cachedThemeStyles;
 
+  /// Maps a composed content row (diff line or comment-card row) back to the
+  /// underlying diff render-line index. Built during [build] when comment
+  /// blocks are present so tap handling can resolve the clicked row to a
+  /// commentable anchor.
+  Map<int, int> _rowToRenderedLine = const {};
+
+  /// Inverse of [_rowToRenderedLine]: maps a diff render-line to the composed
+  /// content row where that diff line starts. Used to translate the external
+  /// scroll controller (render-line space, owned by the parent/dashboard) into
+  /// the inner SingleChildScrollView's content-row space.
+  Map<int, int> _renderLineToContentRow = const {};
+
+  /// Internal scroll controller owning the SingleChildScrollView's content-row
+  /// space. Kept separate from [widget.scrollController] (render-line space) so
+  /// the two coordinate systems never diverge by the comment-block heights.
+  WidgetScrollController? _commentScrollController;
+
+  /// Guards the two-way sync between the external and internal scroll
+  /// controllers against feedback loops.
+  bool _syncingScroll = false;
+
+  bool get _hasCommentBlocks => widget.commentBlocks.isNotEmpty;
+
+  int get _totalCommentBlockHeight => _measuredCommentHeightTotal > 0
+      ? _measuredCommentHeightTotal
+      : widget.commentBlocks.fold(0, (sum, b) => sum + b.height);
+
+  /// Real total height (in content rows) of all comment cards, sourced from the
+  /// actual layout via [_CardHeightProbe] (which reports each card's true
+  /// rendered height, including async `Image` galleries). Until the first layout
+  /// reports, this is 0 and [_totalCommentBlockHeight] falls back to the estimate
+  /// sum — never worse than the pre-measurement behavior.
+  int _measuredCommentHeightTotal = 0;
+
+  /// True rendered heights (rows) of comment cards, reported by [_CardHeightProbe]
+  /// after the real layout runs. Keyed by the card's anchor render-line. Using
+  /// the real layout (instead of a build-time snapshot) is what keeps the
+  /// row→render-line map aligned with what is actually on screen, even when cards
+  /// contain async content (e.g. `NetworkImage` galleries) that is absent from a
+  /// build-time measurement.
+  Map<int, int> _realCardHeights = const {};
+
+  /// Guards the deferred relayout triggered when a probe reports a new height, so
+  /// we schedule at most one `setState` per change.
+  bool _relayoutScheduled = false;
+
+  /// Records a card's real rendered [height] (rows) for [renderLine] and, if it
+  /// differs from what the map currently uses, schedules a single rebuild so the
+  /// row→render-line map picks up the corrected height. Deferred via a microtask
+  /// to avoid calling `setState` during the layout phase.
+  void _reportCardHeight(int renderLine, int height) {
+    if (_realCardHeights[renderLine] == height) return;
+    _realCardHeights = {..._realCardHeights, renderLine: height};
+    _scheduleRelayout();
+  }
+
+  void _scheduleRelayout() {
+    if (_relayoutScheduled) return;
+    _relayoutScheduled = true;
+    Future.microtask(() {
+      _relayoutScheduled = false;
+      if (mounted) setState(() {});
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _attachController(widget.controller);
     _attachScrollController(widget.scrollController);
+    _commentScrollController = WidgetScrollController();
+    _commentScrollController!.addListener(_onCommentScrollChanged);
     _syncController();
   }
 
@@ -356,6 +529,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
       _attachScrollController(widget.scrollController);
     }
     _syncController();
+    if (_hasCommentBlocks) _syncCommentScrollFromExternal();
     _updateThemeStyles();
     return null;
   }
@@ -375,7 +549,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     _controllerAttached = true;
   }
 
-  void _attachScrollController(WidgetScrollController? controller) {
+  void _attachScrollController(ScrollController? controller) {
     if (_scrollControllerAttached) {
       _scrollController?.removeListener(_onExternalScrollChanged);
     }
@@ -475,6 +649,7 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     if (_scrollControllerAttached) {
       _scrollController?.removeListener(_onExternalScrollChanged);
     }
+    _commentScrollController?.removeListener(_onCommentScrollChanged);
     super.dispose();
   }
 
@@ -516,11 +691,13 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
 
   void _onChanged() {
     _syncExternalScrollMetrics();
+    if (_hasCommentBlocks) _syncCommentScrollFromExternal();
     setState(() {});
   }
 
   void _onExternalScrollChanged() {
     _syncExternalScrollController();
+    if (_hasCommentBlocks) _syncCommentScrollFromExternal();
     setState(() {});
   }
 
@@ -528,29 +705,132 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     final scroll = _scrollController;
     if (scroll == null) return;
     _syncExternalScrollMetrics();
-    _controller.setScrollOffset(scroll.offset);
+    // When comment blocks are present the viewer composes its own scrollable
+    // content (diff lines + widget cards) and the external scroll controller
+    // drives that directly; the model's viewport is not used for display, so
+    // we must not push the offset back into the model (it would just move an
+    // unused viewport).
+    if (_hasCommentBlocks) return;
+    final offset = scroll.offset;
+    if (TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.scroll)) {
+      TuiTrace.event(
+        'git_diff.sync_scroll_to_model',
+        tag: TraceTag.scroll,
+        fields: <String, Object?>{'scrollOffset': offset},
+      );
+    }
+    _controller.setScrollOffset(offset);
   }
 
   void _syncExternalScrollMetrics() {
-    final scroll = _scrollController;
-    if (scroll is! WidgetScrollController) return;
-    scroll.updateMetrics(
+    final external = _scrollController;
+    if (external is! WidgetScrollController) return;
+    // The external controller stays in render-line space (owned by the
+    // parent/dashboard), so its extent is just the model's line count. This
+    // keeps keyboard navigation / reveal math consistent with anchor
+    // render-lines and lets it scroll past comment blocks.
+    final totalLineCount = _controller.model.viewport.totalLineCount;
+    external.updateMetrics(
       viewportExtent: _controller.model.height,
-      contentExtent: _controller.totalLineCount,
+      contentExtent: totalLineCount,
     );
+    // The internal controller owns the composed content (diff lines + comment
+    // cards), so its extent includes the comment-block heights.
+    final internal = _commentScrollController;
+    if (internal != null) {
+      internal.updateMetrics(
+        viewportExtent: _controller.model.height,
+        contentExtent: totalLineCount + _totalCommentBlockHeight,
+      );
+    }
+  }
+
+  /// Translates the external scroll controller (render-line space) into the
+  /// internal SingleChildScrollView controller (content-row space).
+  void _syncCommentScrollFromExternal() {
+    final external = _scrollController;
+    final internal = _commentScrollController;
+    if (external == null || internal == null) return;
+    final target = _contentRowForRenderLine(external.offset);
+    if (_syncingScroll) return;
+    _syncingScroll = true;
+    try {
+      if (internal.offset != target) internal.jumpTo(target);
+    } finally {
+      _syncingScroll = false;
+    }
+  }
+
+  /// Translates wheel/scroll on the internal SingleChildScrollView back into
+  /// the external controller's render-line space.
+  void _onCommentScrollChanged() {
+    final external = _scrollController;
+    final internal = _commentScrollController;
+    if (external == null || internal == null || !_hasCommentBlocks) return;
+    final target = _renderLineForContentRow(internal.offset);
+    if (_syncingScroll) return;
+    _syncingScroll = true;
+    try {
+      if (external.offset != target) external.jumpTo(target);
+    } finally {
+      _syncingScroll = false;
+    }
+  }
+
+  int _contentRowForRenderLine(int renderLine) {
+    if (_renderLineToContentRow.isEmpty) return renderLine;
+    final row = _renderLineToContentRow[renderLine];
+    if (row != null) return row;
+    final keys = _renderLineToContentRow.keys;
+    if (renderLine < keys.reduce(math.min)) return 0;
+    final maxKey = keys.reduce(math.max);
+    return _renderLineToContentRow[maxKey]! + (renderLine - maxKey);
+  }
+
+  int _renderLineForContentRow(int contentRow) {
+    final rl = _rowToRenderedLine[contentRow];
+    if (rl != null) return rl;
+    final keys = _rowToRenderedLine.keys;
+    if (keys.isEmpty) return contentRow;
+    if (contentRow < keys.reduce(math.min)) return 0;
+    final maxKey = keys.reduce(math.max);
+    if (contentRow > maxKey) {
+      return _rowToRenderedLine[maxKey]! + (contentRow - maxKey);
+    }
+    return contentRow;
   }
 
   void _syncExternalOffsetFromModel() {
     final scroll = _scrollController;
     if (scroll == null) return;
     _syncExternalScrollMetrics();
-    if (scroll.offset != _controller.scrollOffset) {
-      scroll.jumpTo(_controller.scrollOffset);
+    final offset = _controller.scrollOffset;
+    if (TuiTrace.enabled && TuiTrace.isTagEnabled(TraceTag.scroll)) {
+      TuiTrace.event(
+        'git_diff.sync_offset_from_model',
+        tag: TraceTag.scroll,
+        fields: <String, Object?>{
+          'modelScrollOffset': offset,
+          'scrollOffsetBefore': scroll.offset,
+          'jumpTo': scroll.offset != offset,
+        },
+      );
+    }
+    if (scroll.offset != offset) {
+      scroll.jumpTo(offset);
     }
   }
 
   @override
   Cmd? handleUpdate(Msg msg) {
+    if (_hasCommentBlocks) {
+      // When comment blocks are present the diff is rendered as a
+      // SingleChildScrollView child. The framework forwards the message to
+      // that child first, so it handles wheel/key scrolling on its own. We
+      // only need taps to reach the GestureDetector wrapping it, which also
+      // happens via child dispatch — so we stay out of the way here.
+      return null;
+    }
     if (!widget.scrollable &&
         (msg is KeyMsg || msg is MouseMsg || msg is HitTestMouseMsg)) {
       return null;
@@ -620,7 +900,30 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     }
 
     final text = Text(model.view(), softWrap: false);
-    if (widget.onCommentAnchorSelected == null) return text;
+    if (!_hasCommentBlocks && widget.onCommentAnchorSelected == null) {
+      return text;
+    }
+
+    if (_hasCommentBlocks) {
+      // Compose a scrollable column of diff lines interleaved with rich
+      // comment widgets. The SingleChildScrollView owns vertical scrolling via
+      // its own internal controller (content-row space); the external scroll
+      // controller (render-line space) is kept in sync via [_syncCommentScrollFromExternal].
+      // The GestureDetector captures taps so we can resolve the clicked row to
+      // a commentable anchor.
+      final content = _buildContent();
+      _syncCommentScrollFromExternal();
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: _handleTapDown,
+        child: SingleChildScrollView(
+          controller: _commentScrollController,
+          child: content,
+        ),
+      );
+    }
+
+    // No comment blocks, but tap-to-select is enabled: wrap the plain text.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: _handleTapDown,
@@ -628,14 +931,131 @@ class _GitDiffViewerState extends State<GitDiffViewer> {
     );
   }
 
+  /// Builds the composed content column: one [Text] per diff render-line, with
+  /// comment cards inserted directly after the diff line they are anchored to.
+  ///
+  /// Also records [_rowToRenderedLine] so tap handling can map a clicked
+  /// content row back to the underlying diff render-line.
+  Widget _buildContent() {
+    final model = _controller.model;
+    final renderedLines = model.renderedLines;
+    final children = <Widget>[];
+    final rowToRendered = <int, int>{};
+    final renderLineToContent = <int, int>{};
+
+    final sorted = [...widget.commentBlocks]
+      ..sort((a, b) => a.renderLine.compareTo(b.renderLine));
+    var blockIdx = 0;
+    var row = 0;
+    var measuredTotal = 0;
+
+    for (var i = 0; i < renderedLines.length; i++) {
+      renderLineToContent[i] = row;
+      children.add(Text(renderedLines[i], softWrap: false));
+      rowToRendered[row] = i;
+      row++;
+
+      while (blockIdx < sorted.length && sorted[blockIdx].renderLine == i) {
+        final block = sorted[blockIdx];
+        // Use the most recently measured real height (from [_CardHeightProbe])
+        // so async content such as loaded images is accounted for. Fall back to
+        // the estimate before the first real measurement arrives.
+        final cardRows = _realCardHeights[block.renderLine] ?? block.height;
+        measuredTotal += cardRows;
+        children.add(
+          _CardHeightProbe(
+            renderLine: block.renderLine,
+            onHeight: _reportCardHeight,
+            child: _positionedComment(block, model),
+          ),
+        );
+        for (var h = 0; h < cardRows; h++) {
+          rowToRendered[row] = i;
+          row++;
+        }
+        blockIdx++;
+      }
+    }
+
+    _measuredCommentHeightTotal = measuredTotal;
+
+    _rowToRenderedLine = rowToRendered;
+    _renderLineToContentRow = renderLineToContent;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  }
+
+  /// Wraps a comment [block]'s child so it aligns under the correct side in
+  /// side-by-side view. In unified view the card spans the full width.
+  Widget _positionedComment(DiffCommentBlock block, GitDiffModel model) {
+    if (model.viewMode != DiffViewMode.sideBySide || block.side == null) {
+      return block.child;
+    }
+    // In side-by-side each panel is half the content width. Pad the card to
+    // sit under the panel matching its side.
+    final half = (model.width / 2).ceil();
+    if (block.side == DiffCommentSide.right) {
+      return Padding(
+        padding: EdgeInsets.only(left: half),
+        child: block.child,
+      );
+    }
+    return Padding(
+      padding: EdgeInsets.only(right: half),
+      child: block.child,
+    );
+  }
+
   Cmd? _handleTapDown(TapDownDetails details) {
-    final localY = details.localPosition.dy.floor();
     final localX = details.localPosition.dx.floor();
-    final renderLine = _controller.scrollOffset + localY;
+    // In block mode the content is a column of per-line Text widgets, so the
+    // hit-test local Y is relative to the deepest Text (~0). Derive the
+    // viewer-relative row from the global pointer position instead.
+    final y = _hasCommentBlocks
+        ? (details.globalPosition.dy - _viewerGlobalTopY()).floor()
+        : details.localPosition.dy.floor();
+    // Map the tapped content row back to a diff render-line. When comment
+    // blocks are present, the content rows include the comment cards, so we
+    // consult the row->render-line map built during layout. The scroll offset
+    // is the inner controller's content-row offset in block mode.
+    final offset = _hasCommentBlocks
+        ? (_commentScrollController?.offset ?? 0)
+        : _controller.scrollOffset;
+    final contentRow = offset + y;
+    final renderLine =
+        _rowToRenderedLine[contentRow] ??
+        (contentRow < _controller.model.renderedLines.length
+            ? contentRow
+            : _controller.model.renderedLines.length - 1);
     final side = _sideForLocalX(localX);
-    final anchor = _controller.commentAnchorAt(renderLine, side: side);
+    // Only select a comment anchor when the tapped row maps exactly to one, so
+    // tapping a diff line below a comment does not snap to (and jump to) the
+    // comment card. Tapping a comment card row still resolves to its anchor
+    // because the map yields that anchor's render-line.
+    final anchor = _controller.model.commentAnchors
+        .where(
+          (a) => a.renderLine == renderLine && (side == null || a.side == side),
+        )
+        .firstOrNull;
     if (anchor == null) return null;
     return widget.onCommentAnchorSelected?.call(anchor);
+  }
+
+  /// Global Y (screen space) of the top of this viewer, used to convert a
+  /// pointer's global position into a viewer-relative row when per-line Text
+  /// widgets make the hit-test local Y unreliable.
+  double _viewerGlobalTopY() {
+    final el = elementOf(widget);
+    if (el == null) return 0;
+    RenderObject? current = el.renderObject;
+    var top = 0.0;
+    while (current != null) {
+      top += current.offset.dy;
+      current = current.parent;
+    }
+    return top;
   }
 
   DiffCommentSide? _sideForLocalX(int localX) {

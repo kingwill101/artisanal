@@ -5,7 +5,6 @@ import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 
-
 /// A simple alert dialog with a title, message, and OK button.
 ///
 /// Uses [DialogThemeData] for styling when available.

@@ -21,8 +21,7 @@ import '../layout/layout.dart' show Text, TextAlign, TextOverflow;
 import '../rendering/render_object.dart'
     show LeafRenderObjectWidget, RenderBox, RenderObject;
 import '../layout/geometry.dart' show BoxConstraints, Size;
-import '../selection/selection.dart'
-    show SelectableView, SelectionController;
+import '../selection/selection.dart' show SelectableView, SelectionController;
 import '../theme/theme.dart' show Theme, currentTheme;
 import '../theme/theme_scope.dart' show ThemeScope;
 import '../core/widget.dart';

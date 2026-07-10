@@ -57,9 +57,7 @@ class _HyperlinkTextShowcaseState extends State<HyperlinkTextShowcase> {
 
           // -- Bare URL (no label) --
           Text('Bare URL (no label)', style: theme.titleMedium),
-          HyperlinkText(
-            url: 'https://example.com/some/long/path?query=value',
-          ),
+          HyperlinkText(url: 'https://example.com/some/long/path?query=value'),
           Divider(width: 60),
 
           // -- Custom colors --

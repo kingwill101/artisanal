@@ -4,7 +4,6 @@ import '../core/framework.dart'
 import '../core/widget.dart';
 import '../media/media_query.dart' show MediaQuery;
 
-
 /// A widget that provides its parent's constraints to a builder callback.
 ///
 /// Use [LayoutBuilder] to build widget trees that depend on the available

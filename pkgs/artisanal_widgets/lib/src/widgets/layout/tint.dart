@@ -1,11 +1,11 @@
-import 'package:artisanal/uv.dart' show UvColor, StyledString, UvStyle, UvRgb, UvIndexed256, UvBasic16, Canvas;
+import 'package:artisanal/uv.dart'
+    show UvColor, StyledString, UvStyle, UvRgb, UvIndexed256, UvBasic16, Canvas;
 
 import '../rendering/render_object.dart';
 import '../theme.dart';
 import '../style.dart';
 import '_layout_utils.dart' show renderWidget, colorToUvColor;
 import 'geometry.dart';
-
 
 final Map<UvColor, Color> _uvToStyleColorCache = <UvColor, Color>{};
 

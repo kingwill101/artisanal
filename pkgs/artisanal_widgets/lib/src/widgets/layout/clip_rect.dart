@@ -3,7 +3,6 @@ import '_layout_utils.dart';
 import 'geometry.dart';
 import '../rendering/render_object.dart';
 
-
 /// A widget that clips its child to its allocated size.
 ///
 /// Any content that extends beyond the width or height of the clip region
@@ -18,7 +17,7 @@ import '../rendering/render_object.dart';
 /// )
 /// ```
 class ClipRect extends SingleChildRenderObjectWidget {
-  ClipRect({this.width, this.height, super.child, super.key});
+  ClipRect({this.width, this.height, this.top, super.child, super.key});
 
   /// Maximum width in columns. If null, uses child's natural width.
   final int? width;
@@ -26,9 +25,14 @@ class ClipRect extends SingleChildRenderObjectWidget {
   /// Maximum height in rows. If null, uses child's natural height.
   final int? height;
 
+  /// Number of rows to drop from the top before applying [height]. This lets
+  /// [ClipRect] render a middle band `[top, top + height)` of the child, which
+  /// is useful for scrolling a tall child through a fixed window.
+  final int? top;
+
   @override
   RenderObject createRenderObject() {
-    return _RenderClipRect(clipWidth: width, clipHeight: height);
+    return _RenderClipRect(clipWidth: width, clipHeight: height, clipTop: top);
   }
 
   @override
@@ -36,21 +40,23 @@ class ClipRect extends SingleChildRenderObjectWidget {
     final clip = renderObject as _RenderClipRect;
     clip
       ..clipWidth = width
-      ..clipHeight = height;
+      ..clipHeight = height
+      ..clipTop = top;
   }
 
   @override
   Object view() {
     final content = child != null ? renderWidget(child!) : '';
-    return _clipContent(content, width, height);
+    return _clipContent(content, width, height, top);
   }
 }
 
 class _RenderClipRect extends RenderBox {
-  _RenderClipRect({this.clipWidth, this.clipHeight});
+  _RenderClipRect({this.clipWidth, this.clipHeight, this.clipTop});
 
   int? clipWidth;
   int? clipHeight;
+  int? clipTop;
   String? _lastPaint;
 
   RenderObject? get _child => children.isEmpty ? null : children.first;
@@ -60,7 +66,7 @@ class _RenderClipRect extends RenderBox {
     super.layout(constraints);
     _child?.layout(constraints);
     final content = _child?.paint() ?? '';
-    _lastPaint = _clipContent(content, clipWidth, clipHeight);
+    _lastPaint = _clipContent(content, clipWidth, clipHeight, clipTop);
     size = constraints.constrain(
       Size(
         Layout.getWidth(_lastPaint!).toDouble(),
@@ -74,16 +80,25 @@ class _RenderClipRect extends RenderBox {
     final cached = _lastPaint;
     if (cached != null) return cached;
     final content = _child?.paint() ?? '';
-    return _clipContent(content, clipWidth, clipHeight);
+    return _clipContent(content, clipWidth, clipHeight, clipTop);
   }
 }
 
-/// Clips [content] to the given [maxWidth] and [maxHeight].
-String _clipContent(String content, int? maxWidth, int? maxHeight) {
+/// Clips [content] to the given [maxWidth] and [maxHeight], dropping [top]
+/// rows from the top first.
+String _clipContent(String content, int? maxWidth, int? maxHeight, int? top) {
   if (content.isEmpty) return '';
-  if (maxWidth == null && maxHeight == null) return content;
+  if (maxWidth == null && maxHeight == null && (top == null || top <= 0)) {
+    return content;
+  }
 
   var result = content;
+
+  // Drop top rows before clipping height.
+  if (top != null && top > 0) {
+    final rows = result.split('\n');
+    result = rows.skip(top).join('\n');
+  }
 
   // Clip width: truncate each line to maxWidth columns (no ellipsis — hard clip).
   if (maxWidth != null && maxWidth > 0) {

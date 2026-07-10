@@ -4,7 +4,6 @@ import '../framework.dart';
 import '../theme/theme_scope.dart' show ThemeScope;
 import 'text.dart';
 
-
 /// A vertical line divider.
 ///
 /// Renders a vertical line using the specified character, repeated for

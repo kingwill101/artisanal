@@ -1,5 +1,3 @@
-
-
 class Alignment {
   const Alignment(this.x, this.y);
 

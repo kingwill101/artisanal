@@ -6,7 +6,6 @@ import '../rendering/render_object.dart';
 import '_layout_utils.dart';
 import 'geometry.dart';
 
-
 class RenderConstrainedBox extends RenderBox {
   RenderConstrainedBox({required this.additionalConstraints});
 

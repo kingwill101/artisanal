@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' ;
+import 'package:artisanal/tui.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 

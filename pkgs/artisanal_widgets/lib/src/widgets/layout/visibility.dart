@@ -1,6 +1,5 @@
 import '../core/widget.dart';
 
-
 class Visibility extends Widget {
   Visibility({
     required this.child,

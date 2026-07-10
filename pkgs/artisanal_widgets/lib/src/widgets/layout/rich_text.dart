@@ -5,7 +5,6 @@ import '../style.dart';
 import 'enums.dart';
 import 'text.dart';
 
-
 /// A widget that displays styled text using a [TextSpan] tree.
 ///
 /// This is the lower-level API for styled text. For simple strings use [Text];

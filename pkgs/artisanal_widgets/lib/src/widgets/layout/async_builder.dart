@@ -16,7 +16,6 @@ import '../core/framework.dart'
     show BuildContext, StatelessWidget, StatefulWidget, State;
 import '../core/widget.dart';
 
-
 enum AsyncConnectionState { none, waiting, active, done }
 
 final class AsyncSnapshot<T> {

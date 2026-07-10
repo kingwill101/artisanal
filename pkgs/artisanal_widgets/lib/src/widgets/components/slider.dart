@@ -6,7 +6,6 @@ import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg;
 import 'package:artisanal/widgets.dart';
 
-
 /// An immutable pair of values used by [RangeSlider].
 class RangeValues {
   const RangeValues(this.start, this.end) : assert(start <= end);

@@ -19,7 +19,6 @@ import '../core/widget.dart';
 import '../focus/focus.dart' show Focusable;
 import '../gestures/gestures.dart';
 
-
 class GestureDetector extends StatefulWidget {
   GestureDetector({
     required this.child,

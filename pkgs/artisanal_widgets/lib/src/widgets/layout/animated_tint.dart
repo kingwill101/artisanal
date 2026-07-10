@@ -19,9 +19,7 @@ import '../theme/theme.dart' show hasDarkBackground, currentTheme;
 import '../animation/animation_controller.dart';
 import '../animation/animation_mixin.dart';
 
-
 import 'tint.dart';
-
 
 /// A widget that applies an animated color tint over its child.
 ///

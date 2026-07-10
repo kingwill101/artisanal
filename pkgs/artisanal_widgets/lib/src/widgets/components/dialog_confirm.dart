@@ -5,7 +5,6 @@ import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 
-
 /// A simple yes/no confirmation dialog.
 ///
 /// Displays a title, message, and two buttons (Cancel / Confirm) with

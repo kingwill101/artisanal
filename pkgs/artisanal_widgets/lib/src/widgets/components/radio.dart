@@ -1,10 +1,8 @@
-
 import 'package:artisanal/terminal.dart' as terminal_keys;
 import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
-
 
 class Radio<T> extends StatefulWidget {
   Radio({

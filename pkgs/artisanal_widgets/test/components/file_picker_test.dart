@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart'
     show InterruptMsg, MouseAction, MouseButton, MouseMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';

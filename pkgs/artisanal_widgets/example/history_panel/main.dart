@@ -42,10 +42,7 @@ class _HistoryPanelShowcaseState extends State<HistoryPanelShowcase> {
   ];
 
   final _redoItems = <HistoryEntry>[
-    const HistoryEntry(
-      description: 'Reformat with dart format',
-      isRedo: true,
-    ),
+    const HistoryEntry(description: 'Reformat with dart format', isRedo: true),
     const HistoryEntry(description: 'Sort imports', isRedo: true),
     const HistoryEntry(description: 'Fix trailing comma', isRedo: true),
   ];
@@ -104,10 +101,7 @@ class _HistoryPanelShowcaseState extends State<HistoryPanelShowcase> {
               Divider(),
 
               // ── Compact Mode ──
-              Text(
-                'Compact Mode (default, limit=5)',
-                style: theme.titleMedium,
-              ),
+              Text('Compact Mode (default, limit=5)', style: theme.titleMedium),
               HistoryPanel(
                 title: 'Edit History',
                 undoItems: _undoItems,

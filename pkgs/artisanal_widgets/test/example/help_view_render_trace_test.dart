@@ -2,7 +2,6 @@ import 'dart:convert' show jsonEncode;
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'package:artisanal/style.dart' show Layout;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' as tui;
 import 'package:test/test.dart';

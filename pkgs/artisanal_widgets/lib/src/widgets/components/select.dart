@@ -1,9 +1,7 @@
-
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal/tui.dart' show Cmd;
 import 'package:artisanal/widgets.dart';
-
 
 /// An option for use with [Select] or [DropdownButton].
 class SelectOption<T> {

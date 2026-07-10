@@ -1,7 +1,6 @@
 import '../core/widget.dart';
 import 'enums.dart';
 
-
 class Flexible extends Widget {
   Flexible({
     required this.child,

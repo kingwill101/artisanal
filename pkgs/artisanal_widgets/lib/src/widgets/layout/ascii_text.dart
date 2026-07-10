@@ -1,14 +1,11 @@
-
 import 'package:artisanal/style.dart' hide Padding, Align;
 import 'ascii_font.dart';
 import 'enums.dart';
-import '../core/framework.dart'
-    show BuildContext, StatelessWidget;
+import '../core/framework.dart' show BuildContext, StatelessWidget;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';
 import 'text.dart';
-
 
 /// A widget that renders text using large ASCII art font glyphs.
 ///

@@ -3,7 +3,6 @@ import 'package:artisanal/style.dart' hide Padding, Align;
 import 'enums.dart';
 import 'row.dart';
 
-
 class HBox extends Row {
   HBox({
     required super.children,

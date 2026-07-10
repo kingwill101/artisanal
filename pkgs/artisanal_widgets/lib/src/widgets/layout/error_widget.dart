@@ -45,10 +45,7 @@ class TUIErrorWidget extends StatelessWidget {
       children.add(Text(details!, style: detailStyle));
     }
 
-    return Column(
-      crossAxisAlignment: .start,
-      children: children,
-    );
+    return Column(crossAxisAlignment: .start, children: children);
   }
 }
 

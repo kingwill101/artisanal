@@ -557,10 +557,7 @@ void main() {
         try {
           await tester.pumpWidget(Text('content'), debugOverlay: true);
 
-          RenderMetricsInjector.instance.setMetric(
-            'Key->Render p50',
-            '4.8ms',
-          );
+          RenderMetricsInjector.instance.setMetric('Key->Render p50', '4.8ms');
           RenderMetricsInjector.instance.setMetric('Queue depth', 2);
           tester.pump();
 

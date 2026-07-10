@@ -8,7 +8,6 @@ import 'package:artisanal_widgets/artisanal_widgets.dart';
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;
-import 'package:artisanal/bubbles.dart';
 import 'package:artisanal_widgets/widgets.dart' as w;
 
 /// Light-theme diff styles.

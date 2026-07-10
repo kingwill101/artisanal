@@ -1,8 +1,6 @@
-
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
-
 
 class Toast extends StatelessWidget {
   Toast({

@@ -1,7 +1,9 @@
 import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/editors.dart' show TextInputKeyMap, TextAreaKeyMap;
+import 'package:artisanal_widgets/editors.dart'
+    show TextInputKeyMap, TextAreaKeyMap;
 import 'package:test/test.dart';
 import 'package:artisanal/tui.dart';
+
 class _DemoKeyMap extends KeyMap {
   _DemoKeyMap() {
     final help = KeyBinding.withHelp(['?'], '?', 'help');
@@ -33,9 +35,7 @@ void main() {
       final app = ArtisanalApp(title: 'Demo', home: widget);
       final help = HelpView(keyMap: _DemoKeyMap());
       final picker = FilePicker(directory: '.');
-      final editor = TextEditor(
-        controller: TextAreaController(text: 'hello'),
-      );
+      final editor = TextEditor(controller: TextAreaController(text: 'hello'));
       final codeEditor = CodeEditor(
         controller: TextAreaController(text: 'void main() {}'),
       );
@@ -63,27 +63,24 @@ void main() {
         ),
       ],
     );
-    final diagnosticsSource =
-        TextPositionDiagnosticsSource.patternRules(
-          text: baseController,
-          rules: const [
-            TextPatternDiagnosticRule(
-              pattern: 'TODO',
-              severity: TextDiagnosticSeverity.warning,
-            ),
-          ],
-        );
-    final rangeDiagnosticsSource =
-        ValueNotifier<Iterable<TextDiagnosticRange>>(const []);
+    final diagnosticsSource = TextPositionDiagnosticsSource.patternRules(
+      text: baseController,
+      rules: const [
+        TextPatternDiagnosticRule(
+          pattern: 'TODO',
+          severity: TextDiagnosticSeverity.warning,
+        ),
+      ],
+    );
+    final rangeDiagnosticsSource = ValueNotifier<Iterable<TextDiagnosticRange>>(
+      const [],
+    );
     final positionDiagnosticsSource =
-        ValueNotifier<Iterable<TextPositionDiagnosticRange>>(
-          const [],
-        );
-    final rangeDiagnosticsBinding =
-        TextDiagnosticsBinding.fromRangeListenable(
-          controller: baseController,
-          diagnostics: rangeDiagnosticsSource,
-        );
+        ValueNotifier<Iterable<TextPositionDiagnosticRange>>(const []);
+    final rangeDiagnosticsBinding = TextDiagnosticsBinding.fromRangeListenable(
+      controller: baseController,
+      diagnostics: rangeDiagnosticsSource,
+    );
     final positionDiagnosticsBinding =
         TextDiagnosticsBinding.fromPositionListenable(
           controller: baseController,
@@ -107,9 +104,7 @@ void main() {
       layerKey: 'review',
       buildDecorations: (String text) => text.isEmpty
           ? const []
-          : const [
-              TextLineDecoration(lineIndex: 0, styleKey: 'review.line'),
-            ],
+          : const [TextLineDecoration(lineIndex: 0, styleKey: 'review.line')],
     );
     final textField = TextField(
       controller: TextEditingController(text: 'hello'),
@@ -152,10 +147,7 @@ void main() {
     expect(rangeDiagnosticsBinding, isA<TextDiagnosticsBinding>());
     expect(positionDiagnosticsBinding, isA<TextDiagnosticsBinding>());
     expect(decorationBinding, isA<TextDecorationLayerBinding>());
-    expect(
-      lineDecorationBinding,
-      isA<TextLineDecorationLayerBinding>(),
-    );
+    expect(lineDecorationBinding, isA<TextLineDecorationLayerBinding>());
 
     diagnosticsBinding.dispose();
     diagnosticsSource.dispose();
@@ -171,23 +163,15 @@ void main() {
       values: const [1, 2, 3],
       showGrid: true,
     );
-    final chart = LineChart(
-      values: const [1, 2, 3],
-      width: 12,
-      height: 4,
-    );
+    final chart = LineChart(values: const [1, 2, 3], width: 12, height: 4);
 
     expect(model, isA<ChartModel>());
     expect(chart, isA<LineChart>());
   });
 
   test('stable selection entrypoint exposes shared selection widgets', () {
-    final widget = SelectionArea(
-      child: SelectableText('select me'),
-    );
-    final rich = SelectableRichText(
-      text: const TextSpan(text: 'rich'),
-    );
+    final widget = SelectionArea(child: SelectableText('select me'));
+    final rich = SelectableRichText(text: const TextSpan(text: 'rich'));
     final view = SelectableView('generic');
 
     expect(widget, isA<SelectionArea>());

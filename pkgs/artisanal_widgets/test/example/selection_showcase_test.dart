@@ -1,4 +1,3 @@
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/selection.dart' as s;
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/artisanal_widgets.dart';

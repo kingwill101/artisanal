@@ -1,8 +1,6 @@
-
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Style;
 import 'package:artisanal/widgets.dart';
-
 
 /// An animated spinner indicator for loading states.
 ///

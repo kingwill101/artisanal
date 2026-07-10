@@ -6,7 +6,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
 
-
 /// Predefined fill/track character sets for [ProgressIndicator].
 enum ProgressStyle {
   /// Hash fill, dash track: `[####----]`

@@ -1,4 +1,3 @@
-import 'package:artisanal/terminal.dart' show KeyType;
 import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';

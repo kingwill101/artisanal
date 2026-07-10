@@ -6,7 +6,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
 
-
 /// A single item in a [DialogSelect] list.
 ///
 /// Generic over [T] so callers can attach a typed value to each item.

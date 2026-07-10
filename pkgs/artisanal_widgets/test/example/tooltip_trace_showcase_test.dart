@@ -1,5 +1,4 @@
 import 'package:artisanal/artisanal.dart';
-import 'package:artisanal/style.dart' show Style;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 

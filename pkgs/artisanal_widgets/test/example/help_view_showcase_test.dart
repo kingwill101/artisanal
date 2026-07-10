@@ -1,5 +1,3 @@
-import 'package:artisanal/style.dart' show BasicColor;
-import 'package:artisanal/terminal.dart' show StringTerminal;
 import 'package:artisanal_widgets/app.dart' as app;
 import 'package:artisanal/tui.dart' as runtime;
 import 'package:artisanal/tui.dart' show View, WindowSizeMsg;

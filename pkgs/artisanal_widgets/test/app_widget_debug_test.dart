@@ -14,7 +14,6 @@
 library;
 
 import 'package:artisanal/artisanal.dart';
-import 'package:artisanal/style.dart' show BasicColor;
 import 'package:artisanal_widgets/artisanal_widgets.dart' as w;
 import 'package:test/test.dart';
 

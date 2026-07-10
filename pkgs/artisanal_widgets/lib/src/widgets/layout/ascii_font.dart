@@ -1,6 +1,3 @@
-
-
-
 /// Represents a single ASCII art character glyph.
 class AsciiGlyph {
   const AsciiGlyph(this.lines);

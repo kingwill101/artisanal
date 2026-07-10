@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:artisanal/style.dart' hide Padding, Align;
-import 'package:artisanal/terminal.dart' show StringTerminal;
 import 'package:artisanal/tui.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
@@ -269,8 +268,10 @@ class _HelpScrollFixture extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = context.theme;
     final label = theme.labelSmall.copy()..foreground(theme.onBackground);
-    final contentWidth = (MediaQuery.of(context).size.width.round() - 4)
-        .clamp(32, 2000);
+    final contentWidth = (MediaQuery.of(context).size.width.round() - 4).clamp(
+      32,
+      2000,
+    );
     final dividerWidth = (contentWidth - 2).clamp(24, 2000);
 
     return Container(

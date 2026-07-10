@@ -4,10 +4,7 @@ import 'geometry.dart';
 import '../rendering/render_object.dart';
 import 'spacing.dart';
 
-
-
 import '_layout_utils.dart';
-
 
 class RenderAlign extends RenderBox {
   RenderAlign({

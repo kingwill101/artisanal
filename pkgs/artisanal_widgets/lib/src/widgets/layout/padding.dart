@@ -7,7 +7,6 @@ import '_layout_utils.dart';
 import 'geometry.dart';
 import 'spacing.dart';
 
-
 class RenderPadding extends RenderBox {
   RenderPadding({this.padding});
 

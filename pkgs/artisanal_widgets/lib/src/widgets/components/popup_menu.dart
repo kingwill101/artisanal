@@ -8,7 +8,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
 
-
 /// Base class for entries used in [PopupMenuButton].
 abstract class PopupMenuEntry<T> extends StatelessWidget {
   PopupMenuEntry({super.key});

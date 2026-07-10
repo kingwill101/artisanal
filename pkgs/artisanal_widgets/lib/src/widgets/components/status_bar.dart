@@ -1,7 +1,5 @@
-
 import 'package:artisanal/style.dart' show Color;
 import 'package:artisanal/widgets.dart';
-
 
 /// A horizontal bar that displays a row of [KeyHint] items.
 ///

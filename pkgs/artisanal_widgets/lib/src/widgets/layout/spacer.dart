@@ -1,7 +1,6 @@
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 
-
 class Spacer extends LeafRenderObjectWidget {
   Spacer({this.size = 1, this.fill = ' ', this.flex, super.key});
 

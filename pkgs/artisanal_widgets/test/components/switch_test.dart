@@ -1,5 +1,4 @@
 import 'package:artisanal/tui.dart' show Cmd;
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';
 

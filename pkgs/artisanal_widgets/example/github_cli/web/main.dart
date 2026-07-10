@@ -1,6 +1,4 @@
 import 'package:artisanal/artisanal.dart';
-import 'package:artisanal_widgets/artisanal_widgets.dart';
-import 'package:artisanal_widgets/widgets.dart' show WidgetApp;
 import 'package:github_cli/src/app/dashboard.dart';
 import 'package:github_cli/src/app/pull_request_view.dart';
 import 'package:github_cli/src/client/client_http.dart';

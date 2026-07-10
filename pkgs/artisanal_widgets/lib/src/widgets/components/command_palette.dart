@@ -7,7 +7,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border;
 
-
 /// A single item in a [CommandPalette].
 class CommandPaletteItem {
   const CommandPaletteItem({

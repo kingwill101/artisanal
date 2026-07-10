@@ -1,5 +1,4 @@
 import 'package:artisanal/terminal.dart' as terminal_keys;
-import 'package:artisanal/artisanal.dart';
 import 'package:artisanal/tui.dart' show InterruptMsg, KeyMsg;
 import 'package:artisanal_widgets/artisanal_widgets.dart';
 import 'package:test/test.dart';

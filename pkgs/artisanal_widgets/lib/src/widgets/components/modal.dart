@@ -5,7 +5,6 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style, Colors, Layout;
 
-
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '
   'Will be removed in a future release.',

@@ -25,7 +25,6 @@ import '../rendering/render_layout.dart';
 import '../core/widget.dart';
 import '../theme/theme.dart' show hasDarkBackground, currentTheme;
 
-
 typedef MarkdownLinkTapCallback = Cmd? Function(String url);
 
 final class _MarkdownLinkOpenedMsg extends Msg {
