@@ -4,7 +4,6 @@ import 'package:artisanal/src/uv/uv.dart';
 import 'package:artisanal/src/unicode/width.dart';
 import 'package:test/test.dart';
 
-
 final class _MockScreen implements Screen {
   _MockScreen(int width, int height)
     : _buffer = Buffer.create(width, height),

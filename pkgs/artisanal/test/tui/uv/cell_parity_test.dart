@@ -4,7 +4,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-
 void main() {
   group('Cell parity', () {
     test('ConvertStyle', () {

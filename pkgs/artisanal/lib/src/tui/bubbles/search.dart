@@ -153,7 +153,7 @@ class SearchKeyMap extends KeyMap {
            KeyBinding(
              keys: ['esc'],
              help: Help(key: 'esc', desc: 'cancel'),
-            ) {
+           ) {
     shortHelp = [this.up, this.down, this.select, this.cancel];
     fullHelp = [
       [this.up, this.down, this.home, this.end],
@@ -184,8 +184,6 @@ class SearchKeyMap extends KeyMap {
 
   /// Cancel search.
   final KeyBinding cancel;
-
-
 }
 
 /// Styles for the search component.
@@ -330,7 +328,7 @@ class MultiSearchKeyMap extends SearchKeyMap {
            KeyBinding(
              keys: ['enter'],
              help: Help(key: KeyboardChars.enter, desc: 'confirm'),
-            ) {
+           ) {
     shortHelp = [up, down, this.toggle, this.confirm, cancel];
     fullHelp = [
       [up, down, home, end],
@@ -346,8 +344,6 @@ class MultiSearchKeyMap extends SearchKeyMap {
 
   /// Confirm multi-selection.
   final KeyBinding confirm;
-
-
 }
 
 /// A search/filter component following the Model architecture.

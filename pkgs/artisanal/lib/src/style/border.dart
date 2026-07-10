@@ -34,10 +34,10 @@ final class BorderMetrics {
   });
 
   const BorderMetrics.none()
-      : leftCells = 0,
-        rightCells = 0,
-        topRows = 0,
-        bottomRows = 0;
+    : leftCells = 0,
+      rightCells = 0,
+      topRows = 0,
+      bottomRows = 0;
 
   final int leftCells;
   final int rightCells;

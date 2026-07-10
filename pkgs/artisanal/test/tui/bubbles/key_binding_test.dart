@@ -281,10 +281,13 @@ void main() {
 
     test('calls handler and returns command on match', () {
       var called = false;
-      final binding = KeyBinding(keys: ['up'], handler: () {
-        called = true;
-        return Cmd.quit();
-      });
+      final binding = KeyBinding(
+        keys: ['up'],
+        handler: () {
+          called = true;
+          return Cmd.quit();
+        },
+      );
       final msg = KeyMsg(Key(KeyType.up));
       final cmd = binding.activate(msg);
       expect(called, isTrue);
@@ -340,34 +343,42 @@ void main() {
       });
 
       test('returns null when binding has no handler', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up']),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up']),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.up));
         expect(keyMap.handle(msg), isNull);
       });
 
       test('returns command from matching binding handler', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up'], handler: () => Cmd.quit()),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up'], handler: () => Cmd.quit()),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.up));
         final cmd = keyMap.handle(msg);
         expect(cmd, isNotNull);
       });
 
       test('returns null for non-matching key', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up'], handler: () => Cmd.quit()),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up'], handler: () => Cmd.quit()),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.down));
         expect(keyMap.handle(msg), isNull);
       });
 
       test('skips disabled binding', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['q'], handler: () => Cmd.quit(), disabled: true),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['q'], handler: () => Cmd.quit(), disabled: true),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.runes, runes: [0x71]));
         expect(keyMap.handle(msg), isNull);
       });
@@ -382,9 +393,11 @@ void main() {
       });
 
       test('returns null for no match', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up']),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up']),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.enter));
         expect(keyMap.firstMatch(msg), isNull);
       });
@@ -405,35 +418,48 @@ void main() {
       });
 
       test('returns false when binding has no action', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up']),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up']),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.up));
         expect(keyMap.intercept(msg), isFalse);
       });
 
       test('calls action and returns true on match', () {
         var called = false;
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up'], action: () { called = true; }),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(
+              keys: ['up'],
+              action: () {
+                called = true;
+              },
+            ),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.up));
         expect(keyMap.intercept(msg), isTrue);
         expect(called, isTrue);
       });
 
       test('returns false for non-matching key', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up'], action: () {}),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up'], action: () {}),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.down));
         expect(keyMap.intercept(msg), isFalse);
       });
 
       test('skips disabled binding', () {
-        final keyMap = KeyMap(shortHelp: [
-          KeyBinding(keys: ['up'], action: () {}, disabled: true),
-        ]);
+        final keyMap = KeyMap(
+          shortHelp: [
+            KeyBinding(keys: ['up'], action: () {}, disabled: true),
+          ],
+        );
         final msg = KeyMsg(Key(KeyType.up));
         expect(keyMap.intercept(msg), isFalse);
       });
@@ -448,9 +474,9 @@ void main() {
       test('can be set via constructor', () {
         final prefix = KeyBinding(keys: ['ctrl+x']);
         final sBinding = KeyBinding(keys: ['s']);
-        final keyMap = KeyMap(chords: [
-          (prefix: prefix, key: sBinding, id: 'save'),
-        ]);
+        final keyMap = KeyMap(
+          chords: [(prefix: prefix, key: sBinding, id: 'save')],
+        );
         expect(keyMap.chords, hasLength(1));
         expect(keyMap.chords!.first.id, 'save');
         expect(keyMap.chords!.first.prefix, same(prefix));

@@ -16,10 +16,9 @@ extension ColorRgbBridge on Color {
     return switch (this) {
       final BasicColor c => _basicToRgb(c),
       final AnsiColor c => _ansiToRgb(c),
-      final AdaptiveColor c =>
-        (hasDarkBackground ? c.dark : c.light).toRgb(
-          hasDarkBackground: hasDarkBackground,
-        ),
+      final AdaptiveColor c => (hasDarkBackground ? c.dark : c.light).toRgb(
+        hasDarkBackground: hasDarkBackground,
+      ),
       final CompleteColor c => _hexToRgb(c.trueColor),
       final CompleteAdaptiveColor c =>
         (hasDarkBackground ? c.dark : c.light).toRgb(

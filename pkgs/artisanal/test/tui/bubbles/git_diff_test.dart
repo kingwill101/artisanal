@@ -41,6 +41,30 @@ index 3333333..4444444 100644
 -  int y = 1;
 -  int z = 2;
 +  int y = 10;
+  }''';
+
+/// Single-file diff with two distant hunks, used to verify inline-comment
+/// anchors land on the correct rendered row rather than a nearby hunk header.
+const _multiHunkDiff = '''
+diff --git a/lib/main.dart b/lib/main.dart
+index abc1234..def5678 100644
+--- a/lib/main.dart
++++ b/lib/main.dart
+@@ -1,5 +1,6 @@
+ import 'dart:io';
+
+-void main() {
++void main(List<String> args) {
++  print('first hunk change');
+   exit(0);
+ }
+@@ -40,4 +41,5 @@ class Processor {
+   void run() {
+     setup();
+-    process();
++    process();
++    log('second hunk change');
+   }
  }''';
 
 /// Diff with no-newline-at-eof marker.
@@ -328,6 +352,68 @@ void main() {
           Style.stripAnsi(highlighted.view()),
           Style.stripAnsi(base.view()),
         );
+      });
+
+      test('anchors map to the correct rendered row in multi-hunk diffs', () {
+        final model = GitDiffModel(width: 80).setDiff(_multiHunkDiff);
+        final rendered = model.renderedLines;
+
+        // Every anchor must index the FIRST rendered row of its logical line
+        // (the one containing the start of the content), never a hunk/file
+        // header or a wrapped continuation. This guards against the position
+        // drift that placed comments under the wrong hunk header.
+        for (final anchor in model.commentAnchors) {
+          expect(anchor.renderLine, inInclusiveRange(0, rendered.length - 1));
+          final row = Style.stripAnsi(rendered[anchor.renderLine]);
+          final prefix = anchor.content.length > 10
+              ? anchor.content.substring(0, 10)
+              : anchor.content;
+          expect(
+            row,
+            contains(prefix),
+            reason:
+                'anchor for ${anchor.path}:${anchor.line} '
+                '(${anchor.kind}) did not start on row '
+                '${anchor.renderLine}: ${row.trim()}',
+          );
+        }
+
+        // A comment in the second hunk must sit after the second hunk header,
+        // not near the first hunk.
+        final secondHunkAnchor = model.commentAnchors.singleWhere(
+          (anchor) => anchor.content == "    log('second hunk change');",
+        );
+        final hunkHeaders = rendered
+            .asMap()
+            .entries
+            .where((e) => e.value.contains('@@'))
+            .map((e) => e.key)
+            .toList();
+        final secondHunkHeader = hunkHeaders.last;
+        expect(secondHunkAnchor.renderLine, greaterThan(secondHunkHeader));
+      });
+
+      test('anchors map to the correct rendered row when lines wrap', () {
+        final model = GitDiffModel(
+          width: 20,
+          wrapLines: true,
+        ).setDiff(_multiHunkDiff);
+        final rendered = model.renderedLines;
+
+        for (final anchor in model.commentAnchors) {
+          expect(anchor.renderLine, inInclusiveRange(0, rendered.length - 1));
+          final row = Style.stripAnsi(rendered[anchor.renderLine]);
+          final prefix = anchor.content.length > 10
+              ? anchor.content.substring(0, 10)
+              : anchor.content;
+          expect(
+            row,
+            contains(prefix),
+            reason:
+                'wrapping anchor for ${anchor.path}:${anchor.line} '
+                'did not start on row ${anchor.renderLine}: ${row.trim()}',
+          );
+        }
       });
 
       test('parses no-newline-at-eof marker', () {

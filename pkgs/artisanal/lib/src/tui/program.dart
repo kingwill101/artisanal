@@ -2178,9 +2178,12 @@ class Program<M extends Model> with HotReloadMixin {
         'UvEventMsg(CursorColorEvent ${color == null ? '(null)' : color.toString()})',
       uvev.ColorPaletteEvent(:final index, :final color) =>
         'UvEventMsg(ColorPaletteEvent $index ${color == null ? '(null)' : color.toString()})',
-      uvev.DarkColorSchemeEvent() => 'UvEventMsg(DarkColorSchemeEvent osc=997;1)',
-      uvev.LightColorSchemeEvent() => 'UvEventMsg(LightColorSchemeEvent osc=997;2)',
-      uvev.UnknownOscEvent(:final value) => 'UvEventMsg(UnknownOscEvent osc=${_shortenForTrace(value)})',
+      uvev.DarkColorSchemeEvent() =>
+        'UvEventMsg(DarkColorSchemeEvent osc=997;1)',
+      uvev.LightColorSchemeEvent() =>
+        'UvEventMsg(LightColorSchemeEvent osc=997;2)',
+      uvev.UnknownOscEvent(:final value) =>
+        'UvEventMsg(UnknownOscEvent osc=${_shortenForTrace(value)})',
       uvev.WindowOpEvent(:final op, :final args) =>
         'UvEventMsg(WindowOpEvent osc=$op args=$args)',
       uvev.ClipboardEvent(:final selection, :final content) =>

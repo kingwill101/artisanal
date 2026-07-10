@@ -79,7 +79,7 @@ class NumberInputKeyMap extends KeyMap {
            KeyBinding(
              keys: ['esc', 'ctrl+c'],
              help: Help(key: 'esc', desc: 'cancel'),
-            ) {
+           ) {
     shortHelp = [this.increment, this.decrement, this.submit, this.cancel];
     fullHelp = [
       [this.increment, this.decrement],
@@ -101,7 +101,6 @@ class NumberInputKeyMap extends KeyMap {
 
   /// Cancel the prompt.
   final KeyBinding cancel;
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -333,8 +332,7 @@ class NumberInputModel extends ViewComponent {
 
     // Help.
     if (showHelp) {
-      final helpText = keyMap
-          .shortHelp
+      final helpText = keyMap.shortHelp
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
           .join('  ');

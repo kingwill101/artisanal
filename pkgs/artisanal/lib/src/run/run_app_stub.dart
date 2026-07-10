@@ -11,8 +11,7 @@ Future<void> runWidgetApp(
   Object? host,
   Object? imageAutoMode,
   Object? browserOptions,
-}) async =>
-    _throw();
+}) async => _throw();
 
 Future<void> serveWidgetApp({
   required Object Function() appBuilder,
@@ -30,5 +29,4 @@ Future<void> serveWidgetApp({
   Object? initialSize,
   bool supportsAnsi = true,
   Object? colorProfile,
-}) async =>
-    _throw();
+}) async => _throw();

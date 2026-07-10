@@ -109,7 +109,8 @@ final class TerminalColorSchemeState {
 /// boilerplate.
 mixin TerminalThemeHost {
   TerminalThemeState terminalTheme = const TerminalThemeState();
-  TerminalColorSchemeState terminalColorScheme = const TerminalColorSchemeState();
+  TerminalColorSchemeState terminalColorScheme =
+      const TerminalColorSchemeState();
   final TerminalPaletteService terminalPalette = TerminalPaletteService();
 
   /// Updates terminal color state and color-scheme preference if [msg] carries
@@ -125,7 +126,13 @@ mixin TerminalThemeHost {
 
     terminalColorScheme = terminalColorScheme.update(msg);
 
-    _traceTerminalThemeUpdate(msg, beforeTheme, terminalTheme, beforeColorScheme, terminalColorScheme);
+    _traceTerminalThemeUpdate(
+      msg,
+      beforeTheme,
+      terminalTheme,
+      beforeColorScheme,
+      terminalColorScheme,
+    );
   }
 
   /// Requests foreground/background/cursor reports for terminal theme probing.
@@ -168,7 +175,8 @@ void _traceTerminalThemeUpdate(
     );
   }
 
-  if (beforeColorScheme.hasDarkColorScheme != afterColorScheme.hasDarkColorScheme) {
+  if (beforeColorScheme.hasDarkColorScheme !=
+      afterColorScheme.hasDarkColorScheme) {
     TuiTrace.event(
       'terminal.color_scheme.update',
       tag: TraceTag.input,

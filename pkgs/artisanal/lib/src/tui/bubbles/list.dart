@@ -299,7 +299,7 @@ class ListKeyMap extends KeyMap {
            KeyBinding(
              keys: ['?'],
              help: Help(key: '?', desc: 'less'),
-            ) {
+           ) {
     shortHelp = [this.cursorUp, this.cursorDown, this.filter, this.quit];
     fullHelp = [
       [this.cursorUp, this.cursorDown],
@@ -351,8 +351,6 @@ class ListKeyMap extends KeyMap {
 
   /// Close full help.
   final KeyBinding closeFullHelp;
-
-
 }
 
 /// Styles for list rendering.

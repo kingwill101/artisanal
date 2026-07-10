@@ -74,18 +74,18 @@ class SelectKeyMap extends KeyMap {
              keys: ['pgdown', 'ctrl+d'],
              help: Help(key: 'pgdn', desc: 'page down'),
            ),
-        select =
-            select ??
-            KeyBinding(
-              keys: ['enter'],
-              help: Help(key: KeyboardChars.enter, desc: 'select'),
-            ),
-        cancel =
-            cancel ??
-            KeyBinding(
-              keys: ['esc', 'q'],
-              help: Help(key: 'esc', desc: 'cancel'),
-            ) {
+       select =
+           select ??
+           KeyBinding(
+             keys: ['enter'],
+             help: Help(key: KeyboardChars.enter, desc: 'select'),
+           ),
+       cancel =
+           cancel ??
+           KeyBinding(
+             keys: ['esc', 'q'],
+             help: Help(key: 'esc', desc: 'cancel'),
+           ) {
     shortHelp = [this.up, this.down, this.select, this.cancel];
     fullHelp = [
       [this.up, this.down, this.home, this.end],
@@ -116,8 +116,6 @@ class SelectKeyMap extends KeyMap {
 
   /// Cancel selection.
   final KeyBinding cancel;
-
-
 }
 
 /// Styles for the select component.
@@ -499,18 +497,18 @@ class MultiSelectKeyMap extends KeyMap {
              keys: ['a'],
              help: Help(key: 'a', desc: 'toggle all'),
            ),
-        confirm =
-            confirm ??
-            KeyBinding(
-              keys: ['enter'],
-              help: Help(key: KeyboardChars.enter, desc: 'confirm'),
-            ),
-        cancel =
-            cancel ??
-            KeyBinding(
-              keys: ['esc', 'q'],
-              help: Help(key: 'esc', desc: 'cancel'),
-            ) {
+       confirm =
+           confirm ??
+           KeyBinding(
+             keys: ['enter'],
+             help: Help(key: KeyboardChars.enter, desc: 'confirm'),
+           ),
+       cancel =
+           cancel ??
+           KeyBinding(
+             keys: ['esc', 'q'],
+             help: Help(key: 'esc', desc: 'cancel'),
+           ) {
     shortHelp = [this.up, this.down, this.toggle, this.confirm, this.cancel];
     fullHelp = [
       [this.up, this.down, this.home, this.end],
@@ -547,8 +545,6 @@ class MultiSelectKeyMap extends KeyMap {
 
   /// Cancel selection.
   final KeyBinding cancel;
-
-
 }
 
 /// Styles for the multi-select component.

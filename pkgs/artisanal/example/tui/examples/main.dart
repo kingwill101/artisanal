@@ -103,11 +103,10 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final result = await io.Process.run(
-    'dart',
-    ['run', _entryPoint(name)],
-    runInShell: false,
-  );
+  final result = await io.Process.run('dart', [
+    'run',
+    _entryPoint(name),
+  ], runInShell: false);
 
   io.stdout.write(result.stdout);
   io.stderr.write(result.stderr);

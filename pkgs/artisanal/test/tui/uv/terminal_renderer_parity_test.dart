@@ -2,7 +2,6 @@ import 'package:artisanal/src/colorprofile/profile.dart' as cp;
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 final class _TestSink implements StringSink {
   final StringBuffer _b = StringBuffer();
 

@@ -257,11 +257,12 @@ void _renderPieCellHighRes(
   }
   if (counts.isEmpty) return;
 
-  final dominant = counts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  final dominant = counts.entries
+      .reduce((a, b) => a.value > b.value ? a : b)
+      .key;
 
   final baseStyle = palette[dominant];
-  final useBg =
-      useBackground && (baseStyle.bg != null || baseStyle.fg != null);
+  final useBg = useBackground && (baseStyle.bg != null || baseStyle.fg != null);
   final cellStyle = useBg
       ? (baseStyle.bg != null
             ? baseStyle
@@ -292,19 +293,21 @@ List<int> _sampleCell(
     final dyOffset = -0.5 + dyStep * (row + 0.5);
     for (var col = 0; col < cols; col++) {
       final dxOffset = -0.5 + dxStep * (col + 0.5);
-      results.add(_sampleSlice(
-        x,
-        y,
-        cx,
-        cy,
-        cellAspect,
-        radius,
-        innerRadius,
-        angles,
-        paletteLength,
-        dxOffset: dxOffset,
-        dyOffset: dyOffset,
-      ));
+      results.add(
+        _sampleSlice(
+          x,
+          y,
+          cx,
+          cy,
+          cellAspect,
+          radius,
+          innerRadius,
+          angles,
+          paletteLength,
+          dxOffset: dxOffset,
+          dyOffset: dyOffset,
+        ),
+      );
     }
   }
   return results;
@@ -371,5 +374,3 @@ String _maskToBlockGlyph(int mask) {
     _ => '',
   };
 }
-
-

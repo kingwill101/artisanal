@@ -337,7 +337,8 @@ class Style {
   String? _cachedSpaceTextStyleSuffix;
   bool _hasCachedSpaceTextStyle = false;
 
-  ColorProfile get colorProfile => _activeRenderContext?.colorProfile ?? _colorProfile;
+  ColorProfile get colorProfile =>
+      _activeRenderContext?.colorProfile ?? _colorProfile;
   set colorProfile(ColorProfile value) {
     if (_colorProfile == value) return;
     _colorProfile = value;
@@ -1607,14 +1608,14 @@ class Style {
 
   /// Measures the current box model as immutable metrics.
   BoxMetrics get boxMetrics => BoxMetrics(
-        contentWidth: _width > 0 ? _width : 0,
-        contentHeight: _height > 0 ? _height : 0,
-        padding: _padding,
-        margin: _margin,
-        border: _hasFlag(_PropBits.border) && _border != null
-            ? _border!.measure(_borderSides)
-            : const BorderMetrics.none(),
-      );
+    contentWidth: _width > 0 ? _width : 0,
+    contentHeight: _height > 0 ? _height : 0,
+    padding: _padding,
+    margin: _margin,
+    border: _hasFlag(_PropBits.border) && _border != null
+        ? _border!.measure(_borderSides)
+        : const BorderMetrics.none(),
+  );
 
   /// Gets the transform function if set.
   String Function(String)? get getTransform =>
@@ -1727,55 +1728,55 @@ class Style {
 
   /// Returns an immutable snapshot of the current style state.
   StyleData get data => StyleData(
-        bold: _bold,
-        italic: _italic,
-        underline: _underline,
-        underlineStyle: _underlineStyle,
-        strikethrough: _strikethrough,
-        dim: _dim,
-        inverse: _inverse,
-        blink: _blink,
-        foreground: _foreground,
-        background: _background,
-        borderForeground: _borderForeground,
-        borderBackground: _borderBackground,
-        borderTopForeground: _borderTopForeground,
-        borderRightForeground: _borderRightForeground,
-        borderBottomForeground: _borderBottomForeground,
-        borderLeftForeground: _borderLeftForeground,
-        borderTopBackground: _borderTopBackground,
-        borderRightBackground: _borderRightBackground,
-        borderBottomBackground: _borderBottomBackground,
-        borderLeftBackground: _borderLeftBackground,
-        borderForegroundBlend: List<Color>.from(_borderForegroundBlend),
-        borderForegroundBlendOffset: _borderForegroundBlendOffset,
-        width: _width == 0 ? null : _width,
-        height: _height == 0 ? null : _height,
-        maxWidth: _maxWidth == 0 ? null : _maxWidth,
-        maxHeight: _maxHeight == 0 ? null : _maxHeight,
-        padding: _padding,
-        margin: _margin,
-        align: _align,
-        alignVertical: _alignVertical,
-        border: _border,
-        borderSides: _borderSides,
-        inline: _inline,
-        wrapAnsi: _wrapAnsi,
-        transform: _transform,
-        paddingChar: _paddingChar,
-        marginChar: _marginChar,
-        whitespaceChar: _whitespaceChar,
-        whitespaceForeground: _whitespaceForeground,
-        stringValue: _string,
-        tabWidth: _tabWidth,
-        underlineSpaces: _underlineSpaces,
-        strikethroughSpaces: _strikethroughSpaces,
-        colorWhitespace: _colorWhitespace,
-        hyperlinkUrl: _hyperlinkUrl,
-        hyperlinkParams: _hyperlinkParams,
-        marginBackground: _marginBackground,
-        underlineColor: _underlineColor,
-      );
+    bold: _bold,
+    italic: _italic,
+    underline: _underline,
+    underlineStyle: _underlineStyle,
+    strikethrough: _strikethrough,
+    dim: _dim,
+    inverse: _inverse,
+    blink: _blink,
+    foreground: _foreground,
+    background: _background,
+    borderForeground: _borderForeground,
+    borderBackground: _borderBackground,
+    borderTopForeground: _borderTopForeground,
+    borderRightForeground: _borderRightForeground,
+    borderBottomForeground: _borderBottomForeground,
+    borderLeftForeground: _borderLeftForeground,
+    borderTopBackground: _borderTopBackground,
+    borderRightBackground: _borderRightBackground,
+    borderBottomBackground: _borderBottomBackground,
+    borderLeftBackground: _borderLeftBackground,
+    borderForegroundBlend: List<Color>.from(_borderForegroundBlend),
+    borderForegroundBlendOffset: _borderForegroundBlendOffset,
+    width: _width == 0 ? null : _width,
+    height: _height == 0 ? null : _height,
+    maxWidth: _maxWidth == 0 ? null : _maxWidth,
+    maxHeight: _maxHeight == 0 ? null : _maxHeight,
+    padding: _padding,
+    margin: _margin,
+    align: _align,
+    alignVertical: _alignVertical,
+    border: _border,
+    borderSides: _borderSides,
+    inline: _inline,
+    wrapAnsi: _wrapAnsi,
+    transform: _transform,
+    paddingChar: _paddingChar,
+    marginChar: _marginChar,
+    whitespaceChar: _whitespaceChar,
+    whitespaceForeground: _whitespaceForeground,
+    stringValue: _string,
+    tabWidth: _tabWidth,
+    underlineSpaces: _underlineSpaces,
+    strikethroughSpaces: _strikethroughSpaces,
+    colorWhitespace: _colorWhitespace,
+    hyperlinkUrl: _hyperlinkUrl,
+    hyperlinkParams: _hyperlinkParams,
+    marginBackground: _marginBackground,
+    underlineColor: _underlineColor,
+  );
 
   /// Inherits explicitly-set properties from another style.
   ///
@@ -2618,14 +2619,12 @@ class Style {
     return Ansi.expandTabs(text, tabWidth: tw);
   }
 
-
   String _applyConsoleTags(String text) {
     return ConsoleTagParser(
       colorProfile: colorProfile,
       hasDarkBackground: hasDarkBackground,
     ).render(text);
   }
-
 
   /// Applies padding (fixed spaces, not filling to width).
   /// Like lipgloss, padding adds fixed space characters - alignment fills to width later.
@@ -2870,7 +2869,9 @@ class Style {
     }
 
     final result = List<String>.from(lines);
-    final width = result.isEmpty ? 0 : result.map(visibleLength).reduce(math.max);
+    final width = result.isEmpty
+        ? 0
+        : result.map(visibleLength).reduce(math.max);
     final fillLine = _styleWhitespace(' ' * width);
     final remaining = targetHeight - result.length;
 

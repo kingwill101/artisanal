@@ -552,7 +552,7 @@ class TextAreaKeyMap extends KeyMap {
        undo = undo ?? KeyBinding.withHelp(['ctrl+z'], 'ctrl+z', 'undo'),
        redo =
            redo ??
-           KeyBinding.withHelp(['ctrl+y', 'ctrl+shift+z'], 'ctrl+y', 'redo'            ) {
+           KeyBinding.withHelp(['ctrl+y', 'ctrl+shift+z'], 'ctrl+y', 'redo') {
     shortHelp = [
       this.characterForward,
       this.characterBackward,
@@ -679,8 +679,6 @@ class TextAreaKeyMap extends KeyMap {
       redo: redo ?? this.redo,
     );
   }
-
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

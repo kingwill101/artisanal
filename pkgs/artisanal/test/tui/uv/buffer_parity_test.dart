@@ -4,7 +4,6 @@ import 'package:artisanal/src/unicode/width.dart';
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
 
-
 void main() {
   group('Buffer parity (subset)', () {
     test('TestBufferUniseg (ASCII subset)', () {

@@ -7,13 +7,9 @@ import '../style/color.dart' show ColorProfile;
 import '../terminal/browser_host.dart' show BrowserTerminalHostServer;
 import '../terminal/socket_host.dart' show SocketTerminalHostServer;
 import '../terminal/terminal.dart' show TerminalDimensions;
-import '../tui/runtime.dart'
-    show ProgramHost, ProgramOptions, runProgram;
+import '../tui/runtime.dart' show ProgramHost, ProgramOptions, runProgram;
 import 'transport.dart'
-    show
-        Transport,
-        WidgetAppHostServer,
-        defaultWidgetProgramOptions;
+    show Transport, WidgetAppHostServer, defaultWidgetProgramOptions;
 
 T _configureImageAutoMode<T extends WidgetApp>(
   T app, {
@@ -108,28 +104,34 @@ Future<WidgetAppHostServer> serveWidgetApp({
   switch (transport) {
     case Transport.browser:
       return await BrowserTerminalHostServer.serveProgram<WidgetApp>(
-        address: address,
-        port: port,
-        pagePath: pagePath,
-        webSocketPath: webSocketPath,
-        title: browserTitle,
-        pageHtml: pageHtml,
-        modelBuilder: () =>
-            _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
-        options: resolvedOptions,
-      ) as WidgetAppHostServer;
+            address: address,
+            port: port,
+            pagePath: pagePath,
+            webSocketPath: webSocketPath,
+            title: browserTitle,
+            pageHtml: pageHtml,
+            modelBuilder: () => _configureImageAutoMode(
+              appBuilder(),
+              imageAutoMode: imageAutoMode,
+            ),
+            options: resolvedOptions,
+          )
+          as WidgetAppHostServer;
     case Transport.socket:
       return await SocketTerminalHostServer.serveProgram<WidgetApp>(
-        address: address,
-        port: port,
-        v6Only: v6Only,
-        shared: shared,
-        initialSize: initialSize,
-        supportsAnsi: supportsAnsi,
-        colorProfile: colorProfile,
-        modelBuilder: () =>
-            _configureImageAutoMode(appBuilder(), imageAutoMode: imageAutoMode),
-        options: resolvedOptions,
-      ) as WidgetAppHostServer;
+            address: address,
+            port: port,
+            v6Only: v6Only,
+            shared: shared,
+            initialSize: initialSize,
+            supportsAnsi: supportsAnsi,
+            colorProfile: colorProfile,
+            modelBuilder: () => _configureImageAutoMode(
+              appBuilder(),
+              imageAutoMode: imageAutoMode,
+            ),
+            options: resolvedOptions,
+          )
+          as WidgetAppHostServer;
   }
 }

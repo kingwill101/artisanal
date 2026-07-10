@@ -2,7 +2,6 @@ import 'package:artisanal/src/uv/uv.dart';
 
 import 'package:test/test.dart';
 
-
 List<Event> _decodeAll(EventDecoder d, List<int> bytes) {
   final out = <Event>[];
   var buf = List<int>.from(bytes);

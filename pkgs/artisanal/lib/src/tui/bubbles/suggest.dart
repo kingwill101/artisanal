@@ -106,7 +106,7 @@ class SuggestKeyMap extends KeyMap {
            KeyBinding(
              keys: ['esc', 'ctrl+c'],
              help: Help(key: 'esc', desc: 'cancel'),
-            ) {
+           ) {
     shortHelp = [this.moveUp, this.moveDown, this.accept, this.cancel];
     fullHelp = [
       [this.moveUp, this.moveDown, this.moveFirst, this.moveLast],
@@ -140,7 +140,6 @@ class SuggestKeyMap extends KeyMap {
 
   /// Cancel the prompt.
   final KeyBinding cancel;
-
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -428,8 +427,7 @@ class SuggestModel extends ViewComponent {
 
     // Help.
     if (showHelp) {
-      final helpText = keyMap
-          .shortHelp
+      final helpText = keyMap.shortHelp
           .where((b) => b.help.hasContent)
           .map((b) => '${b.help.key} ${b.help.desc}')
           .join('  ');

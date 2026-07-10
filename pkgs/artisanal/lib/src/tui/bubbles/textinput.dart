@@ -429,14 +429,19 @@ class TextInputKeyMap extends KeyMap {
            KeyBinding(
              keys: ['ctrl+end'],
              help: Help(key: 'ctrl+end', desc: 'Go to document end'),
-            ) {
+           ) {
     shortHelp = [
       this.characterForward,
       this.characterBackward,
       this.deleteCharacterBackward,
     ];
     fullHelp = [
-      [this.characterForward, this.characterBackward, this.wordForward, this.wordBackward],
+      [
+        this.characterForward,
+        this.characterBackward,
+        this.wordForward,
+        this.wordBackward,
+      ],
       [this.lineStart, this.lineEnd, this.documentStart, this.documentEnd],
       [
         this.deleteCharacterBackward,
@@ -456,7 +461,13 @@ class TextInputKeyMap extends KeyMap {
         this.nextSuggestion,
         this.prevSuggestion,
       ],
-      [this.newline, this.lineUp, this.lineDown, this.selectLineUp, this.selectLineDown],
+      [
+        this.newline,
+        this.lineUp,
+        this.lineDown,
+        this.selectLineUp,
+        this.selectLineDown,
+      ],
     ];
   }
 
@@ -561,8 +572,6 @@ class TextInputKeyMap extends KeyMap {
 
   /// Move cursor to end of document (multi-line mode only).
   final KeyBinding documentEnd;
-
-
 }
 
 /// Message for paste events.

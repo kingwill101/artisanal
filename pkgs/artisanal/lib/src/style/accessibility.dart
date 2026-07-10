@@ -31,11 +31,7 @@ double relativeLuminanceRgb(int red, int green, int blue) {
 }
 
 /// Returns `true` when the supplied sRGB color is dark enough to prefer white text.
-bool isDarkColorRgb({
-  required int red,
-  required int green,
-  required int blue,
-}) {
+bool isDarkColorRgb({required int red, required int green, required int blue}) {
   return relativeLuminanceRgb(red, green, blue) < 0.179128784747792;
 }
 

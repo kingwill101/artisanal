@@ -51,7 +51,8 @@ Future<void> runWidgetApp(
   BrowserRunOptions options = const BrowserRunOptions(),
 }) async {
   final canvas = options.canvasId != null
-      ? (web.document.getElementById(options.canvasId!) as web.HTMLCanvasElement)
+      ? (web.document.getElementById(options.canvasId!)
+            as web.HTMLCanvasElement)
       : web.document.createElement('canvas') as web.HTMLCanvasElement;
 
   if (options.appendToBody && canvas.parentNode == null) {
@@ -102,7 +103,14 @@ Future<void> runWidgetApp(
     activeMouseButton = mouse.button;
     final position = _mouseCellPosition(mouse, canvas, canvasRenderer);
     final cb = _mouseButtonCode(mouse.button) + _mouseModifiers(mouse);
-    backend.addInput(_encodeMouseEvent(cb: cb, col: position.col, row: position.row, release: false));
+    backend.addInput(
+      _encodeMouseEvent(
+        cb: cb,
+        col: position.col,
+        row: position.row,
+        release: false,
+      ),
+    );
   }).toJS;
 
   final onMouseUp = ((web.Event event) {
@@ -111,7 +119,14 @@ Future<void> runWidgetApp(
     final position = _mouseCellPosition(mouse, canvas, canvasRenderer);
     final cb = 3 + _mouseModifiers(mouse);
     activeMouseButton = -1;
-    backend.addInput(_encodeMouseEvent(cb: cb, col: position.col, row: position.row, release: true));
+    backend.addInput(
+      _encodeMouseEvent(
+        cb: cb,
+        col: position.col,
+        row: position.row,
+        release: true,
+      ),
+    );
   }).toJS;
 
   final onMouseMove = ((web.Event event) {
@@ -119,8 +134,16 @@ Future<void> runWidgetApp(
     if (activeMouseButton < 0) return;
     event.preventDefault();
     final position = _mouseCellPosition(mouse, canvas, canvasRenderer);
-    final cb = 32 + _mouseButtonCode(activeMouseButton) + _mouseModifiers(mouse);
-    backend.addInput(_encodeMouseEvent(cb: cb, col: position.col, row: position.row, release: false));
+    final cb =
+        32 + _mouseButtonCode(activeMouseButton) + _mouseModifiers(mouse);
+    backend.addInput(
+      _encodeMouseEvent(
+        cb: cb,
+        col: position.col,
+        row: position.row,
+        release: false,
+      ),
+    );
   }).toJS;
 
   canvas.addEventListener('mousedown', onMouseDown);
@@ -186,8 +209,7 @@ Future<Never> serveWidgetApp({
   Object? initialSize,
   bool supportsAnsi = true,
   Object? colorProfile,
-}) =>
-    throw UnsupportedError('serveWidgetApp is not available on web.');
+}) => throw UnsupportedError('serveWidgetApp is not available on web.');
 
 // --- Internal helpers (adapted from bootstrap.dart) ---
 
@@ -289,7 +311,12 @@ List<int> _encodeWheelEvent(
   final position = _mouseCellPosition(event, canvas, canvasRenderer);
   final direction = event.deltaY < 0 ? 64 : 65;
   final cb = direction + _mouseModifiers(event);
-  return _encodeMouseEvent(cb: cb, col: position.col, row: position.row, release: false);
+  return _encodeMouseEvent(
+    cb: cb,
+    col: position.col,
+    row: position.row,
+    release: false,
+  );
 }
 
 void _handleSpecialKey(web.KeyboardEvent event, WebTerminalBackend backend) {

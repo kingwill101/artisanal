@@ -18,11 +18,7 @@ void main() {
         bindings: [
           tui.KeyChordBinding(
             id: 'open-themes',
-            prefix: KeyBinding.withHelp(
-              ['ctrl+x'],
-              'ctrl+x',
-              'prefix',
-            ),
+            prefix: KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
             key: KeyBinding.withHelp(['t'], 't', 'themes'),
           ),
         ],
@@ -50,50 +46,49 @@ void main() {
       expect(received, contains('KeyChordResolvedMsg'));
     });
 
-    test('unmatched key cancels pending chord and forwards original key', () async {
-      final received = <String>[];
-      final input = StreamController<List<int>>();
-      tui.Program<tui.Model>? program;
-      final model = _Model(
-        (msg) => received.add(msg.runtimeType.toString()),
-        onQuit: () => program?.send(const tui.QuitMsg()),
-      );
-      final interceptor = tui.KeyChordInterceptor(
-        bindings: [
-          tui.KeyChordBinding(
-            id: 'open-themes',
-            prefix: KeyBinding.withHelp(
-              ['ctrl+x'],
-              'ctrl+x',
-              'prefix',
+    test(
+      'unmatched key cancels pending chord and forwards original key',
+      () async {
+        final received = <String>[];
+        final input = StreamController<List<int>>();
+        tui.Program<tui.Model>? program;
+        final model = _Model(
+          (msg) => received.add(msg.runtimeType.toString()),
+          onQuit: () => program?.send(const tui.QuitMsg()),
+        );
+        final interceptor = tui.KeyChordInterceptor(
+          bindings: [
+            tui.KeyChordBinding(
+              id: 'open-themes',
+              prefix: KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
+              key: KeyBinding.withHelp(['t'], 't', 'themes'),
             ),
-            key: KeyBinding.withHelp(['t'], 't', 'themes'),
+          ],
+        );
+
+        program = tui.Program(
+          model,
+          options: tui.ProgramOptions(
+            altScreen: false,
+            interceptor: interceptor,
+            input: input.stream,
+            frameTick: false,
           ),
-        ],
-      );
+        );
 
-      program = tui.Program(
-        model,
-        options: tui.ProgramOptions(
-          altScreen: false,
-          interceptor: interceptor,
-          input: input.stream,
-          frameTick: false,
-        ),
-      );
+        final runFuture = program.run();
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        input.add([0x18]);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        input.add([0x61]);
+        await runFuture;
+        await input.close();
 
-      final runFuture = program.run();
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      input.add([0x18]);
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-      input.add([0x61]);
-      await runFuture;
-      await input.close();
-
-      expect(received, contains('KeyChordPrefixMsg'));
-      expect(received, contains('KeyChordCancelledMsg'));
-      expect(received, contains('KeyMsg'));
-    });
+        expect(received, contains('KeyChordPrefixMsg'));
+        expect(received, contains('KeyChordCancelledMsg'));
+        expect(received, contains('KeyMsg'));
+      },
+    );
 
     test('timeout cancels pending chord', () async {
       final received = <String>[];
@@ -107,11 +102,7 @@ void main() {
         bindings: [
           tui.KeyChordBinding(
             id: 'open-themes',
-            prefix: KeyBinding.withHelp(
-              ['ctrl+x'],
-              'ctrl+x',
-              'prefix',
-            ),
+            prefix: KeyBinding.withHelp(['ctrl+x'], 'ctrl+x', 'prefix'),
             key: KeyBinding.withHelp(['t'], 't', 'themes'),
           ),
         ],

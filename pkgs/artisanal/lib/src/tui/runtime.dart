@@ -180,17 +180,9 @@ export 'program.dart'
         runProgramDebug;
 
 export 'key_chord.dart'
-    show
-        KeyChordInterceptor,
-        KeyChordBinding,
-        chordBindings;
+    show KeyChordInterceptor, KeyChordBinding, chordBindings;
 
-export 'key_binding.dart'
-    show
-        Help,
-        KeyBinding,
-        KeyMap,
-        CommonKeyBindings;
+export 'key_binding.dart' show Help, KeyBinding, KeyMap, CommonKeyBindings;
 
 export 'bubbles/spinner.dart'
     show

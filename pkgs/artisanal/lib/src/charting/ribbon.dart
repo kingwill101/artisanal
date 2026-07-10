@@ -101,13 +101,7 @@ void drawRibbonChart(
 
       if (upperIdx == lowerIdx && upperIdx != -1) {
         final sty = palette[upperIdx % palette.length];
-        putSolidChartCell(
-          screen,
-          area.minX + x,
-          screenY,
-          sty,
-          fillChar,
-        );
+        putSolidChartCell(screen, area.minX + x, screenY, sty, fillChar);
       } else if (upperIdx == -1) {
         final sty = palette[lowerIdx % palette.length];
         final fgColor = sty.bg ?? sty.fg;

@@ -21,8 +21,9 @@ Future<void> main() async {
   }
 }
 
-List<({String entrypoint, String outputPath})>
-_fixtureTasks(String packageRoot) {
+List<({String entrypoint, String outputPath})> _fixtureTasks(
+  String packageRoot,
+) {
   final fixturesDir = p.join(packageRoot, 'test', 'plugins', 'fixtures');
   final outputDir = p.join(
     packageRoot,
@@ -42,13 +43,17 @@ _fixtureTasks(String packageRoot) {
     ])
       (
         entrypoint: p.join(fixturesDir, name),
-        outputPath: p.join(outputDir, '${p.basenameWithoutExtension(name)}.dill'),
+        outputPath: p.join(
+          outputDir,
+          '${p.basenameWithoutExtension(name)}.dill',
+        ),
       ),
   ];
 }
 
-List<({String entrypoint, String outputPath})>
-_exampleTasks(String packageRoot) {
+List<({String entrypoint, String outputPath})> _exampleTasks(
+  String packageRoot,
+) {
   final workspaceDir = p.join(
     packageRoot,
     'example',
@@ -88,7 +93,12 @@ _exampleTasks(String packageRoot) {
         ),
       ),
     (
-      entrypoint: p.join(packageRoot, 'example', 'tui', 'remote_plugin_schema_dump.dart'),
+      entrypoint: p.join(
+        packageRoot,
+        'example',
+        'tui',
+        'remote_plugin_schema_dump.dart',
+      ),
       outputPath: p.join(schemaDumpOutputDir, 'remote_plugin_schema_dump.dill'),
     ),
   ];
@@ -96,14 +106,9 @@ _exampleTasks(String packageRoot) {
 
 String _resolveArtisanalPackageRoot() {
   final current = io.Directory.current.path;
-  final candidates = <String>[
-    current,
-    p.join(current, 'pkgs', 'artisanal'),
-  ];
+  final candidates = <String>[current, p.join(current, 'pkgs', 'artisanal')];
   for (final candidate in candidates) {
-    if (io.FileSystemEntity.typeSync(
-          p.join(candidate, 'pubspec.yaml'),
-        ) !=
+    if (io.FileSystemEntity.typeSync(p.join(candidate, 'pubspec.yaml')) !=
         io.FileSystemEntityType.notFound) {
       return candidate;
     }

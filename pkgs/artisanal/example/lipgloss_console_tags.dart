@@ -44,7 +44,9 @@ void parserDemo() {
   print(parser.render('<options=italic>Italic text</>'));
   print(parser.render('<options=strikethrough>Strikethrough text</>'));
   print(parser.render('<options=bold,underline,italic>Multiple options</>'));
-  print(parser.render('<fg=green;bg=black;options=bold>Combined inline style</>'));
+  print(
+    parser.render('<fg=green;bg=black;options=bold>Combined inline style</>'),
+  );
   print(parser.render('<fg=#ff5500>Hex color: Custom orange</>'));
   print(parser.render('<fg=#00ff00>Hex color: Bright green</>'));
   print('');
@@ -52,20 +54,31 @@ void parserDemo() {
   section('3. Color Spectrum');
   final colors = ['red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'];
   for (final color in colors) {
-    print(parser.render('<fg=$color>${color.padLeft(7)}</>  '
+    print(
+      parser.render(
+        '<fg=$color>${color.padLeft(7)}</>  '
         '<bg=$color>  </>  '
-        '<fg=black;bg=$color>$color background</>'));
+        '<fg=black;bg=$color>$color background</>',
+      ),
+    );
   }
   print('');
 
   section('4. Nested Tags');
   print(parser.render('<fg=green>Green text <options=bold>with bold</></>'));
-  print(parser.render(
-      '<fg=red>Red <fg=yellow>yellow nested</> back to red</>'));
-  print(parser.render(
-      '<info>Info <fg=red>red</> <fg=yellow>yellow</> inside info</>'));
-  print(parser.render(
-      '<fg=cyan;options=bold>Bold cyan <options=underline>underlined</> still bold cyan</>'));
+  print(
+    parser.render('<fg=red>Red <fg=yellow>yellow nested</> back to red</>'),
+  );
+  print(
+    parser.render(
+      '<info>Info <fg=red>red</> <fg=yellow>yellow</> inside info</>',
+    ),
+  );
+  print(
+    parser.render(
+      '<fg=cyan;options=bold>Bold cyan <options=underline>underlined</> still bold cyan</>',
+    ),
+  );
   print('');
 
   section('5. Escape Sequences');
@@ -75,10 +88,12 @@ void parserDemo() {
   print('');
 
   section('6. Deeply Nested Structures');
-  print(parser.render(
-    '<info>Level 1 <success>Level 2 <warning>Level 3 <error>Level 4'
-        '</error> back to 3</warning> back to 2</success> back to 1</info>',
-  ));
+  print(
+    parser.render(
+      '<info>Level 1 <success>Level 2 <warning>Level 3 <error>Level 4'
+      '</error> back to 3</warning> back to 2</success> back to 1</info>',
+    ),
+  );
   print('');
 
   section('7. Custom Styles');
@@ -90,58 +105,74 @@ void parserDemo() {
     'highlight',
     Style().foreground(BasicColor('#ffff00')).background(BasicColor('#0000ff')),
   );
-  parser.registerStyle(
-    'subtle',
-    Style().foreground(AnsiColor(245)).italic(),
-  );
+  parser.registerStyle('subtle', Style().foreground(AnsiColor(245)).italic());
   parser.registerStyle(
     'alert',
-    Style().foreground(BasicColor('#ffffff')).background(BasicColor('#ff0000')).bold(),
+    Style()
+        .foreground(BasicColor('#ffffff'))
+        .background(BasicColor('#ff0000'))
+        .bold(),
   );
 
   print(parser.render('<brand>Brand style - bold, underlined, orange</>'));
   print(parser.render('<highlight>Highlight - yellow on blue</>'));
   print(parser.render('<subtle>Subtle style - gray italic</>'));
   print(parser.render('<alert>Alert style - white on red bold</>'));
-  print(parser.render(
-      '<info>Built-in <brand>custom</> <highlight>styles</> in nested context</>'));
+  print(
+    parser.render(
+      '<info>Built-in <brand>custom</> <highlight>styles</> in nested context</>',
+    ),
+  );
   print('');
 
   section('8. Hyperlinks');
-  print(parser.render(
-    'Hyperlink: <href=https://example.com>Example Website</>',
-  ));
-  print(parser.render(
-    'Styled hyperlink: <fg=cyan;options=underline;href=https://dart.dev>'
-        'Dart Documentation</>',
-  ));
+  print(
+    parser.render('Hyperlink: <href=https://example.com>Example Website</>'),
+  );
+  print(
+    parser.render(
+      'Styled hyperlink: <fg=cyan;options=underline;href=https://dart.dev>'
+      'Dart Documentation</>',
+    ),
+  );
   print('');
 
   section('9. Performance');
   final stopwatch = Stopwatch()..start();
   for (var i = 0; i < 1000; i++) {
-    parser.render(
-        '<info>Test <fg=red>$i</> <options=bold>iteration</></info>');
+    parser.render('<info>Test <fg=red>$i</> <options=bold>iteration</></info>');
   }
   stopwatch.stop();
-  print('  Rendered 1000 complex templates in ${stopwatch.elapsedMilliseconds}ms');
+  print(
+    '  Rendered 1000 complex templates in ${stopwatch.elapsedMilliseconds}ms',
+  );
   print('');
 
   section('10. Edge Cases');
   print(parser.render('<info></info>'));
-  print(parser.render('<info><info><info>Triple nested same tag</info></info></info>'));
-  print(parser.render(
-      '<fg=red;bg=red;options=bold,underline,italic,strikethrough>All options at once</>'));
-  print(parser.render(
-      '<fg=red>Unclosed tag (should auto-close at end of string)'));
+  print(
+    parser.render(
+      '<info><info><info>Triple nested same tag</info></info></info>',
+    ),
+  );
+  print(
+    parser.render(
+      '<fg=red;bg=red;options=bold,underline,italic,strikethrough>All options at once</>',
+    ),
+  );
+  print(
+    parser.render('<fg=red>Unclosed tag (should auto-close at end of string)'),
+  );
   print(parser.render(r'<fg=green>\<escaped inside\></>'));
   print('');
 
   section('11. Overlapping vs. Proper Nesting');
-  print(parser.render(
-    '<info>Proper <success>nesting</success> works</info>'));
-  print(parser.render(
-    '<info>Overlapping <success>tags</info> may not work</success>'));
+  print(parser.render('<info>Proper <success>nesting</success> works</info>'));
+  print(
+    parser.render(
+      '<info>Overlapping <success>tags</info> may not work</success>',
+    ),
+  );
   print('');
 }
 

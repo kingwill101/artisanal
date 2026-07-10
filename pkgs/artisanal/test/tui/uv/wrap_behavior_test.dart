@@ -1,7 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 void main() {
   group('wrapAnsiPreserving', () {
     test('wraps and preserves SGR pen state across inserted newlines', () {

@@ -87,7 +87,7 @@ class TableKeyMap extends KeyMap {
            KeyBinding(
              keys: ['end', 'G'],
              help: Help(key: 'G/end', desc: 'go to end'),
-            ) {
+           ) {
     shortHelp = [this.lineUp, this.lineDown];
     fullHelp = [
       [this.lineUp, this.lineDown],
@@ -120,7 +120,6 @@ class TableKeyMap extends KeyMap {
 
   /// Move selection to last row.
   final KeyBinding gotoBottom;
-
 }
 
 /// Styles for table rendering.

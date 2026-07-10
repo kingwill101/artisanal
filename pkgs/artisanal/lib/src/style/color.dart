@@ -93,7 +93,7 @@ abstract class Color {
   /// Creates an adaptive color that switches based on terminal background.
   factory Color.adaptive({required Color light, required Color dark}) =>
       AdaptiveColor(light: light, dark: dark);
-  
+
   /// Creates a complete color with explicit values for each color profile.
   factory Color.complete({
     required String trueColor,

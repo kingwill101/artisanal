@@ -102,7 +102,7 @@ class PasswordKeyMap extends KeyMap {
            KeyBinding(
              keys: ['end', 'ctrl+e'],
              help: Help(key: 'end', desc: 'end'),
-            ) {
+           ) {
     shortHelp = [this.submit, this.cancel];
     fullHelp = [
       [this.submit, this.cancel],
@@ -136,8 +136,6 @@ class PasswordKeyMap extends KeyMap {
 
   /// Move cursor to end.
   final KeyBinding cursorEnd;
-
-
 }
 
 /// Styles for the password component.

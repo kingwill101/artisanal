@@ -69,7 +69,7 @@ class ConfirmKeyMap extends KeyMap {
            KeyBinding(
              keys: ['right', 'l'],
              help: Help(key: Arrows.right, desc: 'no'),
-            ) {
+           ) {
     shortHelp = [this.yes, this.no, this.confirm, this.cancel];
     fullHelp = [
       [this.yes, this.no],
@@ -94,8 +94,6 @@ class ConfirmKeyMap extends KeyMap {
 
   /// Toggle selection right (to No).
   final KeyBinding toggleRight;
-
-
 }
 
 /// Styles for the confirm component.

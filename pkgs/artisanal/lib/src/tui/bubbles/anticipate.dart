@@ -72,7 +72,7 @@ class AnticipateKeyMap extends KeyMap {
            KeyBinding(
              keys: ['backspace', 'ctrl+h'],
              help: Help(key: KeyboardChars.backspace, desc: 'delete char'),
-            ) {
+           ) {
     shortHelp = [this.acceptSuggestion, this.cancel];
     fullHelp = [
       [this.acceptSuggestion, this.cancel],
@@ -94,7 +94,6 @@ class AnticipateKeyMap extends KeyMap {
 
   /// Delete character backward (backspace).
   final KeyBinding deleteCharacterBackward;
-
 }
 
 /// Anticipate model for autocomplete input.

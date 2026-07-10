@@ -41,10 +41,15 @@ class Help {
 /// ```
 class KeyBinding {
   /// Creates a new key binding.
-  KeyBinding({List<String>? keys, Help? help, bool disabled = false, this.handler, this.action})
-    : keys = keys ?? [],
-      help = help ?? const Help(),
-      _disabled = disabled;
+  KeyBinding({
+    List<String>? keys,
+    Help? help,
+    bool disabled = false,
+    this.handler,
+    this.action,
+  }) : keys = keys ?? [],
+       help = help ?? const Help(),
+       _disabled = disabled;
 
   /// Creates a key binding with the given keys.
   factory KeyBinding.withKeys(List<String> keys) {
@@ -266,9 +271,12 @@ extension KeyMsgMatchExtension on KeyMsg {
 /// ```
 class KeyMap {
   /// Creates a new key map.
-  KeyMap({List<KeyBinding>? shortHelp, List<List<KeyBinding>>? fullHelp, this.chords})
-    : shortHelp = shortHelp ?? [],
-      fullHelp = fullHelp ?? [];
+  KeyMap({
+    List<KeyBinding>? shortHelp,
+    List<List<KeyBinding>>? fullHelp,
+    this.chords,
+  }) : shortHelp = shortHelp ?? [],
+       fullHelp = fullHelp ?? [];
 
   /// Creates a key map with [bindings] set as both short and full help.
   ///

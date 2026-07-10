@@ -80,7 +80,6 @@ class _HttpHeadersStub implements HttpHeaders {
   void set(String name, Object value) {}
 }
 
-
 // Stub for dart:io types used by file_picker.dart on web/WASM platforms.
 // ignore_for_file: avoid_classes_with_only_static_members, one_member_abstracts
 

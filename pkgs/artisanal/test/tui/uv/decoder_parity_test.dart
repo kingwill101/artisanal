@@ -5,7 +5,6 @@ import 'package:artisanal/src/uv/uv.dart';
 import 'package:artisanal/src/unicode/grapheme.dart' as uni;
 import 'package:test/test.dart';
 
-
 UvRgb _rgbFromHex(String hex) {
   final s = hex.startsWith('#') ? hex.substring(1) : hex;
   final r = int.parse(s.substring(0, 2), radix: 16);

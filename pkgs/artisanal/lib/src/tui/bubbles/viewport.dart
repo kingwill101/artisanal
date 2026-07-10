@@ -49,7 +49,7 @@ class ViewportKeyMap extends KeyMap {
        right =
            right ??
            KeyBinding.withHelp(['right', 'l'], '${Arrows.right}/l', 'right'),
-        copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy') {
+       copy = copy ?? KeyBinding.withHelp(['ctrl+c', 'y'], 'y', 'copy') {
     shortHelp = [this.up, this.down, this.pageUp, this.pageDown, this.copy];
     fullHelp = [
       [this.up, this.down, this.pageUp, this.pageDown],
@@ -83,7 +83,6 @@ class ViewportKeyMap extends KeyMap {
 
   /// Key binding for copying selected text.
   final KeyBinding copy;
-
 }
 
 /// GutterContext provides context to a [GutterFunc].

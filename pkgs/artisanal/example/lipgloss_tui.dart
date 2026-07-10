@@ -15,13 +15,13 @@ import 'package:artisanal/tui.dart';
 void main(List<String> args) async {
   final demo = args.isNotEmpty ? args.first : 'counter';
   await switch (demo) {
-    'counter'   => _runCounter(),
+    'counter' => _runCounter(),
     'countdown' => _runCountdown(),
-    'input'     => _runInput(),
-    'list'      => _runList(),
-    'uv'        => _runUv(),
-    'chord'     => _runChord(),
-    _           => _printUsage(),
+    'input' => _runInput(),
+    'list' => _runList(),
+    'uv' => _runUv(),
+    'chord' => _runChord(),
+    _ => _printUsage(),
   };
 }
 
@@ -45,15 +45,13 @@ class CounterModel implements Model {
   (Model, Cmd?) update(Msg msg) {
     return switch (msg) {
       KeyMsg(key: Key(type: KeyType.up)) ||
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x2b])) => (
-        CounterModel(count + 1),
-        null,
-      ),
+      KeyMsg(
+        key: Key(type: KeyType.runes, runes: [0x2b]),
+      ) => (CounterModel(count + 1), null),
       KeyMsg(key: Key(type: KeyType.down)) ||
-      KeyMsg(key: Key(type: KeyType.runes, runes: [0x2d])) => (
-        CounterModel(count - 1),
-        null,
-      ),
+      KeyMsg(
+        key: Key(type: KeyType.runes, runes: [0x2d]),
+      ) => (CounterModel(count - 1), null),
       KeyMsg(key: Key(type: KeyType.runes, runes: [0x72])) => (
         const CounterModel(0),
         null,
@@ -99,7 +97,10 @@ class CounterModel implements Model {
 }
 
 Future<void> _runCounter() async {
-  await runProgram(const CounterModel(), options: ProgramOptions(altScreen: true));
+  await runProgram(
+    const CounterModel(),
+    options: ProgramOptions(altScreen: true),
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -198,7 +199,8 @@ class TextInputModel implements Model {
   }
 
   TextInputModel insertChar(String char) {
-    final newValue = value.substring(0, cursor) + char + value.substring(cursor);
+    final newValue =
+        value.substring(0, cursor) + char + value.substring(cursor);
     return copyWith(value: newValue, cursor: cursor + char.length);
   }
 
@@ -214,8 +216,10 @@ class TextInputModel implements Model {
     return copyWith(value: newValue);
   }
 
-  TextInputModel moveCursorLeft() => copyWith(cursor: (cursor - 1).clamp(0, value.length));
-  TextInputModel moveCursorRight() => copyWith(cursor: (cursor + 1).clamp(0, value.length));
+  TextInputModel moveCursorLeft() =>
+      copyWith(cursor: (cursor - 1).clamp(0, value.length));
+  TextInputModel moveCursorRight() =>
+      copyWith(cursor: (cursor + 1).clamp(0, value.length));
   TextInputModel moveCursorStart() => copyWith(cursor: 0);
   TextInputModel moveCursorEnd() => copyWith(cursor: value.length);
   TextInputModel clear() => copyWith(value: '', cursor: 0);
@@ -234,9 +238,14 @@ class TextInputModel implements Model {
       };
     }
     return switch (msg) {
-      KeyMsg(key: Key(type: KeyType.enter)) => (copyWith(submitted: true), null),
+      KeyMsg(key: Key(type: KeyType.enter)) => (
+        copyWith(submitted: true),
+        null,
+      ),
       KeyMsg(key: Key(type: KeyType.escape)) ||
-      KeyMsg(key: Key(ctrl: true, runes: [0x63])) => (copyWith(cancelled: true), null),
+      KeyMsg(
+        key: Key(ctrl: true, runes: [0x63]),
+      ) => (copyWith(cancelled: true), null),
       KeyMsg(key: Key(type: KeyType.backspace)) => (deleteBackward(), null),
       KeyMsg(key: Key(type: KeyType.delete)) => (deleteForward(), null),
       KeyMsg(key: Key(type: KeyType.left)) => (moveCursorLeft(), null),
@@ -250,7 +259,10 @@ class TextInputModel implements Model {
         copyWith(value: value.substring(0, cursor)),
         null,
       ),
-      KeyMsg(key: Key(ctrl: true, runes: [0x77])) => (_deleteWordBackward(), null),
+      KeyMsg(key: Key(ctrl: true, runes: [0x77])) => (
+        _deleteWordBackward(),
+        null,
+      ),
       KeyMsg(key: Key(type: KeyType.runes, runes: final r))
           when !msg.key.ctrl && !msg.key.alt =>
         (insertChar(String.fromCharCodes(r)), null),
@@ -262,9 +274,16 @@ class TextInputModel implements Model {
   TextInputModel _deleteWordBackward() {
     if (cursor == 0) return this;
     var pos = cursor - 1;
-    while (pos > 0 && value[pos] == ' ') { pos--; }
-    while (pos > 0 && value[pos - 1] != ' ') { pos--; }
-    return copyWith(value: value.substring(0, pos) + value.substring(cursor), cursor: pos);
+    while (pos > 0 && value[pos] == ' ') {
+      pos--;
+    }
+    while (pos > 0 && value[pos - 1] != ' ') {
+      pos--;
+    }
+    return copyWith(
+      value: value.substring(0, pos) + value.substring(cursor),
+      cursor: pos,
+    );
   }
 
   @override
@@ -291,7 +310,9 @@ class TextInputModel implements Model {
     } else {
       buffer.write(_getDisplayValue());
     }
-    final contentLen = value.isEmpty ? placeholder.length + 1 : value.length + 1;
+    final contentLen = value.isEmpty
+        ? placeholder.length + 1
+        : value.length + 1;
     if (contentLen < 38) buffer.write(' ' * (38 - contentLen.clamp(0, 38)));
     buffer.writeln(' │');
     buffer.writeln('  └${'─' * 40}┘');
@@ -313,7 +334,11 @@ class TextInputModel implements Model {
     final buffer = StringBuffer();
     if (cursor > 0) {
       final before = value.substring(0, cursor);
-      buffer.write(before.length > 36 ? '…${before.substring(before.length - 35)}' : before);
+      buffer.write(
+        before.length > 36
+            ? '…${before.substring(before.length - 35)}'
+            : before,
+      );
     }
     if (cursor < value.length) {
       buffer.write('\x1b[7m${value[cursor]}\x1b[0m');
@@ -330,7 +355,10 @@ class TextInputModel implements Model {
 
 Future<void> _runInput() async {
   await runProgram(
-    TextInputModel(label: 'Enter your name', placeholder: 'Type your name here...'),
+    TextInputModel(
+      label: 'Enter your name',
+      placeholder: 'Type your name here...',
+    ),
     options: const ProgramOptions(altScreen: true),
   );
 }
@@ -359,8 +387,10 @@ class ListModel implements Model {
   @override
   (Model, Cmd?) update(Msg msg) {
     return switch (msg) {
-      KeyMsg(key: final k) when k.isChar('q') || k.isEscape || k.isCtrlC =>
-        (this, Cmd.quit()),
+      KeyMsg(key: final k) when k.isChar('q') || k.isEscape || k.isCtrlC => (
+        this,
+        Cmd.quit(),
+      ),
       KeyMsg(key: final k) when k.isEnterLike || k.isSpaceLike => (
         copyWith(selected: items[cursor]),
         Cmd.quit(),
@@ -373,10 +403,14 @@ class ListModel implements Model {
         copyWith(cursor: (cursor + 1).clamp(0, items.length - 1)),
         null,
       ),
-      KeyMsg(key: final k) when k.type == KeyType.home || k.char == 'g' =>
-        (copyWith(cursor: 0), null),
-      KeyMsg(key: final k) when k.type == KeyType.end || k.char == 'G' =>
-        (copyWith(cursor: items.length - 1), null),
+      KeyMsg(key: final k) when k.type == KeyType.home || k.char == 'g' => (
+        copyWith(cursor: 0),
+        null,
+      ),
+      KeyMsg(key: final k) when k.type == KeyType.end || k.char == 'G' => (
+        copyWith(cursor: items.length - 1),
+        null,
+      ),
       _ => (this, null),
     };
   }
@@ -396,17 +430,27 @@ class ListModel implements Model {
       }
     }
     buffer.writeln();
-    buffer.writeln('  \x1b[2m↑/k: up • ↓/j: down • Enter: select • q: quit\x1b[0m');
+    buffer.writeln(
+      '  \x1b[2m↑/k: up • ↓/j: down • Enter: select • q: quit\x1b[0m',
+    );
     buffer.writeln();
     return buffer.toString();
   }
 }
 
 Future<void> _runList() async {
-  final model = ListModel(items: [
-    '🍕 Pizza', '🍔 Burger', '🌮 Tacos', '🍜 Ramen',
-    '🥗 Salad', '🍣 Sushi', '🥪 Sandwich', '🍝 Pasta',
-  ]);
+  final model = ListModel(
+    items: [
+      '🍕 Pizza',
+      '🍔 Burger',
+      '🌮 Tacos',
+      '🍜 Ramen',
+      '🥗 Salad',
+      '🍣 Sushi',
+      '🥪 Sandwich',
+      '🍝 Pasta',
+    ],
+  );
   final result = await runProgramWithResult(
     model,
     options: const ProgramOptions(
@@ -416,9 +460,11 @@ Future<void> _runList() async {
     ),
   );
   // ignore: avoid_print
-  print(result.selected == null
-      ? 'No selection made. Maybe next time!'
-      : 'You selected: ${result.selected}');
+  print(
+    result.selected == null
+        ? 'No selection made. Maybe next time!'
+        : 'You selected: ${result.selected}',
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -431,8 +477,12 @@ class UvDemoModel implements Model {
 
   @override
   (Model, Cmd?) update(Msg msg) {
-    if (msg is KeyMsg && msg.key.type == KeyType.runes && msg.key.runes.isNotEmpty) {
-      if (String.fromCharCode(msg.key.runes.first) == 'q') return (this, Cmd.quit());
+    if (msg is KeyMsg &&
+        msg.key.type == KeyType.runes &&
+        msg.key.runes.isNotEmpty) {
+      if (String.fromCharCode(msg.key.runes.first) == 'q') {
+        return (this, Cmd.quit());
+      }
     }
     return (this, null);
   }

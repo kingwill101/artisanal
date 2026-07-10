@@ -1,7 +1,6 @@
 import 'package:artisanal/src/uv/uv.dart';
 import 'package:test/test.dart';
 
-
 void main() {
   group('UvBorder parity', () {
     test('constructors', () {

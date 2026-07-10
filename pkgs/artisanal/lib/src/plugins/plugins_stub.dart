@@ -16,7 +16,8 @@ import 'package:artisanal/src/plugins/remote_surface_protocol.dart' as protocol;
 import 'package:artisanal/src/plugins/remote_surface_session.dart' as session;
 import 'package:artisanal/src/plugins/remote_surface_state.dart' as state;
 import 'package:artisanal/src/plugins/remote_surface_slots.dart' as slots;
-import 'package:artisanal/src/plugins/remote_surface_slot_input.dart' as slot_input;
+import 'package:artisanal/src/plugins/remote_surface_slot_input.dart'
+    as slot_input;
 
 typedef RemotePluginClipboardReader =
     FutureOr<String> Function(
@@ -44,7 +45,9 @@ final class RemotePluginSurfaceDrawable {
   const RemotePluginSurfaceDrawable(this.surface);
   final state.RemotePluginSurfaceState surface;
 
-  Object bounds() => throw UnsupportedError('RemotePluginSurfaceDrawable.bounds is not available on this platform.');
+  Object bounds() => throw UnsupportedError(
+    'RemotePluginSurfaceDrawable.bounds is not available on this platform.',
+  );
 
   void draw(Object screen, Object area) {}
 }

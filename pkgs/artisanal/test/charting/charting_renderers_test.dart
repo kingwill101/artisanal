@@ -991,23 +991,26 @@ void main() {
       expect(output, contains('C'));
     });
 
-    test('pie chart uses solid-cell rendering with high sub-sample resolution', () {
-      final output = _render(30, 15, (s, a) {
-        drawPieChart(
-          s,
-          a,
-          [50, 50],
-          styles: [
-            const UvStyle(fg: UvColor.basic16(1)),
-            const UvStyle(fg: UvColor.basic16(2)),
-          ],
-        );
-      });
-      // With 4x8 sub-sampling, cells near the boundary may have mixed
-      // samples but the dominant slice determines the cell color; solid
-      // interiors render as space + background color.
-      expect(output, isNotEmpty);
-    });
+    test(
+      'pie chart uses solid-cell rendering with high sub-sample resolution',
+      () {
+        final output = _render(30, 15, (s, a) {
+          drawPieChart(
+            s,
+            a,
+            [50, 50],
+            styles: [
+              const UvStyle(fg: UvColor.basic16(1)),
+              const UvStyle(fg: UvColor.basic16(2)),
+            ],
+          );
+        });
+        // With 4x8 sub-sampling, cells near the boundary may have mixed
+        // samples but the dominant slice determines the cell color; solid
+        // interiors render as space + background color.
+        expect(output, isNotEmpty);
+      },
+    );
 
     test('pie chart supports legacy 2x2 sampling via subSamples parameter', () {
       final output = _render(32, 16, (s, a) {

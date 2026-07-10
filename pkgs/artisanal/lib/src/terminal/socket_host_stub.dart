@@ -23,10 +23,7 @@ abstract final class SocketTerminalHostServer {
   static String resizeControlSequence({
     required int width,
     required int height,
-  }) =>
-      throw UnsupportedError(
-        'SocketTerminalHostServer not available on web',
-      );
+  }) => throw UnsupportedError('SocketTerminalHostServer not available on web');
 
   /// Stub: not available on web.
   static Future<SocketTerminalHostServer> serveProgram<M>({

@@ -79,7 +79,6 @@ class GitDiffKeyMap extends KeyMap {
 
   /// Key to cycle through view modes.
   final KeyBinding cycleViewMode;
-
 }
 
 /// Configuration for diff styling.
@@ -346,14 +345,23 @@ class DiffStyles {
       // Unified mode
       addedLine: _bgAware(Style().foreground(success), hasDarkBackground),
       removedLine: _bgAware(Style().foreground(error), hasDarkBackground),
-      contextLine: _bgAware(Style().foreground(onBackground), hasDarkBackground),
+      contextLine: _bgAware(
+        Style().foreground(onBackground),
+        hasDarkBackground,
+      ),
       fileHeader: _bgAware(
         Style().bold().foreground(onSurface),
         hasDarkBackground,
       ),
       hunkHeader: _bgAware(Style().foreground(muted), hasDarkBackground),
-      addedGutter: _bgAware(Style().foreground(success).bold(), hasDarkBackground),
-      removedGutter: _bgAware(Style().foreground(error).bold(), hasDarkBackground),
+      addedGutter: _bgAware(
+        Style().foreground(success).bold(),
+        hasDarkBackground,
+      ),
+      removedGutter: _bgAware(
+        Style().foreground(error).bold(),
+        hasDarkBackground,
+      ),
       contextGutter: _bgAware(Style().foreground(muted), hasDarkBackground),
       lineNumber: _bgAware(Style().foreground(muted), hasDarkBackground),
       // Pretty mode
@@ -383,7 +391,10 @@ class DiffStyles {
         hasDarkBackground,
       ),
       // Side-by-side mode
-      sideBySideSeparator: _bgAware(Style().foreground(border), hasDarkBackground),
+      sideBySideSeparator: _bgAware(
+        Style().foreground(border),
+        hasDarkBackground,
+      ),
       sideBySideAddedLine: _bgAware(
         Style().foreground(success).background(addedBg),
         hasDarkBackground,
@@ -396,22 +407,33 @@ class DiffStyles {
         Style().foreground(onBackground),
         hasDarkBackground,
       ),
-      sideBySideLineNumber: _bgAware(Style().foreground(muted), hasDarkBackground),
-      sideBySideEmptyCell: _bgAware(Style().foreground(surface), hasDarkBackground),
-      sideBySideAddedMarker: _bgAware(Style().foreground(success), hasDarkBackground),
-      sideBySideRemovedMarker: _bgAware(Style().foreground(error), hasDarkBackground),
-      sideBySideContextMarker: _bgAware(Style().foreground(muted), hasDarkBackground),
+      sideBySideLineNumber: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
+      sideBySideEmptyCell: _bgAware(
+        Style().foreground(surface),
+        hasDarkBackground,
+      ),
+      sideBySideAddedMarker: _bgAware(
+        Style().foreground(success),
+        hasDarkBackground,
+      ),
+      sideBySideRemovedMarker: _bgAware(
+        Style().foreground(error),
+        hasDarkBackground,
+      ),
+      sideBySideContextMarker: _bgAware(
+        Style().foreground(muted),
+        hasDarkBackground,
+      ),
       // Inline diff highlighting
       inlineAddedHighlight: _bgAware(
-        Style().background(
-        inlineAddedBg ?? const BasicColor('#2a4a2a'),
-      ),
+        Style().background(inlineAddedBg ?? const BasicColor('#2a4a2a')),
         hasDarkBackground,
       ),
       inlineRemovedHighlight: _bgAware(
-        Style().background(
-        inlineRemovedBg ?? const BasicColor('#4a2a2a'),
-      ),
+        Style().background(inlineRemovedBg ?? const BasicColor('#4a2a2a')),
         hasDarkBackground,
       ),
       selectedCommentLine: _bgAware(
@@ -1104,6 +1126,10 @@ class GitDiffModel extends ViewComponent {
 
   /// Pre-rendered styled lines fed into the viewport.
   final List<String> _renderedLines;
+
+  /// The full list of rendered diff text lines (all view modes, before
+  /// viewport clipping). Each line is an ANSI-formatted string.
+  List<String> get renderedLines => _renderedLines;
 
   /// The underlying viewport for scrolling.
   final ViewportModel _viewport;

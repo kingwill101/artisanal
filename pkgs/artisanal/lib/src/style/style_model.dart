@@ -209,14 +209,19 @@ final class StyleData {
       borderForeground: borderForeground ?? this.borderForeground,
       borderBackground: borderBackground ?? this.borderBackground,
       borderTopForeground: borderTopForeground ?? this.borderTopForeground,
-      borderRightForeground: borderRightForeground ?? this.borderRightForeground,
-      borderBottomForeground: borderBottomForeground ?? this.borderBottomForeground,
+      borderRightForeground:
+          borderRightForeground ?? this.borderRightForeground,
+      borderBottomForeground:
+          borderBottomForeground ?? this.borderBottomForeground,
       borderLeftForeground: borderLeftForeground ?? this.borderLeftForeground,
       borderTopBackground: borderTopBackground ?? this.borderTopBackground,
-      borderRightBackground: borderRightBackground ?? this.borderRightBackground,
-      borderBottomBackground: borderBottomBackground ?? this.borderBottomBackground,
+      borderRightBackground:
+          borderRightBackground ?? this.borderRightBackground,
+      borderBottomBackground:
+          borderBottomBackground ?? this.borderBottomBackground,
       borderLeftBackground: borderLeftBackground ?? this.borderLeftBackground,
-      borderForegroundBlend: borderForegroundBlend ?? this.borderForegroundBlend,
+      borderForegroundBlend:
+          borderForegroundBlend ?? this.borderForegroundBlend,
       borderForegroundBlendOffset:
           borderForegroundBlendOffset ?? this.borderForegroundBlendOffset,
       width: width ?? this.width,

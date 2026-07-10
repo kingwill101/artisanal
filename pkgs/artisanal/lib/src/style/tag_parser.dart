@@ -563,13 +563,15 @@ class ConsoleTagParser {
 
   /// Renders text with the given style.
   String _renderStyledText(String text, Style style) {
-    return style.inline(true).renderWithContext(
-      text,
-      RenderContext(
-        colorProfile: _colorProfile,
-        hasDarkBackground: _hasDarkBackground,
-      ),
-    );
+    return style
+        .inline(true)
+        .renderWithContext(
+          text,
+          RenderContext(
+            colorProfile: _colorProfile,
+            hasDarkBackground: _hasDarkBackground,
+          ),
+        );
   }
 
   /// Builds a style from a styled segment, inheriting from parent.

@@ -4,7 +4,8 @@ import 'dart:async' show FutureOr;
 
 import 'package:args/args.dart' show ArgParser;
 import 'package:args/command_runner.dart'
-    as args show Command, CommandRunner, UsageException;
+    as args
+    show Command, CommandRunner, UsageException;
 
 export 'command_listing.dart'
     show CommandListingEntry, formatCommandListing, indentBlock;
@@ -42,9 +43,12 @@ class ShellCompleter {
     throw UnsupportedError('ShellCompleter is not available on this platform.');
   }
 
-  static String generate(String executableName) =>
-      throw UnsupportedError('ShellCompleter is not available on this platform.');
+  static String generate(String executableName) => throw UnsupportedError(
+    'ShellCompleter is not available on this platform.',
+  );
 
   static String generateAll(List<String> executableNames) =>
-      throw UnsupportedError('ShellCompleter is not available on this platform.');
+      throw UnsupportedError(
+        'ShellCompleter is not available on this platform.',
+      );
 }

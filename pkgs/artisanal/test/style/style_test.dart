@@ -1173,7 +1173,10 @@ void main() {
     });
 
     test('box metrics include measured border geometry', () {
-      final style = Style().padding(1, 2).border(Border.double).borderSides(
+      final style = Style()
+          .padding(1, 2)
+          .border(Border.double)
+          .borderSides(
             BorderSides(top: true, bottom: true, left: true, right: false),
           );
 
@@ -1187,9 +1190,10 @@ void main() {
     });
 
     test('vertical alignment fills top before bottom when bottom aligned', () {
-      final output = Style().height(3).alignVertical(VerticalAlign.bottom).render(
-            'x',
-          );
+      final output = Style()
+          .height(3)
+          .alignVertical(VerticalAlign.bottom)
+          .render('x');
 
       expect(output.split('\n').length, equals(3));
       expect(output.split('\n').last, contains('x'));

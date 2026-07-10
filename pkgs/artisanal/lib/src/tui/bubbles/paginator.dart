@@ -29,7 +29,7 @@ class PaginatorKeyMap extends KeyMap {
             ['pgdown', 'right', 'l'],
             '${Arrows.right}/pgdn',
             'next page',
-           ) {
+          ) {
     shortHelp = [this.prevPage, this.nextPage];
     fullHelp = [
       [this.prevPage, this.nextPage],
@@ -41,7 +41,6 @@ class PaginatorKeyMap extends KeyMap {
 
   /// Key binding for next page.
   final KeyBinding nextPage;
-
 }
 
 /// A paginator widget for handling pagination state and rendering.
