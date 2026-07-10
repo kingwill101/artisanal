@@ -86,6 +86,39 @@ abstract class Command<T> extends args.Command<T> {
   void alert(Object message, {Verbosity? verbosity}) =>
       io.alert(message, verbosity: verbosity);
 
+  // ── Argument / Option accessors (Laravel-style) ──────────────────────
+
+  /// Returns the value of a named option (e.g., `--name`, `--force`).
+  ///
+  /// Sugar over `argResults![name]`.  Use the `as` cast or `??` default to
+  /// get a typed value:
+  ///
+  /// ```dart
+  /// final name = option('name') as String? ?? 'World';
+  /// final force = option('force') as bool;
+  /// ```
+  Object? option(String name) => argResults![name];
+
+  /// Returns `true` if [name] was explicitly provided on the command line.
+  bool hasOption(String name) => argResults!.wasParsed(name);
+
+  /// Returns the positional argument at [index] (0-based), or `null` if
+  /// fewer positional arguments were provided.
+  ///
+  /// ```dart
+  /// final name = argument(0) ?? 'default';
+  /// ```
+  String? argument(int index) {
+    final args = argResults!.rest;
+    return index < args.length ? args[index] : null;
+  }
+
+  /// All positional arguments passed to this command.
+  List<String> get arguments => argResults!.rest;
+
+  /// Number of positional arguments.
+  int get argumentCount => arguments.length;
+
   /// Separator used to group subcommands for display.
   ///
   /// Defaults to `:` (matching Artisanal-style namespaces).

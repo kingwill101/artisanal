@@ -55,8 +55,35 @@
 /// description, and an optional set of arguments and subcommands.
 ///
 /// Override the `run()` method to implement the command's logic. You can
-/// access the [Console] via the `console` property if the command is run
-/// through an Artisanal runner.
+/// access the [Console] via the `io` property for styled output.
+///
+/// Access parsed arguments with Laravel-style helpers:
+///
+/// ```dart
+/// class GreetCommand extends Command<void> {
+///   @override
+///   String get name => 'greet';
+///
+///   @override
+///   String get description => 'Greet someone.';
+///
+///   GreetCommand() {
+///     argParser.addOption('name', abbr: 'n', help: 'Who to greet.');
+///     argParser.addFlag('shout', help: 'SHOUT the greeting.');
+///   }
+///
+///   @override
+///   void run() {
+///     final name = option('name') as String? ?? 'World';
+///     final shout = option('shout') as bool;
+///     final message = argument(0); // first positional arg
+///     io.success('Hello, $name!');
+///   }
+/// }
+/// ```
+///
+/// See [Command.option], [Command.argument], [Command.hasOption],
+/// [Command.arguments], and [Command.argumentCount].
 /// {@endtemplate}
 library;
 

@@ -10,6 +10,8 @@ import 'package:completion/completion.dart' as completion;
 
 import '../io/console.dart';
 import '../renderer/renderer.dart';
+import '../style/color.dart';
+import '../style/style.dart';
 import '../style/verbosity.dart';
 import '../terminal/stdin_stream.dart';
 import 'command_listing.dart';
@@ -44,13 +46,54 @@ typedef UnknownCommandFallback<T> = FutureOr<T> Function(List<String> args);
 /// {@macro artisanal_args_overview}
 ///
 /// ```dart
-/// final runner = CommandRunner('myapp', 'My application')
+/// final runner = CommandRunner(
+///   CommandRunner.detectExecutableName(),
+///   'My application',
+/// )
 ///   ..addCommand(ServeCommand())
 ///   ..addCommand(DbMigrateCommand());
 ///
 /// await runner.run(args);
 /// ```
 class CommandRunner<T> extends args_pkg.CommandRunner<T> {
+  /// Auto-detects the executable name from [Platform.script].
+  ///
+  /// For a compiled binary, returns the binary's file name (e.g. `artisan`).
+  /// For a script run via `dart run` or `dart file.dart`, returns a string
+  /// like `dart run path/to/script.dart` so the usage help shows the correct
+  /// invocation.
+  ///
+  /// ```dart
+  /// final runner = CommandRunner(
+  ///   CommandRunner.detectExecutableName(),
+  ///   'My application',
+  /// );
+  /// ```
+  static String detectExecutableName() {
+    final scriptPath = dartio.Platform.script.toFilePath();
+    try {
+      final cwd = dartio.Directory.current.path;
+      if (scriptPath.startsWith(cwd)) {
+        var relative = scriptPath.substring(cwd.length);
+        if (relative.startsWith('/') || relative.startsWith('\\')) {
+          relative = relative.substring(1);
+        }
+        if (relative.endsWith('.dart')) {
+          final runner = dartio.Platform.executable.split('/').last;
+          return '$runner run $relative';
+        }
+        return relative.split('/').last;
+      }
+    } catch (_) {}
+    // Fallback: just use basename
+    final basename = scriptPath.split('/').last;
+    if (basename.endsWith('.dart')) {
+      final runner = dartio.Platform.executable.split('/').last;
+      return '$runner run $basename';
+    }
+    return basename;
+  }
+
   /// Creates a new command runner.
   ///
   /// - [executableName]: The name of the executable (shown in usage).
@@ -229,8 +272,10 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     try {
       return await super.run(argsList);
     } on args_pkg.UsageException catch (e) {
-      _printUsageError(e);
-      _setExitCode(usageExitCode);
+      if (!_handleMissingCommandAsNamespace(e)) {
+        _printUsageError(e);
+        _setExitCode(usageExitCode);
+      }
       return null;
     } finally {
       _io?.dispose();
@@ -332,16 +377,152 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
     if (first.startsWith('-')) return false;
     if (commands.containsKey(first)) return false;
 
+    // Don't delegate namespace commands (e.g. "flutter" when commands like
+    // "flutter:debug-dump" exist) to the fallback.
+    if (_hasNamespaceCommands(first)) return false;
+
     return true;
   }
 
+  /// Returns `true` if there are commands in the given namespace.
+  bool _hasNamespaceCommands(String prefix) {
+    return allCommandsInNamespace(prefix).isNotEmpty;
+  }
+
+  /// Returns all unique namespace prefixes from registered commands.
+  ///
+  /// For a command named `cache:clear`, this produces `['cache']`.
+  /// For nested namespaces like `cache:foo:bar`, this produces
+  /// `['cache', 'cache:foo']`.
+  ///
+  /// This is equivalent to Symfony Console's `Application::getNamespaces()`.
+  List<String> getNamespaces() {
+    final namespaces = <String>{};
+    for (final command in commands.values) {
+      if (command.hidden) continue;
+      for (final ns in _extractAllNamespaces(command.name)) {
+        namespaces.add(ns);
+      }
+    }
+    final sorted = namespaces.toList()..sort();
+    return sorted;
+  }
+
+  /// Returns all commands whose full name starts with [namespace] followed by
+  /// [namespaceSeparator].
+  ///
+  /// For example, `allCommandsInNamespace('cache')` returns `cache:clear`,
+  /// `cache:forget`, etc.
+  ///
+  /// This is equivalent to Symfony Console's `Application::all($namespace)`.
+  Map<String, args_pkg.Command<T>> allCommandsInNamespace(String namespace) {
+    final prefix = '$namespace$namespaceSeparator';
+    return {
+      for (final entry in commands.entries)
+        if (entry.key.startsWith(prefix)) entry.key: entry.value,
+    };
+  }
+
+  /// Attempts to handle a "command not found" error as a namespace reference.
+  ///
+  /// When a user types a grouped command namespace (e.g. `flutter` where
+  /// commands like `flutter:debug-dump`, `flutter:frame-profile` exist),
+  /// this displays the subcommands in that namespace instead of showing
+  /// an error, matching Symfony Console's behavior when an unknown command
+  /// matches a namespace.
+  ///
+  /// Returns `true` if the error was handled as a namespace, `false` otherwise.
+  bool _handleMissingCommandAsNamespace(args_pkg.UsageException e) {
+    final message = e.message.trim();
+    // Match "Could not find a command named "X"."
+    final match = RegExp(
+      r'^Could not find a command named "(.+)"',
+    ).firstMatch(message);
+    if (match == null) return false;
+
+    final name = match.group(1)!;
+
+    // Check if this is a namespace with subcommands.
+    final namespaceCommands = allCommandsInNamespace(name);
+    if (namespaceCommands.isEmpty) return false;
+
+    // Display a Symfony-style header.
+    writeOut(_heading('Available commands for the "$name" namespace:'));
+
+    // Build command listing entries.
+    final entries = namespaceCommands.entries.map(
+      (e) => CommandListingEntry(name: e.key, description: e.value.summary),
+    );
+    final listing = formatCommandListing(
+      entries,
+      namespaceSeparator: namespaceSeparator,
+      styleNamespace: _heading,
+      styleCommand: _command,
+    );
+    writeOut(listing);
+    writeOut('');
+    writeOut(
+      'Run ${_emphasize('"$executableName $name:<subcommand> --help"')} '
+      'for more information about a command.',
+    );
+
+    // Exit code 1 because no command was actually executed (matches Symfony).
+    _setExitCode(1);
+    return true;
+  }
+
+  /// Extracts all parent namespace parts from a command name.
+  ///
+  /// For `cache:clear` returns `['cache']`.
+  /// For `cache:foo:bar` returns `['cache', 'cache:foo']`.
+  /// For a command with no separator like `serve`, returns `[]`.
+  ///
+  /// This is equivalent to Symfony Console's `extractAllNamespaces()`.
+  List<String> _extractAllNamespaces(String commandName) {
+    final parts = commandName.split(namespaceSeparator);
+    if (parts.length <= 1) return [];
+
+    final namespaces = <String>[];
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (i == 0) {
+        namespaces.add(parts[0]);
+      } else {
+        namespaces.add('${namespaces.last}$namespaceSeparator${parts[i]}');
+      }
+    }
+    return namespaces;
+  }
+
+  /// Formats and prints a Symfony-style error block to stderr.
+  ///
+  /// Output matches Laravel Artisan's `formatBlock($message, 'error', large: true)`:
+  /// a blank line, the styled message with padding, then a trailing blank line.
   void _printUsageError(args_pkg.UsageException e) {
     final message = e.message.trim();
-    if (message.isNotEmpty) {
-      writeErr(_error('Error: $message'));
-      writeErr('');
+    if (message.isEmpty) return;
+
+    writeErr('');
+    writeErr(_styleErrorBlock(message));
+    writeErr('');
+  }
+
+  /// Applies Symfony-style `<error>` block styling.
+  ///
+  /// In ANSI mode, the text is rendered with white foreground on red background.
+  /// In ASCII mode, the text is returned with extra leading spaces (matching the
+  /// visual effect of Symfony's non-decorated error output).
+  String _styleErrorBlock(String message) {
+    // Symfony's formatBlock with large=true adds 2 spaces padding on each side.
+    final padded = '  $message  ';
+    if (_renderer.colorProfile == ColorProfile.ascii) {
+      return padded;
     }
-    writeOut(e.usage.trimRight());
+    return (Style()
+          ..colorProfile = _renderer.colorProfile
+          ..hasDarkBackground = _renderer.hasDarkBackground
+          ..foreground(Colors.white)
+          ..background(Colors.red))
+        .render(padded);
   }
 
   bool _resolveAnsiForArgs(Iterable<String> args) {
@@ -411,8 +592,6 @@ class CommandRunner<T> extends args_pkg.CommandRunner<T> {
   String _option(String text) => helpColorScheme.optionStyle(_renderer)(text);
   String _emphasize(String text) =>
       helpColorScheme.emphasisStyle(_renderer)(text);
-  String _error(String text) => helpColorScheme.errorStyle(_renderer)(text);
-
   String _formatOptionsUsage(String usage) {
     if (_renderer.colorProfile == ColorProfile.ascii) return usage;
 
