@@ -43,6 +43,24 @@ void main() {
       expect(Ansi.stripAnsi(edit.text), 'TEXT');
     });
 
+    test('keeps the tail beyond a run whose style (not text) changed', () {
+      // A selection highlight moving onto a row restyles a run of identical
+      // text (dim -> bold), so the byte-identical suffix starts *inside* the
+      // restyled run, where the pen states differ. The suffix must shrink to
+      // the part after the run's reset — the separator and the tag-wrapped
+      // blanks right of it (a parked sixel, in the app that hit this) must
+      // stay outside the edit.
+      const tail = ' \x1b[90m│\x1b[0m\x1b[38;2;1;2;3m     \x1b[39m';
+      final edit = lineSpanEdit(
+        _line('  \x1b[2m· Tea and rain\x1b[0m$tail'),
+        _line('\x1b[33m▌ \x1b[0m\x1b[1m· Tea and rain\x1b[0m$tail'),
+      )!;
+      expect(edit.column, 0);
+      expect(Ansi.stripAnsi(edit.text), '▌ · Tea and rain');
+      expect(edit.text, isNot(contains('│')));
+      expect(edit.text, isNot(contains('\x1b[38;2;1;2;3m')));
+    });
+
     test('drops the tail when the pen state at its start changed', () {
       // Identical trailing bytes, but the middle switched the colour they
       // inherit — the tail must be rewritten too.

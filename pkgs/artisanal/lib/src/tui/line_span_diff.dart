@@ -46,8 +46,14 @@ typedef _Token = ({String text, int width, bool isAnsi});
 /// The edit never touches display columns outside the changed span: a shared
 /// prefix is skipped, and a byte-identical tail is kept when the two lines
 /// have the same total display width *and* the ANSI state in effect where the
-/// tail starts is identical under both lines (otherwise the tail's rendered
-/// appearance could differ even though its bytes match, so it is rewritten).
+/// tail starts is identical under both lines (matching bytes can render
+/// differently when an earlier sequence changed the pen). When the state at
+/// the longest byte-identical tail differs, the tail is shrunk to the longest
+/// suffix whose inherited state agrees under both lines — typically the part
+/// after the restyled run's own reset — rather than dropped entirely, so a
+/// style-only change to a run of identical text (a selection highlight moving
+/// on or off it) rewrites that run but still leaves the rest of the row
+/// untouched.
 LineSpanEdit? lineSpanEdit(
   TerminalRenderLine oldLine,
   TerminalRenderLine newLine,
@@ -88,7 +94,11 @@ LineSpanEdit? lineSpanEdit(
   // same total display width (otherwise the shared bytes sit at different
   // columns), and only safe when the ANSI state at the suffix start is the
   // same under both lines (matching bytes can still render differently when
-  // an earlier sequence changed the pen).
+  // an earlier sequence changed the pen). A state mismatch at the longest
+  // suffix shrinks it to the longest state-matched one instead of discarding
+  // it: when only a run's style changed (its text identical, so the suffix
+  // walk runs straight through it), the suffix restarts after that run's
+  // reset instead of pulling the whole rest of the row into the edit.
   var suffix = 0;
   if (oldWidth == newWidth) {
     final maxSuffix = (oldTokens.length - prefix) <
@@ -101,11 +111,18 @@ LineSpanEdit? lineSpanEdit(
       suffix++;
     }
     if (suffix > 0) {
-      final oldState = _statePrefixAt(
+      final oldStates = _statePrefixesFrom(
           oldLine.statePrefix, oldTokens, oldTokens.length - suffix);
-      final newState = _statePrefixAt(
+      final newStates = _statePrefixesFrom(
           newLine.statePrefix, newTokens, newTokens.length - suffix);
-      if (oldState != newState) suffix = 0;
+      // oldStates[j] / newStates[j] hold the state before the token that
+      // starts a suffix of length (suffix - j); walk j up (suffix down)
+      // until the states agree.
+      var j = 0;
+      while (j < suffix && oldStates[j] != newStates[j]) {
+        j++;
+      }
+      suffix -= j;
     }
   }
 
@@ -134,6 +151,25 @@ LineSpanEdit? lineSpanEdit(
 String _tailErase(int oldWidth, int newWidth) => oldWidth > newWidth
     ? '${Ansi.reset}${' ' * (oldWidth - newWidth)}'
     : '';
+
+/// The ANSI state active just before each token index in
+/// `[from, tokens.length]`, serialized like [_statePrefixAt] — one entry per
+/// index, in order. One pass over the line, so probing every candidate
+/// suffix start costs the same as probing one.
+List<String> _statePrefixesFrom(
+    String statePrefix, List<_Token> tokens, int from) {
+  final style = uv_styled.StyleState(const UvStyle());
+  final link = uv_styled.LinkState(const Link());
+  applyRenderedAnsiState(statePrefix, style, link);
+  final out = <String>[];
+  for (var i = 0; i <= tokens.length; i++) {
+    if (i >= from) out.add(renderedStatePrefix(style.style, link.link));
+    if (i < tokens.length && tokens[i].isAnsi) {
+      applyRenderedAnsiState(tokens[i].text, style, link);
+    }
+  }
+  return out;
+}
 
 /// The ANSI state active just before token [index], serialized as the
 /// sequences that recreate it from a reset pen. [statePrefix] is the line's
