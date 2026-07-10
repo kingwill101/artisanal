@@ -1,4 +1,5 @@
 library;
+// ignore_for_file: unused_element
 
 import 'package:artisanal/style.dart' as style;
 import 'package:artisanal/tui.dart' as tui;

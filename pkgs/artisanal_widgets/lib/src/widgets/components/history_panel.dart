@@ -1,6 +1,6 @@
 import 'package:artisanal/widgets.dart';
 
-import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+import 'package:artisanal/style.dart' show Color, Style;
 
 /// A single entry in the undo/redo history.
 class HistoryEntry {

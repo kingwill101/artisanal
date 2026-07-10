@@ -26,7 +26,7 @@ import 'package:artisanal/bubbles.dart'
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+import 'package:artisanal/style.dart' show Style;
 
 /// A higher-level Markdown editor with a live rendered preview.
 ///

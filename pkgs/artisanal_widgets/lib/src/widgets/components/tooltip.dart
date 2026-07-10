@@ -6,7 +6,7 @@ import 'dart:math' as math;
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+import 'package:artisanal/style.dart' show Color, Border, Style;
 
 /// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }

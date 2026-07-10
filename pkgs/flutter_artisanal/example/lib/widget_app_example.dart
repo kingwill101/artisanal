@@ -567,7 +567,7 @@ class _ChartShowcaseState extends w.State<ChartShowcase> {
   tui.Cmd? handleUpdate(tui.Msg msg) {
     if (msg is tui.KeyMsg) {
       final key = msg.key;
-      print('[key] char=${key.char ?? 'null'} type=${key.type} bytes=${key.char?.codeUnits ?? []}');
+      debugPrint('[key] char=${key.char ?? 'null'} type=${key.type} bytes=${key.char?.codeUnits ?? []}');
       if (key.char == 'q' || key.char == 'Q') {
         return tui.Cmd.quit();
       }

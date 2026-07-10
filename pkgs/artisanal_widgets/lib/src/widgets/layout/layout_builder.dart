@@ -1,6 +1,6 @@
 import 'geometry.dart';
 import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+    show BuildContext, lessWidget;
 import '../core/widget.dart';
 import '../media/media_query.dart' show MediaQuery;
 

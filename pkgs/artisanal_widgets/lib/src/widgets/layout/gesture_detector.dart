@@ -14,7 +14,7 @@ import 'package:artisanal/tui.dart'
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+    show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
 import '../focus/focus.dart' show Focusable;
 import '../gestures/gestures.dart';

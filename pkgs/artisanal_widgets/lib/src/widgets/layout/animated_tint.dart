@@ -13,9 +13,9 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         TraceTag;
 import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+    show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
-import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+import '../theme/theme.dart' show hasDarkBackground;
 import '../animation/animation_controller.dart';
 import '../animation/animation_mixin.dart';
 

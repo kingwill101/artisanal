@@ -1,6 +1,6 @@
 import 'package:artisanal/widgets.dart';
 
-import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+import 'package:artisanal/style.dart' show Color, Style;
 
 /// A small widget that displays a keyboard shortcut key and its label.
 ///

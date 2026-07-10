@@ -32,7 +32,6 @@ import 'package:artisanal/tui.dart'
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
-        SecondaryDeviceAttributesMsg,
         TerminalVersionMsg,
         TraceTag,
         StreamCmd,

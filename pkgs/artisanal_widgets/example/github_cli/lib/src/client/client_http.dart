@@ -322,7 +322,7 @@ final class GithubHttpClient
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
-        if (after != null) 'after': after,
+        ?'after': after,
       }),
     );
     final issues = ghMap(ghMap(ghMap(json['data'])['repository'])['issues']);
@@ -349,7 +349,7 @@ final class GithubHttpClient
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
-        if (after != null) 'after': after,
+        ?'after': after,
       }),
     );
     final prs = ghMap(ghMap(ghMap(json['data'])['repository'])['pullRequests']);

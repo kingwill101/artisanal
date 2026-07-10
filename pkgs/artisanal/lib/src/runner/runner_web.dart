@@ -37,6 +37,7 @@ class CommandRunner<T> extends args.CommandRunner<T> {
 
 class ShellCompleter {
   ShellCompleter(ArgParser parser) : _parser = parser;
+  // ignore: unused_field
   final ArgParser _parser;
 
   List<String> complete(List<String> args, String compLine, int compPoint) {

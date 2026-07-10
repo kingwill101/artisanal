@@ -1,4 +1,4 @@
-import 'package:artisanal/tui.dart' show Cmd, KeyMsg, KeyBinding;
+import 'package:artisanal/tui.dart' show Cmd;
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';

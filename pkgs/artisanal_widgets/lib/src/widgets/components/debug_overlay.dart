@@ -2,7 +2,7 @@
 import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
-import 'package:artisanal/style.dart' show Color, Border, Style, Colors;
+import 'package:artisanal/style.dart' show Border, Style, Colors;
 
 /// A debug overlay that displays rendering metrics.
 ///

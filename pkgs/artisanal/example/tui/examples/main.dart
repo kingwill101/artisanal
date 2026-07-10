@@ -2,7 +2,7 @@
 ///
 /// Usage:
 ///   dart run example/tui/examples/main.dart          # list
-///   dart run example/tui/examples/main.dart <name>   # run
+///   dart run example/tui/examples/main.dart `<name>`   # run
 library;
 
 import 'dart:io' as io;

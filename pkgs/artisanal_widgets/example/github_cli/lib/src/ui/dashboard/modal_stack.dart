@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'package:artisanal/tui.dart' as tui;
 import 'package:artisanal_widgets/widgets.dart' as w;
 

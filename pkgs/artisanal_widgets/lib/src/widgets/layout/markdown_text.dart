@@ -19,11 +19,11 @@ import 'package:artisanal/artisanal.dart'
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+    show BuildContext, StatefulWidget, State;
 import '../rendering/render_object.dart';
 import '../rendering/render_layout.dart';
 import '../core/widget.dart';
-import '../theme/theme.dart' show hasDarkBackground, currentTheme;
+import '../theme/theme.dart' show hasDarkBackground;
 
 typedef MarkdownLinkTapCallback = Cmd? Function(String url);
 

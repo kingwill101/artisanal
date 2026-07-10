@@ -13,7 +13,7 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         TraceTag;
 import '../core/framework.dart'
-    show BuildContext, StatelessWidget, StatefulWidget, State;
+    show BuildContext, StatefulWidget, State;
 import '../core/widget.dart';
 
 enum AsyncConnectionState { none, waiting, active, done }

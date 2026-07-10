@@ -26,7 +26,7 @@ final class GhCliClient
     final repoJson = await _runJson([
       'repo',
       'view',
-      if (repository != null) repository,
+      ?repository,
       '--json',
       ghRepositoryFields.join(','),
     ]);
