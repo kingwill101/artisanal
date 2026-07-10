@@ -8,6 +8,8 @@ import 'package:artisanal/widgets.dart';
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Border, Style;
 
+
+// ignore_for_file: unused_shown_name
 /// Preferred position for tooltip placement relative to its child.
 enum TooltipPosition { above, below }
 

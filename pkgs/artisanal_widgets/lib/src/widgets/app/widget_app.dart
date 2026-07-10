@@ -1,3 +1,5 @@
+
+// ignore_for_file: unused_shown_name
 /// WidgetApp integrates widgets with the TUI program loop.
 library;
 
@@ -32,6 +34,7 @@ import 'package:artisanal/tui.dart'
         RenderMetrics,
         RenderMetricsModel,
         RenderMetricsMsg,
+        SecondaryDeviceAttributesMsg,
         TerminalVersionMsg,
         TraceTag,
         StreamCmd,

@@ -8,6 +8,8 @@ import 'package:artisanal/style.dart' show Style;
 /// individually via [style], or use the tree's default styling.
 ///
 /// Named `TreeViewNode` to avoid collision with the bubbles `TreeNode`
+
+// ignore_for_file: unused_shown_name
 /// interface from `package:artisanal`.
 class TreeViewNode {
   const TreeViewNode({

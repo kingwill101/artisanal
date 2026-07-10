@@ -21,6 +21,8 @@ import 'package:artisanal/style.dart' show Color;
 ///
 /// // Close the top dialog
 /// DialogStack.of(context).pop();
+
+// ignore_for_file: unused_shown_name
 /// ```
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '

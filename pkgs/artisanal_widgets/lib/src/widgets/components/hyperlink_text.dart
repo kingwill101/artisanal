@@ -16,6 +16,8 @@ import 'package:artisanal/style.dart' show Color, Style;
 ///   label: 'Example Website',
 ///   showUrl: true, // renders: "Example Website (https://example.com)"
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class HyperlinkText extends StatelessWidget {
   HyperlinkText({

@@ -4,6 +4,7 @@ import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color, Layout;
+// ignore_for_file: unused_shown_name
 
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '

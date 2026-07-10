@@ -20,6 +20,8 @@ import 'package:artisanal/style.dart' show Color;
 ///   ),
 ///   child: MainContent(),
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class Drawer extends StatelessWidget {
   Drawer({

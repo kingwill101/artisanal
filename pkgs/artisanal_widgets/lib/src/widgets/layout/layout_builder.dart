@@ -1,6 +1,8 @@
+
+// ignore_for_file: unused_shown_name
 import 'geometry.dart';
 import '../core/framework.dart'
-    show BuildContext, lessWidget;
+    show BuildContext, StatelessWidget, StatefulWidget, State;
 import '../core/widget.dart';
 import '../media/media_query.dart' show MediaQuery;
 

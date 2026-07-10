@@ -1,3 +1,5 @@
+
+// ignore_for_file: unused_shown_name
 import 'dart:async';
 import 'package:artisanal/tui.dart'
     show
@@ -13,7 +15,7 @@ import 'package:artisanal/tui.dart'
         TuiTrace,
         TraceTag;
 import '../core/framework.dart'
-    show BuildContext, StatefulWidget, State;
+    show BuildContext, StatelessWidget, StatefulWidget, State;
 import '../core/widget.dart';
 
 enum AsyncConnectionState { none, waiting, active, done }

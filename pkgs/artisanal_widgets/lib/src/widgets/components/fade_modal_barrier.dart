@@ -24,6 +24,8 @@ import 'package:artisanal/style.dart' show Color;
 ///   onDismiss: () => setState(() => _showBarrier = false),
 ///   child: myContent,
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 @Deprecated(
   'Use DialogRoute via Navigator.of(context).showDialog() instead. '

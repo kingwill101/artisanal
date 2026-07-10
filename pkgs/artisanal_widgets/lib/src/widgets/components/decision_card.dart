@@ -7,6 +7,8 @@ import 'package:artisanal/style.dart' show Color, Border;
 /// Maps to a traffic-light color scheme:
 /// - [green]: safe / proceed
 /// - [yellow]: caution / review
+
+// ignore_for_file: unused_shown_name
 /// - [red]: stop / alert
 enum DecisionSignal {
   green,

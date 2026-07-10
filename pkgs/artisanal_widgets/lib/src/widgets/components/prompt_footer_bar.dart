@@ -22,6 +22,8 @@ import 'package:artisanal/style.dart' show Color;
 ///     (key: 'enter', description: 'confirm'),
 ///   ],
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class PromptFooterBar extends StatelessWidget {
   PromptFooterBar({

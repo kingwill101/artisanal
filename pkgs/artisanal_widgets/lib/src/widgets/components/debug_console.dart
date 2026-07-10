@@ -6,6 +6,7 @@ import 'package:artisanal/widgets.dart';
 
 import 'package:artisanal/tui.dart';
 import 'package:artisanal/style.dart' show Color;
+// ignore_for_file: unused_shown_name
 
 DateTime _defaultDebugConsoleNowProvider() => DateTime.now();
 

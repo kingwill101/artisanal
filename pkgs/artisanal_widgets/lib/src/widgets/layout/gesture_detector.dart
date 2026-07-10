@@ -1,3 +1,5 @@
+
+// ignore_for_file: unused_shown_name
 import 'package:artisanal/tui.dart'
     show
         Cmd,
@@ -14,7 +16,7 @@ import 'package:artisanal/tui.dart'
 import 'geometry.dart';
 import '../core/element.dart' show elementOf;
 import '../core/framework.dart'
-    show BuildContext, StatefulWidget, State;
+    show BuildContext, StatelessWidget, StatefulWidget, State;
 import '../core/widget.dart';
 import '../focus/focus.dart' show Focusable;
 import '../gestures/gestures.dart';

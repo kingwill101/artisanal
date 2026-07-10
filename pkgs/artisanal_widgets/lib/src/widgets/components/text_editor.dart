@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+// ignore_for_file: unused_shown_name
 
 import 'package:artisanal/bubbles.dart'
     show
@@ -7,8 +8,23 @@ import 'package:artisanal/bubbles.dart'
         TextAreaModel,
         TextAreaStyles,
         TextDecorationRange,
+        TextSyntaxBuildResult,
+        TextSyntaxDecorationPatch,
+        TextSyntaxSession,
+        TextSyntaxSnapshot,
+        TextSyntaxProvider,
         TextDocument,
+        TextDocumentChange,
         keyMatchesSingle,
+        codeHandleClosingDelimiterAlignment,
+        codeHandlePairBackspace,
+        codeHandleAutoPair,
+        codeInsertIndentedNewline,
+        codeToggleBlockComments,
+        resolveCodeLanguageProfile,
+        textSyntaxChangeWindow,
+        textSyntaxDecorationLayerKey,
+        textSyntaxDecorationLayerPriority,
         TextHighlightRange,
         TextDiagnosticSeverity,
         TextOffsetStateSnapshot,

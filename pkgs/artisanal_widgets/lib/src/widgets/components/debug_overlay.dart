@@ -19,6 +19,8 @@ import 'package:artisanal/style.dart' show Border, Style, Colors;
 ///   enabled: true,
 ///   child: MyApp(),
 /// )
+
+// ignore_for_file: unused_shown_name
 /// ```
 class DebugOverlay extends StatefulWidget {
   DebugOverlay({
