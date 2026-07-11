@@ -102,9 +102,10 @@ void main() {
 
 ## Image
 
-![Dart logo](https://dart.dev/assets/shared/dart-logo-for-shares.png)
+![Dart logo](https://dart.dev/assets/img/logo/dart-192.svg)
 
-(The image appears as `[Image: Dart logo]` in terminal.)
+(With `renderImages: true`, SVG images are rasterized via pure_svg
+and displayed inline using the terminal's image protocol.)
 
 ---
 
