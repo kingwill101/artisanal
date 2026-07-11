@@ -93,6 +93,18 @@ class MarkdownRenderContext {
 
   // ─── Helpers ──────────────────────────────────────────────────────
 
+  /// Returns the currently active output buffer.
+  StringBuffer get outputBuffer {
+    if (inTableCell) return currentCellBuffer;
+    if (inParagraph && options.width != null && !inCodeBlock) {
+      return paragraphBuffer;
+    }
+    if (listItemStack.isNotEmpty && options.width != null && !inCodeBlock) {
+      return listItemStack.last.buffer;
+    }
+    return buffer;
+  }
+
   static const ansiReset = '\x1b[0m';
 }
 

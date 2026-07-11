@@ -23,17 +23,17 @@ void renderImage(MarkdownRenderContext ctx, Element element) {
 
   final style = Style().dim();
 
-  ctx.buffer.write(ctx.styleToAnsi(style));
+  ctx.outputBuffer.write(ctx.styleToAnsi(style));
 
-  ctx.buffer.write('[Image: $alt]');
+  ctx.outputBuffer.write('[Image: $alt]');
 
   if (src.isNotEmpty) {
 
-    ctx.buffer.write(' ($src)');
+    ctx.outputBuffer.write(' ($src)');
 
   }
 
-  ctx.buffer.write(MarkdownRenderContext.ansiReset);
+  ctx.outputBuffer.write(MarkdownRenderContext.ansiReset);
 
 }
 

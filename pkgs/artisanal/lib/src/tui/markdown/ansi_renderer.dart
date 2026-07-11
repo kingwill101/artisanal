@@ -538,8 +538,11 @@ class AnsiRenderer implements NodeVisitor {
 
       case 'blockquote':
         _blockquoteDepth--;
-        if (_blockquoteDepth == 0) {
+        if (_blockquoteDepth <= 0) {
           _inBlockquote = false;
+          if (_blockquoteDepth < 0) {
+            _blockquoteDepth = 0;
+          }
         }
         _lastWasBlock = true;
         break;
@@ -1785,8 +1788,19 @@ class AnsiRenderer implements NodeVisitor {
     if (_buffer.isNotEmpty && !_buffer.toString().endsWith('\n')) {
       _buffer.write('\n');
     }
-    if (_lastWasBlock) {
+    if (_lastWasBlock && !_inBlockquote) {
       _buffer.write('\n');
+      _lastWasBlock = false;
+    } else if (_lastWasBlock) {
+      // Inside a blockquote: blank lines between paragraph→list are
+      // syntactic separators, not content.  But nested blockquotes
+      // (like those produced by normalizer-merged `> >`) represent
+      // genuine section breaks and need a visible blank line.
+      final enteringNestedBlockquote = _elementStack.isNotEmpty &&
+          _elementStack.last.tag == 'blockquote';
+      if (enteringNestedBlockquote) {
+        _buffer.write('\n');
+      }
       _lastWasBlock = false;
     }
   }

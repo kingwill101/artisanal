@@ -8,11 +8,11 @@ import 'render_context.dart';
 
 void renderHeading(MarkdownRenderContext ctx, String tag) {
   final style = headingStyle(ctx, tag);
-  ctx.buffer.write(ctx.styleToAnsi(style));
+  ctx.outputBuffer.write(ctx.styleToAnsi(style));
 }
 
 void endHeading(MarkdownRenderContext ctx) {
-  ctx.buffer.write(MarkdownRenderContext.ansiReset);
+  ctx.outputBuffer.write(MarkdownRenderContext.ansiReset);
 }
 
 Style headingStyle(MarkdownRenderContext ctx, String tag) {

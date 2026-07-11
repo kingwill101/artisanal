@@ -15,13 +15,11 @@ void renderStartListItem(MarkdownRenderContext ctx, Element element) {
   }
 
   // Add indentation based on nesting level
-  final indent = element.tag == 'li'
-      ? '  ' * (ctx.listDepth)
-      : '  ' * ctx.listDepth;
+  final indent = ' ' * ((ctx.listDepth - 1) * ctx.options.listIndent);
   ctx.buffer.write(indent);
 
   // Get the list style from the parent list element
-  final parentList = ctx.elementStack.isNotEmpty ? ctx.elementStack.last : null;
+  final parentList = renderParentList(ctx);
   final ordered = parentList != null && parentList.tag == 'ol';
   final startAttr = parentList?.attributes['start'];
   final start = startAttr != null ? int.tryParse(startAttr) ?? 1 : 1;
@@ -42,6 +40,16 @@ void renderStartListItem(MarkdownRenderContext ctx, Element element) {
   ctx.listItemStack.add(
     ListItemContext(trimLeadingWhitespace: true),
   );
+}
+
+Element? renderParentList(MarkdownRenderContext ctx) {
+  for (var i = ctx.elementStack.length - 1; i >= 0; i--) {
+    final tag = ctx.elementStack[i].tag;
+    if (tag == 'ul' || tag == 'ol') {
+      return ctx.elementStack[i];
+    }
+  }
+  return null;
 }
 
 bool renderHasNestedList(Element element) {
@@ -82,14 +90,18 @@ String renderIndentContinuationLines(String text, int indent) {
   return lines.asMap().entries.map((e) => e.key == 0 ? e.value : '$prefix${e.value}').join('\n');
 }
 
+Style defaultBlockquoteStyle() => Style().italic().dim();
+
 void renderWriteBlockquotePrefix(MarkdownRenderContext ctx) {
   final color = ctx.options.blockquoteBorderColor;
   if (color == null) {
     ctx.buffer.write('│ ');
-    return;
+  } else {
+    final seq = color.toAnsi(ColorProfile.trueColor);
+    ctx.buffer.write('$seq│ ${MarkdownRenderContext.ansiReset}');
   }
-  final seq = color.toAnsi(ColorProfile.trueColor);
-  ctx.buffer.write('$seq│ ${MarkdownRenderContext.ansiReset}');
+
+  ctx.buffer.write(ctx.styleToAnsi(ctx.options.blockquoteStyle ?? defaultBlockquoteStyle()));
 }
 
 String renderApplyBlockquotePrefix(MarkdownRenderContext ctx, String text) {

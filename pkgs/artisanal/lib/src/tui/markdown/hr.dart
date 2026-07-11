@@ -1,5 +1,4 @@
 import '../../style/style.dart';
-import '../../style/color.dart';
 import 'render_context.dart';
 
 
@@ -19,13 +18,13 @@ void renderHorizontalRule(MarkdownRenderContext ctx) {
 
   final dimStyle = Style().dim();
 
-  ctx.buffer.write(ctx.styleToAnsi(dimStyle));
+  ctx.outputBuffer.write(ctx.styleToAnsi(dimStyle));
 
-  ctx.buffer.write(line);
+  ctx.outputBuffer.write(line);
 
-  ctx.buffer.write(MarkdownRenderContext.ansiReset);
+  ctx.outputBuffer.write(MarkdownRenderContext.ansiReset);
 
-  ctx.buffer.write('\n');
+  ctx.outputBuffer.write('\n');
 
   ctx.lastWasBlock = true;
 

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-import 'package:markdown/markdown.dart' show Element;
 import '../../style/border.dart' as style_border;
 import '../../style/style.dart';
 import '../../tui/bubbles/components/table.dart' as table_component;
@@ -102,9 +100,9 @@ void renderTable(MarkdownRenderContext ctx) {
 
 
 
-  ctx.buffer.write(table.render());
+  ctx.outputBuffer.write(table.render());
 
-  ctx.buffer.write('\n');
+  ctx.outputBuffer.write('\n');
 
 }
 
