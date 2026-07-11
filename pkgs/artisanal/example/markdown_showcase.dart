@@ -102,10 +102,10 @@ void main() {
 
 ## Image
 
-![Dart logo](https://dart.dev/assets/img/logo/dart-192.svg)
+![Test image](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcST9UjitrpsLDBn81E7T6MBLb9JSMOr5lFtBKtU6dScSA&s=10)
 
-(With `renderImages: true`, SVG images are rasterized via pure_svg
-and displayed inline using the terminal's image protocol.)
+(With `renderImages: true`, images are downloaded, decoded, and
+rendered inline via the terminal's supported image protocol.)
 
 ---
 
