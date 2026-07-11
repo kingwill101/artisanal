@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:markdown/markdown.dart';
 
 import '../../style/style.dart';
@@ -43,14 +46,85 @@ class MarkdownRenderer implements NodeVisitor {
   // ─── Public API ────────────────────────────────────────────────────
 
   /// Renders a markdown string to ANSI-styled text.
-  String renderToAnsi(String markdown) {
+  /// Renders a markdown string to ANSI-styled text.
+  ///
+  /// If [options.renderImages] is true, pre-download images first using
+  /// [preloadImages] and pass [imageCache] for terminal-protocol rendering.
+  String renderToAnsi(String markdown, {Map<String, Uint8List>? imageCache}) {
     final nodes = markdown_backend.parseMarkdownNodes(markdown);
-    return render(nodes);
+    return render(nodes, imageCache: imageCache);
   }
 
   /// Renders parsed markdown nodes to ANSI-styled text.
-  String render(List<Node> nodes) {
-    return legacy.AnsiRenderer(options: _options).render(nodes);
+  String render(List<Node> nodes, {Map<String, Uint8List>? imageCache}) {
+    final renderer = legacy.AnsiRenderer(options: _options);
+    if (imageCache != null) {
+      renderer.imageCache.addAll(imageCache);
+    }
+    return renderer.render(nodes);
+  }
+
+  /// Scans markdown for image URLs and downloads them in parallel.
+  ///
+  /// Returns a map of URL → image bytes. Pass the result to [renderToAnsi]
+  /// or [render] when [AnsiRendererOptions.renderImages] is enabled.
+  static Future<Map<String, Uint8List>> preloadImages(
+    String markdown,
+  ) async {
+    final nodes = markdown_backend.parseMarkdownNodes(markdown);
+    final urls = <String>[];
+    _collectImageUrls(nodes, urls);
+
+    if (urls.isEmpty) return {};
+
+    final results = await Future.wait(urls.map(_downloadImageBytes));
+    final cache = <String, Uint8List>{};
+    for (var i = 0; i < urls.length; i++) {
+      if (results[i] != null) {
+        cache[urls[i]] = results[i]!;
+      }
+    }
+    return cache;
+  }
+
+  static void _collectImageUrls(List<Node> nodes, List<String> urls) {
+    for (final node in nodes) {
+      if (node is Element && node.tag == 'img') {
+        final src = node.attributes['src'];
+        if (src != null && src.isNotEmpty) {
+          urls.add(src);
+        }
+      }
+      if (node is Element && node.children != null) {
+        _collectImageUrls(node.children!, urls);
+      }
+    }
+  }
+
+  static Future<Uint8List?> _downloadImageBytes(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final client = HttpClient();
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      if (response.statusCode != 200) {
+        client.close();
+        return null;
+      }
+      final bytes = await response.fold<Uint8List>(
+        Uint8List(0),
+        (prev, chunk) {
+          final combined = Uint8List(prev.length + chunk.length);
+          combined.setRange(0, prev.length, prev);
+          combined.setRange(prev.length, combined.length, chunk);
+          return combined;
+        },
+      );
+      client.close();
+      return bytes;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ─── NodeVisitor implementation ────────────────────────────────────

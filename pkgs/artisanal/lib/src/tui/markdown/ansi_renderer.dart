@@ -17,10 +17,14 @@
 /// ```
 library;
 
+import 'dart:typed_data';
+
 import 'package:html_unescape/html_unescape.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 import 'package:markdown/markdown.dart';
+
+import 'package:image/image.dart' as img;
 
 import '../../style/border.dart' as style_border;
 import '../../style/style.dart';
@@ -31,6 +35,10 @@ import 'backend.dart' as markdown_backend;
 import 'syntax_highlighter.dart';
 import 'options.dart';
 import 'html_context.dart';
+import 'image_renderer.dart' show
+    ImageProtocol,
+    detectImageProtocol,
+    renderImageToAnsi;
 export 'options.dart';
 export 'styles.dart' show MarkdownElementStyle;
 
@@ -101,6 +109,14 @@ class AnsiRenderer implements NodeVisitor {
 
   /// The rendering options.
   final AnsiRendererOptions options;
+
+  /// Pre-downloaded image bytes keyed by URL.
+  ///
+  /// Populated by [AnsiRenderer.loadImages] or [MarkdownRenderer.preloadImages]
+  /// before rendering. When [options.renderImages] is true, [_renderImage]
+  /// looks up the URL here, decodes the image, and renders it through the
+  /// detected terminal graphics protocol.
+  final Map<String, Uint8List> imageCache = {};
 
   /// Output buffer.
   final StringBuffer _buffer = StringBuffer();
@@ -1026,7 +1042,17 @@ class AnsiRenderer implements NodeVisitor {
     final alt = element.attributes['alt'] ?? 'image';
     final src = element.attributes['src'] ?? '';
 
-    // Render as [Image: alt] (url) in terminal
+    // Try terminal image protocol when renderImages is enabled
+    if (options.renderImages && src.isNotEmpty && imageCache.containsKey(src)) {
+      final bytes = imageCache[src]!;
+      final image = img.decodeImage(bytes);
+      if (image != null) {
+        _renderTerminalImage(image);
+        return;
+      }
+    }
+
+    // Fall back to text placeholder
     final style = Style().dim();
     _buffer.write(_styleToAnsiOpen(style));
     _buffer.write('[Image: $alt]');
@@ -1034,6 +1060,34 @@ class AnsiRenderer implements NodeVisitor {
       _buffer.write(' ($src)');
     }
     _buffer.write(_ansiReset);
+  }
+
+  void _renderTerminalImage(img.Image image) {
+    final protocol = detectImageProtocol();
+    if (protocol != ImageProtocol.none) {
+      final (cols, rows) = _imageCellDimensions(image);
+      final escaped = renderImageToAnsi(image, protocol,
+          columns: cols, rows: rows);
+      if (escaped != null) {
+        _buffer.write(escaped);
+        return;
+      }
+    }
+    _buffer.write('[Image: ${image.width}x${image.height}px]');
+  }
+
+  (int columns, int rows) _imageCellDimensions(img.Image image) {
+    const double cellAspect = 0.45;
+    final imageAspect = image.width / image.height;
+    var columns = (image.height * cellAspect * imageAspect).ceil();
+    var rows = image.height ~/ 18 + 1;
+    final maxCols = options.imageMaxWidth;
+    if (maxCols != null && columns > maxCols) {
+      final scale = maxCols / columns;
+      columns = maxCols;
+      rows = (rows * scale).ceil();
+    }
+    return (columns.clamp(1, 200), rows.clamp(1, 80));
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

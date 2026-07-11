@@ -117,14 +117,20 @@ Toggle content with **formatting** and `code`.
 </details>
 ''';
 
-void main() {
+void main() async {
+  // Pre-download images (SVG is rasterized via pure_svg).
+  final imageCache = await MarkdownRenderer.preloadImages(_markdown);
+
   final defaultRendered = MarkdownRenderer(
-    options: const AnsiRendererOptions(width: 88),
-  ).renderToAnsi(_markdown);
+    options: const AnsiRendererOptions(width: 88, renderImages: true),
+  ).renderToAnsi(_markdown, imageCache: imageCache);
 
   final glamourRendered = MarkdownRenderer(
-    options: GlamourTheme.dark.toAnsiRendererOptions(width: 88),
-  ).renderToAnsi(_markdown);
+    options: GlamourTheme.dark.toAnsiRendererOptions(
+      width: 88,
+      renderImages: true,
+    ),
+  ).renderToAnsi(_markdown, imageCache: imageCache);
 
   _section('Default MarkdownRenderer', defaultRendered);
   _section('Glamour dark theme via bridge', glamourRendered);

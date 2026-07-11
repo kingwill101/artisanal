@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:html_unescape/html_unescape.dart';
 import 'package:markdown/markdown.dart' show Element;
 
@@ -86,6 +88,14 @@ class MarkdownRenderContext {
   // ─── Inline text style state ──────────────────────────────────────
 
   bool textStyleActive = false;
+
+  // ─── Image cache (pre-downloaded image bytes keyed by URL) ──────
+
+  /// Pre-downloaded image bytes keyed by URL.
+  ///
+  /// When [options.renderImages] is true, [renderImage] looks up the
+  /// image URL here first. Populated by [MarkdownRenderer.preloadImages].
+  final Map<String, Uint8List> imageCache = {};
 
   // ─── Utilities ────────────────────────────────────────────────────
 

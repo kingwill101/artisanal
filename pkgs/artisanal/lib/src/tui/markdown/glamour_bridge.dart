@@ -18,9 +18,10 @@ extension GlamourThemeToOptions on GlamourTheme {
   /// (prefix, suffix, blockPrefix, blockSuffix, margin, indent, format).
   /// The structural properties are mapped to [MarkdownElementStyle]
   /// while the style properties are mapped to [Style].
-  AnsiRendererOptions toAnsiRendererOptions({int? width}) {
+  AnsiRendererOptions toAnsiRendererOptions({int? width, bool renderImages = false}) {
     return AnsiRendererOptions(
       width: width,
+      renderImages: renderImages,
       h1Style: _toStyle(h1),
       h2Style: _toStyle(h2),
       h3Style: _toStyle(h3),
