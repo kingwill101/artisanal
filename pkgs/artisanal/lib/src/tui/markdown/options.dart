@@ -58,6 +58,8 @@ class AnsiRendererOptions {
     this.tableHeaderStyle,
     this.tableCellStyle,
     this.tableBorderStyle,
+    this.renderImages = false,
+    this.imageMaxWidth,
     this.syntaxHighlighting = true,
     this.maxSyntaxHighlightCodeUnits = 8000,
     this.syntaxTheme,
@@ -100,6 +102,8 @@ class AnsiRendererOptions {
     MarkdownElementStyle? tableHeaderStyle,
     MarkdownElementStyle? tableCellStyle,
     MarkdownElementStyle? tableBorderStyle,
+    bool renderImages = false,
+    int? imageMaxWidth,
     bool syntaxHighlighting = true,
     int? maxSyntaxHighlightCodeUnits,
     ChromaTheme? syntaxTheme,
@@ -135,6 +139,8 @@ class AnsiRendererOptions {
       tableHeaderStyle: tableHeaderStyle?.resolveStyle(),
       tableCellStyle: tableCellStyle?.resolveStyle(),
       tableBorderStyle: tableBorderStyle?.resolveStyle(),
+      renderImages: renderImages,
+      imageMaxWidth: imageMaxWidth,
       syntaxHighlighting: syntaxHighlighting,
       maxSyntaxHighlightCodeUnits: maxSyntaxHighlightCodeUnits,
       syntaxTheme: syntaxTheme,
@@ -239,6 +245,19 @@ class AnsiRendererOptions {
   final ChromaTheme? syntaxTheme;
 
   /// Border style for code blocks.
+  /// Whether to render images inline using terminal graphics protocols.
+  ///
+  /// When `true`, images in markdown are downloaded and displayed using the
+  /// terminal's supported image protocol (Kitty, iTerm2, Sixel).
+  /// Currently only synchronous placeholder rendering is supported;
+  /// full async rendering requires TUI event-loop integration.
+  final bool renderImages;
+
+  /// Maximum width in terminal columns for inline images.
+  ///
+  /// When null, the image is rendered at its natural cell size.
+  final int? imageMaxWidth;
+
   final style_border.Border? codeBlockBorderStyle;
 
   /// Creates a copy with the given fields replaced.
@@ -272,6 +291,8 @@ class AnsiRendererOptions {
     Style? tableHeaderStyle,
     Style? tableCellStyle,
     Style? tableBorderStyle,
+    bool? renderImages,
+    int? imageMaxWidth,
     bool? syntaxHighlighting,
     int? maxSyntaxHighlightCodeUnits,
     ChromaTheme? syntaxTheme,
@@ -307,6 +328,8 @@ class AnsiRendererOptions {
       tableHeaderStyle: tableHeaderStyle ?? this.tableHeaderStyle,
       tableCellStyle: tableCellStyle ?? this.tableCellStyle,
       tableBorderStyle: tableBorderStyle ?? this.tableBorderStyle,
+      renderImages: renderImages ?? this.renderImages,
+      imageMaxWidth: imageMaxWidth ?? this.imageMaxWidth,
       syntaxHighlighting: syntaxHighlighting ?? this.syntaxHighlighting,
       maxSyntaxHighlightCodeUnits:
           maxSyntaxHighlightCodeUnits ?? this.maxSyntaxHighlightCodeUnits,
