@@ -1064,27 +1064,23 @@ class AnsiRenderer implements NodeVisitor {
   void _renderTerminalImage(img.Image image) {
     final (cols, rows) = _imageCellDimensions(image);
 
-    // Use forced protocol if set, otherwise try the primary detected one.
-    var primary = options.imageProtocol ?? detectImageProtocol();
-    if (primary != ImageProtocol.none) {
-      final escaped = renderImageToAnsi(image, primary,
-          columns: cols, rows: rows);
-      if (escaped != null) {
-        _buffer.write(escaped);
-        return;
-      }
+    // Use forced protocol if set.
+    var protocol = options.imageProtocol ?? detectImageProtocol();
+    if (protocol == ImageProtocol.none) {
+      // Fall back to Sixel — it's the most widely supported protocol
+      // across terminals (xterm, VTE/GNOME, foot, WezTerm, VSCode,
+      // Windows Terminal, Konsole, mlterm, etc.) and is silently
+      // ignored by terminals that don't support it.
+      protocol = ImageProtocol.sixel;
     }
 
-    // Fallback: try Sixel → Kitty → iTerm2 in order. Modern terminals
-    // that support one will render it and silently ignore the others.
-    final sixel = renderImageToAnsi(image, ImageProtocol.sixel);
-    if (sixel != null) _buffer.write(sixel);
-    final kitty = renderImageToAnsi(image, ImageProtocol.kitty,
+    final escaped = renderImageToAnsi(image, protocol,
         columns: cols, rows: rows);
-    if (kitty != null) _buffer.write(kitty);
-    final iterm2 = renderImageToAnsi(image, ImageProtocol.iterm2,
-        columns: cols, rows: rows);
-    if (iterm2 != null) _buffer.write(iterm2);
+    if (escaped != null) {
+      _buffer.write(escaped);
+      return;
+    }
+    _buffer.write('[Image: ${image.width}x${image.height}px]');
   }
 
   (int columns, int rows) _imageCellDimensions(img.Image image) {
