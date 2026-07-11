@@ -6,6 +6,7 @@ import 'terminal_native_frame.dart';
 import 'terminal_render_inspector.dart';
 
 /// A decoded evidence event line.
+// ignore_for_file: use_null_aware_elements
 final class TuiEvidenceRecord {
   const TuiEvidenceRecord({
     required this.version,
@@ -130,11 +131,11 @@ final class TuiEvidence {
       result: 'captured',
       type: 'runtime.render',
       factors: <String, Object?>{
-        ?'renderGeneration': renderGeneration,
-        ?'degradationLevel': degradationLevel,
-        ?'renderDurationUs': renderDurationUs,
-        ?'width': width,
-        ?'height': height,
+        if (renderGeneration != null) 'renderGeneration': renderGeneration,
+        if (degradationLevel != null) 'degradationLevel': degradationLevel,
+        if (renderDurationUs != null) 'renderDurationUs': renderDurationUs,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
         'lineCount': frame.lines.length,
         'content': frame.content,
         'plainText': frame.plainText,

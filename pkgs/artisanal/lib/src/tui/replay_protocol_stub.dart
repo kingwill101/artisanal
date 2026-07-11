@@ -1,4 +1,4 @@
-// ignore_for_file: unused_element
+// ignore_for_file: use_null_aware_elements, unused_element
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -173,12 +173,12 @@ final class ReplayRenderCaptureEvent {
       statusHint: statusParts.join(' '),
       fields: <String, Object?>{
         'type': event.type,
-        ?'recordType': recordType,
-        ?'decisionType': decisionType,
-        ?'result': result,
-        ?'renderGeneration': generation,
-        ?'width': width,
-        ?'height': height,
+        if (recordType != null) 'recordType': recordType,
+        if (decisionType != null) 'decisionType': decisionType,
+        if (result != null) 'result': result,
+        if (generation != null) 'renderGeneration': generation,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
         if (changes != null) 'changeSummary': changes.toJson(),
       },
       detailLines: toLines(),

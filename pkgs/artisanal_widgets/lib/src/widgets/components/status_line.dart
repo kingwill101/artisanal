@@ -13,6 +13,7 @@ import 'package:artisanal/widgets.dart';
 /// StatusItem.spinner(frameIndex)
 /// StatusItem.spacer()
 /// ```
+// ignore_for_file: use_null_aware_elements
 sealed class StatusItem {
   const StatusItem._();
 
@@ -199,9 +200,9 @@ class StatusLine extends StatelessWidget {
       return Row(
         gap: 0,
         children: [
-          ?leftWidget,
+          if (leftWidget != null) leftWidget,
           Spacer(),
-          ?rightWidget,
+          if (rightWidget != null) rightWidget,
         ],
       );
     }
@@ -209,11 +210,11 @@ class StatusLine extends StatelessWidget {
     return Row(
       gap: 0,
       children: [
-        ?leftWidget,
+        if (leftWidget != null) leftWidget,
         Spacer(),
-        ?centerWidget,
+        if (centerWidget != null) centerWidget,
         Spacer(),
-        ?rightWidget,
+        if (rightWidget != null) rightWidget,
       ],
     );
   }

@@ -11,6 +11,7 @@ import 'render_recorder.dart';
 import 'trace.dart';
 
 /// Screen metadata captured for replay coordinate scaling.
+// ignore_for_file: use_null_aware_elements
 final class ReplayScreen {
   const ReplayScreen({
     this.width = 0,
@@ -173,12 +174,12 @@ final class ReplayRenderCaptureEvent {
       statusHint: statusParts.join(' '),
       fields: <String, Object?>{
         'type': event.type,
-        ?'recordType': recordType,
-        ?'decisionType': decisionType,
-        ?'result': result,
-        ?'renderGeneration': generation,
-        ?'width': width,
-        ?'height': height,
+        if (recordType != null) 'recordType': recordType,
+        if (decisionType != null) 'decisionType': decisionType,
+        if (result != null) 'result': result,
+        if (generation != null) 'renderGeneration': generation,
+        if (width != null) 'width': width,
+        if (height != null) 'height': height,
         if (changes != null) 'changeSummary': changes.toJson(),
       },
       detailLines: toLines(),

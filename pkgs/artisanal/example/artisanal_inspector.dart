@@ -32,6 +32,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+// ignore_for_file: use_null_aware_elements
 void main(List<String> args) async {
   if (args.isEmpty) {
     stderr.writeln('Usage: dart run example/artisanal_inspector.dart <ws-uri>');
@@ -107,7 +108,7 @@ class _Inspector {
       'jsonrpc': '2.0',
       'id': id,
       'method': method,
-      ?'params': params,
+      if (params != null) 'params': params,
     };
     _ws.add(jsonEncode(request));
     return completer.future.timeout(

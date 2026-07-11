@@ -7,6 +7,7 @@ import '../models/item_kind.dart';
 import 'client.dart';
 import 'json.dart';
 
+// ignore_for_file: use_null_aware_elements
 final class GithubHttpClient
     implements GithubDashboardClient, GithubPullRequestDiffStreamingClient {
   GithubHttpClient({required this.token, http.Client? client})
@@ -322,7 +323,7 @@ final class GithubHttpClient
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
-        ?'after': after,
+        if (after != null) 'after': after,
       }),
     );
     final issues = ghMap(ghMap(ghMap(json['data'])['repository'])['issues']);
@@ -349,7 +350,7 @@ final class GithubHttpClient
         'owner': parts.owner,
         'name': parts.name,
         'first': first,
-        ?'after': after,
+        if (after != null) 'after': after,
       }),
     );
     final prs = ghMap(ghMap(ghMap(json['data'])['repository'])['pullRequests']);
