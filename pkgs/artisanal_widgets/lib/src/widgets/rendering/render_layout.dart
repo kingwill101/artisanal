@@ -672,6 +672,7 @@ class RenderColumn extends RenderBox {
 
   void _computeChildOffsets() {
     if (children.isEmpty) return;
+    if (size.height.isNaN || size.height.isInfinite) return;
 
     final flexData = children.map(_flexDataFor).toList();
     final maxMain = size.height.toInt();
