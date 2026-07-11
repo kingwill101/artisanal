@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:markdown/markdown.dart';
+import 'package:pure_svg/svg.dart' show SvgStringLoader, renderSvgToPng;
 
 import '../../style/style.dart';
 import '../../style/color.dart';
@@ -121,10 +123,25 @@ class MarkdownRenderer implements NodeVisitor {
         },
       );
       client.close();
+
+      // Convert SVG to PNG via pure_svg so img.decodeImage works later.
+      if (_isSvg(url, response.headers.value('content-type') ?? '')) {
+        final svgContent = utf8.decode(bytes);
+        final loader = SvgStringLoader(svgContent);
+        final pngBytes = await renderSvgToPng(loader, width: 200, height: 200);
+        return pngBytes.isEmpty ? null : pngBytes;
+      }
+
       return bytes;
     } catch (_) {
       return null;
     }
+  }
+
+  static bool _isSvg(String url, String contentType) {
+    if (contentType.contains('svg')) return true;
+    final lower = url.toLowerCase();
+    return lower.endsWith('.svg') || lower.contains('.svg?');
   }
 
   // ─── NodeVisitor implementation ────────────────────────────────────

@@ -1042,7 +1042,6 @@ class AnsiRenderer implements NodeVisitor {
     final alt = element.attributes['alt'] ?? 'image';
     final src = element.attributes['src'] ?? '';
 
-    // Try terminal image protocol when renderImages is enabled
     if (options.renderImages && src.isNotEmpty && imageCache.containsKey(src)) {
       final bytes = imageCache[src]!;
       final image = img.decodeImage(bytes);
